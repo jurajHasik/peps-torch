@@ -1,0 +1,90 @@
+{
+	"physDim": 2,
+	"auxBondDim": 3,
+	"sizeN": 2,
+	"sizeM": 2,
+	"map": [
+		{"x":0, "y": 0, "siteId": "A"},
+		{"x":1, "y": 0, "siteId": "B"},
+		{"x":0, "y": 1, "siteId": "C"},
+		{"x":1, "y": 1, "siteId": "D"}
+	],
+	"linkWeightsUsed": true,
+	"linkWeights": [
+		{"sites": ["A", "B"], "directions": [0, 2], "weightId": "L1"},
+		{"sites": ["B", "A"], "directions": [0, 2], "weightId": "L2"},
+		{"sites": ["A", "C"], "directions": [3, 1], "weightId": "L3"},
+		{"sites": ["C", "A"], "directions": [3, 1], "weightId": "L4"},
+		{"sites": ["C", "D"], "directions": [0, 2], "weightId": "L5"},
+		{"sites": ["D", "C"], "directions": [0, 2], "weightId": "L6"},
+		{"sites": ["B", "D"], "directions": [3, 1], "weightId": "L7"},
+		{"sites": ["D", "B"], "directions": [3, 1], "weightId": "L8"}
+	],
+	"siteIds": ["A", "B", "C", "D"],
+	"sites": [
+		{
+			"siteId": "A",
+			"physDim": 2, 
+			"auxDim": 3, 
+			"numEntries": 8,
+			"entries": [
+				"0 0 2 2 2 1.0 0.0",
+				"0 2 0 2 2 1.0 0.0",
+				"0 2 2 0 2 1.0 0.0",
+				"0 2 2 2 0 1.0 0.0",
+				"1 1 2 2 2 1.0 0.0",
+				"1 2 1 2 2 1.0 0.0",
+				"1 2 2 1 2 1.0 0.0",
+				"1 2 2 2 1 1.0 0.0"
+			]
+		},
+		{
+			"siteId": "B",
+			"physDim": 2, 
+			"auxDim": 3, 
+			"numEntries": 8,
+			"entries": [
+				"1 0 2 2 2 -1.0 0.0",
+				"1 2 0 2 2 -1.0 0.0",
+				"1 2 2 0 2 -1.0 0.0",
+				"1 2 2 2 0 -1.0 0.0",
+				"0 1 2 2 2 1.0 0.0",
+				"0 2 1 2 2 1.0 0.0",
+				"0 2 2 1 2 1.0 0.0",
+				"0 2 2 2 1 1.0 0.0"
+			]
+		},
+		{
+			"siteId": "C",
+			"physDim": 2, 
+			"auxDim": 3, 
+			"numEntries": 8,
+			"entries": [
+				"1 0 2 2 2 -1.0 0.0",
+				"1 2 0 2 2 -1.0 0.0",
+				"1 2 2 0 2 -1.0 0.0",
+				"1 2 2 2 0 -1.0 0.0",
+				"0 1 2 2 2 1.0 0.0",
+				"0 2 1 2 2 1.0 0.0",
+				"0 2 2 1 2 1.0 0.0",
+				"0 2 2 2 1 1.0 0.0"
+			]
+		},
+		{
+			"siteId": "D",
+			"physDim": 2, 
+			"auxDim": 3, 
+			"numEntries": 8,
+			"entries": [
+				"0 0 2 2 2 1.0 0.0",
+				"0 2 0 2 2 1.0 0.0",
+				"0 2 2 0 2 1.0 0.0",
+				"0 2 2 2 0 1.0 0.0",
+				"1 1 2 2 2 1.0 0.0",
+				"1 2 1 2 2 1.0 0.0",
+				"1 2 2 1 2 1.0 0.0",
+				"1 2 2 2 1 1.0 0.0"
+			]
+		}
+	]
+} 
