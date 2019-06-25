@@ -8,7 +8,7 @@ import ctmrg
 
 if __name__=='__main__':
 
-	state = ipeps.read_ipeps(None, "test-input/RVB_1x1_conv11.in")
+	state = ipeps.read_ipeps(None, args.instate)
 
 	# test tiling of square lattice with 3x2 unit cell
 	#   0 1 2
@@ -29,7 +29,7 @@ if __name__=='__main__':
 	ctm_env = ctmrg.run(state,ctm_env)
 
 
-	state = ipeps.read_ipeps(None, "test-input/RVB_2x2_ABCD.in")
+	state = ipeps.read_ipeps(None, args.instate)
 
 	# test tiling of square lattice with 3x2 unit cell
 	#   0 1 2
