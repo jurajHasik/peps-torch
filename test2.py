@@ -26,7 +26,7 @@ if __name__=='__main__':
 		print("")
 
 	ctm_env = ENV(args,state)
-	ctm_env = ctmrg.run(state,ctm_env)
+	ctm_env = ctmrg.run(args,state,ctm_env)
 
 
 	state = ipeps.read_ipeps(None, args.instate)

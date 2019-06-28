@@ -55,12 +55,83 @@ class ENV(torch.nn.Module):
             for vec in [(-1,-1), (-1,1), (1,-1), (1,1)]:
                 self.C[(coord,vec)]=torch.empty(self.chi,self.chi)
 
+def init_const(env):
+    for key,t in env.C.items():
+        env.C[key] = torch.ones(t.size())
+    for key,t in env.T.items():
+        env.T[key] = torch.ones(t.size())
+
 def init_random(env):
     for key,t in env.C.items():
         env.C[key] = torch.rand(t.size())
     for key,t in env.T.items():
         env.T[key] = torch.rand(t.size())
-    return env
+
+def init_from_ipeps(ipeps, env):
+    for coord, site in ipeps.sites.items():
+        # Left-upper corner
+        #
+        #     i      = C--1     
+        # j--A--3      0
+        #   /\
+        #  2  m
+        #      \ i
+        #    j--A--3
+        #      /
+        #     2
+        vec = (-1,-1)
+        A = ipeps.site((coord[0]+vec[0],coord[1]+vec[1]))
+        dimsA = A.size()
+        a = torch.einsum('mijef,mijab->eafb',(A,A)).contiguous().view(dimsA[3]**2, dimsA[4]**2)
+        env.C[(coord,vec)] = a
+
+        # right-upper corner
+        #
+        #     i      = 0--C     
+        # 1--A--j         1
+        #   /\
+        #  2  m
+        #      \ i
+        #    1--A--j
+        #      /
+        #     2
+        vec = (1,-1)
+        A = ipeps.site((coord[0]+vec[0],coord[1]+vec[1]))
+        dimsA = A.size()
+        a = torch.einsum('miefj,miabj->eafb',(A,A)).contiguous().view(dimsA[2]**2, dimsA[3]**2)
+        env.C[(coord,vec)] = a
+
+        # right-lower corner
+        #
+        #     0      =    0     
+        # 1--A--j      1--C
+        #   /\
+        #  i  m
+        #      \ 0
+        #    1--A--j
+        #      /
+        #     i
+        vec = (1,1)
+        A = ipeps.site((coord[0]+vec[0],coord[1]+vec[1]))
+        dimsA = A.size()
+        a = torch.einsum('mefij,mabij->eafb',(A,A)).contiguous().view(dimsA[1]**2, dimsA[2]**2)
+        env.C[(coord,vec)] = a
+
+        # left-lower corner
+        #
+        #     0      = 0     
+        # i--A--3      C--1
+        #   /\
+        #  j  m
+        #      \ 0
+        #    i--A--3
+        #      /
+        #     j
+        vec = (-1,1)
+        A = ipeps.site((coord[0]+vec[0],coord[1]+vec[1]))
+        dimsA = A.size()
+        a = torch.einsum('meijf,maijb->eafb',(A,A)).contiguous().view(dimsA[1]**2, dimsA[4]**2)
+        env.C[(coord,vec)] = a
 
 def print_env(env):
     for key,t in env.C.items():
