@@ -5,6 +5,8 @@ from ipeps import IPEPS
 class ENV(torch.nn.Module):
     def __init__(self, args, ipeps, dtype=torch.float64, device='cpu', use_checkpoint=False):
         super(ENV, self).__init__()
+        self.dtype = dtype
+        self.device = device
         self.use_checkpoint = use_checkpoint
         
         # 
@@ -45,27 +47,27 @@ class ENV(torch.nn.Module):
         for coord, site in ipeps.sites.items():
             #for vec in [(0,-1), (-1,0), (0,1), (1,0)]:
             #    self.T[(coord,vec)]="T"+str(ipeps.site(coord))
-            self.T[(coord,(0,-1))]=torch.empty(self.chi,site.size()[1]*site.size()[1],self.chi)
-            self.T[(coord,(-1,0))]=torch.empty(self.chi,self.chi,site.size()[2]*site.size()[2])
-            self.T[(coord,(0,1))]=torch.empty(site.size()[3]*site.size()[3],self.chi,self.chi)
-            self.T[(coord,(1,0))]=torch.empty(self.chi,site.size()[4]*site.size()[4],self.chi)
+            self.T[(coord,(0,-1))]=torch.empty((self.chi,site.size()[1]*site.size()[1],self.chi), dtype=self.dtype, device=self.device)
+            self.T[(coord,(-1,0))]=torch.empty((self.chi,self.chi,site.size()[2]*site.size()[2]), dtype=self.dtype, device=self.device)
+            self.T[(coord,(0,1))]=torch.empty((site.size()[3]*site.size()[3],self.chi,self.chi), dtype=self.dtype, device=self.device)
+            self.T[(coord,(1,0))]=torch.empty((self.chi,site.size()[4]*site.size()[4],self.chi), dtype=self.dtype, device=self.device)
 
             #for vec in [(-1,-1), (-1,1), (1,-1), (1,1)]:
             #     self.C[(coord,vec)]="C"+str(ipeps.site(coord))
             for vec in [(-1,-1), (-1,1), (1,-1), (1,1)]:
-                self.C[(coord,vec)]=torch.empty(self.chi,self.chi)
+                self.C[(coord,vec)]=torch.empty((self.chi,self.chi), dtype=self.dtype, device=self.device)
 
 def init_const(env):
     for key,t in env.C.items():
-        env.C[key] = torch.ones(t.size())
+        env.C[key] = torch.ones(t.size(), dtype=env.dtype, device=env.device)
     for key,t in env.T.items():
-        env.T[key] = torch.ones(t.size())
+        env.T[key] = torch.ones(t.size(), dtype=env.dtype, device=env.device)
 
 def init_random(env):
     for key,t in env.C.items():
-        env.C[key] = torch.rand(t.size())
+        env.C[key] = torch.rand(t.size(), dtype=env.dtype, device=env.device)
     for key,t in env.T.items():
-        env.T[key] = torch.rand(t.size())
+        env.T[key] = torch.rand(t.size(), dtype=env.dtype, device=env.device)
 
 def init_from_ipeps(ipeps, env):
     for coord, site in ipeps.sites.items():
@@ -134,6 +136,9 @@ def init_from_ipeps(ipeps, env):
         env.C[(coord,vec)] = a
 
 def print_env(env):
+    print("dtype "+str(env.dtype))
+    print("device "+str(env.device))
+
     for key,t in env.C.items():
         print(str(key)+" "+str(t.size()))
         #print(t)

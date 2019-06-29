@@ -25,6 +25,7 @@ if __name__=='__main__':
 			print(str(state.vertexToSite((x,y)))+" ", end="")
 		print("")
 
+	torch.set_printoptions(precision=7)
 	ctm_env = ENV(args,state)
 	ctm_env = ctmrg.run(args,state,ctm_env)
 

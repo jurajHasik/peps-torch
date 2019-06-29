@@ -1,8 +1,8 @@
 {
 	"physDim":5,
 	"auxBondDim": 2,
-	"sizeN": 1,
-	"sizeM": 1,
+	"lX": 1,
+	"lY": 1,
 	"map": [
 		{"x":0, "y": 0, "siteId": "A"}
 	],

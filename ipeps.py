@@ -7,6 +7,8 @@ class IPEPS(torch.nn.Module):
         dtype=torch.float64, device='cpu', use_checkpoint=False):
         
         super(IPEPS, self).__init__()
+        self.dtype = dtype
+        self.device = device
         self.use_checkpoint = use_checkpoint
 
         # Dict of non-equivalent on-site tensors 
@@ -41,7 +43,7 @@ class IPEPS(torch.nn.Module):
     def site(self, coord):
         return self.sites[self.vertexToSite(coord)]
 
-def read_ipeps(args, jsonfile, vertexToSite=None):
+def read_ipeps(args, jsonfile, vertexToSite=None, dtype=torch.float64, device='cpu'):
 
     sites = dict()
     
@@ -66,8 +68,8 @@ def read_ipeps(args, jsonfile, vertexToSite=None):
 
             # branch 2: key "auxInds" does not exist, all auxiliary 
             # indices have the same dimension
-            X = torch.zeros(t["physDim"], t["auxDim"], t["auxDim"], \
-                t["auxDim"], t["auxDim"])
+            X = torch.zeros((t["physDim"], t["auxDim"], t["auxDim"], \
+                t["auxDim"], t["auxDim"]), dtype=dtype, device=device)
 
             # 1) fill the tensor with elements from the list "entries"
             # which list the non-zero tensor elements in the following
@@ -100,4 +102,4 @@ def read_ipeps(args, jsonfile, vertexToSite=None):
                 y = coord[1]
                 return ( (x + abs(x)*lX)%lX, (y + abs(y)*lY)%lY )
 
-    return IPEPS(args, sites, vertexToSite)
+    return IPEPS(args, sites, vertexToSite, dtype=dtype, device=device)

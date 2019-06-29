@@ -302,8 +302,19 @@ def ctm_MOVE_UP(ipeps, env):
 
     # Loop over all non-equivalent sites of ipeps
     # and perform absorption and truncation
+    nC1 = dict()
+    nC2 = dict()
+    nT = dict()
     for coord,site in ipeps.sites.items():
-        absorb_truncate_CTM_MOVE_UP(coord, ipeps, env, P[coord], Pt[coord])
+        nC1[coord], nC2[coord], nT[coord] = absorb_truncate_CTM_MOVE_UP(coord, ipeps, env, P, Pt)
+
+    for coord,site in ipeps.sites.items():
+        vec = (0,1)
+        new_coord = ipeps.vertexToSite((coord[0]+vec[0], coord[1]+vec[1]))
+        print("coord: "+str(coord)+" + "+str(vec)+" -> "+str(new_coord))
+        env.C[(new_coord,(1,-1))] = nC1[coord]
+        env.C[(new_coord,(-1,-1))] = nC2[coord]
+        env.T[(new_coord,(0,-1))] = nT[coord]
 
 def ctm_MOVE_LEFT(ipeps, env):
     # Loop over all non-equivalent sites of ipeps
@@ -319,8 +330,19 @@ def ctm_MOVE_LEFT(ipeps, env):
 
     # Loop over all non-equivalent sites of ipeps
     # and perform absorption and truncation
+    nC1 = dict()
+    nC2 = dict()
+    nT = dict()
     for coord,site in ipeps.sites.items():
-        absorb_truncate_CTM_MOVE_LEFT(coord, ipeps, env, P[coord], Pt[coord])
+        nC1[coord], nC2[coord], nT[coord] = absorb_truncate_CTM_MOVE_LEFT(coord, ipeps, env, P, Pt)
+
+    for coord,site in ipeps.sites.items():
+        vec = (1,0)
+        new_coord = ipeps.vertexToSite((coord[0]+vec[0], coord[1]+vec[1]))
+        print("coord: "+str(coord)+" + "+str(vec)+" -> "+str(new_coord))
+        env.C[(new_coord,(-1,-1))] = nC1[coord]
+        env.C[(new_coord,(-1,1))] = nC2[coord]
+        env.T[(new_coord,(-1,0))] = nT[coord]
 
 def ctm_MOVE_DOWN(ipeps, env):
     # Loop over all non-equivalent sites of ipeps
@@ -336,8 +358,19 @@ def ctm_MOVE_DOWN(ipeps, env):
 
     # Loop over all non-equivalent sites of ipeps
     # and perform absorption and truncation
+    nC1 = dict()
+    nC2 = dict()
+    nT = dict()
     for coord,site in ipeps.sites.items():
-        absorb_truncate_CTM_MOVE_DOWN(coord, ipeps, env, P[coord], Pt[coord])
+        nC1[coord], nC2[coord], nT[coord] = absorb_truncate_CTM_MOVE_DOWN(coord, ipeps, env, P, Pt)
+
+    for coord,site in ipeps.sites.items():
+        vec = (0,-1)
+        new_coord = ipeps.vertexToSite((coord[0]+vec[0], coord[1]+vec[1]))
+        print("coord: "+str(coord)+" + "+str(vec)+" -> "+str(new_coord))
+        env.C[(new_coord,(-1,1))] = nC1[coord]
+        env.C[(new_coord,(1,1))] = nC2[coord]
+        env.T[(new_coord,(0,1))] = nT[coord]
 
 def ctm_MOVE_RIGHT(ipeps, env):
     # Loop over all non-equivalent sites of ipeps
@@ -353,8 +386,19 @@ def ctm_MOVE_RIGHT(ipeps, env):
 
     # Loop over all non-equivalent sites of ipeps
     # and perform absorption and truncation
+    nC1 = dict()
+    nC2 = dict()
+    nT = dict()
     for coord,site in ipeps.sites.items():
-        absorb_truncate_CTM_MOVE_RIGHT(coord, ipeps, env, P[coord], Pt[coord])
+        nC1[coord], nC2[coord], nT[coord] = absorb_truncate_CTM_MOVE_RIGHT(coord, ipeps, env, P, Pt)
+
+    for coord,site in ipeps.sites.items():
+        vec = (-1,0)
+        new_coord = ipeps.vertexToSite((coord[0]+vec[0], coord[1]+vec[1]))
+        print("coord: "+str(coord)+" + "+str(vec)+" -> "+str(new_coord))
+        env.C[(new_coord,(1,1))] = nC1[coord]
+        env.C[(new_coord,(1,-1))] = nC2[coord]
+        env.T[(new_coord,(1,0))] = nT[coord]
 
 #####################################################################
 # compute the projectors from 4x4 TN given by coord
@@ -438,10 +482,10 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, use_QR = False, tol = 1e-10):
     # if abs_tol is not None: St = St[St > abs_tol]
     # if abs_tol is not None: St = torch.where(St > abs_tol, St, Stzeros)
     # if rel_tol is not None: St = St[St/St[0] > rel_tol]
-    pseudoinv_rel_tol = torch.sqrt(torch.tensor(1e+7))
+    pseudoinv_rel_tol = torch.sqrt(torch.tensor(1.0e+8, dtype=torch.float64, device='cpu'))
     S_mag_sqrt = torch.sqrt(S[0])
-    S_zeros = torch.zeros(S.shape)
-    S_sqrt = 1.0 / torch.sqrt(S)
+    S_zeros = torch.zeros(S.shape, dtype=torch.float64, device='cpu')
+    S_sqrt = torch.rsqrt(S)
     S_sqrt = torch.where(S_mag_sqrt*S_sqrt < pseudoinv_rel_tol, S_sqrt, S_zeros)
     print(S_sqrt)
 
@@ -531,8 +575,12 @@ def absorb_truncate_CTM_MOVE_UP(coord, ipeps, env, P, Pt):
     T2 = env.T[(coord,(-1,0))]
     C2 = env.C[(coord,(-1,-1))]
     A = ipeps.site(coord)
-    P = P.view(env.chi,A.size()[3],env.chi)
-    Pt = Pt.view(env.chi,A.size()[1],env.chi)
+    vec = (1,0)
+    coord_shift_right = ipeps.vertexToSite((coord[0]+vec[0], coord[1]+vec[1]))
+    P2 = P[coord].view(env.chi,A.size()[3],env.chi)
+    Pt2 = Pt[coord].view(env.chi,A.size()[1],env.chi)
+    P1 = P[coord_shift_right].view(env.chi,A.size()[3],env.chi)
+    Pt1 = Pt[coord_shift_right].view(env.chi,A.size()[1],env.chi)
 
     # 0--C1
     #    1
@@ -543,11 +591,11 @@ def absorb_truncate_CTM_MOVE_UP(coord, ipeps, env, P, Pt):
 
     #        --0 0--C1
     #       |       |
-    # 0<-2--Pt      |
+    # 0<-2--Pt1     |
     #       |       | 
     #        --1 1--T1
-    #               2->0
-    C1 = torch.tensordot(Pt, nC1,([0,1],[0,1]))
+    #               2->1
+    nC1 = torch.tensordot(Pt1, nC1,([0,1],[0,1]))
 
     # C2--1->0
     # 0
@@ -558,22 +606,22 @@ def absorb_truncate_CTM_MOVE_UP(coord, ipeps, env, P, Pt):
 
     # C2--0 0--
     # |        |        
-    # |        P--2->1
+    # |        P2--2->1
     # |        |
     # T2--2 1--
     # 1->0
-    C2 = torch.tensordot(nC2, P,([0,2],[0,1]))
+    nC2 = torch.tensordot(nC2, P2,([0,2],[0,1]))
 
     #        --0 0--T--2->3
     #       |       1->2
-    # 1<-2--Pt
+    # 1<-2--Pt2
     #       |
     #        --1->0 
-    nT = torch.tensordot(Pt, T, ([0],[0]))
+    nT = torch.tensordot(Pt2, T, ([0],[0]))
 
     #        -------T--3->1
     #       |       2
-    # 0<-1--Pt      | 
+    # 0<-1--Pt2     | 
     #       |       0
     #        --0 1--A--3
     #               2 
@@ -581,16 +629,34 @@ def absorb_truncate_CTM_MOVE_UP(coord, ipeps, env, P, Pt):
 
     #     -------T--1 0--
     #    |       |       |
-    # 0--Pt      |       P--2
+    # 0--Pt2     |       P1--2
     #    |       |       |
     #     -------A--3 1--
     #            2->1 
-    T = torch.tensordot(nT, P,([1,3],[0,1]))
-    T = T.contiguous()
+    nT = torch.tensordot(nT, P1,([1,3],[0,1]))
+    nT = nT.contiguous()
 
-    env.C[(coord,(1,-1))] = C1/torch.max(torch.abs(C1))
-    env.C[(coord,(-1,-1))] = C2/torch.max(torch.abs(C2))
-    env.T[(coord,(0,-1))] = T/torch.max(torch.abs(T))
+    # Assign new C,T 
+    #
+    # C(coord,(-1,-1))--                --T(coord,(0,-1))--             --C(coord,(1,-1))
+    # |                  P2--       --Pt2 |                P1--     -Pt1  |
+    # T(coord,(-1,0))---                --A(coord)---------             --T(coord,(1,0))
+    # |                                   |                               |
+    #
+    # =>                            
+    #
+    # C^new(coord+(0,1),(-1,-1))--      --T^new(coord+(0,1),(0,-1))--   --C^new(coord+(0,1),(1,-1))
+    # |                                   |                               |  
+    # vec = (0,1)
+    # new_coord = ipeps.vertexToSite((coord[0]+vec[0], coord[1]+vec[1]))
+    # print("coord: "+str(coord)+" + "+str(vec)+" -> "+str(new_coord))
+    # env.C[(new_coord,(1,-1))] = nC1/torch.max(torch.abs(nC1))
+    # env.C[(new_coord,(-1,-1))] = nC2/torch.max(torch.abs(nC2))
+    # env.T[(new_coord,(0,-1))] = nT/torch.max(torch.abs(nT))
+    nC1 = nC1/torch.max(torch.abs(nC1))
+    nC2 = nC2/torch.max(torch.abs(nC2))
+    nT = nT/torch.max(torch.abs(nT))
+    return nC1, nC2, nT
 
 def absorb_truncate_CTM_MOVE_LEFT(coord, ipeps, env, P, Pt):
     C1 = env.C[(coord,(-1,-1))]
@@ -599,8 +665,12 @@ def absorb_truncate_CTM_MOVE_LEFT(coord, ipeps, env, P, Pt):
     T2 = env.T[(coord,(0,1))]
     C2 = env.C[(coord,(-1,1))]
     A = ipeps.site(coord)
-    P = P.view(env.chi,A.size()[0],env.chi)
-    Pt = Pt.view(env.chi,A.size()[2],env.chi)
+    vec = (0,-1)
+    coord_shift_up = ipeps.vertexToSite((coord[0]+vec[0], coord[1]+vec[1]))
+    P2 = P[coord].view(env.chi,A.size()[0],env.chi)
+    Pt2 = Pt[coord].view(env.chi,A.size()[2],env.chi)
+    P1 = P[coord_shift_up].view(env.chi,A.size()[0],env.chi)
+    Pt1 = Pt[coord_shift_up].view(env.chi,A.size()[2],env.chi)
 
     # C1--1 0--T1--2
     # |        |
@@ -611,31 +681,31 @@ def absorb_truncate_CTM_MOVE_LEFT(coord, ipeps, env, P, Pt):
     # |        |
     # 0        1
     # 0        1
-    # |___Pt___|
+    # |___Pt1__|
     #     2->0
-    C1 = torch.tensordot(Pt, nC1,([0,1],[0,1]))
+    nC1 = torch.tensordot(Pt1, nC1,([0,1],[0,1]))
 
     # 0        0->1
     # C2--1 1--T2--2
     nC2 = torch.tensordot(C2, T2,([1],[1])) 
 
     #    2->0
-    # ___P____
+    # ___P2___
     # 0      1
     # 0      1  
     # C2-----T2--2->1
-    C2 = torch.tensordot(P, nC2,([0,1],[0,1]))
+    nC2 = torch.tensordot(P2, nC2,([0,1],[0,1]))
 
     #    2->1
-    # ___P___
+    # ___P1__
     # 0     1->0
     # 0
     # T--2->3
     # 1->2
-    nT = torch.tensordot(P, T,([0],[0]))
+    nT = torch.tensordot(P1, T,([0],[0]))
 
     #    1->0
-    # ___P_____
+    # ___P1____
     # |       0
     # |       0
     # T--3 1--A--3
@@ -643,20 +713,46 @@ def absorb_truncate_CTM_MOVE_LEFT(coord, ipeps, env, P, Pt):
     nT = torch.tensordot(nT, A,([0,3],[0,1]))
 
     #    0
-    # ___P_____
+    # ___P1___
     # |       |
     # |       |
     # T-------A--3->1
     # 1       2
     # 0       1
-    # |___Pt__|
+    # |___Pt2_|
     #     2
-    T = torch.tensordot(nT, Pt,([1,2],[0,1]))
-    T = T.permute(0,2,1).contiguous()
+    nT = torch.tensordot(nT, Pt2,([1,2],[0,1]))
+    nT = nT.permute(0,2,1).contiguous()
 
-    env.C[(coord,(-1,-1))] = C1/torch.max(torch.abs(C1))
-    env.C[(coord,(-1,1))] = C2/torch.max(torch.abs(C2))
-    env.T[(coord,(-1,0))] = T/torch.max(torch.abs(T))
+    # Assign new C,T 
+    #
+    # C(coord,(-1,-1))--T(coord,(0,-1))-- => C^new(coord+(1,0),(-1,-1))--
+    # |________   ______|                    |
+    #          Pt1
+    #          |
+    #
+    #          |
+    # _________P1______
+    # |                |                     |
+    # T(coord,(-1,0))--A(coord)--            T^new(coord+(1,0),(-1,0))--
+    # |________   _____|                     |
+    #          Pt2
+    #          |                     
+    #          
+    #          |
+    #  ________P2_______
+    # |                 |                    |
+    # C(coord,(-1,1))--T(coord,(0,1))--      C^new(coord+(1,0),(-1,1))
+    # vec = (1,0)
+    # new_coord = ipeps.vertexToSite((coord[0]+vec[0], coord[1]+vec[1]))
+    # print("coord: "+str(coord)+" + "+str(vec)+" -> "+str(new_coord))
+    # env.C[(new_coord,(-1,-1))] = nC1/torch.max(torch.abs(nC1))
+    # env.C[(new_coord,(-1,1))] = nC2/torch.max(torch.abs(nC2))
+    # env.T[(new_coord,(-1,0))] = nT/torch.max(torch.abs(nT))
+    nC1 = nC1/torch.max(torch.abs(nC1))
+    nC2 = nC2/torch.max(torch.abs(nC2))
+    nT = nT/torch.max(torch.abs(nT))
+    return nC1, nC2, nT
 
 def absorb_truncate_CTM_MOVE_DOWN(coord, ipeps, env, P, Pt):
     C1 = env.C[(coord,(-1,1))]
@@ -665,8 +761,12 @@ def absorb_truncate_CTM_MOVE_DOWN(coord, ipeps, env, P, Pt):
     T2 = env.T[(coord,(1,0))]
     C2 = env.C[(coord,(1,1))]
     A = ipeps.site(coord)
-    P = P.view(env.chi,A.size()[1],env.chi)
-    Pt = Pt.view(env.chi,A.size()[3],env.chi)
+    vec = (-1,0)
+    coord_shift_left = ipeps.vertexToSite((coord[0]+vec[0], coord[1]+vec[1]))
+    P2 = P[coord].view(env.chi,A.size()[1],env.chi)
+    Pt2 = Pt[coord].view(env.chi,A.size()[3],env.chi)
+    P1 = P[coord_shift_left].view(env.chi,A.size()[1],env.chi)
+    Pt1 = Pt[coord_shift_left].view(env.chi,A.size()[3],env.chi)
 
     # 0->1
     # T1--2->2
@@ -678,10 +778,10 @@ def absorb_truncate_CTM_MOVE_DOWN(coord, ipeps, env, P, Pt):
     # 1->0
     # T1--2 1--
     # |        |        
-    # |        Pt--2->1
+    # |        Pt1--2->1
     # |        |
     # C1--0 0--   
-    C1 = torch.tensordot(nC1, Pt, ([0,2],[0,1]))
+    nC1 = torch.tensordot(nC1, Pt1, ([0,2],[0,1]))
 
     #    1<-0
     # 2<-1--T2
@@ -693,22 +793,22 @@ def absorb_truncate_CTM_MOVE_DOWN(coord, ipeps, env, P, Pt):
     #            0<-1
     #        --1 2--T2
     #       |       |
-    # 1<-2--P       |
+    # 1<-2--P2      |
     #       |       | 
     #        --0 0--C2
-    C2 = torch.tensordot(nC2, P, ([0,2],[0,1]))
+    nC2 = torch.tensordot(nC2, P2, ([0,2],[0,1]))
 
     #        --1->0
     #       |
-    # 1<-2--P
+    # 1<-2--P1
     #       |       0->2
     #        --0 1--T--2->3 
-    nT = torch.tensordot(P, T, ([0],[1]))
+    nT = torch.tensordot(P1, T, ([0],[1]))
 
     #               0->2
     #        --0 1--A--3 
     #       |       2 
-    # 0<-1--P       |
+    # 0<-1--P1      |
     #       |       2
     #        -------T--3->1
     nT = torch.tensordot(nT, A,([0,2],[1,2]))
@@ -716,15 +816,33 @@ def absorb_truncate_CTM_MOVE_DOWN(coord, ipeps, env, P, Pt):
     #               2->1
     #        -------A--3 1--
     #       |       |       |
-    #    0--P       |       Pt--2
+    #    0--P1      |       Pt2--2
     #       |       |       |
     #        -------T--1 0--
-    T = torch.tensordot(nT, Pt,([1,3],[0,1]))
-    T = T.permute(1,0,2).contiguous()
+    nT = torch.tensordot(nT, Pt2,([1,3],[0,1]))
+    nT = nT.permute(1,0,2).contiguous()
 
-    env.C[(coord,(-1,1))] = C1/torch.max(torch.abs(C1))
-    env.C[(coord,(1,1))] = C2/torch.max(torch.abs(C2))
-    env.T[(coord,(0,1))] = T/torch.max(torch.abs(T))
+    # Assign new C,T
+    # 
+    # |                                 |                              |
+    # T(coord,(-1,0))--               --A(coord)--------             --T(coord,(1,0))
+    # |                Pt1--      --P1  |               Pt2--    --P2  |
+    # C(coord,(-1,1))--               --T(coord,(0,1))--             --C(coord,(1,1))
+    #
+    # =>                            
+    #
+    # |                                 |                              |
+    # C^new(coord+(0,-1),(-1,1))--    --T^new(coord+(0,-1),(0,1))--  --C^new(coord+(0,-1),(1,1))
+    # vec = (0,-1)
+    # new_coord = ipeps.vertexToSite((coord[0]+vec[0], coord[1]+vec[1]))
+    # print("coord: "+str(coord)+" + "+str(vec)+" -> "+str(new_coord))
+    # env.C[(new_coord,(-1,1))] = nC1/torch.max(torch.abs(nC1))
+    # env.C[(new_coord,(1,1))] = nC2/torch.max(torch.abs(nC2))
+    # env.T[(new_coord,(0,1))] = nT/torch.max(torch.abs(nT))
+    nC1 = nC1/torch.max(torch.abs(nC1))
+    nC2 = nC2/torch.max(torch.abs(nC2))
+    nT = nT/torch.max(torch.abs(nT))
+    return nC1, nC2, nT
 
 def absorb_truncate_CTM_MOVE_RIGHT(coord, ipeps, env, P, Pt):
     C1 = env.C[(coord,(1,1))]
@@ -733,19 +851,23 @@ def absorb_truncate_CTM_MOVE_RIGHT(coord, ipeps, env, P, Pt):
     T2 = env.T[(coord,(0,-1))]
     C2 = env.C[(coord,(1,-1))]
     A = ipeps.site(coord)
-    P = P.view(env.chi,A.size()[2],env.chi)
-    Pt = Pt.view(env.chi,A.size()[0],env.chi)
+    vec = (0,1)
+    coord_shift_down = ipeps.vertexToSite((coord[0]+vec[0], coord[1]+vec[1]))
+    P2 = P[coord].view(env.chi,A.size()[2],env.chi)
+    Pt2 = Pt[coord].view(env.chi,A.size()[0],env.chi)
+    P1 = P[coord_shift_down].view(env.chi,A.size()[2],env.chi)
+    Pt1 = Pt[coord_shift_down].view(env.chi,A.size()[0],env.chi)
 
     #       0->1     0
     # 2<-1--T1--2 1--C1
     nC1 = torch.tensordot(C1, T1,([1],[2])) 
 
     #          2->0
-    #        __Pt__
+    #        __Pt1_
     #       1     0
     #       1     0
     # 1<-2--T1----C1
-    C1 = torch.tensordot(Pt, nC1,([0,1],[0,1]))
+    nC1 = torch.tensordot(Pt1, nC1,([0,1],[0,1]))
 
     # 1<-0--T2--2 0--C2
     #    2<-1     0<-1
@@ -754,20 +876,20 @@ def absorb_truncate_CTM_MOVE_RIGHT(coord, ipeps, env, P, Pt):
     # 0<-1--T2----C2
     #       2     0
     #       1     0
-    #       |__P__|
+    #       |__P2_|
     #          2->1
-    C2 = torch.tensordot(nC2, P,([0,2],[0,1]))
+    nC2 = torch.tensordot(nC2, P2,([0,2],[0,1]))
 
     #    1<-2
-    #    ___Pt___
+    #    ___Pt2__
     # 0<-1      0
     #           0
     #     2<-1--T
     #        3<-2
-    nT = torch.tensordot(Pt, T,([0],[0]))
+    nT = torch.tensordot(Pt2, T,([0],[0]))
 
     #       0<-1 
-    #       ___Pt___
+    #       ___Pt2__
     #       0       |
     #       0       |
     # 2<-1--A--3 2--T
@@ -775,20 +897,46 @@ def absorb_truncate_CTM_MOVE_RIGHT(coord, ipeps, env, P, Pt):
     nT = torch.tensordot(nT, A,([0,2],[0,3]))
 
     #          0
-    #       ___Pt___
+    #       ___Pt2__
     #       |       |
     #       |       |
     # 1<-2--A-------T
     #       3       1
     #       1       0
-    #       |___P___|
+    #       |___P1__|
     #           2 
-    T = torch.tensordot(nT, P,([1,3],[0,1]))
-    T = T.contiguous()
+    nT = torch.tensordot(nT, P1,([1,3],[0,1]))
+    nT = nT.contiguous()
 
-    env.C[(coord,(1,1))] = C1/torch.max(torch.abs(C1))
-    env.C[(coord,(1,-1))] = C2/torch.max(torch.abs(C2))
-    env.T[(coord,(1,0))] = T/torch.max(torch.abs(T))
+    # Assign new C,T 
+    #
+    # --T(coord,(0,-1))--C(coord,(1,-1)) =>--C^new(coord+(-1,0),(1,-1))
+    #   |______  ________|                   |
+    #          P2
+    #          |
+    #
+    #          |
+    #    ______Pt2
+    #   |         |                          |
+    # --A(coord)--T(coord,(1,0))           --T^new(coord+(-1,0),(1,0))
+    #   |______  _|                          |
+    #          P1
+    #          |                     
+    #          
+    #          |
+    #    ______Pt1______
+    #   |               |                    |
+    # --T(coord,(0,1))--C(coord,(1,1))     --C^new(coord+(-1,0),(1,1))
+    # vec = (-1,0)
+    # new_coord = ipeps.vertexToSite((coord[0]+vec[0], coord[1]+vec[1]))
+    # print("coord: "+str(coord)+" + "+str(vec)+" -> "+str(new_coord))
+    # env.C[(new_coord,(1,1))] = nC1/torch.max(torch.abs(nC1))
+    # env.C[(new_coord,(1,-1))] = nC2/torch.max(torch.abs(nC2))
+    # env.T[(new_coord,(1,0))] = nT/torch.max(torch.abs(nT))
+    nC1 = nC1/torch.max(torch.abs(nC1))
+    nC2 = nC2/torch.max(torch.abs(nC2))
+    nT = nT/torch.max(torch.abs(nT))
+    return nC1, nC2, nT
 
 #####################################################################
 # functions building pair of 4x2 (or 2x4) halves of 4x4 TN
@@ -992,7 +1140,7 @@ def c2x2_RD(coord, ipeps, env):
     #       2       |
     #       0       |
     # 0<-1--T1------C
-    C2x2 = torch.tensordot(C2x2, A, ([0,3],[3,0]))
+    C2x2 = torch.tensordot(C2x2, A, ([0,3],[2,3]))
 
     # permute 0123->1203
     # reshape (12)(03)->01
