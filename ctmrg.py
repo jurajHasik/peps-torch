@@ -1182,7 +1182,7 @@ def c2x2_LD(coord, ipeps, env):
     C2x2 = torch.tensordot(C2x2, A, ([1,2],[1,2]))
 
     # permute 0123->0213
-    # reshape (02)(13)
+    # reshape (02)(13)->01
     C2x2 = C2x2.permute(0,2,1,3).contiguous().view(T1.size()[0]*A.size()[0],T2.size()[2]*A.size()[3])
 
     # 0
