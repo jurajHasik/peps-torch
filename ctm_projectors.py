@@ -10,14 +10,15 @@ from custom_svd import *
 #####################################################################
 
 def ctm_get_projectors(direction, coord, ipeps, env, ctm_args=CTMARGS(), global_args=GLOBALARGS()):
+    verbosity = ctm_args.verbosity_projectors
     if direction==(0,-1):
-        R, Rt = halves_of_4x4_CTM_MOVE_UP(coord, ipeps, env, verbosity=2)
+        R, Rt = halves_of_4x4_CTM_MOVE_UP(coord, ipeps, env, verbosity=verbosity)
     elif direction==(-1,0): 
-        R, Rt = halves_of_4x4_CTM_MOVE_LEFT(coord, ipeps, env, verbosity=2)  
+        R, Rt = halves_of_4x4_CTM_MOVE_LEFT(coord, ipeps, env, verbosity=verbosity)  
     elif direction==(0,1):
-        R, Rt = halves_of_4x4_CTM_MOVE_DOWN(coord, ipeps, env, verbosity=2)
+        R, Rt = halves_of_4x4_CTM_MOVE_DOWN(coord, ipeps, env, verbosity=verbosity)
     elif direction==(1,0):
-        R, Rt = halves_of_4x4_CTM_MOVE_RIGHT(coord, ipeps, env, verbosity=2)
+        R, Rt = halves_of_4x4_CTM_MOVE_RIGHT(coord, ipeps, env, verbosity=verbosity)
     else:
         raise ValueError("Invalid direction: "+str(direction))
 
@@ -83,7 +84,7 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=CTMARGS(), global_args
     S_zeros = torch.zeros((chi-S.size()[0]), dtype=global_args.dtype, device=global_args.device)
     S_sqrt = torch.rsqrt(S)
     S_sqrt = torch.cat((S_sqrt, S_zeros))
-    print(S_sqrt)
+    # print(S_sqrt)
 
     # Construct projectors
     # P = torch.einsum('i,ij->ij', S_sqrt, torch.mm(U.transpose(1, 0), R.transpose(1, 0)))

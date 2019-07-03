@@ -25,3 +25,11 @@ class CTMARGS():
         self.ctm_env_init_type = 'CONST'
         self.projector_svd_reltol = 1.0e-8
         self.ctm_move_sequence = [(0,-1), (-1,0), (0,1), (1,0)]
+        self.verbosity_projectors = 0
+        self.verbosity_ctm_move = 0
+
+class OPTARGS():
+    def __init__(self):
+        self.lr = 1.0
+        self.max_iter = 20
+        pass

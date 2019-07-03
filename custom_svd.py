@@ -32,12 +32,12 @@ def truncated_svd_gesdd(M, chi, abs_tol=None, rel_tol=None):
     # if rel_tol is not None: St = St[St/St[0] > rel_tol]
     # magnitude = St[0]
     # if rel_tol is not None: St = torch.where(St/magnitude > rel_tol, St, Stzeros)
-    print("[truncated_svd] St "+str(St.shape[0]))
-    print(St)
+    # print("[truncated_svd] St "+str(St.shape[0]))
+    # print(St)
 
     Ut = U[:, :St.shape[0]]
     Vt = V[:, :St.shape[0]]
-    print("Ut "+str(Ut.shape))
-    print("Vt "+str(Vt.shape))
+    # print("Ut "+str(Ut.shape))
+    # print("Vt "+str(Vt.shape))
 
     return Ut, St, Vt

@@ -9,6 +9,7 @@ class AKLTS2():
 		self.dtype=dtype
 		self.device=device
 		self.h = self.get_h()
+		self.phys_dim = 5
 
 	# build AKLT S=2 Hamiltonian <=> Projector from product of two S=2 DOFs
 	# to S=4 DOF H = \sum_{<i,j>} h_ij, where h_ij= ...
@@ -57,6 +58,17 @@ class AKLTS2():
 		rot_op = su2.get_rot_op(5)
 		h_rotated = torch.einsum('jl,ilak,kb->ijab',rot_op,self.h,rot_op)
 		energy = torch.einsum('ijab,ijab',rdm2x1,h_rotated)
+		return energy		
+
+	def energy_1x1(self,state,env):
+		rdm2x1 = rdm.rdm2x1((0,0), state, env)
+		rdm1x2 = rdm.rdm1x2((0,0), state, env)
+		# apply a rotation on physical index of every "odd" site
+		# A A => A B
+		# A A => B A
+		rot_op = su2.get_rot_op(5)
+		h_rotated = torch.einsum('jl,ilak,kb->ijab',rot_op,self.h,rot_op)
+		energy = torch.einsum('ijab,ijab',rdm2x1,h_rotated) + torch.einsum('ijab,ijab',rdm1x2,h_rotated)
 		return energy		
 
 	def energy_2x2(self,ipeps):
