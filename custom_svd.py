@@ -1,11 +1,10 @@
 import torch
-from IPython import embed
+from linalg.svd_gesdd import SVDGESDD
 
 def truncated_svd_gesdd(M, chi, abs_tol=None, rel_tol=None):
     """
     Performs a truncated SVD on a matrix M.     
     M ~ (Ut)(St)(Vt)^{T}
-
     
     inputs:
         M (torch.Tensor):
@@ -25,8 +24,8 @@ def truncated_svd_gesdd(M, chi, abs_tol=None, rel_tol=None):
 
     returns Ut, St, Vt
     """
-    # embed()
-    U, S, V = torch.svd(M)
+
+    U, S, V = SVDGESDD.apply(M)
     St = S[:chi]
     # if abs_tol is not None: St = St[St > abs_tol]
     # if abs_tol is not None: St = torch.where(St > abs_tol, St, Stzeros)
