@@ -1,16 +1,15 @@
 import torch
-from args import args
+from args import CTMARGS, GLOBALARGS
 from ipeps import IPEPS
 
 class ENV(torch.nn.Module):
-    def __init__(self, args, ipeps, dtype=torch.float64, device='cpu', use_checkpoint=False):
+    def __init__(self, chi, ipeps, ctm_args=CTMARGS(), global_args=GLOBALARGS()):
         super(ENV, self).__init__()
-        self.dtype = dtype
-        self.device = device
-        self.use_checkpoint = use_checkpoint
+        self.dtype = global_args.dtype
+        self.device = global_args.device
         
         # 
-        self.chi = args.chi
+        self.chi = chi
 
         # initialize environment tensors
         self.C = dict()
@@ -57,19 +56,31 @@ class ENV(torch.nn.Module):
             for vec in [(-1,-1), (-1,1), (1,-1), (1,1)]:
                 self.C[(coord,vec)]=torch.empty((self.chi,self.chi), dtype=self.dtype, device=self.device)
 
-def init_const(env):
+def init_env(ipeps, env, ctm_args=CTMARGS()):
+    if ctm_args.ctm_env_init_type=='CONST':
+        init_const(env)
+    elif ctm_args.ctm_env_init_type=='RANDOM':
+        init_random(env)
+    elif ctm_args.ctm_env_init_type=='CTMRG':
+        init_from_ipeps(ipeps, env)
+    else:
+        raise ValueError("Invalid environment initialization: "+str(ctm_args.ctm_env_init_type))
+
+def init_const(env, verbosity=0):
     for key,t in env.C.items():
         env.C[key] = torch.ones(t.size(), dtype=env.dtype, device=env.device)
     for key,t in env.T.items():
         env.T[key] = torch.ones(t.size(), dtype=env.dtype, device=env.device)
 
-def init_random(env):
+# TODO restrict random corners to have pos-semidef spectrum
+def init_random(env, verbosity=0):
     for key,t in env.C.items():
         env.C[key] = torch.rand(t.size(), dtype=env.dtype, device=env.device)
     for key,t in env.T.items():
         env.T[key] = torch.rand(t.size(), dtype=env.dtype, device=env.device)
 
-def init_from_ipeps(ipeps, env):
+# TODO finish by initializing Ts as well
+def init_from_ipeps(ipeps, env, verbosity=0):
     for coord, site in ipeps.sites.items():
         # Left-upper corner
         #
@@ -135,13 +146,15 @@ def init_from_ipeps(ipeps, env):
         a = torch.einsum('meijf,maijb->eafb',(A,A)).contiguous().view(dimsA[1]**2, dimsA[4]**2)
         env.C[(coord,vec)] = a
 
-def print_env(env):
+def print_env(env, verbosity=0):
     print("dtype "+str(env.dtype))
     print("device "+str(env.device))
 
     for key,t in env.C.items():
         print(str(key)+" "+str(t.size()))
-        #print(t)
+        if verbosity>0: 
+            print(t)
     for key,t in env.T.items():
         print(str(key)+" "+str(t.size()))
-        #print(t)
+        if verbosity>0:
+            print(t)

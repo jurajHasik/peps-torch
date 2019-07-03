@@ -1,3 +1,4 @@
+import torch
 import argparse
 
 parser = argparse.ArgumentParser(description='')
@@ -9,3 +10,18 @@ parser.add_argument("-cuda", type=int, default=-1, help="GPU #")
 
 args = parser.parse_args()
 
+class GLOBALARGS():
+    def __init__(self):
+        self.dtype = torch.float64
+        self.device = 'cpu'
+
+class PEPSARGS():
+    def __init__(self):
+        pass
+
+class CTMARGS():
+    def __init__(self):
+        self.ctm_max_iter = 50
+        self.ctm_env_init_type = 'CONST'
+        self.projector_svd_reltol = 1.0e-8
+        self.ctm_move_sequence = [(0,-1), (-1,0), (0,1), (1,0)]

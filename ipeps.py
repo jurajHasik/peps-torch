@@ -1,15 +1,13 @@
 import torch
 import json
-from args import args
+from args import PEPSARGS, GLOBALARGS
 
 class IPEPS(torch.nn.Module):
-    def __init__(self, args, sites, vertexToSite,
-        dtype=torch.float64, device='cpu', use_checkpoint=False):
+    def __init__(self, sites, vertexToSite, peps_args=PEPSARGS(), global_args=GLOBALARGS()):
         
         super(IPEPS, self).__init__()
-        self.dtype = dtype
-        self.device = device
-        self.use_checkpoint = use_checkpoint
+        self.dtype = global_args.dtype
+        self.device = global_args.device
 
         # Dict of non-equivalent on-site tensors 
         #
@@ -43,7 +41,8 @@ class IPEPS(torch.nn.Module):
     def site(self, coord):
         return self.sites[self.vertexToSite(coord)]
 
-def read_ipeps(args, jsonfile, vertexToSite=None, dtype=torch.float64, device='cpu'):
+# WARNING a simple PBC vertexToSite function is used by default
+def read_ipeps(jsonfile, vertexToSite=None, peps_args=PEPSARGS(), global_args=GLOBALARGS()):
 
     sites = dict()
     
@@ -69,7 +68,7 @@ def read_ipeps(args, jsonfile, vertexToSite=None, dtype=torch.float64, device='c
             # branch 2: key "auxInds" does not exist, all auxiliary 
             # indices have the same dimension
             X = torch.zeros((t["physDim"], t["auxDim"], t["auxDim"], \
-                t["auxDim"], t["auxDim"]), dtype=dtype, device=device)
+                t["auxDim"], t["auxDim"]), dtype=global_args.dtype, device=global_args.device)
 
             # 1) fill the tensor with elements from the list "entries"
             # which list the non-zero tensor elements in the following
@@ -102,4 +101,4 @@ def read_ipeps(args, jsonfile, vertexToSite=None, dtype=torch.float64, device='c
                 y = coord[1]
                 return ( (x + abs(x)*lX)%lX, (y + abs(y)*lY)%lY )
 
-    return IPEPS(args, sites, vertexToSite, dtype=dtype, device=device)
+    return IPEPS(sites, vertexToSite, peps_args, global_args)
