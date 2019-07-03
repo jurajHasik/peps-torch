@@ -27,8 +27,8 @@ if __name__=='__main__':
     torch.set_printoptions(precision=7)
     ctm_env = ENV(args,state)
     ctm_env = ctmrg.run(args,state,ctm_env)
-
-    model = akltS2.AKLTS2()
-    energy = model.energy_1x1c4v(state,ctm_env)
-    print("E(1x1c4v): "+str(energy))
+    
+    model = coupledLadders.COUPLEDLADDERS(alpha=0.3)
+    energy = model.energy_2x1_1x2(state,ctm_env)
+    print("E(2x1+1x2): "+str(energy))
     

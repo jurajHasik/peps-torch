@@ -76,10 +76,16 @@ class COUPLEDLADDERS():
         for coord,site in state.sites.items():
             rdm2x1 = rdm.rdm2x1(coord,state,env)
             rdm1x2 = rdm.rdm1x2(coord,state,env)
-            energy += torch.einsum('ijab,ijab',rdm2x1,self.h)
-            if coord[1]//2 == 0:
-                energy += torch.einsum('ijab,ijab',rdm1x2,self.h)
+            ss = torch.einsum('ijab,ijab',rdm2x1,self.h)
+            print("E(2x1) "+str(coord)+": "+str(ss))
+            energy += ss
+            if coord[1] % 2 == 0:
+                ss = torch.einsum('ijab,ijab',rdm1x2,self.h)
             else:
-                energy += torch.einsum('ijab,ijab',rdm1x2,self.alpha * self.h)
+                ss = torch.einsum('ijab,ijab',rdm1x2,self.alpha * self.h)
+            energy += ss
+            print("E(1x2) "+str(coord)+": "+str(ss))
 
-        return energy
+        # return energy-per-site
+        energy_per_site=energy/len(state.sites.items())
+        return energy_per_site

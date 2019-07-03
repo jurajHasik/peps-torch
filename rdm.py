@@ -170,8 +170,8 @@ def rdm2x1(coord, ipeps, env):
     left_half = torch.tensordot(C2x1_LD, C2x2_LU, ([0],[0]))
 
     #----- building C2x2_RU ----------------------------------------------------
-    vec = (0,1)
-    shitf_coord = ipeps.vertexToSite((coord[0]+vec[0],coord[0]+vec[1]))
+    vec = (1,0)
+    shitf_coord = ipeps.vertexToSite((coord[0]+vec[0],coord[1]+vec[1]))
     C = env.C[(shitf_coord,(1,-1))]
     T1 = env.T[(shitf_coord,(1,0))]
     T2 = env.T[(shitf_coord,(0,-1))]
@@ -206,7 +206,7 @@ def rdm2x1(coord, ipeps, env):
     #    1
     C2x2_RU = C2x2_RU.permute(1,2,0,3,4,5).contiguous().view(\
         T2.size()[0]*a.size()[1],T1.size()[2]*a.size()[2], dimsA[0], dimsA[0])
-    print("C2X2 RU "+str((coord[0]+vec[0],coord[0]+vec[1]))+"->"+str(shitf_coord)+" (1,-1): "+str(C2x2_RU.size()))
+    print("C2X2 RU "+str((coord[0]+vec[0],coord[1]+vec[1]))+"->"+str(shitf_coord)+" (1,-1): "+str(C2x2_RU.size()))
 
     #----- building C2x1_RD ----------------------------------------------------
     C = env.C[(shitf_coord,(1,1))]
@@ -222,7 +222,7 @@ def rdm2x1(coord, ipeps, env):
     #    0
     #    |
     # 1--C2x1
-    print("C2X1 RD "+str((coord[0]+vec[0],coord[0]+vec[1]))+"->"+str(shitf_coord)+" (1,1): "+str(C2x1_RD.size()))
+    print("C2X1 RD "+str((coord[0]+vec[0],coord[1]+vec[1]))+"->"+str(shitf_coord)+" (1,1): "+str(C2x1_RD.size()))
 
     
 
@@ -304,8 +304,8 @@ def rdm1x2(coord, ipeps, env):
     print("C2X2 LU "+str(coord)+"->"+str(ipeps.vertexToSite(coord))+" (-1,-1): "+str(C2x2_LU.size()))
 
     #----- building C1x2_RU ----------------------------------------------------
-    C = env.C[(coord,(1,-1))]
-    T1 = env.T[(coord,(1,0))]
+    C = env.C[(ipeps.vertexToSite(coord),(1,-1))]
+    T1 = env.T[(ipeps.vertexToSite(coord),(1,0))]
 
     # 0--C
     #    1
@@ -315,13 +315,13 @@ def rdm1x2(coord, ipeps, env):
     C1x2_RU = torch.tensordot(C, T1, ([1],[0]))
 
     # reshape (01)2->(0)1
-    # 0--C2x2
+    # 0--C1x2
     # 23/|
     #    1
     C1x2_RU = C1x2_RU.view(C.size()[0]*T1.size()[1],T1.size()[2]).contiguous()
     print("C1X2 RU "+str(coord)+"->"+str(ipeps.vertexToSite(coord))+" (1,-1): "+str(C1x2_RU.size()))
 
-    #----- build upper part C2x2_LU--C2x2_RU -----------------------------------
+    #----- build upper part C2x2_LU--C1x2_RU -----------------------------------
     # C2x2_LU--1 0--C1x2_RU
     # |\23          |
     # 0->1          1->0
@@ -329,7 +329,7 @@ def rdm1x2(coord, ipeps, env):
 
     #----- building C2x2_LD ----------------------------------------------------
     vec = (0,1)
-    shitf_coord = ipeps.vertexToSite((coord[0]+vec[0],coord[0]+vec[1]))
+    shitf_coord = ipeps.vertexToSite((coord[0]+vec[0],coord[1]+vec[1]))
     C = env.C[(shitf_coord,(-1,1))]
     T1 = env.T[(shitf_coord,(-1,0))]
     T2 = env.T[(shitf_coord,(0,1))]
@@ -365,7 +365,7 @@ def rdm1x2(coord, ipeps, env):
     # C2x2--1
     C2x2_LD = C2x2_LD.permute(0,2,1,3,4,5).contiguous().view(\
         T1.size()[0]*a.size()[0],T2.size()[2]*a.size()[3], dimsA[0], dimsA[0])
-    print("C2X2 LD "+str((coord[0]+vec[0],coord[0]+vec[1]))+"->"+str(shitf_coord)+" (-1,1): "+str(C2x2_LD.size()))
+    print("C2X2 LD "+str((coord[0]+vec[0],coord[1]+vec[1]))+"->"+str(shitf_coord)+" (-1,1): "+str(C2x2_LD.size()))
 
     #----- building C2x2_RD ----------------------------------------------------
     C = env.C[(shitf_coord,(1,1))]
@@ -385,7 +385,7 @@ def rdm1x2(coord, ipeps, env):
     #    0
     #    |
     # 1--C1x2
-    print("C1X2 RD "+str((coord[0]+vec[0],coord[0]+vec[1]))+"->"+str(shitf_coord)+" (1,1): "+str(C1x2_RD.size()))
+    print("C1X2 RD "+str((coord[0]+vec[0],coord[1]+vec[1]))+"->"+str(shitf_coord)+" (1,1): "+str(C1x2_RD.size()))
 
     
 
@@ -467,7 +467,7 @@ def rdm2x2(coord, ipeps, env):
 
     #----- building C2x2_RU ----------------------------------------------------
     vec = (0,1)
-    shitf_coord = ipeps.vertexToSite((coord[0]+vec[0],coord[0]+vec[1]))
+    shitf_coord = ipeps.vertexToSite((coord[0]+vec[0],coord[1]+vec[1]))
     C = env.C[(shitf_coord,(1,-1))]
     T1 = env.T[(shitf_coord,(1,0))]
     T2 = env.T[(shitf_coord,(0,-1))]
@@ -502,7 +502,7 @@ def rdm2x2(coord, ipeps, env):
     #    1
     C2x2_RU = C2x2_RU.permute(1,2,0,3,4,5).contiguous().view(\
         T2.size()[0]*a.size()[1],T1.size()[2]*a.size()[2], dimsA[0], dimsA[0])
-    print("C2X2 RU "+str((coord[0]+vec[0],coord[0]+vec[1]))+"->"+str(shitf_coord)+" (1,-1): "+str(C2x2_RU.size()))
+    print("C2X2 RU "+str((coord[0]+vec[0],coord[1]+vec[1]))+"->"+str(shitf_coord)+" (1,-1): "+str(C2x2_RU.size()))
 
     #----- build upper part C2x2_LU--C2x2_RU -----------------------------------
     # C2x2_LU--1 0--C2x2_RU              C2x2_LU------C2x2_RU
@@ -514,7 +514,7 @@ def rdm2x2(coord, ipeps, env):
 
     #----- building C2x2_RD ----------------------------------------------------
     vec = (1,1)
-    shitf_coord = ipeps.vertexToSite((coord[0]+vec[0],coord[0]+vec[1]))
+    shitf_coord = ipeps.vertexToSite((coord[0]+vec[0],coord[1]+vec[1]))
     C = env.C[(shitf_coord,(1,1))]
     T1 = env.T[(shitf_coord,(0,1))]
     T2 = env.T[(shitf_coord,(1,0))]
@@ -548,11 +548,11 @@ def rdm2x2(coord, ipeps, env):
     #    0
     #    |/23
     # 1--C2x2
-    print("C2X2 RD "+str((coord[0]+vec[0],coord[0]+vec[1]))+"->"+str(shitf_coord)+" (1,1): "+str(C2x2_RD.size()))
+    print("C2X2 RD "+str((coord[0]+vec[0],coord[1]+vec[1]))+"->"+str(shitf_coord)+" (1,1): "+str(C2x2_RD.size()))
 
     #----- building C2x2_LD ----------------------------------------------------
     vec = (0,1)
-    shitf_coord = ipeps.vertexToSite((coord[0]+vec[0],coord[0]+vec[1]))
+    shitf_coord = ipeps.vertexToSite((coord[0]+vec[0],coord[1]+vec[1]))
     C = env.C[(shitf_coord,(-1,1))]
     T1 = env.T[(shitf_coord,(-1,0))]
     T2 = env.T[(shitf_coord,(0,1))]
@@ -588,7 +588,7 @@ def rdm2x2(coord, ipeps, env):
     # C2x2--1
     C2x2_LD = C2x2_LD.permute(0,2,1,3,4,5).contiguous().view(\
         T1.size()[0]*a.size()[0],T2.size()[2]*a.size()[3], dimsA[0], dimsA[0])
-    print("C2X2 LD "+str((coord[0]+vec[0],coord[0]+vec[1]))+"->"+str(shitf_coord)+" (-1,1): "+str(C2x2_LD.size()))
+    print("C2X2 LD "+str((coord[0]+vec[0],coord[1]+vec[1]))+"->"+str(shitf_coord)+" (-1,1): "+str(C2x2_LD.size()))
 
     #----- build lower part C2x2_LD--C2x2_RD -----------------------------------
     # 0             0->3                 0             3->1
