@@ -4,7 +4,6 @@ from env import ENV
 from args import CTMARGS, GLOBALARGS
 from ctm_components import *
 from custom_svd import *
-from IPython import embed
 
 #####################################################################
 # compute the projectors from 4x4 TN given by coord
