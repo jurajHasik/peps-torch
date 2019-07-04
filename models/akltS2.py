@@ -3,11 +3,12 @@ import su2
 from env import ENV
 import ipeps
 import rdm
+from args import GLOBALARGS
 
 class AKLTS2():
-	def __init__(self, dtype=torch.float64, device='cpu'):
-		self.dtype=dtype
-		self.device=device
+	def __init__(self, global_args=GLOBALARGS()):
+		self.dtype=global_args.dtype
+		self.device=global_args.device
 		self.h = self.get_h()
 		self.phys_dim = 5
 

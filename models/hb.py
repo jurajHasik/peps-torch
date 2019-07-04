@@ -6,25 +6,23 @@ import ipeps
 import rdm
 from args import GLOBALARGS
 
-class COUPLEDLADDERS():
-    def __init__(self, alpha=0.0, global_args=GLOBALARGS()):
+class HB():
+    def __init__(self, global_args=GLOBALARGS()):
         self.dtype=global_args.dtype
         self.device=global_args.device
         
-        self.alpha=alpha
         self.h = self.get_h()
 
     # build spin-1/2 coupled-ladders Hamiltonian
-    # H = \sum_{i=(x,y)} h_i,i+\vec{x} + \sum_{i=(x,2y)} h_i,i+\vec{y}
-    #   + alpha * \sum_{i=(x,2y+1)} h_i,i+\vec{y}
+    # H = \sum_{<i,j>} h_i,j
     #  
     # y\x
     #    _:__:__:__:_
     # ..._|__|__|__|_...
-    # ..._a__a__a__a_...
     # ..._|__|__|__|_...
-    # ..._a__a__a__a_...   
-    # ..._|__|__|__|_...   
+    # ..._|__|__|__|_...
+    # ..._|__|__|__|_...
+    # ..._|__|__|__|_...
     #     :  :  :  : 
     # 
     # where h_ij = S_i.S_j, indices of h correspond to s_i,s_j;s_i',s_j'
@@ -77,15 +75,8 @@ class COUPLEDLADDERS():
         for coord,site in state.sites.items():
             rdm2x1 = rdm.rdm2x1(coord,state,env)
             rdm1x2 = rdm.rdm1x2(coord,state,env)
-            ss = torch.einsum('ijab,ijab',rdm2x1,self.h)
-            print("E(2x1) "+str(coord)+": "+str(ss))
-            energy += ss
-            if coord[1] % 2 == 0:
-                ss = torch.einsum('ijab,ijab',rdm1x2,self.h)
-            else:
-                ss = torch.einsum('ijab,ijab',rdm1x2,self.alpha * self.h)
-            energy += ss
-            print("E(1x2) "+str(coord)+": "+str(ss))
+            energy += torch.einsum('ijab,ijab',rdm2x1,self.h)
+            energy += torch.einsum('ijab,ijab',rdm1x2,self.h)
 
         # return energy-per-site
         energy_per_site=energy/len(state.sites.items())
