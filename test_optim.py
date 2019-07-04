@@ -11,6 +11,8 @@ from models import akltS2, coupledLadders, hb
 from ad_optim import optimize_state
 from IPython import embed
 
+torch.set_num_threads(args.omp_cores)
+
 if __name__=='__main__':
 
     torch.set_printoptions(precision=7)

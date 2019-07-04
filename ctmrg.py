@@ -24,7 +24,6 @@ def run(state, env, ctm_args=CTMARGS(), global_args=GLOBALARGS()):
         a = torch.einsum('mefgh,mabcd->eafbgchd',(A,A)).contiguous().view(dimsA[1]**2,\
             dimsA[2]**2, dimsA[3]**2, dimsA[4]**2)
         sitesDL[coord]=a
-        print(coord)
     stateDL = IPEPS(sitesDL,state.vertexToSite)
 
     # 1) 
