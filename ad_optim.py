@@ -25,22 +25,21 @@ def optimize_state(state, ctm_env_init, loss_fn, opt_args=OPTARGS(), ctm_args=CT
     parameters = list(state.sites.values())
     for A in parameters: A.requires_grad_(True)
 
-    peremantent_ctm = [ctm_env_init]
+    previous_ctm = [ctm_env_init]
     def closure():
         for el in parameters: 
             if el.grad is not None: el.grad.zero_()
-        loss, ctm_env = loss_fn(state, peremantent_ctm[0], ctm_args=ctm_args, global_args=global_args)
-        # loss, ctm_env = loss_fn(state, ctm_env_init, ctm_args=ctm_args, global_args=global_args)
+        loss, ctm_env = loss_fn(state, previous_ctm[0], ctm_args=ctm_args, global_args=global_args)
         loss.backward()
+
         lst_C = list(ctm_env.C.values())
         lst_T = list(ctm_env.T.values())
-        peremantent_ctm[0] = ctm_env
+        previous_ctm[0] = ctm_env
         for el in lst_T + lst_C: el.detach_()
-        #if verbosity>0: print(f"closure loss = {loss}")
+
         return loss
 
-    optimizer = torch.optim.LBFGS(parameters, lr=opt_args.lr)    
-    for epoch in range(opt_args.max_iter):
-        optimizer.step(closure)
-        loss = closure()
+    optimizer = torch.optim.LBFGS(parameters, max_iter=opt_args.max_iter_per_epoch, lr=opt_args.lr)    
+    for epoch in range(args.opt_max_iter):
+        loss = optimizer.step(closure)
         if verbosity>0: print(f"loss = {loss}")

@@ -10,6 +10,7 @@ class HB():
     def __init__(self, global_args=GLOBALARGS()):
         self.dtype=global_args.dtype
         self.device=global_args.device
+        self.phys_dim=2
         
         self.h = self.get_h()
 

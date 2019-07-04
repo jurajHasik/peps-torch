@@ -4,8 +4,10 @@ import argparse
 parser = argparse.ArgumentParser(description='')
 parser.add_argument("-omp_cores", type=int, default=1,help="number of OpenMP cores")
 parser.add_argument("-instate", default=None, help="Input state JSON")
+parser.add_argument("-bond_dim", type=int, default=1, help="iPEPS auxiliary bond dimension")
 parser.add_argument("-chi", type=int, default=20, help="environment bond dimension")
 parser.add_argument("-ctm_max_iter", type=int, default=1, help="maximal number of CTM iterations")
+parser.add_argument("-opt_max_iter", type=int, default=100, help="maximal number of CTM iterations")
 parser.add_argument("-cuda", type=int, default=-1, help="GPU #")
 
 args = parser.parse_args()
@@ -31,5 +33,5 @@ class CTMARGS():
 class OPTARGS():
     def __init__(self):
         self.lr = 1.0
-        self.max_iter = 20
+        self.max_iter_per_epoch = 1
         pass
