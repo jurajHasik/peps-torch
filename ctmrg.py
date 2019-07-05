@@ -6,9 +6,8 @@ from env import *
 from ctm_components import *
 from ctm_projectors import *
 
-def run(state, env, ctm_args=CTMARGS(), global_args=GLOBALARGS()):
-    # TODO 0) 
-    # x) Create double-layer (DL) tensors, preserving the same convenction
+def run(state, env, ctm_args=CTMARGS(), global_args=GLOBALARGS()): 
+    # 0) Create double-layer (DL) tensors, preserving the same convenction
     # for order of indices 
     #
     #     /           /

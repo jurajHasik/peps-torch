@@ -2,6 +2,7 @@ import torch
 from args import *
 from IPython import embed
 from env import *
+from ipeps import write_ipeps
 
 # A = torch.rand((phys_dim, bond_dim, bond_dim, bond_dim, bond_dim), dtype=torch.float64)
 # A = 2 * (A - 0.5)
@@ -39,7 +40,16 @@ def optimize_state(state, ctm_env_init, loss_fn, opt_args=OPTARGS(), ctm_args=CT
 
         return loss
 
+    outputstatefile = args.out_prefix+"_state.json"
+    t_data = dict({"loss": [1.0e+16]})
     optimizer = torch.optim.LBFGS(parameters, max_iter=opt_args.max_iter_per_epoch, lr=opt_args.lr)    
     for epoch in range(args.opt_max_iter):
         loss = optimizer.step(closure)
-        if verbosity>0: print(f"loss = {loss}")
+        if verbosity>0: print(f"epoch= {epoch}, loss= {loss}")
+
+        # record observables
+        t_data["loss"].append(loss.item())
+
+        # store current state if the loss improves
+        if t_data["loss"][-2] > t_data["loss"][-1]:
+            write_ipeps(state, outputstatefile)
