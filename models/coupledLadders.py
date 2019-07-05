@@ -10,7 +10,7 @@ class COUPLEDLADDERS():
     def __init__(self, alpha=0.0, global_args=GLOBALARGS()):
         self.dtype=global_args.dtype
         self.device=global_args.device
-        
+        self.phys_dim=2
         self.alpha=alpha
         self.h = self.get_h()
 

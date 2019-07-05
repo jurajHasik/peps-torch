@@ -6,9 +6,8 @@ from env import *
 from ctm_components import *
 from ctm_projectors import *
 
-def run(state, env, ctm_args=CTMARGS(), global_args=GLOBALARGS()):
-    # TODO 0) 
-    # x) Create double-layer (DL) tensors, preserving the same convenction
+def run(state, env, ctm_args=CTMARGS(), global_args=GLOBALARGS()): 
+    # 0) Create double-layer (DL) tensors, preserving the same convenction
     # for order of indices 
     #
     #     /           /
@@ -24,22 +23,20 @@ def run(state, env, ctm_args=CTMARGS(), global_args=GLOBALARGS()):
         a = torch.einsum('mefgh,mabcd->eafbgchd',(A,A)).contiguous().view(dimsA[1]**2,\
             dimsA[2]**2, dimsA[3]**2, dimsA[4]**2)
         sitesDL[coord]=a
-        print(coord)
-        print(a)
     stateDL = IPEPS(sitesDL,state.vertexToSite)
 
     # 1) 
     for i in range(ctm_args.ctm_max_iter):
-        print("CTMRG step "+str(i))
+        # print("CTMRG step "+str(i))
         for direction in ctm_args.ctm_move_sequence:
 
-            ctm_MOVE(direction, stateDL, env, ctm_args=ctm_args, global_args=global_args, verbosity=2)
+            ctm_MOVE(direction, stateDL, env, ctm_args=ctm_args, global_args=global_args, verbosity=ctm_args.verbosity_ctm_move)
     
         # if verbosity==2:
-        for key,C in env.C.items():
-            U,S,V = torch.svd(env.C[key])
-            print(key)
-            print(S)
+        # for key,C in env.C.items():
+        #     U,S,V = torch.svd(env.C[key])
+            # print(key)
+            # print(S)
 
         #if ctm_converged():
         #    break
@@ -96,7 +93,7 @@ def ctm_MOVE(direction, state, env, ctm_args=CTMARGS(), global_args=GLOBALARGS()
     # Assign new nC1,nT,nC2 to appropriate environment tensors
     for coord,site in state.sites.items():
         new_coord = state.vertexToSite((coord[0]-direction[0], coord[1]-direction[1]))
-        print("coord: "+str(coord)+" + "+str(direction)+" -> "+str(new_coord))
+        # print("coord: "+str(coord)+" + "+str(direction)+" -> "+str(new_coord))
         
         env.C[(new_coord,rel_CandT_vecs["nC1"])] = nC1[coord]
         env.C[(new_coord,rel_CandT_vecs["nC2"])] = nC2[coord]
