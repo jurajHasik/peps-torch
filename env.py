@@ -62,7 +62,7 @@ def init_env(ipeps, env, ctm_args=CTMARGS()):
     elif ctm_args.ctm_env_init_type=='RANDOM':
         init_random(env)
     elif ctm_args.ctm_env_init_type=='CTMRG':
-        init_from_ipeps(ipeps, env)
+        init_from_ipeps(ipeps, env, ctm_args.verbosity_initialization)
     else:
         raise ValueError("Invalid environment initialization: "+str(ctm_args.ctm_env_init_type))
 
@@ -81,7 +81,12 @@ def init_random(env, verbosity=0):
 
 # TODO finish by initializing Ts as well
 def init_from_ipeps(ipeps, env, verbosity=0):
+    if verbosity>0:
+        print("ENV: init_from_ipeps")
     for coord, site in ipeps.sites.items():
+        for rel_vec in [(-1,-1),(1,-1),(1,1),(-1,1)]:
+            env.C[(coord,rel_vec)] = torch.zeros(env.chi,env.chi, dtype=env.dtype, device=env.device)
+
         # Left-upper corner
         #
         #     i      = C--1     
@@ -96,7 +101,7 @@ def init_from_ipeps(ipeps, env, verbosity=0):
         A = ipeps.site((coord[0]+vec[0],coord[1]+vec[1]))
         dimsA = A.size()
         a = torch.einsum('mijef,mijab->eafb',(A,A)).contiguous().view(dimsA[3]**2, dimsA[4]**2)
-        env.C[(coord,vec)] = a
+        env.C[(coord,vec)][:dimsA[3]**2,:dimsA[4]**2]=a/torch.max(torch.abs(a))
 
         # right-upper corner
         #
@@ -112,7 +117,7 @@ def init_from_ipeps(ipeps, env, verbosity=0):
         A = ipeps.site((coord[0]+vec[0],coord[1]+vec[1]))
         dimsA = A.size()
         a = torch.einsum('miefj,miabj->eafb',(A,A)).contiguous().view(dimsA[2]**2, dimsA[3]**2)
-        env.C[(coord,vec)] = a
+        env.C[(coord,vec)][:dimsA[2]**2,:dimsA[3]**2]= a/torch.max(torch.abs(a))
 
         # right-lower corner
         #
@@ -128,7 +133,7 @@ def init_from_ipeps(ipeps, env, verbosity=0):
         A = ipeps.site((coord[0]+vec[0],coord[1]+vec[1]))
         dimsA = A.size()
         a = torch.einsum('mefij,mabij->eafb',(A,A)).contiguous().view(dimsA[1]**2, dimsA[2]**2)
-        env.C[(coord,vec)] = a
+        env.C[(coord,vec)][:dimsA[1]**2,:dimsA[2]**2]=a/torch.max(torch.abs(a))
 
         # left-lower corner
         #
@@ -144,7 +149,75 @@ def init_from_ipeps(ipeps, env, verbosity=0):
         A = ipeps.site((coord[0]+vec[0],coord[1]+vec[1]))
         dimsA = A.size()
         a = torch.einsum('meijf,maijb->eafb',(A,A)).contiguous().view(dimsA[1]**2, dimsA[4]**2)
-        env.C[(coord,vec)] = a
+        env.C[(coord,vec)][:dimsA[1]**2,:dimsA[4]**2]=a/torch.max(torch.abs(a))
+
+        # upper transfer matrix
+        #
+        #     i      = 0--T--2     
+        # 1--A--3         1
+        #   /\
+        #  2  m
+        #      \ i
+        #    1--A--3
+        #      /
+        #     2
+        vec = (0,-1)
+        A = ipeps.site((coord[0]+vec[0],coord[1]+vec[1]))
+        dimsA = A.size()
+        a = torch.einsum('miefg,miabc->eafbgc',(A,A)).contiguous().view(dimsA[2]**2, dimsA[3]**2, dimsA[4]**2)
+        env.T[(coord,vec)] = torch.zeros((env.chi,dimsA[3]**2,env.chi), dtype=env.dtype, device=env.device)
+        env.T[(coord,vec)][:dimsA[2]**2,:,:dimsA[4]**2]=a/torch.max(torch.abs(a))
+
+        # left transfer matrix
+        #
+        #     0      = 0     
+        # i--A--3      T--2
+        #   /\         1
+        #  2  m
+        #      \ 0
+        #    i--A--3
+        #      /
+        #     2
+        vec = (-1,0)
+        A = ipeps.site((coord[0]+vec[0],coord[1]+vec[1]))
+        dimsA = A.size()
+        a = torch.einsum('meifg,maibc->eafbgc',(A,A)).contiguous().view(dimsA[1]**2, dimsA[3]**2, dimsA[4]**2)
+        env.T[(coord,vec)] = torch.zeros((env.chi,env.chi,dimsA[4]**2), dtype=env.dtype, device=env.device)
+        env.T[(coord,vec)][:dimsA[1]**2,:dimsA[3]**2,:]=a/torch.max(torch.abs(a))
+
+        # lower transfer matrix
+        #
+        #     0      =    0     
+        # 1--A--3      1--T--2
+        #   /\
+        #  i  m
+        #      \ 0
+        #    1--A--3
+        #      /
+        #     i
+        vec = (0,1)
+        A = ipeps.site((coord[0]+vec[0],coord[1]+vec[1]))
+        dimsA = A.size()
+        a = torch.einsum('mefig,mabic->eafbgc',(A,A)).contiguous().view(dimsA[1]**2, dimsA[2]**2, dimsA[4]**2)
+        env.T[(coord,vec)] = torch.zeros((dimsA[1]**2,env.chi,env.chi), dtype=env.dtype, device=env.device)
+        env.T[(coord,vec)][:,:dimsA[2]**2,:dimsA[4]**2]=a/torch.max(torch.abs(a))
+
+        # right transfer matrix
+        #
+        #     0      =    0     
+        # 1--A--i      1--T
+        #   /\            2
+        #  2  m
+        #      \ 0
+        #    1--A--i
+        #      /
+        #     2
+        vec = (1,0)
+        A = ipeps.site((coord[0]+vec[0],coord[1]+vec[1]))
+        dimsA = A.size()
+        a = torch.einsum('mefgi,mabci->eafbgc',(A,A)).contiguous().view(dimsA[1]**2, dimsA[2]**2, dimsA[3]**2)
+        env.T[(coord,vec)] = torch.zeros((env.chi,dimsA[2]**2,env.chi), dtype=env.dtype, device=env.device)
+        env.T[(coord,vec)][:dimsA[1]**2,:,:dimsA[3]**2]=a/torch.max(torch.abs(a))
 
 def print_env(env, verbosity=0):
     print("dtype "+str(env.dtype))

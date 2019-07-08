@@ -6,7 +6,7 @@ from env import *
 from ctm_components import *
 from ctm_projectors import *
 
-def run(state, env, ctm_args=CTMARGS(), global_args=GLOBALARGS()): 
+def run(state, env, conv_check=None, ctm_args=CTMARGS(), global_args=GLOBALARGS()): 
     # 0) Create double-layer (DL) tensors, preserving the same convenction
     # for order of indices 
     #
@@ -25,7 +25,8 @@ def run(state, env, ctm_args=CTMARGS(), global_args=GLOBALARGS()):
         sitesDL[coord]=a
     stateDL = IPEPS(sitesDL,state.vertexToSite)
 
-    # 1) 
+    # 1) perform CTMRG
+    history=[]
     for i in range(ctm_args.ctm_max_iter):
         # print("CTMRG step "+str(i))
         for direction in ctm_args.ctm_move_sequence:
@@ -40,6 +41,13 @@ def run(state, env, ctm_args=CTMARGS(), global_args=GLOBALARGS()):
 
         #if ctm_converged():
         #    break
+
+        if conv_check is not None:
+            # evaluate convergence of the CTMRG procedure
+            converged = conv_check(state, env, history, ctm_args=ctm_args)
+            if ctm_args.verbosity_ctm_convergence>0: print(history[-1])
+            if converged:
+                break
 
     return env
 
@@ -471,199 +479,3 @@ def absorb_truncate_CTM_MOVE_RIGHT(coord, ipeps, env, P, Pt, verbosity=0):
     nC2 = nC2/torch.max(torch.abs(nC2))
     nT = nT/torch.max(torch.abs(nT))
     return nC1, nC2, nT
-
-# def boundaryVariance(env, coord, dir, dbg = False):
-#     # C-- 1 -> 0
-#     # | 0
-#     # | 0
-#     # C-- 1 -> 1
-#     LB = torch.tensordot(C, C, ([0],[0])) # C(ab)C(ac)=LB(bc)
-
-#     # "Norm" of the <Left|Right>
-#     # C-- 0 1--C
-#     # |        | 0 -> 1
-#     # C-- 1 -> 0
-#     LBRB = torch.tensordot(LB,C,([0],[1])) # LB(ab)C(ca)=bnorm(bc)
-#     # C-------C
-#     # |       | 1
-#     # |       | 0
-#     # C--0 1--C
-#     LBRB = torch.tensordot(LBRB,C,([0,1],[1,0])) # LB(ab)C(ba)=bnorm()
-#     bnorm = LBRB.item()
-
-#     # apply transfer operator T <=> EE 
-#     #
-#     # C--0 0--E-- 2
-#     # |       | 1
-#     # |      
-#     # C--1 -> 0
-#     LB = torch.tensordot(LB,E,([0],[0])) # LB(ab)E(acd)=LB(bcd)
-#     # C-------E--2 -> 0
-#     # |       | 1
-#     # |       | 1  
-#     # C--0 0--E--2 -> 1
-#     LB = torch.tensordot(LB,E,([0,1],[0,1])) # LB(abc)E(abd)=LB(cd)
-
-#     # Evaluate the <Left|T|Right>
-#     # C--E--0 1--C
-#     # |          | 0 -> 1
-#     # |       
-#     # C--E--1 -> 0
-#     LBTRB = torch.tensordot(LB,C,([0],[1])) # LB(ab)C(ca)=LBTRB(bc)
-#     # C--E-------C
-#     # |          | 1
-#     # |          | 0
-#     # C--E--0 1--C
-#     LBTRB = torch.tensordot(LBTRB,C,([0,1],[1,0])) # LBTRB(ab)C(ba)=LBTRB()
-#     lbtrb = LBTRB.item()
-
-#     # apply transfer operator T <=> EE 
-#     #
-#     # C--E--0 0--E--2
-#     # |          | 1
-#     # |      
-#     # C--E--1 -> 0
-#     LB = torch.tensordot(LB,E,([0],[0])) # LB(ab)E(acd)=LB(bcd)
-#     # C--E-------E--2 -> 0
-#     # |          | 1
-#     # |          | 1
-#     # C--E--0 0--E--2 -> 1
-#     LB = torch.tensordot(LB,E,([0,1],[0,1])) # LB(abc)E(abd)=LB(cd)
-
-#     # Evaluate the <Left|TT|Right>
-#     # C--E--E--0 1--C
-#     # |             | 0 -> 1
-#     # |       
-#     # C--E--E--1 -> 0
-#     LB = torch.tensordot(LB,C,([0],[1])) # LB(ab)C(ca)=LB(bc)
-#     # C--E--E-------C
-#     # |             |1
-#     # |             |0
-#     # C--E--E--0 1--C
-#     LB = torch.tensordot(LB,C,([0,1],[1,0])) # LB(ab)C(ba)=LB()
-#     lbttrb = LB.item()
-
-#     if dbg:
-#         print('<L|R> = %.10e ; <L|TT|R>/<L|R> = %.10e ; <L|T|R>/<L|R> = %.10e'%(bnorm, lbttrb/bnorm, lbtrb/bnorm))
-#     return abs(lbttrb/bnorm) - (lbtrb/bnorm)*(lbtrb/bnorm)
-
-# def boundaryVariance3(A, C, E, dbg = False):
-#     # C-- 1 -> 0
-#     # | 0
-#     # | 0
-#     # E-- 1
-#     # | 2
-#     LB = torch.tensordot(C, E, ([0],[0])) # C(ab)E(acd)=LB(bcd)
-
-#     # C-- 0
-#     # E-- 1
-#     # | 2
-#     # | 0
-#     # C-- 1 -> 2
-#     LB = torch.tensordot(LB, C, ([2],[0])) # LB(abc)C(cd)=LB(bd)
-
-#     # "Norm" of the <Left|Right>
-#     # C-- 0 1--C
-#     # |        | 0 -> 2
-#     # E--1 -> 0
-#     # C--2 -> 1
-#     LBRB = torch.tensordot(LB,C,([0],[1])) # LB(abc)C(da)=LBRB(bcd)
-#     # C-----------C
-#     # |           |2
-#     # |           |0
-#     # E--0 1------E       
-#     # C--1->0     |2->1
-#     LBRB = torch.tensordot(LBRB,E,([0,2],[1,0])) # LBRB(abc)E(cad)=LBRB(bd)
-#     # C-----------C
-#     # E-----------E    
-#     # |           |1
-#     # |           |0
-#     # C--0 1------C
-#     LBRB = torch.tensordot(LBRB,C,([0,1],[1,0])) # LBRB(ab)C(ba)=LBRB()
-#     bnorm = LBRB.item()
-
-#     # apply transfer operator T <=> EAE 
-#     #
-#     # C--0 0--E--2->3
-#     # |       |1->2
-#     # E--1->0     
-#     # C--2->1
-#     LB = torch.tensordot(LB,E,([0],[0])) # LB(abc)E(ade)=LB(bcde)
-#     # C-------E--3->1
-#     # |       |2
-#     # |       |0
-#     # E--0 1--A--3
-#     # |       |2 
-#     # C--1->0
-#     LB = torch.tensordot(LB,A,([0,2],[1,0])) # LB(abcd)A(ceaf)=LB(bdef)
-#     # C-------E--1->0
-#     # E-------A--3->1
-#     # |       |2
-#     # |       |1 
-#     # C--0 0--E--2->2
-#     LB = torch.tensordot(LB,E,([0,2],[0,1])) # LB(abcd)E(ace)=LB(bde)
-
-#     # Evaluate the <Left|T|Right>
-#     # C--E--0 1--C
-#     # |  |       |0->2
-#     # E--A--1->0       
-#     # C--E--2->1
-#     LBTRB = torch.tensordot(LB,C,([0],[1])) # LB(abc)C(da)=LBTRB(bcd)
-#     # C--E-------C
-#     # |  |       |2
-#     # |  |       |0
-#     # E--A--0 1--E       
-#     # C--E--1->0 |2->1
-#     LBTRB = torch.tensordot(LBTRB,E,([0,2],[1,0])) # LBTRB(abc)E(cad)=LBTRB(bd)
-#     # C--E-------C
-#     # E--A-------E
-#     # |  |       |1
-#     # |  |       |0
-#     # C--E--0 1--C
-#     LBTRB = torch.tensordot(LBTRB,C,([0,1],[1,0])) # LBTRB(ab)C(ba)=LBTRB()
-#     lbtrb = LBTRB.item()
-
-#     # apply transfer operator T <=> EE 
-#     #
-#     # C--E--0 0--E--2->3
-#     # |  |       |1->2
-#     # E--A--1->0      
-#     # C--E--2->1
-#     LB = torch.tensordot(LB,E,([0],[0])) # LB(abc)E(ade)=LB(bcde)
-#     # C--E-------E--3->1
-#     # |  |       |2
-#     # |  |       |0
-#     # E--A--0 1--A--3
-#     # |  |       |2 
-#     # C--E--1->0
-#     LB = torch.tensordot(LB,A,([0,2],[1,0])) # LB(abcd)A(ceaf)=LB(bdef)
-#     # C--E-------E--1->0
-#     # E--A-------A--3->1
-#     # |  |       |2
-#     # |  |       |1   
-#     # C--E--0 0--E--2
-#     LB = torch.tensordot(LB,E,([0,2],[0,1])) # LB(abcd)E(ace)=LB(bde)
-
-#     # Evaluate the <Left|TT|Right>
-#     # C--E--E--0 1--C
-#     # |  |  |       |0->2
-#     # E--A--A--1->0       
-#     # C--E--E--2->1
-#     LB = torch.tensordot(LB,C,([0],[1])) # LB(abc)C(da)=LB(bcd)
-#     # C--E--E-------C
-#     # |  |  |       |2
-#     # |  |  |       |0
-#     # E--A--A--0 1--E       
-#     # C--E--E--1->0 |2->1
-#     LB = torch.tensordot(LB,E,([0,2],[1,0])) # LB(abc)E(cad)=LB(bd)
-#     # C--E--E-------C
-#     # E--A--A-------E
-#     # |  |  |       |1
-#     # |  |  |       |0
-#     # C--E--E--0 1--C
-#     LB = torch.tensordot(LB,C,([0,1],[1,0])) # LB(ab)C(ba)=LB()
-#     lbttrb = LB.item()
-
-#     if dbg:
-#         print('<L|R> = %.10e ; <L|TT|R>/<L|R> = %.10e ; <L|T|R>/<L|R> = %.10e'%(bnorm, lbttrb/bnorm, lbtrb/bnorm))
-#     return abs(lbttrb/bnorm) - (lbtrb/bnorm)*(lbtrb/bnorm)

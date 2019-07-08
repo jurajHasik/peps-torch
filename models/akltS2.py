@@ -9,22 +9,33 @@ class AKLTS2():
     def __init__(self, global_args=GLOBALARGS()):
         self.dtype=global_args.dtype
         self.device=global_args.device
-        self.h = self.get_h()
         self.phys_dim = 5
+
+        self.h = self.get_h()
+        self.obs_ops = self.get_obs()
 
     # build AKLT S=2 Hamiltonian <=> Projector from product of two S=2 DOFs
     # to S=4 DOF H = \sum_{<i,j>} h_ij, where h_ij= ...
     #
     # indices of h correspond to s_i,s_j;s_i',s_j'
     def get_h(self):
-        s5 = su2.SU2(5, dtype=self.dtype, device=self.device)
+        pd = self.phys_dim
+        s5 = su2.SU2(pd, dtype=self.dtype, device=self.device)
         expr_kron = 'ij,ab->iajb'
         SS = torch.einsum(expr_kron,s5.SZ(),s5.SZ()) + 0.5*(torch.einsum(expr_kron,s5.SP(),s5.SM()) \
             + torch.einsum(expr_kron,s5.SM(),s5.SP()))
-        SS = SS.view(5*5,5*5)
+        SS = SS.view(pd*pd,pd*pd)
         h = (1./14)*(SS + (7./10.)*SS@SS + (7./45.)*SS@SS@SS + (1./90.)*SS@SS@SS@SS)
-        h = h.view(5,5,5,5)
+        h = h.view(pd,pd,pd,pd)
         return h
+
+    def get_obs(self):
+        obs_ops = dict()
+        s5 = su2.SU2(self.phys_dim, dtype=self.dtype, device=self.device)
+        obs_ops["sz"]= s5.SZ()
+        obs_ops["sp"]= s5.SP()
+        obs_ops["sm"]= s5.SM()
+        return obs_ops
 
     # evaluation of energy depends on the nature of underlying
     # ipeps state
@@ -93,4 +104,13 @@ class AKLTS2():
         energy_per_site=energy/len(state.sites.items())
         return energy_per_site
         
+    # definition of other observables
+    def eval_obs(self,state,env):
+        obs= dict()
+        with torch.no_grad():
+            for coord,site in state.sites.items():
+                rdm1x1 = rdm.rdm1x1(coord,state,env)
+                for label,op in self.obs_ops.items():
+                    obs[str(coord)+"|"+label] = torch.trace(rdm1x1@op)
 
+        return obs

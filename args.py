@@ -12,7 +12,6 @@ parser.add_argument("-chi", type=int, default=20, help="environment bond dimensi
 parser.add_argument("-ctm_max_iter", type=int, default=1, help="maximal number of CTM iterations")
 parser.add_argument("-opt_max_iter", type=int, default=100, help="maximal number of CTM iterations")
 
-
 args = parser.parse_args()
 
 class GLOBALARGS():
@@ -27,14 +26,18 @@ class PEPSARGS():
 class CTMARGS():
     def __init__(self):
         self.ctm_max_iter = 50
-        self.ctm_env_init_type = 'CONST'
+        self.ctm_env_init_type = 'CTMRG'
+        self.ctm_conv_tol = 1.0e-10
         self.projector_svd_reltol = 1.0e-8
         self.ctm_move_sequence = [(0,-1), (-1,0), (0,1), (1,0)]
+        self.verbosity_initialization = 1
+        self.verbosity_ctm_convergence = 1
         self.verbosity_projectors = 0
         self.verbosity_ctm_move = 0
 
 class OPTARGS():
     def __init__(self):
+        self.opt_ctm_reinit = True
         self.lr = 1.0
-        self.max_iter_per_epoch = 1
+        self.max_iter_per_epoch = 20
         pass

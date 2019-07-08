@@ -12,7 +12,9 @@ class COUPLEDLADDERS():
         self.device=global_args.device
         self.phys_dim=2
         self.alpha=alpha
+
         self.h = self.get_h()
+        self.obs_ops = self.get_obs()
 
     # build spin-1/2 coupled-ladders Hamiltonian
     # H = \sum_{i=(x,y)} h_i,i+\vec{x} + \sum_{i=(x,2y)} h_i,i+\vec{y}
@@ -29,11 +31,19 @@ class COUPLEDLADDERS():
     # 
     # where h_ij = S_i.S_j, indices of h correspond to s_i,s_j;s_i',s_j'
     def get_h(self):
-        s2 = su2.SU2(2, dtype=self.dtype, device=self.device)
+        s2 = su2.SU2(self.phys_dim, dtype=self.dtype, device=self.device)
         expr_kron = 'ij,ab->iajb'
         SS = torch.einsum(expr_kron,s2.SZ(),s2.SZ()) + 0.5*(torch.einsum(expr_kron,s2.SP(),s2.SM()) \
             + torch.einsum(expr_kron,s2.SM(),s2.SP()))
         return SS
+
+    def get_obs(self):
+        obs_ops = dict()
+        s2 = su2.SU2(self.phys_dim, dtype=self.dtype, device=self.device)
+        obs_ops["sz"]= s2.SZ()
+        obs_ops["sp"]= s2.SP()
+        obs_ops["sm"]= s2.SM()
+        return obs_ops
 
     # evaluation of energy depends on the nature of underlying
     # ipeps state
@@ -78,15 +88,24 @@ class COUPLEDLADDERS():
             rdm2x1 = rdm.rdm2x1(coord,state,env)
             rdm1x2 = rdm.rdm1x2(coord,state,env)
             ss = torch.einsum('ijab,ijab',rdm2x1,self.h)
-            print("E(2x1) "+str(coord)+": "+str(ss))
             energy += ss
             if coord[1] % 2 == 0:
                 ss = torch.einsum('ijab,ijab',rdm1x2,self.h)
             else:
                 ss = torch.einsum('ijab,ijab',rdm1x2,self.alpha * self.h)
             energy += ss
-            print("E(1x2) "+str(coord)+": "+str(ss))
 
         # return energy-per-site
         energy_per_site=energy/len(state.sites.items())
         return energy_per_site
+
+    # definition of other observables
+    def eval_obs(self,state,env):
+        obs= dict()
+        with torch.no_grad():
+            for coord,site in state.sites.items():
+                rdm1x1 = rdm.rdm1x1(coord,state,env)
+                for label,op in self.obs_ops.items():
+                    obs[str(coord)+"|"+label] = torch.trace(rdm1x1@op)
+
+        return obs

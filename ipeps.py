@@ -7,7 +7,7 @@ from args import PEPSARGS, GLOBALARGS
 class IPEPS(torch.nn.Module):
 
     # TODO we infer the size of the cluster from the keys of sites. Is it OK?
-    def __init__(self, sites, vertexToSite, peps_args=PEPSARGS(), global_args=GLOBALARGS()):
+    def __init__(self, sites, vertexToSite=None, lX=None, lY=None, peps_args=PEPSARGS(), global_args=GLOBALARGS()):
         
         super(IPEPS, self).__init__()
         self.dtype = global_args.dtype
@@ -26,6 +26,18 @@ class IPEPS(torch.nn.Module):
         # (anti-clockwise direction)
         self.sites = sites
         
+        # infer the size of the cluster
+        if lX is None or lY is None:
+            min_x = min([coord[0] for coord in sites.keys()])
+            max_x = max([coord[0] for coord in sites.keys()])
+            min_y = min([coord[1] for coord in sites.keys()])
+            max_y = max([coord[1] for coord in sites.keys()])
+            self.lX = max_x-min_x + 1
+            self.lY = max_y-min_y + 1
+        else:
+            self.lX = lX
+            self.lY = lY
+
         # A mapping function from coord on a square lattice
         # to one of the on-site tensor <key>
         #
@@ -39,15 +51,14 @@ class IPEPS(torch.nn.Module):
         # given (x,y) pair on square lattice, apply appropriate
         # transformation and returns <key> of the appropriate 
         # tensor
-        self.vertexToSite = vertexToSite
-
-        # infer the size of the cluster
-        min_x = min([coord[0] for coord in sites.keys()])
-        max_x = max([coord[0] for coord in sites.keys()])
-        min_y = min([coord[1] for coord in sites.keys()])
-        max_y = max([coord[1] for coord in sites.keys()])
-        self.lX = max_x-min_x + 1
-        self.lY = max_y-min_y + 1
+        if vertexToSite is not None:
+            self.vertexToSite = vertexToSite
+        else:
+            def vertexToSite(coord):
+                x = coord[0]
+                y = coord[1]
+                return ( (x + abs(x)*self.lX)%self.lX, (y + abs(y)*self.lY)%self.lY )
+            self.vertexToSite = vertexToSite
 
     def __str__(self):
         print(f"lX x lY: {self.lX} x {self.lY}")
@@ -145,7 +156,7 @@ def read_ipeps(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=PEPSARG
                 y = coord[1]
                 return ( (x + abs(x)*lX)%lX, (y + abs(y)*lY)%lY )
 
-    return IPEPS(sites, vertexToSite, peps_args, global_args)
+    return IPEPS(sites, vertexToSite, lX=lX, lY=lY, peps_args=peps_args, global_args=global_args)
 
 # parameter aux_seq defines the expected order of auxiliary indices
 # to be used in outputfile relative to the convention fixed in tn-torch

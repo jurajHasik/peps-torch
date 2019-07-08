@@ -28,7 +28,7 @@ class HB():
     # 
     # where h_ij = S_i.S_j, indices of h correspond to s_i,s_j;s_i',s_j'
     def get_h(self):
-        s2 = su2.SU2(2, dtype=self.dtype, device=self.device)
+        s2 = su2.SU2(self.phys_dim, dtype=self.dtype, device=self.device)
         expr_kron = 'ij,ab->iajb'
         SS = torch.einsum(expr_kron,s2.SZ(),s2.SZ()) + 0.5*(torch.einsum(expr_kron,s2.SP(),s2.SM()) \
             + torch.einsum(expr_kron,s2.SM(),s2.SP()))

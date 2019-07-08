@@ -30,7 +30,7 @@ def optimize_state(state, ctm_env_init, loss_fn, opt_args=OPTARGS(), ctm_args=CT
     def closure():
         for el in parameters: 
             if el.grad is not None: el.grad.zero_()
-        loss, ctm_env = loss_fn(state, previous_ctm[0], ctm_args=ctm_args, global_args=global_args)
+        loss, ctm_env = loss_fn(state, previous_ctm[0], ctm_args=ctm_args, opt_args=opt_args, global_args=global_args)
         loss.backward()
 
         lst_C = list(ctm_env.C.values())
@@ -47,8 +47,8 @@ def optimize_state(state, ctm_env_init, loss_fn, opt_args=OPTARGS(), ctm_args=CT
         loss = optimizer.step(closure)
         if verbosity>0: print(f"epoch= {epoch}, loss= {loss}")
 
-        # record observables
         t_data["loss"].append(loss.item())
+
 
         # store current state if the loss improves
         if t_data["loss"][-2] > t_data["loss"][-1]:

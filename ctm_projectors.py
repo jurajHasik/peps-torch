@@ -14,7 +14,7 @@ def ctm_get_projectors(direction, coord, ipeps, env, ctm_args=CTMARGS(), global_
     if direction==(0,-1):
         R, Rt = halves_of_4x4_CTM_MOVE_UP(coord, ipeps, env, verbosity=verbosity)
     elif direction==(-1,0): 
-        R, Rt = halves_of_4x4_CTM_MOVE_LEFT(coord, ipeps, env, verbosity=verbosity)  
+        R, Rt = halves_of_4x4_CTM_MOVE_LEFT(coord, ipeps, env, verbosity=verbosity)
     elif direction==(0,1):
         R, Rt = halves_of_4x4_CTM_MOVE_DOWN(coord, ipeps, env, verbosity=verbosity)
     elif direction==(1,0):
