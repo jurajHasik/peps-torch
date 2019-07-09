@@ -30,6 +30,11 @@ def optimize_state(state, ctm_env_init, loss_fn, opt_args=OPTARGS(), ctm_args=CT
     def closure():
         for el in parameters: 
             if el.grad is not None: el.grad.zero_()
+
+        # 0) pre-process state: normalize on-site tensors by largest elements
+        for coord,site in state.sites.items():
+            site = site/torch.max(torch.abs(site))
+
         loss, ctm_env = loss_fn(state, previous_ctm[0], ctm_args=ctm_args, opt_args=opt_args, global_args=global_args)
         loss.backward()
 

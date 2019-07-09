@@ -59,9 +59,6 @@ if __name__=='__main__':
         return False
 
     def loss_fn(state, ctm_env_init, ctm_args= CTMARGS(), opt_args= OPTARGS(), global_args= GLOBALARGS()):
-        # 0) pre-process state: normalize on-site tensors by largest elements
-        for coord,site in state.sites.items():
-            site = site/torch.max(torch.abs(site))
         # possibly re-initialize the environment
         if opt_args.opt_ctm_reinit:
             init_env(state, ctm_env_init)
