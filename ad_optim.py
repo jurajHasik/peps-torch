@@ -49,7 +49,6 @@ def optimize_state(state, ctm_env_init, loss_fn, opt_args=OPTARGS(), ctm_args=CT
 
         t_data["loss"].append(loss.item())
 
-
         # store current state if the loss improves
         if t_data["loss"][-2] > t_data["loss"][-1]:
             write_ipeps(state, outputstatefile)

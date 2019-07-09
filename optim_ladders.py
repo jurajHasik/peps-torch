@@ -24,6 +24,9 @@ if __name__=='__main__':
 
     if args.instate!=None:
         state = read_ipeps(args.instate, peps_args=PEPSARGS(), global_args=GLOBALARGS())
+        if args.bond_dim > max(state.get_aux_bond_dims()):
+            # extend the auxiliary dimensions
+            state = extend_bond_dim(state, args.bond_dim, args.instate_noise)
     elif args.ipeps_init_type=='RANDOM':
         bond_dim = args.bond_dim
         
@@ -57,8 +60,8 @@ if __name__=='__main__':
 
     def loss_fn(state, ctm_env_init, ctm_args= CTMARGS(), opt_args= OPTARGS(), global_args= GLOBALARGS()):
         # 0) pre-process state: normalize on-site tensors by largest elements
-        # for coord,site in state.sites.items():
-        #     site = site/torch.max(torch.abs(site))
+        for coord,site in state.sites.items():
+            site = site/torch.max(torch.abs(site))
         # possibly re-initialize the environment
         if opt_args.opt_ctm_reinit:
             init_env(state, ctm_env_init)

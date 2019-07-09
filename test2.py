@@ -8,6 +8,8 @@ from models import akltS2, coupledLadders, hb
 if __name__=='__main__':
 
     state = read_ipeps(args.instate ,aux_seq=[1,0,3,2])
+    state = extend_bond_dim(state, args.bond_dim)
+
     print(state)
 
     torch.set_printoptions(precision=7)

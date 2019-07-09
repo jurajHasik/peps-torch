@@ -86,6 +86,9 @@ class IPEPS(torch.nn.Module):
     def site(self, coord):
         return self.sites[self.vertexToSite(coord)]
 
+    def get_aux_bond_dims(self):
+        return [d for key in self.sites.keys() for d in self.sites[key].size()[1:]]
+
 # WARNING a simple PBC vertexToSite function is used by default
 # parameter aux_seq defines the expected order of auxiliary indices
 # in input file relative to the convention fixed in tn-torch
@@ -157,6 +160,21 @@ def read_ipeps(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=PEPSARG
                 return ( (x + abs(x)*lX)%lX, (y + abs(y)*lY)%lY )
 
     return IPEPS(sites, vertexToSite, lX=lX, lY=lY, peps_args=peps_args, global_args=global_args)
+
+# Take "state" and enlarge it's on-site tensor up to auxiliary bond dimensions "new_d"
+# optionally add "noise" with magnitude "noise"
+def extend_bond_dim(state, new_d, noise=0.):
+    new_state = state
+    for coord,site in new_state.sites.items():
+        dims = site.size()
+        size_check = [new_d >= d for d in dims[1:]]
+        if False in size_check:
+            raise ValueError("Desired dimension is smaller than following aux dimensions: "+str(size_check))
+
+        new_site = noise * torch.rand((dims[0],new_d,new_d,new_d,new_d), dtype=state.dtype, device=state.device)
+        new_site[:,:dims[1],:dims[2],:dims[3],:dims[4]] = site
+        new_state.sites[coord] = new_site
+    return new_state
 
 # parameter aux_seq defines the expected order of auxiliary indices
 # to be used in outputfile relative to the convention fixed in tn-torch
