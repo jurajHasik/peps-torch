@@ -17,7 +17,7 @@ from ipeps import write_ipeps
 #         return energy
 
 
-def optimize_state(state, ctm_env_init, loss_fn, opt_args=OPTARGS(), ctm_args=CTMARGS(), global_args = GLOBALARGS(), verbosity=0):
+def optimize_state(state, ctm_env_init, loss_fn, local_args, opt_args=OPTARGS(), ctm_args=CTMARGS(), global_args = GLOBALARGS()):
     """
     expects a loss function that operates
     loss_fn(state, ctm_env_init, ctm_args = ctm_args, global_args = GLOBALARGS())
@@ -44,10 +44,11 @@ def optimize_state(state, ctm_env_init, loss_fn, opt_args=OPTARGS(), ctm_args=CT
 
         return loss
 
-    outputstatefile = args.out_prefix+"_state.json"
+    verbosity = opt_args.verbosity_opt_epoch
+    outputstatefile = local_args.out_prefix+"_state.json"
     t_data = dict({"loss": [1.0e+16]})
     optimizer = torch.optim.LBFGS(parameters, max_iter=opt_args.max_iter_per_epoch, lr=opt_args.lr)    
-    for epoch in range(args.opt_max_iter):
+    for epoch in range(local_args.opt_max_iter):
         loss = optimizer.step(closure)
         if verbosity>0: print(f"epoch= {epoch}, loss= {loss}")
 

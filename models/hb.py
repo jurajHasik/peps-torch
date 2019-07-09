@@ -1,6 +1,5 @@
 import torch
 import su2
-from args import args
 from env import ENV
 import ipeps
 import rdm

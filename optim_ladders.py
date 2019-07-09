@@ -1,21 +1,21 @@
 import torch
+import argparse
 from args import *
-import env
-from env import ENV
 from ipeps import *
-import ctmrg
-import rdm
 from env import *
+import ctmrg
 from models import coupledLadders
 from ad_optim import optimize_state
 
+# additional model-dependent arguments
+parser.add_argument("-alpha", type=float, default=0., help="inter-ladder coupling")
+args = parser.parse_args()
 torch.set_num_threads(args.omp_cores)
 
 if __name__=='__main__':
+    
 
-    torch.set_printoptions(precision=7)
-
-    model = coupledLadders.COUPLEDLADDERS(alpha=0.0)
+    model = coupledLadders.COUPLEDLADDERS(alpha=args.alpha)
     
     # initialize an ipeps
     # 1) define lattice-tiling function, that maps arbitrary vertex of square lattice
@@ -25,7 +25,8 @@ if __name__=='__main__':
         state = read_ipeps(args.instate, peps_args=PEPSARGS(), global_args=GLOBALARGS())
         if args.bond_dim > max(state.get_aux_bond_dims()):
             # extend the auxiliary dimensions
-            state = extend_bond_dim(state, args.bond_dim, args.instate_noise)
+            state = extend_bond_dim(state, args.bond_dim)
+        add_random_noise(state, args.instate_noise)
     elif args.ipeps_init_type=='RANDOM':
         bond_dim = args.bond_dim
         
@@ -75,7 +76,7 @@ if __name__=='__main__':
         return loss, ctm_env
 
     # optimize
-    optimize_state(state, ctm_env_init, loss_fn, verbosity=1)
+    optimize_state(state, ctm_env_init, loss_fn, args)
 
     ctm_env = ENV(args.chi, state)
     init_env(state, ctm_env)

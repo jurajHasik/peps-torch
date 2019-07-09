@@ -1,9 +1,14 @@
 import torch
+import argparse
 from args import *
 from env import *
 from ipeps import *
 import ctmrg
 from models import akltS2, coupledLadders, hb
+
+# additional model-dependent arguments (if any)
+args = parser.parse_args()
+torch.set_num_threads(args.omp_cores)
 
 if __name__=='__main__':
 

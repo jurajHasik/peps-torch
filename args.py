@@ -13,8 +13,6 @@ parser.add_argument("-chi", type=int, default=20, help="environment bond dimensi
 parser.add_argument("-ctm_max_iter", type=int, default=1, help="maximal number of CTM iterations")
 parser.add_argument("-opt_max_iter", type=int, default=100, help="maximal number of CTM iterations")
 
-args = parser.parse_args()
-
 class GLOBALARGS():
     def __init__(self):
         self.dtype = torch.float64
@@ -41,4 +39,4 @@ class OPTARGS():
         self.opt_ctm_reinit = True
         self.lr = 1.0
         self.max_iter_per_epoch = 20
-        pass
+        self.verbosity_opt_epoch = 1

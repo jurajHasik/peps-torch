@@ -1,14 +1,15 @@
 import torch
+import argparse
 from args import *
-import env
-from env import ENV
 from ipeps import *
-import ctmrg
-import rdm
 from env import *
+import ctmrg
 from models import akltS2, coupledLadders, hb
 from ad_optim import optimize_state
+import rdm
 
+# additional model-dependent arguments (if any)
+args = parser.parse_args()
 torch.set_num_threads(args.omp_cores)
 
 if __name__=='__main__':
@@ -70,7 +71,7 @@ if __name__=='__main__':
                 return True
         return False
 
-    def loss_fn(state, ctm_env_init, ctm_args = CTMARGS(), global_args = GLOBALARGS()):
+    def loss_fn(state, ctm_env_init, ctm_args= CTMARGS(), opt_args= OPTARGS(), global_args= GLOBALARGS()):
         # 0) pre-process state: normalize on-site tensors by largest elements
         # for coord,site in state.sites.items():
         #     site = site/torch.max(torch.abs(site))
@@ -88,7 +89,7 @@ if __name__=='__main__':
         return loss, ctm_env
 
     # optimize
-    optimize_state(state, ctm_env_init, loss_fn, verbosity=1)
+    optimize_state(state, ctm_env_init, loss_fn, args)
 
     ctm_env = ENV(args.chi, state)
     init_env(state, ctm_env)

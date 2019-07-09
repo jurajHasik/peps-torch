@@ -79,7 +79,7 @@ def init_random(env, verbosity=0):
     for key,t in env.T.items():
         env.T[key] = torch.rand(t.size(), dtype=env.dtype, device=env.device)
 
-# TODO finish by initializing Ts as well
+# TODO handle case when chi < bond_dim^2
 def init_from_ipeps(ipeps, env, verbosity=0):
     if verbosity>0:
         print("ENV: init_from_ipeps")

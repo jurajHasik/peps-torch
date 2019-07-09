@@ -163,7 +163,7 @@ def read_ipeps(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=PEPSARG
 
 # Take "state" and enlarge it's on-site tensor up to auxiliary bond dimensions "new_d"
 # optionally add "noise" with magnitude "noise"
-def extend_bond_dim(state, new_d, noise=0.):
+def extend_bond_dim(state, new_d):
     new_state = state
     for coord,site in new_state.sites.items():
         dims = site.size()
@@ -171,10 +171,15 @@ def extend_bond_dim(state, new_d, noise=0.):
         if False in size_check:
             raise ValueError("Desired dimension is smaller than following aux dimensions: "+str(size_check))
 
-        new_site = noise * torch.rand((dims[0],new_d,new_d,new_d,new_d), dtype=state.dtype, device=state.device)
+        new_site = torch.zeros((dims[0],new_d,new_d,new_d,new_d), dtype=state.dtype, device=state.device)
         new_site[:,:dims[1],:dims[2],:dims[3],:dims[4]] = site
         new_state.sites[coord] = new_site
     return new_state
+
+def add_random_noise(state, noise=0.):
+    for coord in state.sites.keys():
+        rand_t = torch.rand( state.sites[coord].size(), dtype=state.dtype, device=state.device)
+        state.sites[coord] = state.sites[coord] + noise * rand_t
 
 # parameter aux_seq defines the expected order of auxiliary indices
 # to be used in outputfile relative to the convention fixed in tn-torch

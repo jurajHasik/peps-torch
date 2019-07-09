@@ -28,25 +28,16 @@ def run(state, env, conv_check=None, ctm_args=CTMARGS(), global_args=GLOBALARGS(
     # 1) perform CTMRG
     history=[]
     for i in range(ctm_args.ctm_max_iter):
-        # print("CTMRG step "+str(i))
         for direction in ctm_args.ctm_move_sequence:
-
             ctm_MOVE(direction, stateDL, env, ctm_args=ctm_args, global_args=global_args, verbosity=ctm_args.verbosity_ctm_move)
-    
-        # if verbosity==2:
-        # for key,C in env.C.items():
-        #     U,S,V = torch.svd(env.C[key])
-            # print(key)
-            # print(S)
-
-        #if ctm_converged():
-        #    break
 
         if conv_check is not None:
             # evaluate convergence of the CTMRG procedure
             converged = conv_check(state, env, history, ctm_args=ctm_args)
-            if ctm_args.verbosity_ctm_convergence>0: print(history[-1])
+            if ctm_args.verbosity_ctm_convergence>1: print(history[-1])
             if converged:
+                if ctm_args.verbosity_ctm_convergence>0: 
+                    print(f"CTMRG  converged at iter= {i}, history= {history[-1]}")
                 break
 
     return env

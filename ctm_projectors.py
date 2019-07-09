@@ -71,6 +71,7 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=CTMARGS(), global_args
     """
     assert R.shape == Rt.shape
     assert len(R.shape) == 2
+    verbosity = ctm_args.verbosity_projectors
 
     #  SVD decomposition
     M = torch.mm(R.transpose(1, 0), Rt)
@@ -83,7 +84,7 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=CTMARGS(), global_args
     S_zeros = torch.zeros((chi-S.size()[0]), dtype=global_args.dtype, device=global_args.device)
     S_sqrt = torch.rsqrt(S)
     S_sqrt = torch.cat((S_sqrt, S_zeros))
-    # print(S_sqrt)
+    if verbosity>0: print(S_sqrt)
 
     # Construct projectors
     # P = torch.einsum('i,ij->ij', S_sqrt, torch.mm(U.transpose(1, 0), R.transpose(1, 0)))
