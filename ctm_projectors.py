@@ -74,7 +74,6 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=CTMARGS(), global_args
 
     #  SVD decomposition
     M = torch.mm(R.transpose(1, 0), Rt)
-    # embed()
     U, S, V = truncated_svd_gesdd(M, chi) # M = USV^{T}
 
     # if abs_tol is not None: St = St[St > abs_tol]

@@ -8,7 +8,6 @@ import rdm
 from env import *
 from models import coupledLadders
 from ad_optim import optimize_state
-from IPython import embed
 
 torch.set_num_threads(args.omp_cores)
 

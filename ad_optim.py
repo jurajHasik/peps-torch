@@ -1,6 +1,5 @@
 import torch
 from args import *
-from IPython import embed
 from env import *
 from ipeps import write_ipeps
 
