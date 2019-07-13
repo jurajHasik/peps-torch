@@ -29,8 +29,8 @@ class CTMARGS():
         self.ctm_conv_tol = 1.0e-10
         self.projector_svd_reltol = 1.0e-8
         self.ctm_move_sequence = [(0,-1), (-1,0), (0,1), (1,0)]
-        self.verbosity_initialization = 1
-        self.verbosity_ctm_convergence = 1
+        self.verbosity_initialization = 0
+        self.verbosity_ctm_convergence = 0
         self.verbosity_projectors = 0
         self.verbosity_ctm_move = 0
 
@@ -38,5 +38,5 @@ class OPTARGS():
     def __init__(self):
         self.opt_ctm_reinit = True
         self.lr = 1.0
-        self.max_iter_per_epoch = 20
+        self.max_iter_per_epoch = 1
         self.verbosity_opt_epoch = 1

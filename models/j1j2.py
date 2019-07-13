@@ -4,30 +4,28 @@ from env import ENV
 import ipeps
 import rdm
 from args import GLOBALARGS
-from math import sqrt
-import itertools
 
-class COUPLEDLADDERS():
-    def __init__(self, alpha=0.0, global_args=GLOBALARGS()):
+class J1J2():
+    def __init__(self, j1=1.0, j2=0.0, global_args=GLOBALARGS()):
         self.dtype=global_args.dtype
         self.device=global_args.device
         self.phys_dim=2
-        self.alpha=alpha
-
+        self.j1=j1
+        self.j2=j2
+        
         self.h = self.get_h()
         self.obs_ops = self.get_obs_ops()
 
-    # build spin-1/2 coupled-ladders Hamiltonian
-    # H = \sum_{i=(x,y)} h_i,i+\vec{x} + \sum_{i=(x,2y)} h_i,i+\vec{y}
-    #   + alpha * \sum_{i=(x,2y+1)} h_i,i+\vec{y}
+    # build spin-1/2 J1-J2 Hamiltonian
+    # H = j1*\sum_{<i,j>} h_i,j + j2*\sum_<<i,j>> h_i,j
     #  
     # y\x
     #    _:__:__:__:_
     # ..._|__|__|__|_...
-    # ..._a__a__a__a_...
     # ..._|__|__|__|_...
-    # ..._a__a__a__a_...   
-    # ..._|__|__|__|_...   
+    # ..._|__|__|__|_...
+    # ..._|__|__|__|_...
+    # ..._|__|__|__|_...
     #     :  :  :  : 
     # 
     # where h_ij = S_i.S_j, indices of h correspond to s_i,s_j;s_i',s_j'
@@ -74,30 +72,37 @@ class COUPLEDLADDERS():
     def energy_1x1c4v(self,ipeps):
         pass
 
-    def energy_2x2(self,ipeps):
-        pass
-
     # assuming reduced density matrix of 2x2 cluster with indexing of DOFs
     # as follows rdm2x2=rdm2x2(s0,s1,s2,s3;s0',s1',s2',s3')
-    def energy_2x2(self,rdm2x2):
-        energy = torch.einsum('ijklabkl,ijab',rdm2x2,self.h)
-        return energy
+    #
+    # s0,s1
+    # s2,s3
+    #                
+    #                          A3--1B   B3  1A
+    #                          2 \/ 2   2 \/ 2
+    #                A B       0 /\ 0   0 /\ 0
+    # Ex.1 unit cell B A terms B3--1A & A3  1B
+    #
+    #                          A3--1B   B3--1A
+    #                          2 \/ 2   2 \/ 2
+    #                A B       0 /\ 0   0 /\ 0
+    # Ex.2 unit cell A B terms A3--1B & B3--1A
+    def energy_2x2_2site(self,state,env):
+        id2= torch.eye((2,2,2,2),dtype=self.dtype,device=self.device)
+        h2x2_nn= torch.einsum('ijab,klcd->ijklabcd',self.h,id2)
+        h2x2_nn= h2x2_nn + h2x2_nn.permute(2,0,3,1,6,4,7,5) \
+            + h2x2_nn.permute(0,2,1,3,4,6,5,7) + h2x2_nn.permute(2,3,0,1,6,7,4,5)
+        h2x2_nnn= torch.einsum('ijab,klcd->ikljacdb',self.h,id2)
+        h2x2_nnn= h2x2_nnn + h2x2_nnn.permute(1,0,3,2,5,4,7,6)
 
-    def energy_2x1_1x2(self,state,env):
-        energy=0.
-        for coord,site in state.sites.items():
-            rdm2x1 = rdm.rdm2x1(coord,state,env)
-            rdm1x2 = rdm.rdm1x2(coord,state,env)
-            ss = torch.einsum('ijab,ijab',rdm2x1,self.h)
-            energy += ss
-            if coord[1] % 2 == 0:
-                ss = torch.einsum('ijab,ijab',rdm1x2,self.h)
-            else:
-                ss = torch.einsum('ijab,ijab',rdm1x2,self.alpha * self.h)
-            energy += ss
+        rdm2x2_00= rdm.rdm2x1((0,0),state,env)
+        rdm2x2_10= rdm.rdm2x1((1,0),state,env)
+        energy_nn = torch.einsum('ijklacd,ijklabcd',rdm2x2_00,h2x2_nn)
+        energy_nn += torch.einsum('ijklacd,ijklabcd',rdm2x2_10,h2x2_nn)
+        energy_nnn = torch.einsum('ijklacd,ijklabcd',rdm2x2_00,h2x2_nnn)
+        energy_nnn += torch.einsum('ijklacd,ijklabcd',rdm2x2_10,h2x2_nnn)
 
-        # return energy-per-site
-        energy_per_site=energy/len(state.sites.items())
+        energy_per_site = 2.0*(self.j1*energy_nn/8.0 + self.j2*energy_nnn/4.0)
         return energy_per_site
 
     # definition of other observables

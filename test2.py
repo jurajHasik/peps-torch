@@ -12,7 +12,7 @@ torch.set_num_threads(args.omp_cores)
 
 if __name__=='__main__':
 
-    state = read_ipeps(args.instate ,aux_seq=[1,0,3,2])
+    state = read_ipeps(args.instate, aux_seq=[1,0,3,2])
     state = extend_bond_dim(state, args.bond_dim)
 
     print(state)
@@ -27,7 +27,7 @@ if __name__=='__main__':
 
     ctm_env = ctmrg.run(state,ctm_env,ctm_args=CTMARGS(), global_args=GLOBALARGS())
 
-    model = hb.HB()
+    model = coupledLadders.COUPLEDLADDERS()
     energy = model.energy_2x1_1x2(state,ctm_env)
-    print("E(1x1c4v): "+str(energy))
+    print("E(2x1_1x2): "+str(energy))
     

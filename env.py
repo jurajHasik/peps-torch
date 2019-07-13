@@ -58,9 +58,9 @@ class ENV(torch.nn.Module):
 
 def init_env(ipeps, env, ctm_args=CTMARGS()):
     if ctm_args.ctm_env_init_type=='CONST':
-        init_const(env)
+        init_const(env, ctm_args.verbosity_initialization)
     elif ctm_args.ctm_env_init_type=='RANDOM':
-        init_random(env)
+        init_random(env, ctm_args.verbosity_initialization)
     elif ctm_args.ctm_env_init_type=='CTMRG':
         init_from_ipeps(ipeps, env, ctm_args.verbosity_initialization)
     else:

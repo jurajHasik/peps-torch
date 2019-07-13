@@ -161,7 +161,7 @@ def read_ipeps(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=PEPSARG
 
     return IPEPS(sites, vertexToSite, lX=lX, lY=lY, peps_args=peps_args, global_args=global_args)
 
-# Take "state" and enlarge it's on-site tensor up to auxiliary bond dimensions "new_d"
+# Take "state" and enlarge it's on-site tensors up to auxiliary bond dimensions "new_d"
 # optionally add "noise" with magnitude "noise"
 def extend_bond_dim(state, new_d):
     new_state = state

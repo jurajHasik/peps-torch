@@ -4,17 +4,19 @@ from args import *
 from ipeps import *
 from env import *
 import ctmrg
-from models import coupledLadders
+from models import J1J2
 from ad_optim import optimize_state
 
 # additional model-dependent arguments
-parser.add_argument("-alpha", type=float, default=0., help="inter-ladder coupling")
+parser.add_argument("-j1", type=float, default=1., help="nearest-neighbour coupling")
+parser.add_argument("-j2", type=float, default=0., help="next nearest-neighbour coupling")
+parser.add_argument("-tiling", default="BIPARTITE", help="tiling of the lattice")
 args = parser.parse_args()
 torch.set_num_threads(args.omp_cores)
 
 if __name__=='__main__':
     
-    model = coupledLadders.COUPLEDLADDERS(alpha=args.alpha)
+    model = coupledLadders.J1J2(j1=args.j1, j2=args.j2)
     
     # initialize an ipeps
     # 1) define lattice-tiling function, that maps arbitrary vertex of square lattice
@@ -31,10 +33,14 @@ if __name__=='__main__':
         
         A = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim), dtype=torch.float64)
         B = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim), dtype=torch.float64)
-        C = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim), dtype=torch.float64)
-        D = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim), dtype=torch.float64)
 
-        sites = {(0,0): A, (1,0): B, (0,1): C, (1,1): D}
+        if args.tiling == "BIPARTITE":
+            sites = {(0,0): A, (1,0): B}
+            
+            def lattice_to_site(coord):
+                vx = (coord[0] + abs(coord[0]) * 2) % 2
+                vy = abs(coord[1])
+                return ((vx + vy) % 2, 0)
 
         for k in sites.keys():
             sites[k] = sites[k]/torch.max(torch.abs(sites[k]))
