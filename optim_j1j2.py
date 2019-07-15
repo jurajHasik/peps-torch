@@ -4,7 +4,7 @@ from args import *
 from ipeps import *
 from env import *
 import ctmrg
-from models import J1J2
+from models import j1j2
 from ad_optim import optimize_state
 
 # additional model-dependent arguments
@@ -16,7 +16,7 @@ torch.set_num_threads(args.omp_cores)
 
 if __name__=='__main__':
     
-    model = coupledLadders.J1J2(j1=args.j1, j2=args.j2)
+    model = j1j2.J1J2(j1=args.j1, j2=args.j2)
     
     # initialize an ipeps
     # 1) define lattice-tiling function, that maps arbitrary vertex of square lattice
@@ -34,17 +34,27 @@ if __name__=='__main__':
         A = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim), dtype=torch.float64)
         B = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim), dtype=torch.float64)
 
+        # normalization of initial random tensors
+        A = A/torch.max(torch.abs(A))
+        B = B/torch.max(torch.abs(B))
+
+        sites = {(0,0): A, (1,0): B}
+
         if args.tiling == "BIPARTITE":
-            sites = {(0,0): A, (1,0): B}
-            
             def lattice_to_site(coord):
                 vx = (coord[0] + abs(coord[0]) * 2) % 2
                 vy = abs(coord[1])
                 return ((vx + vy) % 2, 0)
+        elif args.tiling == "STRIPE":
+            def lattice_to_site(coord):
+                vx = (coord[0] + abs(coord[0]) * 2) % 2
+                vy = (coord[1] + abs(coord[1]) * 1) % 1
+                return (vx, vy)
+        else:
+            raise ValueError("Invalid tiling: "+str(args.tiling)+" Supported options: "\
+                +"BIPARTITE, STRIPE")
 
-        for k in sites.keys():
-            sites[k] = sites[k]/torch.max(torch.abs(sites[k]))
-        state = IPEPS(sites, lX=2, lY=2)
+        state = IPEPS(sites, vertexToSite=lattice_to_site)
     else:
         raise ValueError("Missing trial state: -instate=None and -ipeps_init_type= "\
             +str(args.ipeps_init_type)+" is not supported")
@@ -56,7 +66,7 @@ if __name__=='__main__':
 
     def ctmrg_conv_energy(state, env, history, ctm_args = CTMARGS()):
         with torch.no_grad():
-            e_curr = model.energy_2x1_1x2(state, env)
+            e_curr = model.energy_2x2_2site(state, env)
             history.append(e_curr.item())
 
             if len(history) > 1 and abs(history[-1]-history[-2]) < ctm_args.ctm_conv_tol:
@@ -70,7 +80,7 @@ if __name__=='__main__':
 
         # 1) compute environment by CTMRG
         ctm_env = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy, ctm_args=ctm_args, global_args=global_args)
-        loss = model.energy_2x1_1x2(state, ctm_env)
+        loss = model.energy_2x2_2site(state, ctm_env)
         
         return loss, ctm_env
 
@@ -80,6 +90,6 @@ if __name__=='__main__':
     ctm_env = ENV(args.chi, state)
     init_env(state, ctm_env)
     ctm_env = ctmrg.run(state, ctm_env)
-    opt_energy = model.energy_2x1_1x2(state,ctm_env)
-    print(f"(opt state) E(2x1+1x2): {opt_energy}")
+    opt_energy = model.energy_2x2_2site(state,ctm_env)
+    print(f"(opt state) E(2x2_2site): {opt_energy}")
     

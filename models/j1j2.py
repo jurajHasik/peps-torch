@@ -4,6 +4,8 @@ from env import ENV
 import ipeps
 import rdm
 from args import GLOBALARGS
+from math import sqrt
+import itertools
 
 class J1J2():
     def __init__(self, j1=1.0, j2=0.0, global_args=GLOBALARGS()):
@@ -88,19 +90,20 @@ class J1J2():
     #                A B       0 /\ 0   0 /\ 0
     # Ex.2 unit cell A B terms A3--1B & B3--1A
     def energy_2x2_2site(self,state,env):
-        id2= torch.eye((2,2,2,2),dtype=self.dtype,device=self.device)
+        id2= torch.eye(4,dtype=self.dtype,device=self.device)
+        id2= id2.view(2,2,2,2).contiguous()
         h2x2_nn= torch.einsum('ijab,klcd->ijklabcd',self.h,id2)
         h2x2_nn= h2x2_nn + h2x2_nn.permute(2,0,3,1,6,4,7,5) \
             + h2x2_nn.permute(0,2,1,3,4,6,5,7) + h2x2_nn.permute(2,3,0,1,6,7,4,5)
         h2x2_nnn= torch.einsum('ijab,klcd->ikljacdb',self.h,id2)
         h2x2_nnn= h2x2_nnn + h2x2_nnn.permute(1,0,3,2,5,4,7,6)
 
-        rdm2x2_00= rdm.rdm2x1((0,0),state,env)
-        rdm2x2_10= rdm.rdm2x1((1,0),state,env)
-        energy_nn = torch.einsum('ijklacd,ijklabcd',rdm2x2_00,h2x2_nn)
-        energy_nn += torch.einsum('ijklacd,ijklabcd',rdm2x2_10,h2x2_nn)
-        energy_nnn = torch.einsum('ijklacd,ijklabcd',rdm2x2_00,h2x2_nnn)
-        energy_nnn += torch.einsum('ijklacd,ijklabcd',rdm2x2_10,h2x2_nnn)
+        rdm2x2_00= rdm.rdm2x2((0,0),state,env)
+        rdm2x2_10= rdm.rdm2x2((1,0),state,env)
+        energy_nn = torch.einsum('ijklabcd,ijklabcd',rdm2x2_00,h2x2_nn)
+        energy_nn += torch.einsum('ijklabcd,ijklabcd',rdm2x2_10,h2x2_nn)
+        energy_nnn = torch.einsum('ijklabcd,ijklabcd',rdm2x2_00,h2x2_nnn)
+        energy_nnn += torch.einsum('ijklabcd,ijklabcd',rdm2x2_10,h2x2_nnn)
 
         energy_per_site = 2.0*(self.j1*energy_nn/8.0 + self.j2*energy_nnn/4.0)
         return energy_per_site
@@ -125,6 +128,6 @@ class J1J2():
         
         # prepare list with labels and values
         obs_labels=["avg_m"]+[f"m{coord}" for coord in state.sites.keys()]\
-            +[f"{lc[0]}{lc[1]}" for lc in list(itertools.product(self.obs_ops.keys(), state.sites.keys()))]
+            +[f"{lc[0]}{lc[1]}" for lc in list(itertools.product(state.sites.keys(), self.obs_ops.keys()))]
         obs_values=[obs[label] for label in obs_labels]
         return obs_values, obs_labels

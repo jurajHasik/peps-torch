@@ -4,6 +4,8 @@ from env import ENV
 import ipeps
 import rdm
 from args import GLOBALARGS
+from math import sqrt
+import itertools
 
 class HB():
     def __init__(self, global_args=GLOBALARGS()):
@@ -12,6 +14,7 @@ class HB():
         self.phys_dim=2
         
         self.h = self.get_h()
+        self.obs_ops = self.get_obs_ops()
 
     # build spin-1/2 coupled-ladders Hamiltonian
     # H = \sum_{<i,j>} h_i,j
@@ -32,6 +35,15 @@ class HB():
         SS = torch.einsum(expr_kron,s2.SZ(),s2.SZ()) + 0.5*(torch.einsum(expr_kron,s2.SP(),s2.SM()) \
             + torch.einsum(expr_kron,s2.SM(),s2.SP()))
         return SS
+
+    def get_obs_ops(self):
+        obs_ops = dict()
+        s2 = su2.SU2(self.phys_dim, dtype=self.dtype, device=self.device)
+        obs_ops["sz"]= s2.SZ()
+        obs_ops["sp"]= s2.SP()
+        obs_ops["sm"]= s2.SM()
+        return obs_ops
+
 
     # evaluation of energy depends on the nature of underlying
     # ipeps state
@@ -66,8 +78,9 @@ class HB():
 
     # assuming reduced density matrix of 2x2 cluster with indexing of DOFs
     # as follows rdm2x2=rdm2x2(s0,s1,s2,s3;s0',s1',s2',s3')
-    def energy_2x2(self,rdm2x2):
-        energy = torch.einsum('ijklabkl,ijab',rdm2x2,self.h)
+    def energy_2x2(self,state,env):
+        rdm2x2= rdm.rdm2x2((0,0),state,env)
+        energy= torch.einsum('ijklabkl,ijab',rdm2x2,self.h)
         return energy
 
     def energy_2x1_1x2(self,state,env):
@@ -81,3 +94,20 @@ class HB():
         # return energy-per-site
         energy_per_site=energy/len(state.sites.items())
         return energy_per_site
+
+    def eval_obs(self,state,env):
+        obs= dict({"avg_m": 0.})
+        with torch.no_grad():
+            for coord,site in state.sites.items():
+                rdm1x1 = rdm.rdm1x1(coord,state,env)
+                for label,op in self.obs_ops.items():
+                    obs[f"{label}{coord}"]= torch.trace(rdm1x1@op)
+                obs[f"m{coord}"]= sqrt(abs(obs[f"sz{coord}"]**2 + obs[f"sp{coord}"]*obs[f"sm{coord}"]))
+                obs["avg_m"] += obs[f"m{coord}"]
+            obs["avg_m"]= obs["avg_m"]/len(state.sites.keys())
+        
+        # prepare list with labels and values
+        obs_labels=["avg_m"]+[f"m{coord}" for coord in state.sites.keys()]\
+            +[f"{lc[1]}{lc[0]}" for lc in list(itertools.product(state.sites.keys(), self.obs_ops.keys()))]
+        obs_values=[obs[label] for label in obs_labels]
+        return obs_values, obs_labels

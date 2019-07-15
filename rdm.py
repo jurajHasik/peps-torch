@@ -480,7 +480,7 @@ def rdm2x2(coord, ipeps, env, verbosity=0):
         print("C2X2 LU "+str(coord)+"->"+str(ipeps.vertexToSite(coord))+" (-1,-1): "+str(C2x2_LU.size()))
 
     #----- building C2x2_RU ----------------------------------------------------
-    vec = (0,1)
+    vec = (1,0)
     shitf_coord = ipeps.vertexToSite((coord[0]+vec[0],coord[1]+vec[1]))
     C = env.C[(shitf_coord,(1,-1))]
     T1 = env.T[(shitf_coord,(1,0))]
@@ -590,7 +590,7 @@ def rdm2x2(coord, ipeps, env, verbosity=0):
     # C--0 1--T2--2->3
     C2x2_LD = torch.tensordot(C2x2_LD, T2, ([0],[1]))
 
-    # 0       0->2
+    # 0        0->2
     # T1--1 1--a--3
     # |        2\45
     # |        2
@@ -612,7 +612,7 @@ def rdm2x2(coord, ipeps, env, verbosity=0):
     # |/23->12      |/23->45   & permute |/12->23      |/45
     # C2x2_LD--1 1--C2x2_RD              C2x2_LD------C2x2_RD
     # TODO is it worthy(performance-wise) to instead overwrite one of C2x2_LD,C2x2_RD ?  
-    lower_half = torch.tensordot(C2x2_LD, C2x2_RD, ([1],[0]))
+    lower_half = torch.tensordot(C2x2_LD, C2x2_RD, ([1],[1]))
     lower_half = lower_half.permute(0,3,1,2,4,5)
 
     # construct reduced density matrix by contracting lower and upper halfs

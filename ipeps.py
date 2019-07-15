@@ -159,7 +159,11 @@ def read_ipeps(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=PEPSARG
                 y = coord[1]
                 return ( (x + abs(x)*lX)%lX, (y + abs(y)*lY)%lY )
 
-    return IPEPS(sites, vertexToSite, lX=lX, lY=lY, peps_args=peps_args, global_args=global_args)
+            state = IPEPS(sites, vertexToSite, lX=lX, lY=lY, peps_args=peps_args, global_args=global_args)
+        else:
+            state = IPEPS(sites, vertexToSite, peps_args=peps_args, global_args=global_args)
+
+    return state
 
 # Take "state" and enlarge it's on-site tensors up to auxiliary bond dimensions "new_d"
 # optionally add "noise" with magnitude "noise"
