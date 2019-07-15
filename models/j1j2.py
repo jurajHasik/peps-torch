@@ -128,6 +128,6 @@ class J1J2():
         
         # prepare list with labels and values
         obs_labels=["avg_m"]+[f"m{coord}" for coord in state.sites.keys()]\
-            +[f"{lc[0]}{lc[1]}" for lc in list(itertools.product(state.sites.keys(), self.obs_ops.keys()))]
+            +[f"{lc[1]}{lc[0]}" for lc in list(itertools.product(state.sites.keys(), self.obs_ops.keys()))]
         obs_values=[obs[label] for label in obs_labels]
         return obs_values, obs_labels
