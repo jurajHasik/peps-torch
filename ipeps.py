@@ -107,6 +107,10 @@ def read_ipeps(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=PEPSARG
     with open(jsonfile) as j:
         raw_state = json.load(j)
 
+        # check for presence of "aux_seq" field in jsonfile
+        if "aux_ind_seq" in raw_state.keys():
+            asq = [x+1 for x in raw_state["aux_ind_seq"]]
+
         # Loop over non-equivalent tensor,site pairs in the unit cell
         for ts in raw_state["map"]:
             coord = (ts["x"],ts["y"])
