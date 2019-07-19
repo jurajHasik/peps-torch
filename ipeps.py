@@ -203,13 +203,16 @@ def add_random_noise(state, noise=0.):
 # TODO drop constrain for aux bond dimension to be identical on 
 # all bond indices
 # TODO implement cutoff on elements with magnitude below tol
-def write_ipeps(state, outputfile, aux_seq=[0,1,2,3], tol=1.0e-10):
+def write_ipeps(state, outputfile, aux_seq=[0,1,2,3], tol=1.0e-10, normalize=False):
     asq = [x+1 for x in aux_seq]
     json_state=dict({"lX": state.lX, "lY": state.lY, "sites": []})
     
     site_ids=[]
     site_map=[]
     for nid,coord,site in [(t[0], *t[1]) for t in enumerate(state.sites.items())]:
+        if normalize:
+            site= site/torch.max(torch.abs(site))
+
         json_tensor=dict()
         
         tdims = site.size()

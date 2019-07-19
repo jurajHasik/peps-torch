@@ -44,9 +44,6 @@ if __name__=='__main__':
             +str(args.ipeps_init_type)+" is not supported")
 
     print(state)
-    
-    ctm_env_init = ENV(args.chi, state)
-    init_env(state, ctm_env_init)
 
     def ctmrg_conv_energy(state, env, history, ctm_args = CTMARGS()):
         with torch.no_grad():
@@ -56,6 +53,15 @@ if __name__=='__main__':
             if len(history) > 1 and abs(history[-1]-history[-2]) < ctm_args.ctm_conv_tol:
                 return True
         return False
+
+    ctm_env_init = ENV(args.chi, state)
+    init_env(state, ctm_env_init)
+    ctm_env_init = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
+
+    loss = model.energy_2x1_1x2(state, ctm_env_init)
+    obs_values, obs_labels = model.eval_obs(state,ctm_env_init)
+    print(", ".join(["epoch","energy"]+obs_labels))
+    print(", ".join([f"{-1}",f"{loss}"]+[f"{v}" for v in obs_values]))
 
     def loss_fn(state, ctm_env_init, ctm_args= CTMARGS(), opt_args= OPTARGS(), global_args= GLOBALARGS()):
         # possibly re-initialize the environment
@@ -75,5 +81,6 @@ if __name__=='__main__':
     init_env(state, ctm_env)
     ctm_env = ctmrg.run(state, ctm_env)
     opt_energy = model.energy_2x1_1x2(state,ctm_env)
-    print(f"(opt state) E(2x1+1x2): {opt_energy}")
+    obs_values, obs_labels = model.eval_obs(state,ctm_env)
+    print(", ".join([f"{args.opt_max_iter}",f"{opt_energy}"]+[f"{v}" for v in obs_values]))
     

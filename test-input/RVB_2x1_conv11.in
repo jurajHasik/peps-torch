@@ -8,8 +8,9 @@
 		{"x":0, "y": 0, "siteId": "A"},
 		{"x":1, "y": 0, "siteId": "B"}
 	],
-	"siteIds": ["A", "B"],
-	"sites": [
+        "siteIds": ["A", "B"],
+	"aux_ind_seq": [1,0,3,2],
+        "sites": [
 		{
 			"siteId": "A",
 			"physDim": 2, 
