@@ -21,9 +21,23 @@ if __name__=='__main__':
     # initialize an ipeps
     # 1) define lattice-tiling function, that maps arbitrary vertex of square lattice
     # coord into one of coordinates within unit-cell of iPEPS ansatz    
+    if args.tiling == "BIPARTITE":
+        def lattice_to_site(coord):
+            vx = (coord[0] + abs(coord[0]) * 2) % 2
+            vy = abs(coord[1])
+            return ((vx + vy) % 2, 0)
+    elif args.tiling == "STRIPE":
+        def lattice_to_site(coord):
+            vx = (coord[0] + abs(coord[0]) * 2) % 2
+            vy = (coord[1] + abs(coord[1]) * 1) % 1
+            return (vx, vy)
+    else:
+        raise ValueError("Invalid tiling: "+str(args.tiling)+" Supported options: "\
+            +"BIPARTITE, STRIPE")
 
     if args.instate!=None:
-        state = read_ipeps(args.instate, peps_args=PEPSARGS(), global_args=GLOBALARGS())
+        state = read_ipeps(args.instate, vertexToSite=lattice_to_site, \
+            peps_args=PEPSARGS(), global_args=GLOBALARGS())
         if args.bond_dim > max(state.get_aux_bond_dims()):
             # extend the auxiliary dimensions
             state = extend_bond_dim(state, args.bond_dim)
@@ -39,20 +53,6 @@ if __name__=='__main__':
         B = B/torch.max(torch.abs(B))
 
         sites = {(0,0): A, (1,0): B}
-
-        if args.tiling == "BIPARTITE":
-            def lattice_to_site(coord):
-                vx = (coord[0] + abs(coord[0]) * 2) % 2
-                vy = abs(coord[1])
-                return ((vx + vy) % 2, 0)
-        elif args.tiling == "STRIPE":
-            def lattice_to_site(coord):
-                vx = (coord[0] + abs(coord[0]) * 2) % 2
-                vy = (coord[1] + abs(coord[1]) * 1) % 1
-                return (vx, vy)
-        else:
-            raise ValueError("Invalid tiling: "+str(args.tiling)+" Supported options: "\
-                +"BIPARTITE, STRIPE")
 
         state = IPEPS(sites, vertexToSite=lattice_to_site)
     else:
