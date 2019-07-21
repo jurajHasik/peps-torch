@@ -55,8 +55,6 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=OPT
         # compute and print observables
         if verbosity>0: 
             obs_values, obs_labels = model.eval_obs(state,current_env[0])
-            if epoch==0:
-                print(", ".join(["epoch","energy"]+obs_labels))
             print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
 
         # store current state if the loss improves
