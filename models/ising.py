@@ -9,6 +9,45 @@ import itertools
 
 class ISING():
     def __init__(self, hx=0.0, q=0.0, global_args=GLOBALARGS()):
+        r"""
+        
+        :param hx: transverse field
+        :param q: plaquette interaction 
+        :param global_args:
+        :type hx: float
+        :type q: float
+        :type global_args: type description
+
+        Build Ising Hamiltonian in transverse field with plaquette interaction
+
+        .. math:: H = - \sum_{<i,j>} h2_{<i,j>} + q\sum_{p} h4_p - h_x\sum_i h1_i
+
+        on the square lattice. Where the first sum runs over the pairs of sites `i,j` 
+        which are nearest-neighbours (denoted as `<.,.>`), the second sum runs over 
+        all plaquettes `p`, and the last sum runs over all sites::
+
+            y\x
+               _:__:__:__:_
+            ..._|__|__|__|_...
+            ..._|__|__|__|_...
+            ..._|__|__|__|_...
+            ..._|__|__|__|_...
+            ..._|__|__|__|_...
+                :  :  :  :
+
+        where
+
+        * :math:`h2_{ij} = 4S^z_i S^z_j` with indices of h2 corresponding to :math:`s_i s_j;s'_i s'_j`
+        * :math:`h4_p  = 16S^z_i S^z_j S^z_k S^z_l` where `i,j,k,l` labels the sites of a plaquette::
+          
+            p= i---j
+               |   |
+               k---l 
+
+          and indices of `h4` correspond to :math:`s_is_js_ks_l;s'_is'_js'_ks'_l`
+        
+        * :math:`h1_i  = 2S^x_i`
+        """
         self.dtype=global_args.dtype
         self.device=global_args.device
         self.phys_dim=2
@@ -18,26 +57,6 @@ class ISING():
         self.h2, self.h4, self.h1 = self.get_h()
         self.obs_ops = self.get_obs_ops()
 
-    # build Ising Hamiltonian in transverse field with plaquette interaction
-    # H = - \sum_{<i,j>} h2_i,j + q*\sum_{p} h4_p - hx*\sum_i h1_i 
-    #  
-    # y\x
-    #    _:__:__:__:_
-    # ..._|__|__|__|_...
-    # ..._|__|__|__|_...
-    # ..._|__|__|__|_...
-    # ..._|__|__|__|_...
-    # ..._|__|__|__|_...
-    #     :  :  :  : 
-    # 
-    # where h2_ij = 4*S^z_i S^z_j, indices of h correspond to s_i,s_j;s'_i,s'_j
-    #       h4_p  = 16*S^z_i S^z_j S^z_k S^z_l where ijkl labels sites of a plaquette
-    #
-    #       p: i---j
-    #          |   |
-    #          k---l, and indices of h_p correspond to s_i,s_j,s_k,s_l;s'_i,s'_j,s'_k,s'_l
-    #
-    #       h1_i  = 2*S^x_i
     def get_h(self):
         s2 = su2.SU2(self.phys_dim, dtype=self.dtype, device=self.device) 
         SzSz = 4*torch.einsum('ij,ab->iajb',s2.SZ(),s2.SZ())
@@ -53,32 +72,19 @@ class ISING():
         obs_ops["sm"]= 2*s2.SM()
         return obs_ops
 
-    # evaluation of energy depends on the nature of underlying
-    # ipeps state
-    #
-    # Ex.1 for 1-site c4v invariant iPEPS there is just a single 2site
-    # operator which gives the energy-per-site
-    #
-    # Ex.2 for 1-site invariant iPEPS there are two two-site terms
-    # which give the energy-per-site
-    #    0       0
-    # 1--A--3 1--A--3 
-    #    2       2                          A
-    #    0       0                          2
-    # 1--A--3 1--A--3                       0
-    #    2       2    , terms A--3 1--A and A have to be evaluated
-    #
-    # Ex.3 for 2x2 cluster iPEPS there are eight two-site terms
-    #    0       0       0
-    # 1--A--3 1--B--3 1--A--3
-    #    2       2       2
-    #    0       0       0
-    # 1--C--3 1--D--3 1--C--3
-    #    2       2       2             A--3 1--B      A B C D
-    #    0       0                     B--3 1--A      2 2 2 2
-    # 1--A--3 1--B--3                  C--3 1--D      0 0 0 0
-    #    2       2             , terms D--3 1--C and  C D A B
     def energy_1x1(self,state,env):
+        r"""
+        For 1-site invariant iPEPS it's enough to construct a single reduced
+        density matrix of a 2x2 plaquette. Afterwards, the energy per site `e` is 
+        computed by evaluating individual terms in the Hamiltonian through
+        :math:`\langle \mathcal{O} \rangle = Tr(\rho_{2x2} \mathcal{O})`
+        
+        .. math:: 
+
+            e = -(\langle h2_{<\bf{0},\bf{x}>} \rangle + \langle h2_{<\bf{0},\bf{y}>} \rangle)
+            + q\langle h4_{\bf{0}} \rangle - h_x \langle h4_{\bf{0}} \rangle
+
+        """
         rdm2x2= rdm.rdm2x2((0,0),state,env)
         eSx= torch.einsum('ijklajkl,ia',rdm2x2,self.h1)
         eSzSz= torch.einsum('ijklabkl,ijab',rdm2x2,self.h2) + \
