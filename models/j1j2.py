@@ -9,6 +9,36 @@ import itertools
 
 class J1J2():
     def __init__(self, j1=1.0, j2=0.0, global_args=GLOBALARGS()):
+        r"""
+        
+        :param j1: nearest-neighbour interaction
+        :param j2: next nearest-neighbour interaction
+        :param global_args: TODO
+        :type j1: float
+        :type j2: float
+        :type global_args: GLOBALARGS
+
+        Build Spin-1/2 :math:`J_1-J_2` Hamiltonian
+
+        .. math:: H = J_1\sum_{<i,j>} h2_{ij} + J_2\sum_{<<i,j>>} h2_{ij}
+
+        on the square lattice. Where the first sum runs over the pairs of sites `i,j` 
+        which are nearest-neighbours (denoted as `<.,.>`), and the second sum runs over 
+        pairs of sites `i,j` which are next nearest-neighbours (denoted as `<<.,.>>`)::
+
+            y\x
+               _:__:__:__:_
+            ..._|__|__|__|_...
+            ..._|__|__|__|_...
+            ..._|__|__|__|_...
+            ..._|__|__|__|_...
+            ..._|__|__|__|_...
+                :  :  :  :
+
+        where
+
+        * :math:`h2_{ij} = \mathbf{S_i}.\mathbf{S_j}` with indices of h2 corresponding to :math:`s_i s_j;s'_i s'_j`
+        """
         self.dtype=global_args.dtype
         self.device=global_args.device
         self.phys_dim=2
@@ -18,19 +48,6 @@ class J1J2():
         self.h = self.get_h()
         self.obs_ops = self.get_obs_ops()
 
-    # build spin-1/2 J1-J2 Hamiltonian
-    # H = j1*\sum_{<i,j>} h_i,j + j2*\sum_<<i,j>> h_i,j
-    #  
-    # y\x
-    #    _:__:__:__:_
-    # ..._|__|__|__|_...
-    # ..._|__|__|__|_...
-    # ..._|__|__|__|_...
-    # ..._|__|__|__|_...
-    # ..._|__|__|__|_...
-    #     :  :  :  : 
-    # 
-    # where h_ij = S_i.S_j, indices of h correspond to s_i,s_j;s_i',s_j'
     def get_h(self):
         s2 = su2.SU2(self.phys_dim, dtype=self.dtype, device=self.device)
         expr_kron = 'ij,ab->iajb'
@@ -74,22 +91,63 @@ class J1J2():
     def energy_1x1c4v(self,ipeps):
         pass
 
-    # assuming reduced density matrix of 2x2 cluster with indexing of DOFs
-    # as follows rdm2x2=rdm2x2(s0,s1,s2,s3;s0',s1',s2',s3')
-    #
-    # s0,s1
-    # s2,s3
-    #                
-    #                          A3--1B   B3  1A
-    #                          2 \/ 2   2 \/ 2
-    #                A B       0 /\ 0   0 /\ 0
-    # Ex.1 unit cell B A terms B3--1A & A3  1B
-    #
-    #                          A3--1B   B3--1A
-    #                          2 \/ 2   2 \/ 2
-    #                A B       0 /\ 0   0 /\ 0
-    # Ex.2 unit cell A B terms A3--1B & B3--1A
     def energy_2x2_2site(self,state,env):
+        r"""
+
+        :param state: wavefunction
+        :param env: CTM environment
+        :type state: IPEPS
+        :type env: ENV
+        :return: energy per site
+        :rtype: float
+
+        We assume iPEPS with 2x1 unit cell containing two tensors A, B. We can
+        tile the square lattice in two ways::
+
+            BIPARTITE           STRIPE   
+
+            A B A B             A B A B
+            B A B A             A B A B
+            A B A B             A B A B
+            B A B A             A B A B
+
+        Taking reduced density matrix :math:`\rho_{2x2}` of 2x2 cluster with indexing 
+        of sites as follows :math:`\rho_{2x2}(s_0,s_1,s_2,s_3;s'_0,s'_1,s'_2,s'_3)`::
+        
+            s0--s1
+            |   |
+            s2--s3
+
+        and without assuming any symmetry on the indices of individual tensors a following
+        set of terms has to be evaluated in order to compute energy-per-site::
+                
+               0           
+            1--A--3
+               2
+            
+            Ex.1 unit cell A B, with BIPARTITE tiling
+
+                A3--1B, B3--1A, A, B, A3  , B3  ,   1A,   1B
+                                2  0   \     \      /     / 
+                                0  2    \     \    /     /  
+                                B  A    1A    1B  A3    B3  
+            
+            Ex.2 unit cell A B, with STRIPE tiling
+
+                A3--1A, B3--1B, A, B, A3  , B3  ,   1A,   1B
+                                2  0   \     \      /     / 
+                                0  2    \     \    /     /  
+                                A  B    1B    1A  B3    A3  
+        """
+        # A3--1B   B3  1A
+        # 2 \/ 2   2 \/ 2
+        # 0 /\ 0   0 /\ 0
+        # B3--1A & A3  1B
+
+        # A3--1B   B3--1A
+        # 2 \/ 2   2 \/ 2
+        # 0 /\ 0   0 /\ 0
+        # A3--1B & B3--1A
         id2= torch.eye(4,dtype=self.dtype,device=self.device)
         id2= id2.view(2,2,2,2).contiguous()
         h2x2_nn= torch.einsum('ijab,klcd->ijklabcd',self.h,id2)
@@ -108,14 +166,47 @@ class J1J2():
         energy_per_site = 2.0*(self.j1*energy_nn/8.0 + self.j2*energy_nnn/4.0)
         return energy_per_site
 
-    # definition of other observables
-    # sp=sx+isy, sm=sx-isy => sx=0.5(sp+sm), sy=-i0.5(sp-sm)
-    # m=\sqrt(<sz>^2+<sx>^2+<sy>^2)=\sqrt(<sz>^2+0.25(<sp>+<sm>)^2-0.25(<sp>-<sm>)^2)
-    #  =\sqrt(<sz>^2+0.5<sp><sm>)
-    #
-    # expect "list" of (observable label, value) pairs
-    # TODO optimize/unify ?
     def eval_obs(self,state,env):
+        r"""
+        :param state: wavefunction
+        :param env: CTM environment
+        :type state: IPEPS
+        :type env: ENV
+        :return:  expectation values of observables, labels of observables
+        :rtype: list[float], list[str]
+
+        Computes the following observables in order
+
+            1. average magnetization over the unit cell,
+            2. magnetization for each site in the unit cell
+            3. :math:`\langle S^z \rangle,\ \langle S^+ \rangle,\ \langle S^- \rangle` 
+               for each site in the unit cell
+
+        where the on-site magnetization is defined as
+        
+        .. math::
+            
+            \begin{align*}
+            m &= \sqrt{ \langle S^z \rangle^2+\langle S^x \rangle^2+\langle S^y \rangle^2 }
+            =\sqrt{\langle S^z \rangle^2+1/4(\langle S^+ \rangle+\langle S^- 
+            \rangle)^2 -1/4(\langle S^+\rangle-\langle S^-\rangle)^2} \\
+              &=\sqrt{\langle S^z \rangle^2 + 1/2\langle S^+ \rangle \langle S^- \rangle)}
+            \end{align*}
+
+        Usual spin components can be obtained through the following relations
+        
+        .. math::
+            
+            \begin{align*}
+            S^+ &=S^x+iS^y               & S^x &= 1/2(S^+ + S^-)\\
+            S^- &=S^x-iS^y\ \Rightarrow\ & S^y &=-i/2(S^+ - S^-)
+            \end{align*}
+
+
+       
+        """
+        # TODO optimize/unify ?
+        # expect "list" of (observable label, value) pairs ?
         obs= dict({"avg_m": 0.})
         with torch.no_grad():
             for coord,site in state.sites.items():

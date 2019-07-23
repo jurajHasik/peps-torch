@@ -1,0 +1,6 @@
+J1-J2 Heisenberg Model
+======================
+
+.. automodule:: models.j1j2
+.. autoclass:: J1J2
+    :members:

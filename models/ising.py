@@ -13,10 +13,10 @@ class ISING():
         
         :param hx: transverse field
         :param q: plaquette interaction 
-        :param global_args:
+        :param global_args: TODO
         :type hx: float
         :type q: float
-        :type global_args: type description
+        :type global_args: GLOBALARGS
 
         Build Ising Hamiltonian in transverse field with plaquette interaction
 

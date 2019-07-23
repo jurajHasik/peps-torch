@@ -1,10 +1,7 @@
-models
+Models
 ======
 
-.. note::
-    Implmentation of various lattice models
+.. toctree::
+    :glob:
 
-.. currentmodule:: models
-.. automodule:: models.ising
-.. autoclass:: ISING
-    :members:
+    models/*
