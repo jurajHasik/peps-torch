@@ -77,6 +77,9 @@ if __name__=='__main__':
     # optimize
     optimize_state(state, ctm_env_init, loss_fn, model, args)
 
+    # compute final observables for the best variational state
+    outputstatefile= args.out_prefix+"_state.json"
+    state= read_ipeps(outputstatefile, peps_args=PEPSARGS(), global_args=GLOBALARGS())
     ctm_env = ENV(args.chi, state)
     init_env(state, ctm_env)
     ctm_env = ctmrg.run(state, ctm_env)

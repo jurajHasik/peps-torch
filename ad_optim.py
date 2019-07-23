@@ -25,6 +25,8 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=OPT
     parameters = list(state.sites.values())
     for A in parameters: A.requires_grad_(True)
 
+    outputstatefile = local_args.out_prefix+"_state.json"
+    t_data = dict({"loss": [1.0e+16], "min_loss": 1.0e+16})
     current_env = [ctm_env_init]
     def closure():
         for el in parameters: 
@@ -37,27 +39,26 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=OPT
         loss, ctm_env = loss_fn(state, current_env[0], ctm_args=ctm_args, opt_args=opt_args, global_args=global_args)
         loss.backward()
 
-        # 2) detach current environment from autograd graph 
+        # 2) detach current environment from autograd graph
         lst_C = list(ctm_env.C.values())
         lst_T = list(ctm_env.T.values())
         current_env[0] = ctm_env
         for el in lst_T + lst_C: el.detach_()
 
+        # 3) store current state if the loss improves
+        t_data["loss"].append(loss.item())
+        if t_data["min_loss"] > t_data["loss"][-1]:
+            t_data["min_loss"]= t_data["loss"][-1]
+            write_ipeps(state, outputstatefile, normalize=True)
+
         return loss
 
     verbosity = opt_args.verbosity_opt_epoch
-    outputstatefile = local_args.out_prefix+"_state.json"
-    t_data = dict({"loss": [1.0e+16]})
     optimizer = torch.optim.LBFGS(parameters, max_iter=opt_args.max_iter_per_epoch, lr=opt_args.lr)    
     for epoch in range(local_args.opt_max_iter):
         loss = optimizer.step(closure)
         
         # compute and print observables
-        if verbosity>0: 
+        if verbosity>0:
             obs_values, obs_labels = model.eval_obs(state,current_env[0])
             print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
-
-        # store current state if the loss improves
-        t_data["loss"].append(loss.item())
-        if t_data["loss"][-2] > t_data["loss"][-1]:
-            write_ipeps(state, outputstatefile, normalize=True)
