@@ -85,7 +85,7 @@ html_theme = 'sphinx_rtd_theme'
 #
 html_theme_options = {
     # Toc options
-    'collapse_navigation': True,
+    'collapse_navigation': False,
     'sticky_navigation': True,
     'navigation_depth': 4,
     'includehidden': True,
@@ -166,5 +166,11 @@ texinfo_documents = [
 
 
 # -- Extension configuration -------------------------------------------------
+#autodoc_default_options = {
+#        'show-inheritance': False,
+#    'special-members': '__init__',
+#    'undoc-members': True,
+#    'exclude-members': '__weakref__'
+#}
 autoclass_content = 'both'
-autodoc_mock_imports = ["torch"]
+#autodoc_mock_imports = ["torch"]

@@ -2,8 +2,32 @@ import torch
 from ipeps import IPEPS
 from env import ENV
 
-# computes 1-site reduced density matrix
-def rdm1x1(coord, ipeps, env, verbosity=0):
+
+def rdm1x1(coord, state, env, verbosity=0):
+    r"""
+    :param coord: vertex (x,y) for which reduced density matrix is constructed
+    :param state: underlying wavefunction
+    :param env: environment corresponding to ``state``
+    :param verbosity: logging verbosity
+    :type coord: tuple(int,int) 
+    :type state: IPEPS
+    :type env: ENV
+    :type verbosity: int
+    :return: 1-site reduced density matrix with indices :math:`s;s'`
+    :rtype: torch.tensor
+
+    Computes 1-site reduced density matrix :math:`\rho_{1x1}` centered on vertex ``coord`` by 
+    contracting the following tensor network::
+
+        C--T-----C
+        |  |     |
+        T--A^+A--T
+        |  |     |
+        C--T-----C
+
+    where the physical indices `s` and `s'` of on-site tensor :math:`A` at vertex ``coord`` 
+    and it's hermitian conjugate :math:`A^\dagger` are left uncontracted
+    """
     # C(-1,-1)--1->0
     # 0
     # 0
@@ -41,8 +65,8 @@ def rdm1x1(coord, ipeps, env, verbosity=0):
     # --A--
     #  /
     #
-    dimsA = ipeps.site(coord).size()
-    a = torch.einsum('mefgh,nabcd->eafbgchdmn',ipeps.site(coord),ipeps.site(coord)).contiguous()\
+    dimsA = state.site(coord).size()
+    a = torch.einsum('mefgh,nabcd->eafbgchdmn',state.site(coord),state.site(coord)).contiguous()\
         .view(dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2, dimsA[0], dimsA[0])
     # C(-1,-1)--0
     # |
@@ -100,21 +124,37 @@ def rdm1x1(coord, ipeps, env, verbosity=0):
 
     return rdm
 
-# computes 2-site reduced density matrix of horizontal 2x1 subsystem
-# strategy:
-# compute four individual corners, construct right and left 
-# half of the network and finally contract them to obtain
-# reduced density matrix:
-# C T             -- T              C = C2x2_LU(coord) C2x2(coord+(1,0))
-# T a(coord)      -- a(coord+(1,0)) T   C2x1_LD(coord) C2x1(coord+(1,0))
-# | |                |              |
-# C T--           -- T              C  
-#
-# The physical DOFs are ordered as follows
-# s0 s1
-# 
-# thus rdm=rdm(s0,s1;s0',s1')
 def rdm2x1(coord, ipeps, env, verbosity=0):
+    r"""
+    :param coord: vertex (x,y) specifies position of 2x1 subsystem
+    :param state: underlying wavefunction
+    :param env: environment corresponding to ``state``
+    :param verbosity: logging verbosity
+    :type coord: tuple(int,int) 
+    :type state: IPEPS
+    :type env: ENV
+    :type verbosity: int
+    :return: 2-site reduced density matrix with indices :math:`s_0s_1;s'_0s'_1`
+    :rtype: torch.tensor
+
+    Computes 2-site reduced density matrix :math:`\rho_{2x1}` of a horizontal 
+    2x1 subsystem using following strategy:
+    
+        1. compute four individual corners 
+        2. construct right and left half of the network
+        3. contract right and left halt to obtain final reduced density matrix
+
+    ::
+
+        C--T------------T------------------C = C2x2_LU(coord)--C2x2(coord+(1,0))
+        |  |            |                  |   |               |  
+        T--A^+A(coord)--A^+A(coord+(1,0))--T   C2x1_LD(coord)--C2x1(coord+(1,0))
+        |  |            |                  |
+        C--T------------T------------------C 
+
+    The physical indices `s` and `s'` of on-sites tensors :math:`A` (and :math:`A^\dagger`) 
+    at vertices ``coord``, ``coord+(1,0)`` are left uncontracted
+    """
     #----- building C2x2_LU ----------------------------------------------------
     C = env.C[(ipeps.vertexToSite(coord),(-1,-1))]
     T1 = env.T[(ipeps.vertexToSite(coord),(0,-1))]
@@ -259,24 +299,39 @@ def rdm2x1(coord, ipeps, env, verbosity=0):
 
     return rdm
 
-
-# computes 2-site reduced density matrix of vertical 1x2 subsystem
-# strategy:
-# compute four individual corners, construct upper and lower 
-# half of the network and finally contract them to obtain
-# reduced density matrix:
-# C T             -- C = C2x2_LU(coord)       C1x2(coord)
-# T a(coord)      -- T   C2x2_LD(coord+(0,1)) C1x2(coord+0,1))
-# | |                |
-# T a(coord+(0,1))-- T
-# C T             -- C
-#
-# The physical DOFs are ordered as follows
-# s0
-# s1
-# 
-# thus rdm=rdm(s0,s1;s0',s1')
 def rdm1x2(coord, ipeps, env, verbosity=0):
+    r"""
+    :param coord: vertex (x,y) specifies position of 1x2 subsystem
+    :param state: underlying wavefunction
+    :param env: environment corresponding to ``state``
+    :param verbosity: logging verbosity
+    :type coord: tuple(int,int) 
+    :type state: IPEPS
+    :type env: ENV
+    :type verbosity: int
+    :return: 2-site reduced density matrix with indices :math:`s_0s_1;s'_0s'_1`
+    :rtype: torch.tensor
+
+    Computes 2-site reduced density matrix :math:`\rho_{1x2}` of a vertical 
+    1x2 subsystem using following strategy:
+    
+        1. compute four individual corners 
+        2. construct upper and lower half of the network
+        3. contract upper and lower halt to obtain final reduced density matrix
+
+    ::
+
+        C--T------------------C = C2x2_LU(coord)--------C1x2(coord)
+        |  |                  |   |                     |
+        T--A^+A(coord)--------T   C2x2_LD(coord+(0,1))--C1x2(coord+0,1))
+        |  |                  |
+        T--A^+A(coord+(0,1))--T
+        |  |                  |
+        C--T------------------C
+
+    The physical indices `s` and `s'` of on-sites tensors :math:`A` (and :math:`A^\dagger`) 
+    at vertices ``coord``, ``coord+(0,1)`` are left uncontracted
+    """
     #----- building C2x2_LU ----------------------------------------------------
     C = env.C[(ipeps.vertexToSite(coord),(-1,-1))]
     T1 = env.T[(ipeps.vertexToSite(coord),(0,-1))]
@@ -426,23 +481,44 @@ def rdm1x2(coord, ipeps, env, verbosity=0):
 
     return rdm
 
-# computes 4-site reduced density matrix of 2x2 subsystem
-# strategy:
-# compute four individual corners, construct upper and lower 
-# half of the network and finally contract them to obtain
-# reduced density matrix:
-# C T             -- T              C = C2x2_LU(coord)       C2x2(coord+(1,0))
-# T a(coord)      -- a(coord+(1,0)) T   C2x2_LD(coord+(0,1)) C2x2(coord+(1,1))
-# | |                |              |
-# T a(coord+(0,1))-- a(coord+(1,1)) T
-# C T             -- T              C
-#
-# The physical DOFs are ordered as follows
-# s0 s1
-# s2 s3
-# 
-# thus rdm=rdm(s0,s1,s2,s3;s0',s1',s2',s3')
 def rdm2x2(coord, ipeps, env, verbosity=0):
+    r"""
+    :param coord: vertex (x,y) specifies upper left site of 2x2 subsystem 
+    :param state: underlying wavefunction
+    :param env: environment corresponding to ``state``
+    :param verbosity: logging verbosity
+    :type coord: tuple(int,int) 
+    :type state: IPEPS
+    :type env: ENV
+    :type verbosity: int
+    :return: 4-site reduced density matrix with indices :math:`s_0s_1s_2s_3;s'_0s'_1s'_2s'_3`
+    :rtype: torch.tensor
+
+    Computes 4-site reduced density matrix :math:`\rho_{2x2}` of 2x2 subsystem specified
+    by the vertex ``coord`` of its upper left corner using strategy:
+
+        1. compute four individual corners
+        2. construct upper and lower half of the network
+        3. contract upper and lower half to obtain final reduced density matrix
+
+    ::
+
+        C--T------------------T------------------C = C2x2_LU(coord)--------C2x2(coord+(1,0))
+        |  |                  |                  |   |                     |
+        T--A^+A(coord)--------A^+A(coord+(1,0))--T   C2x2_LD(coord+(0,1))--C2x2(coord+(1,1))
+        |  |                  |                  |
+        T--A^+A(coord+(0,1))--A^+A(coord+(1,1))--T
+        |  |                  |                  |
+        C--T------------------T------------------C
+        
+    The physical indices `s` and `s'` of on-sites tensors :math:`A` (and :math:`A^\dagger`) 
+    at vertices ``coord``, ``coord+(1,0)``, ``coord+(0,1)``, and ``coord+(1,1)`` are 
+    left uncontracted and given in the same order::
+        
+        s0 s1
+        s2 s3
+
+    """
     #----- building C2x2_LU ----------------------------------------------------
     C = env.C[(ipeps.vertexToSite(coord),(-1,-1))]
     T1 = env.T[(ipeps.vertexToSite(coord),(0,-1))]

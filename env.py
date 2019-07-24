@@ -4,45 +4,68 @@ from ipeps import IPEPS
 
 class ENV(torch.nn.Module):
     def __init__(self, chi, ipeps, ctm_args=CTMARGS(), global_args=GLOBALARGS()):
+        r"""
+        :param chi: environment bond dimension :math:`\chi`
+        :param ipeps: wavefunction
+        :param ctm_args: CTM algorithm configuration
+        :param global_args: global configuration
+        :type chi: int
+        :type ipeps: IPEPS
+        :type ctm_args: CTMARGS
+        :type global_args: GLOBALARGS
+
+        For each pair (coord, site) create corresponding half-row/column tensors T's 
+        and corner tensors C's. The corner tensors have dimensions :math:`\chi \times \chi`
+        and the half-row/column tensors have dimensions :math:`\chi \times \chi \times D^2` 
+        (D might vary depending on the corresponding dimension of on-site tensor)::
+
+            y\x -1 0 1
+             -1  C T C
+              0  T A T
+              1  C T C 
+        
+        The environment tensors of an ENV object ``e`` are accesed through members ``C`` and ``T`` 
+        by providing a tuple of coordinates and directional vector to the environment tensor:: 
+            
+            coord=(0,0)                # tuple(x,y) identifying vertex on the square lattice
+            rel_dir_vec_C=(-1,-1)      # tuple(rx,ry) identifying one of the four corner tensors
+            rel_dir_vec_T=(-1,0)       # tuple(rx,ry) identifying one of the four half-row/column tensors
+            C_upper_left= e.C[(coord,rel_dir_vec_C)] # return upper left corner tensor of site at coord
+            T_left= e.T[(coord,rel_dir_vec_T)]       # return left half-row tensor of site at coord
+
+        The directional vectors identifying individual tensors making up the environment of 
+        a site are defined relative to the position of the site: `coord(environment tensor) - coord(A)`::
+
+            C(-1,-1)   T        (1,-1)C 
+                       |(0,-1)
+            T--(-1,0)--A(0,0)--(1,0)--T 
+                       |(0,1)
+            C(-1,1)    T         (1,1)C
+        
+        The index-position convention is as follows: 
+        Start from the index in the **direction "up"** <=> (0,-1) and continue **anti-clockwise**::
+        
+            C--1 0--T--2 0--C
+            |       |       |
+            0       1       1
+            0               0
+            |               |
+            T--2         1--T
+            |               |
+            1               2
+            0       0       0
+            |       |       |
+            C--1 1--T--2 1--C
+        """
         super(ENV, self).__init__()
         self.dtype = global_args.dtype
         self.device = global_args.device
-        
-        # 
         self.chi = chi
 
         # initialize environment tensors
         self.C = dict()
         self.T = dict()
 
-        # for each pair (coord, site) create corresponding T's and C's
-        # y\x -1 0 1
-        #  -1  C T C
-        #   0  T A T
-        #   1  C T C 
-        # where the directional vectors are given as coord(env-tensor) - coord(A)
-        # C(-1,-1)   T        (1,-1)C 
-        #            |(0,-1)
-        # T--(-1,0)--A(0,0)--(1,0)--T 
-        #            |(0,1)
-        # C(-1,1)    T         (1,1)C
-        # and analogously for corners C
-        #
-        # The dimension-position convention is as follows: 
-        # Start from index in direction "up" <=> (0,-1) and
-        # continue anti-clockwise
-        # 
-        # C--1 0--T--2 0--C
-        # |       |       |
-        # 0       1       1
-        # 0               0
-        # |               |
-        # T--2         1--T
-        # |               |
-        # 1               2
-        # 0       0       0
-        # |       |       |
-        # C--1 1--T--2 1--C
         for coord, site in ipeps.sites.items():
             #for vec in [(0,-1), (-1,0), (0,1), (1,0)]:
             #    self.T[(coord,vec)]="T"+str(ipeps.site(coord))
@@ -57,6 +80,23 @@ class ENV(torch.nn.Module):
                 self.C[(coord,vec)]=torch.empty((self.chi,self.chi), dtype=self.dtype, device=self.device)
 
 def init_env(ipeps, env, ctm_args=CTMARGS()):
+    """
+    :param ipeps: wavefunction
+    :param env: CTM environment
+    :param ctm_args: CTM algorithm configuration
+    :type ipeps: IPEPS
+    :type env: ENV 
+    :type ctm_args: CTMARGS
+
+    Initializes the environment `env` according to one of the supported options specified 
+    inside `CTMARGS.ctm_env_init_type` [TODO link here]
+    
+ 
+    * CONST - all C and T tensors have all their elements intialized to a value 1
+    * RANDOM - all C and T tensors have elements with random numbers drawn from uniform
+      distribution [0,1)
+    * CTMRG - tensors C and T are built from the on-site tensors of `ipeps` 
+    """
     if ctm_args.ctm_env_init_type=='CONST':
         init_const(env, ctm_args.verbosity_initialization)
     elif ctm_args.ctm_env_init_type=='RANDOM':

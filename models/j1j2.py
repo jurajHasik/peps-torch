@@ -10,7 +10,6 @@ import itertools
 class J1J2():
     def __init__(self, j1=1.0, j2=0.0, global_args=GLOBALARGS()):
         r"""
-        
         :param j1: nearest-neighbour interaction
         :param j2: next nearest-neighbour interaction
         :param global_args: TODO
