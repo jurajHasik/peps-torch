@@ -2,6 +2,7 @@ import torch
 from args import *
 from env import *
 from ipeps import write_ipeps
+import matplotlib.pyplot as plt
 
 # A = torch.rand((phys_dim, bond_dim, bond_dim, bond_dim, bond_dim), dtype=torch.float64)
 # A = 2 * (A - 0.5)
@@ -54,11 +55,53 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=OPT
         return loss
 
     verbosity = opt_args.verbosity_opt_epoch
-    optimizer = torch.optim.LBFGS(parameters, max_iter=opt_args.max_iter_per_epoch, lr=opt_args.lr)    
+    outputstatefile = local_args.out_prefix+"_state.json"
+    checkpoint_file = local_args.out_prefix+"_checkpoint.p"
+    optimizer = torch.optim.LBFGS(parameters, max_iter=opt_args.max_iter_per_epoch, lr=opt_args.lr)
+    epoch0 = 0
+    loss0 = None
+
+    if opt_args.resume is not None:
+        checkpoint = torch.load(opt_args.resume)
+        init_parameters = checkpoint["parameters"]
+        epoch0 = checkpoint["epoch"]
+        loss0 = checkpoint["loss"]
+        for i in range(len(parameters)):
+            parameters[i].data = init_parameters[i].data 
+        optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+
+    print(f"loss0 = {loss0}")
+    print(f"new_loss0 = {closure().item()}")
+    t_data = dict({"loss": [1.0e+16]})
+
     for epoch in range(local_args.opt_max_iter):
+        if (epoch % 30) == 0:
+            optimizer_state_dict = optimizer.state_dict()
+
+            optimizer = torch.optim.LBFGS(parameters, max_iter=opt_args.max_iter_per_epoch, lr=opt_args.lr)    
+            # optimizer.load_state_dict(optimizer_state_dict)
+
         loss = optimizer.step(closure)
-        
+        # print("Optimizer's state_dict:")
+        # for var_name in optimizer.state_dict():
+        #     print(var_name, "\t")        
         # compute and print observables
         if verbosity>0:
             obs_values, obs_labels = model.eval_obs(state,current_env[0])
             print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
+
+        # store current state if the loss improves
+        t_data["loss"].append(loss.item())
+        if t_data["loss"][-2] > t_data["loss"][-1]:
+            write_ipeps(state, outputstatefile, normalize=True)
+    
+    torch.save({
+            'epoch': epoch0 + epoch,
+            'loss': loss.item(),
+            'parameters': parameters,
+            'optimizer_state_dict': optimizer.state_dict()}, checkpoint_file)
+    print(checkpoint_file)
+
+
+    # plt.plot(t_data["loss"][20:])
+    # plt.show()
