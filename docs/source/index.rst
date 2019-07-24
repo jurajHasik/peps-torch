@@ -10,6 +10,8 @@ TN-torch
    :maxdepth: 2
    :caption: Contents:
 
+   ipeps
+   env
    models
 
 Indices and tables

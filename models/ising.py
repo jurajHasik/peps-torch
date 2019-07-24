@@ -10,7 +10,6 @@ import itertools
 class ISING():
     def __init__(self, hx=0.0, q=0.0, global_args=GLOBALARGS()):
         r"""
-        
         :param hx: transverse field
         :param q: plaquette interaction 
         :param global_args: TODO
@@ -119,6 +118,19 @@ class ISING():
     # expect "list" of (observable label, value) pairs
     # TODO optimize/unify ?
     def eval_obs(self,state,env):
+        r"""
+        :param state: wavefunction
+        :param env: CTM environment
+        :type state: IPEPS
+        :type env: ENV
+        :return:  expectation values of observables, labels of observables
+        :rtype: list[float], list[str]
+
+        Computes the following observables in order
+
+            1. :math:`\langle 2S^z \rangle,\ \langle 2S^x \rangle` for each site in the unit cell
+
+        """
         obs= dict()
         with torch.no_grad():
             for coord,site in state.sites.items():
