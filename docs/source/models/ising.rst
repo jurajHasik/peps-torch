@@ -1,4 +1,4 @@
-Transverse field Ising model
+Transverse Field Ising Model
 ============================
 
 .. automodule:: models.ising

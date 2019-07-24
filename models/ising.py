@@ -12,7 +12,7 @@ class ISING():
         r"""
         :param hx: transverse field
         :param q: plaquette interaction 
-        :param global_args: TODO
+        :param global_args: global configuration
         :type hx: float
         :type q: float
         :type global_args: GLOBALARGS
@@ -43,7 +43,7 @@ class ISING():
                |   |
                k---l 
 
-          and indices of `h4` correspond to :math:`s_is_js_ks_l;s'_is'_js'_ks'_l`
+          and the indices of `h4` correspond to :math:`s_is_js_ks_l;s'_is'_js'_ks'_l`
         
         * :math:`h1_i  = 2S^x_i`
         """
