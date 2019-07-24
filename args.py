@@ -14,7 +14,15 @@ parser.add_argument("-ctm_max_iter", type=int, default=1, help="maximal number o
 parser.add_argument("-opt_max_iter", type=int, default=100, help="maximal number of CTM iterations")
 
 class GLOBALARGS():
-    def __init__(self):
+    r"""
+    Holds global configuration options
+
+    :ivar dtype: data type of all torch.tensor. Default: ``torch.float64``
+    :vartype dtype: torch.dtype
+    :ivar device: device on which all the torch.tensors are stored. Default: ``'cpu'``
+    :vartype device: str
+    """
+    def __init__(self): 
         self.dtype = torch.float64
         self.device = 'cpu'
 
@@ -23,6 +31,38 @@ class PEPSARGS():
         pass
 
 class CTMARGS():
+    r"""
+    Holds configuration of CTM algorithm
+
+    :ivar ctm_max_iter: maximum iterations of directional CTM algorithm. Default: ``50``
+    :vartype ctm_max_iter: int
+    :ivar ctm_env_init_type: default initialization method for ENV objects. Default: ``'CTMRG'``
+    :vartype ctm_env_init_type: str
+    :ivar ctm_conv_tol: threshold for convergence of CTM algorithm. Default: ``'1.0e-10'``
+    :vartype ctm_conv_tol: float
+    :ivar projector_svd_reltol: relative threshold on the magnitude of the smallest elements of 
+                                singular value spectrum used in the construction of projectors. 
+                                Default: ``1.0e-8``
+    :vartype projector_svd_reltol: float
+    :ivar ctm_move_sequence: sequence of directional moves within single CTM iteration. The possible 
+                             directions are encoded as tuples(int,int) 
+                                
+                                * up = (0,-1)
+                                * left = (-1,0)
+                                * down = (0,1)
+                                * right = (1,0)
+
+                             Default: ``[(0,-1), (-1,0), (0,1), (1,0)]``
+    :vartype ctm_move_sequence: list[tuple(int,int)]
+    :ivar verbosity_initialization: verbosity of initialization method for ENV objects. Default: ``0``
+    :vartype verbosity_initialization: int
+    :ivar verbosity_ctm_convergence: verbosity of evaluation of CTM convergence criterion. Default: ``0``
+    :vartype verbosity_ctm_convergence: int
+    :ivar verbosity_projectors: verbosity of projector construction. Default: ``0``
+    :vartype verbosity_projectors: int
+    :ivar verbosity_ctm_move: verbosity of directional CTM moves. Default: ``0``
+    :vartype verbosity_ctm_move: int
+    """
     def __init__(self):
         self.ctm_max_iter = 50
         self.ctm_env_init_type = 'CTMRG'
@@ -35,8 +75,21 @@ class CTMARGS():
         self.verbosity_ctm_move = 0
 
 class OPTARGS():
+    r"""
+    Holds configuration of optimization process
+
+    :ivar opt_ctm_reinit: reinitialize environment from scratch within every loss 
+                          function evaluation. Default: ``True``
+    :vartype opt_ctm_reinit: bool
+    :ivar lr: initial learning rate. Default: ``1.0``
+    :vartype lr: float
+    :ivar max_iter_per_epoch: maximum number of optimizer iterations per epoch. Default: ``1``
+    :vartype max_iter_per_epoch: int
+    :ivar verbosity_opt_epoch: verbosity within optimization epoch. Default: ``1``
+    :vartype verbosity_opt_epoch: int
+    """
     def __init__(self):
         self.opt_ctm_reinit = True
         self.lr = 1.0
-        self.max_iter_per_epoch = 1
+        self.max_iter_per_epoch = 20
         self.verbosity_opt_epoch = 1

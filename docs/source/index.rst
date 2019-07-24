@@ -12,6 +12,8 @@ TN-torch
 
    ipeps
    env
+   rdm
+   args
    models
 
 Indices and tables
