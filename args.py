@@ -13,7 +13,7 @@ parser.add_argument("-chi", type=int, default=20, help="environment bond dimensi
 parser.add_argument("-ctm_max_iter", type=int, default=1, help="maximal number of CTM iterations")
 parser.add_argument("-opt_max_iter", type=int, default=100, help="maximal number of CTM iterations")
 parser.add_argument("-resume", type=str, default=None, help="file with checkpoint to resume")
-args = parser.parse_args()
+#args = parser.parse_args()
 
 class GLOBALARGS():
     r"""
@@ -89,10 +89,12 @@ class OPTARGS():
     :vartype max_iter_per_epoch: int
     :ivar verbosity_opt_epoch: verbosity within optimization epoch. Default: ``1``
     :vartype verbosity_opt_epoch: int
+    :ivar resume: path to the checkpoint file used to resume a computation from optimization. If resume is None, a new computation is initialized. Default: ``None``
+    :vartype resume: str
     """
     def __init__(self):
         self.opt_ctm_reinit = True
         self.lr = 1.0
         self.max_iter_per_epoch = 20
         self.verbosity_opt_epoch = 1
-        self.resume = args.resume
+        self.resume = None
