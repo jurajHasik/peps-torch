@@ -3,20 +3,56 @@ from math import factorial, sqrt
 
 class SU2():
     def __init__(self, J, dtype=torch.float64, device='cpu'):
+        r"""
+        :param J: highest weight
+        :param dtype: data type of matrix representation of operators
+        :param device: device on which the torch.tensor objects are stored
+        :type J: int
+        :type dtype: torch.dtype
+        :type device: int
+
+        Build a representation J of SU(2) group. The J corresponds to (physics) 
+        spin irrep notation as spin :math:`S = (J-1)/2`.
+
+        The raising and lowering operators are defined as:
+
+        .. math::
+            
+            \begin{align*}
+            S^+ &=S^x+iS^y               & S^x &= 1/2(S^+ + S^-)\\
+            S^- &=S^x-iS^y\ \Rightarrow\ & S^y &=-i/2(S^+ - S^-)
+            \end{align*}
+        """
         self.J = J
         self.dtype=dtype
         self.device=device
 
     def I(self):
+        r"""
+        :return: Identity operator of irrep
+        :rtype: torch.tensor
+        """
         return get_op("I",self.J,dtype=self.dtype,device=self.device)
 
     def SZ(self):
+        r"""
+        :return: :math:`S^z` operator of irrep
+        :rtype: torch.tensor
+        """
         return get_op("sz",self.J,dtype=self.dtype,device=self.device)
 
     def SP(self):
+        r"""
+        :return: :math:`S^+` operator of irrep.
+        :rtype: torch.tensor
+        """
         return get_op("sp",self.J,dtype=self.dtype,device=self.device)
 
     def SM(self):
+        r"""
+        :return: :math:`S^-` operator of irrep.
+        :rtype: torch.tensor
+        """
         return get_op("sm",self.J,dtype=self.dtype,device=self.device)
 
 def get_op(op, m, dtype=torch.float64, device='cpu', dbg = False):

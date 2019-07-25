@@ -1,0 +1,6 @@
+Groups
+======
+
+.. toctree::
+
+    su2

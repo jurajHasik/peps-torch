@@ -15,6 +15,7 @@ TN-torch
    rdm
    args
    models
+   groups
 
 Indices and tables
 ==================
