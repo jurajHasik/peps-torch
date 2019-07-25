@@ -146,23 +146,29 @@ class JQ():
         id2= torch.eye(4,dtype=self.dtype,device=self.device)
         id2= id2.view(2,2,2,2).contiguous()
         h2x2_nn= torch.einsum('ijab,klcd->ijklabcd',self.h2,id2)
-        h2x2_nn= h2x2_nn + h2x2_nn.permute(2,0,3,1,6,4,7,5) \
-            + h2x2_nn.permute(0,2,1,3,4,6,5,7) + h2x2_nn.permute(2,3,0,1,6,7,4,5)
+        h2x2_nn_h= self.j1*(h2x2_nn + h2x2_nn.permute(2,3,0,1,6,7,4,5))
+        h2x2_nn_v= self.j1*(h2x2_nn.permute(0,2,1,3,4,6,5,7) + h2x2_nn.permute(2,0,3,1,6,4,7,5))
+        h2x2_q= -self.q*self.h4
 
         rdm2x2_00= rdm.rdm2x2((0,0),state,env)
         rdm2x2_10= rdm.rdm2x2((1,0),state,env)
         rdm2x2_01= rdm.rdm2x2((0,1),state,env)
         rdm2x2_11= rdm.rdm2x2((1,1),state,env)
-        energy_nn = torch.einsum('ijklabcd,ijklabcd',rdm2x2_00,h2x2_nn)
-        energy_nn += torch.einsum('ijklabcd,ijklabcd',rdm2x2_10,h2x2_nn)
-        energy_nn += torch.einsum('ijklabcd,ijklabcd',rdm2x2_01,h2x2_nn)
-        energy_nn += torch.einsum('ijklabcd,ijklabcd',rdm2x2_11,h2x2_nn)
-        energy_4 = torch.einsum('ijklabcd,ijklabcd',rdm2x2_00,self.h4)
-        energy_4 += torch.einsum('ijklabcd,ijklabcd',rdm2x2_10,self.h4)
-        energy_4 += torch.einsum('ijklabcd,ijklabcd',rdm2x2_01,self.h4)
-        energy_4 += torch.einsum('ijklabcd,ijklabcd',rdm2x2_11,self.h4)
+        energy= torch.einsum('ijklabcd,ijklabcd',rdm2x2_00,h2x2_nn_h+h2x2_q)
+        energy+= torch.einsum('ijklabcd,ijklabcd',rdm2x2_10,h2x2_nn_v+h2x2_q)
+        energy+= torch.einsum('ijklabcd,ijklabcd',rdm2x2_01,h2x2_nn_v+h2x2_q)
+        energy+= torch.einsum('ijklabcd,ijklabcd',rdm2x2_11,h2x2_nn_h+h2x2_q)
+        # energy_nn = torch.einsum('ijklabcd,ijklabcd',rdm2x2_00,h2x2_nn)
+        # energy_nn += torch.einsum('ijklabcd,ijklabcd',rdm2x2_10,h2x2_nn)
+        # energy_nn += torch.einsum('ijklabcd,ijklabcd',rdm2x2_01,h2x2_nn)
+        # energy_nn += torch.einsum('ijklabcd,ijklabcd',rdm2x2_11,h2x2_nn)
+        # energy_4 = torch.einsum('ijklabcd,ijklabcd',rdm2x2_00,self.h4)
+        # energy_4 += torch.einsum('ijklabcd,ijklabcd',rdm2x2_10,self.h4)
+        # energy_4 += torch.einsum('ijklabcd,ijklabcd',rdm2x2_01,self.h4)
+        # energy_4 += torch.einsum('ijklabcd,ijklabcd',rdm2x2_11,self.h4)
 
-        energy_per_site = 2.0*self.j1*(energy_nn/16.0) - self.q*(energy_4/4.0)
+        # energy_per_site = 2.0*self.j1*(energy_nn/16.0) - self.q*(energy_4/4.0)
+        energy_per_site= energy/4.0
         return energy_per_site
 
     def eval_obs(self,state,env):
@@ -212,9 +218,17 @@ class JQ():
                 obs[f"m{coord}"]= sqrt(abs(obs[f"sz{coord}"]**2 + obs[f"sp{coord}"]*obs[f"sm{coord}"]))
                 obs["avg_m"] += obs[f"m{coord}"]
             obs["avg_m"]= obs["avg_m"]/len(state.sites.keys())
+
+            for coord,site in state.sites.items():
+                rdm2x1 = rdm.rdm2x1(coord,state,env)
+                rdm1x2 = rdm.rdm1x2(coord,state,env)
+                obs[f"SS2x1{coord}"]= torch.einsum('ijab,ijab',rdm2x1,self.h2)
+                obs[f"SS1x2{coord}"]= torch.einsum('ijab,ijab',rdm1x2,self.h2)
         
         # prepare list with labels and values
         obs_labels=["avg_m"]+[f"m{coord}" for coord in state.sites.keys()]\
             +[f"{lc[1]}{lc[0]}" for lc in list(itertools.product(state.sites.keys(), self.obs_ops.keys()))]
+        obs_labels += [f"SS2x1{coord}" for coord in state.sites.keys()]
+        obs_labels += [f"SS1x2{coord}" for coord in state.sites.keys()]
         obs_values=[obs[label] for label in obs_labels]
         return obs_values, obs_labels
