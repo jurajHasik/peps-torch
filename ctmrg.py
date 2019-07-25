@@ -47,6 +47,12 @@ def run(state, env, conv_check=None, ctm_args=CTMARGS(), global_args=GLOBALARGS(
 def ctm_MOVE(direction, state, env, ctm_args=CTMARGS(), global_args=GLOBALARGS(), verbosity=0):
     # Loop over all non-equivalent sites of ipeps
     # and compute projectors P(coord), P^tilde(coord)
+    if ctm_args.projector_method=='4X4':
+        ctm_get_projectors=ctm_get_projectors_4x4
+    elif ctm_args.projector_method=='4X2':
+        ctm_get_projectors=ctm_get_projectors_4x2
+    else:
+        raise ValueError("Invalid Projector method: "+str(ctm_args.projector_method))
     P = dict()
     Pt = dict()
     for coord,site in state.sites.items():

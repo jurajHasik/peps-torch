@@ -40,6 +40,16 @@ class CTMARGS():
     :vartype ctm_env_init_type: str
     :ivar ctm_conv_tol: threshold for convergence of CTM algorithm. Default: ``'1.0e-10'``
     :vartype ctm_conv_tol: float
+    :ivar projector_method: method used to construct projectors which facilitate truncation
+                            of environment bond dimension :math:`\chi` within CTM algorithm
+
+                                * 4X4: Projectors are built from two halfs of 4x4 tensor
+                                  network
+                                * 4X2: Projectors are built from two enlarged corners (2x2)
+                                  making up a 4x2 (or 2x4) tensor network
+
+                            Default: ``'4X4'``  
+    :vartype projector_method: str
     :ivar projector_svd_reltol: relative threshold on the magnitude of the smallest elements of 
                                 singular value spectrum used in the construction of projectors. 
                                 Default: ``1.0e-8``
@@ -67,6 +77,7 @@ class CTMARGS():
         self.ctm_max_iter = 50
         self.ctm_env_init_type = 'CTMRG'
         self.ctm_conv_tol = 1.0e-10
+        self.projector_method = '4X2'
         self.projector_svd_reltol = 1.0e-8
         self.ctm_move_sequence = [(0,-1), (-1,0), (0,1), (1,0)]
         self.verbosity_initialization = 0
