@@ -57,7 +57,7 @@ if __name__=='__main__':
 
     ctm_env_init = ENV(args.chi, state)
     init_env(state, ctm_env_init)
-    ctm_env_init = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
+    ctm_env_init, history, t_ctm = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
 
     loss = model.energy_2x2_4site(state, ctm_env_init)
     obs_values, obs_labels = model.eval_obs(state,ctm_env_init)
@@ -70,10 +70,10 @@ if __name__=='__main__':
             init_env(state, ctm_env_init)
 
         # 1) compute environment by CTMRG
-        ctm_env = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy, ctm_args=ctm_args, global_args=global_args)
+        ctm_env, history, t_ctm = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy, ctm_args=ctm_args, global_args=global_args)
         loss = model.energy_2x2_4site(state, ctm_env)
         
-        return loss, ctm_env
+        return loss, ctm_env, history, t_ctm
 
     # optimize
     optimize_state(state, ctm_env_init, loss_fn, model, args)
@@ -83,7 +83,7 @@ if __name__=='__main__':
     state= read_ipeps(outputstatefile, peps_args=PEPSARGS(), global_args=GLOBALARGS())
     ctm_env = ENV(args.chi, state)
     init_env(state, ctm_env)
-    ctm_env = ctmrg.run(state, ctm_env)
+    ctm_env, history, t_ctm = ctmrg.run(state, ctm_env)
     opt_energy = model.energy_2x2_4site(state,ctm_env)
     obs_values, obs_labels = model.eval_obs(state,ctm_env)
     print(", ".join([f"{args.opt_max_iter}",f"{opt_energy}"]+[f"{v}" for v in obs_values]))

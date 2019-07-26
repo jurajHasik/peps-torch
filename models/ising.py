@@ -53,15 +53,22 @@ class ISING():
         self.hx=hx
         self.q=q
         
-        self.h2, self.h4, self.h1 = self.get_h()
+        self.h2, self.h4, self.h1, self.hp = self.get_h()
         self.obs_ops = self.get_obs_ops()
 
     def get_h(self):
         s2 = su2.SU2(self.phys_dim, dtype=self.dtype, device=self.device) 
+        id2= torch.eye(4,dtype=self.dtype,device=self.device)
+        id2= id2.view(2,2,2,2).contiguous()
         SzSz = 4*torch.einsum('ij,ab->iajb',s2.SZ(),s2.SZ())
-        SzSzSzSz = 4*torch.einsum('ijab,klcd->ijklabcd',SzSz,SzSz)
+        SzSzIdId= torch.einsum('ijab,klcd->ijklabcd',SzSz,id2)
+        SzSzSzSz= torch.einsum('ijab,klcd->ijklabcd',SzSz,SzSz)
         Sx = s2.SP()+s2.SM()
-        return SzSz, SzSzSzSz, Sx 
+        SxIdIdId= torch.einsum('ia,jb,kc,ld->ijklabcd',Sx,s2.I(),s2.I(),s2.I())
+
+        hp = -SzSzIdId -SzSzIdId.permute(0,2,1,3,4,6,5,7) +self.q*SzSzSzSz -self.hx*SxIdIdId
+
+        return SzSz, SzSzSzSz, Sx, hp
 
     def get_obs_ops(self):
         obs_ops = dict()
@@ -85,11 +92,12 @@ class ISING():
 
         """
         rdm2x2= rdm.rdm2x2((0,0),state,env)
-        eSx= torch.einsum('ijklajkl,ia',rdm2x2,self.h1)
-        eSzSz= torch.einsum('ijklabkl,ijab',rdm2x2,self.h2) + \
-            torch.einsum('ijklajcl,ikac',rdm2x2,self.h2)
-        eSzSzSzSz= torch.einsum('ijklabcd,ijklabcd',rdm2x2,self.h4)
-        energy_per_site = -eSzSz - self.hx*eSx + self.q*eSzSzSzSz
+        energy_per_site= torch.einsum('ijklabcd,ijklabcd',rdm2x2,self.hp) 
+        # eSx= torch.einsum('ijklajkl,ia',rdm2x2,self.h1)
+        # eSzSz= torch.einsum('ijklabkl,ijab',rdm2x2,self.h2) + \
+        #     torch.einsum('ijklajcl,ikac',rdm2x2,self.h2)
+        # eSzSzSzSz= torch.einsum('ijklabcd,ijklabcd',rdm2x2,self.h4)
+        # energy_per_site = -eSzSz - self.hx*eSx + self.q*eSzSzSzSz
         return energy_per_site 
 
     # assuming reduced density matrix of 2x2 cluster with indexing of DOFs
@@ -110,13 +118,6 @@ class ISING():
     def energy_2x2_2site(self,state,env):
         pass
 
-    # definition of other observables
-    # sp=sx+isy, sm=sx-isy => sx=0.5(sp+sm), sy=-i0.5(sp-sm)
-    # m=\sqrt(<sz>^2+<sx>^2+<sy>^2)=\sqrt(<sz>^2+0.25(<sp>+<sm>)^2-0.25(<sp>-<sm>)^2)
-    #  =\sqrt(<sz>^2+0.5<sp><sm>)
-    #
-    # expect "list" of (observable label, value) pairs
-    # TODO optimize/unify ?
     def eval_obs(self,state,env):
         r"""
         :param state: wavefunction
@@ -134,12 +135,23 @@ class ISING():
         obs= dict()
         with torch.no_grad():
             for coord,site in state.sites.items():
-                rdm1x1 = rdm.rdm1x1(coord,state,env)
+                rdm1x1= rdm.rdm1x1(coord,state,env)
                 for label,op in self.obs_ops.items():
                     obs[f"{label}{coord}"]= torch.trace(rdm1x1@op)
                 obs[f"sx{coord}"]= 0.5*(obs[f"sp{coord}"] + obs[f"sm{coord}"])
-        
+            
+            for coord,site in state.sites.items():
+                rdm2x1= rdm.rdm2x1(coord,state,env)
+                rdm1x2= rdm.rdm1x2(coord,state,env)
+                rdm2x2= rdm.rdm2x2(coord,state,env)
+                obs[f"SzSz2x1{coord}"]= torch.einsum('ijab,ijab',rdm2x1,self.h2)
+                obs[f"SzSz1x2{coord}"]= torch.einsum('ijab,ijab',rdm1x2,self.h2)
+                obs[f"SzSzSzSz{coord}"]= torch.einsum('ijklabcd,ijklabcd',rdm2x2,self.h4)
+
         # prepare list with labels and values
         obs_labels= [f"{lc[1]}{lc[0]}" for lc in list(itertools.product(state.sites.keys(), ["sz","sx"]))]
+        obs_labels+= [f"SzSz2x1{coord}" for coord in state.sites.keys()]
+        obs_labels+= [f"SzSz1x2{coord}" for coord in state.sites.keys()]
+        obs_labels+= [f"SzSzSzSz{coord}" for coord in state.sites.keys()]
         obs_values=[obs[label] for label in obs_labels]
         return obs_values, obs_labels

@@ -54,35 +54,35 @@ if __name__=='__main__':
                 return True
         return False
 
-    ctm_env_init = ENV(args.chi, state)
-    init_env(state, ctm_env_init)
-    ctm_env_init = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
+    ctm_env = ENV(args.chi, state)
+    init_env(state, ctm_env)
+    ctm_env, history, t_ctm = ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
 
-    loss = model.energy_1x1(state, ctm_env_init)
-    obs_values, obs_labels = model.eval_obs(state,ctm_env_init)
+    loss = model.energy_1x1(state, ctm_env)
+    obs_values, obs_labels = model.eval_obs(state,ctm_env)
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{loss}"]+[f"{v}" for v in obs_values]))
 
-    def loss_fn(state, ctm_env_init, ctm_args= CTMARGS(), opt_args= OPTARGS(), global_args= GLOBALARGS()):
+    def loss_fn(state, ctm_env_in, ctm_args= CTMARGS(), opt_args= OPTARGS(), global_args= GLOBALARGS()):
         # possibly re-initialize the environment
         if opt_args.opt_ctm_reinit:
-            init_env(state, ctm_env_init)
+            init_env(state, ctm_env_in)
 
         # 1) compute environment by CTMRG
-        ctm_env = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy, ctm_args=ctm_args, global_args=global_args)
-        loss = model.energy_1x1(state, ctm_env)
+        ctm_env_in, history, t_ctm = ctmrg.run(state, ctm_env_in, conv_check=ctmrg_conv_energy, ctm_args=ctm_args, global_args=global_args)
+        loss = model.energy_1x1(state, ctm_env_in)
         
-        return loss, ctm_env
+        return loss, ctm_env_in, history, t_ctm
 
     # optimize
-    optimize_state(state, ctm_env_init, loss_fn, model, args)
+    optimize_state(state, ctm_env, loss_fn, model, args)
 
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"
     state= read_ipeps(outputstatefile, peps_args=PEPSARGS(), global_args=GLOBALARGS())
     ctm_env = ENV(args.chi, state)
     init_env(state, ctm_env)
-    ctm_env = ctmrg.run(state, ctm_env)
+    ctm_env, history, t_ctm = ctmrg.run(state, ctm_env)
     opt_energy = model.energy_1x1(state,ctm_env)
     obs_values, obs_labels = model.eval_obs(state,ctm_env)
     print(", ".join([f"{args.opt_max_iter}",f"{opt_energy}"]+[f"{v}" for v in obs_values]))

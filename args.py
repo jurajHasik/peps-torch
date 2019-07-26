@@ -79,7 +79,7 @@ class CTMARGS():
         self.ctm_max_iter = 50
         self.ctm_env_init_type = 'CTMRG'
         self.ctm_conv_tol = 1.0e-10
-        self.projector_method = '4X2'
+        self.projector_method = '4X4'
         self.projector_svd_reltol = 1.0e-8
         self.ctm_move_sequence = [(0,-1), (-1,0), (0,1), (1,0)]
         self.verbosity_initialization = 0
@@ -100,12 +100,18 @@ class OPTARGS():
     :vartype max_iter_per_epoch: int
     :ivar verbosity_opt_epoch: verbosity within optimization epoch. Default: ``1``
     :vartype verbosity_opt_epoch: int
-    :ivar resume: path to the checkpoint file used to resume a computation from optimization. If resume is None, a new computation is initialized. Default: ``None``
+    :ivar resume: path to the checkpoint file used to resume a computation from optimization. 
+                  If resume is None, a new computation is initialized. Default: ``None``
     :vartype resume: str
+    :ivar opt_logging: turns on recording of additional data from optimization, such as
+                       CTM convergence, timings, gradients, etc. The information 
+                       is logged in file ``{out_prefix}_log.json``. Default: ``True``
+    :vartype opt_logging: bool
     """
     def __init__(self):
         self.opt_ctm_reinit = True
         self.lr = 1.0
-        self.max_iter_per_epoch = 20
+        self.max_iter_per_epoch = 1
         self.verbosity_opt_epoch = 1
         self.resume = None
+        self.opt_logging = True
