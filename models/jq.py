@@ -8,7 +8,7 @@ from math import sqrt
 import itertools
 
 class JQ():
-    def __init__(self, j1=1.0, q=0.0, global_args=GLOBALARGS()):
+    def __init__(self, j1=0.0, q=1.0, global_args=GLOBALARGS()):
         r"""
         :param j1: nearest-neighbour interaction
         :param q: ring-exchange interaction
@@ -57,20 +57,25 @@ class JQ():
         self.j1=j1
         self.q=q
         
-        self.h2, self.h4 = self.get_h()
+        self.h2, self.h4, self.hp_h_q, self.hp_v_q = self.get_h()
         self.obs_ops = self.get_obs_ops()
 
     def get_h(self):
         s2= su2.SU2(self.phys_dim, dtype=self.dtype, device=self.device)
+        id2= torch.eye(4,dtype=self.dtype,device=self.device)
+        id2= id2.view(2,2,2,2).contiguous()
         expr_kron= 'ij,ab->iajb'
         SS= torch.einsum(expr_kron,s2.SZ(),s2.SZ()) + 0.5*(torch.einsum(expr_kron,s2.SP(),s2.SM()) \
             + torch.einsum(expr_kron,s2.SM(),s2.SP()))
-        id2= torch.eye(4,dtype=self.dtype,device=self.device)
-        id2= id2.view(2,2,2,2).contiguous()
         SSp= SS - 0.25*id2
-        SSSS= torch.einsum('ijab,klcd->ijklabcd',SSp,SSp)
-        SSSS= SSSS + SSSS.permute(0,2,1,3,4,6,5,7)
-        return SS, SSSS
+        SSpSSp= torch.einsum('ijab,klcd->ijklabcd',SSp,SSp)
+        SSpSSp= SSpSSp + SSpSSp.permute(0,2,1,3,4,6,5,7)
+
+        h2x2_SS= torch.einsum('ijab,klcd->ijklabcd',SS,id2)
+        hp_h_q= self.j1*(h2x2_SS + h2x2_SS.permute(2,3,0,1,6,7,4,5)) - self.q*SSpSSp
+        hp_v_q= self.j1*(h2x2_SS.permute(0,2,1,3,4,6,5,7) + h2x2_SS.permute(2,0,3,1,6,4,7,5)) \
+            - self.q*SSpSSp
+        return SS, SSpSSp, hp_h_q, hp_v_q
 
     def get_obs_ops(self):
         obs_ops = dict()
@@ -143,26 +148,25 @@ class JQ():
             0    0   0    0   0    0   0    0
             C3--1D & D3--1C & A3--1B & B3--1A 
         """
-        id2= torch.eye(4,dtype=self.dtype,device=self.device)
-        id2= id2.view(2,2,2,2).contiguous()
-        h2x2_nn= torch.einsum('ijab,klcd->ijklabcd',self.h2,id2)
-        h2x2_nn= h2x2_nn + h2x2_nn.permute(2,0,3,1,6,4,7,5) \
-            + h2x2_nn.permute(0,2,1,3,4,6,5,7) + h2x2_nn.permute(2,3,0,1,6,7,4,5)
-
         rdm2x2_00= rdm.rdm2x2((0,0),state,env)
         rdm2x2_10= rdm.rdm2x2((1,0),state,env)
         rdm2x2_01= rdm.rdm2x2((0,1),state,env)
         rdm2x2_11= rdm.rdm2x2((1,1),state,env)
-        energy_nn = torch.einsum('ijklabcd,ijklabcd',rdm2x2_00,h2x2_nn)
-        energy_nn += torch.einsum('ijklabcd,ijklabcd',rdm2x2_10,h2x2_nn)
-        energy_nn += torch.einsum('ijklabcd,ijklabcd',rdm2x2_01,h2x2_nn)
-        energy_nn += torch.einsum('ijklabcd,ijklabcd',rdm2x2_11,h2x2_nn)
-        energy_4 = torch.einsum('ijklabcd,ijklabcd',rdm2x2_00,self.h4)
-        energy_4 += torch.einsum('ijklabcd,ijklabcd',rdm2x2_10,self.h4)
-        energy_4 += torch.einsum('ijklabcd,ijklabcd',rdm2x2_01,self.h4)
-        energy_4 += torch.einsum('ijklabcd,ijklabcd',rdm2x2_11,self.h4)
+        energy= torch.einsum('ijklabcd,ijklabcd',rdm2x2_00,self.hp_h_q)
+        energy+= torch.einsum('ijklabcd,ijklabcd',rdm2x2_10,self.hp_v_q)
+        energy+= torch.einsum('ijklabcd,ijklabcd',rdm2x2_01,self.hp_v_q)
+        energy+= torch.einsum('ijklabcd,ijklabcd',rdm2x2_11,self.hp_h_q)
+        # energy_nn = torch.einsum('ijklabcd,ijklabcd',rdm2x2_00,h2x2_nn)
+        # energy_nn += torch.einsum('ijklabcd,ijklabcd',rdm2x2_10,h2x2_nn)
+        # energy_nn += torch.einsum('ijklabcd,ijklabcd',rdm2x2_01,h2x2_nn)
+        # energy_nn += torch.einsum('ijklabcd,ijklabcd',rdm2x2_11,h2x2_nn)
+        # energy_4 = torch.einsum('ijklabcd,ijklabcd',rdm2x2_00,self.h4)
+        # energy_4 += torch.einsum('ijklabcd,ijklabcd',rdm2x2_10,self.h4)
+        # energy_4 += torch.einsum('ijklabcd,ijklabcd',rdm2x2_01,self.h4)
+        # energy_4 += torch.einsum('ijklabcd,ijklabcd',rdm2x2_11,self.h4)
 
-        energy_per_site = 2.0*self.j1*(energy_nn/16.0) - self.q*(energy_4/4.0)
+        # energy_per_site = 2.0*self.j1*(energy_nn/16.0) - self.q*(energy_4/4.0)
+        energy_per_site= energy/4.0
         return energy_per_site
 
     def eval_obs(self,state,env):
@@ -212,9 +216,17 @@ class JQ():
                 obs[f"m{coord}"]= sqrt(abs(obs[f"sz{coord}"]**2 + obs[f"sp{coord}"]*obs[f"sm{coord}"]))
                 obs["avg_m"] += obs[f"m{coord}"]
             obs["avg_m"]= obs["avg_m"]/len(state.sites.keys())
+
+            for coord,site in state.sites.items():
+                rdm2x1 = rdm.rdm2x1(coord,state,env)
+                rdm1x2 = rdm.rdm1x2(coord,state,env)
+                obs[f"SS2x1{coord}"]= torch.einsum('ijab,ijab',rdm2x1,self.h2)
+                obs[f"SS1x2{coord}"]= torch.einsum('ijab,ijab',rdm1x2,self.h2)
         
         # prepare list with labels and values
         obs_labels=["avg_m"]+[f"m{coord}" for coord in state.sites.keys()]\
             +[f"{lc[1]}{lc[0]}" for lc in list(itertools.product(state.sites.keys(), self.obs_ops.keys()))]
+        obs_labels += [f"SS2x1{coord}" for coord in state.sites.keys()]
+        obs_labels += [f"SS1x2{coord}" for coord in state.sites.keys()]
         obs_values=[obs[label] for label in obs_labels]
         return obs_values, obs_labels

@@ -1,9 +1,9 @@
+import time
+import json
 import torch
 from args import *
 from env import *
 from ipeps import write_ipeps
-import matplotlib.pyplot as plt
-from IPython import embed
 
 # A = torch.rand((phys_dim, bond_dim, bond_dim, bond_dim, bond_dim), dtype=torch.float64)
 # A = 2 * (A - 0.5)
@@ -27,7 +27,8 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=OPT
     parameters = list(state.sites.values())
     for A in parameters: A.requires_grad_(True)
 
-    outputstatefile = local_args.out_prefix+"_state.json"
+    outputstatefile= local_args.out_prefix+"_state.json"
+    outputlogfile= open(local_args.out_prefix+"_log.json","w")
     t_data = dict({"loss": [1.0e+16], "min_loss": 1.0e+16})
     current_env = [ctm_env_init]
     def closure():
@@ -38,8 +39,10 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=OPT
         for coord,site in state.sites.items():
             site = site/torch.max(torch.abs(site))
 
-        loss, ctm_env = loss_fn(state, current_env[0], ctm_args=ctm_args, opt_args=opt_args, global_args=global_args)
+        loss, ctm_env, history, t_ctm = loss_fn(state, current_env[0], ctm_args=ctm_args, opt_args=opt_args, global_args=global_args)
+        t0= time.perf_counter()
         loss.backward()
+        t1= time.perf_counter()
 
         # 2) detach current environment from autograd graph
         lst_C = list(ctm_env.C.values())
@@ -52,6 +55,13 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=OPT
         if t_data["min_loss"] > t_data["loss"][-1]:
             t_data["min_loss"]= t_data["loss"][-1]
             write_ipeps(state, outputstatefile, normalize=True)
+
+        # 4) log additional metrics for debugging
+        if opt_args.opt_logging:
+            log_entry=dict({"id": len(t_data["loss"]), \
+                "t_grad": t1-t0, "t_ctm": t_ctm, \
+                "ctm_history_len": len(history), "ctm_history": history})
+            outputlogfile.write(json.dumps(log_entry)+'\n')
 
         return loss
 
@@ -80,9 +90,7 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=OPT
     for epoch in range(local_args.opt_max_iter):
  
         loss = optimizer.step(closure)
-        # print("Optimizer's state_dict:")
-        # for var_name in optimizer.state_dict():
-        #     print(var_name, "\t")        
+
         # compute and print observables
         if verbosity>0:
             obs_values, obs_labels = model.eval_obs(state,current_env[0])
@@ -93,15 +101,10 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=OPT
         if t_data["loss"][-2] > t_data["loss"][-1]:
             write_ipeps(state, outputstatefile, normalize=True)
     
-
-    loss, _ctm_env = loss_fn(state, current_env[0], ctm_args=ctm_args, opt_args=opt_args, global_args=global_args)
+    loss, ctm_env, history, t_ctm = loss_fn(state, current_env[0], ctm_args=ctm_args, opt_args=opt_args, global_args=global_args)
     torch.save({
             'epoch': epoch0 + local_args.opt_max_iter,
             'loss': loss.item(),
             'parameters': parameters,
             'optimizer_state_dict': optimizer.state_dict()}, checkpoint_file)
     print(checkpoint_file)
-
-
-    # plt.plot(t_data["loss"][20:])
-    # plt.show()

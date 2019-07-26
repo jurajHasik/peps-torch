@@ -44,15 +44,23 @@ class J1J2():
         self.j1=j1
         self.j2=j2
         
-        self.h = self.get_h()
+        self.h2, self.hp_h, self.hp_v = self.get_h()
         self.obs_ops = self.get_obs_ops()
 
     def get_h(self):
         s2 = su2.SU2(self.phys_dim, dtype=self.dtype, device=self.device)
+        id2= torch.eye(4,dtype=self.dtype,device=self.device)
+        id2= id2.view(2,2,2,2).contiguous()
         expr_kron = 'ij,ab->iajb'
         SS = torch.einsum(expr_kron,s2.SZ(),s2.SZ()) + 0.5*(torch.einsum(expr_kron,s2.SP(),s2.SM()) \
             + torch.einsum(expr_kron,s2.SM(),s2.SP()))
-        return SS
+        
+        h2x2_SS= torch.einsum('ijab,klcd->ijklabcd',SS,id2)
+        hp_h= self.j1*(h2x2_SS + h2x2_SS.permute(2,3,0,1,6,7,4,5)) + \
+            self.j2*(h2x2_SS.permute(0,3,2,1,4,7,6,5) + h2x2_SS.permute(2,0,1,3,6,4,5,7))
+        hp_v= self.j1*(h2x2_SS.permute(0,2,1,3,4,6,5,7) + h2x2_SS.permute(2,0,3,1,6,4,7,5)) +\
+            self.j2*(h2x2_SS.permute(0,3,2,1,4,7,6,5) + h2x2_SS.permute(2,0,1,3,6,4,5,7))
+        return SS, hp_h, hp_v
 
     def get_obs_ops(self):
         obs_ops = dict()
@@ -92,7 +100,6 @@ class J1J2():
 
     def energy_2x2_2site(self,state,env):
         r"""
-
         :param state: wavefunction
         :param env: CTM environment
         :type state: IPEPS
@@ -147,22 +154,18 @@ class J1J2():
         # 2 \/ 2   2 \/ 2
         # 0 /\ 0   0 /\ 0
         # A3--1B & B3--1A
-        id2= torch.eye(4,dtype=self.dtype,device=self.device)
-        id2= id2.view(2,2,2,2).contiguous()
-        h2x2_nn= torch.einsum('ijab,klcd->ijklabcd',self.h,id2)
-        h2x2_nn= h2x2_nn + h2x2_nn.permute(2,0,3,1,6,4,7,5) \
-            + h2x2_nn.permute(0,2,1,3,4,6,5,7) + h2x2_nn.permute(2,3,0,1,6,7,4,5)
-        h2x2_nnn= torch.einsum('ijab,klcd->ikljacdb',self.h,id2)
-        h2x2_nnn= h2x2_nnn + h2x2_nnn.permute(1,0,3,2,5,4,7,6)
+        
 
         rdm2x2_00= rdm.rdm2x2((0,0),state,env)
         rdm2x2_10= rdm.rdm2x2((1,0),state,env)
-        energy_nn = torch.einsum('ijklabcd,ijklabcd',rdm2x2_00,h2x2_nn)
-        energy_nn += torch.einsum('ijklabcd,ijklabcd',rdm2x2_10,h2x2_nn)
-        energy_nnn = torch.einsum('ijklabcd,ijklabcd',rdm2x2_00,h2x2_nnn)
-        energy_nnn += torch.einsum('ijklabcd,ijklabcd',rdm2x2_10,h2x2_nnn)
-
-        energy_per_site = 2.0*(self.j1*energy_nn/8.0 + self.j2*energy_nnn/4.0)
+        energy= torch.einsum('ijklabcd,ijklabcd',rdm2x2_00,self.hp_h)
+        energy+= torch.einsum('ijklabcd,ijklabcd',rdm2x2_10,self.hp_v)
+        energy_per_site= energy/2.0
+        # energy_nn = torch.einsum('ijklabcd,ijklabcd',rdm2x2_00,h2x2_nn)
+        # energy_nn += torch.einsum('ijklabcd,ijklabcd',rdm2x2_10,h2x2_nn)
+        # energy_nnn = torch.einsum('ijklabcd,ijklabcd',rdm2x2_00,h2x2_nnn)
+        # energy_nnn += torch.einsum('ijklabcd,ijklabcd',rdm2x2_10,h2x2_nnn)
+        # energy_per_site = 2.0*(self.j1*energy_nn/8.0 + self.j2*energy_nnn/4.0)
         return energy_per_site
 
     def eval_obs(self,state,env):
@@ -200,9 +203,6 @@ class J1J2():
             S^+ &=S^x+iS^y               & S^x &= 1/2(S^+ + S^-)\\
             S^- &=S^x-iS^y\ \Rightarrow\ & S^y &=-i/2(S^+ - S^-)
             \end{align*}
-
-
-       
         """
         # TODO optimize/unify ?
         # expect "list" of (observable label, value) pairs ?
@@ -215,9 +215,17 @@ class J1J2():
                 obs[f"m{coord}"]= sqrt(abs(obs[f"sz{coord}"]**2 + obs[f"sp{coord}"]*obs[f"sm{coord}"]))
                 obs["avg_m"] += obs[f"m{coord}"]
             obs["avg_m"]= obs["avg_m"]/len(state.sites.keys())
+
+            for coord,site in state.sites.items():
+                rdm2x1 = rdm.rdm2x1(coord,state,env)
+                rdm1x2 = rdm.rdm1x2(coord,state,env)
+                obs[f"SS2x1{coord}"]= torch.einsum('ijab,ijab',rdm2x1,self.h2)
+                obs[f"SS1x2{coord}"]= torch.einsum('ijab,ijab',rdm1x2,self.h2)
         
         # prepare list with labels and values
         obs_labels=["avg_m"]+[f"m{coord}" for coord in state.sites.keys()]\
             +[f"{lc[1]}{lc[0]}" for lc in list(itertools.product(state.sites.keys(), self.obs_ops.keys()))]
+        obs_labels += [f"SS2x1{coord}" for coord in state.sites.keys()]
+        obs_labels += [f"SS1x2{coord}" for coord in state.sites.keys()]
         obs_values=[obs[label] for label in obs_labels]
         return obs_values, obs_labels

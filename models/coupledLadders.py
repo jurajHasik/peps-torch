@@ -9,28 +9,40 @@ import itertools
 
 class COUPLEDLADDERS():
     def __init__(self, alpha=0.0, global_args=GLOBALARGS()):
+        r"""
+        :param alpha: nearest-neighbour interaction
+        :param global_args: global configuration
+        :type alpha: float
+        :type global_args: GLOBALARGS
+
+        Build Hamiltonian of spin-1/2 coupled ladders
+
+        .. math:: H = \sum_{i=(x,y)} h2_{i,i+\vec{x}} + \sum_{i=(x,2y)} h2_{i,i+\vec{y}}
+                   + \alpha \sum_{i=(x,2y+1)} h2_{i,i+\vec{y}}
+
+        on the square lattice. The spin-1/2 ladders are coupled with strength :math:`\alpha`::
+
+            y\x
+               _:__:__:__:_
+            ..._|__|__|__|_...
+            ..._a__a__a__a_...
+            ..._|__|__|__|_...
+            ..._a__a__a__a_...   
+            ..._|__|__|__|_...   
+                :  :  :  :      (a = \alpha) 
+
+        where
+
+        * :math:`h2_{ij} = \mathbf{S}_i.\mathbf{S}_j` with indices of h2 corresponding to :math:`s_i s_j;s'_i s'_j`
+        """
         self.dtype=global_args.dtype
         self.device=global_args.device
         self.phys_dim=2
         self.alpha=alpha
 
-        self.h = self.get_h()
+        self.h2 = self.get_h()
         self.obs_ops = self.get_obs_ops()
 
-    # build spin-1/2 coupled-ladders Hamiltonian
-    # H = \sum_{i=(x,y)} h_i,i+\vec{x} + \sum_{i=(x,2y)} h_i,i+\vec{y}
-    #   + alpha * \sum_{i=(x,2y+1)} h_i,i+\vec{y}
-    #  
-    # y\x
-    #    _:__:__:__:_
-    # ..._|__|__|__|_...
-    # ..._a__a__a__a_...
-    # ..._|__|__|__|_...
-    # ..._a__a__a__a_...   
-    # ..._|__|__|__|_...   
-    #     :  :  :  : 
-    # 
-    # where h_ij = S_i.S_j, indices of h correspond to s_i,s_j;s_i',s_j'
     def get_h(self):
         s2 = su2.SU2(self.phys_dim, dtype=self.dtype, device=self.device)
         expr_kron = 'ij,ab->iajb'
@@ -46,31 +58,6 @@ class COUPLEDLADDERS():
         obs_ops["sm"]= s2.SM()
         return obs_ops
 
-    # evaluation of energy depends on the nature of underlying
-    # ipeps state
-    #
-    # Ex.1 for 1-site c4v invariant iPEPS there is just a single 2site
-    # operator which gives the energy-per-site
-    #
-    # Ex.2 for 1-site invariant iPEPS there are two two-site terms
-    # which give the energy-per-site
-    #    0       0
-    # 1--A--3 1--A--3 
-    #    2       2                          A
-    #    0       0                          2
-    # 1--A--3 1--A--3                       0
-    #    2       2    , terms A--3 1--A and A have to be evaluated
-    #
-    # Ex.3 for 2x2 cluster iPEPS there are eight two-site terms
-    #    0       0       0
-    # 1--A--3 1--B--3 1--A--3
-    #    2       2       2
-    #    0       0       0
-    # 1--C--3 1--D--3 1--C--3
-    #    2       2       2             A--3 1--B      A B C D
-    #    0       0                     B--3 1--A      2 2 2 2
-    # 1--A--3 1--B--3                  C--3 1--D      0 0 0 0
-    #    2       2             , terms D--3 1--C and  C D A B
     def energy_1x1c4v(self,ipeps):
         pass
 
@@ -84,30 +71,100 @@ class COUPLEDLADDERS():
         return energy
 
     def energy_2x1_1x2(self,state,env):
+        r"""
+        :param state: wavefunction
+        :param env: CTM environment
+        :type state: IPEPS
+        :type env: ENV
+        :return: energy per site
+        :rtype: float
+        
+        We assume iPEPS with 2x2 unit cell containing four tensors A, B, C, and D with
+        simple PBC tiling::
+
+            A B A B
+            C D C D
+            A B A B
+            C D C D
+
+        Taking the reduced density matrix :math:`\rho_{2x1}` (:math:`\rho_{1x2}`) 
+        of 2x1 (1x2) cluster given by :py:func:`rdm.rdm2x1` (:py:func:`rdm.rdm1x2`) 
+        with indexing of sites as follows :math:`s_0,s_1;s'_0,s'_1` for both types
+        of density matrices::
+
+            rdm2x1   rdm1x2
+
+            s0--s1   s0
+                     |
+                     s1
+
+        and without assuming any symmetry on the indices of individual tensors a following
+        set of terms has to be evaluated in order to compute energy-per-site::
+
+               0       0       0
+            1--A--3 1--B--3 1--A--3
+               2       2       2
+               0       0       0
+            1--C--3 1--D--3 1--C--3
+               2       2       2             A--3 1--B,      A  B  C  D
+               0       0                     B--3 1--A,      2  2  2  2
+            1--A--3 1--B--3                  C--3 1--D,      0  0  0  0
+               2       2             , terms D--3 1--C, and  C, D, A, B
+        """
         energy=0.
         for coord,site in state.sites.items():
             rdm2x1 = rdm.rdm2x1(coord,state,env)
             rdm1x2 = rdm.rdm1x2(coord,state,env)
-            ss = torch.einsum('ijab,ijab',rdm2x1,self.h)
+            ss = torch.einsum('ijab,ijab',rdm2x1,self.h2)
             energy += ss
             if coord[1] % 2 == 0:
-                ss = torch.einsum('ijab,ijab',rdm1x2,self.h)
+                ss = torch.einsum('ijab,ijab',rdm1x2,self.h2)
             else:
-                ss = torch.einsum('ijab,ijab',rdm1x2,self.alpha * self.h)
+                ss = torch.einsum('ijab,ijab',rdm1x2,self.alpha * self.h2)
             energy += ss
 
         # return energy-per-site
         energy_per_site=energy/len(state.sites.items())
         return energy_per_site
 
-    # definition of other observables
-    # sp=sx+isy, sm=sx-isy => sx=0.5(sp+sm), sy=-i0.5(sp-sm)
-    # m=\sqrt(<sz>^2+<sx>^2+<sy>^2)=\sqrt(<sz>^2+0.25(<sp>+<sm>)^2-0.25(<sp>-<sm>)^2)
-    #  =\sqrt(<sz>^2+0.5<sp><sm>)
-    #
-    # expect "list" of (observable label, value) pairs
-    # TODO optimize/unify ?
     def eval_obs(self,state,env):
+        r"""
+        :param state: wavefunction
+        :param env: CTM environment
+        :type state: IPEPS
+        :type env: ENV
+        :return:  expectation values of observables, labels of observables
+        :rtype: list[float], list[str]
+
+        Computes the following observables in order
+
+            1. average magnetization over the unit cell,
+            2. magnetization for each site in the unit cell
+            3. :math:`\langle S^z \rangle,\ \langle S^+ \rangle,\ \langle S^- \rangle` 
+               for each site in the unit cell
+            4. :math:`\mathbf{S}_i.\mathbf{S}_j` for all non-equivalent nearest neighbour
+               bonds
+
+        where the on-site magnetization is defined as
+        
+        .. math::
+            
+            \begin{align*}
+            m &= \sqrt{ \langle S^z \rangle^2+\langle S^x \rangle^2+\langle S^y \rangle^2 }
+            =\sqrt{\langle S^z \rangle^2+1/4(\langle S^+ \rangle+\langle S^- 
+            \rangle)^2 -1/4(\langle S^+\rangle-\langle S^-\rangle)^2} \\
+              &=\sqrt{\langle S^z \rangle^2 + 1/2\langle S^+ \rangle \langle S^- \rangle)}
+            \end{align*}
+
+        Usual spin components can be obtained through the following relations
+        
+        .. math::
+            
+            \begin{align*}
+            S^+ &=S^x+iS^y               & S^x &= 1/2(S^+ + S^-)\\
+            S^- &=S^x-iS^y\ \Rightarrow\ & S^y &=-i/2(S^+ - S^-)
+            \end{align*}
+        """
         obs= dict({"avg_m": 0.})
         with torch.no_grad():
             for coord,site in state.sites.items():
@@ -118,8 +175,16 @@ class COUPLEDLADDERS():
                 obs["avg_m"] += obs[f"m{coord}"]
             obs["avg_m"]= obs["avg_m"]/len(state.sites.keys())
         
+            for coord,site in state.sites.items():
+                rdm2x1 = rdm.rdm2x1(coord,state,env)
+                rdm1x2 = rdm.rdm1x2(coord,state,env)
+                obs[f"SS2x1{coord}"]= torch.einsum('ijab,ijab',rdm2x1,self.h2)
+                obs[f"SS1x2{coord}"]= torch.einsum('ijab,ijab',rdm1x2,self.h2)
+
         # prepare list with labels and values
         obs_labels=["avg_m"]+[f"m{coord}" for coord in state.sites.keys()]\
-            +[f"{lc[0]}{lc[1]}" for lc in list(itertools.product(self.obs_ops.keys(), state.sites.keys()))]
+            +[f"{lc[1]}{lc[0]}" for lc in list(itertools.product(state.sites.keys(), self.obs_ops.keys()))]
+        obs_labels += [f"SS2x1{coord}" for coord in state.sites.keys()]
+        obs_labels += [f"SS1x2{coord}" for coord in state.sites.keys()]
         obs_values=[obs[label] for label in obs_labels]
         return obs_values, obs_labels

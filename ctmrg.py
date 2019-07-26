@@ -1,3 +1,4 @@
+import time
 import torch
 from args import CTMARGS, GLOBALARGS
 import ipeps
@@ -26,6 +27,7 @@ def run(state, env, conv_check=None, ctm_args=CTMARGS(), global_args=GLOBALARGS(
     stateDL = IPEPS(sitesDL,state.vertexToSite)
 
     # 1) perform CTMRG
+    t0= time.perf_counter()
     history=[]
     for i in range(ctm_args.ctm_max_iter):
         for direction in ctm_args.ctm_move_sequence:
@@ -39,8 +41,9 @@ def run(state, env, conv_check=None, ctm_args=CTMARGS(), global_args=GLOBALARGS(
                 if ctm_args.verbosity_ctm_convergence>0: 
                     print(f"CTMRG  converged at iter= {i}, history= {history[-1]}")
                 break
+    t1= time.perf_counter()
 
-    return env
+    return env, history, t1-t0
 
 # performs CTM move in one of the directions 
 # [Up=(0,-1), Left=(-1,0), Down=(0,1), Right=(1,0)] 
