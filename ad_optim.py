@@ -2,6 +2,8 @@ import torch
 from args import *
 from env import *
 from ipeps import write_ipeps
+import matplotlib.pyplot as plt
+from IPython import embed
 
 # A = torch.rand((phys_dim, bond_dim, bond_dim, bond_dim, bond_dim), dtype=torch.float64)
 # A = 2 * (A - 0.5)
@@ -54,11 +56,52 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=OPT
         return loss
 
     verbosity = opt_args.verbosity_opt_epoch
-    optimizer = torch.optim.LBFGS(parameters, max_iter=opt_args.max_iter_per_epoch, lr=opt_args.lr)    
+    outputstatefile = local_args.out_prefix+"_state.json"
+    checkpoint_file = local_args.out_prefix+"_checkpoint.p"
+    optimizer = torch.optim.LBFGS(parameters, max_iter=opt_args.max_iter_per_epoch, lr=opt_args.lr)
+    epoch0 = 0
+    loss0 = 0
+
+    print(f"resume = {opt_args.resume}")
+
+    if opt_args.resume is not None:
+        print("resuming from check point")
+        checkpoint = torch.load(opt_args.resume)
+        init_parameters = checkpoint["parameters"]
+        epoch0 = checkpoint["epoch"]
+        loss0 = checkpoint["loss"]
+        for i in range(len(parameters)):
+            parameters[i].data = init_parameters[i].data 
+        optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        print(f"checkpoint.loss = {loss0}")
+
+    print(f"new_loss0 = {closure().item()}")
+
     for epoch in range(local_args.opt_max_iter):
+ 
         loss = optimizer.step(closure)
-        
+        # print("Optimizer's state_dict:")
+        # for var_name in optimizer.state_dict():
+        #     print(var_name, "\t")        
         # compute and print observables
         if verbosity>0:
             obs_values, obs_labels = model.eval_obs(state,current_env[0])
             print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
+
+        # store current state if the loss improves
+        t_data["loss"].append(loss.item())
+        if t_data["loss"][-2] > t_data["loss"][-1]:
+            write_ipeps(state, outputstatefile, normalize=True)
+    
+
+    loss, _ctm_env = loss_fn(state, current_env[0], ctm_args=ctm_args, opt_args=opt_args, global_args=global_args)
+    torch.save({
+            'epoch': epoch0 + local_args.opt_max_iter,
+            'loss': loss.item(),
+            'parameters': parameters,
+            'optimizer_state_dict': optimizer.state_dict()}, checkpoint_file)
+    print(checkpoint_file)
+
+
+    # plt.plot(t_data["loss"][20:])
+    # plt.show()
