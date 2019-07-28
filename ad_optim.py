@@ -5,6 +5,31 @@ from args import *
 from env import *
 from ipeps import write_ipeps
 
+def store_checkpoint(checkpoint_file, parameters, optimizer, current_epoch, current_loss, verbosity=0):
+    r"""
+    :param checkpoint_file: target file
+    :param parameters: wavefunction parameters
+    :param optimizer: Optimizer
+    :param current_epoch: current epoch
+    :param current_loss: current value of a loss function
+    :param verbosity: verbosity
+    :type checkpoint_file: str or Path
+    :type parameters: list[torch.tensor]
+    :type optimizer: torch.optim.Optimizer
+    :type current_epoch: int
+    :type current_loss: float
+    :type verbosity: int
+
+    Store the current state of the optimization in ``checkpoint_file``.
+    """
+    torch.save({
+            'epoch': current_epoch,
+            'loss': current_loss,
+            'parameters': parameters,
+            'optimizer_state_dict': optimizer.state_dict()}, checkpoint_file)
+    if verbosity>0:
+        print(checkpoint_file)
+
 # A = torch.rand((phys_dim, bond_dim, bond_dim, bond_dim, bond_dim), dtype=torch.float64)
 # A = 2 * (A - 0.5)
 # A.requires_grad_(True)
@@ -20,15 +45,32 @@ from ipeps import write_ipeps
 
 
 def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=OPTARGS(), ctm_args=CTMARGS(), global_args = GLOBALARGS()):
-    """
-    expects a loss function that operates
-    loss_fn(state, ctm_env_init, ctm_args = ctm_args, global_args = GLOBALARGS())
+    r"""
+    :param state: initial wavefunction
+    :param ctm_env_init: initial environment corresponding to ``state``
+    :param loss_fn: loss function
+    :param model: model with definition of observables
+    :param local_args: parsed command line arguments
+    :param opt_args: optimization configuration
+    :param ctm_args: CTM algorithm configuration
+    :param global_args: global configuration
+    :type state: IPEPS
+    :type ctm_env_init: ENV
+    :type loss_fn: function(IPEPS,ENV,CTMARGS,OPTARGS,GLOBALARGS)->torch.tensor
+    :type model: TODO Model base class
+    :type local_args: argparse.Namespace
+    :type opt_args: OPTARGS
+    :type ctm_args: CTMARGS
+    :type global_args: GLOBALARGS
+
+    Optimizes initial wavefunction ``state`` with respect to ``loss_fn`` using LBFGS optimizer.
+    The main parameters influencing the optimization process are given in :py:class:`args.OPTARGS`.
     """
     parameters = list(state.sites.values())
     for A in parameters: A.requires_grad_(True)
 
     outputstatefile= local_args.out_prefix+"_state.json"
-    outputlogfile= open(local_args.out_prefix+"_log.json","w")
+    outputlogfile= open(local_args.out_prefix+"_log.json",mode="w",buffering=1)
     t_data = dict({"loss": [1.0e+16], "min_loss": 1.0e+16})
     current_env = [ctm_env_init]
     def closure():
@@ -58,7 +100,7 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=OPT
 
         # 4) log additional metrics for debugging
         if opt_args.opt_logging:
-            log_entry=dict({"id": len(t_data["loss"]), \
+            log_entry=dict({"id": len(t_data["loss"])-1, \
                 "t_grad": t1-t0, "t_ctm": t_ctm, \
                 "ctm_history_len": len(history), "ctm_history": history})
             outputlogfile.write(json.dumps(log_entry)+'\n')
@@ -72,39 +114,27 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=OPT
     epoch0 = 0
     loss0 = 0
 
-    print(f"resume = {opt_args.resume}")
-
-    if opt_args.resume is not None:
-        print("resuming from check point")
-        checkpoint = torch.load(opt_args.resume)
+    if local_args.opt_resume is not None:
+        print(f"INFO: resuming from check point. resume = {local_args.opt_resume}")
+        checkpoint = torch.load(local_args.opt_resume)
         init_parameters = checkpoint["parameters"]
         epoch0 = checkpoint["epoch"]
         loss0 = checkpoint["loss"]
         for i in range(len(parameters)):
-            parameters[i].data = init_parameters[i].data 
+            parameters[i].data = init_parameters[i].data
         optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         print(f"checkpoint.loss = {loss0}")
 
-    print(f"new_loss0 = {closure().item()}")
-
     for epoch in range(local_args.opt_max_iter):
  
+        # checkpoint the optimizer
+        # checkpointing before step, guarantees the correspondence between the wavefunction
+        # and the last computed value of loss t_data["loss"][-1]
+        store_checkpoint(checkpoint_file, parameters, optimizer, epoch0+epoch, t_data["loss"][-1])
+
         loss = optimizer.step(closure)
 
         # compute and print observables
         if verbosity>0:
             obs_values, obs_labels = model.eval_obs(state,current_env[0])
             print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
-
-        # store current state if the loss improves
-        t_data["loss"].append(loss.item())
-        if t_data["loss"][-2] > t_data["loss"][-1]:
-            write_ipeps(state, outputstatefile, normalize=True)
-    
-    loss, ctm_env, history, t_ctm = loss_fn(state, current_env[0], ctm_args=ctm_args, opt_args=opt_args, global_args=global_args)
-    torch.save({
-            'epoch': epoch0 + local_args.opt_max_iter,
-            'loss': loss.item(),
-            'parameters': parameters,
-            'optimizer_state_dict': optimizer.state_dict()}, checkpoint_file)
-    print(checkpoint_file)

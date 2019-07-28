@@ -14,6 +14,7 @@ TN-torch
    env
    ctm
    rdm
+   optim
    args
    models
    groups

@@ -12,8 +12,12 @@ parser.add_argument("-bond_dim", type=int, default=1, help="iPEPS auxiliary bond
 parser.add_argument("-chi", type=int, default=20, help="environment bond dimension")
 parser.add_argument("-ctm_max_iter", type=int, default=1, help="maximal number of CTM iterations")
 parser.add_argument("-opt_max_iter", type=int, default=100, help="maximal number of CTM iterations")
-parser.add_argument("-resume", type=str, default=None, help="file with checkpoint to resume")
+parser.add_argument("-opt_resume", type=str, default=None, help="file with checkpoint to resume")
 #args = parser.parse_args()
+
+    # :ivar resume: path to the checkpoint file used to resume a computation from optimization. 
+    #               If resume is None, a new computation is initialized. Default: ``None``
+    # :vartype resume: str
 
 class GLOBALARGS():
     r"""
@@ -100,9 +104,6 @@ class OPTARGS():
     :vartype max_iter_per_epoch: int
     :ivar verbosity_opt_epoch: verbosity within optimization epoch. Default: ``1``
     :vartype verbosity_opt_epoch: int
-    :ivar resume: path to the checkpoint file used to resume a computation from optimization. 
-                  If resume is None, a new computation is initialized. Default: ``None``
-    :vartype resume: str
     :ivar opt_logging: turns on recording of additional data from optimization, such as
                        CTM convergence, timings, gradients, etc. The information 
                        is logged in file ``{out_prefix}_log.json``. Default: ``True``
@@ -113,5 +114,4 @@ class OPTARGS():
         self.lr = 1.0
         self.max_iter_per_epoch = 1
         self.verbosity_opt_epoch = 1
-        self.resume = None
         self.opt_logging = True
