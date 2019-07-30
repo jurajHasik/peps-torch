@@ -4,7 +4,6 @@ import config as cfg
 import ipeps
 from ctm.generic.env import ENV
 from ctm.generic import rdm
-from args import GLOBALARGS
 from math import sqrt
 import itertools
 

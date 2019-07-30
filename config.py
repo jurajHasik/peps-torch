@@ -74,7 +74,8 @@ class PEPSARGS():
 
 class CTMARGS():
     r"""
-    Holds configuration of CTM algorithm
+    Holds configuration of the CTM algorithm. The default settings can be modified through 
+    command line arguments as follows ``-CTMARGS_<variable-name> desired-value``
 
     :ivar ctm_max_iter: maximum iterations of directional CTM algorithm. Default: ``50``
     :vartype ctm_max_iter: int
@@ -135,7 +136,8 @@ class CTMARGS():
 
 class OPTARGS():
     r"""
-    Holds configuration of optimization process
+    Holds configuration of the optimization. The default settings can be modified through 
+    command line arguments as follows ``-OPTARGS_<variable-name> desired-value``
 
     :ivar opt_ctm_reinit: reinitialize environment from scratch within every loss 
                           function evaluation. Default: ``True``

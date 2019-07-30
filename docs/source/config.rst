@@ -4,17 +4,17 @@ Configuration
 Global
 ------
 
-.. autoclass:: args.GLOBALARGS
+.. autoclass:: config.GLOBALARGS
     :members:
 
 Corner Transfer Matrix Algorithm
 --------------------------------
 
-.. autoclass:: args.CTMARGS
+.. autoclass:: config.CTMARGS
     :members:
 
 Optimization
 ------------
 
-.. autoclass:: args.OPTARGS
+.. autoclass:: config.OPTARGS
     :members:

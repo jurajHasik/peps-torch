@@ -13,7 +13,7 @@ TN-torch
    ipeps
    envs
    optim
-   args
+   config
    models
    groups
 
