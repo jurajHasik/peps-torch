@@ -1,5 +1,6 @@
 import torch
 import su2
+import config as cfg
 import ipeps
 from ctm.generic.env import ENV
 from ctm.generic import rdm
@@ -8,7 +9,7 @@ from math import sqrt
 import itertools
 
 class J1J2():
-    def __init__(self, j1=1.0, j2=0.0, global_args=GLOBALARGS()):
+    def __init__(self, j1=1.0, j2=0.0, global_args=cfg.global_args):
         r"""
         :param j1: nearest-neighbour interaction
         :param j2: next nearest-neighbour interaction

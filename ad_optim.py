@@ -1,10 +1,11 @@
 import time
 import json
 import torch
-from args import *
+import config as cfg
 from ipeps import write_ipeps
 
-def store_checkpoint(checkpoint_file, parameters, optimizer, current_epoch, current_loss, verbosity=0):
+def store_checkpoint(checkpoint_file, parameters, optimizer, current_epoch, current_loss,\
+    verbosity=0):
     r"""
     :param checkpoint_file: target file
     :param parameters: wavefunction parameters
@@ -43,7 +44,8 @@ def store_checkpoint(checkpoint_file, parameters, optimizer, current_epoch, curr
 #         return energy
 
 
-def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=OPTARGS(), ctm_args=CTMARGS(), global_args = GLOBALARGS()):
+def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=cfg.opt_args,\
+    ctm_args=cfg.ctm_args, global_args=cfg.global_args):
     r"""
     :param state: initial wavefunction
     :param ctm_env_init: initial environment corresponding to ``state``
@@ -71,7 +73,8 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=OPT
     outputstatefile= local_args.out_prefix+"_state.json"
     outputlogfile= open(local_args.out_prefix+"_log.json",mode="w",buffering=1)
     t_data = dict({"loss": [1.0e+16], "min_loss": 1.0e+16})
-    current_env = [ctm_env_init]
+    prev_epoch=[-1]
+    current_env=[ctm_env_init]
     def closure():
         for el in parameters: 
             if el.grad is not None: el.grad.zero_()
@@ -81,20 +84,23 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=OPT
             site = site/torch.max(torch.abs(site))
 
         # 1) evaluate loss and the gradient
-        loss, ctm_env, history, t_ctm = loss_fn(state, current_env[0], ctm_args=ctm_args, opt_args=opt_args, global_args=global_args)
+        loss, ctm_env, history, t_ctm = loss_fn(state, current_env[0], opt_args=opt_args)
         t0= time.perf_counter()
         loss.backward()
         t1= time.perf_counter()
 
-        # 2) compute and print observables
-        obs_values, obs_labels = model.eval_obs(state,ctm_env)
-        print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
+        # We evaluate observables inside closure as it is the only place with environment
+        # consistent with the state
+        if prev_epoch[0]!=epoch:
+            # 2) compute observables if we moved into new epoch
+            obs_values, obs_labels = model.eval_obs(state,ctm_env)
+            print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
 
-        # 3) store current state if the loss improves
-        t_data["loss"].append(loss.item())
-        if t_data["min_loss"] > t_data["loss"][-1]:
-            t_data["min_loss"]= t_data["loss"][-1]
-            write_ipeps(state, outputstatefile, normalize=True)
+            # 3) store current state if the loss improves
+            t_data["loss"].append(loss.item())
+            if t_data["min_loss"] > t_data["loss"][-1]:
+                t_data["min_loss"]= t_data["loss"][-1]
+                write_ipeps(state, outputstatefile, normalize=True)
 
         # 4) log additional metrics for debugging
         if opt_args.opt_logging:
@@ -109,6 +115,7 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=OPT
         current_env[0] = ctm_env
         for el in lst_T + lst_C: el.detach_()
 
+        prev_epoch[0]=epoch
         return loss
 
     verbosity = opt_args.verbosity_opt_epoch
@@ -131,11 +138,11 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=OPT
         print(f"checkpoint.loss = {loss0}")
 
     for epoch in range(local_args.opt_max_iter):
- 
         # checkpoint the optimizer
         # checkpointing before step, guarantees the correspondence between the wavefunction
         # and the last computed value of loss t_data["loss"][-1]
         store_checkpoint(checkpoint_file, parameters, optimizer, epoch0+epoch, t_data["loss"][-1])
-        loss = optimizer.step(closure)
+        
         # After execution closure ``current_env`` **IS NOT** corresponding to ``state``, since
-        # the ``state`` on-site tensors have been modified by gradient 
+        # the ``state`` on-site tensors have been modified by gradient. 
+        loss = optimizer.step(closure)

@@ -1,13 +1,13 @@
 import time
 import torch
-from args import CTMARGS, GLOBALARGS
+import config as cfg
 import ipeps
 from ipeps import IPEPS
 from ctm.generic.env import *
 from ctm.generic.ctm_components import *
 from ctm.generic.ctm_projectors import *
 
-def run(state, env, conv_check=None, ctm_args=CTMARGS(), global_args=GLOBALARGS()): 
+def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.global_args): 
     r"""
     :param state: wavefunction
     :param env: environment
@@ -63,8 +63,8 @@ def run(state, env, conv_check=None, ctm_args=CTMARGS(), global_args=GLOBALARGS(
     return env, history, t1-t0
 
 # performs CTM move in one of the directions 
-# [Up=(0,-1), Left=(-1,0), Down=(0,1), Right=(1,0)] 
-def ctm_MOVE(direction, state, env, ctm_args=CTMARGS(), global_args=GLOBALARGS(), verbosity=0):
+# [Up=(0,-1), Left=(-1,0), Down=(0,1), Right=(1,0)]
+def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.global_args, verbosity=0):
     # Loop over all non-equivalent sites of ipeps
     # and compute projectors P(coord), P^tilde(coord)
     if ctm_args.projector_method=='4X4':

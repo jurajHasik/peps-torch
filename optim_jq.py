@@ -1,19 +1,22 @@
 import torch
 import argparse
-from args import *
+import config as cfg
 from ipeps import *
 from ctm.generic.env import *
 from ctm.generic import ctmrg
 from models import jq
 from ad_optim import optimize_state
 
-# additional model-dependent arguments
-parser.add_argument("-j1", type=float, default=1.0, help="nearest-neighbour coupling")
-parser.add_argument("-q", type=float, default=0., help="plaquette interaction strength")
-args = parser.parse_args()
-torch.set_num_threads(args.omp_cores)
-
 if __name__=='__main__':
+    # parse command line args and build necessary configuration objects
+    parser= cfg.get_args_parser()
+    # additional model-dependent arguments
+    parser.add_argument("-j1", type=float, default=1.0, help="nearest-neighbour coupling")
+    parser.add_argument("-q", type=float, default=0., help="plaquette interaction strength")
+    args = parser.parse_args()
+    cfg.configure(args)
+    cfg.print_config()
+    torch.set_num_threads(args.omp_cores)
     
     model = jq.JQ(j1=args.j1, q=args.q)
     
@@ -22,7 +25,7 @@ if __name__=='__main__':
     # coord into one of coordinates within unit-cell of iPEPS ansatz    
 
     if args.instate!=None:
-        state = read_ipeps(args.instate, peps_args=PEPSARGS(), global_args=GLOBALARGS())
+        state = read_ipeps(args.instate)
         if args.bond_dim > max(state.get_aux_bond_dims()):
             # extend the auxiliary dimensions
             state = extend_bond_dim(state, args.bond_dim)
@@ -30,10 +33,14 @@ if __name__=='__main__':
     elif args.ipeps_init_type=='RANDOM':
         bond_dim = args.bond_dim
         
-        A = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim), dtype=torch.float64)
-        B = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim), dtype=torch.float64)
-        C = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim), dtype=torch.float64)
-        D = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim), dtype=torch.float64)
+        A = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+            dtype=cfg.global_args.dtype)
+        B = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+            dtype=cfg.global_args.dtype)
+        C = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+            dtype=cfg.global_args.dtype)
+        D = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+            dtype=cfg.global_args.dtype)
 
         sites = {(0,0): A, (1,0): B, (0,1): C, (1,1): D}
 
@@ -46,7 +53,7 @@ if __name__=='__main__':
 
     print(state)
 
-    def ctmrg_conv_energy(state, env, history, ctm_args = CTMARGS()):
+    def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         with torch.no_grad():
             e_curr = model.energy_2x2_4site(state, env)
             history.append(e_curr.item())
@@ -64,13 +71,13 @@ if __name__=='__main__':
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{loss}"]+[f"{v}" for v in obs_values]))
 
-    def loss_fn(state, ctm_env_init, ctm_args= CTMARGS(), opt_args= OPTARGS(), global_args= GLOBALARGS()):
+    def loss_fn(state, ctm_env_init, opt_args=cfg.opt_args):
         # possibly re-initialize the environment
         if opt_args.opt_ctm_reinit:
             init_env(state, ctm_env_init)
 
         # 1) compute environment by CTMRG
-        ctm_env, history, t_ctm = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy, ctm_args=ctm_args, global_args=global_args)
+        ctm_env, history, t_ctm = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
         loss = model.energy_2x2_4site(state, ctm_env)
         
         return loss, ctm_env, history, t_ctm
@@ -80,10 +87,10 @@ if __name__=='__main__':
 
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"
-    state= read_ipeps(outputstatefile, peps_args=PEPSARGS(), global_args=GLOBALARGS())
+    state= read_ipeps(outputstatefile)
     ctm_env = ENV(args.chi, state)
     init_env(state, ctm_env)
-    ctm_env, history, t_ctm = ctmrg.run(state, ctm_env)
+    ctm_env, history, t_ctm = ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
     opt_energy = model.energy_2x2_4site(state,ctm_env)
     obs_values, obs_labels = model.eval_obs(state,ctm_env)
     print(", ".join([f"{args.opt_max_iter}",f"{opt_energy}"]+[f"{v}" for v in obs_values]))

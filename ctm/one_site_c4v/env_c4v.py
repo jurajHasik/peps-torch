@@ -1,9 +1,9 @@
 import torch
-from args import CTMARGS, GLOBALARGS
+import config as cfg
 from ipeps import IPEPS
 
 class ENV_C4V(torch.nn.Module):
-    def __init__(self, chi, state, ctm_args=CTMARGS(), global_args=GLOBALARGS()):
+    def __init__(self, chi, state, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
         r"""
         :param chi: environment bond dimension :math:`\chi`
         :param state: wavefunction
@@ -61,7 +61,7 @@ class ENV_C4V(torch.nn.Module):
         self.T[self.keyT]= torch.empty((self.chi,self.chi,site.size()[2]*site.size()[2]), \
             dtype=self.dtype, device=self.device)
 
-def init_env(state, env, ctm_args=CTMARGS()):
+def init_env(state, env, ctm_args=cfg.ctm_args):
     """
     :param state: wavefunction
     :param env: C4v symmetric CTM environment

@@ -1,23 +1,53 @@
 import torch
 import argparse
 
-parser = argparse.ArgumentParser(description='')
-parser.add_argument("-omp_cores", type=int, default=1,help="number of OpenMP cores")
-parser.add_argument("-cuda", type=int, default=-1, help="GPU #")
-parser.add_argument("-instate", default=None, help="Input state JSON")
-parser.add_argument("-instate_noise", type=float, default=0., help="magnitude of noise added to the trial \"instate\"")
-parser.add_argument("-ipeps_init_type", default="RANDOM", help="initialization of the trial iPEPS state")
-parser.add_argument("-out_prefix", default="output", help="Output files prefix")
-parser.add_argument("-bond_dim", type=int, default=1, help="iPEPS auxiliary bond dimension")
-parser.add_argument("-chi", type=int, default=20, help="environment bond dimension")
-parser.add_argument("-ctm_max_iter", type=int, default=1, help="maximal number of CTM iterations")
-parser.add_argument("-opt_max_iter", type=int, default=100, help="maximal number of CTM iterations")
-parser.add_argument("-opt_resume", type=str, default=None, help="file with checkpoint to resume")
-#args = parser.parse_args()
+def get_args_parser():
+    parser = argparse.ArgumentParser(description='')
+    parser.add_argument("-omp_cores", type=int, default=1,help="number of OpenMP cores")
+    parser.add_argument("-cuda", type=int, default=-1, help="GPU #")
+    parser.add_argument("-instate", default=None, help="Input state JSON")
+    parser.add_argument("-instate_noise", type=float, default=0., help="magnitude of noise added to the trial \"instate\"")
+    parser.add_argument("-ipeps_init_type", default="RANDOM", help="initialization of the trial iPEPS state")
+    parser.add_argument("-out_prefix", default="output", help="Output files prefix")
+    parser.add_argument("-bond_dim", type=int, default=1, help="iPEPS auxiliary bond dimension")
+    parser.add_argument("-chi", type=int, default=20, help="environment bond dimension")
+    parser.add_argument("-opt_max_iter", type=int, default=100, help="maximal number of CTM iterations")
+    parser.add_argument("-opt_resume", type=str, default=None, help="file with checkpoint to resume")
 
-    # :ivar resume: path to the checkpoint file used to resume a computation from optimization. 
-    #               If resume is None, a new computation is initialized. Default: ``None``
-    # :vartype resume: str
+    configs=[global_args, peps_args, ctm_args, opt_args]
+    for c in configs:
+        group_name=type(c).__name__
+        group_prefix=group_name+"_" 
+        parser.add_argument_group(group_prefix)
+        c_list= list(filter(lambda x: "__" not in x, dir(c)))
+        for x in c_list:
+            parser.add_argument("-"+group_prefix+x, type=type(getattr(c,x)), default=getattr(c,x))
+
+    return parser
+
+def configure(parsed_args):
+    configs=[global_args, peps_args, ctm_args, opt_args]
+    keys=[type(c).__name__ for c in configs]
+    conf_dict=dict(zip(keys, configs))
+
+    raw_args= list(filter(lambda x: "__" not in x,dir(parsed_args)))
+    grouped_args=dict(zip(keys,[[] for c in range(len(configs))]))
+    for x in raw_args:
+        for k in keys:
+            if k in x:
+                grouped_args[k].append(x)
+
+    for k,g_args in grouped_args.items():
+        for a in g_args:
+            # strip prefix key+"_"
+            a_noprefix=a[1+len(k):]
+            setattr(conf_dict[k],a_noprefix,getattr(parsed_args,a))
+
+def print_config():
+    print(global_args)
+    print(peps_args)
+    print(ctm_args)
+    print(opt_args)
 
 class GLOBALARGS():
     r"""
@@ -28,9 +58,15 @@ class GLOBALARGS():
     :ivar device: device on which all the torch.tensors are stored. Default: ``'cpu'``
     :vartype device: str
     """
-    def __init__(self): 
+    def __init__(self):
         self.dtype = torch.float64
         self.device = 'cpu'
+
+    def __repr__(self):
+        res=type(self).__name__+"\n"
+        for x in list(filter(lambda x: "__" not in x,dir(self))):
+            res+=f"{x}= {getattr(self,x)}\n"
+        return res[:-1]
 
 class PEPSARGS():
     def __init__(self):
@@ -83,13 +119,19 @@ class CTMARGS():
         self.ctm_max_iter = 50
         self.ctm_env_init_type = 'CTMRG'
         self.ctm_conv_tol = 1.0e-8
-        self.projector_method = '4X2'
+        self.projector_method = '4X4'
         self.projector_svd_reltol = 1.0e-8
         self.ctm_move_sequence = [(0,-1), (-1,0), (0,1), (1,0)]
         self.verbosity_initialization = 0
         self.verbosity_ctm_convergence = 0
         self.verbosity_projectors = 0
         self.verbosity_ctm_move = 0
+
+    def __repr__(self):
+        res=type(self).__name__+"\n"
+        for x in list(filter(lambda x: "__" not in x,dir(self))):
+            res+=f"{x}= {getattr(self,x)}\n"
+        return res[:-1]
 
 class OPTARGS():
     r"""
@@ -123,3 +165,14 @@ class OPTARGS():
         self.max_iter_per_epoch = 1
         self.verbosity_opt_epoch = 1
         self.opt_logging = True
+
+    def __repr__(self):
+        res=type(self).__name__+"\n"
+        for x in list(filter(lambda x: "__" not in x,dir(self))):
+            res+=f"{x}= {getattr(self,x)}\n"
+        return res[:-1]
+
+global_args= GLOBALARGS()
+peps_args= PEPSARGS()
+ctm_args= CTMARGS()
+opt_args= OPTARGS()

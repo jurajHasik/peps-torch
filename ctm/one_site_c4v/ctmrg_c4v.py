@@ -1,12 +1,12 @@
 import time
 import torch
-from args import CTMARGS, GLOBALARGS
+import config as cfg
 import ipeps
 from ipeps import IPEPS
 from ctm.one_site_c4v.env_c4v import *
 from custom_svd import *
 
-def run(state, env, conv_check=None, ctm_args=CTMARGS(), global_args=GLOBALARGS()): 
+def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.global_args): 
     r"""
     :param state: wavefunction
     :param env: initial C4v symmetric environment
@@ -61,7 +61,7 @@ def run(state, env, conv_check=None, ctm_args=CTMARGS(), global_args=GLOBALARGS(
     return env, history, t1-t0
 
 # performs CTM move
-def ctm_MOVE(state, env, ctm_args=CTMARGS(), global_args=GLOBALARGS()):
+def ctm_MOVE(state, env, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
     # 1) build enlarged corner upper left corner
     C2X2= c2x2(state, env, verbosity=ctm_args.verbosity_projectors)
 

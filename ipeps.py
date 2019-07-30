@@ -2,11 +2,11 @@ import torch
 import json
 import itertools
 import math
-from args import PEPSARGS, GLOBALARGS
+import config as cfg
 
 class IPEPS(torch.nn.Module):
-    def __init__(self, sites, vertexToSite=None, lX=None, lY=None, peps_args=PEPSARGS(),\
-        global_args=GLOBALARGS()):
+    def __init__(self, sites, vertexToSite=None, lX=None, lY=None, peps_args=cfg.peps_args,\
+        global_args=cfg.global_args):
         r"""
         :param sites: map from elementary unit cell to on-site tensors
         :param vertexToSite: function mapping arbitrary vertex of a square lattice 
@@ -156,8 +156,8 @@ class IPEPS(torch.nn.Module):
     def get_aux_bond_dims(self):
         return [d for key in self.sites.keys() for d in self.sites[key].size()[1:]]
 
-def read_ipeps(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=PEPSARGS(),\
-        global_args=GLOBALARGS()):
+def read_ipeps(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.peps_args,\
+        global_args=cfg.global_args):
     r"""
     :param jsonfile: input file describing iPEPS in json format
     :param vertexToSite: function mapping arbitrary vertex of a square lattice 
@@ -255,7 +255,6 @@ def read_ipeps(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=PEPSARG
             state = IPEPS(sites, vertexToSite, lX=lX, lY=lY, peps_args=peps_args, global_args=global_args)
         else:
             state = IPEPS(sites, vertexToSite, peps_args=peps_args, global_args=global_args)
-
     return state
 
 def extend_bond_dim(state, new_d):
@@ -351,7 +350,8 @@ def write_ipeps(state, outputfile, aux_seq=[0,1,2,3], tol=1.0e-10, normalize=Fal
         entries = []
         elem_inds = list(itertools.product( *(range(i) for i in tdims) ))
         for ei in elem_inds:
-            entries.append(f"{ei[0]} {ei[asq[0]]} {ei[asq[1]]} {ei[asq[2]]} {ei[asq[3]]} {site[ei[0]][ei[1]][ei[2]][ei[3]][ei[4]]}")
+            entries.append(f"{ei[0]} {ei[asq[0]]} {ei[asq[1]]} {ei[asq[2]]} {ei[asq[3]]}"\
+                +f" {site[ei[0]][ei[1]][ei[2]][ei[3]][ei[4]]}")
             
         json_tensor["entries"]=entries
         json_state["sites"].append(json_tensor)

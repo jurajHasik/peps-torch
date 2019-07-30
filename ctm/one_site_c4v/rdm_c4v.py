@@ -12,7 +12,7 @@ def rdm1x1(state, env, verbosity=0):
     :type verbosity: int
     :return: 1-site reduced density matrix with indices :math:`s;s'`
     :rtype: torch.tensor
-
+    
     Computes 1-site reduced density matrix :math:`\rho_{1x1}` by 
     contracting the following tensor network::
 
@@ -253,6 +253,7 @@ def rdm2x2(state, env, verbosity=0):
         2. construct upper half of the network
         3. contract upper and lower half (identical to upper) to obtain final reduced 
            density matrix
+           
     TODO try single torch.einsum ?
 
     ::

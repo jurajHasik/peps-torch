@@ -1,12 +1,13 @@
 import torch
 import su2
+import config as cfg
 import ipeps
 from ctm.generic.env import ENV
 from ctm.generic import rdm
 from args import GLOBALARGS
 
 class AKLTS2():
-    def __init__(self, global_args=GLOBALARGS()):
+    def __init__(self, global_args=cfg.global_args):
         self.dtype=global_args.dtype
         self.device=global_args.device
         self.phys_dim = 5

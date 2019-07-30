@@ -3,12 +3,12 @@ import su2
 import ipeps
 from ctm.generic.env import ENV
 from ctm.generic import rdm
-from args import GLOBALARGS
+import config as cfg
 from math import sqrt
 import itertools
 
 class COUPLEDLADDERS():
-    def __init__(self, alpha=0.0, global_args=GLOBALARGS()):
+    def __init__(self, alpha=0.0, global_args=cfg.global_args):
         r"""
         :param alpha: nearest-neighbour interaction
         :param global_args: global configuration

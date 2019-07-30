@@ -1,11 +1,11 @@
 import torch
+import config as cfg
 from ipeps import IPEPS
 from ctm.generic.env import ENV
-from args import CTMARGS, GLOBALARGS
 from ctm.generic.ctm_components import *
 from custom_svd import *
 
-def ctm_get_projectors_4x4(direction, coord, state, env, ctm_args=CTMARGS(), global_args=GLOBALARGS()):
+def ctm_get_projectors_4x4(direction, coord, state, env, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
     r"""
     :param direction: direction of the CTM move for which the projectors are to be computed
     :param coord: vertex (x,y) specifying (together with ``direction``) 4x4 tensor network 
@@ -54,7 +54,7 @@ def ctm_get_projectors_4x4(direction, coord, state, env, ctm_args=CTMARGS(), glo
 
     return ctm_get_projectors_from_matrices(R, Rt, env.chi, ctm_args, global_args)
 
-def ctm_get_projectors_4x2(direction, coord, state, env, ctm_args=CTMARGS(), global_args=GLOBALARGS()):
+def ctm_get_projectors_4x2(direction, coord, state, env, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
     r"""
     :param direction: direction of the CTM move for which the projectors are to be computed
     :param coord: vertex (x,y) specifying (together with ``direction``) 4x2 (vertical) or 
@@ -127,7 +127,7 @@ def ctm_get_projectors_4x2(direction, coord, state, env, ctm_args=CTMARGS(), glo
 # direction-independent function performing bi-diagonalization
 #####################################################################
 
-def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=CTMARGS(), global_args=GLOBALARGS()):
+def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
 
     r"""
     :param R: tensor of shape (dim0, dim1)

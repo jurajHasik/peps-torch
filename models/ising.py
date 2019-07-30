@@ -2,14 +2,15 @@ import torch
 import su2
 # from env import ENV
 import ipeps
+from c4v import *
 from ctm.generic import rdm
 from ctm.one_site_c4v import rdm_c4v
-from args import GLOBALARGS
+import config as cfg
 from math import sqrt
 import itertools
 
 class ISING():
-    def __init__(self, hx=0.0, q=0.0, global_args=GLOBALARGS()):
+    def __init__(self, hx=0.0, q=0.0, global_args=cfg.global_args):
         r"""
         :param hx: transverse field
         :param q: plaquette interaction 
@@ -165,7 +166,7 @@ class ISING():
         return obs_values, obs_labels
 
 class ISING_C4V():
-    def __init__(self, hx=0.0, q=0.0, global_args=GLOBALARGS()):
+    def __init__(self, hx=0.0, q=0.0, global_args=cfg.global_args):
         r"""
         :param hx: transverse field
         :param q: plaquette interaction 
@@ -282,14 +283,19 @@ class ISING_C4V():
         """
         obs= dict()
         with torch.no_grad():
-            rdm1x1= rdm_c4v.rdm1x1(state,env_c4v)
+            # symmetrize on-site tensor
+            symm_sites= {(0,0): make_c4v_symm(state.sites[(0,0)])}
+            symm_sites[(0,0)]= symm_sites[(0,0)]/torch.max(torch.abs(symm_sites[(0,0)]))
+            symm_state= ipeps.IPEPS(symm_sites)
+
+            rdm1x1= rdm_c4v.rdm1x1(symm_state,env_c4v)
             for label,op in self.obs_ops.items():
                 obs[f"{label}"]= torch.trace(rdm1x1@op)
             obs["sx"]= 0.5*(obs["sp"] + obs["sm"])
             
             #rdm2x1= rdm.rdm2x1(coord,state,env)
             #rdm1x2= rdm.rdm1x2(coord,state,env)
-            rdm2x2= rdm_c4v.rdm2x2(state,env_c4v)
+            rdm2x2= rdm_c4v.rdm2x2(symm_state,env_c4v)
             #obs[f"SzSz2x1{coord}"]= torch.einsum('ijab,ijab',rdm2x1,self.h2)
             #obs[f"SzSz1x2{coord}"]= torch.einsum('ijab,ijab',rdm1x2,self.h2)
             obs["SzSzSzSz"]= torch.einsum('ijklabcd,ijklabcd',rdm2x2,self.h4)
