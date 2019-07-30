@@ -3,11 +3,28 @@ import torch
 from args import CTMARGS, GLOBALARGS
 import ipeps
 from ipeps import IPEPS
-from env import *
-from ctm_components import *
-from ctm_projectors import *
+from ctm.generic.env import *
+from ctm.generic.ctm_components import *
+from ctm.generic.ctm_projectors import *
 
 def run(state, env, conv_check=None, ctm_args=CTMARGS(), global_args=GLOBALARGS()): 
+    r"""
+    :param state: wavefunction
+    :param env: environment
+    :param conv_check: function which determines the convergence of CTM algorithm. If ``None``,
+                       the algorithm performs ``ctm_args.ctm_max_iter`` iterations. 
+    :param ctm_args: CTM algorithm configuration
+    :param global_args: global configuration
+    :type state: IPEPS
+    :type env: ENV
+    :type conv_check: function(IPEPS,ENV,list[float],CTMARGS)->bool
+    :type ctm_args: CTMARGS
+    :type global_args: GLOBALARGS
+
+    Executes directional CTM algorithm for generic iPEPS starting from the intial environment ``env``.
+    TODO add reference
+    """
+
     # 0) Create double-layer (DL) tensors, preserving the same convenction
     # for order of indices 
     #

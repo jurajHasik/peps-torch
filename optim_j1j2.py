@@ -2,8 +2,8 @@ import torch
 import argparse
 from args import *
 from ipeps import *
-from env import *
-import ctmrg
+from ctm.generic.env import *
+from ctm.generic import ctmrg
 from models import j1j2
 from ad_optim import optimize_state
 

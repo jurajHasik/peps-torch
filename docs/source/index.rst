@@ -11,9 +11,7 @@ TN-torch
    :caption: Contents:
 
    ipeps
-   env
-   ctm
-   rdm
+   envs
    optim
    args
    models

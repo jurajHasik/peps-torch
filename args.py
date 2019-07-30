@@ -82,8 +82,8 @@ class CTMARGS():
     def __init__(self):
         self.ctm_max_iter = 50
         self.ctm_env_init_type = 'CTMRG'
-        self.ctm_conv_tol = 1.0e-10
-        self.projector_method = '4X4'
+        self.ctm_conv_tol = 1.0e-8
+        self.projector_method = '4X2'
         self.projector_svd_reltol = 1.0e-8
         self.ctm_move_sequence = [(0,-1), (-1,0), (0,1), (1,0)]
         self.verbosity_initialization = 0
@@ -100,6 +100,12 @@ class OPTARGS():
     :vartype opt_ctm_reinit: bool
     :ivar lr: initial learning rate. Default: ``1.0``
     :vartype lr: float
+    :ivar tolerance_grad: stopping criterion wrt. norm of the gradient (which norm ? See 
+                          ``torch.optim.LPBFG``). Default: ``1.0e-5``
+    :vartype tolerance_grad: float
+    :ivar tolerance_change: stopping criterion wrt. change of the loss function. 
+                            Default: ``1.0e-9``
+    :vartype tolerance_change: float
     :ivar max_iter_per_epoch: maximum number of optimizer iterations per epoch. Default: ``1``
     :vartype max_iter_per_epoch: int
     :ivar verbosity_opt_epoch: verbosity within optimization epoch. Default: ``1``
@@ -112,6 +118,8 @@ class OPTARGS():
     def __init__(self):
         self.opt_ctm_reinit = True
         self.lr = 1.0
+        self.tolerance_grad = 1e-5
+        self.tolerance_change = 1e-9
         self.max_iter_per_epoch = 1
         self.verbosity_opt_epoch = 1
         self.opt_logging = True

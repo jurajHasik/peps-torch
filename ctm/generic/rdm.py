@@ -1,7 +1,6 @@
 import torch
 from ipeps import IPEPS
-from env import ENV
-
+from ctm.generic.env import ENV
 
 def rdm1x1(coord, state, env, verbosity=0):
     r"""

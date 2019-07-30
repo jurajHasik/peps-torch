@@ -1,0 +1,7 @@
+Environments
+============
+
+.. toctree::
+    :glob:
+
+    envs/*

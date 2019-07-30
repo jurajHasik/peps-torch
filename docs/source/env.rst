@@ -1,5 +1,0 @@
-Environment
-===========
-
-.. automodule:: env
-    :members:

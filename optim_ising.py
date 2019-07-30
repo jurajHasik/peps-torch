@@ -2,8 +2,8 @@ import torch
 import argparse
 from args import *
 from ipeps import *
-from env import *
-import ctmrg
+from ctm.generic.env import *
+from ctm.generic import ctmrg
 from models import ising
 from ad_optim import optimize_state
 
@@ -22,7 +22,7 @@ if __name__=='__main__':
     # coord into one of coordinates within unit-cell of iPEPS ansatz    
     
     if args.instate!=None:
-        state = read_ipeps(args.instate, vertexToSite=lattice_to_site, \
+        state = read_ipeps(args.instate, vertexToSite=None, \
             peps_args=PEPSARGS(), global_args=GLOBALARGS())
         if args.bond_dim > max(state.get_aux_bond_dims()):
             # extend the auxiliary dimensions

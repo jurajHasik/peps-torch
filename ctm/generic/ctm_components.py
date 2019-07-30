@@ -1,6 +1,6 @@
 import torch
 from ipeps import IPEPS
-from env import ENV
+from ctm.generic.env import ENV
 
 #####################################################################
 # functions building pair of 4x2 (or 2x4) halves of 4x4 TN

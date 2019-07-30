@@ -1,8 +1,8 @@
 import torch
 import su2
-from env import ENV
 import ipeps
-import rdm
+from ctm.generic.env import ENV
+from ctm.generic import rdm
 from args import GLOBALARGS
 from math import sqrt
 import itertools

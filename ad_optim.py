@@ -2,7 +2,6 @@ import time
 import json
 import torch
 from args import *
-from env import *
 from ipeps import write_ipeps
 
 def store_checkpoint(checkpoint_file, parameters, optimizer, current_epoch, current_loss, verbosity=0):
@@ -81,16 +80,15 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=OPT
         for coord,site in state.sites.items():
             site = site/torch.max(torch.abs(site))
 
+        # 1) evaluate loss and the gradient
         loss, ctm_env, history, t_ctm = loss_fn(state, current_env[0], ctm_args=ctm_args, opt_args=opt_args, global_args=global_args)
         t0= time.perf_counter()
         loss.backward()
         t1= time.perf_counter()
 
-        # 2) detach current environment from autograd graph
-        lst_C = list(ctm_env.C.values())
-        lst_T = list(ctm_env.T.values())
-        current_env[0] = ctm_env
-        for el in lst_T + lst_C: el.detach_()
+        # 2) compute and print observables
+        obs_values, obs_labels = model.eval_obs(state,ctm_env)
+        print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
 
         # 3) store current state if the loss improves
         t_data["loss"].append(loss.item())
@@ -105,12 +103,19 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=OPT
                 "ctm_history_len": len(history), "ctm_history": history})
             outputlogfile.write(json.dumps(log_entry)+'\n')
 
+        # 5) detach current environment from autograd graph
+        lst_C = list(ctm_env.C.values())
+        lst_T = list(ctm_env.T.values())
+        current_env[0] = ctm_env
+        for el in lst_T + lst_C: el.detach_()
+
         return loss
 
     verbosity = opt_args.verbosity_opt_epoch
     outputstatefile = local_args.out_prefix+"_state.json"
     checkpoint_file = local_args.out_prefix+"_checkpoint.p"
-    optimizer = torch.optim.LBFGS(parameters, max_iter=opt_args.max_iter_per_epoch, lr=opt_args.lr)
+    optimizer = torch.optim.LBFGS(parameters, max_iter=opt_args.max_iter_per_epoch, lr=opt_args.lr, \
+        tolerance_grad=opt_args.tolerance_grad, tolerance_change=opt_args.tolerance_grad)
     epoch0 = 0
     loss0 = 0
 
@@ -131,10 +136,6 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=OPT
         # checkpointing before step, guarantees the correspondence between the wavefunction
         # and the last computed value of loss t_data["loss"][-1]
         store_checkpoint(checkpoint_file, parameters, optimizer, epoch0+epoch, t_data["loss"][-1])
-
         loss = optimizer.step(closure)
-
-        # compute and print observables
-        if verbosity>0:
-            obs_values, obs_labels = model.eval_obs(state,current_env[0])
-            print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
+        # After execution closure ``current_env`` **IS NOT** corresponding to ``state``, since
+        # the ``state`` on-site tensors have been modified by gradient 

@@ -1,8 +1,8 @@
 import torch
 from ipeps import IPEPS
-from env import ENV
+from ctm.generic.env import ENV
 from args import CTMARGS, GLOBALARGS
-from ctm_components import *
+from ctm.generic.ctm_components import *
 from custom_svd import *
 
 def ctm_get_projectors_4x4(direction, coord, state, env, ctm_args=CTMARGS(), global_args=GLOBALARGS()):
