@@ -5,21 +5,21 @@ from ipeps import *
 from c4v import *
 from ctm.one_site_c4v.env_c4v import *
 from ctm.one_site_c4v import ctmrg_c4v
-from models import ising
+from models import jq
 from ad_optim import optimize_state
 
 if __name__=='__main__':
     # parse command line args and build necessary configuration objects
     parser= cfg.get_args_parser()
     # additional model-dependent arguments
-    parser.add_argument("-hx", type=float, default=0., help="transverse field")
-    parser.add_argument("-q", type=float, default=0., help="next nearest-neighbour coupling")
+    parser.add_argument("-j1", type=float, default=0.0, help="nearest-neighbour coupling")
+    parser.add_argument("-q", type=float, default=1.0, help="plaquette interaction strength")
     args = parser.parse_args()
     cfg.configure(args)
     cfg.print_config()
     torch.set_num_threads(args.omp_cores)
 
-    model = ising.ISING_C4V(hx=args.hx, q=args.q)
+    model = jq.JQ_C4V(j1=args.j1, q=args.q)
     
     # initialize an ipeps
     # 1) define lattice-tiling function, that maps arbitrary vertex of square lattice

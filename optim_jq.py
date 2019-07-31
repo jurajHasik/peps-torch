@@ -11,8 +11,8 @@ if __name__=='__main__':
     # parse command line args and build necessary configuration objects
     parser= cfg.get_args_parser()
     # additional model-dependent arguments
-    parser.add_argument("-j1", type=float, default=1.0, help="nearest-neighbour coupling")
-    parser.add_argument("-q", type=float, default=0., help="plaquette interaction strength")
+    parser.add_argument("-j1", type=float, default=0.0, help="nearest-neighbour coupling")
+    parser.add_argument("-q", type=float, default=1.0, help="plaquette interaction strength")
     args = parser.parse_args()
     cfg.configure(args)
     cfg.print_config()
