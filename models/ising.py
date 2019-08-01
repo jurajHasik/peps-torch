@@ -241,7 +241,7 @@ class ISING_C4V():
         :param state: wavefunction
         :param env_c4v: CTM c4v symmetric environment
         :type state: IPEPS
-        :type env: ENV_C4V
+        :type env_c4v: ENV_C4V
         :return: energy per site
         :rtype: float
 
@@ -256,15 +256,15 @@ class ISING_C4V():
             + q\langle h4_{\bf{0}} \rangle - h_x \langle h4_{\bf{0}} \rangle
 
         """
-        # rdm2x2= rdm_c4v.rdm2x2(state,env_c4v)
-        # energy_per_site= torch.einsum('ijklabcd,ijklabcd',rdm2x2,self.hp)
+        rdm2x2= rdm_c4v.rdm2x2(state,env_c4v)
+        energy_per_site= torch.einsum('ijklabcd,ijklabcd',rdm2x2,self.hp)
         
         # From individual contributions 
-        rdm2x1= rdm_c4v.rdm2x1(state,env_c4v)
-        eSx= torch.einsum('ijaj,ia',rdm2x1,self.h1)
-        eSzSz= torch.einsum('ijab,ijab',rdm2x1,self.h2)
+        # rdm2x1= rdm_c4v.rdm2x1(state,env_c4v)
+        # eSx= torch.einsum('ijaj,ia',rdm2x1,self.h1)
+        # eSzSz= torch.einsum('ijab,ijab',rdm2x1,self.h2)
         # eSzSzSzSz= torch.einsum('ijklabcd,ijklabcd',rdm2x2,self.h4)
-        energy_per_site = -2*eSzSz - self.hx*eSx #+ self.q*eSzSzSzSz
+        # energy_per_site = -2*eSzSz - self.hx*eSx + self.q*eSzSzSzSz
         return energy_per_site
 
     def eval_obs(self,state,env_c4v):
@@ -272,7 +272,7 @@ class ISING_C4V():
         :param state: wavefunction
         :param env_c4v: CTM c4v symmetric environment
         :type state: IPEPS
-        :type env: ENV_C4V
+        :type env_c4v: ENV_C4V
         :return:  expectation values of observables, labels of observables
         :rtype: list[float], list[str]
 
@@ -280,6 +280,7 @@ class ISING_C4V():
 
             1. :math:`\langle 2S^z \rangle,\ \langle 2S^x \rangle` for each site in the unit cell
 
+        TODO 2site observable SzSz
         """
         obs= dict()
         with torch.no_grad():
