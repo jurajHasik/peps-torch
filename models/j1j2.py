@@ -1,9 +1,12 @@
 import torch
 import su2
+from c4v import *
 import config as cfg
 import ipeps
 from ctm.generic.env import ENV
 from ctm.generic import rdm
+from ctm.one_site_c4v.env_c4v import ENV_C4V
+from ctm.one_site_c4v import rdm_c4v
 from math import sqrt
 import itertools
 
@@ -227,5 +230,167 @@ class J1J2():
             +[f"{lc[1]}{lc[0]}" for lc in list(itertools.product(state.sites.keys(), self.obs_ops.keys()))]
         obs_labels += [f"SS2x1{coord}" for coord in state.sites.keys()]
         obs_labels += [f"SS1x2{coord}" for coord in state.sites.keys()]
+        obs_values=[obs[label] for label in obs_labels]
+        return obs_values, obs_labels
+
+class J1J2_C4V_BIPARTITE():
+    def __init__(self, j1=1.0, j2=0.0, global_args=cfg.global_args):
+        r"""
+        :param j1: nearest-neighbour interaction
+        :param j2: next nearest-neighbour interaction
+        :param global_args: global configuration
+        :type j1: float
+        :type j2: float
+        :type global_args: GLOBALARGS
+
+        Build Spin-1/2 :math:`J_1-J_2` Hamiltonian
+
+        .. math:: 
+
+            H = J_1\sum_{<i,j>} \mathbf{S}_i.\mathbf{S}_j + J_2\sum_{<<i,j>>} \mathbf{S}_i.\mathbf{S}_j
+            = \sum_{p} h_p
+
+        on the square lattice. Where the first sum runs over the pairs of sites `i,j` 
+        which are nearest-neighbours (denoted as `<.,.>`), and the second sum runs over 
+        pairs of sites `i,j` which are next nearest-neighbours (denoted as `<<.,.>>`)::
+
+            y\x
+               _:__:__:__:_
+            ..._|__|__|__|_...
+            ..._|__|__|__|_...
+            ..._|__|__|__|_...
+            ..._|__|__|__|_...
+            ..._|__|__|__|_...
+                :  :  :  :
+
+        where
+
+        * :math:`h_p = J_1(\mathbf{S}_{r}.\mathbf{S}_{r+\vec{x}} + \mathbf{S}_{r}.\mathbf{S}_{r+\vec{y}})
+          +J_2(\mathbf{S}_{r}.\mathbf{S}_{r+\vec{x}+\vec{y}} + \mathbf{S}_{r+\vec{x}}.\mathbf{S}_{r+\vec{y}})` 
+          with indices of spins ordered as follows :math:`s_r s_{r+\vec{x}} s_{r+\vec{y}} s_{r+\vec{x}+\vec{y}};
+          s'_r s'_{r+\vec{x}} s'_{r+\vec{y}} s'_{r+\vec{x}+\vec{y}}`
+
+        """
+        self.dtype=global_args.dtype
+        self.device=global_args.device
+        self.phys_dim=2
+        self.j1=j1
+        self.j2=j2
+        
+        self.h2, self.h2_rot, self.hp = self.get_h()
+        self.obs_ops = self.get_obs_ops()
+
+    def get_h(self):
+        s2 = su2.SU2(self.phys_dim, dtype=self.dtype, device=self.device)
+        id2= torch.eye(4,dtype=self.dtype,device=self.device)
+        id2= id2.view(2,2,2,2).contiguous()
+        expr_kron = 'ij,ab->iajb'
+        SS= torch.einsum(expr_kron,s2.SZ(),s2.SZ()) + 0.5*(torch.einsum(expr_kron,s2.SP(),s2.SM()) \
+            + torch.einsum(expr_kron,s2.SM(),s2.SP()))
+        rot_op= su2.get_rot_op(self.phys_dim, dtype=self.dtype, device=self.device)
+        SS_rot= torch.einsum('ki,kjcb,ca->ijab',rot_op,SS,rot_op)
+
+        h2x2_SS_rot= torch.einsum('ijab,klcd->ijklabcd',SS_rot,id2) # nearest neighbours
+        h2x2_SS= torch.einsum('ijab,klcd->ikljacdb',SS,id2) # next-nearest neighbours
+        hp= self.j1*(h2x2_SS_rot + h2x2_SS_rot.permute(0,2,1,3,4,6,5,7))\
+            + self.j2*(h2x2_SS + h2x2_SS.permute(1,0,3,2,5,4,7,6))
+        return SS, SS_rot, hp
+
+    def get_obs_ops(self):
+        obs_ops = dict()
+        s2 = su2.SU2(self.phys_dim, dtype=self.dtype, device=self.device)
+        obs_ops["sz"]= s2.SZ()
+        obs_ops["sp"]= s2.SP()
+        obs_ops["sm"]= s2.SM()
+        return obs_ops
+
+    def energy_1x1(self,state,env_c4v):
+        r"""
+        :param state: wavefunction
+        :param env_c4v: CTM c4v symmetric environment
+        :type state: IPEPS
+        :type env_c4v: ENV_C4V
+        :return: energy per site
+        :rtype: float
+
+        We assume 1x1 C4v iPEPS which tiles the lattice with a bipartite pattern composed 
+        of two tensors A, and B=RA, where R rotates approriately the physical Hilbert space 
+        of tensor A on every "odd" site::
+
+            1x1 C4v => rotation P => BIPARTITE
+
+            A A A A                  A B A B
+            A A A A                  B A B A
+            A A A A                  A B A B
+            A A A A                  B A B A
+
+        Due to C4v symmetry it is enough to construct a single reduced density matrix 
+        :py:func:`ctm.one_site_c4v.rdm_c4v.rdm2x2` of a 2x2 plaquette. Afterwards, 
+        the energy per site `e` is computed by evaluating a single plaquette term :math:`h_p`
+        containing two nearest-nighbour terms :math:`\bf{S}.\bf{S}` and two next-nearest 
+        neighbour :math:`\bf{S}.\bf{S}`, as:
+
+        .. math::
+
+            e = \langle \mathcal{h_p} \rangle = Tr(\rho_{2x2} \mathcal{h_p})
+        
+        """
+        rdm2x2= rdm_c4v.rdm2x2(state,env_c4v)
+        energy_per_site= torch.einsum('ijklabcd,ijklabcd',rdm2x2,self.hp)
+        return energy_per_site
+
+    def eval_obs(self,state,env_c4v):
+        r"""
+        :param state: wavefunction
+        :param env_c4v: CTM c4v symmetric environment
+        :type state: IPEPS
+        :type env_c4v: ENV_C4V
+        :return:  expectation values of observables, labels of observables
+        :rtype: list[float], list[str]
+
+        Computes the following observables in order
+
+            1. magnetization
+            2. :math:`\langle S^z \rangle,\ \langle S^+ \rangle,\ \langle S^- \rangle`
+    
+        where the on-site magnetization is defined as
+        
+        .. math::
+            
+            \begin{align*}
+            m &= \sqrt{ \langle S^z \rangle^2+\langle S^x \rangle^2+\langle S^y \rangle^2 }
+            =\sqrt{\langle S^z \rangle^2+1/4(\langle S^+ \rangle+\langle S^- 
+            \rangle)^2 -1/4(\langle S^+\rangle-\langle S^-\rangle)^2} \\
+              &=\sqrt{\langle S^z \rangle^2 + 1/2\langle S^+ \rangle \langle S^- \rangle)}
+            \end{align*}
+
+        Usual spin components can be obtained through the following relations
+        
+        .. math::
+            
+            \begin{align*}
+            S^+ &=S^x+iS^y               & S^x &= 1/2(S^+ + S^-)\\
+            S^- &=S^x-iS^y\ \Rightarrow\ & S^y &=-i/2(S^+ - S^-)
+            \end{align*}
+        """
+        # TODO optimize/unify ?
+        # expect "list" of (observable label, value) pairs ?
+        obs= dict()
+        with torch.no_grad():
+            # symmetrize on-site tensor
+            symm_sites= {(0,0): make_c4v_symm(state.sites[(0,0)])}
+            symm_sites[(0,0)]= symm_sites[(0,0)]/torch.max(torch.abs(symm_sites[(0,0)]))
+            symm_state= ipeps.IPEPS(symm_sites)
+
+            rdm1x1= rdm_c4v.rdm1x1(symm_state,env_c4v)
+            for label,op in self.obs_ops.items():
+                obs[f"{label}"]= torch.trace(rdm1x1@op)
+            obs[f"m"]= sqrt(abs(obs[f"sz"]**2 + obs[f"sp"]*obs[f"sm"]))
+            
+            rdm2x1 = rdm_c4v.rdm2x1(symm_state,env_c4v)
+            obs[f"SS2x1"]= torch.einsum('ijab,ijab',rdm2x1,self.h2_rot)
+            
+        # prepare list with labels and values
+        obs_labels=[f"m"]+[f"{lc}" for lc in self.obs_ops.keys()]+[f"SS2x1"]
         obs_values=[obs[label] for label in obs_labels]
         return obs_values, obs_labels

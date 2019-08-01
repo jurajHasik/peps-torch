@@ -2,5 +2,15 @@ J1-J2 Heisenberg Model
 ======================
 
 .. automodule:: models.j1j2
+
+2x1 unit cell
+^^^^^^^^^^^^^
+
 .. autoclass:: J1J2
+    :members:
+
+1x1 C4v
+^^^^^^^
+
+.. autoclass:: J1J2_C4V_BIPARTITE
     :members:
