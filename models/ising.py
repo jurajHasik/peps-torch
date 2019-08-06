@@ -68,7 +68,7 @@ class ISING():
         Sx = s2.SP()+s2.SM()
         SxIdIdId= torch.einsum('ia,jb,kc,ld->ijklabcd',Sx,s2.I(),s2.I(),s2.I())
 
-        hp = -SzSzIdId -SzSzIdId.permute(0,2,1,3,4,6,5,7) +self.q*SzSzSzSz -self.hx*SxIdIdId
+        hp = -SzSzIdId -SzSzIdId.permute(0,2,1,3,4,6,5,7) -self.q*SzSzSzSz -self.hx*SxIdIdId
 
         return SzSz, SzSzSzSz, Sx, hp
 
@@ -224,7 +224,7 @@ class ISING_C4V():
         Sx = s2.SP()+s2.SM()
         SxIdIdId= torch.einsum('ia,jb,kc,ld->ijklabcd',Sx,s2.I(),s2.I(),s2.I())
 
-        hp = -SzSzIdId -SzSzIdId.permute(0,2,1,3,4,6,5,7) +self.q*SzSzSzSz -self.hx*SxIdIdId
+        hp = -SzSzIdId -SzSzIdId.permute(0,2,1,3,4,6,5,7) -self.q*SzSzSzSz -self.hx*SxIdIdId
 
         return SzSz, SzSzSzSz, Sx, hp
 

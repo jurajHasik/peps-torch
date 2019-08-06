@@ -11,8 +11,9 @@ def get_args_parser():
     parser.add_argument("-out_prefix", default="output", help="Output files prefix")
     parser.add_argument("-bond_dim", type=int, default=1, help="iPEPS auxiliary bond dimension")
     parser.add_argument("-chi", type=int, default=20, help="environment bond dimension")
-    parser.add_argument("-opt_max_iter", type=int, default=100, help="maximal number of CTM iterations")
+    parser.add_argument("-opt_max_iter", type=int, default=100, help="maximal number of epochs")
     parser.add_argument("-opt_resume", type=str, default=None, help="file with checkpoint to resume")
+    parser.add_argument("-opt_resume_override_params", type=bool, default=False, help="override optimizer parameters stored in checkpoint")
 
     configs=[global_args, peps_args, ctm_args, opt_args]
     for c in configs:
@@ -164,6 +165,7 @@ class OPTARGS():
         self.lr = 1.0
         self.tolerance_grad = 1e-5
         self.tolerance_change = 1e-9
+        self.history_size = 100
         self.max_iter_per_epoch = 1
         self.verbosity_opt_epoch = 1
         self.opt_logging = True

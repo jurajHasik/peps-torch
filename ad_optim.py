@@ -73,6 +73,7 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=cfg
     outputstatefile= local_args.out_prefix+"_state.json"
     outputlogfile= open(local_args.out_prefix+"_log.json",mode="w",buffering=1)
     t_data = dict({"loss": [1.0e+16], "min_loss": 1.0e+16})
+    eval_counter=[0]
     prev_epoch=[-1]
     current_env=[ctm_env_init]
     def closure():
@@ -91,7 +92,10 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=cfg
 
         # We evaluate observables inside closure as it is the only place with environment
         # consistent with the state
-        if prev_epoch[0]!=epoch:
+        if prev_epoch[0] > -1: #prev_epoch[0]!=epoch:
+            print(f"Closure-eval {eval_counter[0]}")
+            print(optimizer.state_dict())
+
             # 2) compute observables if we moved into new epoch
             obs_values, obs_labels = model.eval_obs(state,ctm_env)
             print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
@@ -115,6 +119,7 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=cfg
         current_env[0] = ctm_env
         for el in lst_T + lst_C: el.detach_()
 
+        eval_counter[0]+=1
         prev_epoch[0]=epoch
         return loss
 
@@ -122,7 +127,8 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=cfg
     outputstatefile = local_args.out_prefix+"_state.json"
     checkpoint_file = local_args.out_prefix+"_checkpoint.p"
     optimizer = torch.optim.LBFGS(parameters, max_iter=opt_args.max_iter_per_epoch, lr=opt_args.lr, \
-        tolerance_grad=opt_args.tolerance_grad, tolerance_change=opt_args.tolerance_grad)
+        tolerance_grad=opt_args.tolerance_grad, tolerance_change=opt_args.tolerance_change, \
+        history_size=opt_args.history_size)
     epoch0 = 0
     loss0 = 0
 
@@ -134,7 +140,32 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=cfg
         loss0 = checkpoint["loss"]
         for i in range(len(parameters)):
             parameters[i].data = init_parameters[i].data
-        optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        cp_state_dict= checkpoint["optimizer_state_dict"]
+        cp_opt_params= cp_state_dict["param_groups"][0]
+        cp_opt_history= cp_state_dict["state"][cp_opt_params["params"][0]]
+        if local_args.opt_resume_override_params:
+            cp_opt_params["lr"] = opt_args.lr
+            cp_opt_params["max_iter"] = opt_args.max_iter_per_epoch
+            cp_opt_params["tolerance_grad"] = opt_args.tolerance_grad
+            cp_opt_params["tolerance_change"] = opt_args.tolerance_change
+            # resize stored old_dirs, old_stps, ro, al to new history size
+            cp_history_size= cp_opt_params["history_size"]
+            cp_opt_params["history_size"] = opt_args.history_size
+            if opt_args.history_size < cp_history_size:
+                if len(cp_opt_history["old_dirs"]) > opt_args.history_size: 
+                    cp_opt_history["old_dirs"]= cp_opt_history["old_dirs"][-opt_args.history_size:]
+                    cp_opt_history["old_stps"]= cp_opt_history["old_stps"][-opt_args.history_size:]
+            cp_ro_filtered= list(filter(None,cp_opt_history["ro"]))
+            cp_al_filtered= list(filter(None,cp_opt_history["al"]))
+            if len(cp_ro_filtered) > opt_args.history_size:
+                cp_opt_history["ro"]= cp_ro_filtered[-opt_args.history_size:]
+                cp_opt_history["al"]= cp_al_filtered[-opt_args.history_size:]
+            else:
+                cp_opt_history["ro"]= cp_ro_filtered + [None for i in range(opt_args.history_size-len(cp_ro_filtered))]
+                cp_opt_history["al"]= cp_al_filtered + [None for i in range(opt_args.history_size-len(cp_ro_filtered))]
+        cp_state_dict["param_groups"][0]= cp_opt_params
+        cp_state_dict["state"][cp_opt_params["params"][0]]= cp_opt_history
+        optimizer.load_state_dict(cp_state_dict)
         print(f"checkpoint.loss = {loss0}")
 
     for epoch in range(local_args.opt_max_iter):
