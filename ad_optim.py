@@ -92,10 +92,7 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=cfg
 
         # We evaluate observables inside closure as it is the only place with environment
         # consistent with the state
-        if prev_epoch[0] > -1: #prev_epoch[0]!=epoch:
-            print(f"Closure-eval {eval_counter[0]}")
-            print(optimizer.state_dict())
-
+        if prev_epoch[0]!=epoch:
             # 2) compute observables if we moved into new epoch
             obs_values, obs_labels = model.eval_obs(state,ctm_env)
             print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
