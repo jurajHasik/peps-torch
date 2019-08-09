@@ -1,6 +1,7 @@
 import torch
 from ipeps import IPEPS
 from ctm.generic.env import ENV
+from config import ctm_args
 
 #####################################################################
 # functions building pair of 4x2 (or 2x4) halves of 4x4 TN
@@ -236,34 +237,38 @@ def c2x2_LD(coord, ipeps, env, verbosity=0):
     T2 = env.T[(ipeps.vertexToSite(coord),(0,1))]
     A = ipeps.site(coord)
 
-    # 0->1
-    # T1--2
-    # 1
-    # 0
-    # C--1->0
-    C2x2 = torch.tensordot(C, T1, ([0],[1]))
+    tensors= C, T1, T2, A
+    def c2x2_LD_c(*tensors):
+        C, T1, T2, A= tensors
+        # 0->1
+        # T1--2
+        # 1
+        # 0
+        # C--1->0
+        C2x2 = torch.tensordot(C, T1, ([0],[1]))
 
-    # 1->0
-    # T1--2->1
-    # |
-    # |       0->2
-    # C--0 1--T1--2->3
-    C2x2 = torch.tensordot(C2x2, T2, ([0],[1]))
+        # 1->0
+        # T1--2->1
+        # |
+        # |       0->2
+        # C--0 1--T1--2->3
+        C2x2 = torch.tensordot(C2x2, T2, ([0],[1]))
 
-    # 0       0->2
-    # T1--1 1--A--3
-    # |        2
-    # |        2
-    # C--------T2--3->1
-    C2x2 = torch.tensordot(C2x2, A, ([1,2],[1,2]))
+        # 0       0->2
+        # T1--1 1--A--3
+        # |        2
+        # |        2
+        # C--------T2--3->1
+        C2x2 = torch.tensordot(C2x2, A, ([1,2],[1,2]))
 
-    # permute 0123->0213
-    # reshape (02)(13)->01
-    C2x2 = C2x2.permute(0,2,1,3).contiguous().view(T1.size()[0]*A.size()[0],T2.size()[2]*A.size()[3])
+        # permute 0123->0213
+        # reshape (02)(13)->01
+        C2x2 = C2x2.permute(0,2,1,3).contiguous().view(T1.size()[0]*A.size()[0],T2.size()[2]*A.size()[3])
 
-    # 0
-    # |
-    # C2x2--1
+        # 0
+        # |
+        # C2x2--1
+        return C2x2
 
     if verbosity>0: 
         print("C2X2 LD "+str(coord)+"->"+str(ipeps.vertexToSite(coord))+" (-1,1)")
