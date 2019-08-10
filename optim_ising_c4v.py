@@ -79,10 +79,10 @@ if __name__=='__main__':
             init_env(symm_state, ctm_env_in)
 
         # 1) compute environment by CTMRG
-        ctm_env_in, history, t_ctm= ctmrg_c4v.run(symm_state, ctm_env_in, conv_check=ctmrg_conv_energy)
-        loss = model.energy_1x1(symm_state, ctm_env_in)
+        ctm_env_out, history, t_ctm= ctmrg_c4v.run(symm_state, ctm_env_in, conv_check=ctmrg_conv_energy)
+        loss = model.energy_1x1(symm_state, ctm_env_out)
         
-        return loss, ctm_env_in, history, t_ctm
+        return loss, ctm_env_out, history, t_ctm
 
     # optimize
     optimize_state(state, ctm_env, loss_fn, model, args)

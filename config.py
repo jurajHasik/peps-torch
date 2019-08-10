@@ -22,7 +22,10 @@ def get_args_parser():
         parser.add_argument_group(group_prefix)
         c_list= list(filter(lambda x: "__" not in x, dir(c)))
         for x in c_list:
-            parser.add_argument("-"+group_prefix+x, type=type(getattr(c,x)), default=getattr(c,x))
+            if isinstance(getattr(c,x), bool):
+                parser.add_argument("-"+group_prefix+x, action='store_true')
+            else:
+                parser.add_argument("-"+group_prefix+x, type=type(getattr(c,x)), default=getattr(c,x))
 
     return parser
 
@@ -116,9 +119,18 @@ class CTMARGS():
     :vartype verbosity_projectors: int
     :ivar verbosity_ctm_move: verbosity of directional CTM moves. Default: ``0``
     :vartype verbosity_ctm_move: int
-    :ivar fwd_checkpoint: recompute forward pass during backward pass within optimization to save 
-                          memory. Default: ``True``
-    :vartype fwd_checkpoint: bool
+    :ivar fwd_checkpoint_c2x2: recompute forward pass of enlarged corner functions (c2x2_*) during 
+                               backward pass within optimization to save memory. Default: ``False``
+    :vartype fwd_checkpoint_c2x2: bool
+    :ivar fwd_checkpoint_halves: recompute forward pass of halves functions (halves_of_4x4_*) during 
+                                 backward pass within optimization to save memory. Default: ``False``
+    :vartype fwd_checkpoint_halves: bool
+    :ivar fwd_checkpoint_projectors: recompute forward pass of projector construction (except SVD) during 
+                                     backward pass within optimization to save memory. Default: ``False``
+    :vartype fwd_checkpoint_projectors: bool
+    :ivar fwd_checkpoint_absorb: recompute forward pass of absorp and truncate functions (absorb_truncate_*) 
+                                 during backward pass within optimization to save memory. Default: ``False``
+    :vartype fwd_checkpoint_absorb: bool
     """
     def __init__(self):
         self.ctm_max_iter = 50
@@ -133,6 +145,7 @@ class CTMARGS():
         self.verbosity_ctm_move = 0
         self.fwd_checkpoint_c2x2 = False
         self.fwd_checkpoint_halves = False
+        self.fwd_checkpoint_projectors = False
         self.fwd_checkpoint_absorb = False
 
     def __repr__(self):

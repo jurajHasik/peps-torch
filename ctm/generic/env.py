@@ -79,6 +79,14 @@ class ENV(torch.nn.Module):
             for vec in [(-1,-1), (-1,1), (1,-1), (1,1)]:
                 self.C[(coord,vec)]=torch.empty((self.chi,self.chi), dtype=self.dtype, device=self.device)
 
+    def __str__(self):
+        s=f"ENV chi={self.chi}\n"
+        for cr,t in self.C.items():
+            s+=f"C({cr[0]} {cr[1]}): {t.size()}\n"
+        for cr,t in self.T.items():
+            s+=f"T({cr[0]} {cr[1]}): {t.size()}\n"
+        return s
+
 def init_env(ipeps, env, ctm_args=cfg.ctm_args):
     """
     :param ipeps: wavefunction

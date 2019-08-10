@@ -1,4 +1,5 @@
 import torch
+from torch.utils.checkpoint import checkpoint
 import config as cfg
 from ipeps import IPEPS
 from ctm.generic.env import ENV
@@ -42,24 +43,12 @@ def ctm_get_projectors_4x4(direction, coord, state, env, ctm_args=cfg.ctm_args, 
     """
     verbosity = ctm_args.verbosity_projectors
     if direction==(0,-1):
-        # if cfg.ctm_args.fwd_checkpoint_halves:
-        #     R, Rt= checkpoint(halves_of_4x4_CTM_MOVE_UP_c, *halves_of_4x4_CTM_MOVE_UP_t(coord, state, env))
-        # else:
         R, Rt = halves_of_4x4_CTM_MOVE_UP(coord, state, env, verbosity=verbosity)
     elif direction==(-1,0): 
-        # if cfg.ctm_args.fwd_checkpoint_halves:
-        #     R, Rt= checkpoint(halves_of_4x4_CTM_MOVE_LEFT_c, *halves_of_4x4_CTM_MOVE_LEFT_t(coord, state, env))
-        # else:
         R, Rt = halves_of_4x4_CTM_MOVE_LEFT(coord, state, env, verbosity=verbosity)
     elif direction==(0,1):
-        # if cfg.ctm_args.fwd_checkpoint_halves:
-        #     R, Rt= checkpoint(halves_of_4x4_CTM_MOVE_DOWN_c, *halves_of_4x4_CTM_MOVE_DOWN_t(coord, state, env))
-        # else:
         R, Rt = halves_of_4x4_CTM_MOVE_DOWN(coord, state, env, verbosity=verbosity)
     elif direction==(1,0):
-        # if cfg.ctm_args.fwd_checkpoint_halves:
-        #     R, Rt= checkpoint(halves_of_4x4_CTM_MOVE_RIGHT_c, *halves_of_4x4_CTM_MOVE_RIGHT_t(coord, state, env))
-        # else:
         R, Rt = halves_of_4x4_CTM_MOVE_RIGHT(coord, state, env, verbosity=verbosity)
     else:
         raise ValueError("Invalid direction: "+str(direction))
@@ -140,7 +129,6 @@ def ctm_get_projectors_4x2(direction, coord, state, env, ctm_args=cfg.ctm_args, 
 #####################################################################
 
 def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
-
     r"""
     :param R: tensor of shape (dim0, dim1)
     :param Rt: tensor of shape (dim0, dim1)
@@ -211,7 +199,10 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args, global_a
     verbosity = ctm_args.verbosity_projectors
 
     #  SVD decomposition
-    M = torch.mm(R.transpose(1, 0), Rt)
+    if ctm_args.fwd_checkpoint_projectors:
+        M = checkpoint(torch.mm, R.transpose(1, 0), Rt)
+    else:
+        M = torch.mm(R.transpose(1, 0), Rt)
     U, S, V = truncated_svd_gesdd(M, chi) # M = USV^{T}
 
     # if abs_tol is not None: St = St[St > abs_tol]
@@ -224,9 +215,15 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args, global_a
     if verbosity>0: print(S_sqrt)
 
     # Construct projectors
-    # P = torch.einsum('i,ij->ij', S_sqrt, torch.mm(U.transpose(1, 0), R.transpose(1, 0)))
-    P = torch.einsum('ij,j->ij', torch.mm(R, U), S_sqrt)
-    # Pt = torch.einsum('i,ij->ij', S_sqrt, torch.mm(V.transpose(1, 0), Rt.transpose(1, 0)))
-    Pt = torch.einsum('ij,j->ij', torch.mm(Rt, V), S_sqrt)
+    # P = torch.einsum('ij,j->ij', torch.mm(R, U), S_sqrt)
+    # Pt = torch.einsum('ij,j->ij', torch.mm(Rt, V), S_sqrt)
+    expr='ij,j->ij'
+    def P_Pt_c(*tensors):
+        R, Rt, U, V, S_sqrt= tensors
+        return torch.einsum(expr, torch.mm(R, U), S_sqrt), torch.einsum(expr, torch.mm(Rt, V), S_sqrt)
 
-    return P, Pt
+    tensors= R, Rt, U, V, S_sqrt
+    if ctm_args.fwd_checkpoint_projectors:
+        return checkpoint(P_Pt_c, *tensors)
+    else:
+        return P_Pt_c(*tensors)

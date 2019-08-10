@@ -1,8 +1,7 @@
 import time
 import json
 import torch
-from pytorch_memlab import mem_reporter
-from memory_profiler import profile
+#from memory_profiler import profile
 import config as cfg
 from ipeps import write_ipeps
 
@@ -78,7 +77,7 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=cfg
     prev_epoch=[-1]
     current_env=[ctm_env_init]
     
-    @profile
+    #@profile
     def closure():
         for el in parameters: 
             if el.grad is not None: el.grad.zero_()
@@ -91,7 +90,7 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=cfg
         # 1) evaluate loss and the gradient
         loss, ctm_env, history, t_ctm = loss_fn(state, current_env[0], opt_args=opt_args)
         t0= time.perf_counter()
-        loss.backward(retain_graph=False)
+        loss.backward()
         t1= time.perf_counter()
 
         # We evaluate observables inside closure as it is the only place with environment
@@ -119,7 +118,6 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=cfg
         lst_T = list(ctm_env.T.values())
         current_env[0] = ctm_env
         for el in lst_T + lst_C: el.detach_()
-        del ctm_env
 
         eval_counter[0]+=1
         prev_epoch[0]=epoch
@@ -178,4 +176,4 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=cfg
         
         # After execution closure ``current_env`` **IS NOT** corresponding to ``state``, since
         # the ``state`` on-site tensors have been modified by gradient. 
-        loss = optimizer.step(closure)
+        optimizer.step(closure)
