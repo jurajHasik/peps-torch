@@ -116,6 +116,9 @@ class CTMARGS():
     :vartype verbosity_projectors: int
     :ivar verbosity_ctm_move: verbosity of directional CTM moves. Default: ``0``
     :vartype verbosity_ctm_move: int
+    :ivar fwd_checkpoint: recompute forward pass during backward pass within optimization to save 
+                          memory. Default: ``True``
+    :vartype fwd_checkpoint: bool
     """
     def __init__(self):
         self.ctm_max_iter = 50
@@ -128,6 +131,9 @@ class CTMARGS():
         self.verbosity_ctm_convergence = 0
         self.verbosity_projectors = 0
         self.verbosity_ctm_move = 0
+        self.fwd_checkpoint_c2x2 = False
+        self.fwd_checkpoint_halves = False
+        self.fwd_checkpoint_absorb = False
 
     def __repr__(self):
         res=type(self).__name__+"\n"

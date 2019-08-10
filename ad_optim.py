@@ -1,6 +1,8 @@
 import time
 import json
 import torch
+from pytorch_memlab import mem_reporter
+from memory_profiler import profile
 import config as cfg
 from ipeps import write_ipeps
 
@@ -43,7 +45,6 @@ def store_checkpoint(checkpoint_file, parameters, optimizer, current_epoch, curr
 #         energy = model.energy_1x1c4v(state1, ctm_env)
 #         return energy
 
-
 def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=cfg.opt_args,\
     ctm_args=cfg.ctm_args, global_args=cfg.global_args):
     r"""
@@ -76,6 +77,8 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=cfg
     eval_counter=[0]
     prev_epoch=[-1]
     current_env=[ctm_env_init]
+    
+    @profile
     def closure():
         for el in parameters: 
             if el.grad is not None: el.grad.zero_()
@@ -84,10 +87,11 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=cfg
         for coord,site in state.sites.items():
             site = site/torch.max(torch.abs(site))
 
+
         # 1) evaluate loss and the gradient
         loss, ctm_env, history, t_ctm = loss_fn(state, current_env[0], opt_args=opt_args)
         t0= time.perf_counter()
-        loss.backward()
+        loss.backward(retain_graph=False)
         t1= time.perf_counter()
 
         # We evaluate observables inside closure as it is the only place with environment
@@ -115,6 +119,7 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=cfg
         lst_T = list(ctm_env.T.values())
         current_env[0] = ctm_env
         for el in lst_T + lst_C: el.detach_()
+        del ctm_env
 
         eval_counter[0]+=1
         prev_epoch[0]=epoch

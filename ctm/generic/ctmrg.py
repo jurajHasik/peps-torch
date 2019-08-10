@@ -1,5 +1,6 @@
 import time
 import torch
+from torch.utils.checkpoint import checkpoint
 import config as cfg
 import ipeps
 from ipeps import IPEPS
@@ -128,18 +129,22 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
 # functions performing absorption and truncation step
 #####################################################################
 def absorb_truncate_CTM_MOVE_UP(coord, ipeps, env, P, Pt, verbosity=0):
-    C1 = env.C[(coord,(1,-1))]
-    T1 = env.T[(coord,(1,0))]
-    T = env.T[(coord,(0,-1))]
-    T2 = env.T[(coord,(-1,0))]
-    C2 = env.C[(coord,(-1,-1))]
-    A = ipeps.site(coord)
     vec = (1,0)
     coord_shift_right = ipeps.vertexToSite((coord[0]+vec[0], coord[1]+vec[1]))
-    P2 = P[coord].view(env.chi,A.size()[3],env.chi)
-    Pt2 = Pt[coord].view(env.chi,A.size()[1],env.chi)
-    P1 = P[coord_shift_right].view(env.chi,A.size()[3],env.chi)
-    Pt1 = Pt[coord_shift_right].view(env.chi,A.size()[1],env.chi)
+    tensors= env.C[(coord,(1,-1))], env.T[(coord,(1,0))], env.T[(coord,(0,-1))], \
+        env.T[(coord,(-1,0))], env.C[(coord,(-1,-1))], ipeps.site(coord), \
+        P[coord].view(env.chi,ipeps.site(coord).size()[3],env.chi), \
+        Pt[coord].view(env.chi,ipeps.site(coord).size()[1],env.chi), \
+        P[coord_shift_right].view(env.chi,ipeps.site(coord).size()[3],env.chi), \
+        Pt[coord_shift_right].view(env.chi,ipeps.site(coord).size()[1],env.chi)
+
+    if cfg.ctm_args.fwd_checkpoint_absorb:
+        return checkpoint(absorb_truncate_CTM_MOVE_UP_c,*tensors)
+    else:
+        return absorb_truncate_CTM_MOVE_UP_c(*tensors)
+
+def absorb_truncate_CTM_MOVE_UP_c(*tensors):
+    C1, T1, T, T2, C2, A, P2, Pt2, P1, Pt1= tensors
 
     # 0--C1
     #    1
@@ -218,18 +223,22 @@ def absorb_truncate_CTM_MOVE_UP(coord, ipeps, env, P, Pt, verbosity=0):
     return nC1, nC2, nT
 
 def absorb_truncate_CTM_MOVE_LEFT(coord, ipeps, env, P, Pt, verbosity=0):
-    C1 = env.C[(coord,(-1,-1))]
-    T1 = env.T[(coord,(0,-1))]
-    T = env.T[(coord,(-1,0))]
-    T2 = env.T[(coord,(0,1))]
-    C2 = env.C[(coord,(-1,1))]
-    A = ipeps.site(coord)
     vec = (0,-1)
     coord_shift_up = ipeps.vertexToSite((coord[0]+vec[0], coord[1]+vec[1]))
-    P2 = P[coord].view(env.chi,A.size()[0],env.chi)
-    Pt2 = Pt[coord].view(env.chi,A.size()[2],env.chi)
-    P1 = P[coord_shift_up].view(env.chi,A.size()[0],env.chi)
-    Pt1 = Pt[coord_shift_up].view(env.chi,A.size()[2],env.chi)
+    tensors = env.C[(coord,(-1,-1))], env.T[(coord,(0,-1))], env.T[(coord,(-1,0))], \
+        env.T[(coord,(0,1))], env.C[(coord,(-1,1))], ipeps.site(coord), \
+        P[coord].view(env.chi,ipeps.site(coord).size()[0],env.chi), \
+        Pt[coord].view(env.chi,ipeps.site(coord).size()[2],env.chi), \
+        P[coord_shift_up].view(env.chi,ipeps.site(coord).size()[0],env.chi), \
+        Pt[coord_shift_up].view(env.chi,ipeps.site(coord).size()[2],env.chi)
+
+    if cfg.ctm_args.fwd_checkpoint_absorb:
+        return checkpoint(absorb_truncate_CTM_MOVE_LEFT_c,*tensors)
+    else:
+        return absorb_truncate_CTM_MOVE_LEFT_c(*tensors)
+
+def absorb_truncate_CTM_MOVE_LEFT_c(*tensors):
+    C1, T1, T, T2, C2, A, P2, Pt2, P1, Pt1= tensors
 
     # C1--1 0--T1--2
     # |        |
@@ -314,18 +323,22 @@ def absorb_truncate_CTM_MOVE_LEFT(coord, ipeps, env, P, Pt, verbosity=0):
     return nC1, nC2, nT
 
 def absorb_truncate_CTM_MOVE_DOWN(coord, ipeps, env, P, Pt, verbosity=0):
-    C1 = env.C[(coord,(-1,1))]
-    T1 = env.T[(coord,(-1,0))]
-    T = env.T[(coord,(0,1))]
-    T2 = env.T[(coord,(1,0))]
-    C2 = env.C[(coord,(1,1))]
-    A = ipeps.site(coord)
     vec = (-1,0)
     coord_shift_left = ipeps.vertexToSite((coord[0]+vec[0], coord[1]+vec[1]))
-    P2 = P[coord].view(env.chi,A.size()[1],env.chi)
-    Pt2 = Pt[coord].view(env.chi,A.size()[3],env.chi)
-    P1 = P[coord_shift_left].view(env.chi,A.size()[1],env.chi)
-    Pt1 = Pt[coord_shift_left].view(env.chi,A.size()[3],env.chi)
+    tensors= env.C[(coord,(-1,1))], env.T[(coord,(-1,0))], env.T[(coord,(0,1))], \
+        env.T[(coord,(1,0))], env.C[(coord,(1,1))], ipeps.site(coord), \
+        P[coord].view(env.chi,ipeps.site(coord).size()[1],env.chi), \
+        Pt[coord].view(env.chi,ipeps.site(coord).size()[3],env.chi), \
+        P[coord_shift_left].view(env.chi,ipeps.site(coord).size()[1],env.chi), \
+        Pt[coord_shift_left].view(env.chi,ipeps.site(coord).size()[3],env.chi)
+
+    if cfg.ctm_args.fwd_checkpoint_absorb:
+        return checkpoint(absorb_truncate_CTM_MOVE_DOWN_c,*tensors)
+    else:
+        return absorb_truncate_CTM_MOVE_DOWN_c(*tensors)
+
+def absorb_truncate_CTM_MOVE_DOWN_c(*tensors):
+    C1, T1, T, T2, C2, A, P2, Pt2, P1, Pt1= tensors
 
     # 0->1
     # T1--2->2
@@ -404,18 +417,22 @@ def absorb_truncate_CTM_MOVE_DOWN(coord, ipeps, env, P, Pt, verbosity=0):
     return nC1, nC2, nT
 
 def absorb_truncate_CTM_MOVE_RIGHT(coord, ipeps, env, P, Pt, verbosity=0):
-    C1 = env.C[(coord,(1,1))]
-    T1 = env.T[(coord,(0,1))]
-    T = env.T[(coord,(1,0))]
-    T2 = env.T[(coord,(0,-1))]
-    C2 = env.C[(coord,(1,-1))]
-    A = ipeps.site(coord)
     vec = (0,1)
     coord_shift_down = ipeps.vertexToSite((coord[0]+vec[0], coord[1]+vec[1]))
-    P2 = P[coord].view(env.chi,A.size()[2],env.chi)
-    Pt2 = Pt[coord].view(env.chi,A.size()[0],env.chi)
-    P1 = P[coord_shift_down].view(env.chi,A.size()[2],env.chi)
-    Pt1 = Pt[coord_shift_down].view(env.chi,A.size()[0],env.chi)
+    tensors= env.C[(coord,(1,1))], env.T[(coord,(0,1))], env.T[(coord,(1,0))], \
+        env.T[(coord,(0,-1))], env.C[(coord,(1,-1))], ipeps.site(coord), \
+        P[coord].view(env.chi,ipeps.site(coord).size()[2],env.chi), \
+        Pt[coord].view(env.chi,ipeps.site(coord).size()[0],env.chi), \
+        P[coord_shift_down].view(env.chi,ipeps.site(coord).size()[2],env.chi), \
+        Pt[coord_shift_down].view(env.chi,ipeps.site(coord).size()[0],env.chi)
+
+    if cfg.ctm_args.fwd_checkpoint_absorb:
+        return checkpoint(absorb_truncate_CTM_MOVE_RIGHT_c,*tensors)
+    else:
+        return absorb_truncate_CTM_MOVE_RIGHT_c(*tensors)
+
+def absorb_truncate_CTM_MOVE_RIGHT_c(*tensors):
+    C1, T1, T, T2, C2, A, P2, Pt2, P1, Pt1= tensors
 
     #       0->1     0
     # 2<-1--T1--2 1--C1

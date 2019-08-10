@@ -42,12 +42,24 @@ def ctm_get_projectors_4x4(direction, coord, state, env, ctm_args=cfg.ctm_args, 
     """
     verbosity = ctm_args.verbosity_projectors
     if direction==(0,-1):
+        # if cfg.ctm_args.fwd_checkpoint_halves:
+        #     R, Rt= checkpoint(halves_of_4x4_CTM_MOVE_UP_c, *halves_of_4x4_CTM_MOVE_UP_t(coord, state, env))
+        # else:
         R, Rt = halves_of_4x4_CTM_MOVE_UP(coord, state, env, verbosity=verbosity)
     elif direction==(-1,0): 
+        # if cfg.ctm_args.fwd_checkpoint_halves:
+        #     R, Rt= checkpoint(halves_of_4x4_CTM_MOVE_LEFT_c, *halves_of_4x4_CTM_MOVE_LEFT_t(coord, state, env))
+        # else:
         R, Rt = halves_of_4x4_CTM_MOVE_LEFT(coord, state, env, verbosity=verbosity)
     elif direction==(0,1):
+        # if cfg.ctm_args.fwd_checkpoint_halves:
+        #     R, Rt= checkpoint(halves_of_4x4_CTM_MOVE_DOWN_c, *halves_of_4x4_CTM_MOVE_DOWN_t(coord, state, env))
+        # else:
         R, Rt = halves_of_4x4_CTM_MOVE_DOWN(coord, state, env, verbosity=verbosity)
     elif direction==(1,0):
+        # if cfg.ctm_args.fwd_checkpoint_halves:
+        #     R, Rt= checkpoint(halves_of_4x4_CTM_MOVE_RIGHT_c, *halves_of_4x4_CTM_MOVE_RIGHT_t(coord, state, env))
+        # else:
         R, Rt = halves_of_4x4_CTM_MOVE_RIGHT(coord, state, env, verbosity=verbosity)
     else:
         raise ValueError("Invalid direction: "+str(direction))

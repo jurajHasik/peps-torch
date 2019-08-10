@@ -1,4 +1,5 @@
 import torch
+from torch.utils.checkpoint import checkpoint
 from ipeps import IPEPS
 from ctm.generic.env import ENV
 from config import ctm_args
@@ -16,21 +17,52 @@ def halves_of_4x4_CTM_MOVE_UP(coord, ipeps, env, verbosity=0):
     # |0           1|                |     |
     # |0           0|             half2    half1
     # C2x2--1    1--C2x2             |_1 1_|
-    C2x2_1 = c2x2_RU(coord, ipeps, env, verbosity)
-    C2x2_2 = c2x2_RD((coord[0], coord[1]+1), ipeps, env, verbosity)
-    half1 = torch.tensordot(C2x2_1,C2x2_2,([1],[0]))
+    # C2x2_1 = c2x2_RU(coord, ipeps, env, verbosity)
+    # C2x2_2 = c2x2_RD((coord[0], coord[1]+1), ipeps, env, verbosity)
+    # C2x2_3 = c2x2_LU((coord[0]-1, coord[1]), ipeps, env, verbosity)
+    # C2x2_4 = c2x2_LD((coord[0]-1, coord[1]-1), ipeps, env, verbosity)
+    
+    # RU, RD, LU, LD
+    tensors= c2x2_RU_t(coord,ipeps,env) + c2x2_RD_t((coord[0], coord[1]+1),ipeps,env) \
+        + c2x2_LU_t((coord[0]-1, coord[1]),ipeps,env) + c2x2_LD_t((coord[0]-1, coord[1]-1),ipeps,env)
 
-    C2x2_1 = c2x2_LU((coord[0]-1, coord[1]), ipeps, env, verbosity)
-    C2x2_2 = c2x2_LD((coord[0]-1, coord[1]-1), ipeps, env, verbosity)
-    half2 = torch.tensordot(C2x2_1,C2x2_2,([0],[0]))
+    if ctm_args.fwd_checkpoint_halves:
+        return checkpoint(halves_of_4x4_CTM_MOVE_UP_c,*tensors)
+    else:
+        return halves_of_4x4_CTM_MOVE_UP_c(*tensors)
 
-    if verbosity>0:
-        print("HALVES UP "+str(coord)+" h1: "+str(half1.size())+" h2: "+str(half2.size()))
-    if verbosity>1: 
-        print(half1)
-        print(half2)
+def halves_of_4x4_CTM_MOVE_UP_t(coord, ipeps, env):
+    # RU, RD, LU, LD
+    tensors= c2x2_RU_t(coord,ipeps,env) + c2x2_RD_t((coord[0], coord[1]+1),ipeps,env) \
+        + c2x2_LU_t((coord[0]-1, coord[1]),ipeps,env) + c2x2_LD_t((coord[0]-1, coord[1]-1),ipeps,env)
+    return tensors
 
-    return half1, half2
+def halves_of_4x4_CTM_MOVE_UP_c(*tensors):
+    # C T T        C = C2x2_LU(coord+(-1,0))  C2x2(coord)
+    # T A B(coord) T   C2x2_LD(coord+(-1,-1)) C2x2(coord+(0,1))
+    # T C D        T
+    # C T T        C
+
+    # C2x2--1->0 0--C2x2(coord) =     _0 0_
+    # |0           1|                |     |
+    # |0           0|             half2    half1
+    # C2x2--1    1--C2x2             |_1 1_|
+    
+    # C_1, T1_1, T2_1, A_1= tensors[0:4]
+    # C_2, T1_2, T2_2, A_2= tensors[4:8]
+    # C_3, T1_3, T2_3, A_3= tensors[8:12]
+    # C_4, T1_4, T2_4, A_4= tensors[12:16]
+
+    # C2x2_1 = c2x2_RU(coord, ipeps, env, verbosity)
+    # C2x2_2 = c2x2_RD((coord[0], coord[1]+1), ipeps, env, verbosity)
+    # half1 = torch.tensordot(C2x2_1,C2x2_2,([1],[0]))
+
+    # C2x2_1 = c2x2_LU((coord[0]-1, coord[1]), ipeps, env, verbosity)
+    # C2x2_2 = c2x2_LD((coord[0]-1, coord[1]-1), ipeps, env, verbosity)
+    # half2 = torch.tensordot(C2x2_1,C2x2_2,([0],[0]))
+
+    return torch.tensordot(c2x2_RU_c(*tensors[0:4]),c2x2_RD_c(*tensors[4:8]),([1],[0])), \
+        torch.tensordot(c2x2_LU_c(*tensors[8:12]),c2x2_LD_c(*tensors[12:16]),([0],[0]))
 
 def halves_of_4x4_CTM_MOVE_LEFT(coord, ipeps, env, verbosity=0):
     # C T        T C = C2x2_LU(coord)       C2x2(coord+(1,0))
@@ -43,21 +75,47 @@ def halves_of_4x4_CTM_MOVE_LEFT(coord, ipeps, env, verbosity=0):
     # 
     # |0            1<-0|      |0  |1
     # C2x2--1 1---------C2x2   half2
-    C2x2_1 = c2x2_LU(coord, ipeps, env, verbosity)
-    C2x2_2 = c2x2_RU((coord[0]+1, coord[1]), ipeps, env, verbosity)
-    half1 = torch.tensordot(C2x2_1,C2x2_2,([1],[0]))
+    # C2x2_1 = c2x2_LU(coord, ipeps, env, verbosity)
+    # C2x2_2 = c2x2_RU((coord[0]+1, coord[1]), ipeps, env, verbosity)
+    # C2x2_3 = c2x2_LD((coord[0], coord[1]+1), ipeps, env, verbosity)
+    # C2x2_4 = c2x2_RD((coord[0]+1, coord[1]+1), ipeps, env, verbosity)
+    
+    # LU, RU, LS, RD
+    tensors= c2x2_LU_t(coord,ipeps,env) + c2x2_RU_t((coord[0]+1, coord[1]),ipeps,env) \
+        + c2x2_LD_t((coord[0], coord[1]+1),ipeps,env) + c2x2_RD_t((coord[0]+1, coord[1]+1),ipeps,env)
 
-    C2x2_1 = c2x2_LD((coord[0], coord[1]+1), ipeps, env, verbosity)
-    C2x2_2 = c2x2_RD((coord[0]+1, coord[1]+1), ipeps, env, verbosity)
-    half2 = torch.tensordot(C2x2_1,C2x2_2,([1],[1]))
+    if ctm_args.fwd_checkpoint_halves:
+        return checkpoint(halves_of_4x4_CTM_MOVE_LEFT_c,*tensors)
+    else:
+        return halves_of_4x4_CTM_MOVE_LEFT_c(*tensors)
 
-    if verbosity>0:
-        print("HALVES LEFT "+str(coord)+" h1: "+str(half1.size())+" h2: "+str(half2.size()))
-    if verbosity>1:
-        print(half1)
-        print(half2)
+def halves_of_4x4_CTM_MOVE_LEFT_t(coord, ipeps, env):
+    # LU, RU, LS, RD
+    tensors= c2x2_LU_t(coord,ipeps,env) + c2x2_RU_t((coord[0]+1, coord[1]),ipeps,env) \
+        + c2x2_LD_t((coord[0], coord[1]+1),ipeps,env) + c2x2_RD_t((coord[0]+1, coord[1]+1),ipeps,env)
+    return tensors
 
-    return half1, half2
+def halves_of_4x4_CTM_MOVE_LEFT_c(*tensors):
+    # C T        T C = C2x2_LU(coord)       C2x2(coord+(1,0))
+    # T A(coord) B T   C2x2_LD(coord+(0,1)) C2x2(coord+(1,1))
+    # T C        D T
+    # C T        T C
+
+    # C2x2(coord)--1 0--C2x2 = half1
+    # |0               1|      |0  |1
+    # 
+    # |0            1<-0|      |0  |1
+    # C2x2--1 1---------C2x2   half2
+    # C2x2_1 = c2x2_LU(coord, ipeps, env, verbosity)
+    # C2x2_2 = c2x2_RU((coord[0]+1, coord[1]), ipeps, env, verbosity)
+    # half1 = torch.tensordot(C2x2_1,C2x2_2,([1],[0]))
+    
+    # C2x2_1 = c2x2_LD((coord[0], coord[1]+1), ipeps, env, verbosity)
+    # C2x2_2 = c2x2_RD((coord[0]+1, coord[1]+1), ipeps, env, verbosity)
+    # half2 = torch.tensordot(C2x2_1,C2x2_2,([1],[1]))
+    
+    return torch.tensordot(c2x2_LU_c(*tensors[0:4]),c2x2_RU_c(*tensors[4:8]),([1],[0])), \
+        torch.tensordot(c2x2_LD_c(*tensors[8:12]),c2x2_RD_c(*tensors[12:16]),([1],[1]))
 
 def halves_of_4x4_CTM_MOVE_DOWN(coord, ipeps, env, verbosity=0):
     # C T T        C = C2x2_LU(coord+(0,-1)) C2x2(coord+(1,-1))
@@ -69,21 +127,46 @@ def halves_of_4x4_CTM_MOVE_DOWN(coord, ipeps, env, verbosity=0):
     # |0                      |1        |     |
     # |0                      |0      half1    half2
     # C2x2(coord)--1->0 0<-1--C2x2      |_0 0_|
-    C2x2_1 = c2x2_LD(coord, ipeps, env, verbosity)
-    C2x2_2 = c2x2_LU((coord[0], coord[1]-1), ipeps, env, verbosity)
-    half1 = torch.tensordot(C2x2_1,C2x2_2,([0],[0]))
+    # C2x2_1 = c2x2_LD(coord, ipeps, env, verbosity)
+    # C2x2_2 = c2x2_LU((coord[0], coord[1]-1), ipeps, env, verbosity)
+    # C2x2_3 = c2x2_RD((coord[0]+1, coord[1]), ipeps, env, verbosity)
+    # C2x2_4 = c2x2_RU((coord[0]+1, coord[1]-1), ipeps, env, verbosity)
 
-    C2x2_1 = c2x2_RD((coord[0]+1, coord[1]), ipeps, env, verbosity)
-    C2x2_2 = c2x2_RU((coord[0]+1, coord[1]-1), ipeps, env, verbosity)
-    half2 = torch.tensordot(C2x2_1,C2x2_2,([0],[1]))
+    # LD, LU, RD, RU
+    tensors= c2x2_LD_t(coord,ipeps,env) + c2x2_LU_t((coord[0], coord[1]-1),ipeps,env) \
+        + c2x2_RD_t((coord[0]+1, coord[1]),ipeps,env) + c2x2_RU_t((coord[0]+1, coord[1]-1),ipeps,env)
+    
+    if ctm_args.fwd_checkpoint_halves:
+        return checkpoint(halves_of_4x4_CTM_MOVE_DOWN_c,*tensors)
+    else:
+        return halves_of_4x4_CTM_MOVE_DOWN_c(*tensors)
 
-    if verbosity==1:
-        print("HALVES DOWN "+str(coord)+" h1: "+str(half1.size())+" h2: "+str(half2.size()))
-    if verbosity==2:    
-        print(half1)
-        print(half2)
+def halves_of_4x4_CTM_MOVE_DOWN_t(coord, ipeps, env):
+    # LD, LU, RD, RU
+    tensors= c2x2_LD_t(coord,ipeps,env) + c2x2_LU_t((coord[0], coord[1]-1),ipeps,env) \
+        + c2x2_RD_t((coord[0]+1, coord[1]),ipeps,env) + c2x2_RU_t((coord[0]+1, coord[1]-1),ipeps,env)
+    return tensors
 
-    return half1, half2
+def halves_of_4x4_CTM_MOVE_DOWN_c(*tensors):
+    # C T T        C = C2x2_LU(coord+(0,-1)) C2x2(coord+(1,-1))
+    # T A        B T   C2x2_LD(coord)        C2x2(coord+(1,0))
+    # T C(coord) D T
+    # C T        T C
+
+    # C2x2---------1    1<-0--C2x2 =     _1 1_
+    # |0                      |1        |     |
+    # |0                      |0      half1    half2
+    # C2x2(coord)--1->0 0<-1--C2x2      |_0 0_|
+    # C2x2_1 = c2x2_LD(coord, ipeps, env, verbosity)
+    # C2x2_2 = c2x2_LU((coord[0], coord[1]-1), ipeps, env, verbosity)
+    # half1 = torch.tensordot(C2x2_1,C2x2_2,([0],[0]))
+    
+    # C2x2_1 = c2x2_RD((coord[0]+1, coord[1]), ipeps, env, verbosity)
+    # C2x2_2 = c2x2_RU((coord[0]+1, coord[1]-1), ipeps, env, verbosity)
+    # half2 = torch.tensordot(C2x2_1,C2x2_2,([0],[1]))
+
+    return torch.tensordot(c2x2_LD_c(*tensors[0:4]),c2x2_LU_c(*tensors[4:8]),([0],[0])), \
+        torch.tensordot(c2x2_RD_c(*tensors[8:12]),c2x2_RU_c(*tensors[12:16]),([0],[1]))
 
 def halves_of_4x4_CTM_MOVE_RIGHT(coord, ipeps, env, verbosity=0):
     # C T T        C = C2x2_LU(coord+(-1,-1)) C2x2(coord+(0,-1))
@@ -96,21 +179,47 @@ def halves_of_4x4_CTM_MOVE_RIGHT(coord, ipeps, env, verbosity=0):
     # 
     # |0->1      |0            |1  |0
     # C2x2--1 1--C2x2(coord)   half1
-    C2x2_1 = c2x2_RD(coord, ipeps, env, verbosity)
-    C2x2_2 = c2x2_LD((coord[0]-1, coord[1]), ipeps, env, verbosity)
-    half1 = torch.tensordot(C2x2_1,C2x2_2,([1],[1]))
+    # C2x2_1 = c2x2_RD(coord, ipeps, env, verbosity)
+    # C2x2_2 = c2x2_LD((coord[0]-1, coord[1]), ipeps, env, verbosity)
+    # C2x2_3 = c2x2_RU((coord[0], coord[1]-1), ipeps, env, verbosity)
+    # C2x2_4 = c2x2_LU((coord[0]-1, coord[1]-1), ipeps, env, verbosity)
+    
+    # RD, LD, RU, LU
+    tensors= c2x2_RD_t(coord,ipeps,env) + c2x2_LD_t((coord[0]-1, coord[1]),ipeps,env) \
+        + c2x2_RU_t((coord[0], coord[1]-1),ipeps,env) + c2x2_LU_t((coord[0]-1, coord[1]-1),ipeps,env)
+    
+    if ctm_args.fwd_checkpoint_halves:
+        return checkpoint(halves_of_4x4_CTM_MOVE_RIGHT_c,*tensors)
+    else:
+        return halves_of_4x4_CTM_MOVE_RIGHT_c(*tensors)
 
-    C2x2_1 = c2x2_RU((coord[0], coord[1]-1), ipeps, env, verbosity)
-    C2x2_2 = c2x2_LU((coord[0]-1, coord[1]-1), ipeps, env, verbosity)
-    half2 = torch.tensordot(C2x2_1,C2x2_2,([0],[1]))
+def halves_of_4x4_CTM_MOVE_RIGHT_t(coord, ipeps, env):
+    # RD, LD, RU, LU
+    tensors= c2x2_RD_t(coord,ipeps,env) + c2x2_LD_t((coord[0]-1, coord[1]),ipeps,env) \
+        + c2x2_RU_t((coord[0], coord[1]-1),ipeps,env) + c2x2_LU_t((coord[0]-1, coord[1]-1),ipeps,env)
+    return tensors
 
-    if verbosity==1:
-        print("HALVES RIGHT "+str(coord)+" h1: "+str(half1.size())+" h2: "+str(half2.size()))
-    if verbosity==2:
-        print(half1)
-        print(half2)
+def halves_of_4x4_CTM_MOVE_RIGHT_c(*tensors):
+    # C T T        C = C2x2_LU(coord+(-1,-1)) C2x2(coord+(0,-1))
+    # T A B        T   C2x2_LD(coord+(-1,0))  C2x2(coord)
+    # T C D(coord) T
+    # C T T        C
 
-    return half1, half2
+    # C2x2--1 0--C2x2        = half2
+    # |0->1      |1->0         |1  |0
+    # 
+    # |0->1      |0            |1  |0
+    # C2x2--1 1--C2x2(coord)   half1
+    # C2x2_1 = c2x2_RD(coord, ipeps, env, verbosity)
+    # C2x2_2 = c2x2_LD((coord[0]-1, coord[1]), ipeps, env, verbosity)
+    # half1 = torch.tensordot(C2x2_1,C2x2_2,([1],[1]))
+
+    # C2x2_1 = c2x2_RU((coord[0], coord[1]-1), ipeps, env, verbosity)
+    # C2x2_2 = c2x2_LU((coord[0]-1, coord[1]-1), ipeps, env, verbosity)
+    # half2 = torch.tensordot(C2x2_1,C2x2_2,([0],[1]))
+
+    return torch.tensordot(c2x2_RD_c(*tensors[0:4]),c2x2_LD_c(*tensors[4:8]),([1],[1])), \
+        torch.tensordot(c2x2_RU_c(*tensors[8:12]),c2x2_LU_c(*tensors[12:16]),([0],[1]))
 
 #####################################################################
 # functions building 2x2 Corner
@@ -121,31 +230,13 @@ def c2x2_LU(coord, ipeps, env, verbosity=0):
     T2 = env.T[(ipeps.vertexToSite(coord),(-1,0))]
     A = ipeps.site(coord)
 
-    # C--10--T1--2
-    # 0      1
-    C2x2 = torch.tensordot(C, T1, ([1],[0]))
+    tensors= C, T1, T2, A
 
-    # C------T1--2->1
-    # 0      1->0
-    # 0
-    # T2--2->3
-    # 1->2
-    C2x2 = torch.tensordot(C2x2, T2, ([0],[0]))
+    if ctm_args.fwd_checkpoint_c2x2:
+        C2x2= checkpoint(c2x2_LU_c,*tensors)
+    else:
+        C2x2= c2x2_LU_c(*tensors)
 
-    # C-------T1--1->0
-    # |       0
-    # |       0
-    # T2--3 1 A--3 
-    # 2->1    2
-    C2x2 = torch.tensordot(C2x2, A, ([0,3],[0,1]))
-
-    # permute 0123->1203
-    # reshape (12)(03)->01
-    C2x2 = C2x2.permute(1,2,0,3).contiguous().view(T1.size()[2]*A.size()[3],T2.size()[1]*A.size()[2])
-
-    # C2x2--1
-    # |
-    # 0
     if verbosity>0:
         print("C2X2 LU "+str(coord)+"->"+str(ipeps.vertexToSite(coord))+" (-1,-1)")
     if verbosity>1:
@@ -153,39 +244,55 @@ def c2x2_LU(coord, ipeps, env, verbosity=0):
 
     return C2x2
 
+def c2x2_LU_t(coord, ipeps, env):
+    tensors= env.C[(ipeps.vertexToSite(coord),(-1,-1))], \
+        env.T[(ipeps.vertexToSite(coord),(0,-1))], \
+        env.T[(ipeps.vertexToSite(coord),(-1,0))], \
+        ipeps.site(coord)
+    return tensors
+
+def c2x2_LU_c(*tensors):
+        C, T1, T2, A= tensors
+        # C--10--T1--2
+        # 0      1
+        C2x2 = torch.tensordot(C, T1, ([1],[0]))
+
+        # C------T1--2->1
+        # 0      1->0
+        # 0
+        # T2--2->3
+        # 1->2
+        C2x2 = torch.tensordot(C2x2, T2, ([0],[0]))
+
+        # C-------T1--1->0
+        # |       0
+        # |       0
+        # T2--3 1 A--3 
+        # 2->1    2
+        C2x2 = torch.tensordot(C2x2, A, ([0,3],[0,1]))
+
+        # permute 0123->1203
+        # reshape (12)(03)->01
+        C2x2 = C2x2.permute(1,2,0,3).contiguous().view(T1.size()[2]*A.size()[3],T2.size()[1]*A.size()[2])
+
+        # C2x2--1
+        # |
+        # 0
+        return C2x2
+
 def c2x2_RU(coord, ipeps, env, verbosity=0):
     C = env.C[(ipeps.vertexToSite(coord),(1,-1))]
     T1 = env.T[(ipeps.vertexToSite(coord),(1,0))]
     T2 = env.T[(ipeps.vertexToSite(coord),(0,-1))]
     A = ipeps.site(coord)
 
-    # 0--C
-    #    1
-    #    0
-    # 1--T1
-    #    2
-    C2x2 = torch.tensordot(C, T1, ([1],[0]))
+    tensors= C, T1, T2, A
 
-    # 2<-0--T2--2 0--C
-    #    3<-1        |
-    #          0<-1--T1
-    #             1<-2
-    C2x2 = torch.tensordot(C2x2, T2, ([0],[2]))
+    if ctm_args.fwd_checkpoint_c2x2:
+        C2x2= checkpoint(c2x2_RU_c,*tensors)
+    else:
+        C2x2= c2x2_RU_c(*tensors)
 
-    # 1<-2--T2------C
-    #       3       |
-    #       0       |
-    # 2<-1--A--3 0--T1
-    #    3<-2    0<-1
-    C2x2 = torch.tensordot(C2x2, A, ([0,3],[3,0]))
-
-    # permute 0123->1203
-    # reshape (12)(03)->01
-    C2x2 = C2x2.permute(1,2,0,3).contiguous().view(T2.size()[0]*A.size()[1],T1.size()[2]*A.size()[2])
- 
-    # 0--C2x2
-    #    |
-    #    1
     if verbosity>0:
         print("C2X2 RU "+str(coord)+"->"+str(ipeps.vertexToSite(coord))+" (1,-1)")
     if verbosity>1: 
@@ -193,43 +300,100 @@ def c2x2_RU(coord, ipeps, env, verbosity=0):
 
     return C2x2
 
+def c2x2_RU_t(coord, ipeps, env):
+    tensors= env.C[(ipeps.vertexToSite(coord),(1,-1))], \
+        env.T[(ipeps.vertexToSite(coord),(1,0))], \
+        env.T[(ipeps.vertexToSite(coord),(0,-1))], \
+        ipeps.site(coord)
+    return tensors
+
+def c2x2_RU_c(*tensors):
+        C, T1, T2, A= tensors 
+        # 0--C
+        #    1
+        #    0
+        # 1--T1
+        #    2
+        C2x2 = torch.tensordot(C, T1, ([1],[0]))
+
+        # 2<-0--T2--2 0--C
+        #    3<-1        |
+        #          0<-1--T1
+        #             1<-2
+        C2x2 = torch.tensordot(C2x2, T2, ([0],[2]))
+
+        # 1<-2--T2------C
+        #       3       |
+        #       0       |
+        # 2<-1--A--3 0--T1
+        #    3<-2    0<-1
+        C2x2 = torch.tensordot(C2x2, A, ([0,3],[3,0]))
+
+        # permute 0123->1203
+        # reshape (12)(03)->01
+        C2x2 = C2x2.permute(1,2,0,3).contiguous().view(T2.size()[0]*A.size()[1],T1.size()[2]*A.size()[2])
+     
+        # 0--C2x2
+        #    |
+        #    1
+        return C2x2
+
 def c2x2_RD(coord, ipeps, env, verbosity=0):
     C = env.C[(ipeps.vertexToSite(coord),(1,1))]
     T1 = env.T[(ipeps.vertexToSite(coord),(0,1))]
     T2 = env.T[(ipeps.vertexToSite(coord),(1,0))]
     A = ipeps.site(coord)
 
-    #    1<-0        0
-    # 2<-1--T1--2 1--C
-    C2x2 = torch.tensordot(C, T1, ([1],[2]))
+    tensors= C, T1, T2, A
 
-    #         2<-0
-    #      3<-1--T2
-    #            2
-    #    0<-1    0
-    # 1<-2--T1---C
-    C2x2 = torch.tensordot(C2x2, T2, ([0],[2]))
+    if ctm_args.fwd_checkpoint_c2x2:
+        C2x2= checkpoint(c2x2_RD_c,*tensors)
+    else:
+        C2x2= c2x2_RD_c(*tensors)
 
-    #    2<-0    1<-2
-    # 3<-1--A--3 3--T2
-    #       2       |
-    #       0       |
-    # 0<-1--T1------C
-    C2x2 = torch.tensordot(C2x2, A, ([0,3],[2,3]))
-
-    # permute 0123->1203
-    # reshape (12)(03)->01
-    C2x2 = C2x2.permute(1,2,0,3).contiguous().view(T2.size()[0]*A.size()[0],T1.size()[1]*A.size()[1])
-
-    #    0
-    #    |
-    # 1--C2x2
     if verbosity>0:
         print("C2X2 RD "+str(coord)+"->"+str(ipeps.vertexToSite(coord))+" (1,1)")
     if verbosity>1:
         print(C2x2)
 
     return C2x2
+
+def c2x2_RD_t(coord, ipeps, env):
+    tensors= env.C[(ipeps.vertexToSite(coord),(1,1))], \
+        env.T[(ipeps.vertexToSite(coord),(0,1))], \
+        env.T[(ipeps.vertexToSite(coord),(1,0))], \
+        ipeps.site(coord)
+    return tensors
+
+def c2x2_RD_c(*tensors):
+        C, T1, T2, A= tensors
+        #    1<-0        0
+        # 2<-1--T1--2 1--C
+        C2x2 = torch.tensordot(C, T1, ([1],[2]))
+
+        #         2<-0
+        #      3<-1--T2
+        #            2
+        #    0<-1    0
+        # 1<-2--T1---C
+        C2x2 = torch.tensordot(C2x2, T2, ([0],[2]))
+
+        #    2<-0    1<-2
+        # 3<-1--A--3 3--T2
+        #       2       |
+        #       0       |
+        # 0<-1--T1------C
+        C2x2 = torch.tensordot(C2x2, A, ([0,3],[2,3]))
+
+        # permute 0123->1203
+        # reshape (12)(03)->01
+        C2x2 = C2x2.permute(1,2,0,3).contiguous().view(T2.size()[0]*A.size()[0],T1.size()[1]*A.size()[1])
+
+
+        #    0
+        #    |
+        # 1--C2x2
+        return C2x2
 
 def c2x2_LD(coord, ipeps, env, verbosity=0):
     C = env.C[(ipeps.vertexToSite(coord),(-1,1))]
@@ -238,7 +402,27 @@ def c2x2_LD(coord, ipeps, env, verbosity=0):
     A = ipeps.site(coord)
 
     tensors= C, T1, T2, A
-    def c2x2_LD_c(*tensors):
+
+    if ctm_args.fwd_checkpoint_c2x2:
+        C2x2= checkpoint(c2x2_LD_c,*tensors)
+    else:
+        C2x2= c2x2_LD_c(*tensors)
+
+    if verbosity>0: 
+        print("C2X2 LD "+str(coord)+"->"+str(ipeps.vertexToSite(coord))+" (-1,1)")
+    if verbosity>1:
+        print(C2x2)
+
+    return C2x2
+
+def c2x2_LD_t(coord, ipeps, env):
+    tensors= env.C[(ipeps.vertexToSite(coord),(-1,1))], \
+        env.T[(ipeps.vertexToSite(coord),(-1,0))], \
+        env.T[(ipeps.vertexToSite(coord),(0,1))], \
+        ipeps.site(coord)
+    return tensors
+
+def c2x2_LD_c(*tensors):
         C, T1, T2, A= tensors
         # 0->1
         # T1--2
@@ -269,10 +453,3 @@ def c2x2_LD(coord, ipeps, env, verbosity=0):
         # |
         # C2x2--1
         return C2x2
-
-    if verbosity>0: 
-        print("C2X2 LD "+str(coord)+"->"+str(ipeps.vertexToSite(coord))+" (-1,1)")
-    if verbosity>1:
-        print(C2x2)
-
-    return C2x2
