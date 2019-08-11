@@ -99,7 +99,7 @@ if __name__=='__main__':
 
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"
-    state= read_ipeps(outputstatefile)
+    state= read_ipeps(outputstatefile, vertexToSite=state.vertexToSite)
     ctm_env = ENV(args.chi, state)
     init_env(state, ctm_env)
     ctm_env, history, t_ctm = ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)

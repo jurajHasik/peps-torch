@@ -23,7 +23,12 @@ def get_args_parser():
         c_list= list(filter(lambda x: "__" not in x, dir(c)))
         for x in c_list:
             if isinstance(getattr(c,x), bool):
-                parser.add_argument("-"+group_prefix+x, action='store_true')
+                # default is False
+                if not getattr(c,x): 
+                    parser.add_argument("-"+group_prefix+x, action='store_true')
+                # default is True
+                else:
+                    parser.add_argument("-"+group_prefix+"no_"+x, action='store_false', dest=group_prefix+x)
             else:
                 parser.add_argument("-"+group_prefix+x, type=type(getattr(c,x)), default=getattr(c,x))
 
