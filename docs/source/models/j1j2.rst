@@ -3,8 +3,8 @@ J1-J2 Heisenberg Model
 
 .. automodule:: models.j1j2
 
-2x1 unit cell
-^^^^^^^^^^^^^
+2x1 and 2x2 unit cell
+^^^^^^^^^^^^^^^^^^^^^
 
 .. autoclass:: J1J2
     :members:

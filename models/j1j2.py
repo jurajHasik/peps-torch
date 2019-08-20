@@ -198,9 +198,9 @@ class J1J2():
             |   |
             s2--s3
 
-        and without assuming any symmetry on the indices of individual tensors a set
-        of four :math:`\rho_{2x2}`'s are needed over which :math:`h2` and :math:`h4`
-        operators are evaluated::  
+        and without assuming any symmetry on the indices of the individual tensors a set
+        of four :math:`\rho_{2x2}`'s are needed over which :math:`h2` operators 
+        for the nearest and next-neaerest neighbour pairs are evaluated::  
 
             A3--1B   B3--1A   C3--1D   D3--1C
             2    2   2    2   2    2   2    2
