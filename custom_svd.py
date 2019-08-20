@@ -1,7 +1,7 @@
 import torch
 from linalg.svd_gesdd import SVDGESDD
 from linalg.svd_rsvd import RSVD
-from linalg.svd_rsvd import rsvd
+# from linalg.svd_rsvd import rsvd
 
 def truncated_svd_gesdd(M, chi, abs_tol=None, rel_tol=None):
     """

@@ -150,7 +150,7 @@ class CTMARGS():
         self.ctm_env_init_type = 'CTMRG'
         self.ctm_conv_tol = 1.0e-8
         self.projector_method = '4X4'
-        self.projector_svd_method = 'GESDD' 
+        self.projector_svd_method = 'GESDD'
         self.projector_svd_reltol = 1.0e-8
         self.ctm_move_sequence = [(0,-1), (-1,0), (0,1), (1,0)]
         self.verbosity_initialization = 0
