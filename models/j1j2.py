@@ -172,6 +172,53 @@ class J1J2():
         # energy_per_site = 2.0*(self.j1*energy_nn/8.0 + self.j2*energy_nnn/4.0)
         return energy_per_site
 
+    def energy_2x2_4site(self,state,env):
+        r"""
+
+        :param state: wavefunction
+        :param env: CTM environment
+        :type state: IPEPS
+        :type env: ENV
+        :return: energy per site
+        :rtype: float
+
+        We assume iPEPS with 2x2 unit cell containing four tensors A, B, C, and D with
+        simple PBC tiling::
+
+            A B A B
+            C D C D
+            A B A B
+            C D C D
+    
+        Taking the reduced density matrix :math:`\rho_{2x2}` of 2x2 cluster given by 
+        :py:func:`ctm.generic.rdm.rdm2x2` with indexing of sites as follows 
+        :math:`\rho_{2x2}(s_0,s_1,s_2,s_3;s'_0,s'_1,s'_2,s'_3)`::
+        
+            s0--s1
+            |   |
+            s2--s3
+
+        and without assuming any symmetry on the indices of individual tensors a set
+        of four :math:`\rho_{2x2}`'s are needed over which :math:`h2` and :math:`h4`
+        operators are evaluated::  
+
+            A3--1B   B3--1A   C3--1D   D3--1C
+            2    2   2    2   2    2   2    2
+            0    0   0    0   0    0   0    0
+            C3--1D & D3--1C & A3--1B & B3--1A 
+        """
+        rdm2x2_00= rdm.rdm2x2((0,0),state,env)
+        rdm2x2_10= rdm.rdm2x2((1,0),state,env)
+        rdm2x2_01= rdm.rdm2x2((0,1),state,env)
+        rdm2x2_11= rdm.rdm2x2((1,1),state,env)
+        energy= torch.einsum('ijklabcd,ijklabcd',rdm2x2_00,self.hp_h)
+        energy+= torch.einsum('ijklabcd,ijklabcd',rdm2x2_10,self.hp_v)
+        energy+= torch.einsum('ijklabcd,ijklabcd',rdm2x2_01,self.hp_v)
+        energy+= torch.einsum('ijklabcd,ijklabcd',rdm2x2_11,self.hp_h)
+
+        energy_per_site= energy/4.0
+        return energy_per_site
+
     def eval_obs(self,state,env):
         r"""
         :param state: wavefunction

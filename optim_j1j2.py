@@ -29,14 +29,19 @@ if __name__=='__main__':
             vx = (coord[0] + abs(coord[0]) * 2) % 2
             vy = abs(coord[1])
             return ((vx + vy) % 2, 0)
-    elif args.tiling == "STRIPE":
+    elif args.tiling == "2SITE":
         def lattice_to_site(coord):
             vx = (coord[0] + abs(coord[0]) * 2) % 2
             vy = (coord[1] + abs(coord[1]) * 1) % 1
             return (vx, vy)
+    elif args.tiling == "4SITE":
+        def lattice_to_site(coord):
+            vx = (coord[0] + abs(coord[0]) * 2) % 2
+            vy = (coord[1] + abs(coord[1]) * 2) % 2
+            return (vx, vy)
     else:
         raise ValueError("Invalid tiling: "+str(args.tiling)+" Supported options: "\
-            +"BIPARTITE, STRIPE")
+            +"BIPARTITE, 2SITE, 4SITE")
 
     if args.instate!=None:
         state = read_ipeps(args.instate, vertexToSite=lattice_to_site)
@@ -57,6 +62,14 @@ if __name__=='__main__':
         B = B/torch.max(torch.abs(B))
 
         sites = {(0,0): A, (1,0): B}
+        
+        if args.tiling == "4SITE":
+            C= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+                dtype=cfg.global_args.dtype)
+            D= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+                dtype=cfg.global_args.dtype)
+            sites[(0,1)]= C/torch.max(torch.abs(C))
+            sites[(1,1)] = D/torch.max(torch.abs(D))
 
         state = IPEPS(sites, vertexToSite=lattice_to_site)
     else:
@@ -65,9 +78,18 @@ if __name__=='__main__':
 
     print(state)
     
+    # 2) select the "energy" function 
+    if args.tiling == "BIPARTITE" or args.tiling == "2SITE":
+        energy_f=model.energy_2x2_2site
+    elif args.tiling == "4SITE":
+        energy_f=model.energy_2x2_4site
+    else:
+        raise ValueError("Invalid tiling: "+str(args.tiling)+" Supported options: "\
+            +"BIPARTITE, 2SITE, 4SITE")
+
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         with torch.no_grad():
-            e_curr = model.energy_2x2_2site(state, env)
+            e_curr = energy_f(state, env)
             history.append(e_curr.item())
 
             if len(history) > 1 and abs(history[-1]-history[-2]) < ctm_args.ctm_conv_tol:
@@ -78,7 +100,7 @@ if __name__=='__main__':
     init_env(state, ctm_env)
     ctm_env, history, t_ctm = ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
 
-    loss0 = model.energy_2x2_2site(state, ctm_env)
+    loss0 = energy_f(state, ctm_env)
     obs_values, obs_labels = model.eval_obs(state,ctm_env)
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
@@ -90,7 +112,7 @@ if __name__=='__main__':
 
         # 1) compute environment by CTMRG
         ctm_env_out, history, t_ctm = ctmrg.run(state, ctm_env_in, conv_check=ctmrg_conv_energy)
-        loss = model.energy_2x2_2site(state, ctm_env_out)
+        loss = energy_f(state, ctm_env_out)
         
         return loss, ctm_env_out, history, t_ctm
 
@@ -103,7 +125,6 @@ if __name__=='__main__':
     ctm_env = ENV(args.chi, state)
     init_env(state, ctm_env)
     ctm_env, history, t_ctm = ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
-    opt_energy = model.energy_2x2_2site(state,ctm_env)
+    opt_energy = energy_f(state,ctm_env)
     obs_values, obs_labels = model.eval_obs(state,ctm_env)
-    print(", ".join([f"{args.opt_max_iter}",f"{opt_energy}"]+[f"{v}" for v in obs_values]))
-    
+    print(", ".join([f"{args.opt_max_iter}",f"{opt_energy}"]+[f"{v}" for v in obs_values]))  
