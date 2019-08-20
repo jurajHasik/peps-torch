@@ -1,3 +1,4 @@
+import context
 import torch
 import argparse
 import config as cfg
@@ -6,7 +7,6 @@ from c4v import *
 from ctm.one_site_c4v.env_c4v import *
 from ctm.one_site_c4v import ctmrg_c4v
 from models import j1j2
-from ad_optim import optimize_state
 
 if __name__=='__main__':
     # parse command line args and build necessary configuration objects
@@ -14,11 +14,13 @@ if __name__=='__main__':
     # additional model-dependent arguments
     parser.add_argument("-j1", type=float, default=1., help="nearest-neighbour coupling")
     parser.add_argument("-j2", type=float, default=0., help="next nearest-neighbour coupling")
+    # additional observables-related arguments
+    parser.add_argument("-corrf_r", type=int, default=1, help="maximal correlation function distance")
     args = parser.parse_args()
     cfg.configure(args)
     cfg.print_config()
     torch.set_num_threads(args.omp_cores)
-
+    
     model = j1j2.J1J2_C4V_BIPARTITE(j1=args.j1, j2=args.j2)
     
     # initialize an ipeps
@@ -47,49 +49,36 @@ if __name__=='__main__':
             +str(args.ipeps_init_type)+" is not supported")
 
     print(state)
-    
+
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         with torch.no_grad():
             e_curr = model.energy_1x1(state, env)
-            history.append(e_curr.item())
+            obs_values, obs_labels = model.eval_obs(state, env)
+            history.append([e_curr.item()]+obs_values)
+            print(", ".join([f"{len(history)}",f"{e_curr}"]+[f"{v}" for v in obs_values]))
 
-            if len(history) > 1 and abs(history[-1]-history[-2]) < ctm_args.ctm_conv_tol:
+            if len(history) > 1 and abs(history[-1][0]-history[-2][0]) < ctm_args.ctm_conv_tol:
                 return True
         return False
 
-    ctm_env = ENV_C4V(args.chi, state)
-    init_env(state, ctm_env)
-    ctm_env, history, t_ctm = ctmrg_c4v.run(state, ctm_env, conv_check=ctmrg_conv_energy)
+    ctm_env_init = ENV_C4V(args.chi, state)
+    init_env(state, ctm_env_init)
+    print(ctm_env_init)
 
-    loss= model.energy_1x1(state, ctm_env)
-    obs_values, obs_labels= model.eval_obs(state,ctm_env)
+    e_curr0 = model.energy_1x1(state, ctm_env_init)
+    obs_values0, obs_labels = model.eval_obs(state,ctm_env_init)
+
     print(", ".join(["epoch","energy"]+obs_labels))
-    print(", ".join([f"{-1}",f"{loss}"]+[f"{v}" for v in obs_values]))
+    print(", ".join([f"{-1}",f"{e_curr0}"]+[f"{v}" for v in obs_values0]))
 
-    def loss_fn(state, ctm_env_in, opt_args=cfg.opt_args):
-        # symmetrize on-site tensor
-        symm_sites= {(0,0): make_c4v_symm(state.sites[(0,0)])}
-        symm_state= IPEPS(symm_sites)
+    ctm_env_init, history, t_ctm = ctmrg_c4v.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
 
-        # possibly re-initialize the environment
-        if opt_args.opt_ctm_reinit:
-            init_env(symm_state, ctm_env_in)
+    corrSS= model.eval_corrf_SS(state, ctm_env_init, args.corrf_r)
+    print("\nr "+" ".join([label for label in corrSS.keys()]))
+    for i in range(args.corrf_r):
+        print(f"{i} "+" ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
 
-        # 1) compute environment by CTMRG
-        ctm_env_out, history, t_ctm= ctmrg_c4v.run(symm_state, ctm_env_in, conv_check=ctmrg_conv_energy)
-        loss = model.energy_1x1(symm_state, ctm_env_out)
-        
-        return loss, ctm_env_out, history, t_ctm
-
-    # optimize
-    optimize_state(state, ctm_env, loss_fn, model, args)
-
-    # compute final observables for the best variational state
-    outputstatefile= args.out_prefix+"_state.json"
-    state= read_ipeps(outputstatefile)
-    ctm_env = ENV_C4V(args.chi, state)
-    init_env(state, ctm_env)
-    ctm_env, history, t_ctm = ctmrg_c4v.run(state, ctm_env, conv_check=ctmrg_conv_energy)
-    opt_energy = model.energy_1x1(state,ctm_env)
-    obs_values, obs_labels = model.eval_obs(state,ctm_env)
-    print(", ".join([f"{args.opt_max_iter}",f"{opt_energy}"]+[f"{v}" for v in obs_values]))
+    corrDD= model.eval_corrf_DD_H(state, ctm_env_init, args.corrf_r)
+    print("\nr "+" ".join([label for label in corrDD.keys()]))
+    for i in range(args.corrf_r):
+        print(f"{i} "+" ".join([f"{corrDD[label][i]}" for label in corrDD.keys()]))
