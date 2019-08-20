@@ -6,4 +6,5 @@
 
     one_site_c4v/env_c4v
     one_site_c4v/rdm_c4v
+    one_site_c4v/corrf_c4v
     one_site_c4v/ctmrg_c4v

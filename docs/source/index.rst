@@ -16,6 +16,7 @@ TN-torch
    config
    models
    groups
+   linalg
 
 Indices and tables
 ==================
