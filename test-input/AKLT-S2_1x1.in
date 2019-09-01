@@ -1,6 +1,6 @@
 {
 	"physDim":5,
-	"auxBondDim": 2,
+	"auxDim": 2,
 	"lX": 1,
 	"lY": 1,
 	"map": [
