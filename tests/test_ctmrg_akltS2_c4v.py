@@ -48,14 +48,27 @@ if __name__=='__main__':
 
     print(state)
 
-    def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
+    # def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
+    #     with torch.no_grad():
+    #         e_curr = model.energy_1x1(state, env)
+    #         obs_values, obs_labels = model.eval_obs(state, env)
+    #         history.append([e_curr.item()]+obs_values)
+    #         print(", ".join([f"{len(history)}",f"{e_curr}"]+[f"{v}" for v in obs_values]))
+
+    #         if len(history) > 1 and abs(history[-1][0]-history[-2][0]) < ctm_args.ctm_conv_tol:
+    #             return True
+    #     return False
+
+    def ctmrg_conv_specdistC(state, env, history, ctm_args=cfg.ctm_args):
         with torch.no_grad():
             e_curr = model.energy_1x1(state, env)
             obs_values, obs_labels = model.eval_obs(state, env)
-            history.append([e_curr.item()]+obs_values)
             print(", ".join([f"{len(history)}",f"{e_curr}"]+[f"{v}" for v in obs_values]))
+            
+            u,s,v= torch.svd(ctm_env_init.C[ctm_env_init.keyC], compute_uv=False)
+            history.append([s]+[e_curr.item()]+obs_values)
 
-            if len(history) > 1 and abs(history[-1][0]-history[-2][0]) < ctm_args.ctm_conv_tol:
+            if len(history) > 1 and torch.dist(history[-1][0],history[-2][0]) < ctm_args.ctm_conv_tol:
                 return True
         return False
 
@@ -69,7 +82,7 @@ if __name__=='__main__':
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{e_curr0}"]+[f"{v}" for v in obs_values0]))
 
-    ctm_env_init, history, t_ctm = ctmrg_c4v.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
+    ctm_env_init, history, t_ctm = ctmrg_c4v.run(state, ctm_env_init, conv_check=ctmrg_conv_specdistC)
 
     corrSS= model.eval_corrf_SS(state, ctm_env_init, args.corrf_r)
     print("\nr "+" ".join([label for label in corrSS.keys()]))
