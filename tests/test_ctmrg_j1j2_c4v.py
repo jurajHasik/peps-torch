@@ -82,3 +82,9 @@ if __name__=='__main__':
     print("\nr "+" ".join([label for label in corrDD.keys()]))
     for i in range(args.corrf_r):
         print(f"{i} "+" ".join([f"{corrDD[label][i]}" for label in corrDD.keys()]))
+
+    # environment diagnostics
+    print("\nspectrum(C)")
+    u,s,v= torch.svd(ctm_env_init.C[ctm_env_init.keyC], compute_uv=False)
+    for i in range(args.chi):
+        print(f"{i} {s[i]}")
