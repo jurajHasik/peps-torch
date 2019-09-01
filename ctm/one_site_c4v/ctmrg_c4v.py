@@ -6,11 +6,6 @@ from ipeps import IPEPS
 from ctm.one_site_c4v.env_c4v import *
 from custom_svd import *
 
-if cfg.ctm_args.projector_svd_method == 'GESDD':
-    truncated_svd= truncated_svd_gesdd
-elif cfg.ctm_args.projector_svd_method == 'RSVD':
-    truncated_svd= truncated_svd_rsvd
-
 def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.global_args): 
     r"""
     :param state: wavefunction
@@ -67,6 +62,13 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
 
 # performs CTM move
 def ctm_MOVE(state, env, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+    if cfg.ctm_args.projector_svd_method == 'GESDD':
+        truncated_svd= truncated_svd_gesdd
+    elif cfg.ctm_args.projector_svd_method == 'SYM':
+        truncated_svd= truncated_svd_symeig
+    elif cfg.ctm_args.projector_svd_method == 'RSVD':
+        truncated_svd= truncated_svd_rsvd
+    
     # 1) build enlarged corner upper left corner
     C2X2= c2x2(state, env, verbosity=ctm_args.verbosity_projectors)
 
