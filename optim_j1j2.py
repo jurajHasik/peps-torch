@@ -42,7 +42,7 @@ if __name__=='__main__':
             return (vx, vy)
     elif args.tiling == "8SITE":
         def lattice_to_site(coord):
-            shift_x = coord[0] + coord[1] // 2
+            shift_x = coord[0] + 2*(coord[1] // 2)
             vx = shift_x % 4
             vy = coord[1] % 2
             return (vx, vy)
