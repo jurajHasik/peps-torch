@@ -48,7 +48,7 @@ class J1J2():
         self.j1=j1
         self.j2=j2
         
-        self.h2, self.hp_h, self.hp_v = self.get_h()
+        self.h2, self.hp_h, self.hp_v, self.hp = self.get_h()
         self.obs_ops = self.get_obs_ops()
 
     def get_h(self):
@@ -64,7 +64,8 @@ class J1J2():
             self.j2*(h2x2_SS.permute(0,3,2,1,4,7,6,5) + h2x2_SS.permute(2,0,1,3,6,4,5,7))
         hp_v= self.j1*(h2x2_SS.permute(0,2,1,3,4,6,5,7) + h2x2_SS.permute(2,0,3,1,6,4,7,5)) +\
             self.j2*(h2x2_SS.permute(0,3,2,1,4,7,6,5) + h2x2_SS.permute(2,0,1,3,6,4,5,7))
-        return SS, hp_h, hp_v
+        hp=hp_h+hp_v
+        return SS, hp_h, hp_v, hp
 
     def get_obs_ops(self):
         obs_ops = dict()
@@ -225,6 +226,62 @@ class J1J2():
         energy+= torch.einsum('ijklabcd,ijklabcd',rdm2x2_11,self.hp_h)
 
         energy_per_site= energy/4.0
+        return energy_per_site
+
+    def energy_2x2_8site(self,state,env):
+        r"""
+
+        :param state: wavefunction
+        :param env: CTM environment
+        :type state: IPEPS
+        :type env: ENV
+        :return: energy per site
+        :rtype: float
+
+        We assume iPEPS with 4x2 unit cell containing eight tensors A, B, C, D, 
+        E, F, G, H with PBC tiling + SHIFT::
+
+            A B E F
+            C D G H
+          A B E F
+          C D G H
+    
+        Taking the reduced density matrix :math:`\rho_{2x2}` of 2x2 cluster given by 
+        :py:func:`ctm.generic.rdm.rdm2x2` with indexing of sites as follows 
+        :math:`\rho_{2x2}(s_0,s_1,s_2,s_3;s'_0,s'_1,s'_2,s'_3)`::
+        
+            s0--s1
+            |   |
+            s2--s3
+
+        and without assuming any symmetry on the indices of the individual tensors a set
+        of eight :math:`\rho_{2x2}`'s are needed over which :math:`h2` operators 
+        for the nearest and next-neaerest neighbour pairs are evaluated::  
+
+            A3--1B   B3--1E   E3--1F   F3--1A
+            2    2   2    2   2    2   2    2
+            0    0   0    0   0    0   0    0
+            C3--1D & D3--1G & G3--1H & H3--1C 
+
+            C3--1D   D3--1G   G3--1H   H3--1C
+            2    2   2    2   2    2   2    2
+            0    0   0    0   0    0   0    0
+            B3--1E & E3--1F & F3--1A & A3--1B 
+        """
+        # rdm2x2_00= rdm.rdm2x2((0,0),state,env)
+        # rdm2x2_10= rdm.rdm2x2((1,0),state,env)
+        # rdm2x2_01= rdm.rdm2x2((0,1),state,env)
+        # rdm2x2_11= rdm.rdm2x2((1,1),state,env)
+        # rdm2x2_20= rdm.rdm2x2((2,0),state,env)
+        # rdm2x2_30= rdm.rdm2x2((3,0),state,env)
+        # rdm2x2_21= rdm.rdm2x2((2,1),state,env)
+        # rdm2x2_31= rdm.rdm2x2((3,1),state,env)
+        energy=0.
+        for coord,site in state.sites.items():
+            rdm2x2= rdm.rdm2x2(coord,state,env)
+            energy+= torch.einsum('ijklabcd,ijklabcd',rdm2x2,self.hp)
+
+        energy_per_site= energy/(2*8)
         return energy_per_site
 
     def eval_obs(self,state,env):

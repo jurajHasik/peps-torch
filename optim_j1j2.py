@@ -1,3 +1,4 @@
+from math import copysign
 import torch
 import argparse
 import config as cfg
@@ -39,9 +40,15 @@ if __name__=='__main__':
             vx = (coord[0] + abs(coord[0]) * 2) % 2
             vy = (coord[1] + abs(coord[1]) * 2) % 2
             return (vx, vy)
+    elif args.tiling == "8SITE":
+        def lattice_to_site(coord):
+            shift_x = coord[0] + coord[1] // 2
+            vx = shift_x % 4
+            vy = coord[1] % 2
+            return (vx, vy)
     else:
         raise ValueError("Invalid tiling: "+str(args.tiling)+" Supported options: "\
-            +"BIPARTITE, 2SITE, 4SITE")
+            +"BIPARTITE, 2SITE, 4SITE, 8SITE")
 
     if args.instate!=None:
         state = read_ipeps(args.instate, vertexToSite=lattice_to_site)
@@ -63,13 +70,27 @@ if __name__=='__main__':
 
         sites = {(0,0): A, (1,0): B}
         
-        if args.tiling == "4SITE":
+        if args.tiling == "4SITE" or args.tiling == "8SITE":
             C= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
                 dtype=cfg.global_args.dtype)
             D= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
                 dtype=cfg.global_args.dtype)
             sites[(0,1)]= C/torch.max(torch.abs(C))
             sites[(1,1)] = D/torch.max(torch.abs(D))
+
+        if args.tiling == "8SITE":
+            E= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+                dtype=cfg.global_args.dtype)
+            F= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+                dtype=cfg.global_args.dtype)
+            G= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+                dtype=cfg.global_args.dtype)
+            H= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+                dtype=cfg.global_args.dtype)
+            sites[(2,0)]= E/torch.max(torch.abs(E))
+            sites[(3,0)] = F/torch.max(torch.abs(F))
+            sites[(2,1)] = G/torch.max(torch.abs(G))
+            sites[(3,1)] = H/torch.max(torch.abs(H))
 
         state = IPEPS(sites, vertexToSite=lattice_to_site)
     else:
@@ -83,9 +104,11 @@ if __name__=='__main__':
         energy_f=model.energy_2x2_2site
     elif args.tiling == "4SITE":
         energy_f=model.energy_2x2_4site
+    elif args.tiling == "8SITE":
+        energy_f=model.energy_2x2_8site
     else:
         raise ValueError("Invalid tiling: "+str(args.tiling)+" Supported options: "\
-            +"BIPARTITE, 2SITE, 4SITE")
+            +"BIPARTITE, 2SITE, 4SITE, 8SITE")
 
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         with torch.no_grad():
