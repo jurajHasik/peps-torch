@@ -65,7 +65,7 @@ if __name__=='__main__':
             obs_values, obs_labels = model.eval_obs(state, env)
             print(", ".join([f"{len(history)}",f"{e_curr}"]+[f"{v}" for v in obs_values]))
             
-            u,s,v= torch.svd(ctm_env_init.C[ctm_env_init.keyC], compute_uv=False)
+            u,s,v= torch.svd(env.C[env.keyC], compute_uv=False)
             history.append([s]+[e_curr.item()]+obs_values)
 
             if len(history) > 1 and torch.dist(history[-1][0],history[-2][0]) < ctm_args.ctm_conv_tol:

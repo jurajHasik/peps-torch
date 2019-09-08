@@ -17,7 +17,7 @@ class AKLTS2():
         self.device=global_args.device
         self.phys_dim = 5
 
-        self.h = self.get_h()
+        self.h, self.SS = self.get_h()
         self.obs_ops = self.get_obs()
 
     # build AKLT S=2 Hamiltonian <=> Projector from product of two S=2 DOFs
@@ -33,7 +33,8 @@ class AKLTS2():
         SS = SS.view(pd*pd,pd*pd)
         h = (1./14)*(SS + (7./10.)*SS@SS + (7./45.)*SS@SS@SS + (1./90.)*SS@SS@SS@SS)
         h = h.view(pd,pd,pd,pd)
-        return h
+        SS = SS.view(pd,pd,pd,pd)
+        return h, SS
 
     def get_obs(self):
         obs_ops = dict()
@@ -42,63 +43,58 @@ class AKLTS2():
         obs_ops["sp"]= s5.SP()
         obs_ops["sm"]= s5.SM()
         return obs_ops
-
-    # evaluation of energy depends on the nature of underlying
-    # ipeps state
-    #
-    # Ex.1 for 1-site c4v invariant iPEPS there is just a single two-site
-    # term which gives the energy-per-site
-    #
-    # Ex.2 for 1-site invariant iPEPS there are two two-site terms
-    # which give the energy-per-site
-    #    0       0
-    # 1--A--3 1--A--3 
-    #    2       2                          A
-    #    0       0                          2
-    # 1--A--3 1--A--3                       0
-    #    2       2    , terms A--3 1--A and A have to be evaluated
-    #
-    # Ex.3 for 2x2 cluster iPEPS there are eight two-site terms
-    #    0       0       0
-    # 1--A--3 1--B--3 1--A--3
-    #    2       2       2
-    #    0       0       0
-    # 1--C--3 1--D--3 1--C--3
-    #    2       2       2             A--3 1--B      A B C D
-    #    0       0                     B--3 1--A      2 2 2 2
-    # 1--A--3 1--B--3                  C--3 1--D      0 0 0 0
-    #    2       2             , terms D--3 1--C and  C D A B  
-    def energy_1x1c4v(self,state,env):
-        rdm2x1 = rdm.rdm2x1((0,0), state, env)
-        # apply a rotation on physical index of every "odd" site
-        # A A => A B
-        # A A => B A
-        rot_op = su2.get_rot_op(5)
-        h_rotated = torch.einsum('jl,ilak,kb->ijab',rot_op,self.h,rot_op)
-        energy = torch.einsum('ijab,ijab',rdm2x1,h_rotated)
-        return energy       
-
-    def energy_1x1(self,state,env):
-        rdm2x1 = rdm.rdm2x1((0,0), state, env)
-        rdm1x2 = rdm.rdm1x2((0,0), state, env)
-        # apply a rotation on physical index of every "odd" site
-        # A A => A B
-        # A A => B A
-        rot_op = su2.get_rot_op(5)
-        h_rotated = torch.einsum('jl,ilak,kb->ijab',rot_op,self.h,rot_op)
-        energy = torch.einsum('ijab,ijab',rdm2x1,h_rotated) + torch.einsum('ijab,ijab',rdm1x2,h_rotated)
-        return energy       
-
-    def energy_2x2(self,ipeps):
-        pass
-
-    # assuming reduced density matrix of 2x2 cluster with indexing of DOFs
-    # as follows rdm2x2=rdm2x2(s0,s1,s2,s3;s0',s1',s2',s3')
-    def energy_2x2(self,rdm2x2):
-        energy = torch.einsum('ijklabkl,ijab',rdm2x2,self.h)
-        return energy
-
+ 
     def energy_2x1_1x2(self,state,env):
+        r"""
+        :param state: wavefunction
+        :param env: CTM environment
+        :type state: IPEPS
+        :type env: ENV
+        :return: energy per site
+        :rtype: float
+        
+        We assume iPEPS with 2x1 unit cell with tensors A, B and bipartite tiling or 
+        2x2 unit cell containing four tensors A, B, C, and D with a simple PBC tiling::
+
+            A B A B  or  A B A B
+            B A B A      C D C D
+            A B A B      A B A B
+            B A B A      C D C D
+
+        Taking the reduced density matrix :math:`\rho_{2x1}` (:math:`\rho_{1x2}`) 
+        of 2x1 (1x2) cluster given by :py:func:`rdm.rdm2x1` (:py:func:`rdm.rdm1x2`) 
+        with indexing of sites as follows :math:`s_0,s_1;s'_0,s'_1` for both types
+        of density matrices::
+
+            rdm2x1   rdm1x2
+
+            s0--s1   s0
+                     |
+                     s1
+
+        and without assuming any symmetry on the indices of individual tensors a following
+        set of terms has to be evaluated in order to compute energy-per-site for the 
+        case of 2x1 unit cell with bipartite tiling::
+
+               0       0
+            1--A--3 1--B--3
+               2       2                              A  B
+               0       0                              2  2  
+            1--B--3 1--A--3           A--3 1--B,      0  0 
+               2       2      , terms B--3 1--A, and  B, A
+
+        and for the case of 2x2 unit cell::
+
+               0       0       0
+            1--A--3 1--B--3 1--A--3
+               2       2       2
+               0       0       0
+            1--C--3 1--D--3 1--C--3
+               2       2       2             A--3 1--B,      A  B  C  D
+               0       0                     B--3 1--A,      2  2  2  2
+            1--A--3 1--B--3                  C--3 1--D,      0  0  0  0
+               2       2             , terms D--3 1--C, and  C, D, A, B
+        """
         energy=0.
         for coord,site in state.sites.items():
             rdm2x1 = rdm.rdm2x1(coord,state,env)
@@ -133,8 +129,8 @@ class AKLTS2():
             for coord,site in state.sites.items():
                 rdm2x1 = rdm.rdm2x1(coord,state,env)
                 rdm1x2 = rdm.rdm1x2(coord,state,env)
-                obs[f"SS2x1{coord}"]= torch.einsum('ijab,ijab',rdm2x1,self.h2)
-                obs[f"SS1x2{coord}"]= torch.einsum('ijab,ijab',rdm1x2,self.h2)
+                obs[f"SS2x1{coord}"]= torch.einsum('ijab,ijab',rdm2x1,self.SS)
+                obs[f"SS1x2{coord}"]= torch.einsum('ijab,ijab',rdm1x2,self.SS)
         
         # prepare list with labels and values
         obs_labels=["avg_m"]+[f"m{coord}" for coord in state.sites.keys()]\

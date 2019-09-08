@@ -1,14 +1,26 @@
 # tn-torch
+##### A tensor network library for two-dimensional lattice models 
+
+tn-torch performs optimization of infinite Projected entangled-pair state (iPEPS) variational
+wavefunction by direct energy minimization. The gradient is computed by backpropagation 
+(reverse-mode Automatic differentiation).
+
+Supports:
+spin systems
+arbitrary rectangular unit cells
+
+#### Dependencies
+- PyTorch 1.+ (see https://pytorch.org/)
+
+#### Building documentation
+- PyTorch 1.+
+- sphinx
+- sphinx_rtd_theme
 
 
-## test run for coupled ladders
-Run optimization with a noiseless initialization (this will be stuck... local extremum)
-command:
-	python ./optim_ladders.py -bond_dim 3 -chi 9 -instate test-input/VBS_2x2_ABCD.in
+All the dependencies can be installed through ``conda`` (see docs.conda.io).
+Afterwards, build documentation as follows:
 
-Note that the input has a different convention for the indices:
-	state = read_ipeps(args.instate, peps_args=PEPSARGS(), global_args=GLOBALARGS(), aux_seq=[1,0,3,2])
+`cd docs && make html`
 
-adding noise of absolute value 0.073
-command:
-	python ./optim_ladders.py -bond_dim 3 -chi 9 -instate test-input/VBS_2x2_ABCD.in -instate_noise 0.073
+The generated documentation is found at `docs/build/html/index.html`

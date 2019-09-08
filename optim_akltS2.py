@@ -4,50 +4,37 @@ import config as cfg
 from ipeps import *
 from ctm.generic.env import *
 from ctm.generic import ctmrg
-from models import j1j2
+from models import akltS2
 from ad_optim import optimize_state
 
 if __name__=='__main__':
     # parse command line args and build necessary configuration objects
     parser= cfg.get_args_parser()
     # additional model-dependent arguments
-    parser.add_argument("-j1", type=float, default=1., help="nearest-neighbour coupling")
-    parser.add_argument("-j2", type=float, default=0., help="next nearest-neighbour coupling")
     parser.add_argument("-tiling", default="BIPARTITE", help="tiling of the lattice")
     args = parser.parse_args()
     cfg.configure(args)
     cfg.print_config()
     torch.set_num_threads(args.omp_cores)
 
-    model = j1j2.J1J2(j1=args.j1, j2=args.j2)
+    model = akltS2.AKLTS2()
     
     # initialize an ipeps
     # 1) define lattice-tiling function, that maps arbitrary vertex of square lattice
-    # coord into one of coordinates within unit-cell of iPEPS ansatz    
+    # coord into one of coordinates within the unit-cell of iPEPS ansatz    
     if args.tiling == "BIPARTITE":
         def lattice_to_site(coord):
             vx = (coord[0] + abs(coord[0]) * 2) % 2
             vy = abs(coord[1])
             return ((vx + vy) % 2, 0)
-    elif args.tiling == "2SITE":
-        def lattice_to_site(coord):
-            vx = (coord[0] + abs(coord[0]) * 2) % 2
-            vy = (coord[1] + abs(coord[1]) * 1) % 1
-            return (vx, vy)
     elif args.tiling == "4SITE":
         def lattice_to_site(coord):
             vx = (coord[0] + abs(coord[0]) * 2) % 2
             vy = (coord[1] + abs(coord[1]) * 2) % 2
             return (vx, vy)
-    elif args.tiling == "8SITE":
-        def lattice_to_site(coord):
-            shift_x = coord[0] + 2*(coord[1] // 2)
-            vx = shift_x % 4
-            vy = coord[1] % 2
-            return (vx, vy)
     else:
         raise ValueError("Invalid tiling: "+str(args.tiling)+" Supported options: "\
-            +"BIPARTITE, 2SITE, 4SITE, 8SITE")
+            +"BIPARTITE, 4SITE")
 
     if args.instate!=None:
         state = read_ipeps(args.instate, vertexToSite=lattice_to_site)
@@ -69,27 +56,13 @@ if __name__=='__main__':
 
         sites = {(0,0): A, (1,0): B}
         
-        if args.tiling == "4SITE" or args.tiling == "8SITE":
+        if args.tiling == "4SITE":
             C= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
                 dtype=cfg.global_args.dtype)
             D= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
                 dtype=cfg.global_args.dtype)
             sites[(0,1)]= C/torch.max(torch.abs(C))
             sites[(1,1)] = D/torch.max(torch.abs(D))
-
-        if args.tiling == "8SITE":
-            E= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.dtype)
-            F= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.dtype)
-            G= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.dtype)
-            H= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.dtype)
-            sites[(2,0)]= E/torch.max(torch.abs(E))
-            sites[(3,0)] = F/torch.max(torch.abs(F))
-            sites[(2,1)] = G/torch.max(torch.abs(G))
-            sites[(3,1)] = H/torch.max(torch.abs(H))
 
         state = IPEPS(sites, vertexToSite=lattice_to_site)
     else:
@@ -99,12 +72,8 @@ if __name__=='__main__':
     print(state)
     
     # 2) select the "energy" function 
-    if args.tiling == "BIPARTITE" or args.tiling == "2SITE":
-        energy_f=model.energy_2x2_2site
-    elif args.tiling == "4SITE":
-        energy_f=model.energy_2x2_4site
-    elif args.tiling == "8SITE":
-        energy_f=model.energy_2x2_8site
+    if args.tiling == "BIPARTITE" or args.tiling == "4SITE":
+        energy_f=model.energy_2x1_1x2
     else:
         raise ValueError("Invalid tiling: "+str(args.tiling)+" Supported options: "\
             +"BIPARTITE, 2SITE, 4SITE, 8SITE")
