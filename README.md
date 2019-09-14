@@ -25,3 +25,9 @@ Afterwards, build documentation as follows:
 `cd docs && make html`
 
 The generated documentation is found at `docs/build/html/index.html`
+
+\
+\
+Inspired by the pioneering work of Hai-Jun Liao, Jin-Guo Liu, Lei Wang, and Tao Xiang
+
+https://journals.aps.org/prx/abstract/10.1103/PhysRevX.9.031041 
