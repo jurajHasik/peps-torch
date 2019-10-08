@@ -121,12 +121,12 @@ def apply_TM_1sO(state, env, edge, op=None, verbosity=0):
 
          -----T----------
         |     |     
-       edge--(A^+ op A)--
+       edge--(a^+ op a)--
         |     |     
          -----T----------
 
-    where the physical indices `s` and `s'` of the on-site tensor :math:`A` 
-    and it's hermitian conjugate :math:`A^\dagger` are contracted with 
+    where the physical indices `s` and `s'` of the on-site tensor :math:`a` 
+    and it's hermitian conjugate :math:`a^\dagger` are contracted with 
     identity :math:`\delta_{s,s'}` or ``op`` (if supplied).
     """
     # TODO stronger verification
@@ -211,12 +211,12 @@ def apply_TM_2sO(state, env, edge, op=None, verbosity=0):
 
          -----T-------------T------------
         |     |             |
-       edge--(A^+ op_l A)==(A^+ op_r A)--
+       edge--(a^+ op_l a)==(a^+ op_r a)--
         |     |             |
          -----T-------------T------------
 
-    where the physical indices `s` and `s'` of the on-site tensor :math:`A` 
-    and it's hermitian conjugate :math:`A^\dagger` are contracted with 
+    where the physical indices `s` and `s'` of the on-site tensor :math:`a` 
+    and it's hermitian conjugate :math:`a^\dagger` are contracted with 
     identity :math:`\delta_{s,s'}` or ``op_l`` and ``op_r`` if ``op`` is supplied.
     The ``op_l`` and ``op_r`` are given by the SVD decomposition of two-site operator
     ``op``::
@@ -340,6 +340,35 @@ def apply_TM_2sO(state, env, edge, op=None, verbosity=0):
     return E
 
 def corrf_1sO1sO(state, env, op1, get_op2, dist, verbosity=0):
+    r"""
+    :param state: underlying 1-site C4v symmetric wavefunction
+    :param env: C4v symmetric environment corresponding to ``state``
+    :param op1: first one-site operator :math:`O_1`
+    :param get_op2: function returning (position-dependent) second
+                    one-site operator :math:`\text{get_op2}(r)=O_2`
+    :param dist: maximal distance of correlation function
+    :param verbosity: logging verbosity
+    :type state: IPEPS
+    :type env: ENV_C4V
+    :type op1: torch.tensor
+    :type get_op2: function(int)->torch.tensor
+    :type dist: int
+    :type verbosity: int
+    :return: vector ``corrf`` of length ``dist`` holding the values of 
+             correlation function :math:`\langle O_1(0) O_2(r) \rangle` for :math:`r \in [1,dist]`
+    :rtype: torch.tensor
+    
+    Computes the two-point correlation function :math:`\langle O_1(0) O_2(r) \rangle`
+    by contracting the following network::
+
+        C-----T---------- ... -----T---- ... --------T-------------C
+        |     |                    |                 |             |
+        T--(a^+ op_1 a)-- ... --(a^+a)-- ... --(a^+ gen_op2(r) a)--T
+        |     |                    |                 |             | 
+        C-----T---------- ... -----T---- ... --------T-------------C
+
+    for increasingly large distance ``r`` up to ``dist``.
+    """
     E0 = get_edge(state, env, verbosity=verbosity)
     # Apply transfer matrix with operator op1
     #
@@ -376,6 +405,38 @@ def corrf_1sO1sO(state, env, op1, get_op2, dist, verbosity=0):
     return corrf
 
 def corrf_2sO2sO_H(state, env, op1, get_op2, dist, verbosity=0):
+    r"""
+    :param state: underlying 1-site C4v symmetric wavefunction
+    :param env: C4v symmetric environment corresponding to ``state``
+    :param op1: first two-site operator :math:`O_1`
+    :param get_op2: function returning (position-dependent) second
+                    two-site operator :math:`\text{get_op2}(r)=O_2`
+    :param dist: maximal distance of correlation function
+    :param verbosity: logging verbosity
+    :type state: IPEPS
+    :type env: ENV_C4V
+    :type op1: torch.tensor
+    :type get_op2: function(int)->torch.tensor
+    :type dist: int
+    :type verbosity: int
+    :return: vector ``corrf`` of length ``dist`` holding the values of 
+             correlation function :math:`\langle O_1(0) O_2(r) \rangle` for :math:`r \in [2,dist+1]`
+    :rtype: torch.tensor
+    
+    Computes the correlation function :math:`\langle O_1(0) O_2(r) \rangle`
+    of two horizontaly-oriented two-site operators by contracting 
+    the following network::
+
+        C-----T----T------- ... -----T---- ... ----------T----T--------C
+        |     |    |                 |                   |    |        |
+        |   /-a^+--a^+-\             |                /--a^+--a^+---\  |
+        T--< ( op 1 )   >-- ... --(a^+a)-- ... ------< (gen_op2(r)) >--T 
+        |   \-a----a---/             |                \--a----a-----/  |
+        |     |    |                 |                   |    |        | 
+        C-----T----T------- ... -----T---- ... ----------T----T--------C
+
+    for increasingly large distance ``r`` up to ``dist+1``.
+    """
     E0 = get_edge(state, env, verbosity=verbosity)
     # Apply double transfer matrix with operator op2
     #

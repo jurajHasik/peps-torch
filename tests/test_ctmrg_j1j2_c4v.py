@@ -6,6 +6,7 @@ from ipeps import *
 from c4v import *
 from ctm.one_site_c4v.env_c4v import *
 from ctm.one_site_c4v import ctmrg_c4v
+from ctm.one_site_c4v import transferops_c4v
 from models import j1j2
 
 if __name__=='__main__':
@@ -16,6 +17,8 @@ if __name__=='__main__':
     parser.add_argument("-j2", type=float, default=0., help="next nearest-neighbour coupling")
     # additional observables-related arguments
     parser.add_argument("-corrf_r", type=int, default=1, help="maximal correlation function distance")
+    parser.add_argument("-top_n", type=int, default=2, help="number of leading eigenvalues"+
+        "of transfer operator to compute")
     args = parser.parse_args()
     cfg.configure(args)
     cfg.print_config()
@@ -74,17 +77,23 @@ if __name__=='__main__':
     ctm_env_init, history, t_ctm = ctmrg_c4v.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
 
     corrSS= model.eval_corrf_SS(state, ctm_env_init, args.corrf_r)
-    print("\nr "+" ".join([label for label in corrSS.keys()]))
+    print("\n\nSS r "+" ".join([label for label in corrSS.keys()]))
     for i in range(args.corrf_r):
         print(f"{i} "+" ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
 
     corrDD= model.eval_corrf_DD_H(state, ctm_env_init, args.corrf_r)
-    print("\nr "+" ".join([label for label in corrDD.keys()]))
+    print("\n\nDD r "+" ".join([label for label in corrDD.keys()]))
     for i in range(args.corrf_r):
         print(f"{i} "+" ".join([f"{corrDD[label][i]}" for label in corrDD.keys()]))
 
     # environment diagnostics
-    print("\nspectrum(C)")
+    print("\n\nspectrum(C)")
     u,s,v= torch.svd(ctm_env_init.C[ctm_env_init.keyC], compute_uv=False)
     for i in range(args.chi):
         print(f"{i} {s[i]}")
+
+    # transfer operator spectrum
+    print("\n\nspectrum(T)")
+    l= transferops_c4v.get_Top_spec_c4v(args.top_n, state, ctm_env_init)
+    for i in range(l.size()[0]):
+        print(f"{i} {l[i,0]} {l[i,1]}")

@@ -112,3 +112,21 @@ if __name__=='__main__':
     print(", ".join([f"{-1}",f"{e_curr0}"]+[f"{v}" for v in obs_values0]))
 
     ctm_env_init, history, t_ctm = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
+
+    corrSS= model.eval_corrf_SS((0,0), (1,0), state, ctm_env_init, args.corrf_r)
+    print("\n\nSS[(0,0),(1,0)] r "+" ".join([label for label in corrSS.keys()]))
+    for i in range(args.corrf_r):
+        print(f"{i} "+" ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
+
+    corrSS= model.eval_corrf_SS((0,0), (0,1), state, ctm_env_init, args.corrf_r)
+    print("\n\nSS[(0,0),(0,1)] r "+" ".join([label for label in corrSS.keys()]))
+    for i in range(args.corrf_r):
+        print(f"{i} "+" ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
+
+    # environment diagnostics
+    print("\n")
+    for c_loc,c_ten in ctm_env_init.C.items(): 
+        u,s,v= torch.svd(c_ten, compute_uv=False)
+        print(f"spectrum C[{c_loc}]")
+        for i in range(args.chi):
+            print(f"{i} {s[i]}")

@@ -5,6 +5,7 @@ import config as cfg
 import ipeps
 from ctm.generic.env import ENV
 from ctm.generic import rdm
+from ctm.generic import corrf
 from ctm.one_site_c4v.env_c4v import ENV_C4V
 from ctm.one_site_c4v import rdm_c4v
 from ctm.one_site_c4v import corrf_c4v
@@ -345,6 +346,30 @@ class J1J2():
         obs_labels += [f"SS1x2{coord}" for coord in state.sites.keys()]
         obs_values=[obs[label] for label in obs_labels]
         return obs_values, obs_labels
+
+    def eval_corrf_SS(self,coord,direction,state,env,dist):
+   
+        # function allowing for additional site-dependent conjugation of op
+        def conjugate_op(op):
+            #rot_op= su2.get_rot_op(self.phys_dim, dtype=self.dtype, device=self.device)
+            rot_op= torch.eye(self.phys_dim, dtype=self.dtype, device=self.device)
+            op_0= op
+            op_rot= torch.einsum('ki,kl,lj->ij',rot_op,op_0,rot_op)
+            def _gen_op(r):
+                #return op_rot if r%2==0 else op_0
+                return op_0
+            return _gen_op
+
+        op_sx= 0.5*(self.obs_ops["sp"] + self.obs_ops["sm"])
+        op_isy= -0.5*(self.obs_ops["sp"] - self.obs_ops["sm"]) 
+
+        Sz0szR= corrf.corrf_1sO1sO(coord,direction,state,env, self.obs_ops["sz"], \
+            conjugate_op(self.obs_ops["sz"]), dist)
+        Sx0sxR= corrf.corrf_1sO1sO(coord,direction,state,env, op_sx, conjugate_op(op_sx), dist)
+        nSy0SyR= corrf.corrf_1sO1sO(coord,direction,state,env, op_isy, conjugate_op(op_isy), dist)
+
+        res= dict({"ss": Sz0szR+Sx0sxR-nSy0SyR, "szsz": Sz0szR, "sxsx": Sx0sxR, "sysy": -nSy0SyR})
+        return res  
 
 class J1J2_C4V_BIPARTITE():
     def __init__(self, j1=1.0, j2=0.0, global_args=cfg.global_args):
