@@ -307,10 +307,10 @@ def apply_TM_1sO(coord, direction, state, env, edge, op=None, verbosity=0):
 
         #  -------edge--
         # |        2    3->1
-        # |        2    
+        # |        0    
         # T1--1 1--A--3
-        # 0        0->2  
-        E = torch.tensordot(E,A,([1,2],[1,2]))
+        # 0        2
+        E = torch.tensordot(E,A,([1,2],[1,0]))
         if verbosity>0: print("E=EA "+str(E.size()))
 
         #  --edge-----
@@ -571,8 +571,8 @@ def corrf_1sO1sO(coord, direction, state, env, op1, get_op2, dist, verbosity=0):
     applied at site 0=(x,y), the transfer matrices are applied in the 
     ``direction`` up to site :math:`r=(x,y) + \text{dist} \times \text{direction}`. 
     """
-    def shift_c(c,direction):
-        return (c[0]+direction[0],c[1]+direction[1])
+    def shift_c(c,d):
+        return (c[0]+d[0],c[1]+d[1])
 
     c0= coord
     rev_d = (-direction[0],-direction[1]) # opposite direction
