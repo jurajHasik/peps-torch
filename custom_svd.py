@@ -1,6 +1,9 @@
 import torch
+import config as cfg
 from linalg.svd_gesdd import SVDGESDD
 from linalg.svd_rsvd import RSVD
+from linalg.svd_arnoldi import ARNOLDISVD
+
 
 def truncated_svd_gesdd(M, chi, abs_tol=None, rel_tol=None):
     """
@@ -106,3 +109,6 @@ def truncated_svd_symeig(M, chi, abs_tol=None, rel_tol=None):
 
 def truncated_svd_rsvd(M, chi, abs_tol=None, rel_tol=None):
     return RSVD.apply(M, chi)
+
+def truncated_svd_arnoldi(M, chi, abs_tol=None, rel_tol=None):
+    return ARNOLDISVD.apply(M, chi)
