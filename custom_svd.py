@@ -1,7 +1,6 @@
 import torch
 from linalg.svd_gesdd import SVDGESDD
 from linalg.svd_rsvd import RSVD
-# from linalg.svd_rsvd import rsvd
 
 def truncated_svd_gesdd(M, chi, abs_tol=None, rel_tol=None):
     """
@@ -107,4 +106,3 @@ def truncated_svd_symeig(M, chi, abs_tol=None, rel_tol=None):
 
 def truncated_svd_rsvd(M, chi, abs_tol=None, rel_tol=None):
     return RSVD.apply(M, chi)
-    # return rsvd(M, chi)

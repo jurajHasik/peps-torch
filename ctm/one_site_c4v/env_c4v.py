@@ -97,7 +97,8 @@ def init_const(env, verbosity=0):
 # TODO restrict random corners to have pos-semidef spectrum
 def init_random(env, verbosity=0):
     for key,t in env.C.items():
-        env.C[key]= torch.rand(t.size(), dtype=env.dtype, device=env.device)
+        tmpC= torch.rand(t.size(), dtype=env.dtype, device=env.device)
+        env.C[key]= 0.5*(tmpC+tmpC.t())
     for key,t in env.T.items():
         env.T[key]= torch.rand(t.size(), dtype=env.dtype, device=env.device)
 
