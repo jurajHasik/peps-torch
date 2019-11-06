@@ -84,7 +84,9 @@ def init_env(state, env, ctm_args=cfg.ctm_args):
     elif ctm_args.ctm_env_init_type=='RANDOM':
         init_random(env, ctm_args.verbosity_initialization)
     elif ctm_args.ctm_env_init_type=='CTMRG':
-        init_from_ipeps(state, env, ctm_args.verbosity_initialization)
+        init_from_ipeps_pbc(state, env, ctm_args.verbosity_initialization)
+    elif ctm_args.ctm_env_init_type=='CTMRG_OBC':
+        init_from_ipeps_obc(state, env, ctm_args.verbosity_initialization)
     else:
         raise ValueError("Invalid environment initialization: "+str(ctm_args.ctm_env_init_type))
 
@@ -103,9 +105,9 @@ def init_random(env, verbosity=0):
         env.T[key]= torch.rand(t.size(), dtype=env.dtype, device=env.device)
 
 # TODO handle case when chi < bond_dim^2
-def init_from_ipeps(state, env, verbosity=0):
+def init_from_ipeps_pbc(state, env, verbosity=0):
     if verbosity>0:
-        print("ENV: init_from_ipeps")
+        print("ENV: init_from_ipeps_pbc")
 
     # Left-upper corner
     #
@@ -134,6 +136,41 @@ def init_from_ipeps(state, env, verbosity=0):
     #      /
     #     2
     a = torch.einsum('meifg,maibc->eafbgc',(A,A)).contiguous().view(dimsA[1]**2, dimsA[3]**2, dimsA[4]**2)
+    env.T[env.keyT]= torch.zeros((env.chi,env.chi,dimsA[4]**2), dtype=env.dtype, device=env.device)
+    env.T[env.keyT][:dimsA[1]**2,:dimsA[3]**2,:]=a/torch.max(torch.abs(a))
+
+# TODO handle case when chi < bond_dim^2
+def init_from_ipeps_obc(state, env, verbosity=0):
+    if verbosity>0:
+        print("ENV: init_from_ipeps_obc")
+
+    # Left-upper corner
+    #
+    #     i      = C--1     
+    # j--A--3      0
+    #   /\
+    #  2  m
+    #      \ i
+    #    j--A--3
+    #      /
+    #     2
+    A= next(iter(state.sites.values()))
+    dimsA= A.size()
+    a= torch.einsum('mijef,mklab->eafb',(A,A)).contiguous().view(dimsA[3]**2, dimsA[4]**2)
+    env.C[env.keyC]= torch.zeros(env.chi,env.chi, dtype=env.dtype, device=env.device)
+    env.C[env.keyC][:dimsA[3]**2,:dimsA[4]**2]=a/torch.max(torch.abs(a))
+
+    # left transfer matrix
+    #
+    #     0      = 0     
+    # i--A--3      T--2
+    #   /\         1
+    #  2  m
+    #      \ 0
+    #    i--A--3
+    #      /
+    #     2
+    a = torch.einsum('meifg,majbc->eafbgc',(A,A)).contiguous().view(dimsA[1]**2, dimsA[3]**2, dimsA[4]**2)
     env.T[env.keyT]= torch.zeros((env.chi,env.chi,dimsA[4]**2), dtype=env.dtype, device=env.device)
     env.T[env.keyT][:dimsA[1]**2,:dimsA[3]**2,:]=a/torch.max(torch.abs(a))
 
