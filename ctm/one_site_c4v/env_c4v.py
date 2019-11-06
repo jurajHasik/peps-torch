@@ -150,8 +150,8 @@ def init_from_ipeps_obc(state, env, verbosity=0):
     # j--A--3      0
     #   /\
     #  2  m
-    #      \ i
-    #    j--A--3
+    #      \ k
+    #    l--A--3
     #      /
     #     2
     A= next(iter(state.sites.values()))
@@ -167,10 +167,10 @@ def init_from_ipeps_obc(state, env, verbosity=0):
     #   /\         1
     #  2  m
     #      \ 0
-    #    i--A--3
+    #    k--A--3
     #      /
     #     2
-    a = torch.einsum('meifg,majbc->eafbgc',(A,A)).contiguous().view(dimsA[1]**2, dimsA[3]**2, dimsA[4]**2)
+    a = torch.einsum('meifg,makbc->eafbgc',(A,A)).contiguous().view(dimsA[1]**2, dimsA[3]**2, dimsA[4]**2)
     env.T[env.keyT]= torch.zeros((env.chi,env.chi,dimsA[4]**2), dtype=env.dtype, device=env.device)
     env.T[env.keyT][:dimsA[1]**2,:dimsA[3]**2,:]=a/torch.max(torch.abs(a))
 
