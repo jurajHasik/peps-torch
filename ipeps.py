@@ -156,6 +156,9 @@ class IPEPS(torch.nn.Module):
     def get_aux_bond_dims(self):
         return [d for key in self.sites.keys() for d in self.sites[key].size()[1:]]
 
+    def get_tensors(self):
+        return [self.sites[key] for key in self.sites.keys()]
+
 def read_ipeps(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.peps_args,\
         global_args=cfg.global_args):
     r"""

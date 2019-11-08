@@ -66,42 +66,72 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
 # performs CTM move in one of the directions 
 # [Up=(0,-1), Left=(-1,0), Down=(0,1), Right=(1,0)]
 def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.global_args, verbosity=0):
-    # Loop over all non-equivalent sites of ipeps
-    # and compute projectors P(coord), P^tilde(coord)
     if ctm_args.projector_method=='4X4':
         ctm_get_projectors=ctm_get_projectors_4x4
     elif ctm_args.projector_method=='4X2':
         ctm_get_projectors=ctm_get_projectors_4x2
     else:
         raise ValueError("Invalid Projector method: "+str(ctm_args.projector_method))
-    P = dict()
-    Pt = dict()
-    for coord,site in state.sites.items():
-        # TODO compute isometries
-        P[coord], Pt[coord] = ctm_get_projectors(direction, coord, state, env, ctm_args, global_args)
-        if verbosity>0:
-            print("P,Pt RIGHT "+str(coord)+" P: "+str(P[coord].size())+" Pt: "+str(Pt[coord].size()))
-        if verbosity>1:
-            print(P[coord])
-            print(Pt[coord])
 
-    # Loop over all non-equivalent sites of ipeps
-    # and perform absorption and truncation
-    nC1 = dict()
-    nC2 = dict()
-    nT = dict()
-    for coord,site in state.sites.items():
-        if direction==(0,-1):
-            nC1[coord], nC2[coord], nT[coord] = absorb_truncate_CTM_MOVE_UP(coord, state, env, P, Pt)
-        elif direction==(-1,0):
-            nC1[coord], nC2[coord], nT[coord] = absorb_truncate_CTM_MOVE_LEFT(coord, state, env, P, Pt)
-        elif direction==(0,1):
-            nC1[coord], nC2[coord], nT[coord] = absorb_truncate_CTM_MOVE_DOWN(coord, state, env, P, Pt)
-        elif direction==(1,0):
-            nC1[coord], nC2[coord], nT[coord] = absorb_truncate_CTM_MOVE_RIGHT(coord, state, env, P, Pt)
-        else:
-            raise ValueError("Invalid direction: "+str(direction))
+    # EXPERIMENTAL
+    # 0) extract tuple of tensors
+    tensors= tuple(state.get_tensors() + env.get_tensors())
+    
+    def ctm_MOVE_c(*tensors):
+        sites_loc= dict(zip(state.sites.keys(),tensors[0:len(state.sites)]))
+        state_loc= IPEPS(sites_loc, vertexToSite=state.vertexToSite)
+        env_loc= ENV(env.chi)
+        env_loc.C= dict(zip(env.C.keys(),tensors[len(state.sites):len(state.sites)+len(env.C)]))
+        env_loc.T= dict(zip(env.T.keys(),tensors[len(state.sites)+len(env.C):]))
+        # Loop over all non-equivalent sites of ipeps
+        # and compute projectors P(coord), P^tilde(coord)
 
+        P = dict()
+        Pt = dict()
+        for coord,site in state_loc.sites.items():
+            # TODO compute isometries
+            P[coord], Pt[coord] = ctm_get_projectors(direction, coord, state_loc, env_loc, ctm_args, global_args)
+            if verbosity>0:
+                print("P,Pt RIGHT "+str(coord)+" P: "+str(P[coord].size())+" Pt: "+str(Pt[coord].size()))
+            if verbosity>1:
+                print(P[coord])
+                print(Pt[coord])
+
+        # Loop over all non-equivalent sites of ipeps
+        # and perform absorption and truncation
+        nC1 = dict()
+        nC2 = dict()
+        nT = dict()
+        for coord in state_loc.sites.keys():
+            if direction==(0,-1):
+                nC1[coord], nC2[coord], nT[coord] = absorb_truncate_CTM_MOVE_UP(coord, state_loc, env_loc, P, Pt)
+            elif direction==(-1,0):
+                nC1[coord], nC2[coord], nT[coord] = absorb_truncate_CTM_MOVE_LEFT(coord, state_loc, env_loc, P, Pt)
+            elif direction==(0,1):
+                nC1[coord], nC2[coord], nT[coord] = absorb_truncate_CTM_MOVE_DOWN(coord, state_loc, env_loc, P, Pt)
+            elif direction==(1,0):
+                nC1[coord], nC2[coord], nT[coord] = absorb_truncate_CTM_MOVE_RIGHT(coord, state_loc, env_loc, P, Pt)
+            else:
+                raise ValueError("Invalid direction: "+str(direction))
+
+        #return nC1, nC2, nT
+        ret_list= [nC1[key] for key in nC1.keys()] + [nC2[key] for key in nC2.keys()] + [nT[key] for key in nT.keys()]
+        return tuple(ret_list)
+
+    if ctm_args.fwd_checkpoint_move:
+        new_tensors= checkpoint(ctm_MOVE_c,*tensors)
+    else:
+        new_tensors= ctm_MOVE_c(*tensors)
+    
+    tmp_coords= state.sites.keys()
+    count_coord= len(tmp_coords)
+    nC1 = dict(zip(tmp_coords, new_tensors[0:count_coord]))
+    nC2 = dict(zip(tmp_coords, new_tensors[count_coord:2*count_coord]))
+    nT = dict(zip(tmp_coords, new_tensors[2*count_coord:]))
+
+    # ctm_MOVE_c(*tensors)
+
+    # Assign new nC1,nT,nC2 to appropriate environment tensors
     rel_CandT_vecs = dict()
     # specify relative vectors identifying the environment tensors
     # with respect to the direction 
@@ -116,7 +146,6 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
     else:
         raise ValueError("Invalid direction: "+str(direction))
 
-    # Assign new nC1,nT,nC2 to appropriate environment tensors
     for coord,site in state.sites.items():
         new_coord = state.vertexToSite((coord[0]-direction[0], coord[1]-direction[1]))
         # print("coord: "+str(coord)+" + "+str(direction)+" -> "+str(new_coord))
