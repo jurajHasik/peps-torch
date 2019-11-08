@@ -9,15 +9,17 @@ from math import sqrt
 import itertools
 
 class HB():
-    def __init__(self, global_args=cfg.global_args):
+    def __init__(self, spin_s=2, j1=1.0, k1=0.0, global_args=cfg.global_args):
         self.dtype=global_args.dtype
         self.device=global_args.device
-        self.phys_dim=2
+        self.phys_dim=spin_s
+        self.j1=j1
+        self.k1=k1
         
-        self.h = self.get_h()
+        self.SS, self.SS2, self.h2 = self.get_h()
         self.obs_ops = self.get_obs_ops()
 
-    # build spin-1/2 coupled-ladders Hamiltonian
+    # build spin-S coupled-ladders Hamiltonian
     # H = \sum_{<i,j>} h_i,j
     #  
     # y\x
@@ -31,11 +33,21 @@ class HB():
     # 
     # where h_ij = S_i.S_j, indices of h correspond to s_i,s_j;s_i',s_j'
     def get_h(self):
+        pd = self.phys_dim
         s2 = su2.SU2(self.phys_dim, dtype=self.dtype, device=self.device)
         expr_kron = 'ij,ab->iajb'
         SS = torch.einsum(expr_kron,s2.SZ(),s2.SZ()) + 0.5*(torch.einsum(expr_kron,s2.SP(),s2.SM()) \
             + torch.einsum(expr_kron,s2.SM(),s2.SP()))
-        return SS
+        SS = SS.view(pd**2,pd**2)
+        SS2 = SS@SS
+        SS = SS.view(pd,pd,pd,pd)
+        SS2 = SS2.view(pd,pd,pd,pd)
+        
+        # chiral term \vec{S}_i . (\vec{S}_j \times \vec{S}_k) 
+        #          = (S_i)_a (\vec{S}_j \times \vec{S}_k)_a = (S_i)_a \epsilon_{abc} (S_j)_b (S_k)_c
+
+        return SS, SS2, self.j1*SS + self.k1*SS2
+
 
     def get_obs_ops(self):
         obs_ops = dict()
