@@ -74,10 +74,12 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
         raise ValueError("Invalid Projector method: "+str(ctm_args.projector_method))
 
     # EXPERIMENTAL
-    # 0) extract tuple of tensors
-    tensors= tuple(state.get_tensors() + env.get_tensors())
-    
+    # 0) extract raw tensors as tuple
+    tensors= tuple(state.sites[key] for key in state.sites.keys()) \
+        + tuple(env.C[key] for key in env.C.keys()) + tuple(env.T[key] for key in env.T.keys())
+
     def ctm_MOVE_c(*tensors):
+        # 1) wrap raw tensors back into IPEPS and ENV classes 
         sites_loc= dict(zip(state.sites.keys(),tensors[0:len(state.sites)]))
         state_loc= IPEPS(sites_loc, vertexToSite=state.vertexToSite)
         env_loc= ENV(env.chi)
@@ -115,8 +117,11 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
                 raise ValueError("Invalid direction: "+str(direction))
 
         #return nC1, nC2, nT
-        ret_list= [nC1[key] for key in nC1.keys()] + [nC2[key] for key in nC2.keys()] + [nT[key] for key in nT.keys()]
-        return tuple(ret_list)
+        ret_list= tuple([nC1[key] for key in nC1.keys()] + [nC2[key] for key in nC2.keys()] \
+            + [nT[key] for key in nT.keys()])
+        # ret_list= tuple(nC1[key] for key in nC1.keys()) + tuple(nC2[key] for key in nC2.keys()) \
+        #     + tuple(nT[key] for key in nT.keys())
+        return ret_list
 
     if ctm_args.fwd_checkpoint_move:
         new_tensors= checkpoint(ctm_MOVE_c,*tensors)

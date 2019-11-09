@@ -92,10 +92,6 @@ class ENV(torch.nn.Module):
             s+=f"T({cr[0]} {cr[1]}): {t.size()}\n"
         return s
 
-    def get_tensors(self):
-        return [self.C[key] for key in self.C.keys()] + [self.T[key] for key in self.T.keys()]
-
-
 def init_env(state, env, ctm_args=cfg.ctm_args):
     """
     :param state: wavefunction
