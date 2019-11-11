@@ -66,6 +66,7 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
 # performs CTM move in one of the directions 
 # [Up=(0,-1), Left=(-1,0), Down=(0,1), Right=(1,0)]
 def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.global_args, verbosity=0):
+    # select projector function
     if ctm_args.projector_method=='4X4':
         ctm_get_projectors=ctm_get_projectors_4x4
     elif ctm_args.projector_method=='4X2':
@@ -78,6 +79,7 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
     tensors= tuple(state.sites[key] for key in state.sites.keys()) \
         + tuple(env.C[key] for key in env.C.keys()) + tuple(env.T[key] for key in env.T.keys())
 
+    # function wrapping up the core of the CTM MOVE segment of CTM algorithm
     def ctm_MOVE_c(*tensors):
         # 1) wrap raw tensors back into IPEPS and ENV classes 
         sites_loc= dict(zip(state.sites.keys(),tensors[0:len(state.sites)]))
@@ -116,25 +118,25 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
             else:
                 raise ValueError("Invalid direction: "+str(direction))
 
-        #return nC1, nC2, nT
-        ret_list= tuple([nC1[key] for key in nC1.keys()] + [nC2[key] for key in nC2.keys()] \
-            + [nT[key] for key in nT.keys()])
-        # ret_list= tuple(nC1[key] for key in nC1.keys()) + tuple(nC2[key] for key in nC2.keys()) \
-        #     + tuple(nT[key] for key in nT.keys())
+        # 2) Return raw new tensors
+        # ret_list= tuple([nC1[key] for key in nC1.keys()] + [nC2[key] for key in nC2.keys()] \
+        #     + [nT[key] for key in nT.keys()])
+        ret_list= tuple(nC1[key] for key in nC1.keys()) + tuple(nC2[key] for key in nC2.keys()) \
+            + tuple(nT[key] for key in nT.keys())
         return ret_list
 
+    # Call the core function, allowing for checkpointing
     if ctm_args.fwd_checkpoint_move:
         new_tensors= checkpoint(ctm_MOVE_c,*tensors)
     else:
         new_tensors= ctm_MOVE_c(*tensors)
     
+    # 3) warp the returned raw tensor in dictionary
     tmp_coords= state.sites.keys()
     count_coord= len(tmp_coords)
     nC1 = dict(zip(tmp_coords, new_tensors[0:count_coord]))
     nC2 = dict(zip(tmp_coords, new_tensors[count_coord:2*count_coord]))
     nT = dict(zip(tmp_coords, new_tensors[2*count_coord:]))
-
-    # ctm_MOVE_c(*tensors)
 
     # Assign new nC1,nT,nC2 to appropriate environment tensors
     rel_CandT_vecs = dict()
