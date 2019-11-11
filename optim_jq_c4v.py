@@ -12,15 +12,27 @@ if __name__=='__main__':
     # parse command line args and build necessary configuration objects
     parser= cfg.get_args_parser()
     # additional model-dependent arguments
+    parser.add_argument("-c4v_type", default="TI", help="type of C4v ansatz. Supported types:"\
+        +"TI, BIPARTITE, PLAQUETTE")
     parser.add_argument("-j1", type=float, default=0.0, help="nearest-neighbour coupling")
     parser.add_argument("-q", type=float, default=1.0, help="plaquette interaction strength")
+    parser.add_argument("-q_inter", type=float, default=None, help="relevant for c4v_type=PLAQUETTE")
     args = parser.parse_args()
     cfg.configure(args)
     cfg.print_config()
     torch.set_num_threads(args.omp_cores)
 
-    model = jq.JQ_C4V(j1=args.j1, q=args.q)
-    
+    if args.c4v_type == "TI":
+        model= jq.JQ_C4V(j1=args.j1, q=args.q)
+    elif args.c4v_type == "BIPARTITE":
+        model= jq.JQ_C4V_BIPARTITE(j1=args.j1, q=args.q)
+    elif args.c4v_type == "PLAQUETTE":
+        q_inter= args.q if args.q_inter is None else args.q_inter
+        model= jq.JQ_C4V_PLAQUETTE(j1=args.j1, q=args.q, q_inter=q_inter)
+    else:
+        raise ValueError("Unsupported C4v ansatz: -c4v_type= "\
+            +str(args.ipeps_init_type)+" is not supported")
+
     # initialize an ipeps
     # 1) define lattice-tiling function, that maps arbitrary vertex of square lattice
     # coord into one of coordinates within unit-cell of iPEPS ansatz    
