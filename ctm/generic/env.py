@@ -3,14 +3,14 @@ import config as cfg
 from ipeps import IPEPS
 
 class ENV(torch.nn.Module):
-    def __init__(self, chi, ipeps, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+    def __init__(self, chi, state=None, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
         r"""
         :param chi: environment bond dimension :math:`\chi`
-        :param ipeps: wavefunction
+        :param state: wavefunction
         :param ctm_args: CTM algorithm configuration
         :param global_args: global configuration
         :type chi: int
-        :type ipeps: IPEPS
+        :type state: IPEPS
         :type ctm_args: CTMARGS
         :type global_args: GLOBALARGS
 
@@ -66,18 +66,23 @@ class ENV(torch.nn.Module):
         self.C = dict()
         self.T = dict()
 
-        for coord, site in ipeps.sites.items():
-            #for vec in [(0,-1), (-1,0), (0,1), (1,0)]:
-            #    self.T[(coord,vec)]="T"+str(ipeps.site(coord))
-            self.T[(coord,(0,-1))]=torch.empty((self.chi,site.size()[1]*site.size()[1],self.chi), dtype=self.dtype, device=self.device)
-            self.T[(coord,(-1,0))]=torch.empty((self.chi,self.chi,site.size()[2]*site.size()[2]), dtype=self.dtype, device=self.device)
-            self.T[(coord,(0,1))]=torch.empty((site.size()[3]*site.size()[3],self.chi,self.chi), dtype=self.dtype, device=self.device)
-            self.T[(coord,(1,0))]=torch.empty((self.chi,site.size()[4]*site.size()[4],self.chi), dtype=self.dtype, device=self.device)
+        if state is not None:
+            for coord, site in state.sites.items():
+                #for vec in [(0,-1), (-1,0), (0,1), (1,0)]:
+                #    self.T[(coord,vec)]="T"+str(ipeps.site(coord))
+                self.T[(coord,(0,-1))]=torch.empty((self.chi,site.size()[1]*site.size()[1],self.chi), 
+                    dtype=self.dtype, device=self.device)
+                self.T[(coord,(-1,0))]=torch.empty((self.chi,self.chi,site.size()[2]*site.size()[2]), 
+                    dtype=self.dtype, device=self.device)
+                self.T[(coord,(0,1))]=torch.empty((site.size()[3]*site.size()[3],self.chi,self.chi), 
+                    dtype=self.dtype, device=self.device)
+                self.T[(coord,(1,0))]=torch.empty((self.chi,site.size()[4]*site.size()[4],self.chi), 
+                    dtype=self.dtype, device=self.device)
 
-            #for vec in [(-1,-1), (-1,1), (1,-1), (1,1)]:
-            #     self.C[(coord,vec)]="C"+str(ipeps.site(coord))
-            for vec in [(-1,-1), (-1,1), (1,-1), (1,1)]:
-                self.C[(coord,vec)]=torch.empty((self.chi,self.chi), dtype=self.dtype, device=self.device)
+                #for vec in [(-1,-1), (-1,1), (1,-1), (1,1)]:
+                #     self.C[(coord,vec)]="C"+str(ipeps.site(coord))
+                for vec in [(-1,-1), (-1,1), (1,-1), (1,1)]:
+                    self.C[(coord,vec)]=torch.empty((self.chi,self.chi), dtype=self.dtype, device=self.device)
 
     def __str__(self):
         s=f"ENV chi={self.chi}\n"
