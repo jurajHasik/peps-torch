@@ -12,15 +12,15 @@ if __name__=='__main__':
     parser= cfg.get_args_parser()
     # additional model-dependent arguments
     parser.add_argument("-spinS", type=int, default=2, help="su(2) spin irrep dimension")
-    parser.add_argument("-p1", type=float, default=1., help="nearest-neighbour bilinear coupling")
-    parser.add_argument("-p2", type=float, default=0., help="nearest-neighbour biquadratic coupling")
+    parser.add_argument("-j1", type=float, default=1., help="nearest-neighbour bilinear coupling")
+    parser.add_argument("-k1", type=float, default=0., help="nearest-neighbour biquadratic coupling")
     parser.add_argument("-tiling", default="BIPARTITE", help="tiling of the lattice")
     args = parser.parse_args()
     cfg.configure(args)
     cfg.print_config()
     torch.set_num_threads(args.omp_cores)
 
-    model = j1j2.J1J2(j1=args.j1, j2=args.j2)
+    model = hb.HB(spin_s=args.spinS, j1=args.j1, k1=args.k1)
     
     # initialize an ipeps
     # 1) define lattice-tiling function, that maps arbitrary vertex of square lattice
@@ -101,11 +101,11 @@ if __name__=='__main__':
     
     # 2) select the "energy" function 
     if args.tiling == "BIPARTITE" or args.tiling == "2SITE":
-        energy_f=model.energy_2x2_2site
+        energy_f=model.energy_2x1_1x2
     elif args.tiling == "4SITE":
-        energy_f=model.energy_2x2_4site
+        energy_f=model.energy_2x1_1x2
     elif args.tiling == "8SITE":
-        energy_f=model.energy_2x2_8site
+        energy_f=model.energy_2x1_1x2
     else:
         raise ValueError("Invalid tiling: "+str(args.tiling)+" Supported options: "\
             +"BIPARTITE, 2SITE, 4SITE, 8SITE")

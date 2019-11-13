@@ -55,6 +55,24 @@ class SU2():
         """
         return get_op("sm",self.J,dtype=self.dtype,device=self.device)
 
+    # TODO: implement xyz for Sx and Sy terms
+    def SS(self, xyz=(1.,1.,1.)):
+        r"""
+        :param xyz: coefficients of anisotropy of spin-spin interaction
+                    xyz[0]*(S^z S^z) + xyz[1]*(S^x S^x) + xyz[2]*(S^y S^y)
+        :type xyz: tuple(float)
+        :return: spin-spin interaction as rank-4 for tensor 
+        :rtype: torch.tensor
+        """
+        pd = self.J
+        expr_kron = 'ij,ab->iajb'
+        # spin-spin interaction \vec{S}_1.\vec{S}_2 between spins on sites 1 and 2
+        # First as rank-4 tensor
+        SS = xyz[0]*torch.einsum(expr_kron,self.SZ(),self.SZ()) \
+            + 0.5*(torch.einsum(expr_kron,self.SP(),self.SM()) \
+            + torch.einsum(expr_kron,self.SM(),self.SP()))
+        return SS
+
 def get_op(op, m, dtype=torch.float64, device='cpu', dbg = False):
   
     if op == "I":
