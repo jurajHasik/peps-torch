@@ -5,7 +5,7 @@ from ipeps import *
 from ctm.generic.env import *
 from ctm.generic import ctmrg
 from models import hb
-from ad_optim import optimize_state
+from optim.ad_optim import optimize_state
 
 if __name__=='__main__':
     # parse command line args and build necessary configuration objects

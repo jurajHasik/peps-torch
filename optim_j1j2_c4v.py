@@ -6,7 +6,7 @@ from c4v import *
 from ctm.one_site_c4v.env_c4v import *
 from ctm.one_site_c4v import ctmrg_c4v
 from models import j1j2
-from ad_optim import optimize_state
+from optim.ad_optim import optimize_state
 
 if __name__=='__main__':
     # parse command line args and build necessary configuration objects
