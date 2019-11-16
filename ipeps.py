@@ -248,6 +248,37 @@ class IPEPS_SU2SYM(IPEPS):
         super().__init__(sites, vertexToSite=vertexToSite, peps_args=peps_args,\
             global_args=global_args)
 
+    def __str__(self):
+        print(f"lX x lY: {self.lX} x {self.lY}")
+        for nid,coord,site in [(t[0], *t[1]) for t in enumerate(self.coeffs.items())]:
+            print(f"A{nid} {coord}: {site.size()}")
+        
+        # show tiling of a square lattice
+        coord_list = list(self.coeffs.keys())
+        mx, my = 3*self.lX, 3*self.lY
+        label_spacing = 1+int(math.log10(len(self.coeffs.keys())))
+        for y in range(-my,my):
+            if y == -my:
+                print("y\\x ", end="")
+                for x in range(-mx,mx):
+                    print(str(x)+label_spacing*" "+" ", end="")
+                print("")
+            print(f"{y:+} ", end="")
+            for x in range(-mx,mx):
+                print(f"A{coord_list.index(self.vertexToSite((x,y)))} ", end="")
+            print("")
+        
+        # print coefficients
+        for nid,coord,c in [(t[0], *t[1]) for t in enumerate(self.coeffs.items())]:
+            tdims = c.size()
+            tlength = tdims[0]
+            
+            print(f"x: {coord[0]}, y: {coord[1]}")
+            els=[f"{c[i]}" for i in range(tlength)]
+            print(els)
+
+        return ""
+
     def build_onsite_tensors(self):
         ts= torch.stack([t for m,t in self.su2_tensors])
         sites=dict()
@@ -299,37 +330,47 @@ def read_ipeps(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.pep
         if "aux_ind_seq" in raw_state.keys():
             asq = [x+1 for x in raw_state["aux_ind_seq"]]
 
-        # Loop over non-equivalent tensor,site pairs in the unit cell
+        # read the list of considered SU(2)-symmetric tensors
+        su2_tensors=[]
+        for su2t in raw_state["su2_tensors"]:
+            meta=su2t
+            dims=[su2t["physDim"]]+[su2t["auxDim"]]*4
+            
+            t= torch.zeros(tuple(dims), dtype=global_args.dtype, device=global_args.device)
+            for elem in su2t["entries"]:
+                tokens= elem.split(' ')
+                inds=tuple([int(i) for i in tokens[0:5]])
+                t[inds]= float(tokens[5])
+
+            del meta["entries"]
+            su2_tensors.append((meta,t))
+
+        # Loop over non-equivalent tensor,coeffs pairs in the unit cell
+        coeffs=dict()
         for ts in raw_state["map"]:
             coord = (ts["x"],ts["y"])
 
-            # find the corresponding tensor (and its elements) 
+            # find the corresponding tensor of coeffs (and its elements) 
             # identified by "siteId" in the "sites" list
             t = None
-            for s in raw_state["sites"]:
+            for s in raw_state["coeffs"]:
                 if s["siteId"] == ts["siteId"]:
                     t = s
             if t == None:
                 raise Exception("Tensor with siteId: "+ts["sideId"]+" NOT FOUND in \"sites\"") 
 
-            # 0) find the dimensions of auxiliary indices
-            # branch 1: key "auxInds" exists
-
-            # branch 2: key "auxInds" does not exist, all auxiliary 
-            # indices have the same dimension
-            X = torch.zeros((t["physDim"], t["auxDim"], t["auxDim"], \
-                t["auxDim"], t["auxDim"]), dtype=global_args.dtype, device=global_args.device)
+            X = torch.zeros(t["numEntries"], dtype=global_args.dtype, device=global_args.device)
 
             # 1) fill the tensor with elements from the list "entries"
-            # which list the non-zero tensor elements in the following
-            # notation. Dimensions are indexed starting from 0
+            # which list the coefficients in the following
+            # notation: Dimensions are indexed starting from 0
             # 
-            # index (integer) of physDim, left, up, right, down, (float) Re, Im  
+            # index (integer) of coeff, (float) Re, Im  
             for entry in t["entries"]:
-                l = entry.split()
-                X[int(l[0]),int(l[asq[0]]),int(l[asq[1]]),int(l[asq[2]]),int(l[asq[3]])]=float(l[5])
+                tokens = entry.split()
+                X[int(tokens[0])]=float(tokens[1])
 
-            sites[coord]=X
+            coeffs[coord]=X
 
         # Unless given, construct a function mapping from
         # any site of square-lattice back to unit-cell
@@ -351,9 +392,13 @@ def read_ipeps(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.pep
                 y = coord[1]
                 return ( (x + abs(x)*lX)%lX, (y + abs(y)*lY)%lY )
 
-            state = IPEPS(sites, vertexToSite, lX=lX, lY=lY, peps_args=peps_args, global_args=global_args)
+            state = IPEPS_SU2SYM(su2_tensors=su2_tensors, coeffs=coeffs, \
+                vertexToSite=vertexToSite, \
+                lX=lX, lY=lY, peps_args=peps_args, global_args=global_args)
         else:
-            state = IPEPS(sites, vertexToSite, peps_args=peps_args, global_args=global_args)
+            state = IPEPS_SU2SYM(su2_tensors=su2_tensors, coeffs=coeffs, \
+                vertexToSite=vertexToSite, \
+                peps_args=peps_args, global_args=global_args)
     return state
 
 def extend_bond_dim(state, new_d):
