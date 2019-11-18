@@ -268,6 +268,10 @@ class IPEPS_SU2SYM(IPEPS):
                 print(f"A{coord_list.index(self.vertexToSite((x,y)))} ", end="")
             print("")
         
+        # print meta-information of considered su2-sym tensors
+        for i,su2t in enumerate(self.su2_tensors):
+            print(f"{i} {su2t[0]}")
+
         # print coefficients
         for nid,coord,c in [(t[0], *t[1]) for t in enumerate(self.coeffs.items())]:
             tdims = c.size()
