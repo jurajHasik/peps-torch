@@ -473,7 +473,7 @@ class J1J2_C4V_BIPARTITE():
             e = \langle \mathcal{h_p} \rangle = Tr(\rho_{2x2} \mathcal{h_p})
         
         """
-        rdm2x2= rdm_c4v.rdm2x2(state,env_c4v)
+        rdm2x2= rdm_c4v.rdm2x2(state,env_c4v,cfg.ctm_args.verbosity_rdm)
         energy_per_site= torch.einsum('ijklabcd,ijklabcd',rdm2x2,self.hp)
         return energy_per_site
 
@@ -520,12 +520,12 @@ class J1J2_C4V_BIPARTITE():
             symm_sites[(0,0)]= symm_sites[(0,0)]/torch.max(torch.abs(symm_sites[(0,0)]))
             symm_state= ipeps.IPEPS(symm_sites)
 
-            rdm1x1= rdm_c4v.rdm1x1(symm_state,env_c4v)
+            rdm1x1= rdm_c4v.rdm1x1(symm_state,env_c4v,cfg.ctm_args.verbosity_rdm)
             for label,op in self.obs_ops.items():
                 obs[f"{label}"]= torch.trace(rdm1x1@op)
             obs[f"m"]= sqrt(abs(obs[f"sz"]**2 + obs[f"sp"]*obs[f"sm"]))
             
-            rdm2x1 = rdm_c4v.rdm2x1(symm_state,env_c4v)
+            rdm2x1 = rdm_c4v.rdm2x1(symm_state,env_c4v,cfg.ctm_args.verbosity_rdm)
             obs[f"SS2x1"]= torch.einsum('ijab,ijab',rdm2x1,self.h2_rot)
             
         # prepare list with labels and values

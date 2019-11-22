@@ -116,13 +116,13 @@ class IPEPS():
 
     def __str__(self):
         print(f"lX x lY: {self.lX} x {self.lY}")
-        for nid,coord,site in [(t[0], *t[1]) for t in enumerate(self.coeffs.items())]:
+        for nid,coord,site in [(t[0], *t[1]) for t in enumerate(self.sites.items())]:
             print(f"A{nid} {coord}: {site.size()}")
         
         # show tiling of a square lattice
-        coord_list = list(self.coeffs.keys())
+        coord_list = list(self.sites.keys())
         mx, my = 3*self.lX, 3*self.lY
-        label_spacing = 1+int(math.log10(len(self.coeffs.keys())))
+        label_spacing = 1+int(math.log10(len(self.sites.keys())))
         for y in range(-my,my):
             if y == -my:
                 print("y\\x ", end="")
@@ -291,6 +291,107 @@ class IPEPS_SU2SYM(IPEPS):
         return sites
 
 def read_ipeps(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.peps_args,\
+    global_args=cfg.global_args):
+    r"""
+    :param jsonfile: input file describing iPEPS in json format
+    :param vertexToSite: function mapping arbitrary vertex of a square lattice 
+                         into a vertex within elementary unit cell
+    :param aux_seq: array specifying order of auxiliary indices of on-site tensors stored
+                    in `jsonfile`
+    :param peps_args: ipeps configuration
+    :param global_args: global configuration
+    :type jsonfile: str or Path object
+    :type vertexToSite: function(tuple(int,int))->tuple(int,int)
+    :type aux_seq: list[int]
+    :type peps_args: PEPSARGS
+    :type global_args: GLOBALARGS
+    :return: wavefunction
+    :rtype: IPEPS
+    
+
+    A simple PBC ``vertexToSite`` function is used by default
+    
+    Parameter ``aux_seq`` defines the expected order of auxiliary indices
+    in input file relative to the convention fixed in tn-torch::
+    
+         0
+        1A3 <=> [up, left, down, right]: aux_seq=[0,1,2,3]
+         2
+        
+        for alternative order, eg.
+        
+         1
+        0A2 <=> [left, up, right, down]: aux_seq=[1,0,3,2] 
+         3
+    """
+    asq = [x+1 for x in aux_seq]
+    sites = dict()
+    
+    with open(jsonfile) as j:
+        raw_state = json.load(j)
+
+        # check for presence of "aux_seq" field in jsonfile
+        if "aux_ind_seq" in raw_state.keys():
+            asq = [x+1 for x in raw_state["aux_ind_seq"]]
+
+        # Loop over non-equivalent tensor,site pairs in the unit cell
+        for ts in raw_state["map"]:
+            coord = (ts["x"],ts["y"])
+
+            # find the corresponding tensor (and its elements) 
+            # identified by "siteId" in the "sites" list
+            t = None
+            for s in raw_state["sites"]:
+                if s["siteId"] == ts["siteId"]:
+                    t = s
+            if t == None:
+                raise Exception("Tensor with siteId: "+ts["sideId"]+" NOT FOUND in \"sites\"") 
+
+            # 0) find the dimensions of auxiliary indices
+            # branch 1: key "auxInds" exists
+
+            # branch 2: key "auxInds" does not exist, all auxiliary 
+            # indices have the same dimension
+            X = torch.zeros((t["physDim"], t["auxDim"], t["auxDim"], \
+                t["auxDim"], t["auxDim"]), dtype=global_args.dtype, device=global_args.device)
+
+            # 1) fill the tensor with elements from the list "entries"
+            # which list the non-zero tensor elements in the following
+            # notation. Dimensions are indexed starting from 0
+            # 
+            # index (integer) of physDim, left, up, right, down, (float) Re, Im  
+            for entry in t["entries"]:
+                l = entry.split()
+                X[int(l[0]),int(l[asq[0]]),int(l[asq[1]]),int(l[asq[2]]),int(l[asq[3]])]=float(l[5])
+
+            sites[coord]=X
+
+        # Unless given, construct a function mapping from
+        # any site of square-lattice back to unit-cell
+        if vertexToSite == None:
+            # check for legacy keys
+            lX = 0
+            lY = 0
+            if "sizeM" in raw_state:
+                lX = raw_state["sizeM"]
+            else:
+                lX = raw_state["lX"]
+            if "sizeN" in raw_state:
+                lY = raw_state["sizeN"]
+            else:
+                lY = raw_state["lY"]
+
+            def vertexToSite(coord):
+                x = coord[0]
+                y = coord[1]
+                return ( (x + abs(x)*lX)%lX, (y + abs(y)*lY)%lY )
+
+            state = IPEPS(sites, vertexToSite, lX=lX, lY=lY, peps_args=peps_args, global_args=global_args)
+        else:
+            state = IPEPS(sites, vertexToSite, peps_args=peps_args, global_args=global_args)
+    return state
+
+def read_ipeps_su2(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.peps_args,\
     global_args=cfg.global_args):
     r"""
     :param jsonfile: input file describing iPEPS in json format

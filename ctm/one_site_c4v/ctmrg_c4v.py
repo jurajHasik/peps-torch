@@ -65,13 +65,15 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
 def ctm_MOVE(state, env, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
     if cfg.ctm_args.projector_svd_method == 'GESDD':
         truncated_svd= truncated_svd_gesdd
+    elif cfg.ctm_args.projector_svd_method == 'GESDD_SU2':
+        truncated_svd= truncated_svd_gesdd_su2
     elif cfg.ctm_args.projector_svd_method == 'SYM':
         truncated_svd= truncated_svd_symeig
     elif cfg.ctm_args.projector_svd_method == 'RSVD':
         truncated_svd= truncated_svd_rsvd
     elif cfg.ctm_args.projector_svd_method == 'ARPACK':
         truncated_svd= truncated_svd_arnoldi
-
+    
     # 0) extract raw tensors as tuple
     tensors= tuple([next(iter(state.sites.values())),env.C[env.keyC],env.T[env.keyT]])
     
