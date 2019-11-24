@@ -136,7 +136,26 @@ def truncated_svd_symeig(M, chi, abs_tol=None, rel_tol=None):
     """
     U, S, V = SVDSYMEIG.apply(M)
 
+    # regularize by discarding small values
+    S[S < abs_tol]= 0.
+    gaps=S
+    # compute gaps and normalize by larger sing. value. Introduce cutoff
+    # for handling vanishing values set to exact zero
+    gaps=(gaps[0:len(S)-1]-S[1:len(S)])/(gaps[0:len(S)-1]+1.0e-16)
+    gaps[gaps > 1.0]= 0.
+    
+    # estimate the chi_new 
+    chi_new= chi
+    if gaps[chi-1] < eps_multiplet:
+        # the chi is within the multiplet - find the largest chi_new < chi
+        # such that the complete multiplets are preserved
+        for i in range(chi-1,-1,-1):
+            if gaps[i] > eps_multiplet:
+                chi_new= i
+                break
+
     St = S[:chi]
+    St[chi_new+1:]=0.
     # if abs_tol is not None: St = St[St > abs_tol]
     # if abs_tol is not None: St = torch.where(St > abs_tol, St, Stzeros)
     # if rel_tol is not None: St = St[St/St[0] > rel_tol]
@@ -146,7 +165,9 @@ def truncated_svd_symeig(M, chi, abs_tol=None, rel_tol=None):
     # print(St)
 
     Ut = U[:, :St.shape[0]]
+    Ut[:, chi_new+1:]=0.
     Vt = V[:, :St.shape[0]]
+    Vt[:, chi_new+1:]=0.
     # print("Ut "+str(Ut.shape))
     # print("Vt "+str(Vt.shape))
 
