@@ -13,6 +13,8 @@ if __name__=='__main__':
     # additional model-dependent arguments
     parser.add_argument("-j1", type=float, default=0.0, help="nearest-neighbour coupling")
     parser.add_argument("-q", type=float, default=1.0, help="plaquette interaction strength")
+    # additional observables-related arguments
+    parser.add_argument("-corrf_r", type=int, default=1, help="maximal correlation function distance")
     args = parser.parse_args()
     cfg.configure(args)
     cfg.print_config()
@@ -75,3 +77,53 @@ if __name__=='__main__':
     print(", ".join([f"{-1}",f"{e_curr0}"]+[f"{v}" for v in obs_values0]))
 
     ctm_env_init, history, t_ctm = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
+
+    # ---- S.S(r) -----
+    corrSS= model.eval_corrf_SS((0,0), (0,1), state, ctm_env_init, args.corrf_r)
+    print("\n\nSS[(0,0),(1,0)] r "+" ".join([label for label in corrSS.keys()]))
+    for i in range(args.corrf_r):
+        print(f"{i} "+" ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
+
+    corrSS= model.eval_corrf_SS((0,0), (1,0), state, ctm_env_init, args.corrf_r)
+    print("\n\nSS[(0,0),(0,-1)] r "+" ".join([label for label in corrSS.keys()]))
+    for i in range(args.corrf_r):
+        print(f"{i} "+" ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
+
+    corrSS= model.eval_corrf_SS((0,0), (-1,0), state, ctm_env_init, args.corrf_r)
+    print("\n\nSS[(0,0),(1,0)] r "+" ".join([label for label in corrSS.keys()]))
+    for i in range(args.corrf_r):
+        print(f"{i} "+" ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
+
+    corrSS= model.eval_corrf_SS((0,0), (0,-1), state, ctm_env_init, args.corrf_r)
+    print("\n\nSS[(0,0),(0,-1)] r "+" ".join([label for label in corrSS.keys()]))
+    for i in range(args.corrf_r):
+        print(f"{i} "+" ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
+
+    # ---(S.S)(S.S)(r) -----
+    corrDD= model.eval_corrf_DD_H((0,0), (0,1), state, ctm_env_init, args.corrf_r)
+    print("\n\nDD[(0,0),(0,1)] r "+" ".join([label for label in corrDD.keys()]))
+    for i in range(args.corrf_r):
+        print(f"{i} "+" ".join([f"{corrDD[label][i]}" for label in corrDD.keys()]))
+
+    corrDD= model.eval_corrf_DD_H((0,0), (1,0), state, ctm_env_init, args.corrf_r)
+    print("\n\nDD[(0,0),(1,0)] r "+" ".join([label for label in corrDD.keys()]))
+    for i in range(args.corrf_r):
+        print(f"{i} "+" ".join([f"{corrDD[label][i]}" for label in corrDD.keys()]))
+
+    corrDD= model.eval_corrf_DD_H((0,0), (-1,0), state, ctm_env_init, args.corrf_r)
+    print("\n\nDD[(0,0),(-1,0)] r "+" ".join([label for label in corrDD.keys()]))
+    for i in range(args.corrf_r):
+        print(f"{i} "+" ".join([f"{corrDD[label][i]}" for label in corrDD.keys()]))
+
+    corrDD= model.eval_corrf_DD_H((0,0), (0,-1), state, ctm_env_init, args.corrf_r)
+    print("\n\nDD[(0,0),(0,-1)] r "+" ".join([label for label in corrDD.keys()]))
+    for i in range(args.corrf_r):
+        print(f"{i} "+" ".join([f"{corrDD[label][i]}" for label in corrDD.keys()]))
+
+    # environment diagnostics
+    print("\n")
+    for c_loc,c_ten in ctm_env_init.C.items(): 
+        u,s,v= torch.svd(c_ten, compute_uv=False)
+        print(f"spectrum C[{c_loc}]")
+        for i in range(args.chi):
+            print(f"{i} {s[i]}")

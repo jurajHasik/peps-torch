@@ -5,8 +5,10 @@ import ipeps
 from c4v import *
 from ctm.generic.env import ENV
 from ctm.generic import rdm
+from ctm.generic import corrf
 from ctm.one_site_c4v.env_c4v import ENV_C4V
 from ctm.one_site_c4v import rdm_c4v 
+from ctm.one_site_c4v import corrf_c4v
 from math import sqrt
 import itertools
 
@@ -233,6 +235,41 @@ class JQ():
         obs_labels += [f"SS1x2{coord}" for coord in state.sites.keys()]
         obs_values=[obs[label] for label in obs_labels]
         return obs_values, obs_labels
+
+    def eval_corrf_SS(self,coord,direction,state,env,dist):
+   
+        # function allowing for additional site-dependent conjugation of op
+        def conjugate_op(op):
+            #rot_op= su2.get_rot_op(self.phys_dim, dtype=self.dtype, device=self.device)
+            rot_op= torch.eye(self.phys_dim, dtype=self.dtype, device=self.device)
+            op_0= op
+            op_rot= torch.einsum('ki,kl,lj->ij',rot_op,op_0,rot_op)
+            def _gen_op(r):
+                #return op_rot if r%2==0 else op_0
+                return op_0
+            return _gen_op
+
+        op_sx= 0.5*(self.obs_ops["sp"] + self.obs_ops["sm"])
+        op_isy= -0.5*(self.obs_ops["sp"] - self.obs_ops["sm"]) 
+
+        Sz0szR= corrf.corrf_1sO1sO(coord,direction,state,env, self.obs_ops["sz"], \
+            conjugate_op(self.obs_ops["sz"]), dist)
+        Sx0sxR= corrf.corrf_1sO1sO(coord,direction,state,env, op_sx, conjugate_op(op_sx), dist)
+        nSy0SyR= corrf.corrf_1sO1sO(coord,direction,state,env, op_isy, conjugate_op(op_isy), dist)
+
+        res= dict({"ss": Sz0szR+Sx0sxR-nSy0SyR, "szsz": Sz0szR, "sxsx": Sx0sxR, "sysy": -nSy0SyR})
+        return res  
+
+    def eval_corrf_DD_H(self,coord,direction,state,env,dist,verbosity=0):
+        # function generating properly S.S operator
+        def _gen_op(r):
+            return self.h2
+        
+        D0DR= corrf.corrf_2sO2sO_H(coord, direction, state, env, self.h2, _gen_op,\
+            dist, verbosity=verbosity)
+
+        res= dict({"dd": D0DR})
+        return res
 
 class JQ_C4V():
     def __init__(self, j1=0.0, q=1.0, global_args=cfg.global_args):
@@ -578,6 +615,43 @@ class JQ_C4V_BIPARTITE():
         obs_labels=[f"m"]+[f"{lc}" for lc in self.obs_ops.keys()]+[f"SS2x1"]
         obs_values=[obs[label] for label in obs_labels]
         return obs_values, obs_labels
+
+    def eval_corrf_SS(self,state,env_c4v,dist):
+   
+        # function generating properly rotated operators on every bi-partite site
+        def get_bilat_op(op):
+            rot_op= su2.get_rot_op(self.phys_dim, dtype=self.dtype, device=self.device)
+            op_0= op
+            op_rot= torch.einsum('ki,kl,lj->ij',rot_op,op_0,rot_op)
+            def _gen_op(r):
+                return op_rot if r%2==0 else op_0
+            return _gen_op
+
+        op_sx= 0.5*(self.obs_ops["sp"] + self.obs_ops["sm"])
+        op_isy= -0.5*(self.obs_ops["sp"] - self.obs_ops["sm"]) 
+
+        Sz0szR= corrf_c4v.corrf_1sO1sO(state, env_c4v, self.obs_ops["sz"], \
+            get_bilat_op(self.obs_ops["sz"]), dist)
+        Sx0sxR= corrf_c4v.corrf_1sO1sO(state, env_c4v, op_sx, get_bilat_op(op_sx), dist)
+        nSy0SyR= corrf_c4v.corrf_1sO1sO(state, env_c4v, op_isy, get_bilat_op(op_isy), dist)
+
+        res= dict({"ss": Sz0szR+Sx0sxR-nSy0SyR, "szsz": Sz0szR, "sxsx": Sx0sxR, "sysy": -nSy0SyR})
+        return res
+
+    def eval_corrf_DD_H(self,state,env_c4v,dist,verbosity=0):
+        # function generating properly rotated S.S operator on every bi-partite site
+        rot_op= su2.get_rot_op(self.phys_dim, dtype=self.dtype, device=self.device)
+        # (S.S)_s1s2,s1's2' with rotation applied on "first" spin s1,s1' 
+        SS_rot= torch.einsum('ki,kjcb,ca->ijab',rot_op,self.h2,rot_op)
+        # (S.S)_s1s2,s1's2' with rotation applied on "second" spin s2,s2'
+        op_rot= SS_rot.permute(1,0,3,2).contiguous()
+        def _gen_op(r):
+            return SS_rot if r%2==0 else op_rot
+        
+        D0DR= corrf_c4v.corrf_2sO2sO_H(state, env_c4v, SS_rot, _gen_op, dist, verbosity=verbosity)
+
+        res= dict({"dd": D0DR})
+        return res
 
 class JQ_C4V_PLAQUETTE():
     def __init__(self, j1=0.0, q=1.0, q_inter=1.0, global_args=cfg.global_args):
