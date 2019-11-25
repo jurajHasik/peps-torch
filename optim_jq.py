@@ -24,12 +24,19 @@ if __name__=='__main__':
     # 1) define lattice-tiling function, that maps arbitrary vertex of square lattice
     # coord into one of coordinates within unit-cell of iPEPS ansatz    
 
-    if args.instate!=None:
+    if args.instate is not None:
         state = read_ipeps(args.instate)
         if args.bond_dim > max(state.get_aux_bond_dims()):
             # extend the auxiliary dimensions
             state = extend_bond_dim(state, args.bond_dim)
         add_random_noise(state, args.instate_noise)
+    elif args.opt_resume is not None:
+        unit_cell= [(0,0), (1,0), (0,1), (1,1)]
+        checkpoint= torch.load(args.opt_resume)
+        init_parameters = checkpoint["parameters"]
+        assert len(init_parameters)==len(unit_cell), f"Incompatible number of on-site tensors"
+        sites= dict(zip(unit_cell, init_parameters))
+        state = IPEPS(sites, lX=2, lY=2)
     elif args.ipeps_init_type=='RANDOM':
         bond_dim = args.bond_dim
         

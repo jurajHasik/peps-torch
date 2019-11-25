@@ -177,3 +177,7 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=cfg
         # After execution closure ``current_env`` **IS NOT** corresponding to ``state``, since
         # the ``state`` on-site tensors have been modified by gradient. 
         optimizer.step(closure)
+
+    # optimization is over, store the last checkpoint
+    store_checkpoint(checkpoint_file, parameters, optimizer, \
+        epoch0+local_args.opt_max_iter, t_data["loss"][-1])
