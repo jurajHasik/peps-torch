@@ -110,7 +110,8 @@ def truncated_svd_gesdd_su2(M, chi, abs_tol=1.0e-14, rel_tol=None, eps_multiplet
 
     return Ut, St, Vt
 
-def truncated_svd_symeig(M, chi, abs_tol=1.0e-14, rel_tol=None, eps_multiplet=1.0e-10):
+def truncated_svd_symeig(M, chi, abs_tol=1.0e-14, rel_tol=None, eps_multiplet=1.0e-10, \
+    env=None, verbosity=0):
     """
     Return a truncated SVD of a matrix M     
     M ~ (Ut)(St)(Vt)^{T}
@@ -157,6 +158,13 @@ def truncated_svd_symeig(M, chi, abs_tol=1.0e-14, rel_tol=None, eps_multiplet=1.
 
     St = S[:chi].clone()
     St[chi_new+1:]=0.
+    if verbosity>0:
+        relevant_eigs= [f"{x}" for x in S[chi_new-2:chi_new+2]]
+        line = f"chi_cut: {chi_new} len(St): {len(St)} inds: {chi_new-2}:{chi_new+1} S: {relevant_eigs}"
+        env.log(f"{line}\n")
+        relevant_eigs= [f"{x}" for x in St[chi_new-2:]]
+        line = f"chi_cut: {chi_new} len(St): {len(St)} inds: {chi_new-2}:{chi-1} St: {relevant_eigs}"
+        env.log(f"{line}\n")
     # if abs_tol is not None: St = St[St > abs_tol]
     # if abs_tol is not None: St = torch.where(St > abs_tol, St, Stzeros)
     # if rel_tol is not None: St = St[St/St[0] > rel_tol]
