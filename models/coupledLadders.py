@@ -4,6 +4,7 @@ import config as cfg
 import ipeps
 from ctm.generic.env import ENV
 from ctm.generic import rdm
+from ctm.generic import corrf
 from math import sqrt
 import itertools
 
@@ -188,3 +189,38 @@ class COUPLEDLADDERS():
         obs_labels += [f"SS1x2{coord}" for coord in state.sites.keys()]
         obs_values=[obs[label] for label in obs_labels]
         return obs_values, obs_labels
+
+    def eval_corrf_SS(self,coord,direction,state,env,dist):
+   
+        # function allowing for additional site-dependent conjugation of op
+        def conjugate_op(op):
+            #rot_op= su2.get_rot_op(self.phys_dim, dtype=self.dtype, device=self.device)
+            rot_op= torch.eye(self.phys_dim, dtype=self.dtype, device=self.device)
+            op_0= op
+            op_rot= torch.einsum('ki,kl,lj->ij',rot_op,op_0,rot_op)
+            def _gen_op(r):
+                #return op_rot if r%2==0 else op_0
+                return op_0
+            return _gen_op
+
+        op_sx= 0.5*(self.obs_ops["sp"] + self.obs_ops["sm"])
+        op_isy= -0.5*(self.obs_ops["sp"] - self.obs_ops["sm"]) 
+
+        Sz0szR= corrf.corrf_1sO1sO(coord,direction,state,env, self.obs_ops["sz"], \
+            conjugate_op(self.obs_ops["sz"]), dist)
+        Sx0sxR= corrf.corrf_1sO1sO(coord,direction,state,env, op_sx, conjugate_op(op_sx), dist)
+        nSy0SyR= corrf.corrf_1sO1sO(coord,direction,state,env, op_isy, conjugate_op(op_isy), dist)
+
+        res= dict({"ss": Sz0szR+Sx0sxR-nSy0SyR, "szsz": Sz0szR, "sxsx": Sx0sxR, "sysy": -nSy0SyR})
+        return res  
+
+    def eval_corrf_DD_H(self,coord,direction,state,env,dist,verbosity=0):
+        # function generating properly S.S operator
+        def _gen_op(r):
+            return self.h2
+        
+        D0DR= corrf.corrf_2sO2sO_H(coord, direction, state, env, self.h2, _gen_op,\
+            dist, verbosity=verbosity)
+
+        res= dict({"dd": D0DR})
+        return res
