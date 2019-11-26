@@ -110,7 +110,7 @@ def truncated_svd_gesdd_su2(M, chi, abs_tol=1.0e-14, rel_tol=None, eps_multiplet
 
     return Ut, St, Vt
 
-def truncated_svd_symeig(M, chi, abs_tol=None, rel_tol=None):
+def truncated_svd_symeig(M, chi, abs_tol=1.0e-14, rel_tol=None, eps_multiplet=1.0e-10):
     """
     Return a truncated SVD of a matrix M     
     M ~ (Ut)(St)(Vt)^{T}
@@ -137,13 +137,14 @@ def truncated_svd_symeig(M, chi, abs_tol=None, rel_tol=None):
     U, S, V = SVDSYMEIG.apply(M)
 
     # regularize by discarding small values
-    S[S < abs_tol]= 0.
-    gaps=S
+    #S[S < abs_tol]= 0.
+    gaps=S.clone().detach()
+    gaps[gaps < abs_tol]= 0.
     # compute gaps and normalize by larger sing. value. Introduce cutoff
     # for handling vanishing values set to exact zero
     gaps=(gaps[0:len(S)-1]-S[1:len(S)])/(gaps[0:len(S)-1]+1.0e-16)
     gaps[gaps > 1.0]= 0.
-    
+
     # estimate the chi_new 
     chi_new= chi
     if gaps[chi-1] < eps_multiplet:
@@ -154,7 +155,7 @@ def truncated_svd_symeig(M, chi, abs_tol=None, rel_tol=None):
                 chi_new= i
                 break
 
-    St = S[:chi]
+    St = S[:chi].clone()
     St[chi_new+1:]=0.
     # if abs_tol is not None: St = St[St > abs_tol]
     # if abs_tol is not None: St = torch.where(St > abs_tol, St, Stzeros)
@@ -164,9 +165,9 @@ def truncated_svd_symeig(M, chi, abs_tol=None, rel_tol=None):
     # print("[truncated_svd] St "+str(St.shape[0]))
     # print(St)
 
-    Ut = U[:, :St.shape[0]]
+    Ut = U[:, :St.shape[0]].clone()
     Ut[:, chi_new+1:]=0.
-    Vt = V[:, :St.shape[0]]
+    Vt = V[:, :St.shape[0]].clone()
     Vt[:, chi_new+1:]=0.
     # print("Ut "+str(Ut.shape))
     # print("Vt "+str(Vt.shape))
