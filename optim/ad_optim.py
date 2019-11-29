@@ -89,6 +89,13 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=cfg
 
         # 1) evaluate loss and the gradient
         loss, ctm_env, history, t_ctm = loss_fn(state, current_env[0], opt_args=opt_args)
+        
+        # 2) log ctm metrics for debugging
+        if opt_args.opt_logging:
+            log_entry=dict({"id": len(t_data["loss"])-1, \
+                "t_ctm": t_ctm, "ctm_history_len": len(history), "ctm_history": history})
+            outputlogfile.write(json.dumps(log_entry)+'\n')
+
         t0= time.perf_counter()
         loss.backward()
         t1= time.perf_counter()
@@ -96,24 +103,22 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=cfg
         # We evaluate observables inside closure as it is the only place with environment
         # consistent with the state
         if prev_epoch[0]!=epoch:
-            # 2) compute observables if we moved into new epoch
+            # 3) compute observables if we moved into new epoch
             obs_values, obs_labels = model.eval_obs(state,ctm_env)
             print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
 
-            # 3) store current state if the loss improves
+            # 4) store current state if the loss improves
             t_data["loss"].append(loss.item())
             if t_data["min_loss"] > t_data["loss"][-1]:
                 t_data["min_loss"]= t_data["loss"][-1]
                 write_ipeps(state, outputstatefile, normalize=True)
 
-        # 4) log additional metrics for debugging
+        # 5) log additional metrics for debugging
         if opt_args.opt_logging:
-            log_entry=dict({"id": len(t_data["loss"])-1, \
-                "t_grad": t1-t0, "t_ctm": t_ctm, \
-                "ctm_history_len": len(history), "ctm_history": history})
+            log_entry=dict({"id": "t_grad": t1-t0})
             outputlogfile.write(json.dumps(log_entry)+'\n')
 
-        # 5) detach current environment from autograd graph
+        # 6) detach current environment from autograd graph
         lst_C = list(ctm_env.C.values())
         lst_T = list(ctm_env.T.values())
         current_env[0] = ctm_env
