@@ -287,7 +287,7 @@ class IPEPS_SU2SYM(IPEPS):
         ts= torch.stack([t for m,t in self.su2_tensors])
         sites=dict()
         for coord,c in self.coeffs.items():
-            sites[coord]= torch.einsum('i,ipuldr->puldr',c,ts) 
+            sites[coord]= torch.einsum('i,ipuldr->puldr',c,ts)
         return sites
 
 def read_ipeps(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.peps_args,\
