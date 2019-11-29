@@ -75,9 +75,12 @@ class SVDSYMEIG(torch.autograd.Function):
         NS = len(S)
         NINF= len(S[S==0])
 
+        threshold= 1.0e+8
         F = (S - S[:, None])
-        F = safe_inverse(F)
+        #F = safe_inverse(F)
+        F= 1/F
         F.diagonal().fill_(0)
+        F[abs(F)>threshold]=0.
 
         G = (S + S[:, None])
         G.diagonal().fill_(np.inf)
