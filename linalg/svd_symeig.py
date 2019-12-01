@@ -44,17 +44,17 @@ class SVDSYMEIG(torch.autograd.Function):
         sym_error= torch.norm(A-A.t())
         assert sym_error < 1.0e+8, f"enlarged corner(M) is not a symmetric matrix norm(M-M^T)>{sym_error}"
         
-        D, U = torch.symeig(A@A, eigenvectors=True)
+        D, U = torch.symeig(A, eigenvectors=True)
         # torch.symeig returns eigenpairs ordered in the ascending order with respect to eigenvalues 
-        D= flip_tensor(D, 0)
-        U= flip_tensor(U, 1)
+        #D= flip_tensor(D, 0)
+        #U= flip_tensor(U, 1)
+        D,p= torch.sort(torch.abs(D),descending=True)
+        U= U[:,p]
         # M = USV^T => (M^T)US^-1 = V => (M^T=M) => MUS^-1 = V
-        eps_cutoff=D[0] * 1.0e-8
-        Dinvqsrt= torch.rsqrt(D[D>eps_cutoff])
-        Dzeros= torch.zeros(D.size()[0]-Dinvqsrt.size()[0],dtype=D.dtype,device=D.device) 
-        Dinvqsrt= torch.cat((Dinvqsrt,Dzeros))
-        D= torch.sqrt(torch.clamp(D,0,np.inf))
-        V= A@U@torch.diag(Dinvqsrt)
+        eps_cutoff=D[0] * 1.0e-14
+        Dinv= 1/D 
+        Dinv[Dinv > 1/eps_cutoff]= 0.
+        V= A@U@torch.diag(Dinv)
 
         #print("AMENDED D: ")
         #print(D)
