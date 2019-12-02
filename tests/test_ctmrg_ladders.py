@@ -80,7 +80,7 @@ if __name__=='__main__':
 
     ctm_env_init, history, t_ctm = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
 
-    # ---- S.S(r) -----
+    # ----- S(0).S(r) -----
     corrSS= model.eval_corrf_SS((0,0), (1,0), state, ctm_env_init, args.corrf_r)
     print("\n\nSS[(0,0),(1,0)] r "+" ".join([label for label in corrSS.keys()]))
     for i in range(args.corrf_r):
@@ -101,7 +101,7 @@ if __name__=='__main__':
     for i in range(args.corrf_r):
         print(f"{i} "+" ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
 
-    # ---(S.S)(S.S)(r) -----
+    # ----- (S(0).S(x))(S(rx).S(rx+x)) -----
     corrDD= model.eval_corrf_DD_H((0,0), (1,0), state, ctm_env_init, args.corrf_r)
     print("\n\nDD[(0,0),(1,0)] r "+" ".join([label for label in corrDD.keys()]))
     for i in range(args.corrf_r):
@@ -121,6 +121,27 @@ if __name__=='__main__':
     print("\n\nDD[(1,1),(0,1)] r "+" ".join([label for label in corrDD.keys()]))
     for i in range(args.corrf_r):
         print(f"{i} "+" ".join([f"{corrDD[label][i]}" for label in corrDD.keys()]))
+
+    # ----- (S(0).S(y))(S(rx).S(rx+y)) -----
+    corrDD_V= model.eval_corrf_DD_V((0,0),(1,0),state, ctm_env_init, args.corrf_r)
+    print("\n\nDD_V[(0,0),(1,0)] r "+" ".join([label for label in corrDD_V.keys()]))
+    for i in range(args.corrf_r):
+        print(f"{i} "+" ".join([f"{corrDD_V[label][i]}" for label in corrDD_V.keys()]))
+
+    corrDD_V= model.eval_corrf_DD_V((0,0),(0,1),state, ctm_env_init, args.corrf_r)
+    print("\n\nDD_V[(0,0),(0,1)] r "+" ".join([label for label in corrDD_V.keys()]))
+    for i in range(args.corrf_r):
+        print(f"{i} "+" ".join([f"{corrDD_V[label][i]}" for label in corrDD_V.keys()]))
+
+    corrDD_V= model.eval_corrf_DD_V((1,1),(1,0),state, ctm_env_init, args.corrf_r)
+    print("\n\nDD_V[(1,1),(1,0)] r "+" ".join([label for label in corrDD_V.keys()]))
+    for i in range(args.corrf_r):
+        print(f"{i} "+" ".join([f"{corrDD_V[label][i]}" for label in corrDD_V.keys()]))
+
+    corrDD_V= model.eval_corrf_DD_V((1,1),(0,1),state, ctm_env_init, args.corrf_r)
+    print("\n\nDD_V[(1,1),(0,1)] r "+" ".join([label for label in corrDD_V.keys()]))
+    for i in range(args.corrf_r):
+        print(f"{i} "+" ".join([f"{corrDD_V[label][i]}" for label in corrDD_V.keys()]))
 
     # environment diagnostics
     for c_loc,c_ten in ctm_env_init.C.items(): 

@@ -101,6 +101,11 @@ if __name__=='__main__':
     for i in range(args.corrf_r):
         print(f"{i} "+" ".join([f"{corrDD[label][i]}" for label in corrDD.keys()]))
 
+    corrDD_V= model.eval_corrf_DD_V(state, ctm_env_init, args.corrf_r)
+    print("\n\nDD_V r "+" ".join([label for label in corrDD_V.keys()]))
+    for i in range(args.corrf_r):
+        print(f"{i} "+" ".join([f"{corrDD_V[label][i]}" for label in corrDD_V.keys()]))
+
     # environment diagnostics
     print("\n\nspectrum(C)")
     u,s,v= torch.svd(ctm_env_init.C[ctm_env_init.keyC], compute_uv=False)

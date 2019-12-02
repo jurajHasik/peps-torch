@@ -219,8 +219,24 @@ class COUPLEDLADDERS():
         def _gen_op(r):
             return self.h2
         
-        D0DR= corrf.corrf_2sO2sO_H(coord, direction, state, env, self.h2, _gen_op,\
+        D0DR= corrf.corrf_2sOH2sOH_E1(coord, direction, state, env, self.h2, _gen_op,\
             dist, verbosity=verbosity)
 
+        res= dict({"dd": D0DR})
+        return res
+
+    def eval_corrf_DD_V(self,coord,direction,state,env,dist,verbosity=0):
+        r"""
+        Evaluates correlation functions of two vertical dimers
+        DD_v(r)= <(S(0).S(y))(S(r*x).S(y+r*x))>
+             or= <(S(0).S(x))(S(r*y).S(x+r*y))> 
+        """
+        # function generating properly S.S operator
+        def _gen_op(r):
+            return self.h2
+        
+        D0DR= corrf.corrf_2sOV2sOV_E2(coord, direction, state, env, self.h2, _gen_op,\
+            dist, verbosity=verbosity)
+        
         res= dict({"dd": D0DR})
         return res

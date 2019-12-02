@@ -565,7 +565,7 @@ class J1J2_C4V_BIPARTITE():
         def _gen_op(r):
             return SS_rot if r%2==0 else op_rot
         
-        D0DR= corrf_c4v.corrf_2sO2sO_H(state, env_c4v, SS_rot, _gen_op, dist, verbosity=verbosity)
+        D0DR= corrf_c4v.corrf_2sOH2sOH_E1(state, env_c4v, SS_rot, _gen_op, dist, verbosity=verbosity)
 
         res= dict({"dd": D0DR})
         return res
