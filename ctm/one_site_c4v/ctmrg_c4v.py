@@ -1,5 +1,6 @@
 import time
 import torch
+from torch.utils.checkpoint import checkpoint
 import config as cfg
 import ipeps
 from ipeps import IPEPS
@@ -70,70 +71,82 @@ def ctm_MOVE(state, env, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
         truncated_svd= truncated_svd_rsvd
     elif cfg.ctm_args.projector_svd_method == 'ARPACK':
         truncated_svd= truncated_svd_arnoldi
+
+    # 0) extract raw tensors as tuple
+    tensors= tuple([next(iter(state.sites.values())),env.C[env.keyC],env.T[env.keyT]])
     
-    # 1) build enlarged corner upper left corner
-    C2X2= c2x2(state, env, verbosity=ctm_args.verbosity_projectors)
+    # function wrapping up the core of the CTM MOVE segment of CTM algorithm
+    def ctm_MOVE_c(*tensors):
+        A, C, T= tensors
+        # 1) build enlarged corner upper left corner
+        C2X2= c2x2(A, C, T, verbosity=ctm_args.verbosity_projectors)
 
-    # 2) build projector
-    P, S, V = truncated_svd(C2X2, env.chi) # M = PSV^{T}
-    # No inversion, thus no relative tolerance
-    # S = S[S/S[0] > ctm_args.projector_svd_reltol]
-    # S_zeros = torch.zeros((chi-S.size()[0]), dtype=global_args.dtype, device=global_args.device)
-    # S_sqrt = torch.rsqrt(S)
-    # S_sqrt = torch.cat((S_sqrt, S_zeros))
-    if ctm_args.verbosity_projectors>0: print(S)
+        # 2) build projector
+        P, S, V = truncated_svd(C2X2, env.chi) # M = PSV^{T}
+        # No inversion, thus no relative tolerance
+        # S = S[S/S[0] > ctm_args.projector_svd_reltol]
+        # S_zeros = torch.zeros((chi-S.size()[0]), dtype=global_args.dtype, device=global_args.device)
+        # S_sqrt = torch.rsqrt(S)
+        # S_sqrt = torch.cat((S_sqrt, S_zeros))
+        if ctm_args.verbosity_projectors>0: print(S)
 
-    # 3) absorb and truncate
-    #
-    # C2X2--1 0--P--1
-    # 0 
-    # 0
-    # P^t
-    # 1->0
-    C2X2= P.t() @ C2X2 @ P
+        # 3) absorb and truncate
+        #
+        # C2X2--1 0--P--1
+        # 0 
+        # 0
+        # P^t
+        # 1->0
+        C2X2= P.t() @ C2X2 @ P
 
-    T= env.T[env.keyT]
-    A= next(iter(state.sites.values()))
-    P= P.view(env.chi,T.size()[2],env.chi)
-    #    2->1
-    #  __P__
-    # 0     1->0
-    # 0
-    # T--2->3
-    # 1->2
-    nT = torch.tensordot(P, T,([0],[0]))
+        P= P.view(env.chi,T.size()[2],env.chi)
+        #    2->1
+        #  __P__
+        # 0     1->0
+        # 0
+        # T--2->3
+        # 1->2
+        nT = torch.tensordot(P, T,([0],[0]))
 
-    #    1->0
-    #  __P____
-    # |       0
-    # |       0
-    # T--3 1--A--3
-    # 2->1    2
-    nT = torch.tensordot(nT, A,([0,3],[0,1]))
+        #    1->0
+        #  __P____
+        # |       0
+        # |       0
+        # T--3 1--A--3
+        # 2->1    2
+        nT = torch.tensordot(nT, A,([0,3],[0,1]))
 
-    #    0
-    #  __P____
-    # |       |
-    # |       |
-    # T-------A--3->1
-    # 1       2
-    # 0       1
-    # |___P___|
-    #     2
-    nT = torch.tensordot(nT, P,([1,2],[0,1]))
-    nT = nT.permute(0,2,1).contiguous()
+        #    0
+        #  __P____
+        # |       |
+        # |       |
+        # T-------A--3->1
+        # 1       2
+        # 0       1
+        # |___P___|
+        #     2
+        nT = torch.tensordot(nT, P,([1,2],[0,1]))
+        nT = nT.permute(0,2,1).contiguous()
 
-    # 4) symmetrize, normalize and assign new C,T
-    C2X2= 0.5*(C2X2 + C2X2.t())
-    nT= 0.5*(nT + nT.permute(1,0,2))
-    env.C[env.keyC]= C2X2/torch.max(torch.abs(C2X2))
-    env.T[env.keyT]= nT/torch.max(torch.abs(nT))
+        # 4) symmetrize, normalize and assign new C,T
+        C2X2= 0.5*(C2X2 + C2X2.t())
+        nT= 0.5*(nT + nT.permute(1,0,2))
+        C2X2= C2X2/torch.max(torch.abs(C2X2))
+        nT= nT/torch.max(torch.abs(nT))
 
-def c2x2(state, env, verbosity=0):
-    C= env.C[env.keyC]
-    T= env.T[env.keyT]
-    A= next(iter(state.sites.values()))
+        ret_list= tuple([C2X2, nT])
+        return ret_list
 
+    # Call the core function, allowing for checkpointing
+    if ctm_args.fwd_checkpoint_move:
+        new_tensors= checkpoint(ctm_MOVE_c,*tensors)
+    else:
+        new_tensors= ctm_MOVE_c(*tensors)
+
+    env.C[env.keyC]= new_tensors[0]
+    env.T[env.keyT]= new_tensors[1]
+
+def c2x2(A, C, T, verbosity=0):
     # C--1 0--T--1
     # 0       2
     C2x2 = torch.tensordot(C, T, ([1],[0]))
