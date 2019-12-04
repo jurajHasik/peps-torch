@@ -56,11 +56,13 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
     stateDL = IPEPS(sitesDL,state.vertexToSite)
 
     # 1) perform CTMRG
+    t_obs=0.
     t0= time.perf_counter()
     history=[]
     for i in range(ctm_args.ctm_max_iter):
         ctm_MOVE(stateDL, env, truncated_svd, ctm_args=ctm_args, global_args=global_args)
 
+        t0_obs= time.perf_counter()
         if conv_check is not None:
             # evaluate convergence of the CTMRG procedure
             converged = conv_check(state, env, history, ctm_args=ctm_args)
@@ -69,9 +71,11 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
                 if ctm_args.verbosity_ctm_convergence>0: 
                     print(f"CTMRG  converged at iter= {i}, history= {history[-1]}")
                 break
+        t1_obs= time.perf_counter()
+        t_obs+= t1_obs-t0_obs
     t1= time.perf_counter()
 
-    return env, history, t1-t0
+    return env, history, t1-t0, t_obs
 
 # performs CTM move
 def ctm_MOVE(state, env, svd_method, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
