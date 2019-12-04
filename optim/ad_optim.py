@@ -92,7 +92,7 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=cfg
         
         # 2) log ctm metrics for debugging
         if opt_args.opt_logging:
-            log_entry=dict({"id": len(t_data["loss"])-1, \
+            log_entry=dict({"id": len(t_data["loss"]), \
                 "t_ctm": t_ctm, "ctm_history_len": len(history), "ctm_history": history})
             outputlogfile.write(json.dumps(log_entry)+'\n')
 
@@ -115,7 +115,7 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=cfg
 
         # 5) log additional metrics for debugging
         if opt_args.opt_logging:
-            log_entry=dict({"id": "t_grad": t1-t0})
+            log_entry=dict({"id": len(t_data["loss"])-1, "t_grad": t1-t0})
             outputlogfile.write(json.dumps(log_entry)+'\n')
 
         # 6) detach current environment from autograd graph
