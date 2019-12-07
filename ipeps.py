@@ -290,6 +290,9 @@ class IPEPS_SU2SYM(IPEPS):
             sites[coord]= torch.einsum('i,ipuldr->puldr',c,ts)
         return sites
 
+    def get_aux_bond_dims(self):
+        return [max(t[1].size()[1:]) for t in self.su2_tensors]
+
 def read_ipeps(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.peps_args,\
     global_args=cfg.global_args):
     r"""
