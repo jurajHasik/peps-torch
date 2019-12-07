@@ -145,6 +145,11 @@ class IPEPS():
         """
         return self.sites[self.vertexToSite(coord)]
 
+    def add_noise(self,noise):
+        for coord in self.sites.keys():
+            rand_t = torch.rand( self.sites[coord].size(), dtype=self.dtype, device=self.device)
+            self.sites[coord] = self.sites[coord] + noise * rand_t
+
     def get_aux_bond_dims(self):
         return [d for key in self.sites.keys() for d in self.sites[key].size()[1:]]
 
@@ -289,6 +294,11 @@ class IPEPS_SU2SYM(IPEPS):
         for coord,c in self.coeffs.items():
             sites[coord]= torch.einsum('i,ipuldr->puldr',c,ts)
         return sites
+
+    def add_noise(self,noise):
+        for coord in self.coeffs.keys():
+            rand_t = torch.rand( self.coeffs[coord].size(), dtype=self.dtype, device=self.device)
+            self.coeffs[coord] = self.coeffs[coord] + noise * rand_t
 
     def get_aux_bond_dims(self):
         return [max(t[1].size()[1:]) for t in self.su2_tensors]
@@ -542,9 +552,8 @@ def add_random_noise(state, noise=0.):
 
     Take IPEPS and add random uniform noise with magnitude ``noise`` to all on-site tensors
     """
-    for coord in state.sites.keys():
-        rand_t = torch.rand( state.sites[coord].size(), dtype=state.dtype, device=state.device)
-        state.sites[coord] = state.sites[coord] + noise * rand_t
+    state.add_noise(noise) 
+    
 
 def write_ipeps(state, outputfile, aux_seq=[0,1,2,3], tol=1.0e-14, normalize=False):
     r"""
