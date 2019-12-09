@@ -442,7 +442,7 @@ class J1J2_C4V_BIPARTITE():
         obs_ops["sm"]= s2.SM()
         return obs_ops
 
-    def energy_1x1(self,state,env_c4v):
+    def energy_1x1(self,state,env_c4v,force_cpu=False):
         r"""
         :param state: wavefunction
         :param env_c4v: CTM c4v symmetric environment
@@ -475,6 +475,60 @@ class J1J2_C4V_BIPARTITE():
         """
         rdm2x2= rdm_c4v.rdm2x2(state,env_c4v,cfg.ctm_args.verbosity_rdm)
         energy_per_site= torch.einsum('ijklabcd,ijklabcd',rdm2x2,self.hp)
+        return energy_per_site
+
+    def energy_1x1_lowmem(self,state,env_c4v,force_cpu=False):
+        r"""
+        :param state: wavefunction
+        :param env_c4v: CTM c4v symmetric environment
+        :type state: IPEPS
+        :type env_c4v: ENV_C4V
+        :return: energy per site
+        :rtype: float
+
+        We assume 1x1 C4v iPEPS which tiles the lattice with a bipartite pattern composed 
+        of two tensors A, and B=RA, where R rotates approriately the physical Hilbert space 
+        of tensor A on every "odd" site::
+
+            1x1 C4v => rotation P => BIPARTITE
+
+            A A A A                  A B A B
+            A A A A                  B A B A
+            A A A A                  A B A B
+            A A A A                  B A B A
+
+        Due to C4v symmetry it is enough to construct two reduced density matrices.
+        In particular, :py:func:`ctm.one_site_c4v.rdm_c4v.rdm2x1` of a NN-neighbour pair
+        and :py:func:`ctm.one_site_c4v.rdm_c4v.rdm2x1_diag` of NNN-neighbour pair. 
+        Afterwards, the energy per site `e` is computed by evaluating a term :math:`h2_rot`
+        containing :math:`\bf{S}.\bf{S}` for nearest- and :math:`h2` term for 
+        next-nearest- expectation value as:
+
+        .. math::
+
+            e = 2*\langle \mathcal{h2} \rangle_{NN} + 2*\langle \mathcal{h2} \rangle_{NNN}
+            = 2*Tr(\rho_{2x1} \mathcal{h2_rot}) + 2*Tr(\rho_{2x1_diag} \mathcal{h2})
+        
+        """
+        # rdm2x2= rdm_c4v.rdm2x2(state,env_c4v,cfg.ctm_args.verbosity_rdm)
+        if force_cpu:
+            # move to cpu
+            C= env_c4v.C[env_c4v.keyC].cpu()
+            T= env_c4v.T[env_c4v.keyT].cpu()
+            A= next(iter(state.sites.values())).cpu()
+            h2= self.h2_rot.cpu()
+            h2_rot= self.h2_rot.cpu()
+        else:
+            # move to cpu
+            C = env_c4v.C[env_c4v.keyC]
+            T = env_c4v.T[env_c4v.keyT]
+            A = next(iter(state.sites.values()))
+            h2= self.h2_rot
+            h2_rot= self.h2_rot
+        rdm2x1= rdm_c4v.rdm2x1_lowmem(C,T,A,cfg.ctm_args.verbosity_rdm)
+        rdm2x1_diag= rdm_c4v.rdm2x1_diag_lowmem(C,T,A,cfg.ctm_args.verbosity_rdm)
+        energy_per_site= 2.0*torch.einsum('ijkl,ijkl',rdm2x1,h2_rot)\
+            + 2.0*torch.einsum('ijkl,ijkl',rdm2x1_diag,h2)
         return energy_per_site
 
     def eval_obs(self,state,env_c4v):
