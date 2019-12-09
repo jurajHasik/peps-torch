@@ -516,14 +516,14 @@ class J1J2_C4V_BIPARTITE():
             C= env_c4v.C[env_c4v.keyC].cpu()
             T= env_c4v.T[env_c4v.keyT].cpu()
             A= next(iter(state.sites.values())).cpu()
-            h2= self.h2_rot.cpu()
+            h2= self.h2.cpu()
             h2_rot= self.h2_rot.cpu()
         else:
             # move to cpu
             C = env_c4v.C[env_c4v.keyC]
             T = env_c4v.T[env_c4v.keyT]
             A = next(iter(state.sites.values()))
-            h2= self.h2_rot
+            h2= self.h2
             h2_rot= self.h2_rot
         rdm2x1= rdm_c4v.rdm2x1_lowmem(C,T,A,cfg.ctm_args.verbosity_rdm)
         rdm2x1_diag= rdm_c4v.rdm2x1_diag_lowmem(C,T,A,cfg.ctm_args.verbosity_rdm)
