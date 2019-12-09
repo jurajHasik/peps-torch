@@ -527,8 +527,8 @@ class J1J2_C4V_BIPARTITE():
             h2_rot= self.h2_rot
         rdm2x1= rdm_c4v.rdm2x1_lowmem(C,T,A,cfg.ctm_args.verbosity_rdm)
         rdm2x1_diag= rdm_c4v.rdm2x1_diag_lowmem(C,T,A,cfg.ctm_args.verbosity_rdm)
-        energy_per_site= 2.0*torch.einsum('ijkl,ijkl',rdm2x1,h2_rot)\
-            + 2.0*torch.einsum('ijkl,ijkl',rdm2x1_diag,h2)
+        energy_per_site= 2.0*self.j1*torch.einsum('ijkl,ijkl',rdm2x1,h2_rot)\
+            + 2.0*self.j2*torch.einsum('ijkl,ijkl',rdm2x1_diag,h2)
         return energy_per_site
 
     def eval_obs(self,state,env_c4v):
