@@ -62,8 +62,6 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
     torch.cuda.reset_max_memory_allocated(global_args.device)
     for i in range(ctm_args.ctm_max_iter):
         ctm_MOVE(stateDL, env, truncated_svd, ctm_args=ctm_args, global_args=global_args)
-        print(f"GPU-MEM {i} MAX:{torch.cuda.max_memory_allocated(global_args.device)}"\
-            + f" CURRENT:{torch.cuda.memory_allocated(global_args.device)}")
 
         t0_obs= time.perf_counter()
         if conv_check is not None:
