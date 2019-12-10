@@ -475,6 +475,12 @@ class J1J2_C4V_BIPARTITE():
         """
         rdm2x2= rdm_c4v.rdm2x2(state,env_c4v,cfg.ctm_args.verbosity_rdm)
         energy_per_site= torch.einsum('ijklabcd,ijklabcd',rdm2x2,self.hp)
+        # id2= torch.eye(4,dtype=self.dtype,device=self.device)
+        # id2= id2.view(2,2,2,2).contiguous()
+        # print(f"rdm2x1 {torch.einsum('ijklabcd,ijab,klcd',rdm2x2,self.h2_rot,id2)}"\
+        #    + f" rdm1x2 {torch.einsum('ijklabcd,ikac,jlbd',rdm2x2,self.h2_rot,id2)}"\
+        #    + f" rdm_0cc3_diag {torch.einsum('ijklabcd,ilad,jkbc',rdm2x2,self.h2,id2)}"\
+        #    + f" rdm_c12c_diag {torch.einsum('ijklabcd,jkbc,ilad',rdm2x2,self.h2,id2)}")
         return energy_per_site
 
     def energy_1x1_lowmem(self,state,env_c4v,force_cpu=False):
@@ -525,10 +531,12 @@ class J1J2_C4V_BIPARTITE():
             A = next(iter(state.sites.values()))
             h2= self.h2
             h2_rot= self.h2_rot
-        rdm2x1= rdm_c4v.rdm2x1_lowmem(C,T,A,cfg.ctm_args.verbosity_rdm)
-        rdm2x1_diag= rdm_c4v.rdm2x1_diag_lowmem(C,T,A,cfg.ctm_args.verbosity_rdm)
-        energy_per_site= 2.0*self.j1*torch.einsum('ijkl,ijkl',rdm2x1,h2_rot)\
-            + 2.0*self.j2*torch.einsum('ijkl,ijkl',rdm2x1_diag,h2)
+        rdm2x2_NN= rdm_c4v.rdm2x2_NN_lowmem(C,T,A,cfg.ctm_args.verbosity_rdm)
+        rdm2x2_NNN= rdm_c4v.rdm2x2_NNN_lowmem(C,T,A,cfg.ctm_args.verbosity_rdm)
+        energy_per_site= 2.0*self.j1*torch.einsum('ijkl,ijkl',rdm2x2_NN,h2_rot)\
+            + 2.0*self.j2*torch.einsum('ijkl,ijkl',rdm2x2_NNN,h2)
+        # print(f"rdm2x1 {torch.einsum('ijkl,ijkl',rdm2x2_NN,h2_rot)}"\
+        #    + f" rdm_0cc3_diag {torch.einsum('ijkl,ijkl',rdm2x2_NNN,h2)}")
         return energy_per_site
 
     def eval_obs(self,state,env_c4v):
