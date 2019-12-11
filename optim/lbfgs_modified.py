@@ -42,7 +42,8 @@ class LBFGS_MOD(lbfgs.LBFGS):
                  tolerance_grad=1e-7,
                  tolerance_change=1e-9,
                  history_size=100,
-                 line_search_fn=None):
+                 line_search_fn=None,
+                 line_search_eps=1.0e-4):
         super(LBFGS_MOD, self).__init__(
             params,
             lr=lr,
@@ -52,11 +53,17 @@ class LBFGS_MOD(lbfgs.LBFGS):
             tolerance_change=tolerance_change,
             history_size=history_size,
             line_search_fn=line_search_fn)
+        assert len(self.param_groups) == 1
+        group = self.param_groups[0]
+        group["line_search_eps"]= line_search_eps
 
     def _directional_evaluate_derivative_free(self, closure, t, x, d):
         self._add_grad(t, d)
-        loss = float(closure())
+        with torch.no_grad():
+            orig_loss, log_line = closure()
+        loss= float(orig_loss)
         self._set_param(x)
+        print(f"LS {t}, "+log_line)
         return loss
 
     def step_2c(self, closure, closure_linesearch):
@@ -66,7 +73,6 @@ class LBFGS_MOD(lbfgs.LBFGS):
             closure (callable): A closure that reevaluates the model
                 and returns the loss.
         """
-        print("[LBFGS_MOD] entering step_2c")
         assert len(self.param_groups) == 1
 
         group = self.param_groups[0]
@@ -76,7 +82,9 @@ class LBFGS_MOD(lbfgs.LBFGS):
         tolerance_grad = group['tolerance_grad']
         tolerance_change = group['tolerance_change']
         line_search_fn = group['line_search_fn']
+        line_search_eps= group['line_search_eps']
         history_size = group['history_size']
+
 
         # NOTE: LBFGS has only global state, but we register it as state for
         # the first param, because this helps with casting in load_state_dict
@@ -199,7 +207,7 @@ class LBFGS_MOD(lbfgs.LBFGS):
 
                     # return (xmin, fval, iter, funcalls)
                     opt_res = minimize_scalar(obj_func, args=(x_init,d), method='brent', \
-                        options={'xtol': 1.48e-08, 'maxiter': 500})
+                        options={'xtol': line_search_eps, 'maxiter': 500})
                     if opt_res["success"]:
                         t= opt_res["x"]
                         loss= opt_res["fun"]
