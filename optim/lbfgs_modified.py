@@ -216,6 +216,23 @@ class LBFGS_MOD(lbfgs.LBFGS):
                     else:
                         print("LS FAILED "+str(opt_res["status"])+" "+str(opt_res["message"]))
                         raise RuntimeError("minimize_scalar failed")
+                if line_search_fn == "scipy_bounded":
+                    x_init = self._clone_param()
+
+                    def obj_func(t, x, d):
+                        return self._directional_evaluate_derivative_free(closure_linesearch, t, x, d)
+
+                    # return (xmin, fval, iter, funcalls)
+                    opt_res = minimize_scalar(obj_func, args=(x_init,d), method='bounded', \
+                        bounds=(0, t), options={'xatol': line_search_eps, 'maxiter': 500})
+                    if opt_res["success"]:
+                        t= opt_res["x"]
+                        loss= opt_res["fun"]
+                        func_evals= opt_res["nfev"]
+                        print(f"LS CONVERGED {loss} {t} "+str(opt_res["nit"])+f" {func_evals}")
+                    else:
+                        print("LS FAILED "+str(opt_res["status"])+" "+str(opt_res["message"]))
+                        raise RuntimeError("minimize_scalar failed")
 
                 elif line_search_fn == "strong_wolfe":
                     x_init = self._clone_param()

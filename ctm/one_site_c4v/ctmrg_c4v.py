@@ -1,4 +1,5 @@
 import time
+from math import sqrt
 import torch
 from torch.utils.checkpoint import checkpoint
 import config as cfg
@@ -72,7 +73,7 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
                 if ctm_args.verbosity_ctm_convergence>0: 
                     print(f"CTMRG  converged at iter= {i}, history= {history[-1]}")
                 break
-            else:
+            elif len(history)>4:
                 # we are not converged, but perhaps we have entered stationary
                 # oscilatory regime x_i=x_{i+2}, x_{i+1}=x_{i+3} but |x_i-x_{i+1}|=const > small_eps
 
