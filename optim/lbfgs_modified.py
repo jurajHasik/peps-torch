@@ -1,7 +1,62 @@
+from math import sqrt
 import torch
 from functools import reduce
 import torch.optim.lbfgs as lbfgs
 from scipy.optimize import minimize_scalar
+
+# from https://github.com/scipy/scipy/blob/master/scipy/optimize/linesearch.py
+def _scalar_search_armijo(phi, phi0, derphi0, args=(), c1=1e-4, alpha0=1, amin=0):
+    """Minimize over alpha, the function ``phi(alpha)``.
+    Uses the interpolation algorithm (Armijo backtracking) as suggested by
+    Wright and Nocedal in 'Numerical Optimization', 1999, pp. 56-57
+    alpha > 0 is assumed to be a descent direction.
+    Returns
+    -------
+    alpha
+    phi1
+    """
+    phi_a0 = phi(alpha0, *args)
+    if phi_a0 <= phi0 + c1*alpha0*derphi0:
+        return alpha0, phi_a0
+
+    # Otherwise, compute the minimizer of a quadratic interpolant:
+
+    alpha1 = -(derphi0) * alpha0**2 / 2.0 / (phi_a0 - phi0 - derphi0 * alpha0)
+    phi_a1 = phi(alpha1, *args)
+
+    if (phi_a1 <= phi0 + c1*alpha1*derphi0):
+        return alpha1, phi_a1
+
+    # Otherwise, loop with cubic interpolation until we find an alpha which
+    # satisfies the first Wolfe condition (since we are backtracking, we will
+    # assume that the value of alpha is not too small and satisfies the second
+    # condition.
+
+    while alpha1 > amin:       # we are assuming alpha>0 is a descent direction
+        factor = alpha0**2 * alpha1**2 * (alpha1-alpha0)
+        a = alpha0**2 * (phi_a1 - phi0 - derphi0*alpha1) - \
+            alpha1**2 * (phi_a0 - phi0 - derphi0*alpha0)
+        a = a / factor
+        b = -alpha0**3 * (phi_a1 - phi0 - derphi0*alpha1) + \
+            alpha1**3 * (phi_a0 - phi0 - derphi0*alpha0)
+        b = b / factor
+
+        alpha2 = (-b + sqrt(abs(b**2 - 3 * a * derphi0))) / (3.0*a)
+        phi_a2 = phi(alpha2, *args)
+
+        if (phi_a2 <= phi0 + c1*alpha2*derphi0):
+            return alpha2, phi_a2
+
+        if (alpha1 - alpha2) > alpha1 / 2.0 or (1 - alpha2/alpha1) < 0.96:
+            alpha2 = alpha1 / 2.0
+
+        alpha0 = alpha1
+        alpha1 = alpha2
+        phi_a0 = phi_a1
+        phi_a1 = phi_a2
+
+    # Failed to find a suitable step length
+    return None, phi_a1
 
 class LBFGS_MOD(lbfgs.LBFGS):
     """Implements L-BFGS algorithm, heavily inspired by `minFunc
@@ -224,14 +279,28 @@ class LBFGS_MOD(lbfgs.LBFGS):
 
                     # return (xmin, fval, iter, funcalls)
                     opt_res = minimize_scalar(obj_func, args=(x_init,d), method='bounded', \
-                        bounds=(0, t), options={'xatol': line_search_eps, 'maxiter': 500})
+                        bounds=(0, 2*t), options={'xatol': line_search_eps, 'maxiter': 500})
                     if opt_res["success"]:
                         t= opt_res["x"]
                         loss= opt_res["fun"]
                         func_evals= opt_res["nfev"]
-                        print(f"LS CONVERGED {loss} {t} "+str(opt_res["nit"])+f" {func_evals}")
+                        print(f"LS CONVERGED {loss} {t} "+f" {func_evals}")
                     else:
-                        print("LS FAILED "+str(opt_res["status"])+" "+str(opt_res["message"]))
+                        t= opt_res["x"]
+                        loss= opt_res["fun"]
+                        func_evals= opt_res["nfev"]
+                        print("LS FAILED "+str(opt_res["status"])+" "+str(opt_res["message"])\
+                            + f" {loss} {t} {func_evals}")
+                        #raise RuntimeError("minimize_scalar failed")
+                if line_search_fn == "backtracking":
+                    x_init = self._clone_param()
+
+                    def obj_func(t, x, d):
+                        return self._directional_evaluate_derivative_free(closure_linesearch, t, x, d)
+
+                    # return (xmin, fval, iter, funcalls)
+                    t, loss= _scalar_search_armijo(obj_func, t, gtd, args=(x_init,d))
+                    if t is None:
                         raise RuntimeError("minimize_scalar failed")
 
                 elif line_search_fn == "strong_wolfe":

@@ -60,7 +60,6 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
     t_obs=0.
     t0= time.perf_counter()
     history=[]
-    torch.cuda.reset_max_memory_allocated(global_args.device)
     for i in range(ctm_args.ctm_max_iter):
         ctm_MOVE(stateDL, env, truncated_svd, ctm_args=ctm_args, global_args=global_args)
 

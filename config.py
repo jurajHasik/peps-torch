@@ -207,7 +207,8 @@ class OPTARGS():
         self.lr = 1.0
         self.tolerance_grad= 1e-5
         self.tolerance_change= 1e-9
-        self.rel_tol_line_search= 1.0e-4
+        self.line_search="backtracking"
+        self.tol_line_search= 1.0e-4
         self.history_size = 100
         self.max_iter_per_epoch = 1
         self.verbosity_opt_epoch = 1
