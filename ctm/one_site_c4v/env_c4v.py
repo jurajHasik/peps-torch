@@ -196,3 +196,17 @@ def print_env(env, verbosity=0):
     print("T "+str(env.T[keyT].size()))
     if verbosity>0:
         print(env.T[key])
+
+def show_degeneracies(env):
+    D= torch.zeros(env.chi+1, dtype=env.dtype, device=env.device)
+    D[:env.chi], U= torch.symeig(env.C[env.keyC])
+    D, p= torch.sort(torch.abs(D),descending=True)
+    l=0
+    for i in range(env.chi):
+        l+=1
+        g=D[i]-D[i+1]
+        #print(f"{i} {D[i]} {g}", end=" ")
+        if g>1.0e-10:
+            print(f"{l}", end=" ")
+            l=0
+    print("")

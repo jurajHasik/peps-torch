@@ -81,8 +81,10 @@ class SVDSYMEIG(torch.autograd.Function):
         F= 1/F
         F.diagonal().fill_(0)
         F[abs(F)>threshold]=0.
+        print(f"max(F) {F.abs().max()}", end=" ")
 
         G = (S + S[:, None])
+        print(f"max(G) {1./G.abs().max()}", end=" ")
         G.diagonal().fill_(np.inf)
         G = 1/G
         G[-NINF:,-NINF:]=0
@@ -93,7 +95,8 @@ class SVDSYMEIG(torch.autograd.Function):
         Su = (F+G)*(UdU-UdU.t())/2
         Sv = (F-G)*(VdV-VdV.t())/2
 
-        dA = U @ (Su + Sv + torch.diag(dS)) @ Vt 
+        print(f"{dU.abs().max()} {Su.abs().max()} {Sv.abs().max()} {dS.abs().max()} {Vt.abs().max()}", end=" ")
+        dA = U @ (Su + Sv + torch.diag(dS)) @ Vt
         if (M>NS):
             dA = dA + (torch.eye(M, dtype=dU.dtype, device=dU.device) - U@Ut) @ (dU/S) @ Vt
         if (N>NS):
@@ -105,6 +108,7 @@ class SVDSYMEIG(torch.autograd.Function):
             print(S)
             print(dS)
             exit()
+        print(f"max(dA) {dA.abs().max()}", end="\n")
         return dA
 
 def test_svd():

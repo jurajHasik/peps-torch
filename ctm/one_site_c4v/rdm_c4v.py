@@ -380,7 +380,6 @@ def rdm2x2_NN_lowmem(C, T, A, verbosity=0):
     # symmetrize
     dimsRDM= rdm.size()
     rdm= rdm.view(dimsRDM[0]**2,dimsRDM[0]**2)
-    #print( f"rdm_antisym: {torch.norm(rdm-rdm.t())}")
     rdm= 0.5*(rdm+rdm.t())
     eps=0.0
     with torch.no_grad():
