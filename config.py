@@ -160,6 +160,7 @@ class CTMARGS():
         self.projector_svd_reltol = 1.0e-8
         self.ctm_move_sequence = [(0,-1), (-1,0), (0,1), (1,0)]
         self.ctm_logging = False
+        self.verbosity_corner_multiplets= 0
         self.verbosity_initialization = 0
         self.verbosity_ctm_convergence = 0
         self.verbosity_projectors = 0

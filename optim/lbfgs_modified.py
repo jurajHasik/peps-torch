@@ -15,6 +15,7 @@ def _scalar_search_armijo(phi, phi0, derphi0, args=(), c1=1e-4, alpha0=1, amin=0
     alpha
     phi1
     """
+    print(f"LS expected phi: {phi0+c1*alpha0*derphi0} (derphi0: {derphi0})") 
     phi_a0 = phi(alpha0, *args)
     if phi_a0 <= phi0 + c1*alpha0*derphi0:
         return alpha0, phi_a0
@@ -238,6 +239,7 @@ class LBFGS_MOD(lbfgs.LBFGS):
             # compute step length
             ############################################################
             # reset initial guess for step size
+            default_t= 1. / flat_grad.abs().sum() * lr
             if state['n_iter'] == 1:
                 t = min(1., 1. / flat_grad.abs().sum()) * lr
             else:

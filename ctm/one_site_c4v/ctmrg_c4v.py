@@ -100,7 +100,6 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
         t1_obs= time.perf_counter()
         t_obs+= t1_obs-t0_obs
 
-
     t1= time.perf_counter()
 
     return env, history, t1-t0, t_obs
@@ -127,6 +126,7 @@ def ctm_MOVE(state, env, svd_method, ctm_args=cfg.ctm_args, global_args=cfg.glob
         # P^t
         # 1->0
         C2X2= P.t() @ C2X2 @ P
+        # C2X2= P.t() @ C2X2 @ V
 
         P= P.view(env.chi,T.size()[2],env.chi)
         #    2->1

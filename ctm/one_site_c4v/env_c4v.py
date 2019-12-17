@@ -197,16 +197,18 @@ def print_env(env, verbosity=0):
     if verbosity>0:
         print(env.T[key])
 
-def show_degeneracies(env):
+def compute_multiplets(env, eps_multiplet_gap=1.0e-10):
     D= torch.zeros(env.chi+1, dtype=env.dtype, device=env.device)
     D[:env.chi], U= torch.symeig(env.C[env.keyC])
     D, p= torch.sort(torch.abs(D),descending=True)
+    m=[]
     l=0
     for i in range(env.chi):
         l+=1
         g=D[i]-D[i+1]
         #print(f"{i} {D[i]} {g}", end=" ")
-        if g>1.0e-10:
-            print(f"{l}", end=" ")
+        if g>eps_multiplet_gap:
+            #print(f"{l}", end=" ")
+            m.append(l)
             l=0
-    print("")
+    return m
