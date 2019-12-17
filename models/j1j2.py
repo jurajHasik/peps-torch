@@ -533,8 +533,30 @@ class J1J2_C4V_BIPARTITE():
         obs_values=[obs[label] for label in obs_labels]
         return obs_values, obs_labels
 
-    def eval_corrf_SS(self,state,env_c4v,dist):
-   
+    def eval_corrf_SS(self,state,env_c4v,dist,canonical=False):
+        Sop_zxy= torch.zeros((3,self.phys_dim,self.phys_dim),dtype=self.dtype,device=self.device)
+        Sop_zxy[0,:,:]= self.obs_ops["sz"]
+        Sop_zxy[1,:,:]= 0.5*(self.obs_ops["sp"] + self.obs_ops["sm"])
+        Sop_zxy[2,:,:]= -0.5*(self.obs_ops["sp"] - self.obs_ops["sm"])
+
+        # compute vector of spontaneous magnetization
+        if canonical:
+            print("canonical")
+            s_vec_zpm=[]
+            rdm1x1= rdm_c4v.rdm1x1(state,env_c4v)
+            for label in ["sz","sp","sm"]:
+                op= self.obs_ops[label]
+                s_vec_zpm.append(torch.trace(rdm1x1@op))
+            # 0) transform into zxy basis and normalize
+            s_vec_zxy= torch.tensor([s_vec_zpm[0],0.5*(s_vec_zpm[1]+s_vec_zpm[2]),\
+                0.5*(s_vec_zpm[1]-s_vec_zpm[2])],dtype=self.dtype,device=self.device)
+            s_vec_zxy= s_vec_zxy/torch.norm(s_vec_zxy)
+            # 1) build rotation matrix
+            R= torch.tensor([[s_vec_zxy[0],-s_vec_zxy[1],0],[s_vec_zxy[1],s_vec_zxy[0],0],[0,0,1]],\
+                dtype=self.dtype,device=self.device).t()
+            # 2) rotate the vector of operators
+            Sop_zxy= torch.einsum('ab,bij->aij',R,Sop_zxy)
+
         # function generating properly rotated operators on every bi-partite site
         def get_bilat_op(op):
             rot_op= su2.get_rot_op(self.phys_dim, dtype=self.dtype, device=self.device)
@@ -544,13 +566,10 @@ class J1J2_C4V_BIPARTITE():
                 return op_rot if r%2==0 else op_0
             return _gen_op
 
-        op_sx= 0.5*(self.obs_ops["sp"] + self.obs_ops["sm"])
-        op_isy= -0.5*(self.obs_ops["sp"] - self.obs_ops["sm"]) 
-
-        Sz0szR= corrf_c4v.corrf_1sO1sO(state, env_c4v, self.obs_ops["sz"], \
-            get_bilat_op(self.obs_ops["sz"]), dist)
-        Sx0sxR= corrf_c4v.corrf_1sO1sO(state, env_c4v, op_sx, get_bilat_op(op_sx), dist)
-        nSy0SyR= corrf_c4v.corrf_1sO1sO(state, env_c4v, op_isy, get_bilat_op(op_isy), dist)
+        Sz0szR= corrf_c4v.corrf_1sO1sO(state, env_c4v, Sop_zxy[0,:,:], \
+            get_bilat_op(Sop_zxy[0,:,:]), dist)
+        Sx0sxR= corrf_c4v.corrf_1sO1sO(state, env_c4v, Sop_zxy[1,:,:], get_bilat_op(Sop_zxy[1,:,:]), dist)
+        nSy0SyR= corrf_c4v.corrf_1sO1sO(state, env_c4v, Sop_zxy[2,:,:], get_bilat_op(Sop_zxy[2,:,:]), dist)
 
         res= dict({"ss": Sz0szR+Sx0sxR-nSy0SyR, "szsz": Sz0szR, "sxsx": Sx0sxR, "sysy": -nSy0SyR})
         return res

@@ -16,6 +16,8 @@ if __name__=='__main__':
     parser.add_argument("-j1", type=float, default=1., help="nearest-neighbour coupling")
     parser.add_argument("-j2", type=float, default=0., help="next nearest-neighbour coupling")
     # additional observables-related arguments
+    parser.add_argument("-corrf_canonical", action='store_true', help="align spin operators" \
+        + " with the vector of spontaneous magnetization")
     parser.add_argument("-corrf_r", type=int, default=1, help="maximal correlation function distance")
     parser.add_argument("-top_n", type=int, default=2, help="number of leading eigenvalues"+
         "of transfer operator to compute")
@@ -76,7 +78,7 @@ if __name__=='__main__':
 
     ctm_env_init, history, t_ctm = ctmrg_c4v.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
 
-    corrSS= model.eval_corrf_SS(state, ctm_env_init, args.corrf_r)
+    corrSS= model.eval_corrf_SS(state, ctm_env_init, args.corrf_r, canonical=args.corrf_canonical)
     print("\n\nSS r "+" ".join([label for label in corrSS.keys()]))
     for i in range(args.corrf_r):
         print(f"{i} "+" ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
