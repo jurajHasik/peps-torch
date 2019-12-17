@@ -254,7 +254,7 @@ class LBFGS_MOD(lbfgs.LBFGS):
 
             # optional line search: user function
             ls_func_evals = 0
-            if line_search_fn is not None:
+            if line_search_fn is not None or line_search_fn is not "default":
                 # perform line search, using user function
                 if line_search_fn == "scipy_brent":
                     x_init = self._clone_param()
@@ -301,7 +301,7 @@ class LBFGS_MOD(lbfgs.LBFGS):
                         return self._directional_evaluate_derivative_free(closure_linesearch, t, x, d)
 
                     # return (xmin, fval, iter, funcalls)
-                    t, loss= _scalar_search_armijo(obj_func, t, gtd, args=(x_init,d))
+                    t, loss= _scalar_search_armijo(obj_func, loss, gtd, args=(x_init,d), alpha0=default_t)
                     if t is None:
                         raise RuntimeError("minimize_scalar failed")
 

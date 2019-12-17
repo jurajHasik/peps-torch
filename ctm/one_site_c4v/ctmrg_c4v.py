@@ -89,13 +89,9 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
                 # their difference is larger than large_eps
                 if abs(del0) < ctm_args.ctm_conv_tol and abs(del1) < ctm_args.ctm_conv_tol \
                     and abs(history[-1] - history[-2]) > sqrt(ctm_args.ctm_conv_tol):
-                    if not lower:
-                        break
-                    # if we are on lower branch, make an extra ctm step
-                    else:
-                        ctm_MOVE(stateDL, env, truncated_svd, ctm_args=ctm_args, global_args=global_args)
-                        history.append(history[-2])
-                        break
+                    # TODO perhaps return history[-1]=Nan to indicate failure of 
+                    # convergence and force restart
+                    break
 
         t1_obs= time.perf_counter()
         t_obs+= t1_obs-t0_obs
