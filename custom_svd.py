@@ -2,7 +2,7 @@ import torch
 import config as cfg
 from linalg.svd_gesdd import SVDGESDD
 from linalg.svd_rsvd import RSVD
-from linalg.svd_arnoldi import ARNOLDISVD
+from linalg.svd_arnoldi import SVDSYMARNOLDI
 from linalg.svd_symeig import SVDSYMEIG
 
 def truncated_svd_gesdd(M, chi, abs_tol=None, rel_tol=None):
@@ -248,5 +248,67 @@ def truncated_svd_symeig_su2(M, chi, abs_tol=1.0e-14, rel_tol=None, eps_multiple
 def truncated_svd_rsvd(M, chi, abs_tol=None, rel_tol=None):
     return RSVD.apply(M, chi)
 
-def truncated_svd_arnoldi(M, chi, abs_tol=None, rel_tol=None):
-    return ARNOLDISVD.apply(M, chi)
+def truncated_svd_arnoldi(M, chi, abs_tol=1.0e-14, rel_tol=None, keep_multiplets=False, \
+    eps_multiplet=1.0e-12, env=None, verbosity=0):
+    """
+    Return a truncated SVD of a matrix M     
+    M ~ (Ut)(St)(Vt)^{T}
+    by computing the symmetric decomposition of MM^T
+
+    inputs:
+        M (torch.Tensor):
+            tensor of shape (dim0, dim1)
+
+        chi (int):
+            maximum allowed dimension of S
+
+        abs_tol (float):
+            absolute tollerance on singular eigenvalues
+
+        rel_tol (float):
+            relative tollerance on singular eigenvalues
+
+    where S is diagonal matrix of of shape (dimS, dimS)
+    and dimS <= chi
+
+    returns Ut, St, Vt
+    """
+    U, S, V = SVDSYMARNOLDI.apply(M, chi+int(keep_multiplets))
+
+    # estimate the chi_new 
+    chi_new= chi
+    if keep_multiplets:
+        # regularize by discarding small values
+        gaps=S.clone().detach()
+        # S[S < abs_tol]= 0.
+        gaps[gaps < abs_tol]= 0.
+        # compute gaps and normalize by larger sing. value. Introduce cutoff
+        # for handling vanishing values set to exact zero
+        gaps=(gaps[0:len(S)-1]-S[1:len(S)])/(gaps[0:len(S)-1]+1.0e-16)
+        gaps[gaps > 1.0]= 0.
+
+        if gaps[chi-1] < eps_multiplet:
+            # the chi is within the multiplet - find the largest chi_new < chi
+            # such that the complete multiplets are preserved
+            for i in range(chi-1,-1,-1):
+                if gaps[i] > eps_multiplet:
+                    chi_new= i
+                    break
+
+        St = S[:chi].clone()
+        St[chi_new+1:]=0.
+        if verbosity>0:
+            relevant_eigs= [f"{x}" for x in S[chi_new-2:chi_new+2]]
+            line = f"chi_cut: {chi_new} len(St): {len(St)} inds: {chi_new-2}:{chi_new+1} S: {relevant_eigs}"
+            env.log(f"{line}\n")
+            relevant_eigs= [f"{x}" for x in St[chi_new-2:]]
+            line = f"chi_cut: {chi_new} len(St): {len(St)} inds: {chi_new-2}:{chi-1} St: {relevant_eigs}"
+            env.log(f"{line}\n")
+
+        Ut = U[:, :St.shape[0]].clone()
+        Ut[:, chi_new+1:]=0.
+        Vt = V[:, :St.shape[0]].clone()
+        Vt[:, chi_new+1:]=0.
+        return Ut, St, Vt
+
+    return U, S, V

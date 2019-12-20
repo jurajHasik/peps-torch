@@ -36,7 +36,9 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
     elif cfg.ctm_args.projector_svd_method == 'RSVD':
         truncated_svd= truncated_svd_rsvd
     elif cfg.ctm_args.projector_svd_method == 'ARPACK':
-        truncated_svd= truncated_svd_arnoldi
+        def truncated_svd(M, chi):
+            return truncated_svd_arnoldi(M, chi, keep_multiplets=True, env=env, \
+                verbosity=ctm_args.verbosity_projectors)
 
     # 0) Create double-layer (DL) tensors, preserving the same convenction
     # for order of indices 

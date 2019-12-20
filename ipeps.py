@@ -593,7 +593,7 @@ def write_ipeps(state, outputfile, aux_seq=[0,1,2,3], tol=1.0e-14, normalize=Fal
     # write list of considered SU(2)-symmetric tensors
     for meta,t in state.su2_tensors:
         json_tensor=dict()
-        json_tensor["meta"]=meta
+        json_tensor["meta"]=meta["meta"]
 
         tdims = t.size()
         tlength = tdims[0]*tdims[1]*tdims[2]*tdims[3]*tdims[4]
