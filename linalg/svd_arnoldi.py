@@ -28,7 +28,7 @@ class SVDSYMARNOLDI(torch.autograd.Function):
         # the scipy.sparse.linalg.eigsh
         
         # get M as numpy ndarray and wrap back to torch
-        M_nograd = M.clone().detach().numpy()
+        M_nograd = M.clone().detach().cpu().numpy()
         D, U= scipy.sparse.linalg.eigsh(M_nograd, k=k)
 
         D= torch.as_tensor(D)
@@ -41,6 +41,11 @@ class SVDSYMARNOLDI(torch.autograd.Function):
         # 1) M = UDU^t = US(sgn)U^t = U S (sgn)U^t = U S V^t
         # (sgn) is a diagonal matrix with signs of the eigenvales D
         V= U@torch.diag(torch.sign(D[p]))
+
+        if M.is_cuda:
+            U= U.cuda()
+            V= V.cuda()
+            S= S.cuda()
 
         self.save_for_backward(U, S, V)
         return U, S, V
