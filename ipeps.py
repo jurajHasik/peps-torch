@@ -451,7 +451,7 @@ def read_ipeps_su2(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg
         # read the list of considered SU(2)-symmetric tensors
         su2_tensors=[]
         for su2t in raw_state["su2_tensors"]:
-            meta=su2t
+            meta=dict({"meta": su2t["meta"]})
             dims=[su2t["physDim"]]+[su2t["auxDim"]]*4
             
             t= torch.zeros(tuple(dims), dtype=global_args.dtype, device=global_args.device)
@@ -460,7 +460,6 @@ def read_ipeps_su2(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg
                 inds=tuple([int(i) for i in tokens[0:5]])
                 t[inds]= float(tokens[5])
 
-            del meta["entries"]
             su2_tensors.append((meta,t))
 
         # Loop over non-equivalent tensor,coeffs pairs in the unit cell
