@@ -5,7 +5,7 @@ import torch.optim.lbfgs as lbfgs
 from scipy.optimize import minimize_scalar
 
 # from https://github.com/scipy/scipy/blob/master/scipy/optimize/linesearch.py
-def _scalar_search_armijo(phi, phi0, derphi0, args=(), c1=1e-4, alpha0=1, amin=0):
+def _scalar_search_armijo(phi, phi0, derphi0, args=(), c1=1e-4, alpha0=1, amin=1.0e-8):
     """Minimize over alpha, the function ``phi(alpha)``.
     Uses the interpolation algorithm (Armijo backtracking) as suggested by
     Wright and Nocedal in 'Numerical Optimization', 1999, pp. 56-57
