@@ -9,26 +9,26 @@ except:
 class SVDSYMARNOLDI(torch.autograd.Function):
     @staticmethod
     def forward(self, M, k):
-        """
-        Return leading k-singular triples of a matrix M, 
-        where M is symmetric M=M^t: M ~ (U)_{dim0,k}(S)_{k,k} (V)_{k,dim0}^{t}
-        by computing the symmetric decomposition of M= UDU^t
-        up to rank k. D is a diagonal rank-k matirx and U is 
-        a set of orthonormal eigenvectors.
-        
-        inputs:
-            M (torch.Tensor):
-                tensor of shape (dim0, dim0)
-            k (int):
-                desired rank
+        r"""
+        :param M: square symmetric matrix :math:`N \times N`
+        :param k: desired rank (must be smaller than :math:`N`)
+        :type M: torch.tensor
+        :type k: int
+        :return: leading k left eigenvectors U, singular values S, and right 
+                 eigenvectors V
+        :rtype: torch.tensor, torch.tensor, torch.tensor
 
-        returns U, S, V
+        **Note:** `depends on scipy`
+
+        Return leading k-singular triples of a matrix M, where M is symmetric 
+        :math:`M=M^T`, by computing the symmetric decomposition :math:`M= UDU^T` 
+        up to rank k. Partial eigendecomposition is done through Arnoldi method.
         """
         # input validation (M is square and symmetric) is provided by 
         # the scipy.sparse.linalg.eigsh
         
         # get M as numpy ndarray and wrap back to torch
-        M_nograd = M.clone().detach().numpy()
+        M_nograd = M.clone().detach().cpu().numpy()
         D, U= scipy.sparse.linalg.eigsh(M_nograd, k=k)
 
         D= torch.as_tensor(D)
@@ -42,12 +42,17 @@ class SVDSYMARNOLDI(torch.autograd.Function):
         # (sgn) is a diagonal matrix with signs of the eigenvales D
         V= U@torch.diag(torch.sign(D[p]))
 
+        if M.is_cuda:
+            U= U.cuda()
+            V= V.cuda()
+            S= S.cuda()
+
         self.save_for_backward(U, S, V)
         return U, S, V
 
     @staticmethod
     def backward(self, dU, dS, dV):
-        raise Exception("[ARNOLDISVD_SYM] backward not implemented")
+        raise Exception("backward not implemented")
         U, S, V = self.saved_tensors
         return dA, None
 

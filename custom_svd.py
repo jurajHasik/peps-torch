@@ -2,106 +2,197 @@ import torch
 import config as cfg
 from linalg.svd_gesdd import SVDGESDD
 from linalg.svd_symeig import SVDSYMEIG
-from linalg.svd_rsvd import RSVD
 from linalg.svd_arnoldi import SVDSYMARNOLDI
+from linalg.svd_rsvd import RSVD
 
-def truncated_svd_gesdd(M, chi, abs_tol=None, rel_tol=None):
+def truncated_svd_gesdd(M, chi, abs_tol=1.0e-14, rel_tol=None, keep_multiplets=False, \
+    eps_multiplet=1.0e-12, verbosity=0):
+    r"""
+    :param M: matrix of dimensions :math:`N \times L`
+    :param chi: desired maximal rank :math:`\chi`
+    :param abs_tol: absolute tolerance on minimal singular value 
+    :param rel_tol: relative tolerance on minimal singular value
+    :param keep_multiplets: truncate spectrum down to last complete multiplet
+    :param eps_multiplet: allowed splitting within multiplet
+    :param verbosity: logging verbosity
+    :type M: torch.tensor
+    :type chi: int
+    :type abs_tol: float
+    :type rel_tol: float
+    :type keep_multiplets: bool
+    :type eps_multiplet: float
+    :type verbosity: int
+    :return: leading :math:`\chi` left singular vectors U, right singular vectors V, and
+             singular values S
+    :rtype: torch.tensor, torch.tensor, torch.tensor
+
+    Returns leading :math:`\chi`-singular triples of a matrix M by computing the full 
+    SVD :math:`M= USV^T`. Returned tensors have dimensions
+
+    .. math:: dim(U)=(N,\chi),\ dim(S)=(\chi,\chi),\ \textrm{and}\ dim(V)=(L,\chi)
     """
-    Performs a truncated SVD on a matrix M.     
-    M ~ (Ut)(St)(Vt)^{T}
-    
-    inputs:
-        M (torch.Tensor):
-            tensor of shape (dim0, dim1)
-
-        chi (int):
-            maximum allowed dimension of S
-
-        abs_tol (float):
-            absolute tollerance on singular eigenvalues
-
-        rel_tol (float):
-            relative tollerance on singular eigenvalues
-
-    where S is diagonal matrix of of shape (dimS, dimS)
-    and dimS <= chi
-
-    returns Ut, St, Vt
-    """
-    
     U, S, V = SVDGESDD.apply(M)
-    St = S[:chi]
-    # if abs_tol is not None: St = St[St > abs_tol]
-    # if abs_tol is not None: St = torch.where(St > abs_tol, St, Stzeros)
-    # if rel_tol is not None: St = St[St/St[0] > rel_tol]
-    # magnitude = St[0]
-    # if rel_tol is not None: St = torch.where(St/magnitude > rel_tol, St, Stzeros)
-    # print("[truncated_svd] St "+str(St.shape[0]))
-    # print(St)
-
-    Ut = U[:, :St.shape[0]]
-    Vt = V[:, :St.shape[0]]
-    # print("Ut "+str(Ut.shape))
-    # print("Vt "+str(Vt.shape))
-
-    return Ut, St, Vt
-
-def truncated_svd_symeig(M, chi, abs_tol=1.0e-14, rel_tol=None, eps_multiplet=1.0e-10, \
-    verbosity=0):
-    """
-    Return a truncated SVD of a symmertic matrix M     
-    M ~ (Ut)(St)(Vt)^t
-    by computing the symmetric decomposition of M
-
-    inputs:
-        M (torch.Tensor):
-            tensor of shape (dim0, dim1)
-
-        chi (int):
-            maximum allowed dimension of S
-
-        abs_tol (float):
-            absolute tolerance on singular eigenvalues
-
-        rel_tol (float):
-            relative tolerance on singular eigenvalues
-
-    where S is diagonal matrix of of shape (dimS, dimS)
-    and dimS <= chi
-
-    returns Ut, St, Vt
-    """
-    U, S, V = SVDSYMEIG.apply(M)
-
-    gaps=S.clone().detach()
-    gaps[gaps < abs_tol]= 0.
-    # compute gaps and normalize by larger sing. value. Introduce cutoff
-    # for handling vanishing values set to exact zero
-    gaps=(gaps[0:len(S)-1]-S[1:len(S)])/(gaps[0:len(S)-1]+1.0e-16)
-    gaps[gaps > 1.0]= 0.
 
     # estimate the chi_new 
     chi_new= chi
-    if gaps[chi-1] < eps_multiplet:
-        # the chi is within the multiplet - find the largest chi_new < chi
-        # such that the complete multiplets are preserved
-        for i in range(chi-1,-1,-1):
-            if gaps[i] > eps_multiplet:
-                chi_new= i
-                break
+    if keep_multiplets and chi<S.shape[0]:
+        # regularize by discarding small values
+        gaps=S[:chi+1].clone().detach()
+        # S[S < abs_tol]= 0.
+        gaps[gaps < abs_tol]= 0.
+        # compute gaps and normalize by larger sing. value. Introduce cutoff
+        # for handling vanishing values set to exact zero
+        gaps=(gaps[:chi]-S[1:chi+1])/(gaps[:chi]+1.0e-16)
+        gaps[gaps > 1.0]= 0.
 
-    St = S[:chi].clone()
-    St[chi_new+1:]=0.
+        if gaps[chi-1] < eps_multiplet:
+            # the chi is within the multiplet - find the largest chi_new < chi
+            # such that the complete multiplets are preserved
+            for i in range(chi-1,-1,-1):
+                if gaps[i] > eps_multiplet:
+                    chi_new= i
+                    break
 
-    Ut = U[:, :St.shape[0]].clone()
-    Ut[:, chi_new+1:]=0.
-    Vt = V[:, :St.shape[0]].clone()
-    Vt[:, chi_new+1:]=0.
+        St = S[:chi].clone()
+        St[chi_new+1:]=0.
+
+        Ut = U[:, :St.shape[0]].clone()
+        Ut[:, chi_new+1:]=0.
+        Vt = V[:, :St.shape[0]].clone()
+        Vt[:, chi_new+1:]=0.
+        return Ut, St, Vt
+
+    St = S[:min(chi,S.shape[0])]
+    Ut = U[:, :St.shape[0]]
+    Vt = V[:, :St.shape[0]]
 
     return Ut, St, Vt
 
+def truncated_svd_symeig(M, chi, abs_tol=1.0e-14, rel_tol=None, keep_multiplets=False, \
+    eps_multiplet=1.0e-12, verbosity=0):
+    r"""
+    :param M: square matrix of dimensions :math:`N \times N`
+    :param chi: desired maximal rank :math:`\chi`
+    :param abs_tol: absolute tolerance on minimal singular value 
+    :param rel_tol: relative tolerance on minimal singular value
+    :param keep_multiplets: truncate spectrum down to last complete multiplet
+    :param eps_multiplet: allowed splitting within multiplet
+    :param verbosity: logging verbosity
+    :type M: torch.tensor
+    :type chi: int
+    :type abs_tol: float
+    :type rel_tol: float
+    :type keep_multiplets: bool
+    :type eps_multiplet: float
+    :type verbosity: int
+    :return: leading :math:`\chi` left singular vectors U, right singular vectors V, and
+             singular values S
+    :rtype: torch.tensor, torch.tensor, torch.tensor
+
+    Returns leading :math:`\chi`-singular triples of a matrix M, where M is a symmetric 
+    matrix :math:`M=M^T`, by computing the full symmetric decomposition :math:`M= UDU^T`. 
+    Returned tensors have dimensions
+
+    .. math:: dim(U)=(N,\chi),\ dim(S)=(\chi,\chi),\ \textrm{and}\ dim(V)=(N,\chi)
+    """
+    U, S, V = SVDSYMEIG.apply(M)
+
+    # estimate the chi_new 
+    chi_new= chi
+    if keep_multiplets and chi<S.shape[0]:
+        # regularize by discarding small values
+        gaps=S[:chi+1].clone().detach()
+        # S[S < abs_tol]= 0.
+        gaps[gaps < abs_tol]= 0.
+        # compute gaps and normalize by larger sing. value. Introduce cutoff
+        # for handling vanishing values set to exact zero
+        gaps=(gaps[:chi]-S[1:chi+1])/(gaps[:chi]+1.0e-16)
+        gaps[gaps > 1.0]= 0.
+
+        if gaps[chi-1] < eps_multiplet:
+            # the chi is within the multiplet - find the largest chi_new < chi
+            # such that the complete multiplets are preserved
+            for i in range(chi-1,-1,-1):
+                if gaps[i] > eps_multiplet:
+                    chi_new= i
+                    break
+
+        St = S[:chi].clone()
+        St[chi_new+1:]=0.
+
+        Ut = U[:, :St.shape[0]].clone()
+        Ut[:, chi_new+1:]=0.
+        Vt = V[:, :St.shape[0]].clone()
+        Vt[:, chi_new+1:]=0.
+        return Ut, St, Vt
+
+    St = S[:min(chi,S.shape[0])]
+    Ut = U[:, :St.shape[0]]
+    Vt = V[:, :St.shape[0]]
+
+    return Ut, St, Vt
+
+def truncated_svd_symarnoldi(M, chi, abs_tol=1.0e-14, rel_tol=None, keep_multiplets=False, \
+    eps_multiplet=1.0e-12, verbosity=0):
+    r"""
+    :param M: square matrix of dimensions :math:`N \times N`
+    :param chi: desired maximal rank :math:`\chi`
+    :param abs_tol: absolute tolerance on minimal singular value 
+    :param rel_tol: relative tolerance on minimal singular value
+    :param keep_multiplets: truncate spectrum down to last complete multiplet
+    :param eps_multiplet: allowed splitting within multiplet
+    :param verbosity: logging verbosity
+    :type M: torch.tensor
+    :type chi: int
+    :type abs_tol: float
+    :type rel_tol: float
+    :type keep_multiplets: bool
+    :type eps_multiplet: float
+    :type verbosity: int
+    :return: leading :math:`\chi` left singular vectors U, right singular vectors V, and
+             singular values S
+    :rtype: torch.tensor, torch.tensor, torch.tensor
+
+    **Note:** `depends on scipy`
+
+    Returns leading :math:`\chi`-singular triples of a matrix M, where M is a symmetric matrix :math:`M=M^T`,
+    by computing the partial symmetric decomposition :math:`M= UDU^T` up to rank :math:`\chi`. 
+    Returned tensors have dimensions 
+
+    .. math:: dim(U)=(N,\chi),\ dim(S)=(\chi,\chi),\ \textrm{and}\ dim(V)=(N,\chi)
+    """
+    U, S, V = SVDSYMARNOLDI.apply(M, chi+int(keep_multiplets))
+
+    # estimate the chi_new 
+    chi_new= chi
+    if keep_multiplets:
+        # regularize by discarding small values
+        gaps=S.clone().detach()
+        # S[S < abs_tol]= 0.
+        gaps[gaps < abs_tol]= 0.
+        # compute gaps and normalize by larger sing. value. Introduce cutoff
+        # for handling vanishing values set to exact zero
+        gaps=(gaps[:len(S)-1]-S[1:len(S)])/(gaps[:len(S)-1]+1.0e-16)
+        gaps[gaps > 1.0]= 0.
+
+        if gaps[chi-1] < eps_multiplet:
+            # the chi is within the multiplet - find the largest chi_new < chi
+            # such that the complete multiplets are preserved
+            for i in range(chi-1,-1,-1):
+                if gaps[i] > eps_multiplet:
+                    chi_new= i
+                    break
+
+        St = S[:chi].clone()
+        St[chi_new+1:]=0.
+
+        Ut = U[:, :St.shape[0]].clone()
+        Ut[:, chi_new+1:]=0.
+        Vt = V[:, :St.shape[0]].clone()
+        Vt[:, chi_new+1:]=0.
+        return Ut, St, Vt
+
+    return U, S, V
+
 def truncated_svd_rsvd(M, chi, abs_tol=None, rel_tol=None):
     return RSVD.apply(M, chi)
-
-def truncated_svd_arnoldi(M, chi, abs_tol=None, rel_tol=None):
-    return SVDSYMARNOLDI.apply(M, chi)

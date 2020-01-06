@@ -2,7 +2,6 @@
 Implementation taken from https://arxiv.org/abs/1903.09650
 which follows derivation given in https://people.maths.ox.ac.uk/gilesm/files/NA-08-01.pdf
 '''
-import numpy as np
 import torch
 
 def safe_inverse(x, epsilon=1E-12):
@@ -11,18 +10,15 @@ def safe_inverse(x, epsilon=1E-12):
 class SVDSYMEIG(torch.autograd.Function):
     @staticmethod
     def forward(self, A):
-        """
-        Return SVD of a matrix M, where M is symmetric M=M^t     
-        M ~ (U)(S)(V)^{t}
-        by computing the symmetric decomposition of M= UDU^t
+        r"""
+        :param A: square symmetric matrix
+        :type A: torch.tensor
+        :return: left singular vectors U, singular values S, and right singular
+                vectors V
+        :rtype: torch.tensor, torch.tensor, torch.tensor
 
-        inputs:
-            M (torch.Tensor):
-                tensor of shape (dim0, dim0)
-
-        where D is diagonal matrix of of shape (dim0, dim0)
-
-        returns U, S, V
+        Computes SVD of a matrix M, where M is symmetric :math:`M=M^T`,     
+        through symmetric decomposition :math:`M= UDU^T`.
         """
         # input validation (A is square and symmetric) is provided by torch.symeig
         
@@ -99,6 +95,26 @@ def test_SVDSYMEIG_random():
         return SVDSYMEIG.apply(M)
     assert(torch.autograd.gradcheck(force_sym_SVD, M, eps=1e-6, atol=1e-4))
 
+def test_SVDSYMEIG_su2sym():
+    import su2sym.sym_ten_parser as tenSU2
+    # Available D: [3,5,7,9]
+    for D in [3,5,7]:
+        su2sym_t= tenSU2.import_sym_tensors(2,D,"A_1",dtype=torch.float64)
+        c= torch.rand(len(su2sym_t), dtype=torch.float64)
+        ts= torch.stack([tensor for meta,tensor in su2sym_t])
+        a= torch.einsum('i,ipuldr->puldr',c,ts)
+        D2= D**2
+        M= torch.einsum('mijef,mijab->eafb',(a,a)).contiguous().view(D2, D2)
+
+        U,S,V= SVDSYMEIG.apply(M)
+        assert( torch.norm(M-U@torch.diag(S)@V.t()) < S[0]*(M.size()[0]**2)*1e-14 )
+
+        M.requires_grad_(True)
+        def force_sym_SVD(M):
+            M=0.5*(M+M.t())
+            return SVDSYMEIG.apply(M)
+        assert(torch.autograd.gradcheck(force_sym_SVD, M, eps=1e-6, atol=1e-4))
+
 def test_SVDSYMEIG_3x3degenerate():
     M= torch.zeros((3,3),dtype=torch.float64)
     M[0,1]=M[0,2]=M[1,2]=1.
@@ -142,5 +158,6 @@ if __name__=='__main__':
     sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
     test_SVDSYMEIG_random()
-    # test_SVDSYMEIG_rank_deficient()
+    test_SVDSYMEIG_rank_deficient()
     # test_SVDSYMEIG_3x3degenerate()
+    # test_SVDSYMEIG_su2sym()

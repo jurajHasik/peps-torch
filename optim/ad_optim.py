@@ -31,19 +31,6 @@ def store_checkpoint(checkpoint_file, parameters, optimizer, current_epoch, curr
     if verbosity>0:
         print(checkpoint_file)
 
-# A = torch.rand((phys_dim, bond_dim, bond_dim, bond_dim, bond_dim), dtype=torch.float64)
-# A = 2 * (A - 0.5)
-# A.requires_grad_(True)
-# def zero_fn(coord): return (0,0)
-# sites = {(0,0): A}
-# state1 = ipeps.IPEPS(None, sites, zero_fn)
-
-#     def loss_fn(state, model, ctm_args):
-#         ctm_env = ENV(env_args,state1)
-#         ctm_env = ctmrg.run(state, env, ctm_args=ctm_args, global_args=global_args)
-#         energy = model.energy_1x1c4v(state1, ctm_env)
-#         return energy
-
 def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=cfg.opt_args,\
     ctm_args=cfg.ctm_args, global_args=cfg.global_args):
     r"""
@@ -65,7 +52,7 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=cfg
     :type global_args: GLOBALARGS
 
     Optimizes initial wavefunction ``state`` with respect to ``loss_fn`` using LBFGS optimizer.
-    The main parameters influencing the optimization process are given in :py:class:`args.OPTARGS`.
+    The main parameters influencing the optimization process are given in :py:class:`config.OPTARGS`.
     """
     parameters = list(state.sites.values())
     for A in parameters: A.requires_grad_(True)

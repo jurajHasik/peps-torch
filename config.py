@@ -105,8 +105,12 @@ class CTMARGS():
     :ivar projector_svd_method: singular value decomposition algorithm used in the construction
                                 of the projectors:
 
-                                    * GESDD: using pytorch wrapper for LAPACK's gesdd
+                                    * GESDD: pytorch wrapper of LAPACK's gesdd
                                     * RSVD: randomized SVD
+                                    * SYMEIG: pytorch wrapper of LAPACK's dsyev for symmetric
+                                              matrices
+                                    * SYMARP: scipy wrapper of ARPACK's dsaupd for symmetric
+                                              matrices
 
                                 Default: ``'GESDD'``
     :vartype projector_svd_method: str
@@ -124,6 +128,8 @@ class CTMARGS():
 
                              Default: ``[(0,-1), (-1,0), (0,1), (1,0)]``
     :vartype ctm_move_sequence: list[tuple(int,int)]
+    :ivar ctm_logging: log debug statements into log file. Default: ``False`` 
+    :vartype ctm_loggging: bool
     :ivar verbosity_initialization: verbosity of initialization method for ENV objects. Default: ``0``
     :vartype verbosity_initialization: int
     :ivar verbosity_ctm_convergence: verbosity of evaluation of CTM convergence criterion. Default: ``0``
@@ -132,6 +138,8 @@ class CTMARGS():
     :vartype verbosity_projectors: int
     :ivar verbosity_ctm_move: verbosity of directional CTM moves. Default: ``0``
     :vartype verbosity_ctm_move: int
+    :ivar verbosity_rdm: verbosity of reduced density matrix routines. Default: ``0``
+    :vartype verbosity_rdm: int
     :ivar fwd_checkpoint_c2x2: recompute forward pass of enlarged corner functions (c2x2_*) during 
                                backward pass within optimization to save memory. Default: ``False``
     :vartype fwd_checkpoint_c2x2: bool
@@ -144,6 +152,8 @@ class CTMARGS():
     :ivar fwd_checkpoint_absorb: recompute forward pass of absorp and truncate functions (absorb_truncate_*) 
                                  during backward pass within optimization to save memory. Default: ``False``
     :vartype fwd_checkpoint_absorb: bool
+    :ivar fwd_checkpoint_move: recompute forward pass of whole ``ctm_MOVE`` during backward pass. Default: ``False``
+    :vartype fwd_checkpoint_move: bool
     """
     def __init__(self):
         self.ctm_max_iter = 50
@@ -153,10 +163,13 @@ class CTMARGS():
         self.projector_svd_method = 'GESDD'
         self.projector_svd_reltol = 1.0e-8
         self.ctm_move_sequence = [(0,-1), (-1,0), (0,1), (1,0)]
+        self.ctm_logging = False
+        self.verbosity_corner_multiplets= 0
         self.verbosity_initialization = 0
         self.verbosity_ctm_convergence = 0
         self.verbosity_projectors = 0
         self.verbosity_ctm_move = 0
+        self.verbosity_rdm = 0
         self.fwd_checkpoint_c2x2 = False
         self.fwd_checkpoint_halves = False
         self.fwd_checkpoint_projectors = False
@@ -197,9 +210,11 @@ class OPTARGS():
     def __init__(self):
         self.opt_ctm_reinit = True
         self.lr = 1.0
-        self.tolerance_grad = 1e-5
-        self.tolerance_change = 1e-9
-        self.history_size = 100
+        self.tolerance_grad= 1e-5
+        self.tolerance_change= 1e-9
+        self.line_search= "default"
+        self.tol_line_search= 1.0e-4
+        self.history_size= 100
         self.max_iter_per_epoch = 1
         self.verbosity_opt_epoch = 1
         self.opt_logging = True

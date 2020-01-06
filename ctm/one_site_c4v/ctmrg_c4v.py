@@ -1,4 +1,5 @@
 import time
+from math import sqrt
 import torch
 from torch.utils.checkpoint import checkpoint
 import config as cfg
@@ -25,6 +26,20 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
     environment ``env``. TODO add reference
     """
 
+    if cfg.ctm_args.projector_svd_method == 'GESDD':
+        def truncated_svd(M, chi):
+            return truncated_svd_gesdd(M, chi, verbosity=ctm_args.verbosity_projectors)
+    elif cfg.ctm_args.projector_svd_method == 'SYMEIG':
+        def truncated_svd(M, chi):
+            return truncated_svd_symeig(M, chi, keep_multiplets=True, \
+                verbosity=ctm_args.verbosity_projectors)
+    elif cfg.ctm_args.projector_svd_method == 'SYMARP':
+        def truncated_svd(M, chi):
+            return truncated_svd_symarnoldi(M, chi, keep_multiplets=True, \
+                verbosity=ctm_args.verbosity_projectors)
+    elif cfg.ctm_args.projector_svd_method == 'RSVD':
+        truncated_svd= truncated_svd_rsvd
+
     # 0) Create double-layer (DL) tensors, preserving the same convenction
     # for order of indices 
     #
@@ -44,34 +59,51 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
     stateDL = IPEPS(sitesDL,state.vertexToSite)
 
     # 1) perform CTMRG
+    t_obs=0.
     t0= time.perf_counter()
     history=[]
     for i in range(ctm_args.ctm_max_iter):
-        ctm_MOVE(stateDL, env, ctm_args=ctm_args, global_args=global_args)
+        ctm_MOVE(stateDL, env, truncated_svd, ctm_args=ctm_args, global_args=global_args)
 
+        t0_obs= time.perf_counter()
         if conv_check is not None:
             # evaluate convergence of the CTMRG procedure
             converged = conv_check(state, env, history, ctm_args=ctm_args)
             if ctm_args.verbosity_ctm_convergence>1: print(history[-1])
             if converged:
                 if ctm_args.verbosity_ctm_convergence>0: 
-                    print(f"CTMRG  converged at iter= {i}, history= {history[-1]}")
+                    print(f"CTMRG converged at iter= {i}, history= {history[-1]}")
                 break
+            elif len(history)>4:
+                # we are not converged, but perhaps we have entered stationary
+                # oscilatory regime x_i=x_{i+2}, x_{i+1}=x_{i+3} but |x_i-x_{i+1}|=const > small_eps
+
+                # 1) check whether the last value of loss is the on upper or lower branch
+                lower= history[-1] < history[-2] 
+
+                # 2) check if the upper branch decreases and the lower branch increases
+                del0= history[-1]-history[-3]
+                del1= history[-2]-history[-4]
+                dec_upper= del1 < 0 if lower else del0 < 0
+                inc_lower= del0 > 0 if lower else del1 > 0
+
+                # 3) if both lower and upper branch is converged within eps of ctm, but
+                # their difference is larger than large_eps
+                if abs(del0) < ctm_args.ctm_conv_tol and abs(del1) < ctm_args.ctm_conv_tol \
+                    and abs(history[-1] - history[-2]) > sqrt(ctm_args.ctm_conv_tol):
+                    # TODO perhaps return history[-1]=Nan to indicate failure of 
+                    # convergence and force restart
+                    break
+
+        t1_obs= time.perf_counter()
+        t_obs+= t1_obs-t0_obs
+
     t1= time.perf_counter()
 
-    return env, history, t1-t0
+    return env, history, t1-t0, t_obs
 
 # performs CTM move
-def ctm_MOVE(state, env, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
-    if cfg.ctm_args.projector_svd_method == 'GESDD':
-        truncated_svd= truncated_svd_gesdd
-    elif cfg.ctm_args.projector_svd_method == 'SYM':
-        truncated_svd= truncated_svd_symeig
-    elif cfg.ctm_args.projector_svd_method == 'RSVD':
-        truncated_svd= truncated_svd_rsvd
-    elif cfg.ctm_args.projector_svd_method == 'ARPACK':
-        truncated_svd= truncated_svd_arnoldi
-
+def ctm_MOVE(state, env, svd_method, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
     # 0) extract raw tensors as tuple
     tensors= tuple([next(iter(state.sites.values())),env.C[env.keyC],env.T[env.keyT]])
     
@@ -82,13 +114,7 @@ def ctm_MOVE(state, env, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
         C2X2= c2x2(A, C, T, verbosity=ctm_args.verbosity_projectors)
 
         # 2) build projector
-        P, S, V = truncated_svd(C2X2, env.chi) # M = PSV^{T}
-        # No inversion, thus no relative tolerance
-        # S = S[S/S[0] > ctm_args.projector_svd_reltol]
-        # S_zeros = torch.zeros((chi-S.size()[0]), dtype=global_args.dtype, device=global_args.device)
-        # S_sqrt = torch.rsqrt(S)
-        # S_sqrt = torch.cat((S_sqrt, S_zeros))
-        if ctm_args.verbosity_projectors>0: print(S)
+        P, S, V = svd_method(C2X2, env.chi) # M = PSV^{T}
 
         # 3) absorb and truncate
         #
@@ -98,6 +124,7 @@ def ctm_MOVE(state, env, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
         # P^t
         # 1->0
         C2X2= P.t() @ C2X2 @ P
+        # C2X2= P.t() @ C2X2 @ V
 
         P= P.view(env.chi,T.size()[2],env.chi)
         #    2->1

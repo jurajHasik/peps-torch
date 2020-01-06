@@ -2,8 +2,8 @@ import torch
 import config as cfg
 from ipeps import IPEPS
 
-class ENV_C4V(torch.nn.Module):
-    def __init__(self, chi, state, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+class ENV_C4V():
+    def __init__(self, chi, state, log=None, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
         r"""
         :param chi: environment bond dimension :math:`\chi`
         :param state: wavefunction
@@ -47,6 +47,7 @@ class ENV_C4V(torch.nn.Module):
         self.dtype= global_args.dtype
         self.device= global_args.device
         self.chi= chi
+        self.log_file= False
 
         # initialize environment tensors
         # The same structure is preserved as for generic ipeps ``ENV``. We store keys for access
@@ -60,6 +61,15 @@ class ENV_C4V(torch.nn.Module):
         site= next(iter(state.sites.values()))
         self.T[self.keyT]= torch.empty((self.chi,self.chi,site.size()[2]*site.size()[2]), \
             dtype=self.dtype, device=self.device)
+
+        if cfg.ctm_args.ctm_logging and log:
+            self.log_file= open(log, "w")
+
+    def log(self, s):
+        if self.log_file:
+            self.log_file.write(s)
+        else:
+            print(s,end="")
 
 def init_env(state, env, ctm_args=cfg.ctm_args):
     """
@@ -186,3 +196,19 @@ def print_env(env, verbosity=0):
     print("T "+str(env.T[keyT].size()))
     if verbosity>0:
         print(env.T[key])
+
+def compute_multiplets(env, eps_multiplet_gap=1.0e-10):
+    D= torch.zeros(env.chi+1, dtype=env.dtype, device=env.device)
+    D[:env.chi], U= torch.symeig(env.C[env.keyC])
+    D, p= torch.sort(torch.abs(D),descending=True)
+    m=[]
+    l=0
+    for i in range(env.chi):
+        l+=1
+        g=D[i]-D[i+1]
+        #print(f"{i} {D[i]} {g}", end=" ")
+        if g>eps_multiplet_gap:
+            #print(f"{l}", end=" ")
+            m.append(l)
+            l=0
+    return m
