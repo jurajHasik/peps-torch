@@ -39,13 +39,13 @@ if __name__=='__main__':
         bond_dim = args.bond_dim
         
         A = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-            dtype=cfg.global_args.dtype)
+            dtype=cfg.global_args.dtype,device=cfg.global_args.device)
         B = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-            dtype=cfg.global_args.dtype)
+            dtype=cfg.global_args.dtype,device=cfg.global_args.device)
         C = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-            dtype=cfg.global_args.dtype)
+            dtype=cfg.global_args.dtype,device=cfg.global_args.device)
         D = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-            dtype=cfg.global_args.dtype)
+            dtype=cfg.global_args.dtype,device=cfg.global_args.device)
 
         sites = {(0,0): A, (1,0): B, (0,1): C, (1,1): D}
 
@@ -79,7 +79,7 @@ if __name__=='__main__':
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{e_curr0}"]+[f"{v}" for v in obs_values0]))
 
-    ctm_env_init, history, t_ctm = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
+    ctm_env_init, *ctm_log = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
 
     # ----- S(0).S(r) -----
     corrSS= model.eval_corrf_SS((0,0), (1,0), state, ctm_env_init, args.corrf_r)

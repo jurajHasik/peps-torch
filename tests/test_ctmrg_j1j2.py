@@ -41,9 +41,15 @@ if __name__=='__main__':
             vx = (coord[0] + abs(coord[0]) * 2) % 2
             vy = (coord[1] + abs(coord[1]) * 2) % 2
             return (vx, vy)
+    elif args.tiling == "8SITE":
+        def lattice_to_site(coord):
+            shift_x = coord[0] + 2*(coord[1] // 2)
+            vx = shift_x % 4
+            vy = coord[1] % 2
+            return (vx, vy)
     else:
         raise ValueError("Invalid tiling: "+str(args.tiling)+" Supported options: "\
-            +"BIPARTITE, 2SITE, 4SITE")
+            +"BIPARTITE, 2SITE, 4SITE, 8SITE")
 
     # initialize an ipeps
     if args.instate!=None:
@@ -56,9 +62,9 @@ if __name__=='__main__':
         bond_dim = args.bond_dim
         
         A = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-            dtype=cfg.global_args.dtype)
+            dtype=cfg.global_args.dtype,device=cfg.global_args.device)
         B = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-            dtype=cfg.global_args.dtype)
+            dtype=cfg.global_args.dtype,device=cfg.global_args.device)
 
         # normalization of initial random tensors
         A = A/torch.max(torch.abs(A))
@@ -68,9 +74,9 @@ if __name__=='__main__':
         
         if args.tiling == "4SITE":
             C= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.dtype)
+                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
             D= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.dtype)
+                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
             sites[(0,1)]= C/torch.max(torch.abs(C))
             sites[(1,1)] = D/torch.max(torch.abs(D))
 

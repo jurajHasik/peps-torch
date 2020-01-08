@@ -42,7 +42,7 @@ if __name__=='__main__':
         bond_dim = args.bond_dim
         
         A= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-            dtype=cfg.global_args.dtype)
+            dtype=cfg.global_args.dtype,device=cfg.global_args.device)
         A= make_c4v_symm(A)
         A= A/torch.max(torch.abs(A))
 
@@ -76,7 +76,7 @@ if __name__=='__main__':
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{e_curr0}"]+[f"{v}" for v in obs_values0]))
 
-    ctm_env_init, history, t_ctm = ctmrg_c4v.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
+    ctm_env_init, *ctm_log = ctmrg_c4v.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
 
     corrSS= model.eval_corrf_SS(state, ctm_env_init, args.corrf_r, canonical=args.corrf_canonical)
     print("\n\nSS r "+" ".join([label for label in corrSS.keys()]))
