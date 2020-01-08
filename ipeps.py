@@ -553,8 +553,75 @@ def add_random_noise(state, noise=0.):
     """
     state.add_noise(noise) 
     
-
 def write_ipeps(state, outputfile, aux_seq=[0,1,2,3], tol=1.0e-14, normalize=False):
+    r"""
+    :param state: wavefunction to write out in json format
+    :param outputfile: target file
+    :param aux_seq: array specifying order in which the auxiliary indices of on-site tensors 
+                    will be stored in the `outputfile`
+    :param tol: minimum magnitude of tensor elements which are written out
+    :param normalize: if True, on-site tensors are normalized before writing
+    :type state: IPEPS
+    :type ouputfile: str or Path object
+    :type aux_seq: list[int]
+    :type tol: float
+    :type normalize: bool
+
+    Parameter ``aux_seq`` defines the order of auxiliary indices relative to the convention 
+    fixed in tn-torch in which the tensor elements are written out::
+    
+         0
+        1A3 <=> [up, left, down, right]: aux_seq=[0,1,2,3]
+         2
+        
+        for alternative order, eg.
+        
+         1
+        0A2 <=> [left, up, right, down]: aux_seq=[1,0,3,2] 
+         3
+    
+    TODO drop constrain for aux bond dimension to be identical on 
+    all bond indices
+    
+    TODO implement cutoff on elements with magnitude below tol
+        """
+    asq = [x+1 for x in aux_seq]
+    json_state=dict({"lX": state.lX, "lY": state.lY, "sites": []})
+    
+    site_ids=[]
+    site_map=[]
+    for nid,coord,site in [(t[0], *t[1]) for t in enumerate(state.sites.items())]:
+        if normalize:
+            site= site/torch.max(torch.abs(site))
+
+        json_tensor=dict()
+        
+        tdims = site.size()
+        tlength = tdims[0]*tdims[1]*tdims[2]*tdims[3]*tdims[4]
+        
+        site_ids.append(f"A{nid}")
+        site_map.append(dict({"siteId": site_ids[-1], "x": coord[0], "y": coord[1]} ))
+        json_tensor["siteId"]=site_ids[-1]
+        json_tensor["physDim"]= tdims[0]
+        # assuming all auxBondDim are identical
+        json_tensor["auxDim"]= tdims[1]
+        json_tensor["numEntries"]= tlength
+        entries = []
+        elem_inds = list(itertools.product( *(range(i) for i in tdims) ))
+        for ei in elem_inds:
+            entries.append(f"{ei[0]} {ei[asq[0]]} {ei[asq[1]]} {ei[asq[2]]} {ei[asq[3]]}"\
+                +f" {site[ei[0]][ei[1]][ei[2]][ei[3]][ei[4]]}")
+            
+        json_tensor["entries"]=entries
+        json_state["sites"].append(json_tensor)
+
+    json_state["siteIds"]=site_ids
+    json_state["map"]=site_map
+
+    with open(outputfile,'w') as f:
+        json.dump(json_state, f, indent=4, separators=(',', ': '))
+
+def write_ipeps_su2(state, outputfile, aux_seq=[0,1,2,3], tol=1.0e-14, normalize=False):
     r"""
     :param state: wavefunction to write out in json format
     :param outputfile: target file

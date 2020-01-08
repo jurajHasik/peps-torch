@@ -33,13 +33,13 @@ if __name__=='__main__':
         bond_dim = args.bond_dim
         
         A= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-            dtype=cfg.global_args.dtype)
+            dtype=cfg.global_args.dtype, device=cfg.global_args.device)
         A= make_c4v_symm(A)
         A= A/torch.max(torch.abs(A))
 
-        sites = {(0,0): A}
+        sites= {(0,0): A}
 
-        state = IPEPS(sites)
+        state= IPEPS(sites)
     else:
         raise ValueError("Missing trial state: -instate=None and -ipeps_init_type= "\
             +str(args.ipeps_init_type)+" is not supported")
@@ -52,7 +52,7 @@ if __name__=='__main__':
             history.append(s1.tolist())
 
             if len(history) > 1: 
-                s0 = torch.tensor(history[-2],dtype=s1.dtype)
+                s0 = torch.tensor(history[-2],dtype=s1.dtype,device=s1.device)
                 return torch.dist(s1,s0) < ctm_args.ctm_conv_tol
         return False
 
@@ -65,9 +65,9 @@ if __name__=='__main__':
     #             return True
     #     return False
 
-    ctm_env = ENV_C4V(args.chi, state)
+    ctm_env= ENV_C4V(args.chi, state)
     init_env(state, ctm_env)
-    ctm_env, history, t_ctm = ctmrg_c4v.run(state, ctm_env, conv_check=ctmrg_conv_specdistC)
+    ctm_env, *ctm_log= ctmrg_c4v.run(state, ctm_env, conv_check=ctmrg_conv_specdistC)
 
     loss= model.energy_1x1(state, ctm_env)
     obs_values, obs_labels= model.eval_obs(state,ctm_env)
@@ -84,10 +84,10 @@ if __name__=='__main__':
             init_env(symm_state, ctm_env_in)
 
         # 1) compute environment by CTMRG
-        ctm_env_out, history, t_ctm= ctmrg_c4v.run(symm_state, ctm_env_in, conv_check=ctmrg_conv_specdistC)
+        ctm_env_out, *ctm_log= ctmrg_c4v.run(symm_state, ctm_env_in, conv_check=ctmrg_conv_specdistC)
         loss = model.energy_1x1(symm_state, ctm_env_out)
         
-        return loss, ctm_env_out, history, t_ctm
+        return (loss, ctm_env_out, *ctm_log)
 
     # optimize
     optimize_state(state, ctm_env, loss_fn, model, args)
@@ -97,7 +97,7 @@ if __name__=='__main__':
     state= read_ipeps(outputstatefile)
     ctm_env = ENV_C4V(args.chi, state)
     init_env(state, ctm_env)
-    ctm_env, history, t_ctm = ctmrg_c4v.run(state, ctm_env, conv_check=ctmrg_conv_specdistC)
+    ctm_env, *ctm_log = ctmrg_c4v.run(state, ctm_env, conv_check=ctmrg_conv_specdistC)
     opt_energy = model.energy_1x1(state,ctm_env)
     obs_values, obs_labels = model.eval_obs(state,ctm_env)
     print(", ".join([f"{args.opt_max_iter}",f"{opt_energy}"]+[f"{v}" for v in obs_values]))

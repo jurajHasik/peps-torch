@@ -59,11 +59,12 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
     stateDL = IPEPS(sitesDL,state.vertexToSite)
 
     # 1) perform CTMRG
-    t_obs=0.
-    t0= time.perf_counter()
+    t_obs=t_ctm=0.
     history=[]
     for i in range(ctm_args.ctm_max_iter):
+        t0_ctm= time.perf_counter()
         ctm_MOVE(stateDL, env, truncated_svd, ctm_args=ctm_args, global_args=global_args)
+        t1_ctm= time.perf_counter()
 
         t0_obs= time.perf_counter()
         if conv_check is not None:
@@ -74,33 +75,12 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
                 if ctm_args.verbosity_ctm_convergence>0: 
                     print(f"CTMRG converged at iter= {i}, history= {history[-1]}")
                 break
-            elif len(history)>4:
-                # we are not converged, but perhaps we have entered stationary
-                # oscilatory regime x_i=x_{i+2}, x_{i+1}=x_{i+3} but |x_i-x_{i+1}|=const > small_eps
-
-                # 1) check whether the last value of loss is the on upper or lower branch
-                lower= history[-1] < history[-2] 
-
-                # 2) check if the upper branch decreases and the lower branch increases
-                del0= history[-1]-history[-3]
-                del1= history[-2]-history[-4]
-                dec_upper= del1 < 0 if lower else del0 < 0
-                inc_lower= del0 > 0 if lower else del1 > 0
-
-                # 3) if both lower and upper branch is converged within eps of ctm, but
-                # their difference is larger than large_eps
-                if abs(del0) < ctm_args.ctm_conv_tol and abs(del1) < ctm_args.ctm_conv_tol \
-                    and abs(history[-1] - history[-2]) > sqrt(ctm_args.ctm_conv_tol):
-                    # TODO perhaps return history[-1]=Nan to indicate failure of 
-                    # convergence and force restart
-                    break
-
         t1_obs= time.perf_counter()
+        
+        t_ctm+= t1_ctm-t0_ctm
         t_obs+= t1_obs-t0_obs
 
-    t1= time.perf_counter()
-
-    return env, history, t1-t0, t_obs
+    return env, history, t_ctm, t_obs
 
 # performs CTM move
 def ctm_MOVE(state, env, svd_method, ctm_args=cfg.ctm_args, global_args=cfg.global_args):

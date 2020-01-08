@@ -59,9 +59,9 @@ if __name__=='__main__':
         bond_dim = args.bond_dim
         
         A = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-            dtype=cfg.global_args.dtype)
+            dtype=cfg.global_args.dtype,device=cfg.global_args.device)
         B = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-            dtype=cfg.global_args.dtype)
+            dtype=cfg.global_args.dtype,device=cfg.global_args.device)
 
         # normalization of initial random tensors
         A = A/torch.max(torch.abs(A))
@@ -71,21 +71,21 @@ if __name__=='__main__':
         
         if args.tiling == "4SITE" or args.tiling == "8SITE":
             C= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.dtype)
+                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
             D= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.dtype)
+                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
             sites[(0,1)]= C/torch.max(torch.abs(C))
             sites[(1,1)] = D/torch.max(torch.abs(D))
 
         if args.tiling == "8SITE":
             E= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.dtype)
+                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
             F= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.dtype)
+                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
             G= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.dtype)
+                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
             H= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.dtype)
+                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
             sites[(2,0)]= E/torch.max(torch.abs(E))
             sites[(3,0)] = F/torch.max(torch.abs(F))
             sites[(2,1)] = G/torch.max(torch.abs(G))
@@ -120,7 +120,7 @@ if __name__=='__main__':
 
     ctm_env = ENV(args.chi, state)
     init_env(state, ctm_env)
-    ctm_env, history, t_ctm = ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
+    ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
 
     loss0 = energy_f(state, ctm_env)
     obs_values, obs_labels = model.eval_obs(state,ctm_env)
@@ -133,10 +133,10 @@ if __name__=='__main__':
             init_env(state, ctm_env_in)
 
         # 1) compute environment by CTMRG
-        ctm_env_out, history, t_ctm = ctmrg.run(state, ctm_env_in, conv_check=ctmrg_conv_energy)
+        ctm_env_out, *ctm_log= ctmrg.run(state, ctm_env_in, conv_check=ctmrg_conv_energy)
         loss = energy_f(state, ctm_env_out)
         
-        return loss, ctm_env_out, history, t_ctm
+        return (loss, ctm_env_out, *ctm_log)
 
     # optimize
     optimize_state(state, ctm_env, loss_fn, model, args)
@@ -146,7 +146,7 @@ if __name__=='__main__':
     state= read_ipeps(outputstatefile, vertexToSite=state.vertexToSite)
     ctm_env = ENV(args.chi, state)
     init_env(state, ctm_env)
-    ctm_env, history, t_ctm = ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
+    ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
     opt_energy = energy_f(state,ctm_env)
     obs_values, obs_labels = model.eval_obs(state,ctm_env)
     print(", ".join([f"{args.opt_max_iter}",f"{opt_energy}"]+[f"{v}" for v in obs_values]))  

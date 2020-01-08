@@ -15,7 +15,7 @@ class AKLTS2():
     def __init__(self, global_args=cfg.global_args):
         self.dtype=global_args.dtype
         self.device=global_args.device
-        self.phys_dim = 5
+        self.phys_dim= 5
 
         self.h, self.SS = self.get_h()
         self.obs_ops = self.get_obs()
@@ -144,7 +144,7 @@ class AKLTS2_C4V_BIPARTITE():
     def __init__(self, global_args=cfg.global_args):
         self.dtype=global_args.dtype
         self.device=global_args.device
-        self.phys_dim = 5
+        self.phys_dim= 5
 
         self.h2_rot, self.SS, self.SS_rot = self.get_h()
         self.obs_ops = self.get_obs()
@@ -159,7 +159,7 @@ class AKLTS2_C4V_BIPARTITE():
         expr_kron = 'ij,ab->iajb'
         SS = torch.einsum(expr_kron,s5.SZ(),s5.SZ()) + 0.5*(torch.einsum(expr_kron,s5.SP(),s5.SM()) \
             + torch.einsum(expr_kron,s5.SM(),s5.SP()))
-        rot_op = su2.get_rot_op(5)
+        rot_op = s5.BP_rot()
         SS_rot = torch.einsum('jl,ilak,kb->ijab',rot_op,SS,rot_op)
         SS = SS.view(pd*pd,pd*pd)
         h = (1./14)*(SS + (7./10.)*SS@SS + (7./45.)*SS@SS@SS + (1./90.)*SS@SS@SS@SS)

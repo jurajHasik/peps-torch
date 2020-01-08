@@ -55,6 +55,9 @@ class SU2():
         """
         return get_op("sm",self.J,dtype=self.dtype,device=self.device)
 
+    def BP_rot(self):
+        return get_rot_op(self.J,dtype=self.dtype,device=self.device)
+
     # TODO: implement xyz for Sx and Sy terms
     def SS(self, xyz=(1.,1.,1.)):
         r"""

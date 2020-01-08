@@ -425,7 +425,7 @@ class J1J2_C4V_BIPARTITE():
         expr_kron = 'ij,ab->iajb'
         SS= torch.einsum(expr_kron,s2.SZ(),s2.SZ()) + 0.5*(torch.einsum(expr_kron,s2.SP(),s2.SM()) \
             + torch.einsum(expr_kron,s2.SM(),s2.SP()))
-        rot_op= su2.get_rot_op(self.phys_dim, dtype=self.dtype, device=self.device)
+        rot_op= s2.BP_rot()
         SS_rot= torch.einsum('ki,kjcb,ca->ijab',rot_op,SS,rot_op)
 
         h2x2_SS_rot= torch.einsum('ijab,klcd->ijklabcd',SS_rot,id2) # nearest neighbours

@@ -60,7 +60,6 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=cfg
     outputstatefile= local_args.out_prefix+"_state.json"
     outputlogfile= open(local_args.out_prefix+"_log.json",mode="w",buffering=1)
     t_data = dict({"loss": [1.0e+16], "min_loss": 1.0e+16})
-    eval_counter=[0]
     prev_epoch=[-1]
     current_env=[ctm_env_init]
     
@@ -73,45 +72,45 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=cfg
         for coord,site in state.sites.items():
             site = site/torch.max(torch.abs(site))
 
-
-        # 1) evaluate loss and the gradient
-        loss, ctm_env, history, t_ctm = loss_fn(state, current_env[0], opt_args=opt_args)
+        # 1) evaluate loss
+        loss, ctm_env, history, t_ctm, t_check = loss_fn(state, current_env[0], opt_args=opt_args)
         
-        # 2) log ctm metrics for debugging
-        if opt_args.opt_logging:
-            log_entry=dict({"id": len(t_data["loss"]), \
-                "t_ctm": t_ctm, "ctm_history_len": len(history), "ctm_history": history})
-            outputlogfile.write(json.dumps(log_entry)+'\n')
-
-        t0= time.perf_counter()
-        loss.backward()
-        t1= time.perf_counter()
-
         # We evaluate observables inside closure as it is the only place with environment
         # consistent with the state
         if prev_epoch[0]!=epoch:
-            # 3) compute observables if we moved into new epoch
+            # 2) compute observables if we moved into new epoch
             obs_values, obs_labels = model.eval_obs(state,ctm_env)
             print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
 
-            # 4) store current state if the loss improves
+            # 3) store current state if the loss improves
             t_data["loss"].append(loss.item())
             if t_data["min_loss"] > t_data["loss"][-1]:
                 t_data["min_loss"]= t_data["loss"][-1]
                 write_ipeps(state, outputstatefile, normalize=True)
 
-        # 5) log additional metrics for debugging
+        # 4) log CTM metrics for debugging
         if opt_args.opt_logging:
-            log_entry=dict({"id": len(t_data["loss"])-1, "t_grad": t1-t0})
+            log_entry=dict({"id": len(t_data["loss"])-1, \
+                "t_ctm": t_ctm, "t_check": t_check,  "ctm_history_len": len(history), \
+                "ctm_history": history})
             outputlogfile.write(json.dumps(log_entry)+'\n')
 
-        # 6) detach current environment from autograd graph
+        # 5) evaluate gradient
+        t_grad0= time.perf_counter()
+        loss.backward()
+        t_grad1= time.perf_counter()
+
+        # 6) log grad metrics for debugging
+        if opt_args.opt_logging:
+            log_entry=dict({"id": len(t_data["loss"])-1, "t_grad": t_grad1-t_grad0})
+            outputlogfile.write(json.dumps(log_entry)+'\n')
+
+        # 7) detach current environment from autograd graph
         lst_C = list(ctm_env.C.values())
         lst_T = list(ctm_env.T.values())
         current_env[0] = ctm_env
         for el in lst_T + lst_C: el.detach_()
 
-        eval_counter[0]+=1
         prev_epoch[0]=epoch
         return loss
 
