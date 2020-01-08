@@ -80,6 +80,20 @@ if __name__=='__main__':
             sites[(0,1)]= C/torch.max(torch.abs(C))
             sites[(1,1)] = D/torch.max(torch.abs(D))
 
+        if args.tiling == "8SITE":
+            E= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+            F= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+            G= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+            H= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+            sites[(2,0)]= E/torch.max(torch.abs(E))
+            sites[(3,0)] = F/torch.max(torch.abs(F))
+            sites[(2,1)] = G/torch.max(torch.abs(G))
+            sites[(3,1)] = H/torch.max(torch.abs(H))
+
         state = IPEPS(sites, vertexToSite=lattice_to_site)
     else:
         raise ValueError("Missing trial state: -instate=None and -ipeps_init_type= "\
@@ -92,6 +106,8 @@ if __name__=='__main__':
         energy_f=model.energy_2x2_2site
     elif args.tiling == "4SITE":
         energy_f=model.energy_2x2_4site
+    elif args.tiling == "8SITE":
+        energy_f=model.energy_2x2_8site
     else:
         raise ValueError("Invalid tiling: "+str(args.tiling)+" Supported options: "\
             +"BIPARTITE, 2SITE, 4SITE")
@@ -117,7 +133,7 @@ if __name__=='__main__':
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{e_curr0}"]+[f"{v}" for v in obs_values0]))
 
-    ctm_env_init, history, t_ctm = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
+    ctm_env_init, *ctm_log= ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
 
     corrSS= model.eval_corrf_SS((0,0), (1,0), state, ctm_env_init, args.corrf_r)
     print("\n\nSS[(0,0),(1,0)] r "+" ".join([label for label in corrSS.keys()]))
