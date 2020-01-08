@@ -1,6 +1,6 @@
 import torch
-import su2
-from c4v import *
+import groups.su2
+from groups.c4v import *
 import config as cfg
 import ipeps
 from ctm.generic.env import ENV

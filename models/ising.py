@@ -1,8 +1,8 @@
 import torch
-import su2
+import groups.su2
 # from env import ENV
 import ipeps
-from c4v import *
+from groups.c4v import *
 from ctm.generic import rdm
 from ctm.one_site_c4v import rdm_c4v
 import config as cfg

@@ -6,7 +6,7 @@ import config as cfg
 import ipeps
 from ipeps import IPEPS
 from ctm.one_site_c4v.env_c4v import *
-from custom_svd import *
+from linalg.custom_svd import *
 
 def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.global_args): 
     r"""

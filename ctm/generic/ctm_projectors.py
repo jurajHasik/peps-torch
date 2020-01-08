@@ -4,7 +4,7 @@ import config as cfg
 from ipeps import IPEPS
 from ctm.generic.env import ENV
 from ctm.generic.ctm_components import *
-from custom_svd import *
+from linalg.custom_svd import *
 
 def ctm_get_projectors_4x4(direction, coord, state, env, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
     r"""
