@@ -1,5 +1,5 @@
 import torch
-import groups.su2
+import groups.su2 as su2
 # from env import ENV
 import ipeps
 from groups.c4v import *

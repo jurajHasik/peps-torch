@@ -1,5 +1,5 @@
 import torch
-import groups.su2
+import groups.su2 as su2
 import config as cfg
 import ipeps
 from ctm.generic.env import ENV
