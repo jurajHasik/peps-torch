@@ -1,0 +1,238 @@
+import copy
+import time
+import json
+import torch
+#from memory_profiler import profile
+import config as cfg
+from su2sym.ipeps_su2 import write_ipeps_su2
+from ctm.one_site_c4v.env_c4v import compute_multiplets
+from optim import lbfgs_modified
+
+def store_checkpoint(checkpoint_file, parameters, optimizer, current_epoch, current_loss,\
+    verbosity=0):
+    r"""
+    :param checkpoint_file: target file
+    :param parameters: wavefunction parameters
+    :param optimizer: Optimizer
+    :param current_epoch: current epoch
+    :param current_loss: current value of a loss function
+    :param verbosity: verbosity
+    :type checkpoint_file: str or Path
+    :type parameters: list[torch.tensor]
+    :type optimizer: torch.optim.Optimizer
+    :type current_epoch: int
+    :type current_loss: float
+    :type verbosity: int
+
+    Store the current state of the optimization in ``checkpoint_file``.
+    """
+    torch.save({
+            'epoch': current_epoch,
+            'loss': current_loss,
+            'parameters': parameters,
+            'optimizer_state_dict': optimizer.state_dict()}, checkpoint_file)
+    if verbosity>0:
+        print(checkpoint_file)
+
+# A = torch.rand((phys_dim, bond_dim, bond_dim, bond_dim, bond_dim), dtype=torch.float64)
+# A = 2 * (A - 0.5)
+# A.requires_grad_(True)
+# def zero_fn(coord): return (0,0)
+# sites = {(0,0): A}
+# state1 = ipeps.IPEPS(None, sites, zero_fn)
+
+#     def loss_fn(state, model, ctm_args):
+#         ctm_env = ENV(env_args,state1)
+#         ctm_env = ctmrg.run(state, env, ctm_args=ctm_args, global_args=global_args)
+#         energy = model.energy_1x1c4v(state1, ctm_env)
+#         return energy
+
+def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=cfg.opt_args,\
+    ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+    r"""
+    :param state: initial wavefunction
+    :param ctm_env_init: initial environment corresponding to ``state``
+    :param loss_fn: loss function
+    :param model: model with definition of observables
+    :param local_args: parsed command line arguments
+    :param opt_args: optimization configuration
+    :param ctm_args: CTM algorithm configuration
+    :param global_args: global configuration
+    :type state: IPEPS
+    :type ctm_env_init: ENV
+    :type loss_fn: function(IPEPS,ENV,CTMARGS,OPTARGS,GLOBALARGS)->torch.tensor
+    :type model: TODO Model base class
+    :type local_args: argparse.Namespace
+    :type opt_args: OPTARGS
+    :type ctm_args: CTMARGS
+    :type global_args: GLOBALARGS
+
+    Optimizes initial wavefunction ``state`` with respect to ``loss_fn`` using LBFGS optimizer.
+    The main parameters influencing the optimization process are given in :py:class:`args.OPTARGS`.
+    """
+    # parameters = list(state.coeffs.values())
+    parameters = [state.coeffs[k] for k in state.coeffs.keys()]
+    for A in parameters: A.requires_grad_(True)
+
+    outputstatefile= local_args.out_prefix+"_state.json"
+    outputlogfile= open(local_args.out_prefix+"_opt_log.json",mode="w",buffering=1)
+    t_data = dict({"loss": [1.0e+16], "min_loss": 1.0e+16})
+    prev_epoch=[-1]
+    current_env=[ctm_env_init]
+    
+    #@profile
+    def closure():
+        for el in parameters: 
+            if el.grad is not None: el.grad.zero_()
+
+        # 0) pre-process state: normalize on-site tensors by largest elements
+        with torch.no_grad():
+            for c in state.coeffs.keys():
+                state.coeffs[c]*= 1.0/torch.max(torch.abs(state.coeffs[c]))
+
+        # 1) evaluate loss and the gradient
+        loss, ctm_env, history, t_ctm, t_obs = loss_fn(state, current_env[0], opt_args=opt_args)
+
+        # We evaluate observables inside closure as it is the only place with environment
+        # consistent with the state
+        if prev_epoch[0]!=epoch:
+            # 2) compute observables if we moved into new epoch
+            obs_values, obs_labels = model.eval_obs(state,ctm_env)
+            print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values])\
+                +f", {len(history)}")
+
+            # 3) store current state if the loss improves
+            t_data["loss"].append(loss.item())
+            if t_data["min_loss"] > t_data["loss"][-1]:
+                t_data["min_loss"]= t_data["loss"][-1]
+                write_ipeps_su2(state, outputstatefile, normalize=True)
+
+        # 4) log CTM metrics for debugging
+        if opt_args.opt_logging:
+            log_entry=dict({"id": len(t_data["loss"])-1, \
+                "t_ctm": t_ctm, "t_obs": t_obs, "ctm_history_len": len(history), \
+                "ctm_history": history, "final_multiplets": compute_multiplets(ctm_env)})
+            outputlogfile.write(json.dumps(log_entry)+'\n')
+
+        t_grad0= time.perf_counter()
+        loss.backward()
+        t_grad1= time.perf_counter()
+
+        # 5) log grad metrics
+        if opt_args.opt_logging:
+            log_entry=dict({"id": len(t_data["loss"])-1, "ctm_iter": len(history),
+                "t_grad": t_grad1-t_grad0, "grad": [p.grad.tolist() for p in parameters],
+                "coeffs": [p.tolist() for p in parameters] })
+            outputlogfile.write(json.dumps(log_entry)+'\n')
+
+        # 6) detach current environment from autograd graph
+        lst_C = list(ctm_env.C.values())
+        lst_T = list(ctm_env.T.values())
+        current_env[0] = ctm_env
+        for el in lst_T + lst_C: el.detach_()
+
+        prev_epoch[0]=epoch
+        return loss
+
+    # closure for derivative-free line search. This closure
+    # is to be called within torch.no_grad context
+    def closure_linesearch():
+        # 0) pre-process state: normalize on-site tensors by largest elements
+        for c in state.coeffs.keys():
+            state.coeffs[c]*= 1.0/torch.max(torch.abs(state.coeffs[c]))
+
+        # 1) evaluate loss
+        loc_opt_args= copy.deepcopy(opt_args)
+        loc_opt_args.opt_ctm_reinit= False
+        loss, ctm_env, history, t_ctm, t_obs = loss_fn(state, current_env[0],\
+            opt_args=loc_opt_args)
+
+        # We evaluate observables inside closure as it is the only place with the environment
+        # consistent with the state
+        #if prev_epoch[0]!=epoch:
+        # 2) compute observables if we moved into new epoch
+        obs_values, obs_labels = model.eval_obs(state,ctm_env)
+        log_line= ", ".join([f"{len(history)}",f"{loss}"]+[f"{v}" for v in obs_values])
+
+        #     # 3) store current state if the loss improves
+        #     t_data["loss"].append(loss.item())
+        #     if t_data["min_loss"] > t_data["loss"][-1]:
+        #         t_data["min_loss"]= t_data["loss"][-1]
+        #         write_ipeps(state, outputstatefile, normalize=True)
+
+        # 4) log CTM metrics for debugging
+        if opt_args.opt_logging:
+            log_entry=dict({"id_LS": len(t_data["loss"])-1, \
+                "t_ctm": t_ctm, "t_obs": t_obs, "ctm_history_len": len(history), \
+                "ctm_history": history, "final_multiplets": compute_multiplets(ctm_env)})
+            outputlogfile.write(json.dumps(log_entry)+'\n')
+
+        # 5) log opt metrics
+        if opt_args.opt_logging:
+            log_entry=dict({"id_LS": len(t_data["loss"])-1,
+                "coeffs": [p.tolist() for p in parameters] })
+            outputlogfile.write(json.dumps(log_entry)+'\n')
+
+        current_env[0] = ctm_env
+
+        return loss, log_line
+
+    verbosity = opt_args.verbosity_opt_epoch
+    outputstatefile = local_args.out_prefix+"_state.json"
+    checkpoint_file = local_args.out_prefix+"_checkpoint.p"
+    optimizer = lbfgs_modified.LBFGS_MOD(parameters, max_iter=opt_args.max_iter_per_epoch, lr=opt_args.lr, \
+        tolerance_grad=opt_args.tolerance_grad, tolerance_change=opt_args.tolerance_change, \
+        history_size=opt_args.history_size, line_search_fn=opt_args.line_search, \
+        line_search_eps=opt_args.tol_line_search)
+    epoch0 = 0
+    loss0 = 0
+
+    if local_args.opt_resume is not None:
+        print(f"INFO: resuming from check point. resume = {local_args.opt_resume}")
+        checkpoint = torch.load(local_args.opt_resume)
+        init_parameters = checkpoint["parameters"]
+        epoch0 = checkpoint["epoch"]
+        loss0 = checkpoint["loss"]
+        for i in range(len(parameters)):
+            parameters[i].data = init_parameters[i].data
+        cp_state_dict= checkpoint["optimizer_state_dict"]
+        cp_opt_params= cp_state_dict["param_groups"][0]
+        cp_opt_history= cp_state_dict["state"][cp_opt_params["params"][0]]
+        if local_args.opt_resume_override_params:
+            cp_opt_params["lr"] = opt_args.lr
+            cp_opt_params["max_iter"] = opt_args.max_iter_per_epoch
+            cp_opt_params["tolerance_grad"] = opt_args.tolerance_grad
+            cp_opt_params["tolerance_change"] = opt_args.tolerance_change
+            # resize stored old_dirs, old_stps, ro, al to new history size
+            cp_history_size= cp_opt_params["history_size"]
+            cp_opt_params["history_size"] = opt_args.history_size
+            if opt_args.history_size < cp_history_size:
+                if len(cp_opt_history["old_dirs"]) > opt_args.history_size: 
+                    cp_opt_history["old_dirs"]= cp_opt_history["old_dirs"][-opt_args.history_size:]
+                    cp_opt_history["old_stps"]= cp_opt_history["old_stps"][-opt_args.history_size:]
+            cp_ro_filtered= list(filter(None,cp_opt_history["ro"]))
+            cp_al_filtered= list(filter(None,cp_opt_history["al"]))
+            if len(cp_ro_filtered) > opt_args.history_size:
+                cp_opt_history["ro"]= cp_ro_filtered[-opt_args.history_size:]
+                cp_opt_history["al"]= cp_al_filtered[-opt_args.history_size:]
+            else:
+                cp_opt_history["ro"]= cp_ro_filtered + [None for i in range(opt_args.history_size-len(cp_ro_filtered))]
+                cp_opt_history["al"]= cp_al_filtered + [None for i in range(opt_args.history_size-len(cp_ro_filtered))]
+        cp_state_dict["param_groups"][0]= cp_opt_params
+        cp_state_dict["state"][cp_opt_params["params"][0]]= cp_opt_history
+        optimizer.load_state_dict(cp_state_dict)
+        print(f"checkpoint.loss = {loss0}")
+
+    for epoch in range(local_args.opt_max_iter):
+        # checkpoint the optimizer
+        # checkpointing before step, guarantees the correspondence between the wavefunction
+        # and the last computed value of loss t_data["loss"][-1]
+        store_checkpoint(checkpoint_file, parameters, optimizer, epoch0+epoch, t_data["loss"][-1])
+        
+        # After execution closure ``current_env`` **IS NOT** corresponding to ``state``, since
+        # the ``state`` on-site tensors have been modified by gradient. 
+        optimizer.step_2c(closure, closure_linesearch)
+
+    # optimization is over, store the last checkpoint
+    store_checkpoint(checkpoint_file, parameters, optimizer, \
+        epoch0+local_args.opt_max_iter, t_data["loss"][-1])
