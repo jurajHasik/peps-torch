@@ -6,23 +6,26 @@ from ipeps import *
 from ctm.generic.env import *
 from ctm.generic import ctmrg
 from ctm.generic import transferops
-from models import coupledLadders
+from models import jq
+import unittest
 
-if __name__=='__main__':
-    # parse command line args and build necessary configuration objects
-    parser= cfg.get_args_parser()
-    # additional model-dependent arguments
-    parser.add_argument("-alpha", type=float, default=0., help="inter-ladder coupling")
-    # additional observables-related arguments
-    parser.add_argument("-corrf_r", type=int, default=1, help="maximal correlation function distance")
-    parser.add_argument("-top_n", type=int, default=2, help="number of leading eigenvalues"+
-        "of transfer operator to compute")
-    args = parser.parse_args()
+# parse command line args and build necessary configuration objects
+parser= cfg.get_args_parser()
+# additional model-dependent arguments
+parser.add_argument("-j1", type=float, default=0.0, help="nearest-neighbour coupling")
+parser.add_argument("-q", type=float, default=1.0, help="plaquette interaction strength")
+# additional observables-related arguments
+parser.add_argument("-corrf_r", type=int, default=1, help="maximal correlation function distance")
+parser.add_argument("-top_n", type=int, default=2, help="number of leading eigenvalues"+
+    "of transfer operator to compute")
+args, unknown = parser.parse_known_args()
+
+def main():
     cfg.configure(args)
     cfg.print_config()
     torch.set_num_threads(args.omp_cores)
     
-    model = coupledLadders.COUPLEDLADDERS(alpha=args.alpha)
+    model = jq.JQ(j1=args.j1, q=args.q)
     
     # initialize an ipeps
     # 1) define lattice-tiling function, that maps arbitrary vertex of square lattice
@@ -59,7 +62,7 @@ if __name__=='__main__':
 
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         with torch.no_grad():
-            e_curr = model.energy_2x1_1x2(state, env)
+            e_curr = model.energy_2x2_4site(state, env)
             obs_values, obs_labels = model.eval_obs(state, env)
             history.append([e_curr.item()]+obs_values)
             print(", ".join([f"{len(history)}",f"{e_curr}"]+[f"{v}" for v in obs_values]))
@@ -72,8 +75,8 @@ if __name__=='__main__':
     init_env(state, ctm_env_init)
     print(ctm_env_init)
 
-    e_curr0 = model.energy_2x1_1x2(state, ctm_env_init)
-    obs_values0, obs_labels = model.eval_obs(state, ctm_env_init)
+    e_curr0 = model.energy_2x2_4site(state, ctm_env_init)
+    obs_values0, obs_labels = model.eval_obs(state,ctm_env_init)
 
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{e_curr0}"]+[f"{v}" for v in obs_values0]))
@@ -170,3 +173,25 @@ if __name__=='__main__':
     l= transferops.get_Top_spec(args.top_n, (1,1), (0,1), state, ctm_env_init)
     for i in range(l.size()[0]):
         print(f"{i} {l[i,0]} {l[i,1]}")
+
+if __name__=='__main__':
+    main()
+
+
+class TestCtmrg(unittest.TestCase):
+    def setUp(self):
+        args.j1=0.0
+        args.bond_dim=2
+        args.chi=16
+        args.opt_max_iter=2
+
+    # basic tests
+    def test_ctmrg_GESDD(self):
+        args.CTMARGS_projector_svd_method="GESDD"
+        main()
+
+    @unittest.skipIf(not torch.cuda.is_available(), "CUDA not available")
+    def test_ctmrg_GESDD_gpu(self):
+        args.GLOBALARGS_device="cuda:0"
+        args.CTMARGS_projector_svd_method="GESDD"
+        main()

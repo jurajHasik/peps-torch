@@ -7,14 +7,16 @@ from groups.c4v import *
 from ctm.one_site_c4v.env_c4v import *
 from ctm.one_site_c4v import ctmrg_c4v
 from models import akltS2
+import unittest
 
-if __name__=='__main__':
-    # parse command line args and build necessary configuration objects
-    parser= cfg.get_args_parser()
-    # additional model-dependent arguments
-    # additional observables-related arguments
-    parser.add_argument("-corrf_r", type=int, default=1, help="maximal correlation function distance")
-    args = parser.parse_args()
+# parse command line args and build necessary configuration objects
+parser= cfg.get_args_parser()
+# additional model-dependent arguments
+# additional observables-related arguments
+parser.add_argument("-corrf_r", type=int, default=1, help="maximal correlation function distance")
+args, unknown = parser.parse_known_args()
+
+def main():
     cfg.configure(args)
     cfg.print_config()
     torch.set_num_threads(args.omp_cores)
@@ -99,3 +101,33 @@ if __name__=='__main__':
     u,s,v= torch.svd(ctm_env_init.C[ctm_env_init.keyC], compute_uv=False)
     for i in range(args.chi):
         print(f"{i} {s[i]}")
+
+if __name__=='__main__':
+    main()
+
+class TestCtmrg(unittest.TestCase):
+    def setUp(self):
+        args.bond_dim=2
+        args.chi=16
+        args.opt_max_iter=2
+
+    # basic tests
+    def test_ctmrg_GESDD(self):
+        args.CTMARGS_projector_svd_method="GESDD"
+        main()
+
+    def test_ctmrg_SYMEIG(self):
+        args.CTMARGS_projector_svd_method="SYMEIG"
+        main()
+
+    @unittest.skipIf(not torch.cuda.is_available(), "CUDA not available")
+    def test_ctmrg_GESDD_gpu(self):
+        args.GLOBALARGS_device="cuda:0"
+        args.CTMARGS_projector_svd_method="GESDD"
+        main()
+
+    @unittest.skipIf(not torch.cuda.is_available(), "CUDA not available")
+    def test_ctmrg_SYMEIG_gpu(self):
+        args.GLOBALARGS_device="cuda:0"
+        args.CTMARGS_projector_svd_method="SYMEIG"
+        main()

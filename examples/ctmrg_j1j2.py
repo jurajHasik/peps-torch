@@ -1,3 +1,4 @@
+import context
 import torch
 import argparse
 import config as cfg
@@ -5,20 +6,23 @@ from ipeps import *
 from ctm.generic.env import *
 from ctm.generic import ctmrg
 from models import j1j2
-from optim.ad_optim import optimize_state
+import unittest
 
-if __name__=='__main__':
-    # parse command line args and build necessary configuration objects
-    parser= cfg.get_args_parser()
-    # additional model-dependent arguments
-    parser.add_argument("-j1", type=float, default=1., help="nearest-neighbour coupling")
-    parser.add_argument("-j2", type=float, default=0., help="next nearest-neighbour coupling")
-    parser.add_argument("-tiling", default="BIPARTITE", help="tiling of the lattice")
-    args = parser.parse_args()
+# parse command line args and build necessary configuration objects
+parser= cfg.get_args_parser()
+# additional model-dependent arguments
+parser.add_argument("-j1", type=float, default=1., help="nearest-neighbour coupling")
+parser.add_argument("-j2", type=float, default=0., help="next nearest-neighbour coupling")
+parser.add_argument("-tiling", default="BIPARTITE", help="tiling of the lattice")
+# additional observables-related arguments
+parser.add_argument("-corrf_r", type=int, default=1, help="maximal correlation function distance")
+args, unknown = parser.parse_known_args()
+
+def main():
     cfg.configure(args)
     cfg.print_config()
     torch.set_num_threads(args.omp_cores)
-
+    
     model = j1j2.J1J2(j1=args.j1, j2=args.j2)
     
     # initialize an ipeps
@@ -49,6 +53,7 @@ if __name__=='__main__':
         raise ValueError("Invalid tiling: "+str(args.tiling)+" Supported options: "\
             +"BIPARTITE, 2SITE, 4SITE, 8SITE")
 
+    # initialize an ipeps
     if args.instate!=None:
         state = read_ipeps(args.instate, vertexToSite=lattice_to_site)
         if args.bond_dim > max(state.get_aux_bond_dims()):
@@ -69,7 +74,7 @@ if __name__=='__main__':
 
         sites = {(0,0): A, (1,0): B}
         
-        if args.tiling == "4SITE" or args.tiling == "8SITE":
+        if args.tiling == "4SITE":
             C= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
                 dtype=cfg.global_args.dtype,device=cfg.global_args.device)
             D= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
@@ -97,7 +102,7 @@ if __name__=='__main__':
             +str(args.ipeps_init_type)+" is not supported")
 
     print(state)
-    
+
     # 2) select the "energy" function 
     if args.tiling == "BIPARTITE" or args.tiling == "2SITE":
         energy_f=model.energy_2x2_2site
@@ -107,46 +112,80 @@ if __name__=='__main__':
         energy_f=model.energy_2x2_8site
     else:
         raise ValueError("Invalid tiling: "+str(args.tiling)+" Supported options: "\
-            +"BIPARTITE, 2SITE, 4SITE, 8SITE")
+            +"BIPARTITE, 2SITE, 4SITE")
 
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         with torch.no_grad():
             e_curr = energy_f(state, env)
-            history.append(e_curr.item())
+            obs_values, obs_labels = model.eval_obs(state, env)
+            history.append([e_curr.item()]+obs_values)
+            print(", ".join([f"{len(history)}",f"{e_curr}"]+[f"{v}" for v in obs_values]))
 
-            if len(history) > 1 and abs(history[-1]-history[-2]) < ctm_args.ctm_conv_tol:
+            if len(history) > 1 and abs(history[-1][0]-history[-2][0]) < ctm_args.ctm_conv_tol:
                 return True
         return False
 
-    ctm_env = ENV(args.chi, state)
-    init_env(state, ctm_env)
-    ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
+    ctm_env_init = ENV(args.chi, state)
+    init_env(state, ctm_env_init)
+    print(ctm_env_init)
 
-    loss0 = energy_f(state, ctm_env)
-    obs_values, obs_labels = model.eval_obs(state,ctm_env)
+    e_curr0 = energy_f(state, ctm_env_init)
+    obs_values0, obs_labels = model.eval_obs(state,ctm_env_init)
+
     print(", ".join(["epoch","energy"]+obs_labels))
-    print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
+    print(", ".join([f"{-1}",f"{e_curr0}"]+[f"{v}" for v in obs_values0]))
 
-    def loss_fn(state, ctm_env_in, opt_args=cfg.opt_args):
-        # possibly re-initialize the environment
-        if opt_args.opt_ctm_reinit:
-            init_env(state, ctm_env_in)
+    ctm_env_init, *ctm_log= ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
 
-        # 1) compute environment by CTMRG
-        ctm_env_out, *ctm_log= ctmrg.run(state, ctm_env_in, conv_check=ctmrg_conv_energy)
-        loss = energy_f(state, ctm_env_out)
-        
-        return (loss, ctm_env_out, *ctm_log)
+    corrSS= model.eval_corrf_SS((0,0), (1,0), state, ctm_env_init, args.corrf_r)
+    print("\n\nSS[(0,0),(1,0)] r "+" ".join([label for label in corrSS.keys()]))
+    for i in range(args.corrf_r):
+        print(f"{i} "+" ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
 
-    # optimize
-    optimize_state(state, ctm_env, loss_fn, model, args)
+    corrSS= model.eval_corrf_SS((0,0), (0,1), state, ctm_env_init, args.corrf_r)
+    print("\n\nSS[(0,0),(0,1)] r "+" ".join([label for label in corrSS.keys()]))
+    for i in range(args.corrf_r):
+        print(f"{i} "+" ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
 
-    # compute final observables for the best variational state
-    outputstatefile= args.out_prefix+"_state.json"
-    state= read_ipeps(outputstatefile, vertexToSite=state.vertexToSite)
-    ctm_env = ENV(args.chi, state)
-    init_env(state, ctm_env)
-    ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
-    opt_energy = energy_f(state,ctm_env)
-    obs_values, obs_labels = model.eval_obs(state,ctm_env)
-    print(", ".join([f"{args.opt_max_iter}",f"{opt_energy}"]+[f"{v}" for v in obs_values]))  
+    # environment diagnostics
+    print("\n")
+    for c_loc,c_ten in ctm_env_init.C.items(): 
+        u,s,v= torch.svd(c_ten, compute_uv=False)
+        print(f"spectrum C[{c_loc}]")
+        for i in range(args.chi):
+            print(f"{i} {s[i]}")
+
+if __name__=='__main__':
+    main()
+
+class TestCtmrg(unittest.TestCase):
+    def setUp(self):
+        args.j2=0.0
+        args.bond_dim=2
+        args.chi=16
+        args.opt_max_iter=2
+
+    # basic tests
+    def test_ctmrg_GESDD_BIPARTITE(self):
+        args.CTMARGS_projector_svd_method="GESDD"
+        args.tiling="BIPARTITE"
+        main()
+
+    @unittest.skipIf(not torch.cuda.is_available(), "CUDA not available")
+    def test_ctmrg_GESDD_BIPARTITE_gpu(self):
+        args.GLOBALARGS_device="cuda:0"
+        args.CTMARGS_projector_svd_method="GESDD"
+        args.tiling="BIPARTITE"
+        main()
+
+    def test_ctmrg_GESDD_4SITE(self):
+        args.CTMARGS_projector_svd_method="GESDD"
+        args.tiling="4SITE"
+        main()
+
+    @unittest.skipIf(not torch.cuda.is_available(), "CUDA not available")
+    def test_ctmrg_GESDD_4SITE_gpu(self):
+        args.GLOBALARGS_device="cuda:0"
+        args.CTMARGS_projector_svd_method="GESDD"
+        args.tiling="4SITE"
+        main()

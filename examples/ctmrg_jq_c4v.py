@@ -8,21 +8,23 @@ from ctm.one_site_c4v.env_c4v import *
 from ctm.one_site_c4v import ctmrg_c4v
 from ctm.one_site_c4v import transferops_c4v
 from models import jq
+import unittest
 
-if __name__=='__main__':
-    # parse command line args and build necessary configuration objects
-    parser= cfg.get_args_parser()
-    # additional model-dependent arguments
-    parser.add_argument("-c4v_type", default="TI", help="type of C4v ansatz. Supported types:"\
-        +"TI, BIPARTITE, PLAQUETTE")
-    parser.add_argument("-j1", type=float, default=0.0, help="nearest-neighbour coupling")
-    parser.add_argument("-q", type=float, default=1.0, help="plaquette interaction strength")
-    parser.add_argument("-q_inter", type=float, default=None, help="relevant for c4v_type=PLAQUETTE")
-    # additional observables-related arguments
-    parser.add_argument("-corrf_r", type=int, default=1, help="maximal correlation function distance")
-    parser.add_argument("-top_n", type=int, default=2, help="number of leading eigenvalues"+
-        "of transfer operator to compute")
-    args = parser.parse_args()
+# parse command line args and build necessary configuration objects
+parser= cfg.get_args_parser()
+# additional model-dependent arguments
+parser.add_argument("-c4v_type", default="TI", help="type of C4v ansatz. Supported types:"\
+    +"TI, BIPARTITE, PLAQUETTE")
+parser.add_argument("-j1", type=float, default=0.0, help="nearest-neighbour coupling")
+parser.add_argument("-q", type=float, default=1.0, help="plaquette interaction strength")
+parser.add_argument("-q_inter", type=float, default=None, help="relevant for c4v_type=PLAQUETTE")
+# additional observables-related arguments
+parser.add_argument("-corrf_r", type=int, default=1, help="maximal correlation function distance")
+parser.add_argument("-top_n", type=int, default=2, help="number of leading eigenvalues"+
+    "of transfer operator to compute")
+args, unknown = parser.parse_known_args()
+    
+def main():
     cfg.configure(args)
     cfg.print_config()
     torch.set_num_threads(args.omp_cores)
@@ -117,3 +119,39 @@ if __name__=='__main__':
     l= transferops_c4v.get_Top_spec_c4v(args.top_n, state, ctm_env_init)
     for i in range(l.size()[0]):
         print(f"{i} {l[i,0]} {l[i,1]}")
+
+if __name__=='__main__':
+    main()
+
+class TestCtmrg(unittest.TestCase):
+    def setUp(self):
+        args.j1=0.0
+        args.bond_dim=2
+        args.chi=16
+        args.opt_max_iter=2
+        args.GLOBALARGS_device="cpu"
+
+    # basic tests
+    def test_ctmrg_GESDD_BIPARTITE(self):
+        args.c4v_type="BIPARTITE"
+        args.CTMARGS_projector_svd_method="GESDD"
+        main()
+
+    def test_ctmrg_SYMEIG_BIPARTITE(self):
+        args.c4v_type="BIPARTITE"
+        args.CTMARGS_projector_svd_method="SYMEIG"
+        main()
+
+    @unittest.skipIf(not torch.cuda.is_available(), "CUDA not available")
+    def test_ctmrg_GESDD_BIPARTITE_gpu(self):
+        args.c4v_type="BIPARTITE"
+        args.GLOBALARGS_device="cuda:0"
+        args.CTMARGS_projector_svd_method="GESDD"
+        main()
+
+    @unittest.skipIf(not torch.cuda.is_available(), "CUDA not available")
+    def test_ctmrg_SYMEIG_BIPARTITE_gpu(self):
+        args.c4v_type="BIPARTITE"
+        args.GLOBALARGS_device="cuda:0"
+        args.CTMARGS_projector_svd_method="SYMEIG"
+        main()

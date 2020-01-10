@@ -4,39 +4,33 @@ import config as cfg
 from ipeps import *
 from ctm.generic.env import *
 from ctm.generic import ctmrg
-from models import jq
+from models import coupledLadders
 from optim.ad_optim import optimize_state
+import unittest
 
-if __name__=='__main__':
-    # parse command line args and build necessary configuration objects
-    parser= cfg.get_args_parser()
-    # additional model-dependent arguments
-    parser.add_argument("-j1", type=float, default=0.0, help="nearest-neighbour coupling")
-    parser.add_argument("-q", type=float, default=1.0, help="plaquette interaction strength")
-    args = parser.parse_args()
+# parse command line args and build necessary configuration objects
+parser= cfg.get_args_parser()
+# additional model-dependent arguments
+parser.add_argument("-alpha", type=float, default=0., help="inter-ladder coupling")
+args, unknown = parser.parse_known_args()
+
+def main():
     cfg.configure(args)
     cfg.print_config()
     torch.set_num_threads(args.omp_cores)
     
-    model = jq.JQ(j1=args.j1, q=args.q)
+    model = coupledLadders.COUPLEDLADDERS(alpha=args.alpha)
     
     # initialize an ipeps
     # 1) define lattice-tiling function, that maps arbitrary vertex of square lattice
     # coord into one of coordinates within unit-cell of iPEPS ansatz    
 
-    if args.instate is not None:
+    if args.instate!=None:
         state = read_ipeps(args.instate)
         if args.bond_dim > max(state.get_aux_bond_dims()):
             # extend the auxiliary dimensions
             state = extend_bond_dim(state, args.bond_dim)
         add_random_noise(state, args.instate_noise)
-    elif args.opt_resume is not None:
-        unit_cell= [(0,0), (1,0), (0,1), (1,1)]
-        checkpoint= torch.load(args.opt_resume)
-        init_parameters = checkpoint["parameters"]
-        assert len(init_parameters)==len(unit_cell), f"Incompatible number of on-site tensors"
-        sites= dict(zip(unit_cell, init_parameters))
-        state = IPEPS(sites, lX=2, lY=2)
     elif args.ipeps_init_type=='RANDOM':
         bond_dim = args.bond_dim
         
@@ -62,43 +56,73 @@ if __name__=='__main__':
 
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         with torch.no_grad():
-            e_curr = model.energy_2x2_4site(state, env)
+            e_curr = model.energy_2x1_1x2(state, env)
             history.append(e_curr.item())
 
             if len(history) > 1 and abs(history[-1]-history[-2]) < ctm_args.ctm_conv_tol:
                 return True
         return False
 
-    ctm_env_init = ENV(args.chi, state)
-    init_env(state, ctm_env_init)
-    ctm_env_init, *ctm_log = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
+    ctm_env = ENV(args.chi, state)
+    init_env(state, ctm_env)
+    ctm_env, *ctm_log = ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
 
-    loss = model.energy_2x2_4site(state, ctm_env_init)
-    obs_values, obs_labels = model.eval_obs(state,ctm_env_init)
+    loss = model.energy_2x1_1x2(state, ctm_env)
+    obs_values, obs_labels = model.eval_obs(state,ctm_env)
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{loss}"]+[f"{v}" for v in obs_values]))
 
-    def loss_fn(state, ctm_env_init, opt_args=cfg.opt_args):
+    def loss_fn(state, ctm_env_in, opt_args=cfg.opt_args):
         # possibly re-initialize the environment
         if opt_args.opt_ctm_reinit:
-            init_env(state, ctm_env_init)
+            init_env(state, ctm_env_in)
 
         # 1) compute environment by CTMRG
-        ctm_env_out,  *ctm_log = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
-        loss = model.energy_2x2_4site(state, ctm_env_out)
+        ctm_env_out, *ctm_log = ctmrg.run(state, ctm_env_in, conv_check=ctmrg_conv_energy)
+        loss = model.energy_2x1_1x2(state, ctm_env_out)
         
         return (loss, ctm_env_out, *ctm_log)
 
     # optimize
-    optimize_state(state, ctm_env_init, loss_fn, model, args)
+    optimize_state(state, ctm_env, loss_fn, model, args)
 
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"
     state= read_ipeps(outputstatefile)
     ctm_env = ENV(args.chi, state)
     init_env(state, ctm_env)
-    ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
-    opt_energy = model.energy_2x2_4site(state,ctm_env)
+    ctm_env, *ctm_log = ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
+    opt_energy = model.energy_2x1_1x2(state,ctm_env)
     obs_values, obs_labels = model.eval_obs(state,ctm_env)
     print(", ".join([f"{args.opt_max_iter}",f"{opt_energy}"]+[f"{v}" for v in obs_values]))
-    
+
+if __name__=='__main__':
+    main()
+
+class TestOpt(unittest.TestCase):
+    def setUp(self):
+        args.alpha=1.0
+        args.bond_dim=2
+        args.chi=16
+        args.opt_max_iter=2
+
+    # basic tests
+    def test_opt_GESDD(self):
+        args.CTMARGS_projector_svd_method="GESDD"
+        main()
+
+    @unittest.skipIf(not torch.cuda.is_available(), "CUDA not available")
+    def test_opt_GESDD_gpu(self):
+        args.GLOBALARGS_device="cuda:0"
+        args.CTMARGS_projector_svd_method="GESDD"
+        main()
+
+    def test_opt_fwd_checkpoint_move(self):
+        args.fwd_checkpoint_move= True
+        main()
+
+    @unittest.skipIf(not torch.cuda.is_available(), "CUDA not available")
+    def test_opt_gpu_fwd_checkpoint_move(self):
+        args.GLOBALARGS_device="cuda:0"
+        args.fwd_checkpoint_move= True
+        main()
