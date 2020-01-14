@@ -23,15 +23,18 @@ def get_Top_spec(n, coord, direction, state, env, verbosity=0):
     #  --0 (chi)
     # v--1 (D^2)
     #  --2 (chi)
+    
+    # if state and env are on gpu, the matrix-vector product can be performed
+    # there as well. Price to pay is the communication overhead of resulting vector
     def _mv(v):
         c0= coord
-        V= torch.as_tensor(v)
+        V= torch.as_tensor(v,device=state.device)
         V= V.view(chi,ad*ad,chi)
         for i in range(N):
             V= corrf.apply_TM_1sO(c0,direction,state,env,V,verbosity=verbosity)
             c0= (c0[0]+direction[0],c0[1]+direction[1])
         V= V.view(chi*ad*ad*chi)
-        v= V.numpy()
+        v= V.cpu().numpy()
         return v
 
     T= LinearOperator((chi*ad*ad*chi,chi*ad*ad*chi), matvec=_mv)
