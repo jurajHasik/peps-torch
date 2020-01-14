@@ -31,8 +31,8 @@ def store_checkpoint(checkpoint_file, parameters, optimizer, current_epoch, curr
     if verbosity>0:
         print(checkpoint_file)
 
-def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=cfg.opt_args,\
-    ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+def optimize_state(state, ctm_env_init, loss_fn, model, local_args, callbacks=None, \
+    opt_args=cfg.opt_args, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
     r"""
     :param state: initial wavefunction
     :param ctm_env_init: initial environment corresponding to ``state``
@@ -81,6 +81,9 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=cfg
             # 2) compute observables if we moved into new epoch
             obs_values, obs_labels = model.eval_obs(state,ctm_env)
             print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
+
+            # 2a) callbacks
+            for fc in callbacks: fc(state,ctm_env,epoch,history)
 
             # 3) store current state if the loss improves
             t_data["loss"].append(loss.item())
