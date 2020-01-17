@@ -40,30 +40,17 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
     elif cfg.ctm_args.projector_svd_method == 'RSVD':
         truncated_svd= truncated_svd_rsvd
 
-    # 0) Create double-layer (DL) tensors, preserving the same convenction
-    # for order of indices 
-    #
-    #     /           /
-    #  --A^dag-- = --a--
-    #   /|          /
-    #    |/
-    #  --A--
-    #   /
-    #
-    sitesDL=dict()
-    for coord,A in state.sites.items():
-        dimsA = A.size()
-        a = torch.einsum('mefgh,mabcd->eafbgchd',(A,A)).contiguous().view(dimsA[1]**2,\
-            dimsA[2]**2, dimsA[3]**2, dimsA[4]**2)
-        sitesDL[coord]=a
-    stateDL = IPEPS(sitesDL,state.vertexToSite)
+    a= next(iter(state.sites.values()))
+    #A = torch.einsum('mefgh,mabcd->eafbgchd',(a,a)).contiguous().view(a.shape[1]**2,\
+    #        a.shape[2]**2, a.shape[3]**2, a.shape[4]**2)
 
     # 1) perform CTMRG
     t_obs=t_ctm=0.
     history=[]
     for i in range(ctm_args.ctm_max_iter):
         t0_ctm= time.perf_counter()
-        ctm_MOVE_dl(stateDL, env, truncated_svd, ctm_args=ctm_args, global_args=global_args)
+        # ctm_MOVE_dl(A, env, truncated_svd, ctm_args=ctm_args, global_args=global_args)
+        ctm_MOVE_sl(a, env, truncated_svd, ctm_args=ctm_args, global_args=global_args)
         t1_ctm= time.perf_counter()
 
         t0_obs= time.perf_counter()
@@ -83,9 +70,9 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
     return env, history, t_ctm, t_obs
 
 # performs CTM move
-def ctm_MOVE_dl(state, env, svd_method, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+def ctm_MOVE_dl(A, env, svd_method, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
     # 0) extract raw tensors as tuple
-    tensors= tuple([next(iter(state.sites.values())),env.C[env.keyC],env.T[env.keyT]])
+    tensors= tuple([A,env.C[env.keyC],env.T[env.keyT]])
     
     # function wrapping up the core of the CTM MOVE segment of CTM algorithm
     def ctm_MOVE_dl_c(*tensors):
@@ -104,7 +91,7 @@ def ctm_MOVE_dl(state, env, svd_method, ctm_args=cfg.ctm_args, global_args=cfg.g
         # P^t
         # 1->0
         C2X2= P.t() @ C2X2 @ P
-        # C2X2= P.t() @ C2X2 @ V
+        # C2X2= torch.diag(S)
 
         P= P.view(env.chi,T.size()[2],env.chi)
         #    2->1
@@ -141,8 +128,7 @@ def ctm_MOVE_dl(state, env, svd_method, ctm_args=cfg.ctm_args, global_args=cfg.g
         C2X2= C2X2/torch.max(torch.abs(C2X2))
         nT= nT/torch.max(torch.abs(nT))
 
-        ret_list= tuple([C2X2, nT])
-        return ret_list
+        return C2X2, nT
 
     # Call the core function, allowing for checkpointing
     if ctm_args.fwd_checkpoint_move:
@@ -184,9 +170,9 @@ def c2x2_dl(A, C, T, verbosity=0):
     return C2x2
 
 # performs CTM move
-def ctm_MOVE_sl(state, env, svd_method, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+def ctm_MOVE_sl(a, env, svd_method, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
     # 0) extract raw tensors as tuple
-    tensors= tuple([next(iter(state.sites.values())),env.C[env.keyC],env.T[env.keyT]])
+    tensors= tuple([a,env.C[env.keyC],env.T[env.keyT]])
     
     # function wrapping up the core of the CTM MOVE segment of CTM algorithm
     def ctm_MOVE_sl_c(*tensors):
@@ -200,7 +186,7 @@ def ctm_MOVE_sl(state, env, svd_method, ctm_args=cfg.ctm_args, global_args=cfg.g
         # 3) absorb and truncate
         #
         # C2X2--1 0--P--1
-        # 0 
+        # 0
         # 0
         # P^t
         # 1->0
@@ -216,7 +202,6 @@ def ctm_MOVE_sl(state, env, svd_method, ctm_args=cfg.ctm_args, global_args=cfg.g
         # T--2->3
         # 1->2
         nT= torch.tensordot(P, T,([0],[0]))
-
 
         # 4) double-layer tensor contraction - layer by layer
         # 4i) untangle the fused D^2 indices
@@ -275,7 +260,7 @@ def ctm_MOVE_sl(state, env, svd_method, ctm_args=cfg.ctm_args, global_args=cfg.g
         # 0       1
         # |___P___|
         #     2
-        nT = torch.tensordot(nT, P,([1,2],[0,1]))
+        nT = torch.tensordot(nT,P,([1,2],[0,1]))
         nT = nT.permute(0,2,1).contiguous()
 
         # 4) symmetrize, normalize and assign new C,T
@@ -284,8 +269,7 @@ def ctm_MOVE_sl(state, env, svd_method, ctm_args=cfg.ctm_args, global_args=cfg.g
         C2X2= C2X2/torch.max(torch.abs(C2X2))
         nT= nT/torch.max(torch.abs(nT))
 
-        ret_list= tuple([C2X2, nT])
-        return ret_list
+        return C2X2, nT
 
     # Call the core function, allowing for checkpointing
     if ctm_args.fwd_checkpoint_move:
