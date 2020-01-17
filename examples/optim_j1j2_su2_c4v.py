@@ -23,8 +23,9 @@ def main():
     cfg.print_config()
     torch.set_num_threads(args.omp_cores)
 
-    model = j1j2.J1J2_C4V_BIPARTITE(j1=args.j1, j2=args.j2)
-    
+    model= j1j2.J1J2_C4V_BIPARTITE(j1=args.j1, j2=args.j2)
+    energy_f= model.energy_1x1_lowmem
+
     # initialize an ipeps
     if args.instate!=None:
         state = read_ipeps_su2(args.instate, vertexToSite=None)
@@ -75,7 +76,7 @@ def main():
 
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         with torch.no_grad():
-            e_curr = model.energy_1x1_lowmem(state, env)
+            e_curr = energy_f(state, env)
             history.append(e_curr.item())
 
             if len(history) > 1 and abs(history[-1]-history[-2]) < ctm_args.ctm_conv_tol:
@@ -91,7 +92,7 @@ def main():
     ctm_env, history, t_ctm, t_obs= ctmrg_c4v.run(state, ctm_env, \
         conv_check=ctmrg_conv_energy)
 
-    loss= model.energy_1x1(state, ctm_env)
+    loss= energy_f(state, ctm_env)
     obs_values, obs_labels= model.eval_obs(state,ctm_env)
     print(", ".join(["epoch","energy"]+obs_labels)+", ctm-steps")
     print(", ".join([f"{-1}",f"{loss}"]+[f"{v}" for v in obs_values])+f", {len(history)}")
@@ -107,13 +108,13 @@ def main():
         # 1) compute environment by CTMRG
         ctm_env_out, history, t_ctm, t_obs= ctmrg_c4v.run(state, ctm_env_in, \
             conv_check=ctmrg_conv_energy)
-        loss0 = model.energy_1x1_lowmem(state, ctm_env_out, force_cpu=True)
+        loss0 = energy_f(state, ctm_env_out, force_cpu=True)
         
         loc_ctm_args= copy.deepcopy(cfg.ctm_args)
         loc_ctm_args.ctm_max_iter= 1
         ctm_env_out, history1, t_ctm1, t_obs1= ctmrg_c4v.run(state, ctm_env_out, \
             ctm_args=loc_ctm_args)
-        loss1 = model.energy_1x1_lowmem(state, ctm_env_out, force_cpu=True)
+        loss1 = energy_f(state, ctm_env_out, force_cpu=True)
 
         loss=(loss0+loss1)/2
 
@@ -128,7 +129,7 @@ def main():
     ctm_env = ENV_C4V(args.chi, state)
     init_env(state, ctm_env)
     ctm_env, *ctm_log = ctmrg_c4v.run(state, ctm_env, conv_check=ctmrg_conv_energy)
-    opt_energy = model.energy_1x1(state,ctm_env)
+    opt_energy = energy_f(state,ctm_env)
     obs_values, obs_labels = model.eval_obs(state,ctm_env)
     print(", ".join([f"{args.opt_max_iter}",f"{opt_energy}"]+[f"{v}" for v in obs_values])+f", {len(history)}")
 
