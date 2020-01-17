@@ -442,7 +442,7 @@ class J1J2_C4V_BIPARTITE():
         obs_ops["sm"]= s2.SM()
         return obs_ops
 
-    def energy_1x1(self,state,env_c4v,force_cpu=False):
+    def energy_1x1(self,state,env_c4v,**kwargs):
         r"""
         :param state: wavefunction
         :param env_c4v: CTM c4v symmetric environment
@@ -516,27 +516,23 @@ class J1J2_C4V_BIPARTITE():
             = 2*Tr(\rho_{2x1} \mathcal{h2_rot}) + 2*Tr(\rho_{2x1_diag} \mathcal{h2})
         
         """
-        # rdm2x2= rdm_c4v.rdm2x2(state,env_c4v,cfg.ctm_args.verbosity_rdm)
         if force_cpu:
             # move to cpu
-            C= env_c4v.C[env_c4v.keyC].cpu()
-            T= env_c4v.T[env_c4v.keyT].cpu()
-            A= next(iter(state.sites.values())).cpu()
+            C = env_c4v.C[env_c4v.keyC].cpu()
+            T = env_c4v.T[env_c4v.keyT].cpu()
+            a = next(iter(state.sites.values())).cpu()
             h2= self.h2.cpu()
             h2_rot= self.h2_rot.cpu()
         else:
-            # move to cpu
             C = env_c4v.C[env_c4v.keyC]
             T = env_c4v.T[env_c4v.keyT]
-            A = next(iter(state.sites.values()))
+            a = next(iter(state.sites.values()))
             h2= self.h2
             h2_rot= self.h2_rot
-        rdm2x2_NN= rdm_c4v.rdm2x2_NN_lowmem(C,T,A,cfg.ctm_args.verbosity_rdm)
-        rdm2x2_NNN= rdm_c4v.rdm2x2_NNN_lowmem(C,T,A,cfg.ctm_args.verbosity_rdm)
+        rdm2x2_NN= rdm_c4v.rdm2x2_NN_lowmem_sl(C,T,a,cfg.ctm_args.verbosity_rdm)
+        rdm2x2_NNN= rdm_c4v.rdm2x2_NNN_lowmem_sl(C,T,a,cfg.ctm_args.verbosity_rdm)
         energy_per_site= 2.0*self.j1*torch.einsum('ijkl,ijkl',rdm2x2_NN,h2_rot)\
             + 2.0*self.j2*torch.einsum('ijkl,ijkl',rdm2x2_NNN,h2)
-        # print(f"rdm2x1 {torch.einsum('ijkl,ijkl',rdm2x2_NN,h2_rot)}"\
-        #    + f" rdm_0cc3_diag {torch.einsum('ijkl,ijkl',rdm2x2_NNN,h2)}")
         return energy_per_site
 
     def eval_obs(self,state,env_c4v):
@@ -582,13 +578,15 @@ class J1J2_C4V_BIPARTITE():
             symm_sites[(0,0)]= symm_sites[(0,0)]/torch.max(torch.abs(symm_sites[(0,0)]))
             symm_state= ipeps.IPEPS(symm_sites)
 
-            rdm1x1= rdm_c4v.rdm1x1(symm_state,env_c4v,cfg.ctm_args.verbosity_rdm)
+            rdm2x1= rdm_c4v.rdm2x1(symm_state,env_c4v,cfg.ctm_args.verbosity_rdm)
+            obs[f"SS2x1"]= torch.einsum('ijab,ijab',rdm2x1,self.h2_rot)
+            
+            # reduce rdm2x1 to 1x1
+            rdm1x1= torch.einsum('ijaj->ia',rdm2x1)
+            rdm1x1= rdm1x1/torch.trace(rdm1x1)
             for label,op in self.obs_ops.items():
                 obs[f"{label}"]= torch.trace(rdm1x1@op)
             obs[f"m"]= sqrt(abs(obs[f"sz"]**2 + obs[f"sp"]*obs[f"sm"]))
-            
-            rdm2x1 = rdm_c4v.rdm2x1(symm_state,env_c4v,cfg.ctm_args.verbosity_rdm)
-            obs[f"SS2x1"]= torch.einsum('ijab,ijab',rdm2x1,self.h2_rot)
             
         # prepare list with labels and values
         obs_labels=[f"m"]+[f"{lc}" for lc in self.obs_ops.keys()]+[f"SS2x1"]

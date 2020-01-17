@@ -128,6 +128,164 @@ def rdm1x1(state, env, verbosity=0):
 
     return rdm
 
+def rdm1x1_sl(state, env, verbosity=0):
+    r"""
+    :param state: underlying 1-site C4v symmetric wavefunction
+    :param env: C4v symmetric environment corresponding to ``state``
+    :param verbosity: logging verbosity
+    :type state: IPEPS
+    :type env: ENV_C4V
+    :type verbosity: int
+    :return: 1-site reduced density matrix with indices :math:`s;s'`
+    :rtype: torch.tensor
+    
+    Evaluates 1-site operator :math:`Tr(\rho_{1x1}O)` by 
+    contracting the following tensor network::
+
+        C--T-----C
+        |  |     |
+        T--a^+a--T
+        |  |     |
+        C--T-----C
+
+    where the physical indices `s` and `s'` of on-site tensor :math:`a` 
+    and it's hermitian conjugate :math:`a^\dagger` are left uncontracted
+    """
+    C = env.C[env.keyC]
+    T = env.T[env.keyT]
+    # C--1->0
+    # 0
+    # 0
+    # T--2
+    # 1
+    rdm = torch.tensordot(C,T,([0],[0]))
+    if verbosity>2: env.log(f"rdm=CT {rdm.size()}\n")
+    # C--0
+    # |
+    # T--2->1
+    # 1
+    # 0
+    # C--1->2
+    rdm = torch.tensordot(rdm,C,([1],[0]))
+    if verbosity>2: env.log(f"rdm=CTC {rdm.size()}\n")
+    # C--0
+    # |
+    # T--1
+    # |       2->3
+    # C--2 0--T--1->2
+    rdm = torch.tensordot(rdm,T,([2],[0]))
+    
+    # 4i) untangle the fused D^2 indices
+    #
+    # C--0
+    # |
+    # T--1->1,2
+    # |    3->4,5
+    # C----T--2->3
+    a= next(iter(state.sites.values()))
+    rdm= rdm.view(rdm.size()[0],a.size()[2],a.size()[2],rdm.size()[2],a.size()[3],\
+        a.size()[3])
+
+    if verbosity>2: env.log(f"rdm=CTCT {rdm.size()}\n")
+    #    /
+    # --a--
+    #  /|s'
+    #
+    #  s|/
+    # --a--
+    #  /
+    #
+
+    # 4ii) first layer "bra" (in principle conjugate)
+    # C--0    ->5
+    # |       1/0->4
+    # T--1 2--a--4->6
+    # |\2->1  3
+    # |       4 5->3
+    # |       |/
+    # C-------T--3->2
+    rdm= torch.tensordot(rdm,a,([1,4],[2,3]))
+    if verbosity>2: env.log(f"rdm=CTCTa {rdm.size()}\n")
+    
+    # 4iii) second layer "ket"
+    # C--0
+    # |   5->3     1->6
+    # |  -|---1 2--a--4->7
+    # | / |        3\0->5
+    # |/  |/4->2   3
+    # T---a-----------6->4
+    # |   | ------/
+    # |   |/
+    # C---T-----------2->1
+    rdm= torch.tensordot(rdm,a,([1,3],[2,3]))
+
+    # 4iv) fuse pairs of aux indices    
+    # C--0 (3 6)->2
+    # |     | |/5
+    # | ----|-a--7\
+    # |/    | |    >3
+    # T-----a----4/
+    # |4<-2/| |
+    # |     |/
+    # C-----T----1
+    rdm= rdm.permute(0,1,3,6,4,7,2,5).contiguous().view(rdm.size()[0],rdm.size()[1],\
+        a.size()[1]**2,a.size()[4]**2,a.size()[0],a.size()[0])
+
+    if verbosity>2: env.log(f"rdm=CTCTa {rdm.size()}\n")
+    # C--0 0--T--1->0
+    # |       2
+    # |       2
+    # T-------a--3->2
+    # |       |\45->34(s,s')
+    # |       |
+    # C-------T--1
+    rdm = torch.tensordot(T,rdm,([0,2],[0,2]))
+    if verbosity>2: env.log(f"rdm=CTCTaT {rdm.size()}\n")
+    # C--T--0 0--C
+    # |  |       1->0
+    # |  |
+    # T--a--2
+    # |  |\34(s,s')
+    # |  |
+    # C--T--1
+    rdm = torch.tensordot(C,rdm,([0],[0]))
+    if verbosity>2: env.log(f"rdm=CTCTaTC {rdm.size()}\n")
+    # C--T---------------C
+    # |  |               0
+    # |  |               0
+    # T--a--2 2----------T
+    # |  |\34->23(s,s')  1->0
+    # |  |
+    # C--T--1
+    rdm = torch.tensordot(T,rdm,([0,2],[0,2]))
+    if verbosity>2: env.log(f"rdm=CTCTaTCT {rdm.size()}\n")
+    # C--T--------------C
+    # |  |              |
+    # |  |              |
+    # T--a--------------T
+    # |  |\23->12(s,s') 0
+    # |  |              0
+    # C--T--1 1---------C
+    rdm = torch.tensordot(rdm,C,([0,1],[0,1]))
+    if verbosity>2: env.log(f"rdm=CTCTaTCTC {rdm.size()}\n")
+
+    # symmetrize
+    rdm= 0.5*(rdm+rdm.t())
+    # TODO make pos-def ?
+    eps=0.0
+    with torch.no_grad():
+        D, U= torch.eig(rdm)
+        # check only real part
+        if D[:,0].min() < 0:
+            eps= D[:,0].min().abs()
+    rdm+= eps*torch.eye(rdm.size()[0],dtype=rdm.dtype,device=rdm.device)
+
+    # normalize
+    if verbosity>0: env.log(f"Tr(rdm1x1): {torch.trace(rdm)}\n")
+    rdm = rdm / torch.trace(rdm)
+
+    return rdm
+
 def rdm2x1(state, env, verbosity=0):
     r"""
     :param state: underlying 1-site C4v symmetric wavefunction
@@ -238,7 +396,7 @@ def rdm2x1(state, env, verbosity=0):
 
     return rdm
 
-def rdm2x2_NN_lowmem(C, T, A, verbosity=0):
+def rdm2x2_NN_lowmem(C, T, a, verbosity=0):
     r"""
     :param C: corner tensor of C4v symmetric environment
     :param T: half-row/-column tensor of C4v symmetric environment
@@ -254,7 +412,7 @@ def rdm2x2_NN_lowmem(C, T, A, verbosity=0):
     Computes 2-site reduced density matrix :math:`\rho_{2x1}` of 2 sites 
     that are nearest neighbours using strategy:
 
-        1. compute upper left corner
+        1. compute upper left corner using double-layer on-site tensor
         2. construct upper half of the network
         3. contract upper and lower half (identical to upper) to obtain final reduced 
            density matrix
@@ -276,6 +434,49 @@ def rdm2x2_NN_lowmem(C, T, A, verbosity=0):
         s1 c
 
     """
+    return _rdm2x2_NN_lowmem(C,T,a,_get_open_C2x2_LU_dl,verbosity=verbosity)
+
+def rdm2x2_NN_lowmem_sl(C, T, a, verbosity=0):
+    r"""
+    :param C: corner tensor of C4v symmetric environment
+    :param T: half-row/-column tensor of C4v symmetric environment
+    :param a: on-site tensor of C4v symmetric iPEPS
+    :param verbosity: logging verbosity
+    :type C: torch.tensor
+    :type T: torch.tensor
+    :type a: torch.tensor
+    :type verbosity: int
+    :return: 2-site reduced density matrix with indices :math:`s_0s_1;s'_0s'_1`
+    :rtype: torch.tensor
+
+    Computes 2-site reduced density matrix :math:`\rho_{2x1}` of 2 sites 
+    that are nearest neighbours using strategy:
+
+        1. compute upper left corner using layer-by-layer contraction of on-site tensor 
+        2. construct upper half of the network
+        3. contract upper and lower half (identical to upper) to obtain final reduced 
+           density matrix
+
+    ::
+
+        C--T-----T-----C = C2x2--C2x2c
+        |  |     |     |   |     |
+        T--a^+a--a^+a--T   C2x2--C2x2c
+        |  |     |     |
+        T--a^+a--a^+a--T
+        |  |     |     |
+        C--T-----T-----C
+        
+    The physical indices `s` and `s'` of on-sites tensors :math:`a` (and :math:`a^\dagger`) 
+    inside C2x2 tensors are left uncontracted and given in the following order::
+        
+        s0 c
+        s1 c
+
+    """
+    return _rdm2x2_NN_lowmem(C,T,a,_get_open_C2x2_LU_sl,verbosity=verbosity)
+
+def _rdm2x2_NN_lowmem(C, T, a, f_c2x2, verbosity=0):
     #----- building C2x2_LU ----------------------------------------------------
     loc_device=C.device
     is_cpu= loc_device==torch.device('cpu')
@@ -286,50 +487,10 @@ def rdm2x2_NN_lowmem(C, T, A, verbosity=0):
             c=c*d
         return c
 
-    dimsA = A.size()
-    a = torch.einsum('mefgh,nabcd->eafbgchdmn',A,A).contiguous()\
-        .view(dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2, dimsA[0], dimsA[0])
-    if not is_cpu and verbosity>0:
-        print(f"GPU-MEM RDM2X1_diag MAX:{torch.cuda.max_memory_allocated(loc_device)}"\
-            + f" CURRENT:{torch.cuda.memory_allocated(loc_device)}")
-
-    # C--1 0--T--1
-    # 0       2
-    C2x2 = torch.tensordot(C, T, ([1],[0]))
-    if not is_cpu and verbosity>0:
-        print(f"GPU-MEM RDM2X1_diag MAX:{torch.cuda.max_memory_allocated(loc_device)}"\
-            + f" CURRENT:{torch.cuda.memory_allocated(loc_device)}")
-
-    # C------T--1->0
-    # 0      2->1
-    # 0
-    # T--2->3
-    # 1->2
-    C2x2 = torch.tensordot(C2x2, T, ([0],[0]))
-    if not is_cpu and verbosity>0:
-        print(f"GPU-MEM RDM2X1_diag MAX:{torch.cuda.max_memory_allocated(loc_device)}"\
-            + f" CURRENT:{torch.cuda.memory_allocated(loc_device)}")
-
-    # C-------T--0
-    # |       1
-    # |       0
-    # T--3 1--a--3
-    # 2->1    2\45
-    C2x2 = torch.tensordot(C2x2, a, ([1,3],[0,1]))
-    if not is_cpu and verbosity>0:
-        print(f"GPU-MEM RDM2X1_diag MAX:{torch.cuda.max_memory_allocated(loc_device)}"\
-            + f" CURRENT:{torch.cuda.memory_allocated(loc_device)}")
-
-    # permute 012345->120345
-    # reshape (12)(03)45->0123
     # C2x2--1
     # |\23
     # 0
-    C2x2= C2x2.permute(1,2,0,3,4,5).contiguous().view(\
-        T.size()[1]*a.size()[2],T.size()[1]*a.size()[3],dimsA[0],dimsA[0])
-    if not is_cpu and verbosity>0:
-        print(f"GPU-MEM RDM2X1_diag MAX:{torch.cuda.max_memory_allocated(loc_device)}"\
-            + f" CURRENT:{torch.cuda.memory_allocated(loc_device)}")
+    C2x2= f_c2x2(C, T, a, verbosity=verbosity)
 
     # C2x2c--1
     # |
@@ -344,7 +505,7 @@ def rdm2x2_NN_lowmem(C, T, A, verbosity=0):
     # C2x2c--1 0--C2x2    C2x2c--C2x2
     # |           | \     |      | \
     # 0           1  23   0      1 (23)->2
-    C2x2= C2x2.view(T.size()[1]*a.size()[2],T.size()[1]*a.size()[3],dimsA[0]*dimsA[0])
+    C2x2= C2x2.view(T.size()[1]*(a.size()[2]**2),T.size()[1]*(a.size()[3]**2),a.size()[0]**2)
     C2x2= torch.einsum('ab,bci->aci',C2x2c,C2x2)
     # C2x2c= torch.matmul(C2x2c,C2x2)
     if not is_cpu and verbosity>0:
@@ -366,7 +527,7 @@ def rdm2x2_NN_lowmem(C, T, A, verbosity=0):
             + f" CURRENT:{torch.cuda.memory_allocated(loc_device)}"\
             + f" C2x2,C2x2c: {8*(lin_ten_size(rdm)+lin_ten_size(C2x2)+lin_ten_size(C2x2c))}")
 
-    rdm= rdm.view(tuple([dimsA[0] for i in range(4)]))
+    rdm= rdm.view(tuple([a.size()[0] for i in range(4)]))
     if not is_cpu and verbosity>0:
         print(f"GPU-MEM RDM2X1_diag MAX:{torch.cuda.max_memory_allocated(loc_device)}"\
             + f" CURRENT:{torch.cuda.memory_allocated(loc_device)}")
@@ -394,7 +555,7 @@ def rdm2x2_NN_lowmem(C, T, A, verbosity=0):
 
     return rdm
 
-def rdm2x2_NNN_lowmem(C, T, A, verbosity=0):
+def rdm2x2_NNN_lowmem(C, T, a, verbosity=0):
     r"""
     :param C: corner tensor of C4v symmetric environment
     :param T: half-row/-column tensor of C4v symmetric environment
@@ -432,6 +593,49 @@ def rdm2x2_NNN_lowmem(C, T, A, verbosity=0):
         c  s1
 
     """
+    return _rdm2x2_NNN_lowmem(C,T,a,_get_open_C2x2_LU_dl,verbosity=verbosity)()
+
+def rdm2x2_NNN_lowmem_sl(C, T, a, verbosity=0):
+    r"""
+    :param C: corner tensor of C4v symmetric environment
+    :param T: half-row/-column tensor of C4v symmetric environment
+    :param a: on-site tensor of C4v symmetric iPEPS
+    :param verbosity: logging verbosity
+    :type C: torch.tensor
+    :type T: torch.tensor
+    :type a: torch.tensor
+    :type verbosity: int
+    :return: 2-site reduced density matrix with indices :math:`s_0s_1;s'_0s'_1`
+    :rtype: torch.tensor
+
+    Computes 2-site reduced density matrix :math:`\rho_{2x1}_{diag}` of 2 sites 
+    that are next-nearest neighbours (along diagonal) using strategy:
+
+        1. compute upper left corner
+        2. construct upper half of the network
+        3. contract upper and lower half (identical to upper) to obtain final reduced 
+           density matrix
+
+    ::
+
+        C--T-----T-----C = C2x2---C2x2c
+        |  |     |     |   |      |
+        T--a^+a--A^+a--T   C2x2c--C2x2
+        |  |     |     |
+        T--a^+a--A^+a--T
+        |  |     |     |
+        C--T-----T-----C
+        
+    The physical indices `s` and `s'` of on-sites tensors :math:`a` (and :math:`a^\dagger`) 
+    inside C2x2 tensors are left uncontracted and given in the following order::
+        
+        s0 c
+        c  s1
+
+    """
+    return _rdm2x2_NNN_lowmem(C,T,a,_get_open_C2x2_LU_sl,verbosity=verbosity)
+
+def _rdm2x2_NNN_lowmem(C, T, a, f_c2x2, verbosity=0):
     #----- building C2x2_LU ----------------------------------------------------
     loc_device=C.device
     is_cpu= loc_device==torch.device('cpu')
@@ -442,50 +646,10 @@ def rdm2x2_NNN_lowmem(C, T, A, verbosity=0):
             c=c*d
         return c
 
-    dimsA = A.size()
-    a = torch.einsum('mefgh,nabcd->eafbgchdmn',A,A).contiguous()\
-        .view(dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2, dimsA[0], dimsA[0])
-    if not is_cpu and verbosity>0:
-        print(f"GPU-MEM RDM2X1_diag MAX:{torch.cuda.max_memory_allocated(loc_device)}"\
-            + f" CURRENT:{torch.cuda.memory_allocated(loc_device)}")
-
-    # C--1 0--T--1
-    # 0       2
-    C2x2 = torch.tensordot(C, T, ([1],[0]))
-    if not is_cpu and verbosity>0:
-        print(f"GPU-MEM RDM2X1_diag MAX:{torch.cuda.max_memory_allocated(loc_device)}"\
-            + f" CURRENT:{torch.cuda.memory_allocated(loc_device)}")
-
-    # C------T--1->0
-    # 0      2->1
-    # 0
-    # T--2->3
-    # 1->2
-    C2x2 = torch.tensordot(C2x2, T, ([0],[0]))
-    if not is_cpu and verbosity>0:
-        print(f"GPU-MEM RDM2X1_diag MAX:{torch.cuda.max_memory_allocated(loc_device)}"\
-            + f" CURRENT:{torch.cuda.memory_allocated(loc_device)}")
-
-    # C-------T--0
-    # |       1
-    # |       0
-    # T--3 1--a--3
-    # 2->1    2\45
-    C2x2 = torch.tensordot(C2x2, a, ([1,3],[0,1]))
-    if not is_cpu and verbosity>0:
-        print(f"GPU-MEM RDM2X1_diag MAX:{torch.cuda.max_memory_allocated(loc_device)}"\
-            + f" CURRENT:{torch.cuda.memory_allocated(loc_device)}")
-
-    # permute 012345->120345
-    # reshape (12)(03)45->0123
     # C2x2--1
     # |\23
     # 0
-    C2x2= C2x2.permute(1,2,0,3,4,5).contiguous().view(\
-        T.size()[1]*a.size()[2],T.size()[1]*a.size()[3],dimsA[0],dimsA[0])
-    if not is_cpu and verbosity>0:
-        print(f"GPU-MEM RDM2X1_diag MAX:{torch.cuda.max_memory_allocated(loc_device)}"\
-            + f" CURRENT:{torch.cuda.memory_allocated(loc_device)}")
+    C2x2= f_c2x2(C, T, a, verbosity=verbosity)
 
     # C2x2c--1
     # |
@@ -500,7 +664,7 @@ def rdm2x2_NNN_lowmem(C, T, A, verbosity=0):
     # C2x2c--1 0--C2x2    C2x2c--C2x2
     # |           | \     |      | \
     # 0           1  23   0      1 (23)->2
-    C2x2= C2x2.view(T.size()[1]*a.size()[2],T.size()[1]*a.size()[3],dimsA[0]*dimsA[0])
+    C2x2= C2x2.view(T.size()[1]*(a.size()[2]**2),T.size()[1]*(a.size()[3]**2),a.size()[0]**2)
     # rdm= torch.einsum('ab,bci->aci',C2x2c,C2x2)
     C2x2= torch.einsum('ab,bci->aci',C2x2c,C2x2)
     if not is_cpu and verbosity>0:
@@ -522,7 +686,7 @@ def rdm2x2_NNN_lowmem(C, T, A, verbosity=0):
 
 
     # rdm= torch.einsum('abi,abj->ij',C2x2,rdm)
-    rdm= rdm.view(tuple([dimsA[0] for i in range(4)]))
+    rdm= rdm.view(tuple([a.size()[0] for i in range(4)]))
     if not is_cpu and verbosity>0:
         print(f"GPU-MEM RDM2X1_diag MAX:{torch.cuda.max_memory_allocated(loc_device)}"\
             + f" CURRENT:{torch.cuda.memory_allocated(loc_device)}")
@@ -687,3 +851,133 @@ def rdm2x2(state, env, verbosity=0):
     rdm= rdm.view(dimsRDM)
 
     return rdm
+
+def _get_open_C2x2_LU_sl(C, T, a, verbosity=0):
+    loc_device=C.device
+    is_cpu= loc_device==torch.device('cpu')
+
+    # C--1 0--T--1
+    # 0       2
+    C2x2 = torch.tensordot(C, T, ([1],[0]))
+    if not is_cpu and verbosity>0:
+        print(f"GPU-MEM RDM2X1_diag MAX:{torch.cuda.max_memory_allocated(loc_device)}"\
+            + f" CURRENT:{torch.cuda.memory_allocated(loc_device)}")
+
+    # C------T--1->0
+    # 0      2->1
+    # 0
+    # T--2->3
+    # 1->2
+    C2x2 = torch.tensordot(C2x2, T, ([0],[0]))
+    if not is_cpu and verbosity>0:
+        print(f"GPU-MEM RDM2X1_diag MAX:{torch.cuda.max_memory_allocated(loc_device)}"\
+            + f" CURRENT:{torch.cuda.memory_allocated(loc_device)}")
+
+    # 4i) untangle the fused D^2 indices
+    #
+    # C------T--0
+    # 0      1->1,2
+    # 0
+    # T--3->4,5
+    # 2->3
+    C2x2= C2x2.view(C2x2.size()[0],a.size()[1],a.size()[1],C2x2.size()[2],a.size()[2],\
+        a.size()[2])
+
+    # 4ii) first layer "bra" (in principle conjugate)
+    # 
+    # C---------T----0
+    # |         |\---2->1
+    # |         1    
+    # |         1 /0->4
+    # T----4 2--a--4->6 
+    # | |       3->5
+    # |  --5->3
+    # 3->2
+    C2x2= torch.tensordot(C2x2, a,([1,4],[1,2]))
+    
+    # 4iii) second layer "ket"
+    # 
+    # C----T----------0
+    # |    |\-----\
+    # |    |       1
+    # |    |/4->2  |
+    # T----a----------6->4 
+    # | |  |       1/0->5
+    # |  -----3 2--a--4->7
+    # |    |       3->6
+    # |    |
+    # 2->1 5->3
+    C2x2= torch.tensordot(C2x2, a,([1,3],[1,2]))
+
+    # 4iv) fuse pairs of aux indices
+    #
+    # C------T----0
+    # | 4<-2\|\
+    # T------a----4\ 
+    # | \    | |    ->3
+    # |  ------a--7/
+    # |      | |\5->3
+    # 1     (3 6)->2
+    # 
+    # and simultaneously
+    # permute 0123->1203
+    # reshape (12)(03)45->0123
+    C2x2= C2x2.permute(1,3,6,0,4,7,2,5).contiguous().view(C2x2.size()[1]*(a.size()[3]**2),\
+        C2x2.size()[0]*(a.size()[4]**2),a.size()[0],a.size()[0])
+
+    if not is_cpu and verbosity>0:
+        print(f"GPU-MEM RDM2X1_diag MAX:{torch.cuda.max_memory_allocated(loc_device)}"\
+            + f" CURRENT:{torch.cuda.memory_allocated(loc_device)}")
+
+    return C2x2
+
+def _get_open_C2x2_LU_dl(C, T, a, verbosity=0):
+    loc_device=C.device
+    is_cpu= loc_device==torch.device('cpu')
+
+    dimsa = a.size()
+    A = torch.einsum('mefgh,nabcd->eafbgchdmn',a,a).contiguous()\
+        .view(dimsa[1]**2, dimsa[2]**2, dimsa[3]**2, dimsa[4]**2, dimsa[0], dimsa[0])
+    if not is_cpu and verbosity>0:
+        print(f"GPU-MEM RDM2X1_diag MAX:{torch.cuda.max_memory_allocated(loc_device)}"\
+            + f" CURRENT:{torch.cuda.memory_allocated(loc_device)}")
+
+    # C--1 0--T--1
+    # 0       2
+    C2x2 = torch.tensordot(C, T, ([1],[0]))
+    if not is_cpu and verbosity>0:
+        print(f"GPU-MEM RDM2X1_diag MAX:{torch.cuda.max_memory_allocated(loc_device)}"\
+            + f" CURRENT:{torch.cuda.memory_allocated(loc_device)}")
+
+    # C------T--1->0
+    # 0      2->1
+    # 0
+    # T--2->3
+    # 1->2
+    C2x2 = torch.tensordot(C2x2, T, ([0],[0]))
+    if not is_cpu and verbosity>0:
+        print(f"GPU-MEM RDM2X1_diag MAX:{torch.cuda.max_memory_allocated(loc_device)}"\
+            + f" CURRENT:{torch.cuda.memory_allocated(loc_device)}")
+
+    # C-------T--0
+    # |       1
+    # |       0
+    # T--3 1--A--3
+    # 2->1    2\45
+    C2x2 = torch.tensordot(C2x2, A, ([1,3],[0,1]))
+    if not is_cpu and verbosity>0:
+        print(f"GPU-MEM RDM2X1_diag MAX:{torch.cuda.max_memory_allocated(loc_device)}"\
+            + f" CURRENT:{torch.cuda.memory_allocated(loc_device)}")
+
+    # permute 012345->120345
+    # reshape (12)(03)45->0123
+    # C2x2--1
+    # |\23
+    # 0
+    C2x2= C2x2.permute(1,2,0,3,4,5).contiguous().view(\
+        T.size()[1]*A.size()[2],T.size()[1]*A.size()[3],dimsa[0],dimsa[0])
+    if not is_cpu and verbosity>0:
+        print(f"GPU-MEM RDM2X1_diag MAX:{torch.cuda.max_memory_allocated(loc_device)}"\
+            + f" CURRENT:{torch.cuda.memory_allocated(loc_device)}")
+    
+    return C2x2

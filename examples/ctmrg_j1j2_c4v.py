@@ -29,7 +29,8 @@ def main():
     torch.set_num_threads(args.omp_cores)
     
     model = j1j2.J1J2_C4V_BIPARTITE(j1=args.j1, j2=args.j2)
-    
+    energy_f= model.energy_1x1_lowmem
+
     # initialize an ipeps
     if args.instate!=None:
         state = read_ipeps(args.instate, vertexToSite=None)
@@ -59,7 +60,7 @@ def main():
 
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         with torch.no_grad():
-            e_curr = model.energy_1x1(state, env)
+            e_curr = energy_f(state, env)
             obs_values, obs_labels = model.eval_obs(state, env)
             history.append([e_curr.item()]+obs_values)
             print(", ".join([f"{len(history)}",f"{e_curr}"]+[f"{v}" for v in obs_values]))
@@ -72,7 +73,7 @@ def main():
     init_env(state, ctm_env_init)
     print(ctm_env_init)
 
-    e_curr0 = model.energy_1x1(state, ctm_env_init)
+    e_curr0 = energy_f(state, ctm_env_init)
     obs_values0, obs_labels = model.eval_obs(state,ctm_env_init)
 
     print(", ".join(["epoch","energy"]+obs_labels))

@@ -23,7 +23,8 @@ def main():
     torch.set_num_threads(args.omp_cores)
 
     model = j1j2.J1J2_C4V_BIPARTITE(j1=args.j1, j2=args.j2)
-    
+    energy_f= model.energy_1x1_lowmem
+
     # initialize an ipeps
     if args.instate!=None:
         state = read_ipeps(args.instate, vertexToSite=None)
@@ -53,7 +54,7 @@ def main():
     
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         with torch.no_grad():
-            e_curr = model.energy_1x1(state, env)
+            e_curr = energy_f(state, env)
             history.append(e_curr.item())
 
             if len(history) > 1 and abs(history[-1]-history[-2]) < ctm_args.ctm_conv_tol:
@@ -64,7 +65,7 @@ def main():
     init_env(state, ctm_env)
     ctm_env, *ctm_log = ctmrg_c4v.run(state, ctm_env, conv_check=ctmrg_conv_energy)
 
-    loss= model.energy_1x1(state, ctm_env)
+    loss= energy_f(state, ctm_env)
     obs_values, obs_labels= model.eval_obs(state,ctm_env)
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{loss}"]+[f"{v}" for v in obs_values]))
@@ -80,7 +81,7 @@ def main():
 
         # 1) compute environment by CTMRG
         ctm_env_out, *ctm_log= ctmrg_c4v.run(symm_state, ctm_env_in, conv_check=ctmrg_conv_energy)
-        loss = model.energy_1x1(symm_state, ctm_env_out)
+        loss = energy_f(symm_state, ctm_env_out)
         
         return (loss, ctm_env_out, *ctm_log)
 
@@ -93,7 +94,7 @@ def main():
     ctm_env = ENV_C4V(args.chi, state)
     init_env(state, ctm_env)
     ctm_env, *ctm_log = ctmrg_c4v.run(state, ctm_env, conv_check=ctmrg_conv_energy)
-    opt_energy = model.energy_1x1(state,ctm_env)
+    opt_energy = energy_f(state,ctm_env)
     obs_values, obs_labels = model.eval_obs(state,ctm_env)
     print(", ".join([f"{args.opt_max_iter}",f"{opt_energy}"]+[f"{v}" for v in obs_values]))
 
