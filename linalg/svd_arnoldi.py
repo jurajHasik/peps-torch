@@ -3,6 +3,7 @@ import torch
 import torch.nn.functional as Functional
 try:
     import scipy.sparse.linalg
+    from scipy.sparse.linalg import LinearOperator
 except:
     print("Warning: Missing scipy. ARNOLDISVD is not available.")
 
@@ -28,7 +29,15 @@ class SVDSYMARNOLDI(torch.autograd.Function):
         # the scipy.sparse.linalg.eigsh
         
         # get M as numpy ndarray and wrap back to torch
-        M_nograd = M.clone().detach().cpu().numpy()
+        # allow for mat-vec ops to be carried out on GPU
+        def mv(v):
+            V= torch.as_tensor(v,dtype=M.dtype,device=M.device)
+            V= torch.mv(M,V)
+            return V.detach().cpu().numpy()
+        
+        # M_nograd = M.clone().detach().cpu().numpy()
+        M_nograd= LinearOperator(M.size(), matvec=mv)
+
         D, U= scipy.sparse.linalg.eigsh(M_nograd, k=k)
 
         D= torch.as_tensor(D)
