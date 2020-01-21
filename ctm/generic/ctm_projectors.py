@@ -198,12 +198,21 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args, global_a
     assert len(R.shape) == 2
     verbosity = ctm_args.verbosity_projectors
 
+    if ctm_args.projector_svd_method == 'GESDD':
+        def truncated_svd(M, chi):
+            return truncated_svd_gesdd(M, chi, verbosity=ctm_args.verbosity_projectors)
+    elif ctm_args.projector_svd_method == 'ARP':
+        def truncated_svd(M, chi):
+            return truncated_svd_arnoldi(M, chi, verbosity=ctm_args.verbosity_projectors)
+    else:
+        raise(f"Projector svd method \"{cfg.ctm_args.projector_svd_method}\" not implemented")
+
     #  SVD decomposition
     if ctm_args.fwd_checkpoint_projectors:
         M = checkpoint(torch.mm, R.transpose(1, 0), Rt)
     else:
         M = torch.mm(R.transpose(1, 0), Rt)
-    U, S, V = truncated_svd_gesdd(M, chi) # M = USV^{T}
+    U, S, V = truncated_svd(M, chi) # M = USV^{T}
 
     # if abs_tol is not None: St = St[St > abs_tol]
     # if abs_tol is not None: St = torch.where(St > abs_tol, St, Stzeros)

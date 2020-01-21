@@ -82,3 +82,57 @@ def test_SVDSYMARNOLDI_random():
 
 if __name__=='__main__':
     test_SVDSYMARNOLDI_random()
+
+class SVDARNOLDI(torch.autograd.Function):
+    @staticmethod
+    def forward(self, M, k):
+        r"""
+        :param M: square matrix :math:`N \times N`
+        :param k: desired rank (must be smaller than :math:`N`)
+        :type M: torch.tensor
+        :type k: int
+        :return: leading k left eigenvectors U, singular values S, and right 
+                 eigenvectors V
+        :rtype: torch.tensor, torch.tensor, torch.tensor
+
+        **Note:** `depends on scipy`
+
+        Return leading k-singular triples of a matrix M, by computing 
+        the symmetric decomposition of H=MM^T as :math:`H= UDU^T` 
+        up to rank k. Partial eigendecomposition is done through Arnoldi method.
+        """
+        # input validation is provided by the scipy.sparse.linalg.eigsh
+        
+        # allow for mat-vec ops to be carried out on GPU
+        def mv(v):
+            B= torch.as_tensor(v,dtype=M.dtype,device=M.device)
+            B= torch.mv(M,B)
+            return B.detach().cpu().numpy()
+        def vm(v):
+            B= torch.as_tensor(v,dtype=M.dtype,device=M.device)
+            B= torch.matmul(M.t(),B)            
+            return B.detach().cpu().numpy()
+
+        M_nograd= LinearOperator(M.size(), matvec=mv, rmatvec=vm)
+
+        U, S, V= scipy.sparse.linalg.svds(M_nograd, k=k)
+
+        S= torch.as_tensor(S)
+        U= torch.as_tensor(U)
+        # transpose wrt to pytorch
+        V= torch.as_tensor(V)
+        V= V.t()
+
+        if M.is_cuda:
+            U= U.cuda()
+            V= V.cuda()
+            S= S.cuda()
+
+        self.save_for_backward(U, S, V)
+        return U, S, V
+
+    @staticmethod
+    def backward(self, dU, dS, dV):
+        raise Exception("backward not implemented")
+        U, S, V = self.saved_tensors
+        return dA, None

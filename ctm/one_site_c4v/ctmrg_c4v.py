@@ -39,6 +39,8 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
                 verbosity=ctm_args.verbosity_projectors)
     elif cfg.ctm_args.projector_svd_method == 'RSVD':
         truncated_svd= truncated_svd_rsvd
+    else:
+        raise(f"Projector svd method \"{cfg.ctm_args.projector_svd_method}\" not implemented")
 
     a= next(iter(state.sites.values()))
     #A = torch.einsum('mefgh,mabcd->eafbgchd',(a,a)).contiguous().view(a.shape[1]**2,\
