@@ -5,8 +5,8 @@ import config as cfg
 from su2sym.ipeps_su2 import * 
 from groups.c4v import *
 from ctm.one_site_c4v.env_c4v import *
-from ctm.one_site_c4v import ctmrg_c4v
-from ctm.one_site_c4v import transferops_c4v
+from ctm.one_site_c4v import ctmrg_c4v, transferops_c4v
+from ctm.one_site_c4v.rdm_c4v import rdm2x1_sl
 from models import j1j2
 import su2sym.sym_ten_parser as tenSU2 
 import unittest
@@ -58,13 +58,15 @@ def main():
 
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         with torch.no_grad():
-            e_curr = energy_f(state, env)
-            obs_values, obs_labels = model.eval_obs(state, env)
-            history.append(e_curr.item())
-            print(", ".join([f"{len(history)}",f"{e_curr}"]+[f"{v}" for v in obs_values]))
-
-            if len(history) > 1 and abs(history[-1]-history[-2]) < ctm_args.ctm_conv_tol:
-                return True
+            rdm2x1= rdm2x1_sl(state, env)
+            # print(", ".join([f"{len(history)}",f"{e_curr}"]+[f"{v}" for v in obs_values]))
+            dist= float('inf')
+            if len(history) > 1:
+                dist= torch.dist(rdm2x1, history[-1][0], p=2)
+                if dist<ctm_args.ctm_conv_tol:
+                    return True
+            history.append([rdm2x1,dist])
+            print(f"{len(history)}, {dist}")
         return False
 
     ctm_env_init = ENV_C4V(args.chi, state, log=args.out_prefix+"_env.log")
