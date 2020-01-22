@@ -578,7 +578,7 @@ class J1J2_C4V_BIPARTITE():
             symm_sites[(0,0)]= symm_sites[(0,0)]/torch.max(torch.abs(symm_sites[(0,0)]))
             symm_state= ipeps.IPEPS(symm_sites)
 
-            rdm2x1= rdm_c4v.rdm2x1(symm_state,env_c4v,cfg.ctm_args.verbosity_rdm)
+            rdm2x1= rdm_c4v.rdm2x1_sl(symm_state,env_c4v,cfg.ctm_args.verbosity_rdm)
             obs[f"SS2x1"]= torch.einsum('ijab,ijab',rdm2x1,self.h2_rot)
             
             # reduce rdm2x1 to 1x1
