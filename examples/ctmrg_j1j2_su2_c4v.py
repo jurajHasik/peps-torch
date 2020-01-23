@@ -73,7 +73,7 @@ def main():
     init_env(state, ctm_env_init)
 
     e_curr0 = energy_f(state, ctm_env_init, force_cpu=True)
-    obs_values0, obs_labels = model.eval_obs(state,ctm_env_init)
+    obs_values0, obs_labels = model.eval_obs(state,ctm_env_init,force_cpu=True)
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{e_curr0}"]+[f"{v}" for v in obs_values0]))
 
