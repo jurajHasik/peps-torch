@@ -6,6 +6,7 @@ import config as cfg
 from su2sym.ipeps_su2 import *
 from ctm.one_site_c4v.env_c4v import *
 from ctm.one_site_c4v import ctmrg_c4v
+from ctm.one_site_c4v.rdm_c4v import rdm2x1_sl
 from models import j1j2
 from optim.ad_optim_su2 import optimize_state
 import su2sym.sym_ten_parser as tenSU2
@@ -76,11 +77,14 @@ def main():
 
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         with torch.no_grad():
-            e_curr = energy_f(state, env)
-            history.append(e_curr.item())
-
-            if len(history) > 1 and abs(history[-1]-history[-2]) < ctm_args.ctm_conv_tol:
-                return True
+            rdm2x1= rdm2x1_sl(state, env, force_cpu=ctm_args.conv_check_cpu)
+            dist= float('inf')
+            if len(history) > 1:
+                dist= torch.dist(rdm2x1, history[-1][0], p=2)
+                if dist<ctm_args.ctm_conv_tol:
+                    return True
+            history.append([rdm2x1,dist])
+            print(f"{len(history)}, {dist}")
         return False
 
     if cfg.ctm_args.ctm_logging:
@@ -92,7 +96,7 @@ def main():
     ctm_env, history, t_ctm, t_obs= ctmrg_c4v.run(state, ctm_env, \
         conv_check=ctmrg_conv_energy)
 
-    loss= energy_f(state, ctm_env)
+    loss= energy_f(state, ctm_env, force_cpu=True)
     obs_values, obs_labels= model.eval_obs(state,ctm_env)
     print(", ".join(["epoch","energy"]+obs_labels)+", ctm-steps")
     print(", ".join([f"{-1}",f"{loss}"]+[f"{v}" for v in obs_values])+f", {len(history)}")
@@ -129,8 +133,8 @@ def main():
     ctm_env = ENV_C4V(args.chi, state)
     init_env(state, ctm_env)
     ctm_env, *ctm_log = ctmrg_c4v.run(state, ctm_env, conv_check=ctmrg_conv_energy)
-    opt_energy = energy_f(state,ctm_env)
-    obs_values, obs_labels = model.eval_obs(state,ctm_env)
+    opt_energy = energy_f(state,ctm_env,force_cpu=True)
+    obs_values, obs_labels = model.eval_obs(state,ctm_env,force_cpu=True)
     print(", ".join([f"{args.opt_max_iter}",f"{opt_energy}"]+[f"{v}" for v in obs_values])+f", {len(history)}")
 
 if __name__=='__main__':
