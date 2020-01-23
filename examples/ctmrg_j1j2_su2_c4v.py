@@ -82,9 +82,11 @@ def main():
 
     e_curr0 = energy_f(state, ctm_env_init)
     obs_values0, obs_labels = model.eval_obs(state,ctm_env_init)
+    history, t_ctm, t_obs= ctm_log
     print("\n")
     print(", ".join(["epoch","energy"]+obs_labels))
     print("FINAL "+", ".join([f"{e_curr0}"]+[f"{v}" for v in obs_values0]))
+    print(f"TIMINGS ctm: {t_ctm} conv_check: {t_obs}")
 
     # ----- additional observables ---------------------------------------------
     corrSS= model.eval_corrf_SS(state, ctm_env_init, args.corrf_r)
