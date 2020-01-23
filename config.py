@@ -159,6 +159,7 @@ class CTMARGS():
         self.ctm_max_iter = 50
         self.ctm_env_init_type = 'CTMRG'
         self.ctm_conv_tol = 1.0e-8
+        self.conv_check_cpu = False
         self.projector_method = '4X4'
         self.projector_svd_method = 'GESDD'
         self.projector_svd_reltol = 1.0e-8

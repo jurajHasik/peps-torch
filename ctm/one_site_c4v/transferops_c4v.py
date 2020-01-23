@@ -16,12 +16,11 @@ def get_Top_spec_c4v(n, state, env_c4v, verbosity=0):
     # v--1 (D^2)
     #  --2 (chi)
     def _mv(v):
-        V= torch.as_tensor(v)
+        V= torch.as_tensor(v,dtype=env_c4v.dtype,device=env_c4v.device)
         V= V.view(chi,ad*ad,chi)
         V= corrf_c4v.apply_TM_1sO(state,env_c4v,V,verbosity=verbosity)
         V= V.view(chi*ad*ad*chi)
-        v= V.numpy()
-        return v
+        return V.detach().cpu().numpy()
 
     T= LinearOperator((chi*ad*ad*chi,chi*ad*ad*chi), matvec=_mv)
     vals= eigs(T, k=n, v0=None, return_eigenvectors=False)

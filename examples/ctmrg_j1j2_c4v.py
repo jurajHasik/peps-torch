@@ -60,7 +60,7 @@ def main():
 
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         with torch.no_grad():
-            e_curr = energy_f(state, env)
+            e_curr = energy_f(state, env, force_cpu=ctm_args.conv_check_cpu)
             obs_values, obs_labels = model.eval_obs(state, env)
             history.append([e_curr.item()]+obs_values)
             print(", ".join([f"{len(history)}",f"{e_curr}"]+[f"{v}" for v in obs_values]))
