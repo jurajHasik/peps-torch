@@ -7,6 +7,7 @@ import ipeps
 from ipeps import IPEPS
 from ctm.one_site_c4v.env_c4v import *
 from linalg.custom_svd import *
+from linalg.custom_eig import *
 
 def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.global_args): 
     r"""
@@ -26,25 +27,31 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
     environment ``env``. TODO add reference
     """
 
-    if cfg.ctm_args.projector_svd_method == 'GESDD':
-        def truncated_svd(M, chi):
-            return truncated_svd_gesdd(M, chi, verbosity=ctm_args.verbosity_projectors)
-    elif cfg.ctm_args.projector_svd_method == 'SYMEIG':
-        def truncated_svd(M, chi):
-            return truncated_svd_symeig(M, chi, keep_multiplets=True, \
+    if cfg.ctm_args.projector_svd_method == 'SYMEIG':
+        def truncated_eig(M, chi):
+            return truncated_eig_sym(M, chi, keep_multiplets=True,\
                 verbosity=ctm_args.verbosity_projectors)
     elif cfg.ctm_args.projector_svd_method == 'SYMARP':
-        def truncated_svd(M, chi):
-            return truncated_svd_symarnoldi(M, chi, keep_multiplets=True, \
+        def truncated_eig(M, chi):
+            return truncated_eig_symarnoldi(M, chi, keep_multiplets=True, \
                 verbosity=ctm_args.verbosity_projectors)
-    elif cfg.ctm_args.projector_svd_method == 'RSVD':
-        truncated_svd= truncated_svd_rsvd
+    # if cfg.ctm_args.projector_svd_method == 'GESDD':
+    #     def truncated_svd(M, chi):
+    #         return truncated_svd_gesdd(M, chi, verbosity=ctm_args.verbosity_projectors)
+    # elif cfg.ctm_args.projector_svd_method == 'SYMEIG':
+    #     def truncated_svd(M, chi):
+    #         return truncated_svd_symeig(M, chi, keep_multiplets=True, \
+    #             verbosity=ctm_args.verbosity_projectors)
+    # elif cfg.ctm_args.projector_svd_method == 'SYMARP':
+    #     def truncated_svd(M, chi):
+    #         return truncated_svd_symarnoldi(M, chi, keep_multiplets=True, \
+    #             verbosity=ctm_args.verbosity_projectors)
+    # elif cfg.ctm_args.projector_svd_method == 'RSVD':
+    #     truncated_svd= truncated_svd_rsvd
     else:
-        raise(f"Projector svd method \"{cfg.ctm_args.projector_svd_method}\" not implemented")
+        raise Exception(f"Projector eig/svd method \"{cfg.ctm_args.projector_svd_method}\" not implemented")
 
     a= next(iter(state.sites.values()))
-    #A = torch.einsum('mefgh,mabcd->eafbgchd',(a,a)).contiguous().view(a.shape[1]**2,\
-    #        a.shape[2]**2, a.shape[3]**2, a.shape[4]**2)
 
     # 1) perform CTMRG
     t_obs=t_ctm=0.
@@ -52,7 +59,7 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
     for i in range(ctm_args.ctm_max_iter):
         t0_ctm= time.perf_counter()
         # ctm_MOVE_dl(A, env, truncated_svd, ctm_args=ctm_args, global_args=global_args)
-        ctm_MOVE_sl(a, env, truncated_svd, ctm_args=ctm_args, global_args=global_args)
+        ctm_MOVE_sl(a, env, truncated_eig, ctm_args=ctm_args, global_args=global_args)
         t1_ctm= time.perf_counter()
 
         t0_obs= time.perf_counter()
@@ -72,7 +79,7 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
     return env, history, t_ctm, t_obs
 
 # performs CTM move
-def ctm_MOVE_dl(A, env, svd_method, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+def ctm_MOVE_dl(A, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
     # 0) extract raw tensors as tuple
     tensors= tuple([A,env.C[env.keyC],env.T[env.keyT]])
     
@@ -83,7 +90,7 @@ def ctm_MOVE_dl(A, env, svd_method, ctm_args=cfg.ctm_args, global_args=cfg.globa
         C2X2= c2x2_dl(A, C, T, verbosity=ctm_args.verbosity_projectors)
 
         # 2) build projector
-        P, S, V = svd_method(C2X2, env.chi) # M = PSV^{T}
+        P, S, V = f_c2x2_decomp(C2X2, env.chi) # M = PSV^{T}
 
         # 3) absorb and truncate
         #
@@ -172,7 +179,7 @@ def c2x2_dl(A, C, T, verbosity=0):
     return C2x2
 
 # performs CTM move
-def ctm_MOVE_sl(a, env, svd_method, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
     # 0) extract raw tensors as tuple
     tensors= tuple([a,env.C[env.keyC],env.T[env.keyT]])
     
@@ -183,7 +190,8 @@ def ctm_MOVE_sl(a, env, svd_method, ctm_args=cfg.ctm_args, global_args=cfg.globa
         C2X2= c2x2_sl(a, C, T, verbosity=ctm_args.verbosity_projectors)
 
         # 2) build projector
-        P, S, V = svd_method(C2X2, env.chi) # M = PSV^{T}
+        # P, S, V = f_c2x2_decomp(C2X2, env.chi) # M = PSV^T
+        D, P= f_c2x2_decomp(C2X2, env.chi) # M = UDU^T
 
         # 3) absorb and truncate
         #
@@ -192,9 +200,9 @@ def ctm_MOVE_sl(a, env, svd_method, ctm_args=cfg.ctm_args, global_args=cfg.globa
         # 0
         # P^t
         # 1->0
-        C2X2= P.t() @ C2X2 @ P
+        # C2X2= P.t() @ C2X2 @ P
         # TODO allow for symdiag instead of SVD
-        # C2X2= torch.diag(S)
+        C2X2= torch.diag(D)
 
         P= P.view(env.chi,T.size()[2],env.chi)
         #    2->1
