@@ -516,26 +516,15 @@ class J1J2_C4V_BIPARTITE():
             = 2*Tr(\rho_{2x1} \mathcal{h2_rot}) + 2*Tr(\rho_{2x1_diag} \mathcal{h2})
         
         """
-        if force_cpu:
-            # move to cpu
-            C = env_c4v.C[env_c4v.keyC].cpu()
-            T = env_c4v.T[env_c4v.keyT].cpu()
-            a = next(iter(state.sites.values())).cpu()
-            h2= self.h2.cpu()
-            h2_rot= self.h2_rot.cpu()
-        else:
-            C = env_c4v.C[env_c4v.keyC]
-            T = env_c4v.T[env_c4v.keyT]
-            a = next(iter(state.sites.values()))
-            h2= self.h2
-            h2_rot= self.h2_rot
-        rdm2x2_NN= rdm_c4v.rdm2x2_NN_lowmem_sl(C,T,a,cfg.ctm_args.verbosity_rdm)
-        rdm2x2_NNN= rdm_c4v.rdm2x2_NNN_lowmem_sl(C,T,a,cfg.ctm_args.verbosity_rdm)
-        energy_per_site= 2.0*self.j1*torch.einsum('ijkl,ijkl',rdm2x2_NN,h2_rot)\
-            + 2.0*self.j2*torch.einsum('ijkl,ijkl',rdm2x2_NNN,h2)
+        rdm2x2_NN= rdm_c4v.rdm2x2_NN_lowmem_sl(state,env_c4v,force_cpu=force_cpu,\
+            verbosity=cfg.ctm_args.verbosity_rdm)
+        rdm2x2_NNN= rdm_c4v.rdm2x2_NNN_lowmem_sl(state,env_c4v,force_cpu=force_cpu,\
+            verbosity=cfg.ctm_args.verbosity_rdm)
+        energy_per_site= 2.0*self.j1*torch.einsum('ijkl,ijkl',rdm2x2_NN,self.h2_rot)\
+            + 2.0*self.j2*torch.einsum('ijkl,ijkl',rdm2x2_NNN,self.h2)
         return energy_per_site
 
-    def eval_obs(self,state,env_c4v):
+    def eval_obs(self,state,env_c4v,force_cpu=False):
         r"""
         :param state: wavefunction
         :param env_c4v: CTM c4v symmetric environment
@@ -573,12 +562,8 @@ class J1J2_C4V_BIPARTITE():
         # expect "list" of (observable label, value) pairs ?
         obs= dict()
         with torch.no_grad():
-            # symmetrize on-site tensor
-            symm_sites= {(0,0): make_c4v_symm(state.sites[(0,0)])}
-            symm_sites[(0,0)]= symm_sites[(0,0)]/torch.max(torch.abs(symm_sites[(0,0)]))
-            symm_state= ipeps.IPEPS(symm_sites)
-
-            rdm2x1= rdm_c4v.rdm2x1_sl(symm_state,env_c4v,cfg.ctm_args.verbosity_rdm)
+            rdm2x1= rdm_c4v.rdm2x1_sl(state,env_c4v,force_cpu=force_cpu,\
+                verbosity=cfg.ctm_args.verbosity_rdm)
             obs[f"SS2x1"]= torch.einsum('ijab,ijab',rdm2x1,self.h2_rot)
             
             # reduce rdm2x1 to 1x1

@@ -362,7 +362,7 @@ def rdm2x1(state, env, verbosity=0):
 
     return rdm
 
-def rdm2x1_sl(state, env, verbosity=0):
+def rdm2x1_sl(state, env, force_cpu=False, verbosity=0):
     r"""
     :param state: underlying 1-site C4v symmetric wavefunction
     :param env: C4v symmetric environment corresponding to ``state``
@@ -397,11 +397,16 @@ def rdm2x1_sl(state, env, verbosity=0):
     The resulting reduced density matrix is identical to the one of vertical 1x2 subsystem
     due to the C4v symmetry. 
     """
+    if force_cpu:
+        # move to cpu
+        C = env.C[env.keyC].cpu()
+        T = env.T[env.keyT].cpu()
+        a = next(iter(state.sites.values())).cpu()
+    else:
+        C = env.C[env.keyC]
+        T = env.T[env.keyT]
+        a = next(iter(state.sites.values()))
     #----- building C2x2_LU ----------------------------------------------------
-    C = env.C[env.keyC]
-    T = env.T[env.keyT]
-    a = next(iter(state.sites.values()))
-
     # C--1 0--T--1
     # 0       2
     C2x1 = torch.tensordot(C, T, ([1],[0]))
@@ -460,14 +465,14 @@ def rdm2x1_sl(state, env, verbosity=0):
             eps= D[:,0].min().abs()
     rdm+= eps*torch.eye(rdm.size()[0],dtype=rdm.dtype,device=rdm.device)
 
-    # normalize and reshape
+    # normalize and reshape and move to original device
     if verbosity>0: env.log(f"Tr(rdm2x1): {torch.trace(rdm)}\n")
     rdm= rdm / torch.trace(rdm)
-    rdm= rdm.view(dimsRDM)
+    rdm= rdm.view(dimsRDM).to(env.device)
 
     return rdm
 
-def rdm2x2_NN_lowmem(C, T, a, verbosity=0):
+def rdm2x2_NN_lowmem(state, env, force_cpu=False, verbosity=0):
     r"""
     :param C: corner tensor of C4v symmetric environment
     :param T: half-row/-column tensor of C4v symmetric environment
@@ -505,9 +510,9 @@ def rdm2x2_NN_lowmem(C, T, a, verbosity=0):
         s1 c
 
     """
-    return _rdm2x2_NN_lowmem(C,T,a,_get_open_C2x2_LU_dl,verbosity=verbosity)
+    return _rdm2x2_NN_lowmem(state,env,_get_open_C2x2_LU_dl,force_cpu=force_cpu,verbosity=verbosity)
 
-def rdm2x2_NN_lowmem_sl(C, T, a, verbosity=0):
+def rdm2x2_NN_lowmem_sl(state, env, force_cpu=False, verbosity=0):
     r"""
     :param C: corner tensor of C4v symmetric environment
     :param T: half-row/-column tensor of C4v symmetric environment
@@ -545,9 +550,19 @@ def rdm2x2_NN_lowmem_sl(C, T, a, verbosity=0):
         s1 c
 
     """
-    return _rdm2x2_NN_lowmem(C,T,a,_get_open_C2x2_LU_sl,verbosity=verbosity)
+    return _rdm2x2_NN_lowmem(state,env,_get_open_C2x2_LU_sl,force_cpu=force_cpu,verbosity=verbosity)
 
-def _rdm2x2_NN_lowmem(C, T, a, f_c2x2, verbosity=0):
+def _rdm2x2_NN_lowmem(state,env,f_c2x2,force_cpu=False,verbosity=0):
+    if force_cpu:
+        # move to cpu
+        C = env.C[env.keyC].cpu()
+        T = env.T[env.keyT].cpu()
+        a = next(iter(state.sites.values())).cpu()
+    else:
+        C = env.C[env.keyC]
+        T = env.T[env.keyT]
+        a = next(iter(state.sites.values()))
+
     #----- building C2x2_LU ----------------------------------------------------
     loc_device=C.device
     is_cpu= loc_device==torch.device('cpu')
@@ -620,13 +635,13 @@ def _rdm2x2_NN_lowmem(C, T, a, f_c2x2, verbosity=0):
             eps= D.min().abs()
     rdm+= eps*torch.eye(rdm.size()[0],dtype=rdm.dtype,device=rdm.device)
 
-    # normalize and reshape
+    # normalize and reshape and move to original device
     rdm= rdm / torch.trace(rdm)
-    rdm= rdm.view(dimsRDM)
+    rdm= rdm.view(dimsRDM).to(env.device)
 
     return rdm
 
-def rdm2x2_NNN_lowmem(C, T, a, verbosity=0):
+def rdm2x2_NNN_lowmem(state, env, force_cpu=False, verbosity=0):
     r"""
     :param C: corner tensor of C4v symmetric environment
     :param T: half-row/-column tensor of C4v symmetric environment
@@ -664,9 +679,9 @@ def rdm2x2_NNN_lowmem(C, T, a, verbosity=0):
         c  s1
 
     """
-    return _rdm2x2_NNN_lowmem(C,T,a,_get_open_C2x2_LU_dl,verbosity=verbosity)()
+    return _rdm2x2_NNN_lowmem(state,env,_get_open_C2x2_LU_dl,force_cpu=force_cpu,verbosity=verbosity)()
 
-def rdm2x2_NNN_lowmem_sl(C, T, a, verbosity=0):
+def rdm2x2_NNN_lowmem_sl(state, env, force_cpu=False, verbosity=0):
     r"""
     :param C: corner tensor of C4v symmetric environment
     :param T: half-row/-column tensor of C4v symmetric environment
@@ -704,9 +719,19 @@ def rdm2x2_NNN_lowmem_sl(C, T, a, verbosity=0):
         c  s1
 
     """
-    return _rdm2x2_NNN_lowmem(C,T,a,_get_open_C2x2_LU_sl,verbosity=verbosity)
+    return _rdm2x2_NNN_lowmem(state,env,_get_open_C2x2_LU_sl,force_cpu=force_cpu,verbosity=verbosity)
 
-def _rdm2x2_NNN_lowmem(C, T, a, f_c2x2, verbosity=0):
+def _rdm2x2_NNN_lowmem(state,env,f_c2x2,force_cpu=False,verbosity=0):
+    if force_cpu:
+        # move to cpu
+        C = env.C[env.keyC].cpu()
+        T = env.T[env.keyT].cpu()
+        a = next(iter(state.sites.values())).cpu()
+    else:
+        C = env.C[env.keyC]
+        T = env.T[env.keyT]
+        a = next(iter(state.sites.values()))
+
     #----- building C2x2_LU ----------------------------------------------------
     loc_device=C.device
     is_cpu= loc_device==torch.device('cpu')
@@ -780,9 +805,9 @@ def _rdm2x2_NNN_lowmem(C, T, a, f_c2x2, verbosity=0):
             eps= D.min().abs()
     rdm+= eps*torch.eye(rdm.size()[0],dtype=rdm.dtype,device=rdm.device)
 
-    # normalize and reshape
+    # normalize and reshape and move to original device
     rdm= rdm / torch.trace(rdm)
-    rdm= rdm.view(dimsRDM)
+    rdm= rdm.view(dimsRDM).to(env.device)
 
     return rdm
 
