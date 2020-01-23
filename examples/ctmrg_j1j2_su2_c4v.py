@@ -58,7 +58,7 @@ def main():
 
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         with torch.no_grad():
-            rdm2x1= rdm2x1_sl(state, env)
+            rdm2x1= rdm2x1_sl(state, env, force_cpu=ctm_args.conv_check_cpu)
             # print(", ".join([f"{len(history)}",f"{e_curr}"]+[f"{v}" for v in obs_values]))
             dist= float('inf')
             if len(history) > 1:
@@ -72,7 +72,7 @@ def main():
     ctm_env_init = ENV_C4V(args.chi, state, log=args.out_prefix+"_env.log")
     init_env(state, ctm_env_init)
 
-    e_curr0 = energy_f(state, ctm_env_init)
+    e_curr0 = energy_f(state, ctm_env_init, force_cpu=True)
     obs_values0, obs_labels = model.eval_obs(state,ctm_env_init)
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{e_curr0}"]+[f"{v}" for v in obs_values0]))
@@ -80,8 +80,8 @@ def main():
     ctm_env_init, *ctm_log = ctmrg_c4v.run(state, ctm_env_init, \
         conv_check=ctmrg_conv_energy)
 
-    e_curr0 = energy_f(state, ctm_env_init)
-    obs_values0, obs_labels = model.eval_obs(state,ctm_env_init)
+    e_curr0 = energy_f(state, ctm_env_init, force_cpu=True)
+    obs_values0, obs_labels = model.eval_obs(state,ctm_env_init,force_cpu=True)
     history, t_ctm, t_obs= ctm_log
     print("\n")
     print(", ".join(["epoch","energy"]+obs_labels))
