@@ -161,7 +161,7 @@ class CTMARGS():
         self.ctm_conv_tol = 1.0e-8
         self.conv_check_cpu = False
         self.projector_method = '4X4'
-        self.projector_svd_method = 'GESDD'
+        self.projector_svd_method = 'DEFAULT'
         self.projector_svd_reltol = 1.0e-8
         self.ctm_move_sequence = [(0,-1), (-1,0), (0,1), (1,0)]
         self.ctm_logging = False
