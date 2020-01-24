@@ -99,7 +99,7 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=cfg
             # 2) compute observables if we moved into new epoch
             obs_values, obs_labels = model.eval_obs(state,ctm_env)
             print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values])\
-                +f", {len(history)}")
+                +", "+str(len(history["log"])))
 
             # 3) store current state if the loss improves
             t_data["loss"].append(loss.item())
@@ -110,8 +110,8 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=cfg
         # 4) log CTM metrics for debugging
         if opt_args.opt_logging:
             log_entry=dict({"id": len(t_data["loss"])-1, \
-                "t_ctm": t_ctm, "t_obs": t_obs, "ctm_history_len": len(history), \
-                "ctm_history": history, "final_multiplets": compute_multiplets(ctm_env)})
+                "t_ctm": t_ctm, "t_obs": t_obs, "ctm_history_len": len(history["log"]), \
+                "ctm_history": history["log"], "final_multiplets": compute_multiplets(ctm_env)})
             outputlogfile.write(json.dumps(log_entry)+'\n')
 
         t_grad0= time.perf_counter()
@@ -120,7 +120,7 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=cfg
 
         # 5) log grad metrics
         if opt_args.opt_logging:
-            log_entry=dict({"id": len(t_data["loss"])-1, "ctm_iter": len(history),
+            log_entry=dict({"id": len(t_data["loss"])-1, "ctm_iter": len(history["log"]),
                 "t_grad": t_grad1-t_grad0, "grad": [p.grad.tolist() for p in parameters],
                 "coeffs": [p.tolist() for p in parameters] })
             outputlogfile.write(json.dumps(log_entry)+'\n')
