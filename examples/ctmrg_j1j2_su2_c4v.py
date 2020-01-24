@@ -20,6 +20,8 @@ parser.add_argument("-j2", type=float, default=0., help="next nearest-neighbour 
 parser.add_argument("-corrf_r", type=int, default=1, help="maximal correlation function distance")
 parser.add_argument("-top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
+parser.add_argument("-obs_freq", type=int, default=-1, help="frequency of computing observables"+
+    " during CTM convergence")
 args = parser.parse_args()
 
 def main():
@@ -64,9 +66,18 @@ def main():
             dist= float('inf')
             if len(history["log"]) > 1:
                 dist= torch.dist(rdm2x1, history["rdm"], p=2).item()
+            # log dist and observables
+            if args.obs_freq>0 and \
+                (len(history["log"])%args.obs_freq==0 or 
+                (len(history["log"])-1)%args.obs_freq==0):
+                e_curr = energy_f(state, env, force_cpu=ctm_args.conv_check_cpu)
+                obs_values, obs_labels = model.eval_obs(state, env, force_cpu=True)
+                print(", ".join([f"{len(history['log'])}",f"{dist}",f"{e_curr}"]+[f"{v}" for v in obs_values]))
+            else:
+                print(f"{len(history['log'])}, {dist}")
+            # update history
             history["rdm"]=rdm2x1
             history["log"].append(dist)
-            print(str(len(history["log"]))+f", {dist}")
         return dist<ctm_args.ctm_conv_tol
 
     ctm_env_init = ENV_C4V(args.chi, state, log=args.out_prefix+"_env.log")
