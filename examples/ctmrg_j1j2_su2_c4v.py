@@ -58,16 +58,16 @@ def main():
 
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         with torch.no_grad():
+            if not history:
+                history["log"]=[]
             rdm2x1= rdm2x1_sl(state, env, force_cpu=ctm_args.conv_check_cpu)
-            # print(", ".join([f"{len(history)}",f"{e_curr}"]+[f"{v}" for v in obs_values]))
             dist= float('inf')
-            if len(history) > 1:
-                dist= torch.dist(rdm2x1, history[-1][0], p=2)
-                if dist<ctm_args.ctm_conv_tol:
-                    return True
-            history.append([rdm2x1,dist])
-            print(f"{len(history)}, {dist}")
-        return False
+            if len(history["log"]) > 1:
+                dist= torch.dist(rdm2x1, history["rdm"], p=2).item()
+            history["rdm"]=rdm2x1
+            history["log"].append(dist)
+            print(str(len(history["log"]))+f", {dist}")
+        return dist<ctm_args.ctm_conv_tol
 
     ctm_env_init = ENV_C4V(args.chi, state, log=args.out_prefix+"_env.log")
     init_env(state, ctm_env_init)
