@@ -101,7 +101,7 @@ def main():
     print(", ".join(["epoch","energy"]+obs_labels)+", ctm-steps")
     print(", ".join([f"{-1}",f"{loss}"]+[f"{v}" for v in obs_values])+f", {len(history)}")
 
-    def loss_fn(state, ctm_env_in, opt_args=cfg.opt_args):
+    def loss_fn(state, ctm_env_in, opt_args=cfg.opt_args, ctm_args=cfg.ctm_args):
         # build on-site tensors from su2sym components
         state.sites= state.build_onsite_tensors()
 
@@ -111,10 +111,10 @@ def main():
 
         # 1) compute environment by CTMRG
         ctm_env_out, history, t_ctm, t_obs= ctmrg_c4v.run(state, ctm_env_in, \
-            conv_check=ctmrg_conv_energy)
+            conv_check=ctmrg_conv_energy, ctm_args=ctm_args)
         loss0 = energy_f(state, ctm_env_out, force_cpu=True)
         
-        loc_ctm_args= copy.deepcopy(cfg.ctm_args)
+        loc_ctm_args= copy.deepcopy(ctm_args)
         loc_ctm_args.ctm_max_iter= 1
         ctm_env_out, history1, t_ctm1, t_obs1= ctmrg_c4v.run(state, ctm_env_out, \
             ctm_args=loc_ctm_args)
