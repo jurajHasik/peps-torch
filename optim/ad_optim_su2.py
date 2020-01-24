@@ -144,8 +144,10 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=cfg
         # 1) evaluate loss
         loc_opt_args= copy.deepcopy(opt_args)
         loc_opt_args.opt_ctm_reinit= False
+        loc_ctm_args= copy.deepcopy(ctm_args)
+        loc_ctm_args.projector_svd_method= "SYMARP"
         loss, ctm_env, history, t_ctm, t_obs = loss_fn(state, current_env[0],\
-            opt_args=loc_opt_args)
+            opt_args=loc_opt_args, ctm_args=loc_ctm_args)
 
         # We evaluate observables inside closure as it is the only place with the environment
         # consistent with the state
