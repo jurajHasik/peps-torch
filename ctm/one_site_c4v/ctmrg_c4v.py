@@ -27,11 +27,11 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
     environment ``env``. TODO add reference
     """
 
-    if cfg.ctm_args.projector_svd_method == 'SYMEIG':
+    if ctm_args.projector_svd_method=='DEFAULT' or ctm_args.projector_svd_method=='SYMEIG':
         def truncated_eig(M, chi):
             return truncated_eig_sym(M, chi, keep_multiplets=True,\
                 verbosity=ctm_args.verbosity_projectors)
-    elif cfg.ctm_args.projector_svd_method == 'SYMARP':
+    elif ctm_args.projector_svd_method == 'SYMARP':
         def truncated_eig(M, chi):
             return truncated_eig_symarnoldi(M, chi, keep_multiplets=True, \
                 verbosity=ctm_args.verbosity_projectors)
