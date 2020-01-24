@@ -152,7 +152,7 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=cfg
         #if prev_epoch[0]!=epoch:
         # 2) compute observables if we moved into new epoch
         obs_values, obs_labels = model.eval_obs(state,ctm_env)
-        log_line= ", ".join([f"{len(history)}",f"{loss}"]+[f"{v}" for v in obs_values])
+        log_line= ", ".join([str(len(history["log"])),f"{loss}"]+[f"{v}" for v in obs_values])
 
         #     # 3) store current state if the loss improves
         #     t_data["loss"].append(loss.item())
@@ -163,8 +163,8 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, opt_args=cfg
         # 4) log CTM metrics for debugging
         if opt_args.opt_logging:
             log_entry=dict({"id_LS": len(t_data["loss"])-1, \
-                "t_ctm": t_ctm, "t_obs": t_obs, "ctm_history_len": len(history), \
-                "ctm_history": history, "final_multiplets": compute_multiplets(ctm_env)})
+                "t_ctm": t_ctm, "t_obs": t_obs, "ctm_history_len": len(history["log"]), \
+                "ctm_history": history["log"], "final_multiplets": compute_multiplets(ctm_env)})
             outputlogfile.write(json.dumps(log_entry)+'\n')
 
         # 5) log opt metrics
