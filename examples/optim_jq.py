@@ -32,14 +32,10 @@ def main():
         if args.bond_dim > max(state.get_aux_bond_dims()):
             # extend the auxiliary dimensions
             state = extend_bond_dim(state, args.bond_dim)
-        add_random_noise(state, args.instate_noise)
+        state.add_noise(args.instate_noise)
     elif args.opt_resume is not None:
-        unit_cell= [(0,0), (1,0), (0,1), (1,1)]
-        checkpoint= torch.load(args.opt_resume)
-        init_parameters = checkpoint["parameters"]
-        assert len(init_parameters)==len(unit_cell), f"Incompatible number of on-site tensors"
-        sites= dict(zip(unit_cell, init_parameters))
-        state = IPEPS(sites, lX=2, lY=2)
+        state= IPEPS(dict(), lX=2, lY=2)
+        state.load_checkpoint(args.opt_resume)
     elif args.ipeps_init_type=='RANDOM':
         bond_dim = args.bond_dim
         
@@ -52,11 +48,10 @@ def main():
         D = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
             dtype=cfg.global_args.dtype,device=cfg.global_args.device)
 
-        sites = {(0,0): A, (1,0): B, (0,1): C, (1,1): D}
-
+        sites= {(0,0): A, (1,0): B, (0,1): C, (1,1): D}
         for k in sites.keys():
             sites[k] = sites[k]/torch.max(torch.abs(sites[k]))
-        state = IPEPS(sites, lX=2, lY=2)
+        state= IPEPS(sites, lX=2, lY=2)
     else:
         raise ValueError("Missing trial state: -instate=None and -ipeps_init_type= "\
             +str(args.ipeps_init_type)+" is not supported")

@@ -1,4 +1,5 @@
 import torch
+from collections import OrderedDict
 import json
 import itertools
 import math
@@ -93,11 +94,10 @@ class IPEPS():
         
         TODO we infer the size of the cluster from the keys of sites. Is it OK?
         """
-        super(IPEPS, self).__init__()
         self.dtype = global_args.dtype
         self.device = global_args.device
 
-        self.sites = sites
+        self.sites = OrderedDict(sites)
         
         # infer the size of the cluster
         if lX is None or lY is None:
@@ -120,6 +120,42 @@ class IPEPS():
                 return ( (x + abs(x)*self.lX)%self.lX, (y + abs(y)*self.lY)%self.lY )
             self.vertexToSite = vertexToSite
 
+    def site(self, coord):
+        """
+        :param coord: tuple (x,y) specifying vertex on a square lattice
+        :type coord: tuple(int,int)
+        :return: on-site tensor corresponding to the vertex (x,y)
+        :rtype: torch.tensor
+        """
+        return self.sites[self.vertexToSite(coord)]
+
+    def get_parameters(self):
+        return self.sites.values()
+
+    def get_checkpoint(self):
+        return self.sites
+
+    def load_checkpoint(self,checkpoint_file):
+        checkpoint= torch.load(checkpoint_file)
+        self.sites= checkpoint["parameters"]
+
+    def write_to_file(self,outputfile,aux_seq=[0,1,2,3], tol=1.0e-14, normalize=False):
+        write_ipeps(self,outputfile,aux_seq=aux_seq, tol=tol, normalize=normalize)
+
+    def add_noise(self,noise):
+        r"""
+        :param noise: magnitude of the noise
+        :type noise: float
+
+        Take IPEPS and add random uniform noise with magnitude ``noise`` to all on-site tensors
+        """
+        for coord in self.sites.keys():
+            rand_t = torch.rand( self.sites[coord].size(), dtype=self.dtype, device=self.device)
+            self.sites[coord] = self.sites[coord] + noise * rand_t
+
+    def get_aux_bond_dims(self):
+        return [d for key in self.sites.keys() for d in self.sites[key].size()[1:]]
+
     def __str__(self):
         print(f"lX x lY: {self.lX} x {self.lY}")
         for nid,coord,site in [(t[0], *t[1]) for t in enumerate(self.sites.items())]:
@@ -141,23 +177,6 @@ class IPEPS():
             print("")
         
         return ""
-
-    def site(self, coord):
-        """
-        :param coord: tuple (x,y) specifying vertex on a square lattice
-        :type coord: tuple(int,int)
-        :return: on-site tensor corresponding to the vertex (x,y)
-        :rtype: torch.tensor
-        """
-        return self.sites[self.vertexToSite(coord)]
-
-    def add_noise(self,noise):
-        for coord in self.sites.keys():
-            rand_t = torch.rand( self.sites[coord].size(), dtype=self.dtype, device=self.device)
-            self.sites[coord] = self.sites[coord] + noise * rand_t
-
-    def get_aux_bond_dims(self):
-        return [d for key in self.sites.keys() for d in self.sites[key].size()[1:]]
 
 def read_ipeps(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.peps_args,\
     global_args=cfg.global_args):
@@ -194,7 +213,7 @@ def read_ipeps(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.pep
          3
     """
     asq = [x+1 for x in aux_seq]
-    sites = dict()
+    sites = OrderedDict()
     
     with open(jsonfile) as j:
         raw_state = json.load(j)
@@ -284,17 +303,6 @@ def extend_bond_dim(state, new_d):
         new_state.sites[coord] = new_site
     return new_state
 
-def add_random_noise(state, noise=0.):
-    r"""
-    :param state: wavefunction to modify
-    :param noise: magnitude of added noise
-    :type state: IPEPS
-    :type noise: float
-
-    Take IPEPS and add random uniform noise with magnitude ``noise`` to all on-site tensors
-    """
-    state.add_noise(noise) 
-    
 def write_ipeps(state, outputfile, aux_seq=[0,1,2,3], tol=1.0e-14, normalize=False):
     r"""
     :param state: wavefunction to write out in json format

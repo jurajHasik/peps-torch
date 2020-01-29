@@ -3,19 +3,19 @@ import json
 import torch
 #from memory_profiler import profile
 import config as cfg
-from ipeps import write_ipeps
+import pdb
 
-def store_checkpoint(checkpoint_file, parameters, optimizer, current_epoch, current_loss,\
+def store_checkpoint(checkpoint_file, state, optimizer, current_epoch, current_loss,\
     verbosity=0):
     r"""
     :param checkpoint_file: target file
-    :param parameters: wavefunction parameters
+    :param state: ipeps wavefunction
     :param optimizer: Optimizer
     :param current_epoch: current epoch
     :param current_loss: current value of a loss function
     :param verbosity: verbosity
     :type checkpoint_file: str or Path
-    :type parameters: list[torch.tensor]
+    :type state: IPEPS
     :type optimizer: torch.optim.Optimizer
     :type current_epoch: int
     :type current_loss: float
@@ -26,13 +26,13 @@ def store_checkpoint(checkpoint_file, parameters, optimizer, current_epoch, curr
     torch.save({
             'epoch': current_epoch,
             'loss': current_loss,
-            'parameters': parameters,
+            'parameters': state.get_checkpoint(),
             'optimizer_state_dict': optimizer.state_dict()}, checkpoint_file)
     if verbosity>0:
         print(checkpoint_file)
 
-def optimize_state(state, ctm_env_init, loss_fn, model, local_args, callbacks=None, \
-    opt_args=cfg.opt_args, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+def optimize_state(state, ctm_env_init, loss_fn, preprocess, local_args, opt_args=cfg.opt_args,\
+    ctm_args=cfg.ctm_args, global_args=cfg.global_args):
     r"""
     :param state: initial wavefunction
     :param ctm_env_init: initial environment corresponding to ``state``
@@ -54,7 +54,7 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, callbacks=No
     Optimizes initial wavefunction ``state`` with respect to ``loss_fn`` using LBFGS optimizer.
     The main parameters influencing the optimization process are given in :py:class:`config.OPTARGS`.
     """
-    parameters = list(state.sites.values())
+    parameters= state.get_parameters()
     for A in parameters: A.requires_grad_(True)
 
     outputstatefile= local_args.out_prefix+"_state.json"
@@ -65,13 +65,6 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, callbacks=No
     
     #@profile
     def closure():
-        for el in parameters: 
-            if el.grad is not None: el.grad.zero_()
-
-        # 0) pre-process state: normalize on-site tensors by largest elements
-        for coord,site in state.sites.items():
-            site = site/torch.max(torch.abs(site))
-
         # 1) evaluate loss
         loss, ctm_env, history, t_ctm, t_check = loss_fn(state, current_env[0], opt_args=opt_args)
         
@@ -79,8 +72,8 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, callbacks=No
         # consistent with the state
         if prev_epoch[0]!=epoch:
             # 2) compute observables if we moved into new epoch
-            obs_values, obs_labels = model.eval_obs(state,ctm_env)
-            print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
+            # obs_values, obs_labels = model.eval_obs(state,ctm_env)
+            print(", ".join([f"{epoch}",f"{loss}"]))#+[f"{v}" for v in obs_values]))
 
             # 2a) callbacks
             for fc in callbacks: fc(state,ctm_env,epoch,history)
@@ -89,7 +82,7 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, callbacks=No
             t_data["loss"].append(loss.item())
             if t_data["min_loss"] > t_data["loss"][-1]:
                 t_data["min_loss"]= t_data["loss"][-1]
-                write_ipeps(state, outputstatefile, normalize=True)
+                state.write_to_file(outputstatefile, normalize=True)
 
         # 4) log CTM metrics for debugging
         if opt_args.opt_logging:
@@ -132,8 +125,6 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, callbacks=No
         init_parameters = checkpoint["parameters"]
         epoch0 = checkpoint["epoch"]
         loss0 = checkpoint["loss"]
-        for i in range(len(parameters)):
-            parameters[i].data = init_parameters[i].data
         cp_state_dict= checkpoint["optimizer_state_dict"]
         cp_opt_params= cp_state_dict["param_groups"][0]
         cp_opt_history= cp_state_dict["state"][cp_opt_params["params"][0]]
@@ -166,12 +157,13 @@ def optimize_state(state, ctm_env_init, loss_fn, model, local_args, callbacks=No
         # checkpoint the optimizer
         # checkpointing before step, guarantees the correspondence between the wavefunction
         # and the last computed value of loss t_data["loss"][-1]
-        store_checkpoint(checkpoint_file, parameters, optimizer, epoch0+epoch, t_data["loss"][-1])
-        
+        store_checkpoint(checkpoint_file, state, optimizer, epoch0+epoch, t_data["loss"][-1])
+
         # After execution closure ``current_env`` **IS NOT** corresponding to ``state``, since
         # the ``state`` on-site tensors have been modified by gradient. 
+        optimizer.zero_grad()
         optimizer.step(closure)
 
     # optimization is over, store the last checkpoint
-    store_checkpoint(checkpoint_file, parameters, optimizer, \
+    store_checkpoint(checkpoint_file, state, optimizer, \
         epoch0+local_args.opt_max_iter, t_data["loss"][-1])
