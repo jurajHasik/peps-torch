@@ -16,8 +16,8 @@ def make_c4v_symm(A):
     
     Perform left-right, up-down, diagonal symmetrization
     """
-    A= 0.5*(A + A.permute(0,1,4,3,2))   # left-right symmetry
-    A= 0.5*(A + A.permute(0,3,2,1,4))   # up-down symmetry
-    A= 0.5*(A + A.permute(0,4,3,2,1))   # skew-diagonal symmetry
-    A= 0.5*(A + A.permute(0,2,1,4,3))   # diagonal symmetry
+    A= 0.5*(A + A.permute(0,1,4,3,2))   # left-right reflection
+    A= 0.5*(A + A.permute(0,3,2,1,4))   # up-down reflection
+    A= 0.5*(A + A.permute(0,4,1,2,3))   # pi/2 anti-clockwise
+    A= 0.5*(A + A.permute(0,2,3,4,1))   # pi/2 clockwise
     return A

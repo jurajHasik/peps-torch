@@ -46,7 +46,7 @@ class IPEPS_C4V(ipeps.IPEPS):
         ipeps.write_ipeps(tmp_state,outputfile,**kwargs)
 
 def to_ipeps_c4v(state):
-    assert len(state.sites.items())==0, "state has more than a single on-site tensor"
+    assert len(state.sites.items())==1, "state has more than a single on-site tensor"
     return IPEPS_C4V(next(iter(state.sites.values())))
 
 def read_ipeps_c4v(jsonfile, aux_seq=[0,1,2,3], peps_args=cfg.peps_args,\

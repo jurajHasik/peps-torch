@@ -26,7 +26,6 @@ def main():
     # initialize an ipeps
     # 1) define lattice-tiling function, that maps arbitrary vertex of square lattice
     # coord into one of coordinates within unit-cell of iPEPS ansatz    
-
     if args.instate is not None:
         state = read_ipeps(args.instate)
         if args.bond_dim > max(state.get_aux_bond_dims()):
@@ -69,16 +68,16 @@ def main():
 
     ctm_env_init = ENV(args.chi, state)
     init_env(state, ctm_env_init)
-    ctm_env_init, *ctm_log = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
 
+    ctm_env_init, *ctm_log = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
     loss = model.energy_2x2_4site(state, ctm_env_init)
     obs_values, obs_labels = model.eval_obs(state,ctm_env_init)
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{loss}"]+[f"{v}" for v in obs_values]))
 
-    def loss_fn(state, ctm_env_init, opt_args=cfg.opt_args):
+    def loss_fn(state, ctm_env_init, opt_context):
         # possibly re-initialize the environment
-        if opt_args.opt_ctm_reinit:
+        if cfg.opt_args.opt_ctm_reinit:
             init_env(state, ctm_env_init)
 
         # 1) compute environment by CTMRG
@@ -87,8 +86,14 @@ def main():
         
         return (loss, ctm_env_out, *ctm_log)
 
+    def obs_fn(state, ctm_env, opt_context):
+        epoch= len(opt_context["loss_history"]["loss"]) 
+        loss= opt_context["loss_history"]["loss"][-1]
+        obs_values, obs_labels = model.eval_obs(state,ctm_env)
+        print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
+
     # optimize
-    optimize_state(state, ctm_env_init, loss_fn, model, args)
+    optimize_state(state, ctm_env_init, loss_fn, args, obs_fn=obs_fn)
 
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"

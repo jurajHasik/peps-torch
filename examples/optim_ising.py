@@ -26,24 +26,22 @@ def main():
     # initialize an ipeps
     # 1) define lattice-tiling function, that maps arbitrary vertex of square lattice
     # coord into one of coordinates within unit-cell of iPEPS ansatz    
-    
     if args.instate!=None:
         state = read_ipeps(args.instate, vertexToSite=None)
         if args.bond_dim > max(state.get_aux_bond_dims()):
             # extend the auxiliary dimensions
             state = extend_bond_dim(state, args.bond_dim)
-        add_random_noise(state, args.instate_noise)
+        state.add_noise(args.instate_noise)
+    elif args.opt_resume is not None:
+        state= IPEPS(dict(), lX=1, lY=1)
+        state.load_checkpoint(args.opt_resume)
     elif args.ipeps_init_type=='RANDOM':
         bond_dim = args.bond_dim
-        
         A = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
             dtype=cfg.global_args.dtype,device=cfg.global_args.device)
-
         # normalization of initial random tensors
         A = A/torch.max(torch.abs(A))
-
         sites = {(0,0): A}
-
         state = IPEPS(sites)
     else:
         raise ValueError("Missing trial state: -instate=None and -ipeps_init_type= "\
@@ -62,16 +60,16 @@ def main():
 
     ctm_env = ENV(args.chi, state)
     init_env(state, ctm_env)
-    ctm_env, *ctm_log = ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
 
+    ctm_env, *ctm_log = ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
     loss = model.energy_1x1(state, ctm_env)
     obs_values, obs_labels = model.eval_obs(state,ctm_env)
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{loss}"]+[f"{v}" for v in obs_values]))
 
-    def loss_fn(state, ctm_env_in, opt_args=cfg.opt_args):
+    def loss_fn(state, ctm_env_in, opt_context):
         # possibly re-initialize the environment
-        if opt_args.opt_ctm_reinit:
+        if cfg.opt_args.opt_ctm_reinit:
             init_env(state, ctm_env_in)
 
         # 1) compute environment by CTMRG
@@ -80,8 +78,14 @@ def main():
         
         return (loss, ctm_env_out, *ctm_log)
 
+    def obs_fn(state, ctm_env, opt_context):
+        epoch= len(opt_context["loss_history"]["loss"]) 
+        loss= opt_context["loss_history"]["loss"][-1]
+        obs_values, obs_labels = model.eval_obs(state,ctm_env)
+        print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
+
     # optimize
-    optimize_state(state, ctm_env, loss_fn, model, args)
+    optimize_state(state, ctm_env, loss_fn, args, obs_fn=obs_fn)
 
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"
@@ -101,7 +105,7 @@ class TestOpt(unittest.TestCase):
         args.hx=0.0
         args.bond_dim=2
         args.chi=16
-        args.opt_max_iter=2
+        args.opt_max_iter=3
 
     # basic tests
     def test_opt_GESDD(self):

@@ -3,7 +3,6 @@ import torch
 import argparse
 import config as cfg
 from ipeps_c4v import *
-from ipeps import *
 from groups.c4v import *
 from ctm.one_site_c4v.env_c4v import *
 from ctm.one_site_c4v import ctmrg_c4v
@@ -26,7 +25,7 @@ def main():
     model= j1j2.J1J2_C4V_BIPARTITE(j1=args.j1, j2=args.j2)
     energy_f= model.energy_1x1_lowmem
 
-    # initialize an ipeps
+    # initialize the ipeps
     if args.instate!=None:
         state= read_ipeps_c4v(args.instate)
         if args.bond_dim > max(state.get_aux_bond_dims()):
@@ -68,33 +67,43 @@ def main():
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{loss}"]+[f"{v}" for v in obs_values]))
 
-    def preprocess(state):
-        state.sites[(0,0)]= make_c4v_symm(state.sites[(0,0)])
-        state.sites[(0,0)]= state.sites[(0,0)]/torch.max(state.sites[(0,0)])
-        return state
-
-    def loss_fn(state, ctm_env_in, opt_args=cfg.opt_args):
+    def loss_fn(state, ctm_env_in, opt_context):
+        # 0) preprocess
         # symmetrize on-site tensor and normalize
-        # fails on backward
-        # state.sites[(0,0)]= make_c4v_symm(state.sites[(0,0)])
-        # state.sites[(0,0)]= state.sites[(0,0)]/torch.max(state.sites[(0,0)])
-
-        state=IPEPS_C4V(state.sites[(0,0)]) 
+        # Option 1)
+        # with torch.no_grad():
+        #     for site in state.sites.values():
+        #         site.copy_(make_c4v_symm(site))
+        #         site *= 1./torch.max(torch.abs(site))
+        
+        # Option 2)
+        # create a copy of state, symmetrize and normalize making all operations
+        # tracked. This does not "overwrite" the parameters tensors, living outside
+        # the scope of loss_fn
+        state= IPEPS_C4V(state.sites[(0,0)])
         state.sites[(0,0)]= make_c4v_symm(state.sites[(0,0)])
         state.sites[(0,0)]= state.sites[(0,0)]/torch.max(state.sites[(0,0)])
 
         # possibly re-initialize the environment
-        if opt_args.opt_ctm_reinit:
+        if cfg.opt_args.opt_ctm_reinit:
             init_env(state, ctm_env_in)
 
         # 1) compute environment by CTMRG
         ctm_env_out, *ctm_log= ctmrg_c4v.run(state, ctm_env_in, conv_check=ctmrg_conv_energy)
-        loss = energy_f(state, ctm_env_out)
         
+        # 2) evaluate loss with converged environment
+        loss = energy_f(state, ctm_env_out)
+
         return (loss, ctm_env_out, *ctm_log)
 
+    def obs_fn(state, ctm_env, opt_context):
+        epoch= len(opt_context["loss_history"]["loss"]) 
+        loss= opt_context["loss_history"]["loss"][-1]
+        obs_values, obs_labels = model.eval_obs(state,ctm_env)
+        print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
+
     # optimize
-    optimize_state(state, ctm_env, loss_fn, preprocess, args)
+    optimize_state(state, ctm_env, loss_fn, args, obs_fn=obs_fn)
 
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"
@@ -114,21 +123,11 @@ class TestOpt(unittest.TestCase):
         args.j2=0.0
         args.bond_dim=2
         args.chi=16
-        args.opt_max_iter=2
+        args.opt_max_iter=3
 
     # basic tests
-    def test_opt_GESDD(self):
-        args.CTMARGS_projector_svd_method="GESDD"
-        main()
-
     def test_opt_SYMEIG(self):
         args.CTMARGS_projector_svd_method="SYMEIG"
-        main()
-
-    @unittest.skipIf(not torch.cuda.is_available(), "CUDA not available")
-    def test_opt_GESDD_gpu(self):
-        args.GLOBALARGS_device="cuda:0"
-        args.CTMARGS_projector_svd_method="GESDD"
         main()
 
     @unittest.skipIf(not torch.cuda.is_available(), "CUDA not available")

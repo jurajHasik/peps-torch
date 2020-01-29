@@ -7,13 +7,15 @@ from ctm.generic.env import *
 from ctm.generic import ctmrg
 from models import akltS2
 from optim.ad_optim import optimize_state
+import unittest
 
-if __name__=='__main__':
-    # parse command line args and build necessary configuration objects
-    parser= cfg.get_args_parser()
-    # additional model-dependent arguments
-    parser.add_argument("-tiling", default="BIPARTITE", help="tiling of the lattice")
-    args = parser.parse_args()
+# parse command line args and build necessary configuration objects
+parser= cfg.get_args_parser()
+# additional model-dependent arguments
+parser.add_argument("-tiling", default="BIPARTITE", help="tiling of the lattice")
+args, unknown = parser.parse_known_args()
+
+def main():   
     cfg.configure(args)
     cfg.print_config()
     torch.set_num_threads(args.omp_cores)
@@ -42,7 +44,13 @@ if __name__=='__main__':
         if args.bond_dim > max(state.get_aux_bond_dims()):
             # extend the auxiliary dimensions
             state = extend_bond_dim(state, args.bond_dim)
-        add_random_noise(state, args.instate_noise)
+        state.add_noise(state, args.instate_noise)
+    elif args.opt_resume is not None:
+        if args.tiling == "BIPARTITE":
+            state= IPEPS(dict(), lX=2, lY=1)
+        elif args.tiling == "4SITE":
+            state= IPEPS(dict(), lX=2, lY=2)
+        state.load_checkpoint(args.opt_resume)
     elif args.ipeps_init_type=='RANDOM':
         bond_dim = args.bond_dim
         
@@ -90,16 +98,16 @@ if __name__=='__main__':
 
     ctm_env = ENV(args.chi, state)
     init_env(state, ctm_env)
-    ctm_env, *ctm_log = ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
 
+    ctm_env, *ctm_log = ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
     loss0 = energy_f(state, ctm_env)
     obs_values, obs_labels = model.eval_obs(state,ctm_env)
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
 
-    def loss_fn(state, ctm_env_in, opt_args=cfg.opt_args):
+    def loss_fn(state, ctm_env_in, opt_context):
         # possibly re-initialize the environment
-        if opt_args.opt_ctm_reinit:
+        if cfg.opt_args.opt_ctm_reinit:
             init_env(state, ctm_env_in)
 
         # 1) compute environment by CTMRG
@@ -108,8 +116,14 @@ if __name__=='__main__':
         
         return (loss, ctm_env_out, *ctm_log)
 
+    def obs_fn(state, ctm_env, opt_context):
+        epoch= len(opt_context["loss_history"]["loss"]) 
+        loss= opt_context["loss_history"]["loss"][-1]
+        obs_values, obs_labels = model.eval_obs(state,ctm_env)
+        print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
+
     # optimize
-    optimize_state(state, ctm_env, loss_fn, model, args)
+    optimize_state(state, ctm_env, loss_fn, args, obs_fn=obs_fn)
 
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"
@@ -120,3 +134,6 @@ if __name__=='__main__':
     opt_energy = energy_f(state,ctm_env)
     obs_values, obs_labels = model.eval_obs(state,ctm_env)
     print(", ".join([f"{args.opt_max_iter}",f"{opt_energy}"]+[f"{v}" for v in obs_values]))  
+
+if __name__=='__main__':
+    main()
