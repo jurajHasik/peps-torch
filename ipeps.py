@@ -94,10 +94,10 @@ class IPEPS():
         
         TODO we infer the size of the cluster from the keys of sites. Is it OK?
         """
-        self.dtype = global_args.dtype
-        self.device = global_args.device
+        self.dtype= global_args.dtype
+        self.device= global_args.device
 
-        self.sites = OrderedDict(sites)
+        self.sites= OrderedDict(sites)
         
         # infer the size of the cluster
         if lX is None or lY is None:

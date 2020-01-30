@@ -1,6 +1,6 @@
 import torch
 import ipeps
-from groups.c4v import make_c4v_symm 
+from groups.pg import make_c4v_symm 
 import config as cfg
 
 class IPEPS_C4V(ipeps.IPEPS):

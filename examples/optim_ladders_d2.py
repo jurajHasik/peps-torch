@@ -7,7 +7,7 @@ from ipeps_d2 import *
 from ctm.generic.env import *
 from ctm.generic import ctmrg
 from models import coupledLadders
-from optim.ad_optim_d2 import optimize_state
+from optim.ad_optim import optimize_state
 import unittest
 from ctm.generic import transferops
 import json
@@ -28,26 +28,23 @@ def main():
     
     model = coupledLadders.COUPLEDLADDERS_D2_BIPARTITE(alpha=args.alpha)
     
-    # initialize an ipeps
-    # 1) define lattice-tiling function, that maps arbitrary vertex of square lattice
-    # coord into one of coordinates within unit-cell of iPEPS ansatz    
-
+    # initialize an ipeps   
     if args.instate!=None:
         state = read_ipeps_d2(args.instate)
         if args.bond_dim > max(state.get_aux_bond_dims()):
             # extend the auxiliary dimensions
             state = extend_bond_dim(state, args.bond_dim)
-        add_random_noise(state, args.instate_noise)
+        state.add_noise(args.instate_noise)
+    elif args.opt_resume is not None:
+        state= IPEPS_D2SYM()
+        state.load_checkpoint(args.opt_resume)
     elif args.ipeps_init_type=='RANDOM':
         bond_dim = args.bond_dim
-        
         A = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
             dtype=cfg.global_args.dtype,device=cfg.global_args.device)
         # A= make_d2_symm(A)
         A= A/torch.max(torch.abs(A))
-
-        sites = {(0,0): A}   
-        state = IPEPS_D2SYM(sites)
+        state = IPEPS_D2SYM(A)
     else:
         raise ValueError("Missing trial state: -instate=None and -ipeps_init_type= "\
             +str(args.ipeps_init_type)+" is not supported")
@@ -66,27 +63,24 @@ def main():
 
     ctm_env = ENV(args.chi, state)
     init_env(state, ctm_env)
-    ctm_env, *ctm_log = ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
 
+    ctm_env, *ctm_log = ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
     loss = model.energy_2x1_1x2(state, ctm_env)
     obs_values, obs_labels = model.eval_obs(state,ctm_env)
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{loss}"]+[f"{v}" for v in obs_values]))
 
-    def loss_fn(state, ctm_env_in, opt_args=cfg.opt_args):
+    def loss_fn(state, ctm_env_in, opt_context):
         # symmetrize and normalize
-        # with torch.no_grad():
-        for c in state.parent_tensors.keys():
-            state.parent_tensors[c]= make_d2_symm(state.parent_tensors[c])
-            # state.parent_tensors[c]+= state.parent_tensors[c].permute(0,1,4,3,2)
-            # state.parent_tensors[c]*= 1.0/torch.max(torch.abs(state.parent_tensors[c]))
-            state.parent_tensors[c]= state.parent_tensors[c]/torch.max(torch.abs(state.parent_tensors[c]))
-
-        # build on-site tensors
-        state.sites= state.build_onsite_tensors()
+        # symm_site= make_d2_symm(state.parent_site)
+        # symm_site= symm_site/torch.max(torch.abs(symm_site))
+        symm_site= state.parent_site/torch.max(torch.abs(state.parent_site))
+        state= IPEPS_D2SYM(symm_site)
+        # state.parent_tensors[c]+= state.parent_tensors[c].permute(0,1,4,3,2)
+        # state.parent_tensors[c]*= 1.0/torch.max(torch.abs(state.parent_tensors[c]))
 
         # possibly re-initialize the environment
-        if opt_args.opt_ctm_reinit:
+        if cfg.opt_args.opt_ctm_reinit:
             init_env(state, ctm_env_in)
 
         # 1) compute environment by CTMRG
@@ -95,23 +89,14 @@ def main():
         
         return (loss, ctm_env_out, *ctm_log)
 
-    # def top_spec_check(state,ctm_env,epoch,*other):
-    #     with torch.no_grad():
-    #         def _to_json(l):
-    #             re=[l[i,0].item() for i in range(l.size()[0])]
-    #             im=[l[i,1].item() for i in range(l.size()[0])]
-    #             return dict({"re": re, "im": im})
+    def obs_fn(state, ctm_env, opt_context):
+        epoch= len(opt_context["loss_history"]["loss"]) 
+        loss= opt_context["loss_history"]["loss"][-1]
+        obs_values, obs_labels = model.eval_obs(state,ctm_env)
+        print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
 
-    #         if epoch%args.top_freq==0:
-    #             coord_dir_pairs=[((0,0), (1,0)), ((0,0), (0,1)), ((1,1), (1,0)), ((1,1), (0,1))]
-    #             for c,d in coord_dir_pairs:
-    #                 # transfer operator spectrum
-    #                 print(f"TOP spectrum(T)[{c},{d}] ",end="")
-    #                 l= transferops.get_Top_spec(args.top_n, c,d, state, ctm_env)
-    #                 print("TOP "+json.dumps(_to_json(l)))
-
-    # # optimize
-    optimize_state(state, ctm_env, loss_fn, model, args)
+    # optimize
+    optimize_state(state, ctm_env, loss_fn, args, obs_fn=obs_fn)
 
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"
