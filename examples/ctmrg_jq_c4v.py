@@ -2,8 +2,8 @@ import context
 import torch
 import argparse
 import config as cfg
-from ipeps import *
-from groups.c4v import *
+from ipeps_c4v import *
+from groups.pg import make_c4v_symm
 from ctm.one_site_c4v.env_c4v import *
 from ctm.one_site_c4v import ctmrg_c4v
 from ctm.one_site_c4v import transferops_c4v
@@ -45,25 +45,19 @@ def main():
     # coord into one of coordinates within unit-cell of iPEPS ansatz    
 
     if args.instate!=None:
-        state = read_ipeps(args.instate, vertexToSite=None)
-        assert len(state.sites)==1, "Not a 1-site ipeps"
+        state = read_ipeps_c4v(args.instate)
         if args.bond_dim > max(state.get_aux_bond_dims()):
             # extend the auxiliary dimensions
             state = extend_bond_dim(state, args.bond_dim)
-        add_random_noise(state, args.instate_noise)
-        state.sites[(0,0)]= make_c4v_symm(state.sites[(0,0)])
+        state.add_noise(args.instate_noise)
         state.sites[(0,0)]= state.sites[(0,0)]/torch.max(torch.abs(state.sites[(0,0)]))
     elif args.ipeps_init_type=='RANDOM':
         bond_dim = args.bond_dim
-        
         A= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
             dtype=cfg.global_args.dtype,device=cfg.global_args.device)
         A= make_c4v_symm(A)
         A= A/torch.max(torch.abs(A))
-
-        sites = {(0,0): A}
-
-        state = IPEPS(sites)
+        state = IPEPS_C4V(A)
     else:
         raise ValueError("Missing trial state: -instate=None and -ipeps_init_type= "\
             +str(args.ipeps_init_type)+" is not supported")
@@ -131,22 +125,9 @@ class TestCtmrg(unittest.TestCase):
         args.opt_max_iter=2
         args.GLOBALARGS_device="cpu"
 
-    # basic tests
-    def test_ctmrg_GESDD_BIPARTITE(self):
-        args.c4v_type="BIPARTITE"
-        args.CTMARGS_projector_svd_method="GESDD"
-        main()
-
     def test_ctmrg_SYMEIG_BIPARTITE(self):
         args.c4v_type="BIPARTITE"
         args.CTMARGS_projector_svd_method="SYMEIG"
-        main()
-
-    @unittest.skipIf(not torch.cuda.is_available(), "CUDA not available")
-    def test_ctmrg_GESDD_BIPARTITE_gpu(self):
-        args.c4v_type="BIPARTITE"
-        args.GLOBALARGS_device="cuda:0"
-        args.CTMARGS_projector_svd_method="GESDD"
         main()
 
     @unittest.skipIf(not torch.cuda.is_available(), "CUDA not available")

@@ -2,7 +2,7 @@ import torch
 import groups.su2 as su2
 # from env import ENV
 import ipeps
-from groups.c4v import *
+from groups.pg import make_c4v_symm
 from ctm.generic import rdm
 from ctm.one_site_c4v import rdm_c4v
 import config as cfg

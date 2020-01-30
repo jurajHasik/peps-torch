@@ -59,7 +59,7 @@ def main():
         if args.bond_dim > max(state.get_aux_bond_dims()):
             # extend the auxiliary dimensions
             state = extend_bond_dim(state, args.bond_dim)
-        add_random_noise(state, args.instate_noise)
+        state.add_noise(args.instate_noise)
     elif args.ipeps_init_type=='RANDOM':
         bond_dim = args.bond_dim
         
