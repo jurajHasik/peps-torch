@@ -28,6 +28,9 @@ class IPEPS_C4V(ipeps.IPEPS):
         super().__init__(dict({(0,0): site}),peps_args=peps_args,\
             global_args=global_args)
 
+    def site(self,coord=None):
+        return self.sites[(0,0)]
+
     def add_noise(self,noise):
         r"""
         :param noise: magnitude of the noise

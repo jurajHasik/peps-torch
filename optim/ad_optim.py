@@ -3,7 +3,6 @@ import json
 import torch
 #from memory_profiler import profile
 import config as cfg
-import pdb
 from groups.c4v import *
 
 def store_checkpoint(checkpoint_file, state, optimizer, current_epoch, current_loss,\
@@ -32,7 +31,7 @@ def store_checkpoint(checkpoint_file, state, optimizer, current_epoch, current_l
     if verbosity>0:
         print(checkpoint_file)
 
-def optimize_state(state, ctm_env_init, loss_fn, local_args, obs_fn=None, 
+def optimize_state(state, ctm_env_init, loss_fn, local_args, obs_fn=None, post_proc=None,
     opt_args=cfg.opt_args,ctm_args=cfg.ctm_args, global_args=cfg.global_args):
     r"""
     :param state: initial wavefunction
@@ -62,10 +61,10 @@ def optimize_state(state, ctm_env_init, loss_fn, local_args, obs_fn=None,
     t_data = dict({"loss": [], "min_loss": float('inf')})
     prev_epoch=[-1]
     current_env=[ctm_env_init]
-    
+    context= dict({"ctm_args":ctm_args, "opt_args":opt_args, "loss_history": t_data})
+
     #@profile
     def closure():
-        context= dict({"ctm_args":ctm_args, "opt_args":opt_args, "loss_history": t_data})
         # 0) evaluate loss
         loss, ctm_env, history, t_ctm, t_check = loss_fn(state, current_env[0], context)
 
@@ -156,6 +155,9 @@ def optimize_state(state, ctm_env_init, loss_fn, local_args, obs_fn=None,
         # the ``state`` on-site tensors have been modified by gradient. 
         optimizer.zero_grad()
         optimizer.step(closure)
+        
+        if post_proc is not None:
+            post_proc(state, current_env[0], context)
 
     # optimization is over, store the last checkpoint
     store_checkpoint(checkpoint_file, state, optimizer, \

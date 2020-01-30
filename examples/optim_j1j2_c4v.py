@@ -3,7 +3,7 @@ import torch
 import argparse
 import config as cfg
 from ipeps.ipeps_c4v import *
-from groups.pg import make_c4v_symm
+from groups.pg import make_c4v_symm, verify_c4v_symm
 from ctm.one_site_c4v.env_c4v import *
 from ctm.one_site_c4v import ctmrg_c4v
 from models import j1j2
@@ -102,8 +102,20 @@ def main():
         obs_values, obs_labels = model.eval_obs(state,ctm_env)
         print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
 
+    def post_proc(state, ctm_env, opt_context):
+        symm, max_err= verify_c4v_symm(state.site())
+        # print(f"post_proc {symm} {max_err}")
+        if not symm:
+            # force symmetrization outside of autograd
+            with torch.no_grad():
+                symm_site= make_c4v_symm(state.site())
+                # we **cannot** normalize the on-site tensors, as the LBFGS
+                # takes into account the scale
+                # symm_site= symm_site/torch.max(torch.abs(symm_site))
+                state.sites[(0,0)].copy_(symm_site)
+
     # optimize
-    optimize_state(state, ctm_env, loss_fn, args, obs_fn=obs_fn)
+    optimize_state(state, ctm_env, loss_fn, args, obs_fn=obs_fn, post_proc=post_proc)
 
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"
