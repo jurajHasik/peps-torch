@@ -1,5 +1,5 @@
 import torch
-from ipeps import IPEPS
+from ipeps.ipeps_c4v import IPEPS_C4V
 from ctm.one_site_c4v.env_c4v import ENV_C4V
 
 def get_edge(state, env, verbosity=0):
@@ -7,7 +7,7 @@ def get_edge(state, env, verbosity=0):
     :param state: underlying 1-site C4v symmetric wavefunction
     :param env: C4v symmetric environment corresponding to ``state``
     :param verbosity: logging verbosity
-    :type state: IPEPS
+    :type state: IPEPS_C4V
     :type env: ENV_C4V
     :type verbosity: int
     :return: tensor with indices :math:`\chi \times D^2 \times \chi`
@@ -46,7 +46,7 @@ def get_edge_L(state, env, l=1, verbosity=0):
     :param env: C4v symmetric environment corresponding to ``state``
     :param l: length of the edge
     :param verbosity: logging verbosity
-    :type state: IPEPS
+    :type state: IPEPS_C4V
     :type env: ENV_C4V
     :type l: int
     :type verbosity: int
@@ -83,7 +83,7 @@ def apply_edge(state, env, vec, verbosity=0):
     :param env: C4v symmetric environment corresponding to ``state``
     :param vec: tensor of dimensions :math:`\chi \times D^2 \times \chi`
     :param verbosity: logging verbosity
-    :type state: IPEPS
+    :type state: IPEPS_C4V
     :type env: ENV_C4V
     :type vec: torch.tensor
     :type verbosity: int
@@ -142,7 +142,7 @@ def apply_edge_L(state, env, vec, verbosity=0):
     :param env: C4v symmetric environment corresponding to ``state``
     :param vec: tensor of dimensions :math:`\chi \times (D^2)^l \times \chi`
     :param verbosity: logging verbosity
-    :type state: IPEPS
+    :type state: IPEPS_C4V
     :type env: ENV_C4V
     :type vec: torch.tensor
     :type verbosity: int
@@ -176,7 +176,7 @@ def apply_TM_1sO(state, env, edge, op=None, verbosity=0):
     :param edge: tensor of dimensions :math:`\chi \times D^2 \times \chi`
     :param op: operator to be inserted into transfer matrix
     :param verbosity: logging verbosity
-    :type state: IPEPS
+    :type state: IPEPS_C4V
     :type env: ENV_C4V
     :type edge: torch.tensor
     :type op: torch.tensor
@@ -265,8 +265,8 @@ def apply_TM_1sO_2(state, env, edge, op=None, verbosity=0):
     :param edge: tensor of dimensions :math:`\chi \times (D^2)^2 \times \chi
     :param op: two-site operator to be inserted within the two-site transfer matrix
     :param verbosity: logging verbosity
-    :type state: IPEPS
-    :type env: ENV
+    :type state: IPEPS_C4V
+    :type env: ENV_C4V
     :type edge: torch.tensor
     :type op: torch.tensor
     :type verbosity: int
@@ -425,7 +425,7 @@ def apply_TM_2sO(state, env, edge, op=None, verbosity=0):
     :param op: two-site operator to be inserted into the two consecutive
                transfer matrices
     :param verbosity: logging verbosity
-    :type state: IPEPS
+    :type state: IPEPS_C4V
     :type env: ENV_C4V
     :type edge: torch.tensor
     :type op: torch.tensor
@@ -577,7 +577,7 @@ def corrf_1sO1sO(state, env, op1, get_op2, dist, verbosity=0):
                     one-site opreator :math:`\text{get_op2}(r)=O_2`
     :param dist: maximal distance of correlation function
     :param verbosity: logging verbosity
-    :type state: IPEPS
+    :type state: IPEPS_C4V
     :type env: ENV_C4V
     :type op1: torch.tensor
     :type get_op2: function(int)->torch.tensor
@@ -642,7 +642,7 @@ def corrf_2sOH2sOH_E1(state, env, op1, get_op2, dist, verbosity=0):
                     two-site operator :math:`\text{get_op2}(r)=O_2`
     :param dist: maximal distance of correlation function
     :param verbosity: logging verbosity
-    :type state: IPEPS
+    :type state: IPEPS_C4V
     :type env: ENV_C4V
     :type op1: torch.tensor
     :type get_op2: function(int)->torch.tensor
@@ -715,7 +715,7 @@ def corrf_2sOV2sOV_E2(state, env, op1, get_op2, dist, verbosity=0):
                     two-site operator :math:`\text{get_op2}(r)=O_2`
     :param dist: maximal distance of correlation function
     :param verbosity: logging verbosity
-    :type state: IPEPS
+    :type state: IPEPS_C4V
     :type env: ENV_C4V
     :type op1: torch.tensor
     :type get_op2: function(int)->torch.tensor

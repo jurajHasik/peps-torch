@@ -2,7 +2,7 @@ import context
 import torch
 import argparse
 import config as cfg
-from ipeps import *
+from ipeps.ipeps import *
 from ctm.generic.env import *
 from ctm.generic import ctmrg
 from models import akltS2

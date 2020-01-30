@@ -1,8 +1,5 @@
 import torch
 import groups.su2 as su2
-# from env import ENV
-import ipeps
-from groups.pg import make_c4v_symm
 from ctm.generic import rdm
 from ctm.one_site_c4v import rdm_c4v
 import config as cfg
@@ -284,19 +281,14 @@ class ISING_C4V():
         """
         obs= dict()
         with torch.no_grad():
-            # symmetrize on-site tensor
-            symm_sites= {(0,0): make_c4v_symm(state.sites[(0,0)])}
-            symm_sites[(0,0)]= symm_sites[(0,0)]/torch.max(torch.abs(symm_sites[(0,0)]))
-            symm_state= ipeps.IPEPS(symm_sites)
-
-            rdm1x1= rdm_c4v.rdm1x1(symm_state,env_c4v)
+            rdm1x1= rdm_c4v.rdm1x1(state,env_c4v)
             for label,op in self.obs_ops.items():
                 obs[f"{label}"]= torch.trace(rdm1x1@op)
             obs["sx"]= 0.5*(obs["sp"] + obs["sm"])
             
             #rdm2x1= rdm.rdm2x1(coord,state,env)
             #rdm1x2= rdm.rdm1x2(coord,state,env)
-            rdm2x2= rdm_c4v.rdm2x2(symm_state,env_c4v)
+            rdm2x2= rdm_c4v.rdm2x2(state,env_c4v)
             #obs[f"SzSz2x1{coord}"]= torch.einsum('ijab,ijab',rdm2x1,self.h2)
             #obs[f"SzSz1x2{coord}"]= torch.einsum('ijab,ijab',rdm1x2,self.h2)
             obs["SzSzSzSz"]= torch.einsum('ijklabcd,ijklabcd',rdm2x2,self.h4)

@@ -1,8 +1,6 @@
 import torch
 import groups.su2 as su2
-from groups.pg import make_c4v_symm
 import config as cfg
-import ipeps
 from ctm.generic.env import ENV
 from ctm.generic import rdm
 from ctm.one_site_c4v.env_c4v import ENV_C4V
@@ -189,7 +187,7 @@ class AKLTS2_C4V_BIPARTITE():
         r"""
         :param state: wavefunction
         :param env_c4v: CTM c4v symmetric environment
-        :type state: IPEPS
+        :type state: IPEPS_C4V
         :type env_c4v: ENV_C4V
         :return:  expectation values of observables, labels of observables
         :rtype: list[float], list[str]
@@ -223,17 +221,12 @@ class AKLTS2_C4V_BIPARTITE():
         # expect "list" of (observable label, value) pairs ?
         obs= dict()
         with torch.no_grad():
-            # symmetrize on-site tensor
-            symm_sites= {(0,0): make_c4v_symm(state.sites[(0,0)])}
-            symm_sites[(0,0)]= symm_sites[(0,0)]/torch.max(torch.abs(symm_sites[(0,0)]))
-            symm_state= ipeps.IPEPS(symm_sites)
-
-            rdm1x1= rdm_c4v.rdm1x1(symm_state,env_c4v)
+            rdm1x1= rdm_c4v.rdm1x1(state,env_c4v)
             for label,op in self.obs_ops.items():
                 obs[f"{label}"]= torch.trace(rdm1x1@op)
             obs[f"m"]= sqrt(abs(obs[f"sz"]**2 + obs[f"sp"]*obs[f"sm"]))
             
-            rdm2x1 = rdm_c4v.rdm2x1(symm_state,env_c4v)
+            rdm2x1 = rdm_c4v.rdm2x1(state,env_c4v)
             obs[f"SS2x1"]= torch.einsum('ijab,ijab',rdm2x1,self.SS_rot)
             
         # prepare list with labels and values

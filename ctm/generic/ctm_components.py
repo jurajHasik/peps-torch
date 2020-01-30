@@ -1,6 +1,6 @@
 import torch
 from torch.utils.checkpoint import checkpoint
-from ipeps import IPEPS
+from ipeps.ipeps import IPEPS
 from ctm.generic.env import ENV
 from config import ctm_args
 

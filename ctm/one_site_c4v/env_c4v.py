@@ -1,6 +1,6 @@
 import torch
 import config as cfg
-from ipeps import IPEPS
+from ipeps.ipeps_c4v import IPEPS_C4V
 
 class ENV_C4V():
     def __init__(self, chi, state, log=None, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
@@ -10,7 +10,7 @@ class ENV_C4V():
         :param ctm_args: CTM algorithm configuration
         :param global_args: global configuration
         :type chi: int
-        :type state: IPEPS
+        :type state: IPEPS_C4V
         :type ctm_args: CTMARGS
         :type global_args: GLOBALARGS
 
@@ -76,7 +76,7 @@ def init_env(state, env, ctm_args=cfg.ctm_args):
     :param state: wavefunction
     :param env: C4v symmetric CTM environment
     :param ctm_args: CTM algorithm configuration
-    :type state: IPEPS
+    :type state: IPEPS_C4V
     :type env: ENV_C4V
     :type ctm_args: CTMARGS
 

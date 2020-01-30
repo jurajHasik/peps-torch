@@ -1,6 +1,6 @@
 import torch
 import config as cfg
-from ipeps import IPEPS
+from ipeps.ipeps import IPEPS
 
 class ENV():
     def __init__(self, chi, state=None, ctm_args=cfg.ctm_args, global_args=cfg.global_args):

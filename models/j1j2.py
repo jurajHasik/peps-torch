@@ -1,8 +1,6 @@
 import torch
 import groups.su2 as su2
-from groups.pg import make_c4v_symm
 import config as cfg
-import ipeps
 from ctm.generic.env import ENV
 from ctm.generic import rdm
 from ctm.generic import corrf

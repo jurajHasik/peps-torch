@@ -2,8 +2,7 @@ import time
 import torch
 from torch.utils.checkpoint import checkpoint
 import config as cfg
-import ipeps
-from ipeps import IPEPS
+from ipeps.ipeps import IPEPS
 from ctm.generic.env import *
 from ctm.generic.ctm_components import *
 from ctm.generic.ctm_projectors import *
@@ -170,15 +169,15 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
 #####################################################################
 # functions performing absorption and truncation step
 #####################################################################
-def absorb_truncate_CTM_MOVE_UP(coord, ipeps, env, P, Pt, verbosity=0):
+def absorb_truncate_CTM_MOVE_UP(coord, state, env, P, Pt, verbosity=0):
     vec = (1,0)
-    coord_shift_right = ipeps.vertexToSite((coord[0]+vec[0], coord[1]+vec[1]))
+    coord_shift_right = state.vertexToSite((coord[0]+vec[0], coord[1]+vec[1]))
     tensors= env.C[(coord,(1,-1))], env.T[(coord,(1,0))], env.T[(coord,(0,-1))], \
-        env.T[(coord,(-1,0))], env.C[(coord,(-1,-1))], ipeps.site(coord), \
-        P[coord].view(env.chi,ipeps.site(coord).size()[3],env.chi), \
-        Pt[coord].view(env.chi,ipeps.site(coord).size()[1],env.chi), \
-        P[coord_shift_right].view(env.chi,ipeps.site(coord).size()[3],env.chi), \
-        Pt[coord_shift_right].view(env.chi,ipeps.site(coord).size()[1],env.chi)
+        env.T[(coord,(-1,0))], env.C[(coord,(-1,-1))], state.site(coord), \
+        P[coord].view(env.chi,state.site(coord).size()[3],env.chi), \
+        Pt[coord].view(env.chi,state.site(coord).size()[1],env.chi), \
+        P[coord_shift_right].view(env.chi,state.site(coord).size()[3],env.chi), \
+        Pt[coord_shift_right].view(env.chi,state.site(coord).size()[1],env.chi)
 
     if cfg.ctm_args.fwd_checkpoint_absorb:
         return checkpoint(absorb_truncate_CTM_MOVE_UP_c,*tensors)
@@ -264,15 +263,15 @@ def absorb_truncate_CTM_MOVE_UP_c(*tensors):
     nT = nT/torch.max(torch.abs(nT))
     return nC1, nC2, nT
 
-def absorb_truncate_CTM_MOVE_LEFT(coord, ipeps, env, P, Pt, verbosity=0):
+def absorb_truncate_CTM_MOVE_LEFT(coord, state, env, P, Pt, verbosity=0):
     vec = (0,-1)
-    coord_shift_up = ipeps.vertexToSite((coord[0]+vec[0], coord[1]+vec[1]))
+    coord_shift_up = state.vertexToSite((coord[0]+vec[0], coord[1]+vec[1]))
     tensors = env.C[(coord,(-1,-1))], env.T[(coord,(0,-1))], env.T[(coord,(-1,0))], \
-        env.T[(coord,(0,1))], env.C[(coord,(-1,1))], ipeps.site(coord), \
-        P[coord].view(env.chi,ipeps.site(coord).size()[0],env.chi), \
-        Pt[coord].view(env.chi,ipeps.site(coord).size()[2],env.chi), \
-        P[coord_shift_up].view(env.chi,ipeps.site(coord).size()[0],env.chi), \
-        Pt[coord_shift_up].view(env.chi,ipeps.site(coord).size()[2],env.chi)
+        env.T[(coord,(0,1))], env.C[(coord,(-1,1))], state.site(coord), \
+        P[coord].view(env.chi,state.site(coord).size()[0],env.chi), \
+        Pt[coord].view(env.chi,state.site(coord).size()[2],env.chi), \
+        P[coord_shift_up].view(env.chi,state.site(coord).size()[0],env.chi), \
+        Pt[coord_shift_up].view(env.chi,state.site(coord).size()[2],env.chi)
 
     if cfg.ctm_args.fwd_checkpoint_absorb:
         return checkpoint(absorb_truncate_CTM_MOVE_LEFT_c,*tensors)
@@ -364,15 +363,15 @@ def absorb_truncate_CTM_MOVE_LEFT_c(*tensors):
     nT = nT/torch.max(torch.abs(nT))
     return nC1, nC2, nT
 
-def absorb_truncate_CTM_MOVE_DOWN(coord, ipeps, env, P, Pt, verbosity=0):
+def absorb_truncate_CTM_MOVE_DOWN(coord, state, env, P, Pt, verbosity=0):
     vec = (-1,0)
-    coord_shift_left = ipeps.vertexToSite((coord[0]+vec[0], coord[1]+vec[1]))
+    coord_shift_left = state.vertexToSite((coord[0]+vec[0], coord[1]+vec[1]))
     tensors= env.C[(coord,(-1,1))], env.T[(coord,(-1,0))], env.T[(coord,(0,1))], \
-        env.T[(coord,(1,0))], env.C[(coord,(1,1))], ipeps.site(coord), \
-        P[coord].view(env.chi,ipeps.site(coord).size()[1],env.chi), \
-        Pt[coord].view(env.chi,ipeps.site(coord).size()[3],env.chi), \
-        P[coord_shift_left].view(env.chi,ipeps.site(coord).size()[1],env.chi), \
-        Pt[coord_shift_left].view(env.chi,ipeps.site(coord).size()[3],env.chi)
+        env.T[(coord,(1,0))], env.C[(coord,(1,1))], state.site(coord), \
+        P[coord].view(env.chi,state.site(coord).size()[1],env.chi), \
+        Pt[coord].view(env.chi,state.site(coord).size()[3],env.chi), \
+        P[coord_shift_left].view(env.chi,state.site(coord).size()[1],env.chi), \
+        Pt[coord_shift_left].view(env.chi,state.site(coord).size()[3],env.chi)
 
     if cfg.ctm_args.fwd_checkpoint_absorb:
         return checkpoint(absorb_truncate_CTM_MOVE_DOWN_c,*tensors)
@@ -458,15 +457,15 @@ def absorb_truncate_CTM_MOVE_DOWN_c(*tensors):
     nT = nT/torch.max(torch.abs(nT))
     return nC1, nC2, nT
 
-def absorb_truncate_CTM_MOVE_RIGHT(coord, ipeps, env, P, Pt, verbosity=0):
+def absorb_truncate_CTM_MOVE_RIGHT(coord, state, env, P, Pt, verbosity=0):
     vec = (0,1)
-    coord_shift_down = ipeps.vertexToSite((coord[0]+vec[0], coord[1]+vec[1]))
+    coord_shift_down = state.vertexToSite((coord[0]+vec[0], coord[1]+vec[1]))
     tensors= env.C[(coord,(1,1))], env.T[(coord,(0,1))], env.T[(coord,(1,0))], \
-        env.T[(coord,(0,-1))], env.C[(coord,(1,-1))], ipeps.site(coord), \
-        P[coord].view(env.chi,ipeps.site(coord).size()[2],env.chi), \
-        Pt[coord].view(env.chi,ipeps.site(coord).size()[0],env.chi), \
-        P[coord_shift_down].view(env.chi,ipeps.site(coord).size()[2],env.chi), \
-        Pt[coord_shift_down].view(env.chi,ipeps.site(coord).size()[0],env.chi)
+        env.T[(coord,(0,-1))], env.C[(coord,(1,-1))], state.site(coord), \
+        P[coord].view(env.chi,state.site(coord).size()[2],env.chi), \
+        Pt[coord].view(env.chi,state.site(coord).size()[0],env.chi), \
+        P[coord_shift_down].view(env.chi,state.site(coord).size()[2],env.chi), \
+        Pt[coord_shift_down].view(env.chi,state.site(coord).size()[0],env.chi)
 
     if cfg.ctm_args.fwd_checkpoint_absorb:
         return checkpoint(absorb_truncate_CTM_MOVE_RIGHT_c,*tensors)

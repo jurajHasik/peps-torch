@@ -1,5 +1,5 @@
 import torch
-import ipeps
+import ipeps.ipeps as ipeps
 from groups.pg import make_c4v_symm 
 import config as cfg
 

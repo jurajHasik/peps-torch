@@ -1,5 +1,5 @@
 import torch
-from ipeps import IPEPS
+from ipeps.ipeps_c4v import IPEPS_C4V
 from ctm.one_site_c4v.env_c4v import ENV_C4V
 
 def rdm1x1(state, env, verbosity=0):
@@ -7,7 +7,7 @@ def rdm1x1(state, env, verbosity=0):
     :param state: underlying 1-site C4v symmetric wavefunction
     :param env: C4v symmetric environment corresponding to ``state``
     :param verbosity: logging verbosity
-    :type state: IPEPS
+    :type state: IPEPS_C4V
     :type env: ENV_C4V
     :type verbosity: int
     :return: 1-site reduced density matrix with indices :math:`s;s'`
@@ -116,7 +116,7 @@ def rdm1x1_sl(state, env, verbosity=0):
     :param state: underlying 1-site C4v symmetric wavefunction
     :param env: C4v symmetric environment corresponding to ``state``
     :param verbosity: logging verbosity
-    :type state: IPEPS
+    :type state: IPEPS_C4V
     :type env: ENV_C4V
     :type verbosity: int
     :return: 1-site reduced density matrix with indices :math:`s;s'`
@@ -257,7 +257,7 @@ def rdm2x1(state, env, verbosity=0):
     :param state: underlying 1-site C4v symmetric wavefunction
     :param env: C4v symmetric environment corresponding to ``state``
     :param verbosity: logging verbosity
-    :type state: IPEPS
+    :type state: IPEPS_C4V
     :type env: ENV_C4V
     :type verbosity: int
     :return: 2-site reduced density matrix with indices :math:`s_0s_1;s'_0s'_1`
@@ -367,7 +367,7 @@ def rdm2x1_sl(state, env, force_cpu=False, verbosity=0):
     :param state: underlying 1-site C4v symmetric wavefunction
     :param env: C4v symmetric environment corresponding to ``state``
     :param verbosity: logging verbosity
-    :type state: IPEPS
+    :type state: IPEPS_C4V
     :type env: ENV_C4V
     :type verbosity: int
     :return: 2-site reduced density matrix with indices :math:`s_0s_1;s'_0s'_1`
@@ -816,8 +816,8 @@ def rdm2x2(state, env, verbosity=0):
     :param state: underlying 1-site C4v symmetric wavefunction
     :param env: C4v symmetric environment corresponding to ``state``
     :param verbosity: logging verbosity
-    :type state: IPEPS
-    :type env: ENV
+    :type state: IPEPS_C4V
+    :type env: ENV_C4V
     :type verbosity: int
     :return: 4-site reduced density matrix with indices :math:`s_0s_1s_2s_3;s'_0s'_1s'_2s'_3`
     :rtype: torch.tensor

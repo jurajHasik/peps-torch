@@ -3,8 +3,7 @@ from math import sqrt
 import torch
 from torch.utils.checkpoint import checkpoint
 import config as cfg
-import ipeps
-from ipeps import IPEPS
+from ipeps.ipeps_c4v import IPEPS_C4V
 from ctm.one_site_c4v.env_c4v import *
 from linalg.custom_svd import *
 from linalg.custom_eig import *
@@ -17,7 +16,7 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
                        the algorithm performs ``ctm_args.ctm_max_iter`` iterations. 
     :param ctm_args: CTM algorithm configuration
     :param global_args: global configuration
-    :type state: IPEPS
+    :type state: IPEPS_C4V
     :type env: ENV_C4V
     :type conv_check: function(IPEPS,ENV_C4V,list[float],CTMARGS)->bool
     :type ctm_args: CTMARGS

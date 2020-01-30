@@ -2,7 +2,7 @@ import context
 import torch
 import argparse
 import config as cfg
-from ipeps_c4v import *
+from ipeps.ipeps_c4v import *
 from groups.c4v import *
 from ctm.one_site_c4v.env_c4v import *
 from ctm.one_site_c4v import ctmrg_c4v

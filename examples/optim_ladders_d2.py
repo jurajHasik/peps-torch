@@ -3,7 +3,7 @@ import torch
 import argparse
 import config as cfg
 from groups.pg import make_d2_symm, make_d2_antisymm
-from ipeps_d2 import *
+from ipeps.ipeps_d2 import *
 from ctm.generic.env import *
 from ctm.generic import ctmrg
 from models import coupledLadders

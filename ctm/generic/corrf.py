@@ -1,5 +1,5 @@
 import torch
-from ipeps import IPEPS
+from ipeps.ipeps import IPEPS
 from ctm.generic.env import ENV
 
 def get_edge(coord, direction, state, env, verbosity=0):

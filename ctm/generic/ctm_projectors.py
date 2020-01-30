@@ -1,7 +1,7 @@
 import torch
 from torch.utils.checkpoint import checkpoint
 import config as cfg
-from ipeps import IPEPS
+from ipeps.ipeps import IPEPS
 from ctm.generic.env import ENV
 from ctm.generic.ctm_components import *
 from linalg.custom_svd import *
