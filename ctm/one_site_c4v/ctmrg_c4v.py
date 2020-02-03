@@ -54,7 +54,7 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
 
     # 1) perform CTMRG
     t_obs=t_ctm=0.
-    history=[]
+    history=None
     for i in range(ctm_args.ctm_max_iter):
         t0_ctm= time.perf_counter()
         # ctm_MOVE_dl(A, env, truncated_svd, ctm_args=ctm_args, global_args=global_args)
@@ -64,11 +64,10 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
         t0_obs= time.perf_counter()
         if conv_check is not None:
             # evaluate convergence of the CTMRG procedure
-            converged = conv_check(state, env, history, ctm_args=ctm_args)
-            if ctm_args.verbosity_ctm_convergence>1: print(history[-1])
+            converged, history= conv_check(state, env, history, ctm_args=ctm_args)
             if converged:
                 if ctm_args.verbosity_ctm_convergence>0: 
-                    print(f"CTMRG converged at iter= {i}, history= {history[-1]}")
+                    print(f"CTMRG converged at iter= {i}")
                 break
         t1_obs= time.perf_counter()
         

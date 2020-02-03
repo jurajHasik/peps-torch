@@ -9,6 +9,8 @@ from ctm.one_site_c4v import ctmrg_c4v
 from models import jq
 from optim.ad_optim import optimize_state
 import unittest
+import logging
+log = logging.getLogger(__name__)
 
 # parse command line args and build necessary configuration objects
 parser= cfg.get_args_parser()
@@ -18,7 +20,7 @@ parser.add_argument("-c4v_type", default="TI", help="type of C4v ansatz. Support
 parser.add_argument("-j1", type=float, default=0.0, help="nearest-neighbour coupling")
 parser.add_argument("-q", type=float, default=1.0, help="plaquette interaction strength")
 parser.add_argument("-q_inter", type=float, default=None, help="relevant for c4v_type=PLAQUETTE")
-args, unknown = parser.parse_known_args()
+args, unknown_args = parser.parse_known_args()
 
 def main():
     cfg.configure(args)
@@ -65,12 +67,14 @@ def main():
     
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         with torch.no_grad():
+            if not history:
+                history=[]
             e_curr = model.energy_1x1(state, env)
             history.append(e_curr.item())
-
             if len(history) > 1 and abs(history[-1]-history[-2]) < ctm_args.ctm_conv_tol:
-                return True
-        return False
+                log.info({"history_length": len(history), "history": history})
+                return True, history
+        return False, history
 
     ctm_env = ENV_C4V(args.chi, state)
     init_env(state, ctm_env)
@@ -117,6 +121,9 @@ def main():
     print(", ".join([f"{args.opt_max_iter}",f"{opt_energy}"]+[f"{v}" for v in obs_values]))
 
 if __name__=='__main__':
+    if len(unknown_args)>0:
+        print("args not recognized: "+str(unknown_args))
+        raise Exception("Unknown command line arguments")
     main()
 
 class TestOpt(unittest.TestCase):

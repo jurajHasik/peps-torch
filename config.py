@@ -1,10 +1,10 @@
 import torch
 import argparse
+import logging
 
 def get_args_parser():
     parser = argparse.ArgumentParser(description='',allow_abbrev=False)
     parser.add_argument("-omp_cores", type=int, default=1,help="number of OpenMP cores")
-    parser.add_argument("-cuda", type=int, default=-1, help="GPU #")
     parser.add_argument("-instate", default=None, help="Input state JSON")
     parser.add_argument("-instate_noise", type=float, default=0., help="magnitude of noise added to the trial \"instate\"")
     parser.add_argument("-ipeps_init_type", default="RANDOM", help="initialization of the trial iPEPS state")
@@ -39,24 +39,50 @@ def configure(parsed_args):
     keys=[type(c).__name__ for c in configs]
     conf_dict=dict(zip(keys, configs))
 
-    raw_args= list(filter(lambda x: "__" not in x,dir(parsed_args)))
+    raw_args= list(filter(lambda x: "__" not in x and not callable(getattr(parsed_args,x)),\
+        dir(parsed_args)))
     grouped_args=dict(zip(keys,[[] for c in range(len(configs))]))
-    for x in raw_args:
+    nogroup_args=dict()
+    def _search_keys(x):
         for k in keys:
-            if k in x:
-                grouped_args[k].append(x)
+            if k in x: return k
+        return None
+    for x in raw_args:
+        ind= _search_keys(x)
+        if ind is not None:
+            grouped_args[ind].append(x)
+        else:
+            nogroup_args[x]=getattr(parsed_args,x)
 
+    # set prefix args
     for k,g_args in grouped_args.items():
         for a in g_args:
             # strip prefix key+"_"
             a_noprefix=a[1+len(k):]
             setattr(conf_dict[k],a_noprefix,getattr(parsed_args,a))
+    # set generic args
+    for name,val in nogroup_args.items():
+        setattr(main_args,name,val)
+
+    # set up logger
+    logging.basicConfig(filename=main_args.out_prefix+".log", filemode='w', level=logging.INFO)
 
 def print_config():
+    print(main_args)
     print(global_args)
     print(peps_args)
     print(ctm_args)
     print(opt_args)
+
+class MAINARGS():
+    def __init__(self):
+        pass
+
+    def __repr__(self):
+        res=type(self).__name__+"\n"
+        for x in list(filter(lambda x: "__" not in x,dir(self))):
+            res+=f"{x}= {getattr(self,x)}\n"
+        return res[:-1]
 
 class GLOBALARGS():
     r"""
@@ -80,6 +106,12 @@ class GLOBALARGS():
 class PEPSARGS():
     def __init__(self):
         pass
+
+    def __repr__(self):
+        res=type(self).__name__+"\n"
+        for x in list(filter(lambda x: "__" not in x,dir(self))):
+            res+=f"{x}= {getattr(self,x)}\n"
+        return res[:-1]
 
 class CTMARGS():
     r"""
@@ -226,6 +258,7 @@ class OPTARGS():
             res+=f"{x}= {getattr(self,x)}\n"
         return res[:-1]
 
+main_args= MAINARGS()
 global_args= GLOBALARGS()
 peps_args= PEPSARGS()
 ctm_args= CTMARGS()

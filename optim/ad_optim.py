@@ -1,5 +1,7 @@
 import time
 import json
+import logging
+log = logging.getLogger(__name__)
 import torch
 #from memory_profiler import profile
 import config as cfg
@@ -57,7 +59,6 @@ def optimize_state(state, ctm_env_init, loss_fn, local_args, obs_fn=None, post_p
     verbosity = opt_args.verbosity_opt_epoch
     checkpoint_file = local_args.out_prefix+"_checkpoint.p"   
     outputstatefile= local_args.out_prefix+"_state.json"
-    outputlogfile= open(local_args.out_prefix+"_log.json",mode="w",buffering=1)
     t_data = dict({"loss": [], "min_loss": float('inf')})
     prev_epoch=[-1]
     current_env=[ctm_env_init]
@@ -77,9 +78,8 @@ def optimize_state(state, ctm_env_init, loss_fn, local_args, obs_fn=None, post_p
         # 2) log CTM metrics for debugging
         if opt_args.opt_logging:
             log_entry=dict({"id": len(t_data["loss"])-1, \
-                "t_ctm": t_ctm, "t_check": t_check,  "ctm_history_len": len(history), \
-                "ctm_history": history})
-            outputlogfile.write(json.dumps(log_entry)+'\n')
+                "t_ctm": t_ctm, "t_check": t_check}) 
+            log.info(json.dumps(log_entry))
 
         # 3) compute desired observables
         if obs_fn is not None:
@@ -93,7 +93,7 @@ def optimize_state(state, ctm_env_init, loss_fn, local_args, obs_fn=None, post_p
         # 5) log grad metrics for debugging
         if opt_args.opt_logging:
             log_entry=dict({"id": len(t_data["loss"])-1, "t_grad": t_grad1-t_grad0})
-            outputlogfile.write(json.dumps(log_entry)+'\n')
+            log.info(json.dumps(log_entry))
 
         # 6) detach current environment from autograd graph
         lst_C = list(ctm_env.C.values())

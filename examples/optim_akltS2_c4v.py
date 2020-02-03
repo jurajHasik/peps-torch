@@ -4,16 +4,19 @@ import argparse
 import config as cfg
 from ipeps.ipeps_c4v import *
 from groups.pg import make_c4v_symm
-from ctm.one_site_c4v.env_c4v import *
 from ctm.one_site_c4v import ctmrg_c4v
+from ctm.one_site_c4v.env_c4v import *
+from ctm.one_site_c4v.rdm_c4v import rdm2x1_sl
 from models import akltS2
 from optim.ad_optim import optimize_state
 import unittest
+import logging
+log = logging.getLogger(__name__)
 
 # parse command line args and build necessary configuration objects
 parser= cfg.get_args_parser()
 # additional model-dependent arguments
-args, unknown = parser.parse_known_args()
+args, unknown_args = parser.parse_known_args()
 
 def main():
     cfg.configure(args)
@@ -45,20 +48,25 @@ def main():
             +str(args.ipeps_init_type)+" is not supported")
 
     print(state)
-    
-    def ctmrg_conv_specdistC(state, env, history, ctm_args=cfg.ctm_args):
-        with torch.no_grad():
-            u,s1,v= torch.svd(env.C[env.keyC], compute_uv=False)
-            history.append(s1.tolist())
 
-            if len(history) > 1: 
-                s0 = torch.tensor(history[-2],dtype=s1.dtype,device=s1.device)
-                return torch.dist(s1,s0) < ctm_args.ctm_conv_tol
-        return False
+    def ctmrg_conv_rho2x1dist(state, env, history, ctm_args=cfg.ctm_args):
+        with torch.no_grad():
+            if not history:
+                history=dict({"log": []})
+            rdm2x1= rdm2x1_sl(state, env, force_cpu=ctm_args.conv_check_cpu)
+            dist= float('inf')
+            if len(history["log"]) > 1:
+                dist= torch.dist(rdm2x1, history["rdm"], p=2).item()
+            history["rdm"]=rdm2x1
+            history["log"].append(dist)
+            if dist<ctm_args.ctm_conv_tol:
+                log.info({"history_length": len(history['log']), "history": history['log']})
+                return True, history
+        return False, history
 
     ctm_env= ENV_C4V(args.chi, state)
     init_env(state, ctm_env)
-    ctm_env, *ctm_log= ctmrg_c4v.run(state, ctm_env, conv_check=ctmrg_conv_specdistC)
+    ctm_env, *ctm_log= ctmrg_c4v.run(state, ctm_env, conv_check=ctmrg_conv_rho2x1dist)
 
     loss= model.energy_1x1(state, ctm_env)
     obs_values, obs_labels= model.eval_obs(state,ctm_env)
@@ -76,7 +84,7 @@ def main():
             init_env(state, ctm_env_in)
 
         # 1) compute environment by CTMRG
-        ctm_env_out, *ctm_log= ctmrg_c4v.run(state, ctm_env_in, conv_check=ctmrg_conv_specdistC)
+        ctm_env_out, *ctm_log= ctmrg_c4v.run(state, ctm_env_in, conv_check=ctmrg_conv_rho2x1dist)
         loss = model.energy_1x1(state, ctm_env_out)
         
         return (loss, ctm_env_out, *ctm_log) 
@@ -95,12 +103,15 @@ def main():
     state= read_ipeps_c4v(outputstatefile)
     ctm_env = ENV_C4V(args.chi, state)
     init_env(state, ctm_env)
-    ctm_env, *ctm_log = ctmrg_c4v.run(state, ctm_env, conv_check=ctmrg_conv_specdistC)
+    ctm_env, *ctm_log = ctmrg_c4v.run(state, ctm_env, conv_check=ctmrg_conv_rho2x1dist)
     opt_energy = model.energy_1x1(state,ctm_env)
     obs_values, obs_labels = model.eval_obs(state,ctm_env)
     print(", ".join([f"{args.opt_max_iter}",f"{opt_energy}"]+[f"{v}" for v in obs_values]))
 
 if __name__=='__main__':
+    if len(unknown_args)>0:
+        print("args not recognized: "+str(unknown_args))
+        raise Exception("Unknown command line arguments")
     main()
 
 class TestOpt(unittest.TestCase):
