@@ -168,7 +168,6 @@ class TestCtmrg(unittest.TestCase):
         args.j2=0.0
         args.bond_dim=2
         args.chi=16
-        args.opt_max_iter=2
 
     # basic tests
     def test_ctmrg_GESDD_BIPARTITE(self):

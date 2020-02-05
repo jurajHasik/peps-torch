@@ -58,7 +58,7 @@ def main():
             # compute observables
             e_curr = model.energy_1x1(state, env)
             obs_values, obs_labels = model.eval_obs(state, env)
-            print(", ".join([f"{len(history)}",f"{e_curr}"]+[f"{v}" for v in obs_values]))
+            print(", ".join([f"{len(history['log'])}",f"{e_curr}"]+[f"{v}" for v in obs_values]))
 
             if len(history["log"]) > 1:
                 dist= torch.dist(rdm2x1, history["rdm"], p=2).item()
@@ -124,14 +124,59 @@ class TestCtmrg(unittest.TestCase):
         args.bond_dim=2
         args.chi=16
         args.opt_max_iter=2
+        args.instate=None
 
     # basic tests
     def test_ctmrg_SYMEIG(self):
         args.CTMARGS_projector_svd_method="SYMEIG"
-        main()  
+        main()
 
     @unittest.skipIf(not torch.cuda.is_available(), "CUDA not available")
     def test_ctmrg_SYMEIG_gpu(self):
         args.GLOBALARGS_device="cuda:0"
         args.CTMARGS_projector_svd_method="SYMEIG"
         main()
+
+class TestAKLT(unittest.TestCase):
+    def setUp(self):
+        import os
+        args.instate=os.path.dirname(os.path.realpath(__file__))+"/../test-input/AKLT-S2_1x1.in"
+        args.chi=32
+        args.opt_max_iter=50
+
+    def test_ctmrg_AKLT(self):
+        cfg.configure(args)
+        torch.set_num_threads(args.omp_cores)
+    
+        model = akltS2.AKLTS2_C4V_BIPARTITE()
+        state = read_ipeps_c4v(args.instate)
+
+        def ctmrg_conv_f(state, env, history, ctm_args=cfg.ctm_args):
+            with torch.no_grad():
+                if not history:
+                    history=dict({"log": []})
+                rdm2x1= rdm2x1_sl(state, env, force_cpu=ctm_args.conv_check_cpu)
+                dist= float('inf')
+                if len(history["log"]) > 1:
+                    dist= torch.dist(rdm2x1, history["rdm"], p=2).item()
+                history["rdm"]=rdm2x1
+                history["log"].append(dist)
+                if dist<ctm_args.ctm_conv_tol:
+                    log.info({"history_length": len(history['log']), "history": history['log']})
+                    return True, history
+            return False, history
+
+        ctm_env_init = ENV_C4V(args.chi, state)
+        init_env(state, ctm_env_init)
+
+        ctm_env_init, *ctm_log = ctmrg_c4v.run(state, ctm_env_init, conv_check=ctmrg_conv_f)
+
+        e_curr0 = model.energy_1x1(state, ctm_env_init)
+        obs_values0, obs_labels = model.eval_obs(state,ctm_env_init)
+        obs_dict=dict(zip(obs_labels,obs_values0))
+
+        eps=1.0e-14
+        self.assertTrue(e_curr0 < eps)
+        self.assertTrue(obs_dict["m"] < eps)
+        for l in ["sz","sp","sm"]:
+            self.assertTrue(abs(obs_dict[l]) < eps)

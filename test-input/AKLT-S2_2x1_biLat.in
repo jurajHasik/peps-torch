@@ -1,13 +1,11 @@
 {
 	"physDim": 5,
 	"auxBondDim": 2,
-	"sizeN": 2,
-	"sizeM": 2,
+	"lX": 2,
+	"lY": 1,
 	"map": [
 		{"x":0, "y": 0, "siteId": "A"},
-		{"x":0, "y": 1, "siteId": "B"},
-		{"x":1, "y": 0, "siteId": "B"},
-		{"x":1, "y": 1, "siteId": "A"}
+		{"x":1, "y": 0, "siteId": "B"}
 	],
 	"siteIds": ["A", "B"],
 	"sites": [

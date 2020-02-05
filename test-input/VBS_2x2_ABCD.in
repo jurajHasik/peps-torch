@@ -2,8 +2,8 @@
 	"type": "2X2_ABCD",
 	"physDim": 2,
 	"auxBondDim": 2,
-	"sizeN": 2,
-	"sizeM": 2,
+	"lX": 2,
+	"lY": 2,
 	"map": [
 		{"x":0, "y": 0, "siteId": "A"},
 		{"x":1, "y": 0, "siteId": "B"},

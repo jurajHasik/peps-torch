@@ -61,14 +61,16 @@ def main():
 
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         with torch.no_grad():
+            if not history:
+                history=[]
             e_curr = model.energy_2x1_1x2(state, env)
             obs_values, obs_labels = model.eval_obs(state, env)
             history.append([e_curr.item()]+obs_values)
             print(", ".join([f"{len(history)}",f"{e_curr}"]+[f"{v}" for v in obs_values]))
 
             if len(history) > 1 and abs(history[-1][0]-history[-2][0]) < ctm_args.ctm_conv_tol:
-                return True
-        return False
+                return True, history
+        return False, history
 
     ctm_env_init = ENV(args.chi, state)
     init_env(state, ctm_env_init)
@@ -126,10 +128,10 @@ if __name__=='__main__':
 
 class TestCtmrg(unittest.TestCase):
     def setUp(self):
+        args.instate=None
         args.alpha=1.0
         args.bond_dim=2
         args.chi=16
-        args.opt_max_iter=2
 
     # basic tests
     def test_ctmrg_GESDD(self):
@@ -141,3 +143,95 @@ class TestCtmrg(unittest.TestCase):
         args.GLOBALARGS_device="cuda:0"
         args.CTMARGS_projector_svd_method="GESDD"
         main()
+
+class TestLadders_VBS2x2(unittest.TestCase):
+    def setUp(self):
+        import os
+        args.instate=os.path.dirname(os.path.realpath(__file__))+"/../test-input/VBS_2x2_ABCD.in"
+        args.chi=16
+        args.opt_max_iter=50
+
+    def test_ctmrg_Ladders_VBS2x2(self):
+        cfg.configure(args)
+        cfg.print_config()
+        torch.set_num_threads(args.omp_cores)
+        
+        model = coupledLadders.COUPLEDLADDERS(alpha=args.alpha)
+        
+        state = read_ipeps(args.instate)
+
+        def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
+            with torch.no_grad():
+                if not history:
+                    history=[]
+                e_curr = model.energy_2x1_1x2(state, env)
+                history.append([e_curr.item()])
+
+                if len(history) > 1 and abs(history[-1][0]-history[-2][0]) < ctm_args.ctm_conv_tol:
+                    return True, history
+            return False, history
+
+        ctm_env_init = ENV(args.chi, state)
+        init_env(state, ctm_env_init)
+
+        ctm_env_init, *ctm_log = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
+
+        e_curr0 = model.energy_2x1_1x2(state, ctm_env_init)
+        obs_values0, obs_labels = model.eval_obs(state, ctm_env_init)
+        obs_dict=dict(zip(obs_labels,obs_values0))
+
+        eps=1.0e-12
+        self.assertTrue(abs(e_curr0-(-0.375)) < eps)
+        for coord,site in state.sites.items():
+            self.assertTrue(obs_dict[f"m{coord}"] < eps, msg=f"m{coord}")
+            self.assertTrue(obs_dict[f"SS2x1{coord}"] < eps, msg=f"SS2x1{coord}")
+            for l in ["sz","sp","sm"]:
+                self.assertTrue(abs(obs_dict[f"{l}{coord}"]) < eps, msg=f"{l}{coord}")
+        for coord in [(0,0),(1,0)]:
+            self.assertTrue(abs(obs_dict[f"SS1x2{coord}"]-(-0.75)) < eps, msg=f"SS1x2{coord}")
+
+class TestLadders_VBS1x2(unittest.TestCase):
+    def setUp(self):
+        import os
+        args.instate=os.path.dirname(os.path.realpath(__file__))+"/../test-input/VBS_1x2_AB_D2.in"
+        args.chi=16
+        args.opt_max_iter=50
+
+    def test_ctmrg_Ladders_VBS1x2(self):
+        cfg.configure(args)
+        cfg.print_config()
+        torch.set_num_threads(args.omp_cores)
+        
+        model = coupledLadders.COUPLEDLADDERS_D2_BIPARTITE(alpha=args.alpha)
+        
+        state = read_ipeps(args.instate)
+
+        def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
+            with torch.no_grad():
+                if not history:
+                    history=[]
+                e_curr = model.energy_2x1_1x2(state, env)
+                history.append([e_curr.item()])
+
+                if len(history) > 1 and abs(history[-1][0]-history[-2][0]) < ctm_args.ctm_conv_tol:
+                    return True, history
+            return False, history
+
+        ctm_env_init = ENV(args.chi, state)
+        init_env(state, ctm_env_init)
+
+        ctm_env_init, *ctm_log = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
+
+        e_curr0 = model.energy_2x1_1x2(state, ctm_env_init)
+        obs_values0, obs_labels = model.eval_obs(state, ctm_env_init)
+        obs_dict=dict(zip(obs_labels,obs_values0))
+
+        eps=1.0e-12
+        self.assertTrue(abs(e_curr0-(-0.375)) < eps)
+        for coord,site in state.sites.items():
+            self.assertTrue(obs_dict[f"m{coord}"] < eps, msg=f"m{coord}")
+            self.assertTrue(obs_dict[f"SS2x1{coord}"] < eps, msg=f"SS2x1{coord}")
+            for l in ["sz","sp","sm"]:
+                self.assertTrue(abs(obs_dict[f"{l}{coord}"]) < eps, msg=f"{l}{coord}")
+        for coord in [(0,0)]:
+            self.assertTrue(abs(obs_dict[f"SS1x2{coord}"]-(-0.75)) < eps, msg=f"SS1x2{coord}")

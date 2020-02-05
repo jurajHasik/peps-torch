@@ -109,10 +109,10 @@ if __name__=='__main__':
 
 class TestCtmrg(unittest.TestCase):
     def setUp(self):
+        args.instate=None 
         args.j2=0.0
         args.bond_dim=2
         args.chi=16
-        args.opt_max_iter=2
         args.GLOBALARGS_device="cpu"
 
     # basic tests
@@ -125,3 +125,50 @@ class TestCtmrg(unittest.TestCase):
         args.GLOBALARGS_device="cuda:0"
         args.CTMARGS_projector_svd_method="SYMEIG"
         main()
+
+class TestRVB(unittest.TestCase):
+    def setUp(self):
+        import os
+        args.instate=os.path.dirname(os.path.realpath(__file__))+"/../test-input/RVB_1x1.in"
+        args.j2=0.5
+        args.bond_dim=3
+        args.chi=16
+        args.GLOBALARGS_device="cpu"
+        args.CTMARGS_ctm_max_iter=200
+
+    # basic tests
+    def test_ctmrg_RVB(self):
+        cfg.configure(args)
+        torch.set_num_threads(args.omp_cores)
+        
+        model = j1j2.J1J2_C4V_BIPARTITE(j1=args.j1, j2=args.j2)
+        energy_f= model.energy_1x1_lowmem
+
+        state = read_ipeps_c4v(args.instate)
+
+        def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
+            with torch.no_grad():
+                if not history:
+                    history=[]
+                e_curr = energy_f(state, env, force_cpu=ctm_args.conv_check_cpu)
+                history.append([e_curr.item()])
+
+                if len(history) > 1 and abs(history[-1][0]-history[-2][0]) < ctm_args.ctm_conv_tol:
+                    return True, history
+            return False, history
+
+        ctm_env_init = ENV_C4V(args.chi, state)
+        init_env(state, ctm_env_init)
+
+        ctm_env_init, *ctm_log = ctmrg_c4v.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
+
+        e_curr0 = energy_f(state, ctm_env_init)
+        obs_values0, obs_labels = model.eval_obs(state,ctm_env_init)
+        obs_dict=dict(zip(obs_labels,obs_values0))
+
+        eps_e=1.0e-8
+        eps_m=1.0e-14
+        self.assertTrue(abs(e_curr0-(-0.47684229)) < eps_e)
+        self.assertTrue(obs_dict["m"] < eps_m)
+        for l in ["sz","sp","sm"]:
+            self.assertTrue(abs(obs_dict[l]) < eps_m)
