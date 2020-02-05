@@ -22,7 +22,7 @@ parser.add_argument("-q_inter", type=float, default=None, help="relevant for c4v
 parser.add_argument("-corrf_r", type=int, default=1, help="maximal correlation function distance")
 parser.add_argument("-top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
-args, unknown = parser.parse_known_args()
+args, unknown_args = parser.parse_known_args()
     
 def main():
     cfg.configure(args)
@@ -66,14 +66,16 @@ def main():
 
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         with torch.no_grad():
+            if not history:
+                history=[]
             e_curr = model.energy_1x1(state, env)
             obs_values, obs_labels = model.eval_obs(state, env)
             history.append([e_curr.item()]+obs_values)
             print(", ".join([f"{len(history)}",f"{e_curr}"]+[f"{v}" for v in obs_values]))
 
             if len(history) > 1 and abs(history[-1][0]-history[-2][0]) < ctm_args.ctm_conv_tol:
-                return True
-        return False
+                return True, history
+        return False, history
 
     ctm_env_init = ENV_C4V(args.chi, state)
     init_env(state, ctm_env_init)
@@ -115,6 +117,9 @@ def main():
         print(f"{i} {l[i,0]} {l[i,1]}")
 
 if __name__=='__main__':
+    if len(unknown_args)>0:
+        print("args not recognized: "+str(unknown_args))
+        raise Exception("Unknown command line arguments")
     main()
 
 class TestCtmrg(unittest.TestCase):

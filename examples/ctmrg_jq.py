@@ -18,7 +18,7 @@ parser.add_argument("-q", type=float, default=1.0, help="plaquette interaction s
 parser.add_argument("-corrf_r", type=int, default=1, help="maximal correlation function distance")
 parser.add_argument("-top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
-args, unknown = parser.parse_known_args()
+args, unknown_args = parser.parse_known_args()
 
 def main():
     cfg.configure(args)
@@ -62,14 +62,16 @@ def main():
 
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         with torch.no_grad():
+            if not history:
+                history=[]
             e_curr = model.energy_2x2_4site(state, env)
             obs_values, obs_labels = model.eval_obs(state, env)
             history.append([e_curr.item()]+obs_values)
             print(", ".join([f"{len(history)}",f"{e_curr}"]+[f"{v}" for v in obs_values]))
 
             if len(history) > 1 and abs(history[-1][0]-history[-2][0]) < ctm_args.ctm_conv_tol:
-                return True
-        return False
+                return True, history
+        return False, history
 
     ctm_env_init = ENV(args.chi, state)
     init_env(state, ctm_env_init)
@@ -84,67 +86,26 @@ def main():
     ctm_env_init, *ctm_log = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
 
     # ----- S(0).S(r) -----
-    corrSS= model.eval_corrf_SS((0,0), (1,0), state, ctm_env_init, args.corrf_r)
-    print("\n\nSS[(0,0),(1,0)] r "+" ".join([label for label in corrSS.keys()]))
-    for i in range(args.corrf_r):
-        print(f"{i} "+" ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
-
-    corrSS= model.eval_corrf_SS((0,0), (0,1), state, ctm_env_init, args.corrf_r)
-    print("\n\nSS[(0,0),(0,1)] r "+" ".join([label for label in corrSS.keys()]))
-    for i in range(args.corrf_r):
-        print(f"{i} "+" ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
-
-    corrSS= model.eval_corrf_SS((1,1), (1,0), state, ctm_env_init, args.corrf_r)
-    print("\n\nSS[(1,1),(1,0)] r "+" ".join([label for label in corrSS.keys()]))
-    for i in range(args.corrf_r):
-        print(f"{i} "+" ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
-
-    corrSS= model.eval_corrf_SS((1,1), (0,1), state, ctm_env_init, args.corrf_r)
-    print("\n\nSS[(1,1),(0,1)] r "+" ".join([label for label in corrSS.keys()]))
-    for i in range(args.corrf_r):
-        print(f"{i} "+" ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
+    site_dir_list=[((0,0), (1,0)),((0,0), (0,1)), ((1,1), (1,0)), ((1,1), (0,1))]
+    for sdp in site_dir_list:
+        corrSS= model.eval_corrf_SS(*sdp, state, ctm_env_init, args.corrf_r)
+        print(f"\n\nSS[{sdp[0]},{sdp[1]}] r "+" ".join([label for label in corrSS.keys()]))
+        for i in range(args.corrf_r):
+            print(f"{i} "+" ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
 
     # ----- (S(0).S(x))(S(rx).S(rx+x)) -----
-    corrDD= model.eval_corrf_DD_H((0,0), (1,0), state, ctm_env_init, args.corrf_r)
-    print("\n\nDD[(0,0),(1,0)] r "+" ".join([label for label in corrDD.keys()]))
-    for i in range(args.corrf_r):
-        print(f"{i} "+" ".join([f"{corrDD[label][i]}" for label in corrDD.keys()]))
-
-    corrDD= model.eval_corrf_DD_H((0,0), (0,1), state, ctm_env_init, args.corrf_r)
-    print("\n\nDD[(0,0),(0,1)] r "+" ".join([label for label in corrDD.keys()]))
-    for i in range(args.corrf_r):
-        print(f"{i} "+" ".join([f"{corrDD[label][i]}" for label in corrDD.keys()]))
-
-    corrDD= model.eval_corrf_DD_H((1,1), (1,0), state, ctm_env_init, args.corrf_r)
-    print("\n\nDD[(1,1),(1,0)] r "+" ".join([label for label in corrDD.keys()]))
-    for i in range(args.corrf_r):
-        print(f"{i} "+" ".join([f"{corrDD[label][i]}" for label in corrDD.keys()]))
-
-    corrDD= model.eval_corrf_DD_H((1,1), (0,1), state, ctm_env_init, args.corrf_r)
-    print("\n\nDD[(1,1),(0,1)] r "+" ".join([label for label in corrDD.keys()]))
-    for i in range(args.corrf_r):
-        print(f"{i} "+" ".join([f"{corrDD[label][i]}" for label in corrDD.keys()]))
+    for sdp in site_dir_list:
+        corrDD= model.eval_corrf_DD_H(*sdp, state, ctm_env_init, args.corrf_r)
+        print(f"\n\nDD[{sdp[0]},{sdp[1]}] r "+" ".join([label for label in corrDD.keys()]))
+        for i in range(args.corrf_r):
+            print(f"{i} "+" ".join([f"{corrDD[label][i]}" for label in corrDD.keys()]))
 
     # ----- (S(0).S(y))(S(rx).S(rx+y)) -----
-    corrDD_V= model.eval_corrf_DD_V((0,0),(1,0),state, ctm_env_init, args.corrf_r)
-    print("\n\nDD_V[(0,0),(1,0)] r "+" ".join([label for label in corrDD_V.keys()]))
-    for i in range(args.corrf_r):
-        print(f"{i} "+" ".join([f"{corrDD_V[label][i]}" for label in corrDD_V.keys()]))
-
-    corrDD_V= model.eval_corrf_DD_V((0,0),(0,1),state, ctm_env_init, args.corrf_r)
-    print("\n\nDD_V[(0,0),(0,1)] r "+" ".join([label for label in corrDD_V.keys()]))
-    for i in range(args.corrf_r):
-        print(f"{i} "+" ".join([f"{corrDD_V[label][i]}" for label in corrDD_V.keys()]))
-
-    corrDD_V= model.eval_corrf_DD_V((1,1),(1,0),state, ctm_env_init, args.corrf_r)
-    print("\n\nDD_V[(1,1),(1,0)] r "+" ".join([label for label in corrDD_V.keys()]))
-    for i in range(args.corrf_r):
-        print(f"{i} "+" ".join([f"{corrDD_V[label][i]}" for label in corrDD_V.keys()]))
-
-    corrDD_V= model.eval_corrf_DD_V((1,1),(0,1),state, ctm_env_init, args.corrf_r)
-    print("\n\nDD_V[(1,1),(0,1)] r "+" ".join([label for label in corrDD_V.keys()]))
-    for i in range(args.corrf_r):
-        print(f"{i} "+" ".join([f"{corrDD_V[label][i]}" for label in corrDD_V.keys()]))
+    for sdp in site_dir_list:
+        corrDD_V= model.eval_corrf_DD_V(*sdp,state, ctm_env_init, args.corrf_r)
+        print(f"\n\nDD_V[{sdp[0]},{sdp[1]}] r "+" ".join([label for label in corrDD_V.keys()]))
+        for i in range(args.corrf_r):
+            print(f"{i} "+" ".join([f"{corrDD_V[label][i]}" for label in corrDD_V.keys()]))
 
     # environment diagnostics
     for c_loc,c_ten in ctm_env_init.C.items(): 
@@ -154,27 +115,16 @@ def main():
             print(f"{i} {s[i]}")
 
     # transfer operator spectrum
-    print("\n\nspectrum(T)[(0,0),(1,0)]")
-    l= transferops.get_Top_spec(args.top_n, (0,0), (1,0), state, ctm_env_init)
-    for i in range(l.size()[0]):
-        print(f"{i} {l[i,0]} {l[i,1]}")
-
-    print("\n\nspectrum(T)[(0,0),(0,1)]")
-    l= transferops.get_Top_spec(args.top_n, (0,0), (0,1), state, ctm_env_init)
-    for i in range(l.size()[0]):
-        print(f"{i} {l[i,0]} {l[i,1]}")
-
-    print("\n\nspectrum(T)[(1,1),(1,0)]")
-    l= transferops.get_Top_spec(args.top_n, (1,1), (1,0), state, ctm_env_init)
-    for i in range(l.size()[0]):
-        print(f"{i} {l[i,0]} {l[i,1]}")
-
-    print("\n\nspectrum(T)[(1,1),(0,1)]")
-    l= transferops.get_Top_spec(args.top_n, (1,1), (0,1), state, ctm_env_init)
-    for i in range(l.size()[0]):
-        print(f"{i} {l[i,0]} {l[i,1]}")
+    for sdp in site_dir_list:
+        print(f"\n\nspectrum(T)[{sdp[0]},{sdp[1]}]")
+        l= transferops.get_Top_spec(args.top_n, *sdp, state, ctm_env_init)
+        for i in range(l.size()[0]):
+            print(f"{i} {l[i,0]} {l[i,1]}")
 
 if __name__=='__main__':
+    if len(unknown_args)>0:
+        print("args not recognized: "+str(unknown_args))
+        raise Exception("Unknown command line arguments")
     main()
 
 

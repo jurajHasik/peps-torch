@@ -6,15 +6,18 @@ from ipeps.ipeps_c4v import *
 from groups.pg import make_c4v_symm
 from ctm.one_site_c4v.env_c4v import *
 from ctm.one_site_c4v import ctmrg_c4v
+from ctm.one_site_c4v.rdm_c4v import rdm2x1_sl
 from models import akltS2
 import unittest
+import logging
+log = logging.getLogger(__name__)
 
 # parse command line args and build necessary configuration objects
 parser= cfg.get_args_parser()
 # additional model-dependent arguments
 # additional observables-related arguments
 parser.add_argument("-corrf_r", type=int, default=1, help="maximal correlation function distance")
-args, unknown = parser.parse_known_args()
+args, unknown_args = parser.parse_known_args()
 
 def main():
     cfg.configure(args)
@@ -44,29 +47,43 @@ def main():
 
     print(state)
 
-    # def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
-    #     with torch.no_grad():
-    #         e_curr = model.energy_1x1(state, env)
-    #         obs_values, obs_labels = model.eval_obs(state, env)
-    #         history.append([e_curr.item()]+obs_values)
-    #         print(", ".join([f"{len(history)}",f"{e_curr}"]+[f"{v}" for v in obs_values]))
-
-    #         if len(history) > 1 and abs(history[-1][0]-history[-2][0]) < ctm_args.ctm_conv_tol:
-    #             return True
-    #     return False
-
-    def ctmrg_conv_specdistC(state, env, history, ctm_args=cfg.ctm_args):
+    # convergence by 2x1 subsystem reduced density matrix
+    def ctmrg_conv_f(state, env, history, ctm_args=cfg.ctm_args):
         with torch.no_grad():
+            if not history:
+                history=dict({"log": []})
+            rdm2x1= rdm2x1_sl(state, env, force_cpu=ctm_args.conv_check_cpu)
+            dist= float('inf')
+            
+            # compute observables
             e_curr = model.energy_1x1(state, env)
             obs_values, obs_labels = model.eval_obs(state, env)
             print(", ".join([f"{len(history)}",f"{e_curr}"]+[f"{v}" for v in obs_values]))
-            
-            u,s,v= torch.svd(env.C[env.keyC], compute_uv=False)
-            history.append([s]+[e_curr.item()]+obs_values)
 
-            if len(history) > 1 and torch.dist(history[-1][0],history[-2][0]) < ctm_args.ctm_conv_tol:
-                return True
-        return False
+            if len(history["log"]) > 1:
+                dist= torch.dist(rdm2x1, history["rdm"], p=2).item()
+            history["rdm"]=rdm2x1
+            history["log"].append(dist)
+            if dist<ctm_args.ctm_conv_tol:
+                log.info({"history_length": len(history['log']), "history": history['log']})
+                return True, history
+        return False, history
+
+    # convergence by spectrum of the corner matrix
+    # def ctmrg_conv_f(state, env, history, ctm_args=cfg.ctm_args):
+    #     with torch.no_grad():
+    #         if not history:
+    #             history=[]
+    #         e_curr = model.energy_1x1(state, env)
+    #         obs_values, obs_labels = model.eval_obs(state, env)
+    #         print(", ".join([f"{len(history)}",f"{e_curr}"]+[f"{v}" for v in obs_values]))
+            
+    #         u,s,v= torch.svd(env.C[env.keyC], compute_uv=False)
+    #         history.append([s]+[e_curr.item()]+obs_values)
+
+    #         if len(history) > 1 and torch.dist(history[-1][0],history[-2][0]) < ctm_args.ctm_conv_tol:
+    #             return True
+    #     return False
 
     ctm_env_init = ENV_C4V(args.chi, state)
     init_env(state, ctm_env_init)
@@ -78,7 +95,7 @@ def main():
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{e_curr0}"]+[f"{v}" for v in obs_values0]))
 
-    ctm_env_init, *ctm_log = ctmrg_c4v.run(state, ctm_env_init, conv_check=ctmrg_conv_specdistC)
+    ctm_env_init, *ctm_log = ctmrg_c4v.run(state, ctm_env_init, conv_check=ctmrg_conv_f)
 
     corrSS= model.eval_corrf_SS(state, ctm_env_init, args.corrf_r)
     print("\nr "+" ".join([label for label in corrSS.keys()]))
@@ -97,6 +114,9 @@ def main():
         print(f"{i} {s[i]}")
 
 if __name__=='__main__':
+    if len(unknown_args)>0:
+        print("args not recognized: "+str(unknown_args))
+        raise Exception("Unknown command line arguments")
     main()
 
 class TestCtmrg(unittest.TestCase):

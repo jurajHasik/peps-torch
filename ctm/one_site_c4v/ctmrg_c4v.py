@@ -1,7 +1,6 @@
 import time
 from math import sqrt
 import torch
-from torch.utils.checkpoint import checkpoint
 import config as cfg
 from ipeps.ipeps_c4v import IPEPS_C4V
 from ctm.one_site_c4v.env_c4v import *
