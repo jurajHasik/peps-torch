@@ -5,7 +5,6 @@ log = logging.getLogger(__name__)
 import torch
 #from memory_profiler import profile
 import config as cfg
-from groups.c4v import *
 
 def store_checkpoint(checkpoint_file, state, optimizer, current_epoch, current_loss,\
     verbosity=0):
