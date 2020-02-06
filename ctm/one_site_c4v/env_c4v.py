@@ -3,7 +3,7 @@ import config as cfg
 from ipeps.ipeps_c4v import IPEPS_C4V
 
 class ENV_C4V():
-    def __init__(self, chi, state, log=None, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+    def __init__(self, chi, state, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
         r"""
         :param chi: environment bond dimension :math:`\chi`
         :param state: wavefunction
@@ -47,7 +47,6 @@ class ENV_C4V():
         self.dtype= global_args.dtype
         self.device= global_args.device
         self.chi= chi
-        self.log_file= False
 
         # initialize environment tensors
         # The same structure is preserved as for generic ipeps ``ENV``. We store keys for access
@@ -61,15 +60,6 @@ class ENV_C4V():
         site= next(iter(state.sites.values()))
         self.T[self.keyT]= torch.empty((self.chi,self.chi,site.size()[2]*site.size()[2]), \
             dtype=self.dtype, device=self.device)
-
-        if cfg.ctm_args.ctm_logging and log:
-            self.log_file= open(log, "w")
-
-    def log(self, s):
-        if self.log_file:
-            self.log_file.write(s)
-        else:
-            print(s,end="")
 
 def init_env(state, env, ctm_args=cfg.ctm_args):
     """
