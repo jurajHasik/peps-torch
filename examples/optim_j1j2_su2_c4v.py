@@ -11,13 +11,15 @@ from models import j1j2
 from optim.ad_optim_su2 import optimize_state
 import su2sym.sym_ten_parser as tenSU2
 import unittest
+import logging
+log = logging.getLogger(__name__)
 
 # parse command line args and build necessary configuration objects
 parser= cfg.get_args_parser()
 # additional model-dependent arguments
 parser.add_argument("-j1", type=float, default=1., help="nearest-neighbour coupling")
 parser.add_argument("-j2", type=float, default=0., help="next nearest-neighbour coupling")
-args, unknown = parser.parse_known_args()
+args, unknown_args = parser.parse_known_args()
 
 def main():
     cfg.configure(args)
@@ -49,11 +51,19 @@ def main():
             for i,uuid in enumerate(uuid_orig):
                 A[uuid_new.index(uuid)]=coeffs_orig[i]
 
-            coeffs = {(0,0): A}
-            state = IPEPS_SU2SYM(su2_tensors=su2sym_t, coeffs=coeffs)
-
-        add_random_noise(state, args.instate_noise)
-        state.coeffs[(0,0)]= state.coeffs[(0,0)]/torch.max(torch.abs(state.coeffs[(0,0)]))
+            coeffs= {(0,0): A}
+            state= IPEPS_SU2SYM(su2_tensors=su2sym_t, coeffs=coeffs)
+            state.add_noise(args.instate_noise)
+    elif args.opt_resume is not None:
+        if args.bond_dim in [3,5,7,9]:
+            su2sym_t= tenSU2.import_sym_tensors(2,args.bond_dim,"A_1",\
+                dtype=cfg.global_args.dtype, device=cfg.global_args.device)
+        else:
+            raise ValueError("Unsupported -bond_dim= "+str(args.bond_dim))
+        A= torch.zeros(len(su2sym_t), dtype=cfg.global_args.dtype, device=cfg.global_args.device)
+        coeffs = {(0,0): A}
+        state= IPEPS_SU2SYM(su2sym_t, coeffs)
+        state.load_checkpoint(args.opt_resume)
     elif args.ipeps_init_type=='RANDOM':
         if args.bond_dim in [3,5,7,9]:
             su2sym_t= tenSU2.import_sym_tensors(2,args.bond_dim,"A_1",\
@@ -63,38 +73,36 @@ def main():
 
         A= torch.rand(len(su2sym_t), dtype=cfg.global_args.dtype, device=cfg.global_args.device)
         A= A/torch.max(torch.abs(A))
-
         coeffs = {(0,0): A}
-
-        state = IPEPS_SU2SYM(su2_tensors=su2sym_t, coeffs=coeffs)
+        state = IPEPS_SU2SYM(su2sym_t, coeffs)
     else:
         raise ValueError("Missing trial state: -instate=None and -ipeps_init_type= "\
             +str(args.ipeps_init_type)+" is not supported")
 
-    # initialize on-site tensors
-    state.sites= state.build_onsite_tensors()
     print(state)
 
-    def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
+    def ctmrg_conv_f(state, env, history, ctm_args=cfg.ctm_args):
         with torch.no_grad():
             if not history:
-                history["log"]=[]
+                history=dict({"log": []})
             rdm2x1= rdm2x1_sl(state, env, force_cpu=ctm_args.conv_check_cpu)
             dist= float('inf')
             if len(history["log"]) > 1:
                 dist= torch.dist(rdm2x1, history["rdm"], p=2).item()
             history["rdm"]=rdm2x1
             history["log"].append(dist)
-        return dist<ctm_args.ctm_conv_tol
+            if dist<ctm_args.ctm_conv_tol:
+                log.info({"history_length": len(history['log']), "history": history['log']})
+                return True, history
+            elif len(history) >= ctm_args.ctm_max_iter:
+                log.info({"history_length": len(history['log']), "history": history['log']})
+                return False, history
+        return False, history
 
-    if cfg.ctm_args.ctm_logging:
-        env_log= args.out_prefix+"_env_log.json"
-    else:
-        env_log=None
     ctm_env = ENV_C4V(args.chi, state, log=env_log)
     init_env(state, ctm_env)
     ctm_env, history, t_ctm, t_obs= ctmrg_c4v.run(state, ctm_env, \
-        conv_check=ctmrg_conv_energy)
+        conv_check=ctmrg_conv_f)
 
     loss= energy_f(state, ctm_env, force_cpu=True)
     obs_values, obs_labels= model.eval_obs(state,ctm_env)
@@ -138,4 +146,7 @@ def main():
     print(", ".join([f"{args.opt_max_iter}",f"{opt_energy}"]+[f"{v}" for v in obs_values])+f", {len(history)}")
 
 if __name__=='__main__':
+    if len(unknown_args)>0:
+        print("args not recognized: "+str(unknown_args))
+        raise Exception("Unknown command line arguments")
     main()
