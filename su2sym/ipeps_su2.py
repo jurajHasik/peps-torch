@@ -1,10 +1,9 @@
 import torch
+from collections import OrderedDict
 import json
-import itertools
 import math
 import config as cfg
-from ipeps import IPEPS
-from ipeps import add_random_noise
+from ipeps.ipeps import IPEPS
 
 class IPEPS_SU2SYM(IPEPS):
     def __init__(self, su2_tensors, coeffs, vertexToSite=None, lX=None, lY=None, \
@@ -99,8 +98,8 @@ class IPEPS_SU2SYM(IPEPS):
 
         TODO we infer the size of the cluster from the keys of sites. Is it OK?
         """
-        self.su2_tensors= su2_tensors
-        self.coeffs= coeffs
+        self.su2_tensors= OrderedDict(su2_tensors)
+        self.coeffs= OrderedDict(coeffs)
         sites= self.build_onsite_tensors()
 
         super().__init__(sites, vertexToSite=vertexToSite, peps_args=peps_args,\
@@ -141,6 +140,17 @@ class IPEPS_SU2SYM(IPEPS):
 
         return ""
 
+    def get_parameters(self):
+        return self.coeffs.values()
+
+    def get_checkpoint(self):
+        return self.coeffs
+
+    def load_checkpoint(self,checkpoint_file):
+        checkpoint= torch.load(checkpoint_file)
+        self.coeffs= checkpoint["parameters"]
+        self.sites= self.build_onsite_tensors()
+
     def build_onsite_tensors(self):
         ts= torch.stack([t for m,t in self.su2_tensors])
         sites=dict()
@@ -151,7 +161,9 @@ class IPEPS_SU2SYM(IPEPS):
     def add_noise(self,noise):
         for coord in self.coeffs.keys():
             rand_t = torch.rand( self.coeffs[coord].size(), dtype=self.dtype, device=self.device)
-            self.coeffs[coord] = self.coeffs[coord] + noise * rand_t
+            tmp_t = self.coeffs[coord] + noise * rand_t
+            self.coeffs[coord]= tmp_t/torch.max(torch.abs(tmp_t))
+        self.sites= self.build_onsite_tensors()
 
     def get_aux_bond_dims(self):
         return [max(t[1].size()[1:]) for t in self.su2_tensors]
