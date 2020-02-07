@@ -92,22 +92,22 @@ def main():
             history["rdm"]=rdm2x1
             history["log"].append(dist)
             if dist<ctm_args.ctm_conv_tol:
-                log.info({"history_length": len(history['log']), "history": history['log']})
+                log.info({"history_length": len(history['log']), "history": history['log'],
+                    "final_multiplets": compute_multiplets(ctm_env)})
                 return True, history
-            elif len(history) >= ctm_args.ctm_max_iter:
-                log.info({"history_length": len(history['log']), "history": history['log']})
+            elif len(history['log']) >= ctm_args.ctm_max_iter:
+                log.info({"history_length": len(history['log']), "history": history['log'],
+                    "final_multiplets": compute_multiplets(ctm_env)})
                 return False, history
         return False, history
 
-    ctm_env = ENV_C4V(args.chi, state, log=env_log)
+    ctm_env = ENV_C4V(args.chi, state)
     init_env(state, ctm_env)
-    ctm_env, history, t_ctm, t_obs= ctmrg_c4v.run(state, ctm_env, \
-        conv_check=ctmrg_conv_f)
 
-    loss= energy_f(state, ctm_env, force_cpu=True)
-    obs_values, obs_labels= model.eval_obs(state,ctm_env)
-    print(", ".join(["epoch","energy"]+obs_labels)+", ctm-steps")
-    print(", ".join([f"{-1}",f"{loss}"]+[f"{v}" for v in obs_values])+f", {len(history)}")
+    loss0 = energy_f(state, ctm_env, force_cpu=True)
+    obs_values, obs_labels = model.eval_obs(state,ctm_env,force_cpu=True)
+    print(", ".join(["epoch","energy"]+obs_labels))
+    print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
 
     def loss_fn(state, ctm_env_in, opt_args=cfg.opt_args, ctm_args=cfg.ctm_args):
         # build on-site tensors from su2sym components
@@ -119,7 +119,7 @@ def main():
 
         # 1) compute environment by CTMRG
         ctm_env_out, history, t_ctm, t_obs= ctmrg_c4v.run(state, ctm_env_in, \
-            conv_check=ctmrg_conv_energy, ctm_args=ctm_args)
+            conv_check=ctmrg_conv_f, ctm_args=ctm_args)
         loss0 = energy_f(state, ctm_env_out, force_cpu=True)
         
         loc_ctm_args= copy.deepcopy(ctm_args)
@@ -128,19 +128,31 @@ def main():
             ctm_args=loc_ctm_args)
         loss1 = energy_f(state, ctm_env_out, force_cpu=True)
 
-        loss=(loss0+loss1)/2
+        #loss=(loss0+loss1)/2
+        loss= torch.max(loss0,loss1)
 
         return loss, ctm_env_out, history, t_ctm, t_obs
 
+    def obs_fn(state, ctm_env, opt_context):
+        if opt_context["line_search"]:
+            epoch= len(opt_context["loss_history"]["loss_ls"])
+            loss= opt_context["loss_history"]["loss_ls"][-1]
+            print("LS",end=" ")
+        else:
+            epoch= len(opt_context["loss_history"]["loss"]) 
+            loss= opt_context["loss_history"]["loss"][-1] 
+        obs_values, obs_labels = model.eval_obs(state,ctm_env,force_cpu=True)
+        print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
+
     # optimize
-    optimize_state(state, ctm_env, loss_fn, model, args)
+    optimize_state(state, ctm_env, loss_fn, args, obs_fn=obs_fn)
 
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"
     state= read_ipeps_su2(outputstatefile)
     ctm_env = ENV_C4V(args.chi, state)
     init_env(state, ctm_env)
-    ctm_env, *ctm_log = ctmrg_c4v.run(state, ctm_env, conv_check=ctmrg_conv_energy)
+    ctm_env, *ctm_log = ctmrg_c4v.run(state, ctm_env, conv_check=ctmrg_conv_f)
     opt_energy = energy_f(state,ctm_env,force_cpu=True)
     obs_values, obs_labels = model.eval_obs(state,ctm_env,force_cpu=True)
     print(", ".join([f"{args.opt_max_iter}",f"{opt_energy}"]+[f"{v}" for v in obs_values])+f", {len(history)}")
