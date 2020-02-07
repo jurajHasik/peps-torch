@@ -180,6 +180,7 @@ if __name__=='__main__':
 
     print("----- NO ENV REINIT -------------------------------------------------")
     eps=1e-4
+    cfg.ctm_args.projector_svd_method= "SYMARP"
     cfg.opt_args.opt_ctm_reinit= False
     fd_grad=[]
     with torch.no_grad():
@@ -204,6 +205,7 @@ if __name__=='__main__':
     print("----- AD NO ENV REINIT ----------------------------------------------")
     parameters = [state.coeffs[k] for k in state.coeffs.keys()]
     for A in parameters: A.requires_grad_(True)
+    cfg.ctm_args.projector_svd_method= "DEFAULT"
     cfg.opt_args.opt_ctm_reinit= False
     cfg.ctm_args.ctm_conv_tol= -1.
     for epoch in range(args.opt_max_iter):
