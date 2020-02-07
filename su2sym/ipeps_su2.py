@@ -98,7 +98,7 @@ class IPEPS_SU2SYM(IPEPS):
 
         TODO we infer the size of the cluster from the keys of sites. Is it OK?
         """
-        self.su2_tensors= OrderedDict(su2_tensors)
+        self.su2_tensors= su2_tensors
         self.coeffs= OrderedDict(coeffs)
         sites= self.build_onsite_tensors()
 
@@ -168,6 +168,9 @@ class IPEPS_SU2SYM(IPEPS):
     def get_aux_bond_dims(self):
         return [max(t[1].size()[1:]) for t in self.su2_tensors]
 
+    def write_to_file(self, outputfile, aux_seq=[0,1,2,3], tol=1.0e-14, normalize=False):
+        write_ipeps_su2(self, outputfile, aux_seq=aux_seq, tol=tol, normalize=normalize)
+
 def read_ipeps_su2(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.peps_args,\
     global_args=cfg.global_args):
     r"""
@@ -203,7 +206,7 @@ def read_ipeps_su2(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg
          3
     """
     asq = [x+1 for x in aux_seq]
-    sites = dict()
+    sites = OrderedDict()
     
     with open(jsonfile) as j:
         raw_state = json.load(j)
@@ -227,7 +230,7 @@ def read_ipeps_su2(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg
             su2_tensors.append((meta,t))
 
         # Loop over non-equivalent tensor,coeffs pairs in the unit cell
-        coeffs=dict()
+        coeffs=OrderedDict()
         for ts in raw_state["map"]:
             coord = (ts["x"],ts["y"])
 
