@@ -76,11 +76,11 @@ def main():
             history["log"].append(dist)
             if dist<ctm_args.ctm_conv_tol:
                 log.info({"history_length": len(history['log']), "history": history['log'],
-                    "final_multiplets": compute_multiplets(ctm_env)})
+                    "final_multiplets": compute_multiplets(env)})
                 return True, history
             elif len(history['log']) >= ctm_args.ctm_max_iter:
                 log.info({"history_length": len(history['log']), "history": history['log'],
-                    "final_multiplets": compute_multiplets(ctm_env)})
+                    "final_multiplets": compute_multiplets(env)})
                 return False, history
         return False, history
 
