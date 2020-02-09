@@ -3,13 +3,14 @@ import torch
 import argparse
 import config as cfg
 from su2sym.ipeps_su2 import * 
-from groups.c4v import *
 from ctm.one_site_c4v.env_c4v import *
 from ctm.one_site_c4v import ctmrg_c4v, transferops_c4v
 from ctm.one_site_c4v.rdm_c4v import rdm2x1_sl
 from models import j1j2
 import su2sym.sym_ten_parser as tenSU2 
 import unittest
+import logging
+log = logging.getLogger(__name__)
 
 # parse command line args and build necessary configuration objects
 parser= cfg.get_args_parser()
@@ -36,8 +37,7 @@ def main():
     if args.instate!=None:
         state = read_ipeps_su2(args.instate, vertexToSite=None)
         assert len(state.coeffs)==1, "Not a 1-site ipeps"
-        add_random_noise(state, args.instate_noise)
-        state.coeffs[(0,0)]= state.coeffs[(0,0)]/torch.max(torch.abs(state.coeffs[(0,0)]))
+        state.add_noise(args.instate_noise)
     elif args.ipeps_init_type=='RANDOM':
         if args.bond_dim in [3,5,7,9]:
             su2sym_t= tenSU2.import_sym_tensors(2,args.bond_dim,"A_1",\
@@ -46,22 +46,18 @@ def main():
             raise ValueError("Unsupported -bond_dim= "+str(args.bond_dim))
         A= torch.rand(len(su2sym_t), dtype=cfg.global_args.dtype, device=cfg.global_args.device)
         A= A/torch.max(torch.abs(A))
-
         coeffs = {(0,0): A}
-
         state = IPEPS_SU2SYM(su2_tensors=su2sym_t, coeffs=coeffs)
     else:
         raise ValueError("Missing trial state: -instate=None and -ipeps_init_type= "\
             +str(args.ipeps_init_type)+" is not supported")
 
-    # initialize on-site tensors
-    state.build_onsite_tensors()
     print(state)
 
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         with torch.no_grad():
             if not history:
-                history["log"]=[]
+                history=dict({"log": []})
             rdm2x1= rdm2x1_sl(state, env, force_cpu=ctm_args.conv_check_cpu)
             dist= float('inf')
             if len(history["log"]) > 1:
@@ -78,9 +74,17 @@ def main():
             # update history
             history["rdm"]=rdm2x1
             history["log"].append(dist)
-        return dist<ctm_args.ctm_conv_tol
+            if dist<ctm_args.ctm_conv_tol:
+                log.info({"history_length": len(history['log']), "history": history['log'],
+                    "final_multiplets": compute_multiplets(ctm_env)})
+                return True, history
+            elif len(history['log']) >= ctm_args.ctm_max_iter:
+                log.info({"history_length": len(history['log']), "history": history['log'],
+                    "final_multiplets": compute_multiplets(ctm_env)})
+                return False, history
+        return False, history
 
-    ctm_env_init = ENV_C4V(args.chi, state, log=args.out_prefix+"_env.log")
+    ctm_env_init = ENV_C4V(args.chi, state)
     init_env(state, ctm_env_init)
 
     e_curr0 = energy_f(state, ctm_env_init, force_cpu=True)
