@@ -146,3 +146,41 @@ if __name__=='__main__':
         print("args not recognized: "+str(unknown_args))
         raise Exception("Unknown command line arguments")
     main()
+
+class TestOpt(unittest.TestCase):
+    def setUp(self):
+        args.j2=0.0
+        args.bond_dim=2
+        args.chi=16
+        args.opt_max_iter=3
+
+    # basic tests
+    def test_opt_GESDD_BIPARTITE(self):
+        args.CTMARGS_projector_svd_method="GESDD"
+        args.tiling="BIPARTITE"
+        main()
+
+    def test_opt_FWD_CHECKPOINT(self):
+        args.CTMARGS_projector_svd_method="GESDD"
+        args.tiling="BIPARTITE"
+        args.CTMARGS_fwd_checkpoint_move=True
+        main()
+
+    @unittest.skipIf(not torch.cuda.is_available(), "CUDA not available")
+    def test_opt_GESDD_BIPARTITE_gpu(self):
+        args.GLOBALARGS_device="cuda:0"
+        args.CTMARGS_projector_svd_method="GESDD"
+        args.tiling="BIPARTITE"
+        main()
+
+    def test_opt_GESDD_4SITE(self):
+        args.CTMARGS_projector_svd_method="GESDD"
+        args.tiling="4SITE"
+        main()
+
+    @unittest.skipIf(not torch.cuda.is_available(), "CUDA not available")
+    def test_opt_GESDD_4SITE_gpu(self):
+        args.GLOBALARGS_device="cuda:0"
+        args.CTMARGS_projector_svd_method="GESDD"
+        args.tiling="4SITE"
+        main()

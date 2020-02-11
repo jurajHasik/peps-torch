@@ -125,6 +125,11 @@ class TestOpt(unittest.TestCase):
         args.CTMARGS_projector_svd_method="SYMEIG"
         main()
 
+    def test_opt_SYMEIG_fwd_checkpoint(self):
+        args.CTMARGS_projector_svd_method="SYMEIG"
+        args.CTMARGS_fwd_checkpoint_move=True
+        main()
+
     @unittest.skipIf(not torch.cuda.is_available(), "CUDA not available")
     def test_opt_SYMEIG_gpu(self):
         args.GLOBALARGS_device="cuda:0"
