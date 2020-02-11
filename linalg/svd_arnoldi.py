@@ -171,6 +171,20 @@ def test_SVDARNOLDI_random():
     assert( torch.norm(M-U@torch.diag(S)@V.t())-torch.sqrt(torch.sum(S0[k:]**2)) 
         < S0[0]*(m**2)*1e-14 )
 
+def test_SVDARNOLDI_rank_deficient():
+    m= 50
+    k=15
+    for r in [25,35,40,45]:
+        M= torch.rand((m,m),dtype=torch.float64)
+        U, S0, V= torch.svd(M)
+        S0[-r:]=0
+        M= U@torch.diag(S0)@V.t()
+
+        U, S, V= SVDARNOLDI.apply(M, k)
+        assert( torch.norm(M-U@torch.diag(S)@V.t())-torch.sqrt(torch.sum(S0[k:]**2)) 
+            < S0[0]*(m**2)*1e-14 )
+
 if __name__=='__main__':
     test_SVDSYMARNOLDI_random()
     test_SVDARNOLDI_random()
+    test_SVDARNOLDI_rank_deficient()

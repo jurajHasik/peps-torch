@@ -61,26 +61,6 @@ def test_SYMEIG_random():
         return SYMEIG.apply(M)
     assert(torch.autograd.gradcheck(force_sym_eig, M, eps=1e-6, atol=1e-4))
 
-def test_SYMEIG_su2sym():
-    import su2sym.sym_ten_parser as tenSU2
-    # Available D: [3,5,7,9]
-    for D in [3,5,7]:
-        su2sym_t= tenSU2.import_sym_tensors(2,D,"A_1",dtype=torch.float64)
-        c= torch.rand(len(su2sym_t), dtype=torch.float64)
-        ts= torch.stack([tensor for meta,tensor in su2sym_t])
-        a= torch.einsum('i,ipuldr->puldr',c,ts)
-        D2= D**2
-        M= torch.einsum('mijef,mijab->eafb',(a,a)).contiguous().view(D2, D2)
-
-        D,U= SYMEIG.apply(M)
-        assert( torch.norm(M-U@torch.diag(D)@U.t()) < D[0]*(M.size()[0]**2)*1e-14 )
-
-        M.requires_grad_(True)
-        def force_sym_eig(M):
-            M=0.5*(M+M.t())
-            return SYMEIG.apply(M)
-        assert(torch.autograd.gradcheck(force_sym_eig, M, eps=1e-6, atol=1e-4))
-
 def test_SYMEIG_3x3degenerate():
     M= torch.zeros((3,3),dtype=torch.float64)
     M[0,1]=M[0,2]=M[1,2]=1.
@@ -126,4 +106,3 @@ if __name__=='__main__':
     test_SYMEIG_random()
     test_SYMEIG_rank_deficient()
     # test_SYMEIG_3x3degenerate()
-    # test_SYMEIG_su2sym()
