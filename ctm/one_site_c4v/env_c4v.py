@@ -122,8 +122,10 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
     A= next(iter(state.sites.values()))
     dimsA= A.size()
     a= torch.einsum('mijef,mijab->eafb',(A,A)).contiguous().view(dimsA[3]**2, dimsA[4]**2)
+    a= a/torch.max(torch.abs(a))
     env.C[env.keyC]= torch.zeros(env.chi,env.chi, dtype=env.dtype, device=env.device)
-    env.C[env.keyC][:dimsA[3]**2,:dimsA[4]**2]=a/torch.max(torch.abs(a))
+    env.C[env.keyC][:min(env.chi,dimsA[3]**2),:min(env.chi,dimsA[4]**2)]=\
+       a[:min(env.chi,dimsA[3]**2),:min(env.chi,dimsA[4]**2)]
 
     # left transfer matrix
     #
@@ -136,8 +138,10 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
     #      /
     #     2
     a = torch.einsum('meifg,maibc->eafbgc',(A,A)).contiguous().view(dimsA[1]**2, dimsA[3]**2, dimsA[4]**2)
+    a= a/torch.max(torch.abs(a))
     env.T[env.keyT]= torch.zeros((env.chi,env.chi,dimsA[4]**2), dtype=env.dtype, device=env.device)
-    env.T[env.keyT][:dimsA[1]**2,:dimsA[3]**2,:]=a/torch.max(torch.abs(a))
+    env.T[env.keyT][:min(env.chi,dimsA[1]**2),:min(env.chi,dimsA[3]**2),:]=\
+        a[:min(env.chi,dimsA[1]**2),:min(env.chi,dimsA[3]**2),:]
 
 # TODO handle case when chi < bond_dim^2
 def init_from_ipeps_obc(state, env, verbosity=0):
@@ -157,8 +161,10 @@ def init_from_ipeps_obc(state, env, verbosity=0):
     A= next(iter(state.sites.values()))
     dimsA= A.size()
     a= torch.einsum('mijef,mklab->eafb',(A,A)).contiguous().view(dimsA[3]**2, dimsA[4]**2)
+    a= a/torch.max(torch.abs(a))
     env.C[env.keyC]= torch.zeros(env.chi,env.chi, dtype=env.dtype, device=env.device)
-    env.C[env.keyC][:dimsA[3]**2,:dimsA[4]**2]=a/torch.max(torch.abs(a))
+    env.C[env.keyC][:min(env.chi,dimsA[3]**2),:min(env.chi,dimsA[4]**2)]=\
+        a[:min(env.chi,dimsA[3]**2),:min(env.chi,dimsA[4]**2)]
 
     # left transfer matrix
     #
@@ -170,9 +176,11 @@ def init_from_ipeps_obc(state, env, verbosity=0):
     #    k--A--3
     #      /
     #     2
-    a = torch.einsum('meifg,makbc->eafbgc',(A,A)).contiguous().view(dimsA[1]**2, dimsA[3]**2, dimsA[4]**2)
+    a= torch.einsum('meifg,makbc->eafbgc',(A,A)).contiguous().view(dimsA[1]**2, dimsA[3]**2, dimsA[4]**2)
+    a= a/torch.max(torch.abs(a))
     env.T[env.keyT]= torch.zeros((env.chi,env.chi,dimsA[4]**2), dtype=env.dtype, device=env.device)
-    env.T[env.keyT][:dimsA[1]**2,:dimsA[3]**2,:]=a/torch.max(torch.abs(a))
+    env.T[env.keyT][:min(env.chi,dimsA[1]**2),:min(env.chi,dimsA[3]**2,chi),:]=\
+        a[:min(env.chi,dimsA[1]**2),:min(env.chi,dimsA[3]**2,chi),:]
 
 def print_env(env, verbosity=0):
     print("dtype "+str(env.dtype))
