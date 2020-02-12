@@ -53,7 +53,7 @@ def main():
 
             coeffs= {(0,0): A}
             state= IPEPS_SU2SYM(su2_tensors=su2sym_t, coeffs=coeffs)
-            state.add_noise(args.instate_noise)
+        state.add_noise(args.instate_noise)
     elif args.opt_resume is not None:
         if args.bond_dim in [3,5,7,9]:
             su2sym_t= tenSU2.import_sym_tensors(2,args.bond_dim,"A_1",\
