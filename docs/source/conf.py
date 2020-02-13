@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.abspath('../..'))
 # -- Project information -----------------------------------------------------
 
 project = 'tn-torch'
-copyright = '2019, Juraj Hasik, Glen B. Mbeng'
+copyright = '2020, Juraj Hasik, Glen B. Mbeng'
 author = 'Juraj Hasik, Glen B. Mbeng'
 
 # The short X.Y version
