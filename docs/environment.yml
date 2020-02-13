@@ -1,5 +1,7 @@
-name: docs
 channels:
+  - pytorch
+dependencies:
+  - python=3.7
   - pytorch
   - cpuonly
   - scipy
