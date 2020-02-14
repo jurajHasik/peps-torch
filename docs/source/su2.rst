@@ -1,6 +1,6 @@
 SU(2)
 -----
 
-.. automodule:: su2
+.. automodule:: groups.su2
 .. autoclass:: SU2
     :members:

@@ -1,7 +1,7 @@
 iPEPS
 =====
 
-.. automodule:: ipeps
+.. automodule:: ipeps.ipeps
     :members:
 .. autoclass:: IPEPS
     :members:

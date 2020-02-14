@@ -1,5 +1,5 @@
 SVD drivers
 ===========
 
-.. automodule:: custom_svd
+.. automodule:: linalg.custom_svd
     :members:
