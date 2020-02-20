@@ -1,7 +1,8 @@
 import torch
 from math import sqrt
 from functools import reduce
-import torch.optim.sgd as sgd
+from torch.optim.sgd import SGD
+# import torch.optim.sgd as sgd
 import logging
 log = logging.getLogger(__name__)
 
@@ -60,7 +61,7 @@ def _scalar_search_armijo(phi, phi0, derphi0, args=(), c1=1e-4, alpha0=1, amin=1
     # Failed to find a suitable step length
     return None, phi_a1
 
-class SGD_MOD(sgd.SGD):
+class SGD_MOD(SGD):
     r"""Implements stochastic gradient descent (optionally with momentum).
 
     Nesterov momentum is based on the formula from

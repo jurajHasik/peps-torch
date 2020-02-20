@@ -48,6 +48,9 @@ class IPEPS_C4V(ipeps.IPEPS):
         tmp_state= IPEPS_C4V(tmp_t)
         ipeps.write_ipeps(tmp_state,outputfile,**kwargs)
 
+def extend_bond_dim(state, new_d):
+    return ipeps.extend_bond_dim(state, new_d)
+
 def to_ipeps_c4v(state):
     assert len(state.sites.items())==1, "state has more than a single on-site tensor"
     return IPEPS_C4V(next(iter(state.sites.values())))
