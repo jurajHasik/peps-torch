@@ -273,6 +273,7 @@ class OPTARGS():
     def __init__(self):
         self.opt_ctm_reinit = True
         self.lr = 1.0
+        self.momentum = 0
         self.tolerance_grad= 1e-5
         self.tolerance_change= 1e-9
         self.line_search= "default"
