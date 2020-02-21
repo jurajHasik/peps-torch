@@ -7,7 +7,6 @@ import config as cfg
 from optim import sgd_modified
 import logging
 log = logging.getLogger(__name__)
-import pdb
 
 def store_checkpoint(checkpoint_file, state, optimizer, current_epoch, current_loss,\
     verbosity=0):
@@ -79,9 +78,6 @@ def optimize_state(state, ctm_env_init, loss_fn, local_args, obs_fn=None, post_p
     current_env=[ctm_env_init]
     context= dict({"ctm_args":ctm_args, "opt_args":opt_args, "loss_history": t_data,
         "line_search": False})
-    
-    parameters= state.get_parameters()
-    for A in parameters: A.requires_grad_(True)
 
     #@profile
     def closure():
@@ -165,6 +161,9 @@ def optimize_state(state, ctm_env_init, loss_fn, local_args, obs_fn=None, post_p
 
         current_env[0] = ctm_env
         return loss
+
+    parameters= state.get_parameters()
+    for A in parameters: A.requires_grad_(True)
 
     optimizer = sgd_modified.SGD_MOD(parameters, lr=opt_args.lr, momentum=opt_args.momentum, \
         line_search_fn=opt_args.line_search, line_search_eps=opt_args.tol_line_search)
