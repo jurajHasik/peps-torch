@@ -222,6 +222,7 @@ class SGD_MOD(SGD):
                     alpha0=lr, amin= line_search_eps)
                 if t is None:
                     raise RuntimeError("minimize_scalar failed")
+                log.info(f"LS final step: {t}")
             else:
                 raise RuntimeError("unsupported line search")
             
