@@ -233,6 +233,7 @@ class SGD_MOD(SGD):
                 t, f_loss= _scalar_search_armijo(obj_func, f_loss, gtd, args=(x_init,d_p), alpha0=default_t)
                 if t is None:
                     raise RuntimeError("minimize_scalar failed")
+                log.info(f"LS final step: {t}")
             else:
                 raise RuntimeError("unsupported line search")
             
