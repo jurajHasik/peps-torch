@@ -254,7 +254,7 @@ class LBFGS_MOD(LBFGS):
 
             # optional line search: user function
             ls_func_evals = 0
-            if line_search_fn is not None or line_search_fn != "default":
+            if line_search_fn is not None and line_search_fn != "default":
                 # perform line search, using user function
                 if line_search_fn == "backtracking":
                     x_init = self._clone_param()

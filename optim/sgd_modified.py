@@ -218,7 +218,7 @@ class SGD_MOD(SGD):
         # optional line search: user function
         f_loss= float(loss)
         ls_func_evals = 0
-        if line_search_fn is not None and line_search_fn is not "default":
+        if line_search_fn is not None and line_search_fn != "default":
             # perform line search, using user function
             if line_search_fn == "backtracking":
                 d_p.mul_(-1)
