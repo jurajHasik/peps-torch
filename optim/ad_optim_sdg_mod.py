@@ -79,8 +79,29 @@ def optimize_state(state, ctm_env_init, loss_fn, local_args, obs_fn=None, post_p
     context= dict({"ctm_args":ctm_args, "opt_args":opt_args, "loss_history": t_data,
         "line_search": False})
 
+    parameters= state.get_parameters()
+    for A in parameters: A.requires_grad_(True)
+
+    optimizer = sgd_modified.SGD_MOD(parameters, lr=opt_args.lr, momentum=opt_args.momentum, \
+        line_search_fn=opt_args.line_search, line_search_eps=opt_args.tol_line_search)
+
+    if local_args.opt_resume is not None:
+        print(f"INFO: resuming from check point. resume = {local_args.opt_resume}")
+        checkpoint = torch.load(local_args.opt_resume)
+        epoch0 = checkpoint["epoch"]
+        loss0 = checkpoint["loss"]
+        cp_state_dict= checkpoint["optimizer_state_dict"]
+        cp_opt_params= cp_state_dict["param_groups"][0]
+        cp_opt_history= cp_state_dict["state"][cp_opt_params["params"][0]]
+        if local_args.opt_resume_override_params:
+            cp_opt_params["lr"] = opt_args.lr
+        cp_state_dict["param_groups"][0]= cp_opt_params
+        optimizer.load_state_dict(cp_state_dict)
+        print(f"checkpoint.loss = {loss0}")
+
     #@profile
     def closure():
+        optimizer.zero_grad()
         context["line_search"]=False
         # 0) pre-process state: normalize on-site tensors by largest elements
         # with torch.no_grad():
@@ -105,7 +126,7 @@ def optimize_state(state, ctm_env_init, loss_fn, local_args, obs_fn=None, post_p
 
         # 3) compute desired observables
         if obs_fn is not None:
-            obs_fn(state, current_env[0], context)
+            obs_fn(state, ctm_env, context)
 
         t_grad0= time.perf_counter()
         loss.backward()
@@ -162,26 +183,6 @@ def optimize_state(state, ctm_env_init, loss_fn, local_args, obs_fn=None, post_p
         current_env[0] = ctm_env
         return loss
 
-    parameters= state.get_parameters()
-    for A in parameters: A.requires_grad_(True)
-
-    optimizer = sgd_modified.SGD_MOD(parameters, lr=opt_args.lr, momentum=opt_args.momentum, \
-        line_search_fn=opt_args.line_search, line_search_eps=opt_args.tol_line_search)
-
-    if local_args.opt_resume is not None:
-        print(f"INFO: resuming from check point. resume = {local_args.opt_resume}")
-        checkpoint = torch.load(local_args.opt_resume)
-        epoch0 = checkpoint["epoch"]
-        loss0 = checkpoint["loss"]
-        cp_state_dict= checkpoint["optimizer_state_dict"]
-        cp_opt_params= cp_state_dict["param_groups"][0]
-        cp_opt_history= cp_state_dict["state"][cp_opt_params["params"][0]]
-        if local_args.opt_resume_override_params:
-            cp_opt_params["lr"] = opt_args.lr
-        cp_state_dict["param_groups"][0]= cp_opt_params
-        optimizer.load_state_dict(cp_state_dict)
-        print(f"checkpoint.loss = {loss0}")
-
     for epoch in range(local_args.opt_max_iter):
         # checkpoint the optimizer
         # checkpointing before step, guarantees the correspondence between the wavefunction
@@ -191,7 +192,6 @@ def optimize_state(state, ctm_env_init, loss_fn, local_args, obs_fn=None, post_p
         
         # After execution closure ``current_env`` **IS NOT** corresponding to ``state``, since
         # the ``state`` on-site tensors have been modified by gradient. 
-        optimizer.zero_grad()
         optimizer.step_2c(closure, closure_linesearch)
 
         # reset line search history

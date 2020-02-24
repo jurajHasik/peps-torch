@@ -6,9 +6,11 @@ from ipeps.ipeps_c4v import *
 from groups.pg import make_c4v_symm, verify_c4v_symm
 from ctm.one_site_c4v.env_c4v import *
 from ctm.one_site_c4v import ctmrg_c4v
+from ctm.one_site_c4v.rdm_c4v import rdm2x1_sl
 from ctm.one_site_c4v import transferops_c4v
 from models import j1j2
 # from optim.ad_optim_sdg_mod import optimize_state
+#from optim.ad_optim_lbfgs_mod import optimize_state
 from optim.ad_optim import optimize_state
 import json
 import unittest
@@ -49,8 +51,9 @@ def main():
         bond_dim = args.bond_dim
         A= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
             dtype=cfg.global_args.dtype, device=cfg.global_args.device)
-        A= make_c4v_symm(A)
-        A= A/torch.max(torch.abs(A))
+        # A= make_c4v_symm(A)
+        # A= A/torch.max(torch.abs(A))
+        A= A/A.norm()
         state = IPEPS_C4V(A)
     else:
         raise ValueError("Missing trial state: -instate=None and -ipeps_init_type= "\
@@ -69,13 +72,26 @@ def main():
                 log.info({"history_length": len(history), "history": history})
                 return True, history
         return False, history
+        #     if not history:
+        #         history=dict({"log": []})
+        #     rdm2x1= rdm2x1_sl(state, env, force_cpu=ctm_args.conv_check_cpu)
+        #     dist= float('inf')
+        #     if len(history["log"]) > 0:
+        #         dist= torch.dist(rdm2x1, history["rdm"], p=2).item()
+        #     history["rdm"]=rdm2x1
+        #     history["log"].append(dist)
+        #     if dist<ctm_args.ctm_conv_tol or len(history["log"]) >= ctm_args.ctm_max_iter:
+        #         log.info({"history_length": len(history['log']), "history": history['log']})
+        #         return True, history
+        # return False, history
 
-    ctm_env = ENV_C4V(args.chi, state)
-    init_env(state, ctm_env)
+    state_sym= to_ipeps_c4v(state)
+    ctm_env= ENV_C4V(args.chi, state_sym)
+    init_env(state_sym, ctm_env)
     
-    ctm_env, *ctm_log = ctmrg_c4v.run(state, ctm_env, conv_check=ctmrg_conv_energy)
-    loss= energy_f(state, ctm_env)
-    obs_values, obs_labels= model.eval_obs(state,ctm_env)
+    ctm_env, *ctm_log = ctmrg_c4v.run(state_sym, ctm_env, conv_check=ctmrg_conv_energy)
+    loss= energy_f(state_sym, ctm_env)
+    obs_values, obs_labels= model.eval_obs(state_sym,ctm_env)
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{loss}"]+[f"{v}" for v in obs_values]))
 
@@ -84,21 +100,21 @@ def main():
         # create a copy of state, symmetrize and normalize making all operations
         # tracked. This does not "overwrite" the parameters tensors, living outside
         # the scope of loss_fn
-        state= IPEPS_C4V(state.sites[(0,0)])
-        state.sites[(0,0)]= make_c4v_symm(state.sites[(0,0)])
-        state.sites[(0,0)]= state.sites[(0,0)]/state.sites[(0,0)].norm()
+        state_sym= to_ipeps_c4v(state)
 
         # possibly re-initialize the environment
         if cfg.opt_args.opt_ctm_reinit:
-            init_env(state, ctm_env_in)
+            init_env(state_sym, ctm_env_in)
 
         # 1) compute environment by CTMRG
-        ctm_env_out, *ctm_log= ctmrg_c4v.run(state, ctm_env_in, conv_check=ctmrg_conv_energy)
+        ctm_env_out, *ctm_log= ctmrg_c4v.run(state_sym, ctm_env_in, conv_check=ctmrg_conv_energy)
         
         # 2) evaluate loss with converged environment
-        loss = energy_f(state, ctm_env_out)
+        loss = energy_f(state_sym, ctm_env_out)
 
         return (loss, ctm_env_out, *ctm_log)
+
+    
 
     def _to_json(l):
         re=[l[i,0].item() for i in range(l.size()[0])]
@@ -106,11 +122,12 @@ def main():
         return dict({"re": re, "im": im})
 
     def obs_fn(state, ctm_env, opt_context):
-        epoch= len(opt_context["loss_history"]["loss"]) 
+        state_sym= to_ipeps_c4v(state)
+        epoch= len(opt_context["loss_history"]["loss"])
         loss= opt_context["loss_history"]["loss"][-1]
-        obs_values, obs_labels = model.eval_obs(state,ctm_env)
-        print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
-        log.info(f"Norm(site): {state.site().norm()}")
+        obs_values, obs_labels = model.eval_obs(state_sym, ctm_env)
+        print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]+\
+            [f"{torch.max(torch.abs(state.site((0,0))))}"]))
 
         with torch.no_grad():
             if args.top_freq>0 and epoch%args.top_freq==0:
@@ -118,7 +135,7 @@ def main():
                 for c,d in coord_dir_pairs:
                     # transfer operator spectrum
                     print(f"TOP spectrum(T)[{c},{d}] ",end="")
-                    l= transferops_c4v.get_Top_spec_c4v(args.top_n, state, ctm_env)
+                    l= transferops_c4v.get_Top_spec_c4v(args.top_n, state_sym, ctm_env)
                     print("TOP "+json.dumps(_to_json(l)))
 
     def post_proc(state, ctm_env, opt_context):
@@ -134,7 +151,7 @@ def main():
                 state.sites[(0,0)].copy_(symm_site)
 
     # optimize
-    optimize_state(state, ctm_env, loss_fn, obs_fn=obs_fn, post_proc=post_proc)
+    optimize_state(state, ctm_env, loss_fn, args, obs_fn=obs_fn)#, post_proc=post_proc)
 
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"
