@@ -111,12 +111,55 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         optimizer.load_state_dict(cp_state_dict)
         print(f"checkpoint.loss = {loss0}")
 
+    parameters= state.get_parameters()
+    for A in parameters: A.requires_grad_(True)
+
+    optimizer = lbfgs_modified.LBFGS_MOD(parameters, max_iter=opt_args.max_iter_per_epoch, lr=opt_args.lr, \
+        tolerance_grad=opt_args.tolerance_grad, tolerance_change=opt_args.tolerance_change, \
+        history_size=opt_args.history_size, line_search_fn=opt_args.line_search, \
+        line_search_eps=opt_args.tol_line_search)
+
+    # load and/or modify optimizer state from checkpoint
+    if local_args.opt_resume is not None:
+        print(f"INFO: resuming from check point. resume = {local_args.opt_resume}")
+        checkpoint = torch.load(local_args.opt_resume)
+        epoch0 = checkpoint["epoch"]
+        loss0 = checkpoint["loss"]
+        cp_state_dict= checkpoint["optimizer_state_dict"]
+        cp_opt_params= cp_state_dict["param_groups"][0]
+        cp_opt_history= cp_state_dict["state"][cp_opt_params["params"][0]]
+        if local_args.opt_resume_override_params:
+            cp_opt_params["lr"] = opt_args.lr
+            cp_opt_params["max_iter"] = opt_args.max_iter_per_epoch
+            cp_opt_params["tolerance_grad"] = opt_args.tolerance_grad
+            cp_opt_params["tolerance_change"] = opt_args.tolerance_change
+            # resize stored old_dirs, old_stps, ro, al to new history size
+            cp_history_size= cp_opt_params["history_size"]
+            cp_opt_params["history_size"] = opt_args.history_size
+            if opt_args.history_size < cp_history_size:
+                if len(cp_opt_history["old_dirs"]) > opt_args.history_size: 
+                    cp_opt_history["old_dirs"]= cp_opt_history["old_dirs"][-opt_args.history_size:]
+                    cp_opt_history["old_stps"]= cp_opt_history["old_stps"][-opt_args.history_size:]
+            cp_ro_filtered= list(filter(None,cp_opt_history["ro"]))
+            cp_al_filtered= list(filter(None,cp_opt_history["al"]))
+            if len(cp_ro_filtered) > opt_args.history_size:
+                cp_opt_history["ro"]= cp_ro_filtered[-opt_args.history_size:]
+                cp_opt_history["al"]= cp_al_filtered[-opt_args.history_size:]
+            else:
+                cp_opt_history["ro"]= cp_ro_filtered + [None for i in range(opt_args.history_size-len(cp_ro_filtered))]
+                cp_opt_history["al"]= cp_al_filtered + [None for i in range(opt_args.history_size-len(cp_ro_filtered))]
+        cp_state_dict["param_groups"][0]= cp_opt_params
+        cp_state_dict["state"][cp_opt_params["params"][0]]= cp_opt_history
+        optimizer.load_state_dict(cp_state_dict)
+        print(f"checkpoint.loss = {loss0}")
+
     #@profile
     def closure(linesearching=False):
         context["line_search"]= linesearching
         optimizer.zero_grad()
         
         # 0) evaluate loss
+        Optimizer.zero_grad()
         loss, ctm_env, history, t_ctm, t_check = loss_fn(state, current_env[0], context)
 
         # 1) record loss and store current state if the loss improves
