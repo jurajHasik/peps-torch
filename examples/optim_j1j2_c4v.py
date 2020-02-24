@@ -86,6 +86,7 @@ def main():
     init_env(state_sym, ctm_env)
     
     ctm_env, *ctm_log = ctmrg_c4v.run(state_sym, ctm_env, conv_check=ctmrg_conv_f)
+
     loss= energy_f(state_sym, ctm_env)
     obs_values, obs_labels= model.eval_obs(state_sym,ctm_env)
     print(", ".join(["epoch","energy"]+obs_labels))
@@ -143,7 +144,7 @@ def main():
                 for c,d in coord_dir_pairs:
                     # transfer operator spectrum
                     print(f"TOP spectrum(T)[{c},{d}] ",end="")
-                    l= transferops_c4v.get_Top_spec_c4v(args.top_n, state, ctm_env)
+                    l= transferops_c4v.get_Top_spec_c4v(args.top_n, state_sym, ctm_env)
                     print("TOP "+json.dumps(_to_json(l)))
 
     def post_proc(state, ctm_env, opt_context):
