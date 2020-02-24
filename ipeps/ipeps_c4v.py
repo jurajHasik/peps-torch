@@ -44,16 +44,19 @@ class IPEPS_C4V(ipeps.IPEPS):
 
     def write_to_file(self,outputfile,**kwargs):
         # symmetrize before writing out
-        tmp_t= make_c4v_symm(self.site((0,0)))
+        tmp_t= make_c4v_symm(self.site())
         tmp_state= IPEPS_C4V(tmp_t)
-        ipeps.write_ipeps(tmp_state,outputfile,**kwargs)
+        ipeps.write_ipeps(tmp_state, outputfile,**kwargs)
 
 def extend_bond_dim(state, new_d):
     return ipeps.extend_bond_dim(state, new_d)
 
 def to_ipeps_c4v(state):
     assert len(state.sites.items())==1, "state has more than a single on-site tensor"
-    return IPEPS_C4V(next(iter(state.sites.values())))
+    A= next(iter(state.sites.values()))
+    A= make_c4v_symm(A)
+    A= A/torch.max(torch.abs(A))
+    return IPEPS_C4V(A)
 
 def read_ipeps_c4v(jsonfile, aux_seq=[0,1,2,3], peps_args=cfg.peps_args,\
     global_args=cfg.global_args):
