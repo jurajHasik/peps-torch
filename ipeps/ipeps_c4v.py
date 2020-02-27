@@ -31,31 +31,32 @@ class IPEPS_C4V(ipeps.IPEPS):
     def site(self,coord=None):
         return self.sites[(0,0)]
 
-    def add_noise(self,noise):
+    def add_noise(self,noise,symmetrize=False):
         r"""
         :param noise: magnitude of the noise
         :type noise: float
 
         Take IPEPS and add random uniform noise with magnitude ``noise`` to on-site tensor
         """
-        for coord in self.sites.keys():
-            rand_t = torch.rand( self.sites[coord].size(), dtype=self.dtype, device=self.device)
-            self.sites[coord] = make_c4v_symm(self.sites[coord] + noise * rand_t)
+        rand_t = torch.rand( self.site().size(), dtype=self.dtype, device=self.device)
+        self.sites[(0,0)]= self.site() + noise * rand_t
+        if symmetrize:
+            self.sites[(0,0)]= make_c4v_symm(self.site())
 
-    def write_to_file(self,outputfile,**kwargs):
+    def write_to_file(self,outputfile,symmetrize=True,**kwargs):
         # symmetrize before writing out
-        tmp_t= make_c4v_symm(self.site())
+        tmp_t= make_c4v_symm(self.site()) if symmetrize else self.site()
         tmp_state= IPEPS_C4V(tmp_t)
         ipeps.write_ipeps(tmp_state, outputfile,**kwargs)
 
 def extend_bond_dim(state, new_d):
     return ipeps.extend_bond_dim(state, new_d)
 
-def to_ipeps_c4v(state):
+def to_ipeps_c4v(state, normalize=False):
     assert len(state.sites.items())==1, "state has more than a single on-site tensor"
     A= next(iter(state.sites.values()))
     A= make_c4v_symm(A)
-    A= A/torch.max(torch.abs(A))
+    if normalize: A= A/torch.max(torch.abs(A))
     return IPEPS_C4V(A)
 
 def read_ipeps_c4v(jsonfile, aux_seq=[0,1,2,3], peps_args=cfg.peps_args,\
@@ -88,4 +89,5 @@ def read_ipeps_c4v(jsonfile, aux_seq=[0,1,2,3], peps_args=cfg.peps_args,\
     """
     state= ipeps.read_ipeps(jsonfile, aux_seq=aux_seq, peps_args=peps_args,\
         global_args=global_args)
-    return to_ipeps_c4v(state)
+    assert len(state.sites.items())==1, "state has more than a single on-site tensor"
+    return IPEPS_C4V(next(iter(state.sites.values())))

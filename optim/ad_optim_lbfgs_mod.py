@@ -110,7 +110,7 @@ def optimize_state(state, ctm_env_init, loss_fn, local_args, obs_fn=None, post_p
     #@profile
     def closure():
         # 0) evaluate loss
-        Optimizer.zero_grad()
+        optimizer.zero_grad()
         loss, ctm_env, history, t_ctm, t_check = loss_fn(state, current_env[0], context)
 
         # 1) store current state if the loss improves
@@ -151,14 +151,12 @@ def optimize_state(state, ctm_env_init, loss_fn, local_args, obs_fn=None, post_p
     # is to be called within torch.no_grad context
     def closure_linesearch():
         context["line_search"]=True
-        # 0) pre-process state: normalize on-site tensors by largest elements
-        # for c in state.coeffs.keys():
-        #     state.coeffs[c]*= 1.0/torch.max(torch.abs(state.coeffs[c]))
 
         # 1) evaluate loss
         loc_opt_args= copy.deepcopy(opt_args)
         loc_opt_args.opt_ctm_reinit= False
         loc_ctm_args= copy.deepcopy(ctm_args)
+        # TODO check if we are optimizing C4v symmetric ansatz
         loc_ctm_args.projector_svd_method= "SYMARP"
         loc_context= dict({"ctm_args":loc_ctm_args, "opt_args":loc_opt_args, "loss_history": t_data,
             "line_search": True})
@@ -194,6 +192,10 @@ def optimize_state(state, ctm_env_init, loss_fn, local_args, obs_fn=None, post_p
         # After execution closure ``current_env`` **IS NOT** corresponding to ``state``, since
         # the ``state`` on-site tensors have been modified by gradient. 
         optimizer.step_2c(closure, closure_linesearch)
+        
+        # reset line search history
+        t_data["loss_ls"]=[]
+        t_data["min_loss_ls"]=1.0e+16
         
         if post_proc is not None:
             post_proc(state, current_env[0], context)

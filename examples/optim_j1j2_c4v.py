@@ -3,15 +3,15 @@ import torch
 import argparse
 import config as cfg
 from ipeps.ipeps_c4v import *
-from groups.pg import make_c4v_symm, verify_c4v_symm
+from groups.pg import *
 from ctm.one_site_c4v.env_c4v import *
 from ctm.one_site_c4v import ctmrg_c4v
 from ctm.one_site_c4v.rdm_c4v import rdm2x1_sl
 from ctm.one_site_c4v import transferops_c4v
 from models import j1j2
 # from optim.ad_optim_sdg_mod import optimize_state
-#from optim.ad_optim_lbfgs_mod import optimize_state
-from optim.ad_optim import optimize_state
+from optim.ad_optim_lbfgs_mod import optimize_state
+# from optim.ad_optim import optimize_state
 import json
 import unittest
 import logging
@@ -43,7 +43,8 @@ def main():
             # extend the auxiliary dimensions
             state= extend_bond_dim(state, args.bond_dim)
         state.add_noise(args.instate_noise)
-        state.sites[(0,0)]= state.sites[(0,0)]/torch.max(torch.abs(state.sites[(0,0)]))
+        # state.sites[(0,0)]= state.sites[(0,0)]/torch.max(torch.abs(state.sites[(0,0)]))
+        state.sites[(0,0)]= state.site()/state.site().norm()
     elif args.opt_resume is not None:
         state= IPEPS_C4V(torch.tensor(0.))
         state.load_checkpoint(args.opt_resume)
@@ -63,27 +64,27 @@ def main():
     
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         with torch.no_grad():
-            if not history:
-                history=[]
-            e_curr = energy_f(state, env)
-            history.append(e_curr.item())
-            if (len(history) > 1 and abs(history[-1]-history[-2]) < ctm_args.ctm_conv_tol)\
-                or len(history) >= ctm_args.ctm_max_iter:
-                log.info({"history_length": len(history), "history": history})
-                return True, history
-        return False, history
         #     if not history:
-        #         history=dict({"log": []})
-        #     rdm2x1= rdm2x1_sl(state, env, force_cpu=ctm_args.conv_check_cpu)
-        #     dist= float('inf')
-        #     if len(history["log"]) > 0:
-        #         dist= torch.dist(rdm2x1, history["rdm"], p=2).item()
-        #     history["rdm"]=rdm2x1
-        #     history["log"].append(dist)
-        #     if dist<ctm_args.ctm_conv_tol or len(history["log"]) >= ctm_args.ctm_max_iter:
-        #         log.info({"history_length": len(history['log']), "history": history['log']})
+        #         history=[]
+        #     e_curr = energy_f(state, env)
+        #     history.append(e_curr.item())
+        #     if (len(history) > 1 and abs(history[-1]-history[-2]) < ctm_args.ctm_conv_tol)\
+        #         or len(history) >= ctm_args.ctm_max_iter:
+        #         log.info({"history_length": len(history), "history": history})
         #         return True, history
         # return False, history
+            if not history:
+                history=dict({"log": []})
+            rdm2x1= rdm2x1_sl(state, env, force_cpu=ctm_args.conv_check_cpu)
+            dist= float('inf')
+            if len(history["log"]) > 0:
+                dist= torch.dist(rdm2x1, history["rdm"], p=2).item()
+            history["rdm"]=rdm2x1
+            history["log"].append(dist)
+            if dist<ctm_args.ctm_conv_tol or len(history["log"]) >= ctm_args.ctm_max_iter:
+                log.info({"history_length": len(history['log']), "history": history['log']})
+                return True, history
+        return False, history
 
     state_sym= to_ipeps_c4v(state)
     ctm_env= ENV_C4V(args.chi, state_sym)
@@ -100,7 +101,7 @@ def main():
         # create a copy of state, symmetrize and normalize making all operations
         # tracked. This does not "overwrite" the parameters tensors, living outside
         # the scope of loss_fn
-        state_sym= to_ipeps_c4v(state)
+        state_sym= to_ipeps_c4v(state, normalize=True)
 
         # possibly re-initialize the environment
         if cfg.opt_args.opt_ctm_reinit:
@@ -114,15 +115,13 @@ def main():
 
         return (loss, ctm_env_out, *ctm_log)
 
-    
-
     def _to_json(l):
         re=[l[i,0].item() for i in range(l.size()[0])]
         im=[l[i,1].item() for i in range(l.size()[0])]
         return dict({"re": re, "im": im})
 
     def obs_fn(state, ctm_env, opt_context):
-        state_sym= to_ipeps_c4v(state)
+        state_sym= to_ipeps_c4v(state, normalize=True)
         epoch= len(opt_context["loss_history"]["loss"])
         loss= opt_context["loss_history"]["loss"][-1]
         obs_values, obs_labels = model.eval_obs(state_sym, ctm_env)
@@ -139,19 +138,20 @@ def main():
                     print("TOP "+json.dumps(_to_json(l)))
 
     def post_proc(state, ctm_env, opt_context):
-        symm, max_err= verify_c4v_symm(state.site())
+        symm, max_err= verify_c4v_symm_A1(state.site())
         # print(f"post_proc {symm} {max_err}")
         if not symm:
             # force symmetrization outside of autograd
             with torch.no_grad():
                 symm_site= make_c4v_symm(state.site())
-                # we **cannot** normalize the on-site tensors, as the LBFGS
+                # we **cannot** simply normalize the on-site tensors, as the LBFGS
                 # takes into account the scale
                 # symm_site= symm_site/torch.max(torch.abs(symm_site))
                 state.sites[(0,0)].copy_(symm_site)
 
     # optimize
-    optimize_state(state, ctm_env, loss_fn, args, obs_fn=obs_fn)#, post_proc=post_proc)
+    # optimize_state(state, ctm_env, loss_fn, args, obs_fn=obs_fn, post_proc=post_proc)
+    optimize_state(state, ctm_env, loss_fn, args, obs_fn=obs_fn)
 
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"

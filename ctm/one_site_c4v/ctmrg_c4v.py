@@ -266,7 +266,10 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
         C2X2= 0.5*(C2X2 + C2X2.t())
         nT= 0.5*(nT + nT.permute(1,0,2))
         C2X2= C2X2/torch.max(torch.abs(C2X2))
+        # C2X2= C2X2/torch.sum(torch.abs(D))
         nT= nT/torch.max(torch.abs(nT))
+        # nT= ((nT.size()[0]*nT.size()[1]*nT.size()[2])/nT.norm())*nT
+        # print(f"{nT.norm()}")
 
         return C2X2, nT
 
