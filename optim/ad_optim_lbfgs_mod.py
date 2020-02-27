@@ -159,7 +159,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         optimizer.zero_grad()
         
         # 0) evaluate loss
-        Optimizer.zero_grad()
+        optimizer.zero_grad()
         loss, ctm_env, history, t_ctm, t_check = loss_fn(state, current_env[0], context)
 
         # 1) record loss and store current state if the loss improves
@@ -260,7 +260,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         # reset line search history
         t_data["loss_ls"]=[]
         t_data["min_loss_ls"]=1.0e+16
-
+        
         if post_proc is not None:
             post_proc(state, current_env[0], context)
 
