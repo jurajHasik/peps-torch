@@ -225,6 +225,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
             loc_ctm_args.projector_svd_method= opt_args.line_search_svd_method
         ls_context= dict({"ctm_args":loc_ctm_args, "opt_args":loc_opt_args, "loss_history": t_data,
             "line_search": linesearching})
+        
         loss, ctm_env, history, t_ctm, t_check = loss_fn(state, current_env[0],\
             ls_context)
 
@@ -260,7 +261,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         # reset line search history
         t_data["loss_ls"]=[]
         t_data["min_loss_ls"]=1.0e+16
-        
+
         if post_proc is not None:
             post_proc(state, current_env[0], context)
 
