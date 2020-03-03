@@ -3,9 +3,9 @@ from collections import OrderedDict
 import json
 import math
 import config as cfg
-from ipeps.ipeps import IPEPS
+import ipeps.ipeps as ipeps
 
-class IPEPS_SU2SYM(IPEPS):
+class IPEPS_SU2SYM(ipeps.IPEPS):
     def __init__(self, su2_tensors, coeffs, vertexToSite=None, lX=None, lY=None, \
         peps_args=cfg.peps_args, global_args=cfg.global_args):
         r"""
@@ -170,6 +170,9 @@ class IPEPS_SU2SYM(IPEPS):
 
     def write_to_file(self, outputfile, aux_seq=[0,1,2,3], tol=1.0e-14, normalize=False):
         write_ipeps_su2(self, outputfile, aux_seq=aux_seq, tol=tol, normalize=normalize)
+
+def extend_bond_dim(state, new_d):
+    return ipeps.extend_bond_dim(state, new_d)
 
 def read_ipeps_su2(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.peps_args,\
     global_args=cfg.global_args):

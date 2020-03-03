@@ -40,7 +40,7 @@ def main():
         state.add_noise(args.instate_noise)
     elif args.ipeps_init_type=='RANDOM':
         if args.bond_dim in [3,5,7,9]:
-            su2sym_t= tenSU2.import_sym_tensors(2,args.bond_dim,"A_1",\
+            su2sym_t= tenSU2.import_sym_tensors_FIX(2,args.bond_dim,"A_1",\
                 dtype=cfg.global_args.dtype, device=cfg.global_args.device)
         else:
             raise ValueError("Unsupported -bond_dim= "+str(args.bond_dim))

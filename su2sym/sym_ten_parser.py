@@ -108,7 +108,7 @@ def parse_symten_file(infile):
         data = f.read().replace('\n', '')
         return parse_classification(data)
 
-def fill_from_sparse_coo(t,elems):
+def fill_from_sparse_coo_FIX(t,elems):
     """
     :param elems: non-zero elements defined in COO format (tuple(indices),value)
     :type elems: list[tuple(tuple(int),value)]
@@ -117,6 +117,32 @@ def fill_from_sparse_coo(t,elems):
     #     t[e[0]]=e[1]
 
     elems[0]=(tuple([i+1 for i in elems[0][0]]), elems[0][1])
+    for e in elems:
+        t[ tuple([i-1 for i in e[0]]) ]=e[1]
+    return t
+
+def import_sym_tensors_FIX(p, D, pg, infile=None, dtype=torch.float64, device='cpu'):
+    dims=(p,D,D,D,D)
+    tensors=[]
+
+    infile= f"{os.path.dirname(__file__)}/D{D}.txt" if infile is None else infile 
+
+    tensors_coo= parse_symten_file(infile)
+    for tcoo in tensors_coo:
+        if pg==tcoo[0]["meta"]["pg"]:
+            t= torch.zeros(dims, dtype=dtype, device=device)
+            t= fill_from_sparse_coo_FIX(t, tcoo[1])
+            tensors.append((tcoo[0],t))
+
+    return tensors
+
+def fill_from_sparse_coo(t,elems):
+    """
+    :param elems: non-zero elements defined in COO format (tuple(indices),value)
+    :type elems: list[tuple(tuple(int),value)]
+    """
+    # for e in elems:
+    #     t[e[0]]=e[1]
     for e in elems:
         t[ tuple([i-1 for i in e[0]]) ]=e[1]
     return t

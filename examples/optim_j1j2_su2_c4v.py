@@ -7,9 +7,11 @@ from su2sym.ipeps_su2 import *
 from ctm.one_site_c4v.env_c4v import *
 from ctm.one_site_c4v import ctmrg_c4v
 from ctm.one_site_c4v.rdm_c4v import rdm2x1_sl
+from ctm.one_site_c4v import transferops_c4v
 from models import j1j2
 from optim.ad_optim_su2 import optimize_state
 import su2sym.sym_ten_parser as tenSU2
+import json
 import unittest
 import logging
 log = logging.getLogger(__name__)
@@ -19,12 +21,16 @@ parser= cfg.get_args_parser()
 # additional model-dependent arguments
 parser.add_argument("-j1", type=float, default=1., help="nearest-neighbour coupling")
 parser.add_argument("-j2", type=float, default=0., help="next nearest-neighbour coupling")
+parser.add_argument("-top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
+parser.add_argument("-top_n", type=int, default=2, help="number of leading eigenvalues"+
+    "of transfer operator to compute")
 args, unknown_args = parser.parse_known_args()
 
 def main():
     cfg.configure(args)
     cfg.print_config()
     torch.set_num_threads(args.omp_cores)
+    torch.manual_seed(args.seed)
 
     model= j1j2.J1J2_C4V_BIPARTITE(j1=args.j1, j2=args.j2)
     energy_f= model.energy_1x1_lowmem
@@ -37,7 +43,7 @@ def main():
         abd= args.bond_dim
         cbd= max(state.get_aux_bond_dims())
         if abd > cbd and abd in [3,5,7,9]:
-            su2sym_t= tenSU2.import_sym_tensors(2,abd ,"A_1",\
+            su2sym_t= tenSU2.import_sym_tensors_FIX(2,abd ,"A_1",\
                 dtype=cfg.global_args.dtype, device=cfg.global_args.device)
 
             A= torch.zeros(len(su2sym_t), dtype=cfg.global_args.dtype, device=cfg.global_args.device)
@@ -56,7 +62,7 @@ def main():
         state.add_noise(args.instate_noise)
     elif args.opt_resume is not None:
         if args.bond_dim in [3,5,7,9]:
-            su2sym_t= tenSU2.import_sym_tensors(2,args.bond_dim,"A_1",\
+            su2sym_t= tenSU2.import_sym_tensors_FIX(2,args.bond_dim,"A_1",\
                 dtype=cfg.global_args.dtype, device=cfg.global_args.device)
         else:
             raise ValueError("Unsupported -bond_dim= "+str(args.bond_dim))
@@ -66,7 +72,7 @@ def main():
         state.load_checkpoint(args.opt_resume)
     elif args.ipeps_init_type=='RANDOM':
         if args.bond_dim in [3,5,7,9]:
-            su2sym_t= tenSU2.import_sym_tensors(2,args.bond_dim,"A_1",\
+            su2sym_t= tenSU2.import_sym_tensors_FIX(2,args.bond_dim,"A_1",\
                 dtype=cfg.global_args.dtype, device=cfg.global_args.device)
         else:
             raise ValueError("Unsupported -bond_dim= "+str(args.bond_dim))
@@ -109,7 +115,10 @@ def main():
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
 
-    def loss_fn(state, ctm_env_in, opt_args=cfg.opt_args, ctm_args=cfg.ctm_args):
+    def loss_fn(state, ctm_env_in, opt_context):
+        ctm_args= opt_context["ctm_args"]
+        opt_args= opt_context["opt_args"]
+
         # build on-site tensors from su2sym components
         state.sites= state.build_onsite_tensors()
 
@@ -133,6 +142,11 @@ def main():
 
         return loss, ctm_env_out, history, t_ctm, t_obs
 
+    def _to_json(l):
+        re=[l[i,0].item() for i in range(l.size()[0])]
+        im=[l[i,1].item() for i in range(l.size()[0])]
+        return dict({"re": re, "im": im})
+
     def obs_fn(state, ctm_env, opt_context):
         if opt_context["line_search"]:
             epoch= len(opt_context["loss_history"]["loss_ls"])
@@ -143,6 +157,16 @@ def main():
             loss= opt_context["loss_history"]["loss"][-1] 
         obs_values, obs_labels = model.eval_obs(state,ctm_env,force_cpu=True)
         print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
+
+        if not opt_context["line_search"]:
+            with torch.no_grad():
+                if args.top_freq>0 and epoch%args.top_freq==0:
+                    coord_dir_pairs=[((0,0), (1,0))]
+                    for c,d in coord_dir_pairs:
+                        # transfer operator spectrum
+                        print(f"TOP spectrum(T)[{c},{d}] ",end="")
+                        l= transferops_c4v.get_Top_spec_c4v(args.top_n, state_sym, ctm_env)
+                        print("TOP "+json.dumps(_to_json(l)))
 
     # optimize
     optimize_state(state, ctm_env, loss_fn, args, obs_fn=obs_fn)
