@@ -6,8 +6,6 @@ import torch
 import config as cfg
 import logging
 log = logging.getLogger(__name__)
-from su2sym.ipeps_su2 import write_ipeps_su2
-
 from optim import lbfgs_modified
 
 def store_checkpoint(checkpoint_file, state, optimizer, current_epoch, current_loss,\
@@ -84,105 +82,12 @@ def optimize_state(state, ctm_env_init, loss_fn, local_args, obs_fn=None, post_p
     parameters= state.get_parameters()
     for A in parameters: A.requires_grad_(True)
 
-    #@profile
-    def closure():
-        context["line_search"]=False
-        # 0) pre-process state: normalize on-site tensors by largest elements
-        # with torch.no_grad():
-        #     for c in state.coeffs.keys():
-        #         state.coeffs[c]*= 1.0/torch.max(torch.abs(state.coeffs[c]))
-
-        # 1) evaluate loss and the gradient
-        loss, ctm_env, history, t_ctm, t_check = loss_fn(state, current_env[0], 
-            opt_args=opt_args, ctm_args=ctm_args)
-
-        # 2) store current state if the loss improves
-        t_data["loss"].append(loss.item())
-        if t_data["min_loss"] > t_data["loss"][-1]:
-            t_data["min_loss"]= t_data["loss"][-1]
-            state.write_to_file(outputstatefile, normalize=True)
-
-        # 3) log CTM metrics for debugging
-        if opt_args.opt_logging:
-            log_entry=dict({"id": len(t_data["loss"]), \
-                "t_ctm": t_ctm, "t_check": t_check })
-            log.info(json.dumps(log_entry))
-
-        # 3) compute desired observables
-        if obs_fn is not None:
-            obs_fn(state, current_env[0], context)
-
-        t_grad0= time.perf_counter()
-        loss.backward()
-        t_grad1= time.perf_counter()
-
-        # 5) log grad metrics
-        if opt_args.opt_logging:
-            log_entry=dict({"id": len(t_data["loss"]),
-                "t_grad": t_grad1-t_grad0, "grad": [p.grad.tolist() for p in parameters],
-                "coeffs": [p.tolist() for p in parameters] })
-            log.info(json.dumps(log_entry))
-
-        # 6) detach current environment from autograd graph
-        lst_C = list(ctm_env.C.values())
-        lst_T = list(ctm_env.T.values())
-        current_env[0] = ctm_env
-        for el in lst_T + lst_C: el.detach_()
-
-        return loss
-
-    # closure for derivative-free line search. This closure
-    # is to be called within torch.no_grad context
-    def closure_linesearch():
-        context["line_search"]=True
-        t_data["loss_ls"]=[]
-        t_data["min_loss_ls"]=1.0e+16
-        # 0) pre-process state: normalize on-site tensors by largest elements
-        # for c in state.coeffs.keys():
-        #     state.coeffs[c]*= 1.0/torch.max(torch.abs(state.coeffs[c]))
-
-        # 1) evaluate loss
-        loc_opt_args= copy.deepcopy(opt_args)
-        loc_opt_args.opt_ctm_reinit= False
-        loc_ctm_args= copy.deepcopy(ctm_args)
-        loc_ctm_args.projector_svd_method= "SYMARP"
-        loss, ctm_env, history, t_ctm, t_check = loss_fn(state, current_env[0],\
-            opt_args=loc_opt_args, ctm_args=loc_ctm_args)
-
-        # 2) store current state if the loss improves
-        t_data["loss_ls"].append(loss.item())
-        if t_data["min_loss_ls"] > t_data["loss_ls"][-1]:
-            t_data["min_loss_ls"]= t_data["loss_ls"][-1]
-            #write_ipeps(state, outputstatefile, normalize=True)
-
-        # We evaluate observables inside closure as it is the only place with the environment
-        # consistent with the state
-        #if prev_epoch[0]!=epoch:
-        # 3) compute observables if we moved into new epoch
-        if obs_fn is not None:
-            obs_fn(state, ctm_env, context)
-
-        # 5) log CTM metrics for debugging
-        if opt_args.opt_logging:
-            log_entry=dict({"id_LS": len(t_data["loss"])-1, \
-                "t_ctm": t_ctm, "t_check": t_check})
-            log.info(json.dumps(log_entry))
-
-        # 6) log opt metrics
-        if opt_args.opt_logging:
-            log_entry=dict({"id_LS": len(t_data["loss"])-1,
-                "coeffs": [p.tolist() for p in parameters] })
-            log.info(json.dumps(log_entry))
-
-        current_env[0] = ctm_env
-
-        return loss
-
     optimizer = lbfgs_modified.LBFGS_MOD(parameters, max_iter=opt_args.max_iter_per_epoch, lr=opt_args.lr, \
         tolerance_grad=opt_args.tolerance_grad, tolerance_change=opt_args.tolerance_change, \
         history_size=opt_args.history_size, line_search_fn=opt_args.line_search, \
         line_search_eps=opt_args.tol_line_search)
 
+    # load and/or modify optimizer state from checkpoint
     if local_args.opt_resume is not None:
         print(f"INFO: resuming from check point. resume = {local_args.opt_resume}")
         checkpoint = torch.load(local_args.opt_resume)
@@ -216,6 +121,94 @@ def optimize_state(state, ctm_env_init, loss_fn, local_args, obs_fn=None, post_p
         optimizer.load_state_dict(cp_state_dict)
         print(f"checkpoint.loss = {loss0}")
 
+    #@profile
+    def closure():
+        context["line_search"]=False
+
+        # 1) evaluate loss and the gradient
+        optimizer.zero_grad()
+        loss, ctm_env, history, t_ctm, t_check = loss_fn(state, current_env[0], 
+            context)
+
+        # 2) store current state if the loss improves
+        t_data["loss"].append(loss.item())
+        if t_data["min_loss"] > t_data["loss"][-1]:
+            t_data["min_loss"]= t_data["loss"][-1]
+            state.write_to_file(outputstatefile, normalize=True)
+
+        # 3) log CTM metrics for debugging
+        if opt_args.opt_logging:
+            log_entry=dict({"id": len(t_data["loss"]), \
+                "t_ctm": t_ctm, "t_check": t_check })
+            log.info(json.dumps(log_entry))
+
+        # 3) compute desired observables
+        if obs_fn is not None:
+            obs_fn(state, ctm_env, context)
+
+        t_grad0= time.perf_counter()
+        loss.backward()
+        t_grad1= time.perf_counter()
+
+        # 5) log grad metrics
+        if opt_args.opt_logging:
+            log_entry=dict({"id": len(t_data["loss"]),
+                "t_grad": t_grad1-t_grad0, "grad": [p.grad.tolist() for p in parameters],
+                "coeffs": [p.tolist() for p in parameters] })
+            log.info(json.dumps(log_entry))
+
+        # 6) detach current environment from autograd graph
+        lst_C = list(ctm_env.C.values())
+        lst_T = list(ctm_env.T.values())
+        current_env[0] = ctm_env
+        for el in lst_T + lst_C: el.detach_()
+
+        return loss
+
+    # closure for derivative-free line search. This closure
+    # is to be called within torch.no_grad context
+    def closure_linesearch():
+        context["line_search"]=True
+
+        # 1) evaluate loss
+        loc_opt_args= copy.deepcopy(opt_args)
+        loc_opt_args.opt_ctm_reinit= False
+        loc_ctm_args= copy.deepcopy(ctm_args)
+        if opt_args.line_search_svd_method != 'DEFAULT':
+            loc_ctm_args.projector_svd_method= opt_args.line_search_svd_method
+        loc_context= dict({"ctm_args":loc_ctm_args, "opt_args":loc_opt_args, "loss_history": t_data,
+            "line_search": True})
+        loss, ctm_env, history, t_ctm, t_check = loss_fn(state, current_env[0],\
+            loc_context)
+
+        # 2) store current state if the loss improves
+        t_data["loss_ls"].append(loss.item())
+        if t_data["min_loss_ls"] > t_data["loss_ls"][-1]:
+            t_data["min_loss_ls"]= t_data["loss_ls"][-1]
+            #write_ipeps(state, outputstatefile, normalize=True)
+
+        # We evaluate observables inside closure as it is the only place with the environment
+        # consistent with the state
+        #if prev_epoch[0]!=epoch:
+        # 3) compute observables if we moved into new epoch
+        if obs_fn is not None:
+            obs_fn(state, ctm_env, context)
+
+        # 5) log CTM metrics for debugging
+        if opt_args.opt_logging:
+            log_entry=dict({"id_LS": len(t_data["loss"])-1, \
+                "t_ctm": t_ctm, "t_check": t_check})
+            log.info(json.dumps(log_entry))
+
+        # 6) log opt metrics
+        if opt_args.opt_logging:
+            log_entry=dict({"id_LS": len(t_data["loss"])-1,
+                "coeffs": [p.tolist() for p in parameters] })
+            log.info(json.dumps(log_entry))
+
+        current_env[0] = ctm_env
+        return loss
+
     for epoch in range(local_args.opt_max_iter):
         # checkpoint the optimizer
         # checkpointing before step, guarantees the correspondence between the wavefunction
@@ -225,8 +218,11 @@ def optimize_state(state, ctm_env_init, loss_fn, local_args, obs_fn=None, post_p
         
         # After execution closure ``current_env`` **IS NOT** corresponding to ``state``, since
         # the ``state`` on-site tensors have been modified by gradient. 
-        optimizer.zero_grad()
         optimizer.step_2c(closure, closure_linesearch)
+
+        # reset line search history
+        t_data["loss_ls"]=[]
+        t_data["min_loss_ls"]=1.0e+16
 
         if post_proc is not None:
             post_proc(state, current_env[0], context)

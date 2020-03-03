@@ -66,7 +66,6 @@ def main():
                 dtype=cfg.global_args.dtype, device=cfg.global_args.device)
         else:
             raise ValueError("Unsupported --bond_dim= "+str(args.bond_dim))
-
         A= torch.rand(len(u1sym_t), dtype=cfg.global_args.dtype, device=cfg.global_args.device)
         A= A/torch.max(torch.abs(A))
         coeffs = {(0,0): A}
