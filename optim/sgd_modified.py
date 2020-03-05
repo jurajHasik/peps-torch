@@ -223,8 +223,8 @@ class SGD_MOD(SGD):
             if line_search_fn == "backtracking":
                 d_p.mul_(-1)
                 x_init = self._clone_param()
-                gtd = flat_grad.dot(d_p)
                 default_t= 1. / flat_grad.abs().sum() * lr
+                gtd = flat_grad.dot(d_p) * default_t
 
                 def obj_func(t, x, d):
                     return self._directional_evaluate_derivative_free(closure_linesearch, t, x, d)
