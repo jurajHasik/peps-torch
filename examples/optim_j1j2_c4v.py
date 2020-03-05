@@ -97,6 +97,8 @@ def main():
     print(", ".join([f"{-1}",f"{loss}"]+[f"{v}" for v in obs_values]))
 
     def loss_fn(state, ctm_env_in, opt_context):
+        ctm_args= opt_context["ctm_args"]
+        opt_args= opt_context["opt_args"]
         # 0) preprocess
         # create a copy of state, symmetrize and normalize making all operations
         # tracked. This does not "overwrite" the parameters tensors, living outside
@@ -104,11 +106,12 @@ def main():
         state_sym= to_ipeps_c4v(state, normalize=True)
 
         # possibly re-initialize the environment
-        if cfg.opt_args.opt_ctm_reinit:
+        if opt_args.opt_ctm_reinit:
             init_env(state_sym, ctm_env_in)
 
         # 1) compute environment by CTMRG
-        ctm_env_out, *ctm_log= ctmrg_c4v.run(state_sym, ctm_env_in, conv_check=ctmrg_conv_energy)
+        ctm_env_out, *ctm_log= ctmrg_c4v.run(state_sym, ctm_env_in, 
+            conv_check=ctmrg_conv_energy, ctm_args=ctm_args)
         
         # 2) evaluate loss with converged environment
         loss = energy_f(state_sym, ctm_env_out)
