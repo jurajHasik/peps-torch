@@ -78,7 +78,7 @@ class MAINARGS():
     def __init__(self):
         pass
 
-    def __repr__(self):
+    def __str__(self):
         res=type(self).__name__+"\n"
         for x in list(filter(lambda x: "__" not in x,dir(self))):
             res+=f"{x}= {getattr(self,x)}\n"
@@ -97,7 +97,7 @@ class GLOBALARGS():
         self.dtype = torch.float64
         self.device = 'cpu'
 
-    def __repr__(self):
+    def __str__(self):
         res=type(self).__name__+"\n"
         for x in list(filter(lambda x: "__" not in x,dir(self))):
             res+=f"{x}= {getattr(self,x)}\n"
@@ -107,7 +107,7 @@ class PEPSARGS():
     def __init__(self):
         pass
 
-    def __repr__(self):
+    def __str__(self):
         res=type(self).__name__+"\n"
         for x in list(filter(lambda x: "__" not in x,dir(self))):
             res+=f"{x}= {getattr(self,x)}\n"
@@ -209,7 +209,7 @@ class CTMARGS():
         self.fwd_checkpoint_absorb = False
         self.fwd_checkpoint_move = False
 
-    def __repr__(self):
+    def __str__(self):
         res=type(self).__name__+"\n"
         for x in list(filter(lambda x: "__" not in x,dir(self))):
             res+=f"{x}= {getattr(self,x)}\n"
@@ -252,7 +252,7 @@ class OPTARGS():
         self.verbosity_opt_epoch = 1
         self.opt_logging = True
 
-    def __repr__(self):
+    def __str__(self):
         res=type(self).__name__+"\n"
         for x in list(filter(lambda x: "__" not in x,dir(self))):
             res+=f"{x}= {getattr(self,x)}\n"
