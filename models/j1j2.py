@@ -432,8 +432,8 @@ class J1J2_C4V_BIPARTITE():
 
     def get_h(self):
         s2 = su2.SU2(self.phys_dim, dtype=self.dtype, device=self.device)
-        id2= torch.eye(4,dtype=self.dtype,device=self.device)
-        id2= id2.view(2,2,2,2).contiguous()
+        id2= torch.eye(self.phys_dim**2,dtype=self.dtype,device=self.device)
+        id2= id2.view(tuple([self.phys_dim]*4)).contiguous()
         expr_kron = 'ij,ab->iajb'
         SS= torch.einsum(expr_kron,s2.SZ(),s2.SZ()) + 0.5*(torch.einsum(expr_kron,s2.SP(),s2.SM()) \
             + torch.einsum(expr_kron,s2.SM(),s2.SP()))
@@ -444,6 +444,7 @@ class J1J2_C4V_BIPARTITE():
         h2x2_SS= torch.einsum('ijab,klcd->ikljacdb',SS,id2) # next-nearest neighbours
         hp= self.j1*(h2x2_SS_rot + h2x2_SS_rot.permute(0,2,1,3,4,6,5,7))\
             + self.j2*(h2x2_SS + h2x2_SS.permute(1,0,3,2,5,4,7,6))
+        hp= hp.contiguous()
         return SS, SS_rot, hp
 
     def get_obs_ops(self):

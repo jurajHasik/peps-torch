@@ -56,7 +56,8 @@ def to_ipeps_c4v(state, normalize=False):
     assert len(state.sites.items())==1, "state has more than a single on-site tensor"
     A= next(iter(state.sites.values()))
     A= make_c4v_symm(A)
-    if normalize: A= A/torch.max(torch.abs(A))
+    # if normalize: A= A/torch.max(torch.abs(A))
+    if normalize: A= A/A.norm()
     return IPEPS_C4V(A)
 
 def read_ipeps_c4v(jsonfile, aux_seq=[0,1,2,3], peps_args=cfg.peps_args,\

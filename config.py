@@ -271,6 +271,9 @@ class OPTARGS():
     :vartype opt_logging: bool
     """
     def __init__(self):
+        self.itevol_max_iter = 10000
+        self.itevol_tolerance_grad = 1e-5
+        self.itevol_tolerance_change = 1e-9
         self.opt_ctm_reinit = True
         self.lr = 1.0
         self.momentum = 0.
