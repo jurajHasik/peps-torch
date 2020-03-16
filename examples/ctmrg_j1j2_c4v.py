@@ -69,6 +69,17 @@ def main():
     #    during the course of CTM
     # 2a) convergence criterion based on on-site energy
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
+        # with torch.no_grad():
+        #     if not history:
+        #         history=[]
+        #     e_curr = energy_f(state, env, force_cpu=ctm_args.conv_check_cpu)
+        #     obs_values, obs_labels = model.eval_obs(state, env)
+        #     history.append([e_curr.item()]+obs_values)
+        #     print(", ".join([f"{len(history)}",f"{e_curr}"]+[f"{v}" for v in obs_values]))
+
+        #     if len(history) > 1 and abs(history[-1][0]-history[-2][0]) < ctm_args.ctm_conv_tol:
+        #         return True, history
+        # return False, history
         with torch.no_grad():
             if not history:
                 history=[]
