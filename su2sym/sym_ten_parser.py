@@ -141,10 +141,8 @@ def fill_from_sparse_coo(t,elems):
     :param elems: non-zero elements defined in COO format (tuple(indices),value)
     :type elems: list[tuple(tuple(int),value)]
     """
-    # for e in elems:
-    #     t[e[0]]=e[1]
     for e in elems:
-        t[ tuple([i-1 for i in e[0]]) ]=e[1]
+        t[e[0]]=e[1]
     return t
 
 def import_sym_tensors(p, D, pg, infile=None, dtype=torch.float64, device='cpu'):

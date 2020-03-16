@@ -75,6 +75,9 @@ def main():
             +str(args.ipeps_init_type)+" is not supported")
 
     print(state)
+    # PRINT TENSOR
+    # for i in range(2*(3**4)):
+    #     print(state.site((0,0)).reshape(2*(3**4))[i].item())
 
     @torch.no_grad()
     def ctmrg_conv_f(state, env, history, ctm_args=cfg.ctm_args):
