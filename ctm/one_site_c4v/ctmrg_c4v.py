@@ -34,17 +34,9 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
         def truncated_eig(M, chi):
             return truncated_eig_symarnoldi(M, chi, keep_multiplets=True, \
                 verbosity=ctm_args.verbosity_projectors)
-    # if cfg.ctm_args.projector_svd_method == 'GESDD':
+    # elif cfg.ctm_args.projector_svd_method == 'GESDD':
     #     def truncated_svd(M, chi):
     #         return truncated_svd_gesdd(M, chi, verbosity=ctm_args.verbosity_projectors)
-    # elif cfg.ctm_args.projector_svd_method == 'SYMEIG':
-    #     def truncated_svd(M, chi):
-    #         return truncated_svd_symeig(M, chi, keep_multiplets=True, \
-    #             verbosity=ctm_args.verbosity_projectors)
-    # elif cfg.ctm_args.projector_svd_method == 'SYMARP':
-    #     def truncated_svd(M, chi):
-    #         return truncated_svd_symarnoldi(M, chi, keep_multiplets=True, \
-    #             verbosity=ctm_args.verbosity_projectors)
     # elif cfg.ctm_args.projector_svd_method == 'RSVD':
     #     truncated_svd= truncated_svd_rsvd
     else:
@@ -199,7 +191,6 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
         # P^t
         # 1->0
         # C2X2= P.t() @ C2X2 @ P
-        # TODO allow for symdiag instead of SVD
         C2X2= torch.diag(D)
 
         P= P.view(env.chi,T.size()[2],env.chi)
