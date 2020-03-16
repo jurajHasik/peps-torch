@@ -7,7 +7,7 @@ from ctm.one_site_c4v.env_c4v import *
 from ctm.one_site_c4v import ctmrg_c4v, transferops_c4v
 from ctm.one_site_c4v.rdm_c4v import rdm2x1_sl
 from models import j1j2
-import u1sym.sym_ten_parser as tenU1 
+import u1sym.sym_ten_parser as tenU1
 import unittest
 import logging
 log = logging.getLogger(__name__)
@@ -66,7 +66,6 @@ def main():
                 dtype=cfg.global_args.dtype, device=cfg.global_args.device)
         else:
             raise ValueError("Unsupported --bond_dim= "+str(args.bond_dim))
-
         A= torch.rand(len(u1sym_t), dtype=cfg.global_args.dtype, device=cfg.global_args.device)
         A= A/torch.max(torch.abs(A))
         coeffs = {(0,0): A}
