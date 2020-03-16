@@ -5,10 +5,12 @@ import config as cfg
 from ipeps.ipeps_c4v import *
 from groups.pg import make_c4v_symm
 from ctm.one_site_c4v.env_c4v import *
-from ctm.one_site_c4v import ctmrg_c4v
-from ctm.one_site_c4v import transferops_c4v
+from ctm.one_site_c4v import ctmrg_c4v, transferops_c4v
+from ctm.one_site_c4v.rdm_c4v import rdm2x1_sl
 from models import j1j2
 import unittest
+import logging
+log = logging.getLogger(__name__)
 
 # parse command line args and build necessary configuration objects
 parser= cfg.get_args_parser()
@@ -19,8 +21,10 @@ parser.add_argument("-j2", type=float, default=0., help="next nearest-neighbour 
 parser.add_argument("-corrf_canonical", action='store_true', help="align spin operators" \
     + " with the vector of spontaneous magnetization")
 parser.add_argument("-corrf_r", type=int, default=1, help="maximal correlation function distance")
-parser.add_argument("-top_n", type=int, default=2, help="number of leading eigenvalues"+
-    "of transfer operator to compute")
+parser.add_argument("-top_n", type=int, default=2, help="number of leading eigenvalues"
+    + "of transfer operator to compute")
+parser.add_argument("-obs_freq", type=int, default=-1, help="frequency of computing observables"
+    + " during CTM convergence")
 args, unknown_args= parser.parse_known_args()
 
 def main():
@@ -67,9 +71,38 @@ def main():
                 return True, history
         return False, history
 
+    def ctmrg_conv_rdm2x1(state, env, history, ctm_args=cfg.ctm_args):
+        with torch.no_grad():
+            if not history:
+                history=dict({"log": []})
+            rdm2x1= rdm2x1_sl(state, env, force_cpu=ctm_args.conv_check_cpu)
+            dist= float('inf')
+            if len(history["log"]) > 1:
+                dist= torch.dist(rdm2x1, history["rdm"], p=2).item()
+            # log dist and observables
+            if args.obs_freq>0 and \
+                (len(history["log"])%args.obs_freq==0 or 
+                (len(history["log"])-1)%args.obs_freq==0):
+                e_curr = energy_f(state, env, force_cpu=ctm_args.conv_check_cpu)
+                obs_values, obs_labels = model.eval_obs(state, env, force_cpu=True)
+                print(", ".join([f"{len(history['log'])}",f"{dist}",f"{e_curr}"]+[f"{v}" for v in obs_values]))
+            else:
+                print(f"{len(history['log'])}, {dist}")
+            # update history
+            history["rdm"]=rdm2x1
+            history["log"].append(dist)
+            if dist<ctm_args.ctm_conv_tol:
+                log.info({"history_length": len(history['log']), "history": history['log'],
+                    "final_multiplets": compute_multiplets(env)})
+                return True, history
+            elif len(history['log']) >= ctm_args.ctm_max_iter:
+                log.info({"history_length": len(history['log']), "history": history['log'],
+                    "final_multiplets": compute_multiplets(env)})
+                return False, history
+        return False, history
+
     ctm_env_init = ENV_C4V(args.chi, state)
     init_env(state, ctm_env_init)
-    print(ctm_env_init)
 
     e_curr0 = energy_f(state, ctm_env_init)
     obs_values0, obs_labels = model.eval_obs(state,ctm_env_init)
@@ -77,10 +110,19 @@ def main():
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{e_curr0}"]+[f"{v}" for v in obs_values0]))
 
-    ctm_env_init, *ctm_log = ctmrg_c4v.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
+    ctm_env_init, *ctm_log = ctmrg_c4v.run(state, ctm_env_init, conv_check=ctmrg_conv_rdm2x1)
 
+    e_curr0 = energy_f(state, ctm_env_init, force_cpu=True)
+    obs_values0, obs_labels = model.eval_obs(state,ctm_env_init,force_cpu=True)
+    history, t_ctm, t_obs= ctm_log
+    print("\n")
+    print(", ".join(["epoch","energy"]+obs_labels))
+    print("FINAL "+", ".join([f"{e_curr0}"]+[f"{v}" for v in obs_values0]))
+    print(f"TIMINGS ctm: {t_ctm} conv_check: {t_obs}")
+
+    # ----- additional observables ---------------------------------------------
     corrSS= model.eval_corrf_SS(state, ctm_env_init, args.corrf_r, canonical=args.corrf_canonical)
-    print("\n\nSS r "+" ".join([label for label in corrSS.keys()]))
+    print("\n\nSS r "+" ".join([label for label in corrSS.keys()])+f" canonical {args.corrf_canonical}")
     for i in range(args.corrf_r):
         print(f"{i} "+" ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
 

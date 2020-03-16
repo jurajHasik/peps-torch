@@ -1,8 +1,9 @@
 from math import sqrt
 import torch
 from functools import reduce
-import torch.optim.lbfgs as lbfgs
-from scipy.optimize import minimize_scalar
+from torch.optim.lbfgs import LBFGS, _strong_wolfe
+import logging
+log = logging.getLogger(__name__)
 
 # from https://github.com/scipy/scipy/blob/master/scipy/optimize/linesearch.py
 def _scalar_search_armijo(phi, phi0, derphi0, args=(), c1=1e-4, alpha0=1, amin=1.0e-8):
@@ -15,7 +16,7 @@ def _scalar_search_armijo(phi, phi0, derphi0, args=(), c1=1e-4, alpha0=1, amin=1
     alpha
     phi1
     """
-    print(f"LS expected phi: {phi0+c1*alpha0*derphi0} (derphi0: {derphi0})") 
+    log.info(f"LS expected phi: {phi0+c1*alpha0*derphi0} (derphi0: {derphi0})") 
     phi_a0 = phi(alpha0, *args)
     if phi_a0 <= phi0 + c1*alpha0*derphi0:
         return alpha0, phi_a0
@@ -59,7 +60,7 @@ def _scalar_search_armijo(phi, phi0, derphi0, args=(), c1=1e-4, alpha0=1, amin=1
     # Failed to find a suitable step length
     return None, phi_a1
 
-class LBFGS_MOD(lbfgs.LBFGS):
+class LBFGS_MOD(LBFGS):
     """Implements L-BFGS algorithm, heavily inspired by `minFunc
     <https://www.cs.ubc.ca/~schmidtm/Software/minFunc.html>`.
 
@@ -116,10 +117,9 @@ class LBFGS_MOD(lbfgs.LBFGS):
     def _directional_evaluate_derivative_free(self, closure, t, x, d):
         self._add_grad(t, d)
         with torch.no_grad():
-            orig_loss, log_line = closure()
+            orig_loss= closure()
         loss= float(orig_loss)
         self._set_param(x)
-        print(f"LS {t}, "+log_line)
         return loss
 
     def step_2c(self, closure, closure_linesearch):
@@ -254,46 +254,8 @@ class LBFGS_MOD(lbfgs.LBFGS):
 
             # optional line search: user function
             ls_func_evals = 0
-            if line_search_fn is not None or line_search_fn is not "default":
+            if line_search_fn is not None or line_search_fn != "default":
                 # perform line search, using user function
-                if line_search_fn == "scipy_brent":
-                    x_init = self._clone_param()
-
-                    def obj_func(t, x, d):
-                        return self._directional_evaluate_derivative_free(closure_linesearch, t, x, d)
-
-                    # return (xmin, fval, iter, funcalls)
-                    opt_res = minimize_scalar(obj_func, args=(x_init,d), method='brent', \
-                        options={'xtol': line_search_eps, 'maxiter': 500})
-                    if opt_res["success"]:
-                        t= opt_res["x"]
-                        loss= opt_res["fun"]
-                        func_evals= opt_res["nfev"]
-                        print(f"LS CONVERGED {loss} {t} "+str(opt_res["nit"])+f" {func_evals}")
-                    else:
-                        print("LS FAILED "+str(opt_res["status"])+" "+str(opt_res["message"]))
-                        raise RuntimeError("minimize_scalar failed")
-                if line_search_fn == "scipy_bounded":
-                    x_init = self._clone_param()
-
-                    def obj_func(t, x, d):
-                        return self._directional_evaluate_derivative_free(closure_linesearch, t, x, d)
-
-                    # return (xmin, fval, iter, funcalls)
-                    opt_res = minimize_scalar(obj_func, args=(x_init,d), method='bounded', \
-                        bounds=(0, 2*t), options={'xatol': line_search_eps, 'maxiter': 500})
-                    if opt_res["success"]:
-                        t= opt_res["x"]
-                        loss= opt_res["fun"]
-                        func_evals= opt_res["nfev"]
-                        print(f"LS CONVERGED {loss} {t} "+f" {func_evals}")
-                    else:
-                        t= opt_res["x"]
-                        loss= opt_res["fun"]
-                        func_evals= opt_res["nfev"]
-                        print("LS FAILED "+str(opt_res["status"])+" "+str(opt_res["message"])\
-                            + f" {loss} {t} {func_evals}")
-                        #raise RuntimeError("minimize_scalar failed")
                 if line_search_fn == "backtracking":
                     x_init = self._clone_param()
 
@@ -304,18 +266,18 @@ class LBFGS_MOD(lbfgs.LBFGS):
                     t, loss= _scalar_search_armijo(obj_func, loss, gtd, args=(x_init,d), alpha0=default_t)
                     if t is None:
                         raise RuntimeError("minimize_scalar failed")
-
                 elif line_search_fn == "strong_wolfe":
                     x_init = self._clone_param()
 
                     def obj_func(x, t, d):
                         return self._directional_evaluate(closure, x, t, d)
 
-                    loss, flat_grad, t, ls_func_evals = lbfgs._strong_wolfe(
+                    loss, flat_grad, t, ls_func_evals = _strong_wolfe(
                         obj_func, x_init, t, d, loss, flat_grad, gtd)
                 else:
                     raise RuntimeError("unsupported line search")
                 
+                log.info(f"LS final step: {t}")
                 self._add_grad(t, d)
                 opt_cond = flat_grad.abs().max() <= tolerance_grad
                 

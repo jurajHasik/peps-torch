@@ -63,45 +63,6 @@ def optimize_state(state, ctm_env_init, loss_fn, local_args, obs_fn=None, post_p
     current_env=[ctm_env_init]
     context= dict({"ctm_args":ctm_args, "opt_args":opt_args, "loss_history": t_data})
 
-    #@profile
-    def closure():
-        # 0) evaluate loss
-        loss, ctm_env, history, t_ctm, t_check = loss_fn(state, current_env[0], context)
-
-        # 1) store current state if the loss improves
-        t_data["loss"].append(loss.item())
-        if t_data["min_loss"] > t_data["loss"][-1]:
-            t_data["min_loss"]= t_data["loss"][-1]
-            state.write_to_file(outputstatefile, normalize=True)
-
-        # 2) log CTM metrics for debugging
-        if opt_args.opt_logging:
-            log_entry=dict({"id": len(t_data["loss"])-1, \
-                "t_ctm": t_ctm, "t_check": t_check}) 
-            log.info(json.dumps(log_entry))
-
-        # 3) compute desired observables
-        if obs_fn is not None:
-            obs_fn(state, current_env[0], context)
-
-        # 4) evaluate gradient
-        t_grad0= time.perf_counter()
-        loss.backward()
-        t_grad1= time.perf_counter()
-
-        # 5) log grad metrics for debugging
-        if opt_args.opt_logging:
-            log_entry=dict({"id": len(t_data["loss"])-1, "t_grad": t_grad1-t_grad0})
-            log.info(json.dumps(log_entry))
-
-        # 6) detach current environment from autograd graph
-        lst_C = list(ctm_env.C.values())
-        lst_T = list(ctm_env.T.values())
-        current_env[0] = ctm_env
-        for el in lst_T + lst_C: el.detach_()
-
-        return loss
-    
     parameters= state.get_parameters()
     for A in parameters: A.requires_grad_(True)
 
@@ -143,6 +104,46 @@ def optimize_state(state, ctm_env_init, loss_fn, local_args, obs_fn=None, post_p
         optimizer.load_state_dict(cp_state_dict)
         print(f"checkpoint.loss = {loss0}")
 
+    #@profile
+    def closure():
+        # 0) evaluate loss
+        optimizer.zero_grad()
+        loss, ctm_env, history, t_ctm, t_check = loss_fn(state, current_env[0], context)
+
+        # 1) store current state if the loss improves
+        t_data["loss"].append(loss.item())
+        if t_data["min_loss"] > t_data["loss"][-1]:
+            t_data["min_loss"]= t_data["loss"][-1]
+            state.write_to_file(outputstatefile, normalize=True)
+
+        # 2) log CTM metrics for debugging
+        if opt_args.opt_logging:
+            log_entry=dict({"id": len(t_data["loss"])-1, \
+                "t_ctm": t_ctm, "t_check": t_check}) 
+            log.info(json.dumps(log_entry))
+
+        # 3) compute desired observables
+        if obs_fn is not None:
+            obs_fn(state, ctm_env, context)
+
+        # 4) evaluate gradient
+        t_grad0= time.perf_counter()
+        loss.backward()
+        t_grad1= time.perf_counter()
+
+        # 5) log grad metrics for debugging
+        if opt_args.opt_logging:
+            log_entry=dict({"id": len(t_data["loss"])-1, "t_grad": t_grad1-t_grad0})
+            log.info(json.dumps(log_entry))
+
+        # 6) detach current environment from autograd graph
+        lst_C = list(ctm_env.C.values())
+        lst_T = list(ctm_env.T.values())
+        current_env[0] = ctm_env
+        for el in lst_T + lst_C: el.detach_()
+
+        return loss
+    
     for epoch in range(local_args.opt_max_iter):
         # checkpoint the optimizer
         # checkpointing before step, guarantees the correspondence between the wavefunction
@@ -152,7 +153,6 @@ def optimize_state(state, ctm_env_init, loss_fn, local_args, obs_fn=None, post_p
 
         # After execution closure ``current_env`` **IS NOT** corresponding to ``state``, since
         # the ``state`` on-site tensors have been modified by gradient. 
-        optimizer.zero_grad()
         optimizer.step(closure)
         
         if post_proc is not None:

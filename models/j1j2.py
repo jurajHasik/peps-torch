@@ -584,7 +584,6 @@ class J1J2_C4V_BIPARTITE():
 
         # compute vector of spontaneous magnetization
         if canonical:
-            print("canonical")
             s_vec_zpm=[]
             rdm1x1= rdm_c4v.rdm1x1(state,env_c4v)
             for label in ["sz","sp","sm"]:

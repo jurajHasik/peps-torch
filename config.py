@@ -14,6 +14,7 @@ def get_args_parser():
     parser.add_argument("-opt_max_iter", type=int, default=100, help="maximal number of epochs")
     parser.add_argument("-opt_resume", type=str, default=None, help="file with checkpoint to resume")
     parser.add_argument("-opt_resume_override_params", type=bool, default=False, help="override optimizer parameters stored in checkpoint")
+    parser.add_argument("-seed", type=int, default=0, help="PRNG seed")
 
     configs=[global_args, peps_args, ctm_args, opt_args]
     for c in configs:
@@ -197,7 +198,6 @@ class CTMARGS():
         self.projector_svd_reltol = 1.0e-8
         self.ctm_move_sequence = [(0,-1), (-1,0), (0,1), (1,0)]
         self.ctm_logging = False
-        self.verbosity_corner_multiplets= 0
         self.verbosity_initialization = 0
         self.verbosity_ctm_convergence = 0
         self.verbosity_projectors = 0

@@ -366,9 +366,11 @@ def rdm2x1_sl(state, env, force_cpu=False, verbosity=0):
     r"""
     :param state: underlying 1-site C4v symmetric wavefunction
     :param env: C4v symmetric environment corresponding to ``state``
+    :param force_cpu: compute on cpu
     :param verbosity: logging verbosity
     :type state: IPEPS_C4V
     :type env: ENV_C4V
+    :type force_cpu: bool
     :type verbosity: int
     :return: 2-site reduced density matrix with indices :math:`s_0s_1;s'_0s'_1`
     :rtype: torch.tensor
@@ -474,13 +476,13 @@ def rdm2x1_sl(state, env, force_cpu=False, verbosity=0):
 
 def rdm2x2_NN_lowmem(state, env, force_cpu=False, verbosity=0):
     r"""
-    :param C: corner tensor of C4v symmetric environment
-    :param T: half-row/-column tensor of C4v symmetric environment
-    :param A: on-site tensor of C4v symmetric iPEPS
+    :param state: underlying 1-site C4v symmetric wavefunction
+    :param env: C4v symmetric environment corresponding to ``state``
+    :param force_cpu: compute on cpu
     :param verbosity: logging verbosity
-    :type C: torch.tensor
-    :type T: torch.tensor
-    :type A: torch.tensor
+    :type state: IPEPS_C4V
+    :type env: ENV_C4V
+    :type force_cpu: bool
     :type verbosity: int
     :return: 2-site reduced density matrix with indices :math:`s_0s_1;s'_0s'_1`
     :rtype: torch.tensor
@@ -514,13 +516,13 @@ def rdm2x2_NN_lowmem(state, env, force_cpu=False, verbosity=0):
 
 def rdm2x2_NN_lowmem_sl(state, env, force_cpu=False, verbosity=0):
     r"""
-    :param C: corner tensor of C4v symmetric environment
-    :param T: half-row/-column tensor of C4v symmetric environment
-    :param a: on-site tensor of C4v symmetric iPEPS
+    :param state: underlying 1-site C4v symmetric wavefunction
+    :param env: C4v symmetric environment corresponding to ``state``
+    :param force_cpu: compute on cpu
     :param verbosity: logging verbosity
-    :type C: torch.tensor
-    :type T: torch.tensor
-    :type a: torch.tensor
+    :type state: IPEPS_C4V
+    :type env: ENV_C4V
+    :type force_cpu: bool
     :type verbosity: int
     :return: 2-site reduced density matrix with indices :math:`s_0s_1;s'_0s'_1`
     :rtype: torch.tensor
@@ -643,13 +645,13 @@ def _rdm2x2_NN_lowmem(state,env,f_c2x2,force_cpu=False,verbosity=0):
 
 def rdm2x2_NNN_lowmem(state, env, force_cpu=False, verbosity=0):
     r"""
-    :param C: corner tensor of C4v symmetric environment
-    :param T: half-row/-column tensor of C4v symmetric environment
-    :param A: on-site tensor of C4v symmetric iPEPS
+    :param state: underlying 1-site C4v symmetric wavefunction
+    :param env: C4v symmetric environment corresponding to ``state``
+    :param force_cpu: compute on cpu
     :param verbosity: logging verbosity
-    :type C: torch.tensor
-    :type T: torch.tensor
-    :type A: torch.tensor
+    :type state: IPEPS_C4V
+    :type env: ENV_C4V
+    :type force_cpu: bool
     :type verbosity: int
     :return: 2-site reduced density matrix with indices :math:`s_0s_1;s'_0s'_1`
     :rtype: torch.tensor
@@ -683,13 +685,13 @@ def rdm2x2_NNN_lowmem(state, env, force_cpu=False, verbosity=0):
 
 def rdm2x2_NNN_lowmem_sl(state, env, force_cpu=False, verbosity=0):
     r"""
-    :param C: corner tensor of C4v symmetric environment
-    :param T: half-row/-column tensor of C4v symmetric environment
-    :param a: on-site tensor of C4v symmetric iPEPS
+    :param state: underlying 1-site C4v symmetric wavefunction
+    :param env: C4v symmetric environment corresponding to ``state``
+    :param force_cpu: compute on cpu
     :param verbosity: logging verbosity
-    :type C: torch.tensor
-    :type T: torch.tensor
-    :type a: torch.tensor
+    :type state: IPEPS_C4V
+    :type env: ENV_C4V
+    :type force_cpu: bool
     :type verbosity: int
     :return: 2-site reduced density matrix with indices :math:`s_0s_1;s'_0s'_1`
     :rtype: torch.tensor
