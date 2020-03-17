@@ -52,7 +52,7 @@ class SYMARNOLDI(torch.autograd.Function):
         return D, U
 
     @staticmethod
-    def backward(self, dU, dS, dV):
+    def backward(self, dD, dU):
         raise Exception("backward not implemented")
         D, U= self.saved_tensors
         return dA, None
