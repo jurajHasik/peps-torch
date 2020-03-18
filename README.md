@@ -38,7 +38,7 @@ Compute observables and spin-spin correlation functions in horizontal and vertic
 of the resulting state
 
 ```
-python examples/ctmrg_j1j2_c4v.py -instate ex-4site_state.json -chi 48 -j2 0.3 -corrf_r 20
+python examples/ctmrg_j1j2.py -tiling 4SITE -chi 48 -j2 0.3 -instate ex-4site_state.json -corrf_r 20
 ```
 
 #### Supports:
