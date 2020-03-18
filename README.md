@@ -1,11 +1,13 @@
-# tn-torch [![Build Status](https://travis-ci.com/jurajHasik/tn-torch.svg?branch=master)](https://travis-ci.com/jurajHasik/tn-torch)
+# peps-torch [![Build Status](https://travis-ci.com/jurajHasik/tn-torch.svg?branch=master)](https://travis-ci.com/jurajHasik/tn-torch)
 ### A tensor network library for two-dimensional lattice models
 by Juraj Hasik, Glen Bigan Mbeng
 
 \
-tn-torch performs optimization of infinite Projected entangled-pair state (iPEPS) 
-by direct energy minimization. The gradient is computed by backpropagation 
+peps-torch performs optimization of infinite Projected entangled-pair states (iPEPS) 
+by direct energy minimization. The gradients are computed by backpropagation 
 (reverse-mode Automatic differentiation).
+
+For the full documentation, continue to [peps-torch.readthedocs.io](https://peps-torch.readthedocs.io) 
 
 Supports:
 - spin systems

@@ -74,14 +74,6 @@ def main():
 
     def loss_fn(state, ctm_env_in, opt_context):
         # 0) preprocess
-        # symmetrize on-site tensor and normalize
-        # Option 1)
-        # with torch.no_grad():
-        #     for site in state.sites.values():
-        #         site.copy_(make_c4v_symm(site))
-        #         site *= 1./torch.max(torch.abs(site))
-        
-        # Option 2)
         # create a copy of state, symmetrize and normalize making all operations
         # tracked. This does not "overwrite" the parameters tensors, living outside
         # the scope of loss_fn
@@ -120,7 +112,7 @@ def main():
                 state.sites[(0,0)].copy_(symm_site)
 
     # optimize
-    optimize_state(state, ctm_env, loss_fn, args, obs_fn=obs_fn, post_proc=post_proc)
+    optimize_state(state, ctm_env, loss_fn, obs_fn=obs_fn, post_proc=post_proc)
 
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"

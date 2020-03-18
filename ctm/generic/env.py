@@ -14,17 +14,29 @@ class ENV():
         :type ctm_args: CTMARGS
         :type global_args: GLOBALARGS
 
-        For each pair (coord, site) create corresponding half-row/column tensors T's 
-        and corner tensors C's. The corner tensors have dimensions :math:`\chi \times \chi`
+        For each pair of (vertex, on-site tensor) in the elementary unit cell of ``state``, 
+        create corresponding environment tensors: Half-row/column tensors T's and corner tensors C's. 
+        The corner tensors have dimensions :math:`\chi \times \chi`
         and the half-row/column tensors have dimensions :math:`\chi \times \chi \times D^2` 
-        (D might vary depending on the corresponding dimension of on-site tensor)::
+        (D might vary depending on the corresponding dimension of on-site tensor). 
+        The environment of each double-layer tensor (A) is composed of eight different tensors::
 
             y\x -1 0 1
              -1  C T C
               0  T A T
               1  C T C 
-        
-        The environment tensors of an ENV object ``e`` are accesed through members ``C`` and ``T`` 
+
+        The individual tensors making up the environment of a site are defined 
+        by four directional vectors :math:`d = (x,y)_{\textrm{environment tensor}} - (x,y)_\textrm{A}`
+        as follows::
+
+            C(-1,-1)   T        (1,-1)C 
+                       |(0,-1)
+            T--(-1,0)--A(0,0)--(1,0)--T 
+                       |(0,1)
+            C(-1,1)    T         (1,1)C
+
+        These environment tensors of some ENV object ``e`` are accesed through its members ``C`` and ``T`` 
         by providing a tuple of coordinates and directional vector to the environment tensor:: 
             
             coord=(0,0)                # tuple(x,y) identifying vertex on the square lattice
@@ -32,15 +44,6 @@ class ENV():
             rel_dir_vec_T=(-1,0)       # tuple(rx,ry) identifying one of the four half-row/column tensors
             C_upper_left= e.C[(coord,rel_dir_vec_C)] # return upper left corner tensor of site at coord
             T_left= e.T[(coord,rel_dir_vec_T)]       # return left half-row tensor of site at coord
-
-        The directional vectors identifying individual tensors making up the environment of 
-        a site are defined relative to the position of the site: `coord(environment tensor) - coord(A)`::
-
-            C(-1,-1)   T        (1,-1)C 
-                       |(0,-1)
-            T--(-1,0)--A(0,0)--(1,0)--T 
-                       |(0,1)
-            C(-1,1)    T         (1,1)C
         
         The index-position convention is as follows: 
         Start from the index in the **direction "up"** <=> (0,-1) and continue **anti-clockwise**::
@@ -102,7 +105,7 @@ def init_env(state, env, ctm_args=cfg.ctm_args):
     :type ctm_args: CTMARGS
 
     Initializes the environment `env` according to one of the supported options specified 
-    inside `CTMARGS.ctm_env_init_type` [TODO link here]
+    by :class:`CTMARGS.ctm_env_init_type <config.CTMARGS>` 
     
  
     * CONST - all C and T tensors have all their elements intialized to a value 1
@@ -134,7 +137,6 @@ def init_random(env, verbosity=0):
     for key,t in env.T.items():
         env.T[key] = torch.rand(t.size(), dtype=env.dtype, device=env.device)
 
-# TODO handle case when chi < bond_dim^2
 def init_from_ipeps_pbc(state, env, verbosity=0):
     if verbosity>0:
         print("ENV: init_from_ipeps")
@@ -291,7 +293,6 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         env.T[(coord,vec)][:min(env.chi,dimsA[1]**2),:,:min(env.chi,dimsA[3]**2)]=\
             a[:min(env.chi,dimsA[1]**2),:,:min(env.chi,dimsA[3]**2)]
 
-# TODO handle case when chi < bond_dim^2
 def init_from_ipeps_obc(state, env, verbosity=0):
     if verbosity>0:
         print("ENV: init_from_ipeps")

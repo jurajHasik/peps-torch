@@ -262,7 +262,7 @@ def apply_TM_1sO_2(state, env, edge, op=None, verbosity=0):
     r"""
     :param state: underlying 1-site C4v symmetric wavefunction
     :param env: C4v symmetric environment corresponding to ``state``
-    :param edge: tensor of dimensions :math:`\chi \times (D^2)^2 \times \chi
+    :param edge: tensor of dimensions :math:`\chi \times (D^2)^2 \times \chi`
     :param op: two-site operator to be inserted within the two-site transfer matrix
     :param verbosity: logging verbosity
     :type state: IPEPS_C4V

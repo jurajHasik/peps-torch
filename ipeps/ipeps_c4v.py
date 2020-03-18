@@ -17,7 +17,7 @@ class IPEPS_C4V(ipeps.IPEPS):
 
                u s 
                |/ 
-            l--A--r  <=> A[s,u,l,d,r]
+            l--A--r  <=> a[s,u,l,d,r]
                |
                d
         
@@ -36,7 +36,7 @@ class IPEPS_C4V(ipeps.IPEPS):
         :param noise: magnitude of the noise
         :type noise: float
 
-        Take IPEPS and add random uniform noise with magnitude ``noise`` to all on-site tensors
+        Take IPEPS and add random uniform noise with magnitude ``noise`` to on-site tensor
         """
         for coord in self.sites.keys():
             rand_t = torch.rand( self.sites[coord].size(), dtype=self.dtype, device=self.device)
@@ -54,6 +54,32 @@ def to_ipeps_c4v(state):
 
 def read_ipeps_c4v(jsonfile, aux_seq=[0,1,2,3], peps_args=cfg.peps_args,\
     global_args=cfg.global_args):
+    r"""
+    :param jsonfile: input file describing IPEPS_C4V in json format
+    :param aux_seq: array specifying order of auxiliary indices of on-site tensors stored
+                    in `jsonfile`
+    :param peps_args: ipeps configuration
+    :param global_args: global configuration
+    :type jsonfile: str or Path object
+    :type aux_seq: list[int]
+    :type peps_args: PEPSARGS
+    :type global_args: GLOBALARGS
+    :return: wavefunction
+    :rtype: IPEPS_C4V
+    
+    Parameter ``aux_seq`` defines the expected order of auxiliary indices
+    in input file relative to the convention fixed in tn-torch::
+    
+         0
+        1A3 <=> [up, left, down, right]: aux_seq=[0,1,2,3]
+         2
+        
+        for alternative order, eg.
+        
+         1
+        0A2 <=> [left, up, right, down]: aux_seq=[1,0,3,2] 
+         3
+    """
     state= ipeps.read_ipeps(jsonfile, aux_seq=aux_seq, peps_args=peps_args,\
         global_args=global_args)
     return to_ipeps_c4v(state)

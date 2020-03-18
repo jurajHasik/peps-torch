@@ -61,7 +61,7 @@ def configure(parsed_args):
             # strip prefix key+"_"
             a_noprefix=a[1+len(k):]
             setattr(conf_dict[k],a_noprefix,getattr(parsed_args,a))
-    # set generic args
+    # set main args
     for name,val in nogroup_args.items():
         setattr(main_args,name,val)
 
@@ -76,6 +76,33 @@ def print_config():
     print(opt_args)
 
 class MAINARGS():
+    r"""
+    Main simulation options. The default settings can be modified through 
+    command line arguments as follows ``-<option-name> desired-value``
+
+    :ivar omp_cores: number of OpenMP cores. Default: ``1``
+    :vartype omp_cores: int:
+    :ivar instate: input state file. Default: ``None``
+    :vartype instate: str or Path
+    :ivar instate_noise: magnitude of noise applied to the input state, if any. Default: ``0.0``
+    :vartype instate_noise: float
+    :ivar ipeps_init_type: initialization of the trial iPEPS state, if no ``instate`` is provided. Default: ``RANDOM``
+    :vartype ipeps_init_type: str
+    :ivar out_prefix: output file prefix. Default: ``output``
+    :vartype out_prefix: str
+    :ivar bond_dim: iPEPS auxiliary bond dimension. Default: ``1``
+    :vartype bond_dim: int
+    :ivar chi: environment bond dimension. Default: ``20``
+    :vartype chi: int
+    :ivar opt_max_iter: maximal number of optimization steps. Default: ``100``
+    :vartype opt_max_iter: int
+    :ivar opt_resume: resume from checkpoint file. Default: ``None``
+    :vartype opt_resume: str or Path
+    :ivar opt_resume_override_params: override optimizer parameters stored in checkpoint. Default: ``False``
+    :vartype opt_resume_override_params: bool
+    :ivar seed: PRNG seed. Default: ``0``
+    :vartype seed: int
+    """
     def __init__(self):
         pass
 
@@ -87,7 +114,8 @@ class MAINARGS():
 
 class GLOBALARGS():
     r"""
-    Holds global configuration options
+    Holds global configuration options. The default settings can be modified through 
+    command line arguments as follows ``-GLOBALARGS_<variable-name> desired-value``
 
     :ivar dtype: data type of all torch.tensor. Default: ``torch.float64``
     :vartype dtype: torch.dtype
@@ -125,6 +153,8 @@ class CTMARGS():
     :vartype ctm_env_init_type: str
     :ivar ctm_conv_tol: threshold for convergence of CTM algorithm. Default: ``'1.0e-10'``
     :vartype ctm_conv_tol: float
+    :ivar conv_check_cpu: execute CTM convergence check on cpu (if applicable). Default: ``False`` 
+    :vartype conv_check_cpu: bool
     :ivar projector_method: method used to construct projectors which facilitate truncation
                             of environment bond dimension :math:`\chi` within CTM algorithm
 
@@ -135,7 +165,7 @@ class CTMARGS():
 
                             Default: ``'4X4'``  
     :vartype projector_method: str
-    :ivar projector_svd_method: singular value decomposition algorithm used in the construction
+    :ivar projector_svd_method: singular/eigen value decomposition algorithm used in the construction
                                 of the projectors:
 
                                     * GESDD: pytorch wrapper of LAPACK's gesdd
@@ -145,7 +175,7 @@ class CTMARGS():
                                     * SYMARP: scipy wrapper of ARPACK's dsaupd for symmetric
                                               matrices
 
-                                Default: ``'GESDD'``
+                                Default: ``'SYMEIG'`` for c4v-symmetric CTM, otherwise ``'GESDD'``
     :vartype projector_svd_method: str
     :ivar projector_svd_reltol: relative threshold on the magnitude of the smallest elements of 
                                 singular value spectrum used in the construction of projectors. 
