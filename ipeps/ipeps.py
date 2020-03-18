@@ -5,6 +5,9 @@ import itertools
 import math
 import config as cfg
 
+# TODO drop constrain for aux bond dimension to be identical on 
+# all bond indices
+
 class IPEPS():
     def __init__(self, sites, vertexToSite=None, lX=None, lY=None, peps_args=cfg.peps_args,\
         global_args=cfg.global_args):
@@ -29,40 +32,40 @@ class IPEPS():
 
                u s 
                |/ 
-            l--A--r  <=> A[s,u,l,d,r]
+            l--a--r  <=> a[s,u,l,d,r]
                |
                d
         
         where s denotes physical index, and u,l,d,r label four principal directions
-        up, left, down, right in anti-clockwise order starting from up
-        Member ``vertexToSite`` is a mapping function from vertex on a square lattice
-        passed in as tuple(x,y) to a corresponding tuple(x,y) within elementary unit cell.
+        up, left, down, right in anti-clockwise order starting from up.
+        Member ``vertexToSite`` is a mapping function from any vertex (x,y) on a square lattice
+        passed in as tuple(int,int) to a corresponding vertex within elementary unit cell.
         
         On-site tensor of an IPEPS object ``wfc`` at vertex (x,y) is conveniently accessed 
         through the member function ``site``, which internally uses ``vertexToSite`` mapping::
             
             coord= (0,0)
-            A_00= wfc.site(coord)
+            a_00= wfc.site(coord)
 
         By combining the appropriate ``vertexToSite`` mapping function with elementary unit 
-        cell specified through ``sites`` various tilings of a square lattice can be achieved:: 
+        cell specified through ``sites``, various tilings of a square lattice can be achieved:: 
             
             # Example 1: 1-site translational iPEPS
             
-            sites={(0,0): A}
+            sites={(0,0): a}
             def vertexToSite(coord):
                 return (0,0)
             wfc= IPEPS(sites,vertexToSite)
         
             # resulting tiling:
             # y\x -2 -1 0 1 2
-            # -2   A  A A A A
-            # -1   A  A A A A
-            #  0   A  A A A A
-            #  1   A  A A A A
+            # -2   a  a a a a
+            # -1   a  a a a a
+            #  0   a  a a a a
+            #  1   a  a a a a
             # Example 2: 2-site bipartite iPEPS
             
-            sites={(0,0): A, (1,0): B}
+            sites={(0,0): a, (1,0): b}
             def vertexToSite(coord):
                 x = (coord[0] + abs(coord[0]) * 2) % 2
                 y = abs(coord[1])
@@ -71,34 +74,33 @@ class IPEPS():
         
             # resulting tiling:
             # y\x -2 -1 0 1 2
-            # -2   A  B A B A
-            # -1   B  A B A B
-            #  0   A  B A B A
-            #  1   B  A B A B
+            # -2   A  b a b a
+            # -1   B  a b a b
+            #  0   A  b a b a
+            #  1   B  a b a b
         
             # Example 3: iPEPS with 3x2 unit cell with PBC 
             
-            sites={(0,0): A, (1,0): B, (2,0): C, (0,1): D, (1,1): E, (2,1): F}
+            sites={(0,0): a, (1,0): b, (2,0): c, (0,1): d, (1,1): e, (2,1): f}
             wfc= IPEPS(sites,lX=3,lY=2)
             
             # resulting tiling:
             # y\x -2 -1 0 1 2
-            # -2   B  C A B C
-            # -1   E  F D E F
-            #  0   B  C A B C
-            #  1   E  F D E F
+            # -2   b  c a b c
+            # -1   e  f d e f
+            #  0   b  c a b c
+            #  1   e  f d e f
 
-        where in the last example we used default setting for ``vertexToSite``, which
-        maps square lattice into elementary unit cell of size `lX` x `lY` assuming 
+        where in the last example a default setting for ``vertexToSite`` is used, which
+        maps square lattice into elementary unit cell of size ``lX`` x ``lY`` assuming 
         periodic boundary conditions (PBC) along both X and Y directions.
-        
-        TODO we infer the size of the cluster from the keys of sites. Is it OK?
         """
         self.dtype= global_args.dtype
         self.device= global_args.device
 
         self.sites= OrderedDict(sites)
         
+        # TODO we infer the size of the cluster from the keys of sites. Is it OK?
         # infer the size of the cluster
         if lX is None or lY is None:
             min_x = min([coord[0] for coord in sites.keys()])
@@ -159,7 +161,7 @@ class IPEPS():
     def __str__(self):
         print(f"lX x lY: {self.lX} x {self.lY}")
         for nid,coord,site in [(t[0], *t[1]) for t in enumerate(self.sites.items())]:
-            print(f"A{nid} {coord}: {site.size()}")
+            print(f"a{nid} {coord}: {site.size()}")
         
         # show tiling of a square lattice
         coord_list = list(self.sites.keys())
@@ -173,7 +175,7 @@ class IPEPS():
                 print("")
             print(f"{y:+} ", end="")
             for x in range(-mx,mx):
-                print(f"A{coord_list.index(self.vertexToSite((x,y)))} ", end="")
+                print(f"a{coord_list.index(self.vertexToSite((x,y)))} ", end="")
             print("")
         
         return ""
@@ -329,12 +331,8 @@ def write_ipeps(state, outputfile, aux_seq=[0,1,2,3], tol=1.0e-14, normalize=Fal
          1
         0A2 <=> [left, up, right, down]: aux_seq=[1,0,3,2] 
          3
-    
-    TODO drop constrain for aux bond dimension to be identical on 
-    all bond indices
-    
-    TODO implement cutoff on elements with magnitude below tol
-        """
+
+    """
     asq = [x+1 for x in aux_seq]
     json_state=dict({"lX": state.lX, "lY": state.lY, "sites": []})
     

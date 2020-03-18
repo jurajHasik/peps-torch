@@ -118,7 +118,7 @@ def main():
                     print("TOP "+json.dumps(_to_json(l)))
 
     # optimize
-    optimize_state(state, ctm_env, loss_fn, args, obs_fn=obs_fn)
+    optimize_state(state, ctm_env, loss_fn, obs_fn=obs_fn)
 
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"

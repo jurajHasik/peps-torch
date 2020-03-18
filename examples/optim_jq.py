@@ -81,13 +81,13 @@ def main():
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{loss}"]+[f"{v}" for v in obs_values]))
 
-    def loss_fn(state, ctm_env_init, opt_context):
+    def loss_fn(state, ctm_env_in, opt_context):
         # possibly re-initialize the environment
         if cfg.opt_args.opt_ctm_reinit:
-            init_env(state, ctm_env_init)
+            init_env(state, ctm_env_in)
 
         # 1) compute environment by CTMRG
-        ctm_env_out,  *ctm_log = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
+        ctm_env_out,  *ctm_log = ctmrg.run(state, ctm_env_in, conv_check=ctmrg_conv_energy)
         loss = model.energy_2x2_4site(state, ctm_env_out)
         
         return (loss, ctm_env_out, *ctm_log)
@@ -99,7 +99,7 @@ def main():
         print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
 
     # optimize
-    optimize_state(state, ctm_env_init, loss_fn, args, obs_fn=obs_fn)
+    optimize_state(state, ctm_env_init, loss_fn, obs_fn=obs_fn)
 
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"

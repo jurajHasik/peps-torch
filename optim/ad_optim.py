@@ -6,21 +6,18 @@ import torch
 #from memory_profiler import profile
 import config as cfg
 
-def store_checkpoint(checkpoint_file, state, optimizer, current_epoch, current_loss,\
-    verbosity=0):
+def store_checkpoint(checkpoint_file, state, optimizer, current_epoch, current_loss):
     r"""
     :param checkpoint_file: target file
     :param state: ipeps wavefunction
     :param optimizer: Optimizer
     :param current_epoch: current epoch
     :param current_loss: current value of a loss function
-    :param verbosity: verbosity
     :type checkpoint_file: str or Path
     :type state: IPEPS
     :type optimizer: torch.optim.Optimizer
     :type current_epoch: int
     :type current_loss: float
-    :type verbosity: int
 
     Store the current state of the optimization in ``checkpoint_file``.
     """
@@ -29,35 +26,39 @@ def store_checkpoint(checkpoint_file, state, optimizer, current_epoch, current_l
             'loss': current_loss,
             'parameters': state.get_checkpoint(),
             'optimizer_state_dict': optimizer.state_dict()}, checkpoint_file)
-    if verbosity>0:
-        print(checkpoint_file)
 
-def optimize_state(state, ctm_env_init, loss_fn, local_args, obs_fn=None, post_proc=None,
-    opt_args=cfg.opt_args,ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
+    main_args=cfg.main_args, opt_args=cfg.opt_args, ctm_args=cfg.ctm_args, 
+    global_args=cfg.global_args):
     r"""
     :param state: initial wavefunction
-    :param ctm_env_init: initial environment corresponding to ``state``
+    :param ctm_env_init: initial environment of ``state``
     :param loss_fn: loss function
-    :param model: model with definition of observables
-    :param local_args: parsed command line arguments
+    :param obs_fn: optional function to evaluate observables
+    :param post_proc: optional function for post-processing the state and environment  
+    :param main_args: main configuration
     :param opt_args: optimization configuration
     :param ctm_args: CTM algorithm configuration
     :param global_args: global configuration
     :type state: IPEPS
     :type ctm_env_init: ENV
-    :type loss_fn: function(IPEPS,ENV,CTMARGS,OPTARGS,GLOBALARGS)->torch.tensor
-    :type model: TODO Model base class
-    :type local_args: argparse.Namespace
+    :type loss_fn: function(IPEPS,ENV,dict)->torch.tensor
+    :type obs_fn: function(IPEPS,ENV,dict)->None
+    :type post_proc: function(IPEPS,ENV,dict)->None
+    :type main_args: MAINARGS
     :type opt_args: OPTARGS
     :type ctm_args: CTMARGS
     :type global_args: GLOBALARGS
 
-    Optimizes initial wavefunction ``state`` with respect to ``loss_fn`` using LBFGS optimizer.
-    The main parameters influencing the optimization process are given in :py:class:`config.OPTARGS`.
+    Optimizes initial wavefunction ``state`` with respect to ``loss_fn`` using 
+    `LBFGS optimizer <https://pytorch.org/docs/stable/optim.html#torch.optim.LBFGS>`_.
+    The main parameters influencing the optimization process are given in :class:`config.OPTARGS`.
+    Calls to functions ``loss_fn``, ``obs_fn``, and ``post_proc`` pass the current configuration
+    as dictionary ``{"ctm_args":ctm_args, "opt_args":opt_args}``.
     """
     verbosity = opt_args.verbosity_opt_epoch
-    checkpoint_file = local_args.out_prefix+"_checkpoint.p"   
-    outputstatefile= local_args.out_prefix+"_state.json"
+    checkpoint_file = main_args.out_prefix+"_checkpoint.p"   
+    outputstatefile= main_args.out_prefix+"_state.json"
     t_data = dict({"loss": [], "min_loss": float('inf')})
     prev_epoch=[-1]
     current_env=[ctm_env_init]
@@ -71,15 +72,15 @@ def optimize_state(state, ctm_env_init, loss_fn, local_args, obs_fn=None, post_p
         history_size=opt_args.history_size)
 
     # load and/or modify optimizer state from checkpoint
-    if local_args.opt_resume is not None:
-        print(f"INFO: resuming from check point. resume = {local_args.opt_resume}")
-        checkpoint = torch.load(local_args.opt_resume)
+    if main_args.opt_resume is not None:
+        print(f"INFO: resuming from check point. resume = {main_args.opt_resume}")
+        checkpoint = torch.load(main_args.opt_resume)
         epoch0 = checkpoint["epoch"]
         loss0 = checkpoint["loss"]
         cp_state_dict= checkpoint["optimizer_state_dict"]
         cp_opt_params= cp_state_dict["param_groups"][0]
         cp_opt_history= cp_state_dict["state"][cp_opt_params["params"][0]]
-        if local_args.opt_resume_override_params:
+        if main_args.opt_resume_override_params:
             cp_opt_params["lr"] = opt_args.lr
             cp_opt_params["max_iter"] = opt_args.max_iter_per_epoch
             cp_opt_params["tolerance_grad"] = opt_args.tolerance_grad
@@ -144,7 +145,7 @@ def optimize_state(state, ctm_env_init, loss_fn, local_args, obs_fn=None, post_p
 
         return loss
     
-    for epoch in range(local_args.opt_max_iter):
+    for epoch in range(main_args.opt_max_iter):
         # checkpoint the optimizer
         # checkpointing before step, guarantees the correspondence between the wavefunction
         # and the last computed value of loss t_data["loss"][-1]
@@ -160,4 +161,4 @@ def optimize_state(state, ctm_env_init, loss_fn, local_args, obs_fn=None, post_p
 
     # optimization is over, store the last checkpoint
     store_checkpoint(checkpoint_file, state, optimizer, \
-        local_args.opt_max_iter, t_data["loss"][-1])
+        main_args.opt_max_iter, t_data["loss"][-1])

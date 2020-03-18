@@ -14,7 +14,7 @@ class ENV_C4V():
         :type ctm_args: CTMARGS
         :type global_args: GLOBALARGS
 
-        Assuming c4v symmetric single-site ``state`` create corresponding half-row(column) tensor T 
+        Assuming C4v symmetric single-site ``state`` create corresponding half-row(column) tensor T 
         and corner tensor C. The corner tensor has dimensions :math:`\chi \times \chi`
         and the half-row(column) tensor has dimensions :math:`\chi \times \chi \times D^2`::
 
@@ -71,7 +71,7 @@ def init_env(state, env, ctm_args=cfg.ctm_args):
     :type ctm_args: CTMARGS
 
     Initializes the environment `env` according to one of the supported options specified 
-    inside `CTMARGS.ctm_env_init_type` [TODO link here]
+    inside :class:`CTMARGS.ctm_env_init_type <config.CTMARGS>`
     
  
     * CONST - C and T tensors have all their elements intialized to a value 1

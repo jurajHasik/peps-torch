@@ -1,6 +1,9 @@
 Generic iPEPS
 =============
 
+CTMRG algorithm, reduced density matrices and correlation functions 
+for generic iPEPS
+
 .. toctree::
 
     generic/env

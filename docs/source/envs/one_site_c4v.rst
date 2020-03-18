@@ -1,6 +1,9 @@
 1-site C4v iPEPS
 ================
 
+Specialized CTMRG algorithm, reduced density matrices and correlation functions 
+for single-site (C4v) symmetric iPEPS
+
 .. toctree::
     :glob:
 

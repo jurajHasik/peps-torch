@@ -1,6 +1,11 @@
 Configuration
 =============
 
+Main
+----
+
+.. autoclass:: config.MAINARGS
+
 Global
 ------
 
