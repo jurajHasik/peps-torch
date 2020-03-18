@@ -79,7 +79,7 @@ def main():
         # the scope of loss_fn
         state= IPEPS_C4V(state.sites[(0,0)])
         state.sites[(0,0)]= make_c4v_symm(state.sites[(0,0)])
-        state.sites[(0,0)]= state.sites[(0,0)]/torch.max(state.sites[(0,0)])
+        state.sites[(0,0)]= state.sites[(0,0)]/state.sites[(0,0)].norm()
 
         # possibly re-initialize the environment
         if cfg.opt_args.opt_ctm_reinit:
@@ -98,6 +98,7 @@ def main():
         loss= opt_context["loss_history"]["loss"][-1]
         obs_values, obs_labels = model.eval_obs(state,ctm_env)
         print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
+        log.info(f"Norm(site): {state.site().norm()}")
 
     def post_proc(state, ctm_env, opt_context):
         symm, max_err= verify_c4v_symm(state.site())

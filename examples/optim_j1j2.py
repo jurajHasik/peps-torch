@@ -160,6 +160,7 @@ def main():
         loss= opt_context["loss_history"]["loss"][-1]
         obs_values, obs_labels = model.eval_obs(state,ctm_env)
         print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
+        log.info("Norm(sites): "+", ".join([f"{t.norm()}" for c,t in state.sites.items()]))
 
     # optimize
     optimize_state(state, ctm_env, loss_fn, obs_fn=obs_fn)
