@@ -168,6 +168,7 @@ def main():
             conv_check=ctmrg_conv_energy, ctm_args=cfg.ctm_args)
 
         # test positive definitnes of 2x2 rdm in aux space
+        test_symm_aux_C2x2_LU(C, T)
         rdm2x2aux= aux_rdm2x2(state_sym, ctm_env)
         # reshape into matrix
         rdm2x2aux= rdm2x2aux.view([args.bond_dim**8]*2)
@@ -183,6 +184,7 @@ def main():
         # print first five positive evs:
         print(f"D_symm    top {D[-5:-1].tolist()}")
         print(f"D_orig_re top {D_orig_re[-5:-1].tolist()}")
+        rdm2x2aux= rdm2x2aux.view([args.bond_dim]*16)
 
         # test properties of physical rdm
         rdm2x2phys= rdm2x2(state_sym, ctm_env, sym_pos_def=False)
@@ -218,6 +220,13 @@ def main():
         energy0U= energy0U.permute(4,5,0,6,7,1,8,9,2,10,11,3).contiguous()
         energy0U= fidelity_rdm2x2(energy0U, state_sym)
         print(f"energyU0: {energy0U/n} {energy0U} {n}")
+        prdm2= fill_bra_aux_rdm2x2(rdm2x2aux, state_sym)
+        n2= fidelity_rdm2x2(prdm2, state_sym)
+        energy0U_2= torch.tensordot(hp_rot,prdm2,([4,5,6,7],[2,5,8,11]))
+        energy0U_2= energy0U_2.permute(4,5,0,6,7,1,8,9,2,10,11,3).contiguous()
+        energy0U_2= fidelity_rdm2x2(energy0U_2, state_sym)
+        print(f"energyU0_2: {energy0U_2/n2} {energy0U_2} {n2}")
+
         # U|state_0>_ENV
         state0U= torch.tensordot(tg,prdm,([4,5,6,7],[2,5,8,11]))
         state0U= state0U.permute(4,5,0,6,7,1,8,9,2,10,11,3).contiguous()
