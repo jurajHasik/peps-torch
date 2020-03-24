@@ -205,7 +205,7 @@ class SGD_MOD(SGD):
         if weight_decay != 0:
             d_p.add_(weight_decay, p.data)
         if momentum != 0:
-            if self._momentum_buffer:
+            if self._momentum_buffer==None:
                 buf = self._momentum_buffer = torch.clone(d_p).detach()
             else:
                 buf = self._momentum_buffer

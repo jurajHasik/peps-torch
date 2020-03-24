@@ -139,17 +139,19 @@ def main():
             + model.j2*(h2x2_SS.permute(0,2,3,1,4,6,7,5) + h2x2_SS.permute(2,0,1,3,6,4,5,7))
     hp= hp.contiguous()
 
-    tau=args.itevol_step
+    tau=0.0
     tg= hp.view(model.phys_dim**4,model.phys_dim**4)
     tg_d, tg_u= torch.symeig(tg, eigenvectors=True)
     tg= tg_u @ torch.diag(torch.exp(-tau * tg_d)) @ tg_u.t()
     tg2= tg @ tg
+    # tg= torch.eye(model.phys_dim**4, dtype=state.dtype, device=state.device)
+    # tg2= torch.eye(model.phys_dim**4, dtype=state.dtype, device=state.device)
     tg= tg.view(tuple([model.phys_dim]*8))
     tg2= tg2.view(tuple([model.phys_dim]*8))
 
     rot_op= s2.BP_rot()
-    # id4= torch.eye(model.phys_dim**4,dtype=model.dtype,device=model.device)
-    # id4= id4.view(tuple([model.phys_dim]*8)).contiguous()
+    id4= torch.eye(model.phys_dim**4, dtype=state.dtype, device=state.device)
+    id4= id4.view(tuple([model.phys_dim]*8))
     hp_rot= torch.einsum('ijklabcd,im,ln,ay,dv->mjknybcv',hp,rot_op,rot_op,rot_op,rot_op)
     tg= torch.einsum('ijklabcd,im,ln,ay,dv->mjknybcv',tg,rot_op,rot_op,rot_op,rot_op)
     tg2= torch.einsum('ijklabcd,im,ln,ay,dv->mjknybcv',tg2,rot_op,rot_op,rot_op,rot_op)
@@ -166,88 +168,88 @@ def main():
         ctm_env, *ctm_log= ctmrg_c4v.run(state_sym, ctm_env, 
             conv_check=ctmrg_conv_energy, ctm_args=cfg.ctm_args)
 
-        # test positive definitnes of 2x2 rdm in aux space
-        # rdm2x2aux= aux_rdm2x2(state_sym, ctm_env)
-        # # reshape into matrix
-        # rdm2x2aux= rdm2x2aux.view([args.bond_dim**8]*2)
-        # rdm2x2aux_symm= 0.5*(rdm2x2aux+rdm2x2aux.t())
-        # rdm2x2aux_asymm= 0.5*(rdm2x2aux-rdm2x2aux.t())
-        # print(f"rdm2x2aux_symm {rdm2x2aux_symm.norm()} rdm2x2aux_asymm {rdm2x2aux_asymm.norm()}")
-        # D, U= torch.symeig(rdm2x2aux_symm)
-        # print(D)
+        # 2a) prepare imag-time evol step - build mixed reduced density matrix
+        #    without on-site tensors only at single vertex
+        #   _______________________
+        #  |a_a_a___________a______|   <=> C--T--T--C              /
+        #   0 1 2       |  |  |  |         |  |  |  |       A = --a--
+        #  s0 s1 s2     6  7  8  9         T--A--A--T            /|s0
+        #                                  |  |  |  |           
+        #  s0' s1' s2' 10 11 12 13         T--A-- --T             |/s0'
+        #   3 4 5_______|  |  |  |_        |  |  |  |           --a-- 
+        #  |a_a_a__________a_______|       C--T--T--C  where     /
+        rdm2x2_x1= rdm2x2_x1site(state_sym, ctm_env)
+        # test_rdm2x2_x1(rdm2x2_x1, state_sym.site().size()[0], state_sym.site().size()[1])
+        spd_2x2_x1, cnum= rdm2x2_x1_symm_posdef_normalize(rdm2x2_x1, state_sym.site().size()[0], \
+            state_sym.site().size()[1],pos_def=True)
+        print(f"cnum {cnum}")
+        # test_rdm2x2_x1_vs_rdm2x2(hp_rot, rdm2x2_x1, spd_2x2_x1, state_sym, ctm_env)
 
-        # 2) prepare imag-time evol step
-        prdm= partial_rdm2x2(state_sym, ctm_env)
-        # normalization
-        n= fidelity_rdm2x2(prdm, state_sym)
-        assert n > 0, "norm given by 2x2 rdm is not positive"
-        # apply 4-site operator operator
-        # 
-        #    0__1__2___3
-        #    |____op___|
-        #    4  5  6   7
-        #  __2__5__8__11__       __0__1__2__3___
-        # |_____prdm______| =>  |_____prdm______| 
-        # 0 1 3 4 6 7 9  10     4 5 6 7 8 9 10 11
-        # test
-        energy0U= torch.tensordot(hp_rot,prdm,([4,5,6,7],[2,5,8,11]))
-        energy0U= energy0U.permute(4,5,0,6,7,1,8,9,2,10,11,3).contiguous()
-        energy0U= fidelity_rdm2x2(energy0U, state_sym)
-        print(f"energyU0: {energy0U/n} {energy0U} {n}")
-        # U|state_0>_ENV
-        state0U= torch.tensordot(tg,prdm,([4,5,6,7],[2,5,8,11]))
-        state0U= state0U.permute(4,5,0,6,7,1,8,9,2,10,11,3).contiguous()
-        # <state_0|UU|state_0>_ENV
-        n0UU= torch.tensordot(tg2,prdm,([4,5,6,7],[2,5,8,11]))
-        n0UU= n0UU.permute(4,5,0,6,7,1,8,9,2,10,11,3).contiguous()
-        n0UU= fidelity_rdm2x2(n0UU, state_sym)
+        # 2b) insert gate to create effective single-site reduced density matrix
+        #   _____________________
+        #  |_____________________|  
+        #   0 1 2       6 7 8 9->2 3 4 5 
+        #   0_1_2__3->0
+        #  |__4site__|
+        #   4 5 6  7->1
+        #   3 4 5______10_11_12_13->6 7 8 9
+        #  |_____________________|
+        #
+        # <state_0|UU|state_0>
+        norm0UU_x1= torch.tensordot(id4,spd_2x2_x1,([0,1,2,4,5,6],[0,1,2,3,4,5]))
+        norm0UU_x1= torch.einsum('ijmnopqrst,imnop->jqrst',norm0UU_x1,state_sym.site())
+        norm0UU_x1= torch.einsum('jqrst,jqrst',norm0UU_x1,state_sym.site())
 
-        state_trial= to_ipeps_c4v(state_sym, normalize=True)
+        rdm1U0_x1= torch.tensordot(id4,spd_2x2_x1,([0,1,2,4,5,6],[0,1,2,3,4,5]))
+        # <state_1_x1|U|state_0>
+        rdm1U0_x1_ket= torch.einsum('ijmnopqrst,jqrst->imnop',rdm1U0_x1,state_sym.site())
+        # <state0|U|state_1_x1>
+        rdm0U1_x1_bra= torch.einsum('ijmnopqrst,imnop->jqrst',rdm1U0_x1,state_sym.site())
+
+        # <state_1_x1|state_1_x1>
+        rdm1_x1= torch.einsum('ijkijkmnopqrst->mnopqrst',spd_2x2_x1)
+
+        A= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+            dtype=cfg.global_args.dtype, device=cfg.global_args.device)
+        # A= make_c4v_symm(A)
+        # A= A/torch.max(torch.abs(A))
+        A= state_sym.site() + A*0.1
+        A= A/A.norm()
+        state_rnd= IPEPS_C4V(A)
+        state_rnd= to_ipeps_c4v(state_rnd, normalize=True)
+        print(state_sym.site().norm())
         def loss_fn(state, opt_context):
-            state_sym= to_ipeps_c4v(state, normalize=False)
-            # state_sym= state
-            # print(state_sym.site().norm())
+            # state_sym= to_ipeps_c4v(state, normalize=False)
+            state_sym= state
 
-            # a) compute overlap inserting 2x2 "bra" 
-            overlap1U0= fidelity_rdm2x2(state0U, state_sym)
-            n1= partial_rdm2x2(state_sym, ctm_env)
-            n1= fidelity_rdm2x2(n1, state_sym)
+            # 1) compute norm <state_1|state_1>
+            norm1_x1= torch.einsum('mnopqrst,iqrst->mnopi',rdm1_x1,state_sym.site())
+            # exact grad
+            g= norm1_x1.permute(4,0,1,2,3).contiguous() - rdm1U0_x1_ket
+            norm1_x1= torch.einsum('mnopi,imnop',norm1_x1,state_sym.site())
+            
+            # 2) overlaps <state_1|U|state_0>, <state0|U|state_1>
+            overlap1U0_x1= torch.einsum('imnop,imnop',rdm1U0_x1_ket,state_sym.site())
+            overlap0U1_x1= torch.einsum('jqrst,jqrst',rdm0U1_x1_bra,state_sym.site())
+            
+            # loss= 1. - (overlap1U0_x1+overlap0U1_x1)*torch.rsqrt(norm1_x1*norm0UU_x1) + 1.
+            loss= norm1_x1 - overlap1U0_x1 - overlap0U1_x1 + norm0UU_x1
+            # loss= torch.einsum('imnop,imnop',g,g)
+            # print(f"{dist} {loss} {norm1_x1}")
 
-            # loss= 1 - 2*overlap1U0/(torch.sqrt(n1)*torch.sqrt(n0UU)) + 1
-            loss= n1 - 2*overlap1U0 + n0UU
-            g= None
-            # print(f"{loss} {n1} {overlap1U0} {n0UU} {state_sym.site().norm()}")
             return loss, g
 
-        itevol_plaquette_step(state_trial, loss_fn)
+        itevol_plaquette_step(state_rnd, loss_fn, args)
 
-        # compute observable
-        # o= fidelity_rdm2x2(prdm, state_sym)
-        # print(f"{n} {o} {o/n}")
-        # symm, max_err= verify_c4v_symm_A1(state_sym.site())
-        # print(f"post_proc {symm} {max_err}")
-        state_trial= to_ipeps_c4v(state_trial, normalize=True)
-        init_env(state_trial, ctm_env)
+        state_rnd= to_ipeps_c4v(state_rnd, normalize=True)
+        init_env(state_rnd, ctm_env)
 
         # 3) compute environment of evolved state by CTMRG
-        ctm_env, *ctm_log= ctmrg_c4v.run(state_trial, ctm_env, 
+        ctm_env, *ctm_log= ctmrg_c4v.run(state_rnd, ctm_env, 
             conv_check=ctmrg_conv_energy, ctm_args=cfg.ctm_args)
 
         # 4) compute observables
-        obs_fn(state_trial, ctm_env, epoch)
-
-        # 3) check convergence
-        state= to_ipeps_c4v(state_trial, normalize=True)
-
-    # compute final observables for the best variational state
-    outputstatefile= args.out_prefix+"_state.json"
-    state= read_ipeps_c4v(outputstatefile)
-    ctm_env = ENV_C4V(args.chi, state)
-    init_env(state, ctm_env)
-    ctm_env, *ctm_log = ctmrg_c4v.run(state, ctm_env, conv_check=ctmrg_conv_energy)
-    opt_energy = energy_f(state,ctm_env)
-    obs_values, obs_labels = model.eval_obs(state,ctm_env)
-    print(", ".join([f"{args.opt_max_iter}",f"{opt_energy}"]+[f"{v}" for v in obs_values]))
+        obs_fn(state_rnd, ctm_env, epoch)
 
 if __name__=='__main__':
     if len(unknown_args)>0:

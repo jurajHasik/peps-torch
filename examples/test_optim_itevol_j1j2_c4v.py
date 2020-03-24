@@ -10,8 +10,8 @@ from ctm.one_site_c4v import ctmrg_c4v
 from ctm.one_site_c4v.rdm_c4v import *
 from ctm.one_site_c4v import transferops_c4v
 from models import j1j2
-from optim.itevol_optim_bfgs import itevol_plaquette_step
-# from optim.itevol_optim_sgd import itevol_plaquette_step
+# from optim.itevol_optim_bfgs import itevol_plaquette_step
+from optim.itevol_optim_sgd import itevol_plaquette_step
 import json
 import unittest
 import logging
@@ -166,15 +166,15 @@ def main():
         ctm_env, *ctm_log= ctmrg_c4v.run(state_sym, ctm_env, 
             conv_check=ctmrg_conv_energy, ctm_args=cfg.ctm_args)
 
-        # test positive definitnes of 2x2 rdm in aux space
-        # rdm2x2aux= aux_rdm2x2(state_sym, ctm_env)
-        # # reshape into matrix
-        # rdm2x2aux= rdm2x2aux.view([args.bond_dim**8]*2)
-        # rdm2x2aux_symm= 0.5*(rdm2x2aux+rdm2x2aux.t())
-        # rdm2x2aux_asymm= 0.5*(rdm2x2aux-rdm2x2aux.t())
-        # print(f"rdm2x2aux_symm {rdm2x2aux_symm.norm()} rdm2x2aux_asymm {rdm2x2aux_asymm.norm()}")
-        # D, U= torch.symeig(rdm2x2aux_symm)
-        # print(D)
+        # 
+        rdm2x2aux= aux_rdm2x2(state_sym, ctm_env)
+        # reshape into matrix
+        rdm2x2aux= rdm2x2aux.view([args.bond_dim**8]*2)
+        rdm2x2aux_symm= 0.5*(rdm2x2aux+rdm2x2aux.t())
+        rdm2x2aux_asymm= 0.5*(rdm2x2aux-rdm2x2aux.t())
+        print(f"rdm2x2aux_symm {rdm2x2aux_symm.norm()} rdm2x2aux_asymm {rdm2x2aux_asymm.norm()}")
+        D, U= torch.symeig(rdm2x2aux_symm)
+        print(D)
 
         # 2) prepare imag-time evol step
         prdm= partial_rdm2x2(state_sym, ctm_env)
@@ -202,7 +202,14 @@ def main():
         n0UU= n0UU.permute(4,5,0,6,7,1,8,9,2,10,11,3).contiguous()
         n0UU= fidelity_rdm2x2(n0UU, state_sym)
 
-        state_trial= to_ipeps_c4v(state_sym, normalize=True)
+        A= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+            dtype=cfg.global_args.dtype, device=cfg.global_args.device)
+        # A= make_c4v_symm(A)
+        # A= A/torch.max(torch.abs(A))
+        A= state_sym.site() + A*0.02
+        A= A/A.norm()
+        state_trial= IPEPS_C4V(A)
+        state_trial= to_ipeps_c4v(state_trial, normalize=True)
         def loss_fn(state, opt_context):
             state_sym= to_ipeps_c4v(state, normalize=False)
             # state_sym= state
@@ -216,7 +223,7 @@ def main():
             # loss= 1 - 2*overlap1U0/(torch.sqrt(n1)*torch.sqrt(n0UU)) + 1
             loss= n1 - 2*overlap1U0 + n0UU
             g= None
-            # print(f"{loss} {n1} {overlap1U0} {n0UU} {state_sym.site().norm()}")
+            print(f"{loss} {n1} {overlap1U0} {n0UU} {state_sym.site().norm()}")
             return loss, g
 
         itevol_plaquette_step(state_trial, loss_fn)
@@ -237,7 +244,6 @@ def main():
         obs_fn(state_trial, ctm_env, epoch)
 
         # 3) check convergence
-        state= to_ipeps_c4v(state_trial, normalize=True)
 
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"
