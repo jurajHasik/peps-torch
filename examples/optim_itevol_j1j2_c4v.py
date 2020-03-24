@@ -156,6 +156,7 @@ def main():
 
     # TODO optimize
     for epoch in range(args.opt_max_iter):
+        log.info(f"ITEVOL epoch {epoch}")
         state_sym= to_ipeps_c4v(state, normalize=True)
 
         # possibly re-initialize the environment
