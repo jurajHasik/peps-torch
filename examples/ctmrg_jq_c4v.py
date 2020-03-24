@@ -28,6 +28,7 @@ def main():
     cfg.configure(args)
     cfg.print_config()
     torch.set_num_threads(args.omp_cores)
+    torch.manual_seed(args.seed)
     
     if args.c4v_type == "TI":
         model= jq.JQ_C4V(j1=args.j1, q=args.q)

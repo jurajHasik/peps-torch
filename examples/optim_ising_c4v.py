@@ -23,6 +23,7 @@ def main():
     cfg.configure(args)
     cfg.print_config()
     torch.set_num_threads(args.omp_cores)
+    torch.manual_seed(args.seed)
 
     model = ising.ISING_C4V(hx=args.hx, q=args.q)
     

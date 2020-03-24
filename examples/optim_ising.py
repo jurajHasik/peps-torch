@@ -22,6 +22,7 @@ def main():
     cfg.configure(args)
     cfg.print_config()
     torch.set_num_threads(args.omp_cores)
+    torch.manual_seed(args.seed)
 
     model = ising.ISING(hx=args.hx, q=args.q)
     

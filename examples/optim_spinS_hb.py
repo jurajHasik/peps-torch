@@ -24,6 +24,7 @@ def main():
     cfg.configure(args)
     cfg.print_config()
     torch.set_num_threads(args.omp_cores)
+    torch.manual_seed(args.seed)
 
     model = hb.HB(spin_s=args.spinS, j1=args.j1, k1=args.k1)
     

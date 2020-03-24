@@ -23,6 +23,7 @@ def main():
     cfg.configure(args)
     cfg.print_config()
     torch.set_num_threads(args.omp_cores)
+    torch.manual_seed(args.seed)
 
     model= j1j2.J1J2_C4V_BIPARTITE(j1=args.j1, j2=args.j2)
     energy_f= model.energy_1x1_lowmem

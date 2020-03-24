@@ -27,7 +27,7 @@ python examples/ctmrg_j1j2_c4v.py -instate ex-c4v_state.json -chi 48 -j2 0.3 -co
 To instead optimize iPEPS with 2x2 unit cell containing four distinct on-site tensors run
 
 ```
-python examples/optim_j1j2.py -tiling 4SITE -bond_dim 2 -chi 32 -seed 100 -j2 0.3 -CTMARGS_fwd_checkpoint_move -OPTARGS_tolerance_grad 1.0e-8 -out_prefix ex-4site
+python examples/optim_j1j2.py -tiling 4SITE -bond_dim 2 -chi 32 -seed 123 -j2 0.3 -CTMARGS_fwd_checkpoint_move -OPTARGS_tolerance_grad 1.0e-8 -out_prefix ex-4site
 ```
 
 The memory requirements of AD would increasly sharply if all the intermediate variables are stored.
