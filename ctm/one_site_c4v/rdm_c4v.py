@@ -1388,7 +1388,15 @@ def aux_rdm2x2(state, env, force_cpu=False, verbosity=0):
     # 0 2               2 0
     #   V               V V
     #   1               4 3
-    aC2x2 = torch.tensordot(aC2x2, aC2x2, ([1],[1]))
+    # aC2x2 = torch.tensordot(aC2x2, aC2x2, ([1],[1]))
+    # =====================
+    # aC2x2----1 0----aC2x2
+    # |_  \          /   _|
+    # | |  3->2  4<-2   | |
+    # 0 2               3 1
+    #   V               V V
+    #   1               5 3
+    aC2x2 = torch.tensordot(aC2x2, aC2x2, ([1],[0]))
     if not is_cpu and verbosity>0:
         print(f"GPU-MEM pRDM2X2 MAX:{torch.cuda.max_memory_allocated(loc_device)}"\
             + f" CURRENT:{torch.cuda.memory_allocated(loc_device)}")
@@ -1399,8 +1407,17 @@ def aux_rdm2x2(state, env, force_cpu=False, verbosity=0):
     # | | \          / | |       | | \          / | |    |    1    3    |
     # 0 1  2        5  4 3       | 0  1        3  2 |    T--0        2--T
     # 0                  3  =>   |                  | => |              |
-    # | 1  2        5  4 |       | 4  5         7 6 |    T--4        6--T
+    # | 1  2        5  4 |       | 4  5        7  6 |    T--4        6--T
     # |_|_/__________\_|_|       |_|_/__________\_|_|    |    5    7    |
+    # |_______aC2x2______|       |_______aC2x2______|    C----T----T----C
+    # ===================================================================
+    #  __________________         __________________
+    # |_______aC2x2______|       |__________________|    C----T----T----C
+    # | | \          / | |       | | \          / | |    |    1    2    |
+    # 0 1  2        4  5 3       | 0  1        2  3 |    T--0        3--T
+    # 0                  3  =>   |                  | => |              |
+    # | 1  2        4  5 |       | 4  5        6  7 |    T--4        7--T
+    # |_|_/__________\_|_|       |_|_/__________\_|_|    |    5    6    |
     # |_______aC2x2______|       |_______aC2x2______|    C----T----T----C
     aC2x2 = torch.tensordot(aC2x2,aC2x2,([0,3],[0,3]))
     if not is_cpu and verbosity>0:
@@ -1408,7 +1425,9 @@ def aux_rdm2x2(state, env, force_cpu=False, verbosity=0):
             + f" CURRENT:{torch.cuda.memory_allocated(loc_device)}")
 
     # permute such, that aux-index increases from "up" in the anti-clockwise direction
-    aC2x2 = aC2x2.permute(1,0,4,5,7,6,2,3).contiguous()
+    # aC2x2 = aC2x2.permute(1,0,4,5,7,6,2,3).contiguous()
+    # ===================================================
+    aC2x2 = aC2x2.permute(1,0,4,5,6,7,3,2).contiguous()
     # reshape and form bra and ket index
     aC2x2 = aC2x2.view([dimsa[1]]*16).permute(0,2,4,6,8,10,12,14, 1,3,5,7,9,11,13,15).contiguous()
     if not is_cpu and verbosity>0:
@@ -1428,22 +1447,22 @@ def _get_aux_C2x2_LU(C, T, verbosity=0):
         print(f"GPU-MEM RDM2X1_diag MAX:{torch.cuda.max_memory_allocated(loc_device)}"\
             + f" CURRENT:{torch.cuda.memory_allocated(loc_device)}")
 
-    # C------T--1->0
-    # 0      2->1
+    # C------T--1->2
+    # 0      2->3
     # 0
-    # T--2->3
-    # 1->2
-    C2x2 = torch.tensordot(C2x2, T, ([0],[0]))
+    # T--2->1
+    # 1->0
+    C2x2 = torch.tensordot(T, C2x2, ([0],[0]))
     if not is_cpu and verbosity>0:
         print(f"GPU-MEM RDM2X1_diag MAX:{torch.cuda.max_memory_allocated(loc_device)}"\
             + f" CURRENT:{torch.cuda.memory_allocated(loc_device)}")
 
-    # |C2x2____|--0    |C2x2____|--1  
-    # | |     1        | |     3 
-    # |_|--3        => |_|--2
-    #  2                0
+    # |C2x2____|--2    |C2x2____|--1  
+    # | |     3        | |     3 
+    # |_|--1        => |_|--2
+    #  0                0
     #
-    C2x2= C2x2.permute(2,0,3,1).contiguous()
+    C2x2= C2x2.permute(0,2,1,3).contiguous()
 
     return C2x2
 
