@@ -213,7 +213,7 @@ class J1J2():
             A3--1B   B3--1A   C3--1D   D3--1C
             2    2   2    2   2    2   2    2
             0    0   0    0   0    0   0    0
-            C3--1D & D3--1C & A3--1B & B3--1A 
+            C3--1D & D3--1C & A3--1B & B3--1A
         """
         rdm2x2_00= rdm.rdm2x2((0,0),state,env)
         rdm2x2_10= rdm.rdm2x2((1,0),state,env)

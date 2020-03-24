@@ -4,7 +4,7 @@ import logging
 log = logging.getLogger(__name__)
 import torch
 #from memory_profiler import profile
-from optim import lbfgs_modified
+from optim import sgd_modified
 import config as cfg
 
 def itevol_plaquette_step(state1, loss_fn, post_proc=None, main_args=cfg.main_args,
@@ -37,10 +37,8 @@ def itevol_plaquette_step(state1, loss_fn, post_proc=None, main_args=cfg.main_ar
     parameters= state1.get_parameters()
     for A in parameters: A.requires_grad_(True)
 
-    optimizer = lbfgs_modified.LBFGS_MOD(parameters, max_iter=opt_args.max_iter_per_epoch, lr=opt_args.lr, \
-        tolerance_grad=opt_args.itevol_tolerance_grad, tolerance_change=opt_args.itevol_tolerance_change, \
-        history_size=opt_args.history_size, line_search_fn=opt_args.line_search, \
-        line_search_eps=opt_args.tol_line_search)
+    optimizer = sgd_modified.SGD_MOD(parameters, lr=opt_args.lr, momentum=opt_args.momentum, \
+        line_search_fn=opt_args.line_search, line_search_eps=opt_args.tol_line_search)
 
     #@profile
     def closure():
@@ -64,7 +62,8 @@ def itevol_plaquette_step(state1, loss_fn, post_proc=None, main_args=cfg.main_ar
         # dims= g.size()
         # for i in range(dims[0]*(dims[1]**4)):
         #     print(f"{state1.site().grad.view(dims[0]*(dims[1]**4))[i]} {g.view(dims[0]*(dims[1]**4))[i]}")
-        # print(f"g_ad-g_exact diff {(state1.site().grad-2.*g).norm()}")
+        # print(f"g_ad-g_exact diff {(state1.site().grad-2.*g).norm()} {state1.site().grad.norm()} {state1.site().norm()}")
+        print(f"g_ad {state1.site().grad.norm()} {state1.site().norm()}")
 
         return loss
     
@@ -74,8 +73,6 @@ def itevol_plaquette_step(state1, loss_fn, post_proc=None, main_args=cfg.main_ar
         context["line_search"]=True
 
         # 1) evaluate loss
-        # loc_context= dict({"ctm_args":loc_ctm_args, "opt_args":loc_opt_args, "loss_history": t_data,
-        #     "line_search": True})
         loss, g= loss_fn(state1, context)
 
         # 2) store current state if the loss improves
@@ -97,15 +94,15 @@ def itevol_plaquette_step(state1, loss_fn, post_proc=None, main_args=cfg.main_ar
             log_entry=dict({f"fid_LS_{epoch}": t_data["loss_ls"]})
             log.info(json.dumps(log_entry))
 
+        if epoch>1 and epoch%(opt_args.itevol_max_iter/100)==0: 
+            log.info(f"{epoch} {t_data['loss'][-1]} {state1.site().norm()} "\
+                + f"{t_data['loss'][-1] - t_data['loss'][-2]} {t_data['grad_max'][-1]}")
+
         # externalize optimization termination conditions here
         if len(t_data["loss"])>1 and abs(t_data["loss"][-1] - t_data["loss"][-2]) < opt_args.itevol_tolerance_change:
             break
         if t_data["grad_max"][-1] <= opt_args.itevol_tolerance_grad:
             break
-
-        if epoch>1 and epoch%(opt_args.itevol_max_iter/100)==0: 
-            print(f"{epoch} {t_data['loss'][-1]} {state1.site().norm()} "\
-                + f"{t_data['loss'][-1] - t_data['loss'][-2]} {t_data['grad_max'][-1]}")
             # if len(t_data['loss_ls'])>0: print(f"{epoch} {t_data['loss_ls'][-1]}")
 
         # reset line search history
