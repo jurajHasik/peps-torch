@@ -183,6 +183,22 @@ def main():
         print(f"D_symm    top {D[-5:-1].tolist()}")
         print(f"D_orig_re top {D_orig_re[-5:-1].tolist()}")
 
+        # test properties of physical rdm
+        rdm2x2phys= rdm2x2(state_sym, ctm_env, sym_pos_def=False)
+        rdm2x2phys= rdm2x2phys.view([model.phys_dim**4]*2)
+        rdm2x2phys_symm= 0.5*(rdm2x2phys+rdm2x2phys.t())
+        rdm2x2phys_asymm= 0.5*(rdm2x2phys-rdm2x2phys.t())
+        print(f"rdm2x2phys_symm {rdm2x2phys_symm.norm()} rdm2x2phys_asymm {rdm2x2phys_asymm.norm()}")
+        D, U= torch.symeig(rdm2x2phys_symm)
+        D_orig, U_orig= torch.eig(rdm2x2phys)
+        D_orig_re, perm= torch.sort(D_orig[:,0],descending=False)
+        # print first five negative evs:
+        print(f"RHO_symm    low {D[0:4].tolist()}")
+        print(f"RHO_orig_re low {D_orig_re[0:4].tolist()}")
+        # print first five positive evs:
+        print(f"RHO_symm    top {D[-5:-1].tolist()}")
+        print(f"RHO_orig_re top {D_orig_re[-5:-1].tolist()}")
+
         # 2) prepare imag-time evol step
         prdm= partial_rdm2x2(state_sym, ctm_env)
         # normalization

@@ -813,7 +813,7 @@ def _rdm2x2_NNN_lowmem(state,env,f_c2x2,force_cpu=False,verbosity=0):
 
     return rdm
 
-def rdm2x2(state, env, verbosity=0):
+def rdm2x2(state, env, sym_pos_def=True, verbosity=0):
     r"""
     :param state: underlying 1-site C4v symmetric wavefunction
     :param env: C4v symmetric environment corresponding to ``state``
@@ -933,15 +933,15 @@ def rdm2x2(state, env, verbosity=0):
     # symmetrize
     dimsRDM= rdm.size()
     rdm= rdm.view(dimsRDM[0]**4,dimsRDM[0]**4)
-    rdm= 0.5*(rdm+rdm.t())
-    # TODO make pos-def ?
-    # eps=0.0
-    # with torch.no_grad():
-    #     D, U= torch.eig(rdm)
-    #     # check only real part
-    #     if D[:,0].min() < 0:
-    #         eps= D[:,0].min().abs()
-    # rdm+= eps*torch.eye(rdm.size()[0],dtype=rdm.dtype,device=rdm.device)
+    if sym_pos_def:
+        rdm= 0.5*(rdm+rdm.t())
+        # eps=0.0
+        # with torch.no_grad():
+        #     D, U= torch.eig(rdm)
+        #     # check only real part
+        #     if D[:,0].min() < 0:
+        #         eps= D[:,0].min().abs()
+        # rdm+= eps*torch.eye(rdm.size()[0],dtype=rdm.dtype,device=rdm.device)
 
     # normalize and reshape
     if verbosity>0: env.log(f"Tr(rdm2x2): {torch.trace(rdm)}\n")
