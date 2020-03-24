@@ -156,7 +156,6 @@ class TestLadders_VBS2x2(unittest.TestCase):
         cfg.configure(args)
         cfg.print_config()
         torch.set_num_threads(args.omp_cores)
-    torch.manual_seed(args.seed)
         
         model = coupledLadders.COUPLEDLADDERS(alpha=args.alpha)
         
@@ -203,7 +202,6 @@ class TestLadders_VBS1x2(unittest.TestCase):
         cfg.configure(args)
         cfg.print_config()
         torch.set_num_threads(args.omp_cores)
-    torch.manual_seed(args.seed)
         
         model = coupledLadders.COUPLEDLADDERS_D2_BIPARTITE(alpha=args.alpha)
         
