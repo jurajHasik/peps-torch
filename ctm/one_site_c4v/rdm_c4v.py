@@ -1436,6 +1436,75 @@ def aux_rdm2x2(state, env, force_cpu=False, verbosity=0):
 
     return aC2x2
 
+def fill_bra_aux_rdm2x2(a2x2, state, force_cpu=False, verbosity=0):
+    r"""
+    :param a2x2: reduced density matrix of 2x2 region in auxilliary space
+    :param state: underlying 1-site C4v symmetric wavefunction
+    :param force_cpu: execute on cpu
+    :param verbosity: logging verbosity
+    :type a2x2: torch.tensor
+    :type state: IPEPS_C4V
+    :type force_cpu: bool
+    :type verbosity: int
+    :return: 4-site auxilliary reduced density matrix
+    :rtype: torch.tensor
+    """
+
+    # index structure of a2x2
+    #
+    # C----T----T----C
+    # |    0,8  7,15 |
+    # T--1,9   6,14--T
+    # |              |
+    # T--2,10  5,13--T
+    # |    3,11 4,12 |
+    # C----T----T----C where 0-7 are "ket" and 8-15 "bra" aux-indices
+    
+    a= next(iter(state.sites.values()))
+    dimsA= a.size()
+    loc_device=a2x2.device
+    is_cpu= loc_device==torch.device('cpu')
+
+    # build 2x1 section of "bra"
+    # 
+    #      0       0          0    4
+    #    1/      1/         1/   5/
+    # 2--a--4 2--a--4 => 2--a----a--7
+    #    3       3          3    6
+    aa= torch.tensordot(a,a,([4],[2]))
+
+    # contract aa with a2x2
+    #
+    #          0   4                        12  14 
+    #      _1_/_5_/                     13_/_15_/
+    #     |___aa___|                   |___aa___|
+    #     2  3  6  7                   |  |  |  |  
+    # 8_9_10_11_12_13_14_15        8_9_|__|__|__|_10__11
+    # |_a2x2______________| =>     |_a2x2______________|
+    # 0 1 2  3  4  5  6  7         0 1 2  3  4  5  6  7
+    bra_a2x2= torch.tensordot(a2x2,aa,([10,11,12,13],[2,3,6,7]))
+
+    # contract bra_a2x2 with second aa
+    #
+    #          0   4
+    #      ___/___/____
+    # 1--|______aa_____|--5             0     7
+    # |   2 3    6    7   |             |     |
+    # |  /  |    |    |   |          C--T-----T-----C
+    # | |   | 12 | 14 |   |          |  |/10  |/11  |
+    # | |  13_/_15_/  |   |       1--T--a^+---a^+---T--6
+    # | |  |___aa___| |   |          |  |/8   |/9   |
+    # | |  |  |  |  | |   |       2--T--a^+---a^+---T--5
+    # 8_9_ |__|__|__|_10_11          |  |     |     |
+    # |_a2x2______________| =>       C--T-----T-----C  
+    #  0 1 2  3  4  5  6  7             3     4
+    bra_a2x2= torch.tensordot(bra_a2x2,aa,([8,9,10,11,13,15],[1,2,7,5,3,6]))
+
+    # permute into fidelity_rdm2x2 convention
+    bra_a2x2= bra_a2x2.permute(0,1,10,7,6,11,2,3,8,4,5,9).contiguous()
+
+    return bra_a2x2
+
 def _get_aux_C2x2_LU(C, T, verbosity=0):
     loc_device=C.device
     is_cpu= loc_device==torch.device('cpu')
@@ -1466,7 +1535,9 @@ def _get_aux_C2x2_LU(C, T, verbosity=0):
 
     return C2x2
 
-def test_symm_aux_C2x2_LU(C, T):
+def test_symm_aux_C2x2_LU(env):
+    C = env.C[env.keyC]
+    T = env.T[env.keyT]
     C2x2= _get_aux_C2x2_LU(C,T)
 
     tC2x2= C2x2.permute(1,0,3,2)
