@@ -21,6 +21,7 @@ def main():
     cfg.configure(args)
     cfg.print_config()
     torch.set_num_threads(args.omp_cores)
+    torch.manual_seed(args.seed)
     
     model = akltS2.AKLTS2()
     
@@ -170,6 +171,7 @@ class TestAKLT_BIPARTITE(unittest.TestCase):
     def test_ctmrg_AKLT_BIPARTITE(self):
         cfg.configure(args)
         torch.set_num_threads(args.omp_cores)
+    torch.manual_seed(args.seed)
         
         model = akltS2.AKLTS2()
         
@@ -228,6 +230,7 @@ class TestAKLT_4SITE(unittest.TestCase):
     def test_ctmrg_AKLT_4SITE(self):
         cfg.configure(args)
         torch.set_num_threads(args.omp_cores)
+    torch.manual_seed(args.seed)
         
         model = akltS2.AKLTS2()
         

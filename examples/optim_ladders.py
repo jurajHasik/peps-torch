@@ -26,6 +26,7 @@ def main():
     cfg.configure(args)
     cfg.print_config()
     torch.set_num_threads(args.omp_cores)
+    torch.manual_seed(args.seed)
     
     model = coupledLadders.COUPLEDLADDERS(alpha=args.alpha)
     
