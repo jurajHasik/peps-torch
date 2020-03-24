@@ -274,11 +274,9 @@ class LBFGS_MOD(LBFGS):
 
                     loss, flat_grad, t, ls_func_evals = _strong_wolfe(
                         obj_func, x_init, t, d, loss, flat_grad, gtd)
-                    log.info(f"LS final step: {t}")
                 else:
                     raise RuntimeError("unsupported line search")
                 
-                log.info(f"LS final step: {t}")
                 self._add_grad(t, d)
                 opt_cond = flat_grad.abs().max() <= tolerance_grad
                 

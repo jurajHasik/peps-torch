@@ -74,8 +74,6 @@ def itevol_plaquette_step(state1, loss_fn, post_proc=None, main_args=cfg.main_ar
         context["line_search"]=True
 
         # 1) evaluate loss
-        # loc_context= dict({"ctm_args":loc_ctm_args, "opt_args":loc_opt_args, "loss_history": t_data,
-        #     "line_search": True})
         loss, g= loss_fn(state1, context)
 
         # 2) store current state if the loss improves
@@ -83,30 +81,23 @@ def itevol_plaquette_step(state1, loss_fn, post_proc=None, main_args=cfg.main_ar
         if t_data["min_loss_ls"] > t_data["loss_ls"][-1]:
             t_data["min_loss_ls"]= t_data["loss_ls"][-1]
 
-        # 6) log opt metrics
-        # if opt_args.opt_logging:
-        #     log_entry=dict({"id_LS": len(t_data["loss"]), "loss": t_data["loss_ls"]})
-        #     log.info(json.dumps(log_entry))
-
         return loss
         
+    def log_progress(epoch,final=False):
+        if (epoch>1 and epoch%(opt_args.itevol_max_iter/100)==0) or final: 
+            log.info(f"{epoch} {t_data['loss'][-1]} {state1.site().norm()} "\
+                + f"{t_data['loss'][-1] - t_data['loss'][-2]} {t_data['grad_max'][-1]}")
+
     for epoch in range(opt_args.itevol_max_iter):
         optimizer.step_2c(closure, closure_linesearch)
 
-        if opt_args.opt_logging:
-            log_entry=dict({f"fid_LS_{epoch}": t_data["loss_ls"]})
-            log.info(json.dumps(log_entry))
-
         # externalize optimization termination conditions here
-        if len(t_data["loss"])>1 and abs(t_data["loss"][-1] - t_data["loss"][-2]) < opt_args.itevol_tolerance_change:
+        if len(t_data["loss"])>1 and \
+            abs(t_data["loss"][-1] - t_data["loss"][-2]) < opt_args.itevol_tolerance_change:
             break
         if t_data["grad_max"][-1] <= opt_args.itevol_tolerance_grad:
             break
-
-        if epoch>1 and epoch%(opt_args.itevol_max_iter/100)==0: 
-            print(f"{epoch} {t_data['loss'][-1]} {state1.site().norm()} "\
-                + f"{t_data['loss'][-1] - t_data['loss'][-2]} {t_data['grad_max'][-1]}")
-            # if len(t_data['loss_ls'])>0: print(f"{epoch} {t_data['loss_ls'][-1]}")
+        log_progress(epoch)
 
         # reset line search history
         t_data["loss_ls"]=[]
@@ -114,13 +105,7 @@ def itevol_plaquette_step(state1, loss_fn, post_proc=None, main_args=cfg.main_ar
 
         if post_proc is not None:
             post_proc(state1, context)
-
-    print(f"final loss: {t_data['loss'][-1]}")
-
-    # 3) log grad metrics for debugging
-    if opt_args.opt_logging:
-        log_entry=dict({"fid": t_data["loss"], "grad_max": t_data["grad_max"]})
-        log.info(json.dumps(log_entry))
+    log_progress(epoch,final=True)
 
     # turn of autograd
     for A in parameters: A.requires_grad_(False)

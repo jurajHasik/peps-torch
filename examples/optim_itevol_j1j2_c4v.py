@@ -167,14 +167,21 @@ def main():
             conv_check=ctmrg_conv_energy, ctm_args=cfg.ctm_args)
 
         # test positive definitnes of 2x2 rdm in aux space
-        # rdm2x2aux= aux_rdm2x2(state_sym, ctm_env)
-        # # reshape into matrix
-        # rdm2x2aux= rdm2x2aux.view([args.bond_dim**8]*2)
-        # rdm2x2aux_symm= 0.5*(rdm2x2aux+rdm2x2aux.t())
-        # rdm2x2aux_asymm= 0.5*(rdm2x2aux-rdm2x2aux.t())
-        # print(f"rdm2x2aux_symm {rdm2x2aux_symm.norm()} rdm2x2aux_asymm {rdm2x2aux_asymm.norm()}")
-        # D, U= torch.symeig(rdm2x2aux_symm)
-        # print(D)
+        rdm2x2aux= aux_rdm2x2(state_sym, ctm_env)
+        # reshape into matrix
+        rdm2x2aux= rdm2x2aux.view([args.bond_dim**8]*2)
+        rdm2x2aux_symm= 0.5*(rdm2x2aux+rdm2x2aux.t())
+        rdm2x2aux_asymm= 0.5*(rdm2x2aux-rdm2x2aux.t())
+        print(f"rdm2x2aux_symm {rdm2x2aux_symm.norm()} rdm2x2aux_asymm {rdm2x2aux_asymm.norm()}")
+        D, U= torch.symeig(rdm2x2aux_symm)
+        D_orig, U_orig= torch.eig(rdm2x2aux)
+        D_orig_re, perm= torch.sort(D_orig[:,0],descending=False)
+        # print first five negative evs:
+        print(f"D_symm    low {D[0:4].tolist()}")
+        print(f"D_orig_re low {D_orig_re[0:4].tolist()}")
+        # print first five positive evs:
+        print(f"D_symm    top {D[-5:-1].tolist()}")
+        print(f"D_orig_re top {D_orig_re[-5:-1].tolist()}")
 
         # 2) prepare imag-time evol step
         prdm= partial_rdm2x2(state_sym, ctm_env)
