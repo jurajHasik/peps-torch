@@ -168,7 +168,7 @@ def main():
             conv_check=ctmrg_conv_energy, ctm_args=cfg.ctm_args)
 
         # test positive definitnes of 2x2 rdm in aux space
-        test_symm_aux_C2x2_LU(C, T)
+        test_symm_aux_C2x2_LU(ctm_env)
         rdm2x2aux= aux_rdm2x2(state_sym, ctm_env)
         # reshape into matrix
         rdm2x2aux= rdm2x2aux.view([args.bond_dim**8]*2)
