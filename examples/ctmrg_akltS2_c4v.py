@@ -148,7 +148,6 @@ class TestAKLT(unittest.TestCase):
     def test_ctmrg_AKLT(self):
         cfg.configure(args)
         torch.set_num_threads(args.omp_cores)
-    torch.manual_seed(args.seed)
     
         model = akltS2.AKLTS2_C4V_BIPARTITE()
         state = read_ipeps_c4v(args.instate)
