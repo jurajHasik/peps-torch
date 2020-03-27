@@ -9,8 +9,8 @@ from ctm.one_site_c4v import ctmrg_c4v
 from ctm.one_site_c4v.rdm_c4v import rdm2x1_sl
 from ctm.one_site_c4v import transferops_c4v
 from models import j1j2
-from optim.ad_optim_lbfgs_mod import optimize_state
-# from optim.fd_optim_lbfgs_mod import optimize_state
+# from optim.ad_optim_su2 import optimize_state
+from optim.fd_optim_lbfgs_mod import optimize_state
 import su2sym.sym_ten_parser as tenSU2
 import json
 import unittest
