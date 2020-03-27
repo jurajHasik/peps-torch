@@ -10,8 +10,8 @@ from ctm.one_site_c4v import ctmrg_c4v
 from ctm.one_site_c4v.rdm_c4v import *
 from ctm.one_site_c4v import transferops_c4v
 from models import j1j2
-# from optim.itevol_optim_bfgs import itevol_plaquette_step
-from optim.itevol_optim_sgd import itevol_plaquette_step
+from optim.itevol_optim_bfgs import itevol_plaquette_step
+# from optim.itevol_optim_sgd import itevol_plaquette_step
 import json
 import unittest
 import logging
@@ -184,7 +184,7 @@ def main():
         # 2b) insert gate to create effective single-site reduced density matrix
         #   _____________________
         #  |_____________________|  
-        #   0 1 2       6 7 8 9->2 3 4 5 
+        #   0 1 2       6 7 8 9->2 3 4 5
         #   0_1_2__3->0
         #  |__4site__|
         #   4 5 6  7->1
@@ -203,12 +203,54 @@ def main():
         rdm0U1_x1_bra= torch.einsum('ijmnopqrst,imnop->jqrst',rdm1U0_x1,state_sym.site())
 
         # <state_1_x1|state_1_x1>
-        rdm1_x1= torch.einsum('ijkijkmnopqrst->mnopqrst',spd_2x2_x1)
+        # rdm1_x1= torch.einsum('ijkijkmnopqrst->mnopqrst',spd_2x2_x1)
+        rdm1_x1= torch.einsum('ijkijkmnopqrst->mnopqrst',rdm2x2_x1)
+        # test symmetry and positive definitness
+        rdm1_x1= rdm1_x1.view([args.bond_dim**4]*2)
+        rdm1_x1_symm= 0.5*(rdm1_x1+rdm1_x1.t())
+        rdm1_x1_asymm= 0.5*(rdm1_x1-rdm1_x1.t())
+        print(f"rdm1_x1_symm {rdm1_x1_symm.norm()} rdm1_x1_asymm {rdm1_x1_asymm.norm()}")
+        D, U= torch.symeig(rdm1_x1_symm)
+        D_orig, U_orig= torch.eig(rdm1_x1)
+        D_orig_re, perm= torch.sort(D_orig[:,0],descending=False)
+        # print first five negative evs:
+        print(f"rdm1_x1 D_symm    low {D[0:4].tolist()}")
+        print(f"rdm1_x1 D_orig_re low {D_orig_re[0:4].tolist()}")
+        # print first five positive evs:
+        print(f"rdm1_x1 D_symm    top {D[-5:-1].tolist()}")
+        print(f"rdm1_x1 D_orig_re top {D_orig_re[-5:-1].tolist()}")
+        rdm1_x1= rdm1_x1.view([args.bond_dim]*8)
+
+        #
+        ardm1x1= aux_rdm1x1(state_sym, ctm_env)
+        ardm1x1= ardm1x1.view([args.bond_dim**4]*2)
+        ardm1x1_symm= 0.5*(ardm1x1+ardm1x1.t())
+        ardm1x1_asymm= 0.5*(ardm1x1-ardm1x1.t())
+        print(f"ardm1x1_symm {ardm1x1_symm.norm()} ardm1x1_asymm {ardm1x1_asymm.norm()}")
+        D, U= torch.symeig(ardm1x1_symm,eigenvectors=True)
+        D_orig, U_orig= torch.eig(ardm1x1)
+        D_orig_re, perm= torch.sort(D_orig[:,0],descending=False)
+        # print first five negative evs:
+        print(f"ardm1x1 D_symm    low {D[0:4].tolist()}")
+        print(f"ardm1x1 D_orig_re low {D_orig_re[0:4].tolist()}")
+        # print first five positive evs:
+        print(f"ardm1x1 D_symm    top {D[-5:-1].tolist()}")
+        print(f"ardm1x1 D_orig_re top {D_orig_re[-5:-1].tolist()}")
+        ardm1x1= ardm1x1.view([args.bond_dim]*8)
+        # analyze C4v symmetry of eigenvectors
+        for i in range(-5,0,1):
+            evec= U[:,i]
+            # normalized ? 
+            print(f"U[:,{i}] norm {evec.norm()}")
+            evec= evec[None,:].view([1]+[args.bond_dim]*4)
+            evec_sym= make_c4v_symm_A1(evec) 
+            print(f"make_c4v_symm_A1(U[-1,:]) norm {evec_sym.norm()}")
+
 
         state_trial= to_ipeps_c4v(state_sym, normalize=True)
         def loss_fn(state, opt_context):
-            # state_sym= to_ipeps_c4v(state, normalize=False)
-            state_sym= state
+            state_sym= to_ipeps_c4v(state, normalize=False)
+            # state_sym= state
 
             # 1) compute norm <state_1|state_1>
             norm1_x1= torch.einsum('mnopqrst,iqrst->mnopi',rdm1_x1,state_sym.site())

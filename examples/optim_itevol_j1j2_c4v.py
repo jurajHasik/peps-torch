@@ -166,25 +166,45 @@ def main():
         # 1) compute environment by CTMRG
         ctm_env, *ctm_log= ctmrg_c4v.run(state_sym, ctm_env, 
             conv_check=ctmrg_conv_energy, ctm_args=cfg.ctm_args)
-
-        # test positive definitnes of 2x2 rdm in aux space
-        test_symm_aux_C2x2_LU(ctm_env)
-        rdm2x2aux= aux_rdm2x2(state_sym, ctm_env)
-        # reshape into matrix
-        rdm2x2aux= rdm2x2aux.view([args.bond_dim**8]*2)
-        rdm2x2aux_symm= 0.5*(rdm2x2aux+rdm2x2aux.t())
-        rdm2x2aux_asymm= 0.5*(rdm2x2aux-rdm2x2aux.t())
-        print(f"rdm2x2aux_symm {rdm2x2aux_symm.norm()} rdm2x2aux_asymm {rdm2x2aux_asymm.norm()}")
-        D, U= torch.symeig(rdm2x2aux_symm)
-        D_orig, U_orig= torch.eig(rdm2x2aux)
+        
+        # test positive definitnes of 2x1 rdm in aux space
+        rdm2x1aux= aux_rdm2x1(state_sym, ctm_env)
+        rdm2x1aux= rdm2x1aux.view([args.bond_dim**6]*2)
+        rdm2x1aux_symm= 0.5*(rdm2x1aux+rdm2x1aux.t())
+        rdm2x1aux_asymm= 0.5*(rdm2x1aux-rdm2x1aux.t())
+        print(f"rdm2x1aux_symm {rdm2x1aux_symm.norm()} rdm2x1aux_asymm {rdm2x1aux_asymm.norm()}")
+        D, U= torch.symeig(rdm2x1aux_symm)
+        D_orig, U_orig= torch.eig(rdm2x1aux)
         D_orig_re, perm= torch.sort(D_orig[:,0],descending=False)
         # print first five negative evs:
-        print(f"D_symm    low {D[0:4].tolist()}")
-        print(f"D_orig_re low {D_orig_re[0:4].tolist()}")
+        print(f"rdm2x1aux D_symm    low {D[0:4].tolist()}")
+        print(f"rdm2x1aux D_orig_re low {D_orig_re[0:4].tolist()}")
         # print first five positive evs:
-        print(f"D_symm    top {D[-5:-1].tolist()}")
-        print(f"D_orig_re top {D_orig_re[-5:-1].tolist()}")
-        rdm2x2aux= rdm2x2aux.view([args.bond_dim]*16)
+        print(f"rdm2x1aux D_symm    top {D[-5:-1].tolist()}")
+        print(f"rdm2x1aux D_orig_re top {D_orig_re[-5:-1].tolist()}")
+        print(f"{torch.abs(D[-1]/D[0])} {torch.abs(D[-1]/D[0])<1.0e-6}")
+        rdm2x1aux= rdm2x1aux.view([args.bond_dim]*12)
+
+        assert D[0]>0 or (torch.abs(D[-1]/D[0])>1.0e-6), "CTM does not give positive definite environment"
+
+        # test positive definitnes of 2x2 rdm in aux space
+        # test_symm_aux_C2x2_LU(ctm_env)
+        # rdm2x2aux= aux_rdm2x2(state_sym, ctm_env)
+        # # reshape into matrix
+        # rdm2x2aux= rdm2x2aux.view([args.bond_dim**8]*2)
+        # rdm2x2aux_symm= 0.5*(rdm2x2aux+rdm2x2aux.t())
+        # rdm2x2aux_asymm= 0.5*(rdm2x2aux-rdm2x2aux.t())
+        # print(f"rdm2x2aux_symm {rdm2x2aux_symm.norm()} rdm2x2aux_asymm {rdm2x2aux_asymm.norm()}")
+        # D, U= torch.symeig(rdm2x2aux_symm)
+        # D_orig, U_orig= torch.eig(rdm2x2aux)
+        # D_orig_re, perm= torch.sort(D_orig[:,0],descending=False)
+        # # print first five negative evs:
+        # print(f"D_symm    low {D[0:4].tolist()}")
+        # print(f"D_orig_re low {D_orig_re[0:4].tolist()}")
+        # # print first five positive evs:
+        # print(f"D_symm    top {D[-5:-1].tolist()}")
+        # print(f"D_orig_re top {D_orig_re[-5:-1].tolist()}")
+        # rdm2x2aux= rdm2x2aux.view([args.bond_dim]*16)
 
         # test properties of physical rdm
         rdm2x2phys= rdm2x2(state_sym, ctm_env, sym_pos_def=False)
@@ -220,12 +240,12 @@ def main():
         energy0U= energy0U.permute(4,5,0,6,7,1,8,9,2,10,11,3).contiguous()
         energy0U= fidelity_rdm2x2(energy0U, state_sym)
         print(f"energyU0: {energy0U/n} {energy0U} {n}")
-        prdm2= fill_bra_aux_rdm2x2(rdm2x2aux, state_sym)
-        n2= fidelity_rdm2x2(prdm2, state_sym)
-        energy0U_2= torch.tensordot(hp_rot,prdm2,([4,5,6,7],[2,5,8,11]))
-        energy0U_2= energy0U_2.permute(4,5,0,6,7,1,8,9,2,10,11,3).contiguous()
-        energy0U_2= fidelity_rdm2x2(energy0U_2, state_sym)
-        print(f"energyU0_2: {energy0U_2/n2} {energy0U_2} {n2}")
+        # prdm2= fill_bra_aux_rdm2x2(rdm2x2aux, state_sym)
+        # n2= fidelity_rdm2x2(prdm2, state_sym)
+        # energy0U_2= torch.tensordot(hp_rot,prdm2,([4,5,6,7],[2,5,8,11]))
+        # energy0U_2= energy0U_2.permute(4,5,0,6,7,1,8,9,2,10,11,3).contiguous()
+        # energy0U_2= fidelity_rdm2x2(energy0U_2, state_sym)
+        # print(f"energyU0_2: {energy0U_2/n2} {energy0U_2} {n2}")
 
         # U|state_0>_ENV
         state0U= torch.tensordot(tg,prdm,([4,5,6,7],[2,5,8,11]))

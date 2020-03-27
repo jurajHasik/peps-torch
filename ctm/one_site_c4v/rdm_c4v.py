@@ -252,6 +252,58 @@ def rdm1x1_sl(state, env, verbosity=0):
 
     return rdm
 
+def aux_rdm1x1(state, env, verbosity=0):
+    C = env.C[env.keyC]
+    T = env.T[env.keyT]
+    a= next(iter(state.sites.values()))
+    dimsa = a.size()
+    # C--1->0
+    # 0
+    # 0
+    # T--2
+    # 1
+    CTC = torch.tensordot(C,T,([0],[0]))
+    if verbosity>2: env.log(f"rdm=CT {rdm.size()}\n")
+    # C--0
+    # |
+    # T--2->1
+    # 1
+    # 0
+    # C--1->2
+    CTC = torch.tensordot(CTC,C,([1],[0]))
+    if verbosity>2: env.log(f"rdm=CTC {rdm.size()}\n")
+    # C--0
+    # |
+    # T--1
+    # |       2->3
+    # C--2 0--T--1->2
+    rdm = torch.tensordot(CTC,T,([2],[0]))
+    if verbosity>2: env.log(f"rdm=CTCT {rdm.size()}\n")
+    # C--0 0--T--1->3
+    # |       2->4
+    # |       
+    # T--1->0
+    # |      
+    # |       3->2
+    # C-------T--2->1
+    rdm = torch.tensordot(rdm,T,([0],[0]))
+    if verbosity>2: env.log(f"rdm=CTCTT {rdm.size()}\n")
+    
+    # C----T--3 0--C
+    # |    4->2    |    C----T----C
+    # |            |    |    0    |
+    # T--0  3<-1---T => T--1   3--T
+    # |            |    |    2    |
+    # |    2->1    |    C----T----C
+    # C----T--1 2--C
+    rdm = torch.tensordot(rdm,CTC,([1,3],[2,0]))
+    if verbosity>2: env.log(f"rdm=CTCTTCTC {rdm.size()}\n")
+
+    rdm= rdm.permute(2,0,1,3).contiguous()
+    rdm= rdm.view([dimsa[1]]*8).permute(0,2,4,6, 1,3,5,7).contiguous()
+
+    return rdm
+
 def rdm2x1(state, env, verbosity=0):
     r"""
     :param state: underlying 1-site C4v symmetric wavefunction
@@ -1333,6 +1385,121 @@ def test_symm_partial_C2x2_LU(C, T, a):
     tC2x2= C2x2.permute(0,1,3,2,4)
     print(f"C2x2-C2x2^t(aux) {torch.norm(C2x2-tC2x2)}")
 
+def aux_rdm2x1(state, env, force_cpu=False, verbosity=0):
+    r"""
+    :param state: underlying 1-site C4v symmetric wavefunction
+    :param env: C4v symmetric environment corresponding to ``state``
+    :param force_cpu: execute on cpu
+    :param verbosity: logging verbosity
+    :type state: IPEPS_C4V
+    :type env: ENV_C4V
+    :type force_cpu: bool
+    :type verbosity: int
+    :return: 4-site auxilliary reduced density matrix
+    :rtype: torch.tensor
+
+    Computes 4-site aux reduced density matrix :math:`\rho_{2x2}` of 2x2 subsystem 
+    without the on-site tensors (leaving corresponding aux indices open)
+    using strategy:
+
+        1. compute upper left corner
+        2. construct upper half of the network
+        3. contract upper and lower half (identical to upper) to obtain final reduced 
+           auxilliary density matrix
+           
+    TODO try single torch.einsum ?
+
+    :: 
+
+          C----T----T----C    = aC2x2--aC2x2
+          |    0    5    |      |       |
+          T--1        4--T      C2x2----C2x2
+          |    2    3    |
+          C----T----T----C
+
+    """
+    #----- building pC2x2_LU ----------------------------------------------------
+    C = env.C[env.keyC]
+    T = env.T[env.keyT]
+    a = next(iter(state.sites.values()))
+    dimsa = a.size()
+    loc_device=C.device
+    is_cpu= loc_device==torch.device('cpu')
+    if not is_cpu and verbosity>0:
+        print(f"GPU-MEM pRDM2X2 MAX:{torch.cuda.max_memory_allocated(loc_device)}"\
+            + f" CURRENT:{torch.cuda.memory_allocated(loc_device)}")
+
+    aC2x2= _get_aux_C2x2_LU(C, T, verbosity=verbosity)
+
+    #----- build upper part aC2x2_LU--aC2x2_RU -----------------------------------
+    # aC2x2----1 1----aC2x2
+    # |_  \          /   _|
+    # | |  3->2  5<-3   | |
+    # 0 2               2 0
+    #   V               V V
+    #   1               4 3
+    # aC2x2 = torch.tensordot(aC2x2, aC2x2, ([1],[1]))
+    # =====================
+    # aC2x2----1 0----aC2x2
+    # |_  \          /   _|
+    # | |  3->2  4<-2   | |
+    # 0 2               3 1
+    #   V               V V
+    #   1               5 3
+    aC2x2 = torch.tensordot(aC2x2, aC2x2, ([1],[0]))
+    if not is_cpu and verbosity>0:
+        print(f"GPU-MEM pRDM2X2 MAX:{torch.cuda.max_memory_allocated(loc_device)}"\
+            + f" CURRENT:{torch.cuda.memory_allocated(loc_device)}")
+
+    # C2x2--1 => C2x2--1 => |C2x2|--2
+    # | \        |          | |
+    # 0  23      0          0 1
+    C2x2= _get_open_C2x2_LU_sl(C, T, a, verbosity=verbosity)
+    C2x2= torch.einsum('abii->ab',C2x2)
+    C2x2= C2x2.view(C.size()[0],dimsa[3]**2,C.size()[0]*(dimsa[4]**2))
+
+    # C2x2----2 2----C2x2
+    # |  |           |  |
+    # 0  1           1  0
+    #                V  V
+    #                3  2
+    C2x2= torch.tensordot(C2x2,C2x2,([2],[2]))
+
+    # construct reduced density matrix by contracting lower and upper halfs
+    #  __________________         __________________
+    # |_______aC2x2______|       |__________________|    C----T----T----C
+    # | | \          / | |       | | \          / | |    |    1    3    |
+    # 0 1  2        5  4 3       | 0  1        3  2 |    T--0        2--T
+    # 0                  3  =>   |                  | => |              |
+    # | 1  2        5  4 |       | 4  5        7  6 |    T--4        6--T
+    # |_|_/__________\_|_|       |_|_/__________\_|_|    |    5    7    |
+    # |_______aC2x2______|       |_______aC2x2______|    C----T----T----C
+    # ===================================================================
+    #  __________________         __________________
+    # |_______aC2x2______|       |__________________|    C----T----T----C
+    # | | \          / | |       | | \          / | |    |    1    2    |
+    # 0 1  2        4  5 3       | 0  1        2  3 |    T--0        3--T
+    # 0                  2  =>   |                  | => |    4    5    |
+    # | 1              3 |       | 4              5 |    C----T----T----C
+    # |_|______________|_|       |_|______________|_|
+    # |_______C2x2_______|       |________C2x2______|
+    aC2x2 = torch.tensordot(aC2x2,C2x2,([0,3],[0,2]))
+    if not is_cpu and verbosity>0:
+        print(f"GPU-MEM pRDM2X2 MAX:{torch.cuda.max_memory_allocated(loc_device)}"\
+            + f" CURRENT:{torch.cuda.memory_allocated(loc_device)}")
+
+    # permute such, that aux-index increases from "up" in the anti-clockwise direction
+    # aC2x2 = aC2x2.permute(1,0,4,5,7,6,2,3).contiguous()
+    # ===================================================
+    aC2x2 = aC2x2.permute(1,0,4,5,3,2).contiguous()
+    # reshape and form bra and ket index
+    aC2x2 = aC2x2.view([dimsa[1]]*12).permute(0,2,4,6,8,10, 1,3,5,7,9,11).contiguous()
+    if not is_cpu and verbosity>0:
+        print(f"GPU-MEM pRDM2X2 MAX:{torch.cuda.max_memory_allocated(loc_device)}"\
+            + f" CURRENT:{torch.cuda.memory_allocated(loc_device)}")
+
+    return aC2x2
+
 def aux_rdm2x2(state, env, force_cpu=False, verbosity=0):
     r"""
     :param state: underlying 1-site C4v symmetric wavefunction
@@ -1360,11 +1527,11 @@ def aux_rdm2x2(state, env, force_cpu=False, verbosity=0):
     :: 
 
           C----T----T----C    = C2x2--C2x2
-          |    1    3    |      |     |
-          T--0        2--T      C2x2--C2x2
+          |    0    7    |      |     |
+          T--1        6--T      C2x2--C2x2
           |              |
-          T--4        6--T
-          |    5    7    |
+          T--2        5--T
+          |    3    4    |
           C----T----T----C
 
     """
