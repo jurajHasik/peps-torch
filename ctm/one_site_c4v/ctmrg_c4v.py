@@ -47,10 +47,12 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
     # 1) perform CTMRG
     t_obs=t_ctm=0.
     history=None
+    past_steps_data=dict({"Z":[torch.trace(env.C[env.keyC]@env.C[env.keyC]@env.C[env.keyC]@env.C[env.keyC]@env.C[env.keyC])]})
     for i in range(ctm_args.ctm_max_iter):
         t0_ctm= time.perf_counter()
         # ctm_MOVE_dl(A, env, truncated_svd, ctm_args=ctm_args, global_args=global_args)
-        ctm_MOVE_sl(a, env, truncated_eig, ctm_args=ctm_args, global_args=global_args)
+        ctm_MOVE_sl(a, env, truncated_eig, ctm_args=ctm_args, global_args=global_args,\
+            past_steps_data=past_steps_data)
         t1_ctm= time.perf_counter()
 
         t0_obs= time.perf_counter()
@@ -169,7 +171,8 @@ def c2x2_dl(A, C, T, verbosity=0):
     return C2x2
 
 # performs CTM move
-def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.global_args,
+    past_steps_data=None):
     # 0) extract raw tensors as tuple
     tensors= tuple([a,env.C[env.keyC],env.T[env.keyT]])
     
@@ -179,6 +182,8 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
         # 1) build enlarged corner upper left corner
         C2X2= c2x2_sl(a, C, T, verbosity=ctm_args.verbosity_projectors)
 
+        C0_abs_max= C.abs().max()
+        Z0= torch.trace(C@C@C@C)
         # 2) build projector
         # P, S, V = f_c2x2_decomp(C2X2, env.chi) # M = PSV^T
         D, P= f_c2x2_decomp(C2X2, env.chi) # M = UDU^T
@@ -265,6 +270,9 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
         # 4) symmetrize, normalize and assign new C,T
         C2X2= 0.5*(C2X2 + C2X2.t())
         nT= 0.5*(nT + nT.permute(1,0,2))
+        C1_abs_max= C2X2.abs().max()
+        Z1= torch.trace(C2X2@C2X2@C2X2@C2X2)
+        past_steps_data["Z"].append(Z1)
         C2X2= C2X2/torch.max(torch.abs(C2X2))
         # C2X2= C2X2/torch.sum(torch.abs(D))
         nT= nT/torch.max(torch.abs(nT))
