@@ -172,20 +172,34 @@ def main():
         rdm2x1aux= rdm2x1aux.view([args.bond_dim**6]*2)
         rdm2x1aux_symm= 0.5*(rdm2x1aux+rdm2x1aux.t())
         rdm2x1aux_asymm= 0.5*(rdm2x1aux-rdm2x1aux.t())
-        print(f"rdm2x1aux_symm {rdm2x1aux_symm.norm()} rdm2x1aux_asymm {rdm2x1aux_asymm.norm()}")
         D, U= torch.symeig(rdm2x1aux_symm)
         D_orig, U_orig= torch.eig(rdm2x1aux)
         D_orig_re, perm= torch.sort(D_orig[:,0],descending=False)
-        # print first five negative evs:
-        print(f"rdm2x1aux D_symm    low {D[0:4].tolist()}")
-        print(f"rdm2x1aux D_orig_re low {D_orig_re[0:4].tolist()}")
-        # print first five positive evs:
-        print(f"rdm2x1aux D_symm    top {D[-5:-1].tolist()}")
-        print(f"rdm2x1aux D_orig_re top {D_orig_re[-5:-1].tolist()}")
-        print(f"{torch.abs(D[-1]/D[0])} {torch.abs(D[-1]/D[0])<1.0e-6}")
         rdm2x1aux= rdm2x1aux.view([args.bond_dim]*12)
-
-        assert D[0]>0 or (torch.abs(D[-1]/D[0])>1.0e-6), "CTM does not give positive definite environment"
+        if not (D[0]>0 or (torch.abs(D[-1]/D[0])>1.0e-6)):
+            print(f"rdm2x1aux_symm {rdm2x1aux_symm.norm()} rdm2x1aux_asymm {rdm2x1aux_asymm.norm()}")
+            # print first five negative evs:
+            print(f"rdm2x1aux D_symm    low {D[0:4].tolist()}")
+            print(f"rdm2x1aux D_orig_re low {D_orig_re[0:4].tolist()}")
+            # print first five positive evs:
+            print(f"rdm2x1aux D_symm    top {D[-5:-1].tolist()}")
+            print(f"rdm2x1aux D_orig_re top {D_orig_re[-5:-1].tolist()}")
+        
+            # test properties of physical rdm
+            rdm2x2phys= rdm2x2(state_sym, ctm_env, sym_pos_def=False)
+            rdm2x2phys= rdm2x2phys.view([model.phys_dim**4]*2)
+            rdm2x2phys_symm= 0.5*(rdm2x2phys+rdm2x2phys.t())
+            rdm2x2phys_asymm= 0.5*(rdm2x2phys-rdm2x2phys.t())
+            print(f"rdm2x2phys_symm {rdm2x2phys_symm.norm()} rdm2x2phys_asymm {rdm2x2phys_asymm.norm()}")
+            D, U= torch.symeig(rdm2x2phys_symm)
+            D_orig, U_orig= torch.eig(rdm2x2phys)
+            D_orig_re, perm= torch.sort(D_orig[:,0],descending=False)
+            # print first five negative evs:
+            print(f"RHO_symm    low {D[0:4].tolist()}")
+            print(f"RHO_orig_re low {D_orig_re[0:4].tolist()}")
+            # print first five positive evs:
+            print(f"RHO_symm    top {D[-5:-1].tolist()}")
+            print(f"RHO_orig_re top {D_orig_re[-5:-1].tolist()}")
 
         # test positive definitnes of 2x2 rdm in aux space
         # test_symm_aux_C2x2_LU(ctm_env)
@@ -205,28 +219,17 @@ def main():
         # print(f"D_symm    top {D[-5:-1].tolist()}")
         # print(f"D_orig_re top {D_orig_re[-5:-1].tolist()}")
         # rdm2x2aux= rdm2x2aux.view([args.bond_dim]*16)
-
-        # test properties of physical rdm
-        rdm2x2phys= rdm2x2(state_sym, ctm_env, sym_pos_def=False)
-        rdm2x2phys= rdm2x2phys.view([model.phys_dim**4]*2)
-        rdm2x2phys_symm= 0.5*(rdm2x2phys+rdm2x2phys.t())
-        rdm2x2phys_asymm= 0.5*(rdm2x2phys-rdm2x2phys.t())
-        print(f"rdm2x2phys_symm {rdm2x2phys_symm.norm()} rdm2x2phys_asymm {rdm2x2phys_asymm.norm()}")
-        D, U= torch.symeig(rdm2x2phys_symm)
-        D_orig, U_orig= torch.eig(rdm2x2phys)
-        D_orig_re, perm= torch.sort(D_orig[:,0],descending=False)
-        # print first five negative evs:
-        print(f"RHO_symm    low {D[0:4].tolist()}")
-        print(f"RHO_orig_re low {D_orig_re[0:4].tolist()}")
-        # print first five positive evs:
-        print(f"RHO_symm    top {D[-5:-1].tolist()}")
-        print(f"RHO_orig_re top {D_orig_re[-5:-1].tolist()}")
+        
+        assert D[0]>0 or (torch.abs(D[-1]/D[0])>1.0e-6), "CTM does not give positive definite environment"
 
         # 2) prepare imag-time evol step
         prdm= partial_rdm2x2(state_sym, ctm_env)
-        # normalization
-        n= fidelity_rdm2x2(prdm, state_sym)
-        assert n > 0, "norm given by 2x2 rdm is not positive"
+        
+        # consistency checks on partial_rdm2x2
+        # a) normalization
+        # n= fidelity_rdm2x2(prdm, state_sym)
+        # assert n > 0, "norm given by 2x2 rdm is not positive"
+        # 
         # apply 4-site operator operator
         # 
         #    0__1__2___3
@@ -235,11 +238,14 @@ def main():
         #  __2__5__8__11__       __0__1__2__3___
         # |_____prdm______| =>  |_____prdm______| 
         # 0 1 3 4 6 7 9  10     4 5 6 7 8 9 10 11
-        # test
-        energy0U= torch.tensordot(hp_rot,prdm,([4,5,6,7],[2,5,8,11]))
-        energy0U= energy0U.permute(4,5,0,6,7,1,8,9,2,10,11,3).contiguous()
-        energy0U= fidelity_rdm2x2(energy0U, state_sym)
-        print(f"energyU0: {energy0U/n} {energy0U} {n}")
+        # 
+        # b) energy from partial_rdm2x2
+        # energy0U= torch.tensordot(hp_rot,prdm,([4,5,6,7],[2,5,8,11]))
+        # energy0U= energy0U.permute(4,5,0,6,7,1,8,9,2,10,11,3).contiguous()
+        # energy0U= fidelity_rdm2x2(energy0U, state_sym)
+        # print(f"energyU0: {energy0U/n} {energy0U} {n}")
+        # 
+        # c) energy from aux_rdm2x2
         # prdm2= fill_bra_aux_rdm2x2(rdm2x2aux, state_sym)
         # n2= fidelity_rdm2x2(prdm2, state_sym)
         # energy0U_2= torch.tensordot(hp_rot,prdm2,([4,5,6,7],[2,5,8,11]))
@@ -274,11 +280,7 @@ def main():
 
         itevol_plaquette_step(state_trial, loss_fn)
 
-        # compute observable
-        # o= fidelity_rdm2x2(prdm, state_sym)
-        # print(f"{n} {o} {o/n}")
-        # symm, max_err= verify_c4v_symm_A1(state_sym.site())
-        # print(f"post_proc {symm} {max_err}")
+        # post-process state
         state_trial= to_ipeps_c4v(state_trial, normalize=True)
         init_env(state_trial, ctm_env)
 
