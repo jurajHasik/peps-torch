@@ -47,24 +47,27 @@ class J1J2():
         self.j1=j1
         self.j2=j2
         
-        self.h2, self.hp_h, self.hp_v, self.hp = self.get_h()
-        self.obs_ops = self.get_obs_ops()
+        self.h2, self.h2x2_nn, self.h2x2_nnn= self.get_h()
+        self.obs_ops= self.get_obs_ops()
 
     def get_h(self):
         s2 = su2.SU2(self.phys_dim, dtype=self.dtype, device=self.device)
         id2= torch.eye(4,dtype=self.dtype,device=self.device)
         id2= id2.view(2,2,2,2).contiguous()
         expr_kron = 'ij,ab->iajb'
-        SS = torch.einsum(expr_kron,s2.SZ(),s2.SZ()) + 0.5*(torch.einsum(expr_kron,s2.SP(),s2.SM()) \
+        SS= torch.einsum(expr_kron,s2.SZ(),s2.SZ()) + 0.5*(torch.einsum(expr_kron,s2.SP(),s2.SM()) \
             + torch.einsum(expr_kron,s2.SM(),s2.SP()))
+        SS= SS.contiguous()
         
         h2x2_SS= torch.einsum('ijab,klcd->ijklabcd',SS,id2)
-        hp_h= self.j1*(h2x2_SS + h2x2_SS.permute(2,3,0,1,6,7,4,5)) + \
-            self.j2*(h2x2_SS.permute(0,3,2,1,4,7,6,5) + h2x2_SS.permute(2,0,1,3,6,4,5,7))
-        hp_v= self.j1*(h2x2_SS.permute(0,2,1,3,4,6,5,7) + h2x2_SS.permute(2,0,3,1,6,4,7,5)) +\
-            self.j2*(h2x2_SS.permute(0,3,2,1,4,7,6,5) + h2x2_SS.permute(2,0,1,3,6,4,5,7))
-        hp=hp_h+hp_v
-        return SS, hp_h, hp_v, hp
+        h2x2_nn= h2x2_SS + h2x2_SS.permute(2,3,0,1,6,7,4,5) + h2x2_SS.permute(0,2,1,3,4,6,5,7)\
+            + h2x2_SS.permute(2,0,3,1,6,4,7,5)
+        h2x2_nnn= h2x2_SS.permute(0,3,2,1,4,7,6,5) + h2x2_SS.permute(2,0,1,3,6,4,5,7)
+        
+        h2x2_nn= h2x2_nn.contiguous()
+        h2x2_nnn= h2x2_nnn.contiguous()
+
+        return SS, h2x2_nn, h2x2_nnn
 
     def get_obs_ops(self):
         obs_ops = dict()
@@ -74,33 +77,43 @@ class J1J2():
         obs_ops["sm"]= s2.SM()
         return obs_ops
 
-    # evaluation of energy depends on the nature of underlying
-    # ipeps state
-    #
-    # Ex.1 for 1-site c4v invariant iPEPS there is just a single 2site
-    # operator which gives the energy-per-site
-    #
-    # Ex.2 for 1-site invariant iPEPS there are two two-site terms
-    # which give the energy-per-site
-    #    0       0
-    # 1--A--3 1--A--3 
-    #    2       2                          A
-    #    0       0                          2
-    # 1--A--3 1--A--3                       0
-    #    2       2    , terms A--3 1--A and A have to be evaluated
-    #
-    # Ex.3 for 2x2 cluster iPEPS there are eight two-site terms
-    #    0       0       0
-    # 1--A--3 1--B--3 1--A--3
-    #    2       2       2
-    #    0       0       0
-    # 1--C--3 1--D--3 1--C--3
-    #    2       2       2             A--3 1--B      A B C D
-    #    0       0                     B--3 1--A      2 2 2 2
-    # 1--A--3 1--B--3                  C--3 1--D      0 0 0 0
-    #    2       2             , terms D--3 1--C and  C D A B
-    def energy_1x1c4v(self,ipeps):
-        pass
+    def energy_2x2_1site_BP(self,state,env):
+        r"""
+        :param state: wavefunction
+        :param env: CTM environment
+        :type state: IPEPS
+        :type env: ENV
+        :return: energy per site
+        :rtype: float
+
+        We assume 1x1 iPEPS which tiles the lattice with a bipartite pattern composed 
+        of two tensors A, and B=RA, where R rotates approriately the physical Hilbert space 
+        of tensor A on every "odd" site::
+
+            1x1 C4v => rotation P => BIPARTITE
+
+            A A A A                  A B A B
+            A A A A                  B A B A
+            A A A A                  A B A B
+            A A A A                  B A B A
+
+        A single reduced density matrix :py:func:`ctm.rdm.rdm2x2` of a 2x2 plaquette
+        is used to evaluate the energy.
+        """
+        if not (hasattr(self, 'h2x2_nn_rot') or hasattr(self, 'h2x2_nn_nrot')):
+            s2 = su2.SU2(self.phys_dim, dtype=self.dtype, device=self.device)
+            rot_op= s2.BP_rot()
+            self.h2x2_nn_rot= torch.einsum('irtlaxyd,jr,kt,xb,yc->ijklabcd',\
+                self.h2x2_nn,rot_op,rot_op,rot_op,rot_op)
+            self.h2x2_nnn_rot= torch.einsum('irtlaxyd,jr,kt,xb,yc->ijklabcd',\
+                self.h2x2_nnn,rot_op,rot_op,rot_op,rot_op)
+
+        tmp_rdm= rdm.rdm2x2((0,0),state,env)
+        energy_nn= torch.einsum('ijklabcd,ijklabcd',tmp_rdm,self.h2x2_nn_rot)
+        energy_nnn= torch.einsum('ijklabcd,ijklabcd',tmp_rdm,self.h2x2_nnn_rot)
+        energy_per_site = 2.0*(self.j1*energy_nn/4.0 + self.j2*energy_nnn/2.0)
+
+        return energy_per_site
 
     def energy_2x2_2site(self,state,env):
         r"""
@@ -158,25 +171,13 @@ class J1J2():
         # 2 \/ 2   2 \/ 2
         # 0 /\ 0   0 /\ 0
         # A3--1B & B3--1A
-        
-        s2 = su2.SU2(self.phys_dim, dtype=self.dtype, device=self.device)
-        id2= torch.eye(4,dtype=self.dtype,device=self.device)
-        id2= id2.view(2,2,2,2).contiguous()
-        h2x2_SS= torch.einsum('ijab,klcd->ijklabcd',self.h2,id2)
 
-        h2x2_nn= h2x2_SS + h2x2_SS.permute(2,3,0,1,6,7,4,5) + h2x2_SS.permute(0,2,1,3,4,6,5,7)\
-            + h2x2_SS.permute(2,0,3,1,6,4,7,5)
-        h2x2_nnn= h2x2_SS.permute(0,3,2,1,4,7,6,5) + h2x2_SS.permute(2,0,1,3,6,4,5,7)
-
-        rdm2x2_00= rdm.rdm2x2((0,0),state,env)
-        rdm2x2_10= rdm.rdm2x2((1,0),state,env)
-        # energy= torch.einsum('ijklabcd,ijklabcd',rdm2x2_00,self.hp_h)
-        # energy+= torch.einsum('ijklabcd,ijklabcd',rdm2x2_10,self.hp_v)
-        # energy_per_site= energy/2.0
-        energy_nn = torch.einsum('ijklabcd,ijklabcd',rdm2x2_00,h2x2_nn)
-        energy_nn += torch.einsum('ijklabcd,ijklabcd',rdm2x2_10,h2x2_nn)
-        energy_nnn = torch.einsum('ijklabcd,ijklabcd',rdm2x2_00,h2x2_nnn)
-        energy_nnn += torch.einsum('ijklabcd,ijklabcd',rdm2x2_10,h2x2_nnn)
+        energy_nn=0
+        energy_nnn=0
+        for coord in state.sites.keys():
+            tmp_rdm= rdm.rdm2x2(coord,state,env)
+            energy_nn += torch.einsum('ijklabcd,ijklabcd',tmp_rdm,self.h2x2_nn)
+            energy_nnn += torch.einsum('ijklabcd,ijklabcd',tmp_rdm,self.h2x2_nnn)
         energy_per_site = 2.0*(self.j1*energy_nn/8.0 + self.j2*energy_nnn/4.0)
         return energy_per_site
 
@@ -215,28 +216,12 @@ class J1J2():
             0    0   0    0   0    0   0    0
             C3--1D & D3--1C & A3--1B & B3--1A
         """
-        rdm2x2_00= rdm.rdm2x2((0,0),state,env)
-        rdm2x2_10= rdm.rdm2x2((1,0),state,env)
-        rdm2x2_01= rdm.rdm2x2((0,1),state,env)
-        rdm2x2_11= rdm.rdm2x2((1,1),state,env)
-
-        s2 = su2.SU2(self.phys_dim, dtype=self.dtype, device=self.device)
-        id2= torch.eye(4,dtype=self.dtype,device=self.device)
-        id2= id2.view(2,2,2,2).contiguous()
-        h2x2_SS= torch.einsum('ijab,klcd->ijklabcd',self.h2,id2)
-
-        h2x2_nn= h2x2_SS + h2x2_SS.permute(2,3,0,1,6,7,4,5) + h2x2_SS.permute(0,2,1,3,4,6,5,7)\
-            + h2x2_SS.permute(2,0,3,1,6,4,7,5)
-        h2x2_nnn= h2x2_SS.permute(0,3,2,1,4,7,6,5) + h2x2_SS.permute(2,0,1,3,6,4,5,7)
-
-        energy_nn= torch.einsum('ijklabcd,ijklabcd',rdm2x2_00,h2x2_nn)
-        energy_nn+= torch.einsum('ijklabcd,ijklabcd',rdm2x2_10,h2x2_nn)
-        energy_nn+= torch.einsum('ijklabcd,ijklabcd',rdm2x2_01,h2x2_nn)
-        energy_nn+= torch.einsum('ijklabcd,ijklabcd',rdm2x2_11,h2x2_nn)
-        energy_nnn= torch.einsum('ijklabcd,ijklabcd',rdm2x2_00,h2x2_nnn)
-        energy_nnn+= torch.einsum('ijklabcd,ijklabcd',rdm2x2_10,h2x2_nnn)
-        energy_nnn+= torch.einsum('ijklabcd,ijklabcd',rdm2x2_01,h2x2_nnn)
-        energy_nnn+= torch.einsum('ijklabcd,ijklabcd',rdm2x2_11,h2x2_nnn)
+        energy_nn=0
+        energy_nnn=0
+        for coord in state.sites.keys():
+            tmp_rdm= rdm.rdm2x2(coord,state,env)
+            energy_nn += torch.einsum('ijklabcd,ijklabcd',tmp_rdm,self.h2x2_nn)
+            energy_nnn += torch.einsum('ijklabcd,ijklabcd',tmp_rdm,self.h2x2_nnn)
         energy_per_site = 2.0*(self.j1*energy_nn/16.0 + self.j2*energy_nnn/8.0)
 
         return energy_per_site
@@ -281,20 +266,13 @@ class J1J2():
             0    0   0    0   0    0   0    0
             B3--1E & E3--1F & F3--1A & A3--1B 
         """
-        # rdm2x2_00= rdm.rdm2x2((0,0),state,env)
-        # rdm2x2_10= rdm.rdm2x2((1,0),state,env)
-        # rdm2x2_01= rdm.rdm2x2((0,1),state,env)
-        # rdm2x2_11= rdm.rdm2x2((1,1),state,env)
-        # rdm2x2_20= rdm.rdm2x2((2,0),state,env)
-        # rdm2x2_30= rdm.rdm2x2((3,0),state,env)
-        # rdm2x2_21= rdm.rdm2x2((2,1),state,env)
-        # rdm2x2_31= rdm.rdm2x2((3,1),state,env)
-        energy=0.
-        for coord,site in state.sites.items():
-            rdm2x2= rdm.rdm2x2(coord,state,env)
-            energy+= torch.einsum('ijklabcd,ijklabcd',rdm2x2,self.hp)
-
-        energy_per_site= energy/(2*8)
+        energy_nn=0
+        energy_nnn=0
+        for coord in state.sites.keys():
+            tmp_rdm= rdm.rdm2x2(coord,state,env)
+            energy_nn += torch.einsum('ijklabcd,ijklabcd',tmp_rdm,self.h2x2_nn)
+            energy_nnn += torch.einsum('ijklabcd,ijklabcd',tmp_rdm,self.h2x2_nnn)
+        energy_per_site= 2.0*(self.j1*energy_nn/32.0 + self.j2*energy_nnn/16.0)
         return energy_per_site
 
     def eval_obs(self,state,env):
