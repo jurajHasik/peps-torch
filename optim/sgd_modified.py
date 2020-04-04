@@ -2,7 +2,6 @@ import torch
 from math import sqrt
 from functools import reduce
 from torch.optim.sgd import SGD
-# import torch.optim.sgd as sgd
 import logging
 log = logging.getLogger(__name__)
 
@@ -223,20 +222,19 @@ class SGD_MOD(SGD):
             if line_search_fn == "backtracking":
                 d_p.mul_(-1)
                 x_init = self._clone_param()
-                default_t= 1. / flat_grad.abs().sum() * lr
-                gtd = flat_grad.dot(d_p) * default_t
+                gtd = flat_grad.dot(d_p)
 
                 def obj_func(t, x, d):
                     return self._directional_evaluate_derivative_free(closure_linesearch, t, x, d)
 
                 # return (xmin, fval, iter, funcalls)
-                t, f_loss= _scalar_search_armijo(obj_func, f_loss, gtd, args=(x_init,d_p), alpha0=default_t)
+                t, f_loss= _scalar_search_armijo(obj_func, f_loss, gtd, args=(x_init,d_p), alpha0=lr)
                 if t is None:
                     raise RuntimeError("minimize_scalar failed")
-                log.info(f"LS final step: {t}")
             else:
                 raise RuntimeError("unsupported line search")
             
+            log.info(f"LS final step: {t}")
             self._add_grad(t, d_p)
             
         else:

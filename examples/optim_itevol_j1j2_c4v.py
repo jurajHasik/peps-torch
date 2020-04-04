@@ -22,6 +22,7 @@ parser= cfg.get_args_parser()
 # additional model-dependent arguments
 parser.add_argument("-j1", type=float, default=1., help="nearest-neighbour coupling")
 parser.add_argument("-j2", type=float, default=0., help="next nearest-neighbour coupling")
+parser.add_argument("-hz", type=float, default=0., help="staggered magnetic field along z-axis")
 parser.add_argument("-top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
 parser.add_argument("-top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
@@ -134,14 +135,20 @@ def main():
     id2= torch.eye(model.phys_dim**2,dtype=model.dtype,device=model.device)
     id2= id2.view(tuple([model.phys_dim]*4)).contiguous()
     h2x2_SS= torch.einsum('ijab,klcd->ijklabcd',model.h2,id2)
+    h_mz= torch.einsum('ij,kl,mn,op->ikmojlnp',s2.SZ(),s2.I(),s2.I(),s2.I())
+    h_mz= h_mz - h_mz.permute(1,0,2,3, 5,4,6,7) - h_mz.permute(2,1,0,3, 6,5,4,7) \
+        + h_mz.permute(3,1,2,0, 7,5,6,4)
+    h_mz= h_mz.contiguous()
     hp= 0.5*model.j1*(h2x2_SS + h2x2_SS.permute(0,2,1,3,4,6,5,7) \
             + h2x2_SS.permute(2,3,0,1,6,7,4,5) + h2x2_SS.permute(2,0,3,1,6,4,7,5)) \
-            + model.j2*(h2x2_SS.permute(0,2,3,1,4,6,7,5) + h2x2_SS.permute(2,0,1,3,6,4,5,7))
+            + model.j2*(h2x2_SS.permute(0,2,3,1,4,6,7,5) + h2x2_SS.permute(2,0,1,3,6,4,5,7)) \
+            + args.hz*h_mz
     hp= hp.contiguous()
 
     tau=args.itevol_step
     tg= hp.view(model.phys_dim**4,model.phys_dim**4)
     tg_d, tg_u= torch.symeig(tg, eigenvectors=True)
+    print(tg_d)
     tg= tg_u @ torch.diag(torch.exp(-tau * tg_d)) @ tg_u.t()
     tg2= tg @ tg
     tg= tg.view(tuple([model.phys_dim]*8))
@@ -276,7 +283,7 @@ def main():
             loss= n1 - 2*overlap1U0 + n0UU
             g= None
             # print(f"{loss} {n1} {overlap1U0} {n0UU} {state_sym.site().norm()}")
-            return loss, g
+            return loss, g, n1, overlap1U0
 
         itevol_plaquette_step(state_trial, loss_fn)
 

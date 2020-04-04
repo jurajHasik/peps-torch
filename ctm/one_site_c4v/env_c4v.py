@@ -1,28 +1,35 @@
 import torch
 import config as cfg
 from ipeps.ipeps_c4v import IPEPS_C4V
+import pdb
 
 class ENV_C4V():
-    def __init__(self, chi, state, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+    def __init__(self, chi, state=None, bond_dim=None, ctm_args=cfg.ctm_args, 
+        global_args=cfg.global_args):
         r"""
         :param chi: environment bond dimension :math:`\chi`
         :param state: wavefunction
+        :param bond_dim2: bond dimension
         :param ctm_args: CTM algorithm configuration
         :param global_args: global configuration
         :type chi: int
         :type state: IPEPS_C4V
+        :type bond_dim: int
         :type ctm_args: CTMARGS
         :type global_args: GLOBALARGS
 
         Assuming C4v symmetric single-site ``state`` create corresponding half-row(column) tensor T 
         and corner tensor C. The corner tensor has dimensions :math:`\chi \times \chi`
-        and the half-row(column) tensor has dimensions :math:`\chi \times \chi \times D^2`::
+        and the half-row(column) tensor has dimensions :math:`\chi \times \chi \times D^2`
+        with :math:`D` given by ``state`` or ``bond_dim``::
 
             y\x -1 0 1
              -1  C T C
               0  T A T
               1  C T C 
         
+        If both ``state`` and ``bond_dim`` are supplied, the ``bond_dim`` parameter is ignored.
+
         The environment tensors of an ENV object ``e`` are accesed through members ``C`` and ``T`` 
         The index-position convention is as follows: For upper left C and left T start 
         from the index in the **direction "up"** <=> (-1,0) and continue **anti-clockwise**::
@@ -42,11 +49,18 @@ class ENV_C4V():
         All C's and T's in the above diagram are identical and they are symmetric under the exchange of
         environment bond indices :math:`C_{ij}=C_{ji}` and :math:`T_{ija}=C_{jia}`.  
         """
-        assert len(state.sites)==1, "Not a 1-site ipeps"
+        assert state or bond_dim, "either state or bond_dim must be supplied"
+        if state:
+            assert len(state.sites)==1, "Not a 1-site ipeps"
+            site= next(iter(state.sites.values()))
+            assert site.size()[1]==site.size()[1]==site.size()[1]==site.size()[1],\
+                "bond dimensions of on-site tensor are not equal"
+            bond_dim= site.size()[1]
         super(ENV_C4V, self).__init__()
         self.dtype= global_args.dtype
         self.device= global_args.device
         self.chi= chi
+        self.bond_dim= bond_dim
 
         # initialize environment tensors
         # The same structure is preserved as for generic ipeps ``ENV``. We store keys for access
@@ -56,10 +70,16 @@ class ENV_C4V():
         self.C= dict()
         self.T= dict()
 
-        self.C[self.keyC]= torch.empty((self.chi,self.chi), dtype=self.dtype, device=self.device)
-        site= next(iter(state.sites.values()))
-        self.T[self.keyT]= torch.empty((self.chi,self.chi,site.size()[2]*site.size()[2]), \
+        self.C[self.keyC]= torch.zeros((self.chi,self.chi), dtype=self.dtype, device=self.device)
+        self.T[self.keyT]= torch.zeros((self.chi,self.chi,bond_dim**2), \
             dtype=self.dtype, device=self.device)
+
+    def extend(self, new_chi, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+        new_env= ENV_C4V(new_chi, bond_dim=self.bond_dim, ctm_args=ctm_args, global_args=global_args)
+        x= min(self.chi, new_chi)
+        new_env.C[new_env.keyC][:x,:x]= self.C[self.keyC][:x,:x]
+        new_env.T[new_env.keyT][:x,:x,:self.bond_dim**2]= self.T[self.keyT][:x,:x,:self.bond_dim**2]
+        return new_env
 
 def init_env(state, env, ctm_args=cfg.ctm_args):
     """
@@ -186,14 +206,13 @@ def print_env(env, verbosity=0):
     print("dtype "+str(env.dtype))
     print("device "+str(env.device))
 
-    print("C "+str(env.C[keyC].size()))
+    print("C "+str(env.C[env.keyC].size()))
     if verbosity>0: 
-        print(env.C[key])
+        print(env.C[env.keyC])
     
-    key= ((0,0),(-1,0))
-    print("T "+str(env.T[keyT].size()))
+    print("T "+str(env.T[env.keyT].size()))
     if verbosity>0:
-        print(env.T[key])
+        print(env.T[env.keyT])
 
 def compute_multiplets(env, eps_multiplet_gap=1.0e-10):
     D= torch.zeros(env.chi+1, dtype=env.dtype, device=env.device)

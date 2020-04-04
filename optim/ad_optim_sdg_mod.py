@@ -34,21 +34,9 @@ def store_checkpoint(checkpoint_file, state, optimizer, current_epoch, current_l
     if verbosity>0:
         print(checkpoint_file)
 
-# A = torch.rand((phys_dim, bond_dim, bond_dim, bond_dim, bond_dim), dtype=torch.float64)
-# A = 2 * (A - 0.5)
-# A.requires_grad_(True)
-# def zero_fn(coord): return (0,0)
-# sites = {(0,0): A}
-# state1 = ipeps.IPEPS(None, sites, zero_fn)
-
-#     def loss_fn(state, model, ctm_args):
-#         ctm_env = ENV(env_args,state1)
-#         ctm_env = ctmrg.run(state, env, ctm_args=ctm_args, global_args=global_args)
-#         energy = model.energy_1x1c4v(state1, ctm_env)
-#         return energy
-
-def optimize_state(state, ctm_env_init, loss_fn, local_args, obs_fn=None, post_proc=None,
-    opt_args=cfg.opt_args, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
+    main_args=cfg.main_args, opt_args=cfg.opt_args, ctm_args=cfg.ctm_args, 
+    global_args=cfg.global_args):
     r"""
     :param state: initial wavefunction
     :param ctm_env_init: initial environment corresponding to ``state``
@@ -71,13 +59,13 @@ def optimize_state(state, ctm_env_init, loss_fn, local_args, obs_fn=None, post_p
     The main parameters influencing the optimization process are given in :py:class:`args.OPTARGS`.
     """
     verbosity = opt_args.verbosity_opt_epoch
-    checkpoint_file = local_args.out_prefix+"_checkpoint.p" 
-    outputstatefile= local_args.out_prefix+"_state.json"
+    checkpoint_file = main_args.out_prefix+"_checkpoint.p" 
+    outputstatefile= main_args.out_prefix+"_state.json"
     t_data = dict({"loss": [], "min_loss": 1.0e+16, "loss_ls": [], "min_loss_ls": 1.0e+16})
-    prev_epoch=[-1]
     current_env=[ctm_env_init]
     context= dict({"ctm_args":ctm_args, "opt_args":opt_args, "loss_history": t_data,
         "line_search": False})
+    epoch= 0
 
     parameters= state.get_parameters()
     for A in parameters: A.requires_grad_(True)
@@ -85,15 +73,16 @@ def optimize_state(state, ctm_env_init, loss_fn, local_args, obs_fn=None, post_p
     optimizer = sgd_modified.SGD_MOD(parameters, lr=opt_args.lr, momentum=opt_args.momentum, \
         line_search_fn=opt_args.line_search, line_search_eps=opt_args.tol_line_search)
 
-    if local_args.opt_resume is not None:
-        print(f"INFO: resuming from check point. resume = {local_args.opt_resume}")
-        checkpoint = torch.load(local_args.opt_resume)
+    # TODO test opt_resume
+    if main_args.opt_resume is not None:
+        print(f"INFO: resuming from check point. resume = {main_args.opt_resume}")
+        checkpoint = torch.load(main_args.opt_resume)
         epoch0 = checkpoint["epoch"]
         loss0 = checkpoint["loss"]
         cp_state_dict= checkpoint["optimizer_state_dict"]
         cp_opt_params= cp_state_dict["param_groups"][0]
         cp_opt_history= cp_state_dict["state"][cp_opt_params["params"][0]]
-        if local_args.opt_resume_override_params:
+        if main_args.opt_resume_override_params:
             cp_opt_params["lr"] = opt_args.lr
         cp_state_dict["param_groups"][0]= cp_opt_params
         optimizer.load_state_dict(cp_state_dict)
@@ -116,8 +105,7 @@ def optimize_state(state, ctm_env_init, loss_fn, local_args, obs_fn=None, post_p
 
         # 3) log CTM metrics for debugging
         if opt_args.opt_logging:
-            log_entry=dict({"id": len(t_data["loss"]), \
-                "t_ctm": t_ctm, "t_check": t_check })
+            log_entry=dict({"id": epoch, "t_ctm": t_ctm, "t_check": t_check })
             log.info(json.dumps(log_entry))
 
         # 3) compute desired observables
@@ -130,8 +118,7 @@ def optimize_state(state, ctm_env_init, loss_fn, local_args, obs_fn=None, post_p
 
         # 5) log grad metrics
         if opt_args.opt_logging:
-            log_entry=dict({"id": len(t_data["loss"]),
-                "t_grad": t_grad1-t_grad0 })
+            log_entry=dict({"id": epoch, "t_grad": t_grad1-t_grad0 })
             log.info(json.dumps(log_entry))
 
         # 6) detach current environment from autograd graph
@@ -144,12 +131,13 @@ def optimize_state(state, ctm_env_init, loss_fn, local_args, obs_fn=None, post_p
 
     # closure for derivative-free line search. This closure
     # is to be called within torch.no_grad context
+    @torch.no_grad()
     def closure_linesearch():
         context["line_search"]=True
 
         # 1) evaluate loss
         loc_opt_args= copy.deepcopy(opt_args)
-        loc_opt_args.opt_ctm_reinit= False
+        loc_opt_args.opt_ctm_reinit= opt_args.line_search_ctm_reinit
         loc_ctm_args= copy.deepcopy(ctm_args)
         # TODO check if we are optimizing C4v symmetric ansatz
         if opt_args.line_search_svd_method != 'DEFAULT':
@@ -164,21 +152,16 @@ def optimize_state(state, ctm_env_init, loss_fn, local_args, obs_fn=None, post_p
         if t_data["min_loss_ls"] > t_data["loss_ls"][-1]:
             t_data["min_loss_ls"]= t_data["loss_ls"][-1]
 
-        # 5) log CTM metrics for debugging
+        # 5) log metrics for debugging
         if opt_args.opt_logging:
-            log_entry=dict({"id_LS": len(t_data["loss"]), \
-                "t_ctm": t_ctm, "t_check": t_check})
-            log.info(json.dumps(log_entry))
-
-        # 6) log opt metrics
-        if opt_args.opt_logging:
-            log_entry=dict({"id_LS": len(t_data["loss"]), "loss": t_data["loss_ls"]})
+            log_entry=dict({"id": epoch, "LS": len(t_data["loss_ls"]), \
+                "loss": t_data["loss_ls"], "t_ctm": t_ctm, "t_check": t_check})
             log.info(json.dumps(log_entry))
 
         current_env[0] = ctm_env
         return loss
 
-    for epoch in range(local_args.opt_max_iter):
+    for epoch in range(main_args.opt_max_iter):
         # checkpoint the optimizer
         # checkpointing before step, guarantees the correspondence between the wavefunction
         # and the last computed value of loss t_data["loss"][-1]
@@ -198,4 +181,4 @@ def optimize_state(state, ctm_env_init, loss_fn, local_args, obs_fn=None, post_p
 
     # optimization is over, store the last checkpoint
     store_checkpoint(checkpoint_file, state, optimizer, \
-        local_args.opt_max_iter, t_data["loss"][-1])
+        main_args.opt_max_iter, t_data["loss"][-1])

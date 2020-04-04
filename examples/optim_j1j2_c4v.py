@@ -25,6 +25,7 @@ parser.add_argument("-j2", type=float, default=0., help="next nearest-neighbour 
 parser.add_argument("-top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
 parser.add_argument("-top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
+parser.add_argument("-force_cpu", action='store_true', help="evaluate energy on cpu")
 args, unknown_args = parser.parse_known_args()
 
 def main():
@@ -114,7 +115,7 @@ def main():
             conv_check=ctmrg_conv_energy, ctm_args=ctm_args)
         
         # 2) evaluate loss with converged environment
-        loss = energy_f(state_sym, ctm_env_out)
+        loss = energy_f(state_sym, ctm_env_out, force_cpu=args.force_cpu)
 
         return (loss, ctm_env_out, *ctm_log)
 
@@ -124,14 +125,14 @@ def main():
         return dict({"re": re, "im": im})
 
     def obs_fn(state, ctm_env, opt_context):
-        state_sym= to_ipeps_c4v(state, normalize=True)
-        epoch= len(opt_context["loss_history"]["loss"])
-        loss= opt_context["loss_history"]["loss"][-1]
-        obs_values, obs_labels = model.eval_obs(state_sym, ctm_env)
-        print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]+\
-            [f"{torch.max(torch.abs(state.site((0,0))))}"]))
-
         with torch.no_grad():
+            state_sym= to_ipeps_c4v(state, normalize=True)
+            epoch= len(opt_context["loss_history"]["loss"])
+            loss= opt_context["loss_history"]["loss"][-1]
+            obs_values, obs_labels = model.eval_obs(state_sym, ctm_env)
+            print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]+\
+                [f"{torch.max(torch.abs(state.site((0,0))))}"]))
+
             if args.top_freq>0 and epoch%args.top_freq==0:
                 coord_dir_pairs=[((0,0), (1,0))]
                 for c,d in coord_dir_pairs:
@@ -153,8 +154,8 @@ def main():
                 state.sites[(0,0)].copy_(symm_site)
 
     # optimize
-    # optimize_state(state, ctm_env, loss_fn, args, obs_fn=obs_fn, post_proc=post_proc)
-    optimize_state(state, ctm_env, loss_fn, args, obs_fn=obs_fn)
+    # optimize_state(state, ctm_env, loss_fn, obs_fn=obs_fn, post_proc=post_proc)
+    optimize_state(state, ctm_env, loss_fn, obs_fn=obs_fn)
 
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"

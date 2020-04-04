@@ -496,7 +496,7 @@ class J1J2_C4V_BIPARTITE():
         #    + f" rdm_c12c_diag {torch.einsum('ijklabcd,jkbc,ilad',rdm2x2,self.h2,id2)}")
         return energy_per_site
 
-    def energy_1x1_lowmem(self,state,env_c4v,force_cpu=False):
+    def energy_1x1_lowmem(self, state, env_c4v, force_cpu=False):
         r"""
         :param state: wavefunction
         :param env_c4v: CTM c4v symmetric environment
@@ -529,10 +529,10 @@ class J1J2_C4V_BIPARTITE():
             = 2*Tr(\rho_{2x1} \mathcal{h2_rot}) + 2*Tr(\rho_{2x1_diag} \mathcal{h2})
         
         """
-        rdm2x2_NN= rdm_c4v.rdm2x2_NN_lowmem_sl(state,env_c4v,force_cpu=force_cpu,\
-            verbosity=cfg.ctm_args.verbosity_rdm)
-        rdm2x2_NNN= rdm_c4v.rdm2x2_NNN_lowmem_sl(state,env_c4v,force_cpu=force_cpu,\
-            verbosity=cfg.ctm_args.verbosity_rdm)
+        rdm2x2_NN= rdm_c4v.rdm2x2_NN_lowmem_sl(state, env_c4v, sym_pos_def=True,\
+            force_cpu=force_cpu, verbosity=cfg.ctm_args.verbosity_rdm)
+        rdm2x2_NNN= rdm_c4v.rdm2x2_NNN_lowmem_sl(state, env_c4v, sym_pos_def=True,\
+            force_cpu=force_cpu, verbosity=cfg.ctm_args.verbosity_rdm)
         energy_per_site= 2.0*self.j1*torch.einsum('ijkl,ijkl',rdm2x2_NN,self.h2_rot)\
             + 2.0*self.j2*torch.einsum('ijkl,ijkl',rdm2x2_NNN,self.h2)
         return energy_per_site
