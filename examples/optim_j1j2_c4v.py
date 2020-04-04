@@ -9,7 +9,7 @@ from ctm.one_site_c4v import ctmrg_c4v
 from ctm.one_site_c4v.rdm_c4v import rdm2x1_sl
 from ctm.one_site_c4v import transferops_c4v
 from models import j1j2
-# from optim.ad_optim_sdg_mod import optimize_state
+# from optim.ad_optim_sgd_mod import optimize_state
 from optim.ad_optim_lbfgs_mod import optimize_state
 # from optim.ad_optim import optimize_state
 import json
