@@ -239,14 +239,13 @@ class LBFGS_MOD(LBFGS):
             # compute step length
             ############################################################
             # reset initial guess for step size
-            default_t= 1. / flat_grad.abs().sum() * lr
             if state['n_iter'] == 1:
                 t = min(1., 1. / flat_grad.abs().sum()) * lr
             else:
                 t = lr
 
             # directional derivative
-            gtd = flat_grad.dot(d)  # g * d
+            gtd = flat_grad.dot(d)
 
             # directional derivative is below tolerance
             if gtd > -tolerance_change:
@@ -263,7 +262,7 @@ class LBFGS_MOD(LBFGS):
                         return self._directional_evaluate_derivative_free(closure_linesearch, t, x, d)
 
                     # return (xmin, fval, iter, funcalls)
-                    t, loss= _scalar_search_armijo(obj_func, loss, gtd, args=(x_init,d), alpha0=default_t)
+                    t, loss= _scalar_search_armijo(obj_func, loss, gtd, args=(x_init,d), alpha0=t)
                     if t is None:
                         raise RuntimeError("minimize_scalar failed")
                 elif line_search_fn == "strong_wolfe":
@@ -277,6 +276,7 @@ class LBFGS_MOD(LBFGS):
                 else:
                     raise RuntimeError("unsupported line search")
                 
+                log.info(f"LS final step: {t}")
                 self._add_grad(t, d)
                 opt_cond = flat_grad.abs().max() <= tolerance_grad
                 

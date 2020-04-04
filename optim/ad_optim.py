@@ -60,9 +60,9 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
     checkpoint_file = main_args.out_prefix+"_checkpoint.p"   
     outputstatefile= main_args.out_prefix+"_state.json"
     t_data = dict({"loss": [], "min_loss": float('inf')})
-    prev_epoch=[-1]
     current_env=[ctm_env_init]
     context= dict({"ctm_args":ctm_args, "opt_args":opt_args, "loss_history": t_data})
+    epoch= 0
 
     parameters= state.get_parameters()
     for A in parameters: A.requires_grad_(True)
@@ -119,8 +119,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
 
         # 2) log CTM metrics for debugging
         if opt_args.opt_logging:
-            log_entry=dict({"id": len(t_data["loss"])-1, \
-                "t_ctm": t_ctm, "t_check": t_check}) 
+            log_entry=dict({"id": epoch, "t_ctm": t_ctm, "t_check": t_check}) 
             log.info(json.dumps(log_entry))
 
         # 3) compute desired observables
@@ -134,7 +133,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
 
         # 5) log grad metrics for debugging
         if opt_args.opt_logging:
-            log_entry=dict({"id": len(t_data["loss"])-1, "t_grad": t_grad1-t_grad0})
+            log_entry=dict({"id": epoch, "t_grad": t_grad1-t_grad0})
             log.info(json.dumps(log_entry))
 
         # 6) detach current environment from autograd graph

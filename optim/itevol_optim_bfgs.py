@@ -33,6 +33,7 @@ def itevol_plaquette_step(state1, loss_fn, post_proc=None, main_args=cfg.main_ar
     t_data = dict({"loss": [], "min_loss": 1.0e+16, "loss_ls": [], "min_loss_ls": 1.0e+16,
         "grad_max": []})
     context= dict({"ctm_args":ctm_args, "opt_args":opt_args, "loss_history": t_data})
+    _current_diag= dict({"n1": 0, "overlap1U0": 0})
 
     parameters= state1.get_parameters()
     for A in parameters: A.requires_grad_(True)
@@ -48,7 +49,9 @@ def itevol_plaquette_step(state1, loss_fn, post_proc=None, main_args=cfg.main_ar
 
         # 0) evaluate loss
         optimizer.zero_grad()
-        loss, g= loss_fn(state1, context)
+        loss, g, n1, overlap1U0= loss_fn(state1, context)
+        _current_diag["n1"]= n1.item()
+        _current_diag["overlap1U0"]= overlap1U0.item()
 
         # 1) store current state if the loss improves
         t_data["loss"].append(loss.item())
@@ -74,7 +77,9 @@ def itevol_plaquette_step(state1, loss_fn, post_proc=None, main_args=cfg.main_ar
         context["line_search"]=True
 
         # 1) evaluate loss
-        loss, g= loss_fn(state1, context)
+        loss, g, n1, overlap1U0= loss_fn(state1, context)
+        _current_diag["n1"]= n1.item()
+        _current_diag["overlap1U0"]= overlap1U0.item()
 
         # 2) store current state if the loss improves
         t_data["loss_ls"].append(loss.item())
@@ -85,8 +90,9 @@ def itevol_plaquette_step(state1, loss_fn, post_proc=None, main_args=cfg.main_ar
         
     def log_progress(epoch,final=False):
         if (epoch>1 and epoch%(opt_args.itevol_max_iter/100)==0) or final: 
-            log.info(f"{epoch} {t_data['loss'][-1]} {state1.site().norm()} "\
-                + f"{t_data['loss'][-1] - t_data['loss'][-2]} {t_data['grad_max'][-1]}")
+            log.info(f"{epoch} loss {t_data['loss'][-1]} n1 {_current_diag['n1']}"\
+                + f" overlap1U0 {_current_diag['overlap1U0']} norm {state1.site().norm()}"\
+                + f" {t_data['loss'][-1] - t_data['loss'][-2]} {t_data['grad_max'][-1]}")
 
     for epoch in range(opt_args.itevol_max_iter):
         optimizer.step_2c(closure, closure_linesearch)

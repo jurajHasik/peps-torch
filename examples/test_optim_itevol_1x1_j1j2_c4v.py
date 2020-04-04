@@ -182,7 +182,6 @@ def main():
         # test_rdm2x2_x1(rdm2x2_x1, state_sym.site().size()[0], state_sym.site().size()[1])
         spd_2x2_x1, cnum= rdm2x2_x1_symm_posdef_normalize(rdm2x2_x1, state_sym.site().size()[0], \
             state_sym.site().size()[1],pos_def=True)
-        print(f"cnum {cnum}")
         # test_rdm2x2_x1_vs_rdm2x2(hp_rot, rdm2x2_x1, spd_2x2_x1, state_sym, ctm_env)
 
         # 2b) insert gate to create effective single-site reduced density matrix
