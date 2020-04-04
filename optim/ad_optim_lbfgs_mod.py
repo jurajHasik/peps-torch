@@ -73,7 +73,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
     optimizer = lbfgs_modified.LBFGS_MOD(parameters, max_iter=opt_args.max_iter_per_epoch, lr=opt_args.lr, \
         tolerance_grad=opt_args.tolerance_grad, tolerance_change=opt_args.tolerance_change, \
         history_size=opt_args.history_size, line_search_fn=opt_args.line_search, \
-        line_search_eps=opt_args.tol_line_search)
+        line_search_eps=opt_args.line_search_tol)
 
     # load and/or modify optimizer state from checkpoint
     if main_args.opt_resume is not None:

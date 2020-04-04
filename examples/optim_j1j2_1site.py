@@ -26,7 +26,7 @@ def main():
     torch.set_num_threads(args.omp_cores)
     torch.manual_seed(args.seed)
 
-    model = j1j2.J1J2_1SITE_BIPARTITE(j1=args.j1, j2=args.j2)
+    model = j1j2.J1J2(j1=args.j1, j2=args.j2)
     
     # initialize an ipeps
     # 1) define lattice-tiling function, that maps arbitrary vertex of square lattice
@@ -59,7 +59,7 @@ def main():
     print(state)
     
     # 2) select the "energy" function
-    energy_f=model.energy_2x2_1site
+    energy_f=model.energy_2x2_1site_BP
 
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         with torch.no_grad():
@@ -74,6 +74,7 @@ def main():
                 return True, history
         return False, history
 
+    # 3) choose C4v irrep (or their mix)
     def symmetrize(state):
         A= state.site((0,0))
         A_symm= make_c4v_symm_A1(A) 
@@ -114,7 +115,7 @@ def main():
             [f"{torch.max(torch.abs(symm_state.site((0,0))))}"]))
 
     # optimize
-    optimize_state(state, ctm_env, loss_fn, args, obs_fn=obs_fn)
+    optimize_state(state, ctm_env, loss_fn, obs_fn=obs_fn)
 
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"
@@ -143,24 +144,10 @@ class TestOpt(unittest.TestCase):
     # basic tests
     def test_opt_GESDD_BIPARTITE(self):
         args.CTMARGS_projector_svd_method="GESDD"
-        args.tiling="BIPARTITE"
         main()
 
     @unittest.skipIf(not torch.cuda.is_available(), "CUDA not available")
     def test_opt_GESDD_BIPARTITE_gpu(self):
         args.GLOBALARGS_device="cuda:0"
         args.CTMARGS_projector_svd_method="GESDD"
-        args.tiling="BIPARTITE"
-        main()
-
-    def test_opt_GESDD_4SITE(self):
-        args.CTMARGS_projector_svd_method="GESDD"
-        args.tiling="4SITE"
-        main()
-
-    @unittest.skipIf(not torch.cuda.is_available(), "CUDA not available")
-    def test_opt_GESDD_4SITE_gpu(self):
-        args.GLOBALARGS_device="cuda:0"
-        args.CTMARGS_projector_svd_method="GESDD"
-        args.tiling="4SITE"
         main()
