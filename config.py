@@ -272,23 +272,20 @@ class OPTARGS():
     :vartype opt_logging: bool
     """
     def __init__(self):
-        self.itevol_max_iter = 10000
-        self.itevol_tolerance_grad = 1e-5
-        self.itevol_tolerance_change = 1e-9
-        self.opt_ctm_reinit = True
-        self.lr = 1.0
-        self.momentum = 0.
+        self.lr= 1.0
+        self.momentum= 0.
         self.tolerance_grad= 1e-5
         self.tolerance_change= 1e-9
+        self.opt_ctm_reinit= True
         self.line_search= "default"
         self.line_search_ctm_reinit= True
         self.line_search_svd_method= 'DEFAULT'
-        self.tol_line_search= 1.0e-4
+        self.line_search_tol= 1.0e-4
         self.fd_eps= 1.0e-4
         self.history_size= 100
-        self.max_iter_per_epoch = 1
-        self.verbosity_opt_epoch = 1
-        self.opt_logging = True
+        self.max_iter_per_epoch= 1
+        self.verbosity_opt_epoch= 1
+        self.opt_logging= True
 
     def __str__(self):
         res=type(self).__name__+"\n"
