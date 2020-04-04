@@ -71,7 +71,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
     for A in parameters: A.requires_grad_(True)
 
     optimizer = sgd_modified.SGD_MOD(parameters, lr=opt_args.lr, momentum=opt_args.momentum, \
-        line_search_fn=opt_args.line_search, line_search_eps=opt_args.tol_line_search)
+        line_search_fn=opt_args.line_search, line_search_eps=opt_args.line_search_tol)
 
     # TODO test opt_resume
     if main_args.opt_resume is not None:
