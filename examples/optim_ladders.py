@@ -65,17 +65,17 @@ def main():
 
     print(state)
 
+    @torch.no_grad()
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
-        with torch.no_grad():
-            if not history:
-                history=[]
-            e_curr = model.energy_2x1_1x2(state, env)
-            history.append(e_curr.item())
+        if not history:
+            history=[]
+        e_curr = model.energy_2x1_1x2(state, env)
+        history.append(e_curr.item())
 
-            if (len(history) > 1 and abs(history[-1]-history[-2]) < ctm_args.ctm_conv_tol)\
-                or len(history) >= ctm_args.ctm_max_iter:
-                log.info({"history_length": len(history), "history": history})
-                return True, history
+        if (len(history) > 1 and abs(history[-1]-history[-2]) < ctm_args.ctm_conv_tol)\
+            or len(history) >= ctm_args.ctm_max_iter:
+            log.info({"history_length": len(history), "history": history})
+            return True, history
         return False, history
 
     ctm_env = ENV(args.chi, state)
@@ -103,6 +103,7 @@ def main():
                 im=[l[i,1].item() for i in range(l.size()[0])]
                 return dict({"re": re, "im": im})
 
+    @torch.no_grad()
     def obs_fn(state, ctm_env, opt_context):
         epoch= len(opt_context["loss_history"]["loss"]) 
         loss= opt_context["loss_history"]["loss"][-1]

@@ -50,19 +50,19 @@ def main():
 
     print(state)
 
+    @torch.no_grad()
     def ctmrg_conv_rho2x1dist(state, env, history, ctm_args=cfg.ctm_args):
-        with torch.no_grad():
-            if not history:
-                history=dict({"log": []})
-            rdm2x1= rdm2x1_sl(state, env, force_cpu=ctm_args.conv_check_cpu)
-            dist= float('inf')
-            if len(history["log"]) > 0:
-                dist= torch.dist(rdm2x1, history["rdm"], p=2).item()
-            history["rdm"]=rdm2x1
-            history["log"].append(dist)
-            if dist<ctm_args.ctm_conv_tol or len(history["log"]) >= ctm_args.ctm_max_iter:
-                log.info({"history_length": len(history['log']), "history": history['log']})
-                return True, history
+        if not history:
+            history=dict({"log": []})
+        rdm2x1= rdm2x1_sl(state, env, force_cpu=ctm_args.conv_check_cpu)
+        dist= float('inf')
+        if len(history["log"]) > 0:
+            dist= torch.dist(rdm2x1, history["rdm"], p=2).item()
+        history["rdm"]=rdm2x1
+        history["log"].append(dist)
+        if dist<ctm_args.ctm_conv_tol or len(history["log"]) >= ctm_args.ctm_max_iter:
+            log.info({"history_length": len(history['log']), "history": history['log']})
+            return True, history
         return False, history
 
     ctm_env= ENV_C4V(args.chi, state)
@@ -90,6 +90,7 @@ def main():
         
         return (loss, ctm_env_out, *ctm_log) 
 
+    @torch.no_grad()
     def obs_fn(state, ctm_env, opt_context):
         epoch= len(opt_context["loss_history"]["loss"]) 
         loss= opt_context["loss_history"]["loss"][-1]

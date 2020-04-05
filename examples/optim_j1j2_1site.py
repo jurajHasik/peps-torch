@@ -61,17 +61,17 @@ def main():
     # 2) select the "energy" function
     energy_f=model.energy_2x2_1site_BP
 
+    @torch.no_grad()
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
-        with torch.no_grad():
-            if not history:
-                history=[]
-            e_curr = energy_f(state, env)
-            history.append(e_curr.item())
+        if not history:
+            history=[]
+        e_curr = energy_f(state, env)
+        history.append(e_curr.item())
 
-            if (len(history) > 1 and abs(history[-1]-history[-2]) < ctm_args.ctm_conv_tol)\
-                or len(history) >= ctm_args.ctm_max_iter:
-                log.info({"history_length": len(history), "history": history})
-                return True, history
+        if (len(history) > 1 and abs(history[-1]-history[-2]) < ctm_args.ctm_conv_tol)\
+            or len(history) >= ctm_args.ctm_max_iter:
+            log.info({"history_length": len(history), "history": history})
+            return True, history
         return False, history
 
     # 3) choose C4v irrep (or their mix)
@@ -106,6 +106,7 @@ def main():
         
         return (loss, ctm_env_out, *ctm_log)
 
+    @torch.no_grad()
     def obs_fn(state, ctm_env, opt_context):
         symm_state= symmetrize(state)
         epoch= len(opt_context["loss_history"]["loss"]) 
