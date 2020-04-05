@@ -108,7 +108,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
             log_entry=dict({"id": epoch, "t_ctm": t_ctm, "t_check": t_check })
             log.info(json.dumps(log_entry))
 
-        # 3) compute desired observables
+        # 4) compute desired observables
         if obs_fn is not None:
             obs_fn(state, ctm_env, context)
 
@@ -139,7 +139,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         loc_opt_args= copy.deepcopy(opt_args)
         loc_opt_args.opt_ctm_reinit= opt_args.line_search_ctm_reinit
         loc_ctm_args= copy.deepcopy(ctm_args)
-        # TODO check if we are optimizing C4v symmetric ansatz
+
         if opt_args.line_search_svd_method != 'DEFAULT':
             loc_ctm_args.projector_svd_method= opt_args.line_search_svd_method
         loc_context= dict({"ctm_args":loc_ctm_args, "opt_args":loc_opt_args, "loss_history": t_data,
@@ -152,11 +152,15 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         if t_data["min_loss_ls"] > t_data["loss_ls"][-1]:
             t_data["min_loss_ls"]= t_data["loss_ls"][-1]
 
-        # 5) log metrics for debugging
+        # 3) log metrics for debugging
         if opt_args.opt_logging:
             log_entry=dict({"id": epoch, "LS": len(t_data["loss_ls"]), \
                 "loss": t_data["loss_ls"], "t_ctm": t_ctm, "t_check": t_check})
             log.info(json.dumps(log_entry))
+
+        # 4) compute desired observables
+        if obs_fn is not None:
+            obs_fn(state, ctm_env, context)
 
         current_env[0] = ctm_env
         return loss

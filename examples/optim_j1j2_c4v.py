@@ -63,35 +63,26 @@ def main():
 
     print(state)
     
-    def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
-        with torch.no_grad():
-        #     if not history:
-        #         history=[]
-        #     e_curr = energy_f(state, env)
-        #     history.append(e_curr.item())
-        #     if (len(history) > 1 and abs(history[-1]-history[-2]) < ctm_args.ctm_conv_tol)\
-        #         or len(history) >= ctm_args.ctm_max_iter:
-        #         log.info({"history_length": len(history), "history": history})
-        #         return True, history
-        # return False, history
-            if not history:
-                history=dict({"log": []})
-            rdm2x1= rdm2x1_sl(state, env, force_cpu=ctm_args.conv_check_cpu)
-            dist= float('inf')
-            if len(history["log"]) > 0:
-                dist= torch.dist(rdm2x1, history["rdm"], p=2).item()
-            history["rdm"]=rdm2x1
-            history["log"].append(dist)
-            if dist<ctm_args.ctm_conv_tol or len(history["log"]) >= ctm_args.ctm_max_iter:
-                log.info({"history_length": len(history['log']), "history": history['log']})
-                return True, history
+    @torch.no_grad()
+    def ctmrg_conv_f(state, env, history, ctm_args=cfg.ctm_args):
+        if not history:
+            history=dict({"log": []})
+        rdm2x1= rdm2x1_sl(state, env, force_cpu=ctm_args.conv_check_cpu)
+        dist= float('inf')
+        if len(history["log"]) > 0:
+            dist= torch.dist(rdm2x1, history["rdm"], p=2).item()
+        history["rdm"]=rdm2x1
+        history["log"].append(dist)
+        if dist<ctm_args.ctm_conv_tol or len(history["log"]) >= ctm_args.ctm_max_iter:
+            log.info({"history_length": len(history['log']), "history": history['log']})
+            return True, history
         return False, history
 
     state_sym= to_ipeps_c4v(state)
     ctm_env= ENV_C4V(args.chi, state_sym)
     init_env(state_sym, ctm_env)
     
-    ctm_env, *ctm_log = ctmrg_c4v.run(state_sym, ctm_env, conv_check=ctmrg_conv_energy)
+    ctm_env, *ctm_log = ctmrg_c4v.run(state_sym, ctm_env, conv_check=ctmrg_conv_f)
     loss= energy_f(state_sym, ctm_env)
     obs_values, obs_labels= model.eval_obs(state_sym,ctm_env)
     print(", ".join(["epoch","energy"]+obs_labels))
@@ -112,7 +103,7 @@ def main():
 
         # 1) compute environment by CTMRG
         ctm_env_out, *ctm_log= ctmrg_c4v.run(state_sym, ctm_env_in, 
-            conv_check=ctmrg_conv_energy, ctm_args=ctm_args)
+            conv_check=ctmrg_conv_f, ctm_args=ctm_args)
         
         # 2) evaluate loss with converged environment
         loss = energy_f(state_sym, ctm_env_out, force_cpu=args.force_cpu)
@@ -124,8 +115,10 @@ def main():
         im=[l[i,1].item() for i in range(l.size()[0])]
         return dict({"re": re, "im": im})
 
+    @torch.no_grad()
     def obs_fn(state, ctm_env, opt_context):
-        with torch.no_grad():
+        if ("line_search" in opt_context.keys() and not opt_context["line_search"]) \
+            or not "line_search" in opt_context.keys():
             state_sym= to_ipeps_c4v(state, normalize=True)
             epoch= len(opt_context["loss_history"]["loss"])
             loss= opt_context["loss_history"]["loss"][-1]
@@ -162,7 +155,7 @@ def main():
     state= read_ipeps_c4v(outputstatefile)
     ctm_env = ENV_C4V(args.chi, state)
     init_env(state, ctm_env)
-    ctm_env, *ctm_log = ctmrg_c4v.run(state, ctm_env, conv_check=ctmrg_conv_energy)
+    ctm_env, *ctm_log = ctmrg_c4v.run(state, ctm_env, conv_check=ctmrg_conv_f)
     opt_energy = energy_f(state,ctm_env)
     obs_values, obs_labels = model.eval_obs(state,ctm_env)
     print(", ".join([f"{args.opt_max_iter}",f"{opt_energy}"]+[f"{v}" for v in obs_values]))
