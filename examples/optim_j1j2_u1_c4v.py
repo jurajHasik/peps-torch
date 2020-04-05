@@ -10,7 +10,11 @@ from ctm.one_site_c4v.rdm_c4v import rdm2x1_sl
 from ctm.one_site_c4v import transferops_c4v
 from models import j1j2
 from optim.ad_optim_lbfgs_mod import optimize_state
+<<<<<<< HEAD
 import u1sym.sym_ten_parser as tenU1
+=======
+import su2sym.sym_ten_parser as tenSU2
+>>>>>>> merge of ad_optim, su2 and u1 now based on ad_optim optimizers
 import json
 import unittest
 import logging
@@ -46,7 +50,7 @@ def main():
 
         # TODO extending from smaller bond-dim to higher bond-dim is 
         # currently not possible
-        
+
         state.add_noise(args.instate_noise)
     elif args.opt_resume is not None:
         if args.bond_dim in [2,3,4,5,6,7,8]:
@@ -75,9 +79,6 @@ def main():
             +str(args.ipeps_init_type)+" is not supported")
 
     print(state)
-    # PRINT TENSOR
-    # for i in range(2*(3**4)):
-    #     print(state.site((0,0)).reshape(2*(3**4))[i].item())
 
     @torch.no_grad()
     def ctmrg_conv_f(state, env, history, ctm_args=cfg.ctm_args):

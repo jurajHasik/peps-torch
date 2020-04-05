@@ -23,12 +23,13 @@ parser.add_argument("-top_n", type=int, default=2, help="number of leading eigen
     "of transfer operator to compute")
 parser.add_argument("-obs_freq", type=int, default=-1, help="frequency of computing observables"+
     " during CTM convergence")
-args = parser.parse_args()
+args, unknown_args= parser.parse_known_args()
 
 def main():
     cfg.configure(args)
     cfg.print_config()
     torch.set_num_threads(args.omp_cores)
+    torch.manual_seed(args.seed)
     
     model= j1j2.J1J2_C4V_BIPARTITE(j1=args.j1, j2=args.j2)
     energy_f= model.energy_1x1_lowmem
@@ -54,34 +55,34 @@ def main():
 
     print(state)
 
+    @torch.no_grad()
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
-        with torch.no_grad():
-            if not history:
-                history=dict({"log": []})
-            rdm2x1= rdm2x1_sl(state, env, force_cpu=ctm_args.conv_check_cpu)
-            dist= float('inf')
-            if len(history["log"]) > 1:
-                dist= torch.dist(rdm2x1, history["rdm"], p=2).item()
-            # log dist and observables
-            if args.obs_freq>0 and \
-                (len(history["log"])%args.obs_freq==0 or 
-                (len(history["log"])-1)%args.obs_freq==0):
-                e_curr = energy_f(state, env, force_cpu=ctm_args.conv_check_cpu)
-                obs_values, obs_labels = model.eval_obs(state, env, force_cpu=True)
-                print(", ".join([f"{len(history['log'])}",f"{dist}",f"{e_curr}"]+[f"{v}" for v in obs_values]))
-            else:
-                print(f"{len(history['log'])}, {dist}")
-            # update history
-            history["rdm"]=rdm2x1
-            history["log"].append(dist)
-            if dist<ctm_args.ctm_conv_tol:
-                log.info({"history_length": len(history['log']), "history": history['log'],
-                    "final_multiplets": compute_multiplets(env)})
-                return True, history
-            elif len(history['log']) >= ctm_args.ctm_max_iter:
-                log.info({"history_length": len(history['log']), "history": history['log'],
-                    "final_multiplets": compute_multiplets(env)})
-                return False, history
+        if not history:
+            history=dict({"log": []})
+        rdm2x1= rdm2x1_sl(state, env, force_cpu=ctm_args.conv_check_cpu)
+        dist= float('inf')
+        if len(history["log"]) > 1:
+            dist= torch.dist(rdm2x1, history["rdm"], p=2).item()
+        # log dist and observables
+        if args.obs_freq>0 and \
+            (len(history["log"])%args.obs_freq==0 or 
+            (len(history["log"])-1)%args.obs_freq==0):
+            e_curr = energy_f(state, env, force_cpu=ctm_args.conv_check_cpu)
+            obs_values, obs_labels = model.eval_obs(state, env, force_cpu=True)
+            print(", ".join([f"{len(history['log'])}",f"{dist}",f"{e_curr}"]+[f"{v}" for v in obs_values]))
+        else:
+            print(f"{len(history['log'])}, {dist}")
+        # update history
+        history["rdm"]=rdm2x1
+        history["log"].append(dist)
+        if dist<ctm_args.ctm_conv_tol:
+            log.info({"history_length": len(history['log']), "history": history['log'],
+                "final_multiplets": compute_multiplets(env)})
+            return True, history
+        elif len(history['log']) >= ctm_args.ctm_max_iter:
+            log.info({"history_length": len(history['log']), "history": history['log'],
+                "final_multiplets": compute_multiplets(env)})
+            return False, history
         return False, history
 
     ctm_env_init = ENV_C4V(args.chi, state)
@@ -127,4 +128,7 @@ def main():
         print(f"{i} {l[i,0]} {l[i,1]}")
 
 if __name__=='__main__':
+    if len(unknown_args)>0:
+        print("args not recognized: "+str(unknown_args))
+        raise Exception("Unknown command line arguments")
     main()
