@@ -282,6 +282,7 @@ class OPTARGS():
         self.line_search_svd_method= 'DEFAULT'
         self.line_search_tol= 1.0e-4
         self.fd_eps= 1.0e-4
+        self.fd_ctm_reinit= True
         self.history_size= 100
         self.max_iter_per_epoch= 1
         self.verbosity_opt_epoch= 1
