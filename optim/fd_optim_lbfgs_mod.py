@@ -111,7 +111,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
     def grad_fd(loss0):
         # CTM setup during grad evaluation is identical to setup in closure_linesearch 
         loc_opt_args= copy.deepcopy(opt_args)
-        loc_opt_args.opt_ctm_reinit= opt_args.line_search_ctm_reinit
+        loc_opt_args.opt_ctm_reinit= opt_args.fd_ctm_reinit
         loc_ctm_args= copy.deepcopy(ctm_args)
         # TODO check if we are optimizing C4v symmetric ansatz
         if opt_args.line_search_svd_method != 'DEFAULT':
