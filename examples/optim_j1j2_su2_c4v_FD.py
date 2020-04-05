@@ -88,24 +88,24 @@ def main():
 
     print(state)
 
+    @torch.no_grad()
     def ctmrg_conv_f(state, env, history, ctm_args=cfg.ctm_args):
-        with torch.no_grad():
-            if not history:
-                history=dict({"log": []})
-            rdm2x1= rdm2x1_sl(state, env, force_cpu=ctm_args.conv_check_cpu)
-            dist= float('inf')
-            if len(history["log"]) > 1:
-                dist= torch.dist(rdm2x1, history["rdm"], p=2).item()
-            history["rdm"]=rdm2x1
-            history["log"].append(dist)
-            if dist<ctm_args.ctm_conv_tol:
-                log.info({"history_length": len(history['log']), "history": history['log'],
-                    "final_multiplets": compute_multiplets(ctm_env)})
-                return True, history
-            elif len(history['log']) >= ctm_args.ctm_max_iter:
-                log.info({"history_length": len(history['log']), "history": history['log'],
-                    "final_multiplets": compute_multiplets(ctm_env)})
-                return False, history
+        if not history:
+            history=dict({"log": []})
+        rdm2x1= rdm2x1_sl(state, env, force_cpu=ctm_args.conv_check_cpu)
+        dist= float('inf')
+        if len(history["log"]) > 1:
+            dist= torch.dist(rdm2x1, history["rdm"], p=2).item()
+        history["rdm"]=rdm2x1
+        history["log"].append(dist)
+        if dist<ctm_args.ctm_conv_tol:
+            log.info({"history_length": len(history['log']), "history": history['log'],
+                "final_multiplets": compute_multiplets(ctm_env)})
+            return True, history
+        elif len(history['log']) >= ctm_args.ctm_max_iter:
+            log.info({"history_length": len(history['log']), "history": history['log'],
+                "final_multiplets": compute_multiplets(ctm_env)})
+            return False, history
         return False, history
 
     ctm_env = ENV_C4V(args.chi, state)
@@ -148,6 +148,7 @@ def main():
         im=[l[i,1].item() for i in range(l.size()[0])]
         return dict({"re": re, "im": im})
 
+    @torch.no_grad()
     def obs_fn(state, ctm_env, opt_context):
         if opt_context["line_search"]:
             epoch= len(opt_context["loss_history"]["loss_ls"])
@@ -159,18 +160,16 @@ def main():
         obs_values, obs_labels = model.eval_obs(state,ctm_env,force_cpu=True)
         print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
 
-        if not opt_context["line_search"]:
-            with torch.no_grad():
-                if args.top_freq>0 and epoch%args.top_freq==0:
-                    coord_dir_pairs=[((0,0), (1,0))]
-                    for c,d in coord_dir_pairs:
-                        # transfer operator spectrum
-                        print(f"TOP spectrum(T)[{c},{d}] ",end="")
-                        l= transferops_c4v.get_Top_spec_c4v(args.top_n, state_sym, ctm_env)
-                        print("TOP "+json.dumps(_to_json(l)))
+        if (not opt_context["line_search"]) and args.top_freq>0 and epoch%args.top_freq==0:
+            coord_dir_pairs=[((0,0), (1,0))]
+            for c,d in coord_dir_pairs:
+                # transfer operator spectrum
+                print(f"TOP spectrum(T)[{c},{d}] ",end="")
+                l= transferops_c4v.get_Top_spec_c4v(args.top_n, state_sym, ctm_env)
+                print("TOP "+json.dumps(_to_json(l)))
 
     # optimize
-    optimize_state(state, ctm_env, loss_fn, args, obs_fn=obs_fn)
+    optimize_state(state, ctm_env, loss_fn, obs_fn=obs_fn)
 
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"
@@ -180,10 +179,50 @@ def main():
     ctm_env, *ctm_log = ctmrg_c4v.run(state, ctm_env, conv_check=ctmrg_conv_f)
     opt_energy = energy_f(state,ctm_env,force_cpu=True)
     obs_values, obs_labels = model.eval_obs(state,ctm_env,force_cpu=True)
-    print(", ".join([f"{args.opt_max_iter}",f"{opt_energy}"]+[f"{v}" for v in obs_values])+f", {len(history)}")
+    print(", ".join([f"{args.opt_max_iter}",f"{opt_energy}"]+[f"{v}" for v in obs_values]))
 
 if __name__=='__main__':
     if len(unknown_args)>0:
         print("args not recognized: "+str(unknown_args))
         raise Exception("Unknown command line arguments")
     main()
+
+class TestOpt(unittest.TestCase):
+    def setUp(self):
+        args.j2=0.0
+        args.bond_dim=3
+        args.chi=18
+        args.opt_max_iter=3
+        try:
+            import scipy.sparse.linalg
+            self.SCIPY= True
+        except:
+            print("Warning: Missing scipy. ARNOLDISVD is not available.")
+            self.SCIPY= False
+
+    # basic tests
+    def test_opt_SYMEIG_LS(self):
+        args.CTMARGS_projector_svd_method="SYMEIG"
+        args.OPTARGS_line_search="backtracking"
+        main()
+
+    def test_opt_SYMARP_LS_SYMARP(self):
+        if not self.SCIPY: self.skipTest("test skipped: missing scipy")
+        args.CTMARGS_projector_svd_method="SYMARP"
+        args.OPTARGS_line_search="backtracking"
+        main()
+
+    @unittest.skipIf(not torch.cuda.is_available(), "CUDA not available")
+    def test_opt_SYMEIG_gpu(self):
+        args.GLOBALARGS_device="cuda:0"
+        args.CTMARGS_projector_svd_method="SYMEIG"
+        args.OPTARGS_line_search="backtracking"
+        main()
+    
+    @unittest.skipIf(not torch.cuda.is_available(), "CUDA not available")
+    def test_opt_SYMARP_gpu(self):
+        if not self.SCIPY: self.skipTest("test skipped: missing scipy")
+        args.GLOBALARGS_device="cuda:0"
+        args.CTMARGS_projector_svd_method="SYMARP"
+        args.OPTARGS_line_search="backtracking"
+        main()
