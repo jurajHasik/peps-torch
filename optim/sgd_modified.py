@@ -61,54 +61,40 @@ def _scalar_search_armijo(phi, phi0, derphi0, args=(), c1=1e-4, alpha0=1, amin=1
     return None, phi_a1
 
 class SGD_MOD(SGD):
-    r"""Implements stochastic gradient descent (optionally with momentum).
+    r"""
+    Extends the original steepest gradient descent of PyTorch
+    [`torch.optim.SGD <https://pytorch.org/docs/stable/optim.html#torch.optim.SGD>`_]
+    with optional backtracking linesearch. The linesearch implementation
+    is adapted from scipy 
+    [`scipy.optimize.linesearch <https://github.com/scipy/scipy/blob/master/scipy/optimize/linesearch.py>`_]
+    and relies only on the value of the loss function, not derivatives.
 
-    Nesterov momentum is based on the formula from
-    `On the importance of initialization and momentum in deep learning`__.
-
-    Args:
-        params (iterable): iterable of parameters to optimize or dicts defining
-            parameter groups
-        lr (float): learning rate
-        momentum (float, optional): momentum factor (default: 0)
-        weight_decay (float, optional): weight decay (L2 penalty) (default: 0)
-        dampening (float, optional): dampening for momentum (default: 0)
-        nesterov (bool, optional): enables Nesterov momentum (default: False)
-
-    Example:
-        >>> optimizer = torch.optim.SGD(model.parameters(), lr=0.1, momentum=0.9)
-        >>> optimizer.zero_grad()
-        >>> loss_fn(model(input), target).backward()
-        >>> optimizer.step()
-
-    __ http://www.cs.toronto.edu/%7Ehinton/absps/momentum.pdf
-
-    .. note::
-        The implementation of SGD with Momentum/Nesterov subtly differs from
-        Sutskever et. al. and implementations in some other frameworks.
-
-        Considering the specific case of Momentum, the update can be written as
-
-        .. math::
-                  v_{t+1} = \mu * v_{t} + g_{t+1} \\
-                  p_{t+1} = p_{t} - lr * v_{t+1}
-
-        where p, g, v and :math:`\mu` denote the parameters, gradient,
-        velocity, and momentum respectively.
-
-        This is in contrast to Sutskever et. al. and
-        other frameworks which employ an update of the form
-
-        .. math::
-             v_{t+1} = \mu * v_{t} + lr * g_{t+1} \\
-             p_{t+1} = p_{t} - v_{t+1}
-
-        The Nesterov version is analogously modified.
+    .. warning::
+        This optimizer doesn't support per-parameter options and parameter
+        groups (there can be only one).
     """
     def __init__(self, params, lr=1, momentum=0, dampening=0,
                  weight_decay=0, nesterov=False,
                  line_search_fn=None,
                  line_search_eps=1.0e-4):
+        """
+        :param params: iterable of parameters to optimize or dicts defining parameter groups
+        :type params: iterable
+        :param lr: learning rate (default: 1)
+        :type lr: float
+        :param momentum: momentum factor (default: 0)
+        :type momentum: float, optional
+        :param dampening: dampening for momentum (default: 0)
+        :type dampening: float, optional
+        :param weight_decay: weight decay (L2 penalty) (default: 0)
+        :type weight_decay: float, optional
+        :param nesterov: enables Nesterov momentum (default: False)
+        :type nesterov: bool, optional
+        :param line_search_fn: line search algorithm. Supported options ``"backtracking"`` (default: None)
+        :type line_search_fn: str, optional
+        :param line_search_eps: minimal step size (default: 1.0e-4)
+        :type line_search_eps: float, optional
+        """
         super(SGD_MOD, self).__init__(
             params, lr=lr, momentum=momentum, dampening=dampening,
             weight_decay=weight_decay, nesterov=nesterov)
@@ -179,13 +165,14 @@ class SGD_MOD(SGD):
             p.data.copy_(pdata)
 
     def step_2c(self, closure=None, closure_linesearch=None):
-        """Performs a single optimization step.
+        r"""
+        Performs a single optimization step.
 
-        Arguments:
-            closure (callable, optional): A closure that reevaluates the model
-                and returns the loss.
-            closure_linesearch (callable, optional): A closure that reevaluates the model
-                and returns the loss in no_grad context
+        :param closure: A closure that reevaluates the model and returns the loss.
+        :type closure: callable
+        :param closure_linesearch: A closure that reevaluates the model and returns 
+            the loss in no_grad context
+        :type closure_linesearch: callable, optional 
         """
         loss = None
         if closure is not None:
@@ -197,6 +184,7 @@ class SGD_MOD(SGD):
         dampening = self.param_groups[0]['dampening']
         nesterov = self.param_groups[0]['nesterov']
         line_search_fn= self.param_groups[0]['line_search_fn']
+        line_search_eps= self.param_groups[0]['line_search_eps']
         
         flat_grad= self._gather_flat_grad()
         d_p= flat_grad.clone()
@@ -228,7 +216,8 @@ class SGD_MOD(SGD):
                     return self._directional_evaluate_derivative_free(closure_linesearch, t, x, d)
 
                 # return (xmin, fval, iter, funcalls)
-                t, f_loss= _scalar_search_armijo(obj_func, f_loss, gtd, args=(x_init,d_p), alpha0=lr)
+                t, f_loss= _scalar_search_armijo(obj_func, f_loss, gtd, args=(x_init,d_p), \
+                    alpha0=lr, amin= line_search_eps)
                 if t is None:
                     raise RuntimeError("minimize_scalar failed")
             else:

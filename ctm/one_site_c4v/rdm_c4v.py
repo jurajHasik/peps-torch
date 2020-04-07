@@ -182,12 +182,12 @@ def rdm1x1(state, env, verbosity=0):
 
         C--T-----C
         |  |     |
-        T--A^+A--T
+        T--a^+a--T
         |  |     |
         C--T-----C
 
-    where the physical indices `s` and `s'` of on-site tensor :math:`A` 
-    and it's hermitian conjugate :math:`A^\dagger` are left uncontracted
+    where the physical indices `s` and `s'` of on-site tensor :math:`a` 
+    and its hermitian conjugate :math:`a^\dagger` are left uncontracted
     """
     C = env.C[env.keyC]
     T = env.T[env.keyT]
@@ -294,7 +294,7 @@ def rdm1x1_sl(state, env, verbosity=0):
         C--T-----C
 
     where the physical indices `s` and `s'` of on-site tensor :math:`a` 
-    and it's hermitian conjugate :math:`a^\dagger` are left uncontracted
+    and its hermitian conjugate :math:`a^\dagger` are left uncontracted
     """
     C = env.C[env.keyC]
     T = env.T[env.keyT]
@@ -418,6 +418,8 @@ def rdm2x1(state, env, sym_pos_def=False, verbosity=0):
     r"""
     :param state: underlying 1-site C4v symmetric wavefunction
     :param env: C4v symmetric environment corresponding to ``state``
+    :param sym_pos_def: make final density matrix symmetric and non-negative (default: False)
+    :type sym_pos_def: bool
     :param verbosity: logging verbosity
     :type state: IPEPS_C4V
     :type env: ENV_C4V
@@ -437,11 +439,11 @@ def rdm2x1(state, env, sym_pos_def=False, verbosity=0):
 
         C--T-----T-----C = C2x2--C2x2
         |  |     |     |   |     |  
-        T--A^+A--A^+A--T   C2x1--C2x1
+        T--a^+a--a^+a--T   C2x1--C2x1
         |  |     |     |
         C--T-----T-----C 
 
-    The physical indices `s` and `s'` of on-sites tensors :math:`A` (and :math:`A^\dagger`) 
+    The physical indices `s` and `s'` of on-sites tensors :math:`a` (and :math:`a^\dagger`) 
     are left uncontracted and given in the following order::
         
         s0 s1
@@ -452,10 +454,10 @@ def rdm2x1(state, env, sym_pos_def=False, verbosity=0):
     #----- building C2x2_LU ----------------------------------------------------
     C = env.C[env.keyC]
     T = env.T[env.keyT]
-    A = next(iter(state.sites.values()))
-    dimsA = A.size()
-    a = torch.einsum('mefgh,nabcd->eafbgchdmn',A,A).contiguous()\
-        .view(dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2, dimsA[0], dimsA[0])
+    a = next(iter(state.sites.values()))
+    dimsa = a.size()
+    A = torch.einsum('mefgh,nabcd->eafbgchdmn',a,a).contiguous()\
+        .view(dimsa[1]**2, dimsa[2]**2, dimsa[3]**2, dimsa[4]**2, dimsa[0], dimsa[0])
 
     # C--1 0--T--1
     # 0       2
@@ -471,9 +473,9 @@ def rdm2x1(state, env, sym_pos_def=False, verbosity=0):
     # C-------T--0
     # |       1
     # |       0
-    # T2--3 1 a--3
+    # T2--3 1 A--3
     # 2->1    2\45
-    C2x2 = torch.tensordot(C2x2, a, ([1,3],[0,1]))
+    C2x2 = torch.tensordot(C2x2, A, ([1,3],[0,1]))
 
     # permute 012345->120345
     # reshape 12(03)45->01234
@@ -481,7 +483,7 @@ def rdm2x1(state, env, sym_pos_def=False, verbosity=0):
     # | |\34
     # 0 1
     C2x2 = C2x2.permute(1,2,0,3,4,5).contiguous().view(\
-        T.size()[1],a.size()[3],T.size()[1]*a.size()[2],dimsA[0],dimsA[0])
+        T.size()[1],A.size()[3],T.size()[1]*A.size()[2],dimsa[0],dimsa[0])
     if verbosity>2: env.log(f"C2X2 {C2x2.size()}\n")
 
     #----- build left part C2x2_LU--C2x1_LD ------------------------------------
@@ -522,6 +524,8 @@ def rdm2x1_sl(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
     r"""
     :param state: underlying 1-site C4v symmetric wavefunction
     :param env: C4v symmetric environment corresponding to ``state``
+    :param sym_pos_def: make final density matrix symmetric and non-negative (default: False)
+    :type sym_pos_def: bool
     :param force_cpu: compute on cpu
     :param verbosity: logging verbosity
     :type state: IPEPS_C4V
@@ -543,11 +547,11 @@ def rdm2x1_sl(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
 
         C--T-----T-----C = C2x2--C2x2
         |  |     |     |   |     |  
-        T--A^+A--A^+A--T   C2x1--C2x1
+        T--a^+a--a^+a--T   C2x1--C2x1
         |  |     |     |
         C--T-----T-----C 
 
-    The physical indices `s` and `s'` of on-sites tensors :math:`A` (and :math:`A^\dagger`) 
+    The physical indices `s` and `s'` of on-sites tensors :math:`a` (and :math:`a^\dagger`) 
     are left uncontracted and given in the following order::
         
         s0 s1
@@ -627,6 +631,8 @@ def rdm2x2_NN_lowmem(state, env, sym_pos_def=False, force_cpu=False, verbosity=0
     r"""
     :param state: underlying 1-site C4v symmetric wavefunction
     :param env: C4v symmetric environment corresponding to ``state``
+    :param sym_pos_def: make final density matrix symmetric and non-negative (default: False)
+    :type sym_pos_def: bool
     :param force_cpu: compute on cpu
     :param verbosity: logging verbosity
     :type state: IPEPS_C4V
@@ -654,7 +660,7 @@ def rdm2x2_NN_lowmem(state, env, sym_pos_def=False, force_cpu=False, verbosity=0
         |  |     |     |
         C--T-----T-----C
         
-    The physical indices `s` and `s'` of on-sites tensors :math:`A` (and :math:`A^\dagger`) 
+    The physical indices `s` and `s'` of on-sites tensors :math:`a` (and :math:`a^\dagger`) 
     inside C2x2 tensors are left uncontracted and given in the following order::
         
         s0 c
@@ -668,6 +674,8 @@ def rdm2x2_NN_lowmem_sl(state, env, sym_pos_def=False, force_cpu=False, verbosit
     r"""
     :param state: underlying 1-site C4v symmetric wavefunction
     :param env: C4v symmetric environment corresponding to ``state``
+    :param sym_pos_def: make final density matrix symmetric and non-negative (default: False)
+    :type sym_pos_def: bool
     :param force_cpu: compute on cpu
     :param verbosity: logging verbosity
     :type state: IPEPS_C4V
@@ -786,6 +794,8 @@ def rdm2x2_NNN_lowmem(state, env, sym_pos_def=False, force_cpu=False, verbosity=
     r"""
     :param state: underlying 1-site C4v symmetric wavefunction
     :param env: C4v symmetric environment corresponding to ``state``
+    :param sym_pos_def: make final density matrix symmetric and non-negative (default: False)
+    :type sym_pos_def: bool
     :param force_cpu: compute on cpu
     :param verbosity: logging verbosity
     :type state: IPEPS_C4V
@@ -795,10 +805,10 @@ def rdm2x2_NNN_lowmem(state, env, sym_pos_def=False, force_cpu=False, verbosity=
     :return: 2-site reduced density matrix with indices :math:`s_0s_1;s'_0s'_1`
     :rtype: torch.tensor
 
-    Computes 2-site reduced density matrix :math:`\rho_{2x1}_{diag}` of 2 sites 
+    Computes 2-site reduced density matrix :math:`\rho_{2x1}^{diag}` of 2 sites 
     that are next-nearest neighbours (along diagonal) using strategy:
 
-        1. compute upper left corner
+        1. compute upper left corner using double-layer on-site tensor
         2. construct upper half of the network
         3. contract upper and lower half (identical to upper) to obtain final reduced 
            density matrix
@@ -807,9 +817,9 @@ def rdm2x2_NNN_lowmem(state, env, sym_pos_def=False, force_cpu=False, verbosity=
 
         C--T-----T-----C = C2x2---C2x2c
         |  |     |     |   |      |
-        T--A^+A--A^+A--T   C2x2c--C2x2
+        T--a^+a--a^+a--T   C2x2c--C2x2
         |  |     |     |
-        T--A^+A--A^+A--T
+        T--a^+a--a^+a--T
         |  |     |     |
         C--T-----T-----C
         
@@ -827,6 +837,8 @@ def rdm2x2_NNN_lowmem_sl(state, env, sym_pos_def=False, force_cpu=False, verbosi
     r"""
     :param state: underlying 1-site C4v symmetric wavefunction
     :param env: C4v symmetric environment corresponding to ``state``
+    :param sym_pos_def: make final density matrix symmetric and non-negative (default: False)
+    :type sym_pos_def: bool
     :param force_cpu: compute on cpu
     :param verbosity: logging verbosity
     :type state: IPEPS_C4V
@@ -836,10 +848,10 @@ def rdm2x2_NNN_lowmem_sl(state, env, sym_pos_def=False, force_cpu=False, verbosi
     :return: 2-site reduced density matrix with indices :math:`s_0s_1;s'_0s'_1`
     :rtype: torch.tensor
 
-    Computes 2-site reduced density matrix :math:`\rho_{2x1}_{diag}` of 2 sites 
+    Computes 2-site reduced density matrix :math:`\rho_{2x2}^{diag}` of 2 sites 
     that are next-nearest neighbours (along diagonal) using strategy:
 
-        1. compute upper left corner
+        1. compute upper left corner using layer-by-layer contraction of on-site tensor 
         2. construct upper half of the network
         3. contract upper and lower half (identical to upper) to obtain final reduced 
            density matrix
@@ -848,9 +860,9 @@ def rdm2x2_NNN_lowmem_sl(state, env, sym_pos_def=False, force_cpu=False, verbosi
 
         C--T-----T-----C = C2x2---C2x2c
         |  |     |     |   |      |
-        T--a^+a--A^+a--T   C2x2c--C2x2
+        T--a^+a--a^+a--T   C2x2c--C2x2
         |  |     |     |
-        T--a^+a--A^+a--T
+        T--a^+a--a^+a--T
         |  |     |     |
         C--T-----T-----C
         
@@ -947,6 +959,8 @@ def rdm2x2(state, env, sym_pos_def=False, verbosity=0):
     r"""
     :param state: underlying 1-site C4v symmetric wavefunction
     :param env: C4v symmetric environment corresponding to ``state``
+    :param sym_pos_def: make final density matrix symmetric and non-negative (default: False)
+    :type sym_pos_def: bool
     :param verbosity: logging verbosity
     :type state: IPEPS_C4V
     :type env: ENV_C4V
@@ -960,16 +974,14 @@ def rdm2x2(state, env, sym_pos_def=False, verbosity=0):
         2. construct upper half of the network
         3. contract upper and lower half (identical to upper) to obtain final reduced 
            density matrix
-           
-    TODO try single torch.einsum ?
-
+    
     ::
 
         C--T-----T-----C = C2x2--C2x2
         |  |     |     |   |     |
-        T--A^+A--A^+A--T   C2x2--C2x2
+        T--a^+a--a^+a--T   C2x2--C2x2
         |  |     |     |
-        T--A^+A--A^+A--T
+        T--a^+a--a^+a--T
         |  |     |     |
         C--T-----T-----C
         
@@ -1115,7 +1127,7 @@ def aux_rdm1x1(state, env, verbosity=0):
 
     return rdm
 
-def aux_rdm2x1(state, env, force_cpu=False, verbosity=0):
+def aux_rdm2x2_NN(state, env, force_cpu=False, verbosity=0):
     r"""
     :param state: underlying 1-site C4v symmetric wavefunction
     :param env: C4v symmetric environment corresponding to ``state``
@@ -1125,19 +1137,17 @@ def aux_rdm2x1(state, env, force_cpu=False, verbosity=0):
     :type env: ENV_C4V
     :type force_cpu: bool
     :type verbosity: int
-    :return: 4-site auxilliary reduced density matrix
+    :return: 2-site auxilliary reduced density matrix
     :rtype: torch.tensor
 
-    Computes 4-site aux reduced density matrix :math:`\rho_{2x2}` of 2x2 subsystem 
-    without the on-site tensors (leaving corresponding aux indices open)
-    using strategy:
+    Computes 2-site auxiliary reduced density matrix of nearest neighbours 
+    within 2x2 subsystem without the on-site tensors (leaving corresponding 
+    auxiliary indices open) using strategy:
 
         1. compute upper left corner
         2. construct upper half of the network
         3. contract upper and lower half (identical to upper) to obtain final reduced 
            auxilliary density matrix
-           
-    TODO try single torch.einsum ?
 
     :: 
 
@@ -1155,9 +1165,6 @@ def aux_rdm2x1(state, env, force_cpu=False, verbosity=0):
     dimsa = a.size()
     loc_device=C.device
     is_cpu= loc_device==torch.device('cpu')
-    if not is_cpu and verbosity>0:
-        print(f"GPU-MEM pRDM2X2 MAX:{torch.cuda.max_memory_allocated(loc_device)}"\
-            + f" CURRENT:{torch.cuda.memory_allocated(loc_device)}")
 
     aC2x2= _get_aux_C2x2_LU(C, T, verbosity=verbosity)
 
@@ -1177,9 +1184,6 @@ def aux_rdm2x1(state, env, force_cpu=False, verbosity=0):
     #   V               V V
     #   1               5 3
     aC2x2 = torch.tensordot(aC2x2, aC2x2, ([1],[0]))
-    if not is_cpu and verbosity>0:
-        print(f"GPU-MEM pRDM2X2 MAX:{torch.cuda.max_memory_allocated(loc_device)}"\
-            + f" CURRENT:{torch.cuda.memory_allocated(loc_device)}")
 
     # C2x2--1 => C2x2--1 => |C2x2|--2
     # | \        |          | |
@@ -1197,16 +1201,16 @@ def aux_rdm2x1(state, env, force_cpu=False, verbosity=0):
 
     # construct reduced density matrix by contracting lower and upper halfs
     #  __________________         __________________
-    # |_______aC2x2______|       |__________________|    C----T----T----C
+    # |_______aC2x2______|       |______aC2x2_______|    C----T----T----C
     # | | \          / | |       | | \          / | |    |    1    3    |
     # 0 1  2        5  4 3       | 0  1        3  2 |    T--0        2--T
     # 0                  3  =>   |                  | => |              |
     # | 1  2        5  4 |       | 4  5        7  6 |    T--4        6--T
     # |_|_/__________\_|_|       |_|_/__________\_|_|    |    5    7    |
-    # |_______aC2x2______|       |_______aC2x2______|    C----T----T----C
+    # |_______C2x2_______|       |_______C2x2_______|    C----T----T----C
     # ===================================================================
     #  __________________         __________________
-    # |_______aC2x2______|       |__________________|    C----T----T----C
+    # |_______aC2x2______|       |_______aC2x2______|    C----T----T----C
     # | | \          / | |       | | \          / | |    |    1    2    |
     # 0 1  2        4  5 3       | 0  1        2  3 |    T--0        3--T
     # 0                  2  =>   |                  | => |    4    5    |
@@ -1214,9 +1218,6 @@ def aux_rdm2x1(state, env, force_cpu=False, verbosity=0):
     # |_|______________|_|       |_|______________|_|
     # |_______C2x2_______|       |________C2x2______|
     aC2x2 = torch.tensordot(aC2x2,C2x2,([0,3],[0,2]))
-    if not is_cpu and verbosity>0:
-        print(f"GPU-MEM pRDM2X2 MAX:{torch.cuda.max_memory_allocated(loc_device)}"\
-            + f" CURRENT:{torch.cuda.memory_allocated(loc_device)}")
 
     # permute such, that aux-index increases from "up" in the anti-clockwise direction
     # aC2x2 = aC2x2.permute(1,0,4,5,7,6,2,3).contiguous()
@@ -1224,9 +1225,6 @@ def aux_rdm2x1(state, env, force_cpu=False, verbosity=0):
     aC2x2 = aC2x2.permute(1,0,4,5,3,2).contiguous()
     # reshape and form bra and ket index
     aC2x2 = aC2x2.view([dimsa[1]]*12).permute(0,2,4,6,8,10, 1,3,5,7,9,11).contiguous()
-    if not is_cpu and verbosity>0:
-        print(f"GPU-MEM pRDM2X2 MAX:{torch.cuda.max_memory_allocated(loc_device)}"\
-            + f" CURRENT:{torch.cuda.memory_allocated(loc_device)}")
 
     return aC2x2
 
@@ -1243,8 +1241,8 @@ def aux_rdm2x2(state, env, force_cpu=False, verbosity=0):
     :return: 4-site auxilliary reduced density matrix
     :rtype: torch.tensor
 
-    Computes 4-site aux reduced density matrix :math:`\rho_{2x2}` of 2x2 subsystem 
-    without the on-site tensors (leaving corresponding aux indices open)
+    Computes 4-site auxiliary reduced density matrix :math:`\rho_{2x2}` of 2x2 subsystem 
+    without the on-site tensors (leaving corresponding auxiliary indices open)
     using strategy:
 
         1. compute upper left corner
@@ -1272,9 +1270,6 @@ def aux_rdm2x2(state, env, force_cpu=False, verbosity=0):
     dimsa = a.size()
     loc_device=C.device
     is_cpu= loc_device==torch.device('cpu')
-    if not is_cpu and verbosity>0:
-        print(f"GPU-MEM pRDM2X2 MAX:{torch.cuda.max_memory_allocated(loc_device)}"\
-            + f" CURRENT:{torch.cuda.memory_allocated(loc_device)}")
 
     aC2x2= _get_aux_C2x2_LU(C, T, verbosity=verbosity)
 
@@ -1294,9 +1289,6 @@ def aux_rdm2x2(state, env, force_cpu=False, verbosity=0):
     #   V               V V
     #   1               5 3
     aC2x2 = torch.tensordot(aC2x2, aC2x2, ([1],[0]))
-    if not is_cpu and verbosity>0:
-        print(f"GPU-MEM pRDM2X2 MAX:{torch.cuda.max_memory_allocated(loc_device)}"\
-            + f" CURRENT:{torch.cuda.memory_allocated(loc_device)}")
 
     # construct reduced density matrix by contracting lower and upper halfs
     #  __________________         __________________
@@ -1317,9 +1309,6 @@ def aux_rdm2x2(state, env, force_cpu=False, verbosity=0):
     # |_|_/__________\_|_|       |_|_/__________\_|_|    |    5    6    |
     # |_______aC2x2______|       |_______aC2x2______|    C----T----T----C
     aC2x2 = torch.tensordot(aC2x2,aC2x2,([0,3],[0,3]))
-    if not is_cpu and verbosity>0:
-        print(f"GPU-MEM pRDM2X2 MAX:{torch.cuda.max_memory_allocated(loc_device)}"\
-            + f" CURRENT:{torch.cuda.memory_allocated(loc_device)}")
 
     # permute such, that aux-index increases from "up" in the anti-clockwise direction
     # aC2x2 = aC2x2.permute(1,0,4,5,7,6,2,3).contiguous()
@@ -1327,9 +1316,6 @@ def aux_rdm2x2(state, env, force_cpu=False, verbosity=0):
     aC2x2 = aC2x2.permute(1,0,4,5,6,7,3,2).contiguous()
     # reshape and form bra and ket index
     aC2x2 = aC2x2.view([dimsa[1]]*16).permute(0,2,4,6,8,10,12,14, 1,3,5,7,9,11,13,15).contiguous()
-    if not is_cpu and verbosity>0:
-        print(f"GPU-MEM pRDM2X2 MAX:{torch.cuda.max_memory_allocated(loc_device)}"\
-            + f" CURRENT:{torch.cuda.memory_allocated(loc_device)}")
 
     return aC2x2
 

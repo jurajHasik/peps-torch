@@ -279,7 +279,7 @@ class OPTARGS():
         self.line_search= "default"
         self.line_search_ctm_reinit= True
         self.line_search_svd_method= 'DEFAULT'
-        self.line_search_tol= 1.0e-4
+        self.line_search_tol= 1.0e-8
         self.fd_eps= 1.0e-4
         self.fd_ctm_reinit= True
         self.history_size= 100
