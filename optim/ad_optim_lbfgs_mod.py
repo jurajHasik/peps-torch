@@ -55,8 +55,11 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
     :type ctm_args: CTMARGS
     :type global_args: GLOBALARGS
 
-    Optimizes initial wavefunction ``state`` with respect to ``loss_fn`` using LBFGS optimizer.
-    The main parameters influencing the optimization process are given in :py:class:`config.OPTARGS`.
+    Optimizes initial wavefunction ``state`` with respect to ``loss_fn`` using 
+    :class:`optim.lbfgs_modified.LBFGS_MOD` optimizer.
+    The main parameters influencing the optimization process are given in :class:`config.OPTARGS`.
+    Calls to functions ``loss_fn``, ``obs_fn``, and ``post_proc`` pass the current configuration
+    as dictionary ``{"ctm_args":ctm_args, "opt_args":opt_args}``
     """
     verbosity = opt_args.verbosity_opt_epoch
     checkpoint_file = main_args.out_prefix+"_checkpoint.p"   

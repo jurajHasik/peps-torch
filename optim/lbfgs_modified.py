@@ -61,36 +61,14 @@ def _scalar_search_armijo(phi, phi0, derphi0, args=(), c1=1e-4, alpha0=1, amin=1
     return None, phi_a1
 
 class LBFGS_MOD(LBFGS):
-    """Implements L-BFGS algorithm, heavily inspired by `minFunc
-    <https://www.cs.ubc.ca/~schmidtm/Software/minFunc.html>`.
-
-    .. warning::
-        This optimizer doesn't support per-parameter options and parameter
-        groups (there can be only one).
-
-    .. warning::
-        Right now all parameters have to be on a single device. This will be
-        improved in the future.
-
-    .. note::
-        This is a very memory intensive optimizer (it requires additional
-        ``param_bytes * (history_size + 1)`` bytes). If it doesn't fit in memory
-        try reducing the history size, or use a different algorithm.
-
-    Arguments:
-        lr (float): learning rate (default: 1)
-        max_iter (int): maximal number of iterations per optimization step
-            (default: 20)
-        max_eval (int): maximal number of function evaluations per optimization
-            step (default: max_iter * 1.25).
-        tolerance_grad (float): termination tolerance on first order optimality
-            (default: 1e-5).
-        tolerance_change (float): termination tolerance on function
-            value/parameter changes (default: 1e-9).
-        history_size (int): update history size (default: 100).
-        line_search_fn (str): either 'strong_wolfe' or None (default: None).
+    r"""
+    Extends the original steepest gradient descent of PyTorch
+    [`torch.optim.LBFGS <https://pytorch.org/docs/stable/optim.html#torch.optim.LBFGS>`_]
+    with optional backtracking linesearch. The linesearch implementation
+    is adapted from scipy 
+    [`scipy.optimize.linesearch <https://github.com/scipy/scipy/blob/master/scipy/optimize/linesearch.py>`_]
+    and relies only on the value of the loss function, not derivatives.
     """
-
     def __init__(self,
                  params,
                  lr=1,
@@ -101,6 +79,30 @@ class LBFGS_MOD(LBFGS):
                  history_size=100,
                  line_search_fn=None,
                  line_search_eps=1.0e-4):
+        r"""
+        :param params: iterable of parameters to optimize or dicts defining parameter groups
+        :type params: iterable
+        :param lr: learning rate (default: 1)
+        :type lr: float, optional
+        :param max_iter: maximal number of iterations per optimization step (default: 20)
+        :type max_iter: int
+        :param max_eval: maximal number of function evaluations per optimization
+            step (default: max_iter * 1.25).
+        :type max_eval: int
+        :param tolerance_grad: termination tolerance on first order optimality
+            (default: 1e-5).
+        :type tolerance_grad: float
+        :param tolerance_change: termination tolerance on function
+            value/parameter changes (default: 1e-9).
+        :type tolerance_change: float
+        :param history_size: update history size (default: 100).
+        :type history_size: int
+        :param line_search_fn: line search algorithm. Supported options 
+            ``"strong_wolfe"``, ``"backtracking"`` (default: None)
+        :type line_search_fn: str, optional
+        :param line_search_eps: minimal step size (default: 1.0e-4)
+        :type line_search_eps: float, optional
+        """
         super(LBFGS_MOD, self).__init__(
             params,
             lr=lr,
@@ -123,11 +125,14 @@ class LBFGS_MOD(LBFGS):
         return loss
 
     def step_2c(self, closure, closure_linesearch):
-        """Performs a single optimization step.
+        r"""
+        Performs a single optimization step.
 
-        Arguments:
-            closure (callable): A closure that reevaluates the model
-                and returns the loss.
+        :param closure: A closure that reevaluates the model and returns the loss.
+        :type closure: callable
+        :param closure_linesearch: A closure that reevaluates the model and returns 
+            the loss in no_grad context
+        :type closure_linesearch: callable, optional 
         """
         assert len(self.param_groups) == 1
 
