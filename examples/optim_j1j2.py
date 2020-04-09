@@ -6,7 +6,8 @@ from ipeps.ipeps import *
 from ctm.generic.env import *
 from ctm.generic import ctmrg
 from models import j1j2
-from optim.ad_optim import optimize_state
+# from optim.ad_optim import optimize_state
+from optim.ad_optim_lbfgs_mod import optimize_state
 import unittest
 import logging
 log = logging.getLogger(__name__)
@@ -146,23 +147,31 @@ def main():
     print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
 
     def loss_fn(state, ctm_env_in, opt_context):
+        ctm_args= opt_context["ctm_args"]
+        opt_args= opt_context["opt_args"]
+
         # possibly re-initialize the environment
-        if cfg.opt_args.opt_ctm_reinit:
+        if opt_args.opt_ctm_reinit:
             init_env(state, ctm_env_in)
 
         # 1) compute environment by CTMRG
-        ctm_env_out, *ctm_log= ctmrg.run(state, ctm_env_in, conv_check=ctmrg_conv_energy)
+        ctm_env_out, *ctm_log= ctmrg.run(state, ctm_env_in, \
+            conv_check=ctmrg_conv_energy, ctm_args=ctm_args)
+        
+        # 2) evaluate loss with the converged environment
         loss = energy_f(state, ctm_env_out)
         
         return (loss, ctm_env_out, *ctm_log)
 
     @torch.no_grad()
     def obs_fn(state, ctm_env, opt_context):
-        epoch= len(opt_context["loss_history"]["loss"]) 
-        loss= opt_context["loss_history"]["loss"][-1]
-        obs_values, obs_labels = model.eval_obs(state,ctm_env)
-        print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
-        log.info("Norm(sites): "+", ".join([f"{t.norm()}" for c,t in state.sites.items()]))
+        if ("line_search" in opt_context.keys() and not opt_context["line_search"]) \
+            or not "line_search" in opt_context.keys():
+            epoch= len(opt_context["loss_history"]["loss"]) 
+            loss= opt_context["loss_history"]["loss"][-1]
+            obs_values, obs_labels = model.eval_obs(state,ctm_env)
+            print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
+            log.info("Norm(sites): "+", ".join([f"{t.norm()}" for c,t in state.sites.items()]))
 
     # optimize
     optimize_state(state, ctm_env, loss_fn, obs_fn=obs_fn)
@@ -189,6 +198,12 @@ class TestOpt(unittest.TestCase):
         args.bond_dim=2
         args.chi=16
         args.opt_max_iter=3
+        try:
+            import scipy.sparse.linalg
+            self.SCIPY= True
+        except:
+            print("Warning: Missing scipy. Arnoldi methods not available.")
+            self.SCIPY= False
 
     # basic tests
     def test_opt_GESDD_BIPARTITE(self):
@@ -196,11 +211,33 @@ class TestOpt(unittest.TestCase):
         args.tiling="BIPARTITE"
         main()
 
+    def test_opt_GESDD_BIPARTITE_LS_strong_wolfe(self):
+        args.CTMARGS_projector_svd_method="GESDD"
+        args.tiling="BIPARTITE"
+        args.line_search="strong_wolfe"
+        main()
+
+    def test_opt_GESDD_BIPARTITE_LS_backtracking(self):
+        if not self.SCIPY: self.skipTest("test skipped: missing scipy")
+        args.CTMARGS_projector_svd_method="GESDD"
+        args.tiling="BIPARTITE"
+        args.line_search="backtracking"
+        args.line_search_svd_method="ARP"
+        main()
+
     @unittest.skipIf(not torch.cuda.is_available(), "CUDA not available")
     def test_opt_GESDD_BIPARTITE_gpu(self):
         args.GLOBALARGS_device="cuda:0"
         args.CTMARGS_projector_svd_method="GESDD"
         args.tiling="BIPARTITE"
+        main()
+
+    def test_opt_GESDD_BIPARTITE_LS_backtracking_gpu(self):
+        if not self.SCIPY: self.skipTest("test skipped: missing scipy")
+        args.CTMARGS_projector_svd_method="GESDD"
+        args.tiling="BIPARTITE"
+        args.line_search="backtracking"
+        args.line_search_svd_method="ARP"
         main()
 
     def test_opt_GESDD_4SITE(self):

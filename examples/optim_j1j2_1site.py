@@ -77,9 +77,7 @@ def main():
     # 3) choose C4v irrep (or their mix)
     def symmetrize(state):
         A= state.site((0,0))
-        A_symm= make_c4v_symm_A1(A) 
-        # A_symm= make_c4v_symm_A2(A) \
-        #     + make_c4v_symm_B2(A) + make_c4v_symm_B2(A)
+        A_symm= make_c4v_symm_A1(A)
         symm_state= IPEPS({(0,0): A_symm}, vertexToSite=state.vertexToSite)
         return symm_state
 
@@ -94,26 +92,34 @@ def main():
     print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
 
     def loss_fn(state, ctm_env_in, opt_context):
+        ctm_args= opt_context["ctm_args"]
+        opt_args= opt_context["opt_args"]
+
         symm_state= symmetrize(state)
 
         # possibly re-initialize the environment
-        if cfg.opt_args.opt_ctm_reinit:
+        if opt_args.opt_ctm_reinit:
             init_env(symm_state, ctm_env_in)
 
         # 1) compute environment by CTMRG
-        ctm_env_out, *ctm_log= ctmrg.run(symm_state, ctm_env_in, conv_check=ctmrg_conv_energy)
+        ctm_env_out, *ctm_log= ctmrg.run(symm_state, ctm_env_in, \
+            conv_check=ctmrg_conv_energy, ctm_args=ctm_args)
+
+        # 2) evaluate loss with the converged environment
         loss = energy_f(symm_state, ctm_env_out)
         
         return (loss, ctm_env_out, *ctm_log)
 
     @torch.no_grad()
     def obs_fn(state, ctm_env, opt_context):
-        symm_state= symmetrize(state)
-        epoch= len(opt_context["loss_history"]["loss"]) 
-        loss= opt_context["loss_history"]["loss"][-1]
-        obs_values, obs_labels = model.eval_obs(symm_state,ctm_env)
-        print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]+\
-            [f"{torch.max(torch.abs(symm_state.site((0,0))))}"]))
+        if ("line_search" in opt_context.keys() and not opt_context["line_search"]) \
+            or not "line_search" in opt_context.keys():
+            symm_state= symmetrize(state)
+            epoch= len(opt_context["loss_history"]["loss"]) 
+            loss= opt_context["loss_history"]["loss"][-1]
+            obs_values, obs_labels = model.eval_obs(symm_state,ctm_env)
+            print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]+\
+                [f"{torch.max(torch.abs(symm_state.site((0,0))))}"]))
 
     # optimize
     optimize_state(state, ctm_env, loss_fn, obs_fn=obs_fn)

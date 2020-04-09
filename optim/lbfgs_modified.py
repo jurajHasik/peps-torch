@@ -119,10 +119,17 @@ class LBFGS_MOD(LBFGS):
     def _directional_evaluate_derivative_free(self, closure, t, x, d):
         self._add_grad(t, d)
         with torch.no_grad():
-            orig_loss= closure()
+            orig_loss= closure(True)
         loss= float(orig_loss)
         self._set_param(x)
         return loss
+
+    def _directional_evaluate(self, closure, x, t, d):
+        self._add_grad(t, d)
+        loss = float(closure(linesearching=True))
+        flat_grad = self._gather_flat_grad()
+        self._set_param(x)
+        return loss, flat_grad
 
     def step_2c(self, closure, closure_linesearch):
         r"""
@@ -131,7 +138,7 @@ class LBFGS_MOD(LBFGS):
         :param closure: A closure that reevaluates the model and returns the loss.
         :type closure: callable
         :param closure_linesearch: A closure that reevaluates the model and returns 
-            the loss in no_grad context
+            the loss in torch.no_grad context
         :type closure_linesearch: callable, optional 
         """
         assert len(self.param_groups) == 1

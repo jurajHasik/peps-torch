@@ -98,51 +98,53 @@ class SVDARNOLDI(torch.autograd.Function):
         the symmetric decomposition of H=MM^T as :math:`H= UDU^T` 
         up to rank k. Partial eigendecomposition is done through Arnoldi method.
         """
-        # input validation is provided by the scipy.sparse.linalg.eigsh
+        # input validation is provided by the scipy.sparse.linalg.eigsh / 
+        # scipy.sparse.linalg.svds
         
         # ----- Option 0
-        # M_nograd = M.clone().detach()
-        # MMt= M_nograd@M_nograd.t()
+        M_nograd = M.clone().detach()
+        MMt= M_nograd@M_nograd.t()
         
-        # def mv(v):
-        #     B= torch.as_tensor(v,dtype=M.dtype,device=M.device)
-        #     B= torch.mv(MMt,B)
-        #     return B.detach().cpu().numpy()
-
-        # MMt_op= LinearOperator(M.size(), matvec=mv)
-
-        # D, U= scipy.sparse.linalg.eigsh(MMt_op, k=k)
-        # D= torch.as_tensor(D,device=M.device)
-        # U= torch.as_tensor(U,device=M.device)
-
-        # # reorder the eigenpairs by the largest magnitude of eigenvalues
-        # S,p= torch.sort(torch.abs(D),descending=True)
-        # S= torch.sqrt(S)
-        # U= U[:,p]
-
-        # # compute right singular vectors as Mt = V.S.Ut /.U => Mt.U = V.S
-        # V = M_nograd.t() @ U
-        # V = Functional.normalize(V, p=2, dim=0)
-
-        # ----- Option 1
         def mv(v):
             B= torch.as_tensor(v,dtype=M.dtype,device=M.device)
-            B= torch.mv(M,B)
-            return B.detach().cpu().numpy()
-        def vm(v):
-            B= torch.as_tensor(v,dtype=M.dtype,device=M.device)
-            B= torch.matmul(M.t(),B)           
+            B= torch.mv(MMt,B)
             return B.detach().cpu().numpy()
 
-        M_nograd= LinearOperator(M.size(), matvec=mv, rmatvec=vm)
+        MMt_op= LinearOperator(M.size(), matvec=mv)
 
-        U, S, V= scipy.sparse.linalg.svds(M_nograd, k=k)
+        D, U= scipy.sparse.linalg.eigsh(MMt_op, k=k)
+        D= torch.as_tensor(D,device=M.device)
+        U= torch.as_tensor(U,device=M.device)
 
-        S= torch.as_tensor(S)
-        U= torch.as_tensor(U)
-        # transpose wrt to pytorch
-        V= torch.as_tensor(V)
-        V= V.t()
+        # reorder the eigenpairs by the largest magnitude of eigenvalues
+        S,p= torch.sort(torch.abs(D),descending=True)
+        S= torch.sqrt(S)
+        U= U[:,p]
+
+        # compute right singular vectors as Mt = V.S.Ut /.U => Mt.U = V.S
+        V = M_nograd.t() @ U
+        V = Functional.normalize(V, p=2, dim=0)
+
+        # TODO there seems to be a bug in scipy's svds
+        # ----- Option 1
+        # def mv(v):
+        #     B= torch.as_tensor(v,dtype=M.dtype,device=M.device)
+        #     B= torch.mv(M,B)
+        #     return B.detach().cpu().numpy()
+        # def vm(v):
+        #     B= torch.as_tensor(v,dtype=M.dtype,device=M.device)
+        #     B= torch.matmul(M.t(),B)           
+        #     return B.detach().cpu().numpy()
+
+        # M_nograd= LinearOperator(M.size(), matvec=mv, rmatvec=vm)
+
+        # U, S, V= scipy.sparse.linalg.svds(M_nograd, k=k)
+
+        # S= torch.as_tensor(S)
+        # U= torch.as_tensor(U)
+        # # transpose wrt to pytorch
+        # V= torch.as_tensor(V)
+        # V= V.t()
 
         if M.is_cuda:
             U= U.cuda()

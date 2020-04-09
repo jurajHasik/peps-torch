@@ -7,7 +7,8 @@ from ipeps.ipeps_d2 import *
 from ctm.generic.env import *
 from ctm.generic import ctmrg
 from models import coupledLadders
-from optim.ad_optim import optimize_state
+# from optim.ad_optim import optimize_state
+from optim.ad_optim_lbfgs_mod import optimize_state
 import unittest
 from ctm.generic import transferops
 import logging
@@ -77,6 +78,9 @@ def main():
     print(", ".join([f"{-1}",f"{loss}"]+[f"{v}" for v in obs_values]))
 
     def loss_fn(state, ctm_env_in, opt_context):
+        ctm_args= opt_context["ctm_args"]
+        opt_args= opt_context["opt_args"]
+
         # symmetrize and normalize
         # symm_site= make_d2_symm(state.parent_site)
         # symm_site= symm_site/torch.max(torch.abs(symm_site))
@@ -86,21 +90,26 @@ def main():
         # state.parent_tensors[c]*= 1.0/torch.max(torch.abs(state.parent_tensors[c]))
 
         # possibly re-initialize the environment
-        if cfg.opt_args.opt_ctm_reinit:
+        if opt_args.opt_ctm_reinit:
             init_env(state, ctm_env_in)
 
         # 1) compute environment by CTMRG
-        ctm_env_out, *ctm_log = ctmrg.run(state, ctm_env_in, conv_check=ctmrg_conv_energy)
+        ctm_env_out, *ctm_log = ctmrg.run(state, ctm_env_in, \
+            conv_check=ctmrg_conv_energy, ctm_args=ctm_args)
+
+        # 2) evaluate loss with converged environment
         loss = model.energy_2x1_1x2(state, ctm_env_out)
         
         return (loss, ctm_env_out, *ctm_log)
 
     @torch.no_grad()
     def obs_fn(state, ctm_env, opt_context):
-        epoch= len(opt_context["loss_history"]["loss"]) 
-        loss= opt_context["loss_history"]["loss"][-1]
-        obs_values, obs_labels = model.eval_obs(state,ctm_env)
-        print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
+        if ("line_search" in opt_context.keys() and not opt_context["line_search"]) \
+            or not "line_search" in opt_context.keys():
+            epoch= len(opt_context["loss_history"]["loss"]) 
+            loss= opt_context["loss_history"]["loss"][-1]
+            obs_values, obs_labels = model.eval_obs(state,ctm_env)
+            print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
 
     # optimize
     optimize_state(state, ctm_env, loss_fn, obs_fn=obs_fn)
