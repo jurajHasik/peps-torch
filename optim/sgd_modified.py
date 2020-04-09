@@ -116,7 +116,7 @@ class SGD_MOD(SGD):
     def _directional_evaluate_derivative_free(self, closure, t, x, d):
         self._add_grad(t, d)
         with torch.no_grad():
-            orig_loss= closure()
+            orig_loss= closure(True)
         loss= float(orig_loss)
         self._set_param(x)
         return loss
@@ -171,7 +171,7 @@ class SGD_MOD(SGD):
         :param closure: A closure that reevaluates the model and returns the loss.
         :type closure: callable
         :param closure_linesearch: A closure that reevaluates the model and returns 
-            the loss in no_grad context
+            the loss in torch.no_grad context
         :type closure_linesearch: callable, optional 
         """
         loss = None

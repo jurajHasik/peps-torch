@@ -83,12 +83,18 @@ def main():
     print(", ".join([f"{-1}",f"{loss}"]+[f"{v}" for v in obs_values]))
 
     def loss_fn(state, ctm_env_in, opt_context):
+        ctm_args= opt_context["ctm_args"]
+        opt_args= opt_context["opt_args"]
+
         # possibly re-initialize the environment
-        if cfg.opt_args.opt_ctm_reinit:
+        if opt_args.opt_ctm_reinit:
             init_env(state, ctm_env_in)
 
         # 1) compute environment by CTMRG
-        ctm_env_out,  *ctm_log = ctmrg.run(state, ctm_env_in, conv_check=ctmrg_conv_energy)
+        ctm_env_out,  *ctm_log = ctmrg.run(state, ctm_env_in, \
+            conv_check=ctmrg_conv_energy, ctm_args=ctm_args)
+
+        # 2) evaluate loss with the converged environment
         loss = model.energy_2x2_4site(state, ctm_env_out)
         
         return (loss, ctm_env_out, *ctm_log)

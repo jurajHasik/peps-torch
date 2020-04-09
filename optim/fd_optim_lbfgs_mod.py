@@ -141,23 +141,32 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         return fd_grad
 
     #@profile
-    def closure():
-        context["line_search"]=False
+    def closure(linesearching=False):
+        context["line_search"]=linesearching
 
         # 0) evaluate loss
         optimizer.zero_grad()
         with torch.no_grad():
             loss, ctm_env, history, t_ctm, t_check = loss_fn(state, current_env[0], context)
 
-        # 1) store current state if the loss improves
-        t_data["loss"].append(loss.item())
-        if t_data["min_loss"] > t_data["loss"][-1]:
-            t_data["min_loss"]= t_data["loss"][-1]
-            state.write_to_file(outputstatefile, normalize=True)
+        # 1) record loss and store current state if the loss improves
+        if linesearching:
+            t_data["loss_ls"].append(loss.item())
+            if t_data["min_loss_ls"] > t_data["loss_ls"][-1]:
+                t_data["min_loss_ls"]= t_data["loss_ls"][-1]
+        else:  
+            t_data["loss"].append(loss.item())
+            if t_data["min_loss"] > t_data["loss"][-1]:
+                t_data["min_loss"]= t_data["loss"][-1]
+                state.write_to_file(outputstatefile, normalize=True)
 
         # 2) log CTM metrics for debugging
         if opt_args.opt_logging:
-            log_entry=dict({"id": epoch, "t_ctm": t_ctm, "t_check": t_check}) 
+            log_entry=dict({"id": epoch, "loss": t_data["loss"][-1], "t_ctm": t_ctm, \
+                    "t_check": t_check})
+            if linesearching:
+                log_entry["LS"]=len(t_data["loss_ls"])
+                log_entry["loss"]=t_data["loss_ls"]
             log.info(json.dumps(log_entry))
 
         # 3) compute desired observables
@@ -171,9 +180,10 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
             state.coeffs[k].grad= grad[k]
         t_grad1= time.perf_counter()
 
-        # 5) log grad metrics for debugging
+        # 5) log grad metrics
         if opt_args.opt_logging:
-            log_entry=dict({"id": epoch, "t_grad": t_grad1-t_grad0})
+            log_entry=dict({"id": epoch, "t_grad": t_grad1-t_grad0 })
+            if linesearching: log_entry["LS"]=len(t_data["loss_ls"])
             log.info(json.dumps(log_entry))
 
         # 6) detach current environment from autograd graph
@@ -187,8 +197,8 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
     # closure for derivative-free line search. This closure
     # is to be called within torch.no_grad context
     @torch.no_grad()
-    def closure_linesearch():
-        context["line_search"]=True
+    def closure_linesearch(linesearching):
+        context["line_search"]=linesearching
 
         # 1) evaluate loss
         loc_opt_args= copy.deepcopy(opt_args)

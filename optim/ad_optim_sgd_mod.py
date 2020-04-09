@@ -66,8 +66,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
     outputstatefile= main_args.out_prefix+"_state.json"
     t_data = dict({"loss": [], "min_loss": 1.0e+16, "loss_ls": [], "min_loss_ls": 1.0e+16})
     current_env=[ctm_env_init]
-    context= dict({"ctm_args":ctm_args, "opt_args":opt_args, "loss_history": t_data,
-        "line_search": False})
+    context= dict({"ctm_args":ctm_args, "opt_args":opt_args, "loss_history": t_data})
     epoch= 0
 
     parameters= state.get_parameters()
@@ -84,34 +83,46 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         loss0 = checkpoint["loss"]
         cp_state_dict= checkpoint["optimizer_state_dict"]
         cp_opt_params= cp_state_dict["param_groups"][0]
-        cp_opt_history= cp_state_dict["state"][cp_opt_params["params"][0]]
         if main_args.opt_resume_override_params:
-            cp_opt_params["lr"] = opt_args.lr
+            cp_opt_params['lr']= opt_args.lr
+            cp_opt_params['momentum']= opt_args.momentum
+            cp_opt_params['dampening']= opt_args.dampening
+            cp_opt_params['line_search_fn']= opt_args.line_search
+            cp_opt_params['line_search_eps']= opt_args.line_search_tol
         cp_state_dict["param_groups"][0]= cp_opt_params
         optimizer.load_state_dict(cp_state_dict)
         print(f"checkpoint.loss = {loss0}")
 
     #@profile
-    def closure():
+    def closure(linesearching=False):
+        context["line_search"]=linesearching
         optimizer.zero_grad()
-        context["line_search"]=False
 
-        # 1) evaluate loss and the gradient
+        # 0) evaluate loss and the gradient
         loss, ctm_env, history, t_ctm, t_check = loss_fn(state, current_env[0], 
             context)
 
-        # 2) store current state if the loss improves
-        t_data["loss"].append(loss.item())
-        if t_data["min_loss"] > t_data["loss"][-1]:
-            t_data["min_loss"]= t_data["loss"][-1]
-            state.write_to_file(outputstatefile, normalize=True)
+        # 1) record loss and store current state if the loss improves
+        if linesearching:
+            t_data["loss_ls"].append(loss.item())
+            if t_data["min_loss_ls"] > t_data["loss_ls"][-1]:
+                t_data["min_loss_ls"]= t_data["loss_ls"][-1]
+        else:  
+            t_data["loss"].append(loss.item())
+            if t_data["min_loss"] > t_data["loss"][-1]:
+                t_data["min_loss"]= t_data["loss"][-1]
+                state.write_to_file(outputstatefile, normalize=True)
 
-        # 3) log CTM metrics for debugging
+        # 2) log CTM metrics for debugging
         if opt_args.opt_logging:
-            log_entry=dict({"id": epoch, "t_ctm": t_ctm, "t_check": t_check })
+            log_entry=dict({"id": epoch, "loss": t_data["loss"][-1], "t_ctm": t_ctm, \
+                    "t_check": t_check})
+            if linesearching:
+                log_entry["LS"]=len(t_data["loss_ls"])
+                log_entry["loss"]=t_data["loss_ls"]
             log.info(json.dumps(log_entry))
 
-        # 4) compute desired observables
+        # 3) compute desired observables
         if obs_fn is not None:
             obs_fn(state, ctm_env, context)
 
@@ -122,6 +133,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         # 5) log grad metrics
         if opt_args.opt_logging:
             log_entry=dict({"id": epoch, "t_grad": t_grad1-t_grad0 })
+            if linesearching: log_entry["LS"]=len(t_data["loss_ls"])
             log.info(json.dumps(log_entry))
 
         # 6) detach current environment from autograd graph
@@ -135,8 +147,8 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
     # closure for derivative-free line search. This closure
     # is to be called within torch.no_grad context
     @torch.no_grad()
-    def closure_linesearch():
-        context["line_search"]=True
+    def closure_linesearch(linesearching):
+        context["line_search"]=linesearching
 
         # 1) evaluate loss
         loc_opt_args= copy.deepcopy(opt_args)
@@ -145,10 +157,10 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
 
         if opt_args.line_search_svd_method != 'DEFAULT':
             loc_ctm_args.projector_svd_method= opt_args.line_search_svd_method
-        loc_context= dict({"ctm_args":loc_ctm_args, "opt_args":loc_opt_args, "loss_history": t_data,
-            "line_search": True})
+        ls_context= dict({"ctm_args":loc_ctm_args, "opt_args":loc_opt_args, "loss_history": t_data,
+            "line_search": linesearching})
         loss, ctm_env, history, t_ctm, t_check = loss_fn(state, current_env[0],\
-            loc_context)
+            ls_context)
 
         # 2) store current state if the loss improves
         t_data["loss_ls"].append(loss.item())

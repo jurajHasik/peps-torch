@@ -168,12 +168,11 @@ class CTMARGS():
     :ivar projector_svd_method: singular/eigen value decomposition algorithm used in the construction
                                 of the projectors:
 
-                                    * GESDD: pytorch wrapper of LAPACK's gesdd
-                                    * RSVD: randomized SVD
-                                    * SYMEIG: pytorch wrapper of LAPACK's dsyev for symmetric
-                                              matrices
-                                    * SYMARP: scipy wrapper of ARPACK's dsaupd for symmetric
-                                              matrices
+                                    * ``'GESDD'``: pytorch wrapper of LAPACK's gesdd
+                                    * ``'RSVD'``: randomized SVD
+                                    * ``'SYMEIG'``: pytorch wrapper of LAPACK's dsyev for symmetric matrices
+                                    * ``'SYMARP'``: scipy wrapper of ARPACK's dsaupd for symmetric matrices
+                                    * ``'ARP'``: scipy wrapper of ARPACK's svds for general matrices
 
                                 Default: ``'SYMEIG'`` for c4v-symmetric CTM, otherwise ``'GESDD'``
     :vartype projector_svd_method: str
@@ -250,29 +249,66 @@ class OPTARGS():
     Holds configuration of the optimization. The default settings can be modified through 
     command line arguments as follows ``-OPTARGS_<variable-name> desired-value``
 
+    General options
+
     :ivar opt_ctm_reinit: reinitialize environment from scratch within every loss 
                           function evaluation. Default: ``True``
     :vartype opt_ctm_reinit: bool
     :ivar lr: initial learning rate. Default: ``1.0``
     :vartype lr: float
+    :ivar line_search: line search algorithm to use. L-BFGS supports ``'strong_wolfe'`` 
+        and ``'backtracking'``. SGD supports just ``'backtracking'``. Default: ``None``.
+    :vartype line_search: str
+    :ivar line_search_ctm_reinit: recompute environment from scratch at each step within
+        line search algorithm. Default: ``True``.
+    :vartype line_search_ctm_reinit: bool
+    :ivar line_search_svd_method:   eigen decompostion method to use within line search
+        environment computation. See options in :class:`config.CTMARGS`. Default: ``'DEFAULT'`` which
+        depends on the particular CTM algorithm.
+    :vartype line_search_svd_method: str
+    
+    L-BFGS related options
+
     :ivar tolerance_grad: stopping criterion wrt. norm of the gradient (which norm ? See 
-                          ``torch.optim.LPBFG``). Default: ``1.0e-5``
+                          ``torch.optim.LBFGS``). Default: ``1.0e-5``
     :vartype tolerance_grad: float
     :ivar tolerance_change: stopping criterion wrt. change of the loss function. 
                             Default: ``1.0e-9``
     :vartype tolerance_change: float
     :ivar max_iter_per_epoch: maximum number of optimizer iterations per epoch. Default: ``1``
     :vartype max_iter_per_epoch: int
-    :ivar verbosity_opt_epoch: verbosity within optimization epoch. Default: ``1``
-    :vartype verbosity_opt_epoch: int
+    :ivar history_size: number past of directions used to approximate inverse Hessian.
+        Default: ``100``.
+    :vartype history_size: int 
+    
+    SGD related options
+
+    :ivar momentum: momentum used in the SGD step
+    :vartype momentum: float
+    :ivar dampening: dampening used in the SGD step
+    :vartype dampening: float
+
+    Gradients through finite differences
+
+    :ivar fd_eps: magnitude of displacement when computing the forward difference 
+        :math:`E(x_0 + \textrm{fd_eps})-E(x_0)/\textrm{fd_eps}`. Default: ``1.0e-4``
+    :vartype fd_eps: float
+    :ivar fd_ctm_reinit: recompute environment from scratch after applying the displacement.
+        Default: ``True`` 
+
+    Logging
+
     :ivar opt_logging: turns on recording of additional data from optimization, such as
                        CTM convergence, timings, gradients, etc. The information 
                        is logged in file ``{out_prefix}_log.json``. Default: ``True``
     :vartype opt_logging: bool
+    :ivar verbosity_opt_epoch: verbosity within optimization epoch. Default: ``1``
+    :vartype verbosity_opt_epoch: int
     """
     def __init__(self):
         self.lr= 1.0
         self.momentum= 0.
+        self.dampening= 0.
         self.tolerance_grad= 1e-5
         self.tolerance_change= 1e-9
         self.opt_ctm_reinit= True
