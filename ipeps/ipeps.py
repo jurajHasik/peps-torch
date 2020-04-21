@@ -258,19 +258,11 @@ def read_ipeps(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.pep
 
         # Unless given, construct a function mapping from
         # any site of square-lattice back to unit-cell
-        if vertexToSite == None:
-            # check for legacy keys
-            lX = 0
-            lY = 0
-            if "sizeM" in raw_state:
-                lX = raw_state["sizeM"]
-            else:
-                lX = raw_state["lX"]
-            if "sizeN" in raw_state:
-                lY = raw_state["sizeN"]
-            else:
-                lY = raw_state["lY"]
+        # check for legacy keys
+        lX = raw_state["sizeM"] if "sizeM" in raw_state else raw_state["lX"]
+        lY = raw_state["sizeN"] if "sizeN" in raw_state else raw_state["lY"]
 
+        if vertexToSite == None:
             def vertexToSite(coord):
                 x = coord[0]
                 y = coord[1]
@@ -278,7 +270,7 @@ def read_ipeps(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.pep
 
             state = IPEPS(sites, vertexToSite, lX=lX, lY=lY, peps_args=peps_args, global_args=global_args)
         else:
-            state = IPEPS(sites, vertexToSite, peps_args=peps_args, global_args=global_args)
+            state = IPEPS(sites, vertexToSite, lX=lX, lY=lY, peps_args=peps_args, global_args=global_args)
     return state
 
 def extend_bond_dim(state, new_d):

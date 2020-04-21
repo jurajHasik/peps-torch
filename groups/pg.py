@@ -160,8 +160,10 @@ def verify_c4v_symm_A1(A, tol=1.0e-14):
     with torch.no_grad():
         symm= True
         max_d=0.
+        d_list=[]
         for p in [(0,1,4,3,2), (0,3,2,1,4), (0,4,1,2,3), (0,2,3,4,1)]:
             d= torch.dist(A,A.permute(p))
+            d_list.append((p,d))
             symm= symm * (d<tol)
             max_d= max(max_d,d)
-        return symm, max_d
+        return symm, max_d, d_list
