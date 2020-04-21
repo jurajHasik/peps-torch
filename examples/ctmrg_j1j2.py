@@ -5,6 +5,7 @@ import config as cfg
 from ipeps.ipeps import *
 from ctm.generic.env import *
 from ctm.generic import ctmrg
+from ctm.generic import transferops
 from models import j1j2
 import unittest
 
@@ -16,6 +17,8 @@ parser.add_argument("-j2", type=float, default=0., help="next nearest-neighbour 
 parser.add_argument("-tiling", default="BIPARTITE", help="tiling of the lattice")
 # additional observables-related arguments
 parser.add_argument("-corrf_r", type=int, default=1, help="maximal correlation function distance")
+parser.add_argument("-top_n", type=int, default=2, help="number of leading eigenvalues"+
+    "of transfer operator to compute")
 args, unknown_args = parser.parse_known_args()
 
 def main():
@@ -157,6 +160,14 @@ def main():
         print(f"spectrum C[{c_loc}]")
         for i in range(args.chi):
             print(f"{i} {s[i]}")
+
+    # transfer operator spectrum
+    site_dir_list=[((0,0), (1,0)),((0,0), (0,1))]
+    for sdp in site_dir_list:
+        print(f"\n\nspectrum(T)[{sdp[0]},{sdp[1]}]")
+        l= transferops.get_Top_spec(args.top_n, *sdp, state, ctm_env_init)
+        for i in range(l.size()[0]):
+            print(f"{i} {l[i,0]} {l[i,1]}")
 
 if __name__=='__main__':
     if len(unknown_args)>0:
