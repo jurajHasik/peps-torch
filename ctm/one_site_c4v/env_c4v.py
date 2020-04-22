@@ -74,6 +74,12 @@ class ENV_C4V():
         self.T[self.keyT]= torch.zeros((self.chi,self.chi,bond_dim**2), \
             dtype=self.dtype, device=self.device)
 
+    def get_C(self):
+        return self.C[self.keyC]
+
+    def get_T(self):
+        return self.T[self.keyT]
+
     def extend(self, new_chi, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
         new_env= ENV_C4V(new_chi, bond_dim=self.bond_dim, ctm_args=ctm_args, global_args=global_args)
         x= min(self.chi, new_chi)
