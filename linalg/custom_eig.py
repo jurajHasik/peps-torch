@@ -1,7 +1,7 @@
 import torch
 import config as cfg
 from linalg.eig_sym import SYMEIG
-from linalg.eig_arnoldi import SYMARNOLDI
+from linalg.eig_arnoldi import SYMARNOLDI, ARNOLDI
 
 def truncated_eig_sym(M, chi, abs_tol=1.0e-14, rel_tol=None, keep_multiplets=False, \
     eps_multiplet=1.0e-12, verbosity=0):
@@ -122,3 +122,40 @@ def truncated_eig_symarnoldi(M, chi, abs_tol=1.0e-14, rel_tol=None, keep_multipl
 
     return D, U
 
+def truncated_eig_arnoldi(M, chi, v0=None, dtype=None, device=None, 
+    abs_tol=1.0e-14, rel_tol=None, keep_multiplets=False, eps_multiplet=1.0e-12, verbosity=0):
+    r"""
+    :param M: matrix of dimensions :math:`N \times N` or numpy LinearOperator
+    :param chi: desired maximal rank :math:`\chi`
+    :param v0: initial vector
+    :param abs_tol: absolute tolerance on minimal(in magnitude) eigenvalue 
+    :param rel_tol: relative tolerance on minimal(in magnitude) eigenvalue
+    :param keep_multiplets: truncate spectrum down to last complete multiplet
+    :param eps_multiplet: allowed splitting within multiplet
+    :param verbosity: logging verbosity
+    :type M: torch.Tensor or scipy.sparse.linalg.LinearOperator
+    :type chi: int
+    :type v0: torch.Tensor
+    :type abs_tol: float
+    :type rel_tol: float
+    :type keep_multiplets: bool
+    :type eps_multiplet: float
+    :type verbosity: int
+    :return: leading :math:`\chi` eigenvalues D and eigenvectors U
+    :rtype: torch.tensor, torch.tensor
+
+    **Note:** `depends on scipy`
+
+    Returns leading :math:`\chi` eigenpairs of a matrix M, where M is a symmetric matrix :math:`M=M^T`,
+    by computing the partial symmetric decomposition :math:`M= UDU^T` up to rank :math:`\chi`. 
+    Returned tensors have dimensions 
+
+    .. math:: dim(D)=(\chi),\ dim(U)=(N,\chi)
+    """
+
+    D, U= ARNOLDI.apply(M, chi+int(keep_multiplets), v0, dtype, device)
+
+    if keep_multiplets:
+        raise Exception("keep_multiplets not implemented")
+
+    return D, U
