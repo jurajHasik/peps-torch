@@ -51,7 +51,8 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
     # 1) perform CTMRG
     t_obs=t_ctm=t_fpcm=0.
     history=None
-    past_steps_data=dict({"Z":[torch.trace(env.get_C()@env.get_C()@env.get_C()@env.get_C())]})
+    past_steps_data=dict() # possibly store some data throughout the execution of CTM
+    
     for i in range(ctm_args.ctm_max_iter):
         # FPCM acceleration
         if i>=ctm_args.fpcm_init_iter and ctm_args.fpcm_freq>0 and i%ctm_args.fpcm_freq==0:
@@ -253,9 +254,6 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
         # 4) symmetrize, normalize and assign new C,T
         C2X2= 0.5*(C2X2 + C2X2.t())
         nT= 0.5*(nT + nT.permute(1,0,2))
-        C1_abs_max= C2X2.abs().max()
-        Z1= torch.trace(C2X2@C2X2@C2X2@C2X2)
-        past_steps_data["Z"].append(Z1)
         C2X2= C2X2/torch.max(torch.abs(C2X2))
         # C2X2= C2X2/torch.sum(torch.abs(D))
         nT= nT/torch.max(torch.abs(nT))
