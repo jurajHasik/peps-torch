@@ -20,6 +20,7 @@ log = logging.getLogger(__name__)
 # parse command line args and build necessary configuration objects
 parser= cfg.get_args_parser()
 # additional model-dependent arguments
+parser.add_argument("-force_cpu", action="store_true", help="force energy and observale evalution on CPU") 
 parser.add_argument("-j1", type=float, default=1., help="nearest-neighbour coupling")
 parser.add_argument("-j2", type=float, default=0., help="next nearest-neighbour coupling")
 parser.add_argument("-top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
@@ -111,8 +112,8 @@ def main():
     ctm_env = ENV_C4V(args.chi, state)
     init_env(state, ctm_env)
 
-    loss0 = energy_f(state, ctm_env, force_cpu=True)
-    obs_values, obs_labels = model.eval_obs(state,ctm_env,force_cpu=True)
+    loss0 = energy_f(state, ctm_env, force_cpu=args.force_cpu)
+    obs_values, obs_labels = model.eval_obs(state,ctm_env,force_cpu=args.force_cpu)
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
 
@@ -130,13 +131,13 @@ def main():
         # 1) compute environment by CTMRG
         ctm_env_out, history, t_ctm, t_obs= ctmrg_c4v.run(state, ctm_env_in, \
             conv_check=ctmrg_conv_f, ctm_args=ctm_args)
-        loss0 = energy_f(state, ctm_env_out, force_cpu=True)
+        loss0 = energy_f(state, ctm_env_out, force_cpu=args.force_cpu)
         
         loc_ctm_args= copy.deepcopy(ctm_args)
         loc_ctm_args.ctm_max_iter= 1
         ctm_env_out, history1, t_ctm1, t_obs1= ctmrg_c4v.run(state, ctm_env_out, \
             ctm_args=loc_ctm_args)
-        loss1 = energy_f(state, ctm_env_out, force_cpu=True)
+        loss1 = energy_f(state, ctm_env_out, force_cpu=args.force_cpu)
 
         #loss=(loss0+loss1)/2
         loss= torch.max(loss0,loss1)
@@ -157,7 +158,7 @@ def main():
         else:
             epoch= len(opt_context["loss_history"]["loss"]) 
             loss= opt_context["loss_history"]["loss"][-1] 
-        obs_values, obs_labels = model.eval_obs(state,ctm_env,force_cpu=True)
+        obs_values, obs_labels = model.eval_obs(state,ctm_env,force_cpu=args.force_cpu)
         print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
 
         if (not opt_context["line_search"]) and args.top_freq>0 and epoch%args.top_freq==0:
@@ -177,8 +178,8 @@ def main():
     ctm_env = ENV_C4V(args.chi, state)
     init_env(state, ctm_env)
     ctm_env, *ctm_log = ctmrg_c4v.run(state, ctm_env, conv_check=ctmrg_conv_f)
-    opt_energy = energy_f(state,ctm_env,force_cpu=True)
-    obs_values, obs_labels = model.eval_obs(state,ctm_env,force_cpu=True)
+    opt_energy = energy_f(state,ctm_env,force_cpu=args.force_cpu)
+    obs_values, obs_labels = model.eval_obs(state,ctm_env,force_cpu=args.force_cpu)
     print(", ".join([f"{args.opt_max_iter}",f"{opt_energy}"]+[f"{v}" for v in obs_values]))
 
 if __name__=='__main__':
