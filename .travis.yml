@@ -21,8 +21,7 @@ before_install:
 - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh && bash Miniconda3-latest-Linux-x86_64.sh -b -p _miniconda;  else  wget https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh && bash Miniconda3-latest-MacOSX-x86_64.sh -b -p _miniconda; fi
 - export PATH="$PWD/_miniconda/bin:$PATH"
 - conda config --set always_yes yes --set changeps1 no
-- conda create -n test python=${PYTHON_V}
-- conda activate test
+- conda install python=${PYTHON_V}
 - conda update -q conda
 - conda install pytorch==${PYTORCH_V} cpuonly -c pytorch
 - conda install scipy
