@@ -126,11 +126,13 @@ class LBFGS_MOD(LBFGS):
 
     def _directional_evaluate(self, closure, x, t, d):
         self._add_grad(t, d)
-        loss = float(closure(linesearching=True))
+        with torch.enable_grad():
+            loss = float(closure(linesearching=True))
         flat_grad = self._gather_flat_grad()
         self._set_param(x)
         return loss, flat_grad
 
+    @torch.no_grad()
     def step_2c(self, closure, closure_linesearch):
         r"""
         Performs a single optimization step.
@@ -161,7 +163,8 @@ class LBFGS_MOD(LBFGS):
         state.setdefault('n_iter', 0)
 
         # evaluate initial f(x) and df/dx
-        orig_loss = closure()
+        with torch.enable_grad():
+            orig_loss = closure()
         loss = float(orig_loss)
         current_evals = 1
         state['func_evals'] += 1
@@ -232,17 +235,20 @@ class LBFGS_MOD(LBFGS):
                 q = flat_grad.neg()
                 for i in range(num_old - 1, -1, -1):
                     al[i] = old_stps[i].dot(q) * ro[i]
-                    q.add_(-al[i], old_dirs[i])
+                    # q.add_(-al[i], old_dirs[i])
+                    q.add_(old_dirs[i], alpha=-al[i])
 
                 # multiply by initial Hessian
                 # r/d is the final direction
                 d = r = torch.mul(q, H_diag)
                 for i in range(num_old):
                     be_i = old_dirs[i].dot(r) * ro[i]
-                    r.add_(al[i] - be_i, old_stps[i])
+                    # r.add_(al[i] - be_i, old_stps[i])
+                    r.add_(old_stps[i], alpha=al[i] - be_i)
 
             if prev_flat_grad is None:
-                prev_flat_grad = flat_grad.clone()
+                # prev_flat_grad = flat_grad.clone()
+                prev_flat_grad = flat_grad.clone(memory_format=torch.contiguous_format)
             else:
                 prev_flat_grad.copy_(flat_grad)
             prev_loss = loss
@@ -299,7 +305,8 @@ class LBFGS_MOD(LBFGS):
                     # re-evaluate function only if not in last iteration
                     # the reason we do this: in a stochastic setting,
                     # no use to re-evaluate that function here
-                    loss = float(closure())
+                    with torch.enable_grad():
+                        loss = float(closure())
                     flat_grad = self._gather_flat_grad()
                     opt_cond = flat_grad.abs().max() <= tolerance_grad
                     ls_func_evals = 1

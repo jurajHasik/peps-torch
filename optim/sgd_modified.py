@@ -153,7 +153,7 @@ class SGD_MOD(SGD):
         for p in self._params:
             numel = p.numel()
             # view as to avoid deprecated pointwise semantics
-            p.data.add_(step_size, update[offset:offset + numel].view_as(p.data))
+            p.data.add_(update[offset:offset + numel].view_as(p), alpha=step_size)
             offset += numel
         assert offset == self._numel()
 
@@ -164,7 +164,8 @@ class SGD_MOD(SGD):
         for p, pdata in zip(self._params, params_data):
             p.data.copy_(pdata)
 
-    def step_2c(self, closure=None, closure_linesearch=None):
+    @torch.no_grad()
+    def step_2c(self, closure, closure_linesearch=None):
         r"""
         Performs a single optimization step.
 
@@ -175,7 +176,7 @@ class SGD_MOD(SGD):
         :type closure_linesearch: callable, optional 
         """
         loss = None
-        if closure is not None:
+        with torch.enable_grad():
             loss = closure()
 
         lr = self.param_groups[0]['lr']
