@@ -78,7 +78,6 @@ References:
 	M.T. Fishman, L. Vanderstraeten, V. Zauner-Stauber, J. Haegeman, and F. Verstraete,
 	[Phys. Rev. B 98, 235148 (2018) ](https://journals.aps.org/prb/abstract/10.1103/PhysRevB.98.235148)
 	or arXiv version [arXiv:1711.05881 ](https://arxiv.org/abs/1711.05881)
-3.      *Competing States in the t-J Model: Uniform d-Wave State versus Stripe State (Supplemental Material)*, 
-    P. Corboz, T. M. Rice, and M. Troyer, [Phys. Rev. Lett. 113, 046402 (2014) 
-    ](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.113.046402>) or arXiv version 
-    [arXiv:1402.2859](https://arxiv.org/abs/1402.2859)
+3.	*Competing States in the t-J Model: Uniform d-Wave State versus Stripe State (Supplemental Material)*, 
+	P. Corboz, T. M. Rice, and M. Troyer, [Phys. Rev. Lett. 113, 046402 (2014) ](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.113.046402>) or arXiv version 
+	[arXiv:1402.2859](https://arxiv.org/abs/1402.2859)
