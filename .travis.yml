@@ -5,11 +5,10 @@ os: linux
 language: python
 
 env:
- - PYTHON_V=3.6
- - PYTHON_V=3.8
-env:
- - PYTORCH_V=1.4.0
- - PYTORCH_V=1.5.0
+ - PYTHON_V=3.6 PYTORCH_V=1.4.0
+ - PYTHON_V=3.6 PYTORCH_V=1.5.0
+ - PYTHON_V=3.8 PYTORCH_V=1.4.0
+ - PYTHON_V=3.8 PYTORCH_V=1.5.0
 
 branches:
   only:
