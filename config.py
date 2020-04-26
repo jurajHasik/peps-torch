@@ -307,6 +307,8 @@ class OPTARGS():
                        CTM convergence, timings, gradients, etc. The information 
                        is logged in file ``{out_prefix}_log.json``. Default: ``True``
     :vartype opt_logging: bool
+    :ivar opt_log_grad: log values of gradient. Default: ``False``
+    :vartype opt_log_grad: bool
     :ivar verbosity_opt_epoch: verbosity within optimization epoch. Default: ``1``
     :vartype verbosity_opt_epoch: int
     """
@@ -327,6 +329,7 @@ class OPTARGS():
         self.max_iter_per_epoch= 1
         self.verbosity_opt_epoch= 1
         self.opt_logging= True
+        self.opt_log_grad= False
 
     def __str__(self):
         res=type(self).__name__+"\n"
