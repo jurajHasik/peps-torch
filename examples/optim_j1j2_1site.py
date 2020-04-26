@@ -16,8 +16,8 @@ log = logging.getLogger(__name__)
 # parse command line args and build necessary configuration objects
 parser= cfg.get_args_parser()
 # additional model-dependent arguments
-parser.add_argument("-j1", type=float, default=1., help="nearest-neighbour coupling")
-parser.add_argument("-j2", type=float, default=0., help="next nearest-neighbour coupling")
+parser.add_argument("--j1", type=float, default=1., help="nearest-neighbour coupling")
+parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour coupling")
 args, unknown_args = parser.parse_known_args()
 
 def main():

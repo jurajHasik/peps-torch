@@ -20,12 +20,12 @@ log = logging.getLogger(__name__)
 # parse command line args and build necessary configuration objects
 parser= cfg.get_args_parser()
 # additional model-dependent arguments
-parser.add_argument("-j1", type=float, default=1., help="nearest-neighbour coupling")
-parser.add_argument("-j2", type=float, default=0., help="next nearest-neighbour coupling")
-parser.add_argument("-top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
-parser.add_argument("-top_n", type=int, default=2, help="number of leading eigenvalues"+
+parser.add_argument("--j1", type=float, default=1., help="nearest-neighbour coupling")
+parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour coupling")
+parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
+parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
-parser.add_argument("-force_cpu", action='store_true', help="evaluate energy on cpu")
+parser.add_argument("--force_cpu", action='store_true', help="evaluate energy on cpu")
 args, unknown_args = parser.parse_known_args()
 
 def main():
