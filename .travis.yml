@@ -5,10 +5,10 @@ language: python
 matrix:
   include:
   - os: linux
-    addons:
-      apt:
-        sources:
-        - ubuntu-toolchain-r-test
+    env: PYTORCH_V=1.4.0
+  - os: linux 
+    env: PYTORCH_V=1.5.0
+
 
 notifications:
   email: false
@@ -18,7 +18,7 @@ before_install:
 - export PATH="$PWD/_miniconda/bin:$PATH"
 - conda config --set always_yes yes --set changeps1 no
 - conda update -q conda
-- conda install pytorch cpuonly -c pytorch
+- conda install pytorch==${PYTORCH_V} cpuonly -c pytorch
 - conda install scipy=1.3.2
 
 - git clone https://github.com/jurajHasik/tn-torch.git tn-torch && cd tn-torch
