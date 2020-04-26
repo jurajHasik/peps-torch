@@ -12,7 +12,7 @@ env:
 
 branches:
   only:
-  - fix-pytorch15
+  - master
 
 notifications:
   email: false
