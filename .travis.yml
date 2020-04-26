@@ -9,6 +9,9 @@ matrix:
   - os: linux 
     env: PYTORCH_V=1.5.0
 
+branches:
+  only:
+  - fix-pytorch15
 
 notifications:
   email: false
@@ -19,9 +22,8 @@ before_install:
 - conda config --set always_yes yes --set changeps1 no
 - conda update -q conda
 - conda install pytorch==${PYTORCH_V} cpuonly -c pytorch
-- conda install scipy=1.3.2
+- conda install scipy
 
-- git clone https://github.com/jurajHasik/tn-torch.git tn-torch && cd tn-torch
 script: 
 - python -m unittest discover -s examples -p "ctmrg_*.py"
 - python -m unittest discover -s examples -p "optim_*.py"
