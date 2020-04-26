@@ -22,12 +22,24 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
     :param global_args: global configuration
     :type state: IPEPS_C4V
     :type env: ENV_C4V
-    :type conv_check: function(IPEPS,ENV_C4V,list[float],CTMARGS)->bool
+    :type conv_check: function(IPEPS,ENV_C4V,Object,CTMARGS)->bool
     :type ctm_args: CTMARGS
     :type global_args: GLOBALARGS
 
     Executes specialized CTM algorithm for 1-site C4v symmetric iPEPS starting from the intial 
-    environment ``env``. TODO add reference
+    environment ``env``. To establish the convergence of CTM before the maximal number of iterations 
+    is reached  a ``conv_check`` function is invoked. Its expected signature is 
+    ``conv_check(IPEPS,ENV_C4V,Object,CTMARGS)`` where ``Object`` is an arbitary argument. For 
+    example it can be a list or dict used for storing CTM data from previous steps to   
+    check convergence.
+
+    If desired, CTM can be accelerated by fixed-point corner-matrix algorithm (FPCM) controlled 
+    by settings in :py:class:`CTMARGS <config.CTMARGS>`.
+
+    .. note::
+
+        Currently, FPCM does not support reverse-mode differentiation.
+
     """
 
     if ctm_args.projector_svd_method=='DEFAULT' or ctm_args.projector_svd_method=='SYMEIG':
@@ -157,6 +169,26 @@ def ctm_MOVE_dl(A, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
 # performs CTM move
 def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.global_args,
     past_steps_data=None):
+    r"""
+    :param a: on-site C4v symmetric tensor
+    :param env: C4v symmetric environment
+    :param f_c2x2_decomp: function performing the truncated spectral decomposition (eigenvalue/svd) 
+                          of enlarged corner. The ``f_c2x2_decomp`` returns a tuple composed of
+                          leading chi spectral values and projector on leading chi spectral values.
+    :param ctm_args: CTM algorithm configuration
+    :param global_args: global configuration
+    :param past_steps_data: dictionary used for recording diagnostic information during CTM 
+    :type a: torch.Tensor
+    :type env: ENV_C4V
+    :type f_c2x2_decomp: function(torch.Tensor, int)->torch.Tensor, torch.Tensor
+    :type ctm_args: CTMARGS
+    :type global_args: GLOBALARGS
+    :type past_steps_data:
+
+    Executes a single step of C4v symmetric CTM algorithm for 1-site C4v symmetric iPEPS.
+    This variant of CTM step does not explicitly build double-layer on-site tensor.
+    """
+
     # 0) extract raw tensors as tuple
     tensors= tuple([a,env.C[env.keyC],env.T[env.keyT]])
     
