@@ -12,10 +12,10 @@ import unittest
 # parse command line args and build necessary configuration objects
 parser= cfg.get_args_parser()
 # additional model-dependent arguments
-parser.add_argument("-alpha", type=float, default=0., help="inter-ladder coupling")
+parser.add_argument("--alpha", type=float, default=0., help="inter-ladder coupling")
 # additional observables-related arguments
-parser.add_argument("-corrf_r", type=int, default=1, help="maximal correlation function distance")
-parser.add_argument("-top_n", type=int, default=2, help="number of leading eigenvalues"+
+parser.add_argument("--corrf_r", type=int, default=1, help="maximal correlation function distance")
+parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
 args, unknown_args = parser.parse_known_args()
 

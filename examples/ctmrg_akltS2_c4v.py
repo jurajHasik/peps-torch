@@ -16,7 +16,7 @@ log = logging.getLogger(__name__)
 parser= cfg.get_args_parser()
 # additional model-dependent arguments
 # additional observables-related arguments
-parser.add_argument("-corrf_r", type=int, default=1, help="maximal correlation function distance")
+parser.add_argument("--corrf_r", type=int, default=1, help="maximal correlation function distance")
 args, unknown_args = parser.parse_known_args()
 
 def main():

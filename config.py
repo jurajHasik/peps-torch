@@ -4,17 +4,17 @@ import logging
 
 def get_args_parser():
     parser = argparse.ArgumentParser(description='',allow_abbrev=False)
-    parser.add_argument("-omp_cores", type=int, default=1,help="number of OpenMP cores")
-    parser.add_argument("-instate", default=None, help="Input state JSON")
-    parser.add_argument("-instate_noise", type=float, default=0., help="magnitude of noise added to the trial \"instate\"")
-    parser.add_argument("-ipeps_init_type", default="RANDOM", help="initialization of the trial iPEPS state")
-    parser.add_argument("-out_prefix", default="output", help="Output files prefix")
-    parser.add_argument("-bond_dim", type=int, default=1, help="iPEPS auxiliary bond dimension")
-    parser.add_argument("-chi", type=int, default=20, help="environment bond dimension")
-    parser.add_argument("-opt_max_iter", type=int, default=100, help="maximal number of epochs")
-    parser.add_argument("-opt_resume", type=str, default=None, help="file with checkpoint to resume")
-    parser.add_argument("-opt_resume_override_params", type=bool, default=False, help="override optimizer parameters stored in checkpoint")
-    parser.add_argument("-seed", type=int, default=0, help="PRNG seed")
+    parser.add_argument("--omp_cores", type=int, default=1,help="number of OpenMP cores")
+    parser.add_argument("--instate", default=None, help="Input state JSON")
+    parser.add_argument("--instate_noise", type=float, default=0., help="magnitude of noise added to the trial \"instate\"")
+    parser.add_argument("--ipeps_init_type", default="RANDOM", help="initialization of the trial iPEPS state")
+    parser.add_argument("--out_prefix", default="output", help="Output files prefix")
+    parser.add_argument("--bond_dim", type=int, default=1, help="iPEPS auxiliary bond dimension")
+    parser.add_argument("--chi", type=int, default=20, help="environment bond dimension")
+    parser.add_argument("--opt_max_iter", type=int, default=100, help="maximal number of epochs")
+    parser.add_argument("--opt_resume", type=str, default=None, help="file with checkpoint to resume")
+    parser.add_argument("--opt_resume_override_params", type=bool, default=False, help="override optimizer parameters stored in checkpoint")
+    parser.add_argument("--seed", type=int, default=0, help="PRNG seed")
 
     configs=[global_args, peps_args, ctm_args, opt_args]
     for c in configs:
@@ -26,12 +26,12 @@ def get_args_parser():
             if isinstance(getattr(c,x), bool):
                 # default is False
                 if not getattr(c,x): 
-                    parser.add_argument("-"+group_prefix+x, action='store_true')
+                    parser.add_argument("--"+group_prefix+x, action='store_true')
                 # default is True
                 else:
-                    parser.add_argument("-"+group_prefix+"no_"+x, action='store_false', dest=group_prefix+x)
+                    parser.add_argument("--"+group_prefix+"no_"+x, action='store_false', dest=group_prefix+x)
             else:
-                parser.add_argument("-"+group_prefix+x, type=type(getattr(c,x)), default=getattr(c,x))
+                parser.add_argument("--"+group_prefix+x, type=type(getattr(c,x)), default=getattr(c,x))
 
     return parser
 
@@ -78,7 +78,7 @@ def print_config():
 class MAINARGS():
     r"""
     Main simulation options. The default settings can be modified through 
-    command line arguments as follows ``-<option-name> desired-value``
+    command line arguments as follows ``--<option-name> desired-value``
 
     :ivar omp_cores: number of OpenMP cores. Default: ``1``
     :vartype omp_cores: int:
@@ -115,7 +115,7 @@ class MAINARGS():
 class GLOBALARGS():
     r"""
     Holds global configuration options. The default settings can be modified through 
-    command line arguments as follows ``-GLOBALARGS_<variable-name> desired-value``
+    command line arguments as follows ``--GLOBALARGS_<variable-name> desired-value``
 
     :ivar dtype: data type of all torch.tensor. Default: ``torch.float64``
     :vartype dtype: torch.dtype
@@ -145,7 +145,7 @@ class PEPSARGS():
 class CTMARGS():
     r"""
     Holds configuration of the CTM algorithm. The default settings can be modified through 
-    command line arguments as follows ``-CTMARGS_<variable-name> desired-value``
+    command line arguments as follows ``--CTMARGS_<variable-name> desired-value``
 
     :ivar ctm_max_iter: maximum iterations of directional CTM algorithm. Default: ``50``
     :vartype ctm_max_iter: int
@@ -268,7 +268,7 @@ class CTMARGS():
 class OPTARGS():
     r"""
     Holds configuration of the optimization. The default settings can be modified through 
-    command line arguments as follows ``-OPTARGS_<variable-name> desired-value``
+    command line arguments as follows ``--OPTARGS_<variable-name> desired-value``
 
     General options
 
