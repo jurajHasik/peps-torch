@@ -190,18 +190,6 @@ class CTMARGS():
 
                              Default: ``[(0,-1), (-1,0), (0,1), (1,0)]``
     :vartype ctm_move_sequence: list[tuple(int,int)]
-    :ivar ctm_logging: log debug statements into log file. Default: ``False`` 
-    :vartype ctm_loggging: bool
-    :ivar verbosity_initialization: verbosity of initialization method for ENV objects. Default: ``0``
-    :vartype verbosity_initialization: int
-    :ivar verbosity_ctm_convergence: verbosity of evaluation of CTM convergence criterion. Default: ``0``
-    :vartype verbosity_ctm_convergence: int
-    :ivar verbosity_projectors: verbosity of projector construction. Default: ``0``
-    :vartype verbosity_projectors: int
-    :ivar verbosity_ctm_move: verbosity of directional CTM moves. Default: ``0``
-    :vartype verbosity_ctm_move: int
-    :ivar verbosity_rdm: verbosity of reduced density matrix routines. Default: ``0``
-    :vartype verbosity_rdm: int
     :ivar fwd_checkpoint_c2x2: recompute forward pass of enlarged corner functions (c2x2_*) during 
                                backward pass within optimization to save memory. Default: ``False``
     :vartype fwd_checkpoint_c2x2: bool
@@ -216,6 +204,34 @@ class CTMARGS():
     :vartype fwd_checkpoint_absorb: bool
     :ivar fwd_checkpoint_move: recompute forward pass of whole ``ctm_MOVE`` during backward pass. Default: ``False``
     :vartype fwd_checkpoint_move: bool
+
+    FPCM related options
+
+    :ivar fpcm_init_iter: minimal number of CTM steps before FPCM acceleration step is attempted.
+                          Default: ``1``
+    :vartype fpcm_init_iter: int
+    :ivar fpcm_freq: frequency of FPCM steps per CTM steps. Default: ``-1``
+    :vartype fpcm_freq: int
+    :ivar fpcm_isogauge_tol: tolerance on gauging the uniform MPS built from half-row/-column tensor T.
+                             Default: ``1.0e-14``.
+    :vartype fpcm_isogauge_tol: float
+    :ivar fpcm_fpt_tol: tolerance on convergence within FPCM step. Default: ``1.0e-8``
+    :vartype fpcm_fpt_tol: float
+
+    Logging and Debugging options
+
+    :ivar ctm_logging: log debug statements into log file. Default: ``False`` 
+    :vartype ctm_loggging: bool
+    :ivar verbosity_initialization: verbosity of initialization method for ENV objects. Default: ``0``
+    :vartype verbosity_initialization: int
+    :ivar verbosity_ctm_convergence: verbosity of evaluation of CTM convergence criterion. Default: ``0``
+    :vartype verbosity_ctm_convergence: int
+    :ivar verbosity_projectors: verbosity of projector construction. Default: ``0``
+    :vartype verbosity_projectors: int
+    :ivar verbosity_ctm_move: verbosity of directional CTM moves. Default: ``0``
+    :vartype verbosity_ctm_move: int
+    :ivar verbosity_rdm: verbosity of reduced density matrix routines. Default: ``0``
+    :vartype verbosity_rdm: int
     """
     def __init__(self):
         self.ctm_max_iter= 50

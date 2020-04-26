@@ -75,16 +75,24 @@ class ENV_C4V():
             dtype=self.dtype, device=self.device)
 
     def get_C(self):
+        r"""
+        :return: get corner tensor
+        :rtype: torch.Tensor
+        """
         return self.C[self.keyC]
 
     def get_T(self):
+        r"""
+        :return: get half-row/-column tensor
+        :rtype: torch.Tensor
+        """
         return self.T[self.keyT]
 
     def extend(self, new_chi, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
         new_env= ENV_C4V(new_chi, bond_dim=self.bond_dim, ctm_args=ctm_args, global_args=global_args)
         x= min(self.chi, new_chi)
-        new_env.C[new_env.keyC][:x,:x]= self.C[self.keyC][:x,:x]
-        new_env.T[new_env.keyT][:x,:x,:self.bond_dim**2]= self.T[self.keyT][:x,:x,:self.bond_dim**2]
+        new_env.C[new_env.keyC][:x,:x]= self.get_C()[:x,:x]
+        new_env.T[new_env.keyT][:x,:x,:self.bond_dim**2]= self.get_T()[:x,:x,:self.bond_dim**2]
         return new_env
 
 def init_env(state, env, ctm_args=cfg.ctm_args):
