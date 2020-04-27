@@ -63,13 +63,25 @@ def main():
         with torch.no_grad():
             if not history:
                 history=[]
+            
             e_curr = energy_f(state, env, force_cpu=ctm_args.conv_check_cpu)
-            obs_values, obs_labels = model.eval_obs(state, env)
-            history.append([e_curr.item()]+obs_values)
-            print(", ".join([f"{len(history)}",f"{e_curr}"]+[f"{v}" for v in obs_values]))
+            history.append(e_curr.item())
+            print(f"{len(history)%ctm_args.fpcm_freq} ", end="")
+            if args.obs_freq>0 and \
+                (len(history)%args.obs_freq==0 or (len(history)-1)%args.obs_freq==0):
+                obs_values, obs_labels = model.eval_obs(state, env)
+                print(", ".join([f"{len(history)}",f"{e_curr}"]+[f"{v}" for v in obs_values]))
+            else:
+                print(", ".join([f"{len(history)}",f"{e_curr}"]))
 
-            if len(history) > 1 and abs(history[-1][0]-history[-2][0]) < ctm_args.ctm_conv_tol:
+            if len(history) > 1 and abs(history[-1]-history[-2]) < ctm_args.ctm_conv_tol:
+                log.info({"history_length": len(history), "history": history,
+                    "final_multiplets": compute_multiplets(env)})
                 return True, history
+            elif len(history) >= ctm_args.ctm_max_iter:
+                log.info({"history_length": len(history), "history": history,
+                    "final_multiplets": compute_multiplets(env)})
+                return False, history
         return False, history
 
     def ctmrg_conv_rdm2x1(state, env, history, ctm_args=cfg.ctm_args):

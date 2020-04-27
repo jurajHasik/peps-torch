@@ -43,8 +43,9 @@ def fpcm_MOVE_sl(a, env, ctm_args=cfg.ctm_args, global_args=cfg.global_args,
             # 1.2) check convergence 
             tmp_.append((Tp,Cp))
             if len(tmp_)>1:
-                e0= torch.sum((tmp_[1][0]-tmp_[0][0])**2)
-                if verbosity>0: log.info(f"fpcm_MOVE_sl_c iteration {i} error {e0}")
+                e0= torch.norm(tmp_[1][0]-tmp_[0][0])/max(Tp.size())
+                if verbosity>0: log.info(f"fpcm_MOVE_sl_c iteration {i} error (p=2) {e0}"\
+                    +f" (p=inf) {torch.norm(tmp_[1][0]-tmp_[0][0],float('inf'))}")
                 tmp_.pop(0)
             i+=1
 
@@ -312,8 +313,10 @@ def isogauge_MPS(T, C0=None, isogauge_tol=1.0e-8, verbosity=0):
     P, U= pull_through(nC,T)
 
     # initial error in gauging (Frobenius or spectral norm ?)
-    e0= torch.norm(nC-P)
-    if verbosity>0: log.info(f"isogauge_CT init gauging error {e0}")
+    e0= torch.norm(nC-P)/max(nC.size())
+    if verbosity>0: 
+        log.info(f"isogauge_CT init gauging error (p=2) {e0} (p=inf) {torch.norm(nC-P,float('inf'))}")
+
 
     # is error above tolerance ? Iteratively refine
     while e0 > isogauge_tol:
@@ -334,5 +337,6 @@ def isogauge_MPS(T, C0=None, isogauge_tol=1.0e-8, verbosity=0):
         #       |                 |
         P, U= pull_through(nC, T)
         e0= torch.norm(nC-P)
-        if verbosity>0: log.info(f"isogauge_CT iterative improvement gauging error {e0}")
+        if verbosity>0: log.info(f"isogauge_CT iterative improvement gauging error (p=2) {e0}"\
+            +f" (p=inf) {torch.norm(nC-P,float('inf'))}")
     return nC, U
