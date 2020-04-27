@@ -317,7 +317,6 @@ def isogauge_MPS(T, C0=None, isogauge_tol=1.0e-8, verbosity=0):
     if verbosity>0: 
         log.info(f"isogauge_CT init gauging error (p=2) {e0} (p=inf) {torch.norm(nC-P,float('inf'))}")
 
-
     # is error above tolerance ? Iteratively refine
     while e0 > isogauge_tol:
         # get fixed point of mixed transfer matrix
