@@ -55,6 +55,7 @@ class SYMARNOLDI(torch.autograd.Function):
     def backward(self, dD, dU):
         raise Exception("backward not implemented")
         D, U= self.saved_tensors
+        dA= None
         return dA, None
 
 def test_SYMARNOLDI_random():
@@ -143,6 +144,7 @@ class ARNOLDI(torch.autograd.Function):
     def backward(self, dD, dU):
         raise Exception("backward not implemented")
         D, U = self.saved_tensors
+        dA= None
         return dA, None, None, None, None
 
 def test_ARNOLDI_random():

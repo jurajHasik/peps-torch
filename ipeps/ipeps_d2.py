@@ -99,7 +99,7 @@ def extend_bond_dim(state, new_d):
         raise ValueError("Desired dimension is smaller than following aux dimensions: "+str(size_check))
 
     new_t = torch.zeros((dims[0],new_d,new_d,new_d,new_d), dtype=state.dtype, device=state.device)
-    new_t[:,:dims[1],:dims[2],:dims[3],:dims[4]] = t
+    new_t[:,:dims[1],:dims[2],:dims[3],:dims[4]] = state.parent_site
     new_state= IPEPS_D2SYM(new_t)
     return new_state
 
