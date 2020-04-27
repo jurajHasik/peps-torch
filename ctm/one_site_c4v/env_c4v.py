@@ -213,8 +213,8 @@ def init_from_ipeps_obc(state, env, verbosity=0):
     a= torch.einsum('meifg,makbc->eafbgc',(A,A)).contiguous().view(dimsA[1]**2, dimsA[3]**2, dimsA[4]**2)
     a= a/torch.max(torch.abs(a))
     env.T[env.keyT]= torch.zeros((env.chi,env.chi,dimsA[4]**2), dtype=env.dtype, device=env.device)
-    env.T[env.keyT][:min(env.chi,dimsA[1]**2),:min(env.chi,dimsA[3]**2,chi),:]=\
-        a[:min(env.chi,dimsA[1]**2),:min(env.chi,dimsA[3]**2,chi),:]
+    env.T[env.keyT][:min(env.chi,dimsA[1]**2),:min(env.chi,dimsA[3]**2),:]=\
+        a[:min(env.chi,dimsA[1]**2),:min(env.chi,dimsA[3]**2),:]
 
 def print_env(env, verbosity=0):
     print("dtype "+str(env.dtype))
