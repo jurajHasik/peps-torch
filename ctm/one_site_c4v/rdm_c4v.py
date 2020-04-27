@@ -304,7 +304,6 @@ def rdm1x1_sl(state, env, verbosity=0):
     # T--2
     # 1
     CTC = torch.tensordot(C,T,([0],[0]))
-    if verbosity>2: env.log(f"rdm=CT {rdm.size()}\n")
     # C--0
     # |
     # T--2->1
@@ -312,7 +311,6 @@ def rdm1x1_sl(state, env, verbosity=0):
     # 0
     # C--1->2
     CTC = torch.tensordot(CTC,C,([1],[0]))
-    if verbosity>2: env.log(f"rdm=CTC {rdm.size()}\n")
     # C--0
     # |
     # T--1
@@ -331,7 +329,6 @@ def rdm1x1_sl(state, env, verbosity=0):
     rdm= rdm.view(rdm.size()[0],a.size()[2],a.size()[2],rdm.size()[2],a.size()[3],\
         a.size()[3])
 
-    if verbosity>2: env.log(f"rdm=CTCT {rdm.size()}\n")
     #    /
     # --a--
     #  /|s'
@@ -350,7 +347,6 @@ def rdm1x1_sl(state, env, verbosity=0):
     # |       |/
     # C-------T--3->2
     rdm= torch.tensordot(rdm,a,([1,4],[2,3]))
-    if verbosity>2: env.log(f"rdm=CTCTa {rdm.size()}\n")
     
     # 4iii) second layer "ket"
     # C--0
@@ -376,7 +372,6 @@ def rdm1x1_sl(state, env, verbosity=0):
     rdm= rdm.permute(0,1,3,6,4,7,2,5).contiguous().view(rdm.size()[0],rdm.size()[1],\
         a.size()[1]**2,a.size()[4]**2,a.size()[0],a.size()[0])
 
-    if verbosity>2: env.log(f"rdm=CTCTa {rdm.size()}\n")
     # C--0 0--T--1->0
     # |       2
     # |       2
@@ -385,7 +380,6 @@ def rdm1x1_sl(state, env, verbosity=0):
     # |       |
     # C-------T--1
     rdm = torch.tensordot(T,rdm,([0,2],[0,2]))
-    if verbosity>2: env.log(f"rdm=CTCTaT {rdm.size()}\n")
 
     # C--T--0 0---------C
     # |  |              |
@@ -395,7 +389,6 @@ def rdm1x1_sl(state, env, verbosity=0):
     # |  |              |
     # C--T--1 2---------C
     rdm = torch.tensordot(rdm,CTC,([0,1,2],[0,2,1]))
-    if verbosity>2: env.log(f"rdm=CTCTaTCTC {rdm.size()}\n")
 
     # symmetrize
     rdm= 0.5*(rdm+rdm.t())
@@ -409,7 +402,7 @@ def rdm1x1_sl(state, env, verbosity=0):
     rdm+= eps*torch.eye(rdm.size()[0],dtype=rdm.dtype,device=rdm.device)
 
     # normalize
-    if verbosity>0: env.log(f"Tr(rdm1x1): {torch.trace(rdm)}\n")
+    if verbosity>0: log.info(f"Tr(rdm1x1): {torch.trace(rdm)}\n")
     rdm = rdm / torch.trace(rdm)
 
     return rdm
@@ -484,7 +477,6 @@ def rdm2x1(state, env, sym_pos_def=False, verbosity=0):
     # 0 1
     C2x2 = C2x2.permute(1,2,0,3,4,5).contiguous().view(\
         T.size()[1],A.size()[3],T.size()[1]*A.size()[2],dimsa[0],dimsa[0])
-    if verbosity>2: env.log(f"C2X2 {C2x2.size()}\n")
 
     #----- build left part C2x2_LU--C2x1_LD ------------------------------------
     # C2x2--2->1
@@ -514,7 +506,7 @@ def rdm2x1(state, env, sym_pos_def=False, verbosity=0):
         rdm= _sym_pos_def(rdm, verbosity=verbosity, who="rdm2x1")
 
     # normalize and reshape
-    if verbosity>0: env.log(f"Tr(rdm2x1): {torch.trace(rdm)}\n")
+    if verbosity>0: log.info(f"Tr(rdm2x1): {torch.trace(rdm)}\n")
     rdm= rdm / torch.trace(rdm)
     rdm= rdm.view(dimsRDM)
 
@@ -1086,7 +1078,6 @@ def aux_rdm1x1(state, env, verbosity=0):
     # T--2
     # 1
     CTC = torch.tensordot(C,T,([0],[0]))
-    if verbosity>2: env.log(f"rdm=CT {rdm.size()}\n")
     # C--0
     # |
     # T--2->1
@@ -1094,14 +1085,12 @@ def aux_rdm1x1(state, env, verbosity=0):
     # 0
     # C--1->2
     CTC = torch.tensordot(CTC,C,([1],[0]))
-    if verbosity>2: env.log(f"rdm=CTC {rdm.size()}\n")
     # C--0
     # |
     # T--1
     # |       2->3
     # C--2 0--T--1->2
     rdm = torch.tensordot(CTC,T,([2],[0]))
-    if verbosity>2: env.log(f"rdm=CTCT {rdm.size()}\n")
     # C--0 0--T--1->3
     # |       2->4
     # |       
@@ -1110,7 +1099,6 @@ def aux_rdm1x1(state, env, verbosity=0):
     # |       3->2
     # C-------T--2->1
     rdm = torch.tensordot(rdm,T,([0],[0]))
-    if verbosity>2: env.log(f"rdm=CTCTT {rdm.size()}\n")
     
     # C----T--3 0--C
     # |    4->2    |    C----T----C
@@ -1120,7 +1108,6 @@ def aux_rdm1x1(state, env, verbosity=0):
     # |    2->1    |    C----T----C
     # C----T--1 2--C
     rdm = torch.tensordot(rdm,CTC,([1,3],[2,0]))
-    if verbosity>2: env.log(f"rdm=CTCTTCTC {rdm.size()}\n")
 
     rdm= rdm.permute(2,0,1,3).contiguous()
     rdm= rdm.view([dimsa[1]]*8).permute(0,2,4,6, 1,3,5,7).contiguous()
