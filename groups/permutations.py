@@ -1,4 +1,5 @@
 import torch
+import itertools
 
 # A function to calculate the cycle decomposition of a permutation sigma[]
 # Input sigma[] is a proper permutation of any length
