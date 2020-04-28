@@ -28,6 +28,7 @@ parser.add_argument("--obs_freq", type=int, default=-1, help="frequency of compu
 args, unknown_args= parser.parse_known_args()
 
 def main():
+    # 0) parse command line arguments and configure simulation parameters
     cfg.configure(args)
     cfg.print_config()
     torch.set_num_threads(args.omp_cores)
@@ -36,7 +37,7 @@ def main():
     model = j1j2.J1J2_C4V_BIPARTITE(j1=args.j1, j2=args.j2)
     energy_f= model.energy_1x1_lowmem
 
-    # initialize an ipeps
+    # 1) initialize an ipeps - read from file or create a random one
     if args.instate!=None:
         state = read_ipeps_c4v(args.instate)
         if args.bond_dim > max(state.get_aux_bond_dims()):
@@ -59,6 +60,10 @@ def main():
 
     print(state)
 
+    # 2) define convergence criterion for CTM algorithm. This function is to be 
+    #    invoked at every CTM step. We also use it to evaluate observables of interest 
+    #    during the course of CTM
+    # 2a) convergence criterion based on on-site energy
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         with torch.no_grad():
             if not history:
@@ -66,7 +71,7 @@ def main():
             
             e_curr = energy_f(state, env, force_cpu=ctm_args.conv_check_cpu)
             history.append(e_curr.item())
-            print(f"{len(history)%ctm_args.fpcm_freq} ", end="")
+
             if args.obs_freq>0 and \
                 (len(history)%args.obs_freq==0 or (len(history)-1)%args.obs_freq==0):
                 obs_values, obs_labels = model.eval_obs(state, env)
@@ -84,6 +89,8 @@ def main():
                 return False, history
         return False, history
 
+    # 2b) convergence criterion based on 2-site reduced density matrix 
+    #     of nearest-neighbours
     def ctmrg_conv_rdm2x1(state, env, history, ctm_args=cfg.ctm_args):
         with torch.no_grad():
             if not history:
@@ -114,17 +121,20 @@ def main():
                 return False, history
         return False, history
 
+    # 3) initialize environment 
     ctm_env_init = ENV_C4V(args.chi, state)
     init_env(state, ctm_env_init)
 
+    # 4) (optional) compute observables as given by initial environment 
     e_curr0 = energy_f(state, ctm_env_init)
     obs_values0, obs_labels = model.eval_obs(state,ctm_env_init)
-
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{e_curr0}"]+[f"{v}" for v in obs_values0]))
 
+    # 5) (main) execute CTM algorithm
     ctm_env_init, *ctm_log = ctmrg_c4v.run(state, ctm_env_init, conv_check=ctmrg_conv_rdm2x1)
 
+    # 6) compute final observables
     e_curr0 = energy_f(state, ctm_env_init, force_cpu=True)
     obs_values0, obs_labels = model.eval_obs(state,ctm_env_init,force_cpu=True)
     history, t_ctm, t_obs= ctm_log
@@ -133,7 +143,7 @@ def main():
     print("FINAL "+", ".join([f"{e_curr0}"]+[f"{v}" for v in obs_values0]))
     print(f"TIMINGS ctm: {t_ctm} conv_check: {t_obs}")
 
-    # ----- additional observables ---------------------------------------------
+    # 7) ----- additional observables ---------------------------------------------
     corrSS= model.eval_corrf_SS(state, ctm_env_init, args.corrf_r, canonical=args.corrf_canonical)
     print("\n\nSS r "+" ".join([label for label in corrSS.keys()])+f" canonical {args.corrf_canonical}")
     for i in range(args.corrf_r):
