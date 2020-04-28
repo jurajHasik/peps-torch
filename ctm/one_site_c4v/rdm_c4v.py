@@ -551,6 +551,7 @@ def rdm2x1_sl(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
     The resulting reduced density matrix is identical to the one of vertical 1x2 subsystem
     due to the C4v symmetry. 
     """
+    who= "rdm2x1_sl"
     if force_cpu:
         # move to cpu
         C = env.C[env.keyC].cpu()
@@ -560,10 +561,19 @@ def rdm2x1_sl(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
         C = env.C[env.keyC]
         T = env.T[env.keyT]
         a = next(iter(state.sites.values()))
+
     #----- building C2x2_LU ----------------------------------------------------
+    loc_device=C.device
+    is_cpu= loc_device==torch.device('cpu')
+    def ten_size(t):
+        return t.element_size() * t.numel()
+
     # C--1 0--T--1
     # 0       2
     C2x1 = torch.tensordot(C, T, ([1],[0]))
+    if not is_cpu and verbosity>1: 
+        _log_cuda_mem(loc_device,who)
+        log.info(f"{who} C2x1: {ten_size(C2x1)}")
 
     # see _get_open_C2x2_LU_sl
     C2x2 = torch.tensordot(C2x1, T, ([0],[0]))
@@ -571,6 +581,9 @@ def rdm2x1_sl(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
         a.size()[2])
     C2x2= torch.tensordot(C2x2, a,([1,4],[1,2]))
     C2x2= torch.tensordot(C2x2, a,([1,3],[1,2]))
+    if not is_cpu and verbosity>1: 
+        _log_cuda_mem(loc_device,who)
+        log.info(f"{who} C2x1,C2x2: {ten_size(C2x1)+ten_size(C2x2)}")
 
     # 4iv) fuse (some) pairs of aux indices
     #
@@ -585,6 +598,9 @@ def rdm2x1_sl(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
     # permute and reshape 01234567->1(36)(047)25->01234
     C2x2= C2x2.permute(1,3,6,0,4,7,2,5).contiguous().view(C2x2.size()[1],(a.size()[3]**2),\
         C2x2.size()[0]*(a.size()[4]**2),a.size()[0],a.size()[0])
+    if not is_cpu and verbosity>1: 
+        _log_cuda_mem(loc_device,who)
+        log.info(f"{who} C2x1,C2x2: {ten_size(C2x1)+ten_size(C2x2)}")
 
     #----- build left part C2x2_LU--C2x1_LD ------------------------------------
     # C2x2--2->1
@@ -593,6 +609,9 @@ def rdm2x1_sl(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
     # 0 2
     # C2x1--1->0
     left_half = torch.tensordot(C2x1, C2x2, ([0,2],[0,1]))
+    if not is_cpu and verbosity>1: 
+        _log_cuda_mem(loc_device,who)
+        log.info(f"{who} left_half: {ten_size(left_half)}")
 
     # construct reduced density matrix by contracting left and right halfs
     # C2x2--1 1----C2x2
@@ -600,6 +619,9 @@ def rdm2x1_sl(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
     # |            |
     # C2x1--0 0----C2x1
     rdm = torch.tensordot(left_half,left_half,([0,1],[0,1]))
+    if not is_cpu and verbosity>1: 
+        _log_cuda_mem(loc_device,who)
+        log.info(f"{who} rdm: {ten_size(rdm)}")
 
     # permute into order of s0,s1;s0',s1' where primed indices
     # represent "ket"
