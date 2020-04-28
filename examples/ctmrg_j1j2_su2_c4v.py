@@ -15,6 +15,7 @@ log = logging.getLogger(__name__)
 # parse command line args and build necessary configuration objects
 parser= cfg.get_args_parser()
 # additional model-dependent arguments
+parser.add_argument("--force_cpu", action="store_true", help="force energy and observale evalution on CPU")
 parser.add_argument("--j1", type=float, default=1., help="nearest-neighbour coupling")
 parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour coupling")
 # additional observables-related arguments
@@ -59,7 +60,8 @@ def main():
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
             history=dict({"log": []})
-        rdm2x1= rdm2x1_sl(state, env, force_cpu=ctm_args.conv_check_cpu)
+        rdm2x1= rdm2x1_sl(state, env, force_cpu=ctm_args.conv_check_cpu, \
+            verbosity=cfg.ctm_args.verbosity_rdm)
         dist= float('inf')
         if len(history["log"]) > 1:
             dist= torch.dist(rdm2x1, history["rdm"], p=2).item()
@@ -68,8 +70,9 @@ def main():
             (len(history["log"])%args.obs_freq==0 or 
             (len(history["log"])-1)%args.obs_freq==0):
             e_curr = energy_f(state, env, force_cpu=ctm_args.conv_check_cpu)
-            obs_values, obs_labels = model.eval_obs(state, env, force_cpu=True)
-            print(", ".join([f"{len(history['log'])}",f"{dist}",f"{e_curr}"]+[f"{v}" for v in obs_values]))
+            obs_values, obs_labels = model.eval_obs(state, env, force_cpu=args.force_cpu)
+            print(", ".join([f"{len(history['log'])}",f"{dist}",f"{e_curr}"]\
+                +[f"{v}" for v in obs_values]))
         else:
             print(f"{len(history['log'])}, {dist}")
         # update history
@@ -88,16 +91,16 @@ def main():
     ctm_env_init = ENV_C4V(args.chi, state)
     init_env(state, ctm_env_init)
 
-    e_curr0 = energy_f(state, ctm_env_init, force_cpu=True)
-    obs_values0, obs_labels = model.eval_obs(state,ctm_env_init,force_cpu=True)
+    e_curr0 = energy_f(state, ctm_env_init, force_cpu=args.force_cpu)
+    obs_values0, obs_labels = model.eval_obs(state,ctm_env_init,force_cpu=args.force_cpu)
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{e_curr0}"]+[f"{v}" for v in obs_values0]))
 
     ctm_env_init, *ctm_log = ctmrg_c4v.run(state, ctm_env_init, \
         conv_check=ctmrg_conv_energy)
 
-    e_curr0 = energy_f(state, ctm_env_init, force_cpu=True)
-    obs_values0, obs_labels = model.eval_obs(state,ctm_env_init,force_cpu=True)
+    e_curr0 = energy_f(state, ctm_env_init, force_cpu=args.force_cpu)
+    obs_values0, obs_labels = model.eval_obs(state,ctm_env_init,force_cpu=args.force_cpu)
     history, t_ctm, t_obs= ctm_log
     print("\n")
     print(", ".join(["epoch","energy"]+obs_labels))
