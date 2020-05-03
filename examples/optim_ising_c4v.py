@@ -148,7 +148,7 @@ def main():
     ctm_env = ENV_C4V(args.chi, state)
     init_env(state, ctm_env)
     ctm_env, *ctm_log = ctmrg_c4v.run(state, ctm_env, conv_check=ctmrg_conv_energy)
-    opt_energy = model.energy_1x1(state,ctm_env)
+    opt_energy = energy_f(state,ctm_env)
     obs_values, obs_labels = model.eval_obs(state,ctm_env)
     print(", ".join([f"{args.opt_max_iter}",f"{opt_energy}"]+[f"{v}" for v in obs_values]))
 
