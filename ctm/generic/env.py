@@ -95,6 +95,24 @@ class ENV():
             s+=f"T({cr[0]} {cr[1]}): {t.size()}\n"
         return s
 
+    def extend(self, new_chi, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+        new_env= ENV(new_chi, ctm_args=ctm_args, global_args=global_args)
+        x= min(self.chi, new_chi)
+        for k,old_C in self.C.items(): new_env.C[k]= old_C[:x,:x].clone().detach()
+        for k,old_T in self.T.items():
+            if k[1]==(0,-1):
+                new_env.T[k]= old_T[:x,:,:x].clone().detach()
+            elif k[1]==(-1,0):
+                new_env.T[k]= old_T[:x,:x,:].clone().detach()
+            elif k[1]==(0,1):
+                new_env.T[k]= old_T[:,:x,:x].clone().detach()
+            elif k[1]==(1,0):
+                new_env.T[k]= old_T[:x,:,:x].clone().detach()
+            else:
+                raise Exception(f"Unexpected direction {k[1]}")
+
+        return new_env
+
 def init_env(state, env, ctm_args=cfg.ctm_args):
     """
     :param state: wavefunction
