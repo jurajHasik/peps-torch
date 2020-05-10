@@ -195,11 +195,15 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
     # function wrapping up the core of the CTM MOVE segment of CTM algorithm
     def ctm_MOVE_sl_c(*tensors):
         a, C, T= tensors
+        if global_args.device=='cpu' and ctm_args.step_core_gpu:
+            #loc_gpu= torch.device(global_args.gpu)
+            a= a.cuda()
+            C= C.cuda()
+            T= T.cuda()
+
         # 1) build enlarged corner upper left corner
         C2X2= c2x2_sl(a, C, T, verbosity=ctm_args.verbosity_projectors)
 
-        C0_abs_max= C.abs().max()
-        Z0= torch.trace(C@C@C@C)
         # 2) build projector
         # P, S, V = f_c2x2_decomp(C2X2, env.chi) # M = PSV^T
         D, P= f_c2x2_decomp(C2X2, env.chi) # M = UDU^T
@@ -291,6 +295,10 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
         nT= nT/torch.max(torch.abs(nT))
         # nT= ((nT.size()[0]*nT.size()[1]*nT.size()[2])/nT.norm())*nT
         # print(f"{nT.norm()}")
+
+        if global_args.device=='cpu' and ctm_args.step_core_gpu:
+            C2X2= C2X2.cpu()
+            nT= nT.cpu()
 
         return C2X2, nT
 
