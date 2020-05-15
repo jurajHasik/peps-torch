@@ -65,6 +65,11 @@ def configure(parsed_args):
     for name,val in nogroup_args.items():
         setattr(main_args,name,val)
 
+    # validate
+    if ctm_args.step_core_gpu:
+        assert global_args.gpu and torch.cuda.device(global_args.gpu), "CTMARGS_step_core_gpu"\
+            +" resquested without providing valid GLOBALARGS_gpu"
+
     # set up logger
     logging.basicConfig(filename=main_args.out_prefix+".log", filemode='w', level=logging.INFO)
 
@@ -121,10 +126,15 @@ class GLOBALARGS():
     :vartype dtype: torch.dtype
     :ivar device: device on which all the torch.tensors are stored. Default: ``'cpu'``
     :vartype device: str
+    :ivar gpu: gpu used for optional acceleration. It might be desirable to store the model 
+               and all the intermediates of CTM on CPU and compute only the core parts of the expensive
+               CTM step on GPU. Default: ``''``
+    :vartype gpu: str
     """
     def __init__(self):
         self.dtype = torch.float64
         self.device = 'cpu'
+        self.gpu = ''
 
     def __str__(self):
         res=type(self).__name__+"\n"
@@ -232,6 +242,11 @@ class CTMARGS():
     :vartype verbosity_ctm_move: int
     :ivar verbosity_rdm: verbosity of reduced density matrix routines. Default: ``0``
     :vartype verbosity_rdm: int
+
+    :ivar step_core_gpu: assuming the default device is CPU, offload the core part of the CTM step 
+                       to GPU. Together with CTM step checkpointing ``fwd_checkpoint_move`` allows
+                       to store all intermediates on CPU.
+    :vartype step_core_gpu: bool
     """
     def __init__(self):
         self.ctm_max_iter= 50
@@ -258,6 +273,7 @@ class CTMARGS():
         self.fwd_checkpoint_projectors = False
         self.fwd_checkpoint_absorb = False
         self.fwd_checkpoint_move = False
+        self.step_core_gpu = False
 
     def __str__(self):
         res=type(self).__name__+"\n"
