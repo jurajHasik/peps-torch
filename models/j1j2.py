@@ -418,10 +418,13 @@ class J1J2_C4V_BIPARTITE():
         rot_op= s2.BP_rot()
         SS_rot= torch.einsum('ki,kjcb,ca->ijab',rot_op,SS,rot_op)
 
-        h2x2_SS_rot= torch.einsum('ijab,klcd->ijklabcd',SS_rot,id2) # nearest neighbours
-        h2x2_SS= torch.einsum('ijab,klcd->ikljacdb',SS,id2) # next-nearest neighbours
-        hp= self.j1*(h2x2_SS_rot + h2x2_SS_rot.permute(0,2,1,3,4,6,5,7))\
-            + self.j2*(h2x2_SS + h2x2_SS.permute(1,0,3,2,5,4,7,6))
+        h2x2_SS= torch.einsum('ijab,klcd->ijklabcd',SS,id2) # nearest neighbours
+        # 0 1     0 1   0 x   x x   x 1
+        # 2 3 ... x x + 2 x + 2 3 + x 3
+        hp= 0.5*self.j1*(h2x2_SS + h2x2_SS.permute(0,2,1,3,4,6,5,7)\
+           + h2x2_SS.permute(2,3,0,1,6,7,4,5) + h2x2_SS.permute(3,1,2,0,7,5,6,4)) \
+           + self.j2*(h2x2_SS.permute(0,3,2,1,4,7,6,5) + h2x2_SS.permute(2,1,0,3,6,5,4,7))
+        hp= torch.einsum('xj,yk,ixylauvd,ub,vc->ijklabcd',rot_op,rot_op,hp,rot_op,rot_op)
         hp= hp.contiguous()
         return SS, SS_rot, hp
 
@@ -464,14 +467,9 @@ class J1J2_C4V_BIPARTITE():
             e = \langle \mathcal{h_p} \rangle = Tr(\rho_{2x2} \mathcal{h_p})
         
         """
-        rdm2x2= rdm_c4v.rdm2x2(state,env_c4v,cfg.ctm_args.verbosity_rdm)
+        rdm2x2= rdm_c4v.rdm2x2(state,env_c4v,sym_pos_def=True,\
+            verbosity=cfg.ctm_args.verbosity_rdm)
         energy_per_site= torch.einsum('ijklabcd,ijklabcd',rdm2x2,self.hp)
-        # id2= torch.eye(4,dtype=self.dtype,device=self.device)
-        # id2= id2.view(2,2,2,2).contiguous()
-        # print(f"rdm2x1 {torch.einsum('ijklabcd,ijab,klcd',rdm2x2,self.h2_rot,id2)}"\
-        #    + f" rdm1x2 {torch.einsum('ijklabcd,ikac,jlbd',rdm2x2,self.h2_rot,id2)}"\
-        #    + f" rdm_0cc3_diag {torch.einsum('ijklabcd,ilad,jkbc',rdm2x2,self.h2,id2)}"\
-        #    + f" rdm_c12c_diag {torch.einsum('ijklabcd,jkbc,ilad',rdm2x2,self.h2,id2)}")
         return energy_per_site
 
     def energy_1x1_lowmem(self, state, env_c4v, force_cpu=False):
