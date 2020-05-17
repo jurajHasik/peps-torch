@@ -96,8 +96,21 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
 
     return env, history, t_ctm, t_obs
 
+def _log_cuda_mem(device, who="unknown",  uuid=""):
+    log.info(f"{who} {uuid} GPU-MEM MAX_ALLOC {torch.cuda.max_memory_allocated(device)}"\
+            + f" CURRENT_ALLOC {torch.cuda.memory_allocated(device)}")
+
 # performs CTM move
 def ctm_MOVE_dl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+    who= "ctm_MOVE_dl"
+    log_gpu_mem= False
+    if (global_args.device=='cpu' and ctm_args.step_core_gpu):
+        loc_gpu= torch.device(global_args.gpu)
+        log_gpu_mem= ctm_args.verbosity_ctm_move>0
+    elif global_args.device != 'cpu':
+        loc_gpu= a.device
+        log_gpu_mem= ctm_args.verbosity_ctm_move>0
+
     # 0) extract raw tensors as tuple
     dimsa = a.size()
     A = torch.einsum('sefgh,sabcd->eafbgchd',a,a).contiguous()\
@@ -108,16 +121,20 @@ def ctm_MOVE_dl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
     def ctm_MOVE_dl_c(*tensors):
         A, C, T= tensors
         if global_args.device=='cpu' and ctm_args.step_core_gpu:
-            #loc_gpu= torch.device(global_args.gpu)
             A= A.cuda()
             C= C.cuda()
             T= T.cuda()
 
         # 1) build enlarged corner upper left corner
+        if log_gpu_mem: _log_cuda_mem(loc_gpu, who=who, uuid="c2x2_dl_init")
         C2X2= c2x2_dl(A, C, T, verbosity=ctm_args.verbosity_projectors)
+        if log_gpu_mem: _log_cuda_mem(loc_gpu, who=who, uuid="c2x2_dl_end")
 
         # 2) build projector
-        P, S, V = f_c2x2_decomp(C2X2, env.chi) # M = PSV^{T}
+        if log_gpu_mem: _log_cuda_mem(loc_gpu, who=who, uuid="f_c2x2_decomp_init")
+        #P, S, V = f_c2x2_decomp(C2X2, env.chi) # M = PSV^{T}
+        D, P = f_c2x2_decomp(C2X2, env.chi) # M = PSV^{T}
+        if log_gpu_mem: _log_cuda_mem(loc_gpu, who=who, uuid="f_c2x2_decomp_end")
 
         # 3) absorb and truncate
         #
@@ -126,25 +143,31 @@ def ctm_MOVE_dl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
         # 0
         # P^t
         # 1->0
-        C2X2= P.t() @ C2X2 @ P
-        # C2X2= torch.diag(S)
+        # C2X2= P.t() @ C2X2 @ P
+        C2X2= torch.diag(D)
 
+        if log_gpu_mem: _log_cuda_mem(loc_gpu, who=who, uuid="P-view_init")
         P= P.view(env.chi,T.size()[2],env.chi)
+        if log_gpu_mem: _log_cuda_mem(loc_gpu, who=who, uuid="P-view_end")
         #    2->1
         #  __P__
         # 0     1->0
         # 0
         # T--2->3
         # 1->2
+        if log_gpu_mem: _log_cuda_mem(loc_gpu, who=who, uuid="PT_init")
         nT = torch.tensordot(P, T,([0],[0]))
+        if log_gpu_mem: _log_cuda_mem(loc_gpu, who=who, uuid="PT_end")
 
         #    1->0
         #  __P____
         # |       0
         # |       0
         # T--3 1--A--3
-        # 2->1    2
+        # 2->1    2 
+        if log_gpu_mem: _log_cuda_mem(loc_gpu, who=who, uuid="PTA_init")
         nT = torch.tensordot(nT, A,([0,3],[0,1]))
+        if log_gpu_mem: _log_cuda_mem(loc_gpu, who=who, uuid="PTA_end")
 
         #    0
         #  __P____
@@ -155,7 +178,9 @@ def ctm_MOVE_dl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
         # 0       1
         # |___P___|
         #     2
+        if log_gpu_mem: _log_cuda_mem(loc_gpu, who=who, uuid="PTAP_init")
         nT = torch.tensordot(nT, P,([1,2],[0,1]))
+        if log_gpu_mem: _log_cuda_mem(loc_gpu, who=who, uuid="PTAP_end")
         nT = nT.permute(0,2,1).contiguous()
 
         # 4) symmetrize, normalize and assign new C,T
