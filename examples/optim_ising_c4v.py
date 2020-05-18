@@ -14,6 +14,7 @@ from optim.ad_optim_lbfgs_mod import optimize_state
 # from optim.ad_optim import optimize_state
 import unittest
 import logging
+import json
 log = logging.getLogger(__name__)
 
 # parse command line args and build necessary configuration objects
