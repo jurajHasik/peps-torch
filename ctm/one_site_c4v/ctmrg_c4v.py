@@ -76,7 +76,7 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
             log.info(f"fpcm_MOVE_sl DONE t_fpcm {t1_fpcm-t0_fpcm} [s]")
 
         t0_ctm= time.perf_counter()
-        # ctm_MOVE_dl(A, env, truncated_svd, ctm_args=ctm_args, global_args=global_args)
+        # ctm_MOVE_dl(a, env, truncated_eig, ctm_args=ctm_args, global_args=global_args)
         ctm_MOVE_sl(a, env, truncated_eig, ctm_args=ctm_args, global_args=global_args,\
             past_steps_data=past_steps_data)
         t1_ctm= time.perf_counter()
@@ -97,13 +97,22 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
     return env, history, t_ctm, t_obs
 
 # performs CTM move
-def ctm_MOVE_dl(A, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+def ctm_MOVE_dl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
     # 0) extract raw tensors as tuple
+    dimsa = a.size()
+    A = torch.einsum('sefgh,sabcd->eafbgchd',a,a).contiguous()\
+        .view(dimsa[1]**2, dimsa[2]**2, dimsa[3]**2, dimsa[4]**2)
     tensors= tuple([A,env.C[env.keyC],env.T[env.keyT]])
     
     # function wrapping up the core of the CTM MOVE segment of CTM algorithm
     def ctm_MOVE_dl_c(*tensors):
         A, C, T= tensors
+        if global_args.device=='cpu' and ctm_args.step_core_gpu:
+            #loc_gpu= torch.device(global_args.gpu)
+            A= A.cuda()
+            C= C.cuda()
+            T= T.cuda()
+
         # 1) build enlarged corner upper left corner
         C2X2= c2x2_dl(A, C, T, verbosity=ctm_args.verbosity_projectors)
 
@@ -154,6 +163,10 @@ def ctm_MOVE_dl(A, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
         nT= 0.5*(nT + nT.permute(1,0,2))
         C2X2= C2X2/torch.max(torch.abs(C2X2))
         nT= nT/torch.max(torch.abs(nT))
+
+        if global_args.device=='cpu' and ctm_args.step_core_gpu:
+            C2X2= C2X2.cpu()
+            nT= nT.cpu()
 
         return C2X2, nT
 
