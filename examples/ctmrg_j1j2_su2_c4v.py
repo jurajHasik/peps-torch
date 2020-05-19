@@ -6,6 +6,7 @@ from su2sym.ipeps_su2 import *
 from ctm.one_site_c4v.env_c4v import *
 from ctm.one_site_c4v import ctmrg_c4v, transferops_c4v
 from ctm.one_site_c4v.rdm_c4v import rdm2x1_sl
+from ctm.one_site_c4v.rdm_c4v_specialized import rdm2x1_tiled
 from models import j1j2
 import su2sym.sym_ten_parser as tenSU2 
 import unittest
@@ -60,11 +61,13 @@ def main():
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
             history=dict({"log": []})
-        rdm2x1= rdm2x1_sl(state, env, force_cpu=ctm_args.conv_check_cpu, \
+        # rdm= rdm2x1_sl(state, env, force_cpu=ctm_args.conv_check_cpu, \
+        #     verbosity=cfg.ctm_args.verbosity_rdm)
+        rdm= rdm2x1_tiled(state, env, force_cpu=ctm_args.conv_check_cpu, \
             verbosity=cfg.ctm_args.verbosity_rdm)
         dist= float('inf')
         if len(history["log"]) > 1:
-            dist= torch.dist(rdm2x1, history["rdm"], p=2).item()
+            dist= torch.dist(rdm, history["rdm"], p=2).item()
         # log dist and observables
         if args.obs_freq>0 and \
             (len(history["log"])%args.obs_freq==0 or 
@@ -76,7 +79,7 @@ def main():
         else:
             print(f"{len(history['log'])}, {dist}")
         # update history
-        history["rdm"]=rdm2x1
+        history["rdm"]=rdm
         history["log"].append(dist)
         if dist<ctm_args.ctm_conv_tol:
             log.info({"history_length": len(history['log']), "history": history['log'],
