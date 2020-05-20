@@ -34,7 +34,8 @@ def main():
     torch.manual_seed(args.seed)
     
     model= j1j2.J1J2_C4V_BIPARTITE(j1=args.j1, j2=args.j2)
-    energy_f= model.energy_1x1_lowmem
+    # energy_f= model.energy_1x1_lowmem
+    energy_f= model.energy_1x1_tiled
 
     # initialize an ipeps
     if args.instate!=None:
@@ -72,7 +73,7 @@ def main():
         if args.obs_freq>0 and \
             (len(history["log"])%args.obs_freq==0 or 
             (len(history["log"])-1)%args.obs_freq==0):
-            e_curr = energy_f(state, env, force_cpu=ctm_args.conv_check_cpu)
+            e_curr = energy_f(state, env, force_cpu=args.force_cpu)
             obs_values, obs_labels = model.eval_obs(state, env, force_cpu=args.force_cpu)
             print(", ".join([f"{len(history['log'])}",f"{dist}",f"{e_curr}"]\
                 +[f"{v}" for v in obs_values]))
