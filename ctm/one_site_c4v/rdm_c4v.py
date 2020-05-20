@@ -31,7 +31,7 @@ def _get_open_C2x2_LU_sl(C, T, a, verbosity=0):
     # C--1 0--T--1
     # 0       2
     C2x2 = torch.tensordot(C, T, ([1],[0]))
-    if not is_cpu and verbosity>1: _log_cuda_mem(loc_device,who)
+    if not is_cpu and verbosity>1: _log_cuda_mem(loc_device,who,"CT")
         
 
     # C------T--1->0
@@ -40,7 +40,7 @@ def _get_open_C2x2_LU_sl(C, T, a, verbosity=0):
     # T--2->3
     # 1->2
     C2x2 = torch.tensordot(C2x2, T, ([0],[0]))
-    if not is_cpu and verbosity>1: _log_cuda_mem(loc_device,who)
+    if not is_cpu and verbosity>1: _log_cuda_mem(loc_device,who,"CTT")
 
     # 4i) untangle the fused D^2 indices
     #
@@ -62,7 +62,9 @@ def _get_open_C2x2_LU_sl(C, T, a, verbosity=0):
     # | |       3->5
     # |  --5->3
     # 3->2
+    if not is_cpu and verbosity>1: _log_cuda_mem(loc_device,who,"CTTa_init")
     C2x2= torch.tensordot(C2x2, a,([1,4],[1,2]))
+    if not is_cpu and verbosity>1: _log_cuda_mem(loc_device,who,"CTTa_end")
     
     # 4iii) second layer "ket"
     # 
@@ -76,7 +78,9 @@ def _get_open_C2x2_LU_sl(C, T, a, verbosity=0):
     # |    |       3->6
     # |    |
     # 2->1 5->3
+    if not is_cpu and verbosity>1: _log_cuda_mem(loc_device,who,"CTTaa_init")
     C2x2= torch.tensordot(C2x2, a,([1,3],[1,2]))
+    if not is_cpu and verbosity>1: _log_cuda_mem(loc_device,who,"CTTaa_end")
 
     # 4iv) fuse pairs of aux indices
     #

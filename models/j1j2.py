@@ -617,7 +617,9 @@ class J1J2_C4V_BIPARTITE():
         # expect "list" of (observable label, value) pairs ?
         obs= dict()
         with torch.no_grad():
-            rdm2x1= rdm_c4v.rdm2x1_sl(state,env_c4v,force_cpu=force_cpu,\
+            # rdm2x1= rdm_c4v.rdm2x1_sl(state,env_c4v,force_cpu=force_cpu,\
+            #     verbosity=cfg.ctm_args.verbosity_rdm)
+            rdm2x1= rdm2x1_tiled(state,env_c4v,force_cpu=cfg.ctm_args.conv_check_cpu,\
                 verbosity=cfg.ctm_args.verbosity_rdm)
             obs[f"SS2x1"]= torch.einsum('ijab,ijab',rdm2x1,self.SS_rot)
             
