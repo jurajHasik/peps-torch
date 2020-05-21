@@ -76,9 +76,56 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
             log.info(f"fpcm_MOVE_sl DONE t_fpcm {t1_fpcm-t0_fpcm} [s]")
 
         t0_ctm= time.perf_counter()
-        # ctm_MOVE_dl(a, env, truncated_eig, ctm_args=ctm_args, global_args=global_args)
         ctm_MOVE_sl(a, env, truncated_eig, ctm_args=ctm_args, global_args=global_args,\
             past_steps_data=past_steps_data)
+        t1_ctm= time.perf_counter()
+
+        t0_obs= time.perf_counter()
+        if conv_check is not None:
+            # evaluate convergence of the CTMRG procedure
+            converged, history= conv_check(state, env, history, ctm_args=ctm_args)
+            if converged:
+                if ctm_args.verbosity_ctm_convergence>0: 
+                    print(f"CTMRG converged at iter= {i}")
+                break
+        t1_obs= time.perf_counter()
+        
+        t_ctm+= t1_ctm-t0_ctm
+        t_obs+= t1_obs-t0_obs
+
+    return env, history, t_ctm, t_obs
+
+def run_dl(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+    if ctm_args.projector_svd_method=='DEFAULT' or ctm_args.projector_svd_method=='SYMEIG':
+        def truncated_eig(M, chi):
+            return truncated_eig_sym(M, chi, keep_multiplets=True,\
+                verbosity=ctm_args.verbosity_projectors)
+    elif ctm_args.projector_svd_method == 'SYMARP':
+        def truncated_eig(M, chi):
+            return truncated_eig_symarnoldi(M, chi, keep_multiplets=True, \
+                verbosity=ctm_args.verbosity_projectors)
+    else:
+        raise Exception(f"Projector eig/svd method \"{cfg.ctm_args.projector_svd_method}\" not implemented")
+
+    a= next(iter(state.sites.values()))
+
+    # 1) perform CTMRG
+    t_obs=t_ctm=t_fpcm=0.
+    history=None
+    past_steps_data=dict() # possibly store some data throughout the execution of CTM
+    
+    for i in range(ctm_args.ctm_max_iter):
+        # FPCM acceleration
+        if i>=ctm_args.fpcm_init_iter and ctm_args.fpcm_freq>0 and i%ctm_args.fpcm_freq==0:
+            t0_fpcm= time.perf_counter()
+            fpcm_MOVE_sl(a, env, ctm_args=ctm_args, global_args=global_args,
+                past_steps_data=past_steps_data)
+            t1_fpcm= time.perf_counter()
+            t_fpcm+= t1_fpcm-t0_fpcm
+            log.info(f"fpcm_MOVE_sl DONE t_fpcm {t1_fpcm-t0_fpcm} [s]")
+
+        t0_ctm= time.perf_counter()
+        ctm_MOVE_dl(a, env, truncated_eig, ctm_args=ctm_args, global_args=global_args)
         t1_ctm= time.perf_counter()
 
         t0_obs= time.perf_counter()
