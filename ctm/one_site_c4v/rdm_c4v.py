@@ -534,10 +534,10 @@ def rdm2x1(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
     if sym_pos_def: 
         rdm= _sym_pos_def(rdm, verbosity=verbosity, who="rdm2x1")
 
-    # normalize and reshape
+    # normalize and reshape and move to original device
     if verbosity>0: log.info(f"Tr(rdm2x1): {torch.trace(rdm)}\n")
     rdm= rdm / torch.trace(rdm)
-    rdm= rdm.view(dimsRDM)
+    rdm= rdm.view(dimsRDM).to(env.device)
 
     return rdm
 
