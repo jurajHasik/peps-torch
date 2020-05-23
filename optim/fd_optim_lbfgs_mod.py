@@ -129,11 +129,12 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
                     e_i= torch.zeros(A_orig.size()[0],dtype=A_orig.dtype,device=A_orig.device)
                     e_i[i]= opt_args.fd_eps
                     state.coeffs[k]+=e_i
-                    loss1, ctm_env, history, t_ctm, t_check = loss_fn(state, current_env[0],\
+                    loss1, ctm_env, history, timings = loss_fn(state, current_env[0],\
                         loc_context)
                     fd_grad[k][i]=(float(loss1-loss0)/opt_args.fd_eps)
                     log.info(f"FD_GRAD {i} loss1 {loss1} grad_i {fd_grad[k][i]}"\
-                        +f" t_ctm {t_ctm} t_check {t_check}")
+                        +f" t_ctm {timings['t_ctm']} t_check {timings['t_obs']}"\
+                        +f" t_energy {timings['t_energy']}")
                     state.coeffs[k].data.copy_(A_orig)
         log.info(f"FD_GRAD grad {fd_grad}")
 
@@ -146,7 +147,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         # 0) evaluate loss
         optimizer.zero_grad()
         with torch.no_grad():
-            loss, ctm_env, history, t_ctm, t_check = loss_fn(state, current_env[0], context)
+            loss, ctm_env, history, timings= loss_fn(state, current_env[0], context)
 
         # 1) record loss and store current state if the loss improves
         if linesearching:
@@ -161,8 +162,8 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
 
         # 2) log CTM metrics for debugging
         if opt_args.opt_logging:
-            log_entry=dict({"id": epoch, "loss": t_data["loss"][-1], "t_ctm": t_ctm, \
-                    "t_check": t_check})
+            log_entry=dict({"id": epoch, "loss": t_data["loss"][-1], "t_ctm": timings['t_ctm'], \
+                    "t_check": timings['t_obs'], "t_energy": timings['t_energy']})
             if linesearching:
                 log_entry["LS"]=len(t_data["loss_ls"])
                 log_entry["loss"]=t_data["loss_ls"]
@@ -208,7 +209,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
             loc_ctm_args.projector_svd_method= opt_args.line_search_svd_method
         loc_context= dict({"ctm_args":loc_ctm_args, "opt_args":loc_opt_args, "loss_history": t_data,
             "line_search": True})
-        loss, ctm_env, history, t_ctm, t_check = loss_fn(state, current_env[0],\
+        loss, ctm_env, history, timings = loss_fn(state, current_env[0],\
             loc_context)
 
         # 2) store current state if the loss improves
@@ -219,7 +220,8 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         # 5) log CTM metrics for debugging
         if opt_args.opt_logging:
             log_entry=dict({"id": epoch, "LS": len(t_data["loss_ls"]), \
-                "loss": t_data["loss_ls"], "t_ctm": t_ctm, "t_check": t_check})
+                "loss": t_data["loss_ls"], "t_ctm": timings['t_ctm'], \
+                "t_check": timings['t_obs'], "t_energy": timings['t_energy']})
             log.info(json.dumps(log_entry))
 
         # 4) compute desired observables
