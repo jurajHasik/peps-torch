@@ -34,8 +34,9 @@ def main():
     torch.manual_seed(args.seed)
     
     model= j1j2.J1J2_C4V_BIPARTITE(j1=args.j1, j2=args.j2)
-    energy_f= model.energy_1x1_lowmem
-    #energy_f= model.energy_1x1_tiled
+    # energy_f= model.energy_1x1_lowmem
+    energy_f= model.energy_1x1_tiled
+    eval_obs_f= model.eval_obs_tiled
 
     # initialize an ipeps
     if args.instate!=None:
@@ -74,7 +75,7 @@ def main():
             (len(history["log"])%args.obs_freq==0 or 
             (len(history["log"])-1)%args.obs_freq==0):
             e_curr = energy_f(state, env, force_cpu=args.force_cpu)
-            obs_values, obs_labels = model.eval_obs(state, env, force_cpu=args.force_cpu)
+            obs_values, obs_labels = eval_obs_f(state, env, force_cpu=args.force_cpu)
             print(", ".join([f"{len(history['log'])}",f"{dist}",f"{e_curr}"]\
                 +[f"{v}" for v in obs_values]))
         else:
@@ -96,7 +97,7 @@ def main():
     init_env(state, ctm_env_init)
 
     e_curr0 = energy_f(state, ctm_env_init, force_cpu=args.force_cpu)
-    obs_values0, obs_labels = model.eval_obs(state,ctm_env_init,force_cpu=args.force_cpu)
+    obs_values0, obs_labels = eval_obs_f(state,ctm_env_init,force_cpu=args.force_cpu)
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{e_curr0}"]+[f"{v}" for v in obs_values0]))
 
@@ -104,7 +105,7 @@ def main():
         conv_check=ctmrg_conv_energy)
 
     e_curr0 = energy_f(state, ctm_env_init, force_cpu=args.force_cpu)
-    obs_values0, obs_labels = model.eval_obs(state,ctm_env_init,force_cpu=args.force_cpu)
+    obs_values0, obs_labels = eval_obs_f(state,ctm_env_init,force_cpu=args.force_cpu)
     history, t_ctm, t_obs= ctm_log
     print("\n")
     print(", ".join(["epoch","energy"]+obs_labels))

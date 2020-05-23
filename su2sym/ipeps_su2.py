@@ -149,6 +149,7 @@ class IPEPS_SU2SYM(ipeps.IPEPS):
     def load_checkpoint(self,checkpoint_file):
         checkpoint= torch.load(checkpoint_file)
         self.coeffs= checkpoint["parameters"]
+        for coeff_t in self.coeffs.values(): coeff_t.requires_grad_(False)
         self.sites= self.build_onsite_tensors()
 
     def build_onsite_tensors(self):
