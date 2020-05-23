@@ -12,6 +12,7 @@ from models import j1j2
 # from optim.ad_optim_su2 import optimize_state
 from optim.fd_optim_lbfgs_mod import optimize_state
 import su2sym.sym_ten_parser as tenSU2
+import time
 import json
 import unittest
 import logging
@@ -132,18 +133,24 @@ def main():
         # 1) compute environment by CTMRG
         ctm_env_out, history, t_ctm, t_obs= ctmrg_c4v.run(state, ctm_env_in, \
             conv_check=ctmrg_conv_f, ctm_args=ctm_args)
+        t0_energy= time.perf_counter()
         loss0 = energy_f(state, ctm_env_out, force_cpu=args.force_cpu)
+        t1_energy= time.perf_counter()
         
         loc_ctm_args= copy.deepcopy(ctm_args)
         loc_ctm_args.ctm_max_iter= 1
         ctm_env_out, history1, t_ctm1, t_obs1= ctmrg_c4v.run(state, ctm_env_out, \
             ctm_args=loc_ctm_args)
+        t2_energy= time.perf_counter()
         loss1 = energy_f(state, ctm_env_out, force_cpu=args.force_cpu)
+        t3_energy= time.perf_counter()
 
+        timings= dict({"t_ctm": t_ctm, "t_obs": t_obs, \
+            "t_energy": (t1_energy-t0_energy)+(t3_energy-t2_energy)})
         #loss=(loss0+loss1)/2
         loss= torch.max(loss0,loss1)
 
-        return loss, ctm_env_out, history, t_ctm, t_obs
+        return loss, ctm_env_out, history, timings
 
     def _to_json(l):
         re=[l[i,0].item() for i in range(l.size()[0])]
