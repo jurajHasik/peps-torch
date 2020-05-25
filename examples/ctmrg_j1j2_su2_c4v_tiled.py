@@ -74,10 +74,12 @@ def main():
         if args.obs_freq>0 and \
             (len(history["log"])%args.obs_freq==0 or 
             (len(history["log"])-1)%args.obs_freq==0):
+            t0_energy= time.perf_counter()
             e_curr = energy_f(state, env, force_cpu=args.force_cpu)
+            t1_energy= time.perf_counter()
             obs_values, obs_labels = eval_obs_f(state, env, force_cpu=args.force_cpu)
             print(", ".join([f"{len(history['log'])}",f"{dist}",f"{e_curr}"]\
-                +[f"{v}" for v in obs_values]))
+                +[f"{v}" for v in obs_values]+[f"{t1_energy-t0_energy}"]))
         else:
             print(f"{len(history['log'])}, {dist}")
         # update history

@@ -9,6 +9,7 @@ from ctm.one_site_c4v.rdm_c4v import rdm2x1_sl
 from ctm.one_site_c4v.rdm_c4v_specialized import rdm2x1_tiled
 from models import j1j2
 import su2sym.sym_ten_parser as tenSU2 
+import time
 import unittest
 import logging
 log = logging.getLogger(__name__)
@@ -73,10 +74,12 @@ def main():
         if args.obs_freq>0 and \
             (len(history["log"])%args.obs_freq==0 or 
             (len(history["log"])-1)%args.obs_freq==0):
+            t0_energy= time.perf_counter()
             e_curr = energy_f(state, env, force_cpu=args.force_cpu)
+            t1_energy= time.perf_counter()
             obs_values, obs_labels = model.eval_obs(state, env, force_cpu=args.force_cpu)
             print(", ".join([f"{len(history['log'])}",f"{dist}",f"{e_curr}"]\
-                +[f"{v}" for v in obs_values]))
+                +[f"{v}" for v in obs_values]+[f"{t1_energy-t0_energy}"]))
         else:
             print(f"{len(history['log'])}, {dist}")
         # update history
