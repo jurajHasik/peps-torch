@@ -143,6 +143,16 @@ def main():
 
     ctm_env_init, *ctm_log= ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
 
+    # 6) compute final observables
+    e_curr0 = energy_f(state, ctm_env_init)
+    obs_values0, obs_labels = model.eval_obs(state,ctm_env_init)
+    history, t_ctm, t_obs= ctm_log
+    print("\n")
+    print(", ".join(["epoch","energy"]+obs_labels))
+    print("FINAL "+", ".join([f"{e_curr0}"]+[f"{v}" for v in obs_values0]))
+    print(f"TIMINGS ctm: {t_ctm} conv_check: {t_obs}")
+
+    # 7) ----- additional observables ---------------------------------------------
     corrSS= model.eval_corrf_SS((0,0), (1,0), state, ctm_env_init, args.corrf_r)
     print("\n\nSS[(0,0),(1,0)] r "+" ".join([label for label in corrSS.keys()]))
     for i in range(args.corrf_r):
