@@ -152,6 +152,7 @@ def import_sym_tensors(p, D, pg, infile=None, dtype=torch.float64, device='cpu')
     infile= f"{os.path.dirname(__file__)}/D{D}.txt" if infile is None else infile 
 
     tensors_coo= parse_symten_file(infile)
+    print(tensors_coo)
     for tcoo in tensors_coo:
         if pg==tcoo[0]["meta"]["pg"]:
             t= torch.zeros(dims, dtype=dtype, device=device)
