@@ -5,6 +5,7 @@ import config as cfg
 from ipeps.ipeps import *
 from ctm.generic.env import *
 from ctm.generic import ctmrg
+from ctm.generic import transferops
 from models import j1j2
 # from optim.ad_optim import optimize_state
 from optim.ad_optim_lbfgs_mod import optimize_state
@@ -18,6 +19,9 @@ parser= cfg.get_args_parser()
 parser.add_argument("--j1", type=float, default=1., help="nearest-neighbour coupling")
 parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour coupling")
 parser.add_argument("--tiling", default="BIPARTITE", help="tiling of the lattice")
+parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
+parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
+    "of transfer operator to compute")
 args, unknown_args = parser.parse_known_args()
 
 def main():
@@ -163,6 +167,11 @@ def main():
         
         return (loss, ctm_env_out, *ctm_log)
 
+    def _to_json(l):
+                re=[l[i,0].item() for i in range(l.size()[0])]
+                im=[l[i,1].item() for i in range(l.size()[0])]
+                return dict({"re": re, "im": im})
+
     @torch.no_grad()
     def obs_fn(state, ctm_env, opt_context):
         if ("line_search" in opt_context.keys() and not opt_context["line_search"]) \
@@ -172,6 +181,15 @@ def main():
             obs_values, obs_labels = model.eval_obs(state,ctm_env)
             print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
             log.info("Norm(sites): "+", ".join([f"{t.norm()}" for c,t in state.sites.items()]))
+
+            with torch.no_grad():
+                if args.top_freq>0 and epoch%args.top_freq==0:
+                    coord_dir_pairs=[((0,0), (1,0)), ((0,0), (0,1)), ((1,1), (1,0)), ((1,1), (0,1))]
+                    for c,d in coord_dir_pairs:
+                        # transfer operator spectrum
+                        print(f"TOP spectrum(T)[{c},{d}] ",end="")
+                        l= transferops.get_Top_spec(args.top_n, c,d, state, ctm_env)
+                        print("TOP "+json.dumps(_to_json(l)))
 
     # optimize
     optimize_state(state, ctm_env, loss_fn, obs_fn=obs_fn)
