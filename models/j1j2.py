@@ -364,13 +364,18 @@ class J1J2():
         return res  
 
 class J1J2_C4V_BIPARTITE():
-    def __init__(self, j1=1.0, j2=0.0, global_args=cfg.global_args):
+    def __init__(self, j1=1.0, j2=0.0, hz_stag= 0.0, delta_zz=1.0, \
+        global_args=cfg.global_args):
         r"""
         :param j1: nearest-neighbour interaction
         :param j2: next nearest-neighbour interaction
+        :param hz_stag: staggered magnetic field
+        :param delta_zz: easy-axis (nearest-neighbour) anisotropy
         :param global_args: global configuration
         :type j1: float
         :type j2: float
+        :type hz_stag: float
+        :type detla_zz: float
         :type global_args: GLOBALARGS
 
         Build Spin-1/2 :math:`J_1-J_2` Hamiltonian
@@ -395,8 +400,10 @@ class J1J2_C4V_BIPARTITE():
 
         where
 
-        * :math:`h_p = J_1(\mathbf{S}_{r}.\mathbf{S}_{r+\vec{x}} + \mathbf{S}_{r}.\mathbf{S}_{r+\vec{y}})
-          +J_2(\mathbf{S}_{r}.\mathbf{S}_{r+\vec{x}+\vec{y}} + \mathbf{S}_{r+\vec{x}}.\mathbf{S}_{r+\vec{y}})` 
+        * :math:`h_p = J_1(S^x_{r}.S^x_{r+\vec{x}} 
+          + S^y_{r}.S^y_{r+\vec{x}} + \delta_{zz} S^z_{r}.S^z_{r+\vec{x}} + (x<->y))
+          + J_2(\mathbf{S}_{r}.\mathbf{S}_{r+\vec{x}+\vec{y}} + \mathbf{S}_{r+\vec{x}}.\mathbf{S}_{r+\vec{y}})
+          + h_stag (S^z_{r} - S^z_{r+\vec{x}} - S^z_{r+\vec{y}} + S^z_{r+\vec{x}+\vec{y}})` 
           with indices of spins ordered as follows :math:`s_r s_{r+\vec{x}} s_{r+\vec{y}} s_{r+\vec{x}+\vec{y}};
           s'_r s'_{r+\vec{x}} s'_{r+\vec{y}} s'_{r+\vec{x}+\vec{y}}`
 
@@ -406,29 +413,43 @@ class J1J2_C4V_BIPARTITE():
         self.phys_dim=2
         self.j1=j1
         self.j2=j2
+        self.hz_stag=hz_stag
+        self.delta_zz=delta_zz
         
-        self.h2, self.h2_rot, self.hp = self.get_h()
         self.obs_ops = self.get_obs_ops()
 
-    def get_h(self):
         s2 = su2.SU2(self.phys_dim, dtype=self.dtype, device=self.device)
         id2= torch.eye(self.phys_dim**2,dtype=self.dtype,device=self.device)
         id2= id2.view(tuple([self.phys_dim]*4)).contiguous()
         expr_kron = 'ij,ab->iajb'
-        SS= torch.einsum(expr_kron,s2.SZ(),s2.SZ()) + 0.5*(torch.einsum(expr_kron,s2.SP(),s2.SM()) \
-            + torch.einsum(expr_kron,s2.SM(),s2.SP()))
-        rot_op= s2.BP_rot()
-        SS_rot= torch.einsum('ki,kjcb,ca->ijab',rot_op,SS,rot_op)
 
-        h2x2_SS= torch.einsum('ijab,klcd->ijklabcd',SS,id2) # nearest neighbours
+
+        self.SS_delta_zz= self.delta_zz*torch.einsum(expr_kron,s2.SZ(),s2.SZ()) + \
+            0.5*(torch.einsum(expr_kron,s2.SP(),s2.SM()) \
+            + torch.einsum(expr_kron,s2.SM(),s2.SP()))
+        self.SS= torch.einsum(expr_kron,s2.SZ(),s2.SZ()) + \
+            0.5*(torch.einsum(expr_kron,s2.SP(),s2.SM()) \
+            + torch.einsum(expr_kron,s2.SM(),s2.SP()))
+        hz_2x1_nn= torch.einsum(expr_kron,s2.SZ(),s2.I())+torch.einsum(expr_kron,s2.I(),-s2.SZ())
+
+        rot_op= s2.BP_rot()
+        SS_rot= torch.einsum('ki,kjcb,ca->ijab',rot_op,self.SS,rot_op)
+        SS_delta_zz_rot= torch.einsum('ki,kjcb,ca->ijab',rot_op,self.SS_delta_zz,rot_op)
+        hz_2x1_rot= torch.einsum('ki,kjcb,ca->ijab',rot_op,hz_2x1_nn,rot_op)
+        self.SS_rot= SS_rot.contiguous()
+        self.SS_delta_zz_rot= SS_delta_zz_rot.contiguous()
+        self.hz_2x1_rot= hz_2x1_rot.contiguous()
+
+        h2x2_SS_delta_zz= torch.einsum('ijab,klcd->ijklabcd',self.SS_delta_zz,id2) # nearest neighbours
+        h2x2_SS= torch.einsum('ijab,klcd->ijklabcd',self.SS,id2) # next-nearest neighbours
         # 0 1     0 1   0 x   x x   x 1
         # 2 3 ... x x + 2 x + 2 3 + x 3
-        hp= 0.5*self.j1*(h2x2_SS + h2x2_SS.permute(0,2,1,3,4,6,5,7)\
-           + h2x2_SS.permute(2,3,0,1,6,7,4,5) + h2x2_SS.permute(3,1,2,0,7,5,6,4)) \
-           + self.j2*(h2x2_SS.permute(0,3,2,1,4,7,6,5) + h2x2_SS.permute(2,1,0,3,6,5,4,7))
+        hp= 0.5*self.j1*(h2x2_SS_delta_zz + h2x2_SS_delta_zz.permute(0,2,1,3,4,6,5,7)\
+           + h2x2_SS_delta_zz.permute(2,3,0,1,6,7,4,5) + h2x2_SS_delta_zz.permute(3,1,2,0,7,5,6,4)) \
+           + self.j2*(h2x2_SS.permute(0,3,2,1,4,7,6,5) + h2x2_SS.permute(2,1,0,3,6,5,4,7))\
+           - 0.25*self.hz_stag*torch.einsum('ia,jb,kc,ld->ijklabcd',s2.SZ(),-s2.SZ(),-s2.SZ(),s2.SZ())
         hp= torch.einsum('xj,yk,ixylauvd,ub,vc->ijklabcd',rot_op,rot_op,hp,rot_op,rot_op)
-        hp= hp.contiguous()
-        return SS, SS_rot, hp
+        self.hp= hp.contiguous()
 
     def get_obs_ops(self):
         obs_ops = dict()
@@ -511,8 +532,9 @@ class J1J2_C4V_BIPARTITE():
             force_cpu=force_cpu, verbosity=cfg.ctm_args.verbosity_rdm)
         rdm2x2_NNN= rdm_c4v.rdm2x2_NNN_lowmem_sl(state, env_c4v, sym_pos_def=True,\
             force_cpu=force_cpu, verbosity=cfg.ctm_args.verbosity_rdm)
-        energy_per_site= 2.0*self.j1*torch.einsum('ijkl,ijkl',rdm2x2_NN,self.h2_rot)\
-            + 2.0*self.j2*torch.einsum('ijkl,ijkl',rdm2x2_NNN,self.h2)
+        energy_per_site= 2.0*self.j1*torch.einsum('ijkl,ijkl',rdm2x2_NN,self.SS_delta_zz_rot)\
+            + 2.0*self.j2*torch.einsum('ijkl,ijkl',rdm2x2_NNN,self.SS) \
+            - 0.5*self.hz_stag * torch.einsum('ijkl,ijkl',rdm2x2_NN,self.hz_2x1_rot)
         return energy_per_site
 
     def energy_1x1_tiled(self, state, env_c4v, force_cpu=False):
@@ -553,7 +575,8 @@ class J1J2_C4V_BIPARTITE():
         rdm2x2_NNN= rdm2x2_NNN_tiled(state, env_c4v, sym_pos_def=True,\
             force_cpu=force_cpu, verbosity=cfg.ctm_args.verbosity_rdm)
         energy_per_site= 2.0*self.j1*torch.einsum('ijkl,ijkl',rdm2x2_NN,self.h2_rot)\
-            + 2.0*self.j2*torch.einsum('ijkl,ijkl',rdm2x2_NNN,self.h2)
+            + 2.0*self.j2*torch.einsum('ijkl,ijkl',rdm2x2_NNN,self.h2) \
+            - 0.5*self.hz_stag * torch.einsum('ijkl,ijkl',rdm2x2_NN,self.hz_2x1_rot)
         return energy_per_site
 
     def eval_obs(self,state,env_c4v,force_cpu=False):
@@ -596,7 +619,7 @@ class J1J2_C4V_BIPARTITE():
         with torch.no_grad():
             rdm2x1= rdm_c4v.rdm2x1_sl(state,env_c4v,force_cpu=force_cpu,\
                 verbosity=cfg.ctm_args.verbosity_rdm)
-            obs[f"SS2x1"]= torch.einsum('ijab,ijab',rdm2x1,self.h2_rot)
+            obs[f"SS2x1"]= torch.einsum('ijab,ijab',rdm2x1,self.SS_rot)
             
             # reduce rdm2x1 to 1x1
             rdm1x1= torch.einsum('ijaj->ia',rdm2x1)
@@ -615,7 +638,7 @@ class J1J2_C4V_BIPARTITE():
         with torch.no_grad():
             rdm2x1= rdm2x1_tiled(state,env_c4v,force_cpu=force_cpu,\
                 verbosity=cfg.ctm_args.verbosity_rdm)
-            obs[f"SS2x1"]= torch.einsum('ijab,ijab',rdm2x1,self.h2_rot)
+            obs[f"SS2x1"]= torch.einsum('ijab,ijab',rdm2x1,self.SS_rot)
         
             # reduce rdm2x1 to 1x1
             rdm1x1= torch.einsum('ijaj->ia',rdm2x1)
@@ -673,7 +696,7 @@ class J1J2_C4V_BIPARTITE():
         # function generating properly rotated S.S operator on every bi-partite site
         rot_op= su2.get_rot_op(self.phys_dim, dtype=self.dtype, device=self.device)
         # (S.S)_s1s2,s1's2' with rotation applied on "first" spin s1,s1' 
-        SS_rot= torch.einsum('ki,kjcb,ca->ijab',rot_op,self.h2,rot_op)
+        SS_rot= torch.einsum('ki,kjcb,ca->ijab',rot_op,self.SS,rot_op)
         # (S.S)_s1s2,s1's2' with rotation applied on "second" spin s2,s2'
         op_rot= SS_rot.permute(1,0,3,2).contiguous()
         def _gen_op(r):
