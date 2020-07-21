@@ -138,15 +138,6 @@ def main():
                     l= transferops_c4v.get_Top_spec_c4v(args.top_n, state_sym, ctm_env)
                     print("TOP "+json.dumps(_to_json(l)))
 
-        with torch.no_grad():
-            if args.top_freq>0 and epoch%args.top_freq==0:
-                coord_dir_pairs=[((0,0), (1,0))]
-                for c,d in coord_dir_pairs:
-                    # transfer operator spectrum
-                    print(f"TOP spectrum(T)[{c},{d}] ",end="")
-                    l= transferops_c4v.get_Top_spec_c4v(args.top_n, state_sym, ctm_env)
-                    print("TOP "+json.dumps(_to_json(l)))
-
     def post_proc(state, ctm_env, opt_context):
         symm, max_err= verify_c4v_symm_A1(state.site())
         # print(f"post_proc {symm} {max_err}")
