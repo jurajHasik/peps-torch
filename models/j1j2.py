@@ -706,3 +706,18 @@ class J1J2_C4V_BIPARTITE():
 
         res= dict({"dd": D0DR})
         return res
+
+    def eval_corrf_DD_V(self,state,env_c4v,dist,verbosity=0):
+        # function generating properly rotated S.S operator on every bi-partite site
+        rot_op= su2.get_rot_op(self.phys_dim, dtype=self.dtype, device=self.device)
+        # (S.S)_s1s2,s1's2' with rotation applied on "first" spin s1,s1' 
+        SS_rot= torch.einsum('ki,kjcb,ca->ijab',rot_op,self.SS,rot_op)
+        # (S.S)_s1s2,s1's2' with rotation applied on "second" spin s2,s2'
+        op_rot= SS_rot.permute(1,0,3,2).contiguous()
+        def _gen_op(r):
+            return SS_rot if r%2==0 else op_rot
+        
+        D0DR= corrf_c4v.corrf_2sOV2sOV_E2(state, env_c4v, SS_rot, _gen_op, dist, verbosity=verbosity)
+
+        res= dict({"dd": D0DR})
+        return res

@@ -727,7 +727,7 @@ def corrf_2sOV2sOV_E2(state, env, op1, get_op2, dist, verbosity=0):
     :rtype: torch.tensor
     
     Computes the four-point correlation function :math:`\langle O_1(0) O_2(r) \rangle`,
-    where both O_1 and O_2 are two-site operator by contracting the following network::
+    where both O_1 and O_2 are two-site operators by contracting the following network::
 
         C-----T------ ... ----T----- ... -----T---------C
         |     |               |               |         |

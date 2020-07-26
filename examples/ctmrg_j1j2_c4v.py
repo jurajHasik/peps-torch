@@ -25,6 +25,9 @@ parser.add_argument("--top_n", type=int, default=2, help="number of leading eige
     + "of transfer operator to compute")
 parser.add_argument("--obs_freq", type=int, default=-1, help="frequency of computing observables"
     + " during CTM convergence")
+parser.add_argument("--corrf_dd_v", action='store_true', help="compute vertical dimer-dimer"\
+    + " correlation function")
+parser.add_argument("--top2", action='store_true', help="compute transfer matrix for width-2 channel")
 args, unknown_args= parser.parse_known_args()
 
 def main():
@@ -155,6 +158,12 @@ def main():
     for i in range(args.corrf_r):
         print(f"{i} "+" ".join([f"{corrDD[label][i]}" for label in corrDD.keys()]))
 
+    if args.corrf_dd_v:
+        corrDD_V= model.eval_corrf_DD_V(state, ctm_env_init, args.corrf_r)
+        print("\n\nDD_v r "+" ".join([label for label in corrDD_V.keys()]))
+        for i in range(args.corrf_r):
+            print(f"{i} "+" ".join([f"{corrDD_V[label][i]}" for label in corrDD_V.keys()]))
+
     # environment diagnostics
     print("\n\nspectrum(C)")
     u,s,v= torch.svd(ctm_env_init.C[ctm_env_init.keyC], compute_uv=False)
@@ -166,6 +175,13 @@ def main():
     l= transferops_c4v.get_Top_spec_c4v(args.top_n, state, ctm_env_init)
     for i in range(l.size()[0]):
         print(f"{i} {l[i,0]} {l[i,1]}")
+
+    # transfer operator spectrum
+    if args.top2:
+        print("\n\nspectrum(T2)")
+        l= transferops_c4v.get_Top2_spec_c4v(args.top_n, state, ctm_env_init)
+        for i in range(l.size()[0]):
+            print(f"{i} {l[i,0]} {l[i,1]}")
 
 if __name__=='__main__':
     if len(unknown_args)>0:
