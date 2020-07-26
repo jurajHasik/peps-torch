@@ -574,8 +574,8 @@ class J1J2_C4V_BIPARTITE():
             force_cpu=force_cpu, verbosity=cfg.ctm_args.verbosity_rdm)
         rdm2x2_NNN= rdm2x2_NNN_tiled(state, env_c4v, sym_pos_def=True,\
             force_cpu=force_cpu, verbosity=cfg.ctm_args.verbosity_rdm)
-        energy_per_site= 2.0*self.j1*torch.einsum('ijkl,ijkl',rdm2x2_NN,self.h2_rot)\
-            + 2.0*self.j2*torch.einsum('ijkl,ijkl',rdm2x2_NNN,self.h2) \
+        energy_per_site= 2.0*self.j1*torch.einsum('ijkl,ijkl',rdm2x2_NN,self.SS_delta_zz_rot)\
+            + 2.0*self.j2*torch.einsum('ijkl,ijkl',rdm2x2_NNN,self.SS) \
             - 0.5*self.hz_stag * torch.einsum('ijkl,ijkl',rdm2x2_NN,self.hz_2x1_rot)
         return energy_per_site
 
