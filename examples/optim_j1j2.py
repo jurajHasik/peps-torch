@@ -6,8 +6,9 @@ from ipeps.ipeps import *
 from ctm.generic.env import *
 from ctm.generic import ctmrg
 from models import j1j2
-# from optim.ad_optim import optimize_state
-from optim.ad_optim_lbfgs_mod import optimize_state
+from complex_num.complex_operation import *
+from optim.ad_optim import optimize_state
+#from optim.ad_optim_lbfgs_mod import optimize_state
 import unittest
 import logging
 log = logging.getLogger(__name__)
@@ -36,6 +37,9 @@ def main():
             vx = (coord[0] + abs(coord[0]) * 2) % 2
             vy = abs(coord[1])
             return ((vx + vy) % 2, 0)
+    elif args.tiling == "1SITE":
+        def lattice_to_site(coord):
+            return (0, 0)
     elif args.tiling == "2SITE":
         def lattice_to_site(coord):
             vx = (coord[0] + abs(coord[0]) * 2) % 2
@@ -54,7 +58,7 @@ def main():
             return (vx, vy)
     else:
         raise ValueError("Invalid tiling: "+str(args.tiling)+" Supported options: "\
-            +"BIPARTITE, 2SITE, 4SITE, 8SITE")
+            +"BIPARTITE, 1SITE, 2SITE, 4SITE, 8SITE")
 
     if args.instate!=None:
         state = read_ipeps(args.instate, vertexToSite=lattice_to_site)
@@ -73,39 +77,85 @@ def main():
     elif args.ipeps_init_type=='RANDOM':
         bond_dim = args.bond_dim
         
-        A = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+        A1 = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
             dtype=cfg.global_args.dtype,device=cfg.global_args.device)
-        B = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+        B1 = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+            dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+        A2 = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+            dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+        B2 = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
             dtype=cfg.global_args.dtype,device=cfg.global_args.device)
 
         # normalization of initial random tensors
-        A = A/torch.max(torch.abs(A))
-        B = B/torch.max(torch.abs(B))
+        A = torch.zeros((2, model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+            dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+        A[0] = A1; A[1] = A2
+        A = A/max_complex(A)
+        B = torch.zeros((2, model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+            dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+        B[0] = B1; B[1] = B2
+        B = B/max_complex(B)
 
         sites = {(0,0): A, (1,0): B}
         
         if args.tiling == "4SITE" or args.tiling == "8SITE":
-            C= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+            C1= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
                 dtype=cfg.global_args.dtype,device=cfg.global_args.device)
-            D= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+            C2= torch.zeros((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
                 dtype=cfg.global_args.dtype,device=cfg.global_args.device)
-            sites[(0,1)]= C/torch.max(torch.abs(C))
-            sites[(1,1)] = D/torch.max(torch.abs(D))
+            D1= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+            D2= torch.zeros((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+            C = torch.zeros((2, model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+            C[0] = C1; C[1] = C2
+            C = C/max_complex(C)
+            D = torch.zeros((2, model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+            D[0] = D1; D[1] = D2
+            D = D/max_complex(D)
+            sites[(0,1)] = C
+            sites[(1,1)] = D
 
         if args.tiling == "8SITE":
-            E= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+            E1= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
                 dtype=cfg.global_args.dtype,device=cfg.global_args.device)
-            F= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+            E2= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
                 dtype=cfg.global_args.dtype,device=cfg.global_args.device)
-            G= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+            F1= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
                 dtype=cfg.global_args.dtype,device=cfg.global_args.device)
-            H= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+            F2= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
                 dtype=cfg.global_args.dtype,device=cfg.global_args.device)
-            sites[(2,0)]= E/torch.max(torch.abs(E))
-            sites[(3,0)] = F/torch.max(torch.abs(F))
-            sites[(2,1)] = G/torch.max(torch.abs(G))
-            sites[(3,1)] = H/torch.max(torch.abs(H))
-
+            G1= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+            G2= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+            H1= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+            H2= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+            E = torch.zeros((2, model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+            E[0] = E1; E[1] = E2
+            E = E/max_complex(E)
+            F = torch.zeros((2, model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+            F[0] = F1; F[1] = F2
+            F = F/max_complex(F)
+            G = torch.zeros((2, model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+            G[0] = G1; G[1] = G2
+            G = G/max_complex(G)
+            H = torch.zeros((2, model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+            H[0] = H1; H[1] = H2
+            H = H/max_complex(H)
+            sites[(2,0)] = E
+            sites[(3,0)] = F
+            sites[(2,1)] = G
+            sites[(3,1)] = H
+            
         state = IPEPS(sites, vertexToSite=lattice_to_site)
     else:
         raise ValueError("Missing trial state: -instate=None and -ipeps_init_type= "\
@@ -139,7 +189,7 @@ def main():
 
     ctm_env = ENV(args.chi, state)
     init_env(state, ctm_env)
-
+    
     ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
     loss0 = energy_f(state, ctm_env)
     obs_values, obs_labels = model.eval_obs(state,ctm_env)
