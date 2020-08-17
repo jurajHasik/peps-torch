@@ -3,6 +3,7 @@ from torch.utils.checkpoint import checkpoint
 from ipeps.ipeps import IPEPS
 from ctm.generic.env import ENV
 from config import ctm_args
+from complex_num.complex_operation import *
 
 #####################################################################
 # functions building pair of 4x2 (or 2x4) halves of 4x4 TN
@@ -61,8 +62,8 @@ def halves_of_4x4_CTM_MOVE_UP_c(*tensors):
     # C2x2_2 = c2x2_LD((coord[0]-1, coord[1]-1), ipeps, env, verbosity)
     # half2 = torch.tensordot(C2x2_1,C2x2_2,([0],[0]))
 
-    return torch.tensordot(c2x2_RU_c(*tensors[0:4]),c2x2_RD_c(*tensors[4:8]),([1],[0])), \
-        torch.tensordot(c2x2_LU_c(*tensors[8:12]),c2x2_LD_c(*tensors[12:16]),([0],[0]))
+    return tensordot_complex(c2x2_RU_c(*tensors[0:4]),c2x2_RD_c(*tensors[4:8]),([1],[0])), \
+        tensordot_complex(c2x2_LU_c(*tensors[8:12]),c2x2_LD_c(*tensors[12:16]),([0],[0]))
 
 def halves_of_4x4_CTM_MOVE_LEFT(coord, ipeps, env, verbosity=0):
     # C T        T C = C2x2_LU(coord)       C2x2(coord+(1,0))
@@ -114,8 +115,8 @@ def halves_of_4x4_CTM_MOVE_LEFT_c(*tensors):
     # C2x2_2 = c2x2_RD((coord[0]+1, coord[1]+1), ipeps, env, verbosity)
     # half2 = torch.tensordot(C2x2_1,C2x2_2,([1],[1]))
     
-    return torch.tensordot(c2x2_LU_c(*tensors[0:4]),c2x2_RU_c(*tensors[4:8]),([1],[0])), \
-        torch.tensordot(c2x2_LD_c(*tensors[8:12]),c2x2_RD_c(*tensors[12:16]),([1],[1]))
+    return tensordot_complex(c2x2_LU_c(*tensors[0:4]),c2x2_RU_c(*tensors[4:8]),([1],[0])), \
+        tensordot_complex(c2x2_LD_c(*tensors[8:12]),c2x2_RD_c(*tensors[12:16]),([1],[1]))
 
 def halves_of_4x4_CTM_MOVE_DOWN(coord, ipeps, env, verbosity=0):
     # C T T        C = C2x2_LU(coord+(0,-1)) C2x2(coord+(1,-1))
@@ -165,8 +166,8 @@ def halves_of_4x4_CTM_MOVE_DOWN_c(*tensors):
     # C2x2_2 = c2x2_RU((coord[0]+1, coord[1]-1), ipeps, env, verbosity)
     # half2 = torch.tensordot(C2x2_1,C2x2_2,([0],[1]))
 
-    return torch.tensordot(c2x2_LD_c(*tensors[0:4]),c2x2_LU_c(*tensors[4:8]),([0],[0])), \
-        torch.tensordot(c2x2_RD_c(*tensors[8:12]),c2x2_RU_c(*tensors[12:16]),([0],[1]))
+    return tensordot_complex(c2x2_LD_c(*tensors[0:4]),c2x2_LU_c(*tensors[4:8]),([0],[0])), \
+        tensordot_complex(c2x2_RD_c(*tensors[8:12]),c2x2_RU_c(*tensors[12:16]),([0],[1]))
 
 def halves_of_4x4_CTM_MOVE_RIGHT(coord, ipeps, env, verbosity=0):
     # C T T        C = C2x2_LU(coord+(-1,-1)) C2x2(coord+(0,-1))
@@ -218,8 +219,8 @@ def halves_of_4x4_CTM_MOVE_RIGHT_c(*tensors):
     # C2x2_2 = c2x2_LU((coord[0]-1, coord[1]-1), ipeps, env, verbosity)
     # half2 = torch.tensordot(C2x2_1,C2x2_2,([0],[1]))
 
-    return torch.tensordot(c2x2_RD_c(*tensors[0:4]),c2x2_LD_c(*tensors[4:8]),([1],[1])), \
-        torch.tensordot(c2x2_RU_c(*tensors[8:12]),c2x2_LU_c(*tensors[12:16]),([0],[1]))
+    return tensordot_complex(c2x2_RD_c(*tensors[0:4]),c2x2_LD_c(*tensors[4:8]),([1],[1])), \
+        tensordot_complex(c2x2_RU_c(*tensors[8:12]),c2x2_LU_c(*tensors[12:16]),([0],[1]))
 
 #####################################################################
 # functions building 2x2 Corner
@@ -255,25 +256,26 @@ def c2x2_LU_c(*tensors):
         C, T1, T2, A= tensors
         # C--10--T1--2
         # 0      1
-        C2x2 = torch.tensordot(C, T1, ([1],[0]))
+        C2x2 = tensordot_complex(C, T1, ([1],[0]))
 
         # C------T1--2->1
         # 0      1->0
         # 0
         # T2--2->3
         # 1->2
-        C2x2 = torch.tensordot(C2x2, T2, ([0],[0]))
+        C2x2 = tensordot_complex(C2x2, T2, ([0],[0]))
 
         # C-------T1--1->0
         # |       0
         # |       0
         # T2--3 1 A--3 
         # 2->1    2
-        C2x2 = torch.tensordot(C2x2, A, ([0,3],[0,1]))
+        C2x2 = tensordot_complex(C2x2, A, ([0,3],[0,1]))
 
         # permute 0123->1203
         # reshape (12)(03)->01
-        C2x2 = C2x2.permute(1,2,0,3).contiguous().view(T1.size()[2]*A.size()[3],T2.size()[1]*A.size()[2])
+        C2x2 = contiguous_complex(permute_complex((1,2,0,3), C2x2))
+        C2x2 = view_complex((T1.size()[3]*A.size()[4],T2.size()[2]*A.size()[3]), C2x2)
 
         # C2x2--1
         # |
@@ -314,24 +316,25 @@ def c2x2_RU_c(*tensors):
         #    0
         # 1--T1
         #    2
-        C2x2 = torch.tensordot(C, T1, ([1],[0]))
+        C2x2 = tensordot_complex(C, T1, ([1],[0]))
 
         # 2<-0--T2--2 0--C
         #    3<-1        |
         #          0<-1--T1
         #             1<-2
-        C2x2 = torch.tensordot(C2x2, T2, ([0],[2]))
+        C2x2 = tensordot_complex(C2x2, T2, ([0],[2]))
 
         # 1<-2--T2------C
         #       3       |
         #       0       |
         # 2<-1--A--3 0--T1
         #    3<-2    0<-1
-        C2x2 = torch.tensordot(C2x2, A, ([0,3],[3,0]))
+        C2x2 = tensordot_complex(C2x2, A, ([0,3],[3,0]))
 
         # permute 0123->1203
         # reshape (12)(03)->01
-        C2x2 = C2x2.permute(1,2,0,3).contiguous().view(T2.size()[0]*A.size()[1],T1.size()[2]*A.size()[2])
+        C2x2 = contiguous_complex(permute_complex((1,2,0,3), C2x2))
+        C2x2 = view_complex((T2.size()[1]*A.size()[2],T1.size()[3]*A.size()[3]), C2x2)
      
         # 0--C2x2
         #    |
@@ -369,26 +372,26 @@ def c2x2_RD_c(*tensors):
         C, T1, T2, A= tensors
         #    1<-0        0
         # 2<-1--T1--2 1--C
-        C2x2 = torch.tensordot(C, T1, ([1],[2]))
+        C2x2 = tensordot_complex(C, T1, ([1],[2]))
 
         #         2<-0
         #      3<-1--T2
         #            2
         #    0<-1    0
         # 1<-2--T1---C
-        C2x2 = torch.tensordot(C2x2, T2, ([0],[2]))
+        C2x2 = tensordot_complex(C2x2, T2, ([0],[2]))
 
         #    2<-0    1<-2
         # 3<-1--A--3 3--T2
         #       2       |
         #       0       |
         # 0<-1--T1------C
-        C2x2 = torch.tensordot(C2x2, A, ([0,3],[2,3]))
+        C2x2 = tensordot_complex(C2x2, A, ([0,3],[2,3]))
 
         # permute 0123->1203
         # reshape (12)(03)->01
-        C2x2 = C2x2.permute(1,2,0,3).contiguous().view(T2.size()[0]*A.size()[0],T1.size()[1]*A.size()[1])
-
+        C2x2 = contiguous_complex(permute_complex((1,2,0,3), C2x2))
+        C2x2 = view_complex((T2.size()[1]*A.size()[1],T1.size()[2]*A.size()[2]), C2x2)
 
         #    0
         #    |
@@ -429,25 +432,26 @@ def c2x2_LD_c(*tensors):
         # 1
         # 0
         # C--1->0
-        C2x2 = torch.tensordot(C, T1, ([0],[1]))
+        C2x2 = tensordot_complex(C, T1, ([0],[1]))
 
         # 1->0
         # T1--2->1
         # |
         # |       0->2
         # C--0 1--T1--2->3
-        C2x2 = torch.tensordot(C2x2, T2, ([0],[1]))
+        C2x2 = tensordot_complex(C2x2, T2, ([0],[1]))
 
         # 0       0->2
         # T1--1 1--A--3
         # |        2
         # |        2
         # C--------T2--3->1
-        C2x2 = torch.tensordot(C2x2, A, ([1,2],[1,2]))
+        C2x2 = tensordot_complex(C2x2, A, ([1,2],[1,2]))
 
         # permute 0123->0213
         # reshape (02)(13)->01
-        C2x2 = C2x2.permute(0,2,1,3).contiguous().view(T1.size()[0]*A.size()[0],T2.size()[2]*A.size()[3])
+        C2x2 = contiguous_complex(permute_complex((0,2,1,3), C2x2))
+        C2x2 = view_complex((T1.size()[1]*A.size()[1],T2.size()[3]*A.size()[4]), C2x2)
 
         # 0
         # |
