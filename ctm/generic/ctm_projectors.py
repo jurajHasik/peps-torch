@@ -5,6 +5,7 @@ from ipeps.ipeps import IPEPS
 from ctm.generic.env import ENV
 from ctm.generic.ctm_components import *
 from linalg.custom_svd import *
+from complex_num.complex_operation import *
 import logging
 log = logging.getLogger(__name__)
 
@@ -197,7 +198,7 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args, global_a
                         |____Rt___|
     """
     assert R.shape == Rt.shape
-    assert len(R.shape) == 2
+    assert len(R.shape) == 3
     verbosity = ctm_args.verbosity_projectors
 
     if ctm_args.projector_svd_method=='DEFAULT' or ctm_args.projector_svd_method=='GESDD':
@@ -211,18 +212,21 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args, global_a
 
     #  SVD decomposition
     if ctm_args.fwd_checkpoint_projectors:
-        M = checkpoint(torch.mm, R.transpose(1, 0), Rt)
+        M = checkpoint(mm_complex, transpose_complex(R), Rt)
     else:
-        M = torch.mm(R.transpose(1, 0), Rt)
+        M = mm_complex(transpose_complex(R), Rt)
     U, S, V = truncated_svd(M, chi) # M = USV^{T}
-
+    
     # if abs_tol is not None: St = St[St > abs_tol]
     # if abs_tol is not None: St = torch.where(St > abs_tol, St, Stzeros)
     # if rel_tol is not None: St = St[St/St[0] > rel_tol]
-    S = S[S/S[0] > ctm_args.projector_svd_reltol]
-    S_zeros = torch.zeros((chi-S.size()[0]), dtype=global_args.dtype, device=global_args.device)
-    S_sqrt = torch.rsqrt(S)
-    S_sqrt = torch.cat((S_sqrt, S_zeros))
+    S2 = S[0]
+    S2 = S2[S2/S2[0] > ctm_args.projector_svd_reltol]
+    S_zeros = torch.zeros((chi-S2.size()[0]), dtype=global_args.dtype, device=global_args.device)
+    S_sqrtr = torch.rsqrt(S2)
+    S_sqrtr = torch.cat((S_sqrtr, S_zeros))
+    S_sqrti = torch.zeros((S_sqrtr.size()[0]), dtype=global_args.dtype, device=global_args.device)
+    S_sqrt = torch.stack((S_sqrtr, S_sqrti), dim=0)
     if verbosity>0: print(S_sqrt)
 
     # Construct projectors
@@ -231,7 +235,8 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args, global_a
     expr='ij,j->ij'
     def P_Pt_c(*tensors):
         R, Rt, U, V, S_sqrt= tensors
-        return torch.einsum(expr, torch.mm(R, U), S_sqrt), torch.einsum(expr, torch.mm(Rt, V), S_sqrt)
+        return einsum_complex(expr, mm_complex(R, complex_conjugate(U)), S_sqrt), \
+               einsum_complex(expr, mm_complex(Rt, V), S_sqrt)
 
     tensors= R, Rt, U, V, S_sqrt
     if ctm_args.fwd_checkpoint_projectors:
