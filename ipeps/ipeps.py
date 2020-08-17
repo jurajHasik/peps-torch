@@ -4,6 +4,7 @@ import json
 import itertools
 import math
 import config as cfg
+from complex_num.complex_operation import *
 
 # TODO drop constrain for aux bond dimension to be identical on 
 # all bond indices
@@ -214,7 +215,7 @@ def read_ipeps(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.pep
         0A2 <=> [left, up, right, down]: aux_seq=[1,0,3,2] 
          3
     """
-    asq = [x+1 for x in aux_seq]
+    asq = [x+2 for x in aux_seq]
     sites = OrderedDict()
     
     with open(jsonfile) as j:
@@ -222,7 +223,7 @@ def read_ipeps(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.pep
 
         # check for presence of "aux_seq" field in jsonfile
         if "aux_ind_seq" in raw_state.keys():
-            asq = [x+1 for x in raw_state["aux_ind_seq"]]
+            asq = [x+2 for x in raw_state["aux_ind_seq"]]
 
         # Loop over non-equivalent tensor,site pairs in the unit cell
         for ts in raw_state["map"]:
@@ -242,7 +243,7 @@ def read_ipeps(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.pep
 
             # branch 2: key "auxInds" does not exist, all auxiliary 
             # indices have the same dimension
-            X = torch.zeros((t["physDim"], t["auxDim"], t["auxDim"], \
+            X = torch.zeros((t["complex"], t["physDim"], t["auxDim"], t["auxDim"], \
                 t["auxDim"], t["auxDim"]), dtype=global_args.dtype, device=global_args.device)
 
             # 1) fill the tensor with elements from the list "entries"
@@ -252,7 +253,7 @@ def read_ipeps(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.pep
             # index (integer) of physDim, left, up, right, down, (float) Re, Im  
             for entry in t["entries"]:
                 l = entry.split()
-                X[int(l[0]),int(l[asq[0]]),int(l[asq[1]]),int(l[asq[2]]),int(l[asq[3]])]=float(l[5])
+                X[int(l[0]),int(l[1]),int(l[asq[0]]),int(l[asq[1]]),int(l[asq[2]]),int(l[asq[3]])]=float(l[6])
 
             sites[coord]=X
 
@@ -292,8 +293,8 @@ def extend_bond_dim(state, new_d):
         if False in size_check:
             raise ValueError("Desired dimension is smaller than following aux dimensions: "+str(size_check))
 
-        new_site = torch.zeros((dims[0],new_d,new_d,new_d,new_d), dtype=state.dtype, device=state.device)
-        new_site[:,:dims[1],:dims[2],:dims[3],:dims[4]] = site
+        new_site = torch.zeros((dims[0],dims[1],new_d,new_d,new_d,new_d), dtype=state.dtype, device=state.device)
+        new_site[:,:,:dims[1],:dims[2],:dims[3],:dims[4]] = site
         new_state.sites[coord] = new_site
     return new_state
 
@@ -325,7 +326,7 @@ def write_ipeps(state, outputfile, aux_seq=[0,1,2,3], tol=1.0e-14, normalize=Fal
          3
 
     """
-    asq = [x+1 for x in aux_seq]
+    asq = [x+2 for x in aux_seq]
     json_state=dict({"lX": state.lX, "lY": state.lY, "sites": []})
     
     site_ids=[]
@@ -337,20 +338,21 @@ def write_ipeps(state, outputfile, aux_seq=[0,1,2,3], tol=1.0e-14, normalize=Fal
         json_tensor=dict()
         
         tdims = site.size()
-        tlength = tdims[0]*tdims[1]*tdims[2]*tdims[3]*tdims[4]
+        tlength = tdims[0]*tdims[1]*tdims[2]*tdims[3]*tdims[4]*tdims[5]
         
         site_ids.append(f"A{nid}")
         site_map.append(dict({"siteId": site_ids[-1], "x": coord[0], "y": coord[1]} ))
         json_tensor["siteId"]=site_ids[-1]
-        json_tensor["physDim"]= tdims[0]
+        json_tensor["complex"]= tdims[0]
+        json_tensor["physDim"]= tdims[1]
         # assuming all auxBondDim are identical
-        json_tensor["auxDim"]= tdims[1]
+        json_tensor["auxDim"]= tdims[2]
         json_tensor["numEntries"]= tlength
         entries = []
         elem_inds = list(itertools.product( *(range(i) for i in tdims) ))
         for ei in elem_inds:
-            entries.append(f"{ei[0]} {ei[asq[0]]} {ei[asq[1]]} {ei[asq[2]]} {ei[asq[3]]}"\
-                +f" {site[ei[0]][ei[1]][ei[2]][ei[3]][ei[4]]}")
+            entries.append(f"{ei[0]} {ei[1]} {ei[asq[0]]} {ei[asq[1]]} {ei[asq[2]]} {ei[asq[3]]}"\
+                +f" {site[ei[0]][ei[1]][ei[2]][ei[3]][ei[4]][ei[5]]}")
             
         json_tensor["entries"]=entries
         json_state["sites"].append(json_tensor)
