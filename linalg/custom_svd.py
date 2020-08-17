@@ -1,5 +1,6 @@
 import torch
 import config as cfg
+from complex_num.complex_operation import *
 from linalg.svd_gesdd import SVDGESDD
 from linalg.svd_symeig import SVDSYMEIG
 from linalg.svd_arnoldi import SVDSYMARNOLDI, SVDARNOLDI
@@ -32,7 +33,7 @@ def truncated_svd_gesdd(M, chi, abs_tol=1.0e-14, rel_tol=None, keep_multiplets=F
     .. math:: dim(U)=(N,\chi),\ dim(S)=(\chi,\chi),\ \textrm{and}\ dim(V)=(L,\chi)
     """
     U, S, V = SVDGESDD.apply(M)
-
+    
     # estimate the chi_new 
     chi_new= chi
     if keep_multiplets and chi<S.shape[0]:
@@ -62,10 +63,10 @@ def truncated_svd_gesdd(M, chi, abs_tol=1.0e-14, rel_tol=None, keep_multiplets=F
         Vt[:, chi_new+1:]=0.
         return Ut, St, Vt
 
-    St = S[:min(chi,S.shape[0])]
-    Ut = U[:, :St.shape[0]]
-    Vt = V[:, :St.shape[0]]
-
+    St = S[:,:min(chi,S.shape[1])]
+    Ut = U[:,:, :St.shape[1]]
+    Vt = V[:,:, :St.shape[1]]
+    
     return Ut, St, Vt
 
 def truncated_svd_symeig(M, chi, abs_tol=1.0e-14, rel_tol=None, keep_multiplets=False, \
