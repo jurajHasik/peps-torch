@@ -157,7 +157,7 @@ class IPEPS():
             self.sites[coord] = self.sites[coord] + noise * rand_t
 
     def get_aux_bond_dims(self):
-        return [d for key in self.sites.keys() for d in self.sites[key].size()[1:]]
+        return [d for key in self.sites.keys() for d in self.sites[key].size()[2:]]
 
     def __str__(self):
         print(f"lX x lY: {self.lX} x {self.lY}")
@@ -289,7 +289,7 @@ def extend_bond_dim(state, new_d):
     new_state = state
     for coord,site in new_state.sites.items():
         dims = site.size()
-        size_check = [new_d >= d for d in dims[1:]]
+        size_check = [new_d >= d for d in dims[2:]]
         if False in size_check:
             raise ValueError("Desired dimension is smaller than following aux dimensions: "+str(size_check))
 
@@ -333,7 +333,7 @@ def write_ipeps(state, outputfile, aux_seq=[0,1,2,3], tol=1.0e-14, normalize=Fal
     site_map=[]
     for nid,coord,site in [(t[0], *t[1]) for t in enumerate(state.sites.items())]:
         if normalize:
-            site= site/torch.max(torch.abs(site))
+            site= site/max_complex(torch.abs(site)
 
         json_tensor=dict()
         
