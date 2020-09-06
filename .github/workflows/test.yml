@@ -13,7 +13,7 @@ jobs:
     strategy:
       matrix:
         python_v: ['3.6', '3.7', '3.8']
-        pytorch_v: ['1.4.0', '1.5.0']
+        pytorch_v: ['1.4.0', '1.5.0', '1.6.0']
 
     steps:
     - uses: actions/checkout@v2
