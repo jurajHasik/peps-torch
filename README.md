@@ -51,17 +51,17 @@ as their linear combination
 ```
 python examples/optim_j1j2_u1_c4v.py --bond_dim 4 --u1_class B --chi 32 --j2 0.2 \
 --OPTARGS_line_search backtracking --OPTARGS_line_search_svd_method SYMARP --CTMARGS_fwd_checkpoint_move \
---instate ex-u1b
+--out_prefix ex-u1b
 ```
 
 The optimization is performed together with backtracking linesearch. Moreover, the CTM steps during linesearching are accelerated
 by using partial eigenvalue decomposition (SCIPY's Arnoldi) instead of full-rank one.
 
-Using the resulting state `ex_u1b_state.json`, compute the observables such as leading part of transfer matrix spectrum or spin-spin 
+Using the resulting state `ex-u1b_state.json`, compute the observables such as leading part of transfer matrix spectrum or spin-spin 
 and dimer-dimer correlations for distance up to 20 sites
 
 ```
-python examples/ctmrg_j1j2_u1_c4v.py --instate ex_u1b_state.json --j2 0.2 --chi 32 --top_n 4 --corrf_r 20
+python examples/ctmrg_j1j2_u1_c4v.py --instate ex-u1b_state.json --j2 0.2 --chi 32 --top_n 4 --corrf_r 20
 ```
 
 * * *
