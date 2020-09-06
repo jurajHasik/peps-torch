@@ -9,6 +9,7 @@ env:
  - PYTHON_V=3.6 PYTORCH_V=1.5.0
  - PYTHON_V=3.8 PYTORCH_V=1.4.0
  - PYTHON_V=3.8 PYTORCH_V=1.5.0
+ - PYTHON_V=3.8 PYTORCH_V=1.6.0
 
 branches:
   only:
