@@ -45,7 +45,7 @@ def main():
 
     # initialize an ipeps
     if args.instate!=None:
-        state = read_ipeps_su2(args.instate, vertexToSite=None)
+        state = read_ipeps_u1(args.instate, vertexToSite=None)
         assert len(state.coeffs)==1, "Not a 1-site ipeps"
         state.add_noise(args.instate_noise)
     elif args.opt_resume is not None:
