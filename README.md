@@ -51,7 +51,7 @@ as their linear combination
 ```
 python examples/optim_j1j2_u1_c4v.py --bond_dim 4 --u1_class B --chi 32 --j2 0.2 \
 --OPTARGS_line_search backtracking --OPTARGS_line_search_svd_method SYMARP --CTMARGS_fwd_checkpoint_move \
---instate ex-u1b
+--out_prefix ex-u1b
 ```
 
 The optimization is performed together with backtracking linesearch. Moreover, the CTM steps during linesearching are accelerated
