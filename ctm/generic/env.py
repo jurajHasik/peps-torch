@@ -95,6 +95,9 @@ class ENV():
             s+=f"T({cr[0]} {cr[1]}): {t.size()}\n"
         return s
 
+    def clone(self, ctm_args=cfg.ctm_args, global_args=cfg.global_args, requires_grad=False):
+        return self.extend(self, self.chi, ctm_args=ctm_args, global_args=global_args)
+
     def extend(self, new_chi, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
         new_env= ENV(new_chi, ctm_args=ctm_args, global_args=global_args)
         x= min(self.chi, new_chi)
