@@ -88,12 +88,29 @@ class ENV_C4V():
         """
         return self.T[self.keyT]
 
+    def clone(self, ctm_args=cfg.ctm_args, global_args=cfg.global_args, requires_grad=False):
+        new_env= ENV_C4V(self.chi, bond_dim=self.bond_dim, ctm_args=ctm_args, \
+            global_args=global_args)
+        new_env.C[new_env.keyC]= self.get_C().detach().clone()
+        new_env.T[new_env.keyT]= self.get_T().detach().clone()
+        return new_env
+
     def extend(self, new_chi, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
         new_env= ENV_C4V(new_chi, bond_dim=self.bond_dim, ctm_args=ctm_args, global_args=global_args)
         x= min(self.chi, new_chi)
         new_env.C[new_env.keyC][:x,:x]= self.get_C()[:x,:x]
         new_env.T[new_env.keyT][:x,:x,:self.bond_dim**2]= self.get_T()[:x,:x,:self.bond_dim**2]
         return new_env
+
+    def move_to(self, device):
+        if device=='cpu' or device==torch.device('cpu'):
+            self.C[self.keyC]= self.get_C().to(device)
+            self.T[self.keyT]= self.get_T().to(device)
+        elif device.type=='cuda':
+            self.C[self.keyC]= self.get_C().to(device)
+            self.T[self.keyT]= self.get_T().to(device)
+        else:
+            raise RuntimeError(f"Unsupported device {device}")
 
 def init_env(state, env, ctm_args=cfg.ctm_args):
     """

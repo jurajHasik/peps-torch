@@ -1,12 +1,9 @@
-import os
 import copy
 import time
 import json
 import logging
 log = logging.getLogger(__name__)
 import torch
-import torch.distributed as dist
-import torch.multiprocessing as mp
 #from memory_profiler import profile
 from optim import lbfgs_modified
 import config as cfg
@@ -37,7 +34,8 @@ def store_checkpoint(checkpoint_file, state, optimizer, current_epoch, current_l
     if verbosity>0:
         print(checkpoint_file)
 
-def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
+def optimize_state(state, ctm_env_init, loss_fn, grad_fn,
+    obs_fn=None, post_proc=None,
     main_args=cfg.main_args, opt_args=cfg.opt_args,ctm_args=cfg.ctm_args, 
     global_args=cfg.global_args):
     r"""
@@ -111,157 +109,6 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         optimizer.load_state_dict(cp_state_dict)
         print(f"checkpoint.loss = {loss0}")
 
-    # check if distributed available
-    if not dist.is_available():
-        raise RuntimeError("torch.distributed not available")
-
-    N=100
-    mv_result= torch.zeros(N)
-    mv_result.share_memory_()
-    def manager_code(rank,size,queue):
-        print(f"rank {rank} starting MANAGER with N {N}")
-        a= torch.zeros(N,N) 
-        c= torch.zeros(N)
-        dummy_tensor= torch.zeros(1)
-        dummy_tensor[0]= -1
-
-        sender, row, numsent = 0, 0, 0 
-        # recv does not expose information about tag
-        tmp_send= torch.zeros(1+N)
-        tmp_result= torch.zeros(2)
-        status= -1
-
-        # (arbitrary) initialization of a
-        for i in range(N):
-            for j in range(N):
-                a[i,j]= j
-
-        for i in range(1,min( size, N )):
-            # tensor (Tensor) – Tensor to send.
-            # dst (int) – Destination rank.
-            # group (ProcessGroup, optional) – The process group to work on
-            # tag (int, optional) – Tag to match send with remote recv
-            tmp_send[0]= i-1
-            tmp_send[1:]= a[i-1,:]
-            print(f"rank {rank} sending row {i-1} to rank {i}")
-            dist.send( tensor=tmp_send, dst=i, tag=i)
-            numsent+=1
-        
-        # receive dot products back from workers
-        print(f"rank {rank} entering receive stage")
-        for i in range(N):
-            # tensor (Tensor) – Tensor to fill with received data.
-            # src (int, optional) – Source rank. Will receive from any process if unspecified.
-            # group (ProcessGroup, optional) – The process group to work on
-            # tag (int, optional) – Tag to match recv with remote send
-            sender= dist.recv( tmp_result )
-            if sender<0:
-                raise RuntimeError(f"Error in recv, unexpected sender {sender}")
-            print(f"rank {rank} received result from {sender}")
-            row= int(tmp_result[0])
-            c[row]= tmp_result[1]
-            # send another row back to this worker if there is one
-            if numsent < N:
-                tmp_send[0]= numsent
-                tmp_send[1:]= a[numsent,:]
-                print(f"rank {rank} sending row {numsent} to rank {sender}")
-                dist.send( tensor=tmp_send, dst=sender )
-                print(c)
-                numsent+=1
-            else: 
-                # no more work
-                dist.send( dummy_tensor, sender )
-        print("FINAL")
-        print(c)
-        for i in range(N): mv_result[i]= c[i]
-
-    def worker_code(rank,size):
-        print(f"rank {rank} starting WORKER with N {N}")
-        b= torch.zeros(N)
-        c= torch.zeros(1+N)
-        row= 0
-        tmp_result= torch.zeros(2)
-        status= -1
-
-        for i in range(N): 
-            # (arbitrary) b initialization
-            b[i]= 1.0
-
-        if rank <= N:
-            print(f"rank {rank} open for receiving")
-            dist.recv( tensor=c, src=0, tag=rank )
-            status= int(c[0])
-            print(f"rank {rank} received row {status}")
-            
-            while status >= 0:
-                row= status
-                tmp_result[0]= row
-                tmp_result[1]= 0.
-                for i in range(N):
-                    tmp_result[1] += c[i+1] * b[i]
-                print(f"rank {rank} sending result of row {row}")
-                dist.send( tensor=tmp_result, dst=0 )
-                dist.recv( tensor=c, src=0 )
-                status= int(c[0])
-                print(f"rank {rank} receiving new column {status}")
-            print(f"rank {rank} received terminating signal")
-
-    def init_process(fn, rank, size, *args, backend='gloo'):
-        """ Initialize the distributed environment. """
-        os.environ['MASTER_ADDR'] = '127.0.0.1'
-        os.environ['MASTER_PORT'] = '29500'
-        dist.init_process_group(backend, rank=rank, world_size=size)
-        fn(rank, size, *args)
-
-    queue= mp.Queue()
-    size= 3
-    processes= []
-    for rank in range(size):
-        if rank==0:
-            p = mp.Process(target=init_process, args=(manager_code, rank, size, queue))
-        else:
-            p = mp.Process(target=init_process, args=(worker_code, rank, size))
-        # p = Process(target=init_process, args=(rank, size, run))
-        p.start()
-        processes.append(p)
-
-    for p in processes:
-        p.join()
-
-    print(mv_result)
-
-    def grad_fd(loss0):
-        loc_opt_args= copy.deepcopy(opt_args)
-        loc_opt_args.opt_ctm_reinit= opt_args.fd_ctm_reinit
-        loc_ctm_args= copy.deepcopy(ctm_args)
-        # TODO check if we are optimizing C4v symmetric ansatz
-        if opt_args.line_search_svd_method != 'DEFAULT':
-            loc_ctm_args.projector_svd_method= opt_args.line_search_svd_method
-        loc_context= dict({"ctm_args":loc_ctm_args, "opt_args":loc_opt_args, 
-            "loss_history": t_data, "line_search": False})
-
-        # compute components of the grad
-        fd_grad=dict()
-        with torch.no_grad():
-            for k in state.coeffs.keys():
-                A_orig= state.coeffs[k].clone()
-                assert len(A_orig.size())==1, "coefficient tensor is not 1D"
-                fd_grad[k]= torch.zeros(A_orig.size(),dtype=A_orig.dtype,device=A_orig.device)
-                for i in range(state.coeffs[k].size()[0]):                  
-                    e_i= torch.zeros(A_orig.size()[0],dtype=A_orig.dtype,device=A_orig.device)
-                    e_i[i]= opt_args.fd_eps
-                    state.coeffs[k]+=e_i
-                    loss1, ctm_env, history, timings = loss_fn(state, current_env[0],\
-                        loc_context)
-                    fd_grad[k][i]=(float(loss1-loss0)/opt_args.fd_eps)
-                    log.info(f"FD_GRAD {i} loss1 {loss1} grad_i {fd_grad[k][i]}"\
-                        +f" t_ctm {timings['t_ctm']} t_check {timings['t_obs']}"\
-                        +f" t_energy {timings['t_energy']}")
-                    state.coeffs[k].data.copy_(A_orig)
-        log.info(f"FD_GRAD grad {fd_grad}")
-
-        return fd_grad
-
     #@profile
     def closure(linesearching=False):
         context["line_search"]=linesearching
@@ -297,7 +144,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
 
         # 4) evaluate gradient
         t_grad0= time.perf_counter()
-        grad= grad_fd(loss)
+        grad= grad_fn(state, ctm_env, context, loss)
         for k in state.coeffs.keys():
             state.coeffs[k].grad= grad[k]
         t_grad1= time.perf_counter()

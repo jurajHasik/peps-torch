@@ -172,6 +172,33 @@ class IPEPS_SU2SYM(ipeps.IPEPS):
     def write_to_file(self, outputfile, aux_seq=[0,1,2,3], tol=1.0e-14, normalize=False):
         write_ipeps_su2(self, outputfile, aux_seq=aux_seq, tol=tol, normalize=normalize)
 
+    def clone(self, peps_args=cfg.peps_args, global_args=cfg.global_args, requires_grad=False):
+        tmp_su2_t=[]
+        for m,t in self.su2_tensors:
+            tmp_su2_t.append((m, t.detach().clone()))
+        tmp_coeffs= dict()
+        for k,c in self.coeffs.items():
+            tmp_coeffs[k]= c.detach().clone()
+        
+        state_clone= IPEPS_SU2SYM(tmp_su2_t, tmp_coeffs, vertexToSite=self.vertexToSite,\
+            lX=self.lX, lY=self.lY, peps_args=peps_args, global_args=global_args)
+
+        return state_clone
+
+    def move_to(self, device):
+        if device=='cpu' or device==torch.device('cpu'):
+            for i,mt in enumerate(self.su2_tensors):
+                self.su2_tensors[0][1]= mt[1].to(device)
+            for k,c in self.coeffs.items():
+                self.coeffs[k]= c.to(device)
+        elif device.type=='cuda':
+            for i,mt in enumerate(self.su2_tensors):
+                self.su2_tensors[0][1]= mt[1].to(device)
+            for k,c in self.coeffs.items():
+                self.coeffs[k]= c.to(device)
+        else:
+            raise RuntimeError(f"Unsupported device {device}")
+
 def extend_bond_dim(state, new_d):
     return ipeps.extend_bond_dim(state, new_d)
 
@@ -288,6 +315,202 @@ def read_ipeps_su2(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg
                 vertexToSite=vertexToSite, \
                 peps_args=peps_args, global_args=global_args)
     return state
+
+def from_json(json_str, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.peps_args,\
+    global_args=cfg.global_args):
+    r"""
+    :param jsonfile: input file describing iPEPS in json format
+    :param vertexToSite: function mapping arbitrary vertex of a square lattice 
+                         into a vertex within elementary unit cell
+    :param aux_seq: array specifying order of auxiliary indices of on-site tensors stored
+                    in `jsonfile`
+    :param peps_args: ipeps configuration
+    :param global_args: global configuration
+    :type jsonfile: str or Path object
+    :type vertexToSite: function(tuple(int,int))->tuple(int,int)
+    :type aux_seq: list[int]
+    :type peps_args: PEPSARGS
+    :type global_args: GLOBALARGS
+    :return: wavefunction
+    :rtype: IPEPS
+    
+
+    A simple PBC ``vertexToSite`` function is used by default
+    
+    Parameter ``aux_seq`` defines the expected order of auxiliary indices
+    in input file relative to the convention fixed in tn-torch::
+    
+         0
+        1A3 <=> [up, left, down, right]: aux_seq=[0,1,2,3]
+         2
+        
+        for alternative order, eg.
+        
+         1
+        0A2 <=> [left, up, right, down]: aux_seq=[1,0,3,2] 
+         3
+    """
+    asq = [x+1 for x in aux_seq]
+    sites = OrderedDict()
+    raw_state = json.loads(json_str)
+
+    # check for presence of "aux_seq" field in jsonfile
+    if "aux_ind_seq" in raw_state.keys():
+        asq = [x+1 for x in raw_state["aux_ind_seq"]]
+
+    # read the list of considered SU(2)-symmetric tensors
+    su2_tensors=[]
+    for su2t in raw_state["su2_tensors"]:
+        meta=dict({"meta": su2t["meta"]})
+        dims=[su2t["physDim"]]+[su2t["auxDim"]]*4
+        
+        t= torch.zeros(tuple(dims), dtype=global_args.dtype, device=global_args.device)
+        for elem in su2t["entries"]:
+            tokens= elem.split(' ')
+            inds=tuple([int(i) for i in tokens[0:5]])
+            t[inds]= float(tokens[5])
+
+        su2_tensors.append((meta,t))
+
+    # Loop over non-equivalent tensor,coeffs pairs in the unit cell
+    coeffs=OrderedDict()
+    for ts in raw_state["map"]:
+        coord = (ts["x"],ts["y"])
+
+        # find the corresponding tensor of coeffs (and its elements) 
+        # identified by "siteId" in the "sites" list
+        t = None
+        for s in raw_state["coeffs"]:
+            if s["siteId"] == ts["siteId"]:
+                t = s
+        if t == None:
+            raise Exception("Tensor with siteId: "+ts["sideId"]+" NOT FOUND in \"sites\"") 
+
+        X = torch.zeros(t["numEntries"], dtype=global_args.dtype, device=global_args.device)
+
+        # 1) fill the tensor with elements from the list "entries"
+        # which list the coefficients in the following
+        # notation: Dimensions are indexed starting from 0
+        # 
+        # index (integer) of coeff, (float) Re, Im  
+        for entry in t["entries"]:
+            tokens = entry.split()
+            X[int(tokens[0])]=float(tokens[1])
+
+        coeffs[coord]=X
+
+    # Unless given, construct a function mapping from
+    # any site of square-lattice back to unit-cell
+    if vertexToSite == None:
+        # check for legacy keys
+        lX = 0
+        lY = 0
+        if "sizeM" in raw_state:
+            lX = raw_state["sizeM"]
+        else:
+            lX = raw_state["lX"]
+        if "sizeN" in raw_state:
+            lY = raw_state["sizeN"]
+        else:
+            lY = raw_state["lY"]
+
+        def vertexToSite(coord):
+            x = coord[0]
+            y = coord[1]
+            return ( (x + abs(x)*lX)%lX, (y + abs(y)*lY)%lY )
+
+        state = IPEPS_SU2SYM(su2_tensors=su2_tensors, coeffs=coeffs, \
+            vertexToSite=vertexToSite, \
+            lX=lX, lY=lY, peps_args=peps_args, global_args=global_args)
+    else:
+        state = IPEPS_SU2SYM(su2_tensors=su2_tensors, coeffs=coeffs, \
+            vertexToSite=vertexToSite, \
+            peps_args=peps_args, global_args=global_args)
+    return state
+
+def to_json(state, aux_seq=[0,1,2,3], tol=1.0e-14, normalize=False):
+    r"""
+    :param state: wavefunction to write out in json format
+    :param outputfile: target file
+    :param aux_seq: array specifying order in which the auxiliary indices of on-site tensors 
+                    will be stored in the `outputfile`
+    :param tol: minimum magnitude of tensor elements which are written out
+    :param normalize: if True, on-site tensors are normalized before writing
+    :type state: IPEPS
+    :type ouputfile: str or Path object
+    :type aux_seq: list[int]
+    :type tol: float
+    :type normalize: bool
+
+    Parameter ``aux_seq`` defines the order of auxiliary indices relative to the convention 
+    fixed in tn-torch in which the tensor elements are written out::
+    
+         0
+        1A3 <=> [up, left, down, right]: aux_seq=[0,1,2,3]
+         2
+        
+        for alternative order, eg.
+        
+         1
+        0A2 <=> [left, up, right, down]: aux_seq=[1,0,3,2] 
+         3
+    
+    TODO drop constrain for aux bond dimension to be identical on 
+    all bond indices
+    
+    TODO implement cutoff on elements with magnitude below tol
+    """
+    asq = [x+1 for x in aux_seq]
+    json_state=dict({"lX": state.lX, "lY": state.lY, "su2_tensors": [], "coeffs": []})
+    
+    # write list of considered SU(2)-symmetric tensors
+    for meta,t in state.su2_tensors:
+        json_tensor=dict()
+        json_tensor["meta"]=meta["meta"]
+
+        tdims = t.size()
+        tlength = tdims[0]*tdims[1]*tdims[2]*tdims[3]*tdims[4]
+        json_tensor["physDim"]= tdims[0]
+        # assuming all auxBondDim are identical
+        json_tensor["auxDim"]= tdims[1]
+        # get non-zero elements
+        t_nonzero= t.nonzero()
+        json_tensor["numEntries"]= len(t_nonzero)
+        entries = []
+        for elem in t_nonzero:
+            ei=tuple(elem.tolist())
+            entries.append(f"{ei[0]} {ei[asq[0]]} {ei[asq[1]]} {ei[asq[2]]} {ei[asq[3]]}"\
+                +f" {t[ei]}")
+        json_tensor["entries"]=entries
+        json_state["su2_tensors"].append(json_tensor)
+
+    site_ids=[]
+    site_map=[]
+    for nid,coord,c in [(t[0], *t[1]) for t in enumerate(state.coeffs.items())]:
+        if normalize:
+            c= c/torch.max(torch.abs(c))
+
+        json_tensor=dict()
+        
+        tdims = c.size()
+        tlength = tdims[0]
+        
+        site_ids.append(f"A{nid}")
+        site_map.append(dict({"siteId": site_ids[-1], "x": coord[0], "y": coord[1]} ))
+        json_tensor["siteId"]=site_ids[-1]
+        # assuming all auxBondDim are identical
+        json_tensor["numEntries"]= tlength
+        entries = []
+        for i in range(len(c)):
+            entries.append(f"{i} {c[i]}")
+            
+        json_tensor["entries"]=entries
+        json_state["coeffs"].append(json_tensor)
+
+    json_state["siteIds"]=site_ids
+    json_state["map"]=site_map
+
+    return json.dumps(json_state, indent=4, separators=(',', ': '))
 
 def write_ipeps_su2(state, outputfile, aux_seq=[0,1,2,3], tol=1.0e-14, normalize=False):
     r"""
