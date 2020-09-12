@@ -25,6 +25,7 @@ log = logging.getLogger(__name__)
 # parse command line args and build necessary configuration objects
 parser= cfg.get_args_parser()
 # additional model-dependent arguments
+parser.add_argument("--workers", type=int, default=0, help="number of worker processes")
 parser.add_argument("--force_cpu", action="store_true", help="force energy and observale evalution on CPU")
 parser.add_argument("--j1", type=float, default=1., help="nearest-neighbour coupling")
 parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour coupling")
@@ -88,7 +89,8 @@ def loss_functional(loss_fn, state, ctm_env_in, opt_context):
 
     return loss, ctm_env_out, history, timings
 
-def grad_fd_component(loss_fn, state, ctm_env, opt_args, ctm_args, loss0, coeff_key_id, grad_id):
+def grad_fd_component(loss_fn, state, ctm_env, opt_args, ctm_args, loss0, \
+    coeff_key_id, grad_id):
     loc_opt_args= copy.deepcopy(opt_args)
     loc_opt_args.opt_ctm_reinit= opt_args.fd_ctm_reinit
     loc_ctm_args= copy.deepcopy(ctm_args)
@@ -99,81 +101,77 @@ def grad_fd_component(loss_fn, state, ctm_env, opt_args, ctm_args, loss0, coeff_
     loc_context= dict({"ctm_args":loc_ctm_args, "opt_args":loc_opt_args, 
         "loss_history": t_data, "line_search": False})
 
-    # compute components of the grad
+    # compute single component of the grad
     coeff_key= list(state.coeffs.keys())[coeff_key_id]
     with torch.no_grad():
         A_orig= state.coeffs[coeff_key].clone()
-        print(f"grad_fd_component {state.coeffs} {hex(id(state.coeffs[(0,0)]))}")
         assert len(A_orig.size())==1, "coefficient tensor is not 1D"
         
         # 0) add perturbation
         e_i= torch.zeros(A_orig.size()[0],dtype=A_orig.dtype,device=A_orig.device)
         e_i[grad_id]= opt_args.fd_eps
-        print(f"adding {e_i} {hex(id(e_i))}")
         state.coeffs[coeff_key]+=e_i
-        print(f"after addition {state.coeffs} {hex(id(state.coeffs[(0,0)]))}")
         
         # 1) re-evaluate the energy and compute gradient
         loss1, ctm_env, history, timings = loss_fn(state, ctm_env,\
             loc_context)
         grad_val=(float(loss1-loss0)/opt_args.fd_eps)
-        log.info(f"FD_GRAD id {grad_id} {state.coeffs[(0,0)]} {hex(id(state.coeffs[(0,0)]))} loss1 {loss1} grad_val {grad_val}"\
+        log.info(f"FD_GRAD id {coeff_key} {grad_id} loss1 {loss1} grad_val {grad_val}"\
             +f" t_ctm {timings['t_ctm']} t_check {timings['t_obs']}"\
             +f" t_energy {timings['t_energy']}")
 
         # 2) reset perturbation
         state.coeffs[coeff_key].data.copy_(A_orig)
-        print(f"grad_fd_component {state.coeffs} {hex(id(state.coeffs[(0,0)]))}")
 
     return grad_val
 
 def manager_code(rank,size,state,ctm_env,tasks,full_grad,loss0):
-    if size<2: raise RuntimeError(f"MANAGER rank {rank} requires at least one WORKER - size {size}")
+    if size<2: raise RuntimeError(f"MANAGER {rank} requires at least one WORKER - size {size}")
     # assume full_grad has all tensors in shared memory
     # 1.1) tasks= [(coeff_key_id)x(local_grad_id)]
-    N_tasks= len(tasks)
-    print(tasks)
-    print(f"rank {rank} starting MANAGER for {N_tasks} tasks")
+    log.info(f"MANAGER {rank} starting for {len(tasks)} tasks "\
+        +f"- CPU {mp.cpu_count()} this process ")
 
     C_loc_cpu= ctm_env.get_C().cpu()
     T_loc_cpu= ctm_env.get_T().cpu()
     coeff_loc= state.coeffs[(0,0)].cpu()
+    loss0_t= torch.zeros(1, dtype=C_loc_cpu.dtype, device='cpu')
+    loss0_t[0]= loss0
 
     # 2) Assuming every worker has the necessary tensors to perform 
     #    energy evaluation, issue the first set of gradient components to
     #    compute
     numsent= 0
     grad_id= torch.zeros(2, dtype=torch.long, device='cpu')
-    for i in range(0, min(size-1, N_tasks)):
+    for i in range(0, min(size-1, len(tasks))):
         # tensor (Tensor) – Tensor to send.
         # dst (int) – Destination rank.
         # group (ProcessGroup, optional) – The process group to work on
         # tag (int, optional) – Tag to match send with remote recv
         
         # 0) send energy to workers
-        print(f"rank {rank} MANAGER sending loss0 to rank {i+1} tag {3000*size+i+1}")
-        dist.send( tensor=loss0, dst=i+1, tag=3000*size+i+1 )
-
+        log.info(f"MANAGER {rank} sending loss0 to rank {i+1} tag {3000*size+i+1}")
+        dist.send( tensor=loss0_t, dst=i+1, tag=3000*size+i+1 )
         dist.send( tensor=coeff_loc, dst=i+1, tag=4000*size+i+1 )
 
         # 1) send current evironment to workers
-        print(f"rank {rank} MANAGER sending C to rank {i+1} tag {1000*size+i+1}")
+        log.info(f"MANAGER {rank} sending C to rank {i+1} tag {1000*size+i+1}")
         dist.send( tensor=C_loc_cpu, dst=i+1, tag=1000*size+i+1 )
-        print(f"rank {rank} MANAGER sending T to rank {i+1} tag {2000*size+i+1}")
+        log.info(f"MANAGER {rank} sending T to rank {i+1} tag {2000*size+i+1}")
         dist.send( tensor=T_loc_cpu, dst=i+1, tag=2000*size+i+1 )
 
-        print(f"rank {rank} sending id {i} to rank {i+1}")
+        
         grad_id[0]= tasks[numsent][0]
         grad_id[1]= tasks[numsent][1]
-        #grad_id[1]= i-1
+        log.info(f"MANAGER {rank} sending id {grad_id} to WORKER {i+1}")
         dist.send( tensor=grad_id, dst=i+1, tag=i+1 )
         numsent+=1
     
     # 3) receive gradient components back from workers
-    print(f"rank {rank} entering receiving stage")
+    log.info(f"MANAGER {rank} entering receiving stage")
     _terminate= torch.full((2,), -1, dtype=torch.long, device='cpu')
     tmp_result= torch.zeros(3, device='cpu')
-    for i in range(N_tasks):
+    for i in range(len(tasks)):
         # tensor (Tensor) – Tensor to fill with received data.
         # src (int, optional) – Source rank. Will receive from any process if unspecified.
         # group (ProcessGroup, optional) – The process group to work on
@@ -181,7 +179,7 @@ def manager_code(rank,size,state,ctm_env,tasks,full_grad,loss0):
         sender= dist.recv( tmp_result )
         if sender<0:
             raise RuntimeError(f"Error in recv, unexpected sender {sender}")
-        print(f"rank {rank} received result from {sender}")
+        log.info(f"MANAGER {rank} received result from {sender}")
         recv_coeff_id= int(tmp_result[0])
         recv_grad_id= int(tmp_result[1])
         recv_grad_res= tmp_result[2]
@@ -190,10 +188,10 @@ def manager_code(rank,size,state,ctm_env,tasks,full_grad,loss0):
         full_grad[list(full_grad.keys())[recv_coeff_id]][recv_grad_id]= recv_grad_res
         # 3.1) send another gradient component back to sender (if there still is 
         #      a component to compute)
-        if numsent < N_tasks:
+        if numsent < len(tasks):
             grad_id[0]= tasks[numsent][0]
             grad_id[1]= tasks[numsent][1]
-            print(f"rank {rank} sending id {numsent} to rank {sender}")
+            log.info(f"MANAGER {rank} sending id {grad_id} to WORKER {sender}")
             dist.send( tensor=grad_id, dst=sender )
             numsent+=1
         else: 
@@ -203,18 +201,19 @@ def manager_code(rank,size,state,ctm_env,tasks,full_grad,loss0):
     return 0
 
 def worker_code(rank,size,gpu_id,pipe):
-    print(f"rank {rank} starting WORKER")
-    # OPTION ? configure here or pass the configuration from master
+    print(f"WORKER - {rank} in group of {size} - CPU"\
+        +f" {len(os.sched_getaffinity(0))}/{mp.cpu_count()}")
+
     cfg.configure(args)
     #torch.set_num_threads(args.omp_cores)
     #torch.manual_seed(args.seed)
 
-    # set GPU device to be used
+    # set GPU device to be used. Assuming valid gpu_id, move state and env on the device
+    cuda_dev= None
     if gpu_id>=0:
-        # assuming valid gpu_id, move state and env on the device
         cuda_dev= torch.device(f"cuda:{gpu_id}")
         cfg.global_args.device= cuda_dev
-        print(f"rank {rank} WORKER set GLOBALARGS {cfg.global_args}")
+        print(f"WORKER {rank} device {cfg.global_args.device}")
 
     model= j1j2.J1J2_C4V_BIPARTITE(j1=args.j1, j2=args.j2)
     energy_f= model.energy_1x1_lowmem
@@ -225,8 +224,7 @@ def worker_code(rank,size,gpu_id,pipe):
     # get a local copy of initial state
     state_json_str= pipe.recv()
     state= from_json(state_json_str)
-    print(f"rank {rank} WORKER received initial state")
-    print(f"rank {rank} WORKER state.coeffs {state.coeffs}")
+    log.info(f"WORKER {rank} initial state {state.coeffs}")
 
     # initialize environment
     ctm_env = ENV_C4V(args.chi, state)
@@ -237,31 +235,30 @@ def worker_code(rank,size,gpu_id,pipe):
     loss0= torch.zeros(1, dtype=state.dtype, device='cpu')
     grad_id= torch.zeros(2, dtype=torch.long, device='cpu')
     while not optimization_done:
-        print(f"rank {rank} WORKER open for new dist_grad - waiting for ENV")
-        # 0) 
-        print(f"rank {rank} WORKER waiting for loss0 tag {3000*size + rank}")
+        log.info(f"WORKER {rank} open for new dist_grad - waiting for ENV")
+        log.info(f"WORKER {rank} waiting for loss0 tag {3000*size + rank}")
         dist.recv( tensor=loss0, src=0, tag=3000*size + rank )
-        print(f"rank {rank} WORKER received loss0 {loss0.item()} tag {3000*size + rank}")
+        log.info(f"WORKER {rank} received loss0 {loss0.item()} tag {3000*size + rank}")
 
-
+        # receive current state
         coeff_loc= torch.zeros_like(state.coeffs[(0,0)], device='cpu')
         dist.recv( tensor=coeff_loc, src=0, tag=4000*size + rank )
 
+        # receive current (converged) env
         C_loc_cpu= torch.zeros_like(ctm_env.get_C(),device='cpu')
         T_loc_cpu= torch.zeros_like(ctm_env.get_T(),device='cpu')
-        print(f"rank {rank} WORKER wating for C tag {1000*size + rank}")
+        log.info(f"WORKER {rank} wating for C,T tags {1000*size + rank},{2000*size + rank}")
         dist.recv( tensor=C_loc_cpu, src=0, tag=1000*size + rank )
         dist.recv( tensor=T_loc_cpu, src=0, tag=2000*size + rank )
         if gpu_id>=0:
             state.coeffs[(0,0)]= coeff_loc.to(cuda_dev)
             ctm_env.C[ctm_env.keyC]= C_loc_cpu.to(cuda_dev)
             ctm_env.T[ctm_env.keyT]= T_loc_cpu.to(cuda_dev)
-        print(f"rank {rank} WORKER received and moved ENV: C {ctm_env.get_C().device}"+
-            f" T {ctm_env.get_T().device}")
+        log.info(f"WORKER {rank} received C, T and moved to {cuda_dev}")
 
         # 1) receive initial gradient component - new dist grad region starting
         dist.recv( tensor=grad_id, src=0, tag=rank )
-        print(f"rank {rank} received grad_id {grad_id}")
+        log.info(f"WORKER {rank} received grad_id {grad_id}")
         
         # 2) while there is a valid gradient component to compute
         #    execute energy computation
@@ -270,24 +267,26 @@ def worker_code(rank,size,gpu_id,pipe):
             coeff_key_id= grad_id[0]
             loc_grad_id= grad_id[1]
 
-            # 3) gradient evaluation
-            grad_val= grad_fd_component(loss_fn, state, ctm_env, cfg.opt_args, cfg.ctm_args, \
-               loss0, coeff_key_id, loc_grad_id)
+            # 3) gradient evaluation forcing cuda_dev as default GPU
+            with torch.cuda.device(cuda_dev):
+                grad_val= grad_fd_component(loss_fn, state, ctm_env, \
+                    cfg.opt_args, cfg.ctm_args, loss0, coeff_key_id, loc_grad_id)
 
             tmp_result[0]= coeff_key_id
             tmp_result[1]= loc_grad_id
             tmp_result[2]= grad_val
-            print(f"rank {rank} sending result for grad_id {grad_id}")
+            log.info(f"WORKER {rank} sending result for grad_id {grad_id}")
             dist.send( tensor=tmp_result, dst=0 )
             dist.recv( tensor=grad_id, src=0 )
-            print(f"rank {rank} received new grad_id {grad_id}")
-        print(f"rank {rank} received terminating signal for grad_fn") # dist grad region done
-        if grad_id[0]==-2 and grad_id[1]==-2:
-            optimization_done=True
-        print(f"rank {rank} received terminating signal for WORKER")
+            log.info(f"WORKER {rank} received grad_id {grad_id}")
+        log.info(f"WORKER {rank} received terminating signal for grad_fn")
+        # 3) current dist grad region done - waiting for next region
+        optimization_done= (grad_id[0]==-2 and grad_id[1]==-2)
+        log.info(f"WORKER {rank} received final terminating signal")
 
 def main(rank, size, pipes_to_workers):
-    print(f"MASTER - rank {rank} in group of {size}")
+    log(f"MASTER - rank {rank} in group of {size}")
+
     cfg.configure(args)
     cfg.print_config()
     torch.set_num_threads(args.omp_cores)
@@ -348,7 +347,7 @@ def main(rank, size, pipes_to_workers):
 
     print(state)
     # distribute current state to all workers (if there are any) 
-    if len(pipes_to_workers)>0:
+    if len(pipes_to_workers)>0 and size>1:
         state_json_str= to_json(state)
         for p in pipes_to_workers:
             p.send(state_json_str)
@@ -373,16 +372,18 @@ def main(rank, size, pipes_to_workers):
             for j in range(state.coeffs[k].numel()):
                 tasks.append((i,j))
 
-        # dictionary holding gradients of coeffs with shared_memory tensors
+        # dictionary holding gradients of coeffs
         full_grad= dict()
         for k in state.coeffs.keys():
             full_grad[k]= torch.zeros(state.coeffs[k].numel(), dtype=state.coeffs[k].dtype, \
                 device='cpu')
-            #full_grad[k].share_memory_()
 
+        # invoke the manager to start sending out component computation jobs
         status= manager_code(rank,size,state,ctm_env,tasks,full_grad,loss0)
-
-        print(f"FULL GRAD {full_grad}")
+        
+        # move full_grad to default device
+        for k in state.coeffs.keys(): full_grad[k]= full_grad[k].to(state.device)
+        
         return full_grad
 
     def _to_json(l):
@@ -438,15 +439,14 @@ if __name__=='__main__':
     # check if distributed available
     if not dist.is_available():
         raise RuntimeError("torch.distributed not available")
-    world_size=2
+    world_size=args.workers+1
 
-    # check if and how many GPU's are available
+    # check if and how many GPU's are available and assign them equally among workers
     gpu_ids= [-1]*world_size
     if torch.cuda.is_available():
         num_gpus= torch.cuda.device_count()
-        # assign GPU's equally among workers
-        for i in range(1,world_size): gpu_ids[i]= (i-1)%num_gpus
-        print(f"GPU assignment {gpu_ids}")
+        gpu_ids= [(i-1)%num_gpus for i in range(1,world_size)]
+        print(f"GPUs available {num_gpus} GPU assignment {gpu_ids}")
 
     mp.set_start_method('spawn')
     processes=[]
@@ -458,16 +458,18 @@ if __name__=='__main__':
         pipe_worker_to_master[rank-1]= w
     for rank in range(world_size):
         if rank==0:
-            p= mp.Process(target= init_process, args=(rank, world_size, main, pipe_master_to_worker))
+            p= mp.Process(target= init_process, args=(rank, world_size, main, \
+                pipe_master_to_worker))
         else:
-            p= mp.Process(target= init_process, \
-                args=(rank, world_size, worker_code, gpu_ids[rank], pipe_worker_to_master[rank-1]))
+            p= mp.Process(target= init_process, args=(rank, world_size, worker_code, \
+                gpu_ids[rank], pipe_worker_to_master[rank-1]))
         p.start()
         processes.append(p)
 
     for p in processes:
         p.join()
 
+# TODO tests
 class TestOpt(unittest.TestCase):
     def setUp(self):
         args.j2=0.0
