@@ -88,7 +88,8 @@ class ENV_C4V():
         """
         return self.T[self.keyT]
 
-    def clone(self, ctm_args=cfg.ctm_args, global_args=cfg.global_args, requires_grad=False):
+    def clone(self, ctm_args=cfg.ctm_args, global_args=cfg.global_args, \
+        requires_grad=False):
         new_env= ENV_C4V(self.chi, bond_dim=self.bond_dim, ctm_args=ctm_args, \
             global_args=global_args)
         new_env.C[new_env.keyC]= self.get_C().detach().clone()
@@ -96,10 +97,12 @@ class ENV_C4V():
         return new_env
 
     def extend(self, new_chi, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
-        new_env= ENV_C4V(new_chi, bond_dim=self.bond_dim, ctm_args=ctm_args, global_args=global_args)
+        new_env= ENV_C4V(new_chi, bond_dim=self.bond_dim, ctm_args=ctm_args, \
+            global_args=global_args)
         x= min(self.chi, new_chi)
         new_env.C[new_env.keyC][:x,:x]= self.get_C()[:x,:x]
-        new_env.T[new_env.keyT][:x,:x,:self.bond_dim**2]= self.get_T()[:x,:x,:self.bond_dim**2]
+        new_env.T[new_env.keyT][:x,:x,:self.bond_dim**2]= \
+            self.get_T()[:x,:x,:self.bond_dim**2]
         return new_env
 
     def move_to(self, device):
@@ -139,7 +142,8 @@ def init_env(state, env, ctm_args=cfg.ctm_args):
     elif ctm_args.ctm_env_init_type=='CTMRG_OBC':
         init_from_ipeps_obc(state, env, ctm_args.verbosity_initialization)
     else:
-        raise ValueError("Invalid environment initialization: "+str(ctm_args.ctm_env_init_type))
+        raise ValueError("Invalid environment initialization: "\
+            +str(ctm_args.ctm_env_init_type))
 
 def init_const(env, verbosity=0):
     for key,t in env.C.items():
