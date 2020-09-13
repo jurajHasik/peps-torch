@@ -90,7 +90,7 @@ def loss_functional(loss_fn, state, ctm_env_in, opt_context):
     return loss, ctm_env_out, history, timings
 
 def grad_fd_component(loss_fn, state, ctm_env, opt_args, ctm_args, loss0, \
-    coeff_key_id, grad_id):
+    coeff_key_id, grad_id, log_file):
     loc_opt_args= copy.deepcopy(opt_args)
     loc_opt_args.opt_ctm_reinit= opt_args.fd_ctm_reinit
     loc_ctm_args= copy.deepcopy(ctm_args)
@@ -116,9 +116,10 @@ def grad_fd_component(loss_fn, state, ctm_env, opt_args, ctm_args, loss0, \
         loss1, ctm_env, history, timings = loss_fn(state, ctm_env,\
             loc_context)
         grad_val=(float(loss1-loss0)/opt_args.fd_eps)
-        log.info(f"FD_GRAD id {coeff_key} {grad_id} loss1 {loss1} grad_val {grad_val}"\
+        #log.info
+        log_file.write(f"FD_GRAD id {coeff_key} {grad_id} loss1 {loss1} grad_val {grad_val}"\
             +f" t_ctm {timings['t_ctm']} t_check {timings['t_obs']}"\
-            +f" t_energy {timings['t_energy']}")
+            +f" t_energy {timings['t_energy']}\n")
 
         # 2) reset perturbation
         state.coeffs[coeff_key].data.copy_(A_orig)
@@ -183,8 +184,7 @@ def manager_code(rank,size,state,ctm_env,tasks,full_grad,loss0):
         recv_coeff_id= int(tmp_result[0])
         recv_grad_id= int(tmp_result[1])
         recv_grad_res= tmp_result[2]
-        print(tmp_result)
-        print(full_grad[list(full_grad.keys())[recv_coeff_id]])
+        
         full_grad[list(full_grad.keys())[recv_coeff_id]][recv_grad_id]= recv_grad_res
         # 3.1) send another gradient component back to sender (if there still is 
         #      a component to compute)
@@ -203,8 +203,9 @@ def manager_code(rank,size,state,ctm_env,tasks,full_grad,loss0):
 def worker_code(rank,size,gpu_id,pipe):
     print(f"WORKER - {rank} in group of {size} - CPU"\
         +f" {len(os.sched_getaffinity(0))}/{mp.cpu_count()}")
-
     cfg.configure(args)
+    loc_log= open(f"{cfg.main_args.out_prefix}.w{rank}.log","w",1)
+
     #torch.set_num_threads(args.omp_cores)
     #torch.manual_seed(args.seed)
 
@@ -224,7 +225,8 @@ def worker_code(rank,size,gpu_id,pipe):
     # get a local copy of initial state
     state_json_str= pipe.recv()
     state= from_json(state_json_str)
-    log.info(f"WORKER {rank} initial state {state.coeffs}")
+    #log.info(
+    loc_log.write(f"WORKER {rank} initial state {state.coeffs}\n")
 
     # initialize environment
     ctm_env = ENV_C4V(args.chi, state)
@@ -235,10 +237,13 @@ def worker_code(rank,size,gpu_id,pipe):
     loss0= torch.zeros(1, dtype=state.dtype, device='cpu')
     grad_id= torch.zeros(2, dtype=torch.long, device='cpu')
     while not optimization_done:
-        log.info(f"WORKER {rank} open for new dist_grad - waiting for ENV")
-        log.info(f"WORKER {rank} waiting for loss0 tag {3000*size + rank}")
+        #log.info(
+        loc_log.write(f"WORKER {rank} open for new dist_grad - waiting for ENV\n")
+        #log.info(
+        loc_log.write(f"WORKER {rank} waiting for loss0 tag {3000*size + rank}\n")
         dist.recv( tensor=loss0, src=0, tag=3000*size + rank )
-        log.info(f"WORKER {rank} received loss0 {loss0.item()} tag {3000*size + rank}")
+        #log.info(
+        loc_log.write(f"WORKER {rank} received loss0 {loss0.item()} tag {3000*size + rank}\n")
 
         # receive current state
         coeff_loc= torch.zeros_like(state.coeffs[(0,0)], device='cpu')
@@ -247,18 +252,21 @@ def worker_code(rank,size,gpu_id,pipe):
         # receive current (converged) env
         C_loc_cpu= torch.zeros_like(ctm_env.get_C(),device='cpu')
         T_loc_cpu= torch.zeros_like(ctm_env.get_T(),device='cpu')
-        log.info(f"WORKER {rank} wating for C,T tags {1000*size + rank},{2000*size + rank}")
+        #log.info(
+        loc_log.write(f"WORKER {rank} wating for C,T tags {1000*size + rank},{2000*size + rank}\n")
         dist.recv( tensor=C_loc_cpu, src=0, tag=1000*size + rank )
         dist.recv( tensor=T_loc_cpu, src=0, tag=2000*size + rank )
         if gpu_id>=0:
             state.coeffs[(0,0)]= coeff_loc.to(cuda_dev)
             ctm_env.C[ctm_env.keyC]= C_loc_cpu.to(cuda_dev)
             ctm_env.T[ctm_env.keyT]= T_loc_cpu.to(cuda_dev)
-        log.info(f"WORKER {rank} received C, T and moved to {cuda_dev}")
+        #log.info(
+        loc_log.write(f"WORKER {rank} received C, T and moved to {cuda_dev}\n")
 
         # 1) receive initial gradient component - new dist grad region starting
         dist.recv( tensor=grad_id, src=0, tag=rank )
-        log.info(f"WORKER {rank} received grad_id {grad_id}")
+        #log.info(
+        loc_log.write(f"WORKER {rank} received grad_id {grad_id}\n")
         
         # 2) while there is a valid gradient component to compute
         #    execute energy computation
@@ -270,22 +278,26 @@ def worker_code(rank,size,gpu_id,pipe):
             # 3) gradient evaluation forcing cuda_dev as default GPU
             with torch.cuda.device(cuda_dev):
                 grad_val= grad_fd_component(loss_fn, state, ctm_env, \
-                    cfg.opt_args, cfg.ctm_args, loss0, coeff_key_id, loc_grad_id)
+                    cfg.opt_args, cfg.ctm_args, loss0, coeff_key_id, loc_grad_id, loc_log)
 
             tmp_result[0]= coeff_key_id
             tmp_result[1]= loc_grad_id
             tmp_result[2]= grad_val
-            log.info(f"WORKER {rank} sending result for grad_id {grad_id}")
+            #log.info(
+            loc_log.write(f"WORKER {rank} sending result for grad_id {grad_id}\n")
             dist.send( tensor=tmp_result, dst=0 )
             dist.recv( tensor=grad_id, src=0 )
-            log.info(f"WORKER {rank} received grad_id {grad_id}")
-        log.info(f"WORKER {rank} received terminating signal for grad_fn")
+            #log.info(
+            loc_log.write(f"WORKER {rank} received grad_id {grad_id}\n")
+        #log.info(
+        loc_log.write(f"WORKER {rank} received terminating signal for grad_fn\n")
         # 3) current dist grad region done - waiting for next region
         optimization_done= (grad_id[0]==-2 and grad_id[1]==-2)
-        log.info(f"WORKER {rank} received final terminating signal")
+        #log.info(
+        loc_log.write(f"WORKER {rank} received final terminating signal\n")
 
 def main(rank, size, pipes_to_workers):
-    log(f"MASTER - rank {rank} in group of {size}")
+    print(f"MASTER - rank {rank} in group of {size}")
 
     cfg.configure(args)
     cfg.print_config()
@@ -383,7 +395,9 @@ def main(rank, size, pipes_to_workers):
         
         # move full_grad to default device
         for k in state.coeffs.keys(): full_grad[k]= full_grad[k].to(state.device)
-        
+        log_grad_str= [ [full_grad[k][i].item() for i in range(full_grad[k].numel())] for k in full_grad.keys()]
+        print(f"FULL_GRAD {log_grad_str}")
+
         return full_grad
 
     def _to_json(l):
@@ -445,7 +459,7 @@ if __name__=='__main__':
     gpu_ids= [-1]*world_size
     if torch.cuda.is_available():
         num_gpus= torch.cuda.device_count()
-        gpu_ids= [(i-1)%num_gpus for i in range(1,world_size)]
+        gpu_ids= [-1]+[(i-1)%num_gpus for i in range(1,world_size)]
         print(f"GPUs available {num_gpus} GPU assignment {gpu_ids}")
 
     mp.set_start_method('spawn')
