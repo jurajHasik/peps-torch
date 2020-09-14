@@ -47,16 +47,44 @@ def ctmrg_conv_f(state, env, history, ctm_args=cfg.ctm_args):
     history["rdm"]=rdm
     history["log"].append(dist)
     if dist<ctm_args.ctm_conv_tol:
-        log.info({"history_length": len(history['log']), "history": history['log'],
-            "final_multiplets": compute_multiplets(env)})
+        # log.info({"history_length": len(history['log']), "history": history['log'],
+        #     "final_multiplets": compute_multiplets(env)})
+        history["final_multiplets"]= compute_multiplets(env)
         return True, history
     elif len(history['log']) >= ctm_args.ctm_max_iter:
-        log.info({"history_length": len(history['log']), "history": history['log'],
-            "final_multiplets": compute_multiplets(env)})
+        # log.info({"history_length": len(history['log']), "history": history['log'],
+        #     "final_multiplets": compute_multiplets(env)})
+        history["final_multiplets"]= compute_multiplets(env)
         return False, history
     return False, history
 
-def loss_functional(loss_fn, state, ctm_env_in, opt_context):
+def energy_functional(energy_f, state, ctm_env, opt_context):
+    ctm_args= opt_context["ctm_args"]
+    opt_args= opt_context["opt_args"]
+
+    # build on-site tensors from su2sym components
+    state.sites= state.build_onsite_tensors()
+
+    t0_energy= time.perf_counter()
+    loss0 = energy_f(state, ctm_env, force_cpu=args.force_cpu)
+    t1_energy= time.perf_counter()
+    
+    loc_ctm_args= copy.deepcopy(ctm_args)
+    loc_ctm_args.ctm_max_iter= 1
+    ctm_env, history1, t_ctm1, t_obs1= ctmrg_c4v.run(state, ctm_env, \
+        ctm_args=loc_ctm_args)
+    t2_energy= time.perf_counter()
+    loss1 = energy_f(state, ctm_env, force_cpu=args.force_cpu)
+    t3_energy= time.perf_counter()
+
+    timings= dict({"t_ctm1": t_ctm1, "t_obs1": t_obs1, \
+        "t_energy": (t1_energy-t0_energy)+(t3_energy-t2_energy)})
+    #loss=(loss0+loss1)/2
+    loss= torch.max(loss0,loss1)
+
+    return loss, timings
+
+def loss_functional(energy_f, state, ctm_env, opt_context):
     ctm_args= opt_context["ctm_args"]
     opt_args= opt_context["opt_args"]
 
@@ -65,21 +93,21 @@ def loss_functional(loss_fn, state, ctm_env_in, opt_context):
 
     # possibly re-initialize the environment
     if opt_args.opt_ctm_reinit:
-        init_env(state, ctm_env_in)
+        init_env(state, ctm_env)
 
     # 1) compute environment by CTMRG
-    ctm_env_out, history, t_ctm, t_obs= ctmrg_c4v.run(state, ctm_env_in, \
+    ctm_env, history, t_ctm, t_obs= ctmrg_c4v.run(state, ctm_env, \
         conv_check=ctmrg_conv_f, ctm_args=ctm_args)
     t0_energy= time.perf_counter()
-    loss0 = loss_fn(state, ctm_env_out, force_cpu=args.force_cpu)
+    loss0 = energy_f(state, ctm_env, force_cpu=args.force_cpu)
     t1_energy= time.perf_counter()
     
     loc_ctm_args= copy.deepcopy(ctm_args)
     loc_ctm_args.ctm_max_iter= 1
-    ctm_env_out, history1, t_ctm1, t_obs1= ctmrg_c4v.run(state, ctm_env_out, \
+    ctm_env, history1, t_ctm1, t_obs1= ctmrg_c4v.run(state, ctm_env, \
         ctm_args=loc_ctm_args)
     t2_energy= time.perf_counter()
-    loss1 = loss_fn(state, ctm_env_out, force_cpu=args.force_cpu)
+    loss1 = energy_f(state, ctm_env, force_cpu=args.force_cpu)
     t3_energy= time.perf_counter()
 
     timings= dict({"t_ctm": t_ctm, "t_obs": t_obs, \
@@ -87,7 +115,7 @@ def loss_functional(loss_fn, state, ctm_env_in, opt_context):
     #loss=(loss0+loss1)/2
     loss= torch.max(loss0,loss1)
 
-    return loss, ctm_env_out, history, timings
+    return loss, ctm_env, history, timings
 
 def grad_fd_component(loss_fn, state, ctm_env, opt_args, ctm_args, loss0, \
     coeff_key_id, grad_id, log_file):
@@ -116,7 +144,8 @@ def grad_fd_component(loss_fn, state, ctm_env, opt_args, ctm_args, loss0, \
         loss1, ctm_env, history, timings = loss_fn(state, ctm_env,\
             loc_context)
         grad_val=(float(loss1-loss0)/opt_args.fd_eps)
-        #log.info
+        log_file.write(f"history_length: {len(history['log'])}, history: {history['log']},"\
+                +f" final_multiplets: {history['final_multiplets']}\n")
         log_file.write(f"FD_GRAD id {coeff_key} {grad_id} loss1 {loss1} grad_val {grad_val}"\
             +f" t_ctm {timings['t_ctm']} t_check {timings['t_obs']}"\
             +f" t_energy {timings['t_energy']}\n")
@@ -133,6 +162,14 @@ def manager_code(rank,size,state,ctm_env,tasks,full_grad,loss0):
     log.info(f"MANAGER {rank} starting for {len(tasks)} tasks "\
         +f"- CPU {mp.cpu_count()} this process ")
 
+    _terminate_grad= torch.full((2,), -1, dtype=torch.long, device='cpu')
+    _terminate_worker= torch.full((2,), -2, dtype=torch.long, device='cpu')
+    if len(tasks)<1:
+        # terminate workers
+        for i in range(1, size):
+            dist.send( _terminate_worker, dst=i, tag=i )
+        return 0
+
     C_loc_cpu= ctm_env.get_C().cpu()
     T_loc_cpu= ctm_env.get_T().cpu()
     coeff_loc= state.coeffs[(0,0)].cpu()
@@ -145,12 +182,14 @@ def manager_code(rank,size,state,ctm_env,tasks,full_grad,loss0):
     numsent= 0
     grad_id= torch.zeros(2, dtype=torch.long, device='cpu')
     for i in range(0, min(size-1, len(tasks))):
-        # tensor (Tensor) – Tensor to send.
-        # dst (int) – Destination rank.
-        # group (ProcessGroup, optional) – The process group to work on
-        # tag (int, optional) – Tag to match send with remote recv
-        
-        # 0) send energy to workers
+        # 0) sent initial grad_id, invoking new grad computation
+        grad_id[0]= tasks[numsent][0]
+        grad_id[1]= tasks[numsent][1]
+        log.info(f"MANAGER {rank} sending id {grad_id} to WORKER {i+1}")
+        dist.send( tensor=grad_id, dst=i+1, tag=i+1 )
+        numsent+=1
+
+        # 1) send energy to workers
         log.info(f"MANAGER {rank} sending loss0 to rank {i+1} tag {3000*size+i+1}")
         dist.send( tensor=loss0_t, dst=i+1, tag=3000*size+i+1 )
         dist.send( tensor=coeff_loc, dst=i+1, tag=4000*size+i+1 )
@@ -161,17 +200,9 @@ def manager_code(rank,size,state,ctm_env,tasks,full_grad,loss0):
         log.info(f"MANAGER {rank} sending T to rank {i+1} tag {2000*size+i+1}")
         dist.send( tensor=T_loc_cpu, dst=i+1, tag=2000*size+i+1 )
 
-        
-        grad_id[0]= tasks[numsent][0]
-        grad_id[1]= tasks[numsent][1]
-        log.info(f"MANAGER {rank} sending id {grad_id} to WORKER {i+1}")
-        dist.send( tensor=grad_id, dst=i+1, tag=i+1 )
-        numsent+=1
-    
     # 3) receive gradient components back from workers
     log.info(f"MANAGER {rank} entering receiving stage")
-    _terminate= torch.full((2,), -1, dtype=torch.long, device='cpu')
-    tmp_result= torch.zeros(3, device='cpu')
+    tmp_result= torch.zeros(3, dtype=state.dtype, device='cpu')
     for i in range(len(tasks)):
         # tensor (Tensor) – Tensor to fill with received data.
         # src (int, optional) – Source rank. Will receive from any process if unspecified.
@@ -196,7 +227,7 @@ def manager_code(rank,size,state,ctm_env,tasks,full_grad,loss0):
             numsent+=1
         else: 
             # no more work
-            dist.send( _terminate, sender )
+            dist.send( _terminate_grad, sender )
             
     return 0
 
@@ -219,6 +250,9 @@ def worker_code(rank,size,gpu_id,pipe):
     model= j1j2.J1J2_C4V_BIPARTITE(j1=args.j1, j2=args.j2)
     energy_f= model.energy_1x1_lowmem
 
+    def energy_fn(state, ctm_env_in, opt_context):
+        return energy_functional(energy_f, state, ctm_env_in, opt_context)
+
     def loss_fn(state, ctm_env_in, opt_context):
         return loss_functional(energy_f, state, ctm_env_in, opt_context)
 
@@ -239,6 +273,15 @@ def worker_code(rank,size,gpu_id,pipe):
     while not optimization_done:
         #log.info(
         loc_log.write(f"WORKER {rank} open for new dist_grad - waiting for ENV\n")
+        
+        # 1) receive initial gradient component - new dist grad region starting
+        dist.recv( tensor=grad_id, src=0, tag=rank )
+        if (grad_id[0]==-2 and grad_id[1]==-2): 
+            loc_log.write(f"WORKER {rank} received final terminating signal\n")
+            break
+        #log.info(
+        loc_log.write(f"WORKER {rank} received grad_id {grad_id}\n")
+
         #log.info(
         loc_log.write(f"WORKER {rank} waiting for loss0 tag {3000*size + rank}\n")
         dist.recv( tensor=loss0, src=0, tag=3000*size + rank )
@@ -246,7 +289,7 @@ def worker_code(rank,size,gpu_id,pipe):
         loc_log.write(f"WORKER {rank} received loss0 {loss0.item()} tag {3000*size + rank}\n")
 
         # receive current state
-        coeff_loc= torch.zeros_like(state.coeffs[(0,0)], device='cpu')
+        coeff_loc= torch.zeros_like(state.coeffs[(0,0)], dtype=state.dtype, device='cpu')
         dist.recv( tensor=coeff_loc, src=0, tag=4000*size + rank )
 
         # receive current (converged) env
@@ -262,22 +305,19 @@ def worker_code(rank,size,gpu_id,pipe):
             ctm_env.T[ctm_env.keyT]= T_loc_cpu.to(cuda_dev)
         #log.info(
         loc_log.write(f"WORKER {rank} received C, T and moved to {cuda_dev}\n")
-
-        # 1) receive initial gradient component - new dist grad region starting
-        dist.recv( tensor=grad_id, src=0, tag=rank )
-        #log.info(
-        loc_log.write(f"WORKER {rank} received grad_id {grad_id}\n")
         
         # 2) while there is a valid gradient component to compute
         #    execute energy computation
-        tmp_result= torch.zeros(3,device='cpu')
+        tmp_result= torch.zeros(3, dtype=state.dtype, device='cpu')
         while grad_id[0] >= 0 and grad_id[1] >= 0:
             coeff_key_id= grad_id[0]
             loc_grad_id= grad_id[1]
 
             # 3) gradient evaluation forcing cuda_dev as default GPU
             with torch.cuda.device(cuda_dev):
-                grad_val= grad_fd_component(loss_fn, state, ctm_env, \
+                # clone the env
+                env_clone= ctm_env.clone(cuda_dev)
+                grad_val= grad_fd_component(loss_fn, state, env_clone, \
                     cfg.opt_args, cfg.ctm_args, loss0, coeff_key_id, loc_grad_id, loc_log)
 
             tmp_result[0]= coeff_key_id
@@ -292,9 +332,11 @@ def worker_code(rank,size,gpu_id,pipe):
         #log.info(
         loc_log.write(f"WORKER {rank} received terminating signal for grad_fn\n")
         # 3) current dist grad region done - waiting for next region
-        optimization_done= (grad_id[0]==-2 and grad_id[1]==-2)
-        #log.info(
-        loc_log.write(f"WORKER {rank} received final terminating signal\n")
+        # optimization_done= (grad_id[0]==-2 and grad_id[1]==-2)
+        # #log.info(
+        # loc_log.write(f"WORKER {rank} received final terminating signal\n")
+
+    return 0
 
 def main(rank, size, pipes_to_workers):
     print(f"MASTER - rank {rank} in group of {size}")
@@ -428,6 +470,9 @@ def main(rank, size, pipes_to_workers):
     # optimize
     optimize_state(state, ctm_env, loss_fn, grad_fn, obs_fn=obs_fn)
 
+    # inform workers that computation has been finished
+    status= manager_code(rank,size,None,None,[],None,None)
+
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"
     state= read_ipeps_su2(outputstatefile)
@@ -437,6 +482,8 @@ def main(rank, size, pipes_to_workers):
     opt_energy = energy_f(state,ctm_env,force_cpu=args.force_cpu)
     obs_values, obs_labels = model.eval_obs(state,ctm_env,force_cpu=args.force_cpu)
     print(", ".join([f"{args.opt_max_iter}",f"{opt_energy}"]+[f"{v}" for v in obs_values]))
+
+    return 0
 
 def init_process(rank, size, fn, *args, backend='gloo'):
         """ Initialize the distributed environment. """
