@@ -131,6 +131,8 @@ def optimize_state(state, ctm_env_init, loss_fn, grad_fn,
 
         # 2) log CTM metrics for debugging
         if opt_args.opt_logging:
+            log.info({"history_length": len(history['log']), "history": history['log'],
+                "final_multiplets": history["final_multiplets"]})
             log_entry=dict({"id": epoch, "loss": t_data["loss"][-1], "t_ctm": timings['t_ctm'], \
                     "t_check": timings['t_obs'], "t_energy": timings['t_energy']})
             if linesearching:
@@ -144,9 +146,10 @@ def optimize_state(state, ctm_env_init, loss_fn, grad_fn,
 
         # 4) evaluate gradient
         t_grad0= time.perf_counter()
-        grad= grad_fn(state, ctm_env, context, loss)
-        for k in state.coeffs.keys():
-            state.coeffs[k].grad= grad[k]
+        with torch.no_grad():
+            grad= grad_fn(state, ctm_env, context, loss)
+            for k in state.coeffs.keys():
+                state.coeffs[k].grad= grad[k]
         t_grad1= time.perf_counter()
 
         # 5) log grad metrics
@@ -188,6 +191,8 @@ def optimize_state(state, ctm_env_init, loss_fn, grad_fn,
 
         # 5) log CTM metrics for debugging
         if opt_args.opt_logging:
+            log.info({"history_length": len(history['log']), "history": history['log'],
+                "final_multiplets": history["final_multiplets"]})
             log_entry=dict({"id": epoch, "LS": len(t_data["loss_ls"]), \
                 "loss": t_data["loss_ls"], "t_ctm": timings['t_ctm'], \
                 "t_check": timings['t_obs'], "t_energy": timings['t_energy']})
