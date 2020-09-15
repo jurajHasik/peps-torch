@@ -139,7 +139,7 @@ def grad_fd_component(loss_fn, state, ctm_env, opt_args, ctm_args, loss0, \
         e_i= torch.zeros(A_orig.size()[0],dtype=A_orig.dtype,device=A_orig.device)
         e_i[grad_id]= opt_args.fd_eps
         state.coeffs[coeff_key]+=e_i
-        
+
         # 1) re-evaluate the energy and compute gradient
         loss1, ctm_env, history, timings = loss_fn(state, ctm_env,\
             loc_context)
@@ -316,7 +316,7 @@ def worker_code(rank,size,gpu_id,pipe):
             # 3) gradient evaluation forcing cuda_dev as default GPU
             with torch.cuda.device(cuda_dev):
                 # clone the env
-                env_clone= ctm_env.clone(cuda_dev)
+                env_clone= ctm_env.clone()
                 grad_val= grad_fd_component(loss_fn, state, env_clone, \
                     cfg.opt_args, cfg.ctm_args, loss0, coeff_key_id, loc_grad_id, loc_log)
 
