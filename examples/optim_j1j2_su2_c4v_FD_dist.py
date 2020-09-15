@@ -37,24 +37,40 @@ args, unknown_args = parser.parse_known_args()
 
 @torch.no_grad()
 def ctmrg_conv_f(state, env, history, ctm_args=cfg.ctm_args):
+    # if not history:
+    #     history=dict({"log": []})
+    # rdm= rdm2x1_sl(state, env, force_cpu=ctm_args.conv_check_cpu, \
+    #     verbosity=cfg.ctm_args.verbosity_rdm)
+    # dist= float('inf')
+    # if len(history["log"]) > 1:
+    #     dist= torch.dist(rdm, history["rdm"], p=2).item()
+    # history["rdm"]=rdm
+    # history["log"].append(dist)
     if not history:
-        history=dict({"log": []})
+        # first element counts the number of iterations executed, rest hold current distance
+        history_count= 0
+        history_log= torch.full((ctm_args.ctm_max_iter,), 1.0e+16, \
+            dtype=state.dtype, device=state.device)
+        previous_rdm= torch.zeros(1, dtype=state.dtype, device=state.device)
+        history= (history_count, history_log, previous_rdm)
+    history_count= history[0]
+
     rdm= rdm2x1_sl(state, env, force_cpu=ctm_args.conv_check_cpu, \
         verbosity=cfg.ctm_args.verbosity_rdm)
-    dist= float('inf')
-    if len(history["log"]) > 1:
-        dist= torch.dist(rdm, history["rdm"], p=2).item()
-    history["rdm"]=rdm
-    history["log"].append(dist)
-    if dist<ctm_args.ctm_conv_tol:
+    if history_count > 0:
+        history[1][history_count]= torch.dist(rdm, history[2], p=2)
+    history_count += 1
+    history= (history_count, history[1], rdm)
+
+    if history[1][history_count-1]<ctm_args.ctm_conv_tol:
         # log.info({"history_length": len(history['log']), "history": history['log'],
         #     "final_multiplets": compute_multiplets(env)})
-        history["final_multiplets"]= compute_multiplets(env)
+        history= dict(log= history[1][:history_count], final_multiplets=compute_multiplets(env))
         return True, history
-    elif len(history['log']) >= ctm_args.ctm_max_iter:
+    elif history_count >= ctm_args.ctm_max_iter:
         # log.info({"history_length": len(history['log']), "history": history['log'],
         #     "final_multiplets": compute_multiplets(env)})
-        history["final_multiplets"]= compute_multiplets(env)
+        history= dict(log= history[1][:history_count], final_multiplets=compute_multiplets(env))
         return False, history
     return False, history
 
