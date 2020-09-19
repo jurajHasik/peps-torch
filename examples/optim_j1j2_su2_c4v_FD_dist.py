@@ -249,7 +249,8 @@ def manager_code(rank,size,state,ctm_env,tasks,full_grad,loss0):
 
 def worker_code(rank,size,gpu_id,pipe):
     print(f"WORKER - {rank} in group of {size} - CPU"\
-        +f" {len(os.sched_getaffinity(0))}/{mp.cpu_count()}")
+        +f" {len(os.sched_getaffinity(0))}/{mp.cpu_count()}"\
+        +f" torch.get_num_threads {torch.get_num_threads()}")
     cfg.configure(args)
     loc_log= open(f"{cfg.main_args.out_prefix}.w{rank}.log","w",1)
 
@@ -518,6 +519,8 @@ if __name__=='__main__':
         raise RuntimeError("torch.distributed not available")
     world_size=args.workers+1
 
+    torch.__config__.parallel_info()
+
     # check if and how many GPU's are available and assign them equally among workers
     gpu_ids= [-1]*world_size
     if torch.cuda.is_available():
@@ -545,6 +548,7 @@ if __name__=='__main__':
 
     for p in processes:
         p.join()
+
 
 # TODO tests
 class TestOpt(unittest.TestCase):
