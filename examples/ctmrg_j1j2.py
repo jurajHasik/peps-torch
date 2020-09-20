@@ -14,7 +14,8 @@ parser= cfg.get_args_parser()
 # additional model-dependent arguments
 parser.add_argument("--j1", type=float, default=1., help="nearest-neighbour coupling")
 parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour coupling")
-parser.add_argument("--tiling", default="BIPARTITE", help="tiling of the lattice")
+parser.add_argument("--tiling", default="BIPARTITE", help="tiling of the lattice", \
+    choices=["BIPARTITE", "1SITE", "2SITE", "4SITE", "8SITE"])
 # additional observables-related arguments
 parser.add_argument("--corrf_r", type=int, default=1, help="maximal correlation function distance")
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
@@ -37,6 +38,9 @@ def main():
             vx = (coord[0] + abs(coord[0]) * 2) % 2
             vy = abs(coord[1])
             return ((vx + vy) % 2, 0)
+    elif args.tiling == "1SITE":
+        def lattice_to_site(coord):
+            return (0, 0)
     elif args.tiling == "2SITE":
         def lattice_to_site(coord):
             vx = (coord[0] + abs(coord[0]) * 2) % 2
@@ -66,26 +70,21 @@ def main():
         state.add_noise(args.instate_noise)
     elif args.ipeps_init_type=='RANDOM':
         bond_dim = args.bond_dim
-        
         A = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
             dtype=cfg.global_args.dtype,device=cfg.global_args.device)
-        B = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-            dtype=cfg.global_args.dtype,device=cfg.global_args.device)
-
-        # normalization of initial random tensors
         A = A/torch.max(torch.abs(A))
-        B = B/torch.max(torch.abs(B))
-
-        sites = {(0,0): A, (1,0): B}
-        
-        if args.tiling == "4SITE":
+        sites = {(0,0): A}
+        if args.tiling == "2SITE" or args.tiling == "4SITE" or args.tiling == "8SITE":
+            B = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+            sites[(1,0)]= B/torch.max(torch.abs(B))
+        if args.tiling == "4SITE" or args.tiling == "8SITE":
             C= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
                 dtype=cfg.global_args.dtype,device=cfg.global_args.device)
             D= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
                 dtype=cfg.global_args.dtype,device=cfg.global_args.device)
             sites[(0,1)]= C/torch.max(torch.abs(C))
-            sites[(1,1)] = D/torch.max(torch.abs(D))
-
+            sites[(1,1)]= D/torch.max(torch.abs(D))
         if args.tiling == "8SITE":
             E= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
                 dtype=cfg.global_args.dtype,device=cfg.global_args.device)
@@ -95,25 +94,31 @@ def main():
                 dtype=cfg.global_args.dtype,device=cfg.global_args.device)
             H= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
                 dtype=cfg.global_args.dtype,device=cfg.global_args.device)
-            sites[(2,0)]= E/torch.max(torch.abs(E))
+            sites[(2,0)]=  E/torch.max(torch.abs(E))
             sites[(3,0)] = F/torch.max(torch.abs(F))
             sites[(2,1)] = G/torch.max(torch.abs(G))
             sites[(3,1)] = H/torch.max(torch.abs(H))
-
         state = IPEPS(sites, vertexToSite=lattice_to_site)
     else:
-        raise ValueError("Missing trial state: -instate=None and -ipeps_init_type= "\
+        raise ValueError("Missing trial state: --instate=None and --ipeps_init_type= "\
             +str(args.ipeps_init_type)+" is not supported")
 
     print(state)
 
     # 2) select the "energy" function 
     if args.tiling == "BIPARTITE" or args.tiling == "2SITE":
-        energy_f=model.energy_2x2_2site
+        energy_f= model.energy_2x2_2site
+        eval_obs_f= model.eval_obs
+    elif args.tiling == "1SITE":
+        energy_f= model.energy_2x2_1site_BP
+        # TODO include eval_obs with rotation on B-sublattice
+        eval_obs_f= model.eval_obs
     elif args.tiling == "4SITE":
-        energy_f=model.energy_2x2_4site
+        energy_f= model.energy_2x2_4site
+        eval_obs_f= model.eval_obs
     elif args.tiling == "8SITE":
-        energy_f=model.energy_2x2_8site
+        energy_f= model.energy_2x2_8site
+        eval_obs_f= model.eval_obs
     else:
         raise ValueError("Invalid tiling: "+str(args.tiling)+" Supported options: "\
             +"BIPARTITE, 2SITE, 4SITE")
@@ -136,7 +141,7 @@ def main():
     print(ctm_env_init)
 
     e_curr0 = energy_f(state, ctm_env_init)
-    obs_values0, obs_labels = model.eval_obs(state,ctm_env_init)
+    obs_values0, obs_labels = eval_obs_f(state,ctm_env_init)
 
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{e_curr0}"]+[f"{v}" for v in obs_values0]))
@@ -145,7 +150,7 @@ def main():
 
     # 6) compute final observables
     e_curr0 = energy_f(state, ctm_env_init)
-    obs_values0, obs_labels = model.eval_obs(state,ctm_env_init)
+    obs_values0, obs_labels = eval_obs_f(state,ctm_env_init)
     history, t_ctm, t_obs= ctm_log
     print("\n")
     print(", ".join(["epoch","energy"]+obs_labels))
@@ -153,6 +158,7 @@ def main():
     print(f"TIMINGS ctm: {t_ctm} conv_check: {t_obs}")
 
     # 7) ----- additional observables ---------------------------------------------
+    # TODO correct corrf_SS for 1site ansatz - include rotation on B-sublattice
     corrSS= model.eval_corrf_SS((0,0), (1,0), state, ctm_env_init, args.corrf_r)
     print("\n\nSS[(0,0),(1,0)] r "+" ".join([label for label in corrSS.keys()]))
     for i in range(args.corrf_r):

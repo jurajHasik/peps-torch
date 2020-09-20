@@ -3,6 +3,7 @@ import copy
 import torch
 import argparse
 import config as cfg
+from ipeps.ipeps import write_ipeps
 from su2sym.ipeps_su2 import *
 from ctm.one_site_c4v.env_c4v import *
 from ctm.one_site_c4v import ctmrg_c4v

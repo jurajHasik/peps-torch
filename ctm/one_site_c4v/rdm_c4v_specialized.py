@@ -68,8 +68,8 @@ def rdm2x1_tiled(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
     # C--1 0--T--1
     # 0       2
     if log_gpu_mem: _log_cuda_mem(loc_device,who,"CT_init")
-    # C2x1 = torch.tensordot(C, T, ([1],[0]))
-    C2x1= torch.einsum('i,ijk->ijk',torch.diag(C), T)
+    C2x1 = torch.tensordot(C, T, ([1],[0]))
+    # C2x1= torch.einsum('i,ijk->ijk',torch.diag(C), T)
     if log_gpu_mem: _log_cuda_mem(loc_device,who,"CT_end")
 
     # C------T--1->0
@@ -192,8 +192,8 @@ def _get_open_c2x2_LU_sl_elem(C, T, a, idxs, verbosity=0):
     # C--1 0--T--1
     # 0       2
     if log_gpu_mem: _log_cuda_mem(loc_device,who,"CT_init")
-    # C2x2 = torch.tensordot(C, T, ([1],[0]))
-    C2x2= torch.einsum('i,ijk->ijk',torch.diag(C), T)
+    C2x2 = torch.tensordot(C, T, ([1],[0]))
+    # C2x2= torch.einsum('i,ijk->ijk',torch.diag(C), T)
     if log_gpu_mem: _log_cuda_mem(loc_device,who,"CT_end")
 
     # C------T--1->0
