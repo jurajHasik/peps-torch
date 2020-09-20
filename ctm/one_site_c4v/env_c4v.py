@@ -1,6 +1,7 @@
 import torch
 import config as cfg
 from ipeps.ipeps_c4v import IPEPS_C4V
+from linalg.custom_eig import truncated_eig_sym
 import pdb
 
 class ENV_C4V():
@@ -128,13 +129,14 @@ def init_env(state, env, ctm_args=cfg.ctm_args):
     inside :class:`CTMARGS.ctm_env_init_type <config.CTMARGS>`
     
  
-    * CONST - C and T tensors have all their elements intialized to a value 1
+    * PROD - C and T tensors have just a single element intialized to a value 1
+             corresponding to product state environment
     * RANDOM - C and T tensors have elements with random numbers drawn from uniform
       distribution [0,1)
     * CTMRG - tensors C and T are built from the on-site tensor of `state` 
     """
-    if ctm_args.ctm_env_init_type=='CONST':
-        init_const(env, ctm_args.verbosity_initialization)
+    if ctm_args.ctm_env_init_type=='PROD':
+        init_prod(state, env, ctm_args.verbosity_initialization)
     elif ctm_args.ctm_env_init_type=='RANDOM':
         init_random(env, ctm_args.verbosity_initialization)
     elif ctm_args.ctm_env_init_type=='CTMRG':
@@ -145,11 +147,34 @@ def init_env(state, env, ctm_args=cfg.ctm_args):
         raise ValueError("Invalid environment initialization: "\
             +str(ctm_args.ctm_env_init_type))
 
-def init_const(env, verbosity=0):
+def init_prod(state, env, verbosity=0):
     for key,t in env.C.items():
-        env.C[key]= torch.ones(t.size(), dtype=env.dtype, device=env.device)
+        env.C[key]= torch.zeros(t.size(), dtype=env.dtype, device=env.device)
+        env.C[key][0,0]= 1
+
+    A= next(iter(state.sites.values()))
+    # left transfer matrix
+    #
+    #     0      = 0     
+    # i--A--j      T
+    #   /\         1
+    #  2  m
+    #      \ 0
+    #    i--A--j
+    #      /
+    #     2
+    a = torch.einsum('meifj,maibj->eafb',(A,A)).contiguous().view(\
+        A.size()[1]**2, A.size()[3]**2)
+    a= a/torch.max(torch.abs(a))
+    # check symmetry
+    a_asymm_norm= torch.norm(a.t()-a)
+    assert a_asymm_norm/torch.abs(a).max() < 1.0e-8, "a is not symmetric"
+    D, U= truncated_eig_sym(a, 2)
+    # leading eigenvector is unique 
+    assert torch.abs(D[0]-D[1]) > 1.0e-8, "Leading eigenvector of T not unique"
     for key,t in env.T.items():
-        env.T[key]= torch.ones(t.size(), dtype=env.dtype, device=env.device)
+        env.T[key]= torch.zeros(t.size(), dtype=env.dtype, device=env.device)
+        env.T[key][0,0,:]= U[:,0]
 
 # TODO restrict random corners to have pos-semidef spectrum
 def init_random(env, verbosity=0):
@@ -217,9 +242,13 @@ def init_from_ipeps_obc(state, env, verbosity=0):
     dimsA= A.size()
     a= torch.einsum('mijef,mklab->eafb',(A,A)).contiguous().view(dimsA[3]**2, dimsA[4]**2)
     a= a/torch.max(torch.abs(a))
+    # check symmetry
+    a_asymm_norm= torch.norm(a.t()-a)
+    assert a_asymm_norm/torch.abs(a).max() < 1.0e-8, "a is not symmetric"
+    D, U= truncated_eig_sym(a, a.size()[0])
     env.C[env.keyC]= torch.zeros(env.chi,env.chi, dtype=env.dtype, device=env.device)
     env.C[env.keyC][:min(env.chi,dimsA[3]**2),:min(env.chi,dimsA[4]**2)]=\
-        a[:min(env.chi,dimsA[3]**2),:min(env.chi,dimsA[4]**2)]
+        torch.diag(D)[:min(env.chi,dimsA[3]**2),:min(env.chi,dimsA[4]**2)]
 
     # left transfer matrix
     #
@@ -233,6 +262,7 @@ def init_from_ipeps_obc(state, env, verbosity=0):
     #     2
     a= torch.einsum('meifg,makbc->eafbgc',(A,A)).contiguous().view(dimsA[1]**2, dimsA[3]**2, dimsA[4]**2)
     a= a/torch.max(torch.abs(a))
+    a= torch.einsum('ia,abs,bj->ijs',U,a,U)
     env.T[env.keyT]= torch.zeros((env.chi,env.chi,dimsA[4]**2), dtype=env.dtype, device=env.device)
     env.T[env.keyT][:min(env.chi,dimsA[1]**2),:min(env.chi,dimsA[3]**2),:]=\
         a[:min(env.chi,dimsA[1]**2),:min(env.chi,dimsA[3]**2),:]
