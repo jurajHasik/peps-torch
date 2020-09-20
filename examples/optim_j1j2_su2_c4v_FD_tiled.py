@@ -6,6 +6,7 @@ import config as cfg
 from su2sym.ipeps_su2 import *
 from ctm.one_site_c4v.env_c4v import *
 from ctm.one_site_c4v import ctmrg_c4v
+from ctm.one_site_c4v import ctmrg_c4v_specialized
 from ctm.one_site_c4v.rdm_c4v import rdm2x1_sl
 from ctm.one_site_c4v.rdm_c4v_specialized import rdm2x1_tiled
 from ctm.one_site_c4v import transferops_c4v
@@ -135,7 +136,7 @@ def main():
             init_env(state, ctm_env_in)
 
         # 1) compute environment by CTMRG
-        ctm_env_out, history, t_ctm, t_obs= ctmrg_c4v.run(state, ctm_env_in, \
+        ctm_env_out, history, t_ctm, t_obs= ctmrg_c4v_specialized.run_dl_SYMARP(state, ctm_env_in, \
             conv_check=ctmrg_conv_f, ctm_args=ctm_args)
         t0_energy= time.perf_counter()
         loss0 = energy_f(state, ctm_env_out, force_cpu=args.force_cpu)
@@ -143,7 +144,7 @@ def main():
 
         loc_ctm_args= copy.deepcopy(ctm_args)
         loc_ctm_args.ctm_max_iter= 1
-        ctm_env_out, history1, t_ctm1, t_obs1= ctmrg_c4v.run(state, ctm_env_out, \
+        ctm_env_out, history1, t_ctm1, t_obs1= ctmrg_c4v_specialized.run_dl_SYMARP(state, ctm_env_out, \
             ctm_args=loc_ctm_args)
         t2_energy= time.perf_counter()
         loss1 = energy_f(state, ctm_env_out, force_cpu=args.force_cpu)
@@ -189,7 +190,7 @@ def main():
     state= read_ipeps_su2(outputstatefile)
     ctm_env = ENV_C4V(args.chi, state)
     init_env(state, ctm_env)
-    ctm_env, *ctm_log = ctmrg_c4v.run(state, ctm_env, conv_check=ctmrg_conv_f)
+    ctm_env, *ctm_log = ctmrg_c4v_specialized.run_dl_SYMARP(state, ctm_env, conv_check=ctmrg_conv_f)
     opt_energy = energy_f(state,ctm_env,force_cpu=args.force_cpu)
     obs_values, obs_labels = eval_obs_f(state,ctm_env,force_cpu=args.force_cpu)
     print(", ".join([f"{args.opt_max_iter}",f"{opt_energy}"]+[f"{v}" for v in obs_values]))
