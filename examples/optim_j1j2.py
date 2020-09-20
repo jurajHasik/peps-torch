@@ -18,7 +18,8 @@ parser= cfg.get_args_parser()
 # additional model-dependent arguments
 parser.add_argument("--j1", type=float, default=1., help="nearest-neighbour coupling")
 parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour coupling")
-parser.add_argument("--tiling", default="BIPARTITE", help="tiling of the lattice")
+parser.add_argument("--tiling", default="BIPARTITE", help="tiling of the lattice", \
+    choices=["BIPARTITE", "1SITE", "2SITE", "4SITE", "8SITE"])
 parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
@@ -40,6 +41,9 @@ def main():
             vx = (coord[0] + abs(coord[0]) * 2) % 2
             vy = abs(coord[1])
             return ((vx + vy) % 2, 0)
+    elif args.tiling == "1SITE":
+        def lattice_to_site(coord):
+            return (0, 0)
     elif args.tiling == "2SITE":
         def lattice_to_site(coord):
             vx = (coord[0] + abs(coord[0]) * 2) % 2
@@ -69,6 +73,8 @@ def main():
     elif args.opt_resume is not None:
         if args.tiling == "BIPARTITE" or args.tiling == "2SITE":
             state= IPEPS(dict(), lX=2, lY=1)
+        elif args.tiling == "1SITE":
+            state= IPEPS(dict(), lX=1, lY=1)
         elif args.tiling == "4SITE":
             state= IPEPS(dict(), lX=2, lY=2)
         elif args.tiling == "8SITE":
@@ -76,26 +82,21 @@ def main():
         state.load_checkpoint(args.opt_resume)
     elif args.ipeps_init_type=='RANDOM':
         bond_dim = args.bond_dim
-        
         A = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
             dtype=cfg.global_args.dtype,device=cfg.global_args.device)
-        B = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-            dtype=cfg.global_args.dtype,device=cfg.global_args.device)
-
-        # normalization of initial random tensors
         A = A/torch.max(torch.abs(A))
-        B = B/torch.max(torch.abs(B))
-
-        sites = {(0,0): A, (1,0): B}
-        
+        sites = {(0,0): A}
+        if args.tiling == "2SITE" or args.tiling == "4SITE" or args.tiling == "8SITE":
+            B = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+            sites[(1,0)]= B/torch.max(torch.abs(B))
         if args.tiling == "4SITE" or args.tiling == "8SITE":
             C= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
                 dtype=cfg.global_args.dtype,device=cfg.global_args.device)
             D= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
                 dtype=cfg.global_args.dtype,device=cfg.global_args.device)
             sites[(0,1)]= C/torch.max(torch.abs(C))
-            sites[(1,1)] = D/torch.max(torch.abs(D))
-
+            sites[(1,1)]= D/torch.max(torch.abs(D))
         if args.tiling == "8SITE":
             E= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
                 dtype=cfg.global_args.dtype,device=cfg.global_args.device)
@@ -105,7 +106,7 @@ def main():
                 dtype=cfg.global_args.dtype,device=cfg.global_args.device)
             H= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
                 dtype=cfg.global_args.dtype,device=cfg.global_args.device)
-            sites[(2,0)]= E/torch.max(torch.abs(E))
+            sites[(2,0)]=  E/torch.max(torch.abs(E))
             sites[(3,0)] = F/torch.max(torch.abs(F))
             sites[(2,1)] = G/torch.max(torch.abs(G))
             sites[(3,1)] = H/torch.max(torch.abs(H))
@@ -120,10 +121,17 @@ def main():
     # 2) select the "energy" function 
     if args.tiling == "BIPARTITE" or args.tiling == "2SITE":
         energy_f=model.energy_2x2_2site
+        eval_obs_f= model.eval_obs
+    elif args.tiling == "1SITE":
+        energy_f= model.energy_2x2_1site_BP
+        # TODO include eval_obs with rotation on B-sublattice
+        eval_obs_f= model.eval_obs
     elif args.tiling == "4SITE":
         energy_f=model.energy_2x2_4site
+        eval_obs_f= model.eval_obs
     elif args.tiling == "8SITE":
         energy_f=model.energy_2x2_8site
+        eval_obs_f= model.eval_obs
     else:
         raise ValueError("Invalid tiling: "+str(args.tiling)+" Supported options: "\
             +"BIPARTITE, 2SITE, 4SITE, 8SITE")
@@ -146,7 +154,7 @@ def main():
 
     ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
     loss0 = energy_f(state, ctm_env)
-    obs_values, obs_labels = model.eval_obs(state,ctm_env)
+    obs_values, obs_labels = eval_obs_f(state,ctm_env)
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
 
@@ -178,7 +186,7 @@ def main():
             or not "line_search" in opt_context.keys():
             epoch= len(opt_context["loss_history"]["loss"]) 
             loss= opt_context["loss_history"]["loss"][-1]
-            obs_values, obs_labels = model.eval_obs(state,ctm_env)
+            obs_values, obs_labels = eval_obs_f(state,ctm_env)
             print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
             log.info("Norm(sites): "+", ".join([f"{t.norm()}" for c,t in state.sites.items()]))
 
@@ -201,7 +209,7 @@ def main():
     init_env(state, ctm_env)
     ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
     opt_energy = energy_f(state,ctm_env)
-    obs_values, obs_labels = model.eval_obs(state,ctm_env)
+    obs_values, obs_labels = eval_obs_f(state,ctm_env)
     print(", ".join([f"{args.opt_max_iter}",f"{opt_energy}"]+[f"{v}" for v in obs_values]))  
 
 if __name__=='__main__':
