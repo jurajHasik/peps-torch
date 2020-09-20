@@ -203,12 +203,12 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
     dimsA= A.size()
     a= torch.einsum('mijef,mijab->eafb',(A,A)).contiguous().view(dimsA[3]**2, dimsA[4]**2)
     a= a/torch.max(torch.abs(a))
-    # check symmetry
-    # a_asymm_norm= torch.norm(a.t()-a)
-    # assert a_asymm_norm/torch.abs(a).max() < 1.0e-8, "a is not symmetric"
-    # D, U= truncated_eig_sym(a, a.size()[0])
-    # a= torch.diag(D)
     
+    a_asymm_norm= torch.norm(a.t()-a)
+    assert a_asymm_norm/torch.abs(a).max() < 1.0e-8, "a is not symmetric"
+    D, U= truncated_eig_sym(a, a.size()[0])
+    a= torch.diag(D)
+
     env.C[env.keyC]= torch.zeros(env.chi,env.chi, dtype=env.dtype, device=env.device)
     env.C[env.keyC][:min(env.chi,dimsA[3]**2),:min(env.chi,dimsA[4]**2)]=\
        a[:min(env.chi,dimsA[3]**2),:min(env.chi,dimsA[4]**2)]
@@ -225,9 +225,9 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
     #     2
     a = torch.einsum('meifg,maibc->eafbgc',(A,A)).contiguous().view(dimsA[1]**2, dimsA[3]**2, dimsA[4]**2)
     a= a/torch.max(torch.abs(a))
-    # a= torch.einsum('ia,abs,jb->ijs',U.t(),a,U)
+    
+    a= torch.einsum('ai,abs,bj->ijs',U,a,U)
 
-    # print(f"a asymm {torch.norm(a - a.permute(1,0,2))}")
     env.T[env.keyT]= torch.zeros((env.chi,env.chi,dimsA[4]**2), dtype=env.dtype, device=env.device)
     env.T[env.keyT][:min(env.chi,dimsA[1]**2),:min(env.chi,dimsA[3]**2),:]=\
         a[:min(env.chi,dimsA[1]**2),:min(env.chi,dimsA[3]**2),:]
