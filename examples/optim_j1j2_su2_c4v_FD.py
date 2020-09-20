@@ -38,7 +38,7 @@ def main():
     model= j1j2.J1J2_C4V_BIPARTITE(j1=args.j1, j2=args.j2)
     energy_f= model.energy_1x1_tiled if args.tiled else model.energy_1x1_lowmem
     eval_obs_f= model.eval_obs_tiled if args.tiled else model.eval_obs
-    ctmrg_f= ctmrg.run_dl if args.tiled else ctmrg.run
+    ctmrg_f= ctmrg_c4v.run_dl if args.tiled else ctmrg_c4v.run
 
     # initialize an ipeps
     if args.instate!=None:
