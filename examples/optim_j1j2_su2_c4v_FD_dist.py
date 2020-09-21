@@ -400,7 +400,7 @@ def main(rank, size, pipes_to_workers):
     print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values])) 
 
     def loss_fn(state, ctm_env_in, opt_context):
-        return loss_functional(energy_f, state, ctm_env_in, opt_context)
+        return loss_functional(energy_f, ctmrg_f, state, ctm_env_in, opt_context)
 
     def grad_fn(state, ctm_env, opt_context, loss0):
         # 1) prepare list of tasks
