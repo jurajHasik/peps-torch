@@ -4,7 +4,6 @@ import json
 import logging
 log = logging.getLogger(__name__)
 import torch
-#from memory_profiler import profile
 from optim import lbfgs_modified
 import config as cfg
 
@@ -133,8 +132,7 @@ def optimize_state(state, ctm_env_init, loss_fn, grad_fn,
         if opt_args.opt_logging:
             log.info({"history_length": len(history['log']), "history": history['log'],
                 "final_multiplets": history["final_multiplets"]})
-            log_entry=dict({"id": epoch, "loss": t_data["loss"][-1], "t_ctm": timings['t_ctm'], \
-                    "t_check": timings['t_obs'], "t_energy": timings['t_energy']})
+            log_entry=dict({"id": epoch, "loss": t_data["loss"][-1], "timings": timings})
             if linesearching:
                 log_entry["LS"]=len(t_data["loss_ls"])
                 log_entry["loss"]=t_data["loss_ls"]
@@ -179,8 +177,8 @@ def optimize_state(state, ctm_env_init, loss_fn, grad_fn,
         # TODO check if we are optimizing C4v symmetric ansatz
         if opt_args.line_search_svd_method != 'DEFAULT':
             loc_ctm_args.projector_svd_method= opt_args.line_search_svd_method
-        loc_context= dict({"ctm_args":loc_ctm_args, "opt_args":loc_opt_args, "loss_history": t_data,
-            "line_search": True})
+        loc_context= dict({"ctm_args":loc_ctm_args, "opt_args":loc_opt_args, \
+            "loss_history": t_data, "line_search": True})
         loss, ctm_env, history, timings = loss_fn(state, current_env[0],\
             loc_context)
 
@@ -194,8 +192,7 @@ def optimize_state(state, ctm_env_init, loss_fn, grad_fn,
             log.info({"history_length": len(history['log']), "history": history['log'],
                 "final_multiplets": history["final_multiplets"]})
             log_entry=dict({"id": epoch, "LS": len(t_data["loss_ls"]), \
-                "loss": t_data["loss_ls"], "t_ctm": timings['t_ctm'], \
-                "t_check": timings['t_obs'], "t_energy": timings['t_energy']})
+                "loss": t_data["loss_ls"], "timings": timings})
             log.info(json.dumps(log_entry))
 
         # 4) compute desired observables

@@ -50,10 +50,10 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
         def truncated_eig(M, chi):
             return truncated_eig_symarnoldi(M, chi, keep_multiplets=True, \
                 verbosity=ctm_args.verbosity_projectors)
-    # elif ctm_args.projector_svd_method == 'SYMLOBPCG':
-    #     def truncated_eig(M, chi):
-    #         return truncated_eig_symlobpcg(M, chi, keep_multiplets=True, \
-    #             verbosity=ctm_args.verbosity_projectors)
+    elif ctm_args.projector_svd_method == 'SYMLOBPCG':
+        def truncated_eig(M, chi):
+            return truncated_eig_symlobpcg(M, chi, keep_multiplets=True, \
+                verbosity=ctm_args.verbosity_projectors)
     # elif ctm_args.projector_svd_method == 'GESDD':
     #     def truncated_eig(M, chi):
     #         return truncated_svd_gesdd(M, chi, verbosity=ctm_args.verbosity_projectors)
@@ -107,6 +107,10 @@ def run_dl(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.g
     elif ctm_args.projector_svd_method == 'SYMARP':
         def truncated_eig(M, chi):
             return truncated_eig_symarnoldi(M, chi, keep_multiplets=True, \
+                verbosity=ctm_args.verbosity_projectors)
+    elif ctm_args.projector_svd_method == 'SYMLOBPCG':
+        def truncated_eig(M, chi):
+            return truncated_eig_symlobpcg(M, chi, keep_multiplets=True, \
                 verbosity=ctm_args.verbosity_projectors)
     else:
         raise Exception(f"Projector eig/svd method \"{cfg.ctm_args.projector_svd_method}\" not implemented")
