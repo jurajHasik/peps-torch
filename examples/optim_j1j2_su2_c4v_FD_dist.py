@@ -10,8 +10,6 @@ from ctm.one_site_c4v import ctmrg_c4v
 from ctm.one_site_c4v.rdm_c4v import rdm2x1_sl
 from ctm.one_site_c4v import transferops_c4v
 from models import j1j2
-# from optim.ad_optim_su2 import optimize_state
-# from optim.fd_optim_lbfgs_mod import optimize_state
 import torch.multiprocessing as mp
 import torch.distributed as dist
 from optim.fd_optim_lbfgs_mod_distributed import optimize_state
@@ -25,7 +23,6 @@ log = logging.getLogger(__name__)
 # parse command line args and build necessary configuration objects
 parser= cfg.get_args_parser()
 # additional model-dependent arguments
-parser.add_argument("--tiled", action="store_true", help="use tiled density matrices")
 parser.add_argument("--workers", type=int, default=0, help="number of worker processes")
 parser.add_argument("--force_cpu", action="store_true", help="force energy and observable evaluation on CPU")
 parser.add_argument("--j1", type=float, default=1., help="nearest-neighbour coupling")
@@ -66,7 +63,7 @@ def ctmrg_conv_f(state, env, history, ctm_args=cfg.ctm_args):
         return False, history
     return False, history
 
-def loss_functional(energy_f, ctmrg_f, state, ctm_env, opt_context):
+def loss_functional(energy_f, state, ctm_env, opt_context):
     ctm_args= opt_context["ctm_args"]
     opt_args= opt_context["opt_args"]
 
@@ -78,22 +75,24 @@ def loss_functional(energy_f, ctmrg_f, state, ctm_env, opt_context):
         init_env(state, ctm_env)
 
     # 1) compute environment by CTMRG
-    ctm_env, history, t_ctm, t_obs= ctmrg_f(state, ctm_env, \
+    t0_ctm_main= time.perf_counter()
+    ctm_env, history, t_ctm, t_obs= ctmrg_c4v.run(state, ctm_env, \
         conv_check=ctmrg_conv_f, ctm_args=ctm_args)
+    t1_ctm_main= time.perf_counter()
     t0_energy= time.perf_counter()
     loss0 = energy_f(state, ctm_env, force_cpu=args.force_cpu)
     t1_energy= time.perf_counter()
     
     loc_ctm_args= copy.deepcopy(ctm_args)
     loc_ctm_args.ctm_max_iter= 1
-    ctm_env, history1, t_ctm1, t_obs1= ctmrg_f(state, ctm_env, \
+    ctm_env, history1, t_ctm1, t_obs1= ctmrg_c4v.run(state, ctm_env, \
         ctm_args=loc_ctm_args)
     t2_energy= time.perf_counter()
     loss1 = energy_f(state, ctm_env, force_cpu=args.force_cpu)
     t3_energy= time.perf_counter()
 
-    timings= dict({"t_ctm": t_ctm, "t_obs": t_obs, \
-        "t_energy": (t1_energy-t0_energy)+(t3_energy-t2_energy)})
+    timings= dict({"t_ctm_main": t1_ctm_main-t0_ctm_main, "t_ctm": t_ctm,\
+        "t_obs": t_obs, "t_energy": (t1_energy-t0_energy)+(t3_energy-t2_energy)})
     #loss=(loss0+loss1)/2
     loss= torch.max(loss0,loss1)
 
@@ -129,12 +128,10 @@ def grad_fd_component(loss_fn, state, ctm_env, opt_args, ctm_args, loss0, \
         log_file.write(f"history_length: {len(history['log'])}, history: {history['log']},"\
                 +f" final_multiplets: {history['final_multiplets']}\n")
         log_file.write(f"FD_GRAD id {coeff_key} {grad_id} loss1 {loss1} grad_val {grad_val}"\
-            +f" t_ctm {timings['t_ctm']} t_check {timings['t_obs']}"\
-            +f" t_energy {timings['t_energy']}\n")
+            +f" timings {timings}\n")
 
         # 2) reset perturbation
         state.coeffs[coeff_key].data.copy_(A_orig)
-
     return grad_val
 
 def manager_code(rank,size,state,ctm_env,tasks,full_grad,loss0):
@@ -210,8 +207,6 @@ def manager_code(rank,size,state,ctm_env,tasks,full_grad,loss0):
         else: 
             # no more work
             dist.send( _terminate_grad, sender )
-            
-    return 0
 
 def worker_code(rank,size,gpu_id,pipe):
     print(f"WORKER - {rank} in group of {size} - CPU"\
@@ -231,11 +226,10 @@ def worker_code(rank,size,gpu_id,pipe):
         print(f"WORKER {rank} device {cfg.global_args.device}")
 
     model= j1j2.J1J2_C4V_BIPARTITE(j1=args.j1, j2=args.j2)
-    energy_f= model.energy_1x1_tiled if args.tiled else model.energy_1x1_lowmem
-    ctmrg_f= ctmrg_c4v.run_dl if args.tiled else ctmrg_c4v.run
+    energy_f= model.energy_1x1_lowmem
 
     def loss_fn(state, ctm_env_in, opt_context):
-        return loss_functional(energy_f, ctmrg_f, state, ctm_env_in, opt_context)
+        return loss_functional(energy_f, state, ctm_env_in, opt_context)
 
     # get a local copy of initial state
     state_json_str= pipe.recv()
@@ -317,8 +311,6 @@ def worker_code(rank,size,gpu_id,pipe):
         # #log.info(
         # loc_log.write(f"WORKER {rank} received final terminating signal\n")
 
-    return 0
-
 def main(rank, size, pipes_to_workers):
     print(f"MASTER - rank {rank} in group of {size}")
 
@@ -328,9 +320,7 @@ def main(rank, size, pipes_to_workers):
     torch.manual_seed(args.seed)
 
     model= j1j2.J1J2_C4V_BIPARTITE(j1=args.j1, j2=args.j2)
-    energy_f= model.energy_1x1_tiled if args.tiled else model.energy_1x1_lowmem
-    eval_obs_f= model.eval_obs_tiled if args.tiled else model.eval_obs
-    ctmrg_f= ctmrg_c4v.run_dl if args.tiled else ctmrg_c4v.run
+    energy_f= model.energy_1x1_lowmem
 
     # initialize an ipeps
     if args.instate!=None:
@@ -395,12 +385,12 @@ def main(rank, size, pipes_to_workers):
 
     # compute initial observables
     loss0 = energy_f(state, ctm_env, force_cpu=args.force_cpu)
-    obs_values, obs_labels = eval_obs_f(state,ctm_env,force_cpu=args.force_cpu)
+    obs_values, obs_labels = model.eval_obs(state,ctm_env,force_cpu=args.force_cpu)
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values])) 
 
     def loss_fn(state, ctm_env_in, opt_context):
-        return loss_functional(energy_f, ctmrg_f, state, ctm_env_in, opt_context)
+        return loss_functional(energy_f, state, ctm_env_in, opt_context)
 
     def grad_fn(state, ctm_env, opt_context, loss0):
         # 1) prepare list of tasks
@@ -439,7 +429,7 @@ def main(rank, size, pipes_to_workers):
         else:
             epoch= len(opt_context["loss_history"]["loss"])
             loss= opt_context["loss_history"]["loss"][-1] 
-        obs_values, obs_labels = eval_obs_f(state,ctm_env,force_cpu=args.force_cpu)
+        obs_values, obs_labels = model.eval_obs(state,ctm_env,force_cpu=args.force_cpu)
         print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
 
         if (not opt_context["line_search"]) and args.top_freq>0 and epoch%args.top_freq==0:
@@ -461,9 +451,9 @@ def main(rank, size, pipes_to_workers):
     state= read_ipeps_su2(outputstatefile)
     ctm_env = ENV_C4V(args.chi, state)
     init_env(state, ctm_env)
-    ctm_env, *ctm_log = ctmrg_f(state, ctm_env, conv_check=ctmrg_conv_f)
+    ctm_env, *ctm_log = ctmrg_c4v.run(state, ctm_env, conv_check=ctmrg_conv_f)
     opt_energy = energy_f(state,ctm_env,force_cpu=args.force_cpu)
-    obs_values, obs_labels = eval_obs_f(state,ctm_env,force_cpu=args.force_cpu)
+    obs_values, obs_labels = model.eval_obs(state,ctm_env,force_cpu=args.force_cpu)
     print(", ".join([f"{args.opt_max_iter}",f"{opt_energy}"]+[f"{v}" for v in obs_values]))
 
     return 0
