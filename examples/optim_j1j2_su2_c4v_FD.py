@@ -21,7 +21,6 @@ log = logging.getLogger(__name__)
 # parse command line args and build necessary configuration objects
 parser= cfg.get_args_parser()
 # additional model-dependent arguments
-parser.add_argument("--tiled", action="store_true", help="use tiled density matrices")
 parser.add_argument("--force_cpu", action="store_true", help="force energy and observable evaluation on CPU")
 parser.add_argument("--j1", type=float, default=1., help="nearest-neighbour coupling")
 parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour coupling")
@@ -30,6 +29,27 @@ parser.add_argument("--top_n", type=int, default=2, help="number of leading eige
     "of transfer operator to compute")
 args, unknown_args = parser.parse_known_args()
 
+@torch.no_grad()
+def ctmrg_conv_f(state, env, history, ctm_args=cfg.ctm_args):
+    if not history:
+        history=dict({"log": []})
+    rdm= rdm2x1_sl(state, env, force_cpu=ctm_args.conv_check_cpu, \
+        verbosity=cfg.ctm_args.verbosity_rdm)
+    dist= float('inf')
+    if len(history["log"]) > 1:
+        dist= torch.dist(rdm, history["rdm"], p=2).item()
+    history["rdm"]=rdm
+    history["log"].append(dist)
+    if dist<ctm_args.ctm_conv_tol:
+        log.info({"history_length": len(history['log']), "history": history['log'],
+            "final_multiplets": compute_multiplets(env)})
+        return True, history
+    elif len(history['log']) >= ctm_args.ctm_max_iter:
+        log.info({"history_length": len(history['log']), "history": history['log'],
+            "final_multiplets": compute_multiplets(env)})
+        return False, history
+    return False, history
+
 def main():
     cfg.configure(args)
     cfg.print_config()
@@ -37,9 +57,8 @@ def main():
     torch.manual_seed(args.seed)
 
     model= j1j2.J1J2_C4V_BIPARTITE(j1=args.j1, j2=args.j2)
-    energy_f= model.energy_1x1_tiled if args.tiled else model.energy_1x1_lowmem
-    eval_obs_f= model.eval_obs_tiled if args.tiled else model.eval_obs
-    ctmrg_f= ctmrg_c4v.run_dl if args.tiled else ctmrg_c4v.run
+    energy_f= model.energy_1x1_lowmem
+    eval_obs_f= model.eval_obs
 
     # initialize an ipeps
     if args.instate!=None:
@@ -93,35 +112,6 @@ def main():
 
     print(state)
 
-    @torch.no_grad()
-    def ctmrg_conv_f(state, env, history, ctm_args=cfg.ctm_args):
-        if not history:
-            history_count= 0
-            history_log= torch.full((ctm_args.ctm_max_iter,), 1.0e+16, \
-                dtype=state.dtype, device=state.device)
-            previous_rdm= torch.zeros(1, dtype=state.dtype, device=state.device)
-            history= (history_count, history_log, previous_rdm)
-        history_count= history[0]
-
-        rdm= rdm2x1_sl(state, env, force_cpu=ctm_args.conv_check_cpu, \
-            verbosity=cfg.ctm_args.verbosity_rdm)
-        if history_count > 0:
-            history[1][history_count]= torch.dist(rdm, history[2], p=2)
-        history_count += 1
-        history= (history_count, history[1], rdm)
-
-        if history[1][history_count-1]<ctm_args.ctm_conv_tol:
-            history= dict(log= history[1][:history_count], final_multiplets=compute_multiplets(env))
-            log.info({"history_length": len(history['log']), "history": history['log'],
-                    "final_multiplets": history["final_multiplets"]})
-            return True, history
-        elif history_count >= ctm_args.ctm_max_iter:
-            history= dict(log= history[1][:history_count], final_multiplets=compute_multiplets(env))
-            log.info({"history_length": len(history['log']), "history": history['log'],
-                    "final_multiplets": history["final_multiplets"]})
-            return False, history
-        return False, history
-
     ctm_env = ENV_C4V(args.chi, state)
     init_env(state, ctm_env)
 
@@ -142,22 +132,24 @@ def main():
             init_env(state, ctm_env_in)
 
         # 1) compute environment by CTMRG
-        ctm_env_out, history, t_ctm, t_obs= ctmrg_f(state, ctm_env_in, \
+        t0_ctm_main= time.perf_counter() 
+        ctm_env_out, history, t_ctm, t_obs= ctmrg_c4v.run(state, ctm_env_in, \
             conv_check=ctmrg_conv_f, ctm_args=ctm_args)
+        t1_ctm_main= time.perf_counter()
         t0_energy= time.perf_counter()
         loss0 = energy_f(state, ctm_env_out, force_cpu=args.force_cpu)
         t1_energy= time.perf_counter()
         
         loc_ctm_args= copy.deepcopy(ctm_args)
         loc_ctm_args.ctm_max_iter= 1
-        ctm_env_out, history1, t_ctm1, t_obs1= ctmrg_f(state, ctm_env_out, \
+        ctm_env_out, history1, t_ctm1, t_obs1= ctmrg_c4v.run(state, ctm_env_out, \
             ctm_args=loc_ctm_args)
         t2_energy= time.perf_counter()
         loss1 = energy_f(state, ctm_env_out, force_cpu=args.force_cpu)
         t3_energy= time.perf_counter()
 
-        timings= dict({"t_ctm": t_ctm, "t_obs": t_obs, \
-            "t_energy": (t1_energy-t0_energy)+(t3_energy-t2_energy)})
+        timings= dict({ "t_ctm_main": t1_ctm_main-t0_ctm_main, "t_ctm": t_ctm, \
+            "t_obs": t_obs, "t_energy": (t1_energy-t0_energy)+(t3_energy-t2_energy)})
         #loss=(loss0+loss1)/2
         loss= torch.max(loss0,loss1)
 
@@ -196,7 +188,7 @@ def main():
     state= read_ipeps_su2(outputstatefile)
     ctm_env = ENV_C4V(args.chi, state)
     init_env(state, ctm_env)
-    ctm_env, *ctm_log = ctmrg_f(state, ctm_env, conv_check=ctmrg_conv_f)
+    ctm_env, *ctm_log = ctmrg_c4v.run(state, ctm_env, conv_check=ctmrg_conv_f)
     opt_energy = energy_f(state,ctm_env,force_cpu=args.force_cpu)
     obs_values, obs_labels = eval_obs_f(state,ctm_env,force_cpu=args.force_cpu)
     print(", ".join([f"{args.opt_max_iter}",f"{opt_energy}"]+[f"{v}" for v in obs_values]))
