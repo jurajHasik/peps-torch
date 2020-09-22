@@ -235,10 +235,7 @@ def ctm_MOVE_dl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
         nT = nT.permute(0,2,1).contiguous()
 
         # 4) symmetrize, normalize and assign new C,T
-        # C2X2= 0.5*(C2X2 + C2X2.t())
         nT= 0.5*(nT + nT.permute(1,0,2))
-        # C2X2= C2X2/torch.max(torch.abs(C2X2))
-        # nT= nT/torch.max(torch.abs(nT))
         C2X2= C2X2/torch.abs(C2X2[0,0])
         nT= nT/nT.norm()
 
@@ -379,10 +376,7 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
         nT = nT.permute(0,2,1).contiguous()
 
         # 4) symmetrize, normalize and assign new C,T
-        # C2X2= 0.5*(C2X2 + C2X2.t())
         nT= 0.5*(nT + nT.permute(1,0,2))
-        # C2X2= C2X2/torch.max(torch.abs(C2X2))
-        # nT= nT/torch.max(torch.abs(nT))
         C2X2= C2X2/torch.abs(C2X2[0,0])
         nT= nT/nT.norm()
 

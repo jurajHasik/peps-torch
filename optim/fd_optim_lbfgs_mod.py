@@ -163,8 +163,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
 
         # 2) log CTM metrics for debugging
         if opt_args.opt_logging:
-            log_entry=dict({"id": epoch, "loss": t_data["loss"][-1], "t_ctm": timings['t_ctm'], \
-                    "t_check": timings['t_obs'], "t_energy": timings['t_energy']})
+            log_entry=dict({"id": epoch, "loss": t_data["loss"][-1], "timing": timings})
             if linesearching:
                 log_entry["LS"]=len(t_data["loss_ls"])
                 log_entry["loss"]=t_data["loss_ls"]

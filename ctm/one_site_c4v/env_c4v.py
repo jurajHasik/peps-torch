@@ -2,7 +2,6 @@ import torch
 import config as cfg
 from ipeps.ipeps_c4v import IPEPS_C4V
 from linalg.custom_eig import truncated_eig_sym
-import pdb
 
 class ENV_C4V():
     def __init__(self, chi, state=None, bond_dim=None, ctm_args=cfg.ctm_args, 
