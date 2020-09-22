@@ -115,8 +115,8 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         # TODO check if we are optimizing C4v symmetric ansatz
         if opt_args.line_search_svd_method != 'DEFAULT':
             loc_ctm_args.projector_svd_method= opt_args.line_search_svd_method
-        loc_context= dict({"ctm_args":loc_ctm_args, "opt_args":loc_opt_args, "loss_history": t_data,
-            "line_search": False})
+        loc_context= dict({"ctm_args":loc_ctm_args, "opt_args":loc_opt_args, \
+            "loss_history": t_data, "line_search": False})
 
         # compute components of the grad
         fd_grad=dict()
@@ -134,8 +134,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
                         loc_context)
                     fd_grad[k][i]=(float(loss1-loss0)/opt_args.fd_eps)
                     log.info(f"FD_GRAD {i} loss1 {loss1} grad_i {fd_grad[k][i]}"\
-                        +f" t_ctm {timings['t_ctm']} t_check {timings['t_obs']}"\
-                        +f" t_energy {timings['t_energy']}")
+                        +f" timings {timings}")
                     state.coeffs[k].data.copy_(A_orig)
         log.info(f"FD_GRAD grad {fd_grad}")
 
@@ -163,7 +162,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
 
         # 2) log CTM metrics for debugging
         if opt_args.opt_logging:
-            log_entry=dict({"id": epoch, "loss": t_data["loss"][-1], "timing": timings})
+            log_entry=dict({"id": epoch, "loss": t_data["loss"][-1], "timings": timings})
             if linesearching:
                 log_entry["LS"]=len(t_data["loss_ls"])
                 log_entry["loss"]=t_data["loss_ls"]
@@ -220,8 +219,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         # 5) log CTM metrics for debugging
         if opt_args.opt_logging:
             log_entry=dict({"id": epoch, "LS": len(t_data["loss_ls"]), \
-                "loss": t_data["loss_ls"], "t_ctm": timings['t_ctm'], \
-                "t_check": timings['t_obs'], "t_energy": timings['t_energy']})
+                "loss": t_data["loss_ls"], "timings": timings})
             log.info(json.dumps(log_entry))
 
         # 4) compute desired observables

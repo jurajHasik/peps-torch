@@ -105,15 +105,15 @@ class ENV_C4V():
             self.get_T()[:x,:x,:self.bond_dim**2]
         return new_env
 
-    def move_to(self, device):
-        if device=='cpu' or device==torch.device('cpu'):
-            self.C[self.keyC]= self.get_C().to(device)
-            self.T[self.keyT]= self.get_T().to(device)
-        elif device.type=='cuda':
-            self.C[self.keyC]= self.get_C().to(device)
-            self.T[self.keyT]= self.get_T().to(device)
-        else:
-            raise RuntimeError(f"Unsupported device {device}")
+    # def move_to(self, device):
+    #     if device=='cpu' or device==torch.device('cpu'):
+    #         self.C[self.keyC]= self.get_C().to(device)
+    #         self.T[self.keyT]= self.get_T().to(device)
+    #     elif device.type=='cuda':
+    #         self.C[self.keyC]= self.get_C().to(device)
+    #         self.T[self.keyT]= self.get_T().to(device)
+    #     else:
+    #         raise RuntimeError(f"Unsupported device {device}")
 
 def init_env(state, env, ctm_args=cfg.ctm_args):
     """
@@ -250,11 +250,6 @@ def init_from_ipeps_obc(state, env, verbosity=0):
     dimsA= A.size()
     a= torch.einsum('mijef,mklab->eafb',(A,A)).contiguous().view(dimsA[3]**2, dimsA[4]**2)
     a= a/torch.max(torch.abs(a))
-    # check symmetry
-    # a_asymm_norm= torch.norm(a.t()-a)
-    # assert a_asymm_norm/torch.abs(a).max() < 1.0e-8, "a is not symmetric"
-    # D, U= truncated_eig_sym(a, a.size()[0])
-    # a= torch.diag(D)
     env.C[env.keyC]= torch.zeros(env.chi,env.chi, dtype=env.dtype, device=env.device)
     env.C[env.keyC][:min(env.chi,dimsA[3]**2),:min(env.chi,dimsA[4]**2)]=\
         a[:min(env.chi,dimsA[3]**2),:min(env.chi,dimsA[4]**2)]
@@ -271,7 +266,6 @@ def init_from_ipeps_obc(state, env, verbosity=0):
     #     2
     a= torch.einsum('meifg,makbc->eafbgc',(A,A)).contiguous().view(dimsA[1]**2, dimsA[3]**2, dimsA[4]**2)
     a= a/torch.max(torch.abs(a))
-    #a= torch.einsum('ia,abs,bj->ijs',U,a,U)
     env.T[env.keyT]= torch.zeros((env.chi,env.chi,dimsA[4]**2), dtype=env.dtype, device=env.device)
     env.T[env.keyT][:min(env.chi,dimsA[1]**2),:min(env.chi,dimsA[3]**2),:]=\
         a[:min(env.chi,dimsA[1]**2),:min(env.chi,dimsA[3]**2),:]

@@ -3,7 +3,6 @@ import copy
 import torch
 import argparse
 import config as cfg
-from ipeps.ipeps import write_ipeps
 from su2sym.ipeps_su2 import *
 from ctm.one_site_c4v.env_c4v import *
 from ctm.one_site_c4v import ctmrg_c4v
@@ -58,7 +57,6 @@ def main():
 
     model= j1j2.J1J2_C4V_BIPARTITE(j1=args.j1, j2=args.j2)
     energy_f= model.energy_1x1_lowmem
-    eval_obs_f= model.eval_obs
 
     # initialize an ipeps
     if args.instate!=None:
@@ -116,7 +114,7 @@ def main():
     init_env(state, ctm_env)
 
     loss0 = energy_f(state, ctm_env, force_cpu=args.force_cpu)
-    obs_values, obs_labels = eval_obs_f(state,ctm_env,force_cpu=args.force_cpu)
+    obs_values, obs_labels = model.eval_obs(state,ctm_env,force_cpu=args.force_cpu)
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
 
@@ -169,7 +167,7 @@ def main():
         else:
             epoch= len(opt_context["loss_history"]["loss"]) 
             loss= opt_context["loss_history"]["loss"][-1] 
-        obs_values, obs_labels = eval_obs_f(state,ctm_env,force_cpu=args.force_cpu)
+        obs_values, obs_labels = model.eval_obs(state,ctm_env,force_cpu=args.force_cpu)
         print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
 
         if (not opt_context["line_search"]) and args.top_freq>0 and epoch%args.top_freq==0:
@@ -190,7 +188,7 @@ def main():
     init_env(state, ctm_env)
     ctm_env, *ctm_log = ctmrg_c4v.run(state, ctm_env, conv_check=ctmrg_conv_f)
     opt_energy = energy_f(state,ctm_env,force_cpu=args.force_cpu)
-    obs_values, obs_labels = eval_obs_f(state,ctm_env,force_cpu=args.force_cpu)
+    obs_values, obs_labels = model.eval_obs(state,ctm_env,force_cpu=args.force_cpu)
     print(", ".join([f"{args.opt_max_iter}",f"{opt_energy}"]+[f"{v}" for v in obs_values]))
 
 if __name__=='__main__':
