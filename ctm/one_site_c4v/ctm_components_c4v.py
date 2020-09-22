@@ -16,8 +16,9 @@ def c2x2_dl(A, C, T, verbosity=0):
     # C--1 0--T--1
     # 0       2
     if log_gpu_mem: _log_cuda_mem(loc_device, who=who, uuid="CT_init")
-    C2x2 = torch.tensordot(C, T, ([1],[0]))
-    # C2x2= torch.einsum('i,ijk->ijk',torch.diag(C), T)
+    # C2x2 = torch.tensordot(C, T, [1], [0])
+    # C2x2 = torch.einsum('i,ijs->ijs',C,T)
+    C2x2= torch.diag(C).view(-1,1,1)*T
     if log_gpu_mem: _log_cuda_mem(loc_device, who=who, uuid="CT_end")
 
     # C------T--1->0
@@ -50,7 +51,9 @@ def c2x2_dl(A, C, T, verbosity=0):
 def c2x2_sl(a, C, T, verbosity=0):
     # C--1 0--T--1
     # 0       2
-    C2x2 = torch.tensordot(C, T, ([1],[0]))
+    # C2x2 = torch.tensordot(C, T, [1], [0])
+    # C2x2 = torch.einsum('i,ijs->ijs',C,T)
+    C2x2= torch.diag(C).view(-1,1,1)*T
 
     # C------T--1->0
     # 0      2->1
@@ -74,8 +77,8 @@ def c2x2_sl(a, C, T, verbosity=0):
     # |  
     # T--3->4,5
     # 2->3
-    C2x2= C2x2.view(C2x2.size()[0],a.size()[1],a.size()[1],C2x2.size()[2],\
-        a.size()[2],a.size()[2])
+    C2x2= C2x2.view([C2x2.size(0),a.size(1),a.size(1),C2x2.size(2),\
+        a.size(2),a.size(2)])
 
     # 4ii) first layer "bra" (in principle conjugate)
     # 
@@ -116,8 +119,8 @@ def c2x2_sl(a, C, T, verbosity=0):
     # and simultaneously
     # permute 0123->1203
     # reshape (12)(03)->01
-    C2x2= C2x2.permute(1,2,4,0,3,5).contiguous().view(C2x2.size()[1]*(a.size()[3]**2),\
-        C2x2.size()[0]*(a.size()[4]**2))
+    C2x2= C2x2.permute([1,2,4,0,3,5]).contiguous()\
+        .view([C2x2.size(1)*a.size(3)*a.size(3),C2x2.size(0)*a.size(4)*a.size(4)])
 
     # C2x2--1
     # |
