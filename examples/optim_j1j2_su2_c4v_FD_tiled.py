@@ -6,12 +6,10 @@ import config as cfg
 from su2sym.ipeps_su2 import *
 from ctm.one_site_c4v.env_c4v import *
 from ctm.one_site_c4v import ctmrg_c4v
-from ctm.one_site_c4v import ctmrg_c4v_specialized
 from ctm.one_site_c4v.rdm_c4v import rdm2x1_sl
-from ctm.one_site_c4v.rdm_c4v_specialized import rdm2x1_tiled
+#from ctm.one_site_c4v.rdm_c4v_specialized import rdm2x1_tiled
 from ctm.one_site_c4v import transferops_c4v
 from models import j1j2
-# from optim.ad_optim_su2 import optimize_state
 from optim.fd_optim_lbfgs_mod import optimize_state
 import su2sym.sym_ten_parser as tenSU2
 import time
@@ -31,6 +29,29 @@ parser.add_argument("--top_n", type=int, default=2, help="number of leading eige
     "of transfer operator to compute")
 args, unknown_args = parser.parse_known_args()
 
+@torch.no_grad()
+def ctmrg_conv_f(state, env, history, ctm_args=cfg.ctm_args):
+    if not history:
+        history=dict({"log": []})
+    rdm= rdm2x1_sl(state, env, force_cpu=ctm_args.conv_check_cpu, \
+        verbosity=cfg.ctm_args.verbosity_rdm)
+    # rdm= rdm2x1_tiled(state, env, force_cpu=ctm_args.conv_check_cpu, \
+    #     verbosity=cfg.ctm_args.verbosity_rdm)
+    dist= float('inf')
+    if len(history["log"]) > 1:
+        dist= torch.dist(rdm, history["rdm"], p=2).item()
+    history["rdm"]=rdm
+    history["log"].append(dist)
+    if dist<ctm_args.ctm_conv_tol:
+        log.info({"history_length": len(history['log']), "history": history['log'],
+            "final_multiplets": compute_multiplets(env)})
+        return True, history
+    elif len(history['log']) >= ctm_args.ctm_max_iter:
+        log.info({"history_length": len(history['log']), "history": history['log'],
+            "final_multiplets": compute_multiplets(env)})
+        return False, history
+    return False, history
+
 def main():
     cfg.configure(args)
     cfg.print_config()
@@ -38,8 +59,6 @@ def main():
     torch.manual_seed(args.seed)
 
     model= j1j2.J1J2_C4V_BIPARTITE(j1=args.j1, j2=args.j2)
-    energy_f= model.energy_1x1_tiled
-    eval_obs_f= model.eval_obs_tiled
 
     # initialize an ipeps
     if args.instate!=None:
@@ -93,34 +112,11 @@ def main():
 
     print(state)
 
-    @torch.no_grad()
-    def ctmrg_conv_f(state, env, history, ctm_args=cfg.ctm_args):
-        if not history:
-            history=dict({"log": []})
-        rdm= rdm2x1_sl(state, env, force_cpu=ctm_args.conv_check_cpu, \
-            verbosity=cfg.ctm_args.verbosity_rdm)
-        # rdm= rdm2x1_tiled(state, env, force_cpu=ctm_args.conv_check_cpu, \
-        #     verbosity=cfg.ctm_args.verbosity_rdm)
-        dist= float('inf')
-        if len(history["log"]) > 1:
-            dist= torch.dist(rdm, history["rdm"], p=2).item()
-        history["rdm"]=rdm
-        history["log"].append(dist)
-        if dist<ctm_args.ctm_conv_tol:
-            log.info({"history_length": len(history['log']), "history": history['log'],
-                "final_multiplets": compute_multiplets(ctm_env)})
-            return True, history
-        elif len(history['log']) >= ctm_args.ctm_max_iter:
-            log.info({"history_length": len(history['log']), "history": history['log'],
-                "final_multiplets": compute_multiplets(ctm_env)})
-            return False, history
-        return False, history
-
     ctm_env = ENV_C4V(args.chi, state)
     init_env(state, ctm_env)
 
-    loss0 = energy_f(state, ctm_env, force_cpu=args.force_cpu)
-    obs_values, obs_labels = eval_obs_f(state,ctm_env,force_cpu=args.force_cpu)
+    loss0 = model.energy_1x1_tiled(state, ctm_env, force_cpu=args.force_cpu)
+    obs_values, obs_labels = model.eval_obs_tiled(state,ctm_env,force_cpu=args.force_cpu)
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
 
@@ -136,22 +132,24 @@ def main():
             init_env(state, ctm_env_in)
 
         # 1) compute environment by CTMRG
-        ctm_env_out, history, t_ctm, t_obs= ctmrg_c4v_specialized.run_dl_SYMARP(state, ctm_env_in, \
+        t0_ctm_main= time.perf_counter() 
+        ctm_env_out, history, t_ctm, t_obs= ctmrg_c4v.run_dl(state, ctm_env_in, \
             conv_check=ctmrg_conv_f, ctm_args=ctm_args)
+        t1_ctm_main= time.perf_counter() 
         t0_energy= time.perf_counter()
-        loss0 = energy_f(state, ctm_env_out, force_cpu=args.force_cpu)
+        loss0 = model.energy_1x1_tiled(state, ctm_env_out, force_cpu=args.force_cpu)
         t1_energy= time.perf_counter()
 
         loc_ctm_args= copy.deepcopy(ctm_args)
         loc_ctm_args.ctm_max_iter= 1
-        ctm_env_out, history1, t_ctm1, t_obs1= ctmrg_c4v_specialized.run_dl_SYMARP(state, ctm_env_out, \
+        ctm_env_out, history1, t_ctm1, t_obs1= ctmrg_c4v.run_dl(state, ctm_env_out, \
             ctm_args=loc_ctm_args)
         t2_energy= time.perf_counter()
-        loss1 = energy_f(state, ctm_env_out, force_cpu=args.force_cpu)
+        loss1 = model.energy_1x1_tiled(state, ctm_env_out, force_cpu=args.force_cpu)
         t3_energy= time.perf_counter()
 
-        timings= dict({"t_ctm": t_ctm, "t_obs": t_obs, \
-            "t_energy": (t1_energy-t0_energy)+(t3_energy-t2_energy)})
+        timings= dict({"t_ctm_main": t1_ctm_main-t0_ctm_main, "t_ctm": t_ctm, \
+            "t_obs": t_obs, "t_energy": (t1_energy-t0_energy)+(t3_energy-t2_energy)})
         #loss=(loss0+loss1)/2
         loss= torch.max(loss0,loss1)
 
@@ -171,7 +169,7 @@ def main():
         else:
             epoch= len(opt_context["loss_history"]["loss"]) 
             loss= opt_context["loss_history"]["loss"][-1] 
-        obs_values, obs_labels = eval_obs_f(state,ctm_env,force_cpu=args.force_cpu)
+        obs_values, obs_labels = model.eval_obs_tiled(state,ctm_env,force_cpu=args.force_cpu)
         print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
 
         if (not opt_context["line_search"]) and args.top_freq>0 and epoch%args.top_freq==0:
@@ -190,9 +188,9 @@ def main():
     state= read_ipeps_su2(outputstatefile)
     ctm_env = ENV_C4V(args.chi, state)
     init_env(state, ctm_env)
-    ctm_env, *ctm_log = ctmrg_c4v_specialized.run_dl_SYMARP(state, ctm_env, conv_check=ctmrg_conv_f)
-    opt_energy = energy_f(state,ctm_env,force_cpu=args.force_cpu)
-    obs_values, obs_labels = eval_obs_f(state,ctm_env,force_cpu=args.force_cpu)
+    ctm_env, *ctm_log = ctmrg_c4v.run_dl(state, ctm_env, conv_check=ctmrg_conv_f)
+    opt_energy = model.energy_1x1_tiled(state,ctm_env,force_cpu=args.force_cpu)
+    obs_values, obs_labels = model.eval_obs_tiled(state,ctm_env,force_cpu=args.force_cpu)
     print(", ".join([f"{args.opt_max_iter}",f"{opt_energy}"]+[f"{v}" for v in obs_values]))
 
 if __name__=='__main__':
