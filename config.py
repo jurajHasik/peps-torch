@@ -132,9 +132,10 @@ class GLOBALARGS():
     :vartype gpu: str
     """
     def __init__(self):
-        self.dtype = torch.float64
-        self.device = 'cpu'
-        self.gpu = ''
+        self.tensor_io_format= "legacy"
+        self.dtype= torch.float64
+        self.device= 'cpu'
+        self.gpu= ''
 
     def __str__(self):
         res=type(self).__name__+"\n"

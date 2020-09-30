@@ -87,12 +87,9 @@ def get_op(op, m, dtype=torch.float64, device='cpu', dbg = False):
     elif op == "sz":
         if dbg:
             print(">>>>> Constructing 1sO: Sz <<<<<")
-        res1 = torch.zeros((m, m), dtype=dtype, device=device)
-        res2 = torch.zeros((m, m), dtype=dtype, device=device)
+        res= torch.zeros((m, m), dtype=dtype, device=device)
         for i in range(m):
-            res1[i,i] = -0.5 * (-(m - 1) + i*2)
-        res = torch.zeros((2, m, m), dtype=dtype, device=device)
-        res[0] = res1; res[1] = res2
+            res[i,i] = -0.5 * (-(m - 1) + i*2)
         return res
     
     # The s^+ operator maps states with s^z = x to states with
@@ -110,14 +107,11 @@ def get_op(op, m, dtype=torch.float64, device='cpu', dbg = False):
     elif op == "sp":
         if dbg:
             print(">>>>> Constructing 1sO: S^+ <<<<<")
-        res1 = torch.zeros((m, m), dtype=dtype, device=device)
-        res2 = torch.zeros((m, m), dtype=dtype, device=device)
+        res= torch.zeros((m, m), dtype=dtype, device=device)
         for i in range(m-1):
-            res1[i,i+1] = sqrt(0.5 * (m - 1) * (0.5 * (m - 1) + 1) - \
+            res[i,i+1] = sqrt(0.5 * (m - 1) * (0.5 * (m - 1) + 1) - \
                      (-0.5 * (m - 1) + i) * \
                       (-0.5 * (m - 1) + i + 1))
-        res = torch.zeros((2, m, m), dtype=dtype, device=device)
-        res[0] = res1; res[1] = res2
         return res
 
     # The s^- operator maps states with s^z = x to states with
@@ -135,14 +129,11 @@ def get_op(op, m, dtype=torch.float64, device='cpu', dbg = False):
     elif op == "sm":
         if dbg:
             print(">>>>> Constructing 1sO: S^- <<<<<")
-        res1 = torch.zeros((m, m), dtype=dtype, device=device)
-        res2 = torch.zeros((m, m), dtype=dtype, device=device)
+        res= torch.zeros((m, m), dtype=dtype, device=device)
         for i in range(1,m):
-            res1[i, i - 1] = sqrt(0.5 * (m - 1) * (0.5 * (m - 1) + 1) - \
+            res[i, i - 1] = sqrt(0.5 * (m - 1) * (0.5 * (m - 1) + 1) - \
                      (-0.5 * (m - 1) + i) * \
                        (-0.5 * (m - 1) + i - 1))
-        res = torch.zeros((2, m, m), dtype=dtype, device=device)
-        res[0] = res1; res[1] = res2
         return res
     else:
         raise Exception("Unsupported operator requested: "+op)

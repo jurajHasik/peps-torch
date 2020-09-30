@@ -27,7 +27,7 @@ def main():
     torch.set_num_threads(args.omp_cores)
     torch.manual_seed(args.seed)
 
-    model = j1j2.J1J2(j1=args.j1, j2=args.j2)
+    model= j1j2.J1J2(j1=args.j1, j2=args.j2)
     
     # initialize an ipeps
     # 1) define lattice-tiling function, that maps arbitrary vertex of square lattice
@@ -69,6 +69,8 @@ def main():
     elif args.opt_resume is not None:
         if args.tiling == "BIPARTITE" or args.tiling == "2SITE":
             state= IPEPS(dict(), lX=2, lY=1)
+        elif args.tiling == "1SITE":
+            state= IPEPS(dict(), lX=1, lY=1)
         elif args.tiling == "4SITE":
             state= IPEPS(dict(), lX=2, lY=2)
         elif args.tiling == "8SITE":
@@ -77,80 +79,40 @@ def main():
     elif args.ipeps_init_type=='RANDOM':
         bond_dim = args.bond_dim
         
-        A1 = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+        A = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
             dtype=cfg.global_args.dtype,device=cfg.global_args.device)
-        B1 = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-            dtype=cfg.global_args.dtype,device=cfg.global_args.device)
-        A2 = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-            dtype=cfg.global_args.dtype,device=cfg.global_args.device)
-        B2 = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+        B = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
             dtype=cfg.global_args.dtype,device=cfg.global_args.device)
 
         # normalization of initial random tensors
-        A = torch.zeros((2, model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-            dtype=cfg.global_args.dtype,device=cfg.global_args.device)
-        A[0] = A1; A[1] = A2
-        A = A/max_complex(A)
-        B = torch.zeros((2, model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-            dtype=cfg.global_args.dtype,device=cfg.global_args.device)
-        B[0] = B1; B[1] = B2
-        B = B/max_complex(B)
+        A = A/A.abs().max()
+        B = B/B.abs().max()
 
         sites = {(0,0): A, (1,0): B}
         
         if args.tiling == "4SITE" or args.tiling == "8SITE":
-            C1= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+            C= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
                 dtype=cfg.global_args.dtype,device=cfg.global_args.device)
-            C2= torch.zeros((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+            D= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
                 dtype=cfg.global_args.dtype,device=cfg.global_args.device)
-            D1= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
-            D2= torch.zeros((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
-            C = torch.zeros((2, model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
-            C[0] = C1; C[1] = C2
-            C = C/max_complex(C)
-            D = torch.zeros((2, model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
-            D[0] = D1; D[1] = D2
-            D = D/max_complex(D)
+            C = C/C.abs().max()
+            D = D/D.abs().max()
             sites[(0,1)] = C
             sites[(1,1)] = D
 
         if args.tiling == "8SITE":
-            E1= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+            E= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
                 dtype=cfg.global_args.dtype,device=cfg.global_args.device)
-            E2= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+            F= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
                 dtype=cfg.global_args.dtype,device=cfg.global_args.device)
-            F1= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+            G= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
                 dtype=cfg.global_args.dtype,device=cfg.global_args.device)
-            F2= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+            H= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
                 dtype=cfg.global_args.dtype,device=cfg.global_args.device)
-            G1= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
-            G2= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
-            H1= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
-            H2= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
-            E = torch.zeros((2, model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
-            E[0] = E1; E[1] = E2
-            E = E/max_complex(E)
-            F = torch.zeros((2, model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
-            F[0] = F1; F[1] = F2
-            F = F/max_complex(F)
-            G = torch.zeros((2, model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
-            G[0] = G1; G[1] = G2
-            G = G/max_complex(G)
-            H = torch.zeros((2, model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
-            H[0] = H1; H[1] = H2
-            H = H/max_complex(H)
+            E = E/E.abs().max()
+            F = F/F.abs().max()
+            G = G/G.abs().max()
+            H = H/H.abs().max()
             sites[(2,0)] = E
             sites[(3,0)] = F
             sites[(2,1)] = G

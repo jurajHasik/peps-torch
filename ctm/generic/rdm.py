@@ -1,9 +1,28 @@
 import torch
-from ipeps.ipeps import IPEPS
+#from ipeps.ipeps import IPEPS
 from ctm.generic.env import ENV
 from complex_num.complex_operation import *
+from tn_interface import contract, einsum
+from tn_interface import contiguous, view, permute
+from tn_interface import conj
 
-def rdm1x1(coord, state, env, verbosity=0):
+def _sym_pos_def(rdm, sym_pos_def=False, verbosity=0, who="unknown"):
+    rdm_asym= 0.5*(rdm-rdm.t())
+    rdm= 0.5*(rdm+rdm.t())
+    if verbosity>0: 
+        log.info(f"{who} norm(rdm_sym) {rdm.norm()} norm(rdm_asym) {rdm_asym.norm()}")
+    if sym_pos_def:
+        with torch.no_grad():
+            D, U= torch.symeig(rdm, eigenvectors=True)
+            if D.min() < 0:
+                log.info(f"{who} max(diag(rdm)) {D.max()} min(diag(rdm)) {D.min()}")
+                D= torch.clamp(D, min=0)
+                rdm_posdef= U@torch.diag(D)@U.t()
+                rdm.copy_(rdm_posdef)
+    rdm = rdm / rdm.diagonal().sum()
+    return rdm
+
+def rdm1x1(coord, state, env, sym_pos_def=False, verbosity=0):
     r"""
     :param coord: vertex (x,y) for which reduced density matrix is constructed
     :param state: underlying wavefunction
@@ -28,12 +47,13 @@ def rdm1x1(coord, state, env, verbosity=0):
     where the physical indices `s` and `s'` of on-site tensor :math:`A` at vertex ``coord`` 
     and it's hermitian conjugate :math:`A^\dagger` are left uncontracted
     """
+    who= "rdm1x1"
     # C(-1,-1)--1->0
     # 0
     # 0
     # T(-1,0)--2
     # 1
-    rdm = tensordot_complex(env.C[(coord,(-1,-1))],env.T[(coord,(-1,0))],([0],[0]))
+    rdm = contract(env.C[(coord,(-1,-1))],env.T[(coord,(-1,0))],([0],[0]))
     if verbosity>0:
         print("rdm=CT "+str(rdm.size()))
     # C(-1,-1)--0
@@ -42,7 +62,7 @@ def rdm1x1(coord, state, env, verbosity=0):
     # 1
     # 0
     # C(-1,1)--1->2
-    rdm = tensordot_complex(rdm,env.C[(coord,(-1,1))],([1],[0]))
+    rdm = contract(rdm,env.C[(coord,(-1,1))],([1],[0]))
     if verbosity>0:
         print("rdm=CTC "+str(rdm.size()))
     # C(-1,-1)--0
@@ -50,7 +70,7 @@ def rdm1x1(coord, state, env, verbosity=0):
     # T(-1,0)--1
     # |             0->2
     # C(-1,1)--2 1--T(0,1)--2->3
-    rdm = tensordot_complex(rdm,env.T[(coord,(0,1))],([2],[1]))
+    rdm = contract(rdm,env.T[(coord,(0,1))],([2],[1]))
     if verbosity>0:
         print("rdm=CTCT "+str(rdm.size()))
     # TODO - more efficent contraction with uncontracted-double-layer on-site tensor
@@ -65,9 +85,9 @@ def rdm1x1(coord, state, env, verbosity=0):
     # --A--
     #  /
     #
-    dimsA = size_complex(state.site(coord))
-    a = contiguous_complex(einsum_complex('mefgh,nabcd->eafbgchdmn',state.site(coord),complex_conjugate(state.site(coord))))
-    a = view_complex((dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2, dimsA[0], dimsA[0]), a)
+    dimsA = state.site(coord).size()
+    a = contiguous(einsum('mefgh,nabcd->eafbgchdmn',state.site(coord),conj(state.site(coord))))
+    a = view(a, (dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2, dimsA[0], dimsA[0]))
     # C(-1,-1)--0
     # |
     # |             0->2
@@ -75,7 +95,7 @@ def rdm1x1(coord, state, env, verbosity=0):
     # |             2\45(s,s')
     # |             2
     # C(-1,1)-------T(0,1)--3->1
-    rdm = tensordot_complex(rdm,a,([1,2],[1,2]))
+    rdm = contract(rdm,a,([1,2],[1,2]))
     if verbosity>0:
         print("rdm=CTCTa "+str(rdm.size()))
     # C(-1,-1)--0 0--T(0,-1)--2->0
@@ -85,7 +105,7 @@ def rdm1x1(coord, state, env, verbosity=0):
     # |              |\45->34(s,s')
     # |              |
     # C(-1,1)--------T(0,1)--1
-    rdm = tensordot_complex(env.T[(coord,(0,-1))],rdm,([0,1],[0,2]))
+    rdm = contract(env.T[(coord,(0,-1))],rdm,([0,1],[0,2]))
     if verbosity>0:
         print("rdm=CTCTaT "+str(rdm.size()))
     # C(-1,-1)--T(0,-1)--0 0--C(1,-1)
@@ -95,7 +115,7 @@ def rdm1x1(coord, state, env, verbosity=0):
     # |         |\34(s,s')
     # |         |
     # C(-1,1)---T(0,1)--0->1
-    rdm = tensordot_complex(env.C[(coord,(1,-1))],rdm,([0],[0]))
+    rdm = contract(env.C[(coord,(1,-1))],rdm,([0],[0]))
     if verbosity>0:
         print("rdm=CTCTaTC "+str(rdm.size()))
     # C(-1,-1)--T(0,-1)-----C(1,-1)
@@ -105,7 +125,7 @@ def rdm1x1(coord, state, env, verbosity=0):
     # |         |\34->23(s,s')  2->0
     # |         |
     # C(-1,1)---T(0,1)--1
-    rdm = tensordot_complex(env.T[(coord,(1,0))],rdm,([0,1],[0,2]))
+    rdm = contract(env.T[(coord,(1,0))],rdm,([0,1],[0,2]))
     if verbosity>0:
         print("rdm=CTCTaTCT "+str(rdm.size()))
     # C(-1,-1)--T(0,-1)--------C(1,-1)
@@ -115,12 +135,13 @@ def rdm1x1(coord, state, env, verbosity=0):
     # |         |\23->12(s,s') 0
     # |         |              0
     # C(-1,1)---T(0,1)--1 1----C(1,1)
-    rdm = tensordot_complex(rdm,env.C[(coord,(1,1))],([0,1],[0,1]))
+    rdm = contract(rdm,env.C[(coord,(1,1))],([0,1],[0,1]))
     if verbosity>0:
         print("rdm=CTCTaTCTC "+str(rdm.size()))
 
-    # normalize
-    rdm = rdm / trace_complex(rdm)
+    # symmetrize and normalize
+    rdm= _sym_pos_def(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
+
     return rdm
 
 def rdm2x1(coord, ipeps, env, verbosity=0):
@@ -186,7 +207,7 @@ def rdm2x1(coord, ipeps, env, verbosity=0):
     # |\23
     # 0
     C2x2_LU = C2x2_LU.permute(1,2,0,3,4,5).contiguous().view(\
-        T1.size()[2]*a.size()[3],T2.size()[1]*a.size()[2],dimsA[0],dimsA[0])
+        T2.size(1)*a.size(2),T1.size(2)*a.size(3),dimsA[0],dimsA[0])
     if verbosity>0:
         print("C2X2 LU "+str(coord)+"->"+str(ipeps.vertexToSite(coord))+" (-1,-1): "+str(C2x2_LU.size()))
 
@@ -202,7 +223,7 @@ def rdm2x1(coord, ipeps, env, verbosity=0):
     # 0
     # |
     # C2x1--1
-    C2x1_LD = C2x1_LD.view(C.size()[0]*T2.size()[0],T2.size()[2]).contiguous()
+    C2x1_LD = C2x1_LD.view(C.size(0)*T2.size(0),T2.size(2)).contiguous()
     if verbosity>0:
         print("C2X1 LD "+str(coord)+"->"+str(ipeps.vertexToSite(coord))+" (-1,1): "+str(C2x1_LD.size()))
 
@@ -251,7 +272,7 @@ def rdm2x1(coord, ipeps, env, verbosity=0):
     # 23/|
     #    1
     C2x2_RU = C2x2_RU.permute(1,2,0,3,4,5).contiguous().view(\
-        T2.size()[0]*a.size()[1],T1.size()[2]*a.size()[2], dimsA[0], dimsA[0])
+        T2.size(0)*a.size(1),T1.size(2)*a.size(2), dimsA[0], dimsA[0])
     if verbosity>0:
         print("C2X2 RU "+str((coord[0]+vec[0],coord[1]+vec[1]))+"->"+str(shitf_coord)+" (1,-1): "+str(C2x2_RU.size()))
 
@@ -264,7 +285,7 @@ def rdm2x1(coord, ipeps, env, verbosity=0):
     C2x1_RD = torch.tensordot(C, T1, ([1],[2]))
 
     # reshape (01)2->(0)1
-    C2x1_RD = C2x1_RD.view(C.size()[0]*T1.size()[0],T1.size()[1]).contiguous()
+    C2x1_RD = C2x1_RD.view(C.size(0)*T1.size(0),T1.size(1)).contiguous()
 
     #    0
     #    |
@@ -363,7 +384,7 @@ def rdm1x2(coord, ipeps, env, verbosity=0):
     # |\23
     # 0
     C2x2_LU = C2x2_LU.permute(1,2,0,3,4,5).contiguous().view(\
-        T1.size()[2]*a.size()[3],T2.size()[1]*a.size()[2],dimsA[0],dimsA[0])
+        T2.size(1)*a.size(2),T1.size(2)*a.size(3),dimsA[0],dimsA[0])
     if verbosity>0:
         print("C2X2 LU "+str(coord)+"->"+str(ipeps.vertexToSite(coord))+" (-1,-1): "+str(C2x2_LU.size()))
 
@@ -382,7 +403,7 @@ def rdm1x2(coord, ipeps, env, verbosity=0):
     # 0--C1x2
     # 23/|
     #    1
-    C1x2_RU = C1x2_RU.view(C.size()[0]*T1.size()[1],T1.size()[2]).contiguous()
+    C1x2_RU = C1x2_RU.view(C.size(0)*T1.size(1),T1.size(2)).contiguous()
     if verbosity>0:
         print("C1X2 RU "+str(coord)+"->"+str(ipeps.vertexToSite(coord))+" (1,-1): "+str(C1x2_RU.size()))
 
@@ -429,7 +450,7 @@ def rdm1x2(coord, ipeps, env, verbosity=0):
     # |/23
     # C2x2--1
     C2x2_LD = C2x2_LD.permute(0,2,1,3,4,5).contiguous().view(\
-        T1.size()[0]*a.size()[0],T2.size()[2]*a.size()[3], dimsA[0], dimsA[0])
+        T1.size(0)*a.size(0),T2.size(2)*a.size(3), dimsA[0], dimsA[0])
     if verbosity>0:
         print("C2X2 LD "+str((coord[0]+vec[0],coord[1]+vec[1]))+"->"+str(shitf_coord)+" (-1,1): "+str(C2x2_LD.size()))
 
@@ -480,7 +501,7 @@ def rdm1x2(coord, ipeps, env, verbosity=0):
 
     return rdm
 
-def rdm2x2(coord, ipeps, env, verbosity=0):
+def rdm2x2(coord, state, env, sym_pos_def=False, verbosity=0):
     r"""
     :param coord: vertex (x,y) specifies upper left site of 2x2 subsystem 
     :param state: underlying wavefunction
@@ -518,79 +539,80 @@ def rdm2x2(coord, ipeps, env, verbosity=0):
         s2 s3
 
     """
+    who= "rdm2x2"
     #----- building C2x2_LU ----------------------------------------------------
-    C = env.C[(ipeps.vertexToSite(coord),(-1,-1))]
-    T1 = env.T[(ipeps.vertexToSite(coord),(0,-1))]
-    T2 = env.T[(ipeps.vertexToSite(coord),(-1,0))]
-    dimsA = size_complex(ipeps.site(coord))
-    a = contiguous_complex(einsum_complex('mefgh,nabcd->eafbgchdmn',ipeps.site(coord),complex_conjugate(ipeps.site(coord))))
-    a = view_complex((dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2, dimsA[0], dimsA[0]), a)
+    C = env.C[(state.vertexToSite(coord),(-1,-1))]
+    T1 = env.T[(state.vertexToSite(coord),(0,-1))]
+    T2 = env.T[(state.vertexToSite(coord),(-1,0))]
+    dimsA = state.site(coord).size()
+    a = contiguous(einsum('mefgh,nabcd->eafbgchdmn',state.site(coord),conj(state.site(coord))))
+    a = view(a, (dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2, dimsA[0], dimsA[0]))
 
     # C--10--T1--2
     # 0      1
-    C2x2_LU = tensordot_complex(C, T1, ([1],[0]))
+    C2x2_LU = contract(C, T1, ([1],[0]))
 
     # C------T1--2->1
     # 0      1->0
     # 0
     # T2--2->3
     # 1->2
-    C2x2_LU = tensordot_complex(C2x2_LU, T2, ([0],[0]))
+    C2x2_LU = contract(C2x2_LU, T2, ([0],[0]))
 
     # C-------T1--1->0
     # |       0
     # |       0
     # T2--3 1 a--3 
     # 2->1    2\45
-    C2x2_LU = tensordot_complex(C2x2_LU, a, ([0,3],[0,1]))
+    C2x2_LU = contract(C2x2_LU, a, ([0,3],[0,1]))
 
     # permute 012345->120345
     # reshape (12)(03)45->0123
     # C2x2--1
     # |\23
     # 0
-    C2x2_LU = contiguous_complex(permute_complex((1,2,0,3,4,5), C2x2_LU))
-    C2x2_LU = view_complex((T1.size()[3]*a.size()[4],T2.size()[2]*a.size()[3],dimsA[0],dimsA[0]), C2x2_LU)
+    C2x2_LU = contiguous(permute(C2x2_LU,(1,2,0,3,4,5)))
+    C2x2_LU = view(C2x2_LU, (T2.size(1)*a.size(2),T1.size(2)*a.size(3),dimsA[0],dimsA[0]))
     if verbosity>0:
-        print("C2X2 LU "+str(coord)+"->"+str(ipeps.vertexToSite(coord))+" (-1,-1): "+str(C2x2_LU.size()))
+        print("C2X2 LU "+str(coord)+"->"+str(state.vertexToSite(coord))+" (-1,-1): "+str(C2x2_LU.size()))
 
     #----- building C2x2_RU ----------------------------------------------------
     vec = (1,0)
-    shitf_coord = ipeps.vertexToSite((coord[0]+vec[0],coord[1]+vec[1]))
+    shitf_coord = state.vertexToSite((coord[0]+vec[0],coord[1]+vec[1]))
     C = env.C[(shitf_coord,(1,-1))]
     T1 = env.T[(shitf_coord,(1,0))]
     T2 = env.T[(shitf_coord,(0,-1))]
-    dimsA = size_complex(ipeps.site(shitf_coord))
-    a = contiguous_complex(einsum_complex('mefgh,nabcd->eafbgchdmn',ipeps.site(shitf_coord),complex_conjugate(ipeps.site(shitf_coord))))
-    a = view_complex((dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2, dimsA[0], dimsA[0]), a)
+    dimsA = state.site(shitf_coord).size()
+    a = contiguous(einsum('mefgh,nabcd->eafbgchdmn',state.site(shitf_coord),conj(state.site(shitf_coord))))
+    a = view(a, (dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2, dimsA[0], dimsA[0]))
 
     # 0--C
     #    1
     #    0
     # 1--T1
     #    2
-    C2x2_RU = tensordot_complex(C, T1, ([1],[0]))
+    C2x2_RU = contract(C, T1, ([1],[0]))
 
     # 2<-0--T2--2 0--C
     #    3<-1        |
     #          0<-1--T1
     #             1<-2
-    C2x2_RU = tensordot_complex(C2x2_RU, T2, ([0],[2]))
+    C2x2_RU = contract(C2x2_RU, T2, ([0],[2]))
 
     # 1<-2--T2------C
     #       3       |
     #    45\0       |
     # 2<-1--a--3 0--T1
     #    3<-2    0<-1
-    C2x2_RU = tensordot_complex(C2x2_RU, a, ([0,3],[3,0]))
+    C2x2_RU = contract(C2x2_RU, a, ([0,3],[3,0]))
 
     # permute 012334->120345
     # reshape (12)(03)45->0123
     # 0--C2x2
     # 23/|
     #    1
-    C2x2_RU = contiguous_complex(permute_complex((1,2,0,3,4,5), C2x2_RU))
-    C2x2_RU = view_complex((T2.size()[1]*a.size()[2],T1.size()[3]*a.size()[3], dimsA[0], dimsA[0]), C2x2_RU)
+    C2x2_RU = contiguous(permute(C2x2_RU, (1,2,0,3,4,5)))
+    C2x2_RU = view(C2x2_RU, (T2.size(0)*a.size(1),T1.size(2)*a.size(2), dimsA[0], dimsA[0]))
     if verbosity>0:
         print("C2X2 RU "+str((coord[0]+vec[0],coord[1]+vec[1]))+"->"+str(shitf_coord)+" (1,-1): "+str(C2x2_RU.size()))
 
@@ -599,41 +621,41 @@ def rdm2x2(coord, ipeps, env, verbosity=0):
     # |\23->12      |\23->45   & permute |\12->23      |\45
     # 0             1->3                 0             3->1
     # TODO is it worthy(performance-wise) to instead overwrite one of C2x2_LU,C2x2_RU ?  
-    upper_half = tensordot_complex(C2x2_LU, C2x2_RU, ([1],[0]))
-    upper_half = permute_complex((0,3,1,2,4,5), upper_half)
+    upper_half = contract(C2x2_LU, C2x2_RU, ([1],[0]))
+    upper_half = permute(upper_half, (0,3,1,2,4,5))
 
     #----- building C2x2_RD ----------------------------------------------------
     vec = (1,1)
-    shitf_coord = ipeps.vertexToSite((coord[0]+vec[0],coord[1]+vec[1]))
+    shitf_coord = state.vertexToSite((coord[0]+vec[0],coord[1]+vec[1]))
     C = env.C[(shitf_coord,(1,1))]
     T1 = env.T[(shitf_coord,(0,1))]
     T2 = env.T[(shitf_coord,(1,0))]
-    dimsA = size_complex(ipeps.site(shitf_coord))
-    a = contiguous_complex(einsum_complex('mefgh,nabcd->eafbgchdmn',ipeps.site(shitf_coord),complex_conjugate(ipeps.site(shitf_coord))))
-    a = view_complex((dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2, dimsA[0], dimsA[0]), a)
+    dimsA = state.site(shitf_coord).size()
+    a = contiguous(einsum('mefgh,nabcd->eafbgchdmn',state.site(shitf_coord),conj(state.site(shitf_coord))))
+    a = view(a, (dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2, dimsA[0], dimsA[0]))
 
     #    1<-0        0
     # 2<-1--T1--2 1--C
-    C2x2_RD = tensordot_complex(C, T1, ([1],[2]))
+    C2x2_RD = contract(C, T1, ([1],[2]))
 
     #         2<-0
     #      3<-1--T2
     #            2
     #    0<-1    0
     # 1<-2--T1---C
-    C2x2_RD = tensordot_complex(C2x2_RD, T2, ([0],[2]))
+    C2x2_RD = contract(C2x2_RD, T2, ([0],[2]))
 
     #    2<-0    1<-2
     # 3<-1--a--3 3--T2
     #       2\45    |
     #       0       |
     # 0<-1--T1------C
-    C2x2_RD = tensordot_complex(C2x2_RD, a, ([0,3],[2,3]))
+    C2x2_RD = contract(C2x2_RD, a, ([0,3],[2,3]))
 
     # permute 012345->120345
     # reshape (12)(03)45->0123
-    C2x2_RD = contiguous_complex(permute_complex((1,2,0,3,4,5), C2x2_RD))
-    C2x2_RD = view_complex((T2.size()[1]*a.size()[1],T1.size()[2]*a.size()[2], dimsA[0], dimsA[0]), C2x2_RD)
+    C2x2_RD = contiguous(permute(C2x2_RD, (1,2,0,3,4,5)))
+    C2x2_RD = view(C2x2_RD, (T2.size(0)*a.size(0),T1.size(1)*a.size(1), dimsA[0], dimsA[0]))
 
     #    0
     #    |/23
@@ -643,42 +665,42 @@ def rdm2x2(coord, ipeps, env, verbosity=0):
 
     #----- building C2x2_LD ----------------------------------------------------
     vec = (0,1)
-    shitf_coord = ipeps.vertexToSite((coord[0]+vec[0],coord[1]+vec[1]))
+    shitf_coord = state.vertexToSite((coord[0]+vec[0],coord[1]+vec[1]))
     C = env.C[(shitf_coord,(-1,1))]
     T1 = env.T[(shitf_coord,(-1,0))]
     T2 = env.T[(shitf_coord,(0,1))]
-    dimsA = size_complex(ipeps.site(shitf_coord))
-    a = contiguous_complex(einsum_complex('mefgh,nabcd->eafbgchdmn',ipeps.site(shitf_coord),complex_conjugate(ipeps.site(shitf_coord))))
-    a = view_complex((dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2, dimsA[0], dimsA[0]), a)
+    dimsA = state.site(shitf_coord).size()
+    a = contiguous(einsum('mefgh,nabcd->eafbgchdmn',state.site(shitf_coord),conj(state.site(shitf_coord))))
+    a = view(a, (dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2, dimsA[0], dimsA[0]))
 
     # 0->1
     # T1--2
     # 1
     # 0
     # C--1->0
-    C2x2_LD = tensordot_complex(C, T1, ([0],[1]))
+    C2x2_LD = contract(C, T1, ([0],[1]))
 
     # 1->0
     # T1--2->1
     # |
     # |       0->2
     # C--0 1--T2--2->3
-    C2x2_LD = tensordot_complex(C2x2_LD, T2, ([0],[1]))
+    C2x2_LD = contract(C2x2_LD, T2, ([0],[1]))
 
     # 0        0->2
     # T1--1 1--a--3
     # |        2\45
     # |        2
     # C--------T2--3->1
-    C2x2_LD = tensordot_complex(C2x2_LD, a, ([1,2],[1,2]))
+    C2x2_LD = contract(C2x2_LD, a, ([1,2],[1,2]))
 
     # permute 012345->021345
     # reshape (02)(13)45->0123
     # 0
     # |/23
     # C2x2--1
-    C2x2_LD = contiguous_complex(permute_complex((0,2,1,3,4,5), C2x2_LD))
-    C2x2_LD = view_complex((T1.size()[1]*a.size()[1],T2.size()[3]*a.size()[4], dimsA[0], dimsA[0]), C2x2_LD)
+    C2x2_LD = contiguous(permute(C2x2_LD, (0,2,1,3,4,5)))
+    C2x2_LD = view(C2x2_LD, (T1.size(0)*a.size(0),T2.size(2)*a.size(3), dimsA[0], dimsA[0]))
     if verbosity>0:
         print("C2X2 LD "+str((coord[0]+vec[0],coord[1]+vec[1]))+"->"+str(shitf_coord)+" (-1,1): "+str(C2x2_LD.size()))
 
@@ -687,8 +709,8 @@ def rdm2x2(coord, ipeps, env, verbosity=0):
     # |/23->12      |/23->45   & permute |/12->23      |/45
     # C2x2_LD--1 1--C2x2_RD              C2x2_LD------C2x2_RD
     # TODO is it worthy(performance-wise) to instead overwrite one of C2x2_LD,C2x2_RD ?  
-    lower_half = tensordot_complex(C2x2_LD, C2x2_RD, ([1],[1]))
-    lower_half = permute_complex((0,3,1,2,4,5), lower_half)
+    lower_half = contract(C2x2_LD, C2x2_RD, ([1],[1]))
+    lower_half = permute(lower_half, (0,3,1,2,4,5))
 
     # construct reduced density matrix by contracting lower and upper halfs
     # C2x2_LU------C2x2_RU
@@ -697,12 +719,14 @@ def rdm2x2(coord, ipeps, env, verbosity=0):
     # 0            1    
     # |/23->45     |/45->67
     # C2x2_LD------C2x2_RD
-    rdm = tensordot_complex(upper_half,lower_half,([0,1],[0,1]))
+    rdm = contract(upper_half,lower_half,([0,1],[0,1]))
 
     # permute into order of s0,s1,s2,s3;s0',s1',s2',s3' where primed indices
     # represent "ket"
     # 01234567->02461357
     # and normalize
-    rdm = permute_complex((0,2,4,6,1,3,5,7), rdm)
-    rdm = rdm / einsumtrace_complex('ijklijkl',rdm)
+    d_rdm= rdm.size()
+    rdm= view(contiguous(permute(rdm, (0,2,4,6,1,3,5,7))), (d_rdm[0]**4,d_rdm[4]**4))
+    rdm= _sym_pos_def(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
+    rdm= view(rdm, d_rdm)
     return rdm

@@ -4,7 +4,7 @@ import json
 import itertools
 import math
 import config as cfg
-from complex_num.complex_operation import *
+from tensor_io import *
 
 # TODO drop constrain for aux bond dimension to be identical on 
 # all bond indices
@@ -157,7 +157,7 @@ class IPEPS():
             self.sites[coord] = self.sites[coord] + noise * rand_t
 
     def get_aux_bond_dims(self):
-        return [d for key in self.sites.keys() for d in self.sites[key].size()[2:]]
+        return [d for key in self.sites.keys() for d in self.sites[key].size()[1:]]
 
     def __str__(self):
         print(f"lX x lY: {self.lX} x {self.lY}")
@@ -215,7 +215,7 @@ def read_ipeps(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.pep
         0A2 <=> [left, up, right, down]: aux_seq=[1,0,3,2] 
          3
     """
-    asq = [x+2 for x in aux_seq]
+    asq = [x+1 for x in aux_seq]
     sites = OrderedDict()
     
     with open(jsonfile) as j:
@@ -223,7 +223,7 @@ def read_ipeps(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.pep
 
         # check for presence of "aux_seq" field in jsonfile
         if "aux_ind_seq" in raw_state.keys():
-            asq = [x+2 for x in raw_state["aux_ind_seq"]]
+            asq = [x+1 for x in raw_state["aux_ind_seq"]]
 
         # Loop over non-equivalent tensor,site pairs in the unit cell
         for ts in raw_state["map"]:
@@ -238,24 +238,15 @@ def read_ipeps(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.pep
             if t == None:
                 raise Exception("Tensor with siteId: "+ts["sideId"]+" NOT FOUND in \"sites\"") 
 
-            # 0) find the dimensions of auxiliary indices
-            # branch 1: key "auxInds" exists
+            # depending on the "format", read the bare tensor
+            if "format" in t.keys():
+                if t["format"]=="1D":
+                    X= torch.from_numpy(read_bare_json_tensor_np(t))
+            else:
+                # default
+                X= torch.from_numpy(read_bare_json_tensor_np_legacy(t))
 
-            # branch 2: key "auxInds" does not exist, all auxiliary 
-            # indices have the same dimension
-            X = torch.zeros((t["complex"], t["physDim"], t["auxDim"], t["auxDim"], \
-                t["auxDim"], t["auxDim"]), dtype=global_args.dtype, device=global_args.device)
-
-            # 1) fill the tensor with elements from the list "entries"
-            # which list the non-zero tensor elements in the following
-            # notation. Dimensions are indexed starting from 0
-            # 
-            # index (integer) of physDim, left, up, right, down, (float) Re, Im  
-            for entry in t["entries"]:
-                l = entry.split()
-                X[int(l[0]),int(l[1]),int(l[asq[0]]),int(l[asq[1]]),int(l[asq[2]]),int(l[asq[3]])]=float(l[6])
-
-            sites[coord]=X
+            sites[coord]= X.permute((0, *asq))
 
         # Unless given, construct a function mapping from
         # any site of square-lattice back to unit-cell
@@ -289,16 +280,17 @@ def extend_bond_dim(state, new_d):
     new_state = state
     for coord,site in new_state.sites.items():
         dims = site.size()
-        size_check = [new_d >= d for d in dims[2:]]
+        size_check = [new_d >= d for d in dims[1:]]
         if False in size_check:
             raise ValueError("Desired dimension is smaller than following aux dimensions: "+str(size_check))
 
-        new_site = torch.zeros((dims[0],dims[1],new_d,new_d,new_d,new_d), dtype=state.dtype, device=state.device)
-        new_site[:,:,:dims[1],:dims[2],:dims[3],:dims[4]] = site
+        new_site = torch.zeros((dims[0],new_d,new_d,new_d,new_d), dtype=state.dtype, device=state.device)
+        new_site[:,:dims[1],:dims[2],:dims[3],:dims[4]] = site
         new_state.sites[coord] = new_site
     return new_state
 
-def write_ipeps(state, outputfile, aux_seq=[0,1,2,3], tol=1.0e-14, normalize=False):
+def write_ipeps(state, outputfile, aux_seq=[0,1,2,3], tol=1.0e-14, normalize=False,\
+    peps_args=cfg.peps_args, global_args=cfg.global_args):
     r"""
     :param state: wavefunction to write out in json format
     :param outputfile: target file
@@ -326,35 +318,27 @@ def write_ipeps(state, outputfile, aux_seq=[0,1,2,3], tol=1.0e-14, normalize=Fal
          3
 
     """
-    asq = [x+2 for x in aux_seq]
+    asq = [x+1 for x in aux_seq]
     json_state=dict({"lX": state.lX, "lY": state.lY, "sites": []})
     
     site_ids=[]
     site_map=[]
     for nid,coord,site in [(t[0], *t[1]) for t in enumerate(state.sites.items())]:
         if normalize:
-            site= site/max_complex(torch.abs(site)
-
-        json_tensor=dict()
-        
-        tdims = site.size()
-        tlength = tdims[0]*tdims[1]*tdims[2]*tdims[3]*tdims[4]*tdims[5]
+            site= site/site.abs().max()
         
         site_ids.append(f"A{nid}")
         site_map.append(dict({"siteId": site_ids[-1], "x": coord[0], "y": coord[1]} ))
+        
+        if cfg.global_args.tensor_io_format=="legacy":
+            json_tensor= serialize_bare_tensor_legacy(site)
+            json_tensor["physDim"]= site.size(0)
+            # assuming all auxBondDim are identical
+            json_tensor["auxDim"]= site.size(1)
+        elif cfg.global_args.tensor_io_format=="1D":
+            json_tensor= serialize_bare_tensor_np(site)
+
         json_tensor["siteId"]=site_ids[-1]
-        json_tensor["complex"]= tdims[0]
-        json_tensor["physDim"]= tdims[1]
-        # assuming all auxBondDim are identical
-        json_tensor["auxDim"]= tdims[2]
-        json_tensor["numEntries"]= tlength
-        entries = []
-        elem_inds = list(itertools.product( *(range(i) for i in tdims) ))
-        for ei in elem_inds:
-            entries.append(f"{ei[0]} {ei[1]} {ei[asq[0]]} {ei[asq[1]]} {ei[asq[2]]} {ei[asq[3]]}"\
-                +f" {site[ei[0]][ei[1]][ei[2]][ei[3]][ei[4]][ei[5]]}")
-            
-        json_tensor["entries"]=entries
         json_state["sites"].append(json_tensor)
 
     json_state["siteIds"]=site_ids

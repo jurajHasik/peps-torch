@@ -1,15 +1,19 @@
 import torch
 from torch.utils.checkpoint import checkpoint
 import config as cfg
-from ipeps.ipeps import IPEPS
-from ctm.generic.env import ENV
+#from ipeps.ipeps import IPEPS
+#from ctm.generic.env import ENV
 from ctm.generic.ctm_components import *
 from linalg.custom_svd import *
-from complex_num.complex_operation import *
+from tn_interface import mm
+from tn_interface import conj, transpose
 import logging
 log = logging.getLogger(__name__)
 
-def ctm_get_projectors_4x4(direction, coord, state, env, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+import pdb
+
+def ctm_get_projectors_4x4(direction, coord, state, env, ctm_args=cfg.ctm_args, \
+    global_args=cfg.global_args):
     r"""
     :param direction: direction of the CTM move for which the projectors are to be computed
     :param coord: vertex (x,y) specifying (together with ``direction``) 4x4 tensor network 
@@ -58,7 +62,8 @@ def ctm_get_projectors_4x4(direction, coord, state, env, ctm_args=cfg.ctm_args, 
 
     return ctm_get_projectors_from_matrices(R, Rt, env.chi, ctm_args, global_args)
 
-def ctm_get_projectors_4x2(direction, coord, state, env, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+def ctm_get_projectors_4x2(direction, coord, state, env, ctm_args=cfg.ctm_args, \
+    global_args=cfg.global_args):
     r"""
     :param direction: direction of the CTM move for which the projectors are to be computed
     :param coord: vertex (x,y) specifying (together with ``direction``) 4x2 (vertical) or 
@@ -109,19 +114,19 @@ def ctm_get_projectors_4x2(direction, coord, state, env, ctm_args=cfg.ctm_args, 
     if direction==(0,-1): # UP
         R= c2x2_RU(coord, state, env, verbosity=verbosity)
         Rt= c2x2_LU((coord[0]-1,coord[1]), state, env, verbosity=verbosity)
-        Rt= torch.t(Rt)  
+        Rt= transpose(Rt)  
     elif direction==(-1,0): # LEFT
         R= c2x2_LU(coord, state, env, verbosity=verbosity)
         Rt= c2x2_LD((coord[0],coord[1]+1), state, env, verbosity=verbosity)
     elif direction==(0,1): # DOWN
         R= c2x2_LD(coord, state, env, verbosity=verbosity)
-        R= torch.t(R)
+        R= transpose(R)
         Rt= c2x2_RD((coord[0]+1,coord[1]), state, env, verbosity=verbosity)
-        Rt= torch.t(Rt)
+        Rt= transpose(Rt)
     elif direction==(1,0): # RIGHT
         R= c2x2_RD(coord, state, env, verbosity=verbosity)
         Rt= c2x2_RU((coord[0],coord[1]-1), state, env, verbosity=verbosity)
-        Rt= torch.t(Rt)
+        Rt= transpose(Rt)
     else:
         raise ValueError("Invalid direction: "+str(direction))
 
@@ -131,7 +136,8 @@ def ctm_get_projectors_4x2(direction, coord, state, env, ctm_args=cfg.ctm_args, 
 # direction-independent function performing bi-diagonalization
 #####################################################################
 
-def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args, \
+    global_args=cfg.global_args):
     r"""
     :param R: tensor of shape (dim0, dim1)
     :param Rt: tensor of shape (dim0, dim1)
@@ -198,7 +204,7 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args, global_a
                         |____Rt___|
     """
     assert R.shape == Rt.shape
-    assert len(R.shape) == 3
+    assert len(R.shape) == 2
     verbosity = ctm_args.verbosity_projectors
 
     if ctm_args.projector_svd_method=='DEFAULT' or ctm_args.projector_svd_method=='GESDD':
@@ -212,31 +218,29 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args, global_a
 
     #  SVD decomposition
     if ctm_args.fwd_checkpoint_projectors:
-        M = checkpoint(mm_complex, transpose_complex(R), Rt)
+        M = checkpoint(mm, transpose(R), Rt)
     else:
-        M = mm_complex(transpose_complex(R), Rt)
+        M = mm(transpose(R), Rt)
     U, S, V = truncated_svd(M, chi) # M = USV^{T}
     
     # if abs_tol is not None: St = St[St > abs_tol]
     # if abs_tol is not None: St = torch.where(St > abs_tol, St, Stzeros)
     # if rel_tol is not None: St = St[St/St[0] > rel_tol]
-    S2 = S[0]
-    S2 = S2[S2/S2[0] > ctm_args.projector_svd_reltol]
-    S_zeros = torch.zeros((chi-S2.size()[0]), dtype=global_args.dtype, device=global_args.device)
-    S_sqrtr = torch.rsqrt(S2)
-    S_sqrtr = torch.cat((S_sqrtr, S_zeros))
-    S_sqrti = torch.zeros((S_sqrtr.size()[0]), dtype=global_args.dtype, device=global_args.device)
-    S_sqrt = torch.stack((S_sqrtr, S_sqrti), dim=0)
+
+    S_nz= S[S/S[0] > ctm_args.projector_svd_reltol]
+    S_sqrt= S*0
+    S_sqrt[:S_nz.size(0)]= torch.rsqrt(S_nz)
+    
+    if S_sqrt.isnan().any():
+        pdb.set_trace()
+
     if verbosity>0: print(S_sqrt)
 
     # Construct projectors
-    # P = torch.einsum('ij,j->ij', torch.mm(R, U), S_sqrt)
-    # Pt = torch.einsum('ij,j->ij', torch.mm(Rt, V), S_sqrt)
     expr='ij,j->ij'
     def P_Pt_c(*tensors):
         R, Rt, U, V, S_sqrt= tensors
-        return einsum_complex(expr, mm_complex(R, complex_conjugate(U)), S_sqrt), \
-               einsum_complex(expr, mm_complex(Rt, V), S_sqrt)
+        return mm(R, conj(U))*S_sqrt[None,:], mm(Rt,V)*S_sqrt[None,:]
 
     tensors= R, Rt, U, V, S_sqrt
     if ctm_args.fwd_checkpoint_projectors:
