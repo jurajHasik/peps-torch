@@ -32,7 +32,10 @@ def truncated_svd_gesdd(M, chi, abs_tol=1.0e-14, rel_tol=None, keep_multiplets=F
 
     .. math:: dim(U)=(N,\chi),\ dim(S)=(\chi,\chi),\ \textrm{and}\ dim(V)=(L,\chi)
     """
-    U, S, V = SVDGESDD.apply(M)
+    if M.is_complex():
+        U, S, V = SVDGESDD_COMPLEX.apply(M)
+    else:
+        U, S, V = SVDGESDD.apply(M)
     
     # estimate the chi_new 
     chi_new= chi
@@ -63,9 +66,9 @@ def truncated_svd_gesdd(M, chi, abs_tol=1.0e-14, rel_tol=None, keep_multiplets=F
         Vt[:, chi_new+1:]=0.
         return Ut, St, Vt
 
-    St = S[:,:min(chi,S.shape[1])]
-    Ut = U[:,:, :St.shape[1]]
-    Vt = V[:,:, :St.shape[1]]
+    St = S[:min(chi,S.shape[0])]
+    Ut = U[:, :St.shape[0]]
+    Vt = V[:, :St.shape[0]]
     
     return Ut, St, Vt
 

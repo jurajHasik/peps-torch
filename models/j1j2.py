@@ -9,6 +9,8 @@ from ctm.one_site_c4v import rdm_c4v
 from ctm.one_site_c4v import corrf_c4v
 from math import sqrt
 from complex_num.complex_operation import *
+from tn_interface import einsum, mm
+from tn_interface import view, permute, contiguous
 import itertools
 
 class J1J2():
@@ -53,25 +55,20 @@ class J1J2():
 
     def get_h(self):
         s2 = su2.SU2(self.phys_dim, dtype=self.dtype, device=self.device)
-        id21= torch.eye(4,dtype=self.dtype,device=self.device)
-        id21= id21.view(2,2,2,2).contiguous()
-        id22= torch.zeros((4,4),dtype=self.dtype,device=self.device)
-        id22= id22.view(2,2,2,2).contiguous()
-        id2 = torch.stack((id21, id22), dim=0)
+        id2= torch.eye(4, dtype=self.dtype, device=self.device)
+        id2= view(id2, (2,2,2,2))
         expr_kron = 'ij,ab->iajb'
-        SS= einsum_complex(expr_kron,s2.SZ(),s2.SZ()) + 0.5*(einsum_complex(expr_kron,s2.SP(),s2.SM()) \
-            + einsum_complex(expr_kron,s2.SM(),s2.SP()))
-        SS= contiguous_complex(SS)
+        SS= einsum(expr_kron,s2.SZ(),s2.SZ()) + 0.5*(einsum(expr_kron,s2.SP(),s2.SM()) \
+            + einsum(expr_kron,s2.SM(),s2.SP()))
+        SS= contiguous(SS)
         
-        h2x2_SS= einsum_complex('ijab,klcd->ijklabcd',SS,id2)
-        h2x2_nn= h2x2_SS + permute_complex((2,3,0,1,6,7,4,5), h2x2_SS) + permute_complex((0,2,1,3,4,6,5,7), h2x2_SS)\
-            + permute_complex((2,0,3,1,6,4,7,5), h2x2_SS)
-        h2x2_nnn= permute_complex((0,3,2,1,4,7,6,5), h2x2_SS) + permute_complex((2,0,1,3,6,4,5,7), h2x2_SS)
+        h2x2_SS= einsum('ijab,klcd->ijklabcd',SS,id2)
+        h2x2_nn= h2x2_SS + permute(h2x2_SS, (2,3,0,1,6,7,4,5)) + permute(h2x2_SS, (0,2,1,3,4,6,5,7))\
+            + permute(h2x2_SS, (2,0,3,1,6,4,7,5))
+        h2x2_nnn= permute(h2x2_SS, (0,3,2,1,4,7,6,5)) + permute(h2x2_SS, (2,0,1,3,6,4,5,7))
+        h2x2_nn= contiguous(h2x2_nn)
+        h2x2_nnn= contiguous(h2x2_nnn)
         
-        h2x2_nn= contiguous_complex(h2x2_nn)
-        h2x2_nnn= contiguous_complex(h2x2_nnn)
-        
-
         return SS, h2x2_nn, h2x2_nnn
 
     def get_obs_ops(self):
@@ -225,9 +222,9 @@ class J1J2():
         energy_nnn=0
         for coord in state.sites.keys():
             tmp_rdm= rdm.rdm2x2(coord,state,env)
-            energy_nn += einsum_complex('ijklabcd,ijklabcd',tmp_rdm,self.h2x2_nn)
-            energy_nnn += einsum_complex('ijklabcd,ijklabcd',tmp_rdm,self.h2x2_nnn)
-        energy_per_site = 2.0*(self.j1*energy_nn[0]/16.0 + self.j2*energy_nnn[0]/8.0)
+            energy_nn += einsum('ijklabcd,ijklabcd',tmp_rdm,self.h2x2_nn)
+            energy_nnn += einsum('ijklabcd,ijklabcd',tmp_rdm,self.h2x2_nnn)
+        energy_per_site = 2.0*(self.j1*energy_nn/16.0 + self.j2*energy_nnn/8.0)
 
         return energy_per_site
 
@@ -323,22 +320,23 @@ class J1J2():
             for coord,site in state.sites.items():
                 rdm1x1 = rdm.rdm1x1(coord,state,env)
                 for label,op in self.obs_ops.items():
-                    obs[f"{label}{coord}"]= einsum_complex('ij,ij', rdm1x1, op)[0]
+                    # obs[f"{label}{coord}"]= torch.sum(torch.diagonal(mm(rdm1x1, op)))
+                    obs[f"{label}{coord}"]= einsum('ij,ij',rdm1x1, op)
                 obs[f"m{coord}"]= sqrt(abs(obs[f"sz{coord}"]**2 + obs[f"sp{coord}"]*obs[f"sm{coord}"]))
                 obs["avg_m"] += obs[f"m{coord}"]
             obs["avg_m"]= obs["avg_m"]/len(state.sites.keys())
 
-            #for coord,site in state.sites.items():
-            #    rdm2x1 = rdm.rdm2x1(coord,state,env)
-            #    rdm1x2 = rdm.rdm1x2(coord,state,env)
-            #    obs[f"SS2x1{coord}"]= einsum_complex('ijab,ijab',rdm2x1,self.h2)
-            #    obs[f"SS1x2{coord}"]= einsum_complex('ijab,ijab',rdm1x2,self.h2)
+            for coord,site in state.sites.items():
+               rdm2x1 = rdm.rdm2x1(coord,state,env)
+               rdm1x2 = rdm.rdm1x2(coord,state,env)
+               obs[f"SS2x1{coord}"]= einsum('ijab,ijab',rdm2x1,self.h2)
+               obs[f"SS1x2{coord}"]= einsum('ijab,ijab',rdm1x2,self.h2)
         
         # prepare list with labels and values
         obs_labels=["avg_m"]+[f"m{coord}" for coord in state.sites.keys()]\
             +[f"{lc[1]}{lc[0]}" for lc in list(itertools.product(state.sites.keys(), self.obs_ops.keys()))]
-        #obs_labels += [f"SS2x1{coord}" for coord in state.sites.keys()]
-        #obs_labels += [f"SS1x2{coord}" for coord in state.sites.keys()]
+        obs_labels += [f"SS2x1{coord}" for coord in state.sites.keys()]
+        obs_labels += [f"SS1x2{coord}" for coord in state.sites.keys()]
         obs_values=[obs[label] for label in obs_labels]
         return obs_values, obs_labels
 
