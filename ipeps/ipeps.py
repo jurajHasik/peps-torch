@@ -5,6 +5,7 @@ import itertools
 import math
 import config as cfg
 from tensor_io import *
+import pdb
 
 # TODO drop constrain for aux bond dimension to be identical on 
 # all bond indices
@@ -141,6 +142,8 @@ class IPEPS():
     def load_checkpoint(self,checkpoint_file):
         checkpoint= torch.load(checkpoint_file)
         self.sites= checkpoint["parameters"]
+        if True in [s.is_complex() for s in self.sites.values()]:
+            self.dtype= torch.complex128
 
     def write_to_file(self,outputfile,aux_seq=[0,1,2,3], tol=1.0e-14, normalize=False):
         write_ipeps(self,outputfile,aux_seq=aux_seq, tol=tol, normalize=normalize)
@@ -248,12 +251,6 @@ def read_ipeps(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.pep
 
             sites[coord]= X.permute((0, *asq))
 
-        # check if state is complex
-        if True in [s.is_complex() for s in sites.values()]:
-            cfg.global_args.dtype= torch.complex128
-            global_args.dtype= torch.complex128
-            print(f"Setting default dtype to {cfg.global_args.dtype}")
-
         # Unless given, construct a function mapping from
         # any site of square-lattice back to unit-cell
         # check for legacy keys
@@ -269,6 +266,11 @@ def read_ipeps(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.pep
             state = IPEPS(sites, vertexToSite, lX=lX, lY=lY, peps_args=peps_args, global_args=global_args)
         else:
             state = IPEPS(sites, vertexToSite, lX=lX, lY=lY, peps_args=peps_args, global_args=global_args)
+
+        # set the correct dtype for newly created state (might be different
+        # default in cfg.global_args)
+        if True in [s.is_complex() for s in sites.values()]:
+            state.dtype= torch.complex128
     return state
 
 def extend_bond_dim(state, new_d):

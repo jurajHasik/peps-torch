@@ -29,6 +29,8 @@ def main():
     torch.set_num_threads(args.omp_cores)
     torch.manual_seed(args.seed)
 
+    model= coupledLadders.COUPLEDLADDERS(alpha=args.alpha)
+
     # initialize an ipeps
     # 1) define lattice-tiling function, that maps arbitrary vertex of square lattice
     # coord into one of coordinates within unit-cell of iPEPS ansatz
@@ -59,12 +61,17 @@ def main():
             sites[k] = sites[k]/torch.max(torch.abs(sites[k]))
         state = IPEPS(sites, lX=2, lY=2)
     else:
-        raise ValueError("Missing trial state: -instate=None and -ipeps_init_type= "\
+        raise ValueError("Missing trial state: --instate=None and --ipeps_init_type= "\
             +str(args.ipeps_init_type)+" is not supported")
 
-    print(state)
+    if not state.dtype==model.dtype:
+        cfg.global_args.dtype= state.dtype
+        print(f"dtype of initial state {state.dtype} and model {model.dtype} do not match.")
+        print(f"Setting default dtype to {cfg.global_args.dtype} and reinitializing "\
+        +" the model")
+        model= coupledLadders.COUPLEDLADDERS(alpha=args.alpha)
 
-    model = coupledLadders.COUPLEDLADDERS(alpha=args.alpha)
+    print(state)
 
     @torch.no_grad()
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):

@@ -26,6 +26,8 @@ def main():
     torch.set_num_threads(args.omp_cores)
     torch.manual_seed(args.seed)
 
+    model= coupledLadders.COUPLEDLADDERS(alpha=args.alpha)
+
     if args.instate!=None:
         state = read_ipeps(args.instate)
         if args.bond_dim > max(state.get_aux_bond_dims()):
@@ -53,8 +55,13 @@ def main():
         raise ValueError("Missing trial state: -instate=None and -ipeps_init_type= "\
             +str(args.ipeps_init_type)+" is not supported")
     
-    model = coupledLadders.COUPLEDLADDERS(alpha=args.alpha)
-    
+    if not state.dtype==model.dtype:
+        cfg.global_args.dtype= state.dtype
+        print(f"dtype of initial state {state.dtype} and model {model.dtype} do not match.")
+        print(f"Setting default dtype to {cfg.global_args.dtype} and reinitializing "\
+        +" the model")
+        model= coupledLadders.COUPLEDLADDERS(alpha=args.alpha)
+
     # initialize an ipeps
     # 1) define lattice-tiling function, that maps arbitrary vertex of square lattice
     # coord into one of coordinates within unit-cell of iPEPS ansatz    

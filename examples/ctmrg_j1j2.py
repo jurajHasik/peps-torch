@@ -27,6 +27,8 @@ def main():
     torch.set_num_threads(args.omp_cores)
     torch.manual_seed(args.seed)
     
+    model = j1j2.J1J2(j1=args.j1, j2=args.j2)
+
     # initialize an ipeps
     # 1) define lattice-tiling function, that maps arbitrary vertex of square lattice
     # coord into one of coordinates within unit-cell of iPEPS ansatz    
@@ -103,9 +105,14 @@ def main():
         raise ValueError("Missing trial state: -instate=None and -ipeps_init_type= "\
             +str(args.ipeps_init_type)+" is not supported")
 
+    if not state.dtype==model.dtype:
+        cfg.global_args.dtype= state.dtype
+        print(f"dtype of initial state {state.dtype} and model {model.dtype} do not match.")
+        print(f"Setting default dtype to {cfg.global_args.dtype} and reinitializing "\
+        +" the model")
+        model= j1j2.J1J2(alpha=args.alpha)
+
     print(state)
-    
-    model = j1j2.J1J2(j1=args.j1, j2=args.j2)
 
     # 2) select the "energy" function 
     if args.tiling == "BIPARTITE" or args.tiling == "2SITE":
