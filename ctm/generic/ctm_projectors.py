@@ -230,9 +230,6 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args, \
     S_nz= S[S/S[0] > ctm_args.projector_svd_reltol]
     S_sqrt= S*0
     S_sqrt[:S_nz.size(0)]= torch.rsqrt(S_nz)
-    
-    if S_sqrt.isnan().any():
-        pdb.set_trace()
 
     if verbosity>0: print(S_sqrt)
 

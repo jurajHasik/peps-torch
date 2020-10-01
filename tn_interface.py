@@ -12,8 +12,8 @@ def contract(t1, t2, *args):
     elif not t1.is_complex() and not t2.is_complex():
         return torch.tensordot(t1, t2, *args)
     else:
-        raise NotImplementedError(f"Tensors {t1} and {t2} are not either both "\
-            +"complex or both real")
+        raise NotImplementedError(f"Tensors t1 {t1.dtype} and t2 {t2.dtype}"\
+            +" are not either both complex or both real")
 
 def mm_complex(m1, m2):
     return torch.mm(m1.real, m2.real) - torch.mm(m1.imag, m2.imag) \
@@ -25,8 +25,8 @@ def mm(m1, m2):
     elif not m1.is_complex() and not m2.is_complex():
         return torch.mm(m1, m2)
     else:
-        raise NotImplementedError(f"Tensors {m1} and {m2} are not either both "\
-            +"complex or both real")
+        raise NotImplementedError(f"Tensors m1 {m1.dtype} and m2 {m2.dtype} "\
+            +" are not either both complex or both real")
 
 def einsum_complex(op, *ts):
     if len(ts)!=2: raise NotImplementedError("einsum implementation limited to two tensors")
@@ -36,6 +36,7 @@ def einsum_complex(op, *ts):
         + torch.einsum(op, ts[0].imag, ts[1].real)) * 1.0j
 
 def einsum(op, *ts):
+    assert isinstance(op, str), "invalid operation"
     if False not in [t.is_complex() for t in ts]:
         return einsum_complex(op, *ts)
     elif True not in [t.is_complex() for t in ts]:

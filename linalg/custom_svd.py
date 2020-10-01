@@ -1,7 +1,7 @@
 import torch
 import config as cfg
 from complex_num.complex_operation import *
-from linalg.svd_gesdd import SVDGESDD
+from linalg.svd_gesdd import SVDGESDD, SVDGESDD_COMPLEX
 from linalg.svd_symeig import SVDSYMEIG
 from linalg.svd_arnoldi import SVDSYMARNOLDI, SVDARNOLDI
 from linalg.svd_rsvd import RSVD
