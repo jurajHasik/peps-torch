@@ -65,6 +65,14 @@ def configure(parsed_args):
     for name,val in nogroup_args.items():
         setattr(main_args,name,val)
 
+    # custom handling
+    if global_args.dtype=="float64":
+        global_args.dtype= torch.float64
+    elif global_args.dtype=="complex128":
+        global_args.dtype= torch.complex128
+    else:
+        raise NotImplementedError(f"Unsupported dtype {global_args.dtype}")
+
     # validate
     if ctm_args.step_core_gpu:
         assert global_args.gpu and torch.cuda.device(global_args.gpu), "CTMARGS_step_core_gpu"\
@@ -122,7 +130,7 @@ class GLOBALARGS():
     Holds global configuration options. The default settings can be modified through 
     command line arguments as follows ``--GLOBALARGS_<variable-name> desired-value``
 
-    :ivar dtype: data type of all torch.tensor. Default: ``torch.float64``
+    :ivar dtype: data type of all torch.tensor. Default: ``float64``
     :vartype dtype: torch.dtype
     :ivar device: device on which all the torch.tensors are stored. Default: ``'cpu'``
     :vartype device: str
@@ -133,7 +141,7 @@ class GLOBALARGS():
     """
     def __init__(self):
         self.tensor_io_format= "legacy"
-        self.dtype= torch.float64
+        self.dtype= "float64"
         self.device= 'cpu'
         self.gpu= ''
 
