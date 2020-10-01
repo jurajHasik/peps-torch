@@ -1,6 +1,7 @@
 import torch
-import groups.su2 as su2
 import config as cfg
+from tn_interface import contract, einsum
+import groups.su2 as su2
 from ctm.generic.env import ENV
 from ctm.generic import rdm
 from ctm.generic import corrf
@@ -46,8 +47,8 @@ class COUPLEDLADDERS():
     def get_h(self):
         s2 = su2.SU2(self.phys_dim, dtype=self.dtype, device=self.device)
         expr_kron = 'ij,ab->iajb'
-        SS = torch.einsum(expr_kron,s2.SZ(),s2.SZ()) + 0.5*(torch.einsum(expr_kron,s2.SP(),s2.SM()) \
-            + torch.einsum(expr_kron,s2.SM(),s2.SP()))
+        SS = einsum(expr_kron,s2.SZ(),s2.SZ()) + 0.5*(einsum(expr_kron,s2.SP(),s2.SM()) \
+            + einsum(expr_kron,s2.SM(),s2.SP()))
         return SS
 
     def get_obs_ops(self):
@@ -67,7 +68,7 @@ class COUPLEDLADDERS():
     # assuming reduced density matrix of 2x2 cluster with indexing of DOFs
     # as follows rdm2x2=rdm2x2(s0,s1,s2,s3;s0',s1',s2',s3')
     def energy_2x2(self,rdm2x2):
-        energy = torch.einsum('ijklabkl,ijab',rdm2x2,self.h)
+        energy = einsum('ijklabkl,ijab',rdm2x2,self.h)
         return energy
 
     def energy_2x1_1x2(self,state,env):
@@ -115,12 +116,12 @@ class COUPLEDLADDERS():
         for coord,site in state.sites.items():
             rdm2x1 = rdm.rdm2x1(coord,state,env)
             rdm1x2 = rdm.rdm1x2(coord,state,env)
-            ss = torch.einsum('ijab,ijab',rdm2x1,self.h2)
+            ss = einsum('ijab,ijab',rdm2x1,self.h2)
             energy += ss
             if coord[1] % 2 == 0:
-                ss = torch.einsum('ijab,ijab',rdm1x2,self.h2)
+                ss = einsum('ijab,ijab',rdm1x2,self.h2)
             else:
-                ss = torch.einsum('ijab,ijab',rdm1x2,self.alpha * self.h2)
+                ss = einsum('ijab,ijab',rdm1x2,self.alpha * self.h2)
             energy += ss
 
         # return energy-per-site
@@ -170,7 +171,7 @@ class COUPLEDLADDERS():
             for coord,site in state.sites.items():
                 rdm1x1 = rdm.rdm1x1(coord,state,env)
                 for label,op in self.obs_ops.items():
-                    obs[f"{label}{coord}"]= torch.trace(rdm1x1@op)
+                    obs[f"{label}{coord}"]= einsum('ij,ji',rdm1x1, op)
                 obs[f"m{coord}"]= sqrt(abs(obs[f"sz{coord}"]**2 + obs[f"sp{coord}"]*obs[f"sm{coord}"]))
                 obs["avg_m"] += obs[f"m{coord}"]
             obs["avg_m"]= obs["avg_m"]/len(state.sites.keys())
@@ -178,8 +179,8 @@ class COUPLEDLADDERS():
             for coord,site in state.sites.items():
                 rdm2x1 = rdm.rdm2x1(coord,state,env)
                 rdm1x2 = rdm.rdm1x2(coord,state,env)
-                obs[f"SS2x1{coord}"]= torch.einsum('ijab,ijab',rdm2x1,self.h2)
-                obs[f"SS1x2{coord}"]= torch.einsum('ijab,ijab',rdm1x2,self.h2)
+                obs[f"SS2x1{coord}"]= einsum('ijab,ijab',rdm2x1,self.h2)
+                obs[f"SS1x2{coord}"]= einsum('ijab,ijab',rdm1x2,self.h2)
 
         # prepare list with labels and values
         obs_labels=["avg_m"]+[f"m{coord}" for coord in state.sites.keys()]\

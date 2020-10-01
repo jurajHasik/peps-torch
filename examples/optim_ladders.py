@@ -28,9 +28,7 @@ def main():
     cfg.print_config()
     torch.set_num_threads(args.omp_cores)
     torch.manual_seed(args.seed)
-    
-    model = coupledLadders.COUPLEDLADDERS(alpha=args.alpha)
-    
+
     # initialize an ipeps
     # 1) define lattice-tiling function, that maps arbitrary vertex of square lattice
     # coord into one of coordinates within unit-cell of iPEPS ansatz
@@ -65,6 +63,8 @@ def main():
             +str(args.ipeps_init_type)+" is not supported")
 
     print(state)
+
+    model = coupledLadders.COUPLEDLADDERS(alpha=args.alpha)
 
     @torch.no_grad()
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):

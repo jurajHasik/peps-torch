@@ -321,7 +321,7 @@ class J1J2():
                 rdm1x1 = rdm.rdm1x1(coord,state,env)
                 for label,op in self.obs_ops.items():
                     # obs[f"{label}{coord}"]= torch.sum(torch.diagonal(mm(rdm1x1, op)))
-                    obs[f"{label}{coord}"]= einsum('ij,ij',rdm1x1, op)
+                    obs[f"{label}{coord}"]= einsum('ij,ji',rdm1x1, op)
                 obs[f"m{coord}"]= sqrt(abs(obs[f"sz{coord}"]**2 + obs[f"sp{coord}"]*obs[f"sm{coord}"]))
                 obs["avg_m"] += obs[f"m{coord}"]
             obs["avg_m"]= obs["avg_m"]/len(state.sites.keys())

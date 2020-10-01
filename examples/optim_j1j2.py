@@ -6,9 +6,8 @@ from ipeps.ipeps import *
 from ctm.generic.env import *
 from ctm.generic import ctmrg
 from models import j1j2
-from complex_num.complex_operation import *
-from optim.ad_optim import optimize_state
-#from optim.ad_optim_lbfgs_mod import optimize_state
+# from optim.ad_optim import optimize_state
+from optim.ad_optim_lbfgs_mod import optimize_state
 import unittest
 import logging
 log = logging.getLogger(__name__)
@@ -26,8 +25,6 @@ def main():
     cfg.print_config()
     torch.set_num_threads(args.omp_cores)
     torch.manual_seed(args.seed)
-
-    model= j1j2.J1J2(j1=args.j1, j2=args.j2)
     
     # initialize an ipeps
     # 1) define lattice-tiling function, that maps arbitrary vertex of square lattice
@@ -125,6 +122,8 @@ def main():
 
     print(state)
     
+    model= j1j2.J1J2(j1=args.j1, j2=args.j2)
+
     # 2) select the "energy" function 
     if args.tiling == "BIPARTITE" or args.tiling == "2SITE":
         energy_f=model.energy_2x2_2site

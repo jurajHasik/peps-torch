@@ -1,5 +1,6 @@
 import context
 import torch
+from linalg.custom_svd import truncated_svd_gesdd
 import argparse
 import config as cfg
 from ipeps.ipeps import *
@@ -24,12 +25,6 @@ def main():
     cfg.print_config()
     torch.set_num_threads(args.omp_cores)
     torch.manual_seed(args.seed)
-    
-    model = coupledLadders.COUPLEDLADDERS(alpha=args.alpha)
-    
-    # initialize an ipeps
-    # 1) define lattice-tiling function, that maps arbitrary vertex of square lattice
-    # coord into one of coordinates within unit-cell of iPEPS ansatz    
 
     if args.instate!=None:
         state = read_ipeps(args.instate)
@@ -57,6 +52,12 @@ def main():
     else:
         raise ValueError("Missing trial state: -instate=None and -ipeps_init_type= "\
             +str(args.ipeps_init_type)+" is not supported")
+    
+    model = coupledLadders.COUPLEDLADDERS(alpha=args.alpha)
+    
+    # initialize an ipeps
+    # 1) define lattice-tiling function, that maps arbitrary vertex of square lattice
+    # coord into one of coordinates within unit-cell of iPEPS ansatz    
 
     print(state)
 
@@ -87,39 +88,39 @@ def main():
 
     # ----- S(0).S(r) -----
     site_dir_list=[((0,0), (1,0)),((0,0), (0,1)), ((1,1), (1,0)), ((1,1), (0,1))]
-    for sdp in site_dir_list:
-        corrSS= model.eval_corrf_SS(*sdp, state, ctm_env_init, args.corrf_r)
-        print(f"\n\nSS[{sdp[0]},{sdp[1]}] r "+" ".join([label for label in corrSS.keys()]))
-        for i in range(args.corrf_r):
-            print(f"{i} "+" ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
+    # for sdp in site_dir_list:
+    #     corrSS= model.eval_corrf_SS(*sdp, state, ctm_env_init, args.corrf_r)
+    #     print(f"\n\nSS[{sdp[0]},{sdp[1]}] r "+" ".join([label for label in corrSS.keys()]))
+    #     for i in range(args.corrf_r):
+    #         print(f"{i} "+" ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
 
     # ----- (S(0).S(x))(S(rx).S(rx+x)) -----
-    for sdp in site_dir_list:
-        corrDD= model.eval_corrf_DD_H(*sdp, state, ctm_env_init, args.corrf_r)
-        print(f"\n\nDD[{sdp[0]},{sdp[1]}] r "+" ".join([label for label in corrDD.keys()]))
-        for i in range(args.corrf_r):
-            print(f"{i} "+" ".join([f"{corrDD[label][i]}" for label in corrDD.keys()]))
+    # for sdp in site_dir_list:
+    #     corrDD= model.eval_corrf_DD_H(*sdp, state, ctm_env_init, args.corrf_r)
+    #     print(f"\n\nDD[{sdp[0]},{sdp[1]}] r "+" ".join([label for label in corrDD.keys()]))
+    #     for i in range(args.corrf_r):
+    #         print(f"{i} "+" ".join([f"{corrDD[label][i]}" for label in corrDD.keys()]))
 
     # ----- (S(0).S(y))(S(rx).S(rx+y)) -----
-    for sdp in site_dir_list:
-        corrDD_V= model.eval_corrf_DD_V(*sdp,state, ctm_env_init, args.corrf_r)
-        print(f"\n\nDD_V[{sdp[0]},{sdp[1]}] r "+" ".join([label for label in corrDD_V.keys()]))
-        for i in range(args.corrf_r):
-            print(f"{i} "+" ".join([f"{corrDD_V[label][i]}" for label in corrDD_V.keys()]))
+    # for sdp in site_dir_list:
+    #     corrDD_V= model.eval_corrf_DD_V(*sdp,state, ctm_env_init, args.corrf_r)
+    #     print(f"\n\nDD_V[{sdp[0]},{sdp[1]}] r "+" ".join([label for label in corrDD_V.keys()]))
+    #     for i in range(args.corrf_r):
+    #         print(f"{i} "+" ".join([f"{corrDD_V[label][i]}" for label in corrDD_V.keys()]))
 
     # environment diagnostics
     for c_loc,c_ten in ctm_env_init.C.items(): 
-        u,s,v= torch.svd(c_ten, compute_uv=False)
+        u,s,v= truncated_svd_gesdd(c_ten, c_ten.size(0))
         print(f"\n\nspectrum C[{c_loc}]")
         for i in range(args.chi):
             print(f"{i} {s[i]}")
 
     # transfer operator spectrum
-    for sdp in site_dir_list:
-        print(f"\n\nspectrum(T)[{sdp[0]},{sdp[1]}]")
-        l= transferops.get_Top_spec(args.top_n, *sdp, state, ctm_env_init)
-        for i in range(l.size()[0]):
-            print(f"{i} {l[i,0]} {l[i,1]}")
+    # for sdp in site_dir_list:
+    #     print(f"\n\nspectrum(T)[{sdp[0]},{sdp[1]}]")
+    #     l= transferops.get_Top_spec(args.top_n, *sdp, state, ctm_env_init)
+    #     for i in range(l.size()[0]):
+    #         print(f"{i} {l[i,0]} {l[i,1]}")
 
 if __name__=='__main__':
     if len(unknown_args)>0:

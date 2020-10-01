@@ -176,13 +176,14 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
 #####################################################################
 def absorb_truncate_CTM_MOVE_UP(coord, state, env, P, Pt, verbosity=0):
     vec = (1,0)
+    coord_shift_left= state.vertexToSite((coord[0]-vec[0], coord[1]-vec[1]))
     coord_shift_right = state.vertexToSite((coord[0]+vec[0], coord[1]+vec[1]))
     tensors= env.C[(coord,(1,-1))], env.T[(coord,(1,0))], env.T[(coord,(0,-1))], \
         env.T[(coord,(-1,0))], env.C[(coord,(-1,-1))], state.site(coord), \
-        view(P[coord], (env.chi,state.site(coord).size()[3],env.chi)), \
+        view(P[coord], (env.chi,state.site(coord_shift_left).size()[3],env.chi)), \
         view(Pt[coord], (env.chi,state.site(coord).size()[1],env.chi)), \
         view(P[coord_shift_right], (env.chi,state.site(coord).size()[3],env.chi)), \
-        view(Pt[coord_shift_right], (env.chi,state.site(coord).size()[1],env.chi))
+        view(Pt[coord_shift_right], (env.chi,state.site(coord_shift_right).size()[1],env.chi))
 
     if cfg.ctm_args.fwd_checkpoint_absorb:
         return checkpoint(absorb_truncate_CTM_MOVE_UP_c,*tensors)
@@ -264,13 +265,14 @@ def absorb_truncate_CTM_MOVE_UP_c(*tensors):
 
 def absorb_truncate_CTM_MOVE_LEFT(coord, state, env, P, Pt, verbosity=0):
     vec = (0,-1)
-    coord_shift_up = state.vertexToSite((coord[0]+vec[0], coord[1]+vec[1]))
+    coord_shift_up= state.vertexToSite((coord[0]+vec[0], coord[1]+vec[1]))
+    coord_shift_down= state.vertexToSite((coord[0]-vec[0], coord[1]-vec[1]))
     tensors = env.C[(coord,(-1,-1))], env.T[(coord,(0,-1))], env.T[(coord,(-1,0))], \
         env.T[(coord,(0,1))], env.C[(coord,(-1,1))], state.site(coord), \
-        view(P[coord], (env.chi,state.site(coord).size()[0],env.chi)), \
+        view(P[coord], (env.chi,state.site(coord_shift_down).size()[0],env.chi)), \
         view(Pt[coord], (env.chi,state.site(coord).size()[2],env.chi)), \
         view(P[coord_shift_up], (env.chi,state.site(coord).size()[0],env.chi)), \
-        view(Pt[coord_shift_up], (env.chi,state.site(coord).size()[2],env.chi))
+        view(Pt[coord_shift_up], (env.chi,state.site(coord_shift_up).size()[2],env.chi))
 
     if cfg.ctm_args.fwd_checkpoint_absorb:
         return checkpoint(absorb_truncate_CTM_MOVE_LEFT_c,*tensors)
@@ -359,13 +361,14 @@ def absorb_truncate_CTM_MOVE_LEFT_c(*tensors):
 
 def absorb_truncate_CTM_MOVE_DOWN(coord, state, env, P, Pt, verbosity=0):
     vec = (-1,0)
+    coord_shift_right= state.vertexToSite((coord[0]-vec[0], coord[1]-vec[1]))
     coord_shift_left = state.vertexToSite((coord[0]+vec[0], coord[1]+vec[1]))
     tensors= env.C[(coord,(-1,1))], env.T[(coord,(-1,0))], env.T[(coord,(0,1))], \
         env.T[(coord,(1,0))], env.C[(coord,(1,1))], state.site(coord), \
-        view(P[coord], (env.chi,state.site(coord).size()[1],env.chi)), \
+        view(P[coord], (env.chi,state.site(coord_shift_right).size()[1],env.chi)), \
         view(Pt[coord], (env.chi,state.site(coord).size()[3],env.chi)), \
         view(P[coord_shift_left], (env.chi,state.site(coord).size()[1],env.chi)), \
-        view(Pt[coord_shift_left], (env.chi,state.site(coord).size()[3],env.chi))
+        view(Pt[coord_shift_left], (env.chi,state.site(coord_shift_left).size()[3],env.chi))
 
     if cfg.ctm_args.fwd_checkpoint_absorb:
         return checkpoint(absorb_truncate_CTM_MOVE_DOWN_c,*tensors)
@@ -449,12 +452,13 @@ def absorb_truncate_CTM_MOVE_DOWN_c(*tensors):
 def absorb_truncate_CTM_MOVE_RIGHT(coord, state, env, P, Pt, verbosity=0):
     vec = (0,1)
     coord_shift_down = state.vertexToSite((coord[0]+vec[0], coord[1]+vec[1]))
+    coord_shift_up = state.vertexToSite((coord[0]-vec[0], coord[1]-vec[1]))
     tensors= env.C[(coord,(1,1))], env.T[(coord,(0,1))], env.T[(coord,(1,0))], \
         env.T[(coord,(0,-1))], env.C[(coord,(1,-1))], state.site(coord), \
-        view(P[coord], (env.chi,state.site(coord).size()[2],env.chi)), \
+        view(P[coord], (env.chi,state.site(coord_shift_up).size()[2],env.chi)), \
         view(Pt[coord], (env.chi,state.site(coord).size()[0],env.chi)), \
         view(P[coord_shift_down], (env.chi,state.site(coord).size()[2],env.chi)), \
-        view(Pt[coord_shift_down], (env.chi,state.site(coord).size()[0],env.chi))
+        view(Pt[coord_shift_down], (env.chi,state.site(coord_shift_down).size()[0],env.chi))
 
     if cfg.ctm_args.fwd_checkpoint_absorb:
         return checkpoint(absorb_truncate_CTM_MOVE_RIGHT_c,*tensors)
