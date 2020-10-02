@@ -8,7 +8,6 @@ from ctm.one_site_c4v.env_c4v import ENV_C4V
 from ctm.one_site_c4v import rdm_c4v
 from ctm.one_site_c4v import corrf_c4v
 from math import sqrt
-from complex_num.complex_operation import *
 from tn_interface import einsum, mm
 from tn_interface import view, permute, contiguous
 import itertools
@@ -178,8 +177,8 @@ class J1J2():
         energy_nnn=0
         for coord in state.sites.keys():
             tmp_rdm= rdm.rdm2x2(coord,state,env)
-            energy_nn += torch.einsum('ijklabcd,ijklabcd',tmp_rdm,self.h2x2_nn)
-            energy_nnn += torch.einsum('ijklabcd,ijklabcd',tmp_rdm,self.h2x2_nnn)
+            energy_nn += einsum('ijklabcd,ijklabcd',tmp_rdm,self.h2x2_nn)
+            energy_nnn += einsum('ijklabcd,ijklabcd',tmp_rdm,self.h2x2_nnn)
         energy_per_site = 2.0*(self.j1*energy_nn/8.0 + self.j2*energy_nnn/4.0)
         return energy_per_site
 
@@ -272,8 +271,8 @@ class J1J2():
         energy_nnn=0
         for coord in state.sites.keys():
             tmp_rdm= rdm.rdm2x2(coord,state,env)
-            energy_nn += torch.einsum('ijklabcd,ijklabcd',tmp_rdm,self.h2x2_nn)
-            energy_nnn += torch.einsum('ijklabcd,ijklabcd',tmp_rdm,self.h2x2_nnn)
+            energy_nn += einsum('ijklabcd,ijklabcd',tmp_rdm,self.h2x2_nn)
+            energy_nnn += einsum('ijklabcd,ijklabcd',tmp_rdm,self.h2x2_nnn)
         energy_per_site= 2.0*(self.j1*energy_nn/32.0 + self.j2*energy_nnn/16.0)
         return energy_per_site
 
@@ -347,7 +346,7 @@ class J1J2():
             #rot_op= su2.get_rot_op(self.phys_dim, dtype=self.dtype, device=self.device)
             rot_op= torch.eye(self.phys_dim, dtype=self.dtype, device=self.device)
             op_0= op
-            op_rot= torch.einsum('ki,kl,lj->ij',rot_op,op_0,rot_op)
+            op_rot= einsum('ki,kj->ij',rot_op, mm(op_0,rot_op))
             def _gen_op(r):
                 #return op_rot if r%2==0 else op_0
                 return op_0

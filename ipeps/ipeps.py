@@ -5,7 +5,6 @@ import itertools
 import math
 import config as cfg
 from tensor_io import *
-import pdb
 
 # TODO drop constrain for aux bond dimension to be identical on 
 # all bond indices
