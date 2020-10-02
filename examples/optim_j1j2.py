@@ -94,10 +94,8 @@ def main():
                 dtype=cfg.global_args.dtype,device=cfg.global_args.device)
             D= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
                 dtype=cfg.global_args.dtype,device=cfg.global_args.device)
-            C = C/C.abs().max()
-            D = D/D.abs().max()
-            sites[(0,1)] = C
-            sites[(1,1)] = D
+            sites[(0,1)] = C/C.abs().max()
+            sites[(1,1)] = D/D.abs().max()
 
         if args.tiling == "8SITE":
             E= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
@@ -108,14 +106,10 @@ def main():
                 dtype=cfg.global_args.dtype,device=cfg.global_args.device)
             H= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
                 dtype=cfg.global_args.dtype,device=cfg.global_args.device)
-            E = E/E.abs().max()
-            F = F/F.abs().max()
-            G = G/G.abs().max()
-            H = H/H.abs().max()
-            sites[(2,0)] = E
-            sites[(3,0)] = F
-            sites[(2,1)] = G
-            sites[(3,1)] = H
+            sites[(2,0)] = E/E.abs().max()
+            sites[(3,0)] = F/F.abs().max()
+            sites[(2,1)] = G/G.abs().max()
+            sites[(3,1)] = H/H.abs().max()
             
         state = IPEPS(sites, vertexToSite=lattice_to_site)
     else:
