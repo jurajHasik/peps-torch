@@ -95,25 +95,25 @@ def main():
 
     # ----- S(0).S(r) -----
     site_dir_list=[((0,0), (1,0)),((0,0), (0,1)), ((1,1), (1,0)), ((1,1), (0,1))]
-    # for sdp in site_dir_list:
-    #     corrSS= model.eval_corrf_SS(*sdp, state, ctm_env_init, args.corrf_r)
-    #     print(f"\n\nSS[{sdp[0]},{sdp[1]}] r "+" ".join([label for label in corrSS.keys()]))
-    #     for i in range(args.corrf_r):
-    #         print(f"{i} "+" ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
+    for sdp in site_dir_list:
+        corrSS= model.eval_corrf_SS(*sdp, state, ctm_env_init, args.corrf_r)
+        print(f"\n\nSS[{sdp[0]},{sdp[1]}] r "+" ".join([label for label in corrSS.keys()]))
+        for i in range(args.corrf_r):
+            print(f"{i} "+" ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
 
     # ----- (S(0).S(x))(S(rx).S(rx+x)) -----
-    # for sdp in site_dir_list:
-    #     corrDD= model.eval_corrf_DD_H(*sdp, state, ctm_env_init, args.corrf_r)
-    #     print(f"\n\nDD[{sdp[0]},{sdp[1]}] r "+" ".join([label for label in corrDD.keys()]))
-    #     for i in range(args.corrf_r):
-    #         print(f"{i} "+" ".join([f"{corrDD[label][i]}" for label in corrDD.keys()]))
+    for sdp in site_dir_list:
+        corrDD= model.eval_corrf_DD_H(*sdp, state, ctm_env_init, args.corrf_r)
+        print(f"\n\nDD[{sdp[0]},{sdp[1]}] r "+" ".join([label for label in corrDD.keys()]))
+        for i in range(args.corrf_r):
+            print(f"{i} "+" ".join([f"{corrDD[label][i]}" for label in corrDD.keys()]))
 
     # ----- (S(0).S(y))(S(rx).S(rx+y)) -----
-    # for sdp in site_dir_list:
-    #     corrDD_V= model.eval_corrf_DD_V(*sdp,state, ctm_env_init, args.corrf_r)
-    #     print(f"\n\nDD_V[{sdp[0]},{sdp[1]}] r "+" ".join([label for label in corrDD_V.keys()]))
-    #     for i in range(args.corrf_r):
-    #         print(f"{i} "+" ".join([f"{corrDD_V[label][i]}" for label in corrDD_V.keys()]))
+    for sdp in site_dir_list:
+        corrDD_V= model.eval_corrf_DD_V(*sdp,state, ctm_env_init, args.corrf_r)
+        print(f"\n\nDD_V[{sdp[0]},{sdp[1]}] r "+" ".join([label for label in corrDD_V.keys()]))
+        for i in range(args.corrf_r):
+            print(f"{i} "+" ".join([f"{corrDD_V[label][i]}" for label in corrDD_V.keys()]))
 
     # environment diagnostics
     for c_loc,c_ten in ctm_env_init.C.items(): 

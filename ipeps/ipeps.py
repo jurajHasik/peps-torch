@@ -340,9 +340,9 @@ def write_ipeps(state, outputfile, aux_seq=[0,1,2,3], tol=1.0e-14, normalize=Fal
         
         if global_args.tensor_io_format=="legacy":
             json_tensor= serialize_bare_tensor_legacy(site)
-            json_tensor["physDim"]= site.size(0)
+            # json_tensor["physDim"]= site.size(0)
             # assuming all auxBondDim are identical
-            json_tensor["auxDim"]= site.size(1)
+            # json_tensor["auxDim"]= site.size(1)
         elif global_args.tensor_io_format=="1D":
             json_tensor= serialize_bare_tensor_np(site)
 
