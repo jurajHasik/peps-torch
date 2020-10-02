@@ -1,6 +1,6 @@
 import torch
 import config as cfg
-from tn_interface import contract, einsum
+from tn_interface import mm, contract, einsum
 import groups.su2 as su2
 from ctm.generic.env import ENV
 from ctm.generic import rdm
@@ -197,7 +197,7 @@ class COUPLEDLADDERS():
             #rot_op= su2.get_rot_op(self.phys_dim, dtype=self.dtype, device=self.device)
             rot_op= torch.eye(self.phys_dim, dtype=self.dtype, device=self.device)
             op_0= op
-            op_rot= torch.einsum('ki,kl,lj->ij',rot_op,op_0,rot_op)
+            op_rot= einsum('ki,kj->ij',rot_op, mm(op_0,rot_op))
             def _gen_op(r):
                 #return op_rot if r%2==0 else op_0
                 return op_0
@@ -212,7 +212,7 @@ class COUPLEDLADDERS():
         nSy0SyR= corrf.corrf_1sO1sO(coord,direction,state,env, op_isy, conjugate_op(op_isy), dist)
 
         res= dict({"ss": Sz0szR+Sx0sxR-nSy0SyR, "szsz": Sz0szR, "sxsx": Sx0sxR, "sysy": -nSy0SyR})
-        return res  
+        return res
 
     def eval_corrf_DD_H(self,coord,direction,state,env,dist,verbosity=0):
         # function generating properly S.S operator
