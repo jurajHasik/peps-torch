@@ -1,6 +1,18 @@
 from itertools import product
 import json
 import numpy as np
+from yamps.tensor import Tensor
+
+class NumPy_Encoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        else:
+            return super(NumPy_Encoder, self).default(obj)
 
 # assume bare tensor is defined as JSON object with
 # 
@@ -75,11 +87,9 @@ def read_bare_json_tensor_np_legacy(json_obj):
 #      key type content
 # i)   charges [list[int]] list of charges
 #
-def read_json_abelian_block_legacy(json_obj,backend="numpy"):
+def read_json_abelian_block_np_legacy(json_obj):
     charges= json_obj["charges"]
     bare_t= read_bare_json_tensor_np_legacy(json_obj)
-    assert len(charges)==len(bare_t.shape), f"Number of charges {len(charges)} incompatible "\
-        +f"with bare tensor rank {len(bare_t.shape)}"
     return charges, bare_t
 
 # assume abelian tensor is defined as JSON object with
@@ -96,31 +106,41 @@ def read_json_abelian_block_legacy(json_obj,backend="numpy"):
 # NOTE: the default settings (abelian group, backend) of Tensor are injected 
 #       by tensor_abelian module 
 #
-def read_json_abelian_tensor_legacy(json_obj,config=None):
+def read_json_abelian_tensor_legacy(json_obj, backend):
     r"""
     :param json_obj: dictionary from parsed json file
     :type json_obj: dict
     """
 
     # TODO validation
-    s= json_obj["signature"]
+    tensor_io_format= json_obj["format"]
+    assert tensor_io_format=="abelian", "Invalid JSON format of tensor: "+tensor_io_format
+    nsym= json_obj["nsym"]
+    assert nsym==backend.nsym, "Number of abelian symmetries does not match: "\
+        +" settings.nsym "+str(backend.nsym)+" tensor "+str(nsym)
     symmetry= json_obj["symmetry"]
+    assert symmetry==backend.sym, "Symmetries of settings.sym and tensor do not match"
+    s= json_obj["signature"]
     n= json_obj["n"]
     isdiag= json_obj["isdiag"]
     dtype_str= json_obj["dtype"].lower()
     assert dtype_str in ["float64","complex128"], "Invalid dtype"+dtype_str
+    assert dtype_str==backend.dtype, "dtype of tensor and settings.dtype do not match"
 
     # create empty abelian tensor
-    T= Tensor(s=s, n=0, isdiag=isdiag, dtype= dtype_str)
+    T= Tensor(settings=backend, s=s, n=n, isdiag=isdiag, dtype= dtype_str)
     # TODO assign symmetry in constructor or settings ?
-    if symmetry!=T.symmetry:
+    if symmetry!=T.sym:
         warnings.warn(f"Incompatible tensor symmetry: Expected {T.symmetry}, read {symmetry}")
-    T.symmetry= symmetry
+    T.sym= symmetry
 
     # parse blocks
     for b in json_obj["blocks"]:
-        charges, bare_b= read_json_abelian_block_legacy(b)
-        T.set_block(ts=charges, val=bare_b)
+        charges, bare_b= read_json_abelian_block_np_legacy(b)
+        if symmetry:
+            assert len(charges)==len(nsym*bare_b.shape), f"Number of charges {len(charges)}"\
+                +f" incompatible with bare tensor rank {len(bare_b.shape)}"
+        T.set_block(ts=tuple(charges), val=bare_b)
 
     return T
 
@@ -149,14 +169,11 @@ def serialize_bare_tensor_legacy(t):
         dtype_str= dtype_str[dtype_str.find(".")+1:]
 
     json_tensor["dtype"]= dtype_str
-    json_tensor["dims"]= list(t.size())
-
-    tlength = t.numel()
-    json_tensor["numEntries"]= tlength
+    json_tensor["dims"]= list(t.shape)
     
     entries = []
-    elem_inds = list(product( *(range(i) for i in t.size()) ))
-    if t.is_complex():
+    elem_inds = list(product( *(range(i) for i in t.shape) ))
+    if "complex" in dtype_str:
         for ei in elem_inds:
             entries.append(" ".join([f"{i}" for i in ei])\
                 +f" {t[ei].real} {t[ei].imag}")
@@ -165,22 +182,26 @@ def serialize_bare_tensor_legacy(t):
             entries.append(" ".join([f"{i}" for i in ei])\
                 +f" {t[ei]}")
 
+    json_tensor["numEntries"]= len(entries)
     json_tensor["entries"]=entries
     return json_tensor
 
-def serialize_abelian_tensor(t):
+def serialize_abelian_tensor_legacy(t):
     json_tensor=dict()
 
     json_tensor["format"]= "abelian"
-    json_tensor["rank"]= s._ndim
-    json_tensor["signature"]= list(t.s)
-    #json_tensor["symmetry"]= 
-    json_tensor["n"]= list(t.n)
+    json_tensor["nsym"]= t.nsym
+    json_tensor["symmetry"]= t.sym
+    json_tensor["rank"]= t._ndim
+    json_tensor["signature"]= t.s
+    json_tensor["n"]= t.n
     json_tensor["isdiag"]= t.isdiag
     json_tensor["dtype"]= t.dtype
 
     json_tensor["blocks"]= []
-    for b in t.A:
-        json_tensor["blocks"].append(serialize_bare_tensor_legacy(b))
+    for k in t.A.keys():
+        json_block= serialize_bare_tensor_legacy(t.A[k])
+        json_block["charges"]= k
+        json_tensor["blocks"].append(json_block)
 
     return json_tensor
