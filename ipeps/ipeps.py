@@ -4,7 +4,7 @@ import json
 import itertools
 import math
 import config as cfg
-from tensor_io import *
+from ipeps.tensor_io import *
 
 # TODO drop constrain for aux bond dimension to be identical on 
 # all bond indices

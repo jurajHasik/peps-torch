@@ -4,9 +4,13 @@ import itertools
 import math
 import config as cfg
 from ipeps.tensor_io import *
+from ipeps.ipeps import IPEPS
 
 class IPEPS_ABELIAN():
-    def __init__(self, sites, settings, vertexToSite=None, lX=None, lY=None, 
+    
+    _REF_S_DIRS=(-1,-1,-1,1,1)
+
+    def __init__(self, settings, sites, vertexToSite=None, lX=None, lY=None, 
         peps_args=cfg.peps_args, global_args=cfg.global_args):
         r"""
         :param sites: map from elementary unit cell to on-site tensors
@@ -27,11 +31,11 @@ class IPEPS_ABELIAN():
         indexed by tuple of coordinates (x,y) within the elementary unit cell.
         The index-position convetion for on-site tensors is defined as follows::
 
-               u s 
+           (-1)u (-1)s 
                |/ 
-            l--a--r  <=> a[s,u,l,d,r]
+        (-1)l--a--(+1)r  <=> a[s,u,l,d,r] with reference symmetry signature [-1,-1,-1,1,1]
                |
-               d
+           (+1)d
         
         where s denotes physical index, and u,l,d,r label four principal directions
         up, left, down, right in anti-clockwise order starting from up.
@@ -92,6 +96,8 @@ class IPEPS_ABELIAN():
         maps square lattice into elementary unit cell of size ``lX`` x ``lY`` assuming 
         periodic boundary conditions (PBC) along both X and Y directions.
         """
+        self.engine= settings
+        self.backend= settings.back
         assert global_args.dtype==settings.dtype
         self.dtype= settings.dtype
         self.device= global_args.device
@@ -131,21 +137,34 @@ class IPEPS_ABELIAN():
         """
         return self.sites[self.vertexToSite(coord)]
 
+    def move(self, device):
+        for c,t in self.sites:
+            sites[c]= t.move(device)
+
+    def to_dense(self, peps_args=cfg.peps_args, global_args=cfg.global_args):
+        sites= {sid: s.to_numpy() for sid,s in self.sites.items()}
+        state_dense= IPEPS(sites, vertexToSite=self.vertexToSite, lX=self.lX, \
+            lY=self.lY, peps_args=peps_args, global_args=global_args)
+        return state_dense
+
     # TODO autodiff
     # TODO parameters of abelian tensors are individual blocks
     def get_parameters(self):
-        return self.sites.values()
+        raise NotImplementedError
+        # return self.sites.values()
 
     # TODO checkpoint (store state in file)
     # TODO load state from ??? 
     def get_checkpoint(self):
-        return self.sites
+        raise NotImplementedError
+        # return self.sites
 
     def load_checkpoint(self,checkpoint_file):
-        checkpoint= torch.load(checkpoint_file)
-        self.sites= checkpoint["parameters"]
-        if True in [s.is_complex() for s in self.sites.values()]:
-            self.dtype= torch.complex128
+        raise NotImplementedError
+        # checkpoint= torch.load(checkpoint_file)
+        # self.sites= checkpoint["parameters"]
+        # if True in [s.is_complex() for s in self.sites.values()]:
+        #     self.dtype= torch.complex128
 
     def write_to_file(self, outputfile, tol=1.0e-14, normalize=False):
         write_ipeps(self, outputfile, tol=tol, normalize=normalize)
@@ -158,9 +177,10 @@ class IPEPS_ABELIAN():
 
         Take IPEPS and add random uniform noise with magnitude ``noise`` to all on-site tensors
         """
-        for coord in self.sites.keys():
-            rand_t = torch.rand( self.sites[coord].size(), dtype=self.dtype, device=self.device)
-            self.sites[coord] = self.sites[coord] + noise * rand_t
+        raise NotImplementedError
+        # for coord in self.sites.keys():
+        #     rand_t = torch.rand( self.sites[coord].size(), dtype=self.dtype, device=self.device)
+        #     self.sites[coord] = self.sites[coord] + noise * rand_t
 
     def __str__(self):
         print(f"lX x lY: {self.lX} x {self.lY}")
@@ -237,20 +257,23 @@ def read_ipeps(jsonfile, settings, vertexToSite=None, \
         lX = raw_state["sizeM"] if "sizeM" in raw_state else raw_state["lX"]
         lY = raw_state["sizeN"] if "sizeN" in raw_state else raw_state["lY"]
 
-        if vertexToSite == None:
-            def vertexToSite(coord):
-                x = coord[0]
-                y = coord[1]
-                return ( (x + abs(x)*lX)%lX, (y + abs(y)*lY)%lY )
+    if vertexToSite == None:
+        def vertexToSite(coord):
+            x = coord[0]
+            y = coord[1]
+            return ( (x + abs(x)*lX)%lX, (y + abs(y)*lY)%lY )
 
-            state = IPEPS_ABELIAN(sites, settings, vertexToSite, lX=lX, lY=lY, \
-                peps_args=peps_args, global_args=global_args)
-        else:
-            state = IPEPS_ABELIAN(sites, settings, vertexToSite, lX=lX, lY=lY, \
-                peps_args=peps_args, global_args=global_args)
+        state = IPEPS_ABELIAN(settings, sites, vertexToSite, lX=lX, lY=lY, \
+            peps_args=peps_args, global_args=global_args)
+    else:
+        state = IPEPS_ABELIAN(settings, sites, vertexToSite, lX=lX, lY=lY, \
+            peps_args=peps_args, global_args=global_args)
 
-        # check dtypes of all on-site tensors for newly created state
-        assert(False not in [state.dtype==s.dtype for s in sites.values()])
+    # check dtypes of all on-site tensors for newly created state
+    assert(False not in [state.dtype==s.dtype for s in sites.values()])
+
+    # move to device
+    state.move(global_args.device)
 
     return state
 

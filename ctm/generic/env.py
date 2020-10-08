@@ -1,6 +1,5 @@
 import torch
 import config as cfg
-#from ipeps.ipeps import IPEPS
 from tn_interface import einsum
 from tn_interface import conj
 from tn_interface import contiguous, view
@@ -63,7 +62,6 @@ class ENV():
             |       |       |
             C--1 1--T--2 1--C
         """
-        super(ENV, self).__init__()
         self.dtype = global_args.dtype
         self.device = global_args.device
         self.chi = chi
