@@ -1,16 +1,11 @@
-import torch
 from torch.utils.checkpoint import checkpoint
 import config as cfg
-#from ipeps.ipeps import IPEPS
-#from ctm.generic.env import ENV
-from ctm.generic.ctm_components import *
-from linalg.custom_svd import *
-from tn_interface import mm
-from tn_interface import conj, transpose
+from ctm.generic_abelian_nofuse.ctm_components import *
+# from linalg.custom_svd import *
+from tn_interface_abelian import contract
+from tn_interface_abelian import permute
 import logging
 log = logging.getLogger(__name__)
-
-import pdb
 
 def ctm_get_projectors_4x4(direction, coord, state, env, ctm_args=cfg.ctm_args, \
     global_args=cfg.global_args):
@@ -50,17 +45,40 @@ def ctm_get_projectors_4x4(direction, coord, state, env, ctm_args=cfg.ctm_args, 
     """
     verbosity = ctm_args.verbosity_projectors
     if direction==(0,-1):
+        # C2x2--1->0 0--C2x2(coord) =     _0(-1) (+1)0_
+        # |0           1|                |             |
+        # |0           0|                Rt            R
+        # C2x2--1    1--C2x2             |_1(-1) (+1)1_|
+        #
         R, Rt = halves_of_4x4_CTM_MOVE_UP(coord, state, env, verbosity=verbosity)
     elif direction==(-1,0): 
+        # C2x2(coord)--1 0--C2x2 = ----R----
+        # |0               1|      |0(-1)  |1(-1)
+        # 
+        # |0            1<-0|      |0(+1)  |1(+1)
+        # C2x2--1 1---------C2x2   ----Rt---
+        #
         R, Rt = halves_of_4x4_CTM_MOVE_LEFT(coord, state, env, verbosity=verbosity)
     elif direction==(0,1):
+        # C2x2---------1    1<-0--C2x2 =     _1(-1) (+1)1_
+        # |0                      |1        |             |
+        # |0                      |0        R             Rt
+        # C2x2(coord)--1->0 0<-1--C2x2      |_0(-1) (+1)0_|
+        #
         R, Rt = halves_of_4x4_CTM_MOVE_DOWN(coord, state, env, verbosity=verbosity)
     elif direction==(1,0):
+        # C2x2--1 0--C2x2        = ----Rt---
+        # |0->1      |1->0         |1(-1)  |0(-1)
+        # 
+        # |0->1      |0            |1(+1)  |0(+1)
+        # C2x2--1 1--C2x2(coord)   ----R----
+        #
         R, Rt = halves_of_4x4_CTM_MOVE_RIGHT(coord, state, env, verbosity=verbosity)
     else:
         raise ValueError("Invalid direction: "+str(direction))
 
-    return ctm_get_projectors_from_matrices(R, Rt, env.chi, ctm_args, global_args)
+    return ctm_get_projectors_from_matrices(R, Rt, env.chi, direction, \
+        ctm_args, global_args)
 
 def ctm_get_projectors_4x2(direction, coord, state, env, ctm_args=cfg.ctm_args, \
     global_args=cfg.global_args):
@@ -136,8 +154,8 @@ def ctm_get_projectors_4x2(direction, coord, state, env, ctm_args=cfg.ctm_args, 
 # direction-independent function performing bi-diagonalization
 #####################################################################
 
-def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args, \
-    global_args=cfg.global_args):
+def ctm_get_projectors_from_matrices(R, Rt, chi, direction, \
+    ctm_args=cfg.ctm_args, global_args=cfg.global_args):
     r"""
     :param R: tensor of shape (dim0, dim1)
     :param Rt: tensor of shape (dim0, dim1)
@@ -203,44 +221,66 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args, \
                          _|_____|_
                         |____Rt___|
     """
-    assert R.shape == Rt.shape
-    assert len(R.shape) == 2
+    # unfused R, Rt have rank 2*3=6
+    assert R.ndim == Rt.ndim and R.ndim==6
     verbosity = ctm_args.verbosity_projectors
 
+    # TODO autograd
+    # TODO chi, chi_block ?
+    # TODO returns right singular vectors as matrix of "dual" vectors
     if ctm_args.projector_svd_method=='DEFAULT' or ctm_args.projector_svd_method=='GESDD':
-        def truncated_svd(M, chi):
-            return truncated_svd_gesdd(M, chi, verbosity=ctm_args.verbosity_projectors)
-    elif ctm_args.projector_svd_method == 'ARP':
-        def truncated_svd(M, chi):
-            return truncated_svd_arnoldi(M, chi, verbosity=ctm_args.verbosity_projectors)
+        def truncated_svd(M, chi, sU=1):
+            # return truncated_svd_gesdd(M, chi, verbosity=ctm_args.verbosity_projectors)
+            return M.split_svd(NF3([0],[1]), tol=0, D_total=chi, sU=sU)
+    # elif ctm_args.projector_svd_method == 'ARP':
+    #     def truncated_svd(M, chi):
+    #         return truncated_svd_arnoldi(M, chi, verbosity=ctm_args.verbosity_projectors)
     else:
         raise(f"Projector svd method \"{cfg.ctm_args.projector_svd_method}\" not implemented")
 
-    #  SVD decomposition
+    # 0)
+    # Move: UP    (+1)0--R--1(+1) =>T=> (+1)1--R--0(+1)(-1)0--Rt--1(-1) =>SVD=> (+1)U(?)S(-?)Vh(-1)
+    #       LEFT  (-1)0--R--1(-1) =>T=> (-1)1--R--0(-1)(+1)0--Rt--1(+1) =>SVD=> (-1)U(?)S(-?)Vh(+1)
+    #       DOWN  (-1)0--R--1(-1) =>T=> (-1)1--R--0(-1)(+1)0--Rt--1(+1) =>SVD=> (-1)U(?)S(-?)Vh(+1)
+    #       RIGHT (+1)0--R--1(+1) =>T=> (+1)1--R--0(+1)(-1)0--Rt--1(-1) =>SVD=> (+1)U(?)S(-?)Vh(-1)
+    #
     if ctm_args.fwd_checkpoint_projectors:
         M = checkpoint(mm, transpose(R), Rt)
     else:
-        M = mm(transpose(R), Rt)
-    U, S, V = truncated_svd(M, chi) # M = USV^{T}
-    print(S)
-    
-    # if abs_tol is not None: St = St[St > abs_tol]
-    # if abs_tol is not None: St = torch.where(St > abs_tol, St, Stzeros)
-    # if rel_tol is not None: St = St[St/St[0] > rel_tol]
+        M = contract(permute(R, NF3([1,0])), Rt, NF3([1],[0]))
 
-    S_nz= S[S/S[0] > ctm_args.projector_svd_reltol]
-    S_sqrt= S*0
-    S_sqrt[:S_nz.size(0)]= torch.rsqrt(S_nz)
+    # 1) SVD decomposition
+    #
+    # Diagonal tensor S has no signature nor charge
+    signature_U={(0,-1): 1, (-1,0): -1, (0,1): -1, (1,0): 1}
+    U, S, Vh = truncated_svd(M, chi, signature_U[direction]) # M = USV^{+}
+    print(S.to_numpy().diagonal())
+    
+    # 2) Truncation
+    # S_nz= S[S/S[0] > ctm_args.projector_svd_reltol]
+    # S_sqrt= S*0
+    # S_sqrt[:S_nz.size(0)]= torch.rsqrt(S_nz)
+    S_sqrt= S.invsqrt()
 
     if verbosity>0: print(S_sqrt)
 
-    # Construct projectors
+    # 3) Construct projectors
     expr='ij,j->ij'
     def P_Pt_c(*tensors):
-        R, Rt, U, V, S_sqrt= tensors
-        return mm(R, conj(U))*S_sqrt[None,:], mm(Rt,V)*S_sqrt[None,:]
+        R, Rt, U, Vh, S_sqrt= tensors
+        # Move: UP    (+1)0--U--1(?)=>C=> (+1)0--R--1(+1)(-1)0--U--1(-?)S_sqrt = (+1)P(-1)
+        #       ?=1   (-?)0--Vh--1(-1)=>CT=> (-1)0--Rt--1(-1)(+1)1--Vh--0(?)   = (-1)Pt(+1)
+        #       LEFT  (-1)0--U--1(?)=>C=> (-1)0--R--1(-1)(+1)0--U--1(-?)S_sqrt = (-1)P(+1)
+        #       ?=-1  (-?)0--Vh--1(+1)=>CT=> (+1)0--Rt--1(+1)(-1)1--Vh--0(?)   = (+1)Pt(-1)
+        #       DOWN  (-1)0--U--1(?)=>C=> (-1)0--R--1(-1)(+1)0--U--1(-?)S_sqrt = (-1)P(+1)
+        #       ?=-1  (-?)0--Vh--1(+1)=>CT=> (+1)0--Rt--1(+1)(-1)1--Vh--0(?)   = (+1)Pt(-1)
+        #       RIGHT (+1)0--U--1(?)=>C=> (+1)0--R--1(+1)(-1)0--U--1(-?)S_sqrt = (+1)P(-1)
+        #             (-?)0--Vh--1(-1)=>CT=> (-1)0--Rt--1(-1)(+1)1--Vh--0(?)   = (-1)Pt(+1)
+        P= contract(contract(R, U, NF3([1],[0]), conj=(0,1)), S_sqrt, ([3],[0]))
+        Pt= contract(contract(Rt, permute(Vh, [1,2,3,0]), NF3([1],[0]), conj=(0,1)), S_sqrt, ([3],[0]))
+        return P, Pt
 
-    tensors= R, Rt, U, V, S_sqrt
+    tensors= R, Rt, U, Vh, S_sqrt
     if ctm_args.fwd_checkpoint_projectors:
         return checkpoint(P_Pt_c, *tensors)
     else:
