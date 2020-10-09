@@ -1,5 +1,5 @@
 import time
-from torch.utils.checkpoint import checkpoint
+# from torch.utils.checkpoint import checkpoint
 import config as cfg
 from ipeps.ipeps_abelian import IPEPS_ABELIAN
 from ctm.generic_abelian_nofuse.env_abelian import ENV_ABELIAN
@@ -140,7 +140,8 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
 
     # Call the core function, allowing for checkpointing
     if ctm_args.fwd_checkpoint_move:
-        new_tensors= checkpoint(ctm_MOVE_c,*tensors)
+        # new_tensors= checkpoint(ctm_MOVE_c,*tensors)
+        raise RuntimeError("Checkpointing not implemented")
     else:
         new_tensors= ctm_MOVE_c(*tensors)
     
@@ -186,7 +187,8 @@ def absorb_truncate_CTM_MOVE_UP(coord, state, env, P, Pt, verbosity=0):
         P[coord], Pt[coord], P[coord_shift_right], Pt[coord_shift_right]
 
     if cfg.ctm_args.fwd_checkpoint_absorb:
-        return checkpoint(absorb_truncate_CTM_MOVE_UP_c,*tensors)
+        # return checkpoint(absorb_truncate_CTM_MOVE_UP_c,*tensors)
+        raise RuntimeError("Checkpointing not implemented")
     else:
         return absorb_truncate_CTM_MOVE_UP_c_nofuse(*tensors)
 
@@ -274,7 +276,8 @@ def absorb_truncate_CTM_MOVE_LEFT(coord, state, env, P, Pt, verbosity=0):
         P[coord], Pt[coord], P[coord_shift_up], Pt[coord_shift_up]
 
     if cfg.ctm_args.fwd_checkpoint_absorb:
-        return checkpoint(absorb_truncate_CTM_MOVE_LEFT_c,*tensors)
+        # return checkpoint(absorb_truncate_CTM_MOVE_LEFT_c,*tensors)
+        raise RuntimeError("Checkpointing not implemented")
     else:
         # return absorb_truncate_CTM_MOVE_LEFT_c(*tensors)
         ## NOFUSE branch
@@ -371,7 +374,8 @@ def absorb_truncate_CTM_MOVE_DOWN(coord, state, env, P, Pt, verbosity=0):
         P[coord], Pt[coord], P[coord_shift_left], Pt[coord_shift_left]
 
     if cfg.ctm_args.fwd_checkpoint_absorb:
-        return checkpoint(absorb_truncate_CTM_MOVE_DOWN_c,*tensors)
+        # return checkpoint(absorb_truncate_CTM_MOVE_DOWN_c,*tensors)
+        raise RuntimeError("Checkpointing not implemented")
     else:
         #return absorb_truncate_CTM_MOVE_DOWN_c(*tensors)
         ## NOFUSE branch
@@ -463,7 +467,8 @@ def absorb_truncate_CTM_MOVE_RIGHT(coord, state, env, P, Pt, verbosity=0):
         P[coord], Pt[coord], P[coord_shift_down], Pt[coord_shift_down]
 
     if cfg.ctm_args.fwd_checkpoint_absorb:
-        return checkpoint(absorb_truncate_CTM_MOVE_RIGHT_c,*tensors)
+        # return checkpoint(absorb_truncate_CTM_MOVE_RIGHT_c,*tensors)
+        raise RuntimeError("Checkpointing not implemented")
     else:
         # return absorb_truncate_CTM_MOVE_RIGHT_c(*tensors)
         ## NOFUSE branch

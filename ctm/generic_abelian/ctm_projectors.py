@@ -1,4 +1,4 @@
-from torch.utils.checkpoint import checkpoint
+# from torch.utils.checkpoint import checkpoint
 import config as cfg
 from ctm.generic_abelian.ctm_components import *
 # from linalg.custom_svd import *
@@ -244,7 +244,8 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, direction, \
     #       RIGHT (+1)0--R--1(+1) =>T=> (+1)1--R--0(+1)(-1)0--Rt--1(-1) =>SVD=> (+1)U(?)S(-?)Vh(-1)
     #
     if ctm_args.fwd_checkpoint_projectors:
-        M = checkpoint(mm, transpose(R), Rt)
+        # M = checkpoint(mm, transpose(R), Rt)
+        raise RuntimeError("Checkpointing not implemented")
     else:
         M = mm(transpose(R), Rt)
 
@@ -253,7 +254,6 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, direction, \
     # Diagonal tensor S has no signature nor charge
     signature_U={(0,-1): 1, (-1,0): -1, (0,1): -1, (1,0): 1}
     U, S, Vh = truncated_svd(M, chi, signature_U[direction]) # M = USV^{+}
-    print(S.to_numpy().diagonal())
     
     # 2) Truncation
     # S_nz= S[S/S[0] > ctm_args.projector_svd_reltol]
@@ -283,6 +283,7 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, direction, \
 
     tensors= R, Rt, U, Vh, S_sqrt
     if ctm_args.fwd_checkpoint_projectors:
-        return checkpoint(P_Pt_c, *tensors)
+        # return checkpoint(P_Pt_c, *tensors)
+        raise RuntimeError("Checkpointing not implemented")
     else:
         return P_Pt_c(*tensors)
