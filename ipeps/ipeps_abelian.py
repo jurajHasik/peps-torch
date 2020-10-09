@@ -4,7 +4,6 @@ import itertools
 import math
 import config as cfg
 from ipeps.tensor_io import *
-from ipeps.ipeps import IPEPS
 
 class IPEPS_ABELIAN():
     
@@ -138,13 +137,15 @@ class IPEPS_ABELIAN():
         return self.sites[self.vertexToSite(coord)]
 
     def move(self, device):
-        for c,t in self.sites:
-            sites[c]= t.move(device)
+        pass
+        # for c,t in self.sites:
+        #     sites[c]= t.move(device)
 
     def to_dense(self, peps_args=cfg.peps_args, global_args=cfg.global_args):
-        sites= {sid: s.to_numpy() for sid,s in self.sites.items()}
-        state_dense= IPEPS(sites, vertexToSite=self.vertexToSite, lX=self.lX, \
-            lY=self.lY, peps_args=peps_args, global_args=global_args)
+        sites= {sid: s.to_dense() for sid,s in self.sites.items()}
+        settings_dense= next(iter(self.sites.values())).conf
+        state_dense= IPEPS_ABELIAN(settings_dense, sites, vertexToSite=self.vertexToSite, 
+            lX=self.lX, lY=self.lY, peps_args=peps_args, global_args=global_args)
         return state_dense
 
     # TODO autodiff

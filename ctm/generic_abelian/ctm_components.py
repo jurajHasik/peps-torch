@@ -1,4 +1,4 @@
-from torch.utils.checkpoint import checkpoint
+# from torch.utils.checkpoint import checkpoint
 from config import ctm_args
 from tn_interface_abelian import contract
 
@@ -23,7 +23,8 @@ def halves_of_4x4_CTM_MOVE_UP(coord, state, env, verbosity=0):
         + c2x2_LU_t((coord[0]-1, coord[1]),state,env) + c2x2_LD_t((coord[0]-1, coord[1]-1),state,env)
 
     if ctm_args.fwd_checkpoint_halves:
-        return checkpoint(halves_of_4x4_CTM_MOVE_UP_c,*tensors)
+        # return checkpoint(halves_of_4x4_CTM_MOVE_UP_c,*tensors)
+        raise RuntimeError("Checkpointing not implemented")
     else:
         return halves_of_4x4_CTM_MOVE_UP_c(*tensors)
 
@@ -76,7 +77,8 @@ def halves_of_4x4_CTM_MOVE_LEFT(coord, state, env, verbosity=0):
         + c2x2_LD_t((coord[0], coord[1]+1),state,env) + c2x2_RD_t((coord[0]+1, coord[1]+1),state,env)
 
     if ctm_args.fwd_checkpoint_halves:
-        return checkpoint(halves_of_4x4_CTM_MOVE_LEFT_c,*tensors)
+        # return checkpoint(halves_of_4x4_CTM_MOVE_LEFT_c,*tensors)
+        raise RuntimeError("Checkpointing not implemented")
     else:
         return halves_of_4x4_CTM_MOVE_LEFT_c(*tensors)
 
@@ -124,7 +126,8 @@ def halves_of_4x4_CTM_MOVE_DOWN(coord, state, env, verbosity=0):
         + c2x2_RD_t((coord[0]+1, coord[1]),state,env) + c2x2_RU_t((coord[0]+1, coord[1]-1),state,env)
     
     if ctm_args.fwd_checkpoint_halves:
-        return checkpoint(halves_of_4x4_CTM_MOVE_DOWN_c,*tensors)
+        # return checkpoint(halves_of_4x4_CTM_MOVE_DOWN_c,*tensors)
+        raise RuntimeError("Checkpointing not implemented")
     else:
         return halves_of_4x4_CTM_MOVE_DOWN_c(*tensors)
 
@@ -172,7 +175,8 @@ def halves_of_4x4_CTM_MOVE_RIGHT(coord, state, env, verbosity=0):
         + c2x2_RU_t((coord[0], coord[1]-1),state,env) + c2x2_LU_t((coord[0]-1, coord[1]-1),state,env)
     
     if ctm_args.fwd_checkpoint_halves:
-        return checkpoint(halves_of_4x4_CTM_MOVE_RIGHT_c,*tensors)
+        # return checkpoint(halves_of_4x4_CTM_MOVE_RIGHT_c,*tensors)
+        raise RuntimeError("Checkpointing not implemented")
     else:
         return halves_of_4x4_CTM_MOVE_RIGHT_c(*tensors)
 
