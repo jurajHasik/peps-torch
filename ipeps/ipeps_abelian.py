@@ -97,7 +97,8 @@ class IPEPS_ABELIAN():
         """
         self.engine= settings
         self.backend= settings.back
-        assert global_args.dtype==settings.dtype
+        assert global_args.dtype==settings.dtype, "global_args.dtype "+global_args.dtype\
+            +" settings.dtype "+settings.dtype
         self.dtype= settings.dtype
         self.device= global_args.device
         self.nsym = settings.nsym
