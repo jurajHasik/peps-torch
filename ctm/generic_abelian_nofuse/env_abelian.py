@@ -1,6 +1,5 @@
 import config as cfg
 from itertools import product
-from ctm.generic.env import ENV
 
 class ENV_ABELIAN():
     def __init__(self, chi=1, state=None, settings=None, init=False,\
@@ -129,9 +128,10 @@ class ENV_ABELIAN():
         # return new_env
 
     def to_dense(self, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
-        env_dense= ENV(self.chi, ctm_args=ctm_args, global_args=global_args)
-        env_dense.C= {cid: c.to_numpy() for cid,c in self.C.items()}
-        env_dense.T= {tid: t.to_numpy() for tid,t in self.T.items()}
+        C_dense= {cid: c.to_dense() for cid,c in self.C.items()}
+        T_dense= {tid: t.to_dense() for tid,t in self.T.items()}
+        env_dense= ENV_ABELIAN(self.chi, settings=next(iter(C_dense.values())).conf, \
+            ctm_args=ctm_args, global_args=global_args)
         return env_dense
 
 def init_env(state, env, init_method=None, ctm_args=cfg.ctm_args):
