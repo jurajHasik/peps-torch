@@ -1,6 +1,5 @@
 import config as cfg
 from itertools import product
-from ctm.generic.env import ENV
 
 class ENV_ABELIAN():
     def __init__(self, chi=1, state=None, settings=None, init=False,\
