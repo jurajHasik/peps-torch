@@ -187,7 +187,7 @@ class IPEPS_ABELIAN():
     def __str__(self):
         print(f"lX x lY: {self.lX} x {self.lY}")
         for nid,coord,site in [(t[0], *t[1]) for t in enumerate(self.sites.items())]:
-            print(f"a{nid} {coord}: {site.size()}")
+            print(f"a{nid} {coord}: {site}")
         
         # show tiling of a square lattice
         coord_list = list(self.sites.keys())
