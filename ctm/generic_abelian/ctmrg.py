@@ -7,8 +7,6 @@ from ctm.generic_abelian.ctm_components import *
 from ctm.generic_abelian.ctm_projectors import *
 from tn_interface_abelian import contract
 
-import pdb
-
 def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.global_args): 
     r"""
     :param state: wavefunction
@@ -42,10 +40,11 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
         ## a = contiguous(einsum('mefgh,mabcd->eafbgchd',A,conj(A)))
         a= contract(A,A, ((0),(0)), conj=(0,1)) # mefgh,mabcd->efghabcd
         a= a.transpose((0,4,1,5,2,6,3,7)) # efghabcd->eafbgchd
-        a, leg_order= a.group_legs((6,7), new_s=-1) # eafbgc(hd->H)->eafbgcH
-        a, leg_order= a.group_legs((4,5), new_s=-1) # eafb(gc->G)H->eafbGH
-        a, leg_order= a.group_legs((2,3), new_s=1) # ea(fb->F)GH->eaFGH
-        a, leg_order= a.group_legs((0,1), new_s=1) # (ea->E)F->EFGH
+        a, lo3= a.group_legs((6,7), new_s=-1) # eafbgc(hd->H)->eafbgcH
+        a, lo2= a.group_legs((4,5), new_s=-1) # eafb(gc->G)H->eafbGH
+        a, lo1= a.group_legs((2,3), new_s=1) # ea(fb->F)GH->eaFGH
+        a, lo0= a.group_legs((0,1), new_s=1) # (ea->E)F->EFGH
+        a._leg_fusion_data= {k: v for k,v in enumerate([lo0, lo1, lo2, lo3])}
         sitesDL[coord]=a
     stateDL = IPEPS_ABELIAN(state.engine, sitesDL, vertexToSite=state.vertexToSite)
 
@@ -198,8 +197,6 @@ def absorb_truncate_CTM_MOVE_UP(coord, state, env, P, Pt, verbosity=0):
         raise RuntimeError("Checkpointing not implemented")
     else:
         return absorb_truncate_CTM_MOVE_UP_c(*tensors)
-        ## NOFUSE branch
-        # return absorb_truncate_CTM_MOVE_UP_c_nofuse(*tensors)
 
 def absorb_truncate_CTM_MOVE_UP_c(*tensors):
     C1, T1, T, T2, C2, A, P2, Pt2, P1, Pt1= tensors
@@ -263,7 +260,6 @@ def absorb_truncate_CTM_MOVE_UP_c(*tensors):
     #         -------A---
     #                2->1(-1)
     nT = contract(nT, P1,([1],[0]))
-    ## nT = contiguous(nT)
 
     # Assign new C,T 
     #
@@ -279,80 +275,7 @@ def absorb_truncate_CTM_MOVE_UP_c(*tensors):
     nC1 = nC1/nC1.max_abs()
     nC2 = nC2/nC2.max_abs()
     nT = nT/nT.max_abs()
-    return nC1, nC2, nT
-
-def absorb_truncate_CTM_MOVE_UP_c_nofuse(*tensors):
-    C1, T1, T, T2, C2, A, P2, Pt2, P1, Pt1= tensors
-    # Move: UP    (+1)0,1--P--2(-1)
-    #             (-1)0,1--Pt--2(+1)
-
-    # (+1)0--C1
-    #        1
-    #        0
-    # (+1)1--T1 
-    #    (-1)2 
-    nC1= contract(C1,T1,([1],[0]))
-
-    #            --0 0--C1
-    #           |       |
-    # (+1)0<-2--Pt1     |
-    #           |       | 
-    #            --1 1--T1
-    #                   2->1(-1)
-    nC1 = contract(Pt1, nC1,([0,1],[0,1]))
-
-    # C2--1->0(-1)
-    # 0
-    # 0
-    # T2--2(-1)
-    # 1(-1)
-    nC2 = contract(C2, T2,([0],[0]))
-
-    # C2--0 0-- 
-    # |        | 
-    # |        P2--2->1(-1)
-    # |        |
-    # T2--2 1--
-    # 1->0(-1)
-    nC2 = contract(nC2, P2,([0,2],[0,1]))
-    
-    #            --0(-1) (+1)0--T--2->3(-1)
-    #           |               1->2(-1)
-    # (+1)1<-2--Pt2
-    #           |
-    #            --1->0(-1)
-    nT = contract(Pt2, T, ([0],[0]))
-
-    #            -------T--3->1(-1)
-    #           |       2
-    # (+1)0<-1--Pt2     |
-    #           |       0
-    #            --0 1--A--3(-1)
-    #                   2(-1) 
-    nT = contract(nT, A,([0,2],[1,0]))
-
-    #         -------T---1 0--
-    #        |       |        |
-    # (+1)0--Pt2     |        P1--1->2(-1)
-    #        |       |        |
-    #         -------A---3 1--
-    #                2->1(-1)
-    nT = contract(nT, P1,([1,3],[0,1]))
-
-    # Assign new C,T 
-    #
-    # C(coord,(-1,-1))--                --T(coord,(0,-1))--             --C(coord,(1,-1))
-    # |                  P2--       --Pt2 |                P1--     -Pt1  |
-    # T(coord,(-1,0))---                --A(coord)---------             --T(coord,(1,0))
-    # |                                   |                               |
-    #
-    # =>                            
-    #
-    # C^new(coord+(0,1),(-1,-1))--      --T^new(coord+(0,1),(0,-1))--   --C^new(coord+(0,1),(1,-1))
-    # |                                   |                               |
-    nC1 = nC1/nC1.max_abs()
-    nC2 = nC2/nC2.max_abs()
-    nT = nT/nT.max_abs()
+    nT._leg_fusion_data[1]= A._leg_fusion_data[2]
     return nC1, nC2, nT
 
 
@@ -369,8 +292,6 @@ def absorb_truncate_CTM_MOVE_LEFT(coord, state, env, P, Pt, verbosity=0):
         raise RuntimeError("Checkpointing not implemented")
     else:
         return absorb_truncate_CTM_MOVE_LEFT_c(*tensors)
-        ## NOFUSE branch
-        # return absorb_truncate_CTM_MOVE_LEFT_c_nofuse(*tensors)
 
 def absorb_truncate_CTM_MOVE_LEFT_c(*tensors):
     C1, T1, T, T2, C2, A, P2, Pt2, P1, Pt1= tensors
@@ -424,9 +345,9 @@ def absorb_truncate_CTM_MOVE_LEFT_c(*tensors):
     #    0            <=>     0(+1)
     # ___P1___             ___P1____
     # |       |           |         |
-    # |       |           |         |
-    # T-------A--3->1     T---------A--2->1(-1) 
-    # 1       2               1(-1)     
+    # |       |           |         |             0
+    # T-------A--3->1     T---------A--2->1(-1) & T--1->2
+    # 1       2               1(-1)               2->1
     # 0       1               0(+1) 
     # |___Pt2_|               Pt2
     #     2                   1->2(-1)
@@ -456,88 +377,7 @@ def absorb_truncate_CTM_MOVE_LEFT_c(*tensors):
     nC1 = nC1/nC1.max_abs()
     nC2 = nC2/nC2.max_abs()
     nT = nT/nT.max_abs()
-    return nC1, nC2, nT
-
-def absorb_truncate_CTM_MOVE_LEFT_c_nofuse(*tensors):
-    C1, T1, T, T2, C2, A, P2, Pt2, P1, Pt1= tensors
-    # Move: LEFT  (-1)0,1--P--2(+1)
-    #             (+1)0,1--Pt--2(-1)
-
-    # C1--1 0--T1--2(-1)
-    # |        |
-    # 0(-1)    1(-1)
-    nC1= contract(C1,T1,([1],[0]))
-
-    # C1--1 0--T1--2->1(-1)
-    # |        |
-    # 0        1
-    # 0        1
-    # |___Pt1__|
-    #     2->0(-1)
-    nC1= contract(Pt1, nC1,([0,1],[0,1]))
-
-    # 0(+1)    0->1(+1)
-    # C2--1 1--T2--2(-1)
-    nC2= contract(C2, T2,([1],[1]))
-
-    #    2->0(+1)
-    # ___P2___
-    # 0      1
-    # 0      1
-    # C2-----T2--2->1(-1)
-    nC2 = contract(P2, nC2,([0,1],[0,1]))
-
-    #    2->1(+1)
-    # ___P1__
-    # 0     1->0
-    # 0         
-    # T--2->3(-1)
-    # 1->2(-1)
-    nT = contract(P1, T,([0],[0]))
-
-    #    1->0(+1)
-    # ___P1______
-    # |         0
-    # |         0
-    # T--3 1----A--3(-1)
-    # 2->1(-1)  2(-1)
-    nT= contract(nT, A,([0,3],[0,1]))
-
-    #    0(+1)
-    # ___P1___ 
-    # |       |
-    # |       |
-    # T-------A--3->1(-1)
-    # 1       2
-    # 0       1
-    # |___Pt2_|
-    #     2(-1)
-    nT = contract(nT, Pt2,([1,2],[0,1]))
-    nT = nT.transpose((0,2,1))
-    
-
-    # Assign new C,T 
-    #
-    # C(coord,(-1,-1))--T(coord,(0,-1))-- => C^new(coord+(1,0),(-1,-1))--
-    # |________   ______|                    |
-    #          Pt1
-    #          |
-    #
-    #          |
-    # _________P1______
-    # |                |                     |
-    # T(coord,(-1,0))--A(coord)--            T^new(coord+(1,0),(-1,0))--
-    # |________   _____|                     |
-    #          Pt2
-    #          |                     
-    #          
-    #          |
-    #  ________P2_______
-    # |                 |                    |
-    # C(coord,(-1,1))--T(coord,(0,1))--      C^new(coord+(1,0),(-1,1))
-    nC1 = nC1/nC1.max_abs()
-    nC2 = nC2/nC2.max_abs()
-    nT = nT/nT.max_abs()
+    nT._leg_fusion_data[2]= A._leg_fusion_data[3]
     return nC1, nC2, nT
 
 
@@ -554,8 +394,6 @@ def absorb_truncate_CTM_MOVE_DOWN(coord, state, env, P, Pt, verbosity=0):
         raise RuntimeError("Checkpointing not implemented")
     else:
         return absorb_truncate_CTM_MOVE_DOWN_c(*tensors)
-        ## NOFUSE branch
-        # return absorb_truncate_CTM_MOVE_DOWN_c_nofuse(*tensors)
 
 def absorb_truncate_CTM_MOVE_DOWN_c(*tensors):
     C1, T1, T, T2, C2, A, P2, Pt2, P1, Pt1= tensors
@@ -635,82 +473,7 @@ def absorb_truncate_CTM_MOVE_DOWN_c(*tensors):
     nC1 = nC1/nC1.max_abs()
     nC2 = nC2/nC2.max_abs()
     nT = nT/nT.max_abs()
-    return nC1, nC2, nT
-
-def absorb_truncate_CTM_MOVE_DOWN_c_nofuse(*tensors):
-    C1, T1, T, T2, C2, A, P2, Pt2, P1, Pt1= tensors
-    # Move: DOWN  (-1)0,1--P--2(+1)
-    #             (+1)0,1--Pt--2(-1)
-
-    # 0->1(+1)
-    # T1--2->2(-1)
-    # 1
-    # 0
-    # C1--1->0(-1)
-    nC1 = contract(C1,T1,([0],[1]))
-
-    # 1->0(+1)
-    # T1--2 1--
-    # |        |
-    # |        Pt1--2->1(-1)
-    # |        |
-    # C1--0 0--
-    nC1 = contract(nC1, Pt1, ([0,2],[0,1]))
-
-    #    (+1)1<-0
-    # (+1)2<-1--T2
-    #           2
-    #           0
-    # (+1)0<-1--C2     
-    nC2 = contract(C2, T2,([0],[2]))
-
-    #            (+1)0<-1
-    #            --1 2--T2
-    #           |       |
-    # (+1)1<-2--P2      |
-    #           |       | 
-    #            --0 0--C2
-    nC2 = contract(nC2, P2, ([0,2],[0,1]))
-
-    #            --1->0
-    #           |
-    # (+1)1<-2--P1
-    #           |       0->2(+1)
-    #            --0 1--T--2->3(-1)
-    nT = contract(P1, T, ([0],[1]))
-
-    #                   0->2(+1)
-    #            --0 1--A--3(-1)
-    #           |       2
-    # (+1)0<-1--P1      |
-    #           |       2
-    #            -------T--3->1(-1)
-    nT = contract(nT, A,([0,2],[1,2]))
-
-    #                2->1(+1)
-    #         -------A--3 1--
-    #        |       |       |
-    # (+1)0--P1      |       Pt2--1->2(-1)
-    #        |       |       |
-    #         -------T--1 0--
-    nT = contract(nT, Pt2,([1,3],[0,1]))
-    nT = nT.transpose((1,0,2))
-    
-
-    # Assign new C,T
-    # 
-    # |                                 |                              |
-    # T(coord,(-1,0))--               --A(coord)--------             --T(coord,(1,0))
-    # |                Pt1--      --P1  |               Pt2--    --P2  |
-    # C(coord,(-1,1))--               --T(coord,(0,1))--             --C(coord,(1,1))
-    #
-    # =>                            
-    #
-    # |                                 |                              |
-    # C^new(coord+(0,-1),(-1,1))--    --T^new(coord+(0,-1),(0,1))--  --C^new(coord+(0,-1),(1,1))
-    nC1 = nC1/nC1.max_abs()
-    nC2 = nC2/nC2.max_abs()
-    nT = nT/nT.max_abs()
+    nT._leg_fusion_data[0]= A._leg_fusion_data[0]
     return nC1, nC2, nT
 
 
@@ -727,8 +490,6 @@ def absorb_truncate_CTM_MOVE_RIGHT(coord, state, env, P, Pt, verbosity=0):
         raise RuntimeError("Checkpointing not implemented")
     else:
         return absorb_truncate_CTM_MOVE_RIGHT_c(*tensors)
-        ## NOFUSE branch
-        # return absorb_truncate_CTM_MOVE_RIGHT_c_nofuse(*tensors)
 
 def absorb_truncate_CTM_MOVE_RIGHT_c(*tensors):
     C1, T1, T, T2, C2, A, P2, Pt2, P1, Pt1= tensors
@@ -788,83 +549,6 @@ def absorb_truncate_CTM_MOVE_RIGHT_c(*tensors):
     #           2 
     nT = contract(nT, P1,([1],[0]))
     
-    # Assign new C,T 
-    #
-    # --T(coord,(0,-1))--C(coord,(1,-1)) =>--C^new(coord+(-1,0),(1,-1))
-    #   |______  ________|                   |
-    #          P2
-    #          |
-    #
-    #          |
-    #    ______Pt2
-    #   |         |                          |
-    # --A(coord)--T(coord,(1,0))           --T^new(coord+(-1,0),(1,0))
-    #   |______  _|                          |
-    #          P1
-    #          |                     
-    #          
-    #          |
-    #    ______Pt1______
-    #   |               |                    |
-    # --T(coord,(0,1))--C(coord,(1,1))     --C^new(coord+(-1,0),(1,1))
-    nC1 = nC1/nC1.max_abs()
-    nC2 = nC2/nC2.max_abs()
-    nT = nT/nT.max_abs()
-    return nC1, nC2, nT
-
-def absorb_truncate_CTM_MOVE_RIGHT_c_nofuse(*tensors):
-    C1, T1, T, T2, C2, A, P2, Pt2, P1, Pt1= tensors
-    # Move: RIGHT  (+1)0,1--P--2(-1)
-    #              (-1)0,1--Pt--2(+1)
-
-    #           0->1(+1) 0(+1)
-    # (+1)2<-1--T1--2 1--C1
-    nC1= contract(C1, T1,([1],[2]))
-
-    #             2->0(+1)
-    #           __Pt1_
-    #           1     0
-    #           1     0
-    # (+1)1<-2--T1----C1
-    nC1= contract(Pt1, nC1,([0,1],[0,1]))
-
-    # (+1)1<-0--T2--2 0--C2
-    #    (-1)2<-1 (-1)0<-1
-    nC2= contract(C2,T2,([0],[2]))
-
-    # (+1)0<-1--T2----C2
-    #           2     0
-    #           1     0
-    #           |__P2_|
-    #              2->1(-1)
-    nC2= contract(nC2, P2,([0,2],[0,1]))
-
-    # (+1)1<-2
-    #     ___Pt2__
-    #  0<-1      0
-    #            0
-    #  (+1)2<-1--T
-    #     (-1)3<-2
-    nT= contract(Pt2, T,([0],[0]))
-
-    #       (+1)0<-1
-    #           ___Pt2____ 
-    #           0         |
-    #           0         |
-    # (+1)2<-1--A--3 2----T
-    #    (+1)3<-2  (-1)1<-3
-    nT= contract(nT, A,([0,2],[0,3]))
-
-    #          (+1)0
-    #            __Pt2__ 
-    #           |       |
-    #           |       |
-    # (+1)1<-2--A-------T
-    #           3       1
-    #           1       0
-    #           |___P1__|
-    #           (-1)2 
-    nT = contract(nT, P1,([1,3],[0,1]))
     
     # Assign new C,T 
     #
@@ -888,4 +572,5 @@ def absorb_truncate_CTM_MOVE_RIGHT_c_nofuse(*tensors):
     nC1 = nC1/nC1.max_abs()
     nC2 = nC2/nC2.max_abs()
     nT = nT/nT.max_abs()
+    nT._leg_fusion_data[1]= A._leg_fusion_data[1] 
     return nC1, nC2, nT
