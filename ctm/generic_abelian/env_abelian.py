@@ -290,9 +290,10 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         a= A.dot(A, ((0,1), (0,1)), conj=(0,1)) # miefg,miabc->efgabc
         a= a.transpose((0,3,1,4,2,5)) # efgabc->eafbgc
         a, leg_order= a.group_legs((4,5), new_s=-1) # eafb(gc->G)->eafbG
-        a, leg_order= a.group_legs((2,3), new_s=-1) # ea(fb->F)G->eaFG
+        a, leg_order_aux= a.group_legs((2,3), new_s=-1) # ea(fb->F)G->eaFG
         a, leg_order= a.group_legs((0,1), new_s=1) # (ea->E)FG->EFG
         a= a/a.max_abs()
+        a._leg_fusion_data[1]= leg_order_aux
         env.T[(coord,vec)]=a 
 
         # left transfer matrix
@@ -310,10 +311,11 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         ## a = contiguous(einsum('meifg,maibc->eafbgc',A,conj(A)))
         a= A.dot(A, ((0,2), (0,2)), conj=(0,1)) # meifg,maibc->efgabc
         a= a.transpose((0,3,1,4,2,5)) # efgabc->eafbgc
-        a, leg_order= a.group_legs((4,5), new_s=-1) # eafb(gc->G)->eafbG
+        a, leg_order_aux= a.group_legs((4,5), new_s=-1) # eafb(gc->G)->eafbG
         a, leg_order= a.group_legs((2,3), new_s=-1) # ea(fb->F)G->eaFG
         a, leg_order= a.group_legs((0,1), new_s=1) # (ea->E)FG->EFG
         a= a/a.max_abs()
+        a._leg_fusion_data[2]= leg_order_aux
         env.T[(coord,vec)]=a
 
         # lower transfer matrix
@@ -333,8 +335,9 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         a= a.transpose((0,3,1,4,2,5)) # efgabc->eafbgc
         a, leg_order= a.group_legs((4,5), new_s=-1) # eafb(gc->G)->eafbG
         a, leg_order= a.group_legs((2,3), new_s=1) # ea(fb->F)G->eaFG
-        a, leg_order= a.group_legs((0,1), new_s=1) # (ea->E)FG->EFG
+        a, leg_order_aux= a.group_legs((0,1), new_s=1) # (ea->E)FG->EFG
         a= a/a.max_abs()
+        a._leg_fusion_data[0]= leg_order_aux
         env.T[(coord,vec)]=a
 
         # right transfer matrix
@@ -353,9 +356,10 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         a= A.dot(A, ((0,4), (0,4)), conj=(0,1)) # mefig,mabic->efgabc
         a= a.transpose((0,3,1,4,2,5)) # efgabc->eafbgc
         a, leg_order= a.group_legs((4,5), new_s=-1) # eafb(gc->G)->eafbG
-        a, leg_order= a.group_legs((2,3), new_s=1) # ea(fb->F)G->eaFG
+        a, leg_order_aux= a.group_legs((2,3), new_s=1) # ea(fb->F)G->eaFG
         a, leg_order= a.group_legs((0,1), new_s=1) # (ea->E)FG->EFG
         a= a/a.max_abs()
+        a._leg_fusion_data[1]= leg_order_aux
         env.T[(coord,vec)]=a
 
 def init_from_ipeps_obc(state, env, verbosity=0):
