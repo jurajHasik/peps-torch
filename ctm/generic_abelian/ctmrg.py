@@ -1,6 +1,7 @@
 import time
-# from torch.utils.checkpoint import checkpoint
+from torch.utils.checkpoint import checkpoint
 import config as cfg
+from yamps.tensor import decompress_from_1d
 from ipeps.ipeps_abelian import IPEPS_ABELIAN
 from ctm.generic_abelian.env_abelian import ENV_ABELIAN
 from ctm.generic_abelian.ctm_components import *
@@ -86,13 +87,20 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
     else:
         raise ValueError("Invalid Projector method: "+str(ctm_args.projector_method))
 
-    # EXPERIMENTAL
-    # 0) extract raw tensors as tuple
-    tensors= tuple(state.sites[key] for key in state.sites.keys()) \
-        + tuple(env.C[key] for key in env.C.keys()) + tuple(env.T[key] for key in env.T.keys())
+    # 0) compress tensors into 1D representation
+    metadata_store= {}
+    tmp= tuple(state.sites[key].compress_to_1d() for key in state.sites.keys()) \
+        + tuple(env.C[key].compress_to_1d() for key in env.C.keys()) \
+        + tuple(env.T[key].compress_to_1d() for key in env.T.keys())
+    # 1) split into raw 1D tensors and metadata
+    metadata_store["in"], tensors= list(zip(*tmp))
 
     # function wrapping up the core of the CTM MOVE segment of CTM algorithm
     def ctm_MOVE_c(*tensors):
+        # 0) reconstruct the tensors from their 1D representation
+        tensors= tuple(decompress_from_1d(r1d, settings=state.engine, d=meta) \
+            for r1d,meta in zip(tensors,metadata_store["in"]))
+
         # 1) wrap raw tensors back into IPEPS and ENV classes 
         sites_loc= dict(zip(state.sites.keys(),tensors[0:len(state.sites)]))
         state_loc= IPEPS_ABELIAN(state.engine, sites_loc, state.vertexToSite)
@@ -105,14 +113,8 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
         P = dict()
         Pt = dict()
         for coord,site in state_loc.sites.items():
-            # TODO compute isometries
             P[coord], Pt[coord] = ctm_get_projectors(direction, coord, state_loc, env_loc, \
                 ctm_args, global_args)
-            ## NOFUSE branch
-            # _p, _pt= ctm_get_projectors(direction, coord, state_loc, env_loc, \
-            #     ctm_args, global_args)
-            # P[coord]= _p.ungroup_leg(0, _p._leg_fusion_data[0])
-            # Pt[coord]= _pt.ungroup_leg(0, _pt._leg_fusion_data[0])
             if verbosity>0:
                 print("P,Pt RIGHT "+str(coord)+" P: "+str(P[coord].size())+" Pt: "\
                     +str(Pt[coord].size()))
@@ -138,19 +140,21 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
                 raise ValueError("Invalid direction: "+str(direction))
 
         # 2) Return raw new tensors
-        # ret_list= tuple([nC1[key] for key in nC1.keys()] + [nC2[key] for key in nC2.keys()] \
-        #     + [nT[key] for key in nT.keys()])
-        ret_list= tuple(nC1[key] for key in nC1.keys()) + tuple(nC2[key] for key in nC2.keys()) \
-            + tuple(nT[key] for key in nT.keys())
-        return ret_list
+        tmp_loc= tuple(nC1[key].compress_to_1d() for key in nC1.keys()) \
+            + tuple(nC2[key].compress_to_1d() for key in nC2.keys()) \
+            + tuple(nT[key].compress_to_1d() for key in nT.keys())
+        metadata_store["out"], tensors_loc= list(zip(*tmp_loc))
+        return tensors_loc
 
     # Call the core function, allowing for checkpointing
     if ctm_args.fwd_checkpoint_move:
-        # new_tensors= checkpoint(ctm_MOVE_c,*tensors)
-        raise RuntimeError("Checkpointing not implemented")
+        new_tensors= checkpoint(ctm_MOVE_c,*tensors)
     else:
         new_tensors= ctm_MOVE_c(*tensors)
-    
+        
+    new_tensors= tuple(decompress_from_1d(r1d, settings=state.engine, d=meta) \
+            for r1d,meta in zip(new_tensors,metadata_store["out"]))
+
     # 3) warp the returned raw tensor in dictionary
     tmp_coords= state.sites.keys()
     count_coord= len(tmp_coords)
@@ -180,7 +184,7 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
         env.C[(new_coord,rel_CandT_vecs["nC1"])] = nC1[coord]
         env.C[(new_coord,rel_CandT_vecs["nC2"])] = nC2[coord]
         env.T[(new_coord,rel_CandT_vecs["nT"])] = nT[coord]
-    
+
 #####################################################################
 # functions performing absorption and truncation step
 #####################################################################
