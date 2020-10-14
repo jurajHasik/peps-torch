@@ -261,7 +261,7 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, direction, \
     # S_sqrt[:S_nz.size(0)]= torch.rsqrt(S_nz)
     S_sqrt= S.invsqrt()
 
-    if verbosity>0: print(S_sqrt)
+    #if verbosity>0: print(S_sqrt)
 
     # 3) Construct projectors
     expr='ij,j->ij'
