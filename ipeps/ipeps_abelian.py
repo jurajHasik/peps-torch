@@ -144,7 +144,7 @@ class IPEPS_ABELIAN():
 
     def to_dense(self, peps_args=cfg.peps_args, global_args=cfg.global_args):
         sites= {sid: s.to_dense() for sid,s in self.sites.items()}
-        settings_dense= next(iter(self.sites.values())).conf
+        settings_dense= next(iter(sites.values())).conf
         state_dense= IPEPS_ABELIAN(settings_dense, sites, vertexToSite=self.vertexToSite, 
             lX=self.lX, lY=self.lY, peps_args=peps_args, global_args=global_args)
         return state_dense
