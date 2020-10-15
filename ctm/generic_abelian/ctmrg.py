@@ -1,5 +1,5 @@
 import time
-from torch.utils.checkpoint import checkpoint
+import warnings
 import config as cfg
 from yamps.tensor import decompress_from_1d
 from ipeps.ipeps_abelian import IPEPS_ABELIAN
@@ -7,6 +7,10 @@ from ctm.generic_abelian.env_abelian import ENV_ABELIAN
 from ctm.generic_abelian.ctm_components import *
 from ctm.generic_abelian.ctm_projectors import *
 from tn_interface_abelian import contract
+try:
+    from torch.utils.checkpoint import checkpoint
+except ImportError as e:
+    warnings.warn("torch not available", Warning)
 
 def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.global_args): 
     r"""
