@@ -1,6 +1,10 @@
+Work-in-progress: extension to complex numbers. Requires PyTorch 1.6+
+
 # peps-torch [![Build Status](https://travis-ci.com/jurajHasik/peps-torch.svg?branch=master)](https://travis-ci.com/jurajHasik/tn-torch) [![Documentation Status](https://readthedocs.org/projects/peps-torch/badge/?version=latest)](https://peps-torch.readthedocs.io/en/latest/?badge=latest)
 ### A tensor network library for two-dimensional lattice models
 by Juraj Hasik, Glen Bigan Mbeng\
+with contributions by Wei-Lin Tu
+
 with contributions by Wei-Lin Tu
 
 \
