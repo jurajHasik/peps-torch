@@ -7,6 +7,13 @@ import numpy as np
 from tn_interface import mm
 from tn_interface import conj, transpose
 
+# from math import exp, log10
+# def inverse_sharp_cutoff(x, order=10, rate=50):
+#     mask= [x==0]
+#     x= 1/(x+x*torch.exp(-rate*(torch.log10(x.abs())+order)))
+#     x[mask]= 0
+#     return x
+
 def safe_inverse(x, epsilon=1E-12):
     return x/(x**2 + epsilon)
     
@@ -16,14 +23,16 @@ def safe_inverse_2(x, epsilon):
 
 class SVDGESDD(torch.autograd.Function):
     @staticmethod
-    def forward(self, A):
+    def forward(self, A, cutoff):
         U, S, V = torch.svd(A)
-        self.save_for_backward(U, S, V)
+        cutoff= torch.as_tensor(cutoff, dtype=S.dtype, device=S.device)
+        self.save_for_backward(U, S, V, cutoff)
         return U, S, V
     
     @staticmethod
     def backward(self, dU, dS, dV):
-        U, S, V = self.saved_tensors
+        U, S, V, cutoff = self.saved_tensors
+        
         Vt = V.t()
         Ut = U.t()
         M = U.size(0)
@@ -31,8 +40,10 @@ class SVDGESDD(torch.autograd.Function):
         NS = S.size(0)
 
         F = (S - S[:, None])
-        F = safe_inverse(F)
+        mask0= F==0
+        F = safe_inverse(F, cutoff)
         F.diagonal().fill_(0)
+        F[mask0]= 0
 
         G = (S + S[:, None])
         G = safe_inverse(G)
@@ -54,7 +65,7 @@ class SVDGESDD(torch.autograd.Function):
         if (N>NS):
             dA = dA + (U/S) @ dV.t() @ (torch.eye(N, dtype=dU.dtype, device=dU.device) - V@Vt)
 
-        return dA
+        return dA, None
 
 class SVDGESDD_COMPLEX(torch.autograd.Function):
     @staticmethod

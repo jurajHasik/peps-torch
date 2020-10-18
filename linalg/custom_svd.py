@@ -31,11 +31,12 @@ def truncated_svd_gesdd(M, chi, abs_tol=1.0e-14, rel_tol=None, keep_multiplets=F
 
     .. math:: dim(U)=(N,\chi),\ dim(S)=(\chi,\chi),\ \textrm{and}\ dim(V)=(L,\chi)
     """
+    cutoff= cfg.ctm_args.svd_adjoint_cutoff
     if M.is_complex():
         U, S, V = SVDGESDD_COMPLEX.apply(M)
     else:
-        U, S, V = SVDGESDD.apply(M)
-    
+        U, S, V = SVDGESDD.apply(M, cutoff)
+
     # estimate the chi_new 
     chi_new= chi
     if keep_multiplets and chi<S.shape[0]:
