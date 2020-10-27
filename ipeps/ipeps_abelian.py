@@ -3,7 +3,13 @@ from itertools import chain
 import json
 import itertools
 import math
+import warnings
+try:
+    import torch
+except ImportError as e:
+    warnings.warn("torch not available", Warning)
 import config as cfg
+import yamps.tensor as TA
 from ipeps.tensor_io import *
 
 class IPEPS_ABELIAN():
@@ -159,13 +165,12 @@ class IPEPS_ABELIAN():
     # TODO checkpoint (store state in file)
     # TODO load state from ??? 
     def get_checkpoint(self):
-        raise NotImplementedError
-        # return self.sites
+        return {ind: self.sites[ind].to_dict() for ind in self.sites}
 
-    def load_checkpoint(self,checkpoint_file):
-        raise NotImplementedError
-        # checkpoint= torch.load(checkpoint_file)
-        # self.sites= checkpoint["parameters"]
+    def load_checkpoint(self, checkpoint_file):
+        checkpoint= torch.load(checkpoint_file)
+        self.sites= {ind: TA.from_dict(settings= self.engine, d=t_dict_repr) \
+            for ind,t_dict_repr in checkpoint["parameters"].items()}
         # if True in [s.is_complex() for s in self.sites.values()]:
         #     self.dtype= torch.complex128
 

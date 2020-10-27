@@ -46,9 +46,9 @@ def main():
         # TODO add support for noise
         #state.add_noise(args.instate_noise)
     # TODO checkpointing    
-    # elif args.opt_resume is not None:
-    #     state= IPEPS(dict(), lX=2, lY=2)
-    #     state.load_checkpoint(args.opt_resume)
+    elif args.opt_resume is not None:
+        state= IPEPS_ABELIAN(settings_U1, dict(), lX=2, lY=2)
+        state.load_checkpoint(args.opt_resume)
     elif args.ipeps_init_type=='TEST_FULL':
         a= TA.Tensor(settings=settings_full, s=IPEPS_ABELIAN._REF_S_DIRS)
         tmp_block_a= np.zeros((2,2,2,2,2))
@@ -201,7 +201,7 @@ def main():
 
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"
-    state= read_ipeps(outputstatefile, settings_u1)
+    state= read_ipeps(outputstatefile, settings_U1)
     ctm_env = ENV_ABELIAN(args.chi, state=state, init=True)
     init_env(state, ctm_env)
     ctm_env, *ctm_log = ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
