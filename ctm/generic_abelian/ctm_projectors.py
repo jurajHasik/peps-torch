@@ -230,7 +230,8 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, direction, \
     if ctm_args.projector_svd_method=='DEFAULT' or ctm_args.projector_svd_method=='GESDD':
         def truncated_svd(M, chi, sU=1):
             # return truncated_svd_gesdd(M, chi, verbosity=ctm_args.verbosity_projectors)
-            return M.split_svd((0,1), tol=0, D_total=chi, sU=sU)
+            return M.split_svd((0,1), tol=ctm_args.projector_svd_reltol, D_total=chi, \
+                sU=sU)
     # elif ctm_args.projector_svd_method == 'ARP':
     #     def truncated_svd(M, chi):
     #         return truncated_svd_arnoldi(M, chi, verbosity=ctm_args.verbosity_projectors)
@@ -261,7 +262,8 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, direction, \
     # S_sqrt[:S_nz.size(0)]= torch.rsqrt(S_nz)
     S_sqrt= S.invsqrt()
 
-    #if verbosity>0: print(S_sqrt)
+    if verbosity>0: 
+        print(S_sqrt.to_dense().A[()].diag())
 
     # 3) Construct projectors
     expr='ij,j->ij'

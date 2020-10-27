@@ -134,6 +134,11 @@ class ENV_ABELIAN():
             ctm_args=ctm_args, global_args=global_args)
         return env_dense
 
+    def detach_(self):
+        for c in self.C.values(): c.detach_()
+        for t in self.T.values(): t.detach_()
+
+
 def init_env(state, env, init_method=None, ctm_args=cfg.ctm_args):
     """
     :param state: wavefunction

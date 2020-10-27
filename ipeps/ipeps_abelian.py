@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from itertools import chain
 import json
 import itertools
 import math
@@ -152,8 +153,8 @@ class IPEPS_ABELIAN():
     # TODO autodiff
     # TODO parameters of abelian tensors are individual blocks
     def get_parameters(self):
-        raise NotImplementedError
-        # return self.sites.values()
+        # flattened
+        return list(chain( *(self.sites[key].A.values() for key in self.sites)))
 
     # TODO checkpoint (store state in file)
     # TODO load state from ??? 
@@ -298,7 +299,7 @@ def write_ipeps(state, outputfile, tol=1.0e-14, normalize=False,\
     for nid,coord,site in [(t[0], *t[1]) for t in enumerate(state.sites.items())]:
         # TODO
         if normalize:
-            site= site/site.abs().max()
+            site= site/site.max_abs()
         
         site_ids.append(f"A{nid}")
         site_map.append(dict({"siteId": site_ids[-1], "x": coord[0], "y": coord[1]} ))
