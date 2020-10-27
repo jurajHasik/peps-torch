@@ -163,11 +163,8 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
             log.info(json.dumps(log_entry))
 
         # 6) detach current environment from autograd graph
-        # lst_C = list(ctm_env.C.values())
-        # lst_T = list(ctm_env.T.values())
         ctm_env.detach_()
         current_env[0]= ctm_env
-        # for el in lst_T + lst_C: el.detach_()
 
         return loss
     
@@ -212,8 +209,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         # checkpointing before step, guarantees the correspondence between the wavefunction
         # and the last computed value of loss t_data["loss"][-1]
         if epoch>0:
-            # store_checkpoint(checkpoint_file, state, optimizer, epoch, t_data["loss"][-1])
-            pass
+            store_checkpoint(checkpoint_file, state, optimizer, epoch, t_data["loss"][-1])
 
         # After execution closure ``current_env`` **IS NOT** corresponding to ``state``, since
         # the ``state`` on-site tensors have been modified by gradient. 
@@ -232,5 +228,5 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
             break
 
     # optimization is over, store the last checkpoint
-    # store_checkpoint(checkpoint_file, state, optimizer, \
-    #    main_args.opt_max_iter, t_data["loss"][-1])
+    store_checkpoint(checkpoint_file, state, optimizer, \
+        main_args.opt_max_iter, t_data["loss"][-1])
