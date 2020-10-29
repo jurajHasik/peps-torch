@@ -163,8 +163,9 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
             log.info(json.dumps(log_entry))
 
         # 6) detach current environment from autograd graph
-        ctm_env.detach_()
-        current_env[0]= ctm_env
+        # ctm_env.detach_()
+        # current_env[0]= ctm_env
+        current_env[0]= ctm_env.detach()
 
         return loss
     

@@ -37,7 +37,7 @@ class SU2_NOSYM():
         tmp_block= get_op(op_id, J, dtype)
         op= TA.Tensor(self.engine, s=self._REF_S_DIRS)
         op.set_block(val=tmp_block)
-        op= op.move_to_device(device)
+        op= op.to(device)
         return op
 
     def I(self):
