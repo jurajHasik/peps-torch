@@ -19,6 +19,7 @@ class IPEPS_ABELIAN():
     def __init__(self, settings, sites, vertexToSite=None, lX=None, lY=None, 
         peps_args=cfg.peps_args, global_args=cfg.global_args):
         r"""
+        :param settings: TODO
         :param sites: map from elementary unit cell to on-site tensors
         :param vertexToSite: function mapping arbitrary vertex of a square lattice 
                              into a vertex within elementary unit cell
@@ -26,7 +27,8 @@ class IPEPS_ABELIAN():
         :param lY: length of the elementary unit cell in Y direction
         :param peps_args: ipeps configuration
         :param global_args: global configuration
-        :type sites: dict[tuple(int,int) : torch.tensor]
+        :type settings: TODO
+        :type sites: dict[tuple(int,int) : yamps.tensor.Tensor]
         :type vertexToSite: function(tuple(int,int))->tuple(int,int)
         :type lX: int
         :type lY: int
@@ -48,7 +50,7 @@ class IPEPS_ABELIAN():
         Member ``vertexToSite`` is a mapping function from any vertex (x,y) on a square lattice
         passed in as tuple(int,int) to a corresponding vertex within elementary unit cell.
         
-        On-site tensor of an IPEPS object ``wfc`` at vertex (x,y) is conveniently accessed 
+        On-site tensor of an IPEPS_ABELIAN object ``wfc`` at vertex (x,y) is conveniently accessed 
         through the member function ``site``, which internally uses ``vertexToSite`` mapping::
             
             coord= (0,0)
@@ -140,55 +142,86 @@ class IPEPS_ABELIAN():
         :param coord: tuple (x,y) specifying vertex on a square lattice
         :type coord: tuple(int,int)
         :return: on-site tensor corresponding to the vertex (x,y)
-        :rtype: torch.tensor
+        :rtype: yamps.tensor.Tensor
         """
         return self.sites[self.vertexToSite(coord)]
 
-    def move(self, device):
-        pass
-        # for c,t in self.sites:
-        #     sites[c]= t.move(device)
+    def to(self, device):
+        r"""
+        :param device: device identifier
+        :type device: str
+        :return: returns a copy of the state on ``device``. If the state
+                 already resides on `device` returns ``self``.
+        :rtype: IPEPS_ABELIAN
 
-    def to_dense(self, peps_args=cfg.peps_args, global_args=cfg.global_args):
-        sites= {sid: s.to_dense() for sid,s in self.sites.items()}
+        Move the entire state to ``device``.        
+        """
+        if device==self.device: return self
+        sites= {ind: t.to(device) for ind,t in self.sites.items()}
+        state= IPEPS_ABELIAN(self.engine, sites, self.vertexToSite, 
+            lX=self.lX, lY=self.lY)
+        return state
+
+    def to_dense(self):
+        r"""
+        :return: returns a copy of the state with all on-site tensors in their dense 
+                 representation. If the state already has just dense on-site tensors 
+                 returns ``self``.
+        :rtype: IPEPS_ABELIAN
+
+        Create a copy of state with all on-site tensors as dense possesing no explicit
+        block structure (symmetry). This operations preserves gradients on returned
+        dense state.
+        """
+        if sites.nsym==0: return self
+        sites_dense= {ind: t.to_dense() for ind,t in self.sites.items()}
         settings_dense= next(iter(sites.values())).conf
-        state_dense= IPEPS_ABELIAN(settings_dense, sites, vertexToSite=self.vertexToSite, 
-            lX=self.lX, lY=self.lY, peps_args=peps_args, global_args=global_args)
+        state_dense= IPEPS_ABELIAN(settings_dense, sites_dense, \
+            vertexToSite=self.vertexToSite, lX=self.lX, lY=self.lY)
         return state_dense
 
-    # TODO autodiff
-    # TODO parameters of abelian tensors are individual blocks
     def get_parameters(self):
-        # flattened
-        return list(chain( *(self.sites[key].A.values() for key in self.sites)))
+        return list(chain( *(self.sites[ind].A.values() for ind in self.sites)))
 
-    # TODO checkpoint (store state in file)
-    # TODO load state from ??? 
     def get_checkpoint(self):
+        r"""
+        :return: serializable (pickle-able) representation of IPEPS_ABELIAN state
+        :rtype: dict
+
+        Return dict containing serialized on-site (block-sparse) tensors. The individual
+        blocks are serialized into Numpy ndarrays
+        """
         return {ind: self.sites[ind].to_dict() for ind in self.sites}
 
     def load_checkpoint(self, checkpoint_file):
         checkpoint= torch.load(checkpoint_file)
         self.sites= {ind: TA.from_dict(settings= self.engine, d=t_dict_repr) \
             for ind,t_dict_repr in checkpoint["parameters"].items()}
-        # if True in [s.is_complex() for s in self.sites.values()]:
-        #     self.dtype= torch.complex128
 
-    def write_to_file(self, outputfile, tol=1.0e-14, normalize=False):
+    def write_to_file(self, outputfile, tol=None, normalize=False):
         write_ipeps(self, outputfile, tol=tol, normalize=normalize)
 
-    # TODO has to operate on blocks
-    def add_noise(self,noise):
+    # NOTE what about non-initialized blocks, which are however allowed by the symmetry ?
+    def add_noise(self, noise=0):
         r"""
         :param noise: magnitude of the noise
         :type noise: float
+        :return: a copy of state with noisy on-site tensors. For default value of 
+                 ``noise`` being zero ``self`` is returned. 
+        :rtype: IPEPS_ABELIAN
 
-        Take IPEPS and add random uniform noise with magnitude ``noise`` to all on-site tensors
+        Create a new state by adding random uniform noise with magnitude ``noise`` to all 
+        copies of on-site tensors. The noise is added to all blocks making up the individual 
+        on-site tensors.
         """
-        raise NotImplementedError
-        # for coord in self.sites.keys():
-        #     rand_t = torch.rand( self.sites[coord].size(), dtype=self.dtype, device=self.device)
-        #     self.sites[coord] = self.sites[coord] + noise * rand_t
+        if noise==0: return self
+        sites= {}
+        for ind,t in self.sites.items():
+            t_data, D_data= t.get_tD()
+            sites[ind]= t + noise * t.rand(s=t.s, n=t.n, t=t_data, D=D_data, isdiag=t.isdiag)
+        state= IPEPS_ABELIAN(self.engine, sites, self.vertexToSite, 
+            lX=self.lX, lY=self.lY)
+        return state
 
     def __str__(self):
         print(f"lX x lY: {self.lX} x {self.lY}")
@@ -215,7 +248,7 @@ class IPEPS_ABELIAN():
 def read_ipeps(jsonfile, settings, vertexToSite=None, \
     peps_args=cfg.peps_args, global_args=cfg.global_args):
     r"""
-    :param jsonfile: input file describing iPEPS in json format
+    :param jsonfile: input file describing IPEPS_ABELIAN in json format
     :param vertexToSite: function mapping arbitrary vertex of a square lattice 
                          into a vertex within elementary unit cell
     :param peps_args: ipeps configuration
@@ -225,7 +258,7 @@ def read_ipeps(jsonfile, settings, vertexToSite=None, \
     :type peps_args: PEPSARGS
     :type global_args: GLOBALARGS
     :return: wavefunction
-    :rtype: IPEPS
+    :rtype: IPEPS_ABELIAN
     
 
     A simple PBC ``vertexToSite`` function is used by default
@@ -278,21 +311,20 @@ def read_ipeps(jsonfile, settings, vertexToSite=None, \
             peps_args=peps_args, global_args=global_args)
 
     # check dtypes of all on-site tensors for newly created state
-    assert(False not in [state.dtype==s.dtype for s in sites.values()])
+    assert (False not in [state.dtype==s.dtype for s in sites.values()]), \
+        "incompatible dtype among state and on-site tensors"
 
-    # move to device
-    state.move(global_args.device)
+    # move to desired device and return
+    return state.to(global_args.device)
 
-    return state
-
-def write_ipeps(state, outputfile, tol=1.0e-14, normalize=False,\
+def write_ipeps(state, outputfile, tol=None, normalize=False,\
     peps_args=cfg.peps_args, global_args=cfg.global_args):
     r"""
     :param state: wavefunction to write out in json format
     :param outputfile: target file
     :param tol: minimum magnitude of tensor elements which are written out
     :param normalize: if True, on-site tensors are normalized before writing
-    :type state: IPEPS
+    :type state: IPEPS_ABELIAN
     :type ouputfile: str or Path object
     :type tol: float
     :type normalize: bool
@@ -302,7 +334,6 @@ def write_ipeps(state, outputfile, tol=1.0e-14, normalize=False,\
     site_ids=[]
     site_map=[]
     for nid,coord,site in [(t[0], *t[1]) for t in enumerate(state.sites.items())]:
-        # TODO
         if normalize:
             site= site/site.max_abs()
         

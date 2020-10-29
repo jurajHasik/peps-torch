@@ -2,14 +2,14 @@
 import torch
 import numpy as np
 import argparse
-import yamps.peps.config as cfg
-import yamps.peps.examples.abelian.settings_full_torch as settings_full
-import yamps.peps.examples.abelian.settings_U1_torch as settings_U1
+import config as cfg
+import examples.abelian.settings_full_torch as settings_full
+import examples.abelian.settings_U1_torch as settings_U1
 import yamps.tensor as TA
-from yamps.peps.ipeps.ipeps_abelian import *
-from yamps.peps.ctm.generic_abelian.env_abelian import *
-import yamps.peps.ctm.generic_abelian.ctmrg as ctmrg
-from yamps.peps.models.abelian import coupledLadders
+from ipeps.ipeps_abelian import *
+from ctm.generic_abelian.env_abelian import *
+import ctm.generic_abelian.ctmrg as ctmrg
+from models.abelian import coupledLadders
 # from optim.ad_optim import optimize_state
 from optim.ad_optim_lbfgs_mod_abelian import optimize_state
 #from optim.ad_optim_lbfgs_mod import optimize_state
@@ -31,10 +31,14 @@ args, unknown_args = parser.parse_known_args()
 def main():
     cfg.configure(args)
     cfg.print_config()
-    # settings_U1.back.set_num_threads(args.omp_cores)
-    # settings_U1.back.manual_seed(args.seed)
-    settings_full.back.set_num_threads(args.omp_cores)
-    settings_full.back.random_seed(args.seed)
+    # TODO(?) choose symmetry group
+    if args.ipeps_init_type=='TEST_FULL' or (args.instate!=None and False):
+        settings= settings_full
+        print("HERE")
+    elif args.ipeps_init_type=='TEST_U1' or (args.instate!=None and True):
+        settings= settings_U1
+    settings.back.set_num_threads(args.omp_cores)
+    settings.back.random_seed(args.seed)
 
     model= coupledLadders.COUPLEDLADDERS_NOSYM(settings_full,alpha=args.alpha)
 
@@ -42,9 +46,8 @@ def main():
     # 1) define lattice-tiling function, that maps arbitrary vertex of square lattice
     # coord into one of coordinates within unit-cell of iPEPS ansatz
     if args.instate!=None:
-        state= read_ipeps(args.instate, settings_full)
-        # TODO add support for noise
-        #state.add_noise(args.instate_noise)
+        state= read_ipeps(args.instate, settings)
+        state= state.add_noise(args.instate_noise)
     # TODO checkpointing    
     elif args.opt_resume is not None:
         state= IPEPS_ABELIAN(settings_U1, dict(), lX=2, lY=2)
@@ -201,7 +204,7 @@ def main():
 
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"
-    state= read_ipeps(outputstatefile, settings_U1)
+    state= read_ipeps(outputstatefile, settings)
     ctm_env = ENV_ABELIAN(args.chi, state=state, init=True)
     init_env(state, ctm_env)
     ctm_env, *ctm_log = ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)

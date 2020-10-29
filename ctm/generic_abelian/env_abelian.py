@@ -128,15 +128,38 @@ class ENV_ABELIAN():
         # return new_env
 
     def to_dense(self, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+        r"""
+        :return: returns a copy of the environment with all C,T tensors in their dense 
+                 representation. If the environment already has just dense C,T tensors 
+                 returns ``self``.
+        :rtype: ENV_ABELIAN
+
+        Create a copy of environment with all on-site tensors as dense possesing no explicit
+        block structure (symmetry). This operations preserves gradients on returned
+        dense environment.
+        """
+        if self.nsym==0: return self
         C_dense= {cid: c.to_dense() for cid,c in self.C.items()}
         T_dense= {tid: t.to_dense() for tid,t in self.T.items()}
         env_dense= ENV_ABELIAN(self.chi, settings=next(iter(C_dense.values())).conf, \
             ctm_args=ctm_args, global_args=global_args)
+        env_dense.C= C_dense
+        env_dense.T= T_dense
         return env_dense
 
-    def detach_(self):
-        for c in self.C.values(): c.detach_()
-        for t in self.T.values(): t.detach_()
+    def detach(self):
+        r"""
+        :return: returns a view of the environment with all C,T tensors detached from
+                 computational graph.
+        :rtype: ENV_ABELIAN
+
+        Create a view of environment with all on-site tensors (their blocks) detached 
+        from computational graph. 
+        """
+        e= ENV_ABELIAN(self.chi, settings=self.engine)
+        e.C= {cid: c.detach() for cid,c in self.C.items()}
+        e.T= {tid: t.detach() for tid,t in self.T.items()}
+        return e
 
 
 def init_env(state, env, init_method=None, ctm_args=cfg.ctm_args):
