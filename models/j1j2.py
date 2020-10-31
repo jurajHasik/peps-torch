@@ -10,7 +10,7 @@ from ctm.one_site_c4v.rdm_c4v_specialized import rdm2x2_NNN_tiled,\
     rdm2x2_NN_tiled, rdm2x1_tiled
 from ctm.one_site_c4v import corrf_c4v
 from math import sqrt
-from tn_interface import einsum, mm
+from tn_interface import einsum, contract, mm
 from tn_interface import view, permute, contiguous
 import itertools
 
@@ -186,7 +186,6 @@ class J1J2():
         # 2 \/ 2   2 \/ 2
         # 0 /\ 0   0 /\ 0
         # A3--1B & B3--1A
-
         energy_nn=0
         energy_nnn=0
         for coord in state.sites.keys():

@@ -13,6 +13,7 @@ from optim.ad_optim_lbfgs_mod import optimize_state
 import unittest
 import logging
 log = logging.getLogger(__name__)
+import pdb
 
 # parse command line args and build necessary configuration objects
 parser= cfg.get_args_parser()
@@ -158,6 +159,7 @@ def main():
             return True, history
         return False, history
 
+    for s in state.sites.values(): s.requires_grad_(True)
     ctm_env = ENV(args.chi, state)
     init_env(state, ctm_env)
     
@@ -168,6 +170,7 @@ def main():
     print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
 
     def loss_fn(state, ctm_env_in, opt_context):
+        pdb.set_trace()
         ctm_args= opt_context["ctm_args"]
         opt_args= opt_context["opt_args"]
 
@@ -177,8 +180,9 @@ def main():
 
         # 1) compute environment by CTMRG
         ctm_env_out, *ctm_log= ctmrg.run(state, ctm_env_in, \
-            conv_check=ctmrg_conv_energy, ctm_args=ctm_args)
-        
+             conv_check=ctmrg_conv_energy, ctm_args=ctm_args)
+        ctm_env_out= ctm_env_in
+
         # 2) evaluate loss with the converged environment
         loss = energy_f(state, ctm_env_out)
         
@@ -209,6 +213,7 @@ def main():
                         print("TOP "+json.dumps(_to_json(l)))
 
     # optimize
+    pdb.set_trace()
     optimize_state(state, ctm_env, loss_fn, obs_fn=obs_fn)
 
     # compute final observables for the best variational state

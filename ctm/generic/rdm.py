@@ -566,8 +566,7 @@ def rdm2x2(coord, state, env, sym_pos_def=False, verbosity=0):
     T1 = env.T[(state.vertexToSite(coord),(0,-1))]
     T2 = env.T[(state.vertexToSite(coord),(-1,0))]
     dimsA = state.site(coord).size()
-    a = contiguous(einsum('mefgh,nabcd->eafbgchdmn',state.site(coord),conj(state.site(coord))))
-    a = view(a, (dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2, dimsA[0], dimsA[0]))
+    a= _open_dl_site(state.site(coord))
 
     # C--10--T1--2
     # 0      1
@@ -604,8 +603,7 @@ def rdm2x2(coord, state, env, sym_pos_def=False, verbosity=0):
     T1 = env.T[(shitf_coord,(1,0))]
     T2 = env.T[(shitf_coord,(0,-1))]
     dimsA = state.site(shitf_coord).size()
-    a = contiguous(einsum('mefgh,nabcd->eafbgchdmn',state.site(shitf_coord),conj(state.site(shitf_coord))))
-    a = view(a, (dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2, dimsA[0], dimsA[0]))
+    a= _open_dl_site(state.site(shitf_coord))
 
     # 0--C
     #    1
@@ -652,8 +650,7 @@ def rdm2x2(coord, state, env, sym_pos_def=False, verbosity=0):
     T1 = env.T[(shitf_coord,(0,1))]
     T2 = env.T[(shitf_coord,(1,0))]
     dimsA = state.site(shitf_coord).size()
-    a = contiguous(einsum('mefgh,nabcd->eafbgchdmn',state.site(shitf_coord),conj(state.site(shitf_coord))))
-    a = view(a, (dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2, dimsA[0], dimsA[0]))
+    a= _open_dl_site(state.site(shitf_coord))
 
     #    1<-0        0
     # 2<-1--T1--2 1--C
@@ -691,8 +688,7 @@ def rdm2x2(coord, state, env, sym_pos_def=False, verbosity=0):
     T1 = env.T[(shitf_coord,(-1,0))]
     T2 = env.T[(shitf_coord,(0,1))]
     dimsA = state.site(shitf_coord).size()
-    a = contiguous(einsum('mefgh,nabcd->eafbgchdmn',state.site(shitf_coord),conj(state.site(shitf_coord))))
-    a = view(a, (dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2, dimsA[0], dimsA[0]))
+    a= _open_dl_site(state.site(shitf_coord))
 
     # 0->1
     # T1--2

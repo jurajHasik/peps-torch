@@ -110,7 +110,7 @@ def main():
         print(f"dtype of initial state {state.dtype} and model {model.dtype} do not match.")
         print(f"Setting default dtype to {cfg.global_args.torch_dtype} and reinitializing "\
         +" the model")
-        model= j1j2.J1J2(alpha=args.alpha)
+        model= j1j2.J1J2(j1=args.j1, j2=args.j2)
 
     print(state)
 
