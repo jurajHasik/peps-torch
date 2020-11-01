@@ -211,7 +211,6 @@ def main():
                         print("TOP "+json.dumps(_to_json(l)))
 
     # optimize
-    pdb.set_trace()
     optimize_state(state, ctm_env, loss_fn, obs_fn=obs_fn)
 
     # compute final observables for the best variational state
