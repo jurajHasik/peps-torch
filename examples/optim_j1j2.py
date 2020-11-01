@@ -159,7 +159,6 @@ def main():
             return True, history
         return False, history
 
-    for s in state.sites.values(): s.requires_grad_(True)
     ctm_env = ENV(args.chi, state)
     init_env(state, ctm_env)
     
@@ -170,7 +169,6 @@ def main():
     print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
 
     def loss_fn(state, ctm_env_in, opt_context):
-        pdb.set_trace()
         ctm_args= opt_context["ctm_args"]
         opt_args= opt_context["opt_args"]
 

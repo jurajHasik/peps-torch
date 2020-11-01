@@ -6,7 +6,8 @@ import torch
 #from memory_profiler import profile
 import config as cfg
 
-def store_checkpoint(checkpoint_file, state, optimizer, current_epoch, current_loss):
+def store_checkpoint(checkpoint_file, state, optimizer, current_epoch, current_loss,\
+    verbosity=0):
     r"""
     :param checkpoint_file: target file
     :param state: ipeps wavefunction
@@ -26,6 +27,8 @@ def store_checkpoint(checkpoint_file, state, optimizer, current_epoch, current_l
             'loss': current_loss,
             'parameters': state.get_checkpoint(),
             'optimizer_state_dict': optimizer.state_dict()}, checkpoint_file)
+    if verbosity>0:
+        print(checkpoint_file)
 
 def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
     main_args=cfg.main_args, opt_args=cfg.opt_args, ctm_args=cfg.ctm_args, 
@@ -119,7 +122,8 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
 
         # 2) log CTM metrics for debugging
         if opt_args.opt_logging:
-            log_entry=dict({"id": epoch, "t_ctm": t_ctm, "t_check": t_check}) 
+            log_entry=dict({"id": epoch, "loss": t_data["loss"][-1], "t_ctm": t_ctm, \
+                    "t_check": t_check})
             log.info(json.dumps(log_entry))
 
         # 3) compute desired observables
@@ -134,7 +138,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         # 5) log grad metrics for debugging
         if opt_args.opt_logging:
             log_entry=dict({"id": epoch, "t_grad": t_grad1-t_grad0})
-            log_entry["grad_mag"]= [p.grad.norm().item() for p in parameters]
+            log_entry["grad_mag"]= [abs(p.grad.norm().item()) for p in parameters]
             if opt_args.opt_log_grad: log_entry["grad"]= [p.grad.tolist() for p in parameters]
             log.info(json.dumps(log_entry))
 
