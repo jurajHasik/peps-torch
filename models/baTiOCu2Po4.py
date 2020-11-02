@@ -189,8 +189,8 @@ class BaTiOCu2Po44():
         energy += einsum('ijklabcd,ijklabcd',rdm6, self.plq[6,:,:,:,:, :,:,:,:])
         rdm5= rdm.rdm2x2((1,0),state,env)
         rdm7= rdm.rdm2x2((3,0),state,env)
-        energy += einsum('ijklabcd,ijklabcd',rdm4, self.plq[5,:,:,:,:, :,:,:,:])
-        energy += einsum('ijklabcd,ijklabcd',rdm6, self.plq[7,:,:,:,:, :,:,:,:])
+        energy += einsum('ijklabcd,ijklabcd',rdm5, self.plq[5,:,:,:,:, :,:,:,:])
+        energy += einsum('ijklabcd,ijklabcd',rdm7, self.plq[7,:,:,:,:, :,:,:,:])
         rdm0= rdm.rdm2x2((0,-1),state,env)
         rdm2= rdm.rdm2x2((2,-1),state,env)
         energy += einsum('ijklabcd,ijklabcd',rdm0, self.plq[0,:,:,:,:, :,:,:,:])
@@ -259,6 +259,25 @@ class BaTiOCu2Po44():
         obs_labels += [f"SS1x2{coord}" for coord in state.sites.keys()]
         obs_values=[obs[label] for label in obs_labels]
         return obs_values, obs_labels
+
+    def eval_nnn_SS(self,state,env):
+        id2= torch.eye(4, dtype=self.dtype, device=self.device)
+        id2= view(id2, (2,2,2,2))
+        
+        # o  o and  o  o
+        #  \          /
+        #   \        /
+        # o  o      o  o
+        nnn_11= einsum('ijab,klcd->ikljacdb',self.SS,id2)
+        nnn_m11= nnn_11.permute(1,0,3,2, 5,4,7,6)
+
+        obs= dict()
+        for xy in itertools.product(range(4),range(2)):
+            rdm2x2= rdm.rdm2x2(xy,state,env)
+            obs[f"SS2x2_11{xy}"]= einsum('ijklabcd,abcdijkl',rdm2x2,nnn_11)
+            obs[f"SS2x2_m11{xy}"]= einsum('ijklabcd,abcdijkl',rdm2x2,nnn_m11)
+        return obs
+
 
     # def eval_corrf_SS(self,coord,direction,state,env,dist):
    
