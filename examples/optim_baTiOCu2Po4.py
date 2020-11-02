@@ -94,7 +94,8 @@ def main():
         e_curr = energy_f(state, env)
         history.append(e_curr.item())
 
-        if (len(history) > 1 and abs(history[-1]-history[-2]) < ctm_args.ctm_conv_tol)\
+        if (len(history) > 1 and \
+            abs( 2*(history[-1]-history[-2])/(history[-1]+history[-2]) ) < ctm_args.ctm_conv_tol)\
             or len(history) >= ctm_args.ctm_max_iter:
             log.info({"history_length": len(history), "history": history})
             return True, history
