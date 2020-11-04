@@ -1,5 +1,5 @@
+from types import SimpleNamespace
 import yamps.tensor.backend_torch as back
-dot_merge = False
-sym = []
-nsym = len(sym)
-dtype = 'float64'
+
+settings_full_torch= SimpleNamespace(back= back, dot_merge=False, \
+    sym= [], nsym=0, dtype='float64')

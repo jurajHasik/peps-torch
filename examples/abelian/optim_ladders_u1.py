@@ -3,7 +3,7 @@ import torch
 import numpy as np
 import argparse
 import config as cfg
-import examples.abelian.settings_full_torch as settings_full
+from examples.abelian.settings_full_torch import settings_full_torch as settings_full
 import examples.abelian.settings_U1_torch as settings_U1
 import yamps.tensor as TA
 from ipeps.ipeps_abelian import *
@@ -18,6 +18,7 @@ import json
 import unittest
 import logging
 log = logging.getLogger(__name__)
+import pdb
 
 # parse command line args and build necessary configuration objects
 parser= cfg.get_args_parser()
@@ -34,11 +35,17 @@ def main():
     # TODO(?) choose symmetry group
     if args.ipeps_init_type=='TEST_FULL' or (args.instate!=None and False):
         settings= settings_full
-        print("HERE")
     elif args.ipeps_init_type=='TEST_U1' or (args.instate!=None and True):
         settings= settings_U1
+    # override default device specified in settings
+    default_device= 'cpu' if not hasattr(settings, 'device') else settings.device
+    if not cfg.global_args.device == default_device:
+        settings.device = cfg.global_args.device
+        settings_full.device = cfg.global_args.device
+        print("Setting backend device: "+settings.device)
     settings.back.set_num_threads(args.omp_cores)
     settings.back.random_seed(args.seed)
+    pdb.set_trace()
 
     model= coupledLadders.COUPLEDLADDERS_NOSYM(settings_full,alpha=args.alpha)
 
@@ -141,7 +148,7 @@ def main():
         if not history:
             history=[]
         e_curr = model.energy_2x1_1x2(state, env)
-        history.append(e_curr.to_number().item())
+        history.append(e_curr.to_number())
         print(history)
 
         if (len(history) > 1 and abs(history[-1]-history[-2]) < ctm_args.ctm_conv_tol)\
@@ -156,7 +163,7 @@ def main():
     loss = model.energy_2x1_1x2(state, ctm_env)
     obs_values, obs_labels = model.eval_obs(state,ctm_env)
     print(", ".join(["epoch","energy"]+obs_labels))
-    print(", ".join([f"{-1}",f"{loss.to_number().item()}"]+[f"{v}" for v in obs_values]))
+    print(", ".join([f"{-1}",f"{loss.to_number()}"]+[f"{v}" for v in obs_values]))
 
     def loss_fn(state, ctm_env_in, opt_context):
         ctm_args= opt_context["ctm_args"]
@@ -172,7 +179,7 @@ def main():
 
         # 2) evaluate loss with converged environment
         loss= model.energy_2x1_1x2(state, ctm_env_out)
-        loss= loss.to_number()
+        loss= loss.to_raw_tensor()
 
         return (loss, ctm_env_out, *ctm_log)
 
