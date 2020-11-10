@@ -222,11 +222,6 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args, \
     else:
         M = mm(transpose(R), Rt)
     U, S, V = truncated_svd(M, chi) # M = USV^{T}
-    print(S)
-    
-    # if abs_tol is not None: St = St[St > abs_tol]
-    # if abs_tol is not None: St = torch.where(St > abs_tol, St, Stzeros)
-    # if rel_tol is not None: St = St[St/St[0] > rel_tol]
 
     S_nz= S[S/S[0] > ctm_args.projector_svd_reltol]
     S_sqrt= S*0

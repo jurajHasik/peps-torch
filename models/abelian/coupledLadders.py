@@ -2,10 +2,9 @@ from math import sqrt
 import itertools
 import config as cfg
 import yamps.tensor as TA
-from tn_interface_abelian import mm, contract
+from tn_interface_abelian import contract
 import groups.su2_abelian as su2
 from ctm.generic_abelian import rdm
-#from ctm.generic import corrf
 
 class COUPLEDLADDERS_NOSYM():
     def __init__(self, settings, alpha=0.0, global_args=cfg.global_args):
@@ -63,8 +62,8 @@ class COUPLEDLADDERS_NOSYM():
         r"""
         :param state: wavefunction
         :param env: CTM environment
-        :type state: IPEPS
-        :type env: ENV
+        :type state: IPEPS_ABELIAN
+        :type env: ENV_ABELIAN
         :return: energy per site
         :rtype: float
         
@@ -126,8 +125,8 @@ class COUPLEDLADDERS_NOSYM():
         r"""
         :param state: wavefunction
         :param env: CTM environment
-        :type state: IPEPS
-        :type env: ENV
+        :type state: IPEPS_ABELIAN
+        :type env: ENV_ABELIAN
         :return:  expectation values of observables, labels of observables
         :rtype: list[float], list[str]
 

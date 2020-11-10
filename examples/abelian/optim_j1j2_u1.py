@@ -8,11 +8,10 @@ import yamps.tensor as TA
 from ipeps.ipeps_abelian import *
 from ctm.generic_abelian.env_abelian import *
 import ctm.generic_abelian.ctmrg as ctmrg
-from models.abelian import coupledLadders
+from models.abelian import j1j2
 # from optim.ad_optim import optimize_state
+# from optim.ad_optim_lbfgs_mod import optimize_state
 from optim.ad_optim_lbfgs_mod_abelian import optimize_state
-#from optim.ad_optim_lbfgs_mod import optimize_state
-#from ctm.generic import transferops
 import json
 import unittest
 import logging
@@ -21,11 +20,10 @@ log = logging.getLogger(__name__)
 # parse command line args and build necessary configuration objects
 parser= cfg.get_args_parser()
 # additional model-dependent arguments
-parser.add_argument("--alpha", type=float, default=0., help="inter-ladder coupling")
+parser.add_argument("--j1", type=float, default=1., help="nearest-neighbour coupling")
+parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour coupling")
+parser.add_argument("--tiling", default="BIPARTITE", help="tiling of the lattice")
 parser.add_argument("--symmetry", default=None, help="symmetry structure", choices=["NONE","U1"])
-parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
-parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
-    "of transfer operator to compute")
 args, unknown_args = parser.parse_known_args()
 
 def main():
@@ -44,18 +42,59 @@ def main():
         print("Setting backend device: "+settings.device)
     settings.back.set_num_threads(args.omp_cores)
     settings.back.random_seed(args.seed)
-
-    model= coupledLadders.COUPLEDLADDERS_NOSYM(settings_full,alpha=args.alpha)
+    
+    # the model (in particular operators forming Hamiltonian) is defined in a dense form
+    # with no symmetry structure
+    model= j1j2.J1J2_NOSYM(settings_full,j1=args.j1,j2=args.j2)
 
     # initialize an ipeps
     # 1) define lattice-tiling function, that maps arbitrary vertex of square lattice
-    # coord into one of coordinates within unit-cell of iPEPS ansatz
+    # coord into one of coordinates within unit-cell of iPEPS ansatz    
+    if args.tiling == "BIPARTITE":
+        def lattice_to_site(coord):
+            vx = (coord[0] + abs(coord[0]) * 2) % 2
+            vy = abs(coord[1])
+            return ((vx + vy) % 2, 0)
+    elif args.tiling == "1SITE":
+        def lattice_to_site(coord):
+            return (0, 0)
+    elif args.tiling == "2SITE":
+        def lattice_to_site(coord):
+            vx = (coord[0] + abs(coord[0]) * 2) % 2
+            vy = (coord[1] + abs(coord[1]) * 1) % 1
+            return (vx, vy)
+    elif args.tiling == "4SITE":
+        def lattice_to_site(coord):
+            vx = (coord[0] + abs(coord[0]) * 2) % 2
+            vy = (coord[1] + abs(coord[1]) * 2) % 2
+            return (vx, vy)
+    elif args.tiling == "8SITE":
+        def lattice_to_site(coord):
+            shift_x = coord[0] + 2*(coord[1] // 2)
+            vx = shift_x % 4
+            vy = coord[1] % 2
+            return (vx, vy)
+    else:
+        raise ValueError("Invalid tiling: "+str(args.tiling)+" Supported options: "\
+            +"BIPARTITE, 1SITE, 2SITE, 4SITE, 8SITE")
+
     if args.instate!=None:
-        state= read_ipeps(args.instate, settings)
+        state= read_ipeps(args.instate, settings, vertexToSite=lattice_to_site)
         state= state.add_noise(args.instate_noise)
-    # TODO checkpointing    
     elif args.opt_resume is not None:
-        state= IPEPS_ABELIAN(settings_U1, dict(), lX=2, lY=2)
+        if args.tiling == "BIPARTITE" or args.tiling == "2SITE":
+            state= IPEPS_ABELIAN(settings, dict(), vertexToSite=lattice_to_site,\
+                lX=2, lY=1)
+            state= IPEPS(dict(), lX=2, lY=1)
+        elif args.tiling == "1SITE":
+            state= IPEPS_ABELIAN(settings, dict(), vertexToSite=lattice_to_site,\
+                lX=1, lY=1)
+        elif args.tiling == "4SITE":
+            state= IPEPS_ABELIAN(settings, dict(), vertexToSite=lattice_to_site,\
+                lX=2, lY=2)
+        elif args.tiling == "8SITE":
+            state= IPEPS_ABELIAN(settings, dict(), vertexToSite=lattice_to_site,\
+                lX=4, lY=2)
         state.load_checkpoint(args.opt_resume)
     else:
         raise ValueError("Missing trial state: --instate=None and --ipeps_init_type= "\
@@ -66,17 +105,24 @@ def main():
         print(f"dtype of initial state {state.dtype} and model {model.dtype} do not match.")
         print(f"Setting default dtype to {cfg.global_args.dtype} and reinitializing "\
         +" the model")
-        model= coupledLadders.COUPLEDLADDERS_NOSYM(settings_full,alpha=args.alpha)
+        model= j1j2.J1J2(settings_full,j1=args.j1,j2=args.j2)
 
     print(state)
+    
+    # 2) select the "energy" function 
+    if args.tiling=="BIPARTITE" or args.tiling=="2SITE" or args.tiling=="4SITE" \
+        or args.tiling=="8SITE":
+        energy_f=model.energy_2x1_or_2Lx2site_2x2rdms
+    else:
+        raise ValueError("Invalid tiling: "+str(args.tiling)+" Supported options: "\
+            +"BIPARTITE, 2SITE, 4SITE, 8SITE")
 
     @torch.no_grad()
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
             history=[]
-        e_curr = model.energy_2x1_1x2(state, env).to_number()
-        history.append(e_curr)
-        print(history)
+        e_curr= energy_f(state, env)
+        history.append(e_curr.to_number())
 
         if (len(history) > 1 and abs(history[-1]-history[-2]) < ctm_args.ctm_conv_tol)\
             or len(history) >= ctm_args.ctm_max_iter:
@@ -85,12 +131,12 @@ def main():
         return False, history
 
     ctm_env= ENV_ABELIAN(args.chi, state=state, init=True)
-
-    ctm_env, *ctm_log = ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
-    loss= model.energy_2x1_1x2(state, ctm_env).to_number()
-    obs_values, obs_labels= model.eval_obs(state,ctm_env)
+    
+    ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
+    loss0 = energy_f(state, ctm_env).to_number()
+    obs_values, obs_labels = model.eval_obs(state,ctm_env)
     print(", ".join(["epoch","energy"]+obs_labels))
-    print(", ".join([f"{-1}",f"{loss}"]+[f"{v}" for v in obs_values]))
+    print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
 
     def loss_fn(state, ctm_env_in, opt_context):
         ctm_args= opt_context["ctm_args"]
@@ -101,19 +147,14 @@ def main():
             init_env(state, ctm_env_in)
 
         # 1) compute environment by CTMRG
-        ctm_env_out, *ctm_log = ctmrg.run(state, ctm_env_in, \
+        ctm_env_out, *ctm_log= ctmrg.run(state, ctm_env_in, \
             conv_check=ctmrg_conv_energy, ctm_args=ctm_args)
-
-        # 2) evaluate loss with converged environment
-        loss= model.energy_2x1_1x2(state, ctm_env_out)
+        
+        # 2) evaluate loss with the converged environment
+        loss= energy_f(state, ctm_env_out)
         loss= loss.to_number()
-
+        
         return (loss, ctm_env_out, *ctm_log)
-
-    def _to_json(l):
-                re=[l[i,0].item() for i in range(l.size()[0])]
-                im=[l[i,1].item() for i in range(l.size()[0])]
-                return dict({"re": re, "im": im})
 
     @torch.no_grad()
     def obs_fn(state, ctm_env, opt_context):
@@ -123,27 +164,19 @@ def main():
             loss= opt_context["loss_history"]["loss"][-1]
             obs_values, obs_labels = model.eval_obs(state,ctm_env)
             print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
-
-            # with torch.no_grad():
-            #     if args.top_freq>0 and epoch%args.top_freq==0:
-            #         coord_dir_pairs=[((0,0), (1,0)), ((0,0), (0,1)), ((1,1), (1,0)), ((1,1), (0,1))]
-            #         for c,d in coord_dir_pairs:
-            #             # transfer operator spectrum
-            #             print(f"TOP spectrum(T)[{c},{d}] ",end="")
-            #             l= transferops.get_Top_spec(args.top_n, c,d, state, ctm_env)
-            #             print("TOP "+json.dumps(_to_json(l)))
+            log.info("Norm(sites): "+", ".join([f"{t.norm()}" for c,t in state.sites.items()]))
 
     # optimize
     optimize_state(state, ctm_env, loss_fn, obs_fn=obs_fn)
 
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"
-    state= read_ipeps(outputstatefile, settings)
+    state= read_ipeps(outputstatefile, settings, vertexToSite=state.vertexToSite)
     ctm_env = ENV_ABELIAN(args.chi, state=state, init=True)
-    ctm_env, *ctm_log = ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
-    opt_energy = model.energy_2x1_1x2(state,ctm_env).to_number()
+    ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
+    opt_energy = energy_f(state,ctm_env).to_number()
     obs_values, obs_labels = model.eval_obs(state,ctm_env)
-    print(", ".join([f"{args.opt_max_iter}",f"{opt_energy}"]+[f"{v}" for v in obs_values]))
+    print(", ".join([f"{args.opt_max_iter}",f"{opt_energy}"]+[f"{v}" for v in obs_values]))  
 
 if __name__=='__main__':
     if len(unknown_args)>0:
