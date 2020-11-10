@@ -248,7 +248,10 @@ def read_ipeps(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.pep
                 # default
                 X= torch.from_numpy(read_bare_json_tensor_np_legacy(t))
 
-            sites[coord]= X.permute((0, *asq))
+            sites[coord]= X.permute((0, *asq)) 
+
+        # move to selected device
+        sites[coord]= sites[coord].to(global_args.device)
 
         # Unless given, construct a function mapping from
         # any site of square-lattice back to unit-cell

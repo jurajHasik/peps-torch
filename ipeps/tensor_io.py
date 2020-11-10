@@ -1,7 +1,11 @@
+import warnings
 from itertools import product
 import json
 import numpy as np
-from yamps.tensor import Tensor
+try:
+    from yamps.tensor import Tensor
+except ImportError as e:
+    warnings.warn("yamps.tensor not available", Warning)
 
 class NumPy_Encoder(json.JSONEncoder):
     def default(self, obj):

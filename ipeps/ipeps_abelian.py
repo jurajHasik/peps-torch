@@ -288,7 +288,18 @@ def read_ipeps(jsonfile, settings, vertexToSite=None, \
                 else:
                     raise Exception("Unsupported format "+t["format"])
             else:
-                raise Exception(f"Missing key \"format\"")
+                warnings.warn("\"format\" not specified. Assuming dense tensor", Warning)
+                t["charges"]=[]
+                tmp_t= {"blocks": [t]}
+                tmp_t["format"]="abelian"
+                tmp_t["dtype"]= t["dtype"]
+                tmp_t["nsym"]=0
+                tmp_t["symmetry"]=[]
+                tmp_t["signature"]= IPEPS_ABELIAN._REF_S_DIRS
+                tmp_t["n"]=0
+                tmp_t["isdiag"]=False
+                tmp_t["rank"]= len(t["dims"])
+                X= read_json_abelian_tensor_legacy(tmp_t, settings)
 
             sites[coord]= X
 
