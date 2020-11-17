@@ -105,7 +105,7 @@ def main():
         print(f"dtype of initial state {state.dtype} and model {model.dtype} do not match.")
         print(f"Setting default dtype to {cfg.global_args.dtype} and reinitializing "\
         +" the model")
-        model= j1j2.J1J2(settings_full,j1=args.j1,j2=args.j2)
+        model= j1j2.J1J2_NOSYM(settings_full,j1=args.j1,j2=args.j2)
 
     print(state)
     
