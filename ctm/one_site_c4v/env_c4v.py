@@ -1,7 +1,6 @@
 import torch
 import config as cfg
 from ipeps.ipeps_c4v import IPEPS_C4V
-import pdb
 
 class ENV_C4V():
     def __init__(self, chi, state=None, bond_dim=None, ctm_args=cfg.ctm_args, 
@@ -57,7 +56,7 @@ class ENV_C4V():
                 "bond dimensions of on-site tensor are not equal"
             bond_dim= site.size()[1]
         super(ENV_C4V, self).__init__()
-        self.dtype= global_args.dtype
+        self.dtype= global_args.torch_dtype
         self.device= global_args.device
         self.chi= chi
         self.bond_dim= bond_dim

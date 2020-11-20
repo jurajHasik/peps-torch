@@ -209,6 +209,7 @@ def read_ipeps_u1(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.
         0A2 <=> [left, up, right, down]: aux_seq=[1,0,3,2] 
          3
     """
+    dtype= global_args.torch_dtype
     asq = [x+1 for x in aux_seq]
     sites = OrderedDict()
     
@@ -225,7 +226,7 @@ def read_ipeps_u1(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.
             meta=dict({"meta": symt["meta"]})
             dims=[symt["physDim"]]+[symt["auxDim"]]*4
             
-            t= torch.zeros(tuple(dims), dtype=global_args.dtype, device=global_args.device)
+            t= torch.zeros(tuple(dims), dtype=dtype, device=global_args.device)
             for elem in symt["entries"]:
                 tokens= elem.split(' ')
                 inds=tuple([int(i) for i in tokens[0:5]])
@@ -247,7 +248,7 @@ def read_ipeps_u1(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.
             if t == None:
                 raise Exception("Tensor with siteId: "+ts["sideId"]+" NOT FOUND in \"sites\"") 
 
-            X = torch.zeros(t["numEntries"], dtype=global_args.dtype, device=global_args.device)
+            X = torch.zeros(t["numEntries"], dtype=dtype, device=global_args.device)
 
             # 1) fill the tensor with elements from the list "entries"
             # which list the coefficients in the following
