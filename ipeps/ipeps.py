@@ -96,7 +96,7 @@ class IPEPS():
         maps square lattice into elementary unit cell of size ``lX`` x ``lY`` assuming 
         periodic boundary conditions (PBC) along both X and Y directions.
         """
-        self.dtype= global_args.dtype
+        self.dtype= global_args.torch_dtype
         self.device= global_args.device
 
         self.sites= OrderedDict(sites)
