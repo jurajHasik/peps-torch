@@ -101,8 +101,6 @@ def main():
     ctm_env= ENV_C4V_ABELIAN(args.chi, state=state, init=True)
     print(ctm_env)
     
-    import pdb
-    pdb.set_trace()
     # 4) (optional) compute observables as given by initial environment 
     e_curr0= energy_f(state,ctm_env,force_cpu=args.force_cpu)
     obs_values0, obs_labels = model.eval_obs(state,ctm_env,force_cpu=args.force_cpu)
