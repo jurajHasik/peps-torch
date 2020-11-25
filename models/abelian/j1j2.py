@@ -1,10 +1,12 @@
 from math import sqrt
+import numpy as np
 import itertools
 import config as cfg
 import yamps.tensor as TA
 from tn_interface_abelian import contract, permute
 import groups.su2_abelian as su2
 from ctm.generic_abelian import rdm
+from ctm.one_site_c4v_abelian import rdm_c4v
 #from ctm.generic import corrf
 
 class J1J2_NOSYM():
@@ -335,4 +337,248 @@ class J1J2_NOSYM():
     #     nSy0SyR= corrf.corrf_1sO1sO(coord,direction,state,env, op_isy, conjugate_op(op_isy), dist)
 
     #     res= dict({"ss": Sz0szR+Sx0sxR-nSy0SyR, "szsz": Sz0szR, "sxsx": Sx0sxR, "sysy": -nSy0SyR})
-    #     return res  
+    #     return res
+
+class J1J2_C4V_BIPARTITE_NOSYM():
+    def __init__(self, settings, j1=1.0, j2=0.0, global_args=cfg.global_args):
+        r"""
+        :param j1: nearest-neighbour interaction
+        :param j2: next nearest-neighbour interaction
+        :param global_args: global configuration
+        :type j1: float
+        :type j2: float
+        :type global_args: GLOBALARGS
+
+        Build Spin-1/2 :math:`J_1-J_2` Hamiltonian
+
+        .. math:: 
+
+            H = J_1\sum_{<i,j>} \mathbf{S}_i.\mathbf{S}_j + J_2\sum_{<<i,j>>} \mathbf{S}_i.\mathbf{S}_j
+            = \sum_{p} h_p
+
+        on the square lattice. Where the first sum runs over the pairs of sites `i,j` 
+        which are nearest-neighbours (denoted as `<.,.>`), and the second sum runs over 
+        pairs of sites `i,j` which are next nearest-neighbours (denoted as `<<.,.>>`)::
+
+            y\x
+               _:__:__:__:_
+            ..._|__|__|__|_...
+            ..._|__|__|__|_...
+            ..._|__|__|__|_...
+            ..._|__|__|__|_...
+            ..._|__|__|__|_...
+                :  :  :  :
+
+        where
+
+        * :math:`h_p = J_1(\mathbf{S}_{r}.\mathbf{S}_{r+\vec{x}} + \mathbf{S}_{r}.\mathbf{S}_{r+\vec{y}})
+          +J_2(\mathbf{S}_{r}.\mathbf{S}_{r+\vec{x}+\vec{y}} + \mathbf{S}_{r+\vec{x}}.\mathbf{S}_{r+\vec{y}})` 
+          with indices of spins ordered as follows :math:`s_r s_{r+\vec{x}} s_{r+\vec{y}} s_{r+\vec{x}+\vec{y}};
+          s'_r s'_{r+\vec{x}} s'_{r+\vec{y}} s'_{r+\vec{x}+\vec{y}}`
+
+        """
+        assert settings.nsym==0, "No abelian symmetry is assumed"
+        self.engine= settings
+        self.backend= settings.back
+        self.dtype=settings.dtype
+        self.device='cpu' if not hasattr(settings, 'device') else settings.device
+        self.phys_dim=2
+        self.j1=j1
+        self.j2=j2
+        
+        self.SS, self.SS_rot, self.hp = self.get_h()
+        self.obs_ops = self.get_obs_ops()
+
+    def get_h(self):
+        irrep = su2.SU2_NOSYM(self.engine, self.phys_dim)
+        I1= irrep.I()
+        SS= irrep.SS()
+        rot_op= irrep.BP_rot()
+        
+        #      1                    0       1
+        #      R                    --SS_nn--
+        #      0                    2       3
+        # 0->1 1    1->0    0->1            0
+        # --SS-- => --SS_nn--    =>         R
+        # 2    3    2       3               1->3  
+        SS_nn= contract(rot_op,SS,([0],[1]))
+        SS_nn= permute(SS_nn,(1,0,2,3))
+        SS_nn= contract(SS_nn,rot_op.conj(),([3],[0]))
+
+        # 0        0->2                 0     1 
+        # I1--(x)--I1   => transpose => I1----I1 
+        # 1        1->3                 2     3
+        I2= contract(I1,I1,([],[]))
+        I2= permute(I2, (0,2,1,3))
+        I2_nn= contract(rot_op,I2,([0],[1]))
+        I2_nn= permute(I2_nn,(1,0,2,3))
+        I2_nn= contract(I2_nn,rot_op.conj(),([3],[0]))
+
+        # 0   1       0 1->4 5                  0 1      2 3 
+        # SS_nn--(x)--I2_nn     => transpose => SS_nn----I2_nn
+        # 2   3       2 3->6 7                  4 5      6 7
+        h2x2_SSnn= contract(SS_nn,I2_nn,([],[]))
+        h2x2_SSnn= permute(h2x2_SSnn, (0,1,5,4, 2,3,7,6))
+        
+        h2x2_SSnnn= contract(SS,I2.negate_signature(),([],[]))
+        h2x2_SSnnn= permute(h2x2_SSnnn, (0,1,4,5, 2,3,6,7))
+
+        # all nearest-neighbour S.S terms on 2x2 plaquette
+        #        S  SR        x  xR                                S  xR     x  SR
+        #        xR x         SR S                                 SR x      xR S 
+        h2x2_nn= h2x2_SSnn + permute(h2x2_SSnn, (3,2,1,0,7,6,5,4)) + \
+            permute(h2x2_SSnn, (0,2,1,3,4,6,5,7)) + permute(h2x2_SSnn, (3,1,2,0,7,5,6,4))
+        # all next nearest-neighbour S.S terms on 2x2 plaquette
+        #                 S  xR                                    x  SR
+        #                 xR S                                     SR x    
+        h2x2_nnn= permute(h2x2_SSnnn, (0,3,2,1,4,7,6,5)) + \
+            permute(h2x2_SSnnn.negate_signature(), (2,0,1,3,6,4,5,7))
+        h2x2= 0.5*self.j1*h2x2_nn + self.j2*h2x2_nnn
+
+        return SS, SS_nn, h2x2
+
+    def get_obs_ops(self):
+        obs_ops = dict()
+        irrep = su2.SU2_NOSYM(self.engine, self.phys_dim)
+        obs_ops["sz"]= irrep.SZ()
+        obs_ops["sp"]= irrep.SP()
+        obs_ops["sm"]= irrep.SM()
+        return obs_ops
+
+    def energy_1x1(self,state,env_c4v,force_cpu=False):
+        r"""
+        :param state: wavefunction
+        :param env_c4v: CTM c4v symmetric environment
+        :type state: IPEPS_ABELIAN_C4V
+        :type env_c4v: ENV_ABELIAN_C4V
+        :return: energy per site
+        :rtype: float
+
+        We assume 1x1 C4v iPEPS which tiles the lattice with a bipartite pattern composed 
+        of two tensors A, and B=RA, where R rotates approriately the physical Hilbert space 
+        of tensor A on every "odd" site::
+
+            1x1 C4v => rotation P => BIPARTITE
+
+            A A A A                  A B A B
+            A A A A                  B A B A
+            A A A A                  A B A B
+            A A A A                  B A B A
+
+        Due to C4v symmetry it is enough to construct a single reduced density matrix 
+        :py:func:`ctm.one_site_c4v.rdm_c4v.rdm2x2` of a 2x2 plaquette. Afterwards, 
+        the energy per site `e` is computed by evaluating a single plaquette term :math:`h_p`
+        containing two nearest-nighbour terms :math:`\bf{S}.\bf{S}` and two next-nearest 
+        neighbour :math:`\bf{S}.\bf{S}`, as:
+
+        .. math::
+
+            e = \langle \mathcal{h_p} \rangle = Tr(\rho_{2x2} \mathcal{h_p})
+        
+        """
+        _ci= ([0,1,2,3,4,5,6,7], [0,1,2,3,4,5,6,7])
+        rdm2x2= rdm_c4v.rdm2x2(state, env_c4v, sym_pos_def=False,\
+            verbosity=cfg.ctm_args.verbosity_rdm, force_cpu=force_cpu).to_dense()
+        energy_per_site= contract(rdm2x2,self.hp,_ci).to_number()
+        return energy_per_site
+
+    def energy_1x1_lowmem(self,state,env_c4v,force_cpu=False):
+        r"""
+        :param state: wavefunction
+        :param env_c4v: CTM c4v symmetric environment
+        :type state: IPEPS_ABELIAN_C4V
+        :type env_c4v: ENV_ABELIAN_C4V
+        :return: energy per site
+        :rtype: float
+
+        We assume 1x1 C4v iPEPS which tiles the lattice with a bipartite pattern composed 
+        of two tensors A, and B=RA, where R rotates approriately the physical Hilbert space 
+        of tensor A on every "odd" site::
+
+            1x1 C4v => rotation P => BIPARTITE
+
+            A A A A                  A B A B
+            A A A A                  B A B A
+            A A A A                  A B A B
+            A A A A                  B A B A
+
+        Due to C4v symmetry it is enough to construct two reduced density matrices.
+        In particular, :py:func:`ctm.one_site_c4v.rdm_c4v.rdm2x1` of a NN-neighbour pair
+        and :py:func:`ctm.one_site_c4v.rdm_c4v.rdm2x1_diag` of NNN-neighbour pair. 
+        Afterwards, the energy per site `e` is computed by evaluating a term :math:`h2_rot`
+        containing :math:`\bf{S}.\bf{S}` for nearest- and :math:`h2` term for 
+        next-nearest- expectation value as:
+
+        .. math::
+
+            e = 2*\langle \mathcal{h2} \rangle_{NN} + 2*\langle \mathcal{h2} \rangle_{NNN}
+            = 2*Tr(\rho_{2x1} \mathcal{h2_rot}) + 2*Tr(\rho_{2x1_diag} \mathcal{h2})
+        
+        """
+        _ci= ([0,1,2,3],[0,1,2,3])
+        rdm2x2_NN= rdm_c4v.rdm2x2_NN(state, env_c4v, sym_pos_def=False,\
+            force_cpu=force_cpu, verbosity=cfg.ctm_args.verbosity_rdm).to_dense()
+        rdm2x2_NNN= rdm_c4v.rdm2x2_NNN(state, env_c4v, sym_pos_def=False,\
+            force_cpu=force_cpu, verbosity=cfg.ctm_args.verbosity_rdm).to_dense()
+        SS_nn= contract(rdm2x2_NN,self.SS_rot,_ci).to_number()
+        SS_nnn= contract(rdm2x2_NNN,self.SS,_ci).to_number()
+        energy_per_site= 2.0*self.j1*SS_nn + 2.0*self.j2*SS_nnn
+        return energy_per_site
+
+    def eval_obs(self,state,env_c4v,force_cpu=False):
+        r"""
+        :param state: wavefunction
+        :param env_c4v: CTM c4v symmetric environment
+        :type state: IPEPS_ABELIAN_C4V
+        :type env_c4v: ENV_ABELIAN_C4V
+        :return:  expectation values of observables, labels of observables
+        :rtype: list[float], list[str]
+
+        Computes the following observables in order
+
+            1. magnetization
+            2. :math:`\langle S^z \rangle,\ \langle S^+ \rangle,\ \langle S^- \rangle`
+    
+        where the on-site magnetization is defined as
+        
+        .. math::
+            
+            \begin{align*}
+            m &= \sqrt{ \langle S^z \rangle^2+\langle S^x \rangle^2+\langle S^y \rangle^2 }
+            =\sqrt{\langle S^z \rangle^2+1/4(\langle S^+ \rangle+\langle S^- 
+            \rangle)^2 -1/4(\langle S^+\rangle-\langle S^-\rangle)^2} \\
+              &=\sqrt{\langle S^z \rangle^2 + 1/2\langle S^+ \rangle \langle S^- \rangle)}
+            \end{align*}
+
+        Usual spin components can be obtained through the following relations
+        
+        .. math::
+            
+            \begin{align*}
+            S^+ &=S^x+iS^y               & S^x &= 1/2(S^+ + S^-)\\
+            S^- &=S^x-iS^y\ \Rightarrow\ & S^y &=-i/2(S^+ - S^-)
+            \end{align*}
+        """
+        # TODO optimize/unify ?
+        # expect "list" of (observable label, value) pairs ?
+        obs= dict()
+        _ci= ([0,1,2,3],[2,3,0,1])
+        rdm2x1= rdm_c4v.rdm2x1(state,env_c4v,force_cpu=force_cpu,\
+            verbosity=cfg.ctm_args.verbosity_rdm).to_dense()
+        if np.all(rdm2x1.s/self.SS_rot.s==-1):
+            rdm2x1= rdm2x1.negate_signature()
+        obs[f"SS2x1"]= contract(rdm2x1,self.SS_rot,_ci).to_number()
+        
+        # TODO reduce rdm2x1 to 1x1
+        rdm1x1 = rdm_c4v.rdm1x1(state,env_c4v,force_cpu=force_cpu,\
+            verbosity=cfg.ctm_args.verbosity_rdm).to_dense()
+        if np.all(rdm1x1.s/self.obs_ops["sz"].s==-1):
+            rdm1x1= rdm1x1.negate_signature()
+        for label,op in self.obs_ops.items():
+            obs[f"{label}"]= contract(rdm1x1, op, ([0,1],[1,0])).to_number()
+        obs[f"m"]= sqrt(abs(obs[f"sz"]**2 + obs[f"sp"]*obs[f"sm"]))
+        
+        # prepare list with labels and values
+        obs_labels=[f"m"]+[f"{lc}" for lc in self.obs_ops.keys()]+[f"SS2x1"]
+        obs_values=[obs[label] for label in obs_labels]
+        return obs_values, obs_labels

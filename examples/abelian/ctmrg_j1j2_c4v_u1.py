@@ -1,4 +1,3 @@
-import copy
 import torch
 import numpy as np
 import argparse
@@ -11,14 +10,10 @@ from models.abelian import j1j2
 from ctm.one_site_c4v_abelian.env_c4v_abelian import *
 from ctm.one_site_c4v_abelian import ctmrg_c4v
 from ctm.one_site_c4v_abelian.rdm_c4v import rdm2x1
-# from optim.ad_optim_lbfgs_mod import optimize_state
-# from optim.ad_optim import optimize_state
-from optim.ad_optim_lbfgs_mod_abelian import optimize_state
 import json
 import unittest
 import logging
 log = logging.getLogger(__name__)
-import pdb
 
 # parse command line args and build necessary configuration objects
 parser= cfg.get_args_parser()
@@ -30,6 +25,8 @@ parser.add_argument("--delta_zz", type=float, default=1., help="easy-axis (neare
 parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
+parser.add_argument("--obs_freq", type=int, default=-1, help="frequency of computing observables"
+    + " during CTM convergence")
 parser.add_argument("--force_cpu", action='store_true', help="evaluate energy on cpu")
 parser.add_argument("--symmetry", default=None, help="symmetry structure", choices=["NONE","U1"])
 args, unknown_args = parser.parse_known_args()
@@ -53,7 +50,6 @@ def main():
 
     model= j1j2.J1J2_C4V_BIPARTITE_NOSYM(settings_full, j1=args.j1, j2=args.j2)
     energy_f= model.energy_1x1_lowmem
-    energy_f2= model.energy_1x1
 
     # initialize the ipeps
     if args.instate!=None:
@@ -69,6 +65,8 @@ def main():
 
     print(state)
     
+    # 2) convergence criterion based on 2-site reduced density matrix 
+    #    of nearest-neighbours
     @torch.no_grad()
     def ctmrg_conv_f(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
@@ -77,9 +75,21 @@ def main():
         dist= float('inf')
         if len(history["log"]) > 1:
             dist= (rho2x1-history["rdm"]).norm().item()
+
+        # log dist and observables
+        if args.obs_freq>0 and \
+            (len(history["log"])%args.obs_freq==0 or 
+            (len(history["log"])-1)%args.obs_freq==0):
+            e_curr = energy_f(state, env, force_cpu=args.force_cpu)
+            obs_values, obs_labels = model.eval_obs(state, env, force_cpu=args.force_cpu)
+            print(", ".join([f"{len(history['log'])}",f"{dist}",f"{e_curr}"]\
+                +[f"{v}" for v in obs_values]))
+        else:
+            print(f"{len(history['log'])}, {dist}")
+
+        # update history and check convergence
         history["rdm"]=rho2x1
         history["log"].append(dist)
-
         if dist<ctm_args.ctm_conv_tol or len(history['log']) >= ctm_args.ctm_max_iter:
             log.info({"history_length": len(history['log']), "history": history['log'],
                 "final_multiplets": env.compute_multiplets()[1]})
@@ -87,99 +97,35 @@ def main():
             not len(history['log']) >= ctm_args.ctm_max_iter
         return converged, history
 
-    state= state.symmetrize()
+    # 3) initialize environment
     ctm_env= ENV_C4V_ABELIAN(args.chi, state=state, init=True)
     print(ctm_env)
     
+    import pdb
+    pdb.set_trace()
     # 4) (optional) compute observables as given by initial environment 
-    e_curr0= energy_f(state, ctm_env, force_cpu=args.force_cpu)
+    e_curr0= energy_f(state,ctm_env,force_cpu=args.force_cpu)
     obs_values0, obs_labels = model.eval_obs(state,ctm_env,force_cpu=args.force_cpu)
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{e_curr0}"]+[f"{v}" for v in obs_values0]))
 
-    # ctm_env, *ctm_log = ctmrg_c4v.run(state, ctm_env, conv_check=ctmrg_conv_f)
-
-    def loss_fn(state, ctm_env_in, opt_context):
-        ctm_args= opt_context["ctm_args"]
-        opt_args= opt_context["opt_args"]
-
-        # 0) preprocess
-        # create a copy of state, symmetrize and normalize making all operations
-        # tracked. This does not "overwrite" the parameters tensors, living outside
-        # the scope of loss_fn
-        state_sym= state.symmetrize()
-
-        # possibly re-initialize the environment
-        if opt_args.opt_ctm_reinit:
-            init_env(state_sym, ctm_env_in)
-
-        # 1) compute environment by CTMRG
-        ctm_env_out, *ctm_log= ctmrg_c4v.run(state_sym, ctm_env_in, 
-            conv_check=ctmrg_conv_f, ctm_args=ctm_args)
-        
-        # 2) evaluate loss with converged environment
-        loss0 = energy_f(state_sym, ctm_env_out, force_cpu=args.force_cpu)
-
-        # 2b) in case of two-branch convergence of CTM - take higher of two energies
-        #     in two consecutive iterations
-        loc_ctm_args= copy.deepcopy(ctm_args)
-        loc_ctm_args.ctm_max_iter= 1
-        ctm_env_out, history1, t_ctm1, t_obs1= ctmrg_c4v.run(state, ctm_env_out, \
-            ctm_args=loc_ctm_args)
-        loss1 = energy_f(state, ctm_env_out, force_cpu=args.force_cpu)
-
-        loss= torch.max(loss0,loss1)
-
-        return (loss, ctm_env_out, *ctm_log)
-
-    # def _to_json(l):
-    #     re=[l[i,0].item() for i in range(l.size()[0])]
-    #     im=[l[i,1].item() for i in range(l.size()[0])]
-    #     return dict({"re": re, "im": im})
-
-    @torch.no_grad()
-    def obs_fn(state, ctm_env, opt_context):
-        if ("line_search" in opt_context.keys() and not opt_context["line_search"]) \
-            or not "line_search" in opt_context.keys():
-            state_sym= state.symmetrize()
-            epoch= len(opt_context["loss_history"]["loss"])
-            loss= opt_context["loss_history"]["loss"][-1]
-            obs_values, obs_labels = model.eval_obs(state_sym, ctm_env, force_cpu=args.force_cpu)
-            print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]+\
-                [f"{state.site().max_abs()}"]))
-
-    #         if args.top_freq>0 and epoch%args.top_freq==0:
-    #             coord_dir_pairs=[((0,0), (1,0))]
-    #             for c,d in coord_dir_pairs:
-    #                 # transfer operator spectrum
-    #                 print(f"TOP spectrum(T)[{c},{d}] ",end="")
-    #                 l= transferops_c4v.get_Top_spec_c4v(args.top_n, state_sym, ctm_env)
-    #                 print("TOP "+json.dumps(_to_json(l)))
-
-    # def post_proc(state, ctm_env, opt_context):
-    #     symm, max_err= verify_c4v_symm_A1(state.site())
-    #     # print(f"post_proc {symm} {max_err}")
-    #     if not symm:
-    #         # force symmetrization outside of autograd
-    #         with torch.no_grad():
-    #             symm_site= make_c4v_symm(state.site())
-    #             # we **cannot** simply normalize the on-site tensors, as the LBFGS
-    #             # takes into account the scale
-    #             # symm_site= symm_site/torch.max(torch.abs(symm_site))
-    #             state.sites[(0,0)].copy_(symm_site)
-
-    # optimize
-    # optimize_state(state, ctm_env, loss_fn, obs_fn=obs_fn, post_proc=post_proc)
-    optimize_state(state, ctm_env, loss_fn, obs_fn=obs_fn)
-
-    # compute final observables for the best variational state
-    outputstatefile= args.out_prefix+"_state.json"
-    state= read_ipeps_c4v(args.instate, settings)
-    ctm_env= ENV_C4V_ABELIAN(args.chi, state=state, init=True)
+    # 5) (main) execute CTM algorithm
     ctm_env, *ctm_log = ctmrg_c4v.run(state, ctm_env, conv_check=ctmrg_conv_f)
-    opt_energy = energy_f(state,ctm_env,force_cpu=args.force_cpu)
-    obs_values, obs_labels = model.eval_obs(state,ctm_env,force_cpu=args.force_cpu)
-    print(", ".join([f"{args.opt_max_iter}",f"{opt_energy}"]+[f"{v}" for v in obs_values]))
+    
+    # 6) compute final observables
+    e_curr0 = energy_f(state,ctm_env,force_cpu=args.force_cpu)
+    obs_values0, obs_labels = model.eval_obs(state,ctm_env,force_cpu=args.force_cpu)
+    history, t_ctm, t_obs= ctm_log
+    print("\n")
+    print(", ".join(["epoch","energy"]+obs_labels))
+    print("FINAL "+", ".join([f"{e_curr0}"]+[f"{v}" for v in obs_values0]))
+    print(f"TIMINGS ctm: {t_ctm} conv_check: {t_obs}")
+
+    # environment diagnostics
+    print("\n\nspectrum(C)")
+    D,m= ctm_env.compute_multiplets()
+    for i in range(args.chi):
+        print(f"{i} {D[i]}")
 
 if __name__=='__main__':
     if len(unknown_args)>0:
