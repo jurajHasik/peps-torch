@@ -136,6 +136,7 @@ class IPEPS_ABELIAN_C4V():
         new_site= old_site + noise * old_site.rand(s=old_site.s, n=old_site.n, \
             t=t_data, D=D_data, isdiag=old_site.isdiag)
         state= IPEPS_ABELIAN_C4V(self.engine, new_site)
+        state= state.symmetrize()
         return state
 
     def __str__(self):

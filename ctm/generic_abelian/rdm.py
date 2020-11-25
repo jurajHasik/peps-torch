@@ -37,7 +37,6 @@ def _sym_pos_def_rdm(rdm, sym_pos_def=False, verbosity=0, who=None):
 # ----- COMPONENTS ------------------------------------------------------------
 
 def open_C2x2_LU(coord, state, env, verbosity=0):
-    who="open_C2x2_LU"
     r= state.vertexToSite(coord)
     C = env.C[(state.vertexToSite(r),(-1,-1))]
     T1 = env.T[(state.vertexToSite(r),(0,-1))]
@@ -125,7 +124,6 @@ def open_C2x2_LD(coord, state, env, verbosity=0):
     The physical indices `s` and `s'` of on-site tensor :math:`a` at vertex ``coord`` 
     and its hermitian conjugate :math:`a^\dagger` are left uncontracted
     """
-    who= "open_C2x2_LD"
     r= state.vertexToSite(coord)
     # 0
     # |

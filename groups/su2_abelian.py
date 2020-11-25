@@ -69,7 +69,12 @@ class SU2_NOSYM():
         return self._cast("sm",self.J,self.dtype,self.device)
 
     def BP_rot(self):
-        return self._cast("rot",self.J,self.dtype,self.device)
+        tmp_block= get_op("rot", self.J, self.dtype)
+        op= TA.Tensor(self.engine, s=[1,1])
+        op.set_block(val=tmp_block)
+        op= op.to(self.device)
+        return op
+
 
     def S_zpm(self):
         # 1(-1)
