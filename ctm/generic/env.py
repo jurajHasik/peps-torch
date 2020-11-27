@@ -62,8 +62,12 @@ class ENV():
             |       |       |
             C--1 1--T--2 1--C
         """
-        self.dtype = global_args.dtype
-        self.device = global_args.device
+        if state:
+            self.dtype= state.dtype
+            self.device= state.device
+        else:
+            self.dtype= global_args.torch_dtype
+            self.device= global_args.device
         self.chi = chi
 
         # initialize environment tensors
