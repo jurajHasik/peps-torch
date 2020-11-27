@@ -79,9 +79,9 @@ def main():
         bond_dim = args.bond_dim
         
         A = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-            dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+            dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
         B = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-            dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+            dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
 
         # normalization of initial random tensors
         A = A/A.abs().max()
@@ -91,21 +91,21 @@ def main():
         
         if args.tiling == "4SITE" or args.tiling == "8SITE":
             C= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+                dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
             D= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+                dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
             sites[(0,1)] = C/C.abs().max()
             sites[(1,1)] = D/D.abs().max()
 
         if args.tiling == "8SITE":
             E= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+                dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
             F= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+                dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
             G= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+                dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
             H= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+                dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
             sites[(2,0)] = E/E.abs().max()
             sites[(3,0)] = F/F.abs().max()
             sites[(2,1)] = G/G.abs().max()
@@ -117,9 +117,9 @@ def main():
             +str(args.ipeps_init_type)+" is not supported")
 
     if not state.dtype==model.dtype:
-        cfg.global_args.dtype= state.dtype
+        cfg.global_args.torch_dtype= state.dtype
         print(f"dtype of initial state {state.dtype} and model {model.dtype} do not match.")
-        print(f"Setting default dtype to {cfg.global_args.dtype} and reinitializing "\
+        print(f"Setting default dtype to {cfg.global_args.torch_dtype} and reinitializing "\
         +" the model")
         model= j1j2.J1J2(alpha=args.alpha)
 
@@ -237,6 +237,11 @@ class TestOpt(unittest.TestCase):
         args.line_search_svd_method="ARP"
         main()
 
+    def test_opt_GESDD_4SITE(self):
+        args.CTMARGS_projector_svd_method="GESDD"
+        args.tiling="4SITE"
+        main()
+
     @unittest.skipIf(not torch.cuda.is_available(), "CUDA not available")
     def test_opt_GESDD_BIPARTITE_gpu(self):
         args.GLOBALARGS_device="cuda:0"
@@ -244,17 +249,13 @@ class TestOpt(unittest.TestCase):
         args.tiling="BIPARTITE"
         main()
 
+    @unittest.skipIf(not torch.cuda.is_available(), "CUDA not available")
     def test_opt_GESDD_BIPARTITE_LS_backtracking_gpu(self):
         if not self.SCIPY: self.skipTest("test skipped: missing scipy")
         args.CTMARGS_projector_svd_method="GESDD"
         args.tiling="BIPARTITE"
         args.line_search="backtracking"
         args.line_search_svd_method="ARP"
-        main()
-
-    def test_opt_GESDD_4SITE(self):
-        args.CTMARGS_projector_svd_method="GESDD"
-        args.tiling="4SITE"
         main()
 
     @unittest.skipIf(not torch.cuda.is_available(), "CUDA not available")
