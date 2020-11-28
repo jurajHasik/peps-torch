@@ -318,13 +318,20 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
         nT= nT/nT.max_abs()
         nT._leg_fusion_data[2]= lo2
 
-        return C2X2, nT
+        # 2) Return raw new tensors
+        tmp_loc= tuple([C2X2.compress_to_1d(), nT.compress_to_1d()])
+        metadata_store["out"], tensors_loc= list(zip(*tmp_loc))
+
+        return tensors_loc
 
     # Call the core function, allowing for checkpointing
     if ctm_args.fwd_checkpoint_move:
         new_tensors= checkpoint(ctm_MOVE_sl_c,*tensors)
     else:
         new_tensors= ctm_MOVE_sl_c(*tensors)
+
+    new_tensors= tuple(decompress_from_1d(r1d, settings=env.engine, d=meta) \
+            for r1d,meta in zip(new_tensors,metadata_store["out"]))
 
     env.C[env.keyC]= new_tensors[0]
     env.T[env.keyT]= new_tensors[1]
