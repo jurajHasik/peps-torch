@@ -1,11 +1,10 @@
 import torch
-import numpy as np
 import argparse
 import config as cfg
 from examples.abelian.settings_full_torch import settings_full_torch as settings_full
 import examples.abelian.settings_U1_torch as settings_U1
 import yamps.tensor as TA
-from ipeps.ipeps_abelian_c4v import *
+from ipeps.ipeps_abelian_c4v_lc import *
 from models.abelian import j1j2
 from ctm.one_site_c4v_abelian.env_c4v_abelian import *
 from ctm.one_site_c4v_abelian import ctmrg_c4v
@@ -53,11 +52,11 @@ def main():
 
     # initialize the ipeps
     if args.instate!=None:
-        state= read_ipeps_c4v(args.instate, settings)
+        state= read_ipeps_c4v_lc(args.instate, settings)
         state= state.add_noise(args.instate_noise)
-        state.sites[(0,0)]= state.sites[(0,0)]/state.sites[(0,0)].max_abs()
+        #state.sites[(0,0)]= state.sites[(0,0)]/state.sites[(0,0)].max_abs()
     elif args.opt_resume is not None:
-        state= IPEPS_ABELIAN_C4V(settings, None)
+        state= IPEPS_ABELIAN_C4V_LC(settings, None, None, None)
         state.load_checkpoint(args.opt_resume)
     else:
         raise ValueError("Missing trial state: --instate=None and --ipeps_init_type= "\
