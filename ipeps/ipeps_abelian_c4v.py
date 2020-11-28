@@ -85,7 +85,7 @@ class IPEPS_ABELIAN_C4V():
         block structure (symmetry). This operations preserves gradients on returned
         dense state.
         """
-        if sites.nsym==0: return self
+        if self.nsym==0: return self
         site_dense= self.site().to_dense()
         settings_dense= site_dense.conf
         state_dense= IPEPS_ABELIAN_C4V(settings_dense, site_dense)
@@ -160,8 +160,6 @@ class IPEPS_ABELIAN_C4V():
             print("")
         
         return ""
-
-
 
 def read_ipeps_c4v(jsonfile, settings, \
     peps_args=cfg.peps_args, global_args=cfg.global_args):
