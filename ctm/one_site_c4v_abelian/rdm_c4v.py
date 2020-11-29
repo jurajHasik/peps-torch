@@ -330,9 +330,9 @@ def rdm2x2_NN(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
     """
     who= "rdm2x2_NN"
     if force_cpu:
-        C = env.C[env.keyC].cpu()
-        T = env.T[env.keyT].cpu()
-        a = state.site().cpu()
+        C = env.C[env.keyC].to('cpu')
+        T = env.T[env.keyT].to('cpu')
+        a = state.site().to('cpu')
     else:
         C = env.C[env.keyC]
         T = env.T[env.keyT]
@@ -380,6 +380,9 @@ def rdm2x2_NN(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
     rdm= _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity,\
         who=who)
 
+    if force_cpu:
+        rdm= rdm.to(env.device)
+
     return rdm
 
 def rdm2x2_NNN(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
@@ -424,9 +427,9 @@ def rdm2x2_NNN(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
     """
     who= "rdm2x2_NNN"
     if force_cpu:
-        C = env.C[env.keyC].cpu()
-        T = env.T[env.keyT].cpu()
-        a = state.site().cpu()
+        C = env.C[env.keyC].to('cpu')
+        T = env.T[env.keyT].to('cpu')
+        a = state.site().to('cpu')
     else:
         C = env.C[env.keyC]
         T = env.T[env.keyT]
@@ -473,6 +476,9 @@ def rdm2x2_NNN(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
     # normalize and symmetrize
     rdm= _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity,\
         who=who)
+
+    if force_cpu:
+        rdm= rdm.to(env.device)
 
     return rdm
 
