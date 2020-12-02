@@ -6,6 +6,7 @@ import math
 import warnings
 try:
     import torch
+    from ipeps.ipeps import IPEPS
 except ImportError as e:
     warnings.warn("torch not available", Warning)
 import config as cfg
@@ -173,11 +174,26 @@ class IPEPS_ABELIAN():
         block structure (symmetry). This operations preserves gradients on returned
         dense state.
         """
-        if sites.nsym==0: return self
+        if self.nsym==0: return self
         sites_dense= {ind: t.to_dense() for ind,t in self.sites.items()}
-        settings_dense= next(iter(sites.values())).conf
+        settings_dense= next(iter(self.sites.values())).conf
         state_dense= IPEPS_ABELIAN(settings_dense, sites_dense, \
             vertexToSite=self.vertexToSite, lX=self.lX, lY=self.lY)
+        return state_dense
+
+    def to_dense_torch_ipeps(self, peps_args=cfg.peps_args, global_args=cfg.global_args):
+        r"""
+        :return: returns equivalent dense state with all on-site tensors in their dense 
+                 representation on torch backend. 
+        :rtype: IPEPS
+
+        Create an IPEPS state with all on-site tensors as dense possesing no explicit
+        block structure (symmetry). This operations preserves gradients on returned
+        dense state.
+        """
+        sites_dense= {ind: t.to_dense().A[()] for ind,t in self.sites.items()}
+        state_dense= IPEPS(sites_dense, vertexToSite=self.vertexToSite, \
+            lX=self.lX, lY=self.lY,peps_args=peps_args, global_args=global_args)
         return state_dense
 
     def get_parameters(self):

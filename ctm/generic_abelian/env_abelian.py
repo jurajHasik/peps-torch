@@ -1,5 +1,10 @@
 import config as cfg
 from itertools import product
+try:
+    import torch
+    from ctm.generic.env import ENV
+except ImportError as e:
+    warnings.warn("torch not available", Warning)
 
 class ENV_ABELIAN():
     def __init__(self, chi=1, state=None, settings=None, init=False,\
@@ -143,6 +148,23 @@ class ENV_ABELIAN():
         T_dense= {tid: t.to_dense() for tid,t in self.T.items()}
         env_dense= ENV_ABELIAN(self.chi, settings=next(iter(C_dense.values())).conf, \
             ctm_args=ctm_args, global_args=global_args)
+        env_dense.C= C_dense
+        env_dense.T= T_dense
+        return env_dense
+
+    def to_dense_torch_env(self, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+        r"""
+        :return: returns equivalent of the environment with all C,T tensors in their dense 
+                 representation on torch backend. 
+        :rtype: ENV
+
+        Create a copy of environment with all on-site tensors as dense possesing no explicit
+        block structure (symmetry). This operations preserves gradients on returned
+        dense environment.
+        """
+        C_dense= {cid: c.to_dense().A[()] for cid,c in self.C.items()}
+        T_dense= {tid: t.to_dense().A[()] for tid,t in self.T.items()}
+        env_dense= ENV(self.chi, ctm_args=ctm_args, global_args=global_args)
         env_dense.C= C_dense
         env_dense.T= T_dense
         return env_dense
