@@ -53,7 +53,7 @@ def main():
     if args.instate!=None:
         state= read_ipeps(args.instate, settings)
         state= state.add_noise(args.instate_noise)
-    # TODO checkpointing    
+    # TODO checkpointing
     elif args.opt_resume is not None:
         state= IPEPS_ABELIAN(settings_U1, dict(), lX=2, lY=2)
         state.load_checkpoint(args.opt_resume)
