@@ -37,10 +37,9 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
         def truncated_decomp(M, chi, legs=(0,1), sU=1):
             return M.split_svd(legs, tol=ctm_args.projector_svd_reltol, D_total=chi, \
                 sU=sU, keep_multiplets=True)
-    elif ctm_args.projector_svd_method=='SYMEIG':
-        #raise NotImplementedError
+    elif ctm_args.projector_svd_method=='SYMARP':
         def truncated_decomp(M, chi, legs=(0,1), sU=1):
-            return M.split_X(axes=legs, tol=ctm_args.projector_svd_reltol, D_total=chi, \
+            return M.split_svd_eigsh_2C(axes=legs, tol=ctm_args.projector_svd_reltol, D_total=chi, \
                 sU=sU, keep_multiplets=True)
     else:
         raise Exception(f"Projector eig/svd method \"{cfg.ctm_args.projector_svd_method}\" not implemented")
