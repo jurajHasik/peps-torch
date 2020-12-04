@@ -214,7 +214,7 @@ class IPEPS_ABELIAN_C4V_LC(IPEPS_ABELIAN_C4V):
         if noise==0: return self
         coeffs= {}
         for coord in self.coeffs.keys():
-            rand_t = torch.rand( self.coeffs[coord].size(), dtype=self.dtype, device=self.device)
+            rand_t = torch.rand_like(self.coeffs[coord])-0.5
             tmp_t = self.coeffs[coord] + noise * rand_t
             coeffs[coord]= tmp_t/torch.max(torch.abs(tmp_t))
         state= IPEPS_ABELIAN_C4V_LC(self.engine, self.elem_tensors, coeffs, self.abelian_sym_data)
