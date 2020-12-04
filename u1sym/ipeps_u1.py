@@ -221,8 +221,10 @@ def read_ipeps_u1(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.
             asq = [x+1 for x in raw_state["aux_ind_seq"]]
 
         # read the list of considered SU(2)-symmetric tensors
+        ten_list_key="sym_tensors"
+        if "elem_tensors" in raw_state.keys(): ten_list_key= "elem_tensors"
         sym_tensors=[]
-        for symt in raw_state["sym_tensors"]:
+        for symt in raw_state[ten_list_key]:
             meta=dict({"meta": symt["meta"]})
             dims=[symt["physDim"]]+[symt["auxDim"]]*4
             

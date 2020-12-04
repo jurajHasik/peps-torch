@@ -85,8 +85,8 @@ def main():
             obs_values, obs_labels = model.eval_obs(state, env, force_cpu=args.force_cpu)
             print(", ".join([f"{len(history['log'])}",f"{dist}",f"{e_curr}"]\
                 +[f"{v}" for v in obs_values]))
-        else:
-            print(f"{len(history['log'])}, {dist}")
+        # else:
+        #    print(f"{len(history['log'])}, {dist}")
 
         # update history and check convergence
         history["rdm"]=rho2x1
