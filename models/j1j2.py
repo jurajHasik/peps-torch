@@ -43,7 +43,7 @@ class J1J2():
 
         * :math:`h2_{ij} = \mathbf{S_i}.\mathbf{S_j}` with indices of h2 corresponding to :math:`s_i s_j;s'_i s'_j`
         """
-        self.dtype=global_args.dtype
+        self.dtype=global_args.torch_dtype
         self.device=global_args.device
         self.phys_dim=2
         self.j1=j1
@@ -408,7 +408,7 @@ class J1J2_C4V_BIPARTITE():
           s'_r s'_{r+\vec{x}} s'_{r+\vec{y}} s'_{r+\vec{x}+\vec{y}}`
 
         """
-        self.dtype=global_args.dtype
+        self.dtype=global_args.torch_dtype
         self.device=global_args.device
         self.phys_dim=2
         self.j1=j1

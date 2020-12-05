@@ -46,7 +46,7 @@ class ISING():
         
         * :math:`h1_i  = 2S^x_i`
         """
-        self.dtype=global_args.dtype
+        self.dtype=global_args.torch_dtype
         self.device=global_args.device
         self.phys_dim=2
         self.hx=hx
@@ -202,7 +202,7 @@ class ISING_C4V():
         
         * :math:`h1_i  = 2S^x_i`
         """
-        self.dtype=global_args.dtype
+        self.dtype=global_args.torch_dtype
         self.device=global_args.device
         self.phys_dim=2
         self.hx=hx

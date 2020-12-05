@@ -67,9 +67,9 @@ def main():
         cbd= max(state.get_aux_bond_dims())
         if abd > cbd and abd in [3,5,7,9]:
             su2sym_t= tenSU2.import_sym_tensors_FIX(2,abd ,"A_1",\
-                dtype=cfg.global_args.dtype, device=cfg.global_args.device)
+                dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
 
-            A= torch.zeros(len(su2sym_t), dtype=cfg.global_args.dtype, device=cfg.global_args.device)
+            A= torch.zeros(len(su2sym_t), dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
 
             # get uuid lists
             uuid_orig=[t[0]["meta"]["name"].replace("T_","T_"+((abd-cbd)//2)*"0") for t in state.su2_tensors]
@@ -86,21 +86,21 @@ def main():
     elif args.opt_resume is not None:
         if args.bond_dim in [3,5,7,9]:
             su2sym_t= tenSU2.import_sym_tensors_FIX(2,args.bond_dim,"A_1",\
-                dtype=cfg.global_args.dtype, device=cfg.global_args.device)
+                dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
         else:
             raise ValueError("Unsupported -bond_dim= "+str(args.bond_dim))
-        A= torch.zeros(len(su2sym_t), dtype=cfg.global_args.dtype, device=cfg.global_args.device)
+        A= torch.zeros(len(su2sym_t), dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
         coeffs = {(0,0): A}
         state= IPEPS_SU2SYM(su2sym_t, coeffs)
         state.load_checkpoint(args.opt_resume)
     elif args.ipeps_init_type=='RANDOM':
         if args.bond_dim in [3,5,7,9]:
             su2sym_t= tenSU2.import_sym_tensors_FIX(2,args.bond_dim,"A_1",\
-                dtype=cfg.global_args.dtype, device=cfg.global_args.device)
+                dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
         else:
             raise ValueError("Unsupported -bond_dim= "+str(args.bond_dim))
 
-        A= torch.rand(len(su2sym_t), dtype=cfg.global_args.dtype, device=cfg.global_args.device)
+        A= torch.rand(len(su2sym_t), dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
         A= A/torch.max(torch.abs(A))
         coeffs = {(0,0): A}
         state = IPEPS_SU2SYM(su2sym_t, coeffs)

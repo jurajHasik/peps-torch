@@ -30,9 +30,9 @@ def main():
     cfg.print_config()
     torch.set_num_threads(args.omp_cores)
     torch.manual_seed(args.seed)
-
-    model = j1j2.J1J2(j1=args.j1, j2=args.j2)
     
+    model= j1j2.J1J2(j1=args.j1, j2=args.j2)
+
     # initialize an ipeps
     # 1) define lattice-tiling function, that maps arbitrary vertex of square lattice
     # coord into one of coordinates within unit-cell of iPEPS ansatz    
@@ -62,7 +62,7 @@ def main():
             return (vx, vy)
     else:
         raise ValueError("Invalid tiling: "+str(args.tiling)+" Supported options: "\
-            +"BIPARTITE, 2SITE, 4SITE, 8SITE")
+            +"BIPARTITE, 1SITE, 2SITE, 4SITE, 8SITE")
 
     if args.instate!=None:
         state = read_ipeps(args.instate, vertexToSite=lattice_to_site)
@@ -83,38 +83,46 @@ def main():
     elif args.ipeps_init_type=='RANDOM':
         bond_dim = args.bond_dim
         A = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-            dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+            dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
+
+        # normalization of initial random tensors
         A = A/torch.max(torch.abs(A))
         sites = {(0,0): A}
-        if args.tiling == "2SITE" or args.tiling == "4SITE" or args.tiling == "8SITE":
+        if args.tiling in ["BIPARTITE", "2SITE", "4SITE", "8SITE"]:
             B = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+                dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
             sites[(1,0)]= B/torch.max(torch.abs(B))
-        if args.tiling == "4SITE" or args.tiling == "8SITE":
+        if args.tiling in ["4SITE", "8SITE"]:
             C= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+                dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
             D= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+                dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
             sites[(0,1)]= C/torch.max(torch.abs(C))
             sites[(1,1)]= D/torch.max(torch.abs(D))
         if args.tiling == "8SITE":
             E= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+                dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
             F= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+                dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
             G= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+                dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
             H= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
-            sites[(2,0)]=  E/torch.max(torch.abs(E))
+                dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
+            sites[(2,0)] = E/torch.max(torch.abs(E))
             sites[(3,0)] = F/torch.max(torch.abs(F))
             sites[(2,1)] = G/torch.max(torch.abs(G))
             sites[(3,1)] = H/torch.max(torch.abs(H))
-
         state = IPEPS(sites, vertexToSite=lattice_to_site)
     else:
         raise ValueError("Missing trial state: -instate=None and -ipeps_init_type= "\
             +str(args.ipeps_init_type)+" is not supported")
+
+    if not state.dtype==model.dtype:
+        cfg.global_args.torch_dtype= state.dtype
+        print(f"dtype of initial state {state.dtype} and model {model.dtype} do not match.")
+        print(f"Setting default dtype to {cfg.global_args.torch_dtype} and reinitializing "\
+        +" the model")
+        model= j1j2.J1J2(alpha=args.alpha)
 
     print(state)
     
@@ -151,7 +159,7 @@ def main():
 
     ctm_env = ENV(args.chi, state)
     init_env(state, ctm_env)
-
+    
     ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
     loss0 = energy_f(state, ctm_env)
     obs_values, obs_labels = eval_obs_f(state,ctm_env)
@@ -251,6 +259,11 @@ class TestOpt(unittest.TestCase):
         args.line_search_svd_method="ARP"
         main()
 
+    def test_opt_GESDD_4SITE(self):
+        args.CTMARGS_projector_svd_method="GESDD"
+        args.tiling="4SITE"
+        main()
+
     @unittest.skipIf(not torch.cuda.is_available(), "CUDA not available")
     def test_opt_GESDD_BIPARTITE_gpu(self):
         args.GLOBALARGS_device="cuda:0"
@@ -258,17 +271,13 @@ class TestOpt(unittest.TestCase):
         args.tiling="BIPARTITE"
         main()
 
+    @unittest.skipIf(not torch.cuda.is_available(), "CUDA not available")
     def test_opt_GESDD_BIPARTITE_LS_backtracking_gpu(self):
         if not self.SCIPY: self.skipTest("test skipped: missing scipy")
         args.CTMARGS_projector_svd_method="GESDD"
         args.tiling="BIPARTITE"
         args.line_search="backtracking"
         args.line_search_svd_method="ARP"
-        main()
-
-    def test_opt_GESDD_4SITE(self):
-        args.CTMARGS_projector_svd_method="GESDD"
-        args.tiling="4SITE"
         main()
 
     @unittest.skipIf(not torch.cuda.is_available(), "CUDA not available")
