@@ -46,6 +46,7 @@ def main():
         settings.device = cfg.global_args.device
         settings_full.device = cfg.global_args.device
         print("Setting backend device: "+settings.device)
+    settings.back.ad_decomp_reg= cfg.ctm_args.ad_decomp_reg
     settings.back.set_num_threads(args.omp_cores)
     settings.back.random_seed(args.seed)
 

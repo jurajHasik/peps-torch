@@ -3,8 +3,8 @@ import config as cfg
 from linalg.eig_sym import SYMEIG
 from linalg.eig_arnoldi import SYMARNOLDI, ARNOLDI
 
-def truncated_eig_sym(M, chi, abs_tol=1.0e-14, rel_tol=None, keep_multiplets=False, \
-    eps_multiplet=1.0e-12, verbosity=0):
+def truncated_eig_sym(M, chi, abs_tol=1.0e-14, rel_tol=None, ad_decomp_reg=1.0e-12, \
+    keep_multiplets=False, eps_multiplet=1.0e-12, verbosity=0):
     r"""
     :param M: symmetric matrix of dimensions :math:`N \times N`
     :param chi: desired maximal rank :math:`\chi`
@@ -29,7 +29,8 @@ def truncated_eig_sym(M, chi, abs_tol=1.0e-14, rel_tol=None, keep_multiplets=Fal
 
     .. math:: dim(D)=(\chi),\ dim(U)=(N,\chi)
     """
-    D, U= SYMEIG.apply(M)
+    reg= torch.as_tensor(ad_decomp_reg, dtype=M.dtype, device=M.device)
+    D, U= SYMEIG.apply(M,reg)
 
     # estimate the chi_new 
     chi_new= chi
