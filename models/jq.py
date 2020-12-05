@@ -54,7 +54,7 @@ class JQ():
 
           and the indices of `h4` correspond to :math:`s_is_js_ks_l;s'_is'_js'_ks'_l`
         """
-        self.dtype=global_args.dtype
+        self.dtype=global_args.torch_dtype
         self.device=global_args.device
         self.phys_dim=2
         self.j1=j1
@@ -329,7 +329,7 @@ class JQ_C4V():
 
           and the indices of `h4` correspond to :math:`s_is_js_ks_l;s'_is'_js'_ks'_l`
         """
-        self.dtype=global_args.dtype
+        self.dtype=global_args.torch_dtype
         self.device=global_args.device
         self.phys_dim=2
         self.j1=j1
@@ -494,7 +494,7 @@ class JQ_C4V_BIPARTITE():
 
           and the indices of `h4` correspond to :math:`s_is_js_ks_l;s'_is'_js'_ks'_l`
         """
-        self.dtype=global_args.dtype
+        self.dtype=global_args.torch_dtype
         self.device=global_args.device
         self.phys_dim=2
         self.j1=j1
@@ -738,7 +738,7 @@ class JQ_C4V_PLAQUETTE():
             &+ J(\mathbf{S}_{s2_i}.\mathbf{S}_{s0_j} + \mathbf{S}_{s3_i}.\mathbf{S}_{s1_j})
             \end{align*}
         """
-        self.dtype=global_args.dtype
+        self.dtype=global_args.torch_dtype
         self.device=global_args.device
         self.phys_dim=2**4
         self.j1=j1

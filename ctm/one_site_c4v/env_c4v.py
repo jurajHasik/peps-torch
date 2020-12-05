@@ -57,7 +57,7 @@ class ENV_C4V():
                 "bond dimensions of on-site tensor are not equal"
             bond_dim= site.size()[1]
         super(ENV_C4V, self).__init__()
-        self.dtype= global_args.dtype
+        self.dtype= global_args.torch_dtype
         self.device= global_args.device
         self.chi= chi
         self.bond_dim= bond_dim

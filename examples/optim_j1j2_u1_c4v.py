@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 # parse command line args and build necessary configuration objects
 parser= cfg.get_args_parser()
 # additional model-dependent arguments
-parser.add_argument("--u1_class", type=str, default="B", choices=["A", "B", "C", "D", "E"])
+parser.add_argument("--u1_class", type=str, default="B", choices=["A", "B", "C", "D", "E", "NRVB"])
 parser.add_argument("--j1", type=float, default=1., help="nearest-neighbour coupling")
 parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour coupling")
 parser.add_argument("--hz_stag", type=float, default=0., help="staggered mag. field")
@@ -52,10 +52,10 @@ def main():
         if args.bond_dim in [2,3,4,5,6,7,8]:
             u1sym_t= tenU1.import_sym_tensors(2,args.bond_dim,"A_1",\
                 infile=f"u1sym/D{args.bond_dim}_U1_{args.u1_class}.txt",\
-                dtype=cfg.global_args.dtype, device=cfg.global_args.device)
+                dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
         else:
             raise ValueError("Unsupported --bond_dim= "+str(args.bond_dim))
-        A= torch.zeros(len(u1sym_t), dtype=cfg.global_args.dtype, device=cfg.global_args.device)
+        A= torch.zeros(len(u1sym_t), dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
         coeffs = {(0,0): A}
         state= IPEPS_U1SYM(u1sym_t, coeffs)
         state.load_checkpoint(args.opt_resume)
@@ -63,10 +63,10 @@ def main():
         if args.bond_dim in [2,3,4,5,6,7,8]:
             u1sym_t= tenU1.import_sym_tensors(2, args.bond_dim, "A_1", \
                 infile=f"u1sym/D{args.bond_dim}_U1_{args.u1_class}.txt", \
-                dtype=cfg.global_args.dtype, device=cfg.global_args.device)
+                dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
         else:
             raise ValueError("Unsupported --bond_dim= "+str(args.bond_dim))
-        A= torch.rand(len(u1sym_t), dtype=cfg.global_args.dtype, device=cfg.global_args.device)
+        A= torch.rand(len(u1sym_t), dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
         A= A/torch.max(torch.abs(A))
         coeffs = {(0,0): A}
         state = IPEPS_U1SYM(u1sym_t, coeffs)

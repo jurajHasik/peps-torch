@@ -45,7 +45,7 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
     if ctm_args.projector_svd_method=='DEFAULT' or ctm_args.projector_svd_method=='SYMEIG':
         def truncated_eig(M, chi):
             return truncated_eig_sym(M, chi, keep_multiplets=True,\
-                verbosity=ctm_args.verbosity_projectors)
+                ad_decomp_reg=ctm_args.ad_decomp_reg, verbosity=ctm_args.verbosity_projectors)
     elif ctm_args.projector_svd_method == 'SYMARP':
         def truncated_eig(M, chi):
             return truncated_eig_symarnoldi(M, chi, keep_multiplets=True, \
@@ -382,7 +382,8 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
         # 4) symmetrize, normalize and assign new C,T
         nT= 0.5*(nT + nT.permute(1,0,2))
         C2X2= C2X2/torch.abs(C2X2[0,0])
-        nT= nT/nT.norm()
+        nT= nT/nT.abs().max()
+        #nT= nT/nT.norm()
 
         if global_args.device=='cpu' and ctm_args.step_core_gpu:
             C2X2= C2X2.cpu()

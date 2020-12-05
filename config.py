@@ -65,10 +65,18 @@ def configure(parsed_args):
     for name,val in nogroup_args.items():
         setattr(main_args,name,val)
 
+    # custom handling
+    if global_args.dtype=="float64":
+        global_args.torch_dtype= torch.float64
+    elif global_args.dtype=="complex128":
+        global_args.torch_dtype= torch.complex128
+    else:
+        raise NotImplementedError(f"Unsupported dtype {global_args.dtype}")
+
     # validate
-    if ctm_args.step_core_gpu:
-        assert global_args.gpu and torch.cuda.device(global_args.gpu), "CTMARGS_step_core_gpu"\
-            +" resquested without providing valid GLOBALARGS_gpu"
+    # if ctm_args.step_core_gpu:
+    #     assert global_args.gpu and torch.cuda.device(global_args.gpu), "CTMARGS_step_core_gpu"\
+    #         +" resquested without providing valid GLOBALARGS_gpu"
 
     # set up logger
     logging.basicConfig(filename=main_args.out_prefix+".log", filemode='w', level=logging.INFO)
@@ -122,7 +130,7 @@ class GLOBALARGS():
     Holds global configuration options. The default settings can be modified through 
     command line arguments as follows ``--GLOBALARGS_<variable-name> desired-value``
 
-    :ivar dtype: data type of all torch.tensor. Default: ``torch.float64``
+    :ivar dtype: data type of all torch.tensor. Default: ``float64``
     :vartype dtype: torch.dtype
     :ivar device: device on which all the torch.tensors are stored. Default: ``'cpu'``
     :vartype device: str
@@ -132,9 +140,11 @@ class GLOBALARGS():
     :vartype gpu: str
     """
     def __init__(self):
-        self.dtype = torch.float64
-        self.device = 'cpu'
-        self.gpu = ''
+        self.tensor_io_format= "legacy"
+        self.dtype= "float64"
+        self.torch_dtype= torch.float64
+        self.device= 'cpu'
+        self.gpu= ''
 
     def __str__(self):
         res=type(self).__name__+"\n"
@@ -260,6 +270,7 @@ class CTMARGS():
         self.projector_method = '4X4'
         self.projector_svd_method = 'DEFAULT'
         self.projector_svd_reltol = 1.0e-8
+        self.ad_decomp_reg= 1.0e-12
         self.ctm_move_sequence = [(0,-1), (-1,0), (0,1), (1,0)]
         self.ctm_logging = False
         self.verbosity_initialization = 0

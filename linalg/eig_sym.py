@@ -9,7 +9,7 @@ def safe_inverse(x, epsilon=1E-12):
 
 class SYMEIG(torch.autograd.Function):
     @staticmethod
-    def forward(self, A):
+    def forward(self, A, ad_decomp_reg):
         r"""
         :param A: square symmetric matrix
         :type A: torch.tensor
@@ -28,22 +28,22 @@ class SYMEIG(torch.autograd.Function):
         D= D[p]
         U= U[:,p]
         
-        self.save_for_backward(D,U)
+        self.save_for_backward(D,U,ad_decomp_reg)
         return D,U
 
     @staticmethod
     def backward(self, dD, dU):
-        D, U= self.saved_tensors
+        D, U, ad_decomp_reg= self.saved_tensors
         Ut = U.t()
 
         F = (D - D[:, None])
-        F = safe_inverse(F)
+        F = safe_inverse(F,epsilon=ad_decomp_reg)
         #F= 1/F
         F.diagonal().fill_(0)
         # F[abs(F) > 1.0e+8]=0
 
         dA = U @ (torch.diag(dD) + F*(Ut@dU)) @ Ut
-        return dA
+        return dA, None
 
 def test_SYMEIG_random():
     m= 50

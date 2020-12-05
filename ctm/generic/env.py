@@ -1,6 +1,8 @@
 import torch
 import config as cfg
-from ipeps.ipeps import IPEPS
+from tn_interface import einsum
+from tn_interface import conj
+from tn_interface import contiguous, view
 
 class ENV():
     def __init__(self, chi, state=None, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
@@ -60,9 +62,12 @@ class ENV():
             |       |       |
             C--1 1--T--2 1--C
         """
-        super(ENV, self).__init__()
-        self.dtype = global_args.dtype
-        self.device = global_args.device
+        if state:
+            self.dtype= state.dtype
+            self.device= state.device
+        else:
+            self.dtype= global_args.torch_dtype
+            self.device= global_args.device
         self.chi = chi
 
         # initialize environment tensors
@@ -73,13 +78,13 @@ class ENV():
             for coord, site in state.sites.items():
                 #for vec in [(0,-1), (-1,0), (0,1), (1,0)]:
                 #    self.T[(coord,vec)]="T"+str(ipeps.site(coord))
-                self.T[(coord,(0,-1))]=torch.empty((self.chi,site.size()[1]*site.size()[1],self.chi), 
+                self.T[(coord,(0,-1))]=torch.empty((self.chi,site.size(1)*site.size(2),self.chi), 
                     dtype=self.dtype, device=self.device)
-                self.T[(coord,(-1,0))]=torch.empty((self.chi,self.chi,site.size()[2]*site.size()[2]), 
+                self.T[(coord,(-1,0))]=torch.empty((self.chi,self.chi,site.size(2)*site.size(2)), 
                     dtype=self.dtype, device=self.device)
-                self.T[(coord,(0,1))]=torch.empty((site.size()[3]*site.size()[3],self.chi,self.chi), 
+                self.T[(coord,(0,1))]=torch.empty((site.size(3)*site.size(3),self.chi,self.chi), 
                     dtype=self.dtype, device=self.device)
-                self.T[(coord,(1,0))]=torch.empty((self.chi,site.size()[4]*site.size()[4],self.chi), 
+                self.T[(coord,(1,0))]=torch.empty((self.chi,site.size(4)*site.size(4),self.chi), 
                     dtype=self.dtype, device=self.device)
 
                 #for vec in [(-1,-1), (-1,1), (1,-1), (1,1)]:
@@ -163,7 +168,8 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         print("ENV: init_from_ipeps")
     for coord, site in state.sites.items():
         for rel_vec in [(-1,-1),(1,-1),(1,1),(-1,1)]:
-            env.C[(coord,rel_vec)] = torch.zeros(env.chi,env.chi, dtype=env.dtype, device=env.device)
+            env.C[(coord,rel_vec)] = torch.zeros(env.chi,env.chi, dtype=env.dtype, 
+                device=env.device)
 
         # Left-upper corner
         #
@@ -178,8 +184,9 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         vec = (-1,-1)
         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
         dimsA = A.size()
-        a= torch.einsum('mijef,mijab->eafb',(A,A)).contiguous().view(dimsA[3]**2, dimsA[4]**2)
-        a= a/torch.max(torch.abs(a))
+        a= contiguous(einsum('mijef,mijab->eafb',A,conj(A)))
+        a= view(a, (dimsA[3]**2, dimsA[4]**2))
+        a= a/a.abs().max()
         env.C[(coord,vec)][:min(env.chi,dimsA[3]**2),:min(env.chi,dimsA[4]**2)]=\
             a[:min(env.chi,dimsA[3]**2),:min(env.chi,dimsA[4]**2)]
 
@@ -196,8 +203,9 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         vec = (1,-1)
         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
         dimsA = A.size()
-        a= torch.einsum('miefj,miabj->eafb',(A,A)).contiguous().view(dimsA[2]**2, dimsA[3]**2)
-        a= a/torch.max(torch.abs(a))
+        a= contiguous(einsum('miefj,miabj->eafb',A,conj(A)))
+        a= view(a, (dimsA[2]**2, dimsA[3]**2))
+        a= a/a.abs().max()
         env.C[(coord,vec)][:min(env.chi,dimsA[2]**2),:min(env.chi,dimsA[3]**2)]=\
             a[:min(env.chi,dimsA[2]**2),:min(env.chi,dimsA[3]**2)]
 
@@ -214,8 +222,9 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         vec = (1,1)
         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
         dimsA = A.size()
-        a= torch.einsum('mefij,mabij->eafb',(A,A)).contiguous().view(dimsA[1]**2, dimsA[2]**2)
-        a= a/torch.max(torch.abs(a))
+        a= contiguous(einsum('mefij,mabij->eafb',A,conj(A)))
+        a= view(a, (dimsA[1]**2, dimsA[2]**2))
+        a= a/a.abs().max()
         env.C[(coord,vec)][:min(env.chi,dimsA[1]**2),:min(env.chi,dimsA[2]**2)]=\
             a[:min(env.chi,dimsA[1]**2),:min(env.chi,dimsA[2]**2)]
 
@@ -232,8 +241,9 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         vec = (-1,1)
         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
         dimsA = A.size()
-        a = torch.einsum('meijf,maijb->eafb',(A,A)).contiguous().view(dimsA[1]**2, dimsA[4]**2)
-        a= a/torch.max(torch.abs(a))
+        a = contiguous(einsum('meijf,maijb->eafb',A,conj(A)))
+        a = view(a, (dimsA[1]**2, dimsA[4]**2)) 
+        a= a/a.abs().max()
         env.C[(coord,vec)][:min(env.chi,dimsA[1]**2),:min(env.chi,dimsA[4]**2)]=\
             a[:min(env.chi,dimsA[1]**2),:min(env.chi,dimsA[4]**2)]
 
@@ -250,8 +260,9 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         vec = (0,-1)
         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
         dimsA = A.size()
-        a = torch.einsum('miefg,miabc->eafbgc',(A,A)).contiguous().view(dimsA[2]**2, dimsA[3]**2, dimsA[4]**2)
-        a= a/torch.max(torch.abs(a))
+        a = contiguous(einsum('miefg,miabc->eafbgc',A,conj(A)))
+        a = view(a, (dimsA[2]**2, dimsA[3]**2, dimsA[4]**2))
+        a= a/a.abs().max()
         env.T[(coord,vec)] = torch.zeros((env.chi,dimsA[3]**2,env.chi), dtype=env.dtype, device=env.device)
         env.T[(coord,vec)][:min(env.chi,dimsA[2]**2),:,:min(env.chi,dimsA[4]**2)]=\
             a[:min(env.chi,dimsA[2]**2),:,:min(env.chi,dimsA[4]**2)]
@@ -269,8 +280,9 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         vec = (-1,0)
         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
         dimsA = A.size()
-        a = torch.einsum('meifg,maibc->eafbgc',(A,A)).contiguous().view(dimsA[1]**2, dimsA[3]**2, dimsA[4]**2)
-        a= a/torch.max(torch.abs(a))
+        a = contiguous(einsum('meifg,maibc->eafbgc',A,conj(A)))
+        a = view(a, (dimsA[1]**2, dimsA[3]**2, dimsA[4]**2))
+        a= a/a.abs().max()
         env.T[(coord,vec)] = torch.zeros((env.chi,env.chi,dimsA[4]**2), dtype=env.dtype, device=env.device)
         env.T[(coord,vec)][:min(env.chi,dimsA[1]**2),:min(env.chi,dimsA[3]**2),:]=\
             a[:min(env.chi,dimsA[1]**2),:min(env.chi,dimsA[3]**2),:]
@@ -289,8 +301,9 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         vec = (0,1)
         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
         dimsA = A.size()
-        a = torch.einsum('mefig,mabic->eafbgc',(A,A)).contiguous().view(dimsA[1]**2, dimsA[2]**2, dimsA[4]**2)
-        a= a/torch.max(torch.abs(a))
+        a = contiguous(einsum('mefig,mabic->eafbgc',A,conj(A)))
+        a = view(a, (dimsA[1]**2, dimsA[2]**2, dimsA[4]**2))
+        a= a/a.abs().max()
         env.T[(coord,vec)] = torch.zeros((dimsA[1]**2,env.chi,env.chi), dtype=env.dtype, device=env.device)
         env.T[(coord,vec)][:,:min(env.chi,dimsA[2]**2),:min(env.chi,dimsA[4]**2)]=\
             a[:,:min(env.chi,dimsA[2]**2),:min(env.chi,dimsA[4]**2)]
@@ -308,8 +321,9 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         vec = (1,0)
         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
         dimsA = A.size()
-        a = torch.einsum('mefgi,mabci->eafbgc',(A,A)).contiguous().view(dimsA[1]**2, dimsA[2]**2, dimsA[3]**2)
-        a= a/torch.max(torch.abs(a))
+        a = contiguous(einsum('mefgi,mabci->eafbgc',A,conj(A)))
+        a = view(a, (dimsA[1]**2, dimsA[2]**2, dimsA[3]**2))
+        a= a/a.abs().max()
         env.T[(coord,vec)] = torch.zeros((env.chi,dimsA[2]**2,env.chi), dtype=env.dtype, device=env.device)
         env.T[(coord,vec)][:min(env.chi,dimsA[1]**2),:,:min(env.chi,dimsA[3]**2)]=\
             a[:min(env.chi,dimsA[1]**2),:,:min(env.chi,dimsA[3]**2)]
