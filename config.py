@@ -270,6 +270,7 @@ class CTMARGS():
         self.projector_method = '4X4'
         self.projector_svd_method = 'DEFAULT'
         self.projector_svd_reltol = 1.0e-8
+        self.ad_decomp_reg= 1.0e-12
         self.ctm_move_sequence = [(0,-1), (-1,0), (0,1), (1,0)]
         self.ctm_logging = False
         self.verbosity_initialization = 0

@@ -41,12 +41,13 @@ def main():
         settings= settings_full
     elif args.symmetry=="U1":
         settings= settings_U1
-    # override default device specified in settings
+    # override defaults in settings
     default_device= 'cpu' if not hasattr(settings, 'device') else settings.device
     if not cfg.global_args.device == default_device:
         settings.device = cfg.global_args.device
         settings_full.device = cfg.global_args.device
         print("Setting backend device: "+settings.device)
+    settings.back.ad_decomp_reg= cfg.ctm_args.ad_decomp_reg
     settings.back.set_num_threads(args.omp_cores)
     settings.back.random_seed(args.seed)
 
