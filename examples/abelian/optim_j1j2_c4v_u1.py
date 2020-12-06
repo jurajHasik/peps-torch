@@ -11,9 +11,8 @@ from models.abelian import j1j2
 from ctm.one_site_c4v_abelian.env_c4v_abelian import *
 from ctm.one_site_c4v_abelian import ctmrg_c4v
 from ctm.one_site_c4v_abelian.rdm_c4v import rdm2x1
-# from optim.ad_optim_lbfgs_mod import optimize_state
 # from optim.ad_optim import optimize_state
-from optim.ad_optim_lbfgs_mod_abelian import optimize_state
+from optim.ad_optim_lbfgs_mod import optimize_state
 import json
 import unittest
 import logging
