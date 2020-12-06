@@ -180,6 +180,20 @@ class ENV_ABELIAN():
         env_torch.T= T_torch
         return env_torch
 
+    def clone(self):
+        r"""
+        :return: returns a clone of the environment with all C,T tensors attached to
+                 computational graph.
+        :rtype: ENV_ABELIAN
+
+        Create a clone environment with all tensors (their blocks) attached to
+        computational graph. 
+        """
+        e= ENV_ABELIAN(self.chi, settings=self.engine)
+        e.C= {cid: c.clone() for cid,c in self.C.items()}
+        e.T= {tid: t.clone() for tid,t in self.T.items()}
+        return e
+
     def detach(self):
         r"""
         :return: returns a view of the environment with all C,T tensors detached from

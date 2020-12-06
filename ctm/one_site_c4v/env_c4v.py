@@ -88,12 +88,18 @@ class ENV_C4V():
         """
         return self.T[self.keyT]
 
-    def clone(self, ctm_args=cfg.ctm_args, global_args=cfg.global_args, \
-        requires_grad=False):
+    def clone(self, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
         new_env= ENV_C4V(self.chi, bond_dim=self.bond_dim, ctm_args=ctm_args, \
             global_args=global_args)
-        new_env.C[new_env.keyC]= self.get_C().detach().clone()
-        new_env.T[new_env.keyT]= self.get_T().detach().clone()
+        new_env.C[new_env.keyC]= self.get_C().clone()
+        new_env.T[new_env.keyT]= self.get_T().clone()
+        return new_env
+
+    def detach(self, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+        new_env= ENV_C4V(self.chi, bond_dim=self.bond_dim, ctm_args=ctm_args, \
+            global_args=global_args)
+        new_env.C[new_env.keyC]= self.get_C().detach()
+        new_env.T[new_env.keyT]= self.get_T().detach()
         return new_env
 
     def extend(self, new_chi, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
