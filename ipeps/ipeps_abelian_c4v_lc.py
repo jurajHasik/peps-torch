@@ -256,6 +256,133 @@ class IPEPS_ABELIAN_C4V_LC(IPEPS_ABELIAN_C4V):
 
         return ""
 
+    def serialize_to_json(self, normalize=False, tol=None):
+        r"""
+        :param state: wavefunction to serialize to json format
+        :param tol: minimum magnitude of tensor elements which are written out
+        :param normalize: if True, on-site tensors are normalized before writing
+        :type state: IPEPS_ABELIAN_C4V_LC
+        :type tol: float
+        :type normalize: bool
+        :return: serialized state
+        :rtype: str
+        """
+        json_state=dict({"lX": self.lX, "lY": self.lY, "elem_tensors": [], "coeffs": []})
+        
+        # write abelian charge data
+        json_state["abelian_charges"]=self.abelian_sym_data["abelian_charges"]
+        json_state["total_abelian_charge"]= self.abelian_sym_data["total_abelian_charge"]
+
+        # write list of considered elementary tensors
+        for meta,t in self.elem_tensors:
+            json_tensor=dict()
+            json_tensor["meta"]=meta["meta"]
+
+            tdims = t.size()
+            tlength = tdims[0]*tdims[1]*tdims[2]*tdims[3]*tdims[4]
+            json_tensor["physDim"]= tdims[0]
+            # assuming all auxBondDim are identical
+            json_tensor["auxDim"]= tdims[1]
+            # get non-zero elements
+            t_nonzero= t.nonzero()
+            json_tensor["numEntries"]= len(t_nonzero)
+            entries = []
+            for elem in t_nonzero:
+                ei=tuple(elem.tolist())
+                entries.append(f"{ei[0]} {ei[1]} {ei[2]} {ei[3]} {ei[4]}"\
+                    +f" {t[ei]}")
+            json_tensor["entries"]=entries
+            json_state["elem_tensors"].append(json_tensor)
+
+        site_ids=[]
+        site_map=[]
+        for nid,coord,c in [(t[0], *t[1]) for t in enumerate(self.coeffs.items())]:
+            if normalize:
+                c= c/torch.max(torch.abs(c))
+
+            json_tensor=dict()
+            
+            tdims = c.size()
+            tlength = tdims[0]
+            
+            site_ids.append(f"A{nid}")
+            site_map.append(dict({"siteId": site_ids[-1], "x": coord[0], "y": coord[1]} ))
+            json_tensor["siteId"]=site_ids[-1]
+            # assuming all auxBondDim are identical
+            json_tensor["numEntries"]= tlength
+            entries = []
+            for i in range(len(c)):
+                entries.append(f"{i} {c[i]}")
+                
+            json_tensor["entries"]=entries
+            json_state["coeffs"].append(json_tensor)
+
+        json_state["siteIds"]=site_ids
+        json_state["map"]=site_map
+
+        return json.dumps(json_state, indent=4, separators=(',', ': '))
+
+def deserialize_from_json(raw_json, settings, peps_args=cfg.peps_args,\
+    global_args=cfg.global_args):
+    dtype= global_args.torch_dtype
+    raw_state= raw_json
+    if isinstance(raw_json,str):
+        raw_state= json.loads(raw_json)
+
+    # read abelian charge data
+    if "abelian_charges" in raw_state.keys() and "total_abelian_charge" in raw_state.keys():
+        abelian_sym_data={}
+        abelian_sym_data["abelian_charges"]= raw_state["abelian_charges"]
+        abelian_sym_data["total_abelian_charge"]= raw_state["total_abelian_charge"]
+    else:
+        raise Exception("missing abelian charge data")
+
+    # read the list of elementary tensors
+    elem_tensors=[]
+    for symt in raw_state["elem_tensors"]:
+        meta=dict({"meta": symt["meta"]})
+        dims=[symt["physDim"]]+[symt["auxDim"]]*4
+        
+        t= torch.zeros(tuple(dims), dtype=dtype, device=global_args.device)
+        for elem in symt["entries"]:
+            tokens= elem.split(' ')
+            inds=tuple([int(i) for i in tokens[0:5]])
+            t[inds]= float(tokens[5])
+
+        elem_tensors.append((meta,t))
+
+    # Loop over non-equivalent tensor,coeffs pairs in the unit cell
+    coeffs=OrderedDict()
+    for ts in raw_state["map"]:
+        coord = (ts["x"],ts["y"])
+
+        # find the corresponding tensor of coeffs (and its elements) 
+        # identified by "siteId" in the "sites" list
+        t = None
+        for s in raw_state["coeffs"]:
+            if s["siteId"] == ts["siteId"]:
+                t = s
+        if t == None:
+            raise Exception("Tensor with siteId: "+ts["sideId"]+" NOT FOUND in \"coeffs\"") 
+
+        X = torch.zeros(t["numEntries"], dtype=dtype, device=global_args.device)
+
+        # 1) fill the tensor with elements from the list "entries"
+        # which list the coefficients in the following
+        # notation: Dimensions are indexed starting from 0
+        # 
+        # index (integer) of coeff, (float) Re, Im  
+        for entry in t["entries"]:
+            tokens = entry.split()
+            X[int(tokens[0])]=float(tokens[1])
+
+        coeffs[coord]=X
+
+    state= IPEPS_ABELIAN_C4V_LC(settings, elem_tensors, coeffs, abelian_sym_data, \
+        peps_args=peps_args, global_args=global_args)
+
+    return state
+
 def read_ipeps_c4v_lc(jsonfile, settings, peps_args=cfg.peps_args,\
     global_args=cfg.global_args):
     r"""
@@ -272,58 +399,8 @@ def read_ipeps_c4v_lc(jsonfile, settings, peps_args=cfg.peps_args,\
     
     with open(jsonfile) as j:
         raw_state = json.load(j)
-
-        # read abelian charge data
-        if "abelian_charges" in raw_state.keys() and "total_abelian_charge" in raw_state.keys():
-            abelian_sym_data={}
-            abelian_sym_data["abelian_charges"]= raw_state["abelian_charges"]
-            abelian_sym_data["total_abelian_charge"]= raw_state["total_abelian_charge"]
-        else:
-            raise Exception("missing abelian charge data")
-
-        # read the list of elementary tensors
-        elem_tensors=[]
-        for symt in raw_state["elem_tensors"]:
-            meta=dict({"meta": symt["meta"]})
-            dims=[symt["physDim"]]+[symt["auxDim"]]*4
-            
-            t= torch.zeros(tuple(dims), dtype=dtype, device=global_args.device)
-            for elem in symt["entries"]:
-                tokens= elem.split(' ')
-                inds=tuple([int(i) for i in tokens[0:5]])
-                t[inds]= float(tokens[5])
-
-            elem_tensors.append((meta,t))
-
-        # Loop over non-equivalent tensor,coeffs pairs in the unit cell
-        coeffs=OrderedDict()
-        for ts in raw_state["map"]:
-            coord = (ts["x"],ts["y"])
-
-            # find the corresponding tensor of coeffs (and its elements) 
-            # identified by "siteId" in the "sites" list
-            t = None
-            for s in raw_state["coeffs"]:
-                if s["siteId"] == ts["siteId"]:
-                    t = s
-            if t == None:
-                raise Exception("Tensor with siteId: "+ts["sideId"]+" NOT FOUND in \"coeffs\"") 
-
-            X = torch.zeros(t["numEntries"], dtype=dtype, device=global_args.device)
-
-            # 1) fill the tensor with elements from the list "entries"
-            # which list the coefficients in the following
-            # notation: Dimensions are indexed starting from 0
-            # 
-            # index (integer) of coeff, (float) Re, Im  
-            for entry in t["entries"]:
-                tokens = entry.split()
-                X[int(tokens[0])]=float(tokens[1])
-
-            coeffs[coord]=X
-
-    state= IPEPS_ABELIAN_C4V_LC(settings, elem_tensors, coeffs, abelian_sym_data, \
-        peps_args=peps_args, global_args=global_args)
+        state= deserialize_from_json(raw_state, settings, peps_args=peps_args,\
+            global_args=global_args)
 
     return state
 
@@ -338,58 +415,7 @@ def write_ipeps_c4v_lc(state, outputfile, tol=None, normalize=False):
     :type tol: float
     :type normalize: bool
     """
-    json_state=dict({"lX": state.lX, "lY": state.lY, "elem_tensors": [], "coeffs": []})
-    
-    # write abelian charge data
-    json_state["abelian_charges"]=state.abelian_sym_data["abelian_charges"]
-    json_state["total_abelian_charge"]= state.abelian_sym_data["total_abelian_charge"]
-
-    # write list of considered elementary tensors
-    for meta,t in state.elem_tensors:
-        json_tensor=dict()
-        json_tensor["meta"]=meta["meta"]
-
-        tdims = t.size()
-        tlength = tdims[0]*tdims[1]*tdims[2]*tdims[3]*tdims[4]
-        json_tensor["physDim"]= tdims[0]
-        # assuming all auxBondDim are identical
-        json_tensor["auxDim"]= tdims[1]
-        # get non-zero elements
-        t_nonzero= t.nonzero()
-        json_tensor["numEntries"]= len(t_nonzero)
-        entries = []
-        for elem in t_nonzero:
-            ei=tuple(elem.tolist())
-            entries.append(f"{ei[0]} {ei[1]} {ei[2]} {ei[3]} {ei[4]}"\
-                +f" {t[ei]}")
-        json_tensor["entries"]=entries
-        json_state["elem_tensors"].append(json_tensor)
-
-    site_ids=[]
-    site_map=[]
-    for nid,coord,c in [(t[0], *t[1]) for t in enumerate(state.coeffs.items())]:
-        if normalize:
-            c= c/torch.max(torch.abs(c))
-
-        json_tensor=dict()
-        
-        tdims = c.size()
-        tlength = tdims[0]
-        
-        site_ids.append(f"A{nid}")
-        site_map.append(dict({"siteId": site_ids[-1], "x": coord[0], "y": coord[1]} ))
-        json_tensor["siteId"]=site_ids[-1]
-        # assuming all auxBondDim are identical
-        json_tensor["numEntries"]= tlength
-        entries = []
-        for i in range(len(c)):
-            entries.append(f"{i} {c[i]}")
-            
-        json_tensor["entries"]=entries
-        json_state["coeffs"].append(json_tensor)
-
-    json_state["siteIds"]=site_ids
-    json_state["map"]=site_map
+    json_str= state.serialize_to_json(tol=tol, normalize=normalize)
 
     with open(outputfile,'w') as f:
-        json.dump(json_state, f, indent=4, separators=(',', ': '))
+        f.write(json_str)
