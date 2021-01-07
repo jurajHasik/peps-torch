@@ -86,6 +86,7 @@ def main():
     init_env(state_sym, ctm_env)
     
     ctm_env, *ctm_log = ctmrg_c4v.run(state_sym, ctm_env, conv_check=ctmrg_conv_f)
+
     loss= energy_f(state_sym, ctm_env)
     obs_values, obs_labels= model.eval_obs(state_sym,ctm_env)
     print(", ".join(["epoch","energy"]+obs_labels))

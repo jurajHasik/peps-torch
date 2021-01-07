@@ -38,13 +38,13 @@ def main():
         bond_dim = args.bond_dim
         
         A = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-            dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+            dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
         B = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-            dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+            dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
         C = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-            dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+            dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
         D = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-            dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+            dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
 
         sites = {(0,0): A, (1,0): B, (0,1): C, (1,1): D}
 
@@ -56,9 +56,9 @@ def main():
             +str(args.ipeps_init_type)+" is not supported")
     
     if not state.dtype==model.dtype:
-        cfg.global_args.dtype= state.dtype
+        cfg.global_args.torch_dtype= state.dtype
         print(f"dtype of initial state {state.dtype} and model {model.dtype} do not match.")
-        print(f"Setting default dtype to {cfg.global_args.dtype} and reinitializing "\
+        print(f"Setting default dtype to {cfg.global_args.torch_dtype} and reinitializing "\
         +" the model")
         model= coupledLadders.COUPLEDLADDERS(alpha=args.alpha)
 

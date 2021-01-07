@@ -156,7 +156,7 @@ def make_c4v_symm_B2(A):
     A= 0.5*(A - A.permute(0,3,4,1,2))   # pi anti-clockwise (R^2)
     return A
 
-def verify_c4v_symm_A1(A, tol=1.0e-14):
+def verify_c4v_symm_A1(A):
     with torch.no_grad():
         symm= True
         max_d=0.

@@ -8,7 +8,7 @@ import itertools
 
 class HB():
     def __init__(self, spin_s=2, j1=1.0, k1=0.0, global_args=cfg.global_args):
-        self.dtype=global_args.dtype
+        self.dtype=global_args.torch_dtype
         self.device=global_args.device
         self.phys_dim=spin_s
         self.j1=j1
