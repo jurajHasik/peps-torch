@@ -144,6 +144,20 @@ class ENV_C4V_ABELIAN():
         e.T= {tid: t.detach() for tid,t in self.T.items()}
         return e
 
+    def clone(self):
+        r"""
+        :return: returns a clone of the environment. Cloned tensors C,T are part of the 
+                 computational graph.
+        :rtype: ENV_ABELIAN
+
+        Create a clone of environment with all tensors (their blocks) part of  
+        the computational graph. 
+        """
+        e= ENV_C4V_ABELIAN(self.chi, settings=self.engine)
+        e.C= {cid: c.clone() for cid,c in self.C.items()}
+        e.T= {tid: t.clone() for tid,t in self.T.items()}
+        return e        
+
     def compute_multiplets(self, eps_multiplet_gap=1.0e-10):
         return compute_multiplets(self.get_C(), eps_multiplet_gap=eps_multiplet_gap)
 

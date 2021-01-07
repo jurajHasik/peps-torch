@@ -46,10 +46,10 @@ def main():
 
         # TODO extending from smaller bond-dim to higher bond-dim is 
         # currently not possible
-        
+
         state.add_noise(args.instate_noise)
     elif args.opt_resume is not None:
-        if args.bond_dim in [2,3,4,5,6,7,8]:
+        if args.bond_dim in [2,3,4,5,6,7,8,9]:
             u1sym_t= tenU1.import_sym_tensors(2,args.bond_dim,"A_1",\
                 infile=f"u1sym/D{args.bond_dim}_U1_{args.u1_class}.txt",\
                 dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
@@ -60,13 +60,12 @@ def main():
         state= IPEPS_U1SYM(u1sym_t, coeffs)
         state.load_checkpoint(args.opt_resume)
     elif args.ipeps_init_type=='RANDOM':
-        if args.bond_dim in [2,3,4,5,6,7,8]:
+        if args.bond_dim in [2,3,4,5,6,7,8,9]:
             u1sym_t= tenU1.import_sym_tensors(2, args.bond_dim, "A_1", \
                 infile=f"u1sym/D{args.bond_dim}_U1_{args.u1_class}.txt", \
                 dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
         else:
             raise ValueError("Unsupported --bond_dim= "+str(args.bond_dim))
-
         A= torch.rand(len(u1sym_t), dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
         A= A/torch.max(torch.abs(A))
         coeffs = {(0,0): A}

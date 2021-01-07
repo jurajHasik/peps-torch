@@ -117,6 +117,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         optimizer.zero_grad()
         
         # 0) evaluate loss
+        optimizer.zero_grad()
         loss, ctm_env, history, t_ctm, t_check = loss_fn(state, current_env[0], context)
 
         # 1) record loss and store current state if the loss improves
@@ -137,6 +138,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
             if linesearching:
                 log_entry["LS"]=len(t_data["loss_ls"])
                 log_entry["loss"]=t_data["loss_ls"]
+
             log.info(json.dumps(log_entry))
 
         # 3) compute desired observables
@@ -159,10 +161,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
             log.info(json.dumps(log_entry))
 
         # 6) detach current environment from autograd graph
-        lst_C = list(ctm_env.C.values())
-        lst_T = list(ctm_env.T.values())
-        current_env[0] = ctm_env
-        for el in lst_T + lst_C: el.detach_()
+        current_env[0] = ctm_env.detach().clone()
 
         return loss
     
@@ -181,6 +180,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
             loc_ctm_args.projector_svd_method= opt_args.line_search_svd_method
         ls_context= dict({"ctm_args":loc_ctm_args, "opt_args":loc_opt_args, "loss_history": t_data,
             "line_search": linesearching})
+        
         loss, ctm_env, history, t_ctm, t_check = loss_fn(state, current_env[0],\
             ls_context)
 

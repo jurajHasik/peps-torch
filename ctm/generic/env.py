@@ -100,6 +100,18 @@ class ENV():
             s+=f"T({cr[0]} {cr[1]}): {t.size()}\n"
         return s
 
+    def clone(self, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+        new_env= ENV(self.chi, ctm_args=ctm_args, global_args=global_args)
+        new_env.C= { k: c.clone() for k,c in self.C.items() }
+        new_env.T= { k: t.clone() for k,t in self.T.items() }
+        return new_env
+
+    def detach(self, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+        new_env= ENV(self.chi, ctm_args=ctm_args, global_args=global_args)
+        new_env.C= { k: c.detach() for k,c in self.C.items() }
+        new_env.T= { k: t.detach() for k,t in self.T.items() }
+        return new_env
+
     def extend(self, new_chi, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
         new_env= ENV(new_chi, ctm_args=ctm_args, global_args=global_args)
         x= min(self.chi, new_chi)

@@ -11,7 +11,7 @@ import itertools
 
 class AKLTS2():
     def __init__(self, global_args=cfg.global_args):
-        self.dtype=global_args.dtype
+        self.dtype=global_args.torch_dtype
         self.device=global_args.device
         self.phys_dim= 5
 
@@ -140,7 +140,7 @@ class AKLTS2():
 
 class AKLTS2_C4V_BIPARTITE():
     def __init__(self, global_args=cfg.global_args):
-        self.dtype=global_args.dtype
+        self.dtype=global_args.torch_dtype
         self.device=global_args.device
         self.phys_dim= 5
 

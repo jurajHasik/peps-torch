@@ -269,7 +269,7 @@ class COUPLEDLADDERS_D2_BIPARTITE():
 
         * :math:`h2_{ij} = \mathbf{S}_i.\mathbf{S}_j` with indices of h2 corresponding to :math:`s_i s_j;s'_i s'_j`
         """
-        self.dtype=global_args.dtype
+        self.dtype=global_args.torch_dtype
         self.device=global_args.device
         self.phys_dim=2
         self.alpha=alpha

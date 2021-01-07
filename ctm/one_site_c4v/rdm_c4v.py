@@ -5,8 +5,8 @@ import logging
 log = logging.getLogger(__name__)
 
 # ----- components -------------------------------------------------------------
-def _log_cuda_mem(device, who="unknown"):
-    log.info(f"{who} GPU-MEM MAX_ALLOC {torch.cuda.max_memory_allocated(device)}"\
+def _log_cuda_mem(device, who="unknown",  uuid=""):
+    log.info(f"{who} {uuid} GPU-MEM MAX_ALLOC {torch.cuda.max_memory_allocated(device)}"\
             + f" CURRENT_ALLOC {torch.cuda.memory_allocated(device)}")
 
 def _sym_pos_def(rdm, verbosity=0, who="unknown"):
@@ -31,7 +31,7 @@ def _get_open_C2x2_LU_sl(C, T, a, verbosity=0):
     # C--1 0--T--1
     # 0       2
     C2x2 = torch.tensordot(C, T, ([1],[0]))
-    if not is_cpu and verbosity>1: _log_cuda_mem(loc_device,who)
+    if not is_cpu and verbosity>1: _log_cuda_mem(loc_device,who,"CT")
         
 
     # C------T--1->0
@@ -40,7 +40,7 @@ def _get_open_C2x2_LU_sl(C, T, a, verbosity=0):
     # T--2->3
     # 1->2
     C2x2 = torch.tensordot(C2x2, T, ([0],[0]))
-    if not is_cpu and verbosity>1: _log_cuda_mem(loc_device,who)
+    if not is_cpu and verbosity>1: _log_cuda_mem(loc_device,who,"CTT")
 
     # 4i) untangle the fused D^2 indices
     #
@@ -62,7 +62,9 @@ def _get_open_C2x2_LU_sl(C, T, a, verbosity=0):
     # | |       3->5
     # |  --5->3
     # 3->2
+    if not is_cpu and verbosity>1: _log_cuda_mem(loc_device,who,"CTTa_init")
     C2x2= torch.tensordot(C2x2, a,([1,4],[1,2]))
+    if not is_cpu and verbosity>1: _log_cuda_mem(loc_device,who,"CTTa_end")
     
     # 4iii) second layer "ket"
     # 
@@ -76,7 +78,9 @@ def _get_open_C2x2_LU_sl(C, T, a, verbosity=0):
     # |    |       3->6
     # |    |
     # 2->1 5->3
+    if not is_cpu and verbosity>1: _log_cuda_mem(loc_device,who,"CTTaa_init")
     C2x2= torch.tensordot(C2x2, a,([1,3],[1,2]))
+    if not is_cpu and verbosity>1: _log_cuda_mem(loc_device,who,"CTTaa_end")
 
     # 4iv) fuse pairs of aux indices
     #
@@ -407,7 +411,7 @@ def rdm1x1_sl(state, env, verbosity=0):
 
     return rdm
 
-def rdm2x1(state, env, sym_pos_def=False, verbosity=0):
+def rdm2x1(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
     r"""
     :param state: underlying 1-site C4v symmetric wavefunction
     :param env: C4v symmetric environment corresponding to ``state``
@@ -444,31 +448,52 @@ def rdm2x1(state, env, sym_pos_def=False, verbosity=0):
     The resulting reduced density matrix is identical to the one of vertical 1x2 subsystem
     due to the C4v symmetry. 
     """
+    who= "rdm2x1"
+    if force_cpu:
+        # move to cpu
+        C = env.C[env.keyC].cpu()
+        T = env.T[env.keyT].cpu()
+        a = next(iter(state.sites.values())).cpu()
+    else:
+        C = env.C[env.keyC]
+        T = env.T[env.keyT]
+        a = next(iter(state.sites.values()))
+
+    loc_device=a.device
+    is_cpu= loc_device==torch.device('cpu')
+    log_gpu_mem= (not is_cpu and verbosity>0)
+
+    def ten_size(t):
+        return t.element_size() * t.numel()
+
     #----- building C2x2_LU ----------------------------------------------------
-    C = env.C[env.keyC]
-    T = env.T[env.keyT]
-    a = next(iter(state.sites.values()))
     dimsa = a.size()
     A = torch.einsum('mefgh,nabcd->eafbgchdmn',a,a).contiguous()\
         .view(dimsa[1]**2, dimsa[2]**2, dimsa[3]**2, dimsa[4]**2, dimsa[0], dimsa[0])
 
     # C--1 0--T--1
     # 0       2
+    if log_gpu_mem: _log_cuda_mem(loc_device,who,"CT_init")
     C2x1 = torch.tensordot(C, T, ([1],[0]))
+    if log_gpu_mem: _log_cuda_mem(loc_device,who,"CT_end")
 
     # C------T--1->0
     # 0      2->1
     # 0
     # T2--2->3
     # 1->2
+    if log_gpu_mem: _log_cuda_mem(loc_device,who,"CTT_init")
     C2x2 = torch.tensordot(C2x1, T, ([0],[0]))
+    if log_gpu_mem: _log_cuda_mem(loc_device,who,"CTT_end")
 
     # C-------T--0
     # |       1
     # |       0
     # T2--3 1 A--3
     # 2->1    2\45
+    if log_gpu_mem: _log_cuda_mem(loc_device,who,"CTTA_init")
     C2x2 = torch.tensordot(C2x2, A, ([1,3],[0,1]))
+    if log_gpu_mem: _log_cuda_mem(loc_device,who,"CTTA_end")
 
     # permute 012345->120345
     # reshape 12(03)45->01234
@@ -484,14 +509,18 @@ def rdm2x1(state, env, sym_pos_def=False, verbosity=0):
     # 0 1
     # 0 2
     # C2x1--1->0
+    if log_gpu_mem: _log_cuda_mem(loc_device,who,"CTTATC_init")
     left_half = torch.tensordot(C2x1, C2x2, ([0,2],[0,1]))
+    if log_gpu_mem: _log_cuda_mem(loc_device,who,"CTTATC_end")
 
     # construct reduced density matrix by contracting left and right halfs
     # C2x2--1 1----C2x2
     # |\23->01     |\23
     # |            |
     # C2x1--0 0----C2x1
+    if log_gpu_mem: _log_cuda_mem(loc_device,who,"rdm_init")
     rdm = torch.tensordot(left_half,left_half,([0,1],[0,1]))
+    if log_gpu_mem: _log_cuda_mem(loc_device,who,"rdm_end")
 
     # permute into order of s0,s1;s0',s1' where primed indices
     # represent "ket"
@@ -505,10 +534,10 @@ def rdm2x1(state, env, sym_pos_def=False, verbosity=0):
     if sym_pos_def: 
         rdm= _sym_pos_def(rdm, verbosity=verbosity, who="rdm2x1")
 
-    # normalize and reshape
+    # normalize and reshape and move to original device
     if verbosity>0: log.info(f"Tr(rdm2x1): {torch.trace(rdm)}\n")
     rdm= rdm / torch.trace(rdm)
-    rdm= rdm.view(dimsRDM)
+    rdm= rdm.view(dimsRDM).to(env.device)
 
     return rdm
 
