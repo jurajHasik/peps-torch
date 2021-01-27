@@ -377,3 +377,140 @@ def write_ipeps(state, outputfile, tol=None, normalize=False,\
 
     with open(outputfile,'w') as f:
         json.dump(json_state, f, indent=4, separators=(',', ': '), cls=NumPy_Encoder)
+
+
+class IPEPS_ABELIAN_WEIGHTED(IPEPS_ABELIAN):
+
+    def __init__(self, settings, sites, weights, vertexToSite=None, lX=None, lY=None, 
+        peps_args=cfg.peps_args, global_args=cfg.global_args):
+        r"""
+        :param settings: TODO
+        :param sites: map from elementary unit cell to on-site tensors
+        :param weights: map from edges within unit cell to weight tensors
+        :param vertexToSite: function mapping arbitrary vertex of a square lattice 
+                             into a vertex within elementary unit cell
+        :param lX: length of the elementary unit cell in X direction
+        :param lY: length of the elementary unit cell in Y direction
+        :param peps_args: ipeps configuration
+        :param global_args: global configuration
+        :type settings: TODO
+        :type sites: dict[tuple(int,int) : yamps.tensor.Tensor]
+        :type weights: dict[tuple(tuple(int,int), tuple(int,int)) : yamps.tensor.Tensor]
+        :type vertexToSite: function(tuple(int,int))->tuple(int,int)
+        :type lX: int
+        :type lY: int
+        :type peps_args: PEPSARGS
+        :type global_args: GLOBALARGS
+
+        Member ``sites`` is a dictionary of non-equivalent on-site tensors
+        indexed by tuple of coordinates (x,y) within the elementary unit cell.
+        The index-position convetion for on-site tensors is defined as follows::
+
+           (-1)u (-1)s 
+               |/ 
+        (-1)l--a--(+1)r  <=> a[s,u,l,d,r] with reference symmetry signature [-1,-1,-1,1,1]
+               |
+           (+1)d
+        
+        where s denotes physical index, and u,l,d,r label four principal directions
+        up, left, down, right in anti-clockwise order starting from up.
+        Member ``vertexToSite`` is a mapping function from any vertex (x,y) on a square lattice
+        passed in as tuple(int,int) to a corresponding vertex within elementary unit cell.
+        
+        On-site tensor of an IPEPS_ABELIAN object ``wfc`` at vertex (x,y) is conveniently accessed 
+        through the member function ``site``, which internally uses ``vertexToSite`` mapping::
+            
+            coord= (0,0)
+            a_00= wfc.site(coord)
+
+        By combining the appropriate ``vertexToSite`` mapping function with elementary unit 
+        cell specified through ``sites``, various tilings of a square lattice can be achieved:: 
+            
+            # Example 1: 1-site translational iPEPS
+            
+            sites={(0,0): a}
+            def vertexToSite(coord):
+                return (0,0)
+            wfc= IPEPS(sites,vertexToSite)
+        
+            # resulting tiling:
+            # y\x -2 -1 0 1 2
+            # -2   a  a a a a
+            # -1   a  a a a a
+            #  0   a  a a a a
+            #  1   a  a a a a
+            # Example 2: 2-site bipartite iPEPS
+            
+            sites={(0,0): a, (1,0): b}
+            def vertexToSite(coord):
+                x = (coord[0] + abs(coord[0]) * 2) % 2
+                y = abs(coord[1])
+                return ((x + y) % 2, 0)
+            wfc= IPEPS(sites,vertexToSite)
+        
+            # resulting tiling:
+            # y\x -2 -1 0 1 2
+            # -2   A  b a b a
+            # -1   B  a b a b
+            #  0   A  b a b a
+            #  1   B  a b a b
+        
+            # Example 3: iPEPS with 3x2 unit cell with PBC 
+            
+            sites={(0,0): a, (1,0): b, (2,0): c, (0,1): d, (1,1): e, (2,1): f}
+            wfc= IPEPS(sites,lX=3,lY=2)
+            
+            # resulting tiling:
+            # y\x -2 -1 0 1 2
+            # -2   b  c a b c
+            # -1   e  f d e f
+            #  0   b  c a b c
+            #  1   e  f d e f
+
+        where in the last example a default setting for ``vertexToSite`` is used, which
+        maps square lattice into elementary unit cell of size ``lX`` x ``lY`` assuming 
+        periodic boundary conditions (PBC) along both X and Y directions.
+
+
+        """
+        self.weights= OrderedDict(weights)
+
+        super().__init__(settings, sites, vertexToSite=vertexToSite, lX=lX, lY=lY, 
+            peps_args=peps_args, global_args=global_args)
+
+    def absorb_weights(self, peps_args=cfg.peps_args, global_args=cfg.global_args):
+        dxy_w_to_ind= OrderedDict({(0,-1): 1, (-1,0): 2, (0,1): 3, (1,0): 4})
+        full_dxy=set(dxy_w_to_ind.keys())
+
+        a_sites=dict()
+        for coord in self.sites.keys():
+            A= self.site(coord)
+            # 0,[1--0,1->4],2->1,3->2,4->3
+            # 0,[1--0,1->4],2->1,3->2,4->3
+            # ...
+            for dxy,ind in dxy_w_to_ind.items():
+                w= self.weight((coord, dxy)).sqrt()
+                A= A.dot(w, ([1],[0]))
+            a_sites[coord]= A
+
+        return IPEPS_ABELIAN(self.engine, a_sites, vertexToSite=self.vertexToSite,\
+            lX=self.lX, lY=self.lY, peps_args=peps_args, global_args=global_args)
+
+    def weight(self, weight_id):
+        """
+        :param weight_id: tuple with (x,y) coords specifying vertex on a square lattice
+                          and tuple with (dx,dy) coords specifying on of the directions
+                          (0,-1), (-1,0), (0,1), (1,0) corresponding to up, left, down, and
+                          right respectively.
+        :type weight_id: tuple(tuple(int,int), tuple(int,int))
+        :return: diagonal weight tensor
+        :rtype: yamps.tensor.Tensor
+        """
+        xy_site, dxy= weight_id
+        assert dxy in [(0,-1), (-1,0), (0,1), (1,0)],"invalid direction"
+        return self.weights[ (self.vertexToSite(xy_site), dxy) ]
+
+def get_weighted_ipeps(state, weights, peps_args=cfg.peps_args, global_args=cfg.global_args):
+    return IPEPS_ABELIAN_WEIGHTED(state.engine, state.sites, weights,\
+        vertexToSite=state.vertexToSite, lX=state.lX, lY=state.lY,\
+        peps_args=peps_args, global_args=global_args)

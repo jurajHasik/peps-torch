@@ -338,8 +338,13 @@ def deserialize_from_json(raw_json, settings, peps_args=cfg.peps_args,\
         raise Exception("missing abelian charge data")
 
     # read the list of elementary tensors
+    elem_ten_key="elem_tensors"
+    if "su2_tensors" in raw_state.keys():
+        elem_ten_key="su2_tensors"
+    elif "sym_tensors" in raw_state.keys():
+        elem_ten_key="sym_tensors"
     elem_tensors=[]
-    for symt in raw_state["elem_tensors"]:
+    for symt in raw_state[elem_ten_key]:
         meta=dict({"meta": symt["meta"]})
         dims=[symt["physDim"]]+[symt["auxDim"]]*4
         
