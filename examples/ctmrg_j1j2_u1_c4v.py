@@ -148,13 +148,13 @@ def main():
     for i in range(args.chi):
         print(f"{i} {s[i]}")
 
-    # transfer operator spectrum
+    # transfer operator spectrum 1-site-width channel
     print("\n\nspectrum(T)")
     l= transferops_c4v.get_Top_spec_c4v(args.top_n, state, ctm_env_init)
     for i in range(l.size()[0]):
         print(f"{i} {l[i,0]} {l[i,1]}")
 
-    # transfer operator spectrum
+    # transfer operator spectrum 2-site-width channel
     if args.top2:
         print("\n\nspectrum(T2)")
         l= transferops_c4v.get_Top2_spec_c4v(args.top_n, state, ctm_env_init)
