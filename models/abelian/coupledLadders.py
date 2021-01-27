@@ -290,8 +290,41 @@ class COUPLEDLADDERS_U1():
             energy += ss
             if coord[1] % 2 == 0:
                 ss = contract(rdm1x2,self.h2,_ci)
-            else:
+            else:   
                 ss = contract(rdm1x2,self.alpha * self.h2,_ci)
+            energy += ss
+
+        # return energy-per-site
+        energy_per_site=energy/len(state.sites.items())
+        return energy_per_site
+
+    def energy_2x1_1x2_H(self,state,env):
+        r"""
+        Ladders are weakly coupled horizontaly::
+
+            y\x
+                   _:_a_:__:_a_:__:
+                ..._|_a_|__|_a_|__|...
+                ..._|_a_|__|_a_|__|...
+                ..._|_a_|__|_a_|__|...
+                ..._|_a_|__|_a_|__|...   
+                ..._|_a_|__|_a_|__|...   
+                    :   :  :   :  : (a = \alpha)
+        """
+        energy=TA.zeros(self.engine)
+        #
+        # (-1)0--|rho|--2(+1) (-1)0--|S.S|--2(+1)
+        # (-1)1--|   |--3(+1) (-1)1--|   |--3(+1)
+        _ci= ([0,1,2,3],[2,3,0,1])
+        for coord,site in state.sites.items():
+            rdm2x1= rdm.rdm2x1(coord,state,env)
+            rdm1x2= rdm.rdm1x2(coord,state,env)
+            ss= contract(rdm1x2, self.h2,_ci)
+            energy += ss
+            if coord[0] % 2 == 0:
+                ss = contract(rdm2x1,self.h2,_ci)
+            else:   
+                ss = contract(rdm2x1,self.alpha * self.h2,_ci)
             energy += ss
 
         # return energy-per-site
@@ -422,3 +455,56 @@ class COUPLEDLADDERS_U1():
         for i in range(6,-1,-1): gate_seq.append(gate_seq[i])
         return gate_seq
 
+    def gen_gate_seq_2S_H(self,t):
+        r"""
+        :param t: imaginary time step
+        :type t: float
+        :return: gate sequence
+        :rtype: list[tuple(tuple(tuple(int,int),tuple(int,int),tuple(int,int)), Tensor)]
+        
+        Generate a 2-site gate sequence exp(-t S.S) for imaginary-time optimization.
+        Each element of sequence has two parts: First, the placement of the gate encoded by (x,y) 
+        coords of the two sites and the vector from 1st to 2nd site: (x_1,y_1), 
+        (x_2-x_1, y_2-y_1), (x_2,y_2). Second, the 2-site gate Tensor.
+
+        The gate sequance generated::
+
+                    g[0]         g[2]
+            g[4]--(0,0)--g[5]--(1,0)--[g[4]]
+                    g[1]         g[3]
+            g[6]--(0,1)--g[7]--(1,1)--[g[6]]
+                   [g[0]]       [g[2]]
+
+        The g[5] and g[7] are the "weak" links, with alpha * S.S interaction, coupling the ladders
+        """
+        gate_SS_1= self._gen_gate_SS(-t)
+        gate_SS_alpha= self._gen_gate_SS(-t*self.alpha)
+        gate_seq=[
+            (((0,0),(0,1),(0,1)), gate_SS_1),
+            (((1,0),(0,1),(1,1)), gate_SS_1),
+            (((0,1),(0,1),(0,0)), gate_SS_1),
+            (((1,1),(0,1),(1,0)), gate_SS_1),
+            (((0,0),(1,0),(1,0)), gate_SS_1),
+            (((0,1),(1,0),(1,1)), gate_SS_1),
+            (((1,0),(1,0),(0,0)), gate_SS_alpha),
+            (((1,1),(1,0),(0,1)), gate_SS_alpha)
+        ]
+        return gate_seq
+
+    def gen_gate_seq_2S_2ndOrder_H(self,t):
+        gate_SS_1= self._gen_gate_SS(-t)
+        gate_SS_2= self._gen_gate_SS(-2*t)
+        gate_SS_alpha= self._gen_gate_SS(-t*self.alpha)
+        gate_SS_2alpha= self._gen_gate_SS(-2*t*self.alpha)
+        gate_seq=[
+            (((0,0),(0,1),(0,1)), gate_SS_1),
+            (((1,0),(0,1),(1,1)), gate_SS_1),
+            (((0,1),(0,1),(0,0)), gate_SS_1),
+            (((1,1),(0,1),(1,0)), gate_SS_1),
+            (((0,0),(1,0),(1,0)), gate_SS_1),
+            (((0,1),(1,0),(1,1)), gate_SS_1),
+            (((1,0),(1,0),(0,0)), gate_SS_alpha)            
+        ]
+        gate_seq.append(  (((1,1),(1,0),(0,1)), gate_SS_2alpha) ) 
+        for i in range(6,-1,-1): gate_seq.append(gate_seq[i])
+        return gate_seq
