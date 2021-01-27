@@ -419,7 +419,7 @@ def rdm2x1(coord, state, env, sym_pos_def=False, verbosity=0):
     who="rdm2x1"
     #----- building C2x2_LU ----------------------------------------------------
     C2x2_LU= open_C2x2_LU(coord, state, env, verbosity=verbosity)
-    C2x2_LU= _group_legs_C2x2_LU(C2x2_LU)
+    # C2x2_LU= _group_legs_C2x2_LU(C2x2_LU)
 
     if verbosity>0:
         print(f"C2X2 LU {coord} -> f{state.vertexToSite(coord)} (-1,-1): {C2x2_LU}")
@@ -432,7 +432,7 @@ def rdm2x1(coord, state, env, sym_pos_def=False, verbosity=0):
     # 0       0->1      / \
     # C--1 1--T2--2 => C---T--2->1
     C2x1_LD= contract(C, T2, ([1],[1]))
-    C2x1_LD, lo= C2x1_LD.group_legs((0,1), new_s=1)
+    # C2x1_LD, lo= C2x1_LD.group_legs((0,1), new_s=1)
 
     if verbosity>0:
         print(f"C2X1 LD {coord} -> {state.vertexToSite(coord)} (-1,1): {C2x1_LD}")
@@ -444,13 +444,21 @@ def rdm2x1(coord, state, env, sym_pos_def=False, verbosity=0):
     # 0
     # C2x1_LD--1->0
     # TODO is it worthy(performance-wise) to instead overwrite one of C2x2_LU,C2x2_RU ?  
-    left_half= contract(C2x1_LD, C2x2_LU, ([0],[0]))
+    # left_half= contract(C2x1_LD, C2x2_LU, ([0],[0]))
+    # C----T--2->1  
+    # |    |     
+    # T---a*a--3->2  
+    # |    |\4,5->3,4 
+    # 0    1     
+    # 0    1
+    # C----T2--2->0
+    left_half= contract(C2x1_LD, C2x2_LU, ([0,1],[0,1]))
 
     #----- building C2x2_RU ----------------------------------------------------
     vec = (1,0)
     shift_r = state.vertexToSite((coord[0]+vec[0],coord[1]+vec[1]))
     C2x2_RU= open_C2x2_RU(shift_r, state, env, verbosity=verbosity)
-    C2x2_RU= _group_legs_C2x2_RU(C2x2_RU)
+    # C2x2_RU= _group_legs_C2x2_RU(C2x2_RU)
     
     if verbosity>0:
         print(f"C2X2 RU {(coord[0]+vec[0],coord[1]+vec[1])} -> {shift_r} "\
@@ -464,7 +472,7 @@ def rdm2x1(coord, state, env, sym_pos_def=False, verbosity=0):
     #    1<-0        0           / \  
     # 2<-1--T1--2 1--C => 1<-2--T1--C
     C2x1_RD= contract(C, T1, ([1],[2]))
-    C2x1_RD, lo= C2x1_RD.group_legs((0,1), new_s=1)
+    # C2x1_RD, lo= C2x1_RD.group_legs((0,1), new_s=1)
 
     if verbosity>0:
         print(f"C2X1 RD {(coord[0]+vec[0],coord[1]+vec[1])} -> {shitf_coord} "\
@@ -476,14 +484,28 @@ def rdm2x1(coord, state, env, sym_pos_def=False, verbosity=0):
     #       1
     #       0
     # 0<-1--C2x1_RD
-    right_half =contract(C2x1_RD, C2x2_RU, ([0],[1]))
+    # right_half =contract(C2x1_RD, C2x2_RU, ([0],[1]))
+    #       1<-0--T2----C
+    #             |     |
+    #       2<-1-a*a----T1
+    #   3,4<-4,5-/|     |
+    #         (-1)3     2
+    #             1     0
+    #       0<-2--T1----C
+    right_half =contract(C2x1_RD, C2x2_RU, ([0,1],[2,3]))
 
     # construct reduced density matrix by contracting left and right halfs
     # C2x2_LU--1 1----C2x2_RU
     # |\23->01        |\23
     # |               |    
     # C2x1_LD--0 0----C2x1_RD
-    rdm =contract(left_half,right_half,([0,1],[0,1]))
+    # rdm =contract(left_half,right_half,([0,1],[0,1]))
+    # C2x2_LU--1 1----C2x2_RU
+    # |     \--2 2--/ |
+    # |\34->01        |\34->23
+    # |               |    
+    # C2x1_LD--0 0----C2x1_RD
+    rdm =contract(left_half,right_half,([0,1,2],[0,1,2]))
 
     # permute into order of s0,s1;s0',s1' where primed indices
     # represent "bra"
@@ -531,7 +553,7 @@ def rdm1x2(coord, state, env, sym_pos_def=False, verbosity=0):
     who="rdm1x2"
     #----- building C2x2_LU ----------------------------------------------------
     C2x2_LU= open_C2x2_LU(coord, state, env, verbosity=verbosity)
-    C2x2_LU= _group_legs_C2x2_LU(C2x2_LU)
+    # C2x2_LU= _group_legs_C2x2_LU(C2x2_LU)
     # C2x2_LU--1
     # | \2,3 
     # 0 
@@ -549,7 +571,7 @@ def rdm1x2(coord, state, env, sym_pos_def=False, verbosity=0):
     # 1--T1             1<-2
     #    2
     C1x2_RU= contract(C, T1, ([1],[0]))
-    C1x2_RU, lo= C1x2_RU.group_legs((0,1), new_s=1)
+    # C1x2_RU, lo= C1x2_RU.group_legs((0,1), new_s=1)
 
     if verbosity>0:
         print(f"C1X2 RU {coord} -> {state.vertexToSite(coord)} (1,-1): {C1x2_RU}")
@@ -558,13 +580,19 @@ def rdm1x2(coord, state, env, sym_pos_def=False, verbosity=0):
     # C2x2_LU--1 0--C1x2_RU
     # |\23          |
     # 0->1          1->0
-    upper_half =contract(C1x2_RU, C2x2_LU, ([0],[1]))
+    # upper_half =contract(C1x2_RU, C2x2_LU, ([0],[1]))
+    # C----T--------2 0--C  
+    # |    |             |
+    # T---a*a-------3 1--T1
+    # |    |\4,5->3,4    2->0
+    # 0->1 1->2
+    upper_half =contract(C1x2_RU, C2x2_LU, ([0,1],[2,3]))
 
     #----- building C2x2_LD ----------------------------------------------------
     vec = (0,1)
     shift_r = state.vertexToSite((coord[0]+vec[0],coord[1]+vec[1]))
     C2x2_LD= open_C2x2_LD(shift_r, state, env, verbosity=verbosity)
-    C2x2_LD= _group_legs_C2x2_LD(C2x2_LD)
+    # C2x2_LD= _group_legs_C2x2_LD(C2x2_LD)
 
     if verbosity>0:
         print(f"C2X2 LD {(coord[0]+vec[0],coord[1]+vec[1])} -> {shift_r} "\
@@ -581,7 +609,7 @@ def rdm1x2(coord, state, env, sym_pos_def=False, verbosity=0):
     # 2<-1--C              1<-2--C
     C1x2_RD= contract(T2, C, ([2],[0]))
     C1x2_RD= permute(C1x2_RD, (0,2,1))
-    C1x2_RD, lo= C1x2_RD.group_legs((1,2), new_s=1)
+    # C1x2_RD, lo= C1x2_RD.group_legs((1,2), new_s=1)
 
     if verbosity>0:
         print(f"C1X2 RD {(coord[0]+vec[0],coord[1]+vec[1])} -> {shift_r} "\
@@ -591,7 +619,13 @@ def rdm1x2(coord, state, env, sym_pos_def=False, verbosity=0):
     # 0->1(+1)      0
     # |/23          |
     # C2x2_LD--1 1--C1x2_RD 
-    lower_half =contract(C1x2_RD, C2x2_LD, ([1],[1]))
+    # lower_half =contract(C1x2_RD, C2x2_LD, ([1],[1]))
+    # 0->1 1->2 4,5->3,4
+    # |    | --/          0
+    # T---a*a--------3 2--T2
+    # |    |              |
+    # C----T---------2 1--C
+    lower_half =contract(C1x2_RD, C2x2_LD, ([1,2],[2,3]))
 
     # construct reduced density matrix by contracting lower and upper halfs
     # C2x2_LU------C1x2_RU
@@ -600,7 +634,14 @@ def rdm1x2(coord, state, env, sym_pos_def=False, verbosity=0):
     # 1            0
     # |/23         |
     # C2x2_LD------C1x2_RD
-    rdm =contract(upper_half,lower_half,([0,1],[0,1]))
+    # rdm =contract(upper_half,lower_half,([0,1],[0,1]))
+    # C2x2_LU------C1x2_RU
+    # | | \34->01     |
+    # 1 2             0
+    # 1 2             0
+    # | | /34         |
+    # C2x2_LD------C1x2_RD
+    rdm =contract(upper_half,lower_half,([0,1,2],[0,1,2]))
 
     # permute into order of s0,s1;s0',s1' where primed indices
     # represent "bra"
