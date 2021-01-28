@@ -73,9 +73,8 @@ def main():
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
             history=[]
-        e_curr = model.energy_2x1_1x2(state, env).to_number()
+        e_curr = model.energy_2x1_1x2(state, env).item()
         history.append(e_curr)
-        print(history)
 
         if (len(history) > 1 and abs(history[-1]-history[-2]) < ctm_args.ctm_conv_tol)\
             or len(history) >= ctm_args.ctm_max_iter:
@@ -116,21 +115,25 @@ def main():
 
     @torch.no_grad()
     def obs_fn(state, ctm_env, opt_context):
-        if ("line_search" in opt_context.keys() and not opt_context["line_search"]) \
-            or not "line_search" in opt_context.keys():
+        if opt_context["line_search"]:
+            epoch= len(opt_context["loss_history"]["loss_ls"])
+            loss= opt_context["loss_history"]["loss_ls"][-1]
+            print("LS",end=" ")
+        else:
             epoch= len(opt_context["loss_history"]["loss"]) 
-            loss= opt_context["loss_history"]["loss"][-1]
-            obs_values, obs_labels = model.eval_obs(state,ctm_env)
-            print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
+            loss= opt_context["loss_history"]["loss"][-1] 
+        obs_values, obs_labels = model.eval_obs(state,ctm_env)
+        print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
 
-            # with torch.no_grad():
-            #     if args.top_freq>0 and epoch%args.top_freq==0:
-            #         coord_dir_pairs=[((0,0), (1,0)), ((0,0), (0,1)), ((1,1), (1,0)), ((1,1), (0,1))]
-            #         for c,d in coord_dir_pairs:
-            #             # transfer operator spectrum
-            #             print(f"TOP spectrum(T)[{c},{d}] ",end="")
-            #             l= transferops.get_Top_spec(args.top_n, c,d, state, ctm_env)
-            #             print("TOP "+json.dumps(_to_json(l)))
+        # with torch.no_grad():
+        #     if (not opt_context["line_search"]) and args.top_freq>0 \
+        #         and epoch%args.top_freq==0:
+        #         coord_dir_pairs=[((0,0), (1,0)), ((0,0), (0,1)), ((1,1), (1,0)), ((1,1), (0,1))]
+        #         for c,d in coord_dir_pairs:
+        #             # transfer operator spectrum
+        #             print(f"TOP spectrum(T)[{c},{d}] ",end="")
+        #             l= transferops.get_Top_spec(args.top_n, c,d, state, ctm_env)
+        #             print("TOP "+json.dumps(_to_json(l)))
 
     # optimize
     optimize_state(state, ctm_env, loss_fn, obs_fn=obs_fn)

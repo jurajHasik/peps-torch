@@ -231,7 +231,7 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, direction, \
         def truncated_svd(M, chi, sU=1):
             # return truncated_svd_gesdd(M, chi, verbosity=ctm_args.verbosity_projectors)
             return M.split_svd((0,1), tol=ctm_args.projector_svd_reltol, D_total=chi, \
-                sU=sU)
+                sU=sU, keep_multiplets=True)
     # elif ctm_args.projector_svd_method == 'ARP':
     #     def truncated_svd(M, chi):
     #         return truncated_svd_arnoldi(M, chi, verbosity=ctm_args.verbosity_projectors)

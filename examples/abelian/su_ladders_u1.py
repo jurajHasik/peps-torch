@@ -31,6 +31,7 @@ parser.add_argument("--SU_init_step", type=float, default=0.1, help="intial SU (
 parser.add_argument("--SU_ctm_obs_freq", type=int, default=0)
 parser.add_argument("--SU_adaptive_slowdown_factor", type=float, default=0.5)
 parser.add_argument("--SU_stop_cond", type=float, default=1.0e-6)
+parser.add_argument("--SU_min_energy_diff", type=float, default=1.0e-8)
 parser.add_argument("--SU_max_steps", type=int, default=1000)
 args, unknown_args = parser.parse_known_args()
 
@@ -81,9 +82,8 @@ def main():
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
             history=[]
-        e_curr = model.energy_2x1_1x2(state, env).to_number()
+        e_curr = model.energy_2x1_1x2(state, env).item()
         history.append(e_curr)
-        print(history)
 
         if (len(history) > 1 and abs(history[-1]-history[-2]) < ctm_args.ctm_conv_tol)\
             or len(history) >= ctm_args.ctm_max_iter:
@@ -169,10 +169,10 @@ def main():
     outputstatefile= args.out_prefix+"_state.json"
     opt_context= {"loss_history": {"loss":[loss], "beta": 0, \
         "time_step": [args.SU_init_step]}}
-    su_opts={"weight_inv_cutoff": 1.0e-14, "max_D_total": args.SU_max_D, \
+    su_opts={"weight_inv_cutoff": 1.0e-14, "max_D_total": args.bond_dim, \
         "log_level": 0}
     gate_seq_SS= model.gen_gate_seq_2S_2ndOrder(args.SU_init_step)
-    for tstep in range(args.SU_max_steps):
+    for tstep in range(args.opt_max_iter):
         state_w= run_seq_2s(state_w, gate_seq_SS, su_opts)
         opt_context["loss_history"]["beta"] += opt_context["loss_history"]["time_step"][-1]
 
@@ -184,10 +184,12 @@ def main():
             obs_fn(_tmp_state, ctm_env, opt_context)
 
         # 
-        _energy_criterion= len(opt_context["loss_history"]["loss"])<2 \
-            or opt_context["loss_history"]["loss"][-1] < opt_context["loss_history"]["loss"][-2]
+        _energy_criterion=-1.0
+        if len(opt_context["loss_history"]["loss"])>2:
+            _energy_criterion= opt_context["loss_history"]["loss"][-1] - \
+                opt_context["loss_history"]["loss"][-2]
 
-        if args.SU_policy=="ADAPTIVE" and not _energy_criterion:
+        if args.SU_policy=="ADAPTIVE" and abs(_energy_criterion)<args.SU_min_energy_diff:
             # # rollback to previous state
             opt_context["loss_history"]["beta"] -= opt_context["loss_history"]["time_step"][-1]
             state= read_ipeps(outputstatefile, settings)
@@ -198,7 +200,7 @@ def main():
             opt_context["loss_history"]["time_step"].append(new_ts)
             gate_seq_SS= model.gen_gate_seq_2S_2ndOrder(new_ts)
             
-        elif _energy_criterion:
+        elif _energy_criterion<0:
             # store new state
             _tmp_state= state_w.absorb_weights()
             _tmp_state.write_to_file(outputstatefile)
