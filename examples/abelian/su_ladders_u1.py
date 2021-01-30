@@ -179,7 +179,12 @@ def main():
         if args.SU_policy=="ADAPTIVE" or (args.SU_ctm_obs_freq>0 \
             and tstep%args.SU_ctm_obs_freq==0):
             _tmp_state= state_w.absorb_weights()
-            loss, ctm_env, *ctm_log= loss_fn(_tmp_state, ctm_env)
+            try:
+                loss, ctm_env, *ctm_log= loss_fn(_tmp_state, ctm_env)
+            except Exception as err:
+                _tmp_state.write_to_file(args.out_prefix+"_ERR_state.json")
+                raise err
+
             opt_context["loss_history"]["loss"].append(loss)
             obs_fn(_tmp_state, ctm_env, opt_context)
 
@@ -189,7 +194,7 @@ def main():
             _energy_criterion= opt_context["loss_history"]["loss"][-1] - \
                 opt_context["loss_history"]["loss"][-2]
 
-        if args.SU_policy=="ADAPTIVE" and abs(_energy_criterion)<args.SU_min_energy_diff:
+        if args.SU_policy=="ADAPTIVE" and _energy_criterion > -args.SU_min_energy_diff:
             # # rollback to previous state
             opt_context["loss_history"]["beta"] -= opt_context["loss_history"]["time_step"][-1]
             state= read_ipeps(outputstatefile, settings)
@@ -200,7 +205,7 @@ def main():
             opt_context["loss_history"]["time_step"].append(new_ts)
             gate_seq_SS= model.gen_gate_seq_2S_2ndOrder(new_ts)
             
-        elif _energy_criterion<0:
+        elif _energy_criterion < -args.SU_min_energy_diff:
             # store new state
             _tmp_state= state_w.absorb_weights()
             _tmp_state.write_to_file(outputstatefile)
