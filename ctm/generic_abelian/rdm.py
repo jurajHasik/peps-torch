@@ -329,14 +329,14 @@ def rdm1x1(coord, state, env, sym_pos_def=False, verbosity=0):
     who= "rdm1x1"
     r= state.vertexToSite(coord)
     rdm= open_C2x2_LD(r, state, env, verbosity=verbosity)
-    rdm= _group_legs_C2x2_LD(rdm)
+    # rdm= _group_legs_C2x2_LD(rdm)
 
 
     # C(-1,-1)--1 0--T(0,-1)--2  => C---T--2->1(-1)
     # 0              1               \ /
     #                                 0(-1)
     C2x1_LU= contract(env.C[(r,(-1,-1))], env.T[(r,(0,-1))],([1],[0]))
-    C2x1_LU, lo= C2x1_LU.group_legs((0,1), new_s=-1) 
+    # C2x1_LU, lo= C2x1_LU.group_legs((0,1), new_s=-1) 
 
     # C2x1_LU--1->0 => C2x1_LU--0
     # |                |         \0(-1)
@@ -344,8 +344,17 @@ def rdm1x1(coord, state, env, sym_pos_def=False, verbosity=0):
     # 0__ _/           |rdm|----1
     # |    |               \2,3->1,2
     # |rdm_|--1 <-NOTE: contains both env index and double layer aux-indices)
-    rdm= contract(C2x1_LU, rdm, ([0],[0]))
-    rdm, lo= rdm.group_legs((0,1), new_s=-1)
+    #rdm= contract(C2x1_LU, rdm, ([0],[0]))
+    #rdm, lo= rdm.group_legs((0,1), new_s=-1)
+    # C----T--2->0
+    # 0    1
+    # 0    1  4,5->3,4
+    # |    | /
+    # T---a*a--3->2
+    # |    |
+    # C----T---2->1
+    rdm= contract(C2x1_LU, rdm, ([0,1],[0,1]))
+
     if verbosity>0:
         print("rdm=CTCTaT "+str(rdm))
 
@@ -355,14 +364,22 @@ def rdm1x1(coord, state, env, sym_pos_def=False, verbosity=0):
     #       0          0--<   |
     # 0<-1--C(1,1)         0--C(1,1)
     E= contract(env.C[(r,(1,1))], env.T[(r,(1,0))], ([0],[2]))
-    E, lo= E.group_legs((0,2), new_s=1)
+    # E, lo= E.group_legs((0,2), new_s=1)
 
     #    0--C(1,-1) =>          0--C
     #       1           (+1)0--<   |
     #       1                   1--E
     # 1<-0--E
+    # E= contract(env.C[(r,(1,-1))], E, ([1],[1]))
+    # E, lo= E.group_legs((0,1), new_s=1)
+    #    0--C
+    #       1 
+    #       1  
+    #    2--T(1,0)
+    #       |
+    #       |
+    # 1<-0--C(1,1)
     E= contract(env.C[(r,(1,-1))], E, ([1],[1]))
-    E, lo= E.group_legs((0,1), new_s=1)
 
     if verbosity>0:
         print("rdm=CTC "+str(E))
@@ -374,7 +391,16 @@ def rdm1x1(coord, state, env, sym_pos_def=False, verbosity=0):
     # |         |              |       |  | 
     # |         |              |       |  |
     # C(-1,1)---T(0,1)---------/       \--C(1,1)
-    rdm = contract(rdm,E,([0],[0]))
+    # rdm = contract(rdm,E,([0],[0]))
+    # C----T------0 0--C
+    # |    |           |
+    # |    |  3,4      | 
+    # |    | /         |
+    # T---a*a-----2 2--T
+    # |    |           |
+    # C----T------1 1--C
+    rdm = contract(rdm,E,([0,2,1],[0,2,1]))
+
     if verbosity>0:
         print("rdm=CTCTaTCTC "+str(rdm))
 

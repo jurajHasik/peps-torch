@@ -181,12 +181,11 @@ def main():
             _tmp_state= state_w.absorb_weights()
             try:
                 loss, ctm_env, *ctm_log= loss_fn(_tmp_state, ctm_env)
+                obs_fn(_tmp_state, ctm_env, opt_context)
             except Exception as err:
                 _tmp_state.write_to_file(args.out_prefix+"_ERR_state.json")
                 raise err
-
             opt_context["loss_history"]["loss"].append(loss)
-            obs_fn(_tmp_state, ctm_env, opt_context)
 
         # 
         _energy_criterion=-1.0
