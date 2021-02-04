@@ -175,7 +175,7 @@ def ctm_MOVE_dl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
     # function wrapping up the core of the CTM MOVE segment of CTM algorithm
     def ctm_MOVE_dl_c(*tensors):
         A, C, T= tensors
-        if global_args.device=='cpu' and ctm_args.step_core_gpu:
+        if global_args.device=='cpu' and global_args.offload_to_gpu != 'None':
             A= A.cuda()
             C= C.cuda()
             T= T.cuda()
@@ -243,7 +243,7 @@ def ctm_MOVE_dl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
         C2X2= C2X2/torch.abs(C2X2[0,0])
         nT= nT/nT.norm()
 
-        if global_args.device=='cpu' and ctm_args.step_core_gpu:
+        if global_args.device=='cpu' and global_args.offload_to_gpu != 'None':
             C2X2= C2X2.cpu()
             nT= nT.cpu()
 
@@ -287,7 +287,7 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
     # function wrapping up the core of the CTM MOVE segment of CTM algorithm
     def ctm_MOVE_sl_c(*tensors):
         a, C, T= tensors
-        if global_args.device=='cpu' and ctm_args.step_core_gpu:
+        if global_args.device=='cpu' and global_args.offload_to_gpu != 'None':
             #loc_gpu= torch.device(global_args.gpu)
             a= a.cuda()
             C= C.cuda()
@@ -385,7 +385,7 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
         nT= nT/nT.abs().max()
         #nT= nT/nT.norm()
 
-        if global_args.device=='cpu' and ctm_args.step_core_gpu:
+        if global_args.device=='cpu' and global_args.offload_to_gpu != 'None':
             C2X2= C2X2.cpu()
             nT= nT.cpu()
 
