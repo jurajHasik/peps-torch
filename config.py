@@ -134,17 +134,17 @@ class GLOBALARGS():
     :vartype dtype: torch.dtype
     :ivar device: device on which all the torch.tensors are stored. Default: ``'cpu'``
     :vartype device: str
-    :ivar gpu: gpu used for optional acceleration. It might be desirable to store the model 
+    :ivar offload_to_gpu: gpu used for optional acceleration. It might be desirable to store the model 
                and all the intermediates of CTM on CPU and compute only the core parts of the expensive
-               CTM step on GPU. Default: ``''``
-    :vartype gpu: str
+               CTM step on GPU. Default: ``'None'``
+    :vartype offload_to_gpu: str
     """
     def __init__(self):
         self.tensor_io_format= "legacy"
         self.dtype= "float64"
         self.torch_dtype= torch.float64
         self.device= 'cpu'
-        self.gpu= ''
+        self.offload_to_gpu= 'None'
 
     def __str__(self):
         res=type(self).__name__+"\n"
@@ -252,11 +252,6 @@ class CTMARGS():
     :vartype verbosity_ctm_move: int
     :ivar verbosity_rdm: verbosity of reduced density matrix routines. Default: ``0``
     :vartype verbosity_rdm: int
-
-    :ivar step_core_gpu: assuming the default device is CPU, offload the core part of the CTM step 
-                       to GPU. Together with CTM step checkpointing ``fwd_checkpoint_move`` allows
-                       to store all intermediates on CPU.
-    :vartype step_core_gpu: bool
     """
     def __init__(self):
         self.ctm_max_iter= 50
@@ -284,7 +279,6 @@ class CTMARGS():
         self.fwd_checkpoint_projectors = False
         self.fwd_checkpoint_absorb = False
         self.fwd_checkpoint_move = False
-        self.step_core_gpu = False
 
     def __str__(self):
         res=type(self).__name__+"\n"

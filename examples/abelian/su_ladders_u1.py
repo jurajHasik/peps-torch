@@ -181,13 +181,13 @@ def main():
             _tmp_state= state_w.absorb_weights()
             try:
                 loss, ctm_env, *ctm_log= loss_fn(_tmp_state, ctm_env)
+                opt_context["loss_history"]["loss"].append(loss)
                 obs_fn(_tmp_state, ctm_env, opt_context)
             except Exception as err:
                 _tmp_state.write_to_file(args.out_prefix+"_ERR_state.json")
                 raise err
-            opt_context["loss_history"]["loss"].append(loss)
 
-        # 
+        # check CTM energy and depending on policy adjust time step
         _energy_criterion=-1.0
         if len(opt_context["loss_history"]["loss"])>2:
             _energy_criterion= opt_context["loss_history"]["loss"][-1] - \

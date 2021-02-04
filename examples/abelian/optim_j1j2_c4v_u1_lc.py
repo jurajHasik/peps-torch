@@ -156,7 +156,7 @@ def main():
     
     # 6) compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"
-    state= read_ipeps_c4v_lc(outputstatefiles, settings)
+    state= read_ipeps_c4v_lc(outputstatefile, settings)
     ctm_env= ENV_C4V_ABELIAN(args.chi, state=state, init=True)
     ctm_env, *ctm_log = ctmrg_c4v.run(state, ctm_env, conv_check=ctmrg_conv_f)
     opt_energy = energy_f(state,ctm_env,force_cpu=args.force_cpu)

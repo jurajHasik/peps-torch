@@ -216,6 +216,12 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
     
     # function wrapping up the core of the CTM MOVE segment of CTM algorithm
     def ctm_MOVE_sl_c(*tensors):
+        #
+        # keep inputs for autograd stored on cpu, move to gpu for the core 
+        # of the computation if desired
+        if global_args.offload_to_gpu != 'None' and global_args.device=='cpu':
+            tensors=  tuple(r1d.to(global_args.offload_to_gpu) for r1d in tensors)
+
         a,C,T= tuple(decompress_from_1d(r1d, settings=env.engine, d=meta) \
             for r1d,meta in zip(tensors,metadata_store["in"]))
 
@@ -319,6 +325,10 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
         # 2) Return raw new tensors
         tmp_loc= tuple([C2X2.compress_to_1d(), nT.compress_to_1d()])
         metadata_store["out"], tensors_loc= list(zip(*tmp_loc))
+
+        # move back to (default) cpu if offload_to_gpu is specified
+        if global_args.offload_to_gpu != 'None' and global_args.device=='cpu':
+            tensors_loc= tuple(r1d.to(global_args.device) for r1d in tensors_loc)
 
         return tensors_loc
 
