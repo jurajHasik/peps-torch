@@ -55,7 +55,9 @@ class IPEPS_ABELIAN_C4V_LC(IPEPS_ABELIAN_C4V):
         self.abelian_sym_data= abelian_sym_data
         self.elem_tensors= elem_tensors
         self.coeffs= OrderedDict(coeffs)
-        self.sites[(0,0)]= self.build_onsite_tensors()
+        if (elem_tensors and len(elem_tensors)>0):
+            assert len(coeffs)==1, "single-site ipeps is assumed"
+            self.sites[(0,0)]= self.build_onsite_tensors()
 
     def build_onsite_tensors(self, verbosity=0):
         if not self.abelian_sym_data or self.nsym==0:
