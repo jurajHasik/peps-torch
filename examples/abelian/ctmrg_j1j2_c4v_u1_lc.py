@@ -61,7 +61,7 @@ def main():
         state= state.add_noise(args.instate_noise)
         #state.sites[(0,0)]= state.sites[(0,0)]/state.sites[(0,0)].max_abs()
     elif args.opt_resume is not None:
-        state= IPEPS_ABELIAN_C4V_LC(settings, None, None, None)
+        state= IPEPS_ABELIAN_C4V_LC(settings, None, dict(), None)
         state.load_checkpoint(args.opt_resume)
     else:
         raise ValueError("Missing trial state: --instate=None and --ipeps_init_type= "\

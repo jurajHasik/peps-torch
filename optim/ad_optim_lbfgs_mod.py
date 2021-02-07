@@ -114,7 +114,6 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
     #@profile
     def closure(linesearching=False):
         context["line_search"]= linesearching
-        optimizer.zero_grad()
         
         # 0) evaluate loss
         optimizer.zero_grad()
