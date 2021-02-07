@@ -10,6 +10,7 @@ from models.abelian import j1j2
 from ctm.one_site_c4v_abelian.env_c4v_abelian import *
 from ctm.one_site_c4v_abelian import ctmrg_c4v
 from ctm.one_site_c4v_abelian.rdm_c4v import rdm2x1
+from ctm.one_site_c4v_abelian import transferops_c4v
 import json
 import unittest
 import logging
@@ -119,11 +120,23 @@ def main():
     print("FINAL "+", ".join([f"{e_curr0}"]+[f"{v}" for v in obs_values0]))
     print(f"TIMINGS ctm: {t_ctm} conv_check: {t_obs}")
 
+    # ----- additional observables ---------------------------------------------
+    # corrSS= model.eval_corrf_SS(state, ctm_env, args.corrf_r, canonical=args.corrf_canonical)
+    # print("\n\nSS r "+" ".join([label for label in corrSS.keys()])+f" canonical {args.corrf_canonical}")
+    # for i in range(args.corrf_r):
+    #     print(f"{i} "+" ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
+
     # environment diagnostics
     print("\n\nspectrum(C)")
     D,m= ctm_env.compute_multiplets()
     for i in range(len(D)):
         print(f"{i} {D[i]}")
+
+    # transfer operator spectrum 1-site-width channel
+    print("\n\nspectrum(T)")
+    l= transferops_c4v.get_Top_spec_c4v(args.top_n, state, ctm_env)
+    for i in range(l.size()[0]):
+        print(f"{i} {l[i,0]} {l[i,1]}")
 
 if __name__=='__main__':
     if len(unknown_args)>0:

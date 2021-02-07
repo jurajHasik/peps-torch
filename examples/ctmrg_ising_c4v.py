@@ -142,6 +142,11 @@ def main():
     print(f"TIMINGS ctm: {t_ctm} conv_check: {t_obs}")
 
     # 7) ----- additional observables ---------------------------------------------
+    corrSS= model.eval_corrf_SS(state, ctm_env_init, args.corrf_r)
+    print("\n\nSS r "+" ".join([label for label in corrSS.keys()]))
+    for i in range(args.corrf_r):
+        print(f"{i} "+" ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
+
     # environment diagnostics
     print("\n\nspectrum(C)")
     u,s,v= torch.svd(ctm_env_init.C[ctm_env_init.keyC], compute_uv=False)
