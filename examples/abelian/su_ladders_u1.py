@@ -25,14 +25,18 @@ parser.add_argument("--symmetry", default=None, help="symmetry structure", choic
 parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
-parser.add_argument("--SU_max_D", type=int, default=1, help="maximal bond dimension within SU")
+# Alternative 
+# --bond_dim, default=1, help="maximal bond dimension within SU")
+# ADAPTIVE policy computes real (CTM) energy every SU step
+#          and adjusts the time by SU_adaptive_slowdown_factor step if the
+#          energy increases
 parser.add_argument("--SU_policy", type=str, default="ADAPTIVE", help="SU policy", choices=["ADAPTIVE","REGULAR"])
 parser.add_argument("--SU_init_step", type=float, default=0.1, help="intial SU (imaginary) time step")
 parser.add_argument("--SU_ctm_obs_freq", type=int, default=0)
 parser.add_argument("--SU_adaptive_slowdown_factor", type=float, default=0.5)
 parser.add_argument("--SU_stop_cond", type=float, default=1.0e-6)
 parser.add_argument("--SU_min_energy_diff", type=float, default=1.0e-8)
-parser.add_argument("--SU_max_steps", type=int, default=1000)
+# --opt_max_iter, type=int, default=1000, help="maximal number of SU steps"
 args, unknown_args = parser.parse_known_args()
 
 def main():

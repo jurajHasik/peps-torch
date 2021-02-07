@@ -95,8 +95,6 @@ def ctm_MOVE_dl(a_dl, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg
             for r1d,meta in zip(tensors,metadata_store["in"]))
         A, C, T= tensors
 
-        import pdb
-        pdb.set_trace()
         # 1) build enlarged corner upper left corner
         C2X2= c2x2_dl(A, C, T, verbosity=ctm_args.verbosity_projectors)
 

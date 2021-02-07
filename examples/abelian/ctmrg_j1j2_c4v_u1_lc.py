@@ -9,6 +9,7 @@ from models.abelian import j1j2
 from ctm.one_site_c4v_abelian.env_c4v_abelian import *
 from ctm.one_site_c4v_abelian import ctmrg_c4v
 from ctm.one_site_c4v_abelian.rdm_c4v import rdm2x1
+from ctm.one_site_c4v_abelian import transferops_c4v
 import json
 import unittest
 import logging
@@ -21,6 +22,10 @@ parser.add_argument("--j1", type=float, default=1., help="nearest-neighbour coup
 parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour coupling")
 parser.add_argument("--hz_stag", type=float, default=0., help="staggered mag. field")
 parser.add_argument("--delta_zz", type=float, default=1., help="easy-axis (nearest-neighbour) anisotropy")
+# additional observables-related arguments
+parser.add_argument("--corrf_canonical", action='store_true', help="align spin operators" \
+    + " with the vector of spontaneous magnetization")
+parser.add_argument("--corrf_r", type=int, default=1, help="maximal correlation function distance")
 parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
@@ -118,11 +123,27 @@ def main():
     print("FINAL "+", ".join([f"{e_curr0}"]+[f"{v}" for v in obs_values0]))
     print(f"TIMINGS ctm: {t_ctm} conv_check: {t_obs}")
 
+    # ----- additional observables ---------------------------------------------
+    # corrSS= model.eval_corrf_SS(state, ctm_env, args.corrf_r, canonical=args.corrf_canonical)
+    # print("\n\nSS r "+" ".join([label for label in corrSS.keys()])+f" canonical {args.corrf_canonical}")
+    # for i in range(args.corrf_r):
+    #     print(f"{i} "+" ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
+
     # environment diagnostics
     print("\n\nspectrum(C)")
     D,m= ctm_env.compute_multiplets()
     for i in range(len(D)):
         print(f"{i} {D[i]}")
+
+    # transfer operator spectrum 1-site-width channel
+    print("\n\nspectrum(T)")
+    import time
+    t0_ctm= time.perf_counter()
+    l= transferops_c4v.get_Top_spec_c4v(args.top_n, state, ctm_env)
+    for i in range(l.size()[0]):
+        print(f"{i} {l[i,0]} {l[i,1]}")
+    t1_ctm= time.perf_counter()
+    print(f"{t1_ctm-t0_ctm}")
 
 if __name__=='__main__':
     if len(unknown_args)>0:

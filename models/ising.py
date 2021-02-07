@@ -2,6 +2,7 @@ import torch
 import groups.su2 as su2
 from ctm.generic import rdm
 from ctm.one_site_c4v import rdm_c4v
+from ctm.one_site_c4v import corrf_c4v
 import config as cfg
 from math import sqrt
 import itertools
@@ -321,3 +322,20 @@ class ISING_C4V():
         obs_labels+= ["SzSzSzSz"]
         obs_values=[obs[label] for label in obs_labels]
         return obs_values, obs_labels
+
+    def eval_corrf_SS(self,state,env_c4v,dist):
+        Sop_zxy= torch.zeros((3,self.phys_dim,self.phys_dim),dtype=self.dtype,device=self.device)
+        Sop_zxy[0,:,:]= self.obs_ops["sz"]
+        Sop_zxy[1,:,:]= 0.5*(self.obs_ops["sp"] + self.obs_ops["sm"])    # S^x
+
+        # dummy function, since no sublattice rotation is present
+        def get_op(op):
+            op_0= op
+            def _gen_op(r): return op_0
+            return _gen_op
+
+        Sz0szR= corrf_c4v.corrf_1sO1sO(state, env_c4v, Sop_zxy[0,:,:], get_op(Sop_zxy[0,:,:]), dist)
+        Sx0sxR= corrf_c4v.corrf_1sO1sO(state, env_c4v, Sop_zxy[1,:,:], get_op(Sop_zxy[1,:,:]), dist)
+ 
+        res= dict({"ss": Sz0szR+Sx0sxR, "szsz": Sz0szR, "sxsx": Sx0sxR})
+        return res
