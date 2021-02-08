@@ -4,7 +4,7 @@ from groups.pg import make_c4v_symm
 import config as cfg
 
 class IPEPS_C4V(ipeps.IPEPS):
-    def __init__(self, site, peps_args=cfg.peps_args, global_args=cfg.global_args):
+    def __init__(self, site=None, peps_args=cfg.peps_args, global_args=cfg.global_args):
         r"""
         :param site: on-site tensor
         :param peps_args: ipeps configuration
@@ -24,8 +24,12 @@ class IPEPS_C4V(ipeps.IPEPS):
         where s denotes physical index, and u,l,d,r label four principal directions
         up, left, down, right in anti-clockwise order starting from up.
         """
-        assert isinstance(site,torch.Tensor), "site is not a torch.Tensor"
-        super().__init__(dict({(0,0): site}),peps_args=peps_args,\
+        if site is not None:
+            assert isinstance(site,torch.Tensor), "site is not a torch.Tensor"
+            sites= {(0,0): site}
+        else:
+            sites= dict()
+        super().__init__(sites, lX=1, lY=1, peps_args=peps_args,\
             global_args=global_args)
 
     def site(self,coord=None):
