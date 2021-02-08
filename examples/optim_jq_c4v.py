@@ -52,7 +52,7 @@ def main():
         state.add_noise(args.instate_noise)
         state.sites[(0,0)]= state.sites[(0,0)]/torch.max(torch.abs(state.sites[(0,0)]))
     elif args.opt_resume is not None:
-        state= IPEPS_C4V(torch.tensor(0.))
+        state= IPEPS_C4V()
         state.load_checkpoint(args.opt_resume)
     elif args.ipeps_init_type=='RANDOM':
         bond_dim = args.bond_dim
