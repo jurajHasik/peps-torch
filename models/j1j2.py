@@ -13,7 +13,7 @@ from math import sqrt
 import itertools
 
 class J1J2():
-    def __init__(self, j1=1.0, j2=0.0, global_args=cfg.global_args):
+    def __init__(self, j1=1.0, j2=0, global_args=cfg.global_args):
         r"""
         :param j1: nearest-neighbour interaction
         :param j2: next nearest-neighbour interaction
@@ -48,6 +48,7 @@ class J1J2():
         self.phys_dim=2
         self.j1=j1
         self.j2=j2
+        self.j3=j3
         
         self.h2, self.h2x2_nn, self.h2x2_nnn= self.get_h()
         self.obs_ops= self.get_obs_ops()
@@ -364,7 +365,7 @@ class J1J2():
         return res  
 
 class J1J2_C4V_BIPARTITE():
-    def __init__(self, j1=1.0, j2=0.0, hz_stag= 0.0, delta_zz=1.0, \
+    def __init__(self, j1=1.0, j2=0, j3=0, hz_stag= 0.0, delta_zz=1.0, \
         global_args=cfg.global_args):
         r"""
         :param j1: nearest-neighbour interaction
@@ -413,6 +414,7 @@ class J1J2_C4V_BIPARTITE():
         self.phys_dim=2
         self.j1=j1
         self.j2=j2
+        self.j3=j3
         self.hz_stag=hz_stag
         self.delta_zz=delta_zz
         
@@ -493,6 +495,11 @@ class J1J2_C4V_BIPARTITE():
         rdm2x2= rdm_c4v.rdm2x2(state,env_c4v,sym_pos_def=True,\
             verbosity=cfg.ctm_args.verbosity_rdm)
         energy_per_site= torch.einsum('ijklabcd,ijklabcd',rdm2x2,self.hp)
+        if abs(self.j3)>0:
+            rdm3x1= rdm_c4v.rdm3x1(state,env_c4v,sym_pos_def=True,\
+                force_cpu=False,verbosity=cfg.ctm_args.verbosity_rdm)
+            ss_3x1= torch.einsum('ijab,ijab',rdm3x1,self.SS)
+            energy_per_site= energy_per_site + 2*self.j3*ss_3x1
         return energy_per_site
 
     def energy_1x1_lowmem(self, state, env_c4v, force_cpu=False):
@@ -535,6 +542,11 @@ class J1J2_C4V_BIPARTITE():
         energy_per_site= 2.0*self.j1*torch.einsum('ijkl,ijkl',rdm2x2_NN,self.SS_delta_zz_rot)\
             + 2.0*self.j2*torch.einsum('ijkl,ijkl',rdm2x2_NNN,self.SS) \
             - 0.5*self.hz_stag * torch.einsum('ijkl,ijkl',rdm2x2_NN,self.hz_2x1_rot)
+        if abs(self.j3)>0:
+            rdm3x1= rdm_c4v.rdm3x1_sl(state,env_c4v,sym_pos_def=True,\
+                force_cpu=force_cpu,verbosity=cfg.ctm_args.verbosity_rdm)
+            ss_3x1= torch.einsum('ijab,ijab',rdm3x1,self.SS)
+            energy_per_site= energy_per_site + 2*self.j3*ss_3x1
         return energy_per_site
 
     def energy_1x1_tiled(self, state, env_c4v, force_cpu=False):
@@ -577,6 +589,11 @@ class J1J2_C4V_BIPARTITE():
         energy_per_site= 2.0*self.j1*torch.einsum('ijkl,ijkl',rdm2x2_NN,self.SS_delta_zz_rot)\
             + 2.0*self.j2*torch.einsum('ijkl,ijkl',rdm2x2_NNN,self.SS) \
             - 0.5*self.hz_stag * torch.einsum('ijkl,ijkl',rdm2x2_NN,self.hz_2x1_rot)
+        if abs(self.j3)>0:
+            rdm3x1= rdm_c4v.rdm3x1_sl(state,env_c4v,sym_pos_def=True,\
+                force_cpu=force_cpu,verbosity=cfg.ctm_args.verbosity_rdm)
+            ss_3x1= torch.einsum('ijab,ijab',rdm3x1,self.SS)
+            energy_per_site= energy_per_site + 2*self.j3*ss_3x1
         return energy_per_site
 
     def eval_obs(self,state,env_c4v,force_cpu=False):
@@ -617,6 +634,11 @@ class J1J2_C4V_BIPARTITE():
         # expect "list" of (observable label, value) pairs ?
         obs= dict()
         with torch.no_grad():
+            if abs(self.j3)>0:
+                rdm3x1= rdm_c4v.rdm3x1(state,env_c4v,force_cpu=force_cpu,\
+                    verbosity=cfg.ctm_args.verbosity_rdm)
+                obs[f"SS3x1"]= torch.einsum('ijab,ijab',rdm3x1,self.SS)
+
             rdm2x1= rdm_c4v.rdm2x1_sl(state,env_c4v,force_cpu=force_cpu,\
                 verbosity=cfg.ctm_args.verbosity_rdm)
             obs[f"SS2x1"]= torch.einsum('ijab,ijab',rdm2x1,self.SS_rot)
@@ -630,6 +652,7 @@ class J1J2_C4V_BIPARTITE():
             
         # prepare list with labels and values
         obs_labels=[f"m"]+[f"{lc}" for lc in self.obs_ops.keys()]+[f"SS2x1"]
+        if abs(self.j3)>0: obs_labels += [f"SS3x1"]
         obs_values=[obs[label] for label in obs_labels]
         return obs_values, obs_labels
 
