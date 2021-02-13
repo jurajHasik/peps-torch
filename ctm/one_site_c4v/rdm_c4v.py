@@ -670,6 +670,343 @@ def rdm2x1_sl(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
 
     return rdm
 
+def rdm3x1(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
+    r"""
+    :param state: underlying 1-site C4v symmetric wavefunction
+    :param env: C4v symmetric environment corresponding to ``state``
+    :param sym_pos_def: make final density matrix symmetric and non-negative (default: False)
+    :type sym_pos_def: bool
+    :param verbosity: logging verbosity
+    :type state: IPEPS_C4V
+    :type env: ENV_C4V
+    :type verbosity: int
+    :return: 2-site reduced density matrix with indices :math:`s_0s_1;s'_0s'_1`
+    :rtype: torch.tensor
+
+    Computes 2-site reduced density matrix :math:`\rho_{2x1}` of a horizontal 
+    3x1 subsystem using following strategy:
+    
+        1. compute upper left 2x2 corner and lower left 2x1 corner
+        2. construct left half of the network
+        3. contract with extra T-a^+a-T column
+        3. contract result with right half (identical to the left of step 2) to obtain final 
+           reduced density matrix
+
+    ::
+
+        C--T-----T-----T------C = C2x2--T----C2x2
+        |  |     |     |      |     |   a^+a  |
+        T--a^+a--a^+a--a^+a---T   C2x1--T----C2x1
+        |  |     |     |      |
+        C--T-----T-----T------C 
+
+    The physical indices `s` and `s'` of on-sites tensors :math:`a` (and :math:`a^\dagger`) 
+    are left uncontracted and given in the following order::
+        
+        s0 s1
+
+    The resulting reduced density matrix is identical to the one of vertical 1x2 subsystem
+    due to the C4v symmetry. 
+    """
+    who= "rdm3x1"
+    if force_cpu:
+        # move to cpu
+        C = env.C[env.keyC].cpu()
+        T = env.T[env.keyT].cpu()
+        a = next(iter(state.sites.values())).cpu()
+    else:
+        C = env.C[env.keyC]
+        T = env.T[env.keyT]
+        a = next(iter(state.sites.values()))
+
+    loc_device=a.device
+    is_cpu= loc_device==torch.device('cpu')
+    log_gpu_mem= (not is_cpu and verbosity>0)
+
+    def ten_size(t):
+        return t.element_size() * t.numel()
+
+    #----- building C2x2_LU ----------------------------------------------------
+    dimsa = a.size()
+    A_open = torch.einsum('mefgh,nabcd->eafbgchdmn',a,a).contiguous()\
+        .view(dimsa[1]**2, dimsa[2]**2, dimsa[3]**2, dimsa[4]**2, dimsa[0], dimsa[0])
+    A= torch.einsum('abcdii->abcd',A_open)
+
+    # C--1 0--T--1
+    # 0       2
+    if log_gpu_mem: _log_cuda_mem(loc_device,who,"CT_init")
+    C2x1 = torch.tensordot(C, T, ([1],[0]))
+    if log_gpu_mem: _log_cuda_mem(loc_device,who,"CT_end")
+
+    # C------T--1->0
+    # 0      2->1
+    # 0
+    # T2--2->3
+    # 1->2
+    if log_gpu_mem: _log_cuda_mem(loc_device,who,"CTT_init")
+    C2x2 = torch.tensordot(C2x1, T, ([0],[0]))
+    if log_gpu_mem: _log_cuda_mem(loc_device,who,"CTT_end")
+
+    # C-------T--0
+    # |       1
+    # |       0
+    # T2--3 1 A_open--3
+    # 2->1    2\45
+    if log_gpu_mem: _log_cuda_mem(loc_device,who,"CTTA_init")
+    C2x2 = torch.tensordot(C2x2, A_open, ([1,3],[0,1]))
+    if log_gpu_mem: _log_cuda_mem(loc_device,who,"CTTA_end")
+
+    # permute 012345->120345
+    # C2x2--2
+    # |__|--3
+    # | |\45
+    # 0 1
+    C2x2 = C2x2.permute(1,2,0,3,4,5).contiguous()
+
+    #----- build left part C2x2_LU--C2x1_LD ------------------------------------
+    # C2x2--2->1
+    # |__|--3->2
+    # | |\34
+    # 0 1
+    # 0 2
+    # C2x1--1->0
+    if log_gpu_mem: _log_cuda_mem(loc_device,who,"CTTATC_init")
+    left_half = torch.tensordot(C2x1, C2x2, ([0,2],[0,1]))
+    if log_gpu_mem: _log_cuda_mem(loc_device,who,"CTTATC_end")
+
+    #---- append extra T-a^+a-T column
+    #
+    # /--34->45
+    # C2x2--1->2
+    # |  |--2->3   2->1
+    # C2x1--0 0----T--1->0
+    r3x1 = torch.tensordot(T, left_half, ([0],[0]))
+    # /--45
+    # C2x2--2->3
+    # |
+    # |__        0
+    # |  |--3 1--A--3->1
+    # |  |       2
+    # |  |       1
+    # C2x1-------T--0->2
+    r3x1 = torch.tensordot(A, r3x1, ([1,2],[3,1]))
+    # /--45->34
+    # C2x2--3 0--T--1->0 
+    # |          2
+    # |__        0
+    # |  |-------A--1
+    # C2x1-------T--2
+    r3x1 = torch.tensordot(T, r3x1, ([0,2],[3,0]))
+
+    # construct reduced density matrix by contracting 2x1 channel with right half
+    # /--34->01        /--34->23
+    # C2x2----T--0 1--C2x2 
+    # |  |    |       |
+    # |  |----A--1 2--|
+    # C2x1----T--2 0--C2x1
+    if log_gpu_mem: _log_cuda_mem(loc_device,who,"rdm_init")
+    rdm = torch.tensordot(r3x1,left_half,([0,1,2],[1,2,0]))
+    if log_gpu_mem: _log_cuda_mem(loc_device,who,"rdm_end")
+
+    # permute into order of s0,s1;s0',s1' where primed indices
+    # represent "ket"
+    # 0123->0213
+    rdm= rdm.permute(0,2,1,3).contiguous()
+
+    # symmetrize
+    dimsRDM= rdm.size()
+    rdm= rdm.view(dimsRDM[0]**2,dimsRDM[0]**2)
+    
+    if sym_pos_def: 
+        rdm= _sym_pos_def(rdm, verbosity=verbosity, who="rdm2x1")
+
+    # normalize and reshape and move to original device
+    if verbosity>0: log.info(f"Tr(rdm2x1): {torch.trace(rdm)}\n")
+    rdm= rdm / torch.trace(rdm)
+    rdm= rdm.view(dimsRDM).to(env.device)
+
+    return rdm
+
+def rdm3x1_sl(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
+    r"""
+    :param state: underlying 1-site C4v symmetric wavefunction
+    :param env: C4v symmetric environment corresponding to ``state``
+    :param sym_pos_def: make final density matrix symmetric and non-negative (default: False)
+    :type sym_pos_def: bool
+    :param force_cpu: compute on cpu
+    :param verbosity: logging verbosity
+    :type state: IPEPS_C4V
+    :type env: ENV_C4V
+    :type force_cpu: bool
+    :type verbosity: int
+    :return: 2-site reduced density matrix with indices :math:`s_0s_1;s'_0s'_1`
+    :rtype: torch.tensor
+
+    Computes 2-site reduced density matrix :math:`\rho_{2x1}` of a horizontal 
+    3x1 subsystem using following strategy:
+    
+        1. compute upper left 2x2 corner and lower left 2x1 corner
+        2. construct left half of the network
+        3. contract left and right half (identical to the left) to obtain final 
+           reduced density matrix
+
+    ::
+
+        C--T-----T-----T------C = C2x2--T----C2x2
+        |  |     |     |      |     |   a^+a  |
+        T--a^+a--a^+a--a^+a---T   C2x1--T----C2x1
+        |  |     |     |      |
+        C--T-----T-----T------C 
+
+    The physical indices `s` and `s'` of on-sites tensors :math:`a` (and :math:`a^\dagger`) 
+    are left uncontracted and given in the following order::
+        
+        s0 s1
+
+    The resulting reduced density matrix is identical to the one of vertical 1x2 subsystem
+    due to the C4v symmetry. 
+    """
+    who= "rdm3x1_sl"
+    if force_cpu:
+        # move to cpu
+        C = env.C[env.keyC].cpu()
+        T = env.T[env.keyT].cpu()
+        a = next(iter(state.sites.values())).cpu()
+    else:
+        C = env.C[env.keyC]
+        T = env.T[env.keyT]
+        a = next(iter(state.sites.values()))
+
+    #----- building C2x2_LU ----------------------------------------------------
+    loc_device=C.device
+    is_cpu= loc_device==torch.device('cpu')
+    def ten_size(t):
+        return t.element_size() * t.numel()
+
+    # C--1 0--T--1
+    # 0       2
+    C2x1 = torch.tensordot(C, T, ([1],[0]))
+    if not is_cpu and verbosity>1: 
+        _log_cuda_mem(loc_device,who)
+        log.info(f"{who} C2x1: {ten_size(C2x1)}")
+
+    # see _get_open_C2x2_LU_sl
+    C2x2 = torch.tensordot(C2x1, T, ([0],[0]))
+    C2x2= C2x2.view(C2x2.size()[0],a.size()[1],a.size()[1],C2x2.size()[2],a.size()[2],\
+        a.size()[2])
+    C2x2= torch.tensordot(C2x2, a,([1,4],[1,2]))
+    C2x2= torch.tensordot(C2x2, a,([1,3],[1,2]))
+    if not is_cpu and verbosity>1: 
+        _log_cuda_mem(loc_device,who)
+        log.info(f"{who} C2x1,C2x2: {ten_size(C2x1)+ten_size(C2x2)}")
+
+    # 4iv) fuse (some) pairs of aux indices
+    #
+    # C------T----0->2
+    # | 5<-2\|\    
+    # T------a----4->3 
+    # | \    | |   
+    # |  ------a--7->4
+    # |      | |\5->6
+    # 1->0  (3 6)->1
+    # 
+    # permute and reshape 01234567->1(36)04725->0123456
+    C2x2= C2x2.permute(1,3,6, 0,4,7, 2,5).contiguous().view(C2x2.size()[1],(a.size()[3]**2),\
+        C2x2.size(0),a.size(4),a.size(4),a.size(0),a.size(0))
+    if not is_cpu and verbosity>1: 
+        _log_cuda_mem(loc_device,who)
+        log.info(f"{who} C2x1,C2x2: {ten_size(C2x1)+ten_size(C2x2)}")
+
+    #----- build left part C2x2_LU--C2x1_LD ------------------------------------
+    # /56->45
+    # C2x2--2->1
+    # |__|--3->2
+    # | | \-4->3
+    # 0 1
+    # 0 2
+    # C2x1--1->0
+    left_half = torch.tensordot(C2x1, C2x2, ([0,2],[0,1]))
+    if not is_cpu and verbosity>1: 
+        _log_cuda_mem(loc_device,who)
+        log.info(f"{who} left_half: {ten_size(left_half)}")
+
+    #    2->2,3
+    # 0--T--1
+    T= T.view(T.size(0),T.size(1),a.size(1),a.size(1))
+
+    # /45->67
+    # C2x2--1->3
+    # |  |
+    # |a |--2->4
+    # | a|\-3->5
+    # |  |       2,3->1,2
+    # C2x1--0 0--T--1->0
+    r3x1= torch.tensordot(T,left_half,([0],[0]))
+    # /67->78
+    # C2x2--3->5
+    # |  |
+    # |a |--4->6
+    # |  |       1
+    # | a|\-5 2--a--4->2
+    # |  |       3\0
+    # |  |4<-1--\2
+    # C2x1-------T--0->3
+    r3x1= torch.tensordot(a,r3x1,([2,3],[5,2]))
+    # /78->67
+    # C2x2--5
+    # |  |
+    # |  |       1->0
+    # |a |--6 2--a--4->1
+    # |  |       3\0
+    # |  |       4 0-\1->2
+    # | a|\-----------a--2->3
+    # |  |       \---\|
+    # C2x1------------T--3->4
+    r3x1= torch.tensordot(a,r3x1,([0,2,3],[0,6,4]))
+    # /67->45
+    # C2x2--5 0--T-------1->0
+    # |  |       2\---\
+    # |  |       0    |
+    # |a |-------a----|--1
+    # |  |       |    3
+    # |  |       |    2
+    # | a|\-----------a--3->2
+    # |  |       \---\|
+    # C2x1------------T--4->3
+    r3x1= torch.tensordot(T,r3x1,([0,2,3],[5,0,2]))
+
+    # construct reduced density matrix by contracting left and right halfs
+    # /45->01            /45->23
+    # C2x2----T----0 1--C2x2
+    # |  |    |\        |  |
+    # |a |----a-|--1 2--|  | 
+    # |  |    |\|       |  |
+    # | a|\-----a--2 3--|  |
+    # |  |     \|       |  |
+    # C2x1------T--3 0--C2x1
+    rdm = torch.tensordot(r3x1,left_half,([0,1,2,3],[1,2,3,0]))
+    if not is_cpu and verbosity>1: 
+        _log_cuda_mem(loc_device,who)
+        log.info(f"{who} rdm: {ten_size(rdm)}")
+
+    # permute into order of s0,s1;s0',s1' where primed indices
+    # represent "ket"
+    # 0123->0213
+    rdm= rdm.permute(0,2,1,3).contiguous()
+
+    # symmetrize
+    dimsRDM= rdm.size()
+    rdm= rdm.view(dimsRDM[0]**2,dimsRDM[0]**2)
+    if sym_pos_def: 
+        rdm= _sym_pos_def(rdm, verbosity=verbosity, who="rdm2x1")
+
+    # normalize and reshape and move to original device
+    if verbosity>0: log.info(f"Tr(rdm2x1): {torch.trace(rdm)}\n")
+    rdm= rdm / torch.trace(rdm)
+    rdm= rdm.view(dimsRDM).to(env.device)
+
+    return rdm
+
 def rdm2x2_NN_lowmem(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
     r"""
     :param state: underlying 1-site C4v symmetric wavefunction
