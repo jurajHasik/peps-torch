@@ -1,4 +1,5 @@
-import yamps.tensor as TA
+# import yamps.tensor as TA
+import yamps.yast as TA
 
 # def tensordot_complex(t1, t2, *args):
 #     return torch.tensordot(t1.real, t2.real, *args) \
@@ -32,8 +33,10 @@ def contract(t1, t2, *args, **kwargs):
 #             +" are not either both complex or both real")
 
 def mm(m1, m2, **kwargs):
-    assert m1.ndim==2, "m1 is not a matrix"
-    assert m2.ndim==2, "m2 is not a matrix"
+    # assert m1.ndim==2, "m1 is not a matrix"
+    # assert m2.ndim==2, "m2 is not a matrix"
+    assert len(m1.lfuse)==2, "m1 is not a matrix"
+    assert len(m2.lfuse)==2, "m2 is not a matrix"
     return m1.dot(m2, ((1),(0)), **kwargs)
 
 # def einsum_complex(op, *ts):
@@ -69,7 +72,8 @@ def permute(t, *args):
 #     return torch.transpose(t, 0, 1)
 
 def transpose(m):
-    assert m.ndim==2, "m is not a matrix"
+    # assert m.ndim==2, "m is not a matrix"
+    assert len(m.lfuse)==2, "m is not a matrix"
     return m.transpose((1,0))
 
 def conj(t):

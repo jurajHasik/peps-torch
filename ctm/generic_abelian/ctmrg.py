@@ -1,7 +1,8 @@
 import time
 import warnings
 import config as cfg
-from yamps.tensor import decompress_from_1d
+# from yamps.tensor import decompress_from_1d
+from yamps.yast import decompress_from_1d
 from ipeps.ipeps_abelian import IPEPS_ABELIAN
 from ctm.generic_abelian.env_abelian import ENV_ABELIAN
 from ctm.generic_abelian.ctm_components import *
@@ -45,11 +46,12 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
         ## a = contiguous(einsum('mefgh,mabcd->eafbgchd',A,conj(A)))
         a= contract(A,A, ((0),(0)), conj=(0,1)) # mefgh,mabcd->efghabcd
         a= a.transpose((0,4,1,5,2,6,3,7)) # efghabcd->eafbgchd
-        a, lo3= a.group_legs((6,7), new_s=-1) # eafbgc(hd->H)->eafbgcH
-        a, lo2= a.group_legs((4,5), new_s=-1) # eafb(gc->G)H->eafbGH
-        a, lo1= a.group_legs((2,3), new_s=1) # ea(fb->F)GH->eaFGH
-        a, lo0= a.group_legs((0,1), new_s=1) # (ea->E)F->EFGH
-        a._leg_fusion_data= {k: v for k,v in enumerate([lo0, lo1, lo2, lo3])}
+        # a, lo3= a.group_legs((6,7), new_s=-1) # eafbgc(hd->H)->eafbgcH
+        # a, lo2= a.group_legs((4,5), new_s=-1) # eafb(gc->G)H->eafbGH
+        # a, lo1= a.group_legs((2,3), new_s=1) # ea(fb->F)GH->eaFGH
+        # a, lo0= a.group_legs((0,1), new_s=1) # (ea->E)F->EFGH
+        # a._leg_fusion_data= {k: v for k,v in enumerate([lo0, lo1, lo2, lo3])}
+        a= a.fuse_legs( axes=((0,1),(2,3),(4,5),(6,7)) )
         sitesDL[coord]=a
     stateDL = IPEPS_ABELIAN(state.engine, sitesDL, vertexToSite=state.vertexToSite)
 
@@ -102,7 +104,7 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
     # function wrapping up the core of the CTM MOVE segment of CTM algorithm
     def ctm_MOVE_c(*tensors):
         # 0) reconstruct the tensors from their 1D representation
-        tensors= tuple(decompress_from_1d(r1d, settings=state.engine, d=meta) \
+        tensors= tuple(decompress_from_1d(r1d, config=state.engine, d=meta) \
             for r1d,meta in zip(tensors,metadata_store["in"]))
 
         # 1) wrap raw tensors back into IPEPS and ENV classes 
@@ -156,7 +158,7 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
     else:
         new_tensors= ctm_MOVE_c(*tensors)
         
-    new_tensors= tuple(decompress_from_1d(r1d, settings=state.engine, d=meta) \
+    new_tensors= tuple(decompress_from_1d(r1d, config=state.engine, d=meta) \
             for r1d,meta in zip(new_tensors,metadata_store["out"]))
 
     # 3) warp the returned raw tensor in dictionary
@@ -225,7 +227,7 @@ def absorb_truncate_CTM_MOVE_UP_c(*tensors):
     #       |       | 
     #        --1 1--T1
     #               2->1
-    Pt1= Pt1.ungroup_leg(0, Pt1._leg_fusion_data[0])
+    # Pt1= Pt1.ungroup_leg(0, Pt1._leg_fusion_data[0])
     nC1 = contract(Pt1, nC1,([0,1],[0,1]))
     #nC1 = contract(Pt1, nC1,([0],[0]))
 
@@ -243,7 +245,7 @@ def absorb_truncate_CTM_MOVE_UP_c(*tensors):
     # |        |
     # T2--2 1--
     # 1->0
-    P2= P2.ungroup_leg(0, P2._leg_fusion_data[0])
+    # P2= P2.ungroup_leg(0, P2._leg_fusion_data[0])
     # nC2 = contract(nC2, P2,([0],[0]))
     nC2= contract(nC2, P2,([0,2],[0,1]))
     
@@ -252,7 +254,7 @@ def absorb_truncate_CTM_MOVE_UP_c(*tensors):
     # (+1)2<-1--Pt2--0(-1)->|      => 1<-2--Pt2
     #                       1(-1)           |
     #                                        --1->0(-1)
-    Pt2= Pt2.ungroup_leg(0, Pt2._leg_fusion_data[0])
+    # Pt2= Pt2.ungroup_leg(0, Pt2._leg_fusion_data[0])
     nT = contract(Pt2, T, ([0],[0]))
 
     #            -------T--3->1(-1) =>         ----T-----
@@ -270,7 +272,7 @@ def absorb_truncate_CTM_MOVE_UP_c(*tensors):
     #        |       |  |
     #         -------A---
     #                2->1(-1)
-    P1= P1.ungroup_leg(0, P1._leg_fusion_data[0])
+    # P1= P1.ungroup_leg(0, P1._leg_fusion_data[0])
     nT= contract(nT, P1, ([1,3],[0,1]))
     # nT = contract(nT, P1,([1],[0]))
 
@@ -288,7 +290,7 @@ def absorb_truncate_CTM_MOVE_UP_c(*tensors):
     nC1 = nC1/nC1.max_abs()
     nC2 = nC2/nC2.max_abs()
     nT = nT/nT.max_abs()
-    nT._leg_fusion_data[1]= A._leg_fusion_data[2]
+    # nT._leg_fusion_data[1]= A._leg_fusion_data[2]
     return nC1, nC2, nT
 
 
@@ -323,7 +325,7 @@ def absorb_truncate_CTM_MOVE_LEFT_c(*tensors):
     # 0        1            Pt1
     # |___Pt1__|            1->0(-1) 
     #     2->0
-    Pt1= Pt1.ungroup_leg(0, Pt1._leg_fusion_data[0])
+    # Pt1= Pt1.ungroup_leg(0, Pt1._leg_fusion_data[0])
     # nC1= contract(Pt1, nC1,([0],[0]))
     nC1= contract(Pt1, nC1, ([0,1],[0,1]))
 
@@ -337,7 +339,7 @@ def absorb_truncate_CTM_MOVE_LEFT_c(*tensors):
     # 0      1            0(-1)
     # 0      1            0(+1)
     # C2-----T2--2->1     C2T2--1(-1)
-    P2= P2.ungroup_leg(0, P2._leg_fusion_data[0])
+    # P2= P2.ungroup_leg(0, P2._leg_fusion_data[0])
     # nC2 = contract(P2, nC2,([0],[0]))
     nC2 = contract(P2, nC2,([0,1],[0,1]))
 
@@ -347,7 +349,7 @@ def absorb_truncate_CTM_MOVE_LEFT_c(*tensors):
     # 0                        0(+1)
     # T--2->3                  T--2->3(-1)
     # 1->2                     1->2(-1)
-    P1= P1.ungroup_leg(0,P1._leg_fusion_data[0])
+    # P1= P1.ungroup_leg(0,P1._leg_fusion_data[0])
     nT = contract(P1, T,([0],[0]))
 
     #    1->0(+1)        =>     0(+1)
@@ -369,7 +371,7 @@ def absorb_truncate_CTM_MOVE_LEFT_c(*tensors):
     # |___Pt2_|               Pt2
     #     2                   1->2(-1)
     # nT = contract(nT, Pt2,([1],[0]))
-    Pt2= Pt2.ungroup_leg(0, Pt2._leg_fusion_data[0])
+    # Pt2= Pt2.ungroup_leg(0, Pt2._leg_fusion_data[0])
     nT = contract(nT, Pt2,([1,2],[0,1]))    
     nT = nT.transpose((0,2,1))
     
@@ -396,7 +398,7 @@ def absorb_truncate_CTM_MOVE_LEFT_c(*tensors):
     nC1 = nC1/nC1.max_abs()
     nC2 = nC2/nC2.max_abs()
     nT = nT/nT.max_abs()
-    nT._leg_fusion_data[2]= A._leg_fusion_data[3]
+    # nT._leg_fusion_data[2]= A._leg_fusion_data[3]
     return nC1, nC2, nT
 
 
@@ -434,7 +436,7 @@ def absorb_truncate_CTM_MOVE_DOWN_c(*tensors):
     # |        |
     # C1--0 0--   
     # nC1 = contract(nC1, Pt1, ([0],[0]))
-    Pt1= Pt1.ungroup_leg(0, Pt1._leg_fusion_data[0])
+    # Pt1= Pt1.ungroup_leg(0, Pt1._leg_fusion_data[0])
     nC1 = contract(nC1, Pt1, ([0,2],[0,1]))
 
     #    1<-0  <=>          (+1)1  
@@ -452,7 +454,7 @@ def absorb_truncate_CTM_MOVE_DOWN_c(*tensors):
     #       |       | 
     #        --0 0--C2
     # nC2 = contract(nC2, P2, ([0],[0]))
-    P2= P2.ungroup_leg(0, P2._leg_fusion_data[0])
+    # P2= P2.ungroup_leg(0, P2._leg_fusion_data[0])
     nC2 = contract(nC2, P2, ([0,2],[0,1]))
 
     #        --1->0         <=>                                    --1(-1)
@@ -460,7 +462,7 @@ def absorb_truncate_CTM_MOVE_DOWN_c(*tensors):
     # 1<-2--P1                  (+1)1--P1--0(-1) => (+1)2<-1--P1--|  
     #       |       0->2                                          |              0->2(+1)
     #        --0 1--T--2->3                                        --0(-1)(+1)1--T--2->3(-1)
-    P1= P1.ungroup_leg(0, P1._leg_fusion_data[0])
+    # P1= P1.ungroup_leg(0, P1._leg_fusion_data[0])
     nT = contract(P1, T, ([0],[1]))
 
     #                   0->2(+1)    =>           2(+1)
@@ -478,7 +480,7 @@ def absorb_truncate_CTM_MOVE_DOWN_c(*tensors):
     # (+1)0--P1      |  |--1(-1)(+1)0--Pt2--1->2(-1)
     #        |       |  |
     #         -------T--
-    Pt2= Pt2.ungroup_leg(0, Pt2._leg_fusion_data[0])
+    # Pt2= Pt2.ungroup_leg(0, Pt2._leg_fusion_data[0])
     # nT = contract(nT, Pt2,([1],[0]))
     nT = contract(nT, Pt2,([1,3],[0,1]))
     nT = nT.transpose((1,0,2))
@@ -498,7 +500,7 @@ def absorb_truncate_CTM_MOVE_DOWN_c(*tensors):
     nC1 = nC1/nC1.max_abs()
     nC2 = nC2/nC2.max_abs()
     nT = nT/nT.max_abs()
-    nT._leg_fusion_data[0]= A._leg_fusion_data[0]
+    # nT._leg_fusion_data[0]= A._leg_fusion_data[0]
     return nC1, nC2, nT
 
 
@@ -532,7 +534,7 @@ def absorb_truncate_CTM_MOVE_RIGHT_c(*tensors):
     #       1     0         (+1)0  
     # 1<-2--T1----C1 <=> (+1)1--C1T1
     # nC1= contract(Pt1, nC1,([0],[0]))
-    Pt1= Pt1.ungroup_leg(0, Pt1._leg_fusion_data[0])
+    #Pt1= Pt1.ungroup_leg(0, Pt1._leg_fusion_data[0])
     nC1= contract(Pt1, nC1,([0,1],[0,1]))
 
     # 1<-0--T2--2 0--C2 <=>  (+1)1--C2T2
@@ -546,7 +548,7 @@ def absorb_truncate_CTM_MOVE_RIGHT_c(*tensors):
     #       |__P2_|                P2
     #          2->1            (-1)1
     # nC2= contract(nC2, P2,([0],[0]))
-    P2= P2.ungroup_leg(0, P2._leg_fusion_data[0])
+    #P2= P2.ungroup_leg(0, P2._leg_fusion_data[0])
     nC2= contract(nC2, P2,([0,2],[0,1]))
 
     #    1<-2     <=> (+1)1   =>    (+1)1<-2
@@ -555,7 +557,7 @@ def absorb_truncate_CTM_MOVE_RIGHT_c(*tensors):
     #           0                           (+1)0
     #     2<-1--T                     (+1)2<-1--T
     #        3<-2                        (-1)3<-2
-    Pt2= Pt2.ungroup_leg(0, Pt2._leg_fusion_data[0])
+    #Pt2= Pt2.ungroup_leg(0, Pt2._leg_fusion_data[0])
     nT= contract(Pt2, T,([0],[0]))
 
     #       (+1)0<-1        =>        (+1)0  
@@ -577,7 +579,7 @@ def absorb_truncate_CTM_MOVE_RIGHT_c(*tensors):
     #       |___P1__|             (-1)2<-1
     #           2 
     # nT = contract(nT, P1,([1],[0]))
-    P1= P1.ungroup_leg(0, P1._leg_fusion_data[0]) 
+    #P1= P1.ungroup_leg(0, P1._leg_fusion_data[0]) 
     nT= contract(nT, P1,([1,3],[0,1]))
     
     
@@ -603,5 +605,5 @@ def absorb_truncate_CTM_MOVE_RIGHT_c(*tensors):
     nC1 = nC1/nC1.max_abs()
     nC2 = nC2/nC2.max_abs()
     nT = nT/nT.max_abs()
-    nT._leg_fusion_data[1]= A._leg_fusion_data[1] 
+    #nT._leg_fusion_data[1]= A._leg_fusion_data[1] 
     return nC1, nC2, nT

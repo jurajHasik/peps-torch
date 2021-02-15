@@ -1,4 +1,5 @@
-import yamps.tensor as TA
+# import yamps.tensor as TA
+import yamps.yast as TA
 import numpy as np
 from math import factorial, sqrt
 
@@ -26,10 +27,10 @@ class SU2_NOSYM():
             S^- &=S^x-iS^y\ \Rightarrow\ & S^y &=-i/2(S^+ - S^-)
             \end{align*}
         """
-        assert settings.nsym==0, "No abelian symmetry is assumed"
+        assert settings.sym.nsym==0, "No abelian symmetry is assumed"
         self.J = J
         self.engine= settings
-        self.backend= settings.back
+        self.backend= settings.backend
         self.dtype= settings.dtype
         self.device= 'cpu' if not hasattr(settings, 'device') else settings.device
 
@@ -213,10 +214,10 @@ class SU2_U1():
             S^- &=S^x-iS^y\ \Rightarrow\ & S^y &=-i/2(S^+ - S^-)
             \end{align*}
         """
-        assert settings.nsym==1, "U(1) abelian symmetry is assumed"
+        assert settings.sym.nsym==1, "U(1) abelian symmetry is assumed"
         self.J = J
         self.engine= settings
-        self.backend= settings.back
+        self.backend= settings.backend
         self.dtype= settings.dtype
         self.device= 'cpu' if not hasattr(settings, 'device') else settings.device
 

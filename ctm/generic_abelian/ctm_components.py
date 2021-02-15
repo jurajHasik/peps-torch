@@ -53,11 +53,11 @@ def halves_of_4x4_CTM_MOVE_UP_c(*tensors):
     c2x2_RU= c2x2_RU_c(*tensors[0:4])
     c2x2_RD= c2x2_RD_c(*tensors[4:8])
     R= contract(c2x2_RU,c2x2_RD,([1],[0]))
-    R._leg_fusion_data[0]= c2x2_RU._leg_fusion_data[0]
+    # R._leg_fusion_data[0]= c2x2_RU._leg_fusion_data[0]
     c2x2_LU= c2x2_LU_c(*tensors[8:12])
     c2x2_LD= c2x2_LD_c(*tensors[12:16])
     Rt= contract(c2x2_LU, c2x2_LD,([0],[0]))
-    Rt._leg_fusion_data[0]= c2x2_LU._leg_fusion_data[1]
+    # Rt._leg_fusion_data[0]= c2x2_LU._leg_fusion_data[1]
     return R, Rt
 
 def halves_of_4x4_CTM_MOVE_LEFT(coord, state, env, verbosity=0):
@@ -103,11 +103,11 @@ def halves_of_4x4_CTM_MOVE_LEFT_c(*tensors):
     c2x2_LU= c2x2_LU_c(*tensors[0:4])
     c2x2_RU= c2x2_RU_c(*tensors[4:8])
     R= contract(c2x2_LU,c2x2_RU,([1],[0]))
-    R._leg_fusion_data[0]= c2x2_LU._leg_fusion_data[0]
+    # R._leg_fusion_data[0]= c2x2_LU._leg_fusion_data[0]
     c2x2_LD= c2x2_LD_c(*tensors[8:12])
     c2x2_RD= c2x2_RD_c(*tensors[12:16])
     Rt= contract(c2x2_LD,c2x2_RD,([1],[1]))
-    Rt._leg_fusion_data[0]= c2x2_LD._leg_fusion_data[0]
+    # Rt._leg_fusion_data[0]= c2x2_LD._leg_fusion_data[0]
     return R, Rt
 
 def halves_of_4x4_CTM_MOVE_DOWN(coord, state, env, verbosity=0):
@@ -151,11 +151,11 @@ def halves_of_4x4_CTM_MOVE_DOWN_c(*tensors):
     c2x2_LD= c2x2_LD_c(*tensors[0:4])
     c2x2_LU= c2x2_LU_c(*tensors[4:8])
     R= contract(c2x2_LD,c2x2_LU,([0],[0]))
-    R._leg_fusion_data[0]= c2x2_LD._leg_fusion_data[1]
+    # R._leg_fusion_data[0]= c2x2_LD._leg_fusion_data[1]
     c2x2_RD= c2x2_RD_c(*tensors[8:12])
     c2x2_RU= c2x2_RU_c(*tensors[12:16])
     Rt= contract(c2x2_RD,c2x2_RU,([0],[1]))
-    Rt._leg_fusion_data[0]= c2x2_RD._leg_fusion_data[1]
+    # Rt._leg_fusion_data[0]= c2x2_RD._leg_fusion_data[1]
     return R, Rt
 
 def halves_of_4x4_CTM_MOVE_RIGHT(coord, state, env, verbosity=0):
@@ -201,11 +201,11 @@ def halves_of_4x4_CTM_MOVE_RIGHT_c(*tensors):
     c2x2_RD= c2x2_RD_c(*tensors[0:4])
     c2x2_LD= c2x2_LD_c(*tensors[4:8])
     R= contract(c2x2_RD,c2x2_LD,([1],[1]))
-    R._leg_fusion_data[0]= c2x2_RD._leg_fusion_data[0]
+    # R._leg_fusion_data[0]= c2x2_RD._leg_fusion_data[0]
     c2x2_RU= c2x2_RU_c(*tensors[8:12])
     c2x2_LU= c2x2_LU_c(*tensors[12:16])
     Rt= contract(c2x2_RU,c2x2_LU,([0],[1]))
-    Rt._leg_fusion_data[0]= c2x2_RU._leg_fusion_data[1]
+    # Rt._leg_fusion_data[0]= c2x2_RU._leg_fusion_data[1]
     return R, Rt
 
 #####################################################################
@@ -263,10 +263,11 @@ def c2x2_LU_c(*tensors):
         ## C2x2 = contiguous(permute(C2x2,(1,2,0,3)))
         C2x2= C2x2.transpose((1,2,0,3))
         ## C2x2 = view(C2x2,(T2.size(1)*A.size(2),T1.size(2)*A.size(3)))
-        C2x2, lo1= C2x2.group_legs((2,3), new_s=-1)
-        C2x2, lo0= C2x2.group_legs((0,1), new_s=-1)
-        C2x2._leg_fusion_data[1]= lo1
-        C2x2._leg_fusion_data[0]= lo0
+        # C2x2, lo1= C2x2.group_legs((2,3), new_s=-1)
+        # C2x2, lo0= C2x2.group_legs((0,1), new_s=-1)
+        # C2x2._leg_fusion_data[1]= lo1
+        # C2x2._leg_fusion_data[0]= lo0
+        C2x2= C2x2.fuse_legs(axes=((0,1),(2,3)))
 
         # C2x2--1(-1)
         # |
@@ -327,10 +328,11 @@ def c2x2_RU_c(*tensors):
         ## C2x2 = contiguous(permute(C2x2,(1,2,0,3)))
         C2x2 = C2x2.transpose((1,2,0,3))
         ## C2x2 = view(C2x2,(T2.size(0)*A.size(1),T1.size(2)*A.size(2)))
-        C2x2, lo1= C2x2.group_legs((2,3), new_s=-1)
-        C2x2, lo0= C2x2.group_legs((0,1), new_s=1)
-        C2x2._leg_fusion_data[1]= lo1
-        C2x2._leg_fusion_data[0]= lo0
+        # C2x2, lo1= C2x2.group_legs((2,3), new_s=-1)
+        # C2x2, lo0= C2x2.group_legs((0,1), new_s=1)
+        # C2x2._leg_fusion_data[1]= lo1
+        # C2x2._leg_fusion_data[0]= lo0
+        C2x2= C2x2.fuse_legs(axes=((0,1),(2,3)))
 
         # (+1)0--C2x2
         #        |
@@ -389,10 +391,11 @@ def c2x2_RD_c(*tensors):
         ## C2x2 = contiguous(permute(C2x2,(1,2,0,3)))
         C2x2= C2x2.transpose((1,2,0,3))
         ## C2x2 = view(C2x2,(T2.size(0)*A.size(0),T1.size(1)*A.size(1)))
-        C2x2, lo1= C2x2.group_legs((2,3), new_s=1)
-        C2x2, lo0= C2x2.group_legs((0,1), new_s=1)
-        C2x2._leg_fusion_data[1]= lo1
-        C2x2._leg_fusion_data[0]= lo0
+        # C2x2, lo1= C2x2.group_legs((2,3), new_s=1)
+        # C2x2, lo0= C2x2.group_legs((0,1), new_s=1)
+        # C2x2._leg_fusion_data[1]= lo1
+        # C2x2._leg_fusion_data[0]= lo0
+        C2x2= C2x2.fuse_legs(axes=((0,1),(2,3)))
 
         #    (+1)0
         #        |
@@ -454,10 +457,11 @@ def c2x2_LD_c(*tensors):
         ## C2x2 = contiguous(permute(C2x2,(0,2,1,3)))
         C2x2 = C2x2.transpose((0,2,1,3))
         ## C2x2 = view(C2x2,(T1.size(0)*A.size(0),T2.size(2)*A.size(3)))
-        C2x2, lo1= C2x2.group_legs((2,3), new_s=-1)
-        C2x2, lo0= C2x2.group_legs((0,1), new_s=1)
-        C2x2._leg_fusion_data[1]= lo1
-        C2x2._leg_fusion_data[0]= lo0
+        # C2x2, lo1= C2x2.group_legs((2,3), new_s=-1)
+        # C2x2, lo0= C2x2.group_legs((0,1), new_s=1)
+        # C2x2._leg_fusion_data[1]= lo1
+        # C2x2._leg_fusion_data[0]= lo0
+        C2x2= C2x2.fuse_legs(axes=((0,1),(2,3)))
 
         # 0(+1)
         # |

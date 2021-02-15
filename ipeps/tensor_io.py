@@ -3,7 +3,8 @@ from itertools import product
 import json
 import numpy as np
 try:
-    from yamps.tensor import Tensor
+    # from yamps.tensor import Tensor
+    from yamps.yast import Tensor
 except ImportError as e:
     warnings.warn("yamps.tensor not available", Warning)
 
@@ -120,10 +121,11 @@ def read_json_abelian_tensor_legacy(json_obj, backend):
     tensor_io_format= json_obj["format"]
     assert tensor_io_format=="abelian", "Invalid JSON format of tensor: "+tensor_io_format
     nsym= json_obj["nsym"]
-    assert nsym==backend.nsym, "Number of abelian symmetries does not match: "\
-        +" settings.nsym "+str(backend.nsym)+" tensor "+str(nsym)
+    assert nsym==backend.sym.nsym, "Number of abelian symmetries does not match: "\
+        +" settings.nsym "+str(backend.sym.nsym)+" tensor "+str(nsym)
     symmetry= json_obj["symmetry"]
-    assert symmetry==backend.sym, "Symmetries of settings.sym and tensor do not match"
+    # TODO equivalence between different names such as U1 and U(1)
+    # assert symmetry==backend.sym.name, "Symmetries of settings.sym and tensor do not match"
     s= json_obj["signature"]
     n= json_obj["n"]
     isdiag= json_obj["isdiag"]
@@ -134,9 +136,11 @@ def read_json_abelian_tensor_legacy(json_obj, backend):
     # create empty abelian tensor
     T= Tensor(settings=backend, s=s, n=n, isdiag=isdiag, dtype= dtype_str)
     # TODO assign symmetry in constructor or settings ?
-    if symmetry!=T.sym:
-        warnings.warn(f"Incompatible tensor symmetry: Expected {T.symmetry}, read {symmetry}")
-    T.sym= symmetry
+    # TODO equivalence between different names such as U1 and U(1)
+    if symmetry!=T.config.sym.name:
+        warnings.warn(f"Incompatible tensor symmetry: Expected {T.config.sym.name},"\
+            +f" read {symmetry}")
+    # T.sym= symmetry
 
     # parse blocks
     for b in json_obj["blocks"]:
@@ -194,13 +198,13 @@ def serialize_abelian_tensor_legacy(t):
     json_tensor=dict()
 
     json_tensor["format"]= "abelian"
-    json_tensor["nsym"]= t.nsym
-    json_tensor["symmetry"]= t.sym
+    json_tensor["nsym"]= t.config.sym.nsym
+    json_tensor["symmetry"]= t.config.sym.name
     json_tensor["rank"]= t._ndim
     json_tensor["signature"]= t.s
     json_tensor["n"]= t.n
     json_tensor["isdiag"]= t.isdiag
-    json_tensor["dtype"]= t.dtype
+    json_tensor["dtype"]= t.config.dtype
 
     json_tensor["blocks"]= []
     for k in t.A.keys():

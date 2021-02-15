@@ -221,7 +221,8 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, direction, \
                          _|_____|_
                         |____Rt___|
     """
-    assert R.ndim == Rt.ndim and R.ndim==2
+    # assert R.ndim == Rt.ndim and R.ndim==2
+    assert len(R.lfuse) == len(Rt.lfuse) and len(R.lfuse) == 2
     verbosity = ctm_args.verbosity_projectors
 
     # TODO autograd
@@ -278,9 +279,11 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, direction, \
         #       RIGHT (+1)0--U--1(?)=>C=> (+1)0--R--1(+1)(-1)0--U--1(-?)S_sqrt = (+1)P(-1)
         #             (-?)0--Vh--1(-1)=>CT=> (-1)0--Rt--1(-1)(+1)1--Vh--0(?)   = (-1)Pt(+1)
         P= mm(mm(R, U, conj=(0,1)), S_sqrt)
-        P._leg_fusion_data[0]= R._leg_fusion_data[0]
+        # P._leg_fusion_data[0]= R._leg_fusion_data[0]
         Pt= mm(mm(Rt,transpose(Vh), conj=(0,1)),S_sqrt)
-        Pt._leg_fusion_data[0]= Rt._leg_fusion_data[0]
+        # Pt._leg_fusion_data[0]= Rt._leg_fusion_data[0]
+        P= P.unfuse_legs(axes=0, inplace=True)
+        Pt= Pt.unfuse_legs(axes=0, inplace=True)
         return P, Pt
 
     tensors= R, Rt, U, Vh, S_sqrt

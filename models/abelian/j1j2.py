@@ -2,7 +2,8 @@ from math import sqrt
 import numpy as np
 import itertools
 import config as cfg
-import yamps.tensor as TA
+# import yamps.tensor as TA
+import yamps.yast as TA
 from tn_interface_abelian import contract, permute
 import groups.su2_abelian as su2
 from ctm.generic_abelian import rdm
@@ -40,9 +41,9 @@ class J1J2_NOSYM():
 
         * :math:`h2_{ij} = \mathbf{S_i}.\mathbf{S_j}` with indices of h2 corresponding to :math:`s_i s_j;s'_i s'_j`
         """
-        assert settings.nsym==0, "No abelian symmetry is assumed"
+        assert settings.sym.nsym==0, "No abelian symmetry is assumed"
         self.engine= settings
-        self.backend= settings.back
+        self.backend= settings.backend
         self.dtype=settings.dtype
         self.device='cpu' if not hasattr(settings, 'device') else settings.device
         self.phys_dim=2
@@ -244,7 +245,8 @@ class J1J2_NOSYM():
 
         energy_nn=TA.zeros(self.engine)
         energy_nnn=TA.zeros(self.engine)
-        _ci= ([0,1,2,3, 4,5,6,7],[4,5,6,7, 0,1,2,3])
+        # _ci= ([0,1,2,3, 4,5,6,7],[4,5,6,7, 0,1,2,3])
+        _ci= ([0,1,2,3, 4,5,6,7],[0,1,2,3, 4,5,6,7])
         for coord in state.sites.keys():
             tmp_rdm= rdm.rdm2x2(coord,state,env).to_dense()
             energy_nn += contract(tmp_rdm,self.h2x2_nn,_ci)
@@ -292,15 +294,18 @@ class J1J2_NOSYM():
         # TODO optimize/unify ?
         # expect "list" of (observable label, value) pairs ?
         obs= dict({"avg_m": 0.})
+        #_ci= ([0,1],[1,0])
+        _ci= ([0,1],[0,1])
         for coord,site in state.sites.items():
             rdm1x1 = rdm.rdm1x1(coord,state,env).to_dense()
             for label,op in self.obs_ops.items():
-                obs[f"{label}{coord}"]= contract(rdm1x1, op, ([0,1],[1,0])).to_number()
+                obs[f"{label}{coord}"]= contract(rdm1x1, op, _ci).to_number()
             obs[f"m{coord}"]= sqrt(abs(obs[f"sz{coord}"]**2 + obs[f"sp{coord}"]*obs[f"sm{coord}"]))
             obs["avg_m"] += obs[f"m{coord}"]
         obs["avg_m"]= obs["avg_m"]/len(state.sites.keys())
 
-        _ci= ([0,1,2,3],[2,3,0,1])
+        # _ci= ([0,1,2,3],[2,3,0,1])
+        _ci= ([0,1,2,3],[0,1,2,3])
         for coord,site in state.sites.items():
             rdm2x1 = rdm.rdm2x1(coord,state,env).to_dense()
             rdm1x2 = rdm.rdm1x2(coord,state,env).to_dense()
@@ -377,9 +382,9 @@ class J1J2_C4V_BIPARTITE_NOSYM():
           s'_r s'_{r+\vec{x}} s'_{r+\vec{y}} s'_{r+\vec{x}+\vec{y}}`
 
         """
-        assert settings.nsym==0, "No abelian symmetry is assumed"
+        assert settings.sym.nsym==0, "No abelian symmetry is assumed"
         self.engine= settings
-        self.backend= settings.back
+        self.backend= settings.backend
         self.dtype=settings.dtype
         self.device='cpu' if not hasattr(settings, 'device') else settings.device
         self.phys_dim=2
@@ -476,7 +481,8 @@ class J1J2_C4V_BIPARTITE_NOSYM():
             e = \langle \mathcal{h_p} \rangle = Tr(\rho_{2x2} \mathcal{h_p})
         
         """
-        _ci= ([0,1,2,3,4,5,6,7], [0,1,2,3,4,5,6,7])
+        # _ci= ([0,1,2,3,4,5,6,7], [0,1,2,3,4,5,6,7])
+        _ci= ([0,1,2,3,4,5,6,7], [4,5,6,7,0,1,2,3])
         rdm2x2= rdm_c4v.rdm2x2(state, env_c4v, sym_pos_def=False,\
             verbosity=cfg.ctm_args.verbosity_rdm, force_cpu=force_cpu).to_dense()
         energy_per_site= contract(rdm2x2,self.hp,_ci).to_number()
@@ -515,6 +521,7 @@ class J1J2_C4V_BIPARTITE_NOSYM():
             = 2*Tr(\rho_{2x1} \mathcal{h2_rot}) + 2*Tr(\rho_{2x1_diag} \mathcal{h2})
         
         """
+        # _ci= ([0,1,2,3],[2,3,0,1])
         _ci= ([0,1,2,3],[0,1,2,3])
         rdm2x2_NN= rdm_c4v.rdm2x2_NN(state, env_c4v, sym_pos_def=False,\
             force_cpu=force_cpu, verbosity=cfg.ctm_args.verbosity_rdm).to_dense()
@@ -562,7 +569,8 @@ class J1J2_C4V_BIPARTITE_NOSYM():
         # TODO optimize/unify ?
         # expect "list" of (observable label, value) pairs ?
         obs= dict()
-        _ci= ([0,1,2,3],[2,3,0,1])
+        # _ci= ([0,1,2,3],[2,3,0,1])
+        _ci= ([0,1,2,3],[0,1,2,3])
         rdm2x1= rdm_c4v.rdm2x1(state,env_c4v,force_cpu=force_cpu,\
             verbosity=cfg.ctm_args.verbosity_rdm).to_dense()
         if np.all(rdm2x1.s/self.SS_rot.s==-1):
@@ -570,12 +578,14 @@ class J1J2_C4V_BIPARTITE_NOSYM():
         obs[f"SS2x1"]= contract(rdm2x1,self.SS_rot,_ci).to_number()
         
         # TODO reduce rdm2x1 to 1x1
+        # _ci= ([0,1],[1,0])
+        _ci= ([0,1],[0,1])
         rdm1x1 = rdm_c4v.rdm1x1(state,env_c4v,force_cpu=force_cpu,\
             verbosity=cfg.ctm_args.verbosity_rdm).to_dense()
         if np.all(rdm1x1.s/self.obs_ops["sz"].s==-1):
             rdm1x1= rdm1x1.negate_signature()
         for label,op in self.obs_ops.items():
-            obs[f"{label}"]= contract(rdm1x1, op, ([0,1],[1,0])).to_number()
+            obs[f"{label}"]= contract(rdm1x1, op, _ci).to_number()
         obs[f"m"]= sqrt(abs(obs[f"sz"]**2 + obs[f"sp"]*obs[f"sm"]))
         
         # prepare list with labels and values
