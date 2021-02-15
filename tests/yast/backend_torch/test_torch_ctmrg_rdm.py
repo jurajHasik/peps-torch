@@ -1,0 +1,150 @@
+import numpy as np
+import unittest
+import settings_full_torch
+import settings_U1_torch
+# import yamps.tensor as TA
+import yamps.yast as TA
+import config as cfg
+from ipeps.ipeps_abelian import IPEPS_ABELIAN
+from ctm.generic_abelian.env_abelian import ENV_ABELIAN
+import ctm.generic_abelian.ctmrg as ctmrg_abelian
+import ctm.generic_abelian.rdm as rdm
+
+class Test_env_abelian_full_torch(unittest.TestCase):
+    
+    _ref_s_dir= IPEPS_ABELIAN._REF_S_DIRS
+
+    @classmethod
+    def _get_2x1_BIPARTITE_full(cls):
+        a = TA.zeros(settings=settings_full_torch, s=cls._ref_s_dir, D=(2, 2, 2, 2, 2))
+        b = TA.zeros(settings=settings_full_torch, s=cls._ref_s_dir, D=(2, 2, 2, 2, 2))
+        T= np.zeros((2,2,2,2,2))
+        T[0,0,0,0,0]= -1.000635518923222
+        T[1,1,0,0,0]= -0.421284989637812
+        T[1,0,1,0,0]= -0.421284989637812
+        T[1,0,0,1,0]= -0.421284989637812
+        T[1,0,0,0,1]= -0.421284989637812
+        Tb= np.tensordot(np.asarray([[0,1],[-1,0]]), T, axes=([1],[0]))
+        a.set_block(val=T)
+        b.set_block(val=Tb)
+        sites=dict({(0,0): a, (1,0): b})
+
+
+        def vertexToSite(r):
+            x = (r[0] + abs(r[0]) * 2) % 2
+            y = abs(r[1])
+            return ((x + y) % 2, 0)
+
+        state= IPEPS_ABELIAN(settings_full_torch, sites, vertexToSite)
+        env= ENV_ABELIAN(chi=8, state=state, init=True)
+
+        def ctmrg_conv_f(state, env, history, ctm_args=cfg.ctm_args):
+            # compute SVD of corners
+            for cid,c in env.C.items():
+                u,s,v= c.split_svd((0,1))
+                s= s.to_numpy().diagonal()
+                print(f"{cid}: {s}")
+            return False, history
+
+        cfg.ctm_args.ctm_max_iter= 2
+        env_out, *ctm_log= ctmrg_abelian.run(state, env, conv_check=ctmrg_conv_f,
+            ctm_args= cfg.ctm_args)
+
+        return state, env_out
+
+    @classmethod
+    def setUpClass(cls):
+        cls.state_full, cls.env_full= cls._get_2x1_BIPARTITE_full()
+
+    def test_rdm1x1_abelian_2x1_BIPARTITE_full(self):
+        state, env= self.state_full, self.env_full
+        rho1x1= rdm.rdm1x1((0,0), state, env)
+
+    def test_rdm2x1_abelian_2x1_BIPARTITE_full(self):
+        state, env= self.state_full, self.env_full
+        rho2x1= rdm.rdm2x1((0,0), state, env)
+
+    def test_rdm1x2_abelian_2x1_BIPARTITE_full(self):
+        state, env= self.state_full, self.env_full
+        rho1x2= rdm.rdm1x2((0,0), state, env)
+
+    def test_rdm2x2_abelian_2x1_BIPARTITE_full(self):
+        state, env= self.state_full, self.env_full
+        rho2x2= rdm.rdm2x2((0,0), state, env)
+
+class Test_env_abelian_U1_torch(unittest.TestCase):
+    
+    _ref_s_dir= IPEPS_ABELIAN._REF_S_DIRS
+
+    @classmethod
+    def _get_2x1_BIPARTITE_U1(cls):
+        # AFM D=2
+        a = TA.Tensor(settings=settings_U1_torch, s=cls._ref_s_dir, n=0)
+                        # t=((0, -1), (0, 1), (0, 1), (0,-1), (0,-1)),
+                        # D=((1, 1), (1,1), (1,1), (1,1), (1,1)))
+        tmp1= -1.000635518923222*np.ones((1,1,1,1,1))
+        tmp2= -0.421284989637812*np.ones((1,1,1,1,1))
+        a.set_block((0,0,0,0,0), (1,1,1,1,1), val=tmp1)
+        a.set_block((-1,1,0,0,0), (1,1,1,1,1), val=tmp2)
+        a.set_block((-1,0,1,0,0), (1,1,1,1,1), val=tmp2)
+        a.set_block((-1,0,0,-1,0), (1,1,1,1,1), val=tmp2)
+        a.set_block((-1,0,0,0,-1), (1,1,1,1,1), val=tmp2)
+
+        b = TA.Tensor(settings=settings_U1_torch, s=cls._ref_s_dir, n=0)
+                        # t=((0, 1), (0, -1), (0, -1), (0,1), (0,1)),
+                        # D=((1, 1), (1,1), (1,1), (1,1), (1,1)))
+        b.set_block((0,0,0,0,0), (1,1,1,1,1), val=-tmp1)
+        b.set_block((1,-1,0,0,0), (1,1,1,1,1), val=tmp2)
+        b.set_block((1,0,-1,0,0), (1,1,1,1,1), val=tmp2)
+        b.set_block((1,0,0,1,0), (1,1,1,1,1), val=tmp2)
+        b.set_block((1,0,0,0,1), (1,1,1,1,1), val=tmp2)
+
+        sites=dict({(0,0): a, (1,0): b})
+
+        def vertexToSite(r):
+            x = (r[0] + abs(r[0]) * 2) % 2
+            y = abs(r[1])
+            return ((x + y) % 2, 0)
+
+        state= IPEPS_ABELIAN(settings_U1_torch, sites, vertexToSite)
+        env= ENV_ABELIAN(chi=8, state=state, init=True)
+
+        def ctmrg_conv_f(state, env, history, ctm_args=cfg.ctm_args):
+            # compute SVD of corners
+            for cid,c in env.C.items():
+                u,s,v= c.split_svd((0,1))
+                s= np.sort(s.to_numpy().diagonal())[::-1]
+                print(f"{cid}: {s}")
+            return False, history
+
+        cfg.ctm_args.ctm_max_iter= 2
+        env_out, *ctm_log= ctmrg_abelian.run(state, env, conv_check=ctmrg_conv_f,
+            ctm_args= cfg.ctm_args)
+
+        return state, env
+
+    @classmethod
+    def setUpClass(cls):
+        cls.state_u1, cls.env_u1= cls._get_2x1_BIPARTITE_U1()
+
+    def test_rdm1x1_abelian_2x1_BIPARTITE_U1(self):
+        state, env= self.state_u1, self.env_u1
+        rho1x1= rdm.rdm1x1((0,0), state, env)
+
+    def test_rdm2x1_abelian_2x1_BIPARTITE_U1(self):
+        state, env= self.state_u1, self.env_u1
+        rho2x1= rdm.rdm2x1((0,0), state, env)
+
+    def test_rdm1x2_abelian_2x1_BIPARTITE_U1(self):
+        state, env= self.state_u1, self.env_u1
+        rho1x2= rdm.rdm1x2((0,0), state, env)
+
+    def test_rdm2x2_abelian_2x1_BIPARTITE_U1(self):
+        state, env= self.state_u1, self.env_u1
+        rho2x2= rdm.rdm2x2((0,0), state, env, verbosity=1)
+
+# TODO test correctness by comparing eigenvalues of RDMs from 
+#      full and U1 cases
+
+if __name__ == '__main__':
+    unittest.main()

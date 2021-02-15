@@ -1,7 +1,8 @@
 from math import sqrt
 import itertools
 import config as cfg
-import yamps.tensor as TA
+# import yamps.tensor as TA
+import yamps.yast as TA
 from tn_interface_abelian import contract
 import groups.su2_abelian as su2
 from ctm.generic_abelian import rdm
@@ -34,9 +35,9 @@ class COUPLEDLADDERS_NOSYM():
 
         * :math:`h2_{ij} = \mathbf{S}_i.\mathbf{S}_j` with indices of h2 corresponding to :math:`s_i s_j;s'_i s'_j`
         """
-        assert settings.nsym==0, "No abelian symmetry is assumed"
+        assert settings.sym.nsym==0, "No abelian symmetry is assumed"
         self.engine= settings
-        self.backend= settings.back
+        self.backend= settings.backend
         self.dtype=settings.dtype
         self.device='cpu' if not hasattr(settings, 'device') else settings.device
         self.phys_dim=2
@@ -105,11 +106,12 @@ class COUPLEDLADDERS_NOSYM():
         #
         # (-1)0--|rho|--2(+1) (-1)0--|S.S|--2(+1)
         # (-1)1--|   |--3(+1) (-1)1--|   |--3(+1)
-        _ci= ([0,1,2,3],[2,3,0,1])
+        # _ci= ([0,1,2,3],[2,3,0,1])
+        _ci= ([0,1,2,3],[0,1,2,3])
         for coord,site in state.sites.items():
             rdm2x1= rdm.rdm2x1(coord,state,env).to_dense()
             rdm1x2= rdm.rdm1x2(coord,state,env).to_dense()
-            ss= contract(rdm2x1, self.h2,_ci)
+            ss= contract(rdm2x1, self.h2, _ci)
             energy += ss
             if coord[1] % 2 == 0:
                 ss = contract(rdm1x2,self.h2,_ci)
@@ -160,15 +162,18 @@ class COUPLEDLADDERS_NOSYM():
             \end{align*}
         """
         obs= dict({"avg_m": 0.})
+        # _ci= ([0,1],[1,0])
+        _ci= ([0,1],[0,1])
         for coord,site in state.sites.items():
             rdm1x1 = rdm.rdm1x1(coord,state,env).to_dense()
             for label,op in self.obs_ops.items():
-                obs[f"{label}{coord}"]= contract(rdm1x1, op, ([0,1],[1,0])).to_number()
+                obs[f"{label}{coord}"]= contract(rdm1x1, op, _ci).to_number()
             obs[f"m{coord}"]= sqrt(abs(obs[f"sz{coord}"]**2 + obs[f"sp{coord}"]*obs[f"sm{coord}"]))
             obs["avg_m"] += obs[f"m{coord}"]
         obs["avg_m"]= obs["avg_m"]/len(state.sites.keys())
     
-        _ci= ([0,1,2,3],[2,3,0,1])
+        # _ci= ([0,1,2,3],[2,3,0,1])
+        _ci= ([0,1,2,3],[0,1,2,3])
         for coord,site in state.sites.items():
             rdm2x1 = rdm.rdm2x1(coord,state,env).to_dense()
             rdm1x2 = rdm.rdm1x2(coord,state,env).to_dense()
@@ -211,9 +216,9 @@ class COUPLEDLADDERS_U1():
 
         * :math:`h2_{ij} = \mathbf{S}_i.\mathbf{S}_j` with indices of h2 corresponding to :math:`s_i s_j;s'_i s'_j`
         """
-        assert settings.nsym==1, "U(1) abelian symmetry is assumed"
+        assert settings.sym.nsym==1, "U(1) abelian symmetry is assumed"
         self.engine= settings
-        self.backend= settings.back
+        self.backend= settings.backend
         self.dtype=settings.dtype
         self.device='cpu' if not hasattr(settings, 'device') else settings.device
         self.phys_dim=2

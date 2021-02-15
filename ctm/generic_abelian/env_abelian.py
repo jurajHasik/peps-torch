@@ -76,10 +76,10 @@ class ENV_ABELIAN():
             self.sym= state.sym
         elif settings:
             self.engine= settings
-            self.backend= settings.back
+            self.backend= settings.backend
             self.dtype= settings.dtype
-            self.nsym = settings.nsym
-            self.sym= settings.sym
+            self.nsym = settings.sym.nsym
+            self.sym= settings.sym.name
         else:
             raise RuntimeError("Either state or settings must be provided")
         self.device= global_args.device
@@ -282,11 +282,12 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         a= A.dot(A, ((0,1,2), (0,1,2)), conj=(0,1)) # mijef,mijab->efab
         a= a.transpose((0,2,1,3)) # efab->eafb
         ## here we need to group-legs / reshape
-        a, lo1= a.group_legs((2,3), new_s=-1) # ea(fb->F)->eaF
-        a, lo0= a.group_legs((0,1), new_s=-1) # (ea->E)F->EF
+        # a, lo1= a.group_legs((2,3), new_s=-1) # ea(fb->F)->eaF
+        # a, lo0= a.group_legs((0,1), new_s=-1) # (ea->E)F->EF
+        a= a.fuse_legs( axes=((0,1),(2,3)) )
         a= a/a.max_abs()
-        a._leg_fusion_data[0]= lo0
-        a._leg_fusion_data[1]= lo1
+        # a._leg_fusion_data[0]= lo0
+        # a._leg_fusion_data[1]= lo1
         env.C[(coord,vec)]= a
 
         # right-upper corner
@@ -304,11 +305,12 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         ## a= contiguous(einsum('miefj,miabj->eafb',A,conj(A)))
         a= A.dot(A, ((0,1,4), (0,1,4)), conj=(0,1)) # miefj,miabj->efab
         a= a.transpose((0,2,1,3)) # efab->eafb
-        a, lo1= a.group_legs((2,3), new_s=-1) # ea(fb->F)->eaF
-        a, lo0= a.group_legs((0,1), new_s=1) # F(ea->E)->EF
+        # a, lo1= a.group_legs((2,3), new_s=-1) # ea(fb->F)->eaF
+        # a, lo0= a.group_legs((0,1), new_s=1) # F(ea->E)->EF
+        a= a.fuse_legs( axes=((0,1),(2,3)) )
         a= a/a.max_abs()
-        a._leg_fusion_data[0]= lo0
-        a._leg_fusion_data[1]= lo1
+        # a._leg_fusion_data[0]= lo0
+        # a._leg_fusion_data[1]= lo1
         env.C[(coord,vec)]=a
 
         # right-lower corner
@@ -326,11 +328,12 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         ## a= contiguous(einsum('mefij,mabij->eafb',A,conj(A)))
         a= A.dot(A, ((0,3,4), (0,3,4)), conj=(0,1)) # miefj,miabj->efab
         a= a.transpose((0,2,1,3)) # efab->eafb
-        a, lo1= a.group_legs((2,3), new_s=1) # ea(fb->F)->eaF
-        a, lo0= a.group_legs((0,1), new_s=1) # F(ea->E)->EF
+        # a, lo1= a.group_legs((2,3), new_s=1) # ea(fb->F)->eaF
+        # a, lo0= a.group_legs((0,1), new_s=1) # F(ea->E)->EF
+        a= a.fuse_legs( axes=((0,1),(2,3)) )
         a= a/a.max_abs()
-        a._leg_fusion_data[0]= lo0
-        a._leg_fusion_data[1]= lo1
+        # a._leg_fusion_data[0]= lo0
+        # a._leg_fusion_data[1]= lo1
         env.C[(coord,vec)]=a
 
         # left-lower corner
@@ -348,11 +351,12 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         ## a = contiguous(einsum('meijf,maijb->eafb',A,conj(A)))
         a= A.dot(A, ((0,2,3), (0,2,3)), conj=(0,1)) # miefj,miabj->efab
         a= a.transpose((0,2,1,3)) # efab->eafb
-        a, lo1= a.group_legs((2,3), new_s=-1) # ea(fb->F)->eaF
-        a, lo0= a.group_legs((0,1), new_s=1) # F(ea->E)->EF
+        # a, lo1= a.group_legs((2,3), new_s=-1) # ea(fb->F)->eaF
+        # a, lo0= a.group_legs((0,1), new_s=1) # F(ea->E)->EF
+        a= a.fuse_legs( axes=((0,1),(2,3)) )
         a= a/a.max_abs()
-        a._leg_fusion_data[0]= lo0
-        a._leg_fusion_data[1]= lo1
+        # a._leg_fusion_data[0]= lo0
+        # a._leg_fusion_data[1]= lo1
         env.C[(coord,vec)]=a
 
     # half-row/-column transfer tensor
@@ -372,13 +376,14 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         ## a = contiguous(einsum('miefg,miabc->eafbgc',A,conj(A)))
         a= A.dot(A, ((0,1), (0,1)), conj=(0,1)) # miefg,miabc->efgabc
         a= a.transpose((0,3,1,4,2,5)) # efgabc->eafbgc
-        a, lo2= a.group_legs((4,5), new_s=-1) # eafb(gc->G)->eafbG
-        a, leg_order_aux= a.group_legs((2,3), new_s=-1) # ea(fb->F)G->eaFG
-        a, lo0= a.group_legs((0,1), new_s=1) # (ea->E)FG->EFG
+        # a, lo2= a.group_legs((4,5), new_s=-1) # eafb(gc->G)->eafbG
+        # a, leg_order_aux= a.group_legs((2,3), new_s=-1) # ea(fb->F)G->eaFG
+        # a, lo0= a.group_legs((0,1), new_s=1) # (ea->E)FG->EFG
+        a= a.fuse_legs( axes=((0,1),(2,3),(4,5)) )
         a= a/a.max_abs()
-        a._leg_fusion_data[0]= lo0
-        a._leg_fusion_data[2]= lo2
-        a._leg_fusion_data[1]= leg_order_aux
+        # a._leg_fusion_data[0]= lo0
+        # a._leg_fusion_data[2]= lo2
+        # a._leg_fusion_data[1]= leg_order_aux
         env.T[(coord,vec)]=a 
 
         # left transfer matrix
@@ -396,13 +401,14 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         ## a = contiguous(einsum('meifg,maibc->eafbgc',A,conj(A)))
         a= A.dot(A, ((0,2), (0,2)), conj=(0,1)) # meifg,maibc->efgabc
         a= a.transpose((0,3,1,4,2,5)) # efgabc->eafbgc
-        a, leg_order_aux= a.group_legs((4,5), new_s=-1) # eafb(gc->G)->eafbG
-        a, lo1= a.group_legs((2,3), new_s=-1) # ea(fb->F)G->eaFG
-        a, lo0= a.group_legs((0,1), new_s=1) # (ea->E)FG->EFG
+        # a, leg_order_aux= a.group_legs((4,5), new_s=-1) # eafb(gc->G)->eafbG
+        # a, lo1= a.group_legs((2,3), new_s=-1) # ea(fb->F)G->eaFG
+        # a, lo0= a.group_legs((0,1), new_s=1) # (ea->E)FG->EFG
+        a= a.fuse_legs( axes=((0,1),(2,3),(4,5)) )
         a= a/a.max_abs()
-        a._leg_fusion_data[0]= lo0
-        a._leg_fusion_data[1]= lo1
-        a._leg_fusion_data[2]= leg_order_aux
+        # a._leg_fusion_data[0]= lo0
+        # a._leg_fusion_data[1]= lo1
+        # a._leg_fusion_data[2]= leg_order_aux
         env.T[(coord,vec)]=a
 
         # lower transfer matrix
@@ -420,13 +426,14 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         ## a = contiguous(einsum('mefig,mabic->eafbgc',A,conj(A)))
         a= A.dot(A, ((0,3), (0,3)), conj=(0,1)) # mefig,mabic->efgabc
         a= a.transpose((0,3,1,4,2,5)) # efgabc->eafbgc
-        a, lo2= a.group_legs((4,5), new_s=-1) # eafb(gc->G)->eafbG
-        a, lo1= a.group_legs((2,3), new_s=1) # ea(fb->F)G->eaFG
-        a, leg_order_aux= a.group_legs((0,1), new_s=1) # (ea->E)FG->EFG
+        # a, lo2= a.group_legs((4,5), new_s=-1) # eafb(gc->G)->eafbG
+        # a, lo1= a.group_legs((2,3), new_s=1) # ea(fb->F)G->eaFG
+        # a, leg_order_aux= a.group_legs((0,1), new_s=1) # (ea->E)FG->EFG
+        a= a.fuse_legs( axes=((0,1),(2,3),(4,5)) )
         a= a/a.max_abs()
-        a._leg_fusion_data[1]= lo1
-        a._leg_fusion_data[2]= lo2
-        a._leg_fusion_data[0]= leg_order_aux
+        # a._leg_fusion_data[1]= lo1
+        # a._leg_fusion_data[2]= lo2
+        # a._leg_fusion_data[0]= leg_order_aux
         env.T[(coord,vec)]=a
 
         # right transfer matrix
@@ -444,13 +451,14 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         ## a = contiguous(einsum('mefgi,mabci->eafbgc',A,conj(A)))
         a= A.dot(A, ((0,4), (0,4)), conj=(0,1)) # mefig,mabic->efgabc
         a= a.transpose((0,3,1,4,2,5)) # efgabc->eafbgc
-        a, lo2= a.group_legs((4,5), new_s=-1) # eafb(gc->G)->eafbG
-        a, leg_order_aux= a.group_legs((2,3), new_s=1) # ea(fb->F)G->eaFG
-        a, lo0= a.group_legs((0,1), new_s=1) # (ea->E)FG->EFG
+        # a, lo2= a.group_legs((4,5), new_s=-1) # eafb(gc->G)->eafbG
+        # a, leg_order_aux= a.group_legs((2,3), new_s=1) # ea(fb->F)G->eaFG
+        # a, lo0= a.group_legs((0,1), new_s=1) # (ea->E)FG->EFG
+        a= a.fuse_legs( axes=((0,1),(2,3),(4,5)) )
         a= a/a.max_abs()
-        a._leg_fusion_data[0]= lo0
-        a._leg_fusion_data[2]= lo2
-        a._leg_fusion_data[1]= leg_order_aux
+        # a._leg_fusion_data[0]= lo0
+        # a._leg_fusion_data[2]= lo2
+        # a._leg_fusion_data[1]= leg_order_aux
         env.T[(coord,vec)]=a
 
 def init_from_ipeps_obc(state, env, verbosity=0):

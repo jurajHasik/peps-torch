@@ -9,7 +9,8 @@ try:
 except ImportError as e:
     warnings.warn("torch not available", Warning)
 import config as cfg
-import yamps.tensor as TA
+# import yamps.tensor as TA
+import yamps.yast as TA
 from groups.pg_abelian import make_c4v_symm_A1
 from ipeps.tensor_io import *
 
@@ -40,7 +41,7 @@ class IPEPS_ABELIAN_C4V():
         up, left, down, right in anti-clockwise order starting from up.
         """
         self.engine= settings
-        self.backend= settings.back
+        self.backend= settings.backend
         assert global_args.dtype==settings.dtype, "global_args.dtype "+global_args.dtype\
             +" settings.dtype "+settings.dtype
         self.dtype= settings.dtype

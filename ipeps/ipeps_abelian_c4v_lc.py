@@ -9,7 +9,8 @@ try:
 except ImportError as e:
     warnings.warn("torch not available", Warning)
 import config as cfg
-import yamps.tensor as TA
+# import yamps.tensor as TA
+import yamps.yast as TA
 from groups.pg_abelian import make_c4v_symm_A1
 from ipeps.tensor_io import *
 from ipeps.ipeps_abelian_c4v import IPEPS_ABELIAN_C4V

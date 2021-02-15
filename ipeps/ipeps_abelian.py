@@ -10,7 +10,8 @@ try:
 except ImportError as e:
     warnings.warn("torch not available", Warning)
 import config as cfg
-import yamps.tensor as TA
+# import yamps.tensor as TA
+import yamps.yast as TA
 from ipeps.tensor_io import *
 
 class IPEPS_ABELIAN():
@@ -106,13 +107,13 @@ class IPEPS_ABELIAN():
         periodic boundary conditions (PBC) along both X and Y directions.
         """
         self.engine= settings
-        self.backend= settings.back
+        self.backend= settings.backend
         assert global_args.dtype==settings.dtype, "global_args.dtype "+global_args.dtype\
             +" settings.dtype "+settings.dtype
         self.dtype= settings.dtype
         self.device= global_args.device
-        self.nsym = settings.nsym
-        self.sym= settings.sym
+        self.nsym = settings.sym.nsym
+        self.sym= settings.sym.name
 
         self.sites= OrderedDict(sites)
         
@@ -338,7 +339,7 @@ def read_ipeps(jsonfile, settings, vertexToSite=None, \
             peps_args=peps_args, global_args=global_args)
 
     # check dtypes of all on-site tensors for newly created state
-    assert (False not in [state.dtype==s.dtype for s in sites.values()]), \
+    assert (False not in [state.dtype==s.config.dtype for s in sites.values()]), \
         "incompatible dtype among state and on-site tensors"
 
     # move to desired device and return
