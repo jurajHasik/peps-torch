@@ -32,9 +32,6 @@ class Test_ctmrg_abelian_full_torch(unittest.TestCase):
         for t in a.A.values(): t.requires_grad_(True)
         for t in b.A.values(): t.requires_grad_(True)
         sites=dict({(0,0): a, (1,0): b})
-        import pdb
-        pdb.set_trace()
-
 
         def vertexToSite(r):
             x = (r[0] + abs(r[0]) * 2) % 2
