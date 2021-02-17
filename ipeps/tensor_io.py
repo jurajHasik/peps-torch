@@ -200,7 +200,7 @@ def serialize_abelian_tensor_legacy(t, native=False):
     json_tensor["format"]= "abelian"
     json_tensor["nsym"]= t.config.sym.nsym
     json_tensor["symmetry"]= t.config.sym.name
-    json_tensor["rank"]= t.ldim() if not native else t.nnlegs
+    json_tensor["rank"]= t.get_ndim(native=native)
     json_tensor["signature"]= t.get_signature(native=native)
     json_tensor["n"]= t.n
     json_tensor["isdiag"]= t.isdiag
