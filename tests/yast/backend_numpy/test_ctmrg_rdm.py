@@ -2,13 +2,14 @@ import numpy as np
 import unittest
 import settings_full
 import settings_U1
-import settings_U1_U1
-import yamps.tensor as TA
-import yamps.peps.config as cfg
-from yamps.peps.ipeps.ipeps_abelian import IPEPS_ABELIAN
-from yamps.peps.ctm.generic_abelian.env_abelian import ENV_ABELIAN
-import yamps.peps.ctm.generic_abelian.ctmrg as ctmrg_abelian
-import yamps.peps.ctm.generic_abelian.rdm as rdm
+# import settings_U1_U1
+# import yamps.tensor as TA
+import yamps.yast as TA
+import config as cfg
+from ipeps.ipeps_abelian import IPEPS_ABELIAN
+from ctm.generic_abelian.env_abelian import ENV_ABELIAN
+import ctm.generic_abelian.ctmrg as ctmrg_abelian
+import ctm.generic_abelian.rdm as rdm
 
 class Test_ctmrg_rdm_abelian_full(unittest.TestCase):
     

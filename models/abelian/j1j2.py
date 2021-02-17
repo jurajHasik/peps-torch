@@ -84,43 +84,43 @@ class J1J2_NOSYM():
         obs_ops["sm"]= irrep.SM()
         return obs_ops
 
-    def energy_2x2_1site_BP(self,state,env):
-        r"""
-        :param state: wavefunction
-        :param env: CTM environment
-        :type state: IPEPS_ABELIAN
-        :type env: ENV_ABELIAN
-        :return: energy per site
-        :rtype: float
+    # def energy_2x2_1site_BP(self,state,env):
+    #     r"""
+    #     :param state: wavefunction
+    #     :param env: CTM environment
+    #     :type state: IPEPS_ABELIAN
+    #     :type env: ENV_ABELIAN
+    #     :return: energy per site
+    #     :rtype: float
 
-        We assume 1x1 iPEPS which tiles the lattice with a bipartite pattern composed 
-        of two tensors A, and B=RA, where R rotates approriately the physical Hilbert space 
-        of tensor A on every "odd" site::
+    #     We assume 1x1 iPEPS which tiles the lattice with a bipartite pattern composed 
+    #     of two tensors A, and B=RA, where R rotates approriately the physical Hilbert space 
+    #     of tensor A on every "odd" site::
 
-            1x1 C4v => rotation P => BIPARTITE
+    #         1x1 C4v => rotation P => BIPARTITE
 
-            A A A A                  A B A B
-            A A A A                  B A B A
-            A A A A                  A B A B
-            A A A A                  B A B A
+    #         A A A A                  A B A B
+    #         A A A A                  B A B A
+    #         A A A A                  A B A B
+    #         A A A A                  B A B A
 
-        A single reduced density matrix :py:func:`ctm.rdm.rdm2x2` of a 2x2 plaquette
-        is used to evaluate the energy.
-        """
-        if not (hasattr(self, 'h2x2_nn_rot') or hasattr(self, 'h2x2_nn_nrot')):
-            irrep = su2.SU2_NOSYM(self.engine, self.phys_dim)
-            rot_op= irrep.BP_rot()
-            self.h2x2_nn_rot= torch.einsum('irtlaxyd,jr,kt,xb,yc->ijklabcd',\
-                self.h2x2_nn,rot_op,rot_op,rot_op,rot_op)
-            self.h2x2_nnn_rot= torch.einsum('irtlaxyd,jr,kt,xb,yc->ijklabcd',\
-                self.h2x2_nnn,rot_op,rot_op,rot_op,rot_op)
+    #     A single reduced density matrix :py:func:`ctm.rdm.rdm2x2` of a 2x2 plaquette
+    #     is used to evaluate the energy.
+    #     """
+    #     if not (hasattr(self, 'h2x2_nn_rot') or hasattr(self, 'h2x2_nn_nrot')):
+    #         irrep = su2.SU2_NOSYM(self.engine, self.phys_dim)
+    #         rot_op= irrep.BP_rot()
+    #         self.h2x2_nn_rot= torch.einsum('irtlaxyd,jr,kt,xb,yc->ijklabcd',\
+    #             self.h2x2_nn,rot_op,rot_op,rot_op,rot_op)
+    #         self.h2x2_nnn_rot= torch.einsum('irtlaxyd,jr,kt,xb,yc->ijklabcd',\
+    #             self.h2x2_nnn,rot_op,rot_op,rot_op,rot_op)
 
-        tmp_rdm= rdm.rdm2x2((0,0),state,env)
-        energy_nn= torch.einsum('ijklabcd,ijklabcd',tmp_rdm,self.h2x2_nn_rot)
-        energy_nnn= torch.einsum('ijklabcd,ijklabcd',tmp_rdm,self.h2x2_nnn_rot)
-        energy_per_site = 2.0*(self.j1*energy_nn/4.0 + self.j2*energy_nnn/2.0)
+    #     tmp_rdm= rdm.rdm2x2((0,0),state,env)
+    #     energy_nn= torch.einsum('ijklabcd,ijklabcd',tmp_rdm,self.h2x2_nn_rot)
+    #     energy_nnn= torch.einsum('ijklabcd,ijklabcd',tmp_rdm,self.h2x2_nnn_rot)
+    #     energy_per_site = 2.0*(self.j1*energy_nn/4.0 + self.j2*energy_nnn/2.0)
 
-        return energy_per_site
+    #     return energy_per_site
 
     def energy_2x1_or_2Lx2site_2x2rdms(self,state,env):
         r"""
@@ -248,7 +248,7 @@ class J1J2_NOSYM():
         # _ci= ([0,1,2,3, 4,5,6,7],[4,5,6,7, 0,1,2,3])
         _ci= ([0,1,2,3, 4,5,6,7],[0,1,2,3, 4,5,6,7])
         for coord in state.sites.keys():
-            tmp_rdm= rdm.rdm2x2(coord,state,env).to_dense()
+            tmp_rdm= rdm.rdm2x2(coord,state,env).to_nonsymmetric()
             energy_nn += contract(tmp_rdm,self.h2x2_nn,_ci)
             energy_nnn += contract(tmp_rdm,self.h2x2_nnn,_ci)
         energy_per_site = 2.0*(self.j1*energy_nn/(4*N) + self.j2*energy_nnn/(2*N))
@@ -297,7 +297,7 @@ class J1J2_NOSYM():
         #_ci= ([0,1],[1,0])
         _ci= ([0,1],[0,1])
         for coord,site in state.sites.items():
-            rdm1x1 = rdm.rdm1x1(coord,state,env).to_dense()
+            rdm1x1 = rdm.rdm1x1(coord,state,env).to_nonsymmetric()
             for label,op in self.obs_ops.items():
                 obs[f"{label}{coord}"]= contract(rdm1x1, op, _ci).to_number()
             obs[f"m{coord}"]= sqrt(abs(obs[f"sz{coord}"]**2 + obs[f"sp{coord}"]*obs[f"sm{coord}"]))
@@ -307,8 +307,8 @@ class J1J2_NOSYM():
         # _ci= ([0,1,2,3],[2,3,0,1])
         _ci= ([0,1,2,3],[0,1,2,3])
         for coord,site in state.sites.items():
-            rdm2x1 = rdm.rdm2x1(coord,state,env).to_dense()
-            rdm1x2 = rdm.rdm1x2(coord,state,env).to_dense()
+            rdm2x1 = rdm.rdm2x1(coord,state,env).to_nonsymmetric()
+            rdm1x2 = rdm.rdm1x2(coord,state,env).to_nonsymmetric()
             obs[f"SS2x1{coord}"]= contract(rdm2x1,self.h2,_ci).to_number()
             obs[f"SS1x2{coord}"]= contract(rdm1x2,self.h2,_ci).to_number()
         

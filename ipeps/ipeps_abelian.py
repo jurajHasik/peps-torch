@@ -176,8 +176,8 @@ class IPEPS_ABELIAN():
         dense state.
         """
         if self.nsym==0: return self
-        sites_dense= {ind: t.to_dense() for ind,t in self.sites.items()}
-        settings_dense= next(iter(self.sites.values())).conf
+        sites_dense= {ind: t.to_nonsymmetric() for ind,t in self.sites.items()}
+        settings_dense= next(iter(sites_dense.values())).config
         state_dense= IPEPS_ABELIAN(settings_dense, sites_dense, \
             vertexToSite=self.vertexToSite, lX=self.lX, lY=self.lY)
         return state_dense
@@ -192,7 +192,7 @@ class IPEPS_ABELIAN():
         block structure (symmetry). This operations preserves gradients on returned
         dense state.
         """
-        sites_dense= {ind: t.to_dense().A[()] for ind,t in self.sites.items()}
+        sites_dense= {ind: t.to_dense() for ind,t in self.sites.items()}
         state_dense= IPEPS(sites_dense, vertexToSite=self.vertexToSite, \
             lX=self.lX, lY=self.lY,peps_args=peps_args, global_args=global_args)
         return state_dense
