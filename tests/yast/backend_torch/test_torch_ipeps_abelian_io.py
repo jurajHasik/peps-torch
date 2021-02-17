@@ -25,7 +25,8 @@ class Test_IO_ipeps_abelian(unittest.TestCase):
         for k in state1.sites.keys():
             self.assertTrue(state1.sites[k].config.sym.nsym==state0.nsym)
             self.assertTrue(state1.sites[k].config.sym.name==state0.sym)
-            self.assertTrue(state1.sites[k]._ndim==state0.sites[k]._ndim)
+            self.assertTrue(state1.sites[k].nnlegs==state0.sites[k].nnlegs)
+            self.assertTrue(state1.sites[k].ldim()==state0.sites[k].ldim())
             self.assertTrue(np.array_equal(state1.sites[k].s,state0.sites[k].s))
             self.assertTrue(np.array_equal(state1.sites[k].n,state0.sites[k].n))
             if state0.nsym>0:

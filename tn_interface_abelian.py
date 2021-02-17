@@ -35,8 +35,8 @@ def contract(t1, t2, *args, **kwargs):
 def mm(m1, m2, **kwargs):
     # assert m1.ndim==2, "m1 is not a matrix"
     # assert m2.ndim==2, "m2 is not a matrix"
-    assert len(m1.lfuse)==2, "m1 is not a matrix"
-    assert len(m2.lfuse)==2, "m2 is not a matrix"
+    assert m1.ldim()==2, "m1 is not a matrix"
+    assert m2.ldim()==2, "m2 is not a matrix"
     return m1.dot(m2, ((1),(0)), **kwargs)
 
 # def einsum_complex(op, *ts):
@@ -73,7 +73,7 @@ def permute(t, *args):
 
 def transpose(m):
     # assert m.ndim==2, "m is not a matrix"
-    assert len(m.lfuse)==2, "m is not a matrix"
+    assert m.ldim()==2, "m is not a matrix"
     return m.transpose((1,0))
 
 def conj(t):

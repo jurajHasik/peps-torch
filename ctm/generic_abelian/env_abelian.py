@@ -144,18 +144,19 @@ class ENV_ABELIAN():
         dense environment.
         """
         if self.nsym==0: return self
-        C_dense= {cid: c.to_dense() for cid,c in self.C.items()}
+        C_dense= {cid: c.to_nonsymmetric() for cid,c in self.C.items()}
         T_dense= {}
         #            UP         LEFT       DOWN     RIGHT
-        dir_to_leg= {(0,-1): 1, (-1,0): 2, (0,1): 0, (1,0): 1}
+        # dir_to_leg= {(0,-1): 1, (-1,0): 2, (0,1): 0, (1,0): 1}
         # tid = (coord,dir)
         for tid,T in self.T.items():
-            fused_leg= dir_to_leg[tid[1]]
-            Td= T.ungroup_leg(fused_leg, T._leg_fusion_data[fused_leg])
-            Td= Td.to_dense()
-            Td, lo= Td.group_legs((fused_leg, fused_leg+1), new_s=T.s[fused_leg])
-            Td._leg_fusion_data[fused_leg]= lo
-            T_dense[tid]= Td
+            # fused_leg= dir_to_leg[tid[1]]
+            # Td= T.ungroup_leg(fused_leg, T._leg_fusion_data[fused_leg])
+            # Td= Td.to_nonsymmetric()
+            # Td, lo= Td.group_legs((fused_leg, fused_leg+1), new_s=T.s[fused_leg])
+            # Td._leg_fusion_data[fused_leg]= lo
+            # T_dense[tid]= Td
+            T_dense[tid]= T.to_nonsymmetric()
         env_dense= ENV_ABELIAN(self.chi, settings=next(iter(C_dense.values())).conf, \
             ctm_args=ctm_args, global_args=global_args)
         env_dense.C= C_dense
@@ -172,9 +173,11 @@ class ENV_ABELIAN():
         block structure (symmetry). This operations preserves gradients on returned
         dense environment.
         """
-        env_dense= self.to_dense(ctm_args=ctm_args, global_args=global_args)
-        C_torch= {cid: c.A[()] for cid,c in env_dense.C.items()}
-        T_torch= {tid: t.A[()] for tid,t in env_dense.T.items()}
+        # env_dense= self.to_dense(ctm_args=ctm_args, global_args=global_args)
+        # C_torch= {cid: c.A[()] for cid,c in env_dense.C.items()}
+        # T_torch= {tid: t.A[()] for tid,t in env_dense.T.items()}
+        C_torch= {cid: c.to_dense() for cid,c in self.C.items()}
+        T_torch= {tid: t.to_dense() for tid,t in self.T.items()}
         env_torch= ENV(self.chi, ctm_args=ctm_args, global_args=global_args)
         env_torch.C= C_torch
         env_torch.T= T_torch

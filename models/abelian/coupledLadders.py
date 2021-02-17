@@ -165,7 +165,7 @@ class COUPLEDLADDERS_NOSYM():
         # _ci= ([0,1],[1,0])
         _ci= ([0,1],[0,1])
         for coord,site in state.sites.items():
-            rdm1x1 = rdm.rdm1x1(coord,state,env).to_dense()
+            rdm1x1 = rdm.rdm1x1(coord,state,env).to_nonsymmetric()
             for label,op in self.obs_ops.items():
                 obs[f"{label}{coord}"]= contract(rdm1x1, op, _ci).to_number()
             obs[f"m{coord}"]= sqrt(abs(obs[f"sz{coord}"]**2 + obs[f"sp{coord}"]*obs[f"sm{coord}"]))
@@ -175,8 +175,8 @@ class COUPLEDLADDERS_NOSYM():
         # _ci= ([0,1,2,3],[2,3,0,1])
         _ci= ([0,1,2,3],[0,1,2,3])
         for coord,site in state.sites.items():
-            rdm2x1 = rdm.rdm2x1(coord,state,env).to_dense()
-            rdm1x2 = rdm.rdm1x2(coord,state,env).to_dense()
+            rdm2x1 = rdm.rdm2x1(coord,state,env).to_nonsymmetric()
+            rdm1x2 = rdm.rdm1x2(coord,state,env).to_nonsymmetric()
             obs[f"SS2x1{coord}"]= contract(rdm2x1,self.h2,_ci).to_number()
             obs[f"SS1x2{coord}"]= contract(rdm1x2,self.h2,_ci).to_number()
 

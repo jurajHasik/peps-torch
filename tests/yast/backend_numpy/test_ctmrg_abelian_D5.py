@@ -3,11 +3,12 @@ import numpy as np
 import unittest
 import settings_full
 import settings_U1
-import yamps.tensor as TA
-import yamps.peps.config as cfg
-from yamps.peps.ipeps.ipeps_abelian import IPEPS_ABELIAN, read_ipeps
-from yamps.peps.ctm.generic_abelian.env_abelian import ENV_ABELIAN
-import yamps.peps.ctm.generic_abelian.ctmrg as ctmrg_abelian
+# import yamps.tensor as TA
+import yamps.yast as TA
+import config as cfg
+from ipeps.ipeps_abelian import IPEPS_ABELIAN, read_ipeps
+from ctm.generic_abelian.env_abelian import ENV_ABELIAN
+import ctm.generic_abelian.ctmrg as ctmrg_abelian
 
 class Test_ctmrg_abelian_U1_D5_basic(unittest.TestCase):
     
@@ -19,6 +20,12 @@ class Test_ctmrg_abelian_U1_D5_basic(unittest.TestCase):
     def _get_1x1_full(cls):
         instate= pathlib.Path(__file__).parent.absolute() / cls.instate
         state_U1= read_ipeps(instate, settings_U1)
+        # set correct signature
+        T0= state_U1.site((0,0))
+        a= TA.Tensor(settings=T0.config, s=cls._ref_s_dir, n=T0.n)
+        for c,block in T0.A.items(): 
+            a.set_block(tuple(cls._ref_s_dir*np.asarray(c)), block.shape, val=block) 
+        state_U1.sites= {(0,0): a}
         state_dense= state_U1.to_dense()
         return state_dense
 
@@ -29,10 +36,10 @@ class Test_ctmrg_abelian_U1_D5_basic(unittest.TestCase):
 
         # create 2x1 bipartite
         T0= state_U1.site((0,0))
-        a= TA.Tensor(settings=T0.conf, s=cls._ref_s_dir, n=T0.n)
+        a= TA.Tensor(settings=T0.config, s=cls._ref_s_dir, n=T0.n)
         for c,block in T0.A.items():
             a.set_block(tuple(cls._ref_s_dir*np.asarray(c)), block.shape, val=block) 
-        b= TA.Tensor(settings=a.conf, s=cls._ref_s_dir, n=-a.n)
+        b= TA.Tensor(settings=a.config, s=cls._ref_s_dir, n=-a.n)
         for c,block in a.A.items():
             b.set_block(tuple(-np.asarray(c)), block.shape, val=block)
 
@@ -126,10 +133,10 @@ class Test_ctmrg_abelian_U1_D5_spectra(unittest.TestCase):
 
         # create 2x1 bipartite
         T0= state_U1.site((0,0))
-        a= TA.Tensor(settings=T0.conf, s=cls._ref_s_dir, n=T0.n)
+        a= TA.Tensor(settings=T0.config, s=cls._ref_s_dir, n=T0.n)
         for c,block in T0.A.items():
             a.set_block(tuple(cls._ref_s_dir*np.asarray(c)), block.shape, val=block) 
-        b= TA.Tensor(settings=a.conf, s=cls._ref_s_dir, n=-a.n)
+        b= TA.Tensor(settings=a.config, s=cls._ref_s_dir, n=-a.n)
         for c,block in a.A.items():
             b.set_block(tuple(-np.asarray(c)), block.shape, val=block)
 
