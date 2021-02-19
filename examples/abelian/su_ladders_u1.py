@@ -2,7 +2,7 @@ import torch
 import numpy as np
 import argparse
 import config as cfg
-from examples.abelian.settings_full_torch import settings_full_torch as settings_full
+import examples.abelian.settings_full_torch as settings_full
 import examples.abelian.settings_U1_torch as settings_U1
 import yamps.tensor as TA
 from ipeps.ipeps_abelian import *
@@ -56,8 +56,8 @@ def main():
         settings.device = cfg.global_args.device
         settings_full.device = cfg.global_args.device
         print("Setting backend device: "+settings.device)
-    settings.back.set_num_threads(args.omp_cores)
-    settings.back.random_seed(args.seed)
+    settings.backend.set_num_threads(args.omp_cores)
+    settings.backend.random_seed(args.seed)
 
     # initialize an ipeps
     # 1) define lattice-tiling function, that maps arbitrary vertex of square lattice
