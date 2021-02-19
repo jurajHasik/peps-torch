@@ -234,8 +234,9 @@ class IPEPS_ABELIAN():
         if noise==0: return self
         sites= {}
         for ind,t in self.sites.items():
-            t_data, D_data= t.get_tD()
-            sites[ind]= t + noise * t.rand(s=t.s, n=t.n, t=t_data, D=D_data, isdiag=t.isdiag)
+            ts, Ds= t.get_leg_charges_and_dims(native=True)
+            t_noise= TA.rand(config=t.config, s=t.s, n=t.n, t=ts, D=Ds, isdiag=t.isdiag)
+            sites[ind]= t + noise * t_noise
         state= IPEPS_ABELIAN(self.engine, sites, self.vertexToSite, 
             lX=self.lX, lY=self.lY)
         return state

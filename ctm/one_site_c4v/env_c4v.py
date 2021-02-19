@@ -102,6 +102,10 @@ class ENV_C4V():
         new_env.T[new_env.keyT]= self.get_T().detach()
         return new_env
 
+    def detach_(self):
+        self.get_C().detach_()
+        self.get_T().detach_()
+
     def extend(self, new_chi, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
         new_env= ENV_C4V(new_chi, bond_dim=self.bond_dim, ctm_args=ctm_args, \
             global_args=global_args)

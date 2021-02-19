@@ -112,6 +112,10 @@ class ENV():
         new_env.T= { k: t.detach() for k,t in self.T.items() }
         return new_env
 
+    def detach_(self):
+        for c in self.C.values(): c.detach_()
+        for t in self.T.values(): t.detach_()
+
     def extend(self, new_chi, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
         new_env= ENV(new_chi, ctm_args=ctm_args, global_args=global_args)
         x= min(self.chi, new_chi)
