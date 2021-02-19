@@ -48,7 +48,6 @@ class J1J2():
         self.phys_dim=2
         self.j1=j1
         self.j2=j2
-        self.j3=j3
         
         self.h2, self.h2x2_nn, self.h2x2_nnn= self.get_h()
         self.obs_ops= self.get_obs_ops()

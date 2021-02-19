@@ -109,8 +109,8 @@ class COUPLEDLADDERS_NOSYM():
         # _ci= ([0,1,2,3],[2,3,0,1])
         _ci= ([0,1,2,3],[0,1,2,3])
         for coord,site in state.sites.items():
-            rdm2x1= rdm.rdm2x1(coord,state,env).to_dense()
-            rdm1x2= rdm.rdm1x2(coord,state,env).to_dense()
+            rdm2x1= rdm.rdm2x1(coord,state,env).to_nonsymmetric()
+            rdm1x2= rdm.rdm1x2(coord,state,env).to_nonsymmetric()
             ss= contract(rdm2x1, self.h2, _ci)
             energy += ss
             if coord[1] % 2 == 0:

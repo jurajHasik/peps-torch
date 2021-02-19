@@ -211,6 +211,9 @@ class ENV_ABELIAN():
         e.T= {tid: t.detach() for tid,t in self.T.items()}
         return e
 
+    def detach_(self):
+        for c in self.C.values(): c.detach(inplace=True)
+        for t in self.T.values(): t.detach(inplace=True)
 
 def init_env(state, env, init_method=None, ctm_args=cfg.ctm_args):
     """
