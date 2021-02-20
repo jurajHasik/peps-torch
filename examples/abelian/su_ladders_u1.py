@@ -21,7 +21,7 @@ log = logging.getLogger(__name__)
 parser= cfg.get_args_parser()
 # additional model-dependent arguments
 parser.add_argument("--alpha", type=float, default=0., help="inter-ladder coupling")
-parser.add_argument("--symmetry", default=None, help="symmetry structure", choices=["NONE","U1"])
+parser.add_argument("--symmetry", default="None", help="symmetry structure", choices=["None","U1"])
 parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
@@ -43,7 +43,7 @@ def main():
     cfg.configure(args)
     cfg.print_config()
     # TODO(?) choose symmetry group
-    if not args.symmetry or args.symmetry=="NONE":
+    if not args.symmetry or args.symmetry=="None":
         settings= settings_full
         model= coupledLadders.COUPLEDLADDERS_NOSYM(settings,alpha=args.alpha)
     elif args.symmetry=="U1":
