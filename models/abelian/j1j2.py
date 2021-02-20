@@ -425,7 +425,7 @@ class J1J2_C4V_BIPARTITE_NOSYM():
         h2x2_SSnn= contract(SS_nn,I2_nn,([],[]))
         h2x2_SSnn= permute(h2x2_SSnn, (0,1,5,4, 2,3,7,6))
         
-        h2x2_SSnnn= contract(SS,I2.negate_signature(),([],[]))
+        h2x2_SSnnn= contract(SS,I2.flip_signature(),([],[]))
         h2x2_SSnnn= permute(h2x2_SSnnn, (0,1,4,5, 2,3,6,7))
 
         # all nearest-neighbour S.S terms on 2x2 plaquette
@@ -437,7 +437,7 @@ class J1J2_C4V_BIPARTITE_NOSYM():
         #                 S  xR                                    x  SR
         #                 xR S                                     SR x    
         h2x2_nnn= permute(h2x2_SSnnn, (0,3,2,1,4,7,6,5)) + \
-            permute(h2x2_SSnnn.negate_signature(), (2,0,1,3,6,4,5,7))
+            permute(h2x2_SSnnn.flip_signature(), (2,0,1,3,6,4,5,7))
         h2x2= 0.5*self.j1*h2x2_nn + self.j2*h2x2_nnn
 
         return SS, SS_nn, h2x2
@@ -521,12 +521,12 @@ class J1J2_C4V_BIPARTITE_NOSYM():
             = 2*Tr(\rho_{2x1} \mathcal{h2_rot}) + 2*Tr(\rho_{2x1_diag} \mathcal{h2})
         
         """
-        # _ci= ([0,1,2,3],[2,3,0,1])
-        _ci= ([0,1,2,3],[0,1,2,3])
+        _ci= ([0,1,2,3],[2,3,0,1])
+        # _ci= ([0,1,2,3],[0,1,2,3])
         rdm2x2_NN= rdm_c4v.rdm2x2_NN(state, env_c4v, sym_pos_def=False,\
-            force_cpu=force_cpu, verbosity=cfg.ctm_args.verbosity_rdm).to_dense()
+            force_cpu=force_cpu, verbosity=cfg.ctm_args.verbosity_rdm).to_nonsymmetric()
         rdm2x2_NNN= rdm_c4v.rdm2x2_NNN(state, env_c4v, sym_pos_def=False,\
-            force_cpu=force_cpu, verbosity=cfg.ctm_args.verbosity_rdm).to_dense()
+            force_cpu=force_cpu, verbosity=cfg.ctm_args.verbosity_rdm).to_nonsymmetric()
         SS_nn= contract(rdm2x2_NN,self.SS_rot,_ci).to_number()
         SS_nnn= contract(rdm2x2_NNN,self.SS,_ci).to_number()
         energy_per_site= 2.0*self.j1*SS_nn + 2.0*self.j2*SS_nnn
@@ -569,21 +569,21 @@ class J1J2_C4V_BIPARTITE_NOSYM():
         # TODO optimize/unify ?
         # expect "list" of (observable label, value) pairs ?
         obs= dict()
-        # _ci= ([0,1,2,3],[2,3,0,1])
-        _ci= ([0,1,2,3],[0,1,2,3])
+        _ci= ([0,1,2,3],[2,3,0,1])
+        # _ci= ([0,1,2,3],[0,1,2,3])
         rdm2x1= rdm_c4v.rdm2x1(state,env_c4v,force_cpu=force_cpu,\
-            verbosity=cfg.ctm_args.verbosity_rdm).to_dense()
+            verbosity=cfg.ctm_args.verbosity_rdm).to_nonsymmetric()
         if np.all(rdm2x1.s/self.SS_rot.s==-1):
-            rdm2x1= rdm2x1.negate_signature()
+            rdm2x1= rdm2x1.flip_signature(inplace=True)
         obs[f"SS2x1"]= contract(rdm2x1,self.SS_rot,_ci).to_number()
         
         # TODO reduce rdm2x1 to 1x1
-        # _ci= ([0,1],[1,0])
-        _ci= ([0,1],[0,1])
+        _ci= ([0,1],[1,0])
+        # _ci= ([0,1],[0,1])
         rdm1x1 = rdm_c4v.rdm1x1(state,env_c4v,force_cpu=force_cpu,\
-            verbosity=cfg.ctm_args.verbosity_rdm).to_dense()
+            verbosity=cfg.ctm_args.verbosity_rdm).to_nonsymmetric()
         if np.all(rdm1x1.s/self.obs_ops["sz"].s==-1):
-            rdm1x1= rdm1x1.negate_signature()
+            rdm1x1= rdm1x1.flip_signature()
         for label,op in self.obs_ops.items():
             obs[f"{label}"]= contract(rdm1x1, op, _ci).to_number()
         obs[f"m"]= sqrt(abs(obs[f"sz"]**2 + obs[f"sp"]*obs[f"sm"]))

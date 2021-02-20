@@ -20,8 +20,8 @@ def _sym_pos_def_matrix(rdm, sym_pos_def=False, verbosity=0, who="unknown"):
     return rdm
 
 def _sym_pos_def_rdm(rdm, sym_pos_def=False, verbosity=0, who=None):
-    assert len(rdm.lfuse)%2==0, "invalid rank of RDM"
-    nsites= len(rdm.lfuse)//2
+    assert rdm.get_ndim()%2==0, "invalid rank of RDM"
+    nsites= rdm.get_ndim()//2
     # rdm, lo_bra= rdm.group_legs(tuple(nsites+i for i in range(nsites)), new_s=1)
     # rdm, lo_ket= rdm.group_legs(tuple(i for i in range(nsites)), new_s=-1)
     rdm= rdm.fuse_legs(axes=(tuple(nsites+i for i in range(nsites)),\

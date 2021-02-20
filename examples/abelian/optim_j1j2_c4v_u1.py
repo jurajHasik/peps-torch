@@ -3,9 +3,9 @@ import torch
 import numpy as np
 import argparse
 import config as cfg
-from examples.abelian.settings_full_torch import settings_full_torch as settings_full
+import examples.abelian.settings_full_torch as settings_full
 import examples.abelian.settings_U1_torch as settings_U1
-import yamps.tensor as TA
+import yamps.yast as TA
 from ipeps.ipeps_abelian_c4v import *
 from models.abelian import j1j2
 from ctm.one_site_c4v_abelian.env_c4v_abelian import *
@@ -46,9 +46,9 @@ def main():
         settings.device = cfg.global_args.device
         settings_full.device = cfg.global_args.device
         print("Setting backend device: "+settings.device)
-    settings.back.ad_decomp_reg= cfg.ctm_args.ad_decomp_reg
-    settings.back.set_num_threads(args.omp_cores)
-    settings.back.random_seed(args.seed)
+    settings.backend.ad_decomp_reg= cfg.ctm_args.ad_decomp_reg
+    settings.backend.set_num_threads(args.omp_cores)
+    settings.backend.random_seed(args.seed)
 
     model= j1j2.J1J2_C4V_BIPARTITE_NOSYM(settings_full, j1=args.j1, j2=args.j2)
     energy_f= model.energy_1x1_lowmem

@@ -4,8 +4,8 @@ from .ctm_components_c4v import c2x2_dl
 log = logging.getLogger(__name__)
 
 def _sym_pos_def_matrix(rdm, sym_pos_def=False, verbosity=0, who="unknown"):
-    rdm_asym= 0.5*(rdm-rdm.transpose().conj())
-    rdm= 0.5*(rdm+rdm.transpose().conj())
+    rdm_asym= 0.5*(rdm-rdm.transpose((1,0)).conj())
+    rdm= 0.5*(rdm+rdm.transpose((1,0)).conj())
     if verbosity>0: 
         log.info(f"{who} norm(rdm_sym) {rdm.norm()} norm(rdm_asym) {rdm_asym.norm()}")
     # if sym_pos_def:
@@ -20,13 +20,16 @@ def _sym_pos_def_matrix(rdm, sym_pos_def=False, verbosity=0, who="unknown"):
     return rdm
 
 def _sym_pos_def_rdm(rdm, sym_pos_def=False, verbosity=0, who=None):
-    assert rdm.ndim%2==0, "invalid rank of RDM"
-    nsites= rdm.ndim//2
-    rdm, lo_bra= rdm.group_legs(tuple(nsites+i for i in range(nsites)), new_s=1)
-    rdm, lo_ket= rdm.group_legs(tuple(i for i in range(nsites)), new_s=-1)
+    assert rdm.get_ndim()%2==0, "invalid rank of RDM"
+    nsites= rdm.get_ndim()//2
+    # rdm, lo_bra= rdm.group_legs(tuple(nsites+i for i in range(nsites)), new_s=1)
+    # rdm, lo_ket= rdm.group_legs(tuple(i for i in range(nsites)), new_s=-1)
+    rdm= rdm.fuse_legs(axes=(tuple(nsites+i for i in range(nsites)),\
+        tuple(i for i in range(nsites))) )
     rdm= _sym_pos_def_matrix(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
-    rdm= rdm.ungroup_leg(1, lo_bra)
-    rdm= rdm.ungroup_leg(0, lo_ket)
+    rdm= rdm.unfuse_legs(axes=(0,1), inplace=True)
+    # rdm= rdm.ungroup_leg(1, lo_bra)
+    # rdm= rdm.ungroup_leg(0, lo_ket)
     return rdm
 
 # CONVENTION:
@@ -37,16 +40,17 @@ def _sym_pos_def_rdm(rdm, sym_pos_def=False, verbosity=0, who=None):
 # ----- components -------------------------------------------------------------
 def aux_C2x2_LU(a,C,T, verbosity=0):
     # C--1(-1)(+1)0--T--1(+1)
-    # 0(-1)      (-1)2
+    # 0(-1)      (-1)2,3
     c2x2= contract(C, T, ([1],[0]))
 
-    # C------T--1->2(+) => C------T--2(+1)->1(+)
-    # 0(-1)  2->3(-1)      |      3->2(-)
+    # C------T--1->3(+) => C------T--3(+1)->1(+)
+    # 0(-1)  2,3->4,5(-1)  |      4,5->2,3(-)
     # 0(+1)                |
-    # T--2->1(-)           T--1(-)->3(-)
+    # T--2,3->1,2(-)       T--1,2(-)->4,5(-)
     # 1->0(+1)             0(+)
     c2x2= contract(T, c2x2, ([0],[0]))
-    c2x2= permute(c2x2,(0,2,3,1))
+    # c2x2= permute(c2x2,(0,2,3,1))
+    c2x2= permute(c2x2,(0,3,4,5,1,2))
 
     # Open indices connecting Ts to on-site tensor. The unmerged index pairs are ordered 
     # as ket,bra
@@ -56,8 +60,8 @@ def aux_C2x2_LU(a,C,T, verbosity=0):
     # T--3->3(+1),4(-1)->4(+1),5(-1)
     # |
     # 0(+1)
-    c2x2= c2x2.ungroup_leg(3, T._leg_fusion_data[2])
-    c2x2= c2x2.ungroup_leg(2, T._leg_fusion_data[2])
+    # c2x2= c2x2.ungroup_leg(3, T._leg_fusion_data[2])
+    # c2x2= c2x2.ungroup_leg(2, T._leg_fusion_data[2])
 
     return c2x2
 
@@ -162,11 +166,11 @@ def rdm1x1(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
     # 0(+) 1(+),2(-)     /1(+)
     rdm= open_C2x2_LU(a,C,T, verbosity=verbosity)
 
-    # 0(-)       (-)2           0(-)   2(-)->2(-),3(+)
+    # 0(-)       (-)2,3         0(-)   2(-)->2(-),3(+)
     # C--(-)1 (+)0--T--(+)1  => C------T--1(+)
     #
     C2x1_LU= contract(C, T,([1],[0]))
-    C2x1_LU= C2x1_LU.ungroup_leg(2, T._leg_fusion_data[2])
+    # C2x1_LU= C2x1_LU.ungroup_leg(2, T._leg_fusion_data[2])
 
     # |rdm     |--3(+)->1(+)
     # |________|--4(+),5(-)->2(+),3(-)
@@ -254,11 +258,11 @@ def rdm2x1(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
     # 0(+) 1(+),2(-)     /1(+)
     left_half= open_C2x2_LU(a,C,T, verbosity=verbosity)
 
-    # 0(-)       (-)2           0(-)   2(-)->2(-),3(+)
+    # 0(-)       (-)2,3         0(-)   2(-)->2(-),3(+)
     # C--(-)1 (+)0--T--(+)1  => C------T--1(+)
     #
     C2x1_LU= contract(C, T,([1],[0]))
-    C2x1_LU= C2x1_LU.ungroup_leg(2, T._leg_fusion_data[2])
+    # C2x1_LU= C2x1_LU.ungroup_leg(2, T._leg_fusion_data[2])
 
     # |rdm     |--3(+)->1(+)
     # |________|--4(+),5(-)->2(+),3(-)
@@ -275,7 +279,7 @@ def rdm2x1(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
     # |\4(+),5(-)             4(-),5(+)/|
     # | ->0(+),1(-)         ->2(-),3(+) |
     # C2x1---------0(+) 0(+)---------C2x1
-    rdm = contract(left_half,left_half.negate_signature(),([0,1,2,3],[0,1,2,3]))
+    rdm = contract(left_half,left_half.flip_signature(),([0,1,2,3],[0,1,2,3]))
 
     # permute into order of s0,s1;s0',s1' where primed indices
     # represent "ket"
@@ -360,7 +364,7 @@ def rdm2x2_NN(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
     # |        |                                 |     |
     # 0(+1->-) 1(+1->-),2(-1->+)            1(+),2(-)  0(+)
     #                                     ->4(+),5(-)  ->3(+)
-    C2x2= contract(C2x2c.negate_signature(), C2x2, ([3,4,5],[3,4,5]))
+    C2x2= contract(C2x2c.flip_signature(), C2x2, ([3,4,5],[3,4,5]))
 
     # C2x2______________________|--6(+),7(-)->0(+),1(-)
     # |                |
@@ -368,7 +372,7 @@ def rdm2x2_NN(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
     # 0(+),1(+),2(-)   3(-),4(-),5(+)
     # |________________|________
     # C2x2______________________|--6(-),7(+)->2(-),3(+)
-    rdm= contract(C2x2, C2x2.negate_signature(), ([0,1,2,3,4,5],[0,1,2,3,4,5]))
+    rdm= contract(C2x2, C2x2.flip_signature(), ([0,1,2,3,4,5],[0,1,2,3,4,5]))
 
     # permute into order of s0,s1;s0',s1' where primed indices
     # represent "ket"
@@ -457,7 +461,7 @@ def rdm2x2_NNN(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
     # |        |                                 |     |
     # 0(+1->-) 1(+1->-),2(-1->+)            1(+),2(-)  0(+)
     #                                     ->4(+),5(-)  ->3(+)
-    C2x2= contract(C2x2c.negate_signature(), C2x2, ([3,4,5],[3,4,5]))
+    C2x2= contract(C2x2c.flip_signature(), C2x2, ([3,4,5],[3,4,5]))
 
     #                        C2x2_____________|--6(+),7(-)->0(+),1(-)
     #                        |                |
@@ -545,7 +549,7 @@ def rdm2x2(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
     # |        |                                 |     |
     # 0(+)     1(+),2(-)             1(+->-),2(-1->+)  0(+->-)
     #                                     ->6(-),7(+)  ->5(-)
-    C2x2= contract(C2x2, C2x2.negate_signature(), ([3,4,5],[3,4,5]))
+    C2x2= contract(C2x2, C2x2.flip_signature(), ([3,4,5],[3,4,5]))
 
     # construct reduced density matrix by contracting lower and upper halfs
     #
