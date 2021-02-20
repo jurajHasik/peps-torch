@@ -46,8 +46,8 @@ class IPEPS_ABELIAN_C4V():
             +" settings.dtype "+settings.dtype
         self.dtype= settings.dtype
         self.device= global_args.device
-        self.nsym = settings.nsym
-        self.sym= settings.sym
+        self.nsym = settings.sym.nsym
+        self.sym= settings.sym.name
 
         self.lX=1
         self.lY=1
@@ -87,8 +87,8 @@ class IPEPS_ABELIAN_C4V():
         dense state.
         """
         if self.nsym==0: return self
-        site_dense= self.site().to_dense()
-        settings_dense= site_dense.conf
+        site_dense= self.site().to_nonsymmetric()
+        settings_dense= site_dense.config
         state_dense= IPEPS_ABELIAN_C4V(settings_dense, site_dense)
         return state_dense
 
@@ -132,11 +132,12 @@ class IPEPS_ABELIAN_C4V():
         on-site tensors.
         """
         if noise==0: return self
-        old_site= self.site()
-        t_data, D_data= self.site().get_tD()
-        new_site= old_site + noise * old_site.rand(s=old_site.s, n=old_site.n, \
-            t=t_data, D=D_data, isdiag=old_site.isdiag)
-        state= IPEPS_ABELIAN_C4V(self.engine, new_site)
+        _tmp= self.site()
+        t_data, D_data= _tmp.get_leg_charges_and_dims(native=True)
+        t_noise= TA.rand(config=_tmp.config, s=_tmp.s, n=_tmp.n, \
+            t=t_data, D=D_data, isdiag=_tmp.isdiag)
+        site= _tmp + noise * t_noise
+        state= IPEPS_ABELIAN_C4V(self.engine, site)
         state= state.symmetrize()
         return state
 
@@ -229,7 +230,7 @@ def read_ipeps_c4v(jsonfile, settings, \
             peps_args=peps_args, global_args=global_args)
 
     # check dtypes of all on-site tensors for newly created state
-    assert (False not in [state.dtype==s.dtype for s in sites.values()]), \
+    assert (False not in [state.dtype==s.config.dtype for s in sites.values()]), \
         "incompatible dtype among state and on-site tensors"
 
     # move to desired device and return

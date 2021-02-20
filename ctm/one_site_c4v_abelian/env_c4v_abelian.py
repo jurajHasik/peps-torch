@@ -1,5 +1,6 @@
 import config as cfg
-import yamps.tensor as TA
+# import yamps.tensor as TA
+import yamps.yast as TA
 import numpy as np
 
 class ENV_C4V_ABELIAN():
@@ -55,10 +56,10 @@ class ENV_C4V_ABELIAN():
             self.sym= state.sym
         elif settings:
             self.engine= settings
-            self.backend= settings.back
+            self.backend= settings.backend
             self.dtype= settings.dtype
-            self.nsym = settings.nsym
-            self.sym= settings.sym
+            self.nsym = settings.sym.nsym
+            self.sym= settings.sym.name
         else:
             raise RuntimeError("Either state or settings must be provided")
         self.device= global_args.device
@@ -122,8 +123,8 @@ class ENV_C4V_ABELIAN():
         dense environment.
         """
         if self.nsym==0: return self
-        C_dense= {cid: c.to_dense() for cid,c in self.C.items()}
-        T_dense= {tid: t.to_dense() for tid,t in self.T.items()}
+        C_dense= {cid: c.to_nonsymmetric() for cid,c in self.C.items()}
+        T_dense= {tid: t.to_nonsymmetric() for tid,t in self.T.items()}
         env_dense= ENV_C4V_ABELIAN(self.chi, settings=next(iter(C_dense.values())).conf, \
             ctm_args=ctm_args, global_args=global_args)
         env_dense.C= C_dense
@@ -158,9 +159,12 @@ class ENV_C4V_ABELIAN():
         e.T= {tid: t.clone() for tid,t in self.T.items()}
         return e        
 
+    def detach_(self):
+        self.get_C().detach(inplace=True)
+        self.get_T().detach(inplace=True)
+
     def compute_multiplets(self, eps_multiplet_gap=1.0e-10):
         return compute_multiplets(self.get_C(), eps_multiplet_gap=eps_multiplet_gap)
-
 
 def init_env(state, env, init_method=None, ctm_args=cfg.ctm_args):
     """
@@ -240,17 +244,18 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
     a= A.dot(A, ((0,1,2), (0,1,2)), conj=(0,1)) # mijef,mijab->efab
     a= a.transpose((0,2,1,3)) # efab->eafb
     ## here we need to group-legs / reshape
-    a, lo1= a.group_legs((2,3), new_s=-1) # ea(fb->F)->eaF
-    a, lo0= a.group_legs((0,1), new_s=-1) # (ea->E)F->EF
+    # a, lo1= a.group_legs((2,3), new_s=-1) # ea(fb->F)->eaF
+    # a, lo0= a.group_legs((0,1), new_s=-1) # (ea->E)F->EF
+    a= a.fuse_legs( axes=((0,1),(2,3)) )
     a= a/a.max_abs()
-    a._leg_fusion_data[0]= lo0
-    a._leg_fusion_data[1]= lo1
+    # a._leg_fusion_data[0]= lo0
+    # a._leg_fusion_data[1]= lo1
     env.C[env.keyC]= a
 
     # left transfer matrix
     #
     #     (+1)1             0(-1),1(+1)->0(+1)     
-    # (+1)i--A*--4(+1)    = T--4(-1),5(+1)->2(-1)
+    # (+1)i--A*--4(+1)    = T--4(-1),5(+1)->2,3(-1)
     #       /\(+1)          2(-1),3(+1)->1(+1)
     #  (+1)3  m
     #          \(-1) 1(-1)
@@ -258,16 +263,17 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
     #          /
     #     (-1)3
     vec = (-1,0)
-    B= A.negate_signature()
+    B= A.flip_signature()
     a= B.dot(B, ((0,2), (0,2)), conj=(0,1)) # meifg,maibc->efgabc
     a= a.transpose((0,3,1,4,2,5)) # efgabc->eafbgc
-    a, leg_order_aux= a.group_legs((4,5), new_s=-1) # eafb(gc->G)->eafbG
-    a, lo1= a.group_legs((2,3), new_s=1) # ea(fb->F)G->eaFG
-    a, lo0= a.group_legs((0,1), new_s=1) # (ea->E)FG->EFG
+    # a, leg_order_aux= a.group_legs((4,5), new_s=-1) # eafb(gc->G)->eafbG
+    # a, lo1= a.group_legs((2,3), new_s=1) # ea(fb->F)G->eaFG
+    # a, lo0= a.group_legs((0,1), new_s=1) # (ea->E)FG->EFG
+    a= a.fuse_legs( axes=((0,1),(2,3),4,5) )
     a= a/a.max_abs()
-    a._leg_fusion_data[0]= lo0
-    a._leg_fusion_data[1]= lo1
-    a._leg_fusion_data[2]= leg_order_aux
+    # a._leg_fusion_data[0]= lo0
+    # a._leg_fusion_data[1]= lo1
+    # a._leg_fusion_data[2]= leg_order_aux
     env.T[env.keyT]=a
 
 def compute_multiplets(C, eps_multiplet_gap=1.0e-10):

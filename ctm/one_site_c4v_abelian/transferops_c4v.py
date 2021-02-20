@@ -1,7 +1,7 @@
 import itertools
 import numpy as np
 import torch
-from yamps.tensor import decompress_from_1d, zeros
+from yamps.yast import decompress_from_1d, zeros
 from tn_interface_abelian import contract, permute
 try:
     from scipy.sparse.linalg import LinearOperator
@@ -21,16 +21,16 @@ def get_Top_spec_c4v(n, state, env_c4v, verbosity=0):
     # get symmetry structure of the (grouped) edge and create a dummy Nx1 vector
     # for serialization
     # (+)--M--(+) (-)--V0--(+) = (+)--V1--(+)
-    Cs, Ds= E.get_tD()
+    Cs, Ds= E.get_leg_charges_and_dims()
     # get all the possible sectors given by fusion of E-legs
     Cs1= np.array(list(itertools.product(*Cs)))
     Cs1= np.unique(Cs1.sum(1), axis=0)
     Cs1= tuple(map(tuple,Cs1))
 
     # build dummy Nx1 vector
-    Cs= Cs + [Cs1]
-    Ds= Ds + [tuple([1]*len(Cs1))]
-    v0= zeros(settings= E.conf, s=(-1,-1,-1,1), n=0, t=Cs, D=Ds)
+    Cs= Cs + (Cs1,)
+    Ds= Ds + (tuple([1]*len(Cs1)),)
+    v0= zeros(settings= E.config, s=np.concatenate((E.s,[1])), n=0, t=Cs, D=Ds)
     meta, r1d= v0.compress_to_1d()
     N= r1d.numel()
 
@@ -45,7 +45,7 @@ def get_Top_spec_c4v(n, state, env_c4v, verbosity=0):
         # (+)0--
         # (-)1--E--(-) dummy-index
         # (+)2--
-        V= decompress_from_1d(V1d, settings=E.conf, d=meta)
+        V= decompress_from_1d(V1d, config=E.config, d=meta)
         V= corrf_c4v.apply_TM_1sO(state,env_c4v,V,verbosity=verbosity)
         # bring the edge back into plain 1d representation
         _meta, V1d= V.compress_to_1d()

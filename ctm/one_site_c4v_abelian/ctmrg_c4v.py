@@ -1,7 +1,8 @@
 import time
 import warnings
 import config as cfg
-from yamps.tensor import decompress_from_1d
+# from yamps.tensor import decompress_from_1d
+from yamps.yast import decompress_from_1d
 from tn_interface_abelian import contract, permute
 from ctm.one_site_c4v_abelian.ctm_components_c4v import *
 try:
@@ -220,7 +221,7 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
         if global_args.offload_to_gpu != 'None' and global_args.device=='cpu':
             tensors=  tuple(r1d.to(global_args.offload_to_gpu) for r1d in tensors)
 
-        a,C,T= tuple(decompress_from_1d(r1d, settings=env.engine, d=meta) \
+        a,C,T= tuple(decompress_from_1d(r1d, config=env.engine, d=meta) \
             for r1d,meta in zip(tensors,metadata_store["in"]))
 
         # 1) build enlarged corner upper left corner
@@ -248,7 +249,7 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
         # P*--
         # 2->0(-1)
         C2X2= contract(P.conj(), C2X2, ([0,1,2],[0,1,2]))
-        C2X2= contract(C2X2, P.negate_signature(), ([1,2,3],[0,1,2]))
+        C2X2= contract(C2X2, P.flip_signature(), ([1,2,3],[0,1,2]))
 
         # The absorption step for C is done with T placed at B-sublattice
         # and hence the half-row/column tensor absorption step is done with T'
@@ -263,7 +264,8 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
         # 0(+1->-1)
         # T--2(-)->2(-),3(+)->2(-1->+1),3(+1->-1)
         # 1(+1->-1)
-        T= T.ungroup_leg(2, T._leg_fusion_data[2]).negate_signature()
+        # T= T.ungroup_leg(2, T._leg_fusion_data[2]).negate_signature()
+        T= T.flip_signature()
 
         #       3(+)->2(+)                        0 
         # ______P___                         _____P___
@@ -286,7 +288,7 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
         # 1(-)                              |             |  | 
         #                                   1(-)    (-)2<-5  3->4(+)
         #
-        _a= a.negate_signature()
+        _a= a.flip_signature()
         nT= contract(nT, _a, ([2,4], [1,2]))
         nT= contract(nT, _a.conj(), ([2,3,4], [1,2,0]))
 
@@ -302,7 +304,7 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
         #  __P____
         # |       |
         # |       |                           0(+)  
-        # T'-----a*a--4(-),5(+)->1(-),2(+) => T--1(-),2(+)->2(-)
+        # T'-----a*a--4(-),5(+)->1(-),2(+) => T--1(-),2(+)->2,3(-)
         # 1(-1)   2(-),3(+)                   2->1(+)
         # 0(+1)   1(+),2(-)
         # |___P__|
@@ -311,14 +313,14 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
         nT= contract(nT, P,([1,2,3],[0,1,2]))
         
         nT= nT.transpose((0,3,1,2))
-        nT, lo2= nT.group_legs((2,3), new_s=-1)
+        # nT, lo2= nT.group_legs((2,3), new_s=-1)
 
         # 4) symmetrize, normalize and assign new C,T
-        C2X2= 0.5*( C2X2 + C2X2.transpose().conj_blocks() )
-        nT= 0.5*(nT + nT.transpose((1,0,2)).conj_blocks() )
+        C2X2= 0.5*( C2X2 + C2X2.transpose((1,0)).conj_blocks() )
+        nT= 0.5*(nT + nT.transpose((1,0,2,3)).conj_blocks() )
         C2X2= C2X2/S.max_abs()
         nT= nT/nT.max_abs()
-        nT._leg_fusion_data[2]= lo2
+        # nT._leg_fusion_data[2]= lo2
 
         # 2) Return raw new tensors
         tmp_loc= tuple([C2X2.compress_to_1d(), nT.compress_to_1d()])
@@ -336,7 +338,7 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
     else:
         new_tensors= ctm_MOVE_sl_c(*tensors)
 
-    new_tensors= tuple(decompress_from_1d(r1d, settings=env.engine, d=meta) \
+    new_tensors= tuple(decompress_from_1d(r1d, config=env.engine, d=meta) \
             for r1d,meta in zip(new_tensors,metadata_store["out"]))
 
     env.C[env.keyC]= new_tensors[0]

@@ -15,16 +15,23 @@ def get_edge(state, env, verbosity=0):
 
             C--0(-)
             |
-        E = T--1(-)
+        E = T--1(-) 1,2
             |     
-            C--2(-)
+            C--2(-) 3
     """
     C = env.C[env.keyC]
     T = env.T[env.keyT]
+    # T = T.fuse_legs( axes=(0,1,(2,3)) )
     # C--1->0
     # 0
     # 0
     # T--2
+    # 1
+
+    # C--1->0
+    # 0
+    # 0
+    # T--2,3
     # 1
     E = contract(C,T,([0],[0]))
     if verbosity>0: print(f"E=CT \n{E}")
@@ -34,6 +41,13 @@ def get_edge(state, env, verbosity=0):
     # 1
     # 0
     # C--1->2
+
+    # C--0
+    # |
+    # T--2,3->1,2
+    # 1
+    # 0
+    # C--1->3
     E = contract(E,C,([1],[0]))
     if verbosity>0: print(f"E=CT \n{E}")
     return E
@@ -201,12 +215,14 @@ def apply_TM_1sO(state, env, edge, op=None, verbosity=0):
     if op is not None:
     	assert op.ndim==2,"1-site operator is expected to have two indices"
 
-    T = env.T[env.keyT]
+    T= env.T[env.keyT]
+    # T= T.fuse_legs( axes=(0,1,(2,3)) )
+
 	# Assume index structure of ``edge`` tensor to be as follows
 	# 
 	#       -- 0(+)
-	# edge |-- 1(-)
-	#       -- 2(+)
+	# edge |-- 1(-) 1,2
+	#       -- 2(+) 3
 	#
 	#   ----0 0--T--1->2
 	#  |         2->3
@@ -219,6 +235,12 @@ def apply_TM_1sO(state, env, edge, op=None, verbosity=0):
     # 3--edge--1->0
     # ->2 |
     #      ----2->1
+
+    #      ----0 0--T--1->4
+    #     |         2,3->5,6
+    # 4--edge--1,2->0,1
+    # ->3 |
+    #      ----3->2
     E = contract(edge,T,([0],[0]))
     if verbosity>0: print(f"E=CT \n{E}")
 
@@ -239,11 +261,12 @@ def apply_TM_1sO(state, env, edge, op=None, verbosity=0):
     a_dl= contract(op,a, ([0],[0])) if op else a
     a_dl= contract(a_dl,a, ([0],[0]), conj=(0,1)) # mefgh,mabcd->efghabcd
     a_dl= a_dl.transpose((0,4,1,5,2,6,3,7)) # efghabcd->eafbgchd
-    a_dl, lo3= a_dl.group_legs((6,7), new_s=1) # eafbgc(hd->H)->eafbgcH
-    a_dl, lo2= a_dl.group_legs((4,5), new_s=1) # eafb(gc->G)H->eafbGH
-    a_dl, lo1= a_dl.group_legs((2,3), new_s=1) # ea(fb->F)GH->eaFGH
-    a_dl, lo0= a_dl.group_legs((0,1), new_s=1) # (ea->E)F->EFGH
+    # a_dl, lo3= a_dl.group_legs((6,7), new_s=1) # eafbgc(hd->H)->eafbgcH
+    # a_dl, lo2= a_dl.group_legs((4,5), new_s=1) # eafb(gc->G)H->eafbGH
+    # a_dl, lo1= a_dl.group_legs((2,3), new_s=1) # ea(fb->F)GH->eaFGH
+    # a_dl, lo0= a_dl.group_legs((0,1), new_s=1) # (ea->E)F->EFGH
     # a_dl._leg_fusion_data= {k: v for k,v in enumerate([lo0, lo1, lo2, lo3])}
+    # a_dl= a_dl.fuse_legs( axes=((0,1),(2,3),(4,5),(6,7)) )
 
 	#   ---------T--2->1 
 	#  |         3
@@ -259,7 +282,15 @@ def apply_TM_1sO(state, env, edge, op=None, verbosity=0):
     # 2--edge--0 1--A--3->4   
     # ->1 |         2->3
     #      ----1->0
-    E = contract(E,a_dl,([0,4],[1,0]))
+    # E = contract(E,a_dl,([0,4],[1,0]))
+
+    #      -------------T--4->2 
+    #     |             5,6
+    #     |             0,1
+    # 3--edge--0,1 2,3--A--6,7->5,6   
+    # ->1 |             4,5->3,4
+    #      ----2->0
+    E = contract(E,a_dl,([0,1,5,6],[2,3,0,1]))
     if verbosity>0: print(f"E=CT \n{E}")
 
 	#   -------T--1->0
@@ -278,8 +309,18 @@ def apply_TM_1sO(state, env, edge, op=None, verbosity=0):
     # ->0 |       3
     #     |       2
     #      --0 0--T--1->3
-    E = contract(E,T,([0,3],[0,2]))
-    E = E.transpose((1,2,3,0))
+    # E = contract(E,T,([0,3],[0,2]))
+    # E = E.transpose((1,2,3,0))
+
+    #      -------T--2->1
+    #     |       |
+    #     |       |
+    # 1--edge-----A--5,6->2,3
+    # ->0 |       3,4
+    #     |       2,3
+    #      --0 0--T--1->4
+    E = contract(E,T,([0,3,4],[0,2,3]))
+    E = E.transpose((1,2,3,4,0))
     if verbosity>0: print(f"E=CT \n{E}")
 
     return E
