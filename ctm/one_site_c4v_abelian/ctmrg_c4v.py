@@ -1,5 +1,6 @@
 import time
 import warnings
+from types import SimpleNamespace
 import config as cfg
 # from yamps.tensor import decompress_from_1d
 from yamps.yast import decompress_from_1d
@@ -218,10 +219,13 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
         #
         # keep inputs for autograd stored on cpu, move to gpu for the core 
         # of the computation if desired
+        _loc_engine= env.engine
         if global_args.offload_to_gpu != 'None' and global_args.device=='cpu':
             tensors=  tuple(r1d.to(global_args.offload_to_gpu) for r1d in tensors)
+            _loc_engine= SimpleNamespace(backend=_loc_engine.backend, sym=_loc_engine.sym,\
+                dtype=_loc_engine.dtype, device=global_args.offload_to_gpu)
 
-        a,C,T= tuple(decompress_from_1d(r1d, config=env.engine, d=meta) \
+        a,C,T= tuple(decompress_from_1d(r1d, config=_loc_engine, d=meta) \
             for r1d,meta in zip(tensors,metadata_store["in"]))
 
         # 1) build enlarged corner upper left corner

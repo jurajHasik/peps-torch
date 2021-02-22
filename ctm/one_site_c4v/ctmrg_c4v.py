@@ -289,9 +289,9 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
         a, C, T= tensors
         if global_args.device=='cpu' and global_args.offload_to_gpu != 'None':
             #loc_gpu= torch.device(global_args.gpu)
-            a= a.cuda()
-            C= C.cuda()
-            T= T.cuda()
+            a= a.to(global_args.offload_to_gpu) #a.cuda()
+            C= C.to(global_args.offload_to_gpu) #C.cuda()
+            T= T.to(global_args.offload_to_gpu) #T.cuda()
 
         # 1) build enlarged corner upper left corner
         C2X2= c2x2_sl(a, C, T, verbosity=ctm_args.verbosity_projectors)
