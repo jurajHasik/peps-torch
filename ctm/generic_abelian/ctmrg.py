@@ -1,5 +1,6 @@
 import time
 import warnings
+from types import SimpleNamespace
 import config as cfg
 # from yamps.tensor import decompress_from_1d
 from yamps.yast import decompress_from_1d
@@ -103,14 +104,23 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
 
     # function wrapping up the core of the CTM MOVE segment of CTM algorithm
     def ctm_MOVE_c(*tensors):
+        #
+        # keep inputs for autograd stored on cpu, move to gpu for the core 
+        # of the computation if desired
+        _loc_engine= env.engine
+        if global_args.offload_to_gpu != 'None' and global_args.device=='cpu':
+            tensors=  tuple(r1d.to(global_args.offload_to_gpu) for r1d in tensors)
+            _loc_engine= SimpleNamespace(backend=_loc_engine.backend, sym=_loc_engine.sym,\
+                dtype=_loc_engine.dtype, device=global_args.offload_to_gpu)
+
         # 0) reconstruct the tensors from their 1D representation
-        tensors= tuple(decompress_from_1d(r1d, config=state.engine, d=meta) \
+        tensors= tuple(decompress_from_1d(r1d, config=_loc_engine, d=meta) \
             for r1d,meta in zip(tensors,metadata_store["in"]))
 
         # 1) wrap raw tensors back into IPEPS and ENV classes 
         sites_loc= dict(zip(state.sites.keys(),tensors[0:len(state.sites)]))
-        state_loc= IPEPS_ABELIAN(state.engine, sites_loc, state.vertexToSite)
-        env_loc= ENV_ABELIAN(env.chi, settings=state.engine)
+        state_loc= IPEPS_ABELIAN(_loc_engine, sites_loc, state.vertexToSite)
+        env_loc= ENV_ABELIAN(env.chi, settings=_loc_engine)
         env_loc.C= dict(zip(env.C.keys(),tensors[len(state.sites):len(state.sites)+len(env.C)]))
         env_loc.T= dict(zip(env.T.keys(),tensors[len(state.sites)+len(env.C):]))
         # Loop over all non-equivalent sites of ipeps
@@ -150,6 +160,11 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
             + tuple(nC2[key].compress_to_1d() for key in nC2.keys()) \
             + tuple(nT[key].compress_to_1d() for key in nT.keys())
         metadata_store["out"], tensors_loc= list(zip(*tmp_loc))
+        
+        # move back to (default) cpu if offload_to_gpu is specified
+        if global_args.offload_to_gpu != 'None' and global_args.device=='cpu':
+            tensors_loc= tuple(r1d.to(global_args.device) for r1d in tensors_loc)
+
         return tensors_loc
 
     # Call the core function, allowing for checkpointing
@@ -158,7 +173,7 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
     else:
         new_tensors= ctm_MOVE_c(*tensors)
         
-    new_tensors= tuple(decompress_from_1d(r1d, config=state.engine, d=meta) \
+    new_tensors= tuple(decompress_from_1d(r1d, config=env.engine, d=meta) \
             for r1d,meta in zip(new_tensors,metadata_store["out"]))
 
     # 3) warp the returned raw tensor in dictionary

@@ -23,8 +23,10 @@ def get_Top_spec_c4v(n, state, env_c4v, verbosity=0):
     # (+)--M--(+) (-)--V0--(+) = (+)--V1--(+)
     Cs, Ds= E.get_leg_charges_and_dims()
     # get all the possible sectors given by fusion of E-legs
-    Cs1= np.array(list(itertools.product(*Cs)))
-    Cs1= np.unique(Cs1.sum(1), axis=0)
+    Cs1= E.s[0]*np.asarray(Cs[0])
+    for x in [s*np.asarray(c) for s,c in zip(E.s[1:], Cs[1:])]:
+        X= np.add.outer(Cs1, x)
+        Cs1= np.unique(X.reshape(len(Cs1)*len(x),1),axis=0)
     Cs1= tuple(map(tuple,Cs1))
 
     # build dummy Nx1 vector
@@ -40,6 +42,7 @@ def get_Top_spec_c4v(n, state, env_c4v, verbosity=0):
     # v--1 (D^2)
     #  --2 (chi)
     def _mv(v):
+        pdb.set_trace()
         V1d= torch.as_tensor(v, dtype=r1d.dtype, device=r1d.device)
         # bring 1d vector into edge structure
         # (+)0--
@@ -47,6 +50,7 @@ def get_Top_spec_c4v(n, state, env_c4v, verbosity=0):
         # (+)2--
         V= decompress_from_1d(V1d, config=E.config, d=meta)
         V= corrf_c4v.apply_TM_1sO(state,env_c4v,V,verbosity=verbosity)
+        # V= V.flip_signature(inplace=True)
         # bring the edge back into plain 1d representation
         _meta, V1d= V.compress_to_1d()
         return V1d.detach().cpu().numpy()
