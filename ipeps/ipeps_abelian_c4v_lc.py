@@ -9,7 +9,6 @@ try:
 except ImportError as e:
     warnings.warn("torch not available", Warning)
 import config as cfg
-# import yamps.tensor as TA
 import yamps.yast as TA
 from groups.pg_abelian import make_c4v_symm_A1
 from ipeps.tensor_io import *
@@ -132,7 +131,7 @@ class IPEPS_ABELIAN_C4V_LC(IPEPS_ABELIAN_C4V):
         c_phys= set(oc_p) # charges on physical leg
         c_aux= set(oc_a)  # charges on (each) auxiliary leg
         d_aux= (oc_d[c] for c in c_aux)
-        site = TA.Tensor(settings=self.engine, s=IPEPS_ABELIAN_C4V._REF_S_DIRS, n=tot_charge,
+        site = TA.Tensor(config=self.engine, s=IPEPS_ABELIAN_C4V._REF_S_DIRS, n=tot_charge,
                             t=(c_phys, c_aux, c_aux, c_aux, c_aux),
                             D=((1, 1), d_aux, d_aux, d_aux, d_aux))
         for c,b in blocks.items():
@@ -169,8 +168,8 @@ class IPEPS_ABELIAN_C4V_LC(IPEPS_ABELIAN_C4V):
         """
         if sites.nsym==0: return self
         # TODO don't pass through site conversion
-        site_dense= self.site().to_dense()
-        settings_dense= site_dense.conf
+        site_dense= self.site().to_nonsymmetric()
+        settings_dense= site_dense.config
         state_dense= IPEPS_ABELIAN_C4V_LC(settings_dense, self.elem_tensors,\
             self.coeffs, None)
         return state_dense
