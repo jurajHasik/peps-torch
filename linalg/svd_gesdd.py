@@ -102,9 +102,38 @@ class SVDGESDD_COMPLEX(torch.autograd.Function):
         return dA
 
 def test_SVDGESDD_random():
+    
     M, N = 50, 40
     A = torch.rand(M, N, dtype=torch.float64, requires_grad=True)
-    assert(torch.autograd.gradcheck(SVDGESDD.apply, A, eps=1e-6, atol=1e-4))
+    assert(torch.autograd.gradcheck(SVDGESDD.apply, A, eps=1e-6, atol=1e-5))
+
+    M, N = 40, 40
+    A = torch.rand(M, N, dtype=torch.float64, requires_grad=True)
+    assert(torch.autograd.gradcheck(SVDGESDD.apply, A, eps=1e-6, atol=1e-5))
+
+    M= 50
+    A= torch.rand(M, M, dtype=torch.float64)
+    A= 0.5*(A+A.t())
+
+    D, U = torch.symeig(A, eigenvectors=True)
+    # make random spectrum with almost degen
+    for split_scale in [10.0, 1.0, 0.1, 0.01, 0.]: 
+        tot_scale=1000
+        d0= torch.rand(M//2, dtype=torch.float64)
+        splits= torch.rand(M//2, dtype=torch.float64)
+        for i in range(M//2):
+            D[2*i]= tot_scale*d0[i]
+            D[2*i+1]= tot_scale*d0[i]+split_scale*splits[i]
+        A= U.t() @ torch.diag(D) @ U
+        print(D)
+
+        try:
+            A.requires_grad_()
+            assert(torch.autograd.gradcheck(SVDGESDD.apply, A, eps=1e-6, atol=1e-5))
+        except Exception as e:
+            print(f"FAILED for splits: {split_scale}")
+            print(e)
+
 
 def test_SVDGESDD_COMPLEX_random():
     M = 5
@@ -117,5 +146,5 @@ def test_SVDGESDD_COMPLEX_random():
     assert(torch.autograd.gradcheck(test_f, A, eps=1e-6, atol=1e-4))
 
 if __name__=='__main__':
-    # test_SVDSYMEIG_random()
-    test_SVDGESDD_COMPLEX_random()
+    test_SVDGESDD_random()
+    # test_SVDGESDD_COMPLEX_random()

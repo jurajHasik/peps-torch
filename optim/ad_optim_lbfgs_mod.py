@@ -185,8 +185,9 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         ls_context= dict({"ctm_args":loc_ctm_args, "opt_args":loc_opt_args, "loss_history": t_data,
             "line_search": linesearching})
         
-        loss, current_env, history, t_ctm, t_check = loss_fn(state, current_env,\
+        loss, ctm_env, history, t_ctm, t_check = loss_fn(state, current_env[0],\
             ls_context)
+        current_env[0]= ctm_env
 
         # 2) store current state if the loss improves
         t_data["loss_ls"].append(loss.item())
@@ -201,7 +202,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
 
         # 4) compute desired observables
         if obs_fn is not None:
-            obs_fn(state, ctm_env, context)
+            obs_fn(state, current_env[0], context)
 
         return loss
 
