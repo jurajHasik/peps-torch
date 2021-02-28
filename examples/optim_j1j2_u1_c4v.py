@@ -22,6 +22,7 @@ parser= cfg.get_args_parser()
 parser.add_argument("--u1_class", type=str, default="B", choices=["A", "B", "C", "D", "E", "NRVB"])
 parser.add_argument("--j1", type=float, default=1., help="nearest-neighbour coupling")
 parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour coupling")
+parser.add_argument("--j3", type=float, default=0., help="next-to-next nearest-neighbour coupling")
 parser.add_argument("--hz_stag", type=float, default=0., help="staggered mag. field")
 parser.add_argument("--delta_zz", type=float, default=1., help="easy-axis (nearest-neighbour) anisotropy")
 parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
@@ -35,8 +36,8 @@ def main():
     torch.set_num_threads(args.omp_cores)
     torch.manual_seed(args.seed)
 
-    model= j1j2.J1J2_C4V_BIPARTITE(j1=args.j1, j2=args.j2, hz_stag=args.hz_stag, \
-        delta_zz=args.delta_zz)
+    model= j1j2.J1J2_C4V_BIPARTITE(j1=args.j1, j2=args.j2, j3=args.j3, \
+        hz_stag=args.hz_stag, delta_zz=args.delta_zz)
     energy_f= model.energy_1x1_lowmem
 
     # initialize an ipeps
