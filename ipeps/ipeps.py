@@ -146,6 +146,7 @@ class IPEPS():
     def load_checkpoint(self,checkpoint_file):
         checkpoint= torch.load(checkpoint_file)
         self.sites= checkpoint["parameters"]
+        for site_t in self.sites.values(): site_t.requires_grad_(False)
         if True in [s.is_complex() for s in self.sites.values()]:
             self.dtype= torch.complex128
 
