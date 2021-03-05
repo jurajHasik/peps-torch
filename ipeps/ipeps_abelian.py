@@ -212,6 +212,7 @@ class IPEPS_ABELIAN():
 
     def load_checkpoint(self, checkpoint_file):
         checkpoint= torch.load(checkpoint_file)
+        # TODO set requires_grad False
         self.sites= {ind: TA.from_dict(settings= self.engine, d=t_dict_repr) \
             for ind,t_dict_repr in checkpoint["parameters"].items()}
 

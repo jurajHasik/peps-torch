@@ -166,7 +166,7 @@ class IPEPS_ABELIAN_C4V_LC(IPEPS_ABELIAN_C4V):
         block structure (symmetry). This operations preserves gradients on returned
         dense state.
         """
-        if sites.nsym==0: return self
+        if self.nsym==0: return self
         # TODO don't pass through site conversion
         site_dense= self.site().to_nonsymmetric()
         settings_dense= site_dense.config
