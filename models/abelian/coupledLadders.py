@@ -1,8 +1,7 @@
 from math import sqrt
 import itertools
 import config as cfg
-# import yamps.tensor as TA
-import yamps.yast as TA
+import yamps.yast as yast
 from tn_interface_abelian import contract
 import groups.su2_abelian as su2
 from ctm.generic_abelian import rdm
@@ -102,7 +101,7 @@ class COUPLEDLADDERS_NOSYM():
             1--A--3 1--B--3                  C--3 1--D,      0  0  0  0
                2       2             , terms D--3 1--C, and  C, D, A, B
         """
-        energy=TA.zeros(self.engine)
+        energy=yast.zeros(self.engine)
         #
         # (-1)0--|rho|--2(+1) (-1)0--|S.S|--2(+1)
         # (-1)1--|   |--3(+1) (-1)1--|   |--3(+1)
@@ -283,7 +282,7 @@ class COUPLEDLADDERS_U1():
             1--A--3 1--B--3                  C--3 1--D,      0  0  0  0
                2       2             , terms D--3 1--C, and  C, D, A, B
         """
-        energy=TA.zeros(self.engine)
+        energy=yast.zeros(self.engine)
         #
         # (-1)0--|rho|--2(+1) (-1)0--|S.S|--2(+1)
         # (-1)1--|   |--3(+1) (-1)1--|   |--3(+1)
@@ -317,7 +316,7 @@ class COUPLEDLADDERS_U1():
                 ..._|_a_|__|_a_|__|...   
                     :   :  :   :  : (a = \alpha)
         """
-        energy=TA.zeros(self.engine)
+        energy=yast.zeros(self.engine)
         #
         # (-1)0--|rho|--2(+1) (-1)0--|S.S|--2(+1)
         # (-1)1--|   |--3(+1) (-1)1--|   |--3(+1)

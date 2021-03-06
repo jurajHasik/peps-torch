@@ -2,7 +2,6 @@ import time
 import warnings
 from types import SimpleNamespace
 import config as cfg
-# from yamps.tensor import decompress_from_1d
 from yamps.yast import decompress_from_1d
 from ipeps.ipeps_abelian import IPEPS_ABELIAN
 from ctm.generic_abelian.env_abelian import ENV_ABELIAN
@@ -100,7 +99,7 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
         + tuple(env.C[key].compress_to_1d() for key in env.C.keys()) \
         + tuple(env.T[key].compress_to_1d() for key in env.T.keys())
     # 1) split into raw 1D tensors and metadata
-    metadata_store["in"], tensors= list(zip(*tmp))
+    tensors, metadata_store["in"]= list(zip(*tmp))
 
     # function wrapping up the core of the CTM MOVE segment of CTM algorithm
     def ctm_MOVE_c(*tensors):
@@ -114,7 +113,7 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
                 dtype=_loc_engine.dtype, device=global_args.offload_to_gpu)
 
         # 0) reconstruct the tensors from their 1D representation
-        tensors= tuple(decompress_from_1d(r1d, config=_loc_engine, d=meta) \
+        tensors= tuple(decompress_from_1d(r1d, _loc_engine, meta) \
             for r1d,meta in zip(tensors,metadata_store["in"]))
 
         # 1) wrap raw tensors back into IPEPS and ENV classes 
@@ -159,7 +158,7 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
         tmp_loc= tuple(nC1[key].compress_to_1d() for key in nC1.keys()) \
             + tuple(nC2[key].compress_to_1d() for key in nC2.keys()) \
             + tuple(nT[key].compress_to_1d() for key in nT.keys())
-        metadata_store["out"], tensors_loc= list(zip(*tmp_loc))
+        tensors_loc, metadata_store["out"]= list(zip(*tmp_loc))
         
         # move back to (default) cpu if offload_to_gpu is specified
         if global_args.offload_to_gpu != 'None' and global_args.device=='cpu':
@@ -173,7 +172,7 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
     else:
         new_tensors= ctm_MOVE_c(*tensors)
         
-    new_tensors= tuple(decompress_from_1d(r1d, config=env.engine, d=meta) \
+    new_tensors= tuple(decompress_from_1d(r1d, env.engine, meta) \
             for r1d,meta in zip(new_tensors,metadata_store["out"]))
 
     # 3) warp the returned raw tensor in dictionary

@@ -1,11 +1,10 @@
+import os
 import torch
 import numpy as np
 import argparse
 import config as cfg
 import examples.abelian.settings_full_torch as settings_full
 import examples.abelian.settings_U1_torch as settings_U1
-# import yamps.tensor as TA
-import yamps.yast as TA
 from ipeps.ipeps_abelian import *
 from ctm.generic_abelian.env_abelian import *
 import ctm.generic_abelian.ctmrg as ctmrg
@@ -164,3 +163,49 @@ if __name__=='__main__':
         print("args not recognized: "+str(unknown_args))
         raise Exception("Unknown command line arguments")
     main()
+
+class TestCtmrg(unittest.TestCase):
+    tol= 1.0e-6
+    DIR_PATH = os.path.dirname(os.path.realpath(__file__))
+    OUT_PRFX = "RESULT_test_run_u1_d3_2x1_neel"
+
+    def setUp(self):
+        args.instate=self.DIR_PATH+"/../../test-input/abelian/c4v/BFGS100LS_U1B_D3-chi72-j20.0-run0-iRNDseed321_blocks_2site_state.json"
+        args.symmetry="U1"
+        args.bond_dim=3
+        args.chi=32
+        args.out_prefix=self.OUT_PRFX
+
+    def test_ctmrg_j1j2_bipartite(self):
+        from io import StringIO 
+        from unittest.mock import patch 
+        from math import isclose
+
+        with patch('sys.stdout', new = StringIO()) as tmp_out: 
+            main()
+        tmp_out.seek(0)
+
+        # parse FINAL observables
+        final_obs=None
+        l= tmp_out.readline()
+        while l:
+            if "FINAL" in l:
+                final_obs= l.rstrip()
+                break
+            l= tmp_out.readline()
+        assert final_obs
+
+        # compare with the reference
+        ref_data="""
+        -0.6645979511667757, 0.3713621967866411, 0.3713621967866413, 0.37136219678664095, 
+        0.3713621967866413, 0.0, 0.0, -0.37136219678664095, 0.0, 0.0, -0.33229727696449596, 
+        -0.33229727696449607, -0.3322972769393827, -0.33229727693938854
+        """
+        fobs_tokens= [float(x) for x in final_obs[len("FINAL"):].split(",")]
+        ref_tokens= [float(x) for x in ref_data.split(",")]
+        for val,ref_val in zip(fobs_tokens, ref_tokens):
+            assert isclose(val,ref_val, rel_tol=self.tol)
+
+    def tearDown(self):
+        for f in [self.OUT_PRFX+"_state.json"]:
+            if os.path.isfile(f): os.remove(f)

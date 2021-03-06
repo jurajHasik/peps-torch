@@ -3,8 +3,7 @@ import numpy as np
 import unittest
 import settings_full
 import settings_U1
-# import yamps.tensor as TA
-import yamps.yast as TA
+import yamps.yast as yast
 import config as cfg
 from ipeps.ipeps_abelian import IPEPS_ABELIAN, read_ipeps
 from ctm.generic_abelian.env_abelian import ENV_ABELIAN
@@ -22,7 +21,7 @@ class Test_ctmrg_abelian_U1_D5_basic(unittest.TestCase):
         state_U1= read_ipeps(instate, settings_U1)
         # set correct signature
         T0= state_U1.site((0,0))
-        a= TA.Tensor(settings=T0.config, s=cls._ref_s_dir, n=T0.n)
+        a= yast.Tensor(config=T0.config, s=cls._ref_s_dir, n=T0.n)
         for c,block in T0.A.items(): 
             a.set_block(tuple(cls._ref_s_dir*np.asarray(c)), block.shape, val=block) 
         state_U1.sites= {(0,0): a}
@@ -36,10 +35,10 @@ class Test_ctmrg_abelian_U1_D5_basic(unittest.TestCase):
 
         # create 2x1 bipartite
         T0= state_U1.site((0,0))
-        a= TA.Tensor(settings=T0.config, s=cls._ref_s_dir, n=T0.n)
+        a= yast.Tensor(config=T0.config, s=cls._ref_s_dir, n=T0.n)
         for c,block in T0.A.items():
             a.set_block(tuple(cls._ref_s_dir*np.asarray(c)), block.shape, val=block) 
-        b= TA.Tensor(settings=a.config, s=cls._ref_s_dir, n=-a.n)
+        b= yast.Tensor(config=a.config, s=cls._ref_s_dir, n=-a.n)
         for c,block in a.A.items():
             b.set_block(tuple(-np.asarray(c)), block.shape, val=block)
 
@@ -133,10 +132,10 @@ class Test_ctmrg_abelian_U1_D5_spectra(unittest.TestCase):
 
         # create 2x1 bipartite
         T0= state_U1.site((0,0))
-        a= TA.Tensor(settings=T0.config, s=cls._ref_s_dir, n=T0.n)
+        a= yast.Tensor(config=T0.config, s=cls._ref_s_dir, n=T0.n)
         for c,block in T0.A.items():
             a.set_block(tuple(cls._ref_s_dir*np.asarray(c)), block.shape, val=block) 
-        b= TA.Tensor(settings=a.config, s=cls._ref_s_dir, n=-a.n)
+        b= yast.Tensor(config=a.config, s=cls._ref_s_dir, n=-a.n)
         for c,block in a.A.items():
             b.set_block(tuple(-np.asarray(c)), block.shape, val=block)
 

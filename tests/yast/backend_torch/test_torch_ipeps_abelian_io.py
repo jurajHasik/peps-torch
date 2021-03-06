@@ -1,5 +1,4 @@
-# import yamps.tensor as TA
-import yamps.yast as TA
+import yamps.yast as yast
 import settings_full_torch as settings_full
 import settings_U1_torch as settings_U1
 # import yamps.yast.backend_torch.config_U1_U1_R as settings_U1_U1
@@ -34,8 +33,8 @@ class Test_IO_ipeps_abelian(unittest.TestCase):
             self.assertTrue(state0.sites[k].norm_diff(state1.sites[k])<1.0e-8)
 
     def test_write_full(self):
-        a = TA.rand(settings=settings_full, s=(-1, 1, 1, -1, -1), D=(2, 3, 2, 3, 2))
-        b = TA.rand(settings=settings_full, s=(-1, 1, 1, -1, -1), D=(2, 3, 2, 3, 2))
+        a = yast.rand(config=settings_full, s=(-1, 1, 1, -1, -1), D=(2, 3, 2, 3, 2))
+        b = yast.rand(config=settings_full, s=(-1, 1, 1, -1, -1), D=(2, 3, 2, 3, 2))
         sites=dict({(0,0): a, (1,0): b})
 
         def vertexToSite(r):
@@ -47,11 +46,11 @@ class Test_IO_ipeps_abelian(unittest.TestCase):
         write_ipeps(state, self.outf_full)
 
     def test_write_U1(self):
-        a = TA.rand(settings=settings_U1, s=(1, 1, 1, 1, 1), n=1,
+        a = yast.rand(config=settings_U1, s=(1, 1, 1, 1, 1), n=1,
                         t=((-1, 1), (0, 2), (0, 2), (0, 2), (0, 2)),
                         D=((1, 1), (2,1), (2,1), (2,1), (2,1)))
 
-        b = TA.rand(settings=settings_U1, s=(1, 1, 1, 1, 1), n=1,
+        b = yast.rand(config=settings_U1, s=(1, 1, 1, 1, 1), n=1,
                         t=((-1, 1), (0, 2), (0, 2), (0, 2), (0, 2)),
                         D=((1, 1), (2,1), (2,1), (2,1), (2,1)))
         sites=dict({(0,0): a, (1,0): b})
@@ -65,11 +64,11 @@ class Test_IO_ipeps_abelian(unittest.TestCase):
         write_ipeps(state, self.outf_U1)
 
     # def test_write_U1_U1(self):
-    #     a = TA.rand(settings=settings_U1_U1, s=(-1, 1, 1, -1, -1), n=(1,1),
+    #     a = yast.rand(config=settings_U1_U1, s=(-1, 1, 1, -1, -1), n=(1,1),
     #                     t=[(1,-1),(1,-1), (0, 2),(0,2), (0,2),(0,2), (0, -2),(0,-2), (0,-2),(0,-2)],
     #                     D=[(1,1),(1,1), (2,1),(2,1), (2,1),(2,1), (2,1),(2,1), (2,1),(2,1)])
 
-    #     b = TA.rand(settings=settings_U1_U1, s=(-1, 1, 1, -1, -1), n=(1,1),
+    #     b = yast.rand(config=settings_U1_U1, s=(-1, 1, 1, -1, -1), n=(1,1),
     #                     t=[(-1,1),(-1,1), (0, 2),(0,2), (0,2),(0,2), (0, -2),(0,-2), (0,-2),(0,-2)],
     #                     D=[(1,1),(1,1), (2,1),(2,1), (2,1),(2,1), (2,1),(2,1), (2,1),(2,1)])
     #     sites=dict({(0,0): a, (1,0): b})
@@ -83,8 +82,8 @@ class Test_IO_ipeps_abelian(unittest.TestCase):
     #     write_ipeps(state, self.outf_U1_U1)
 
     def test_read_full(self):
-        a = TA.rand(settings=settings_full, s=(-1, 1, 1, -1, -1), D=(2, 3, 2, 3, 2))
-        b = TA.rand(settings=settings_full, s=(-1, 1, 1, -1, -1), D=(2, 3, 2, 3, 2))
+        a = yast.rand(config=settings_full, s=(-1, 1, 1, -1, -1), D=(2, 3, 2, 3, 2))
+        b = yast.rand(config=settings_full, s=(-1, 1, 1, -1, -1), D=(2, 3, 2, 3, 2))
         sites=dict({(0,0): a, (1,0): b})
 
         def vertexToSite(r):
@@ -99,11 +98,11 @@ class Test_IO_ipeps_abelian(unittest.TestCase):
         self._ipeps_abelian_test_equal(state0, state1)
 
     def test_read_U1(self):
-        a = TA.rand(settings=settings_U1, s=(1, 1, 1, 1, 1), n=1,
+        a = yast.rand(config=settings_U1, s=(1, 1, 1, 1, 1), n=1,
                         t=((-1, 1), (0, 2), (0, 2), (0, 2), (0, 2)),
                         D=((1, 1), (2,1), (2,1), (2,1), (2,1)))
 
-        b = TA.rand(settings=settings_U1, s=(1, 1, 1, 1, 1), n=1,
+        b = yast.rand(config=settings_U1, s=(1, 1, 1, 1, 1), n=1,
                         t=((-1, 1), (0, 2), (0, 2), (0, 2), (0, 2)),
                         D=((1, 1), (2,1), (2,1), (2,1), (2,1)))
         sites=dict({(0,0): a, (1,0): b})
@@ -120,11 +119,11 @@ class Test_IO_ipeps_abelian(unittest.TestCase):
         self._ipeps_abelian_test_equal(state0, state1)
 
     # def test_read_U1_U1(self):
-    #     a = TA.rand(settings=settings_U1_U1, s=(-1, 1, 1, -1, -1), n=(1,1),
+    #     a = yast.rand(config=settings_U1_U1, s=(-1, 1, 1, -1, -1), n=(1,1),
     #                     t=[(1,-1),(1,-1), (0, 2),(0,2), (0,2),(0,2), (0, -2),(0,-2), (0,-2),(0,-2)],
     #                     D=[(1,1),(1,1), (2,1),(2,1), (2,1),(2,1), (2,1),(2,1), (2,1),(2,1)])
 
-    #     b = TA.rand(settings=settings_U1_U1, s=(-1, 1, 1, -1, -1), n=(1,1),
+    #     b = yast.rand(config=settings_U1_U1, s=(-1, 1, 1, -1, -1), n=(1,1),
     #                     t=[(-1,1),(-1,1), (0, 2),(0,2), (0,2),(0,2), (0, -2),(0,-2), (0,-2),(0,-2)],
     #                     D=[(1,1),(1,1), (2,1),(2,1), (2,1),(2,1), (2,1),(2,1), (2,1),(2,1)])
     #     sites=dict({(0,0): a, (1,0): b})

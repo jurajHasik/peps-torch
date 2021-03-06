@@ -1,5 +1,3 @@
-# import yamps.tensor as TA
-import yamps.yast as TA
 from tn_interface_abelian import permute
 
 def make_d2_symm(A):

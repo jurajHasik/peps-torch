@@ -9,8 +9,7 @@ try:
 except ImportError as e:
     warnings.warn("torch not available", Warning)
 import config as cfg
-# import yamps.tensor as TA
-import yamps.yast as TA
+import yamps.yast as yast
 from groups.pg_abelian import make_c4v_symm_A1
 from ipeps.tensor_io import *
 
@@ -108,7 +107,7 @@ class IPEPS_ABELIAN_C4V():
     def load_checkpoint(self, checkpoint_file):
         checkpoint= torch.load(checkpoint_file)
         # TODO set requires_grad False
-        self.sites= {ind: TA.from_dict(settings= self.engine, d=t_dict_repr) \
+        self.sites= {ind: yast.from_dict(settings= self.engine, d=t_dict_repr) \
             for ind,t_dict_repr in checkpoint["parameters"].items()}
 
     def write_to_file(self, outputfile, tol=None, normalize=False):
@@ -135,7 +134,7 @@ class IPEPS_ABELIAN_C4V():
         if noise==0: return self
         _tmp= self.site()
         t_data, D_data= _tmp.get_leg_charges_and_dims(native=True)
-        t_noise= TA.rand(config=_tmp.config, s=_tmp.s, n=_tmp.n, \
+        t_noise= yast.rand(config=_tmp.config, s=_tmp.s, n=_tmp.n, \
             t=t_data, D=D_data, isdiag=_tmp.isdiag)
         site= _tmp + noise * t_noise
         state= IPEPS_ABELIAN_C4V(self.engine, site)

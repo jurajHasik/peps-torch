@@ -1,5 +1,4 @@
-# import yamps.tensor as TA
-import yamps.yast as TA
+import yamps.yast as yast
 import numpy as np
 from math import factorial, sqrt
 
@@ -36,7 +35,7 @@ class SU2_NOSYM():
 
     def _cast(self, op_id, J, dtype, device):
         tmp_block= self.get_op(op_id, J, dtype)
-        op= TA.Tensor(self.engine, s=self._REF_S_DIRS)
+        op= yast.Tensor(self.engine, s=self._REF_S_DIRS)
         op.set_block(val=tmp_block)
         op= op.to(device)
         return op
@@ -71,7 +70,7 @@ class SU2_NOSYM():
 
     def BP_rot(self):
         tmp_block= self.get_op("rot", self.J, self.dtype)
-        op= TA.Tensor(self.engine, s=[1,1])
+        op= yast.Tensor(self.engine, s=[1,1])
         op.set_block(val=tmp_block)
         op= op.to(self.device)
         return op
@@ -81,7 +80,7 @@ class SU2_NOSYM():
         # 1(-1)
         # S--0(-1)
         # 2(+1)
-        op= TA.Tensor(self.engine, s=[-1]+list(self._REF_S_DIRS))
+        op= yast.Tensor(self.engine, s=[-1]+list(self._REF_S_DIRS))
         tmp_block= np.zeros((3,self.J,self.J), dtype=self.dtype)
         tmp_block[0,:,:]= self.get_op("sz", self.J, self.dtype)
         tmp_block[1,:,:]= self.get_op("sp", self.J, self.dtype)
@@ -106,7 +105,7 @@ class SU2_NOSYM():
         #     + np.einsum(expr_kron,get_op("sm", J, self.dtype),get_op("sp", J, self.dtype)))
         S_vec= self.S_zpm()
         S_vec_dag= S_vec.conj().transpose((0,2,1))
-        g= TA.Tensor(self.engine, s=self._REF_S_DIRS)
+        g= yast.Tensor(self.engine, s=self._REF_S_DIRS)
         tmp_block= np.diag(np.asarray(xyz, dtype=self.dtype))
         g.set_block(val=tmp_block)
         #
@@ -226,7 +225,7 @@ class SU2_U1():
         :return: Identity operator of irrep
         :rtype: torch.tensor
         """
-        op= TA.Tensor(self.engine, s=self._REF_S_DIRS, n=0)
+        op= yast.Tensor(self.engine, s=self._REF_S_DIRS, n=0)
         for j in range(-self.J,self.J+1,2):
             c= (j,j) #if j%2==1 else (j//2,j//2)
             op.set_block(ts=c, Ds=(1,1), val='ones')
@@ -239,7 +238,7 @@ class SU2_U1():
         :rtype: torch.tensor
         """
         unit_block= np.ones((1,1), dtype=self.dtype)
-        op= TA.Tensor(self.engine, s=self._REF_S_DIRS, n=0)
+        op= yast.Tensor(self.engine, s=self._REF_S_DIRS, n=0)
         for j in range(-self.J,self.J+1,2):
             c= (j,j) #if j%2==1 else (j//2,j//2)
             op.set_block(ts=c, val= (0.5*j)*unit_block)
@@ -265,7 +264,7 @@ class SU2_U1():
         where C_+ = sqrt(S(S+1)-M(M+1))
         """
         unit_block= np.ones((1,1), dtype=self.dtype)
-        op= TA.Tensor(self.engine, s=self._REF_S_DIRS, n=-2)
+        op= yast.Tensor(self.engine, s=self._REF_S_DIRS, n=-2)
         for j in range(-self.J,self.J,2):
             c= (j+2,j) #if j%2==1 else (j//2+1,j//2)
             c_p= sqrt(0.5 * self.J * (0.5 * self.J + 1) - 0.5*j * (0.5*j + 1))
@@ -292,7 +291,7 @@ class SU2_U1():
         where C_- = sqrt(S(S+1)-M(M-1))
         """
         unit_block= np.ones((1,1), dtype=self.dtype)
-        op= TA.Tensor(self.engine, s=self._REF_S_DIRS, n=2)
+        op= yast.Tensor(self.engine, s=self._REF_S_DIRS, n=2)
         for j in range(-self.J+2,self.J+1,2):
             c= (j-2,j) #if j%2==1 else (j//2,j//2-1)
             c_p= sqrt(0.5 * self.J * (0.5 * self.J + 1) - 0.5*j * (0.5*j - 1))
@@ -301,7 +300,7 @@ class SU2_U1():
         return op
 
     def BP_rot(self):
-        # op= TA.Tensor(self.engine, s=self._REF_S_DIRS, n=0)
+        # op= yast.Tensor(self.engine, s=self._REF_S_DIRS, n=0)
         # for j in range(-self.J,self.J+1,2):
         #     op.set_block(ts=(j,j), Ds=(1,1), val='ones')
         # op= op.to(self.device)
@@ -313,7 +312,7 @@ class SU2_U1():
         # 1(-1)
         # S--0(-1)
         # 2(+1)
-        op_v= TA.Tensor(self.engine, s=[-1]+list(self._REF_S_DIRS), n=0)
+        op_v= yast.Tensor(self.engine, s=[-1]+list(self._REF_S_DIRS), n=0)
         op_sz, op_sp, op_sm= self.SZ(), self.SP(), self.SM()
         for op in [op_sz, op_sp, op_sm]:
             for c in op.A:
@@ -336,7 +335,7 @@ class SU2_U1():
         #     + 0.5*(np.einsum(expr_kron,get_op("sp", J, self.dtype),get_op("sm", J, self.dtype)) \
         #     + np.einsum(expr_kron,get_op("sm", J, self.dtype),get_op("sp", J, self.dtype)))
         unit_block= np.ones((1,1), dtype=self.dtype)
-        g= TA.Tensor(self.engine, s=self._REF_S_DIRS)
+        g= yast.Tensor(self.engine, s=self._REF_S_DIRS)
         g.set_block(ts=(2,2), val=zpm[1]*unit_block)
         g.set_block(ts=(0,0), val=zpm[0]*unit_block)
         g.set_block(ts=(-2,-2), val=zpm[2]*unit_block)

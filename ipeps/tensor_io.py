@@ -3,10 +3,9 @@ from itertools import product
 import json
 import numpy as np
 try:
-    # from yamps.tensor import Tensor
-    from yamps.yast import Tensor
+    import yamps.yast as yast
 except ImportError as e:
-    warnings.warn("yamps.tensor not available", Warning)
+    warnings.warn("yast not available", Warning)
 
 class NumPy_Encoder(json.JSONEncoder):
     def default(self, obj):
@@ -111,30 +110,32 @@ def read_json_abelian_block_np_legacy(json_obj):
 # NOTE: the default settings (abelian group, backend) of Tensor are injected 
 #       by tensor_abelian module 
 #
-def read_json_abelian_tensor_legacy(json_obj, backend):
+def read_json_abelian_tensor_legacy(json_obj, config):
     r"""
     :param json_obj: dictionary from parsed json file
     :type json_obj: dict
+    :param config: yast.Tensor configuration
+    :type config: namedtuple
     """
 
     # TODO validation
     tensor_io_format= json_obj["format"]
     assert tensor_io_format=="abelian", "Invalid JSON format of tensor: "+tensor_io_format
     nsym= json_obj["nsym"]
-    assert nsym==backend.sym.nsym, "Number of abelian symmetries does not match: "\
-        +" settings.nsym "+str(backend.sym.nsym)+" tensor "+str(nsym)
+    assert nsym==config.sym.nsym, "Number of abelian symmetries does not match: "\
+        +" settings.nsym "+str(config.sym.nsym)+" tensor "+str(nsym)
     symmetry= json_obj["symmetry"]
     # TODO equivalence between different names such as U1 and U(1)
-    # assert symmetry==backend.sym.name, "Symmetries of settings.sym and tensor do not match"
+    # assert symmetry==config.sym.name, "Symmetries of settings.sym and tensor do not match"
     s= json_obj["signature"]
     n= json_obj["n"]
     isdiag= json_obj["isdiag"]
     dtype_str= json_obj["dtype"].lower()
     assert dtype_str in ["float64","complex128"], "Invalid dtype"+dtype_str
-    assert dtype_str==backend.dtype, "dtype of tensor and settings.dtype do not match"
+    assert dtype_str==config.dtype, "dtype of tensor and settings.dtype do not match"
 
     # create empty abelian tensor
-    T= Tensor(settings=backend, s=s, n=n, isdiag=isdiag, dtype= dtype_str)
+    T= yast.Tensor(config=config, s=s, n=n, isdiag=isdiag, dtype= dtype_str)
     # TODO assign symmetry in constructor or settings ?
     # TODO equivalence between different names such as U1 and U(1)
     if symmetry!=T.config.sym.name:
@@ -153,6 +154,17 @@ def read_json_abelian_tensor_legacy(json_obj, backend):
     return T
 
 def serialize_bare_tensor_np(t):
+    r"""
+    Parameters
+    ----------
+    t: numpy.ndarray
+
+    Returns
+    -------
+    json_tensor: dict
+
+        JSON-compliant representation of numpy.ndarray
+    """
     json_tensor=dict()
 
     dtype_str= f"{t.dtype}"
@@ -170,6 +182,17 @@ def serialize_bare_tensor_np(t):
     return json_tensor
 
 def serialize_bare_tensor_legacy(t):
+    r"""
+    Parameters
+    ----------
+    t: torch.tensor
+
+    Returns
+    -------
+    json_tensor: dict
+
+        JSON-compliant representation of torch.tensor
+    """
     json_tensor=dict()
 
     dtype_str= f"{t.dtype}"
@@ -195,6 +218,20 @@ def serialize_bare_tensor_legacy(t):
     return json_tensor
 
 def serialize_abelian_tensor_legacy(t, native=False):
+    r"""
+    Parameters
+    ----------
+    t: yast.Tensor
+
+    native: bool
+        if True serialize tensor with all legs unfused
+
+    Returns
+    -------
+    json_tensor: dict
+
+        JSON-compliant representation of yast.Tensor
+    """
     json_tensor=dict()
 
     json_tensor["format"]= "abelian"
