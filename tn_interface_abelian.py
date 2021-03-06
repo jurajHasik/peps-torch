@@ -1,6 +1,3 @@
-# import yamps.tensor as TA
-import yamps.yast as TA
-
 # def tensordot_complex(t1, t2, *args):
 #     return torch.tensordot(t1.real, t2.real, *args) \
 #         - torch.tensordot(t1.imag, t2.imag, *args) \

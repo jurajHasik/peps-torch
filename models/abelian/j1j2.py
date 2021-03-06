@@ -2,8 +2,7 @@ from math import sqrt
 import numpy as np
 import itertools
 import config as cfg
-# import yamps.tensor as TA
-import yamps.yast as TA
+import yamps.yast as yast
 from tn_interface_abelian import contract, permute
 import groups.su2_abelian as su2
 from ctm.generic_abelian import rdm
@@ -243,8 +242,8 @@ class J1J2_NOSYM():
         N= state.lX*state.lY
         assert N==len(state.sites), "size of the unit cell does not match number of sites"
 
-        energy_nn=TA.zeros(self.engine)
-        energy_nnn=TA.zeros(self.engine)
+        energy_nn=yast.zeros(self.engine)
+        energy_nnn=yast.zeros(self.engine)
         # _ci= ([0,1,2,3, 4,5,6,7],[4,5,6,7, 0,1,2,3])
         _ci= ([0,1,2,3, 4,5,6,7],[0,1,2,3, 4,5,6,7])
         for coord in state.sites.keys():

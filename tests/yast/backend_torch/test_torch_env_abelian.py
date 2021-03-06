@@ -2,9 +2,7 @@ import numpy as np
 import unittest
 import settings_full_torch as settings_full
 import settings_U1_torch as settings_U1
-# import settings_U1_U1_torch as settings_U1_U1
-# import yamps.tensor as TA
-import yamps.yast as TA
+import yamps.yast as yast
 import config as cfg
 from ipeps.ipeps_abelian import IPEPS_ABELIAN
 from ctm.generic_abelian.env_abelian import ENV_ABELIAN
@@ -15,8 +13,8 @@ class Test_env_abelian(unittest.TestCase):
 
     @classmethod
     def _get_2x1_BIPARTITE_full(cls):
-        a = TA.rand(settings=settings_full, s=cls._ref_s_dir, D=(2, 3, 2, 3, 2))
-        b = TA.rand(settings=settings_full, s=cls._ref_s_dir, D=(2, 3, 2, 3, 2))
+        a = yast.rand(config=settings_full, s=cls._ref_s_dir, D=(2, 3, 2, 3, 2))
+        b = yast.rand(config=settings_full, s=cls._ref_s_dir, D=(2, 3, 2, 3, 2))
         sites=dict({(0,0): a, (1,0): b})
 
         def vertexToSite(r):
@@ -28,11 +26,11 @@ class Test_env_abelian(unittest.TestCase):
 
     @classmethod
     def _get_2x1_BIPARTITE_U1(cls):
-        a = TA.rand(settings=settings_U1, s=cls._ref_s_dir, n=1,
+        a = yast.rand(config=settings_U1, s=cls._ref_s_dir, n=1,
                         t=((-1, 1), (0, -2), (0, -2), (0, 2), (0, 2)),
                         D=((1, 1), (2,1), (2,1), (2,1), (2,1)))
 
-        b = TA.rand(settings=settings_U1, s=cls._ref_s_dir, n=1,
+        b = yast.rand(config=settings_U1, s=cls._ref_s_dir, n=1,
                         t=((-1, 1), (0, -2), (0, -2), (0, 2), (0, 2)),
                         D=((1, 1), (2,1), (2,1), (2,1), (2,1)))
         sites=dict({(0,0): a, (1,0): b})
@@ -46,11 +44,11 @@ class Test_env_abelian(unittest.TestCase):
 
     @classmethod
     def _get_2x1_BIPARTITE_U1_U1(cls):
-        a = TA.rand(settings=settings_U1_U1, s=cls._ref_s_dir, n=(1,1),
+        a = yast.rand(config=settings_U1_U1, s=cls._ref_s_dir, n=(1,1),
                         t=[(-1,1),(-1,1), (0,-2),(0,-2), (0,-2),(0,-2), (0,2),(0,2), (0,2),(0,2)],
                         D=[(1,1),(1,1), (2,1),(2,1), (2,1),(2,1), (2,1),(2,1), (2,1),(2,1)])
 
-        b = TA.rand(settings=settings_U1_U1, s=cls._ref_s_dir, n=(1,1),
+        b = yast.rand(config=settings_U1_U1, s=cls._ref_s_dir, n=(1,1),
                         t=[(-1,1),(-1,1), (0,-2),(0,-2), (0,-2),(0,-2), (0,2),(0,2), (0,2),(0,2)],
                         D=[(1,1),(1,1), (2,1),(2,1), (2,1),(2,1), (2,1),(2,1), (2,1),(2,1)])
         sites=dict({(0,0): a, (1,0): b})

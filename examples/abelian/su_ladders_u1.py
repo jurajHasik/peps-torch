@@ -1,15 +1,13 @@
-import torch
-import numpy as np
 import argparse
+import numpy as np
+import torch
 import config as cfg
+import yamps.tensor as yast
 import examples.abelian.settings_full_torch as settings_full
 import examples.abelian.settings_U1_torch as settings_U1
-import yamps.tensor as TA
 from ipeps.ipeps_abelian import *
 from ctm.generic_abelian.env_abelian import *
 import ctm.generic_abelian.ctmrg as ctmrg
-# from ctm.generic_abelian_nofuse.env_abelian import *
-# import ctm.generic_abelian_nofuse.ctmrg as ctmrg
 from models.abelian import coupledLadders
 from optim.su_abelian import run_seq_2s
 import json
@@ -161,7 +159,7 @@ def main():
                 w_rid= (state.vertexToSite(add_(coord,dxy)), neg_(dxy))
 
                 if not w_id in weights.keys() and not w_rid in weights.keys():
-                    W= TA.match_legs( tensors=[state.site(w_id[0]), state.site(w_rid[0])],\
+                    W= yast.match_legs( tensors=[state.site(w_id[0]), state.site(w_rid[0])],\
                         legs=[dxy_w_to_ind[w_id[1]], dxy_w_to_ind[w_rid[1]]], isdiag=True )
                     weights[w_id]= W
                     weights[w_rid]= W

@@ -212,7 +212,7 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
     metadata_store= {}
     tmp= tuple([a.compress_to_1d(), \
         env.C[env.keyC].compress_to_1d(), env.T[env.keyT].compress_to_1d()])
-    metadata_store["in"], tensors= list(zip(*tmp))
+    tensors, metadata_store["in"] = list(zip(*tmp))
     
     # function wrapping up the core of the CTM MOVE segment of CTM algorithm
     def ctm_MOVE_sl_c(*tensors):
@@ -225,7 +225,7 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
             _loc_engine= SimpleNamespace(backend=_loc_engine.backend, sym=_loc_engine.sym,\
                 dtype=_loc_engine.dtype, device=global_args.offload_to_gpu)
 
-        a,C,T= tuple(decompress_from_1d(r1d, config=_loc_engine, d=meta) \
+        a,C,T= tuple(decompress_from_1d(r1d, _loc_engine, meta) \
             for r1d,meta in zip(tensors,metadata_store["in"]))
 
         # 1) build enlarged corner upper left corner
@@ -328,7 +328,7 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
 
         # 2) Return raw new tensors
         tmp_loc= tuple([C2X2.compress_to_1d(), nT.compress_to_1d()])
-        metadata_store["out"], tensors_loc= list(zip(*tmp_loc))
+        tensors_loc, metadata_store["out"]= list(zip(*tmp_loc))
 
         # move back to (default) cpu if offload_to_gpu is specified
         if global_args.offload_to_gpu != 'None' and global_args.device=='cpu':
@@ -342,7 +342,7 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
     else:
         new_tensors= ctm_MOVE_sl_c(*tensors)
 
-    new_tensors= tuple(decompress_from_1d(r1d, config=env.engine, d=meta) \
+    new_tensors= tuple(decompress_from_1d(r1d, env.engine, meta) \
             for r1d,meta in zip(new_tensors,metadata_store["out"]))
 
     env.C[env.keyC]= new_tensors[0]

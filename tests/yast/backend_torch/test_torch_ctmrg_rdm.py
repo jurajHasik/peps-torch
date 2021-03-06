@@ -2,8 +2,7 @@ import numpy as np
 import unittest
 import settings_full_torch
 import settings_U1_torch
-# import yamps.tensor as TA
-import yamps.yast as TA
+import yamps.yast as yast
 import config as cfg
 from ipeps.ipeps_abelian import IPEPS_ABELIAN
 from ctm.generic_abelian.env_abelian import ENV_ABELIAN
@@ -16,8 +15,8 @@ class Test_env_abelian_full_torch(unittest.TestCase):
 
     @classmethod
     def _get_2x1_BIPARTITE_full(cls):
-        a = TA.zeros(settings=settings_full_torch, s=cls._ref_s_dir, D=(2, 2, 2, 2, 2))
-        b = TA.zeros(settings=settings_full_torch, s=cls._ref_s_dir, D=(2, 2, 2, 2, 2))
+        a = yast.zeros(config=settings_full_torch, s=cls._ref_s_dir, D=(2, 2, 2, 2, 2))
+        b = yast.zeros(config=settings_full_torch, s=cls._ref_s_dir, D=(2, 2, 2, 2, 2))
         T= np.zeros((2,2,2,2,2))
         T[0,0,0,0,0]= -1.000635518923222
         T[1,1,0,0,0]= -0.421284989637812
@@ -79,7 +78,7 @@ class Test_env_abelian_U1_torch(unittest.TestCase):
     @classmethod
     def _get_2x1_BIPARTITE_U1(cls):
         # AFM D=2
-        a = TA.Tensor(settings=settings_U1_torch, s=cls._ref_s_dir, n=0)
+        a = yast.Tensor(config=settings_U1_torch, s=cls._ref_s_dir, n=0)
                         # t=((0, -1), (0, 1), (0, 1), (0,-1), (0,-1)),
                         # D=((1, 1), (1,1), (1,1), (1,1), (1,1)))
         tmp1= -1.000635518923222*np.ones((1,1,1,1,1))
@@ -90,7 +89,7 @@ class Test_env_abelian_U1_torch(unittest.TestCase):
         a.set_block((-1,0,0,-1,0), (1,1,1,1,1), val=tmp2)
         a.set_block((-1,0,0,0,-1), (1,1,1,1,1), val=tmp2)
 
-        b = TA.Tensor(settings=settings_U1_torch, s=cls._ref_s_dir, n=0)
+        b = yast.Tensor(config=settings_U1_torch, s=cls._ref_s_dir, n=0)
                         # t=((0, 1), (0, -1), (0, -1), (0,1), (0,1)),
                         # D=((1, 1), (1,1), (1,1), (1,1), (1,1)))
         b.set_block((0,0,0,0,0), (1,1,1,1,1), val=-tmp1)

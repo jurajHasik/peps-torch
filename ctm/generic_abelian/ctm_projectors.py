@@ -221,8 +221,7 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, direction, \
                          _|_____|_
                         |____Rt___|
     """
-    # assert R.ndim == Rt.ndim and R.ndim==2
-    assert len(R.lfuse) == len(Rt.lfuse) and len(R.lfuse) == 2
+    assert R.get_ndim() == Rt.get_ndim() and R.get_ndim() == 2
     verbosity = ctm_args.verbosity_projectors
 
     # TODO autograd

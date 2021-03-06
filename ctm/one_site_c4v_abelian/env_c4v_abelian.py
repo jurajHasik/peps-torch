@@ -1,6 +1,4 @@
 import config as cfg
-# import yamps.tensor as TA
-import yamps.yast as TA
 import numpy as np
 
 class ENV_C4V_ABELIAN():
