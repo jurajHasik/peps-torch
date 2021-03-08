@@ -9,6 +9,7 @@ from ctm.generic import transferops
 from models import j1j2
 # from optim.ad_optim import optimize_state
 from optim.ad_optim_lbfgs_mod import optimize_state
+# from optim.ad_optim_sgd_mod import optimize_state
 import unittest
 import logging
 log = logging.getLogger(__name__)
@@ -180,6 +181,8 @@ def main():
         
         # 2) evaluate loss with the converged environment
         loss = energy_f(state, ctm_env_out)
+        if loss.iscomplex():
+            loss = loss.real
         
         return (loss, ctm_env_out, *ctm_log)
 

@@ -4,7 +4,6 @@ import json
 import logging
 log = logging.getLogger(__name__)
 import torch
-#from memory_profiler import profile
 from optim import lbfgs_modified
 import config as cfg
 
@@ -147,7 +146,6 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
             if linesearching:
                 log_entry["LS"]=len(t_data["loss_ls"])
                 log_entry["loss"]=t_data["loss_ls"]
-
             log.info(json.dumps(log_entry))
 
         # 3) compute desired observables
