@@ -67,7 +67,7 @@ class IPEPS_ABELIAN_C4V_LC(IPEPS_ABELIAN_C4V):
             for coord,c in self.coeffs.items():
                 sites[coord]= torch.einsum('i,ipuldr->puldr',c,ts)
             
-            site= yast.Tensor(settings=self.engine, s=IPEPS_ABELIAN_C4V._REF_S_DIRS)
+            site= yast.Tensor(config=self.engine, s=IPEPS_ABELIAN_C4V._REF_S_DIRS)
             site.set_block(val=next(iter(sites.values())))
 
             return site
