@@ -7,6 +7,9 @@ import config as cfg
 from math import sqrt
 import itertools
 
+def _cast_to_real(t):
+    return t.real if t.is_complex() else t
+
 class ISING():
     def __init__(self, hx=0.0, q=0.0, global_args=cfg.global_args):
         r"""
@@ -105,25 +108,9 @@ class ISING():
         #     torch.einsum('ijklajcl,ikac',rdm2x2,self.h2)
         # eSzSzSzSz= torch.einsum('ijklabcd,ijklabcd',rdm2x2,self.h4)
         # energy_per_site = -eSzSz - self.hx*eSx + self.q*eSzSzSzSz
-        return energy_per_site 
+        energy_per_site= _cast_to_real(energy_per_site)
 
-    # assuming reduced density matrix of 2x2 cluster with indexing of DOFs
-    # as follows rdm2x2=rdm2x2(s0,s1,s2,s3;s0',s1',s2',s3')
-    #
-    # s0,s1
-    # s2,s3
-    #                
-    #                          A3--1B   B3  1A
-    #                          2 \/ 2   2 \/ 2
-    #                A B       0 /\ 0   0 /\ 0
-    # Ex.1 unit cell B A terms B3--1A & A3  1B
-    #
-    #                          A3--1B   B3--1A
-    #                          2 \/ 2   2 \/ 2
-    #                A B       0 /\ 0   0 /\ 0
-    # Ex.2 unit cell A B terms A3--1B & B3--1A
-    def energy_2x2_2site(self,state,env):
-        pass
+        return energy_per_site 
 
     def eval_obs(self,state,env):
         r"""
@@ -151,9 +138,12 @@ class ISING():
                 rdm2x1= rdm.rdm2x1(coord,state,env)
                 rdm1x2= rdm.rdm1x2(coord,state,env)
                 rdm2x2= rdm.rdm2x2(coord,state,env)
-                obs[f"SzSz2x1{coord}"]= torch.einsum('ijab,ijab',rdm2x1,self.h2)
-                obs[f"SzSz1x2{coord}"]= torch.einsum('ijab,ijab',rdm1x2,self.h2)
-                obs[f"SzSzSzSz{coord}"]= torch.einsum('ijklabcd,ijklabcd',rdm2x2,self.h4)
+                SzSz2x1= torch.einsum('ijab,ijab',rdm2x1,self.h2)
+                SzSz1x2= torch.einsum('ijab,ijab',rdm1x2,self.h2)
+                SzSzSzSz= torch.einsum('ijklabcd,ijklabcd',rdm2x2,self.h4)
+                obs[f"SzSz2x1{coord}"]= _cast_to_real(SzSz2x1)
+                obs[f"SzSz1x2{coord}"]= _cast_to_real(SzSz1x2)
+                obs[f"SzSzSzSz{coord}"]= _cast_to_real(SzSzSzSz)
 
         # prepare list with labels and values
         obs_labels= [f"{lc[1]}{lc[0]}" for lc in list(itertools.product(state.sites.keys(), ["sz","sx"]))]

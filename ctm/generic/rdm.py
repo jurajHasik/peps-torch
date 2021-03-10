@@ -5,9 +5,9 @@ from tn_interface import contract, einsum
 from tn_interface import contiguous, view, permute
 from tn_interface import conj
 
-def _sym_pos_def(rdm, sym_pos_def=False, verbosity=0, who="unknown"):
-    rdm_asym= 0.5*(rdm-rdm.t())
-    rdm= 0.5*(rdm+rdm.t())
+def _sym_pos_def_matrix(rdm, sym_pos_def=False, verbosity=0, who="unknown"):
+    rdm_asym= 0.5*(rdm-rdm.conj().t())
+    rdm= 0.5*(rdm+rdm.conj().t())
     if verbosity>0: 
         log.info(f"{who} norm(rdm_sym) {rdm.norm()} norm(rdm_asym) {rdm_asym.norm()}")
     if sym_pos_def:
@@ -16,9 +16,20 @@ def _sym_pos_def(rdm, sym_pos_def=False, verbosity=0, who="unknown"):
             if D.min() < 0:
                 log.info(f"{who} max(diag(rdm)) {D.max()} min(diag(rdm)) {D.min()}")
                 D= torch.clamp(D, min=0)
-                rdm_posdef= U@torch.diag(D)@U.t()
+                rdm_posdef= U@torch.diag(D)@U.conj().t()
                 rdm.copy_(rdm_posdef)
     rdm = rdm / rdm.diagonal().sum()
+    return rdm
+
+def _sym_pos_def_rdm(rdm, sym_pos_def=False, verbosity=0, who=None):
+    assert len(rdm.size())%2==0, "invalid rank of RDM"
+    nsites= len(rdm.size())//2
+
+    orig_shape= rdm.size()
+    rdm= rdm.reshape(torch.prod(torch.as_tensor(rdm.size())[:nsites]),-1)
+    
+    rdm= _sym_pos_def_matrix(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
+    rdm= rdm.reshape(orig_shape)
     return rdm
 
 def rdm1x1(coord, state, env, sym_pos_def=False, verbosity=0):
@@ -139,11 +150,11 @@ def rdm1x1(coord, state, env, sym_pos_def=False, verbosity=0):
         print("rdm=CTCTaTCTC "+str(rdm.size()))
 
     # symmetrize and normalize
-    rdm= _sym_pos_def(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
+    rdm= _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
 
     return rdm
 
-def rdm2x1(coord, ipeps, env, sym_pos_def=False, verbosity=0):
+def rdm2x1(coord, state, env, sym_pos_def=False, verbosity=0):
     r"""
     :param coord: vertex (x,y) specifies position of 2x1 subsystem
     :param state: underlying wavefunction
@@ -176,11 +187,11 @@ def rdm2x1(coord, ipeps, env, sym_pos_def=False, verbosity=0):
     """
     who="rdm2x1"
     #----- building C2x2_LU ----------------------------------------------------
-    C = env.C[(ipeps.vertexToSite(coord),(-1,-1))]
-    T1 = env.T[(ipeps.vertexToSite(coord),(0,-1))]
-    T2 = env.T[(ipeps.vertexToSite(coord),(-1,0))]
-    dimsA = ipeps.site(coord).size()
-    a = einsum('mefgh,nabcd->eafbgchdmn',ipeps.site(coord),conj(ipeps.site(coord)))
+    C = env.C[(state.vertexToSite(coord),(-1,-1))]
+    T1 = env.T[(state.vertexToSite(coord),(0,-1))]
+    T2 = env.T[(state.vertexToSite(coord),(-1,0))]
+    dimsA = state.site(coord).size()
+    a = einsum('mefgh,nabcd->eafbgchdmn',state.site(coord),conj(state.site(coord)))
     a = view(contiguous(a),\
         (dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2, dimsA[0], dimsA[0]))
 
@@ -211,11 +222,11 @@ def rdm2x1(coord, ipeps, env, sym_pos_def=False, verbosity=0):
     C2x2_LU= view(contiguous(C2x2_LU), \
         (T2.size(1)*a.size(2),T1.size(2)*a.size(3),dimsA[0],dimsA[0]))
     if verbosity>0:
-        print("C2X2 LU "+str(coord)+"->"+str(ipeps.vertexToSite(coord))+" (-1,-1): "+str(C2x2_LU.size()))
+        print("C2X2 LU "+str(coord)+"->"+str(state.vertexToSite(coord))+" (-1,-1): "+str(C2x2_LU.size()))
 
     #----- building C2x1_LD ----------------------------------------------------
-    C = env.C[(ipeps.vertexToSite(coord),(-1,1))]
-    T2 = env.T[(ipeps.vertexToSite(coord),(0,1))]
+    C = env.C[(state.vertexToSite(coord),(-1,1))]
+    T2 = env.T[(state.vertexToSite(coord),(0,1))]
 
     # 0       0->1
     # C--1 1--T2--2
@@ -227,7 +238,7 @@ def rdm2x1(coord, ipeps, env, sym_pos_def=False, verbosity=0):
     # C2x1--1
     C2x1_LD= view(contiguous(C2x1_LD), (C.size(0)*T2.size(0),T2.size(2)))
     if verbosity>0:
-        print("C2X1 LD "+str(coord)+"->"+str(ipeps.vertexToSite(coord))+" (-1,1): "+str(C2x1_LD.size()))
+        print("C2X1 LD "+str(coord)+"->"+str(state.vertexToSite(coord))+" (-1,1): "+str(C2x1_LD.size()))
 
     #----- build left part C2x2_LU--C2x1_LD ------------------------------------
     # C2x2_LU--1 
@@ -240,12 +251,12 @@ def rdm2x1(coord, ipeps, env, sym_pos_def=False, verbosity=0):
 
     #----- building C2x2_RU ----------------------------------------------------
     vec = (1,0)
-    shitf_coord = ipeps.vertexToSite((coord[0]+vec[0],coord[1]+vec[1]))
+    shitf_coord = state.vertexToSite((coord[0]+vec[0],coord[1]+vec[1]))
     C = env.C[(shitf_coord,(1,-1))]
     T1 = env.T[(shitf_coord,(1,0))]
     T2 = env.T[(shitf_coord,(0,-1))]
-    dimsA = ipeps.site(shitf_coord).size()
-    a= einsum('mefgh,nabcd->eafbgchdmn',ipeps.site(shitf_coord),conj(ipeps.site(shitf_coord)))
+    dimsA = state.site(shitf_coord).size()
+    a= einsum('mefgh,nabcd->eafbgchdmn',state.site(shitf_coord),conj(state.site(shitf_coord)))
     a= view(contiguous(a), \
         (dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2, dimsA[0], dimsA[0]))
 
@@ -317,15 +328,13 @@ def rdm2x1(coord, ipeps, env, sym_pos_def=False, verbosity=0):
     # permute into order of s0,s1;s0',s1' where primed indices
     # represent "ket"
     # 0123->0213
-    # and normalize
-    d_rdm= rdm.size()
-    rdm = view(contiguous(permute(rdm, (0,2,1,3))), (d_rdm[0]**2,d_rdm[0]**2))
-    rdm= _sym_pos_def(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
-    rdm= view(rdm, d_rdm)
+    # symmetrize and normalize 
+    rdm = contiguous(permute(rdm, (0,2,1,3)))
+    rdm= _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
 
     return rdm
 
-def rdm1x2(coord, ipeps, env, sym_pos_def=False, verbosity=0):
+def rdm1x2(coord, state, env, sym_pos_def=False, verbosity=0):
     r"""
     :param coord: vertex (x,y) specifies position of 1x2 subsystem
     :param state: underlying wavefunction
@@ -360,11 +369,11 @@ def rdm1x2(coord, ipeps, env, sym_pos_def=False, verbosity=0):
     """
     who="rdm1x2"
     #----- building C2x2_LU ----------------------------------------------------
-    C = env.C[(ipeps.vertexToSite(coord),(-1,-1))]
-    T1 = env.T[(ipeps.vertexToSite(coord),(0,-1))]
-    T2 = env.T[(ipeps.vertexToSite(coord),(-1,0))]
-    dimsA = ipeps.site(coord).size()
-    a= einsum('mefgh,nabcd->eafbgchdmn',ipeps.site(coord), conj(ipeps.site(coord)))
+    C = env.C[(state.vertexToSite(coord),(-1,-1))]
+    T1 = env.T[(state.vertexToSite(coord),(0,-1))]
+    T2 = env.T[(state.vertexToSite(coord),(-1,0))]
+    dimsA = state.site(coord).size()
+    a= einsum('mefgh,nabcd->eafbgchdmn',state.site(coord), conj(state.site(coord)))
     a= view(contiguous(a), \
         (dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2, dimsA[0], dimsA[0]))
 
@@ -395,11 +404,11 @@ def rdm1x2(coord, ipeps, env, sym_pos_def=False, verbosity=0):
     C2x2_LU= view(contiguous(C2x2_LU), \
         (T2.size(1)*a.size(2),T1.size(2)*a.size(3),dimsA[0],dimsA[0]))
     if verbosity>0:
-        print("C2X2 LU "+str(coord)+"->"+str(ipeps.vertexToSite(coord))+" (-1,-1): "+str(C2x2_LU.size()))
+        print("C2X2 LU "+str(coord)+"->"+str(state.vertexToSite(coord))+" (-1,-1): "+str(C2x2_LU.size()))
 
     #----- building C1x2_RU ----------------------------------------------------
-    C = env.C[(ipeps.vertexToSite(coord),(1,-1))]
-    T1 = env.T[(ipeps.vertexToSite(coord),(1,0))]
+    C = env.C[(state.vertexToSite(coord),(1,-1))]
+    T1 = env.T[(state.vertexToSite(coord),(1,0))]
 
     # 0--C
     #    1
@@ -414,7 +423,7 @@ def rdm1x2(coord, ipeps, env, sym_pos_def=False, verbosity=0):
     #    1
     C1x2_RU= view(contiguous(C1x2_RU), (C.size(0)*T1.size(1),T1.size(2)))
     if verbosity>0:
-        print("C1X2 RU "+str(coord)+"->"+str(ipeps.vertexToSite(coord))+" (1,-1): "+str(C1x2_RU.size()))
+        print("C1X2 RU "+str(coord)+"->"+str(state.vertexToSite(coord))+" (1,-1): "+str(C1x2_RU.size()))
 
     #----- build upper part C2x2_LU--C1x2_RU -----------------------------------
     # C2x2_LU--1 0--C1x2_RU
@@ -424,12 +433,12 @@ def rdm1x2(coord, ipeps, env, sym_pos_def=False, verbosity=0):
 
     #----- building C2x2_LD ----------------------------------------------------
     vec = (0,1)
-    shitf_coord = ipeps.vertexToSite((coord[0]+vec[0],coord[1]+vec[1]))
+    shitf_coord = state.vertexToSite((coord[0]+vec[0],coord[1]+vec[1]))
     C = env.C[(shitf_coord,(-1,1))]
     T1 = env.T[(shitf_coord,(-1,0))]
     T2 = env.T[(shitf_coord,(0,1))]
-    dimsA = ipeps.site(shitf_coord).size()
-    a= einsum('mefgh,nabcd->eafbgchdmn',ipeps.site(shitf_coord),conj(ipeps.site(shitf_coord)))
+    dimsA = state.site(shitf_coord).size()
+    a= einsum('mefgh,nabcd->eafbgchdmn',state.site(shitf_coord),conj(state.site(shitf_coord)))
     a= view(contiguous(a), \
         (dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2, dimsA[0], dimsA[0]))
 
@@ -507,11 +516,9 @@ def rdm1x2(coord, ipeps, env, sym_pos_def=False, verbosity=0):
     # permute into order of s0,s1;s0',s1' where primed indices
     # represent "ket"
     # 0123->0213
-    # and normalize
-    d_rdm= rdm.size()
-    rdm = view(contiguous(permute(rdm, (0,2,1,3))), (d_rdm[0]**2,d_rdm[0]**2))
-    rdm= _sym_pos_def(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
-    rdm= view(rdm, d_rdm)
+    # symmetrize and normalize
+    rdm = contiguous(permute(rdm, (0,2,1,3)))
+    rdm= _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
 
     return rdm
 
@@ -738,9 +745,8 @@ def rdm2x2(coord, state, env, sym_pos_def=False, verbosity=0):
     # permute into order of s0,s1,s2,s3;s0',s1',s2',s3' where primed indices
     # represent "ket"
     # 01234567->02461357
-    # and normalize
-    d_rdm= rdm.size()
-    rdm= view(contiguous(permute(rdm, (0,2,4,6,1,3,5,7))), (d_rdm[0]**4,d_rdm[4]**4))
-    rdm= _sym_pos_def(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
-    rdm= view(rdm, d_rdm)
+    # symmetrize and normalize
+    rdm= contiguous(permute(rdm, (0,2,4,6,1,3,5,7)))
+    rdm= _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
+    
     return rdm

@@ -10,6 +10,9 @@ from ctm.one_site_c4v import corrf_c4v
 from math import sqrt
 import itertools
 
+def _cast_to_real(t):
+    return t.real if t.is_complex() else t
+
 class JQ():
     def __init__(self, j1=0.0, q=1.0, global_args=cfg.global_args):
         r"""
@@ -88,34 +91,6 @@ class JQ():
         obs_ops["sm"]= s2.SM()
         return obs_ops
 
-    # evaluation of energy depends on the nature of underlying
-    # ipeps state
-    #
-    # Ex.1 for 1-site c4v invariant iPEPS there is just a single 2site
-    # operator which gives the energy-per-site
-    #
-    # Ex.2 for 1-site invariant iPEPS there are two two-site terms
-    # which give the energy-per-site
-    #    0       0
-    # 1--A--3 1--A--3 
-    #    2       2                          A
-    #    0       0                          2
-    # 1--A--3 1--A--3                       0
-    #    2       2    , terms A--3 1--A and A have to be evaluated
-    #
-    # Ex.3 for 2x2 cluster iPEPS there are eight two-site terms
-    #    0       0       0
-    # 1--A--3 1--B--3 1--A--3
-    #    2       2       2
-    #    0       0       0
-    # 1--C--3 1--D--3 1--C--3
-    #    2       2       2             A--3 1--B      A B C D
-    #    0       0                     B--3 1--A      2 2 2 2
-    # 1--A--3 1--B--3                  C--3 1--D      0 0 0 0
-    #    2       2             , terms D--3 1--C and  C D A B
-    def energy_1x1c4v(self,ipeps):
-        pass
-
     def energy_2x2_4site(self,state,env):
         r"""
 
@@ -170,6 +145,8 @@ class JQ():
 
         # energy_per_site = 2.0*self.j1*(energy_nn/16.0) - self.q*(energy_4/4.0)
         energy_per_site= energy/4.0
+        energy_per_site= _cast_to_real(energy_per_site)   
+
         return energy_per_site
 
     def eval_obs(self,state,env):
@@ -223,8 +200,10 @@ class JQ():
             for coord,site in state.sites.items():
                 rdm2x1 = rdm.rdm2x1(coord,state,env)
                 rdm1x2 = rdm.rdm1x2(coord,state,env)
-                obs[f"SS2x1{coord}"]= torch.einsum('ijab,ijab',rdm2x1,self.h2)
-                obs[f"SS1x2{coord}"]= torch.einsum('ijab,ijab',rdm1x2,self.h2)
+                SS2x1= torch.einsum('ijab,ijab',rdm2x1,self.h2)
+                SS1x2= torch.einsum('ijab,ijab',rdm1x2,self.h2)
+                obs[f"SS2x1{coord}"]= _cast_to_real(SS2x1)
+                obs[f"SS1x2{coord}"]= _cast_to_real(SS1x2)
         
         # prepare list with labels and values
         obs_labels=["avg_m"]+[f"m{coord}" for coord in state.sites.keys()]\

@@ -149,7 +149,7 @@ def main():
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
             history=[]
-        e_curr = energy_f(state, env)
+        e_curr= energy_f(state, env)
         history.append(e_curr.item())
 
         if (len(history) > 1 and abs(history[-1]-history[-2]) < ctm_args.ctm_conv_tol)\
@@ -162,7 +162,7 @@ def main():
     init_env(state, ctm_env)
     
     ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
-    loss0 = energy_f(state, ctm_env)
+    loss0= energy_f(state, ctm_env)
     obs_values, obs_labels = eval_obs_f(state,ctm_env)
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
@@ -181,8 +181,6 @@ def main():
         
         # 2) evaluate loss with the converged environment
         loss = energy_f(state, ctm_env_out)
-        if loss.iscomplex():
-            loss = loss.real
         
         return (loss, ctm_env_out, *ctm_log)
 
@@ -219,9 +217,9 @@ def main():
     ctm_env = ENV(args.chi, state)
     init_env(state, ctm_env)
     ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
-    opt_energy = energy_f(state,ctm_env)
+    loss0= energy_f(state,ctm_env)
     obs_values, obs_labels = eval_obs_f(state,ctm_env)
-    print(", ".join([f"{args.opt_max_iter}",f"{opt_energy}"]+[f"{v}" for v in obs_values]))  
+    print(", ".join([f"{args.opt_max_iter}",f"{loss0}"]+[f"{v}" for v in obs_values]))  
 
 if __name__=='__main__':
     if len(unknown_args)>0:

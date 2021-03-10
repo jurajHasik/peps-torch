@@ -6,7 +6,7 @@ from ipeps.ipeps import *
 from ctm.generic.env import *
 from ctm.generic import ctmrg
 from models import jq
-from optim.ad_optim import optimize_state
+from optim.ad_optim_lbfgs_mod import optimize_state
 import unittest
 import logging
 log = logging.getLogger(__name__)
@@ -77,10 +77,10 @@ def main():
     init_env(state, ctm_env_init)
 
     ctm_env_init, *ctm_log = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
-    loss = model.energy_2x2_4site(state, ctm_env_init)
+    loss0 = model.energy_2x2_4site(state, ctm_env_init)
     obs_values, obs_labels = model.eval_obs(state,ctm_env_init)
     print(", ".join(["epoch","energy"]+obs_labels))
-    print(", ".join([f"{-1}",f"{loss}"]+[f"{v}" for v in obs_values]))
+    print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
 
     def loss_fn(state, ctm_env_in, opt_context):
         ctm_args= opt_context["ctm_args"]
@@ -115,9 +115,9 @@ def main():
     ctm_env = ENV(args.chi, state)
     init_env(state, ctm_env)
     ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
-    opt_energy = model.energy_2x2_4site(state,ctm_env)
+    loss0 = model.energy_2x2_4site(state,ctm_env)
     obs_values, obs_labels = model.eval_obs(state,ctm_env)
-    print(", ".join([f"{args.opt_max_iter}",f"{opt_energy}"]+[f"{v}" for v in obs_values]))
+    print(", ".join([f"{args.opt_max_iter}",f"{loss0}"]+[f"{v}" for v in obs_values]))
     
 if __name__=='__main__':
     if len(unknown_args)>0:

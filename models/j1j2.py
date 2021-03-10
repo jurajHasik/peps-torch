@@ -12,6 +12,9 @@ from ctm.one_site_c4v import corrf_c4v
 from math import sqrt
 import itertools
 
+def _cast_to_real(t):
+    return t.real if t.is_complex() else t
+
 class J1J2():
     def __init__(self, j1=1.0, j2=0, global_args=cfg.global_args):
         r"""
@@ -113,7 +116,8 @@ class J1J2():
         tmp_rdm= rdm.rdm2x2((0,0),state,env)
         energy_nn= torch.einsum('ijklabcd,ijklabcd',tmp_rdm,self.h2x2_nn_rot)
         energy_nnn= torch.einsum('ijklabcd,ijklabcd',tmp_rdm,self.h2x2_nnn_rot)
-        energy_per_site = 2.0*(self.j1*energy_nn/4.0 + self.j2*energy_nnn/2.0)
+        energy_per_site= 2.0*(self.j1*energy_nn/4.0 + self.j2*energy_nnn/2.0)
+        energy_per_site= _cast_to_real(energy_per_site) 
 
         return energy_per_site
 
@@ -180,7 +184,9 @@ class J1J2():
             tmp_rdm= rdm.rdm2x2(coord,state,env)
             energy_nn += torch.einsum('ijklabcd,ijklabcd',tmp_rdm,self.h2x2_nn)
             energy_nnn += torch.einsum('ijklabcd,ijklabcd',tmp_rdm,self.h2x2_nnn)
-        energy_per_site = 2.0*(self.j1*energy_nn/8.0 + self.j2*energy_nnn/4.0)
+        energy_per_site= 2.0*(self.j1*energy_nn/8.0 + self.j2*energy_nnn/4.0)
+        energy_per_site= _cast_to_real(energy_per_site)
+
         return energy_per_site
 
     def energy_2x2_4site(self,state,env):
@@ -224,7 +230,8 @@ class J1J2():
             tmp_rdm= rdm.rdm2x2(coord,state,env)
             energy_nn += torch.einsum('ijklabcd,ijklabcd',tmp_rdm,self.h2x2_nn)
             energy_nnn += torch.einsum('ijklabcd,ijklabcd',tmp_rdm,self.h2x2_nnn)
-        energy_per_site = 2.0*(self.j1*energy_nn/16.0 + self.j2*energy_nnn/8.0)
+        energy_per_site= 2.0*(self.j1*energy_nn/16.0 + self.j2*energy_nnn/8.0)
+        energy_per_site= _cast_to_real(energy_per_site)
 
         return energy_per_site
 
@@ -275,6 +282,8 @@ class J1J2():
             energy_nn += torch.einsum('ijklabcd,ijklabcd',tmp_rdm,self.h2x2_nn)
             energy_nnn += torch.einsum('ijklabcd,ijklabcd',tmp_rdm,self.h2x2_nnn)
         energy_per_site= 2.0*(self.j1*energy_nn/32.0 + self.j2*energy_nnn/16.0)
+        energy_per_site= _cast_to_real(energy_per_site)
+
         return energy_per_site
 
     def eval_obs(self,state,env):
@@ -328,8 +337,10 @@ class J1J2():
             for coord,site in state.sites.items():
                 rdm2x1 = rdm.rdm2x1(coord,state,env)
                 rdm1x2 = rdm.rdm1x2(coord,state,env)
-                obs[f"SS2x1{coord}"]= torch.einsum('ijab,ijab',rdm2x1,self.h2)
-                obs[f"SS1x2{coord}"]= torch.einsum('ijab,ijab',rdm1x2,self.h2)
+                SS2x1= torch.einsum('ijab,ijab',rdm2x1,self.h2)
+                SS1x2= torch.einsum('ijab,ijab',rdm1x2,self.h2)
+                obs[f"SS2x1{coord}"]= SS2x1.real if SS2x1.is_complex() else SS2x1
+                obs[f"SS1x2{coord}"]= SS1x2.real if SS1x2.is_complex() else SS1x2
         
         # prepare list with labels and values
         obs_labels=["avg_m"]+[f"m{coord}" for coord in state.sites.keys()]\
@@ -499,6 +510,8 @@ class J1J2_C4V_BIPARTITE():
                 force_cpu=False,verbosity=cfg.ctm_args.verbosity_rdm)
             ss_3x1= torch.einsum('ijab,ijab',rdm3x1,self.SS)
             energy_per_site= energy_per_site + 2*self.j3*ss_3x1
+
+        energy_per_site= _cast_to_real(energy_per_site)
         return energy_per_site
 
     def energy_1x1_lowmem(self, state, env_c4v, force_cpu=False):
@@ -548,6 +561,8 @@ class J1J2_C4V_BIPARTITE():
                 force_cpu=force_cpu,verbosity=cfg.ctm_args.verbosity_rdm)
             ss_3x1= torch.einsum('ijab,ijab',rdm3x1,self.SS)
             energy_per_site= energy_per_site + 2*self.j3*ss_3x1
+        energy_per_site= _cast_to_real(energy_per_site)
+
         return energy_per_site
 
     def energy_1x1_tiled(self, state, env_c4v, force_cpu=False):
@@ -597,6 +612,8 @@ class J1J2_C4V_BIPARTITE():
                 force_cpu=force_cpu,verbosity=cfg.ctm_args.verbosity_rdm)
             ss_3x1= torch.einsum('ijab,ijab',rdm3x1,self.SS)
             energy_per_site= energy_per_site + 2*self.j3*ss_3x1
+        energy_per_site= _cast_to_real(energy_per_site)
+
         return energy_per_site
 
     def eval_obs(self,state,env_c4v,force_cpu=False):
@@ -644,8 +661,9 @@ class J1J2_C4V_BIPARTITE():
 
             rdm2x1= rdm_c4v.rdm2x1_sl(state,env_c4v,force_cpu=force_cpu,\
                 verbosity=cfg.ctm_args.verbosity_rdm)
-            obs[f"SS2x1"]= torch.einsum('ijab,ijab',rdm2x1,self.SS_rot)
-            
+            SS2x1= torch.einsum('ijab,ijab',rdm2x1,self.SS_rot)
+            obs[f"SS2x1"]= SS2x1.real if SS2x1.is_complex() else SS2x1
+
             # reduce rdm2x1 to 1x1
             rdm1x1= torch.einsum('ijaj->ia',rdm2x1)
             rdm1x1= rdm1x1/torch.trace(rdm1x1)
@@ -664,8 +682,9 @@ class J1J2_C4V_BIPARTITE():
         with torch.no_grad():
             rdm2x1= rdm2x1_tiled(state,env_c4v,force_cpu=force_cpu,\
                 verbosity=cfg.ctm_args.verbosity_rdm)
-            obs[f"SS2x1"]= torch.einsum('ijab,ijab',rdm2x1,self.SS_rot)
-        
+            SS2x1= torch.einsum('ijab,ijab',rdm2x1,self.SS_rot)
+            obs[f"SS2x1"]= SS2x1 if SS2x1.is_complex() else SS2x1
+
             # reduce rdm2x1 to 1x1
             rdm1x1= torch.einsum('ijaj->ia',rdm2x1)
             rdm1x1= rdm1x1/torch.trace(rdm1x1)
