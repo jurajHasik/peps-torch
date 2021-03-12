@@ -157,6 +157,7 @@ class IPEPS_U1SYM(ipeps.IPEPS):
         sites=dict()
         for coord,c in self.coeffs.items():
             sites[coord]= torch.einsum('i,ipuldr->puldr',c,ts)
+
         return sites
 
     def add_noise(self,noise):
@@ -228,14 +229,31 @@ def read_ipeps_u1(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.
             ten_list_key= "su2_tensors"
         sym_tensors=[]
         for symt in raw_state[ten_list_key]:
+            loc_dtype= torch.float64 # assume float64 by default 
+            if "dtype" in symt.keys():
+                if "complex128"==symt["dtype"]:
+                    loc_dtype= torch.complex128  
+                elif "float64"==symt["dtype"]:
+                    loc_dtype= torch.float64
+                else:
+                    raise RuntimeError("Invalid dtype: "+symt["dtype"])
+            assert loc_dtype==dtype, "dtypes do not match - iPEPS "\
+                +str(dtype)+" vs elementary tensor "+str(loc_dtype)
+
             meta=dict({"meta": symt["meta"]})
             dims=[symt["physDim"]]+[symt["auxDim"]]*4
             
             t= torch.zeros(tuple(dims), dtype=dtype, device=global_args.device)
-            for elem in symt["entries"]:
-                tokens= elem.split(' ')
-                inds=tuple([int(i) for i in tokens[0:5]])
-                t[inds]= float(tokens[5])
+            if t.is_complex():
+                for elem in symt["entries"]:
+                    tokens= elem.split(' ')
+                    inds=tuple([int(i) for i in tokens[0:5]])
+                    t[inds]= float(tokens[5]) + (0.+1.j)*float(tokens[6])
+            else:
+                for elem in symt["entries"]:
+                    tokens= elem.split(' ')
+                    inds=tuple([int(i) for i in tokens[0:5]])
+                    t[inds]= float(tokens[5])
 
             sym_tensors.append((meta,t))
 
@@ -253,16 +271,32 @@ def read_ipeps_u1(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.
             if t == None:
                 raise Exception("Tensor with siteId: "+ts["sideId"]+" NOT FOUND in \"sites\"") 
 
+            loc_dtype= torch.float64
+            if "dtype" in t.keys():
+                if "complex128"==t["dtype"]:
+                    loc_dtype= torch.complex128  
+                elif "float64"==t["dtype"]:
+                    loc_dtype= torch.float64
+                else:
+                    raise RuntimeError("Invalid dtype: "+t["dtype"])
+            assert loc_dtype==dtype, "dtypes do not match - iPEPS "\
+                +str(dtype)+" vs elementary tensor "+str(loc_dtype)
+
             X = torch.zeros(t["numEntries"], dtype=dtype, device=global_args.device)
 
             # 1) fill the tensor with elements from the list "entries"
             # which list the coefficients in the following
             # notation: Dimensions are indexed starting from 0
             # 
-            # index (integer) of coeff, (float) Re, Im  
-            for entry in t["entries"]:
-                tokens = entry.split()
-                X[int(tokens[0])]=float(tokens[1])
+            # index (integer) of coeff, (float) Re, Im
+            if X.is_complex():
+                for entry in t["entries"]:
+                    tokens = entry.split()
+                    X[int(tokens[0])]=float(tokens[1]) + (0.+1.j)*float(tokens[2]) 
+            else:
+                for entry in t["entries"]:
+                    tokens = entry.split()
+                    X[int(tokens[0])]=float(tokens[1])
 
             coeffs[coord]=X
 
@@ -333,6 +367,7 @@ def write_ipeps_u1(state, outputfile, aux_seq=[0,1,2,3], tol=1.0e-14, normalize=
     # write list of considered SU(2)-symmetric tensors
     for meta,t in state.sym_tensors:
         json_tensor=dict()
+        json_tensor["dtype"]="complex128" if t.is_complex() else "float64"
         json_tensor["meta"]=meta["meta"]
 
         tdims = t.size()
@@ -364,6 +399,7 @@ def write_ipeps_u1(state, outputfile, aux_seq=[0,1,2,3], tol=1.0e-14, normalize=
         
         site_ids.append(f"A{nid}")
         site_map.append(dict({"siteId": site_ids[-1], "x": coord[0], "y": coord[1]} ))
+        json_tensor["dtype"]="complex128" if c.is_complex() else "float64"
         json_tensor["siteId"]=site_ids[-1]
         # assuming all auxBondDim are identical
         json_tensor["numEntries"]= tlength

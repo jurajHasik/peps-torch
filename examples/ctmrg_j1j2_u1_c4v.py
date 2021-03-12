@@ -43,6 +43,7 @@ def main():
     model= j1j2.J1J2_C4V_BIPARTITE(j1=args.j1, j2=args.j2, j3=args.j3, \
         hz_stag=args.hz_stag, delta_zz=args.delta_zz)
     energy_f= model.energy_1x1_lowmem
+    #energy_f= model.energy_1x1
 
     # initialize an ipeps
     if args.instate!=None:
@@ -78,7 +79,7 @@ def main():
     print(state)
 
     @torch.no_grad()
-    def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args): 
+    def ctmrg_conv_rdm2x1(state, env, history, ctm_args=cfg.ctm_args): 
         if not history:
             history=dict({"log": []})
         rdm2x1= rdm2x1_sl(state, env, force_cpu=ctm_args.conv_check_cpu)
@@ -97,14 +98,12 @@ def main():
         # update history
         history["rdm"]=rdm2x1
         history["log"].append(dist)
-        if dist<ctm_args.ctm_conv_tol:
+
+        converged= dist<ctm_args.ctm_conv_tol
+        if converged or len(history['log']) >= ctm_args.ctm_max_iter:
             log.info({"history_length": len(history['log']), "history": history['log'],
                 "final_multiplets": compute_multiplets(env)})
-            return True, history
-        elif len(history['log']) >= ctm_args.ctm_max_iter:
-            log.info({"history_length": len(history['log']), "history": history['log'],
-                "final_multiplets": compute_multiplets(env)})
-            return False, history
+            return converged, history
         return False, history
 
     ctm_env_init = ENV_C4V(args.chi, state)
@@ -116,7 +115,7 @@ def main():
     print(", ".join([f"{-1}",f"{e_curr0}"]+[f"{v}" for v in obs_values0]))
 
     ctm_env_init, *ctm_log = ctmrg_c4v.run(state, ctm_env_init, \
-        conv_check=ctmrg_conv_energy)
+        conv_check=ctmrg_conv_rdm2x1)
 
     e_curr0 = energy_f(state, ctm_env_init, force_cpu=True)
     obs_values0, obs_labels = model.eval_obs(state,ctm_env_init,force_cpu=True)

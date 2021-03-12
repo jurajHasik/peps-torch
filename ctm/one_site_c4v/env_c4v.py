@@ -159,7 +159,7 @@ def init_env(state, env, ctm_args=cfg.ctm_args):
 def init_prod(state, env, verbosity=0):
     for key,t in env.C.items():
         env.C[key]= torch.zeros(t.size(), dtype=env.dtype, device=env.device)
-        env.C[key][0,0]= 1
+        env.C[key][0,0]= 1.0 + 0.j if env.C[key].is_complex() else 1.0
 
     A= next(iter(state.sites.values()))
     # left transfer matrix
@@ -172,12 +172,12 @@ def init_prod(state, env, verbosity=0):
     #    i--A--j
     #      /
     #     2
-    a = torch.einsum('meifj,maibj->eafb',(A,A)).contiguous().view(\
+    a = torch.einsum('meifj,maibj->eafb',(A,A.conj())).contiguous().view(\
         A.size()[1]**2, A.size()[3]**2)
-    a= a/torch.max(torch.abs(a))
+    a= a/a.abs().max()
     # check symmetry
-    a_asymm_norm= torch.norm(a.t()-a)
-    assert a_asymm_norm/torch.abs(a).max() < 1.0e-8, "a is not symmetric"
+    a_asymm_norm= torch.norm(a.conj().t()-a)
+    assert a_asymm_norm/a.abs().max() < 1.0e-8, "a is not symmetric"
     D, U= truncated_eig_sym(a, 2)
     # leading eigenvector is unique 
     assert torch.abs(D[0]-D[1]) > 1.0e-8, "Leading eigenvector of T not unique"
@@ -189,7 +189,7 @@ def init_prod(state, env, verbosity=0):
 def init_random(env, verbosity=0):
     for key,t in env.C.items():
         tmpC= torch.rand(t.size(), dtype=env.dtype, device=env.device)
-        env.C[key]= 0.5*(tmpC+tmpC.t())
+        env.C[key]= 0.5*(tmpC+tmpC.conj().t())
     for key,t in env.T.items():
         env.T[key]= torch.rand(t.size(), dtype=env.dtype, device=env.device)
 
@@ -210,11 +210,11 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
     #     2
     A= next(iter(state.sites.values()))
     dimsA= A.size()
-    a= torch.einsum('mijef,mijab->eafb',(A,A)).contiguous().view(dimsA[3]**2, dimsA[4]**2)
-    a= a/torch.max(torch.abs(a))
-    
-    a_asymm_norm= torch.norm(a.t()-a)
-    assert a_asymm_norm/torch.abs(a).max() < 1.0e-8, "a is not symmetric"
+    a= torch.einsum('mijef,mijab->eafb',A,A.conj()).contiguous().view(dimsA[3]**2, dimsA[4]**2)
+    a= a/a.abs().max()
+
+    a_asymm_norm= torch.norm(a.conj().t()-a)
+    assert a_asymm_norm/a.abs().max() < 1.0e-8, "a is not symmetric"
     D, U= truncated_eig_sym(a, a.size()[0])
     a= torch.diag(D)
 
@@ -222,20 +222,22 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
     env.C[env.keyC][:min(env.chi,dimsA[3]**2),:min(env.chi,dimsA[4]**2)]=\
        a[:min(env.chi,dimsA[3]**2),:min(env.chi,dimsA[4]**2)]
 
-    # left transfer matrix
+    # left transfer matrix (orientation from 1->0)
     #
-    #     0      = 0     
-    # i--A--3      T--2
-    #   /\         1
+    #     0      = A 0     
+    # i--A--3      | T--2
+    #   /\         | 1
     #  2  m
     #      \ 0
     #    i--A--3
     #      /
     #     2
-    a = torch.einsum('meifg,maibc->eafbgc',(A,A)).contiguous().view(dimsA[1]**2, dimsA[3]**2, dimsA[4]**2)
-    a= a/torch.max(torch.abs(a))
-    
-    a= torch.einsum('ai,abs,bj->ijs',U,a,U)
+    a= torch.einsum('meifg,maibc->eafbgc',(A,A.conj())).contiguous().view(dimsA[1]**2, dimsA[3]**2, dimsA[4]**2)
+    a= a/a.abs().max()
+
+    a= torch.einsum('ai,abs,bj->ijs',U,a,U.conj())
+    a_asymm_norm= (a-a.permute(1,0,2).conj()).norm()
+    assert a_asymm_norm/a.abs().max() < 1.0e-8, "a is not symmetric"
 
     env.T[env.keyT]= torch.zeros((env.chi,env.chi,dimsA[4]**2), dtype=env.dtype, device=env.device)
     env.T[env.keyT][:min(env.chi,dimsA[1]**2),:min(env.chi,dimsA[3]**2),:]=\
@@ -258,8 +260,8 @@ def init_from_ipeps_obc(state, env, verbosity=0):
     #     2
     A= next(iter(state.sites.values()))
     dimsA= A.size()
-    a= torch.einsum('mijef,mklab->eafb',(A,A)).contiguous().view(dimsA[3]**2, dimsA[4]**2)
-    a= a/torch.max(torch.abs(a))
+    a= torch.einsum('mijef,mklab->eafb',(A,A.conj())).contiguous().view(dimsA[3]**2, dimsA[4]**2)
+    a= a/a.abs().max()
     env.C[env.keyC]= torch.zeros(env.chi,env.chi, dtype=env.dtype, device=env.device)
     env.C[env.keyC][:min(env.chi,dimsA[3]**2),:min(env.chi,dimsA[4]**2)]=\
         a[:min(env.chi,dimsA[3]**2),:min(env.chi,dimsA[4]**2)]
@@ -274,8 +276,8 @@ def init_from_ipeps_obc(state, env, verbosity=0):
     #    k--A--3
     #      /
     #     2
-    a= torch.einsum('meifg,makbc->eafbgc',(A,A)).contiguous().view(dimsA[1]**2, dimsA[3]**2, dimsA[4]**2)
-    a= a/torch.max(torch.abs(a))
+    a= torch.einsum('meifg,makbc->eafbgc',(A,A.conj())).contiguous().view(dimsA[1]**2, dimsA[3]**2, dimsA[4]**2)
+    a= a/a.abs().max()
     env.T[env.keyT]= torch.zeros((env.chi,env.chi,dimsA[4]**2), dtype=env.dtype, device=env.device)
     env.T[env.keyT][:min(env.chi,dimsA[1]**2),:min(env.chi,dimsA[3]**2),:]=\
         a[:min(env.chi,dimsA[1]**2),:min(env.chi,dimsA[3]**2),:]
