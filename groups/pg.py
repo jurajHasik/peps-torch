@@ -104,7 +104,7 @@ def make_c4v_symm_A2(A):
            |
            d
     
-    Project on-site tensor ``A`` on B2 irrep of C4v group.
+    Project on-site tensor ``A`` on A2 irrep of C4v group.
     """
     A= 0.5*(A - A.permute(0,1,4,3,2))   # left-right reflection (\sigma)
     A= 0.5*(A - A.permute(0,4,3,2,1))   # skew reflection (\sigma R^-1) 

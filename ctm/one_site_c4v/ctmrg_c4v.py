@@ -159,8 +159,8 @@ def _log_cuda_mem(device, who="unknown",  uuid=""):
 def ctm_MOVE_dl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
     who= "ctm_MOVE_dl"
     log_gpu_mem= False
-    if (global_args.device=='cpu' and ctm_args.step_core_gpu):
-        loc_gpu= torch.device(global_args.gpu)
+    if global_args.device=='cpu' and global_args.offload_to_gpu != 'None':
+        loc_gpu= torch.device(global_args.offload_to_gpu)
         log_gpu_mem= ctm_args.verbosity_ctm_move>0
     elif global_args.device != 'cpu':
         loc_gpu= a.device
@@ -168,7 +168,7 @@ def ctm_MOVE_dl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
 
     # 0) extract raw tensors as tuple
     dimsa = a.size()
-    A = torch.einsum('sefgh,sabcd->eafbgchd',a,a).contiguous()\
+    A = torch.einsum('sefgh,sabcd->eafbgchd',a,a.conj()).contiguous()\
         .view(dimsa[1]**2, dimsa[2]**2, dimsa[3]**2, dimsa[4]**2)
     tensors= tuple([A,env.C[env.keyC],env.T[env.keyT]])
     
@@ -176,9 +176,9 @@ def ctm_MOVE_dl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
     def ctm_MOVE_dl_c(*tensors):
         A, C, T= tensors
         if global_args.device=='cpu' and global_args.offload_to_gpu != 'None':
-            A= A.cuda()
-            C= C.cuda()
-            T= T.cuda()
+            A= A.to(global_args.offload_to_gpu) #A.cuda()
+            C= C.to(global_args.offload_to_gpu) #C.cuda()
+            T= T.to(global_args.offload_to_gpu) #T.cuda()
 
         # 1) build enlarged corner upper left corner
         if log_gpu_mem: _log_cuda_mem(loc_gpu, who=who, uuid="c2x2_dl_init")
@@ -199,17 +199,17 @@ def ctm_MOVE_dl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
         # P^t
         # 1->0
         # C2X2= P.t() @ C2X2 @ P
-        C2X2= torch.diag(D)
+        C2X2= torch.diag((1.+0.j)*D) if C2X2.is_complex() else torch.diag(D)
 
         if log_gpu_mem: _log_cuda_mem(loc_gpu, who=who, uuid="P-view_init")
         P= P.view(env.chi,T.size()[2],env.chi)
         if log_gpu_mem: _log_cuda_mem(loc_gpu, who=who, uuid="P-view_end")
-        #    2->1
-        #  __P__
-        # 0     1->0
-        # 0
-        # T--2->3
-        # 1->2
+        #      2->1
+        #    __P__
+        #   0     1->0
+        # A 0
+        # | T--2->3
+        # | 1->2
         if log_gpu_mem: _log_cuda_mem(loc_gpu, who=who, uuid="PT_init")
         nT = torch.tensordot(P, T,([0],[0]))
         if log_gpu_mem: _log_cuda_mem(loc_gpu, who=who, uuid="PT_end")
@@ -234,12 +234,12 @@ def ctm_MOVE_dl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
         # |___P___|
         #     2
         if log_gpu_mem: _log_cuda_mem(loc_gpu, who=who, uuid="PTAP_init")
-        nT = torch.tensordot(nT, P,([1,2],[0,1]))
+        nT = torch.tensordot(nT, P.conj(),([1,2],[0,1]))
         if log_gpu_mem: _log_cuda_mem(loc_gpu, who=who, uuid="PTAP_end")
         nT = nT.permute(0,2,1).contiguous()
 
         # 4) symmetrize, normalize and assign new C,T
-        nT= 0.5*(nT + nT.permute(1,0,2))
+        nT= 0.5*(nT + nT.permute(1,0,2).conj())
         C2X2= C2X2/torch.abs(C2X2[0,0])
         nT= nT/nT.norm()
 
@@ -308,15 +308,15 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
         # P^t
         # 1->0
         # C2X2= P.t() @ C2X2 @ P
-        C2X2= torch.diag(D)
+        C2X2= torch.diag((1.+0.j)*D) if C2X2.is_complex() else torch.diag(D)
 
         P= P.view(env.chi,T.size()[2],env.chi)
-        #    2->1
-        #  __P__
-        # 0     1->0
-        # 0
-        # T--2->3
-        # 1->2
+        #      2->1
+        #    __P__
+        #   0     1->0
+        # A 0
+        # | T--2->3
+        # | 1->2
         nT= torch.tensordot(P, T,([0],[0]))
 
         # 4) double-layer tensor contraction - layer by layer
@@ -352,7 +352,7 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
         # |    |       3->4
         # |    |
         # 2->1 5->2
-        nT= torch.tensordot(nT, a,([0,3,4],[1,2,0]))
+        nT= torch.tensordot(nT, a.conj(),([0,3,4],[1,2,0]))
 
         # 4iv) fuse pairs of aux indices
         #    0
@@ -370,17 +370,17 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
         #    0
         #  __P____
         # |       |
-        # |       |
-        # T------aa--3->1
-        # 1       2
+        # |       |          A 0
+        # T------aa--3->1 => | T--2
+        # 1       2          | 1
         # 0       1
         # |___P___|
         #     2
-        nT = torch.tensordot(nT,P,([1,2],[0,1]))
+        nT = torch.tensordot(nT,P.conj(),([1,2],[0,1]))
         nT = nT.permute(0,2,1).contiguous()
 
         # 4) symmetrize, normalize and assign new C,T
-        nT= 0.5*(nT + nT.permute(1,0,2))
+        nT= 0.5*(nT + nT.conj().permute(1,0,2))
         C2X2= C2X2/torch.abs(C2X2[0,0])
         nT= nT/nT.abs().max()
         #nT= nT/nT.norm()

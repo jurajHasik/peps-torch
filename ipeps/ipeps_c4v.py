@@ -57,10 +57,16 @@ def extend_bond_dim(state, new_d):
     return ipeps.extend_bond_dim(state, new_d)
 
 def to_ipeps_c4v(state, normalize=False):
+    #TODO other classes of C4v-symmetric ansatz ?
+    # we choose A1 irrep, in principle, other choices are possible (A2, B1, ...)
     assert len(state.sites.items())==1, "state has more than a single on-site tensor"
     A= next(iter(state.sites.values()))
-    A= make_c4v_symm(A)
-    # if normalize: A= A/torch.max(torch.abs(A))
+    
+    if A.is_complex():
+        A= make_c4v_symm(A.real) + make_c4v_symm(A.imag, irreps=["A2"]) * 1.0j
+    else:
+        A= make_c4v_symm(A)
+    
     if normalize: A= A/A.norm()
     return IPEPS_C4V(A)
 

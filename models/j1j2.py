@@ -435,7 +435,6 @@ class J1J2_C4V_BIPARTITE():
         id2= id2.view(tuple([self.phys_dim]*4)).contiguous()
         expr_kron = 'ij,ab->iajb'
 
-
         self.SS_delta_zz= self.delta_zz*torch.einsum(expr_kron,s2.SZ(),s2.SZ()) + \
             0.5*(torch.einsum(expr_kron,s2.SP(),s2.SM()) \
             + torch.einsum(expr_kron,s2.SM(),s2.SP()))
