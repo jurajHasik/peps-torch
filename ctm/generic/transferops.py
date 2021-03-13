@@ -44,7 +44,10 @@ def get_Top_spec(n, coord, direction, state, env, verbosity=0):
 
     # post-process and return as torch tensor with first and second column
     # containing real and imaginary parts respectively
-    vals= np.copy(vals[::-1]) # descending order
+    # sort by abs value in ascending order, then reverse order to descending
+    ind_sorted= np.argsort(np.abs(vals))
+    vals= vals[ ind_sorted[::-1] ]
+    # vals= np.copy(vals[::-1]) # descending order
     vals= (1.0/np.abs(vals[0])) * vals
     L= torch.zeros((n,2), dtype=state.dtype, device=state.device)
     L[:,0]= torch.as_tensor(np.real(vals))
