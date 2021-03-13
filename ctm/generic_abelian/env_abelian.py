@@ -178,9 +178,27 @@ class ENV_ABELIAN():
         # T_torch= {tid: t.A[()] for tid,t in env_dense.T.items()}
         C_torch= {cid: c.to_dense() for cid,c in self.C.items()}
         T_torch= {tid: t.to_dense() for tid,t in self.T.items()}
+        
         env_torch= ENV(self.chi, ctm_args=ctm_args, global_args=global_args)
-        env_torch.C= C_torch
-        env_torch.T= T_torch
+        for cid,c in C_torch.items():
+            env_torch.C[cid]= torch.zeros(self.chi,self.chi,dtype=c.dtype,device=c.device)
+            env_torch.C[cid][:c.size(0),:c.size(1)]= c
+        for tid,t in T_torch.items():
+            t_site, t_dir= tid
+            if t_dir==(0,-1):
+                env_torch.T[tid]= torch.zeros(self.chi,t.size(1),self.chi,dtype=t.dtype,device=t.device)
+                env_torch.T[tid][:t.size(0),:,:t.size(2)]= t
+            elif t_dir==(-1,0):
+                env_torch.T[tid]= torch.zeros(self.chi,self.chi,t.size(2),dtype=t.dtype,device=t.device)
+                env_torch.T[tid][:t.size(0),:t.size(1),:]= t
+            elif t_dir==(0,1):
+                env_torch.T[tid]= torch.zeros(t.size(0),self.chi,self.chi,dtype=t.dtype,device=t.device)
+                env_torch.T[tid][:,:t.size(1),:t.size(2)]= t
+            elif t_dir==(1,0):
+                env_torch.T[tid]= torch.zeros(self.chi,t.size(1),self.chi,dtype=t.dtype,device=t.device)
+                env_torch.T[tid][:t.size(0),:,:t.size(2)]= t
+            else:
+                raise RuntimeError("Invalid T-tensor site "+str(t_site)+" direction: "+str(t_dir))
         return env_torch
 
     def clone(self):
