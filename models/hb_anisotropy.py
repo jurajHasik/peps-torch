@@ -6,6 +6,7 @@ from ctm.generic import corrf
 from ctm.generic import rdm
 from math import sqrt
 import itertools
+import numpy as np
 
 
 class HB():
@@ -66,6 +67,7 @@ class HB():
 
     def energy_2x1_1x2(self, state, env):
         energy = 0.
+        print("-----------")
         for coord, site in state.sites.items():
             rdm2x1 = rdm.rdm2x1(coord, state, env)
             rdm1x2 = rdm.rdm1x2(coord, state, env)
@@ -91,9 +93,12 @@ class HB():
 
     def eval_obs(self, state, env):
 
-        obs = dict({"avg_m": 0., "avg_II_Q": 0., "avg_III_Q": 0.})
+        obs = dict({"avg_II_Q": 0., "avg_III_Q": 0.,
+                    "avg_anti_s_vector": np.zeros(3),
+                    "avg_s_vector": np.zeros(3)})
         with torch.no_grad():
             # one-site observables
+            sign = 1
             for coord, site in state.sites.items():
                 rdm1x1 = rdm.rdm1x1(coord, state, env)
                 for label in ["sz", "sp", "sm"]:
@@ -108,12 +113,17 @@ class HB():
                 obs["avg_II_Q"] += obs[f"avg_II_Q{coord}"]
                 obs["avg_III_Q"] += obs[f"avg_III_Q{coord}"]
 
-            obs["avg_m"] = obs["avg_m"] / len(state.sites.keys())
+            s_vector = obs["avg_s_vector"] / len(state.sites.keys())
+            obs["avg_m"] = sqrt(abs(s_vector[0] ** 2 + s_vector[1] * s_vector[2]))
+            s_vector = obs["avg_anti_s_vector"] / len(state.sites.keys())
+            obs["anti_fm"] = sqrt(abs(s_vector[0] ** 2 + s_vector[1] * s_vector[2]))
+
             obs["avg_II_Q"] = obs["avg_II_Q"] / len(state.sites.keys())
             obs["avg_III_Q"] = obs["avg_III_Q"] / len(state.sites.keys())
+            obs["dimer_op"] = self.eval_dimer_operator(state, env)
 
         # prepare list with labels and values
-        obs_labels = ["avg_m", "avg_II_Q", "avg_III_Q"]
+        obs_labels = ["avg_m", "avg_II_Q", "avg_III_Q", "anti_fm", "dimer_op"]
         obs_values = [obs[label] for label in obs_labels]
         return obs_values, obs_labels
 
@@ -140,7 +150,46 @@ class HB():
             obs["avg_m"] = obs["avg_m"] / len(state.sites.keys())
             obs["avg_II_Q"] = obs["avg_II_Q"] / len(state.sites.keys())
             obs["avg_III_Q"] = obs["avg_III_Q"] / len(state.sites.keys())
+            obs["dimer_op"] = self.eval_dimer_operator(state, env)
         return obs
+
+    def eval_dimer_operator(self, state, env, direction=(1,0)):
+        def conjugate_op(op):
+            # rot_op= su2.get_rot_op(self.phys_dim, dtype=self.dtype, device=self.device)
+            rot_op = torch.eye(self.phys_dim, dtype=self.dtype, device=self.device)
+            op_0 = op
+            op_rot = torch.einsum('ki,kl,lj->ij', rot_op, op_0, rot_op)
+
+            def _gen_op(r):
+                # return op_rot if r%2==0 else op_0
+                return op_0
+
+            return _gen_op
+
+        op_sz = self.obs_ops["sz"]
+        op_sx = self.obs_ops["sx"]
+        op_isy = self.obs_ops["isy"]
+        ss = []
+
+        print("op_sz = ", op_sz)
+        print("conj_sz = ", conjugate_op(op_sz)(0))
+
+        with torch.no_grad():
+            # one-site observables
+            for coord, site in state.sites.items():
+                Sz0szR = corrf.corrf_1sO1sO(coord, direction, state, env, op_sz,
+                                            conjugate_op(op_sz), 0)
+                Sx0sxR = corrf.corrf_1sO1sO(coord, direction, state, env, op_sx,
+                                            conjugate_op(op_sx), 0)
+                nSy0SyR = corrf.corrf_1sO1sO(coord, direction, state, env, op_isy,
+                                             conjugate_op(op_isy), 0)
+
+                print([Sx0sxR, -nSy0SyR, Sz0szR])
+                ss.append(Sz0szR + Sx0sxR - nSy0SyR)
+
+        dimer_op = torch.abs(ss[0] - ss[1])
+        print(ss)
+        return dimer_op.numpy()
 
     def get_Q(self):
         """
