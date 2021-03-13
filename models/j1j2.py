@@ -52,17 +52,21 @@ class J1J2():
         self.j1=j1
         self.j2=j2
         
-        self.h2, self.h2x2_nn, self.h2x2_nnn= self.get_h()
+        self.h2, self.SS_rot, self.h2x2_nn, self.h2x2_nnn, self.h2x2_nn_rot, \
+            self.h2x2_nnn_rot= self.get_h()
         self.obs_ops= self.get_obs_ops()
 
     def get_h(self):
         s2 = su2.SU2(self.phys_dim, dtype=self.dtype, device=self.device)
         id2= torch.eye(4,dtype=self.dtype,device=self.device)
         id2= id2.view(2,2,2,2).contiguous()
+        rot_op= s2.BP_rot()
         expr_kron = 'ij,ab->iajb'
         SS= torch.einsum(expr_kron,s2.SZ(),s2.SZ()) + 0.5*(torch.einsum(expr_kron,s2.SP(),s2.SM()) \
             + torch.einsum(expr_kron,s2.SM(),s2.SP()))
         SS= SS.contiguous()
+
+        SS_rot= torch.einsum('ki,kjcb,ca->ijab',rot_op,SS,rot_op)
         
         h2x2_SS= torch.einsum('ijab,klcd->ijklabcd',SS,id2)
         h2x2_nn= h2x2_SS + h2x2_SS.permute(2,3,0,1,6,7,4,5) + h2x2_SS.permute(0,2,1,3,4,6,5,7)\
@@ -72,7 +76,16 @@ class J1J2():
         h2x2_nn= h2x2_nn.contiguous()
         h2x2_nnn= h2x2_nnn.contiguous()
 
-        return SS, h2x2_nn, h2x2_nnn
+        # sublattice rotation for single-site bipartite (BP) ansatz
+        h2x2_nn_rot= torch.einsum('irtlaxyd,jr,kt,xb,yc->ijklabcd',\
+            h2x2_nn,rot_op,rot_op,rot_op,rot_op)
+        h2x2_nnn_rot= torch.einsum('irtlaxyd,jr,kt,xb,yc->ijklabcd',\
+            h2x2_nnn,rot_op,rot_op,rot_op,rot_op)
+
+        h2x2_nn_rot= h2x2_nn_rot.contiguous()
+        h2x2_nnn_rot= h2x2_nnn_rot.contiguous()
+
+        return SS, SS_rot, h2x2_nn, h2x2_nnn, h2x2_nn_rot, h2x2_nnn_rot
 
     def get_obs_ops(self):
         obs_ops = dict()
@@ -105,14 +118,6 @@ class J1J2():
         A single reduced density matrix :py:func:`ctm.rdm.rdm2x2` of a 2x2 plaquette
         is used to evaluate the energy.
         """
-        if not (hasattr(self, 'h2x2_nn_rot') or hasattr(self, 'h2x2_nn_nrot')):
-            s2 = su2.SU2(self.phys_dim, dtype=self.dtype, device=self.device)
-            rot_op= s2.BP_rot()
-            self.h2x2_nn_rot= torch.einsum('irtlaxyd,jr,kt,xb,yc->ijklabcd',\
-                self.h2x2_nn,rot_op,rot_op,rot_op,rot_op)
-            self.h2x2_nnn_rot= torch.einsum('irtlaxyd,jr,kt,xb,yc->ijklabcd',\
-                self.h2x2_nnn,rot_op,rot_op,rot_op,rot_op)
-
         tmp_rdm= rdm.rdm2x2((0,0),state,env)
         energy_nn= torch.einsum('ijklabcd,ijklabcd',tmp_rdm,self.h2x2_nn_rot)
         energy_nnn= torch.einsum('ijklabcd,ijklabcd',tmp_rdm,self.h2x2_nnn_rot)
@@ -285,6 +290,47 @@ class J1J2():
         energy_per_site= _cast_to_real(energy_per_site)
 
         return energy_per_site
+
+    def eval_obs_1site_BP(self,state,env):
+        r"""
+        :param state: wavefunction
+        :param env: CTM environment
+        :type state: IPEPS
+        :type env: ENV
+        :return:  expectation values of observables, labels of observables
+        :rtype: list[float], list[str]
+        
+        Evaluates observables for single-site ansatz by including the sublattice
+        rotation in the physical space. 
+        """
+
+        # TODO optimize/unify ?
+        # expect "list" of (observable label, value) pairs ?
+        obs= dict({"avg_m": 0.})
+        with torch.no_grad():
+            for coord,site in state.sites.items():
+                rdm1x1 = rdm.rdm1x1(coord,state,env)
+                for label,op in self.obs_ops.items():
+                    obs[f"{label}{coord}"]= torch.trace(rdm1x1@op)
+                obs[f"m{coord}"]= sqrt(abs(obs[f"sz{coord}"]**2 + obs[f"sp{coord}"]*obs[f"sm{coord}"]))
+                obs["avg_m"] += obs[f"m{coord}"]
+            obs["avg_m"]= obs["avg_m"]/len(state.sites.keys())
+
+            for coord,site in state.sites.items():
+                rdm2x1 = rdm.rdm2x1(coord,state,env)
+                rdm1x2 = rdm.rdm1x2(coord,state,env)
+                SS2x1= torch.einsum('ijab,ijab',rdm2x1,self.SS_rot)
+                SS1x2= torch.einsum('ijab,ijab',rdm1x2,self.SS_rot)
+                obs[f"SS2x1{coord}"]= SS2x1.real if SS2x1.is_complex() else SS2x1
+                obs[f"SS1x2{coord}"]= SS1x2.real if SS1x2.is_complex() else SS1x2
+        
+        # prepare list with labels and values
+        obs_labels=["avg_m"]+[f"m{coord}" for coord in state.sites.keys()]\
+            +[f"{lc[1]}{lc[0]}" for lc in list(itertools.product(state.sites.keys(), self.obs_ops.keys()))]
+        obs_labels += [f"SS2x1{coord}" for coord in state.sites.keys()]
+        obs_labels += [f"SS1x2{coord}" for coord in state.sites.keys()]
+        obs_values=[obs[label] for label in obs_labels]
+        return obs_values, obs_labels
 
     def eval_obs(self,state,env):
         r"""

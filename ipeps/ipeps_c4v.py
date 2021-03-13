@@ -49,8 +49,7 @@ class IPEPS_C4V(ipeps.IPEPS):
 
     def write_to_file(self,outputfile,symmetrize=True,**kwargs):
         # symmetrize before writing out
-        tmp_t= make_c4v_symm(self.site()) if symmetrize else self.site()
-        tmp_state= IPEPS_C4V(tmp_t)
+        tmp_state= to_ipeps_c4v(self) if symmetrize else self
         ipeps.write_ipeps(tmp_state, outputfile,**kwargs)
 
 def extend_bond_dim(state, new_d):

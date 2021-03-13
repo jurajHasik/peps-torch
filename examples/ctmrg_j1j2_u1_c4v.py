@@ -43,7 +43,8 @@ def main():
     model= j1j2.J1J2_C4V_BIPARTITE(j1=args.j1, j2=args.j2, j3=args.j3, \
         hz_stag=args.hz_stag, delta_zz=args.delta_zz)
     energy_f= model.energy_1x1_lowmem
-    #energy_f= model.energy_1x1
+    # energy_f= model.energy_1x1_tiled
+    # energy_f= model.energy_1x1
 
     # initialize an ipeps
     if args.instate!=None:
