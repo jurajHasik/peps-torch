@@ -22,14 +22,16 @@ def get_Top_spec_c4v(n, state, env_c4v, verbosity=0):
         V= V.view(chi*ad*ad*chi)
         return V.detach().cpu().numpy()
 
-    T= LinearOperator((chi*ad*ad*chi,chi*ad*ad*chi), matvec=_mv)
+    _test_T= torch.zeros(1,dtype=env_c4v.dtype)
+    T= LinearOperator((chi*ad*ad*chi,chi*ad*ad*chi), matvec=_mv, \
+        dtype="complex128" if _test_T.is_complex() else "float64")
     vals= eigs(T, k=n, v0=None, return_eigenvectors=False)
 
     # post-process and return as torch tensor with first and second column
     # containing real and imaginary parts respectively
     vals= np.copy(vals[::-1]) # descending order
     vals= (1.0/np.abs(vals[0])) * vals
-    L= torch.zeros((n,2), dtype=state.dtype, device=state.device)
+    L= torch.zeros((n,2), dtype=torch.float64, device=state.device)
     L[:,0]= torch.as_tensor(np.real(vals))
     L[:,1]= torch.as_tensor(np.imag(vals))
 
@@ -58,7 +60,7 @@ def get_Top2_spec_c4v(n, state, env_c4v, verbosity=0):
     # containing real and imaginary parts respectively
     vals= np.copy(vals[::-1]) # descending order
     vals= (1.0/np.abs(vals[0])) * vals
-    L= torch.zeros((n,2), dtype=state.dtype, device=state.device)
+    L= torch.zeros((n,2), dtype=torch.float64, device=state.device)
     L[:,0]= torch.as_tensor(np.real(vals))
     L[:,1]= torch.as_tensor(np.imag(vals))
 

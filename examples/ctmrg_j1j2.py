@@ -120,8 +120,7 @@ def main():
         eval_obs_f= model.eval_obs
     elif args.tiling == "1SITE":
         energy_f= model.energy_2x2_1site_BP
-        # TODO include eval_obs with rotation on B-sublattice
-        eval_obs_f= model.eval_obs
+        eval_obs_f= model.eval_obs_1site_BP
     elif args.tiling == "4SITE":
         energy_f= model.energy_2x2_4site
         eval_obs_f= model.eval_obs
@@ -137,7 +136,7 @@ def main():
             if not history:
                 history=[]
             e_curr = energy_f(state, env)
-            obs_values, obs_labels = model.eval_obs(state, env)
+            obs_values, obs_labels = eval_obs_f(state, env)
             history.append([e_curr.item()]+obs_values)
             print(", ".join([f"{len(history)}",f"{e_curr}"]+[f"{v}" for v in obs_values]))
 

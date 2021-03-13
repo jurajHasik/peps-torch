@@ -7,6 +7,10 @@ import torch
 def safe_inverse(x, epsilon=1E-12):
     return x/(x**2 + epsilon)
 
+def safe_inverse_2(x, epsilon):
+    x[abs(x)<epsilon]=float('inf')
+    return x.pow(-1)
+
 class SYMEIG(torch.autograd.Function):
     @staticmethod
     def forward(self, A, ad_decomp_reg):
@@ -34,15 +38,15 @@ class SYMEIG(torch.autograd.Function):
     @staticmethod
     def backward(self, dD, dU):
         D, U, ad_decomp_reg= self.saved_tensors
-        Ut = U.t()
+        Uh = U.t().conj()
+        D_scale= D[0].abs() # D is ordered in descending fashion by abs val
 
         F = (D - D[:, None])
+        # F = safe_inverse_2(F, D_scale*1.0e-12)
         F = safe_inverse(F,epsilon=ad_decomp_reg)
-        #F= 1/F
         F.diagonal().fill_(0)
-        # F[abs(F) > 1.0e+8]=0
-
-        dA = U @ (torch.diag(dD) + F*(Ut@dU)) @ Ut
+        
+        dA = U @ (torch.diag(dD) + F*(Uh@dU)) @ Uh
         return dA, None
 
 def test_SYMEIG_random():

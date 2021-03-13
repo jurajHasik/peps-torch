@@ -65,6 +65,7 @@ class SVDGESDD_COMPLEX(torch.autograd.Function):
 
     @staticmethod
     def backward(self, dU, dS, dV):
+        # https://github.com/pytorch/pytorch/blob/master/torch/csrc/autograd/FunctionsManual.cpp
         # Tensor svd_backward(const std::vector<torch::autograd::Variable> &grads, const Tensor& self,
         #   bool some, bool compute_uv, const Tensor& raw_u, const Tensor& sigma, const Tensor& raw_v) {
         # TORCH_CHECK(compute_uv,
