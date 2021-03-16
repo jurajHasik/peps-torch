@@ -38,6 +38,8 @@ def main():
         settings.device = cfg.global_args.device
         settings_full.device = cfg.global_args.device
         print("Setting backend device: "+settings.device)
+    # override default dtype
+    settings_full.dtype= settings.dtype= cfg.global_args.dtype
     settings.backend.set_num_threads(args.omp_cores)
     settings.backend.random_seed(args.seed)
     

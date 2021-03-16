@@ -210,7 +210,7 @@ class SVDGESDD_COMPLEX(torch.autograd.Function):
             imag_term= (u * L.unsqueeze(-2)) @ vh
             return u_term + sigma_term + v_term + imag_term
 
-        return u_term + sigma_term + v_term;
+        return u_term + sigma_term + v_term
 
 
 def test_SVDGESDD_random():

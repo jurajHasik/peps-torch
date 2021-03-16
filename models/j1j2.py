@@ -321,8 +321,8 @@ class J1J2():
                 rdm1x2 = rdm.rdm1x2(coord,state,env)
                 SS2x1= torch.einsum('ijab,ijab',rdm2x1,self.SS_rot)
                 SS1x2= torch.einsum('ijab,ijab',rdm1x2,self.SS_rot)
-                obs[f"SS2x1{coord}"]= SS2x1.real if SS2x1.is_complex() else SS2x1
-                obs[f"SS1x2{coord}"]= SS1x2.real if SS1x2.is_complex() else SS1x2
+                obs[f"SS2x1{coord}"]= _cast_to_real(SS2x1)
+                obs[f"SS1x2{coord}"]= _cast_to_real(SS1x2)
         
         # prepare list with labels and values
         obs_labels=["avg_m"]+[f"m{coord}" for coord in state.sites.keys()]\
@@ -385,8 +385,8 @@ class J1J2():
                 rdm1x2 = rdm.rdm1x2(coord,state,env)
                 SS2x1= torch.einsum('ijab,ijab',rdm2x1,self.h2)
                 SS1x2= torch.einsum('ijab,ijab',rdm1x2,self.h2)
-                obs[f"SS2x1{coord}"]= SS2x1.real if SS2x1.is_complex() else SS2x1
-                obs[f"SS1x2{coord}"]= SS1x2.real if SS1x2.is_complex() else SS1x2
+                obs[f"SS2x1{coord}"]= _cast_to_real(SS2x1)
+                obs[f"SS1x2{coord}"]= _cast_to_real(SS1x2)
         
         # prepare list with labels and values
         obs_labels=["avg_m"]+[f"m{coord}" for coord in state.sites.keys()]\
@@ -707,7 +707,7 @@ class J1J2_C4V_BIPARTITE():
             rdm2x1= rdm_c4v.rdm2x1_sl(state,env_c4v,force_cpu=force_cpu,\
                 verbosity=cfg.ctm_args.verbosity_rdm)
             SS2x1= torch.einsum('ijab,ijab',rdm2x1,self.SS_rot)
-            obs[f"SS2x1"]= SS2x1.real if SS2x1.is_complex() else SS2x1
+            obs[f"SS2x1"]= _cast_to_real(SS2x1)
 
             # reduce rdm2x1 to 1x1
             rdm1x1= torch.einsum('ijaj->ia',rdm2x1)
@@ -728,7 +728,7 @@ class J1J2_C4V_BIPARTITE():
             rdm2x1= rdm2x1_tiled(state,env_c4v,force_cpu=force_cpu,\
                 verbosity=cfg.ctm_args.verbosity_rdm)
             SS2x1= torch.einsum('ijab,ijab',rdm2x1,self.SS_rot)
-            obs[f"SS2x1"]= SS2x1 if SS2x1.is_complex() else SS2x1
+            obs[f"SS2x1"]= _cast_to_real(SS2x1)
 
             # reduce rdm2x1 to 1x1
             rdm1x1= torch.einsum('ijaj->ia',rdm2x1)

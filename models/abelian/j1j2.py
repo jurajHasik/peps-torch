@@ -9,6 +9,9 @@ from ctm.generic_abelian import rdm
 from ctm.one_site_c4v_abelian import rdm_c4v
 #from ctm.generic import corrf
 
+def _cast_to_real(t):
+    return t.real if t.is_complex() else t
+
 class J1J2_NOSYM():
     def __init__(self, settings, j1=1.0, j2=0.0, global_args=cfg.global_args):
         r"""
@@ -250,7 +253,8 @@ class J1J2_NOSYM():
             tmp_rdm= rdm.rdm2x2(coord,state,env).to_nonsymmetric()
             energy_nn += contract(tmp_rdm,self.h2x2_nn,_ci)
             energy_nnn += contract(tmp_rdm,self.h2x2_nnn,_ci)
-        energy_per_site = 2.0*(self.j1*energy_nn/(4*N) + self.j2*energy_nnn/(2*N))
+        energy_per_site= 2.0*(self.j1*energy_nn/(4*N) + self.j2*energy_nnn/(2*N))
+        energy_per_site= _cast_to_real(energy_per_site)
 
         return energy_per_site
 
@@ -308,8 +312,10 @@ class J1J2_NOSYM():
         for coord,site in state.sites.items():
             rdm2x1 = rdm.rdm2x1(coord,state,env).to_nonsymmetric()
             rdm1x2 = rdm.rdm1x2(coord,state,env).to_nonsymmetric()
-            obs[f"SS2x1{coord}"]= contract(rdm2x1,self.h2,_ci).to_number()
-            obs[f"SS1x2{coord}"]= contract(rdm1x2,self.h2,_ci).to_number()
+            SS2x1= contract(rdm2x1,self.h2,_ci).to_number()
+            SS1x2= contract(rdm1x2,self.h2,_ci).to_number()
+            obs[f"SS2x1{coord}"]= _cast_to_real(SS2x1)
+            obs[f"SS1x2{coord}"]= _cast_to_real(SS1x2)
         
         # prepare list with labels and values
         obs_labels=["avg_m"]+[f"m{coord}" for coord in state.sites.keys()]\
