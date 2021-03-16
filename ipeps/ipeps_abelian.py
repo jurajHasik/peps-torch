@@ -207,12 +207,12 @@ class IPEPS_ABELIAN():
         Return dict containing serialized on-site (block-sparse) tensors. The individual
         blocks are serialized into Numpy ndarrays
         """
-        return {ind: self.sites[ind].to_dict() for ind in self.sites}
+        return {ind: self.sites[ind].export_to_dict() for ind in self.sites}
 
     def load_checkpoint(self, checkpoint_file):
         checkpoint= torch.load(checkpoint_file)
         # TODO set requires_grad False
-        self.sites= {ind: yast.from_dict(settings= self.engine, d=t_dict_repr) \
+        self.sites= {ind: yast.import_from_dict(settings= self.engine, d=t_dict_repr) \
             for ind,t_dict_repr in checkpoint["parameters"].items()}
 
     def write_to_file(self, outputfile, tol=None, normalize=False):

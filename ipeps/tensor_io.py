@@ -132,7 +132,14 @@ def read_json_abelian_tensor_legacy(json_obj, config):
     isdiag= json_obj["isdiag"]
     dtype_str= json_obj["dtype"].lower()
     assert dtype_str in ["float64","complex128"], "Invalid dtype"+dtype_str
-    assert dtype_str==config.dtype, "dtype of tensor and settings.dtype do not match"
+    # allow upcasting from float to complex
+    _UPCAST= False
+    if dtype_str== config.dtype: pass
+    elif dtype_str=="float64" and config.dtype=="complex128":
+        _UPCAST= True
+        warnings.warn(f"Upcasting from "+dtype_str+" to "+config.dtype)
+    else:
+        raise RuntimeError("Incompatible dtypes: input tensor "+dtype_str+" config: "+config.dtype)
 
     # create empty abelian tensor
     T= yast.Tensor(config=config, s=s, n=n, isdiag=isdiag, dtype= dtype_str)
@@ -149,7 +156,7 @@ def read_json_abelian_tensor_legacy(json_obj, config):
         if symmetry:
             assert len(charges)==len(nsym*bare_b.shape), f"Number of charges {len(charges)}"\
                 +f" incompatible with bare tensor rank {len(bare_b.shape)}"
-        T.set_block(ts=tuple(charges), val=bare_b)
+        T.set_block(ts=tuple(charges), val=(1.+0.j)*bare_b if _UPCAST else bare_b)
 
     return T
 

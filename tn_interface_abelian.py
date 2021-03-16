@@ -14,7 +14,7 @@
 #             +" are not either both complex or both real")
 
 def contract(t1, t2, *args, **kwargs):
-    return t1.dot(t2, *args, **kwargs)
+    return t1.tensordot(t2, *args, **kwargs)
 
 # def mm_complex(m1, m2):
 #     return torch.mm(m1.real, m2.real) - torch.mm(m1.imag, m2.imag) \
@@ -32,7 +32,7 @@ def contract(t1, t2, *args, **kwargs):
 def mm(m1, m2, **kwargs):
     assert m1.get_ndim()==2, "m1 is not a matrix"
     assert m2.get_ndim()==2, "m2 is not a matrix"
-    return m1.dot(m2, ((1),(0)), **kwargs)
+    return m1.tensordot(m2, ((1),(0)), **kwargs)
 
 # def einsum_complex(op, *ts):
 #     if len(ts)!=2: raise NotImplementedError("einsum implementation limited to two tensors")

@@ -112,13 +112,13 @@ class SU2_NOSYM():
         # 1->0
         # S--0(-1) (+1)1--g--0->2(-1)
         # 2->1
-        SS= S_vec.dot(g,([0],[1]))
+        SS= S_vec.tensordot(g,([0],[1]))
         
         #
         # 0          1->2
         # S--g--2 0--S
         # 1          2->3
-        SS= SS.dot(S_vec_dag,([2],[0]))
+        SS= SS.tensordot(S_vec_dag,([2],[0]))
         SS= SS.transpose((0,2,1,3))
         return SS
 
@@ -347,13 +347,13 @@ class SU2_U1():
         # 1->0
         # S--0(-1) (+1)1--g--0->2(-1)
         # 2->1
-        SS= S_vec.dot(g,([0],[1]))
+        SS= S_vec.tensordot(g,([0],[1]))
         
         #
         # 0          1->2
         # S--g--2 0--S
         # 1          2->3
-        SS= SS.dot(S_vec_dag,([2],[0]))
+        SS= SS.tensordot(S_vec_dag,([2],[0]))
         SS= SS.transpose((0,2,1,3))
         return SS
 

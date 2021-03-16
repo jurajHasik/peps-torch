@@ -31,6 +31,7 @@ parser.add_argument("--obs_freq", type=int, default=-1, help="frequency of compu
 parser.add_argument("--corrf_dd_v", action='store_true', help="compute vertical dimer-dimer"\
     + " correlation function")
 parser.add_argument("--top2", action='store_true', help="compute transfer matrix for width-2 channel")
+parser.add_argument("--force_cpu", action='store_true', help="evaluate energy on cpu")
 args, unknown_args= parser.parse_known_args()
 
 def main():
@@ -111,7 +112,7 @@ def main():
             (len(history["log"])%args.obs_freq==0 or 
             (len(history["log"])-1)%args.obs_freq==0):
             e_curr = energy_f(state, env, force_cpu=ctm_args.conv_check_cpu)
-            obs_values, obs_labels = model.eval_obs(state, env, force_cpu=True)
+            obs_values, obs_labels = model.eval_obs(state, env, force_cpu=ctm_args.conv_check_cpu)
             print(", ".join([f"{len(history['log'])}",f"{dist}",f"{e_curr}"]+[f"{v}" for v in obs_values]))
         else:
             print(f"{len(history['log'])}, {dist}")
@@ -131,8 +132,8 @@ def main():
     init_env(state, ctm_env_init)
 
     # 4) (optional) compute observables as given by initial environment 
-    e_curr0 = energy_f(state, ctm_env_init)
-    obs_values0, obs_labels = model.eval_obs(state,ctm_env_init)
+    e_curr0 = energy_f(state, ctm_env_init,force_cpu=args.force_cpu)
+    obs_values0, obs_labels = model.eval_obs(state,ctm_env_init,force_cpu=args.force_cpu)
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{e_curr0}"]+[f"{v}" for v in obs_values0]))
 
@@ -140,8 +141,8 @@ def main():
     ctm_env_init, *ctm_log = ctmrg_c4v.run(state, ctm_env_init, conv_check=ctmrg_conv_rdm2x1)
 
     # 6) compute final observables
-    e_curr0 = energy_f(state, ctm_env_init, force_cpu=True)
-    obs_values0, obs_labels = model.eval_obs(state,ctm_env_init,force_cpu=True)
+    e_curr0 = energy_f(state, ctm_env_init, force_cpu=args.force_cpu)
+    obs_values0, obs_labels = model.eval_obs(state,ctm_env_init,force_cpu=args.force_cpu)
     history, t_ctm, t_obs= ctm_log
     print("\n")
     print(", ".join(["epoch","energy"]+obs_labels))
