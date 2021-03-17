@@ -1,3 +1,4 @@
+import yast
 from tn_interface_abelian import contract
 
 def run_seq_2s(state, gate_seq, su_opts={"weight_inv_cutoff": 1.0e-14, \
@@ -60,9 +61,9 @@ def apply_gate_2s(state,bond,gate,su_opts):
 	#      |             |                          
 	# (s)--B-- -> 1(s)--rB--(-s)2 0(s)--SB--(-s)1 0(s)--xB--
 	W= state.weight((xy_s1, dxy_w_s1s2))
-	xA, SA, rA= A.split_svd( (list(outer_inds_s1),[0, dxy_w_to_ind[dxy_w_s1s2]]), \
+	xA, SA, rA= yast.linalg.svd(A, (list(outer_inds_s1),[0, dxy_w_to_ind[dxy_w_s1s2]]), \
 		sU=-A.s[dxy_w_to_ind[dxy_w_s1s2]])
-	rB, SB, xB= B.split_svd( ([0, dxy_w_to_ind[dxy_w_s2s1]], \
+	rB, SB, xB= yast.linalg.svd(B, ([0, dxy_w_to_ind[dxy_w_s2s1]], \
 		list(outer_inds_s2)), sU=-B.s[dxy_w_to_ind[dxy_w_s2s1]])
 
 	# contract
@@ -89,7 +90,7 @@ def apply_gate_2s(state,bond,gate,su_opts):
 	#     0              1
 	#     |              |
 	# 1--nA--2 --W-- 0--nB--2
-	nA, W, nB= M.split_svd(([0,2],[1,3]), sU=A.s[dxy_w_to_ind[dxy_w_s1s2]],\
+	nA, W, nB= yast.linalg.svd(M, ([0,2],[1,3]), sU=A.s[dxy_w_to_ind[dxy_w_s1s2]],\
 		D_total=max_D_total)
 
 	# normalize new weight
@@ -115,7 +116,7 @@ def apply_gate_2s(state,bond,gate,su_opts):
 
 	# apply inverse of the previous weights
 	for dxy_w in outer_w_dxy_s1:
-		w= state.weight((xy_s1, dxy_w)).inv(cutoff=weight_inv_cutoff)
+		w= state.weight((xy_s1, dxy_w)).reciprocal(cutoff=weight_inv_cutoff)
 		A= contract(w,A, ([1],[dxy_w_to_ind[dxy_w]]))
 		#                                0  1  2  ....     N     1  2      0      N
 		# jk,ik * i0,i1,...,ik,...,iN -> jk,i0,i1,...,,...,iN -> i0,i1,...,jk,...,iN 
@@ -125,7 +126,7 @@ def apply_gate_2s(state,bond,gate,su_opts):
 		# print(f"{(xy_s1, dxy_w)} {([1],[dxy_w_to_ind[dxy_w]])} {ind_l}")
 
 	for dxy_w in outer_w_dxy_s2:
-		w= state.weight((xy_s2, dxy_w)).inv(cutoff=weight_inv_cutoff)
+		w= state.weight((xy_s2, dxy_w)).reciprocal(cutoff=weight_inv_cutoff)
 		B= contract(w,B, ([1],[dxy_w_to_ind[dxy_w]]))
 		ind_l= list(range(1,B.get_ndim()))
 		ind_l.insert(dxy_w_to_ind[dxy_w], 0)

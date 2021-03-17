@@ -8,7 +8,9 @@ from ipeps.ipeps_abelian import *
 from ctm.generic_abelian.env_abelian import *
 import ctm.generic_abelian.ctmrg as ctmrg
 from models.abelian import coupledLadders
-#from ctm.generic import transferops
+from models import coupledLadders as coupledLadders_dense
+import ctm.generic.ctmrg as ctmrg_dense
+from ctm.generic import transferops
 import json
 import unittest
 import logging
@@ -19,7 +21,6 @@ parser= cfg.get_args_parser()
 # additional model-dependent arguments
 parser.add_argument("--alpha", type=float, default=0., help="inter-ladder coupling")
 parser.add_argument("--symmetry", default=None, help="symmetry structure", choices=["NONE","U1"])
-parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
 args, unknown_args = parser.parse_known_args()
@@ -38,6 +39,8 @@ def main():
         settings.device = cfg.global_args.device
         settings_full.device = cfg.global_args.device
         print("Setting backend device: "+settings.device)
+    # override default dtype
+    settings_full.dtype= settings.dtype= cfg.global_args.dtype
     settings.backend.set_num_threads(args.omp_cores)
     settings.backend.random_seed(args.seed)
 
@@ -104,8 +107,26 @@ def main():
         print(f"\n\nspectrum C[{c_loc}]")
         for charges, sector in s.A.items():
             print(charges)
-            for i in range(len(sector)):
-                print(f"{i} {sector[i]}")
+            sector_diag= sector.diag()
+            for i in range(len(sector_diag)):
+                print(f"{i} {sector_diag[i]}")
+
+    # convert to dense env and compute transfer operator spectrum
+    # TODO conversion from symmetric to dense gives wrong environment
+    state_dense= state.to_dense_torch_ipeps()
+    ctm_env_dense= ctm_env.to_dense_torch_env()
+    model_dense= coupledLadders_dense.COUPLEDLADDERS(alpha=args.alpha)
+    loss= model_dense.energy_2x1_1x2(state_dense, ctm_env_dense)
+    obs_values, obs_labels= model_dense.eval_obs(state_dense,ctm_env_dense)
+    print(", ".join(["energy"]+obs_labels))
+    print(", ".join([f"{loss}"]+[f"{v}" for v in obs_values]))
+
+    site_dir_list=[((0,0), (1,0)),((0,0), (0,1)), ((1,1), (1,0)), ((1,1), (0,1))]
+    for sdp in site_dir_list:
+        print(f"\n\nspectrum(T)[{sdp[0]},{sdp[1]}]")
+        l= transferops.get_Top_spec(args.top_n, *sdp, state_dense, ctm_env_dense)
+        for i in range(l.size()[0]):
+            print(f"{i} {l[i,0]} {l[i,1]}")
 
 if __name__=='__main__':
     if len(unknown_args)>0:

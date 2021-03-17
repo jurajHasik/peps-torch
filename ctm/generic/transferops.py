@@ -49,7 +49,7 @@ def get_Top_spec(n, coord, direction, state, env, verbosity=0):
     vals= vals[ ind_sorted[::-1] ]
     # vals= np.copy(vals[::-1]) # descending order
     vals= (1.0/np.abs(vals[0])) * vals
-    L= torch.zeros((n,2), dtype=state.dtype, device=state.device)
+    L= torch.zeros((n,2), dtype=torch.float64, device=state.device)
     L[:,0]= torch.as_tensor(np.real(vals))
     L[:,1]= torch.as_tensor(np.imag(vals))
 
