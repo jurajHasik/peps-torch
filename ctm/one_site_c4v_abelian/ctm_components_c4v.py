@@ -1,7 +1,8 @@
 from tn_interface_abelian import contract, permute
 
 def c2x2_dl(A, C, T, verbosity=0):
-    # pdb.set_trace()
+    # TODO migration
+    raise RuntimeError("Not implemented")
     # C--1(-1) (+1)0--T--1(+1)
     # 0(-1)           2(-1)
     C2x2= contract(C, T, ([1],[0]))

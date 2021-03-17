@@ -3,7 +3,7 @@ import warnings
 from types import SimpleNamespace
 import config as cfg
 # from yamps.tensor import decompress_from_1d
-from yamps.yast import decompress_from_1d
+import yast
 from tn_interface_abelian import contract, permute
 from ctm.one_site_c4v_abelian.ctm_components_c4v import *
 try:
@@ -37,7 +37,7 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
 
     if ctm_args.projector_svd_method=='DEFAULT' or ctm_args.projector_svd_method=='GESDD':
         def truncated_decomp(M, chi, legs=(0,1), sU=1):
-            return M.split_svd(legs, tol=ctm_args.projector_svd_reltol, D_total=chi, \
+            return yast.linalg.svd(M, legs, tol=ctm_args.projector_svd_reltol, D_total=chi, \
                 sU=sU, keep_multiplets=True)
     elif ctm_args.projector_svd_method=='SYMARP':
         def truncated_decomp(M, chi, legs=(0,1), sU=1):
@@ -84,6 +84,8 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
 
 # performs CTM move
 def ctm_MOVE_dl(a_dl, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+    # TODO migration
+    raise RuntimeError("Not implemented")
     # 0) compress abelian symmetric tensor into 1D representation for the purposes of 
     #    checkpointing
     metadata_store= {}
@@ -225,7 +227,7 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
             _loc_engine= SimpleNamespace(backend=_loc_engine.backend, sym=_loc_engine.sym,\
                 dtype=_loc_engine.dtype, device=global_args.offload_to_gpu)
 
-        a,C,T= tuple(decompress_from_1d(r1d, _loc_engine, meta) \
+        a,C,T= tuple(yast.decompress_from_1d(r1d, _loc_engine, meta) \
             for r1d,meta in zip(tensors,metadata_store["in"]))
 
         # 1) build enlarged corner upper left corner
@@ -342,7 +344,7 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
     else:
         new_tensors= ctm_MOVE_sl_c(*tensors)
 
-    new_tensors= tuple(decompress_from_1d(r1d, env.engine, meta) \
+    new_tensors= tuple(yast.decompress_from_1d(r1d, env.engine, meta) \
             for r1d,meta in zip(new_tensors,metadata_store["out"]))
 
     env.C[env.keyC]= new_tensors[0]

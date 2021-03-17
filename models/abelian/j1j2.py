@@ -489,7 +489,7 @@ class J1J2_C4V_BIPARTITE_NOSYM():
         # _ci= ([0,1,2,3,4,5,6,7], [0,1,2,3,4,5,6,7])
         _ci= ([0,1,2,3,4,5,6,7], [4,5,6,7,0,1,2,3])
         rdm2x2= rdm_c4v.rdm2x2(state, env_c4v, sym_pos_def=False,\
-            verbosity=cfg.ctm_args.verbosity_rdm, force_cpu=force_cpu).to_dense()
+            verbosity=cfg.ctm_args.verbosity_rdm, force_cpu=force_cpu).to_nonsymmetric()
         energy_per_site= contract(rdm2x2,self.hp,_ci).to_number()
         return energy_per_site
 

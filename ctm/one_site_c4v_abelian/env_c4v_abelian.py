@@ -1,5 +1,6 @@
 import config as cfg
 import numpy as np
+import yast
 
 class ENV_C4V_ABELIAN():
     def __init__(self, chi=1, state=None, settings=None, init=False, 
@@ -239,7 +240,7 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
     vec = (-1,-1)
     A = state.site()
     ## a= contiguous(einsum('mijef,mijab->eafb',A,conj(A)))
-    a= A.dot(A, ((0,1,2), (0,1,2)), conj=(0,1)) # mijef,mijab->efab
+    a= A.tensordot(A, ((0,1,2), (0,1,2)), conj=(0,1)) # mijef,mijab->efab
     a= a.transpose((0,2,1,3)) # efab->eafb
     ## here we need to group-legs / reshape
     # a, lo1= a.group_legs((2,3), new_s=-1) # ea(fb->F)->eaF
@@ -262,7 +263,7 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
     #     (-1)3
     vec = (-1,0)
     B= A.flip_signature()
-    a= B.dot(B, ((0,2), (0,2)), conj=(0,1)) # meifg,maibc->efgabc
+    a= B.tensordot(B, ((0,2), (0,2)), conj=(0,1)) # meifg,maibc->efgabc
     a= a.transpose((0,3,1,4,2,5)) # efgabc->eafbgc
     # a, leg_order_aux= a.group_legs((4,5), new_s=-1) # eafb(gc->G)->eafbG
     # a, lo1= a.group_legs((2,3), new_s=1) # ea(fb->F)G->eaFG
@@ -275,7 +276,7 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
     env.T[env.keyT]=a
 
 def compute_multiplets(C, eps_multiplet_gap=1.0e-10):
-    U,S,V= C.split_svd((0,1), sU=1)
+    U,S,V= yast.linalg.svd(C, (0,1), sU=1)
     S_dense= np.diag(S.to_numpy())
     chi= len(S_dense)
     D= np.zeros(chi+1, dtype=S_dense.dtype) # numpy sorts in ascending fashion

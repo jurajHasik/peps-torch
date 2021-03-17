@@ -1,6 +1,7 @@
 import os
 import torch
 import numpy as np
+import yast
 import argparse
 import config as cfg
 import examples.abelian.settings_full_torch as settings_full
@@ -153,12 +154,13 @@ def main():
 
     # environment diagnostics
     for c_loc,c_ten in ctm_env.C.items(): 
-        u,s,v= c_ten.split_svd(([0],[1]))
+        u,s,v= yast.linalg.svd(c_ten,([0],[1]))
         print(f"\n\nspectrum C[{c_loc}]")
         for charges, sector in s.A.items():
             print(charges)
-            for i in range(len(sector)):
-                print(f"{i} {sector[i]}")
+            sector_diag= sector.diag()
+            for i in range(len(sector_diag)):
+                print(f"{i} {sector_diag[i]}")
 
 if __name__=='__main__':
     if len(unknown_args)>0:
