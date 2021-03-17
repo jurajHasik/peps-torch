@@ -39,13 +39,15 @@ args, unknown_args = parser.parse_known_args()
 
 def main():
     cfg.configure(args)
-    cfg.print_config()
-    # TODO(?) choose symmetry group
+    cfg.print_config() 
+    # TODO(?) choose symmetry group and override default dtype
     if not args.symmetry or args.symmetry=="None":
         settings= settings_full
+        settings_full.dtype= settings.dtype= cfg.global_args.dtype
         model= coupledLadders.COUPLEDLADDERS_NOSYM(settings,alpha=args.alpha)
     elif args.symmetry=="U1":
         settings= settings_U1
+        settings_full.dtype= settings.dtype= cfg.global_args.dtype
         model= coupledLadders.COUPLEDLADDERS_U1(settings,alpha=args.alpha)
         # model= coupledLadders.COUPLEDLADDERS_NOSYM(settings_full,alpha=args.alpha)
     # override default device specified in settings
@@ -78,6 +80,8 @@ def main():
         +" the model")
         model= coupledLadders.COUPLEDLADDERS_NOSYM(settings_full,alpha=args.alpha)
 
+    import pdb
+    pdb.set_trace()
     print(state)
 
     @torch.no_grad()

@@ -492,7 +492,7 @@ class IPEPS_ABELIAN_WEIGHTED(IPEPS_ABELIAN):
             # ...
             for dxy,ind in dxy_w_to_ind.items():
                 w= self.weight((coord, dxy)).sqrt()
-                A= A.dot(w, ([1],[0]))
+                A= A.tensordot(w, ([1],[0]))
             a_sites[coord]= A
 
         return IPEPS_ABELIAN(self.engine, a_sites, vertexToSite=self.vertexToSite,\

@@ -6,6 +6,9 @@ from tn_interface_abelian import contract
 import groups.su2_abelian as su2
 from ctm.generic_abelian import rdm
 
+def _cast_to_real(t):
+    return t.real if t.is_complex() else t
+
 class COUPLEDLADDERS_NOSYM():
     def __init__(self, settings, alpha=0.0, global_args=cfg.global_args):
         r"""
@@ -120,6 +123,8 @@ class COUPLEDLADDERS_NOSYM():
 
         # return energy-per-site
         energy_per_site=energy/len(state.sites.items())
+        energy_per_site=_cast_to_real(energy_per_site)
+
         return energy_per_site
 
     def eval_obs(self,state,env):
@@ -176,8 +181,10 @@ class COUPLEDLADDERS_NOSYM():
         for coord,site in state.sites.items():
             rdm2x1 = rdm.rdm2x1(coord,state,env).to_nonsymmetric()
             rdm1x2 = rdm.rdm1x2(coord,state,env).to_nonsymmetric()
-            obs[f"SS2x1{coord}"]= contract(rdm2x1,self.h2,_ci).to_number()
-            obs[f"SS1x2{coord}"]= contract(rdm1x2,self.h2,_ci).to_number()
+            SS2x1= contract(rdm2x1,self.h2,_ci).to_number()
+            SS1x2= contract(rdm1x2,self.h2,_ci).to_number()
+            obs[f"SS2x1{coord}"]= _cast_to_real(SS2x1)
+            obs[f"SS1x2{coord}"]= _cast_to_real(SS1x2)
 
         # prepare list with labels and values
         obs_labels=["avg_m"]+[f"m{coord}" for coord in state.sites.keys()]\
@@ -301,6 +308,8 @@ class COUPLEDLADDERS_U1():
 
         # return energy-per-site
         energy_per_site=energy/len(state.sites.items())
+        energy_per_site=_cast_to_real(energy_per_site)
+
         return energy_per_site
 
     def energy_2x1_1x2_H(self,state,env):
@@ -335,6 +344,8 @@ class COUPLEDLADDERS_U1():
 
         # return energy-per-site
         energy_per_site=energy/len(state.sites.items())
+        energy_per_site=_cast_to_real(energy_per_site)
+
         return energy_per_site
 
     def eval_obs(self,state,env):
@@ -391,8 +402,10 @@ class COUPLEDLADDERS_U1():
         for coord,site in state.sites.items():
             rdm2x1 = rdm.rdm2x1(coord,state,env)
             rdm1x2 = rdm.rdm1x2(coord,state,env)
-            obs[f"SS2x1{coord}"]= contract(rdm2x1,self.h2,_ci).to_number()
-            obs[f"SS1x2{coord}"]= contract(rdm1x2,self.h2,_ci).to_number()
+            SS2x1= contract(rdm2x1,self.h2,_ci).to_number()
+            SS1x2= contract(rdm1x2,self.h2,_ci).to_number()
+            obs[f"SS2x1{coord}"]=_cast_to_real(SS2x1)
+            obs[f"SS1x2{coord}"]=_cast_to_real(SS1x2)
 
         # prepare list with labels and values
         obs_labels=["avg_m"]+[f"m{coord}" for coord in state.sites.keys()]\
@@ -404,10 +417,10 @@ class COUPLEDLADDERS_U1():
 
     def _gen_gate_SS(self,t):
         gate_SS= self.h2
-        D, U= gate_SS.split_eigh(axes=([0,1],[2,3]))
+        D, U= yast.linalg.eigh(gate_SS, axes=([0,1],[2,3]))
         D= D.exp(t)
-        gate_SS= U.dot(D, ([2],[0]))
-        gate_SS= gate_SS.dot(U, ([2,2]), conj=(0,1))
+        gate_SS= U.tensordot(D, ([2],[0]))
+        gate_SS= gate_SS.tensordot(U, ([2,2]), conj=(0,1))
         return gate_SS
 
     def gen_gate_seq_2S(self,t):
