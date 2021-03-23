@@ -9,6 +9,13 @@ from ctm.generic import transferops
 from models.SU3_AKLT import *
 import unittest
 import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib import rc
+rc('font',**{'family':'sans-','serif':['Palatino']})
+rc('text', usetex=True)
+rc('xtick', labelsize=6)
+rc('ytick', labelsize=6)
+rc('axes', labelsize=6)
 
 # parse command line args and build necessary configuration objects
 parser= cfg.get_args_parser()
@@ -56,25 +63,30 @@ def main():
 		
 	# initializes an environment for the ipeps
 	ctm_env_init = ENV(args.chi, state)
-	init_env(state, ctm_env_init)
-	# initial energy of up and down triangles
-	e_init_dn = model.energy_triangle(state, ctm_env_init)
-	print('*** Energy per site (before CTMRG) -- down triangles: '+str(e_init_dn.item()))
-	e_init_up = model.energy_triangle_up(state, ctm_env_init)
-	print('*** Energy per site (before CTMRG) -- up triangles: '+str(e_init_up.item()))
-	
+	init_env(state, ctm_env_init)	
 	# performs CTMRG and computes the obervables afterwards (energy and lambda_3)
 	ctm_env_fin, *ctm_log= ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_rdm)
 	
-	e_final_dn = model.energy_triangle(state, ctm_env_fin)
-	print('*** Energy per site (after CTMRG) -- down triangles: '+str(e_final_dn.item()))
-	e_final_up = model.energy_triangle_up(state, ctm_env_fin)
-	print('*** Energy per site (after CTMRG) -- up triangles: '+str(e_final_up.item()))
+	max_distance = 20
 	
-	colors3, colors8 = model.eval_lambdas(state,ctm_env_fin)
-	print('*** <Lambda_3> (after CTMRG): '+str(colors3[0].item())+', '+str(colors3[1].item())+', '+str(colors3[2].item()))
-	print('*** <Lambda_8> (after CTMRG): '+str(colors8[0].item())+', '+str(colors8[1].item())+', '+str(colors8[2].item()))
+	corrf_L3, corrf_L8 = model.eval_corrf_LL((1,0),state,ctm_env_fin,dist=max_distance)
+	corrf_PP = model.eval_corrf_PP((1,0),state,ctm_env_fin,dist=max_distance)
+	corrf_L3, corrf_L8 = -np.array(corrf_L3), -np.array(corrf_L8)
 	
+	plt.figure(1, figsize=(2.5,2.))
+	array_r = np.arange(1,max_distance+2,1)
+	plt.plot(array_r, np.log(np.abs(corrf_L3)), '.',color='b')
+	#plt.plot(array_r, corrf_L8, '.')
+	p1, p0 = np.polyfit(array_r[2:20],np.log(np.abs(corrf_L3))[2:20],1)
+	print('<LL> correlation length = '+str(-1/p1))
+	plt.plot(array_r, p0+p1*array_r, color='b',linewidth=0.7)
+	plt.xlabel(r'$r$')
+	plt.ylabel(r'$\log | \langle \lambda_3(0) \lambda_3(r) \rangle |$')
+	plt.xscale('linear')
+	plt.yscale('linear')
+	
+	plt.tight_layout()
+	plt.show()
 	
 if __name__=='__main__':
 	if len(unknown_args)>0:
