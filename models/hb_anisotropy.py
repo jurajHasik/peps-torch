@@ -11,7 +11,7 @@ import numpy as np
 
 class HB():
     def __init__(self, phys_dim=3, j1_x=1.0, j1_y=1.0, k1_x=0.0, k1_y=0.0, global_args=cfg.global_args):
-        self.dtype = global_args.dtype
+        self.dtype = global_args.torch_dtype
         self.device = global_args.device
         self.phys_dim = phys_dim
         self.j1_x = j1_x
@@ -93,7 +93,7 @@ class HB():
 
     def eval_obs(self, state, env):
 
-        obs = dict({"avg_II_Q": 0., "avg_III_Q": 0.,
+        obs = dict({"avg_m": 0., "avg_II_Q": 0., "avg_III_Q": 0.,
                     "avg_anti_s_vector": np.zeros(3),
                     "avg_s_vector": np.zeros(3)})
         with torch.no_grad():

@@ -1,3 +1,4 @@
+from math import cos, sin
 import context
 import torch
 import argparse
@@ -16,7 +17,7 @@ log = logging.getLogger(__name__)
 # parse command line args and build necessary configuration objects
 parser = cfg.get_args_parser()
 # additional model-dependent arguments
-parser.add_argument("--theta", type=float, default=0., help="theta")
+parser.add_argument("--theta", type=float, help="theta")
 parser.add_argument("--ratio", type=float, default=1., help="y/x ratio")
 parser.add_argument("--j1_x", type=float, default=1., help="nn x bilinear coupling")
 parser.add_argument("--j1_y", type=float, default=1., help="nn y bilinear coupling")
@@ -28,6 +29,12 @@ args, unknown_args = parser.parse_known_args()
 
 def main():
     cfg.configure(args)
+    # allow for couplings to be specified through theta
+    if args.theta:
+        args.j1_x= cfg.main_args.j1_x= 1.0 * cos( args.theta )
+        args.k1_x= cfg.main_args.k1_x= 1.0 * sin( args.theta )
+        args.j1_y= cfg.main_args.j1_y= args.j1_x * args.ratio
+        args.k1_y= cfg.main_args.k1_y= args.k1_x * args.ratio
     cfg.print_config()
     torch.set_num_threads(args.omp_cores)
     torch.manual_seed(args.seed)
@@ -84,12 +91,12 @@ def main():
         # B = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim), \
         #                dtype=cfg.global_args.dtype, device=cfg.global_args.device)
         A = torch.zeros((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim), \
-                        dtype=cfg.global_args.dtype, device=cfg.global_args.device)
+                        dtype=model.dtype, device=cfg.global_args.device)
         A[:, 0, :, 0, :] = torch.rand_like(A[:, 0, :, 0, :], dtype=A.dtype, device=A.device)
         A = (1 - args.ratio) * A + args.ratio * torch.rand_like(A, dtype=A.dtype, device=A.device)
 
         B = torch.zeros((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),
-                        dtype=cfg.global_args.dtype, device=cfg.global_args.device)
+                        dtype=model.dtype, device=cfg.global_args.device)
         B[:, 0, :, 0, :] = torch.rand_like(B[:, 0, :, 0, :], dtype=B.dtype, device=B.device)
         B = (1 - args.ratio) * B + args.ratio * torch.rand_like(B, dtype=B.dtype, device=B.device)
 

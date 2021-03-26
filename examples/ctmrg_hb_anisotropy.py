@@ -1,3 +1,4 @@
+from math import cos, sin
 import context
 import torch
 import argparse
@@ -14,6 +15,7 @@ import unittest
 parser= cfg.get_args_parser()
 # additional model-dependent arguments
 parser.add_argument("--theta", type=float, default=0., help="theta")
+parser.add_argument("--ratio", type=float, default=1., help="y/x ratio")
 parser.add_argument("--j1_x", type=float, default=1., help="nn x bilinear coupling")
 parser.add_argument("--j1_y", type=float, default=1., help="nn y bilinear coupling")
 parser.add_argument("--k1_x", type=float, default=0., help="nn x biquadratic coupling")
@@ -28,6 +30,11 @@ args, unknown_args = parser.parse_known_args()
 
 def main():
     cfg.configure(args)
+    if args.theta:
+        args.j1_x= cfg.main_args.j1_x= 1.0 * cos( args.theta )
+        args.k1_x= cfg.main_args.k1_x= 1.0 * sin( args.theta )
+        args.j1_y= cfg.main_args.j1_y= args.j1_x * args.ratio
+        args.k1_y= cfg.main_args.k1_y= args.k1_x * args.ratio
     cfg.print_config()
     torch.set_num_threads(args.omp_cores)
     torch.manual_seed(args.seed)
