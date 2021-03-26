@@ -75,7 +75,6 @@ class SU2_NOSYM():
         op= op.to(self.device)
         return op
 
-
     def S_zpm(self):
         # 1(-1)
         # S--0(-1)
@@ -300,14 +299,8 @@ class SU2_U1():
         return op
 
     def BP_rot(self):
-        # op= yast.Tensor(self.engine, s=self._REF_S_DIRS, n=0)
-        # for j in range(-self.J,self.J+1,2):
-        #     op.set_block(ts=(j,j), Ds=(1,1), val='ones')
-        # op= op.to(self.device)
-        # return op
-        pass
-
-
+        raise NotImplementedError("AFM rotation operator is not compatible with U(1) symmetry")    
+    
     def S_zpm(self):
         # 1(-1)
         # S--0(-1)

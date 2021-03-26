@@ -7,7 +7,7 @@ from tn_interface_abelian import contract, permute
 import groups.su2_abelian as su2
 from ctm.generic_abelian import rdm
 from ctm.one_site_c4v_abelian import rdm_c4v
-#from ctm.generic import corrf
+from ctm.one_site_c4v_abelian import corrf_c4v
 
 def _cast_to_real(t):
     return t.real if t.is_complex() else t
@@ -597,3 +597,32 @@ class J1J2_C4V_BIPARTITE_NOSYM():
         obs_labels=[f"m"]+[f"{lc}" for lc in self.obs_ops.keys()]+[f"SS2x1"]
         obs_values=[obs[label] for label in obs_labels]
         return obs_values, obs_labels
+
+    def eval_corrf_SS(self,state,env_c4v,dist):
+        import examples.abelian.settings_U1_torch as settings_U1
+        irrep = su2.SU2_U1(settings_U1, self.phys_dim-1)
+        
+        # manually define the rotated operators, since rotation operator
+        # cannot be expressed as U(1)-symmetric tensors
+        def get_bilat_op_SZ():
+            def _gen_op(r):
+                return (-1)*irrep.SZ().flip_signature() if r%2==0 else irrep.SZ()
+            return _gen_op
+
+        def get_bilat_op_SP():
+            def _gen_op(r):
+                return (-1)*irrep.SM().flip_signature() if r%2==0 else irrep.SP()
+            return _gen_op
+
+        def get_bilat_op_SM():
+            def _gen_op(r):
+                return (-1)*irrep.SP().flip_signature() if r%2==0 else irrep.SM()
+            return _gen_op
+
+        Sz0szR= corrf_c4v.corrf_1sO1sO(state, env_c4v, irrep.SZ(), \
+            get_bilat_op_SZ(), dist)
+        Sp0smR= corrf_c4v.corrf_1sO1sO(state, env_c4v, irrep.SP(), get_bilat_op_SM(), dist)
+        Sm0SpR= corrf_c4v.corrf_1sO1sO(state, env_c4v, irrep.SM(), get_bilat_op_SP(), dist)
+
+        res= dict({"ss": Sz0szR+0.5*(Sp0smR+Sm0SpR), "szsz": Sz0szR, "spsm": Sp0smR, "smsp": Sm0SpR})
+        return res

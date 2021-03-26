@@ -118,7 +118,7 @@ class Test_ctmrg_abelian(unittest.TestCase):
         def ctmrg_conv_f(state, env, history, ctm_args=cfg.ctm_args):
             # compute SVD of corners
             for cid,c in env.C.items():
-                u,s,v= c.split_svd((0,1))
+                u,s,v= yast.linalg.svd(c,(0,1))
                 s= s.to_numpy().diagonal()
                 print(f"{cid}: {s}")
             return False, history
@@ -137,7 +137,7 @@ class Test_ctmrg_abelian(unittest.TestCase):
         def ctmrg_conv_f(state, env, history, ctm_args=cfg.ctm_args):
             # compute SVD of corners
             for cid,c in env.C.items():
-                u,s,v= c.split_svd((0,1))
+                u,s,v= yast.linalg.svd(c,(0,1))
                 s= s.to_numpy().diagonal()
                 print(f"{cid}: {s}")
             return False, history
@@ -154,7 +154,7 @@ class Test_ctmrg_abelian(unittest.TestCase):
         def ctmrg_conv_f(state, env, history, ctm_args=cfg.ctm_args):
             # compute SVD of corners
             for cid,c in env.C.items():
-                u,s,v= c.split_svd((0,1))
+                u,s,v= yast.linalg.svd(c,(0,1))
                 s= s.to_numpy().diagonal()
                 print(f"{cid}: {s}")
             return False, history
@@ -172,7 +172,7 @@ class Test_ctmrg_abelian(unittest.TestCase):
         def ctmrg_conv_f(state, env, history, ctm_args=cfg.ctm_args):
             # compute SVD of corners
             for cid,c in env.C.items():
-                u,s,v= c.split_svd((0,1))
+                u,s,v= yast.linalg.svd(c,(0,1))
                 s= s.to_numpy().diagonal()
                 print(f"{cid}: {s}")
             return False, history
@@ -189,7 +189,7 @@ class Test_ctmrg_abelian(unittest.TestCase):
         def ctmrg_conv_f(state, env, history, ctm_args=cfg.ctm_args):
             # compute SVD of corners
             for cid,c in env.C.items():
-                u,s,v= c.split_svd((0,1))
+                u,s,v= yast.linalg.svd(c,(0,1))
                 s= s.to_numpy().diagonal()
                 print(f"{cid}: {s}")
             return False, history

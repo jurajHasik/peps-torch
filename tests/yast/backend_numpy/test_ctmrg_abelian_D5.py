@@ -66,7 +66,7 @@ class Test_ctmrg_abelian_U1_D5_basic(unittest.TestCase):
             history+=1
             print(history)
             for cid,c in env.C.items():
-                u,s,v= c.split_svd((0,1))
+                u,s,v= yast.linalg.svd(c,(0,1))
                 s= s.to_numpy().diagonal()
                 print(f"{cid}: {s}")
             return False, history
@@ -84,7 +84,7 @@ class Test_ctmrg_abelian_U1_D5_basic(unittest.TestCase):
         def ctmrg_conv_f(state, env, history, ctm_args=cfg.ctm_args):
             # compute SVD of corners
             for cid,c in env.C.items():
-                u,s,v= c.split_svd((0,1))
+                u,s,v= yast.linalg.svd(c,(0,1))
                 s= np.sort(s.to_numpy().diagonal())[::-1]
                 print(f"{cid}: {s}")
             return False, history
@@ -103,7 +103,7 @@ class Test_ctmrg_abelian_U1_D5_basic(unittest.TestCase):
         def ctmrg_conv_f(state, env, history, ctm_args=cfg.ctm_args):
             # compute SVD of corners
             for cid,c in env.C.items():
-                u,s,v= c.split_svd((0,1))
+                u,s,v= yast.linalg.svd(c,(0,1))
                 s= s.to_numpy().diagonal()
                 print(f"{cid}: {s}")
             return False, history
@@ -174,7 +174,7 @@ class Test_ctmrg_abelian_U1_D5_spectra(unittest.TestCase):
         # store corner spectra
         s_1x1={}
         for cid,c in env1x1.C.items():
-            u,s,v= c.split_svd((0,1))
+            u,s,v= yast.linalg.svd(c,(0,1))
             s_1x1[cid]= s.to_numpy().diagonal()
         
         # ----- 2x1_BIPARTITE_full -----
@@ -195,7 +195,7 @@ class Test_ctmrg_abelian_U1_D5_spectra(unittest.TestCase):
 
         s_2x1_full={}
         for cid,c in env_dense.C.items():
-            u,s,v= c.split_svd((0,1))
+            u,s,v= yast.linalg.svd(c,(0,1))
             s_2x1_full[cid]= s.to_numpy().diagonal()
 
         # ----- 2x1_BIPARTITE_U1 -----
@@ -214,7 +214,7 @@ class Test_ctmrg_abelian_U1_D5_spectra(unittest.TestCase):
 
         s_2x1_U1={}
         for cid,c in envU1.C.items():
-            u,s,v= c.split_svd((0,1))
+            u,s,v= yast.linalg.svd(c,(0,1))
             s_2x1_U1[cid]= np.sort(s.to_numpy().diagonal())[::-1]  
         
         # ----- compare -----
