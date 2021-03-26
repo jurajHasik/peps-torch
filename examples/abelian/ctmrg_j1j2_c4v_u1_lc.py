@@ -22,8 +22,6 @@ parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour
 parser.add_argument("--hz_stag", type=float, default=0., help="staggered mag. field")
 parser.add_argument("--delta_zz", type=float, default=1., help="easy-axis (nearest-neighbour) anisotropy")
 # additional observables-related arguments
-parser.add_argument("--corrf_canonical", action='store_true', help="align spin operators" \
-    + " with the vector of spontaneous magnetization")
 parser.add_argument("--corrf_r", type=int, default=1, help="maximal correlation function distance")
 parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
@@ -123,10 +121,10 @@ def main():
     print(f"TIMINGS ctm: {t_ctm} conv_check: {t_obs}")
 
     # ----- additional observables ---------------------------------------------
-    # corrSS= model.eval_corrf_SS(state, ctm_env, args.corrf_r, canonical=args.corrf_canonical)
-    # print("\n\nSS r "+" ".join([label for label in corrSS.keys()])+f" canonical {args.corrf_canonical}")
-    # for i in range(args.corrf_r):
-    #     print(f"{i} "+" ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
+    corrSS= model.eval_corrf_SS(state, ctm_env, args.corrf_r)
+    print("\n\nSS r "+" ".join([label for label in corrSS.keys()]))
+    for i in range(args.corrf_r):
+        print(f"{i} "+" ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
 
     # environment diagnostics
     print("\n\nspectrum(C)")

@@ -278,7 +278,7 @@ def rdm2x1(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
     # |__|----2(+),3(-) 2(-),3(+)----|  |
     # |\4(+),5(-)             4(-),5(+)/|
     # | ->0(+),1(-)         ->2(-),3(+) |
-    # C2x1---------0(+) 0(+)---------C2x1
+    # C2x1---------0(+) 0(-)---------C2x1
     rdm = contract(left_half,left_half.flip_signature(),([0,1,2,3],[0,1,2,3]))
 
     # permute into order of s0,s1;s0',s1' where primed indices

@@ -1,7 +1,7 @@
 import itertools
 import numpy as np
 import torch
-from yamps.yast import decompress_from_1d, zeros
+import yamps.yast as yast
 from tn_interface_abelian import contract, permute
 try:
     from scipy.sparse.linalg import LinearOperator
@@ -12,6 +12,7 @@ except:
 from ctm.one_site_c4v_abelian import corrf_c4v
 
 def get_Top_spec_c4v(n, state, env_c4v, verbosity=0):
+    raise NotImplementedError()
     # 0) build edge and get symmetric structure
     # (+)0--
     # (-)1--E 
@@ -32,8 +33,9 @@ def get_Top_spec_c4v(n, state, env_c4v, verbosity=0):
     # build dummy Nx1 vector
     Cs= Cs + (Cs1,)
     Ds= Ds + (tuple([1]*len(Cs1)),)
-    v0= zeros(settings= E.config, s=np.concatenate((E.s,[1])), n=0, t=Cs, D=Ds)
-    meta, r1d= v0.compress_to_1d()
+    v0= yast.zeros(config= E.config, s=np.concatenate((E.s,[1])), n=0, t=Cs, D=Ds)
+    # r1d, meta= v0.compress_to_1d()
+    r1d, meta= E.compress_to_1d()
     N= r1d.numel()
 
     # multiply vector by transfer-op and pass the result back to numpy
@@ -42,17 +44,17 @@ def get_Top_spec_c4v(n, state, env_c4v, verbosity=0):
     # v--1 (D^2)
     #  --2 (chi)
     def _mv(v):
-        pdb.set_trace()
         V1d= torch.as_tensor(v, dtype=r1d.dtype, device=r1d.device)
         # bring 1d vector into edge structure
         # (+)0--
         # (-)1--E--(-) dummy-index
         # (+)2--
-        V= decompress_from_1d(V1d, config=E.config, d=meta)
+        # pdb.set_trace()
+        V= yast.decompress_from_1d(V1d, E.config, meta)
         V= corrf_c4v.apply_TM_1sO(state,env_c4v,V,verbosity=verbosity)
         # V= V.flip_signature(inplace=True)
         # bring the edge back into plain 1d representation
-        _meta, V1d= V.compress_to_1d()
+        V1d, _meta= V.compress_to_1d()
         return V1d.detach().cpu().numpy()
 
     T= LinearOperator((N,N), matvec=_mv)

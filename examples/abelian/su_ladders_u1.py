@@ -80,8 +80,6 @@ def main():
         +" the model")
         model= coupledLadders.COUPLEDLADDERS_NOSYM(settings_full,alpha=args.alpha)
 
-    import pdb
-    pdb.set_trace()
     print(state)
 
     @torch.no_grad()
