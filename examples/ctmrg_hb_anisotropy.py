@@ -155,25 +155,26 @@ def main():
 
     ctm_env_init, *ctm_log = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
 
-    corrSS = model.eval_corrf_SS((0, 0), (1, 0), state, ctm_env_init, args.corrf_r)
-    print("\n\nSS[(0,0),(1,0)] r " + " ".join([label for label in corrSS.keys()]))
-    for i in range(args.corrf_r):
-        print(f"{i} " + " ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
 
-    corrSS = model.eval_corrf_SS((0, 0), (0, 1), state, ctm_env_init, args.corrf_r)
-    print("\n\nSS[(0,0),(0,1)] r " + " ".join([label for label in corrSS.keys()]))
-    for i in range(args.corrf_r):
-        print(f"{i} " + " ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
+    # corrSS = model.eval_corrf_SS((0, 0), (1, 0), state, ctm_env_init, args.corrf_r)
+    # print("\n\nSS[(0,0),(1,0)] r " + " ".join([label for label in corrSS.keys()]))
+    # for i in range(args.corrf_r):
+    #     print(f"{i} " + " ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
 
-    corrSSSS = model.eval_corrf_SSSS((0, 0), (1, 0), state, ctm_env_init, args.corrf_r)
-    print("\n\nSSSS[(0,0),(1,0)] r " + " ".join([label for label in corrSSSS.keys()]))
-    for i in range(args.corrf_r):
-        print(f"{i} " + " ".join([f"{corrSSSS[label][i]}" for label in corrSSSS.keys()]))
+    # corrSS = model.eval_corrf_SS((0, 0), (0, 1), state, ctm_env_init, args.corrf_r)
+    # print("\n\nSS[(0,0),(0,1)] r " + " ".join([label for label in corrSS.keys()]))
+    # for i in range(args.corrf_r):
+    #     print(f"{i} " + " ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
 
-    corrSSSS = model.eval_corrf_SSSS((0, 0), (0, 1), state, ctm_env_init, args.corrf_r)
-    print("\n\nSSSS[(0,0),(0,1)] r " + " ".join([label for label in corrSSSS.keys()]))
-    for i in range(args.corrf_r):
-        print(f"{i} " + " ".join([f"{corrSSSS[label][i]}" for label in corrSSSS.keys()]))
+    # corrSSSS = model.eval_corrf_SSSS((0, 0), (1, 0), state, ctm_env_init, args.corrf_r)
+    # print("\n\nSSSS[(0,0),(1,0)] r " + " ".join([label for label in corrSSSS.keys()]))
+    # for i in range(args.corrf_r):
+    #     print(f"{i} " + " ".join([f"{corrSSSS[label][i]}" for label in corrSSSS.keys()]))
+
+    # corrSSSS = model.eval_corrf_SSSS((0, 0), (0, 1), state, ctm_env_init, args.corrf_r)
+    # print("\n\nSSSS[(0,0),(0,1)] r " + " ".join([label for label in corrSSSS.keys()]))
+    # for i in range(args.corrf_r):
+    #     print(f"{i} " + " ".join([f"{corrSSSS[label][i]}" for label in corrSSSS.keys()]))
 
     # environment diagnostics
     print("\n")

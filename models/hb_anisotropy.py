@@ -189,7 +189,7 @@ class HB():
 
         dimer_op = torch.abs(ss[0] - ss[1])
         print(ss)
-        return dimer_op.numpy()
+        return dimer_op
 
     def get_Q(self):
         """
