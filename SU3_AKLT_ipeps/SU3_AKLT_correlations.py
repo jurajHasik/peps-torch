@@ -70,13 +70,14 @@ def main():
 	max_distance = 20
 	
 	corrf_L3, corrf_L8 = model.eval_corrf_LL((1,0),state,ctm_env_fin,dist=max_distance)
-	corrf_PP = model.eval_corrf_PP((1,0),state,ctm_env_fin,dist=max_distance)
+	corrf_PP = model.eval_corrf_PP((0,1),state,ctm_env_fin,dist=max_distance)
+	print(torch.norm(corrf_PP).item())
 	corrf_L3, corrf_L8 = -np.array(corrf_L3), -np.array(corrf_L8)
 	
 	plt.figure(1, figsize=(2.5,2.))
 	array_r = np.arange(1,max_distance+2,1)
 	plt.plot(array_r, np.log(np.abs(corrf_L3)), '.',color='b')
-	#plt.plot(array_r, corrf_L8, '.')
+	plt.plot(array_r, np.log(np.abs(corrf_L8)), '.', color = 'r')
 	p1, p0 = np.polyfit(array_r[2:20],np.log(np.abs(corrf_L3))[2:20],1)
 	print('<LL> correlation length = '+str(-1/p1))
 	plt.plot(array_r, p0+p1*array_r, color='b',linewidth=0.7)
@@ -84,6 +85,7 @@ def main():
 	plt.ylabel(r'$\log | \langle \lambda_3(0) \lambda_3(r) \rangle |$')
 	plt.xscale('linear')
 	plt.yscale('linear')
+	
 	
 	plt.tight_layout()
 	plt.show()

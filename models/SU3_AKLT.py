@@ -38,8 +38,12 @@ for s in range(27):
 # define the matrices associated with the observables \lambda_3 and \lambda_8 for the 3 sites
 lambda_3 = torch.tensor([[1.,0.,0.],[0.,-1.,0.],[0.,0.,0.]]).double()
 lambda_8 = 1./sqrt(3.) * torch.tensor([[1.,0.,0.],[0.,1.,0.],[0.,0.,-2.]]).double()
-lambda_3_1 = lambda_3_2 = lambda_3_3 = torch.eye(27).double()
-lambda_8_1 = lambda_8_2 = lambda_8_3 = torch.eye(27).double()
+lambda_3_1 = torch.eye(27).double()
+lambda_3_2 = torch.eye(27).double()
+lambda_3_3 = torch.eye(27).double()
+lambda_8_1 = torch.eye(27).double()
+lambda_8_2 = torch.eye(27).double()
+lambda_8_3 = torch.eye(27).double()
 for s in range(27):
 	n1,n2,n3 = fmap_inv(s)
 	lambda_3_1[s,s] = lambda_3[n1,n1]
@@ -73,7 +77,8 @@ class SU3_AKLT():
 		h_triangle = self.P123 + self.P123m
 		rho1x1 = rdm.rdm1x1((0,0),state,env)
 		energy = torch.trace(rho1x1@h_triangle)
-		# rescale with 2/3 because we are interested in the energy per site
+		# Other way to compute the energy without explicitly computing the reduced density matrix: insert directly h_triangle
+		# print(2/3*rdm.rdm1x1((0,0),state,env,operator=h_triangle)/rdm.rdm1x1((0,0),state,env,operator=torch.eye(27,dtype=torch.float64)))
 		return(2/3*energy)
 	
 	def energy_triangle_up(self,state,env):
@@ -115,7 +120,8 @@ class SU3_AKLT():
 		
 	def eval_corrf_LL(self, direction, state, env, dist=10):
 		# computes the correlation functions for observables \lambda_3 (L3) and \lambda_8 (L8)
-		corrf_L3L3 = corrf_L8L8 = 0
+		corrf_L3L3 = 0
+		corrf_L8L8 = 0
 		
 		O1 = lambda_3_1
 		get_O2 = lambda r: O1
@@ -133,6 +139,7 @@ class SU3_AKLT():
 		O1 = self.P123 + self.P123m
 		get_O2 = lambda r: O1
 		corrf_PP += corrf.corrf_1sO1sO((0,0), direction, state, env, O1, get_O2, dist)
+		
 		e_t = 3./2. * self.energy_triangle(state, env)
 		return(corrf_PP - (e_t)**2)
 		
