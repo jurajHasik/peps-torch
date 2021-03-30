@@ -55,27 +55,15 @@ def main():
 		
 	# initializes an environment for the ipeps
 	ctm_env_init = ENV(args.chi, state)
-	init_env(state, ctm_env_init)
-	# initial energy of up and down triangles
-	e_init_dn = model.energy_triangle(state, ctm_env_init)
-	print('*** Energy per site (before CTMRG) -- down triangles: '+str(e_init_dn.item()))
-	e_init_up = model.energy_triangle_up(state, ctm_env_init)
-	print('*** Energy per site (before CTMRG) -- up triangles: '+str(e_init_up.item()))
-	
+	init_env(state, ctm_env_init)	
 	# performs CTMRG and computes the obervables afterwards (energy and lambda_3)
 	ctm_env_fin, *ctm_log= ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_rdm)
 	
-	e_final_dn = model.energy_triangle(state, ctm_env_fin)
-	print('*** Energy per site (after CTMRG) -- down triangles: '+str(e_final_dn.item()))
-	e_final_up = model.energy_triangle_up(state, ctm_env_fin)
-	print('*** Energy per site (after CTMRG) -- up triangles: '+str(e_final_up.item()))
-	
-	colors3, colors8 = model.eval_lambdas(state,ctm_env_fin)
-	print('*** <Lambda_3> (after CTMRG): '+str(colors3[0].item())+', '+str(colors3[1].item())+', '+str(colors3[2].item()))
-	print('*** <Lambda_8> (after CTMRG): '+str(colors8[0].item())+', '+str(colors8[1].item())+', '+str(colors8[2].item()))
-	
-	
-	
+	indices = torch.tensor(range(args.top_n))
+	TM_spectrum = transferops.get_Top_spec(args.top_n, (0,0), (1,0), state, ctm_env_fin, verbosity=0)
+	indices_TM_spectrum = torch.tensor([list(indices), list(torch.transpose(TM_spectrum, 0, 1)[0]), list(torch.transpose(TM_spectrum, 0, 1)[1]), [0] + [1./np.log(np.sqrt(TM_spectrum[jj,0]**2 + TM_spectrum[jj,1]**2)) for jj in range(1,args.top_n)]])
+	indices_TM_spectrum = torch.transpose(indices_TM_spectrum, 0, 1)
+	print(indices_TM_spectrum)
 	
 if __name__=='__main__':
 	if len(unknown_args)>0:

@@ -4,6 +4,7 @@ from ctm.generic.env import ENV
 from tn_interface import contract, einsum
 from tn_interface import contiguous, view, permute
 from tn_interface import conj
+from math import sqrt
 
 # function (n1,n2,n3) --> s that maps the basis of states in the fundamental irrep of SU(3) (states n=0,1,2) for the three sites of the unit cell to a single physical index s=0...26
 # NB: the 3 sites are labeled as:
@@ -48,17 +49,20 @@ def _sym_pos_def_rdm(rdm, sym_pos_def=False, verbosity=0, who=None):
 	rdm= rdm.reshape(orig_shape)
 	return rdm
 
-def rdm1x1(coord, state, env, sym_pos_def=False, verbosity=0):
+def rdm1x1(coord, state, env, operator=None, sym_pos_def=False, verbosity=0):
 	r"""
 	:param coord: vertex (x,y) for which reduced density matrix is constructed
 	:param state: underlying wavefunction
 	:param env: environment corresponding to ``state``
+	:param state: 1-site operator to contract with the two physical indices of the rdm
 	:param verbosity: logging verbosity
 	:type coord: tuple(int,int) 
 	:type state: IPEPS
 	:type env: ENV
+	:type operator: torch.tensor
 	:type verbosity: int
-	:return: 1-site reduced density matrix with indices :math:`s;s'`
+	:return: 1-site reduced density matrix with indices :math:`s;s'`. If an operator was provided, 
+	returns the expectation value of this operator (not normalized by the norm of the wavefunction).
 	:rtype: torch.tensor
 
 	Computes 1-site reduced density matrix :math:`\rho_{1x1}` centered on vertex ``coord`` by 
@@ -70,8 +74,9 @@ def rdm1x1(coord, state, env, sym_pos_def=False, verbosity=0):
 		|  |	 |
 		C--T-----C
 
-	where the physical indices `s` and `s'` of on-site tensor :math:`A` at vertex ``coord`` 
-	and it's hermitian conjugate :math:`A^\dagger` are left uncontracted
+	If no operator was provided, the physical indices `s` and `s'` of on-site tensor :math:`A` 
+	at vertex ``coord`` and it's hermitian conjugate :math:`A^\dagger` are left uncontracted. 
+	Else, they are contracted with the operator.
 	"""
 	who= "rdm1x1"
 	# C(-1,-1)--1->0
@@ -94,7 +99,7 @@ def rdm1x1(coord, state, env, sym_pos_def=False, verbosity=0):
 	# C(-1,-1)--0
 	# |
 	# T(-1,0)--1
-	# |			 0->2
+	# |			    0->2
 	# C(-1,1)--2 1--T(0,1)--2->3
 	rdm = contract(rdm,env.T[(coord,(0,1))],([2],[1]))
 	if verbosity>0:
@@ -103,7 +108,7 @@ def rdm1x1(coord, state, env, sym_pos_def=False, verbosity=0):
 	#		Possibly reshape indices 1,2 of rdm, which are to be contracted with 
 	#		on-site tensor and contract bra,ket in two steps instead of creating 
 	#		double layer tensor
-	#	/
+	#	 /
 	# --A--
 	#  /|s
 	#  
@@ -112,62 +117,67 @@ def rdm1x1(coord, state, env, sym_pos_def=False, verbosity=0):
 	#  /
 	#
 	dimsA = state.site(coord).size()
-	a = contiguous(einsum('mefgh,nabcd->eafbgchdmn',state.site(coord),conj(state.site(coord))))
-	a = view(a, (dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2, dimsA[0], dimsA[0]))
+	if operator==None:
+		a = contiguous(einsum('mefgh,nabcd->eafbgchdmn',state.site(coord),conj(state.site(coord))))
+		a = view(a, (dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2, dimsA[0], dimsA[0]))
+	else:
+		a = contiguous(einsum('mefgh,mn,nabcd->eafbgchd',state.site(coord), operator, conj(state.site(coord))))
+		a = view(a, (dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2))
 	# C(-1,-1)--0
 	# |
-	# |			 0->2
+	# |			    0->2
 	# T(-1,0)--1 1--a--3
-	# |			 2\45(s,s')
-	# |			 2
+	# |			    2\45(s,s')
+	# |			    2
 	# C(-1,1)-------T(0,1)--3->1
 	rdm = contract(rdm,a,([1,2],[1,2]))
 	if verbosity>0:
 		print("rdm=CTCTa "+str(rdm.size()))
 	# C(-1,-1)--0 0--T(0,-1)--2->0
-	# |			  1
-	# |			  2
+	# |			 	 1
+	# |			 	 2
 	# T(-1,0)--------a--3->2
-	# |			  |\45->34(s,s')
-	# |			  |
+	# |			  	 |\45->34(s,s')
+	# |			  	 |
 	# C(-1,1)--------T(0,1)--1
 	rdm = contract(env.T[(coord,(0,-1))],rdm,([0,1],[0,2]))
 	if verbosity>0:
 		print("rdm=CTCTaT "+str(rdm.size()))
 	# C(-1,-1)--T(0,-1)--0 0--C(1,-1)
-	# |		 |			 1->0
-	# |		 |
+	# |		    |			  1->0
+	# |		    |
 	# T(-1,0)---a--2
-	# |		 |\34(s,s')
-	# |		 |
+	# |		    |\34(s,s')
+	# |		    |
 	# C(-1,1)---T(0,1)--0->1
 	rdm = contract(env.C[(coord,(1,-1))],rdm,([0],[0]))
 	if verbosity>0:
 		print("rdm=CTCTaTC "+str(rdm.size()))
 	# C(-1,-1)--T(0,-1)-----C(1,-1)
-	# |		 |		   0
-	# |		 |		   0
+	# |		    |		  	    0
+	# |		    |		 	    0
 	# T(-1,0)---a--2 1------T(1,0) 
-	# |		 |\34->23(s,s')  2->0
-	# |		 |
+	# |		    |\34->23(s,s')  2->0
+	# |		    |
 	# C(-1,1)---T(0,1)--1
 	rdm = contract(env.T[(coord,(1,0))],rdm,([0,1],[0,2]))
 	if verbosity>0:
 		print("rdm=CTCTaTCT "+str(rdm.size()))
 	# C(-1,-1)--T(0,-1)--------C(1,-1)
-	# |		 |			  |
-	# |		 |			  |
+	# |		    |			     |
+	# |		    |		 	     |
 	# T(-1,0)---a--------------T(1,0) 
-	# |		 |\23->12(s,s') 0
-	# |		 |			  0
+	# |		    |\23->12(s,s')   0
+	# |		    |			     0
 	# C(-1,1)---T(0,1)--1 1----C(1,1)
 	rdm = contract(rdm,env.C[(coord,(1,1))],([0,1],[0,1]))
 	if verbosity>0:
 		print("rdm=CTCTaTCTC "+str(rdm.size()))
 
 	# symmetrize and normalize
-	rdm= _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
-
+	if operator == None:
+		rdm= _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)	
+	#print(torch.max(torch.abs(rdm)))
 	return rdm
 
 def rdm2x1(coord, state, env, sym_pos_def=False, verbosity=0):
@@ -212,7 +222,7 @@ def rdm2x1(coord, state, env, sym_pos_def=False, verbosity=0):
 		(dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2, dimsA[0], dimsA[0]))
 
 	# C--10--T1--2
-	# 0	  1
+	# 0	 	 1
 	C2x2_LU =contract(C, T1, ([1],[0]))
 
 	# C------T1--2->1
@@ -223,10 +233,10 @@ def rdm2x1(coord, state, env, sym_pos_def=False, verbosity=0):
 	C2x2_LU =contract(C2x2_LU, T2, ([0],[0]))
 
 	# C-------T1--1->0
-	# |	   0
-	# |	   0
+	# |	  	  0
+	# |	      0
 	# T2--3 1 a--3 
-	# 2->1	2\45
+	# 2->1	  2\45
 	C2x2_LU =contract(C2x2_LU, a, ([0,3],[0,1]))
 
 	# permute 012345->120345
@@ -277,30 +287,30 @@ def rdm2x1(coord, state, env, sym_pos_def=False, verbosity=0):
 		(dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2, dimsA[0], dimsA[0]))
 
 	# 0--C
-	#	1
-	#	0
+	#	 1
+	#	 0
 	# 1--T1
-	#	2
+	#	 2
 	C2x2_RU =contract(C, T1, ([1],[0]))
 
 	# 2<-0--T2--2 0--C
-	#	3<-1		|
-	#		  0<-1--T1
-	#			 1<-2
+	#    3<-1	     |
+	#		   0<-1--T1
+	#			  1<-2
 	C2x2_RU =contract(C2x2_RU, T2, ([0],[2]))
 
 	# 1<-2--T2------C
-	#	   3	   |
-	#	45\0	   |
+	#	    3	    |
+	#	 45\0	    |
 	# 2<-1--a--3 0--T1
-	#	3<-2	0<-1
+	#	 3<-2	 0<-1
 	C2x2_RU =contract(C2x2_RU, a, ([0,3],[3,0]))
 
 	# permute 012334->120345
 	# reshape (12)(03)45->0123
 	# 0--C2x2
 	# 23/|
-	#	1
+	#	 1
 	C2x2_RU= permute(C2x2_RU, (1,2,0,3,4,5))
 	C2x2_RU= view(contiguous(C2x2_RU), \
 		(T2.size(0)*a.size(1),T1.size(2)*a.size(2), dimsA[0], dimsA[0]))
@@ -311,15 +321,15 @@ def rdm2x1(coord, state, env, sym_pos_def=False, verbosity=0):
 	C = env.C[(shitf_coord,(1,1))]
 	T1 = env.T[(shitf_coord,(0,1))]
 
-	#	1<-0		0
+	#	 1<-0  	 	 0
 	# 2<-1--T1--2 1--C
 	C2x1_RD =contract(C, T1, ([1],[2]))
 
 	# reshape (01)2->(0)1
 	C2x1_RD = view(contiguous(C2x1_RD), (C.size(0)*T1.size(0),T1.size(1)))
 
-	#	0
-	#	|
+	#	 0
+	#	 |
 	# 1--C2x1
 	if verbosity>0:
 		print("C2X1 RD "+str((coord[0]+vec[0],coord[1]+vec[1]))+"->"+str(shitf_coord)+" (1,1): "+str(C2x1_RD.size()))
@@ -328,16 +338,16 @@ def rdm2x1(coord, state, env, sym_pos_def=False, verbosity=0):
 
 	#----- build right part C2x2_RU--C2x1_RD -----------------------------------
 	# 1<-0--C2x2_RU
-	#	   |\23
-	#	   1
-	#	   0
+	#	    |\23
+	#	    1
+	#	    0
 	# 0<-1--C2x1_RD
 	right_half =contract(C2x1_RD, C2x2_RU, ([0],[1]))
 
 	# construct reduced density matrix by contracting left and right halfs
 	# C2x2_LU--1 1----C2x2_RU
-	# |\23->01		|\23
-	# |			   |	
+	# |\23->01		  |\23
+	# |			      |	
 	# C2x1_LD--0 0----C2x1_RD
 	rdm =contract(left_half,right_half,([0,1],[0,1]))
 
@@ -398,17 +408,17 @@ def rdm1x2(coord, state, env, sym_pos_def=False, verbosity=0):
 	C2x2_LU =contract(C, T1, ([1],[0]))
 
 	# C------T1--2->1
-	# 0	  1->0
+	# 0	     1->0
 	# 0
 	# T2--2->3
 	# 1->2
 	C2x2_LU =contract(C2x2_LU, T2, ([0],[0]))
 
 	# C-------T1--1->0
-	# |	   0
-	# |	   0
+	# |	 	  0
+	# |	 	  0
 	# T2--3 1 a--3 
-	# 2->1	2\45
+	# 2->1 	  2\45
 	C2x2_LU =contract(C2x2_LU, a, ([0,3],[0,1]))
 
 	# permute 012345->120345
@@ -427,24 +437,24 @@ def rdm1x2(coord, state, env, sym_pos_def=False, verbosity=0):
 	T1 = env.T[(state.vertexToSite(coord),(1,0))]
 
 	# 0--C
-	#	1
-	#	0
+	#	 1
+	#	 0
 	# 1--T1
-	#	2
+	#	 2
 	C1x2_RU =contract(C, T1, ([1],[0]))
 
 	# reshape (01)2->(0)1
 	# 0--C1x2
 	# 23/|
-	#	1
+	#	 1
 	C1x2_RU= view(contiguous(C1x2_RU), (C.size(0)*T1.size(1),T1.size(2)))
 	if verbosity>0:
 		print("C1X2 RU "+str(coord)+"->"+str(state.vertexToSite(coord))+" (1,-1): "+str(C1x2_RU.size()))
 
 	#----- build upper part C2x2_LU--C1x2_RU -----------------------------------
 	# C2x2_LU--1 0--C1x2_RU
-	# |\23		  |
-	# 0->1		  1->0
+	# |\23		    |
+	# 0->1		    1->0
 	upper_half =contract(C1x2_RU, C2x2_LU, ([0],[1]))
 
 	#----- building C2x2_LD ----------------------------------------------------
@@ -468,14 +478,14 @@ def rdm1x2(coord, state, env, sym_pos_def=False, verbosity=0):
 	# 1->0
 	# T1--2->1
 	# |
-	# |	   0->2
+	# |	      0->2
 	# C--0 1--T2--2->3
 	C2x2_LD =contract(C2x2_LD, T2, ([0],[1]))
 
-	# 0	   0->2
+	# 0	       0->2
 	# T1--1 1--a--3
-	# |		2\45
-	# |		2
+	# |		   2\45
+	# |		   2
 	# C--------T2--3->1
 	C2x2_LD =contract(C2x2_LD, a, ([1,2],[1,2]))
 
@@ -494,10 +504,10 @@ def rdm1x2(coord, state, env, sym_pos_def=False, verbosity=0):
 	C = env.C[(shitf_coord,(1,1))]
 	T2 = env.T[(shitf_coord,(1,0))]
 
-	#	   0
-	#	1--T2
-	#	   2
-	#	   0
+	#	    0
+	#	 1--T2
+	#	    2
+	#	    0
 	# 2<-1--C
 	C1x2_RD =contract(T2, C, ([2],[0]))
 
@@ -506,8 +516,8 @@ def rdm1x2(coord, state, env, sym_pos_def=False, verbosity=0):
 	C1x2_RD = view(contiguous(permute(C1x2_RD,(0,2,1))), \
 		(T2.size()[0],C.size()[1]*T2.size()[1]))
 
-	#	0
-	#	|
+	#	 0
+	#	 |
 	# 1--C1x2
 	if verbosity>0:
 		print("C1X2 RD "+str((coord[0]+vec[0],coord[1]+vec[1]))+"->"+str(shitf_coord)+" (1,1): "+str(C1x2_RD.size()))
@@ -515,17 +525,17 @@ def rdm1x2(coord, state, env, sym_pos_def=False, verbosity=0):
 	
 
 	#----- build lower part C2x2_LD--C1x2_RD -----------------------------------
-	# 0->1		  0
-	# |/23		  |
+	# 0->1		    0
+	# |/23		    |
 	# C2x2_LD--1 1--C1x2_RD 
 	lower_half =contract(C1x2_RD, C2x2_LD, ([1],[1]))
 
 	# construct reduced density matrix by contracting lower and upper halfs
 	# C2x2_LU------C1x2_RU
-	# |\23->01	 |
-	# 1			0	
-	# 1			0	
-	# |/23		 |
+	# |\23->01	   |
+	# 1			   0	
+	# 1			   0	
+	# |/23		   |
 	# C2x2_LD------C1x2_RD
 	rdm =contract(upper_half,lower_half,([0,1],[0,1]))
 
@@ -590,17 +600,17 @@ def rdm2x2(coord, state, env, sym_pos_def=False, verbosity=0):
 	C2x2_LU = contract(C, T1, ([1],[0]))
 
 	# C------T1--2->1
-	# 0	  1->0
+	# 0	     1->0
 	# 0
 	# T2--2->3
 	# 1->2
 	C2x2_LU = contract(C2x2_LU, T2, ([0],[0]))
 
 	# C-------T1--1->0
-	# |	   0
-	# |	   0
+	# |	      0
+	# |	      0
 	# T2--3 1 a--3 
-	# 2->1	2\45
+	# 2->1	  2\45
 	C2x2_LU = contract(C2x2_LU, a, ([0,3],[0,1]))
 
 	# permute 012345->120345
@@ -624,30 +634,30 @@ def rdm2x2(coord, state, env, sym_pos_def=False, verbosity=0):
 	a = view(a, (dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2, dimsA[0], dimsA[0]))
 
 	# 0--C
-	#	1
-	#	0
+	#	 1
+	#	 0
 	# 1--T1
-	#	2
+	#	  2
 	C2x2_RU = contract(C, T1, ([1],[0]))
 
 	# 2<-0--T2--2 0--C
-	#	3<-1		|
-	#		  0<-1--T1
-	#			 1<-2
+	#	 3<-1		 |
+	#		   0<-1--T1
+	#			  1<-2
 	C2x2_RU = contract(C2x2_RU, T2, ([0],[2]))
 
 	# 1<-2--T2------C
-	#	   3	   |
-	#	45\0	   |
+	#	    3	    |
+	#	 45\0	    |
 	# 2<-1--a--3 0--T1
-	#	3<-2	0<-1
+	#	 3<-2  	 0<-1
 	C2x2_RU = contract(C2x2_RU, a, ([0,3],[3,0]))
 
 	# permute 012334->120345
 	# reshape (12)(03)45->0123
 	# 0--C2x2
 	# 23/|
-	#	1
+	#	 1
 	C2x2_RU = contiguous(permute(C2x2_RU, (1,2,0,3,4,5)))
 	C2x2_RU = view(C2x2_RU, (T2.size(0)*a.size(1),T1.size(2)*a.size(2), dimsA[0], dimsA[0]))
 	if verbosity>0:
@@ -655,8 +665,8 @@ def rdm2x2(coord, state, env, sym_pos_def=False, verbosity=0):
 
 	#----- build upper part C2x2_LU--C2x2_RU -----------------------------------
 	# C2x2_LU--1 0--C2x2_RU			  C2x2_LU------C2x2_RU
-	# |\23->12	  |\23->45   & permute |\12->23	  |\45
-	# 0			 1->3				 0			 3->1
+	# |\23->12	 |\23->45   & permute |\12->23	   |\45
+	# 0			 1->3				  0			   3->1
 	# TODO is it worthy(performance-wise) to instead overwrite one of C2x2_LU,C2x2_RU ?  
 	upper_half = contract(C2x2_LU, C2x2_RU, ([1],[0]))
 	upper_half = permute(upper_half, (0,3,1,2,4,5))
@@ -675,17 +685,17 @@ def rdm2x2(coord, state, env, sym_pos_def=False, verbosity=0):
 	# 2<-1--T1--2 1--C
 	C2x2_RD = contract(C, T1, ([1],[2]))
 
-	#		 2<-0
-	#	  3<-1--T2
-	#			2
-	#	0<-1	0
+	#		  2<-0
+	#	   3<-1--T2
+	#			 2
+	#	 0<-1	 0
 	# 1<-2--T1---C
 	C2x2_RD = contract(C2x2_RD, T2, ([0],[2]))
 
-	#	2<-0	1<-2
+	#	 2<-0	 1<-2
 	# 3<-1--a--3 3--T2
-	#	   2\45	|
-	#	   0	   |
+	#	    2\45	|
+	#	    0	    |
 	# 0<-1--T1------C
 	C2x2_RD = contract(C2x2_RD, a, ([0,3],[2,3]))
 
@@ -694,8 +704,8 @@ def rdm2x2(coord, state, env, sym_pos_def=False, verbosity=0):
 	C2x2_RD = contiguous(permute(C2x2_RD, (1,2,0,3,4,5)))
 	C2x2_RD = view(C2x2_RD, (T2.size(0)*a.size(0),T1.size(1)*a.size(1), dimsA[0], dimsA[0]))
 
-	#	0
-	#	|/23
+	#	 0
+	#	 |/23
 	# 1--C2x2
 	if verbosity>0:
 		print("C2X2 RD "+str((coord[0]+vec[0],coord[1]+vec[1]))+"->"+str(shitf_coord)+" (1,1): "+str(C2x2_RD.size()))
@@ -720,14 +730,14 @@ def rdm2x2(coord, state, env, sym_pos_def=False, verbosity=0):
 	# 1->0
 	# T1--2->1
 	# |
-	# |	   0->2
+	# |	   	  0->2
 	# C--0 1--T2--2->3
 	C2x2_LD = contract(C2x2_LD, T2, ([0],[1]))
 
-	# 0		0->2
+	# 0		   0->2
 	# T1--1 1--a--3
-	# |		2\45
-	# |		2
+	# |		   2\45
+	# |		   2
 	# C--------T2--3->1
 	C2x2_LD = contract(C2x2_LD, a, ([1,2],[1,2]))
 
@@ -742,19 +752,19 @@ def rdm2x2(coord, state, env, sym_pos_def=False, verbosity=0):
 		print("C2X2 LD "+str((coord[0]+vec[0],coord[1]+vec[1]))+"->"+str(shitf_coord)+" (-1,1): "+str(C2x2_LD.size()))
 
 	#----- build lower part C2x2_LD--C2x2_RD -----------------------------------
-	# 0			 0->3				 0			 3->1
-	# |/23->12	  |/23->45   & permute |/12->23	  |/45
-	# C2x2_LD--1 1--C2x2_RD			  C2x2_LD------C2x2_RD
+	# 0			    0->3				 0			  3->1
+	# |/23->12	    |/23->45   & permute |/12->23	  |/45
+	# C2x2_LD--1 1--C2x2_RD			     C2x2_LD------C2x2_RD
 	# TODO is it worthy(performance-wise) to instead overwrite one of C2x2_LD,C2x2_RD ?  
 	lower_half = contract(C2x2_LD, C2x2_RD, ([1],[1]))
 	lower_half = permute(lower_half, (0,3,1,2,4,5))
 
 	# construct reduced density matrix by contracting lower and upper halfs
 	# C2x2_LU------C2x2_RU
-	# |\23->01	 |\45->23
-	# 0			1	
-	# 0			1	
-	# |/23->45	 |/45->67
+	# |\23->01	   |\45->23
+	# 0			   1	
+	# 0			   1	
+	# |/23->45	   |/45->67
 	# C2x2_LD------C2x2_RD
 	rdm = contract(upper_half,lower_half,([0,1],[0,1]))
 
@@ -781,29 +791,7 @@ def rdm2x2_up_triangle(coord, state, env, sym_pos_def=False, verbosity=0):
 	:return: 4-site reduced density matrix with indices :math:`s_0s_1s_2s_3;s'_0s'_1s'_2s'_3`
 	:rtype: torch.tensor
 
-	Computes 4-site reduced density matrix :math:`\rho_{2x2}` of 2x2 subsystem specified
-	by the vertex ``coord`` of its upper left corner using strategy:
-
-		1. compute four individual corners
-		2. construct upper and lower half of the network
-		3. contract upper and lower half to obtain final reduced density matrix
-
-	::
-
-		C--T------------------T------------------C = C2x2_LU(coord)--------C2x2(coord+(1,0))
-		|  |				  |				  |   |					 |
-		T--A^+A(coord)--------A^+A(coord+(1,0))--T   C2x2_LD(coord+(0,1))--C2x2(coord+(1,1))
-		|  |				  |				  |
-		T--A^+A(coord+(0,1))--A^+A(coord+(1,1))--T
-		|  |				  |				  |
-		C--T------------------T------------------C
-		
-	The physical indices `s` and `s'` of on-sites tensors :math:`A` (and :math:`A^\dagger`) 
-	at vertices ``coord``, ``coord+(1,0)``, ``coord+(0,1)``, and ``coord+(1,1)`` are 
-	left uncontracted and given in the same order::
-		
-		s0 s1
-		s2 s3
+	
 
 	"""
 	who= "rdm2x2"
@@ -816,21 +804,21 @@ def rdm2x2_up_triangle(coord, state, env, sym_pos_def=False, verbosity=0):
 	a = view(a, (dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2, dimsA[0], dimsA[0]))
 
 	# C--10--T1--2
-	# 0	  1
+	# 0	     1
 	C2x2_LU = contract(C, T1, ([1],[0]))
 
 	# C------T1--2->1
-	# 0	  1->0
+	# 0	     1->0
 	# 0
 	# T2--2->3
 	# 1->2
 	C2x2_LU = contract(C2x2_LU, T2, ([0],[0]))
 
 	# C-------T1--1->0
-	# |	   0
-	# |	   0
+	# |	      0
+	# |	      0
 	# T2--3 1 a--3 
-	# 2->1	2\45
+	# 2->1	  2\45
 	C2x2_LU = contract(C2x2_LU, a, ([0,3],[0,1]))
 
 	# permute 012345->120345
@@ -860,21 +848,21 @@ def rdm2x2_up_triangle(coord, state, env, sym_pos_def=False, verbosity=0):
 	a = view(a, (dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2, dimsA[0], dimsA[0]))
 
 	# 0--C
-	#	1
-	#	0
+	#	 1
+	#	 0
 	# 1--T1
-	#	2
+	#	 2
 	C2x2_RU = contract(C, T1, ([1],[0]))
 
 	# 2<-0--T2--2 0--C
-	#	3<-1		|
-	#		  0<-1--T1
-	#			 1<-2
+	#	 3<-1		 |
+	#		   0<-1--T1
+	#			  1<-2
 	C2x2_RU = contract(C2x2_RU, T2, ([0],[2]))
 
 	# 1<-2--T2------C
-	#	   3	    |
-	#	45\0	    |
+	#	    3	    |
+	#	 45\0	    |
 	# 2<-1--a--3 0--T1
 	#	 3<-2	 0<-1
 	C2x2_RU = contract(C2x2_RU, a, ([0,3],[3,0]))
@@ -883,7 +871,7 @@ def rdm2x2_up_triangle(coord, state, env, sym_pos_def=False, verbosity=0):
 	# reshape (12)(03)45->0123
 	# 0--C2x2
 	# 23/|
-	#	1
+	#	 1
 	C2x2_RU = contiguous(permute(C2x2_RU, (1,2,0,3,4,5)))
 	C2x2_RU = view(C2x2_RU, (T2.size(0)*a.size(1),T1.size(2)*a.size(2), dimsA[0], dimsA[0]))
 	if verbosity>0:
@@ -891,8 +879,8 @@ def rdm2x2_up_triangle(coord, state, env, sym_pos_def=False, verbosity=0):
 		
 	# [EDIT FOR KAGOME]: contract partly the physical legs 23 and leave effective physical legs for the site in the up triangle = site n°2
 	# 0--C2x2
-	# 23/|
-	#    1
+	#  23/|
+	#     1
 	C2x2_RU_temp = torch.zeros(T2.size(0)*a.size(1),T2.size(0)*a.size(1),3,3,3,3,3,3).double()
 	for s in range(27):
 		for t in range(27):
@@ -933,10 +921,10 @@ def rdm2x2_up_triangle(coord, state, env, sym_pos_def=False, verbosity=0):
 	# 1<-2--T1---C
 	C2x2_RD = contract(C2x2_RD, T2, ([0],[2]))
 
-	#	  2<-0	  1<-2
+	#	 2<-0	 1<-2
 	# 3<-1--a--3 3--T2
-	#	     2\45	|
-	#	     0	    |
+	#	    2\45	|
+	#	    0	    |
 	# 0<-1--T1------C
 	C2x2_RD = contract(C2x2_RD, a, ([0,3],[2,3]))
 
@@ -945,15 +933,15 @@ def rdm2x2_up_triangle(coord, state, env, sym_pos_def=False, verbosity=0):
 	C2x2_RD = contiguous(permute(C2x2_RD, (1,2,0,3,4,5)))
 	C2x2_RD = view(C2x2_RD, (T2.size(0)*a.size(0),T1.size(1)*a.size(1), dimsA[0], dimsA[0]))
 
-	#	0
-	#	|/23
+	#	 0
+	#	 |/23
 	# 1--C2x2
 	if verbosity>0:
 		print("C2X2 RD "+str((coord[0]+vec[0],coord[1]+vec[1]))+"->"+str(shitf_coord)+" (1,1): "+str(C2x2_RD.size()))
 		
 	# [EDIT FOR KAGOME]: contract partly the physical legs 23 and leave effective physical legs for the site in the up triangle = site n°1
-	#	0
-	#	|/23
+	#	 0
+	#	 |/23
 	# 1--C2x2
 	C2x2_RD_temp = torch.zeros(T2.size(0)*a.size(1),T2.size(0)*a.size(1),3,3,3,3,3,3).double()
 	for s in range(27):
@@ -989,10 +977,10 @@ def rdm2x2_up_triangle(coord, state, env, sym_pos_def=False, verbosity=0):
 	# C--0 1--T2--2->3
 	C2x2_LD = contract(C2x2_LD, T2, ([0],[1]))
 
-	# 0			0->2
+	# 0		   0->2
 	# T1--1 1--a--3
-	# |			2\45
-	# |			2
+	# |		   2\45
+	# |		   2
 	# C--------T2--3->1
 	C2x2_LD = contract(C2x2_LD, a, ([1,2],[1,2]))
 
@@ -1021,9 +1009,9 @@ def rdm2x2_up_triangle(coord, state, env, sym_pos_def=False, verbosity=0):
 	
 
 	#----- build lower part C2x2_LD--C2x2_RD -----------------------------------
-	# 0			 0->3				 0			 3->1
-	# |/23->12	  |/23->45   & permute |/12->23	  |/45
-	# C2x2_LD--1 1--C2x2_RD			  C2x2_LD------C2x2_RD
+	# 0			    0->3				 0			  3->1
+	# |/23->12	    |/23->45   & permute |/12->23	  |/45
+	# C2x2_LD--1 1--C2x2_RD			     C2x2_LD------C2x2_RD
 	# TODO is it worthy(performance-wise) to instead overwrite one of C2x2_LD,C2x2_RD ?  
 	lower_half = contract(C2x2_LD, C2x2_RD, ([1],[1]))
 	lower_half = permute(lower_half, (0,3,1,2,4,5))
@@ -1034,7 +1022,7 @@ def rdm2x2_up_triangle(coord, state, env, sym_pos_def=False, verbosity=0):
 	# |				|\23->01
 	# 0				1	
 	# 0				1	
-	# |/23			 |/45
+	# |/23			|/45
 	# C2x2_LD------C2x2_RD
 	rdm = contract(upper_half,lower_half,([0,1],[0,1]))
 
