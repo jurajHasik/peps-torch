@@ -201,7 +201,7 @@ class IPEPS_U1SYM(ipeps.IPEPS):
         write_ipeps_u1(self, outputfile, aux_seq=aux_seq, tol=tol, normalize=normalize)
 
 def extend_bond_dim(state, new_d):
-    return ipeps.extend_bond_dim(state, new_d)
+	return ipeps.extend_bond_dim(state, new_d)
 
 def read_ipeps_u1(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.peps_args,\
     global_args=cfg.global_args):
