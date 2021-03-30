@@ -432,7 +432,7 @@ def write_ipeps_u1(state, outputfile, aux_seq=[0,1,2,3], tol=1.0e-14, normalize=
 def write_coeffs(state, outputfile):
 	print(state.coeffs)
 	dict_coeffs = state.coeffs
-	with open(outputfile+'.json', 'w') as f:
+	with open(outputfile, 'w') as f:
 		f.write(json.dumps(dict_coeffs))
 
 def read_coeffs(inputfile):
