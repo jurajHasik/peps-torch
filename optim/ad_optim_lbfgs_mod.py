@@ -8,7 +8,7 @@ from optim import lbfgs_modified
 import config as cfg
 
 def store_checkpoint(checkpoint_file, state, optimizer, current_epoch, current_loss,\
-    verbosity=0):
+    verbosity=1):
     r"""
     :param checkpoint_file: target file
     :param state: ipeps wavefunction
@@ -119,6 +119,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         # 0) evaluate loss
         optimizer.zero_grad()
         loss, ctm_env, history, t_ctm, t_check = loss_fn(state, current_env[0], context)
+        print('loss function computed')
 
         # 4) evaluate gradient
         t_grad0= time.perf_counter()
@@ -129,6 +130,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         ctm_env.detach_()
         current_env[0]= ctm_env
         # current_env[0]= ctm_env.detach().clone()
+        print(linesearching)
 
         # 1) record loss and store current state if the loss improves
         if linesearching:
@@ -140,6 +142,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
             if t_data["min_loss"] > t_data["loss"][-1]:
                 t_data["min_loss"]= t_data["loss"][-1]
                 state.write_to_file(outputstatefile, normalize=True)
+                print(state.coeffs)
 
         # 2) log CTM metrics for debugging
         if opt_args.opt_logging:
