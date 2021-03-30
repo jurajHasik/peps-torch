@@ -39,14 +39,14 @@ def main():
 		coeffs = read_coeffs(args.init_coeffs)
 	else:
 		# If no input coefficients provided, initializes with the AKLT state (all coefficients = 0)
-		coeffs = {(0,0): torch.tensor([0.,0.,0.,0.,0.,0], dtype=torch.float64)}
+		coeffs = {(0,0): torch.tensor([0.2,0.1,0.,0.,-0.1,0.], dtype=torch.float64)}
 	state = IPEPS_U1SYM(elementary_tensors, coeffs)
 	
 	model = SU3_chiral.SU3_CHIRAL(theta = args.theta)
 	
 	def energy_f(state, env):
 		return model.energy_triangle(state,env)
-	
+		
 	def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
 		if not history:
 			history=[]
@@ -69,14 +69,15 @@ def main():
 			init_env(state, ctm_env_in)
 		# compute environment by CTMRG
 		ctm_env_out, history, t_ctm, t_obs= ctmrg.run(state, ctm_env_in, conv_check=ctmrg_conv_energy, ctm_args=ctm_args)
+		#ctm_env_out, history, t_ctm, t_obs = Ctm_env_out, History, T_ctm, T_obs
 		loss = energy_f(state, ctm_env_out)
 		return loss, ctm_env_out, history, t_ctm, t_obs
-
+		
 	ctm_env = ENV(args.chi, state)
 	init_env(state, ctm_env)
 	
 	optimize_state(state, ctm_env, loss_fn)
-	
+	print(state.coeffs)
 
 	
 if __name__=='__main__':
