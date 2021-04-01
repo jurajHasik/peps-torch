@@ -70,8 +70,6 @@ def main():
 	max_distance = 20
 	
 	corrf_L3, corrf_L8 = model.eval_corrf_LL((1,0),state,ctm_env_fin,dist=max_distance)
-	corrf_PP = model.eval_corrf_PP((0,1),state,ctm_env_fin,dist=max_distance)
-	print(torch.norm(corrf_PP).item())
 	corrf_L3, corrf_L8 = -np.array(corrf_L3), -np.array(corrf_L8)
 	
 	plt.figure(1, figsize=(2.5,2.))

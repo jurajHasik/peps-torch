@@ -39,25 +39,31 @@ def main():
 		coeffs = read_coeffs(args.init_coeffs)
 	else:
 		# If no input coefficients provided, initializes with the AKLT state (all coefficients = 0)
-		coeffs = {(0,0): torch.tensor([0.2,0.1,0.,0.,-0.1,0.], dtype=torch.float64)}
+		coeffs = {(0,0): torch.tensor([0.,0.,0.,0.,0.,0.], dtype=torch.float64)}
 	state = IPEPS_U1SYM(elementary_tensors, coeffs)
+	state.add_noise(args.instate_noise)
+	print(state.coeffs)
 	
 	model = SU3_chiral.SU3_CHIRAL(theta = args.theta)
 	
 	def energy_f(state, env):
 		return model.energy_triangle(state,env)
 		
+	@torch.no_grad()
 	def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
 		if not history:
 			history=[]
 		e_curr= energy_f(state,env)
-		history.append(e_curr)
-		print('Step n°'+str(len(history))+'     E_site = '+str(e_curr))
+		history.append(e_curr.item())
+		print('CTMRG step n°'+str(len(history))+'     E_site = '+str(e_curr))
 		if (len(history) > 1 and abs(history[-1]-history[-2]) < ctm_args.ctm_conv_tol)\
 			or len(history) >= ctm_args.ctm_max_iter:
 			log.info({"history_length": len(history), "history": history})
 			return True, history
 		return False, history
+		
+	ctm_env = ENV(args.chi, state)
+	init_env(state, ctm_env)
 	
 	def loss_fn(state, ctm_env_in, opt_context):
 		ctm_args= opt_context["ctm_args"]
@@ -69,12 +75,10 @@ def main():
 			init_env(state, ctm_env_in)
 		# compute environment by CTMRG
 		ctm_env_out, history, t_ctm, t_obs= ctmrg.run(state, ctm_env_in, conv_check=ctmrg_conv_energy, ctm_args=ctm_args)
-		#ctm_env_out, history, t_ctm, t_obs = Ctm_env_out, History, T_ctm, T_obs
 		loss = energy_f(state, ctm_env_out)
-		return loss, ctm_env_out, history, t_ctm, t_obs
-		
-	ctm_env = ENV(args.chi, state)
-	init_env(state, ctm_env)
+		print(loss.item())
+		timings = (t_ctm, t_obs)
+		return loss, ctm_env_out, history, timings
 	
 	optimize_state(state, ctm_env, loss_fn)
 	print(state.coeffs)
