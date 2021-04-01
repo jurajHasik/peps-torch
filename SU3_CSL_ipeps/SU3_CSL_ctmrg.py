@@ -37,6 +37,7 @@ def main():
 		elementary_tensors.append(ts)
 	coeffs = {(0,0): torch.tensor([0.,0.,0.,0.,0.,0.],dtype=torch.complex128)}
 	state = IPEPS_U1SYM(elementary_tensors, coeffs)
+	state.add_noise(2)
 	
 	model = SU3_chiral.SU3_CHIRAL(theta = args.theta)
 	
@@ -47,7 +48,7 @@ def main():
 		if not history:
 			history=[]
 		e_curr= energy_f(state,env)
-		history.append(e_curr)
+		history.append(e_curr.item())
 		print('Step n°'+str(len(history))+'     E_site = '+str(e_curr))
 		if (len(history) > 1 and abs(history[-1]-history[-2]) < ctm_args.ctm_conv_tol)\
 			or len(history) >= ctm_args.ctm_max_iter:
