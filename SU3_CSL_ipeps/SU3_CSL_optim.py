@@ -1,6 +1,8 @@
-import torch
-import math
+import context
+import argparse
 import config as cfg
+import math
+import torch
 import copy
 from collections import OrderedDict
 from u1sym.ipeps_u1 import IPEPS_U1SYM, write_coeffs, read_coeffs
@@ -9,7 +11,7 @@ from models import SU3_chiral
 from ctm.generic.env import *
 from ctm.generic import ctmrg
 from ctm.generic import rdm
-from optim.ad_optim_lbfgs_mod import optimize_state
+from optim.fd_optim_lbfgs_mod import optimize_state
 import json
 import unittest
 import logging
@@ -55,7 +57,7 @@ def main():
 			history=[]
 		e_curr= energy_f(state,env)
 		history.append(e_curr.item())
-		print('CTMRG step n°'+str(len(history))+'     E_site = '+str(e_curr))
+		print('CTMRG step n°'+str(len(history))+'     E_site = '+str(e_curr.item()))
 		if (len(history) > 1 and abs(history[-1]-history[-2]) < ctm_args.ctm_conv_tol)\
 			or len(history) >= ctm_args.ctm_max_iter:
 			log.info({"history_length": len(history), "history": history})
