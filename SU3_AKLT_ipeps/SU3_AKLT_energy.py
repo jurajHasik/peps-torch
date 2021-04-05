@@ -1,5 +1,4 @@
 import context
-import torch
 import argparse
 import config as cfg
 from ipeps.ipeps import *
@@ -8,6 +7,7 @@ from ctm.generic import ctmrg
 from ctm.generic import transferops
 from models.SU3_AKLT import *
 import unittest
+import torch
 import numpy as np
 
 # parse command line args and build necessary configuration objects
