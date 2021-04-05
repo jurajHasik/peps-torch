@@ -37,7 +37,7 @@ def main():
 		elementary_tensors.append(ts)
 	coeffs = {(0,0): torch.tensor([0.,0.,0.,0.,0.,0.],dtype=torch.complex128)}
 	state = IPEPS_U1SYM(elementary_tensors, coeffs)
-	state.add_noise(2)
+	state.add_noise(args.instate_noise)
 	
 	model = SU3_chiral.SU3_CHIRAL(theta = args.theta)
 	
@@ -49,7 +49,7 @@ def main():
 			history=[]
 		e_curr= energy_f(state,env)
 		history.append(e_curr.item())
-		print('Step n°'+str(len(history))+'     E_site = '+str(e_curr))
+		print('Step n°'+str(len(history))+'     E_site = '+str(e_curr.item()))
 		if (len(history) > 1 and abs(history[-1]-history[-2]) < ctm_args.ctm_conv_tol)\
 			or len(history) >= ctm_args.ctm_max_iter:
 			log.info({"history_length": len(history), "history": history})
@@ -60,12 +60,12 @@ def main():
 	init_env(state, ctm_env_init)
 	
 	e_dn_init = energy_f(state, ctm_env_init)
-	print('*** Energy per site (before CTMRG) -- down triangles: '+str(e_dn_init))
+	print('*** Energy per site (before CTMRG) -- down triangles: '+str(e_dn_init.item()))
 	
 	ctm_env_out, *ctm_log= ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
 	
 	e_dn_final = energy_f(state,ctm_env_out)
-	print('*** Energy per site (after CTMRG) -- down triangles: '+str(e_dn_final))
+	print('*** Energy per site (after CTMRG) -- down triangles: '+str(e_dn_final.item()))
 
 	
 if __name__=='__main__':
