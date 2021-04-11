@@ -65,10 +65,12 @@ class J1J2LAMBDA_C4V_BIPARTITE():
 
         # chiral term
         # build permutation operator i->j->k->l->i
-        P12= torch.as_tensor([[1,0,0,0],[0,0,1,0],[0,1,0,0],[0,0,0,1]], dtype=torch.float64)
+        P12= torch.as_tensor([[1,0,0,0],[0,0,1,0],[0,1,0,0],[0,0,0,1]], \
+            dtype=self.dtype, device=self.device)
         P12= P12.view(2,2,2,2)
+
         # 0<->1 , Id, Id
-        P12II= torch.einsum('abij,cdkl->abcdijkl',P12, torch.eye(4).view(2,2,2,2))
+        P12II= torch.einsum('abij,cdkl->abcdijkl',P12, id2)
         PI12I= P12II.permute(3,0,1,2, 7,4,5,6).contiguous()
         PII12= P12II.permute(2,3,0,1, 6,7,4,5).contiguous()
         # Id, Id, 2<-3>
@@ -82,10 +84,12 @@ class J1J2LAMBDA_C4V_BIPARTITE():
         #                      s2 s3
         # 
         # s0 s1 => s0 s1
-        # s3 s2    s2 s3
+        # s2 s3    s3 s2
         chiral_term= chiral_term.permute(0,1,3,2, 4,5,7,6)
-        self.chiral_term= chiral_term
-        self.hp_chiral= self.lmbd*chiral_term.contiguous()         
+        chiral_term= torch.einsum('xj,yk,ixylauvd,ub,vc->ijklabcd',rot_op,rot_op,chiral_term,\
+            rot_op,rot_op)
+        self.chiral_term= chiral_term.contiguous()
+        self.hp_chiral= self.lmbd*chiral_term    
 
     def get_obs_ops(self):
         obs_ops = dict()
@@ -126,7 +130,7 @@ class J1J2LAMBDA_C4V_BIPARTITE():
             e = \langle \mathcal{h_p} \rangle = Tr(\rho_{2x2} \mathcal{h_p})
         
         """
-        rdm2x2= rdm_c4v.rdm2x2(state,env_c4v,sym_pos_def=True,\
+        rdm2x2= rdm_c4v.rdm2x2(state,env_c4v,sym_pos_def=False,\
             verbosity=cfg.ctm_args.verbosity_rdm)
         energy_per_site= torch.einsum('ijklabcd,ijklabcd',rdm2x2,self.hp + self.hp_chiral)
         if abs(self.j3)>0:
