@@ -45,7 +45,11 @@ class IPEPS_C4V(ipeps.IPEPS):
         rand_t = torch.rand( self.site().size(), dtype=self.dtype, device=self.device)
         self.sites[(0,0)]= self.site() + noise * rand_t
         if symmetrize:
-            self.sites[(0,0)]= make_c4v_symm(self.site())
+            if self.sites[(0,0)].is_complex():
+                self.sites[(0,0)]= make_c4v_symm(self.site().real) \
+                + make_c4v_symm(self.site().imag, irreps=["A2"]) * 1.0j
+            else:
+                self.sites[(0,0)]= make_c4v_symm(self.site())
 
     def write_to_file(self,outputfile,symmetrize=True,**kwargs):
         # symmetrize before writing out
