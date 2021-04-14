@@ -36,7 +36,7 @@ def main():
 	for name in ['S0','S1','S2','S3','S4','L0','L1','L2']:
 		ts = load_SU3_tensor(name)
 		elementary_tensors.append(ts)
-	coeffs = {(0,0): torch.tensor([0.,0.,0.,0.,0.,0.],dtype=torch.complex128)}
+	coeffs = {(0,0): torch.tensor([0.,0.,0.,0.,0.,0.],dtype=torch.float64)}
 	state = IPEPS_U1SYM(elementary_tensors, coeffs)
 	state.add_noise(args.instate_noise)
 	print(state.coeffs)
