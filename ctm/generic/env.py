@@ -262,19 +262,19 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
     for coord, site in state.sites.items():
         # upper transfer matrix
         #
-        #     i      = 0--T--2     
-        # 1--A--3         1
+        #     i      = C--1     
+        # j--A--3      0
         #   /\
         #  2  m
         #      \ i
-        #    1--A--3
+        #    j--A--3
         #      /
         #     2
-        vec = (0,-1)
+        vec = (-1,-1)
         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
         dimsA = A.size()
-        a = contiguous(einsum('miefg,miabc->eafbgc',A,conj(A)))
-        a = view(a, (dimsA[2]**2, dimsA[3]**2, dimsA[4]**2))
+        a= contiguous(einsum('mijef,mijab->eafb',A,conj(A)))
+        a= view(a, (dimsA[3]**2, dimsA[4]**2))
         a= a/a.abs().max()
         if env.chi >= max(dimsA[2]**2, dimsA[4]**2):
             env.T[(coord,vec)]= torch.zeros((env.chi,dimsA[3]**2,env.chi), dtype=env.dtype, device=env.device)
@@ -282,22 +282,21 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         else:
             env.T[(coord,vec)]= a
 
-
-        # left transfer matrix
+        # right-upper corner
         #
-        #     0      = 0     
-        # i--A--3      T--2
-        #   /\         1
+        #     i      = 0--C     
+        # 1--A--j         1
+        #   /\
         #  2  m
-        #      \ 0
-        #    i--A--3
+        #      \ i
+        #    1--A--j
         #      /
         #     2
-        vec = (-1,0)
+        vec = (1,-1)
         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
         dimsA = A.size()
-        a = contiguous(einsum('meifg,maibc->eafbgc',A,conj(A)))
-        a = view(a, (dimsA[1]**2, dimsA[3]**2, dimsA[4]**2))
+        a= contiguous(einsum('miefj,miabj->eafb',A,conj(A)))
+        a= view(a, (dimsA[2]**2, dimsA[3]**2))
         a= a/a.abs().max()
         if env.chi >= max(dimsA[1]**2, dimsA[3]**2):
             env.T[(coord,vec)] = torch.zeros((env.chi,env.chi,dimsA[4]**2), dtype=env.dtype, device=env.device)
@@ -305,21 +304,21 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         else:
             env.T[(coord,vec)]= a
 
-        # lower transfer matrix
+        # right-lower corner
         #
         #     0      =    0     
-        # 1--A--3      1--T--2
+        # 1--A--j      1--C
         #   /\
         #  i  m
         #      \ 0
-        #    1--A--3
+        #    1--A--j
         #      /
         #     i
-        vec = (0,1)
+        vec = (1,1)
         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
         dimsA = A.size()
-        a = contiguous(einsum('mefig,mabic->eafbgc',A,conj(A)))
-        a = view(a, (dimsA[1]**2, dimsA[2]**2, dimsA[4]**2))
+        a= contiguous(einsum('mefij,mabij->eafb',A,conj(A)))
+        a= view(a, (dimsA[1]**2, dimsA[2]**2))
         a= a/a.abs().max()
         if env.chi >= max(dimsA[2]**2, dimsA[4]**2):
             env.T[(coord,vec)] = torch.zeros((dimsA[1]**2,env.chi,env.chi), dtype=env.dtype, device=env.device)
@@ -327,21 +326,21 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         else:
             env.T[(coord,vec)]= a
 
-        # right transfer matrix
+        # left-lower corner
         #
-        #     0      =    0     
-        # 1--A--i      1--T
-        #   /\            2
-        #  2  m
+        #     0      = 0     
+        # i--A--3      C--1
+        #   /\
+        #  j  m
         #      \ 0
-        #    1--A--i
+        #    i--A--3
         #      /
-        #     2
-        vec = (1,0)
+        #     j
+        vec = (-1,1)
         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
         dimsA = A.size()
-        a = contiguous(einsum('mefgi,mabci->eafbgc',A,conj(A)))
-        a = view(a, (dimsA[1]**2, dimsA[2]**2, dimsA[3]**2))
+        a = contiguous(einsum('meijf,maijb->eafb',A,conj(A)))
+        a = view(a, (dimsA[1]**2, dimsA[4]**2))
         a= a/a.abs().max()
         if env.chi >= max(dimsA[2]**2, dimsA[4]**2):
             env.T[(coord,vec)] = torch.zeros((env.chi,dimsA[2]**2,env.chi), dtype=env.dtype, device=env.device)
