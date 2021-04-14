@@ -21,7 +21,6 @@ log = logging.getLogger(__name__)
 # parse command line args and build necessary configuration objects
 parser= cfg.get_args_parser()
 parser.add_argument("--theta", type=float, default=0., help="rotation angle of the model")
-parser.add_argument("--init_coeffs", type=str, default=None, help="path to the .json file containing the value of the initial coefficients")
 args, unknown_args= parser.parse_known_args()
 
 def main():
@@ -32,16 +31,12 @@ def main():
 	torch.set_num_threads(args.omp_cores)
 	torch.manual_seed(args.seed)
 	
-	# Import all elementary tensors and build initial state from input coefficients.
+	# Import all elementary tensors and build initial state
 	elementary_tensors = []
 	for name in ['S0','S1','S2','S3','S4','L0','L1','L2']:
 		ts = load_SU3_tensor(name)
 		elementary_tensors.append(ts)
-	if args.init_coeffs:
-		coeffs = read_coeffs(args.init_coeffs)
-	else:
-		# If no input coefficients provided, initializes with the AKLT state (all coefficients = 0)
-		coeffs = {(0,0): torch.tensor([0.,0.,0.,0.,0.,0.], dtype=torch.float64)}
+	coeffs = {(0,0): torch.tensor([0.,0.,0.,0.,0.,0.],dtype=torch.complex128)}
 	state = IPEPS_U1SYM(elementary_tensors, coeffs)
 	state.add_noise(args.instate_noise)
 	print(state.coeffs)
@@ -66,6 +61,9 @@ def main():
 		
 	ctm_env = ENV(args.chi, state)
 	init_env(state, ctm_env)
+	
+	e_dn_init = energy_f(state, ctm_env)
+	print('*** Energy per site (before CTMRG) -- down triangles: '+str(e_dn_init.item()))
 	
 	def loss_fn(state, ctm_env_in, opt_context):
 		ctm_args= opt_context["ctm_args"]
