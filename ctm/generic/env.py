@@ -3,6 +3,7 @@ import config as cfg
 from tn_interface import einsum
 from tn_interface import conj
 from tn_interface import contiguous, view
+from linalg.custom_svd import truncated_svd_gesdd
 
 class ENV():
     def __init__(self, chi, state=None, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
@@ -179,87 +180,10 @@ def init_random(env, verbosity=0):
 def init_from_ipeps_pbc(state, env, verbosity=0):
     if verbosity>0:
         print("ENV: init_from_ipeps")
+    # 0) build initial T-tensors by appropriate contraction of the on-site double-layer
+    #    tensors. If such T-tensors extend the desired chi dimension, keep the full 
+    #    T-tensors and proceed to the next step 
     for coord, site in state.sites.items():
-        for rel_vec in [(-1,-1),(1,-1),(1,1),(-1,1)]:
-            env.C[(coord,rel_vec)] = torch.zeros(env.chi,env.chi, dtype=env.dtype, 
-                device=env.device)
-
-        # Left-upper corner
-        #
-        #     i      = C--1     
-        # j--A--3      0
-        #   /\
-        #  2  m
-        #      \ i
-        #    j--A--3
-        #      /
-        #     2
-        vec = (-1,-1)
-        A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
-        dimsA = A.size()
-        a= contiguous(einsum('mijef,mijab->eafb',A,conj(A)))
-        a= view(a, (dimsA[3]**2, dimsA[4]**2))
-        a= a/a.abs().max()
-        env.C[(coord,vec)][:min(env.chi,dimsA[3]**2),:min(env.chi,dimsA[4]**2)]=\
-            a[:min(env.chi,dimsA[3]**2),:min(env.chi,dimsA[4]**2)]
-
-        # right-upper corner
-        #
-        #     i      = 0--C     
-        # 1--A--j         1
-        #   /\
-        #  2  m
-        #      \ i
-        #    1--A--j
-        #      /
-        #     2
-        vec = (1,-1)
-        A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
-        dimsA = A.size()
-        a= contiguous(einsum('miefj,miabj->eafb',A,conj(A)))
-        a= view(a, (dimsA[2]**2, dimsA[3]**2))
-        a= a/a.abs().max()
-        env.C[(coord,vec)][:min(env.chi,dimsA[2]**2),:min(env.chi,dimsA[3]**2)]=\
-            a[:min(env.chi,dimsA[2]**2),:min(env.chi,dimsA[3]**2)]
-
-        # right-lower corner
-        #
-        #     0      =    0     
-        # 1--A--j      1--C
-        #   /\
-        #  i  m
-        #      \ 0
-        #    1--A--j
-        #      /
-        #     i
-        vec = (1,1)
-        A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
-        dimsA = A.size()
-        a= contiguous(einsum('mefij,mabij->eafb',A,conj(A)))
-        a= view(a, (dimsA[1]**2, dimsA[2]**2))
-        a= a/a.abs().max()
-        env.C[(coord,vec)][:min(env.chi,dimsA[1]**2),:min(env.chi,dimsA[2]**2)]=\
-            a[:min(env.chi,dimsA[1]**2),:min(env.chi,dimsA[2]**2)]
-
-        # left-lower corner
-        #
-        #     0      = 0     
-        # i--A--3      C--1
-        #   /\
-        #  j  m
-        #      \ 0
-        #    i--A--3
-        #      /
-        #     j
-        vec = (-1,1)
-        A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
-        dimsA = A.size()
-        a = contiguous(einsum('meijf,maijb->eafb',A,conj(A)))
-        a = view(a, (dimsA[1]**2, dimsA[4]**2)) 
-        a= a/a.abs().max()
-        env.C[(coord,vec)][:min(env.chi,dimsA[1]**2),:min(env.chi,dimsA[4]**2)]=\
-            a[:min(env.chi,dimsA[1]**2),:min(env.chi,dimsA[4]**2)]
-
         # upper transfer matrix
         #
         #     i      = 0--T--2     
@@ -276,9 +200,12 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         a = contiguous(einsum('miefg,miabc->eafbgc',A,conj(A)))
         a = view(a, (dimsA[2]**2, dimsA[3]**2, dimsA[4]**2))
         a= a/a.abs().max()
-        env.T[(coord,vec)] = torch.zeros((env.chi,dimsA[3]**2,env.chi), dtype=env.dtype, device=env.device)
-        env.T[(coord,vec)][:min(env.chi,dimsA[2]**2),:,:min(env.chi,dimsA[4]**2)]=\
-            a[:min(env.chi,dimsA[2]**2),:,:min(env.chi,dimsA[4]**2)]
+        if env.chi >= max(dimsA[2]**2, dimsA[4]**2):
+            env.T[(coord,vec)]= torch.zeros((env.chi,dimsA[3]**2,env.chi), dtype=env.dtype, device=env.device)
+            env.T[(coord,vec)][:dimsA[2]**2,:,:dimsA[4]**2]= a[:dimsA[2]**2,:,:dimsA[4]**2]
+        else:
+            env.T[(coord,vec)]= a
+
 
         # left transfer matrix
         #
@@ -296,10 +223,11 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         a = contiguous(einsum('meifg,maibc->eafbgc',A,conj(A)))
         a = view(a, (dimsA[1]**2, dimsA[3]**2, dimsA[4]**2))
         a= a/a.abs().max()
-        env.T[(coord,vec)] = torch.zeros((env.chi,env.chi,dimsA[4]**2), dtype=env.dtype, device=env.device)
-        env.T[(coord,vec)][:min(env.chi,dimsA[1]**2),:min(env.chi,dimsA[3]**2),:]=\
-            a[:min(env.chi,dimsA[1]**2),:min(env.chi,dimsA[3]**2),:]
-
+        if env.chi >= max(dimsA[1]**2, dimsA[3]**2):
+            env.T[(coord,vec)] = torch.zeros((env.chi,env.chi,dimsA[4]**2), dtype=env.dtype, device=env.device)
+            env.T[(coord,vec)][:dimsA[1]**2,:dimsA[3]**2,:]= a[:dimsA[1]**2,:dimsA[3]**2,:]
+        else:
+            env.T[(coord,vec)]= a
 
         # lower transfer matrix
         #
@@ -317,9 +245,11 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         a = contiguous(einsum('mefig,mabic->eafbgc',A,conj(A)))
         a = view(a, (dimsA[1]**2, dimsA[2]**2, dimsA[4]**2))
         a= a/a.abs().max()
-        env.T[(coord,vec)] = torch.zeros((dimsA[1]**2,env.chi,env.chi), dtype=env.dtype, device=env.device)
-        env.T[(coord,vec)][:,:min(env.chi,dimsA[2]**2),:min(env.chi,dimsA[4]**2)]=\
-            a[:,:min(env.chi,dimsA[2]**2),:min(env.chi,dimsA[4]**2)]
+        if env.chi >= max(dimsA[2]**2, dimsA[4]**2):
+            env.T[(coord,vec)] = torch.zeros((dimsA[1]**2,env.chi,env.chi), dtype=env.dtype, device=env.device)
+            env.T[(coord,vec)][:,:dimsA[2]**2,:dimsA[4]**2]= a[:,:dimsA[2]**2,:dimsA[4]**2]
+        else:
+            env.T[(coord,vec)]= a
 
         # right transfer matrix
         #
@@ -337,9 +267,149 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         a = contiguous(einsum('mefgi,mabci->eafbgc',A,conj(A)))
         a = view(a, (dimsA[1]**2, dimsA[2]**2, dimsA[3]**2))
         a= a/a.abs().max()
-        env.T[(coord,vec)] = torch.zeros((env.chi,dimsA[2]**2,env.chi), dtype=env.dtype, device=env.device)
-        env.T[(coord,vec)][:min(env.chi,dimsA[1]**2),:,:min(env.chi,dimsA[3]**2)]=\
-            a[:min(env.chi,dimsA[1]**2),:,:min(env.chi,dimsA[3]**2)]
+        if env.chi >= max(dimsA[2]**2, dimsA[4]**2):
+            env.T[(coord,vec)] = torch.zeros((env.chi,dimsA[2]**2,env.chi), dtype=env.dtype, device=env.device)
+            env.T[(coord,vec)][:dimsA[1]**2,:,:dimsA[3]**2]= a[:dimsA[1]**2,:,:dimsA[3]**2]
+        else:
+            env.T[(coord,vec)]= a
+
+    # 1) build initial corner tensors by appropriate contraction of the on-site double-layer
+    #    tensors. If such corner tensors extend the desired chi dimension, truncate them
+    #    and apply the resulting projectors to full T-tensors from the step 0
+    for coord, site in state.sites.items():
+        # Left-upper corner
+        #
+        #     i      = C--1     
+        # j--A--3      0
+        #   /\
+        #  2  m
+        #      \ i
+        #    j--A--3
+        #      /
+        #     2
+        vec = (-1,-1)
+        A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
+        dimsA = A.size()
+        a= contiguous(einsum('mijef,mijab->eafb',A,conj(A)))
+        a= view(a, (dimsA[3]**2, dimsA[4]**2))
+        a= a/a.abs().max()
+        if env.chi >= max(dimsA[3]**2, dimsA[4]**2):
+            env.C[(coord,vec)]= torch.zeros(env.chi,env.chi, dtype=env.dtype, 
+                device=env.device)
+            env.C[(coord,vec)][:dimsA[3]**2,:dimsA[4]**2]= a[:dimsA[3]**2,:dimsA[4]**2]
+        else:
+            # C--1--T => C--V V^\dag 0--T(0,-1)--2 = S--1--T
+            # |          U^\dag         1            |
+            # 0          U                           0
+            # T          0                           T
+            #            T(-1,0)--2
+            #            1
+            U,S,V= truncated_svd_gesdd(a, env.chi, abs_tol=1.0e-14, keep_multiplets=True, \
+                eps_multiplet=1.0e-12, verbosity=verbosity)
+            env.C[(coord,vec)]= torch.diag(S)*(1+0j) if a.is_complex() else torch.diag(S)
+            env.T[(coord, (0,-1) )]= torch.einsum('ij,ibc->jbc', V.conj(), env.T[(coord, (0,-1) )] )
+            env.T[(coord, (-1,0) )]= torch.einsum('ij,ibc->jbc', U, env.T[(coord, (-1,0) )] )
+
+        # right-upper corner
+        #
+        #     i      = 0--C     
+        # 1--A--j         1
+        #   /\
+        #  2  m
+        #      \ i
+        #    1--A--j
+        #      /
+        #     2
+        vec = (1,-1)
+        A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
+        dimsA = A.size()
+        a= contiguous(einsum('miefj,miabj->eafb',A,conj(A)))
+        a= view(a, (dimsA[2]**2, dimsA[3]**2))
+        a= a/a.abs().max()
+        if env.chi >= max(dimsA[2]**2, dimsA[3]**2):
+            env.C[(coord,vec)]= torch.zeros(env.chi,env.chi, dtype=env.dtype, 
+                device=env.device)
+            env.C[(coord,vec)][:dimsA[2]**2,:dimsA[3]**2]= a[:dimsA[2]**2,:dimsA[3]**2]
+        else:
+            # T--0--C => 0--T(0,-1)--2 U U^\dag 0--C      = T--0--S
+            #       |       1                      V              |
+            #       1                              V^\dag         1
+            #       T                              0              T
+            #                                   1--T(1,0)
+            #                                      2
+            U,S,V= truncated_svd_gesdd(a, env.chi, abs_tol=1.0e-14, keep_multiplets=True, \
+                eps_multiplet=1.0e-12, verbosity=verbosity)
+            env.C[(coord,vec)]= torch.diag(S)*(1+0j) if a.is_complex() else torch.diag(S)
+            env.T[(coord, (0,-1) )]= torch.einsum('ij,abi->abj', U, env.T[(coord, (0,-1) )] )
+            env.T[(coord, (1,0) )]= torch.einsum('ij,ibc->jbc', V.conj(), env.T[(coord, (1,0) )] )
+
+
+        # right-lower corner
+        #
+        #     0      =    0     
+        # 1--A--j      1--C
+        #   /\
+        #  i  m
+        #      \ 0
+        #    1--A--j
+        #      /
+        #     i
+        vec = (1,1)
+        A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
+        dimsA = A.size()
+        a= contiguous(einsum('mefij,mabij->eafb',A,conj(A)))
+        a= view(a, (dimsA[1]**2, dimsA[2]**2))
+        a= a/a.abs().max()
+        if env.chi >= max(dimsA[1]**2, dimsA[2]**2):
+            env.C[(coord,vec)]= torch.zeros(env.chi,env.chi, dtype=env.dtype, 
+                device=env.device)
+            env.C[(coord,vec)][:dimsA[1]**2,:dimsA[2]**2]= a[:dimsA[1]**2,:dimsA[2]**2]
+        else:
+            #       T =>                          0      =       T
+            #       0                          1--T(1,0)         0
+            #       |                             2              |
+            # T--1--C                             U        T--1--S
+            #               0                     U^\dag
+            #            1--T(0,1)--2 V^\dag V 1--C
+            U,S,V= truncated_svd_gesdd(a, env.chi, abs_tol=1.0e-14, keep_multiplets=True, \
+                eps_multiplet=1.0e-12, verbosity=verbosity)
+            env.C[(coord,vec)]= torch.diag(S)*(1+0j) if a.is_complex() else torch.diag(S)
+            env.T[(coord, (0,1) )]= torch.einsum('ij,abi->abj', V.conj(), env.T[(coord, (0,1) )] )
+            env.T[(coord, (1,0) )]= torch.einsum('ij,abi->abj', U, env.T[(coord, (1,0) )] )
+
+        # left-lower corner
+        #
+        #     0      = 0     
+        # i--A--3      C--1
+        #   /\
+        #  j  m
+        #      \ 0
+        #    i--A--3
+        #      /
+        #     j
+        vec = (-1,1)
+        A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
+        dimsA = A.size()
+        a = contiguous(einsum('meijf,maijb->eafb',A,conj(A)))
+        a = view(a, (dimsA[1]**2, dimsA[4]**2))
+        a= a/a.abs().max()
+        if env.chi >= max(dimsA[1]**2, dimsA[4]**2):
+            env.C[(coord,vec)]= torch.zeros(env.chi,env.chi, dtype=env.dtype, 
+                device=env.device)
+            env.C[(coord,vec)][:dimsA[1]**2,:dimsA[4]**2]= a[:dimsA[1]**2,:dimsA[4]**2]
+        else:
+            # T       => 0                          = T
+            # 0          T(-1,0)--2                   0
+            # |          1                            |
+            # C--1--T    U                            S--1--T
+            #            U^\dag           0
+            #            C--1 V V^\dag 1--T(0,1)--2
+            U,S,V= truncated_svd_gesdd(a, env.chi, abs_tol=1.0e-14, keep_multiplets=True, \
+                eps_multiplet=1.0e-12, verbosity=verbosity)
+            env.C[(coord,vec)]= torch.diag(S)*(1+0j) if a.is_complex() else torch.diag(S)
+            env.T[(coord, (0,1) )]= torch.einsum('ij,aic->ajc', V.conj(), env.T[(coord, (0,1) )] )
+            env.T[(coord, (-1,0) )]= torch.einsum('ij,aic->ajc', U, env.T[(coord, (-1,0) )] )
+        
 
 def init_from_ipeps_obc(state, env, verbosity=0):
     if verbosity>0:

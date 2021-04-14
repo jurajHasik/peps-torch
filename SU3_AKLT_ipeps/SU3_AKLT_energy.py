@@ -22,6 +22,7 @@ args, unknown_args = parser.parse_known_args()
 model = SU3_AKLT()
 def lattice_to_site(coord): return (0,0)
 state = read_ipeps('SU3_AKLT_ipeps/SU3_AKLT_ipeps.json', vertexToSite=lattice_to_site)
+state.add_noise(args.instate_noise)
 
 def main():
 
@@ -75,6 +76,15 @@ def main():
 	print('*** <Lambda_8> (after CTMRG): '+str(colors8[0].item())+', '+str(colors8[1].item())+', '+str(colors8[2].item()))
 	
 	
+	
+	# environment diagnostics
+	print("\n")
+	for c_loc,c_ten in ctm_env_init.C.items(): 
+		u,s,v= torch.svd(c_ten, compute_uv=False)
+		print(f"spectrum C[{c_loc}]")
+		for i in range(args.chi):
+			print(f"{i} {s[i]}")
+		
 	
 	
 if __name__=='__main__':

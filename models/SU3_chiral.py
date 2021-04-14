@@ -83,3 +83,14 @@ class SU3_CHIRAL():
 		e_dn = torch.real(e_dn / norm_wf)
 		return(2/3*e_dn)
 		
+	def eval_lambdas(self,state,env):
+		# computes the expectation value of the SU(3) observables \lambda_3 and \lambda_8 for the three sites of the unit cell
+		id_matrix = torch.eye(27, dtype=torch.complex128)
+		norm_wf = rdm.rdm1x1((0,0), state, env, operator=id_matrix)
+		color3_1 = rdm.rdm1x1((0,0), state, env, operator=lambda_3_1) / norm_wf
+		color3_2 = rdm.rdm1x1((0,0), state, env, operator=lambda_3_2) / norm_wf
+		color3_3 = rdm.rdm1x1((0,0), state, env, operator=lambda_3_3) / norm_wf
+		color8_1 = rdm.rdm1x1((0,0), state, env, operator=lambda_8_1) / norm_wf
+		color8_2 = rdm.rdm1x1((0,0), state, env, operator=lambda_8_2) / norm_wf
+		color8_3 = rdm.rdm1x1((0,0), state, env, operator=lambda_8_3) / norm_wf
+		return((color3_1, color3_2, color3_3), (color8_1, color8_2, color8_3))

@@ -154,8 +154,8 @@ class IPEPS_U1SYM(ipeps.IPEPS):
 		
 	def build_onsite_tensors(self):
 		# Edited for SU(3) chiral CSL Kagome
-		(l1, l2, l3, l4, m1, m2) = self.coeffs[(0,0)]
 		(S0, S1, S2, S3, S4, L0, L1, L2) = self.sym_tensors
+		(l1, l2, l3, l4, m1, m2) = self.coeffs[(0,0)]
 		# trivalent tensor S
 		S_tensor = S0 + l1 * S1 + l2 * S2 + 1j * l3 * S3 + 1j * l4 * S4
 		# bivalent tensor L
