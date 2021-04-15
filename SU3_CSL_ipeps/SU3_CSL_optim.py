@@ -11,7 +11,7 @@ from models import SU3_chiral
 from ctm.generic.env import *
 from ctm.generic import ctmrg
 from ctm.generic import rdm
-from optim.ad_optim_lbfgs_mod import optimize_state
+from optim.fd_optim_lbfgs_mod import optimize_state
 import json
 import unittest
 import logging
@@ -78,7 +78,7 @@ def main():
 		loss = energy_f(state, ctm_env_out)
 		print(loss.item())
 		timings = (t_ctm, t_obs)
-		return loss, ctm_env_out, history, t_ctm, t_obs
+		return loss, ctm_env_out, history, timings
 	
 	optimize_state(state, ctm_env, loss_fn)
 	print(state.coeffs)
