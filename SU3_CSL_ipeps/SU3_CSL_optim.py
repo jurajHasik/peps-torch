@@ -17,7 +17,6 @@ import unittest
 import logging
 log = logging.getLogger(__name__)
 
-
 # parse command line args and build necessary configuration objects
 parser= cfg.get_args_parser()
 parser.add_argument("--theta", type=float, default=0., help="rotation angle of the model")
