@@ -15,6 +15,8 @@ import unittest
 import logging
 log = logging.getLogger(__name__)
  
+print(torch.cuda.is_available())
+print(torch.cuda.current_device())
 
 # parse command line args and build necessary configuration objects
 parser= cfg.get_args_parser()
