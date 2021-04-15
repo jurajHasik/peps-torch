@@ -169,7 +169,7 @@ class IPEPS_U1SYM(ipeps.IPEPS):
 			a_tensor[si,:,:,:,:] = a_tensor_temp[n1,n2,n3,:,:,:,:]
 		sites=dict()
 		for coord,c in self.coeffs.items():
-			sites[coord]= a_tensor
+			sites[coord]= a_tensor.cuda()
 		return sites
 
 	def add_noise(self,noise):
