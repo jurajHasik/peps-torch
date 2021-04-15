@@ -49,16 +49,6 @@ def main():
 	def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
 		if not history:
 			history=[]
-		
-		# environment diagnostics
-		print("\n")
-		for c_loc,c_ten in env.C.items(): 
-			u,s,v= torch.svd(c_ten, compute_uv=False)
-			print(f"spectrum C[{c_loc}]")
-			for i in range(args.chi):
-				print(f"{i} {s[i]}")
-		print("\n")
-	
 		e_curr= energy_f(state,env)
 		history.append(e_curr.item())
 		print('Step n°'+str(len(history))+'     E_site = '+str(e_curr.item()))
@@ -90,14 +80,6 @@ def main():
 
 	ctm_env_init = ENV(args.chi, state)
 	init_env(state, ctm_env_init)
-	
-	print("\n")
-	for c_loc,c_ten in ctm_env_init.C.items(): 
-		u,s,v= torch.svd(c_ten, compute_uv=False)
-		print(f"spectrum C[{c_loc}]")
-		for i in range(args.chi):
-			print(f"{i} {s[i]}")
-	print("\n")
 	
 	e_dn_init = energy_f(state, ctm_env_init)
 	print('*** Energy per site (before CTMRG) -- down triangles: '+str(e_dn_init.item()))
