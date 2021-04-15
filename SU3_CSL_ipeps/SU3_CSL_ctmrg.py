@@ -1,5 +1,6 @@
 import torch
 import math
+import numpy as np
 import config as cfg
 import copy
 from collections import OrderedDict
@@ -44,9 +45,20 @@ def main():
 	def energy_f(state, env):
 		return model.energy_triangle(state,env)
 	
+	
 	def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
 		if not history:
 			history=[]
+		
+		# environment diagnostics
+		print("\n")
+		for c_loc,c_ten in env.C.items(): 
+			u,s,v= torch.svd(c_ten, compute_uv=False)
+			print(f"spectrum C[{c_loc}]")
+			for i in range(args.chi):
+				print(f"{i} {s[i]}")
+		print("\n")
+	
 		e_curr= energy_f(state,env)
 		history.append(e_curr.item())
 		print('Step n°'+str(len(history))+'     E_site = '+str(e_curr.item()))
@@ -55,9 +67,37 @@ def main():
 			log.info({"history_length": len(history), "history": history})
 			return True, history
 		return False, history
+		
+		
+	def ctmrg_conv_corners(state,env,history,ctm_args=cfg.ctm_args):
+		if not history:
+			history=[]
+		S_list = []
+		for c_loc,c_ten in env.C.items(): 
+			u,s,v= torch.svd(c_ten, compute_uv=False)
+			S_list.append(s.tolist())
+		S_list = np.array(S_list)
+		history.append(S_list)
+		if len(history) <= 1: 
+			Delta_C = 'not defined'
+		else:
+			Delta_C = np.linalg.norm(history[-1]-history[-2]).item()
+		print('Step n°'+str(len(history))+'     Delta_C = '+str(Delta_C)) #+'     E_down = '+str(e_curr.item())
+		if len(history) > 1 and Delta_C < ctm_args.ctm_conv_tol:
+			return True, history
+		return False, history
+		
 
 	ctm_env_init = ENV(args.chi, state)
 	init_env(state, ctm_env_init)
+	
+	print("\n")
+	for c_loc,c_ten in ctm_env_init.C.items(): 
+		u,s,v= torch.svd(c_ten, compute_uv=False)
+		print(f"spectrum C[{c_loc}]")
+		for i in range(args.chi):
+			print(f"{i} {s[i]}")
+	print("\n")
 	
 	e_dn_init = energy_f(state, ctm_env_init)
 	print('*** Energy per site (before CTMRG) -- down triangles: '+str(e_dn_init.item()))
