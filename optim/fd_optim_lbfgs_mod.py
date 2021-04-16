@@ -159,7 +159,6 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
             if t_data["min_loss"] > t_data["loss"][-1]:
                 t_data["min_loss"]= t_data["loss"][-1]
                 #state.write_to_file(outputstatefile, normalize=True)
-                print(state.coeffs)
 
         # 2) log CTM metrics for debugging
         if opt_args.opt_logging:
@@ -177,7 +176,9 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         t_grad0= time.perf_counter()
         grad= grad_fd(loss)
         for k in state.coeffs.keys():
+        	print(state.coeffs)
             state.coeffs[k].grad= grad[k]
+            print(state.coeffs)
         t_grad1= time.perf_counter()
 
         # 5) log grad metrics
