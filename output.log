@@ -1,0 +1,8 @@
+INFO:__main__:{'history_length': 2, 'history': [-0.6666666666666666, -0.6666666666666666]}
+INFO:__main__:{'history_length': 2, 'history': [-0.6666666666666666, -0.6666666666666666]}
+ERROR:root:Internal Python error in the inspect module.
+Below is the traceback from this internal error.
+
+INFO:root:
+Unfortunately, your original traceback can not be constructed.
+
