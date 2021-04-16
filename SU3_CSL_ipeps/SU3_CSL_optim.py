@@ -61,8 +61,6 @@ def main():
 	ctm_env = ENV(args.chi, state)
 	init_env(state, ctm_env)
 	
-	e_dn_init = energy_f(state, ctm_env)
-	print('*** Energy per site (before CTMRG) -- down triangles: '+str(e_dn_init.item()))
 	
 	def loss_fn(state, ctm_env_in, opt_context):
 		ctm_args= opt_context["ctm_args"]
