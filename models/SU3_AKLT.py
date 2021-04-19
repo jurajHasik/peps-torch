@@ -68,10 +68,8 @@ class SU3_AKLT():
 		self.P12, self.P23, self.P31 = matP_12.double(), matP_23.double(), matP_31.double()
 		# in-cell triangle permutation operators:
 		self.P123, self.P123m = matP_t.double(), matP_t2.double()
-	
-	def rdm1x1(self,state,env):
-		return rdm.rdm1x1((0,0), state, env)
-	
+
+
 	def energy_triangle(self,state,env):
 		# Computes the expectation value of the energy per site for a "down"-triangle (defined by the three sites within the unit cell)
 		h_triangle = self.P123 + self.P123m
@@ -89,7 +87,7 @@ class SU3_AKLT():
 		#			    (0,1)--(1,1)
 		# The up-triangle is made of the following 3 sites: (1,0)_2, (0,1)_3, (1,1)_1
 		# where (i,j)_k labels the k-th site of the unit cell (i,j).
-		rho3 = rdm.rdm2x2_up_triangle((0,0), state, env)
+		# rho3 = rdm.rdm2x2_up_triangle((0,0), state, env)
 		
 		# define a permutation operator between (1,0)_2, (0,1)_3, (1,1)_1
 		P_upm = torch.zeros(3,3,3,3,3,3).double()
@@ -102,8 +100,9 @@ class SU3_AKLT():
 					P_upm[n1,n2,n3,n2,n3,n1] = 1.		
 		# contract rho3 and the operator
 		P_op = P_up + P_upm
-		energy = torch.einsum('ijkabc,abcijk->',P_op,rho3)
-		return(2/3*energy)
+		norm_wf = rdm.rdm2x2_up_triangle_id((0,0), state, env)
+		energy = rdm.rdm2x2_up_triangle((0,0), state, env, operator = P_op)
+		return(2/3*energy/norm_wf)
 		
 		
 	def eval_lambdas(self,state,env):

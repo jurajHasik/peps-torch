@@ -70,13 +70,6 @@ def main():
 			if not history:
 				history=[]
 			e_curr = model.energy_triangle(state, env)
-			print("\n")
-			for c_loc,c_ten in env.C.items(): 
-				u,s,v= torch.svd(c_ten, compute_uv=False)
-				print(f"spectrum C[{c_loc}]")
-				for i in range(args.chi):
-					print(f"{i} {s[i]}")
-			print("\n")
 			history.append([e_curr])
 			if len(history) <= 1: 
 				Delta_E = 'not defined'
@@ -92,27 +85,19 @@ def main():
 	ctm_env_init = ENV(args.chi, state)
 	init_env(state, ctm_env_init)
 	
-	print("\n")
-	for c_loc,c_ten in ctm_env_init.C.items(): 
-		u,s,v= torch.svd(c_ten, compute_uv=False)
-		print(f"spectrum C[{c_loc}]")
-		for i in range(args.chi):
-			print(f"{i} {s[i]}")
-	
-	
 	# initial energy of up and down triangles
 	e_init_dn = model.energy_triangle(state, ctm_env_init)
 	print('*** Energy per site (before CTMRG) -- down triangles: '+str(e_init_dn.item()))
-#	e_init_up = model.energy_triangle_up(state, ctm_env_init)
-#	print('*** Energy per site (before CTMRG) -- up triangles: '+str(e_init_up.item()))
+	e_init_up = model.energy_triangle_up(state, ctm_env_init)
+	print('*** Energy per site (before CTMRG) -- up triangles: '+str(e_init_up.item()))
 	
 	# performs CTMRG and computes the obervables afterwards (energy and lambda_3)
 	ctm_env_fin, *ctm_log= ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
 	
 	e_final_dn = model.energy_triangle(state, ctm_env_fin)
 	print('*** Energy per site (after CTMRG) -- down triangles: '+str(e_final_dn.item()))
-#	e_final_up = model.energy_triangle_up(state, ctm_env_fin)
-#	print('*** Energy per site (after CTMRG) -- up triangles: '+str(e_final_up.item()))
+	e_final_up = model.energy_triangle_up(state, ctm_env_fin)
+	print('*** Energy per site (after CTMRG) -- up triangles: '+str(e_final_up.item()))
 	
 	colors3, colors8 = model.eval_lambdas(state,ctm_env_fin)
 	print('*** <Lambda_3> (after CTMRG): '+str(colors3[0].item())+', '+str(colors3[1].item())+', '+str(colors3[2].item()))

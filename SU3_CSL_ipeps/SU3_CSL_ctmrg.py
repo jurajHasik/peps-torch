@@ -46,8 +46,9 @@ def main():
 	model = SU3_chiral.SU3_CHIRAL(theta = args.theta)
 	
 	def energy_f(state, env):
-		return model.energy_triangle(state,env)
-	
+		e_dn = model.energy_triangle(state,env)
+		e_up = model.energy_triangle_up(state,env)
+		return((e_up+e_dn)/2)
 	
 	def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
 		if not history:
@@ -86,12 +87,16 @@ def main():
 	
 	e_dn_init = energy_f(state, ctm_env_init)
 	print('*** Energy per site (before CTMRG) -- down triangles: '+str(e_dn_init.item()))
+	e_up_init = model.energy_triangle_up(state, ctm_env_init)
+	print('*** Energy per site (before CTMRG) -- up triangles: '+str(e_up_init.item()))
 	
 	ctm_env_out, *ctm_log= ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
 	
 	e_dn_final = energy_f(state,ctm_env_out)
+	e_up_final = model.energy_triangle_up(state, ctm_env_out)
 	colors3, colors8 = model.eval_lambdas(state,ctm_env_out)
 	print('*** Energy per site (after CTMRG) -- down triangles: '+str(e_dn_final.item()))
+	print('*** Energy per site (after CTMRG) -- up triangles: '+str(e_up_final.item()))
 	print('*** <Lambda_3> (after CTMRG): '+str(colors3[0].item())+', '+str(colors3[1].item())+', '+str(colors3[2].item()))
 	print('*** <Lambda_8> (after CTMRG): '+str(colors8[0].item())+', '+str(colors8[1].item())+', '+str(colors8[2].item()))
 
