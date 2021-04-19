@@ -778,7 +778,7 @@ def rdm2x2(coord, state, env, sym_pos_def=False, verbosity=0):
 	return rdm
 	
 	
-def rdm2x2_up_triangle(coord, state, env, sym_pos_def=False, verbosity=0):
+def rdm2x2_up_triangle(coord, state, env, operator=None, sym_pos_def=False, verbosity=0):
 	r"""
 	:param coord: vertex (x,y) specifies upper left site of 2x2 subsystem 
 	:param state: underlying wavefunction
@@ -790,9 +790,6 @@ def rdm2x2_up_triangle(coord, state, env, sym_pos_def=False, verbosity=0):
 	:type verbosity: int
 	:return: 4-site reduced density matrix with indices :math:`s_0s_1s_2s_3;s'_0s'_1s'_2s'_3`
 	:rtype: torch.tensor
-
-	
-
 	"""
 	who= "rdm2x2"
 	#----- building C2x2_LU ----------------------------------------------------
@@ -800,9 +797,10 @@ def rdm2x2_up_triangle(coord, state, env, sym_pos_def=False, verbosity=0):
 	T1 = env.T[(state.vertexToSite(coord),(0,-1))]
 	T2 = env.T[(state.vertexToSite(coord),(-1,0))]
 	dimsA = state.site(coord).size()
-	a = contiguous(einsum('mefgh,nabcd->eafbgchdmn',state.site(coord),conj(state.site(coord))))
-	a = view(a, (dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2, dimsA[0], dimsA[0]))
-
+	# contract all physical sites of this unit cell (index m)
+	a = contiguous(einsum('mefgh,mabcd->eafbgchd',state.site(coord), conj(state.site(coord))))
+	a = view(a, (dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2))
+	
 	# C--10--T1--2
 	# 0	     1
 	C2x2_LU = contract(C, T1, ([1],[0]))
@@ -818,24 +816,18 @@ def rdm2x2_up_triangle(coord, state, env, sym_pos_def=False, verbosity=0):
 	# |	      0
 	# |	      0
 	# T2--3 1 a--3 
-	# 2->1	  2\45
+	# 2->1	  2
 	C2x2_LU = contract(C2x2_LU, a, ([0,3],[0,1]))
 
-	# permute 012345->120345
-	# reshape (12)(03)45->0123
-	# C2x2--1
-	# |\23
-	# 0
-	C2x2_LU = contiguous(permute(C2x2_LU,(1,2,0,3,4,5)))
-	C2x2_LU = view(C2x2_LU, (T2.size(1)*a.size(2),T1.size(2)*a.size(3),dimsA[0],dimsA[0]))
-	if verbosity>0:
-		print("C2X2 LU "+str(coord)+"->"+str(state.vertexToSite(coord))+" (-1,-1): "+str(C2x2_LU.size()))
-	 
-	# [EDIT FOR KAGOME]: contract physical legs 01(23)->01 because this site does not belong to the up triangle
+	# permute 0123->1203
+	# reshape (12)(03)->01
 	# C2x2--1
 	# |
 	# 0
-	C2x2_LU = einsum('abcc->ab',C2x2_LU)
+	C2x2_LU = contiguous(permute(C2x2_LU,(1,2,0,3)))
+	C2x2_LU = view(C2x2_LU, (T2.size(1)*a.size(2),T1.size(2)*a.size(3)))
+	if verbosity>0:
+		print("C2X2 LU "+str(coord)+"->"+str(state.vertexToSite(coord))+" (-1,-1): "+str(C2x2_LU.size()))
 	
 	#----- building C2x2_RU ----------------------------------------------------
 	vec = (1,0)
@@ -844,8 +836,14 @@ def rdm2x2_up_triangle(coord, state, env, sym_pos_def=False, verbosity=0):
 	T1 = env.T[(shitf_coord,(1,0))]
 	T2 = env.T[(shitf_coord,(0,-1))]
 	dimsA = state.site(shitf_coord).size()
-	a = contiguous(einsum('mefgh,nabcd->eafbgchdmn', state.site(shitf_coord),conj(state.site(shitf_coord))))
-	a = view(a, (dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2, dimsA[0], dimsA[0]))
+	# reshape 27 = 3*3*3
+	A_reshaped = torch.zeros((3,3,3,dimsA[1],dimsA[2],dimsA[3],dimsA[4]),dtype= state.site(shitf_coord).dtype)
+	for s in range(27):
+		n1,n2,n3 = fmap_inv(s)
+		A_reshaped[n1,n2,n3,:,:,:,:] = state.site(shitf_coord)[s,:,:,:,:]
+	# double layer tensor with sites 1 and 3 contracted
+	a = contiguous(einsum('mikefgh,mjkabcd->eafbgchdij', A_reshaped,conj(A_reshaped)))
+	a = view(a, (dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2, 3, 3))
 
 	# 0--C
 	#	 1
@@ -873,33 +871,19 @@ def rdm2x2_up_triangle(coord, state, env, sym_pos_def=False, verbosity=0):
 	# 23/|
 	#	 1
 	C2x2_RU = contiguous(permute(C2x2_RU, (1,2,0,3,4,5)))
-	C2x2_RU = view(C2x2_RU, (T2.size(0)*a.size(1),T1.size(2)*a.size(2), dimsA[0], dimsA[0]))
+	C2x2_RU = view(C2x2_RU, (T2.size(0)*a.size(1),T1.size(2)*a.size(2), 3,3))
 	if verbosity>0:
 		print("C2X2 RU "+str((coord[0]+vec[0],coord[1]+vec[1]))+"->"+str(shitf_coord)+" (1,-1): "+str(C2x2_RU.size()))
-		
-	# [EDIT FOR KAGOME]: contract partly the physical legs 23 and leave effective physical legs for the site in the up triangle = site n°2
-	# 0--C2x2
-	#  23/|
-	#     1
-	C2x2_RU_temp = torch.zeros(T2.size(0)*a.size(1),T2.size(0)*a.size(1),3,3,3,3,3,3).double()
-	for s in range(27):
-		for t in range(27):
-			n1,n2,n3 = fmap_inv(s)
-			m1,m2,m3 = fmap_inv(t)
-			C2x2_RU_temp[:,:,n1,n2,n3,m1,m2,m3] = C2x2_RU[:,:,s,t]
-	C2x2_RU_temp = einsum('abijkimk->abjm',C2x2_RU_temp)
-	C2x2_RU = C2x2_RU_temp
 
 	#----- build upper part C2x2_LU--C2x2_RU -----------------------------------
-	# [EDIT FOR KAGOME]
-	#
+	# 
 	# C2x2_LU--1 0--C2x2_RU  
-	# |			 |\23	  
-	# 0			 1	  
+	# |				 |\23	  
+	# 0				 1	  
 	#
 	# TODO is it worthy(performance-wise) to instead overwrite one of C2x2_LU,C2x2_RU ?  
 	upper_half = contract(C2x2_LU, C2x2_RU, ([1],[0]))
-	
+
 	#----- building C2x2_RD ----------------------------------------------------
 	vec = (1,1)
 	shitf_coord = state.vertexToSite((coord[0]+vec[0],coord[1]+vec[1]))
@@ -907,8 +891,14 @@ def rdm2x2_up_triangle(coord, state, env, sym_pos_def=False, verbosity=0):
 	T1 = env.T[(shitf_coord,(0,1))]
 	T2 = env.T[(shitf_coord,(1,0))]
 	dimsA = state.site(shitf_coord).size()
-	a = contiguous(einsum('mefgh,nabcd->eafbgchdmn', state.site(shitf_coord),conj(state.site(shitf_coord))))
-	a = view(a, (dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2, dimsA[0], dimsA[0]))
+	# reshape 27 = 3*3*3
+	A_reshaped = torch.zeros((3,3,3,dimsA[1],dimsA[2],dimsA[3],dimsA[4]),dtype= state.site(shitf_coord).dtype)
+	for s in range(27):
+		n1,n2,n3 = fmap_inv(s)
+		A_reshaped[n1,n2,n3,:,:,:,:] = state.site(shitf_coord)[s,:,:,:,:]
+	# double layer tensor with sites 2 and 3 contracted
+	a = contiguous(einsum('mikefgh,nikabcd->eafbgchdmn', A_reshaped,conj(A_reshaped)))
+	a = view(a, (dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2, 3, 3))
 
 	#	1<-0		0
 	# 2<-1--T1--2 1--C
@@ -931,27 +921,13 @@ def rdm2x2_up_triangle(coord, state, env, sym_pos_def=False, verbosity=0):
 	# permute 012345->120345
 	# reshape (12)(03)45->0123
 	C2x2_RD = contiguous(permute(C2x2_RD, (1,2,0,3,4,5)))
-	C2x2_RD = view(C2x2_RD, (T2.size(0)*a.size(0),T1.size(1)*a.size(1), dimsA[0], dimsA[0]))
+	C2x2_RD = view(C2x2_RD, (T2.size(0)*a.size(0),T1.size(1)*a.size(1), 3,3))
 
 	#	 0
 	#	 |/23
 	# 1--C2x2
 	if verbosity>0:
 		print("C2X2 RD "+str((coord[0]+vec[0],coord[1]+vec[1]))+"->"+str(shitf_coord)+" (1,1): "+str(C2x2_RD.size()))
-		
-	# [EDIT FOR KAGOME]: contract partly the physical legs 23 and leave effective physical legs for the site in the up triangle = site n°1
-	#	 0
-	#	 |/23
-	# 1--C2x2
-	C2x2_RD_temp = torch.zeros(T2.size(0)*a.size(1),T2.size(0)*a.size(1),3,3,3,3,3,3).double()
-	for s in range(27):
-		for t in range(27):
-			n1,n2,n3 = fmap_inv(s)
-			m1,m2,m3 = fmap_inv(t)
-			C2x2_RD_temp[:,:,n1,n2,n3,m1,m2,m3] = C2x2_RD[:,:,s,t]
-	C2x2_RD_temp = einsum('abijkljk->abil',C2x2_RD_temp)
-	C2x2_RD = C2x2_RD_temp
-	
 
 	#----- building C2x2_LD ----------------------------------------------------
 	vec = (0,1)
@@ -960,8 +936,14 @@ def rdm2x2_up_triangle(coord, state, env, sym_pos_def=False, verbosity=0):
 	T1 = env.T[(shitf_coord,(-1,0))]
 	T2 = env.T[(shitf_coord,(0,1))]
 	dimsA = state.site(shitf_coord).size()
-	a = contiguous(einsum('mefgh,nabcd->eafbgchdmn',state.site(shitf_coord),conj(state.site(shitf_coord))))
-	a = view(a, (dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2, dimsA[0], dimsA[0]))
+	# reshape 27 = 3*3*3
+	A_reshaped = torch.zeros((3,3,3,dimsA[1],dimsA[2],dimsA[3],dimsA[4]),dtype= state.site(shitf_coord).dtype)
+	for s in range(27):
+		n1,n2,n3 = fmap_inv(s)
+		A_reshaped[n1,n2,n3,:,:,:,:] = state.site(shitf_coord)[s,:,:,:,:]
+	# double layer tensor with sites 1 and 2 contracted
+	a = contiguous(einsum('mikefgh,milabcd->eafbgchdkl', A_reshaped,conj(A_reshaped)))
+	a = view(a, (dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2, 3, 3))
 
 	# 0->1
 	# T1--2
@@ -990,23 +972,9 @@ def rdm2x2_up_triangle(coord, state, env, sym_pos_def=False, verbosity=0):
 	# |/23
 	# C2x2--1
 	C2x2_LD = contiguous(permute(C2x2_LD, (0,2,1,3,4,5)))
-	C2x2_LD = view(C2x2_LD, (T1.size(0)*a.size(1),T2.size(1)*a.size(1), dimsA[0], dimsA[0]))
+	C2x2_LD = view(C2x2_LD, (T1.size(0)*a.size(1),T2.size(1)*a.size(1), 3,3))
 	if verbosity>0:
 		print("C2X2 LD "+str((coord[0]+vec[0],coord[1]+vec[1]))+"->"+str(shitf_coord)+" (-1,1): "+str(C2x2_LD.size()))
-		
-	# [EDIT FOR KAGOME]: contract partly the physical legs 23 and leave effective physical legs for the site in the up triangle = site n°3
-	# 0
-	# |/23
-	# C2x2--1
-	C2x2_LD_temp = torch.zeros(T1.size(0)*a.size(1),T2.size(1)*a.size(1),3,3,3,3,3,3).double()
-	for s in range(27):
-		for t in range(27):
-			n1,n2,n3 = fmap_inv(s)
-			m1,m2,m3 = fmap_inv(t)
-			C2x2_LD_temp[:,:,n1,n2,n3,m1,m2,m3] = C2x2_LD[:,:,s,t]
-	C2x2_LD_temp = einsum('abijkijn->abkn',C2x2_LD_temp)
-	C2x2_LD = C2x2_LD_temp
-	
 
 	#----- build lower part C2x2_LD--C2x2_RD -----------------------------------
 	# 0			    0->3				 0			  3->1
@@ -1017,7 +985,6 @@ def rdm2x2_up_triangle(coord, state, env, sym_pos_def=False, verbosity=0):
 	lower_half = permute(lower_half, (0,3,1,2,4,5))
 
 	# construct reduced density matrix by contracting lower and upper halfs
-	# [EDIT FOR KAGOME]
 	# C2x2_LU------C2x2_RU
 	# |				|\23->01
 	# 0				1	
@@ -1032,5 +999,215 @@ def rdm2x2_up_triangle(coord, state, env, sym_pos_def=False, verbosity=0):
 	# symmetrize and normalize
 	# [EDIT FOR KAGOME]: the s0;s0' were already contracted out
 	rdm= contiguous(permute(rdm, (0,2,4,1,3,5)))
-	rdm= _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
+	
+	if operator == None:
+		rdm= _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)	
+	else:
+		# contract the 3-site operator with the rdm
+		value_operator = einsum('ikmjln,ikmjln->',rdm,operator)
+		rdm = value_operator
+	return rdm
+	
+
+def rdm2x2_up_triangle_id(coord, state, env, sym_pos_def=False, verbosity=0):
+	r"""
+	:param coord: vertex (x,y) specifies upper left site of 2x2 subsystem 
+	:param state: underlying wavefunction
+	:param env: environment corresponding to ``state``
+	:param verbosity: logging verbosity
+	:type coord: tuple(int,int) 
+	:type state: IPEPS
+	:type env: ENV
+	:type verbosity: int
+	:return: 4-site reduced density matrix with indices :math:`s_0s_1s_2s_3;s'_0s'_1s'_2s'_3`
+	:rtype: torch.tensor
+	
+	Special case where the operator = the identity. This funciton thus computes the norm of the wavefunction < psi | psi >
+	"""
+	who= "rdm2x2"
+	#----- building C2x2_LU ----------------------------------------------------
+	C = env.C[(state.vertexToSite(coord),(-1,-1))]
+	T1 = env.T[(state.vertexToSite(coord),(0,-1))]
+	T2 = env.T[(state.vertexToSite(coord),(-1,0))]
+	dimsA = state.site(coord).size()
+	# contract all physical sites of this unit cell (index m)
+	a = contiguous(einsum('mefgh,mabcd->eafbgchd',state.site(coord), conj(state.site(coord))))
+	a = view(a, (dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2))
+
+	# C--10--T1--2
+	# 0	     1
+	C2x2_LU = contract(C, T1, ([1],[0]))
+
+	# C------T1--2->1
+	# 0	     1->0
+	# 0
+	# T2--2->3
+	# 1->2
+	C2x2_LU = contract(C2x2_LU, T2, ([0],[0]))
+
+	# C-------T1--1->0
+	# |	      0
+	# |	      0
+	# T2--3 1 a--3 
+	# 2->1	  2
+	C2x2_LU = contract(C2x2_LU, a, ([0,3],[0,1]))
+
+	# permute 0123->1203
+	# reshape (12)(03)->01
+	# C2x2--1
+	# |
+	# 0
+	C2x2_LU = contiguous(permute(C2x2_LU,(1,2,0,3)))
+	C2x2_LU = view(C2x2_LU, (T2.size(1)*a.size(2),T1.size(2)*a.size(3)))
+	if verbosity>0:
+		print("C2X2 LU "+str(coord)+"->"+str(state.vertexToSite(coord))+" (-1,-1): "+str(C2x2_LU.size()))
+	
+	#----- building C2x2_RU ----------------------------------------------------
+	vec = (1,0)
+	shitf_coord = state.vertexToSite((coord[0]+vec[0],coord[1]+vec[1]))
+	C = env.C[(shitf_coord,(1,-1))]
+	T1 = env.T[(shitf_coord,(1,0))]
+	T2 = env.T[(shitf_coord,(0,-1))]
+	dimsA = state.site(shitf_coord).size()
+	# contract all physical sites of this unit cell (index m)
+	a = contiguous(einsum('mefgh,mabcd->eafbgchd',state.site(shitf_coord), conj(state.site(shitf_coord))))
+	a = view(a, (dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2))
+
+	# 0--C
+	#	 1
+	#	 0
+	# 1--T1
+	#	 2
+	C2x2_RU = contract(C, T1, ([1],[0]))
+
+	# 2<-0--T2--2 0--C
+	#	 3<-1		 |
+	#		   0<-1--T1
+	#			  1<-2
+	C2x2_RU = contract(C2x2_RU, T2, ([0],[2]))
+
+	# 1<-2--T2------C
+	#	    3	    |
+	#	    0	    |
+	# 2<-1--a--3 0--T1
+	#	 3<-2	 0<-1
+	C2x2_RU = contract(C2x2_RU, a, ([0,3],[3,0]))
+
+	# permute 012334->1203
+	# reshape (12)(03)->01
+	# 0--C2x2
+	#    |
+	#	 1
+	C2x2_RU = contiguous(permute(C2x2_RU, (1,2,0,3)))
+	C2x2_RU = view(C2x2_RU, (T2.size(0)*a.size(1),T1.size(2)*a.size(2)))
+	if verbosity>0:
+		print("C2X2 RU "+str((coord[0]+vec[0],coord[1]+vec[1]))+"->"+str(shitf_coord)+" (1,-1): "+str(C2x2_RU.size()))
+
+	#----- build upper part C2x2_LU--C2x2_RU -----------------------------------
+	# 
+	# C2x2_LU--1 0--C2x2_RU  
+	# |				 |  
+	# 0				 1	  
+	#
+	# TODO is it worthy(performance-wise) to instead overwrite one of C2x2_LU,C2x2_RU ?  
+	upper_half = contract(C2x2_LU, C2x2_RU, ([1],[0]))
+
+	#----- building C2x2_RD ----------------------------------------------------
+	vec = (1,1)
+	shitf_coord = state.vertexToSite((coord[0]+vec[0],coord[1]+vec[1]))
+	C = env.C[(shitf_coord,(1,1))]
+	T1 = env.T[(shitf_coord,(0,1))]
+	T2 = env.T[(shitf_coord,(1,0))]
+	dimsA = state.site(shitf_coord).size()
+	# contract all physical sites of this unit cell (index m)
+	a = contiguous(einsum('mefgh,mabcd->eafbgchd',state.site(shitf_coord), conj(state.site(shitf_coord))))
+	a = view(a, (dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2))
+
+	#	 1<-0	   	0
+	# 2<-1--T1--2 1--C
+	C2x2_RD = contract(C, T1, ([1],[2]))
+
+	#		  2<-0
+	#	   3<-1--T2
+	#			 2
+	#	 0<-1	 0
+	# 1<-2--T1---C
+	C2x2_RD = contract(C2x2_RD, T2, ([0],[2]))
+
+	#	 2<-0	 1<-2
+	# 3<-1--a--3 3--T2
+	#	    2   	|
+	#	    0	    |
+	# 0<-1--T1------C
+	C2x2_RD = contract(C2x2_RD, a, ([0,3],[2,3]))
+
+	# permute 0123->1203
+	# reshape (12)(03)->01
+	C2x2_RD = contiguous(permute(C2x2_RD, (1,2,0,3)))
+	C2x2_RD = view(C2x2_RD, (T2.size(0)*a.size(0),T1.size(1)*a.size(1)))
+
+	#	 0
+	#	 |
+	# 1--C2x2
+	if verbosity>0:
+		print("C2X2 RD "+str((coord[0]+vec[0],coord[1]+vec[1]))+"->"+str(shitf_coord)+" (1,1): "+str(C2x2_RD.size()))
+
+	#----- building C2x2_LD ----------------------------------------------------
+	vec = (0,1)
+	shitf_coord = state.vertexToSite((coord[0]+vec[0],coord[1]+vec[1]))
+	C = env.C[(shitf_coord,(-1,1))]
+	T1 = env.T[(shitf_coord,(-1,0))]
+	T2 = env.T[(shitf_coord,(0,1))]
+	dimsA = state.site(shitf_coord).size()
+	# contract all physical sites of this unit cell (index m)
+	a = contiguous(einsum('mefgh,mabcd->eafbgchd',state.site(shitf_coord), conj(state.site(shitf_coord))))
+	a = view(a, (dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2))
+
+	# 0->1
+	# T1--2
+	# 1
+	# 0
+	# C--1->0
+	C2x2_LD = contract(C, T1, ([0],[1]))
+
+	# 1->0
+	# T1--2->1
+	# |
+	# |	      0->2
+	# C--0 1--T2--2->3
+	C2x2_LD = contract(C2x2_LD, T2, ([0],[1]))
+
+	# 0		   0->2
+	# T1--1 1--a--3
+	# |		   2
+	# |		   2
+	# C--------T2--3->1
+	C2x2_LD = contract(C2x2_LD, a, ([1,2],[1,2]))
+
+	# permute 0123->0213
+	# reshape (02)(13)->01
+	# 0
+	# |
+	# C2x2--1
+	C2x2_LD = contiguous(permute(C2x2_LD, (0,2,1,3)))
+	C2x2_LD = view(C2x2_LD, (T1.size(0)*a.size(1),T2.size(1)*a.size(1)))
+	if verbosity>0:
+		print("C2X2 LD "+str((coord[0]+vec[0],coord[1]+vec[1]))+"->"+str(shitf_coord)+" (-1,1): "+str(C2x2_LD.size()))
+
+	#----- build lower part C2x2_LD--C2x2_RD -----------------------------------
+	# 0			    0->1
+	# |     	    |        
+	# C2x2_LD--1 1--C2x2_RD		
+	# TODO is it worthy(performance-wise) to instead overwrite one of C2x2_LD,C2x2_RD ?  
+	lower_half = contract(C2x2_LD, C2x2_RD, ([1],[1]))
+
+	# construct reduced density matrix by contracting lower and upper halfs
+	# C2x2_LU------C2x2_RU
+	# |				|
+	# 0				1	
+	# 0				1	
+	# |  			|
+	# C2x2_LD------C2x2_RD
+	rdm = contract(upper_half,lower_half,([0,1],[0,1]))
+
 	return rdm

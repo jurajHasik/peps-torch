@@ -11,7 +11,7 @@ from models import SU3_chiral
 from ctm.generic.env import *
 from ctm.generic import ctmrg
 from ctm.generic import rdm
-from optim.ad_optim_lbfgs_mod import optimize_state
+from optim.fd_optim_lbfgs_mod import optimize_state
 import json
 import unittest
 import logging
@@ -43,7 +43,9 @@ def main():
 	model = SU3_chiral.SU3_CHIRAL(theta = args.theta)
 	
 	def energy_f(state, env):
-		return model.energy_triangle(state,env)
+		e_dn = model.energy_triangle(state,env)
+		e_up = model.energy_triangle_up(state,env)
+		return((e_up+e_dn)/2)
 		
 	@torch.no_grad()
 	def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
@@ -61,7 +63,6 @@ def main():
 	ctm_env = ENV(args.chi, state)
 	init_env(state, ctm_env)
 	
-	
 	def loss_fn(state, ctm_env_in, opt_context):
 		ctm_args= opt_context["ctm_args"]
 		opt_args= opt_context["opt_args"]
@@ -73,9 +74,8 @@ def main():
 		# compute environment by CTMRG
 		ctm_env_out, history, t_ctm, t_obs= ctmrg.run(state, ctm_env_in, conv_check=ctmrg_conv_energy, ctm_args=ctm_args)
 		loss = energy_f(state, ctm_env_out)
-		print(loss.item())
 		timings = (t_ctm, t_obs)
-		return loss, ctm_env_out, history, t_ctm, t_obs
+		return loss, ctm_env_out, history, timings
 	
 	optimize_state(state, ctm_env, loss_fn)
 	print(state.coeffs)
