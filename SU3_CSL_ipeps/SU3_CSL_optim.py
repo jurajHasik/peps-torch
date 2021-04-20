@@ -69,8 +69,8 @@ def main():
 		# build on-site tensors from su2sym components
 		state.sites= state.build_onsite_tensors()
 		# possibly re-initialize the environment
-		if opt_args.opt_ctm_reinit:
-			init_env(state, ctm_env_in)
+		#if opt_args.opt_ctm_reinit:
+		#	init_env(state, ctm_env_in)
 		# compute environment by CTMRG
 		ctm_env_out, history, t_ctm, t_obs= ctmrg.run(state, ctm_env_in, conv_check=ctmrg_conv_energy, ctm_args=ctm_args)
 		loss = energy_f(state, ctm_env_out)
