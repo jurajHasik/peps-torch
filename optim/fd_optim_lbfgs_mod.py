@@ -160,8 +160,9 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
             if t_data["min_loss"] > t_data["loss"][-1]:
                 t_data["min_loss"]= t_data["loss"][-1]
                 #state.write_to_file(outputstatefile, normalize=True)
-                print('Updated state : ')
-                print(state.coeffs)
+                print(f'Current state: {state.coeffs[(0,0)].data}')
+                if state.coeffs[(0,0)].grad != None:
+                    print(f'Current gradient: {state.coeffs[(0,0)].grad.data}')
 
         # 2) log CTM metrics for debugging
         if opt_args.opt_logging:
@@ -233,8 +234,8 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         # checkpoint the optimizer
         # checkpointing before step, guarantees the correspondence between the wavefunction
         # and the last computed value of loss t_data["loss"][-1]
+        print('***** epoch n. '+str(epoch))
         if epoch>0:
-            print('***** epoch n. '+str(epoch))
             store_checkpoint(checkpoint_file, state, optimizer, epoch, t_data["loss"][-1])
 
         # After execution closure ``current_env`` **IS NOT** corresponding to ``state``, since
