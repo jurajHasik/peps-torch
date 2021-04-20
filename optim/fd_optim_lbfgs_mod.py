@@ -126,7 +126,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
                 assert len(A_orig.size())==1, "coefficient tensor is not 1D"
                 fd_grad[k]= torch.zeros(A_orig.size(),dtype=A_orig.dtype,device=A_orig.device)
                 for i in range(state.coeffs[k].size()[0]):
-                	print('* gradient component n. '+str(i))          
+                    print('* gradient component n. '+str(i))
                     e_i= torch.zeros(A_orig.size()[0],dtype=A_orig.dtype,device=A_orig.device)
                     e_i[i]= opt_args.fd_eps
                     state.coeffs[k]+=e_i
@@ -234,7 +234,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         # checkpointing before step, guarantees the correspondence between the wavefunction
         # and the last computed value of loss t_data["loss"][-1]
         if epoch>0:
-        	print('***** epoch n. '+str(epoch))
+            print('***** epoch n. '+str(epoch))
             store_checkpoint(checkpoint_file, state, optimizer, epoch, t_data["loss"][-1])
 
         # After execution closure ``current_env`` **IS NOT** corresponding to ``state``, since
