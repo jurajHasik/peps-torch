@@ -175,8 +175,8 @@ class IPEPS_U1SYM(ipeps.IPEPS):
 	def add_noise(self,noise):
 		for coord in self.coeffs.keys():
 			rand_t = torch.rand( self.coeffs[coord].size(), dtype=torch.float64, device=self.device)
-			tmp_t = self.coeffs[coord] + noise * rand_t
-			self.coeffs[coord]= tmp_t #/torch.max(torch.abs(tmp_t))
+			tmp_t = self.coeffs[coord] + noise * 2 * (rand_t - 0.5*torch.ones(self.coeffs[coord].size(), dtype=torch.float64, device=self.device))
+			self.coeffs[coord]= tmp_t
 		self.sites= self.build_onsite_tensors()
 
 	def get_aux_bond_dims(self):
