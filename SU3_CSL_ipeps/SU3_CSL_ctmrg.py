@@ -36,10 +36,13 @@ def main():
 	for name in ['S0','S1','S2','S3','S4','L0','L1','L2']:
 		ts = load_SU3_tensor(name)
 		elementary_tensors.append(ts)
-	coeffs = {(0,0): torch.tensor([0.,0.,0.,0.,0.,0.], dtype=torch.float64)}
-	state = IPEPS_U1SYM(elementary_tensors, coeffs)
+	# define initial coefficients
+	coeffs = {(0,0): torch.tensor([1.,0.,0.,0.,0.,1.,0.,0.],dtype=torch.float64)}
+	# define which coefficients will be added a noise
+	var_coeffs_allowed = torch.tensor([0,1,1,0,0, 0,1,0])
+	state = IPEPS_U1SYM(elementary_tensors, coeffs, var_coeffs_allowed)
 	state.add_noise(args.instate_noise)
-	print(state.coeffs)
+	print(f'Current state: {state.coeffs[(0,0)].data}')
 	
 	model = SU3_chiral.SU3_CHIRAL(theta = args.theta)
 	
