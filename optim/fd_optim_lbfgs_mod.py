@@ -142,8 +142,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
                         state.coeffs[k].data.copy_(A_orig)
         log.info(f"FD_GRAD grad {fd_grad}")
         print(f'Current state: {state.coeffs[(0,0)].data}')
-        if state.coeffs[(0,0)].grad != None:
-            print(f'Current gradient: {fd_grad}')
+        print(f'Current gradient: {fd_grad}')
         return fd_grad
 
     #@profile
@@ -236,6 +235,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         # checkpoint the optimizer
         # checkpointing before step, guarantees the correspondence between the wavefunction
         # and the last computed value of loss t_data["loss"][-1]
+        print('\n')
         print('***** epoch n. '+str(epoch))
         if epoch>0:
             store_checkpoint(checkpoint_file, state, optimizer, epoch, t_data["loss"][-1])
