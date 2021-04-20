@@ -140,7 +140,9 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
                         +f" timings {timings}")
                     state.coeffs[k].data.copy_(A_orig)
         log.info(f"FD_GRAD grad {fd_grad}")
-
+        print(f'Current state: {state.coeffs[(0,0)].data}')
+        if state.coeffs[(0,0)].grad != None:
+            print(f'Current gradient: {state.coeffs[(0,0)].grad.data}')
         return fd_grad
 
     #@profile
@@ -162,9 +164,6 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
             if t_data["min_loss"] > t_data["loss"][-1]:
                 t_data["min_loss"]= t_data["loss"][-1]
                 #state.write_to_file(outputstatefile, normalize=True)
-                print(f'Current state: {state.coeffs[(0,0)].data}')
-                if state.coeffs[(0,0)].grad != None:
-                    print(f'Current gradient: {state.coeffs[(0,0)].grad.data}')
 
         # 2) log CTM metrics for debugging
         if opt_args.opt_logging:
