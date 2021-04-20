@@ -128,21 +128,22 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
                 assert len(A_orig.size())==1, "coefficient tensor is not 1D"
                 fd_grad[k]= torch.zeros(A_orig.size(),dtype=A_orig.dtype,device=A_orig.device)
                 for i in range(state.coeffs[k].size()[0]):
-                    print('* gradient component n. '+str(i))
-                    e_i= torch.zeros(A_orig.size()[0],dtype=A_orig.dtype,device=A_orig.device)
-                    e_i[i]= opt_args.fd_eps
-                    state.coeffs[k]+=e_i
-                    loc_env= current_env[0].clone()
-                    loss1, ctm_env, history, timings = loss_fn(state, loc_env,\
+                    if state.var_coeffs_allowed[i] > 0:
+                        print('* gradient component n. '+str(i))
+                        e_i= torch.zeros(A_orig.size()[0],dtype=A_orig.dtype,device=A_orig.device)
+                        e_i[i]= opt_args.fd_eps
+                        state.coeffs[k]+=e_i
+                        loc_env= current_env[0].clone()
+                        loss1, ctm_env, history, timings = loss_fn(state, loc_env,\
                         loc_context)
-                    fd_grad[k][i]=(float(loss1-loss0)/opt_args.fd_eps)
-                    log.info(f"FD_GRAD {i} loss1 {loss1} grad_i {fd_grad[k][i]}"\
+                        fd_grad[k][i]=(float(loss1-loss0)/opt_args.fd_eps)
+                        log.info(f"FD_GRAD {i} loss1 {loss1} grad_i {fd_grad[k][i]}"\
                         +f" timings {timings}")
-                    state.coeffs[k].data.copy_(A_orig)
+                        state.coeffs[k].data.copy_(A_orig)
         log.info(f"FD_GRAD grad {fd_grad}")
         print(f'Current state: {state.coeffs[(0,0)].data}')
         if state.coeffs[(0,0)].grad != None:
-            print(f'Current gradient: {state.coeffs[(0,0)].grad.data}')
+            print(f'Current gradient: {fd_grad}')
         return fd_grad
 
     #@profile
