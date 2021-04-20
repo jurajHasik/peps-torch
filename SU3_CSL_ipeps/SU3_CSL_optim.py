@@ -38,7 +38,7 @@ def main():
 	coeffs = {(0,0): torch.tensor([0.,0.,0.,0.,0.,0.],dtype=torch.float64)}
 	state = IPEPS_U1SYM(elementary_tensors, coeffs)
 	state.add_noise(args.instate_noise)
-	print(state.coeffs)
+	print(f'Current state: {state.coeffs[(0,0)].data}')
 	
 	model = SU3_chiral.SU3_CHIRAL(theta = args.theta)
 	
@@ -78,7 +78,6 @@ def main():
 		return loss, ctm_env_out, history, timings
 	
 	optimize_state(state, ctm_env, loss_fn)
-	print(state.coeffs)
 
 	
 if __name__=='__main__':
