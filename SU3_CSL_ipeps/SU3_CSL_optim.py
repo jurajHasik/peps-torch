@@ -35,7 +35,9 @@ def main():
 	for name in ['S0','S1','S2','S3','S4','L0','L1','L2']:
 		ts = load_SU3_tensor(name)
 		elementary_tensors.append(ts)
+	# define initial coefficients
 	coeffs = {(0,0): torch.tensor([1.,0.,0.,0.,0.,1.,0.,0.],dtype=torch.float64)}
+	# define which coefficients are allowed to move in the optimization procedure
 	var_coeffs_allowed = torch.tensor([0,1,1,0,0, 0,1,0])
 	state = IPEPS_U1SYM(elementary_tensors, coeffs, var_coeffs_allowed)
 	state.add_noise(args.instate_noise)
@@ -46,6 +48,7 @@ def main():
 	def energy_f(state, env):
 		e_dn = model.energy_triangle(state,env)
 		e_up = model.energy_triangle_up(state,env)
+		print('E_up={e_up}, E_dn={e_dn}')
 		return((e_up+e_dn)/2)
 		
 	@torch.no_grad()
