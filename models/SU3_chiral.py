@@ -82,4 +82,38 @@ class SU3_CHIRAL():
 		norm_wf = rdm.rdm1x1((0,0), state, env, operator=id_matrix)
 		e_dn = torch.real(e_dn / norm_wf)
 		return(2/3*e_dn)
+	
+	def energy_triangle_up(self,state,env):
+		# Computes the expectation value of the energy for a "up"-triangle.
+		# unit cells:      (1,0)      with the index order convention (1,0), (0,1), (1,1)
+		#				   /   \
+		#			    (0,1)--(1,1)
+		# The up-triangle is made of the following 3 sites: (1,0)_2, (0,1)_3, (1,1)_1
+		# where (i,j)_k labels the k-th site of the unit cell (i,j).
+		P_upm = torch.zeros((3,3,3,3,3,3),dtype=torch.complex128)
+		P_up = torch.zeros((3,3,3,3,3,3),dtype=torch.complex128)
+		#				    2 3 1 2'3'1' (prime indices are 'ket' indices)
+		for n1 in range(3):
+			for n2 in range(3):
+				for n3 in range(3):
+					P_up[n3,n1,n2,n2,n3,n1] = 1.
+					P_upm[n1,n2,n3,n2,n3,n1] = 1.
+		P_op = exp(1j*self.theta) * P_up + exp(-1j*self.theta) * P_upm
+		id_1site = torch.eye(3, dtype=torch.complex128)
+		id_3sites = torch.einsum('ij,kl,mn->ikmjln',id_1site,id_1site,id_1site)
+		e_up = rdm.rdm2x2_up_triangle((0,0), state, env, operator = P_op)
+		norm_wf = rdm.rdm2x2_up_triangle_id((0,0), state, env)
+		return(2/3 * torch.real(e_up/norm_wf))
 		
+		
+	def eval_lambdas(self,state,env):
+		# computes the expectation value of the SU(3) observables \lambda_3 and \lambda_8 for the three sites of the unit cell
+		id_matrix = torch.eye(27, dtype=torch.complex128)
+		norm_wf = rdm.rdm1x1((0,0), state, env, operator=id_matrix)
+		color3_1 = rdm.rdm1x1((0,0), state, env, operator=lambda_3_1) / norm_wf
+		color3_2 = rdm.rdm1x1((0,0), state, env, operator=lambda_3_2) / norm_wf
+		color3_3 = rdm.rdm1x1((0,0), state, env, operator=lambda_3_3) / norm_wf
+		color8_1 = rdm.rdm1x1((0,0), state, env, operator=lambda_8_1) / norm_wf
+		color8_2 = rdm.rdm1x1((0,0), state, env, operator=lambda_8_2) / norm_wf
+		color8_3 = rdm.rdm1x1((0,0), state, env, operator=lambda_8_3) / norm_wf
+		return((color3_1, color3_2, color3_3), (color8_1, color8_2, color8_3))

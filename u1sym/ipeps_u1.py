@@ -6,7 +6,7 @@ import config as cfg
 import ipeps.ipeps as ipeps
 
 class IPEPS_U1SYM(ipeps.IPEPS):
-	def __init__(self, sym_tensors, coeffs, vertexToSite=None, lX=None, lY=None, \
+	def __init__(self, sym_tensors, coeffs, var_coeffs_allowed = None, vertexToSite=None, lX=None, lY=None, \
 		peps_args=cfg.peps_args, global_args=cfg.global_args):
 		r"""
 		:param sym_tensors: list of selected symmetric tensors
@@ -100,6 +100,12 @@ class IPEPS_U1SYM(ipeps.IPEPS):
 		"""
 		self.sym_tensors= sym_tensors
 		self.coeffs= OrderedDict(coeffs)
+		if var_coeffs_allowed == None:
+			# all coefficients are allowed to move (default)
+			self.var_coeffs_allowed = torch.tensor([1,1,1,1,1, 1,1,1])
+		else:
+			# only the selected coeffs (with a '1') are allowed to move
+			self.var_coeffs_allowed = var_coeffs_allowed
 		sites= self.build_onsite_tensors()
 
 		super().__init__(sites, vertexToSite=vertexToSite, peps_args=peps_args,\
@@ -154,14 +160,14 @@ class IPEPS_U1SYM(ipeps.IPEPS):
 		
 	def build_onsite_tensors(self):
 		# Edited for SU(3) chiral CSL Kagome
-		(l1, l2, l3, l4, m1, m2) = self.coeffs[(0,0)]
-		(S0, S1, S2, S3, S4, L0, L1, L2) = self.sym_tensors
-		# trivalent tensor S
-		S_tensor = S0 + l1 * S1 + l2 * S2 + 1j * l3 * S3 + 1j * l4 * S4
+		(M0, M1, M2, M3, M4,  L0, L1, L2) = self.sym_tensors		
+		(m0, m1, m2, m3, m4,  l0, l1, l2) = self.coeffs[(0,0)]
+		# trivalent tensor M
+		M_tensor = m0 * M0 + m1 * M1 + m2 * M2 + 1j * m3 * M3 + 1j * m4 * M4
 		# bivalent tensor L
-		L_tensor = L0 + m1 * L1 + 1j * m2 * L2
+		L_tensor = l0 * L0 + l1 * L1 + 1j * l2 * L2
 		# square-lattice tensor with 3 physical indices (d=3)
-		a_tensor_temp = torch.einsum('abi,uij,jkl,vkc,wld->uvwabcd', S_tensor, L_tensor, S_tensor, L_tensor, L_tensor)
+		a_tensor_temp = torch.einsum('abi,uij,jkl,vkc,wld->uvwabcd', M_tensor, L_tensor, M_tensor, L_tensor, L_tensor)
 		# reshape to a single d=27 index
 		a_tensor = torch.zeros((27,7,7,7,7), dtype=torch.complex128)
 		for si in range(27):
@@ -175,8 +181,8 @@ class IPEPS_U1SYM(ipeps.IPEPS):
 	def add_noise(self,noise):
 		for coord in self.coeffs.keys():
 			rand_t = torch.rand( self.coeffs[coord].size(), dtype=torch.float64, device=self.device)
-			tmp_t = self.coeffs[coord] + noise * rand_t
-			self.coeffs[coord]= tmp_t #/torch.max(torch.abs(tmp_t))
+			tmp_t = self.coeffs[coord] + noise * 2 * (rand_t - 0.5*torch.ones(self.coeffs[coord].size(), dtype=torch.float64, device=self.device)) * self.var_coeffs_allowed
+			self.coeffs[coord]= tmp_t
 		self.sites= self.build_onsite_tensors()
 
 	def get_aux_bond_dims(self):
