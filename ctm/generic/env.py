@@ -153,8 +153,8 @@ def init_env(state, env, ctm_args=cfg.ctm_args):
       distribution [0,1)
     * CTMRG - tensors C and T are built from the on-site tensors of `state` 
     """
-    if ctm_args.ctm_env_init_type=='CONST':
-        init_const(env, ctm_args.verbosity_initialization)
+    if ctm_args.ctm_env_init_type=='PROD':
+        init_prod(state, env, ctm_args.verbosity_initialization)
     elif ctm_args.ctm_env_init_type=='RANDOM':
         init_random(env, ctm_args.verbosity_initialization)
     elif ctm_args.ctm_env_init_type=='CTMRG':
@@ -164,11 +164,87 @@ def init_env(state, env, ctm_args=cfg.ctm_args):
     else:
         raise ValueError("Invalid environment initialization: "+str(ctm_args.ctm_env_init_type))
 
-def init_const(env, verbosity=0):
+def init_prod(state, env, verbosity=0):
     for key,t in env.C.items():
-        env.C[key] = torch.ones(t.size(), dtype=env.dtype, device=env.device)
-    for key,t in env.T.items():
-        env.T[key] = torch.ones(t.size(), dtype=env.dtype, device=env.device)
+        env.C[key]= torch.zeros(t.size(), dtype=env.dtype, device=env.device)
+        env.C[key][0,0]= 1.0 + 0.j if env.C[key].is_complex() else 1.0
+
+    for coord, site in state.sites.items():
+        # upper transfer matrix
+        #
+        #     i      = 0--T--2     
+        # 1--A--3         1
+        #   /\
+        #  2  m
+        #      \ i
+        #    1--A--3
+        #      /
+        #     2
+        vec = (0,-1)
+        A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
+        dimsA = A.size()
+        a = contiguous(einsum('miefg,miebg->fb',A,conj(A)))
+        a = view(a, (dimsA[3]**2))
+        a= a/a.abs().max()
+        env.T[(coord,vec)]= torch.zeros((env.chi,dimsA[3]**2,env.chi), dtype=env.dtype, device=env.device)
+        env.T[(coord,vec)][0,:,0]= a
+
+        # left transfer matrix
+        #
+        #     0      = 0     
+        # i--A--3      T--2
+        #   /\         1
+        #  2  m
+        #      \ 0
+        #    i--A--3
+        #      /
+        #     2
+        vec = (-1,0)
+        A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
+        dimsA = A.size()
+        a = contiguous(einsum('meifg,meifc->gc',A,conj(A)))
+        a = view(a, (dimsA[4]**2))
+        a= a/a.abs().max()
+        env.T[(coord,vec)] = torch.zeros((env.chi,env.chi,dimsA[4]**2), dtype=env.dtype, device=env.device)
+        env.T[(coord,vec)][0,0,:]= a
+
+        # lower transfer matrix
+        #
+        #     0      =    0     
+        # 1--A--3      1--T--2
+        #   /\
+        #  i  m
+        #      \ 0
+        #    1--A--3
+        #      /
+        #     i
+        vec = (0,1)
+        A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
+        dimsA = A.size()
+        a = contiguous(einsum('mefig,mafig->ea',A,conj(A)))
+        a = view(a, (dimsA[1]**2))
+        a= a/a.abs().max()
+        env.T[(coord,vec)] = torch.zeros((dimsA[1]**2,env.chi,env.chi), dtype=env.dtype, device=env.device)
+        env.T[(coord,vec)][:,0,0]= a
+
+        # right transfer matrix
+        #
+        #     0      =    0     
+        # 1--A--i      1--T
+        #   /\            2
+        #  2  m
+        #      \ 0
+        #    1--A--i
+        #      /
+        #     2
+        vec = (1,0)
+        A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
+        dimsA = A.size()
+        a = contiguous(einsum('mefgi,mebgi->fb',A,conj(A)))
+        a = view(a, (dimsA[2]**2))
+        a= a/a.abs().max()
+        env.T[(coord,vec)] = torch.zeros((env.chi,dimsA[2]**2,env.chi), dtype=env.dtype, device=env.device)
+        env.T[(coord,vec)][0,:,0]= a
 
 # TODO restrict random corners to have pos-semidef spectrum
 def init_random(env, verbosity=0):
