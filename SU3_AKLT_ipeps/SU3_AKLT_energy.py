@@ -22,6 +22,7 @@ args, unknown_args = parser.parse_known_args()
 model = SU3_AKLT()
 def lattice_to_site(coord): return (0,0)
 state = read_ipeps('SU3_AKLT_ipeps/SU3_AKLT_ipeps.json', vertexToSite=lattice_to_site)
+state.add_noise(args.instate_noise)
 
 def main():
 
@@ -30,6 +31,7 @@ def main():
 	print('\n')
 	torch.set_num_threads(args.omp_cores)
 	torch.manual_seed(args.seed)
+	
 	
 	def ctmrg_conv_rdm(state, env, history, ctm_args=cfg.ctm_args):
 		"""
@@ -43,7 +45,13 @@ def main():
 				history=[]
 			e_curr = model.energy_triangle(state, env)
 			rdm_curr = model.rdm1x1(state,env)
-			history.append([e_curr.item(), rdm_curr])
+			print("\n")
+			for c_loc,c_ten in env.C.items(): 
+				u,s,v= torch.svd(c_ten, compute_uv=False)
+				print(f"spectrum C[{c_loc}]")
+				for i in range(args.chi):
+					print(f"{i} {s[i]}")
+			history.append([e_curr, rdm_curr])
 			if len(history) <= 1: 
 				Delta_rho = 'not defined'
 			else:
@@ -53,9 +61,30 @@ def main():
 				return True, history
 		return False, history
 		
+		
+	def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
+		"""
+		Convergence is defined wrt. the energy
+		"""
+		with torch.no_grad():
+			if not history:
+				history=[]
+			e_curr = model.energy_triangle(state, env)
+			history.append([e_curr])
+			if len(history) <= 1: 
+				Delta_E = 'not defined'
+			else:
+				Delta_E = torch.norm(history[-1][0]-history[-2][0]).item()
+			print('Step n°'+str(len(history))+'     E_down = '+str(e_curr.item()))
+			if len(history) > 1 and Delta_E < ctm_args.ctm_conv_tol:
+				return True, history
+		return False, history
+	
+		
 	# initializes an environment for the ipeps
 	ctm_env_init = ENV(args.chi, state)
 	init_env(state, ctm_env_init)
+	
 	# initial energy of up and down triangles
 	e_init_dn = model.energy_triangle(state, ctm_env_init)
 	print('*** Energy per site (before CTMRG) -- down triangles: '+str(e_init_dn.item()))
@@ -63,7 +92,7 @@ def main():
 	print('*** Energy per site (before CTMRG) -- up triangles: '+str(e_init_up.item()))
 	
 	# performs CTMRG and computes the obervables afterwards (energy and lambda_3)
-	ctm_env_fin, *ctm_log= ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_rdm)
+	ctm_env_fin, *ctm_log= ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
 	
 	e_final_dn = model.energy_triangle(state, ctm_env_fin)
 	print('*** Energy per site (after CTMRG) -- down triangles: '+str(e_final_dn.item()))
@@ -75,6 +104,15 @@ def main():
 	print('*** <Lambda_8> (after CTMRG): '+str(colors8[0].item())+', '+str(colors8[1].item())+', '+str(colors8[2].item()))
 	
 	
+	
+	# environment diagnostics
+	print("\n")
+	for c_loc,c_ten in ctm_env_init.C.items(): 
+		u,s,v= torch.svd(c_ten, compute_uv=False)
+		print(f"spectrum C[{c_loc}]")
+		for i in range(args.chi):
+			print(f"{i} {s[i]}")
+		
 	
 	
 if __name__=='__main__':

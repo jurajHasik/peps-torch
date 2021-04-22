@@ -125,19 +125,22 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
                 A_orig= state.coeffs[k].clone()
                 assert len(A_orig.size())==1, "coefficient tensor is not 1D"
                 fd_grad[k]= torch.zeros(A_orig.size(),dtype=A_orig.dtype,device=A_orig.device)
-                for i in range(state.coeffs[k].size()[0]):                  
-                    e_i= torch.zeros(A_orig.size()[0],dtype=A_orig.dtype,device=A_orig.device)
-                    e_i[i]= opt_args.fd_eps
-                    state.coeffs[k]+=e_i
-                    loc_env= current_env[0].clone()
-                    loss1, ctm_env, history, timings = loss_fn(state, loc_env,\
+                for i in range(state.coeffs[k].size()[0]):
+                    if state.var_coeffs_allowed[i] > 0:
+                        print('* gradient component n. '+str(i))
+                        e_i= torch.zeros(A_orig.size()[0],dtype=A_orig.dtype,device=A_orig.device)
+                        e_i[i]= opt_args.fd_eps
+                        state.coeffs[k]+=e_i
+                        loc_env= current_env[0].clone()
+                        loss1, ctm_env, history, timings = loss_fn(state, loc_env,\
                         loc_context)
-                    fd_grad[k][i]=(float(loss1-loss0)/opt_args.fd_eps)
-                    log.info(f"FD_GRAD {i} loss1 {loss1} grad_i {fd_grad[k][i]}"\
+                        fd_grad[k][i]=(float(loss1-loss0)/opt_args.fd_eps)
+                        log.info(f"FD_GRAD {i} loss1 {loss1} grad_i {fd_grad[k][i]}"\
                         +f" timings {timings}")
-                    state.coeffs[k].data.copy_(A_orig)
+                        state.coeffs[k].data.copy_(A_orig)
         log.info(f"FD_GRAD grad {fd_grad}")
-
+        print(f'Current state: {state.coeffs[(0,0)].data}')
+        print(f'Current gradient: {fd_grad}')
         return fd_grad
 
     #@profile
@@ -159,7 +162,6 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
             if t_data["min_loss"] > t_data["loss"][-1]:
                 t_data["min_loss"]= t_data["loss"][-1]
                 #state.write_to_file(outputstatefile, normalize=True)
-                print(state.coeffs)
 
         # 2) log CTM metrics for debugging
         if opt_args.opt_logging:
@@ -231,6 +233,8 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         # checkpoint the optimizer
         # checkpointing before step, guarantees the correspondence between the wavefunction
         # and the last computed value of loss t_data["loss"][-1]
+        print('\n')
+        print('***** epoch n. '+str(epoch))
         if epoch>0:
             store_checkpoint(checkpoint_file, state, optimizer, epoch, t_data["loss"][-1])
 
@@ -244,6 +248,11 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
 
         if post_proc is not None:
             post_proc(state, current_env[0], context)
+        
+        # terminate condition
+        if len(t_data["loss"])>1 and \
+            abs(t_data["loss"][-1]-t_data["loss"][-2])<opt_args.tolerance_change:
+            break
 
     # optimization is over, store the last checkpoint
     store_checkpoint(checkpoint_file, state, optimizer, \
