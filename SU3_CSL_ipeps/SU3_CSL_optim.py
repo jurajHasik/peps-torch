@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 
 # parse command line args and build necessary configuration objects
 parser= cfg.get_args_parser()
-parser.add_argument("--theta", type=float, default=0., help="rotation angle of the model")
+parser.add_argument("--frac_theta", type=float, default=0., help="rotation angle of the model")
 args, unknown_args= parser.parse_known_args()
 
 def main():
@@ -36,14 +36,14 @@ def main():
 		ts = load_SU3_tensor(name)
 		elementary_tensors.append(ts)
 	# define initial coefficients
-	coeffs = {(0,0): torch.tensor([1.,0.,0.,0.,0.,1.,0.,0.],dtype=torch.float64)}
+	coeffs = {(0,0): torch.tensor([0.,0.,0.,0.,0.,0.,0.,0.],dtype=torch.float64)}
 	# define which coefficients are allowed to move in the optimization procedure
-	var_coeffs_allowed = torch.tensor([0,1,1,1,1, 0,1,1])
+	var_coeffs_allowed = torch.tensor([1,1,1,1,1, 1,1,1])
 	state = IPEPS_U1SYM(elementary_tensors, coeffs, var_coeffs_allowed)
 	state.add_noise(args.instate_noise)
 	print(f'Current state: {state.coeffs[(0,0)].data}')
 	
-	model = SU3_chiral.SU3_CHIRAL(theta = args.theta)
+	model = SU3_chiral.SU3_CHIRAL(theta = math.pi * args.frac_theta / 100.0)
 	
 	def energy_f(state, env):
 		e_dn = model.energy_triangle(state,env)
@@ -82,7 +82,12 @@ def main():
 		return loss, ctm_env_out, history, timings
 	
 	optimize_state(state, ctm_env, loss_fn)
-
+	e_dn_final = model.energy_triangle(state,ctm_env)
+	e_up_final = model.energy_triangle_up(state,ctm_env)
+	e_tot_final = (e_dn_final + e_up_final)/2
+	print(f'\n\n E_up={e_up_final.item()}, E_dn={e_dn_final.item()}, E_tot={e_tot_final.item()}')
+	print(e_tot_final.item())
+	
 	
 if __name__=='__main__':
 	if len(unknown_args)>0:
