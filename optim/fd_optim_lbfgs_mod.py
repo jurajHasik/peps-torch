@@ -139,7 +139,6 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
                         +f" timings {timings}")
                         state.coeffs[k].data.copy_(A_orig)
         log.info(f"FD_GRAD grad {fd_grad}")
-        print(f'Current state: {state.coeffs[(0,0)].data}')
         print(f'Current gradient: {fd_grad}')
         return fd_grad
 
@@ -181,6 +180,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         for k in state.coeffs.keys():
             state.coeffs[k].grad= grad[k]
         t_grad1= time.perf_counter()
+        print(f'Current state: {state.coeffs[(0,0)].data}')
 
         # 5) log grad metrics
         if opt_args.opt_logging:
