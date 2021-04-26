@@ -4,6 +4,7 @@ import config as cfg
 import math
 import torch
 import copy
+from random import randint
 from collections import OrderedDict
 from u1sym.ipeps_u1 import IPEPS_U1SYM, write_coeffs, read_coeffs
 from read_write_SU3_tensors import *
@@ -28,7 +29,9 @@ def main():
 	cfg.print_config()
 	print('\n')
 	torch.set_num_threads(args.omp_cores)
-	torch.manual_seed(args.seed)
+	rseed = randint(1,args.seed)
+	torch.manual_seed(rseed)
+	#torch.manual_seed(args.seed)
 	
 	# Import all elementary tensors and build initial state
 	elementary_tensors = []
@@ -36,9 +39,9 @@ def main():
 		ts = load_SU3_tensor(name)
 		elementary_tensors.append(ts)
 	# define initial coefficients
-	coeffs = {(0,0): torch.tensor([0.,0.,0.,0.,0.,0.,0.,0.,0.,0.],dtype=torch.float64)}
-	# define which coefficients will be added a noise
-	var_coeffs_allowed = torch.tensor([0,0,0,0,0,1,1, 1,1,1])
+	coeffs = {(0,0): torch.tensor([1.,0.,0.,0.,0.,0.,0.,1.,0.,0.],dtype=torch.float64)}
+	# define which coefficients will be added a noise and will be allowed to vary
+	var_coeffs_allowed = torch.tensor([1,1,1,1,1,0,0, 1,1,1])
 	state = IPEPS_U1SYM(elementary_tensors, coeffs, var_coeffs_allowed)
 	state.add_noise(args.instate_noise)
 	print(f'Current state: {state.coeffs[(0,0)].data}')
