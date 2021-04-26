@@ -32,13 +32,13 @@ def main():
 	
 	# Import all elementary tensors and build initial state
 	elementary_tensors = []
-	for name in ['S0','S1','S2','S3','S4','L0','L1','L2']:
+	for name in ['S0','S1','S2','S3','S4','S5','S6','L0','L1','L2']:
 		ts = load_SU3_tensor(name)
 		elementary_tensors.append(ts)
 	# define initial coefficients
-	coeffs = {(0,0): torch.tensor([0.,0.,0.,0.,0.,0.,0.,0.],dtype=torch.float64)}
-	# define which coefficients are allowed to move in the optimization procedure
-	var_coeffs_allowed = torch.tensor([1,1,1,1,1, 1,1,1])
+	coeffs = {(0,0): torch.tensor([0.,0.,0.,0.,0.,0.,0.,0.,0.,0.],dtype=torch.float64)}
+	# define which coefficients will be added a noise
+	var_coeffs_allowed = torch.tensor([0,0,0,0,0,1,1, 1,1,1])
 	state = IPEPS_U1SYM(elementary_tensors, coeffs, var_coeffs_allowed)
 	state.add_noise(args.instate_noise)
 	print(f'Current state: {state.coeffs[(0,0)].data}')
