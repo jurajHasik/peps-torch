@@ -32,13 +32,13 @@ def main():
     
     # Import all elementary tensors and build initial state
     elementary_tensors = []
-    for name in ['S0','S1','S2','S3','S4','L0','L1','L2']:
+    for name in ['S0','S1','S2','S3','S4','S5','S6','L0','L1','L2']:
         ts = load_SU3_tensor(name)
         elementary_tensors.append(ts)
     # define initial coefficients
-    coeffs = {(0,0): torch.tensor([1.,0.,0.,0.,0.,1.,0.,0.],dtype=torch.float64)}
+    coeffs = {(0,0): torch.tensor([0.,0.,0.,0.,0.,0.,0.,0.,0.,0.],dtype=torch.float64)}
     # define which coefficients will be added a noise
-    var_coeffs_allowed = torch.tensor([0,1,1,0,0, 0,1,0])
+    var_coeffs_allowed = torch.tensor([0,0,0,0,0,1,1, 1,1,1])
     state = IPEPS_U1SYM(elementary_tensors, coeffs, var_coeffs_allowed)
     state.add_noise(args.instate_noise)
     print(f'Current state: {state.coeffs[(0,0)].data}')
@@ -92,14 +92,15 @@ def main():
     ctm_env_init = ENV(args.chi, state)
     init_env(state, ctm_env_init)
     
-    e_dn_init = energy_f(state, ctm_env_init)
+    e_dn_init = model.energy_triangle(state, ctm_env_init)
     print('*** Energy per site (before CTMRG) -- down triangles: '+str(e_dn_init.item()))
     e_up_init = model.energy_triangle_up(state, ctm_env_init)
     print('*** Energy per site (before CTMRG) -- up triangles: '+str(e_up_init.item()))
+    print(f'*** Energy per site (before CTMRG) -- total: {(e_up_init.item()+e_dn_init.item())/2}')
     
     ctm_env_out, *ctm_log= ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
     
-    e_dn_final = energy_f(state,ctm_env_out)
+    e_dn_final = model.energy_triangle(state,ctm_env_out)
     e_up_final = model.energy_triangle_up(state, ctm_env_out)
     colors3, colors8 = model.eval_lambdas(state,ctm_env_out)
     print('*** Energy per site (after CTMRG) -- down triangles: '+str(e_dn_final.item()))

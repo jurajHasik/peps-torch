@@ -18,6 +18,8 @@ def write_SU3_tensors():
 	S2 = torch.zeros((7,7,7),dtype=torch.complex128)
 	S3 = torch.zeros((7,7,7),dtype=torch.complex128)
 	S4 = torch.zeros((7,7,7),dtype=torch.complex128)
+	S5 = torch.zeros((7,7,7),dtype=torch.complex128)
+	S6 = torch.zeros((7,7,7),dtype=torch.complex128)
 
 	# S0: {0,3,0}, A2 
 	S0[3,4,5] = S0[4,5,3] = S0[5,3,4] = -1./np.sqrt(6.)
@@ -38,6 +40,25 @@ def write_SU3_tensors():
 	S4[0,5,6] = S4[0,6,5] = S4[5,0,6] = S4[5,6,0] = S4[6,0,5] = S4[6,5,0] = 1./(3.*np.sqrt(2.))
 	S4[1,4,6] = S4[1,6,4] = S4[6,1,4] = S4[6,4,1] = S4[4,6,1] = S4[4,1,6] = -1./(3.*np.sqrt(2.))
 	S4[2,3,6] = S4[3,6,2] = S4[6,2,3] = S4[2,6,3] = S4[3,2,6] = S4[6,3,2] = 1./(3.*np.sqrt(2.))
+	
+	# S5: {1,1,1}, E
+	S5[0,5,6] = S5[2,3,6] = 1./3.
+	S5[1,4,6] = -1./3.
+	S5[3,6,2] = S5[5,6,0] = 1j *(1j+np.sqrt(3.))/6.
+	S5[4,6,1] = (1.-1j*np.sqrt(3.))/6.
+	S5[6,0,5] = -1j*(-1j+np.sqrt(3.))/6.
+	S5[6,1,4] = (1+1j*np.sqrt(3.))/6.
+	S5[6,2,3] = -1j*(-1j+np.sqrt(3.))/6.
+	
+	# S6: {1,1,1}, E
+	S6[0,6,5] = S6[2,6,3] = 1./3.
+	S6[1,6,4] = -1./3.
+	S6[3,2,6] = S6[5,0,6] = -1j *(-1j+np.sqrt(3.))/6.
+	S6[4,1,6] = (1.+1j*np.sqrt(3.))/6.
+	S6[6,5,0] = 1j*(1j+np.sqrt(3.))/6.
+	S6[6,4,1] = (1-1j*np.sqrt(3.))/6.
+	S6[6,3,2] = 1j*(1j+np.sqrt(3.))/6.
+	
 	#________________________________
 
 
@@ -59,7 +80,8 @@ def write_SU3_tensors():
 	L2[0,6,0] = L2[1,6,1] = L2[2,6,2] = 1./np.sqrt(2.)
 	#________________________________
 
-	for tensor,name in zip([S0,S1,S2,S3,S4,L0,L1,L2],['S0','S1','S2','S3','S4','L0','L1','L2']):
+
+	for tensor,name in zip([S0,S1,S2,S3,S4,S5,S6,L0,L1,L2],['S0','S1','S2','S3','S4','S5','S6','L0','L1','L2']):
 		filename = path+name+'.json'
 		write_json_to_file(tensor,filename)
 		
