@@ -102,7 +102,7 @@ class IPEPS_U1SYM(ipeps.IPEPS):
 		self.coeffs= OrderedDict(coeffs)
 		if var_coeffs_allowed == None:
 			# all coefficients are allowed to move (default)
-			self.var_coeffs_allowed = torch.tensor([1,1,1,1,1, 1,1,1])
+			self.var_coeffs_allowed = torch.ones(self.coeffs[coord].size())
 		else:
 			# only the selected coeffs (with a '1') are allowed to move
 			self.var_coeffs_allowed = var_coeffs_allowed
@@ -160,10 +160,10 @@ class IPEPS_U1SYM(ipeps.IPEPS):
 		
 	def build_onsite_tensors(self):
 		# Edited for SU(3) chiral CSL Kagome
-		(M0, M1, M2, M3, M4,  L0, L1, L2) = self.sym_tensors		
-		(m0, m1, m2, m3, m4,  l0, l1, l2) = self.coeffs[(0,0)]
+		(M0, M1, M2, M3, M4, M5, M6,  L0, L1, L2) = self.sym_tensors		
+		(m0, m1, m2, m3, m4, m5, m6,  l0, l1, l2) = self.coeffs[(0,0)]
 		# trivalent tensor M
-		M_tensor = m0 * M0 + m1 * M1 + m2 * M2 + 1j * m3 * M3 + 1j * m4 * M4
+		M_tensor = m0 * M0 + m1 * M1 + m2 * M2 + 1j * m3 * M3 + 1j * m4 * M4 + m5 * M5 + m6 * M6
 		# bivalent tensor L
 		L_tensor = l0 * L0 + l1 * L1 + 1j * l2 * L2
 		# square-lattice tensor with 3 physical indices (d=3)
