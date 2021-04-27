@@ -36,9 +36,9 @@ def main():
         ts = load_SU3_tensor(name)
         elementary_tensors.append(ts)
     # define initial coefficients
-    coeffs = {(0,0): torch.tensor([1.,0.,0.,0.,0.,0.,0.,1.,0.,0.],dtype=torch.float64)}
+    coeffs = {(0,0): torch.tensor([0.,0.,0.,0.,0.,0.,0.,0.,0.,0.],dtype=torch.float64)}
     # define which coefficients will be added a noise
-    var_coeffs_allowed = torch.tensor([1,1,1,1,1,0,0, 1,1,1])
+    var_coeffs_allowed = torch.tensor([0,0,0,0,0,1,1, 1,1,1])
     state = IPEPS_U1SYM(elementary_tensors, coeffs, var_coeffs_allowed)
     state.add_noise(args.instate_noise)
     print(f'Current state: {state.coeffs[(0,0)].data}')
@@ -57,11 +57,11 @@ def main():
         history.append(e_curr.item())
         print('Step n°'+str(len(history))+'     E_site = '+str(e_curr.item()))
         
-        for c_loc,c_ten in env.C.items():
-            u,s,v= torch.svd(c_ten, compute_uv=False)
-            print(f"\n\nspectrum C[{c_loc}]")
-            for i in range(args.chi):
-                print(f"{i} {s[i]}")
+        #for c_loc,c_ten in env.C.items():
+        #    u,s,v= torch.svd(c_ten, compute_uv=False)
+        #    print(f"\n\nspectrum C[{c_loc}]")
+        #    for i in range(args.chi):
+        #        print(f"{i} {s[i]}")
 
         if (len(history) > 1 and abs(history[-1]-history[-2]) < ctm_args.ctm_conv_tol)\
             or len(history) >= ctm_args.ctm_max_iter:
