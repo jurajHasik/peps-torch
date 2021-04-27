@@ -595,7 +595,7 @@ def rdm2x1_sl(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
         C = env.C[env.keyC]
         T = env.T[env.keyT]
         a = next(iter(state.sites.values()))
-
+        
     #----- building C2x2_LU ----------------------------------------------------
     loc_device=C.device
     is_cpu= loc_device==torch.device('cpu')

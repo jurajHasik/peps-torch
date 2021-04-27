@@ -595,7 +595,6 @@ class J1J2_C4V_BIPARTITE():
         """
         rdm2x2_NN= rdm_c4v.rdm2x2_NN_lowmem_sl(state, env_c4v, sym_pos_def=True,\
             force_cpu=force_cpu, verbosity=cfg.ctm_args.verbosity_rdm)
-
         energy_per_site= 2.0*self.j1*torch.einsum('ijkl,ijkl',rdm2x2_NN,self.SS_delta_zz_rot)\
             - 0.5*self.hz_stag * torch.einsum('ijkl,ijkl',rdm2x2_NN,self.hz_2x1_rot)
         if abs(self.j2)>0:
@@ -710,7 +709,6 @@ class J1J2_C4V_BIPARTITE():
                 verbosity=cfg.ctm_args.verbosity_rdm)
             SS2x1= torch.einsum('ijab,ijab',rdm2x1,self.SS_rot)
             obs[f"SS2x1"]= _cast_to_real(SS2x1)
-
             # reduce rdm2x1 to 1x1
             rdm1x1= torch.einsum('ijaj->ia',rdm2x1)
             rdm1x1= rdm1x1/torch.trace(rdm1x1)
@@ -745,19 +743,11 @@ class J1J2_C4V_BIPARTITE():
         return obs_values, obs_labels
 
     def eval_corrf_SS(self,state,env_c4v,dist,canonical=False):
-        ### MODIFICATION OF THE PROGRAM
-        #Sop_zxy= torch.zeros((3,self.phys_dim,self.phys_dim),dtype=self.dtype,device=self.device)
-        #Sop_zxy[0,:,:]= self.obs_ops["sz"]
-        #Sop_zxy[1,:,:]= 0.5*(self.obs_ops["sp"] + self.obs_ops["sm"])
-        #Sop_zxy[2,:,:]= -0.5*(self.obs_ops["sp"] - self.obs_ops["sm"])
+        Sop_zxy= torch.zeros((3,self.phys_dim,self.phys_dim),dtype=self.dtype,device=self.device)
+        Sop_zxy[0,:,:]= self.obs_ops["sz"]
+        Sop_zxy[1,:,:]= 0.5*(self.obs_ops["sp"] + self.obs_ops["sm"])
+        Sop_zxy[2,:,:]= -0.5*(self.obs_ops["sp"] - self.obs_ops["sm"])
 
-        Sop_zxy = torch.zeros((3,2,2,2,2), dtype=self.dtype, device=self.device)
-        Sop_zxy[0,:,:,:,:] = torch.einsum('ij,kl->ikjl', self.obs_ops["sz"], torch.eye(2))
-        Sop_zxy[1,:,:,:,:] = torch.einsum('ij,kl->ikjl',\
-                                          0.5*(self.obs_ops["sp"] + self.obs_ops["sm"]), torch.eye(2))
-        Sop_zxy[2,:,:,:,:] = torch.einsum('ij,kl->ikjl',\
-                                          -0.5*(self.obs_ops["sp"] - self.obs_ops["sm"]), torch.eye(2))
-        Sop_zxy = Sop_zxy.view(3,4,4).contiguous()
         # compute vector of spontaneous magnetization
         if canonical:
             s_vec_zpm=[]
@@ -777,11 +767,6 @@ class J1J2_C4V_BIPARTITE():
 
         # function generating properly rotated operators on every bi-partite site
         def get_bilat_op(op):
-            ### MODIFICATION OF THE PROGRAM
-            rot_op= su2.get_rot_op(self.phys_dim, dtype=self.dtype, device=self.device)
-            rot_op = torch.einsum('ij,kl->ikjl', rot_op, torch.eye(2))
-            rot_op = rot_op.view(4,4).contiguous()
-            ### END OF MODIFICATION
             op_0= op
             op_rot= torch.einsum('ki,kl,lj->ij',rot_op,op_0,rot_op)
             def _gen_op(r):
@@ -797,15 +782,9 @@ class J1J2_C4V_BIPARTITE():
         return res
 
     def eval_corrf_DD_H(self,state,env_c4v,dist,verbosity=0):
-        ### MODIFICATION OF THE PROGRAM
         # function generating properly rotated S.S operator on every bi-partite site
         rot_op= su2.get_rot_op(self.phys_dim, dtype=self.dtype, device=self.device)
-        rot_op = torch.einsum('ij,kl->ikjl', rot_op, torch.eye(2))
-        rot_op = rot_op.view(4,4).contiguous()
         # (S.S)_s1s2,s1's2' with rotation applied on "first" spin s1,s1' 
-        self.SS = torch.einsum('ijkl,mn,op->imjnkolp',\
-                               self.SS, torch.eye(2), torch.eye(2))
-        self.SS = self.SS.view(4,4,4,4).contiguous()
         SS_rot= torch.einsum('ki,kjcb,ca->ijab',rot_op,self.SS,rot_op)
         # (S.S)_s1s2,s1's2' with rotation applied on "second" spin s2,s2'
         op_rot= SS_rot.permute(1,0,3,2).contiguous()
@@ -818,12 +797,8 @@ class J1J2_C4V_BIPARTITE():
         return res
 
     def eval_corrf_DD_V(self,state,env_c4v,dist,verbosity=0):
-        ### MODIFICATION OF THE PROGRAM
         # function generating properly rotated S.S operator on every bi-partite site
         rot_op= su2.get_rot_op(self.phys_dim, dtype=self.dtype, device=self.device)
-        rot_op = torch.einsum('ij,kl->ikjl', rot_op, torch.eye(2))
-        rot_op = rot_op.view(4,4).contiguous()
-        ### END OF MODIFICATION
         # (S.S)_s1s2,s1's2' with rotation applied on "first" spin s1,s1' 
         SS_rot= torch.einsum('ki,kjcb,ca->ijab',rot_op,self.SS,rot_op)
         # (S.S)_s1s2,s1's2' with rotation applied on "second" spin s2,s2'
