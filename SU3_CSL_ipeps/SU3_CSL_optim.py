@@ -39,9 +39,9 @@ def main():
 		ts = load_SU3_tensor(name)
 		elementary_tensors.append(ts)
 	# define initial coefficients
-	coeffs = {(0,0): torch.tensor([0.,0.,0.,0.,0.,0.,0.,0.,0.,0.],dtype=torch.float64)}
+	coeffs = {(0,0): torch.tensor([1.,0.,0.,0.,0.,0.,0., 1.,0.,0.],dtype=torch.float64)}
 	# define which coefficients will be added a noise
-	var_coeffs_allowed = torch.tensor([0,0,0,0,0,1,1, 1,1,1])
+	var_coeffs_allowed = torch.tensor([1,1,1,1,1,0,0, 1,1,1])
 	state = IPEPS_U1SYM(elementary_tensors, coeffs, var_coeffs_allowed)
 	state.add_noise(args.instate_noise)
 	print(f'Current state: {state.coeffs[(0,0)].data}')
@@ -67,8 +67,8 @@ def main():
 			return True, history
 		return False, history
 		
-	ctm_env = ENV(args.chi, state)
-	init_env(state, ctm_env)
+	ctm_env_init = ENV(args.chi, state)
+	init_env(state, ctm_env_init)
 	
 	def loss_fn(state, ctm_env_in, opt_context):
 		ctm_args= opt_context["ctm_args"]
@@ -76,17 +76,18 @@ def main():
 		# build on-site tensors from su2sym components
 		state.sites= state.build_onsite_tensors()
 		# possibly re-initialize the environment
-		#if opt_args.opt_ctm_reinit:
-		#	init_env(state, ctm_env_in)
+		if opt_args.opt_ctm_reinit:
+			init_env(state, ctm_env_in)
 		# compute environment by CTMRG
 		ctm_env_out, history, t_ctm, t_obs= ctmrg.run(state, ctm_env_in, conv_check=ctmrg_conv_energy, ctm_args=ctm_args)
 		loss = energy_f(state, ctm_env_out)
 		timings = (t_ctm, t_obs)
 		return loss, ctm_env_out, history, timings
 	
-	optimize_state(state, ctm_env, loss_fn)
-	e_dn_final = model.energy_triangle(state,ctm_env)
-	e_up_final = model.energy_triangle_up(state,ctm_env)
+	optimize_state(state, ctm_env_init, loss_fn)
+	ctm_env_final, *ctm_log= ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
+	e_dn_final = model.energy_triangle(state,ctm_env_final)
+	e_up_final = model.energy_triangle_up(state,ctm_env_final)
 	e_tot_final = (e_dn_final + e_up_final)/2
 	print(f'\n\n E_up={e_up_final.item()}, E_dn={e_dn_final.item()}, E_tot={e_tot_final.item()}')
 	print(e_tot_final.item())
