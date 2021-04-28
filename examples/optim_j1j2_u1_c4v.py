@@ -19,9 +19,10 @@ log = logging.getLogger(__name__)
 # parse command line args and build necessary configuration objects
 parser= cfg.get_args_parser()
 # additional model-dependent arguments
-parser.add_argument("--u1_class", type=str, default="B", choices=["A", "B", "C", "D", "E"])
+parser.add_argument("--u1_class", type=str, default="B")
 parser.add_argument("--j1", type=float, default=1., help="nearest-neighbour coupling")
 parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour coupling")
+parser.add_argument("--j3", type=float, default=0., help="next-to-next nearest-neighbour coupling")
 parser.add_argument("--hz_stag", type=float, default=0., help="staggered mag. field")
 parser.add_argument("--delta_zz", type=float, default=1., help="easy-axis (nearest-neighbour) anisotropy")
 parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
@@ -35,8 +36,8 @@ def main():
     torch.set_num_threads(args.omp_cores)
     torch.manual_seed(args.seed)
 
-    model= j1j2.J1J2_C4V_BIPARTITE(j1=args.j1, j2=args.j2, hz_stag=args.hz_stag, \
-        delta_zz=args.delta_zz)
+    model= j1j2.J1J2_C4V_BIPARTITE(j1=args.j1, j2=args.j2, j3=args.j3, \
+        hz_stag=args.hz_stag, delta_zz=args.delta_zz)
     energy_f= model.energy_1x1_lowmem
 
     # initialize an ipeps
@@ -46,28 +47,27 @@ def main():
 
         # TODO extending from smaller bond-dim to higher bond-dim is 
         # currently not possible
-        
+
         state.add_noise(args.instate_noise)
     elif args.opt_resume is not None:
-        if args.bond_dim in [2,3,4,5,6,7,8]:
+        if args.bond_dim in [2,3,4,5,6,7,8,9]:
             u1sym_t= tenU1.import_sym_tensors(2,args.bond_dim,"A_1",\
                 infile=f"u1sym/D{args.bond_dim}_U1_{args.u1_class}.txt",\
-                dtype=cfg.global_args.dtype, device=cfg.global_args.device)
+                dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
         else:
             raise ValueError("Unsupported --bond_dim= "+str(args.bond_dim))
-        A= torch.zeros(len(u1sym_t), dtype=cfg.global_args.dtype, device=cfg.global_args.device)
+        A= torch.zeros(len(u1sym_t), dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
         coeffs = {(0,0): A}
         state= IPEPS_U1SYM(u1sym_t, coeffs)
         state.load_checkpoint(args.opt_resume)
     elif args.ipeps_init_type=='RANDOM':
-        if args.bond_dim in [2,3,4,5,6,7,8]:
+        if args.bond_dim in [2,3,4,5,6,7,8,9]:
             u1sym_t= tenU1.import_sym_tensors(2, args.bond_dim, "A_1", \
                 infile=f"u1sym/D{args.bond_dim}_U1_{args.u1_class}.txt", \
-                dtype=cfg.global_args.dtype, device=cfg.global_args.device)
+                dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
         else:
             raise ValueError("Unsupported --bond_dim= "+str(args.bond_dim))
-
-        A= torch.rand(len(u1sym_t), dtype=cfg.global_args.dtype, device=cfg.global_args.device)
+        A= torch.rand(len(u1sym_t), dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
         A= A/torch.max(torch.abs(A))
         coeffs = {(0,0): A}
         state = IPEPS_U1SYM(u1sym_t, coeffs)
