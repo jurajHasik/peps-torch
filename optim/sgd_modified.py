@@ -72,6 +72,7 @@ class SGD_MOD(SGD):
     .. warning::
         This optimizer doesn't support per-parameter options and parameter
         groups (there can be only one).
+
     """
     def __init__(self, params, lr=1, momentum=0, dampening=0,
                  weight_decay=0, nesterov=False,
@@ -221,6 +222,7 @@ class SGD_MOD(SGD):
                     alpha0=lr, amin= line_search_eps)
                 if t is None:
                     raise RuntimeError("minimize_scalar failed")
+                log.info(f"LS final step: {t}")
             else:
                 raise RuntimeError("unsupported line search")
             

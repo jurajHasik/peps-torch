@@ -6,7 +6,6 @@ from ipeps.ipeps import *
 from ctm.generic.env import *
 from ctm.generic import ctmrg
 from models import coupledLadders
-# from optim.ad_optim import optimize_state
 from optim.ad_optim_lbfgs_mod import optimize_state
 from ctm.generic import transferops
 import json
@@ -28,9 +27,9 @@ def main():
     cfg.print_config()
     torch.set_num_threads(args.omp_cores)
     torch.manual_seed(args.seed)
-    
-    model = coupledLadders.COUPLEDLADDERS(alpha=args.alpha)
-    
+
+    model= coupledLadders.COUPLEDLADDERS(alpha=args.alpha)
+
     # initialize an ipeps
     # 1) define lattice-tiling function, that maps arbitrary vertex of square lattice
     # coord into one of coordinates within unit-cell of iPEPS ansatz
@@ -47,13 +46,13 @@ def main():
         bond_dim = args.bond_dim
         
         A = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-            dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+            dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
         B = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-            dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+            dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
         C = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-            dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+            dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
         D = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-            dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+            dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
 
         sites = {(0,0): A, (1,0): B, (0,1): C, (1,1): D}
 
@@ -61,8 +60,15 @@ def main():
             sites[k] = sites[k]/torch.max(torch.abs(sites[k]))
         state = IPEPS(sites, lX=2, lY=2)
     else:
-        raise ValueError("Missing trial state: -instate=None and -ipeps_init_type= "\
+        raise ValueError("Missing trial state: --instate=None and --ipeps_init_type= "\
             +str(args.ipeps_init_type)+" is not supported")
+
+    if not state.dtype==model.dtype:
+        cfg.global_args.torch_dtype= state.dtype
+        print(f"dtype of initial state {state.dtype} and model {model.dtype} do not match.")
+        print(f"Setting default dtype to {cfg.global_args.torch_dtype} and reinitializing "\
+        +" the model")
+        model= coupledLadders.COUPLEDLADDERS(alpha=args.alpha)
 
     print(state)
 
@@ -70,7 +76,8 @@ def main():
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
             history=[]
-        e_curr = model.energy_2x1_1x2(state, env)
+        e_curr= model.energy_2x1_1x2(state, env)
+        e_curr= e_curr.real if e_curr.is_complex() else e_curr
         history.append(e_curr.item())
 
         if (len(history) > 1 and abs(history[-1]-history[-2]) < ctm_args.ctm_conv_tol)\
@@ -83,10 +90,10 @@ def main():
     init_env(state, ctm_env)
 
     ctm_env, *ctm_log = ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
-    loss = model.energy_2x1_1x2(state, ctm_env)
+    loss0= model.energy_2x1_1x2(state, ctm_env)
     obs_values, obs_labels = model.eval_obs(state,ctm_env)
     print(", ".join(["epoch","energy"]+obs_labels))
-    print(", ".join([f"{-1}",f"{loss}"]+[f"{v}" for v in obs_values]))
+    print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
 
     def loss_fn(state, ctm_env_in, opt_context):
         ctm_args= opt_context["ctm_args"]
@@ -137,9 +144,9 @@ def main():
     ctm_env = ENV(args.chi, state)
     init_env(state, ctm_env)
     ctm_env, *ctm_log = ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
-    opt_energy = model.energy_2x1_1x2(state,ctm_env)
+    loss0 = model.energy_2x1_1x2(state,ctm_env)
     obs_values, obs_labels = model.eval_obs(state,ctm_env)
-    print(", ".join([f"{args.opt_max_iter}",f"{opt_energy}"]+[f"{v}" for v in obs_values]))
+    print(", ".join([f"{args.opt_max_iter}",f"{loss0}"]+[f"{v}" for v in obs_values]))
 
 if __name__=='__main__':
     if len(unknown_args)>0:

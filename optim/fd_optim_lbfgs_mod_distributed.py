@@ -4,7 +4,6 @@ import json
 import logging
 log = logging.getLogger(__name__)
 import torch
-#from memory_profiler import profile
 from optim import lbfgs_modified
 import config as cfg
 
@@ -34,7 +33,8 @@ def store_checkpoint(checkpoint_file, state, optimizer, current_epoch, current_l
     if verbosity>0:
         print(checkpoint_file)
 
-def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
+def optimize_state(state, ctm_env_init, loss_fn, grad_fn,
+    obs_fn=None, post_proc=None,
     main_args=cfg.main_args, opt_args=cfg.opt_args,ctm_args=cfg.ctm_args, 
     global_args=cfg.global_args):
     r"""
@@ -69,10 +69,10 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
     parameters= state.get_parameters()
     for A in parameters: A.requires_grad_(True)
 
-    optimizer = lbfgs_modified.LBFGS_MOD(parameters, max_iter=opt_args.max_iter_per_epoch, lr=opt_args.lr, \
-        tolerance_grad=opt_args.tolerance_grad, tolerance_change=opt_args.tolerance_change, \
-        history_size=opt_args.history_size, line_search_fn=opt_args.line_search, \
-        line_search_eps=opt_args.line_search_tol)
+    optimizer = lbfgs_modified.LBFGS_MOD(parameters, max_iter=opt_args.max_iter_per_epoch, \
+        lr=opt_args.lr, tolerance_grad=opt_args.tolerance_grad, \
+        tolerance_change=opt_args.tolerance_change, history_size=opt_args.history_size, \
+        line_search_fn=opt_args.line_search, line_search_eps=opt_args.line_search_tol)
 
     # load and/or modify optimizer state from checkpoint
     if main_args.opt_resume is not None:
@@ -108,38 +108,6 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         optimizer.load_state_dict(cp_state_dict)
         print(f"checkpoint.loss = {loss0}")
 
-    def grad_fd(loss0):
-        loc_opt_args= copy.deepcopy(opt_args)
-        loc_opt_args.opt_ctm_reinit= opt_args.fd_ctm_reinit
-        loc_ctm_args= copy.deepcopy(ctm_args)
-        # TODO check if we are optimizing C4v symmetric ansatz
-        if opt_args.line_search_svd_method != 'DEFAULT':
-            loc_ctm_args.projector_svd_method= opt_args.line_search_svd_method
-        loc_context= dict({"ctm_args":loc_ctm_args, "opt_args":loc_opt_args, \
-            "loss_history": t_data, "line_search": False})
-
-        # compute components of the grad
-        fd_grad=dict()
-        with torch.no_grad():
-            for k in state.coeffs.keys():
-                A_orig= state.coeffs[k].clone()
-                assert len(A_orig.size())==1, "coefficient tensor is not 1D"
-                fd_grad[k]= torch.zeros(A_orig.size(),dtype=A_orig.dtype,device=A_orig.device)
-                for i in range(state.coeffs[k].size()[0]):                  
-                    e_i= torch.zeros(A_orig.size()[0],dtype=A_orig.dtype,device=A_orig.device)
-                    e_i[i]= opt_args.fd_eps
-                    state.coeffs[k]+=e_i
-                    loc_env= current_env[0].clone()
-                    loss1, ctm_env, history, timings = loss_fn(state, loc_env,\
-                        loc_context)
-                    fd_grad[k][i]=(float(loss1-loss0)/opt_args.fd_eps)
-                    log.info(f"FD_GRAD {i} loss1 {loss1} grad_i {fd_grad[k][i]}"\
-                        +f" timings {timings}")
-                    state.coeffs[k].data.copy_(A_orig)
-        log.info(f"FD_GRAD grad {fd_grad}")
-
-        return fd_grad
-
     #@profile
     def closure(linesearching=False):
         context["line_search"]=linesearching
@@ -162,6 +130,8 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
 
         # 2) log CTM metrics for debugging
         if opt_args.opt_logging:
+            log.info({"history_length": len(history['log']), "history": history['log'],
+                "final_multiplets": history["final_multiplets"]})
             log_entry=dict({"id": epoch, "loss": t_data["loss"][-1], "timings": timings})
             if linesearching:
                 log_entry["LS"]=len(t_data["loss_ls"])
@@ -174,9 +144,10 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
 
         # 4) evaluate gradient
         t_grad0= time.perf_counter()
-        grad= grad_fd(loss)
-        for k in state.coeffs.keys():
-            state.coeffs[k].grad= grad[k]
+        with torch.no_grad():
+            grad= grad_fn(state, ctm_env, context, loss)
+            for k in state.coeffs.keys():
+                state.coeffs[k].grad= grad[k]
         t_grad1= time.perf_counter()
 
         # 5) log grad metrics
@@ -203,8 +174,8 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         # TODO check if we are optimizing C4v symmetric ansatz
         if opt_args.line_search_svd_method != 'DEFAULT':
             loc_ctm_args.projector_svd_method= opt_args.line_search_svd_method
-        loc_context= dict({"ctm_args":loc_ctm_args, "opt_args":loc_opt_args, "loss_history": t_data,
-            "line_search": True})
+        loc_context= dict({"ctm_args":loc_ctm_args, "opt_args":loc_opt_args, \
+            "loss_history": t_data, "line_search": True})
         loss, ctm_env, history, timings = loss_fn(state, current_env[0],\
             loc_context)
 
@@ -215,6 +186,8 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
 
         # 5) log CTM metrics for debugging
         if opt_args.opt_logging:
+            log.info({"history_length": len(history['log']), "history": history['log'],
+                "final_multiplets": history["final_multiplets"]})
             log_entry=dict({"id": epoch, "LS": len(t_data["loss_ls"]), \
                 "loss": t_data["loss_ls"], "timings": timings})
             log.info(json.dumps(log_entry))

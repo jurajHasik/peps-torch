@@ -23,11 +23,11 @@ def get_edge(state, env, verbosity=0):
     """
     C = env.C[env.keyC]
     T = env.T[env.keyT]
-    # C--1->0
-    # 0
-    # 0
-    # T--2
-    # 1
+    #   C--1->0
+    #   0
+    # A 0
+    # | T--2
+    # | 1
     E = torch.tensordot(C,T,([0],[0]))
     if verbosity>0: print("E=CT "+str(E.size()))
     # C--0
@@ -54,16 +54,21 @@ def get_edge_L(state, env, l=1, verbosity=0):
     :rtype: torch.tensor
 
     Build an edge of length l by contracting a following network::
-
-        E = C--T--...--T--C
-            |  |       |  |
-            0  1       l  l+1
+   
+               ---->  
+        E = A C--T--...--T--C   |
+            | |  |       |  |   V
+              0  1       l  l+1
     """
     C= env.C[env.keyC]
     T= env.T[env.keyT]
-    T= T.permute(0,2,1).contiguous()
+    #  <----           ---->
+    # 0--T--1  =>  0<-1--T--0->2
+    #    2               2->1
+    T= T.permute(1,2,0).contiguous()
     E= C
     for i in range(1,l+1):
+        #           ---->
         #  E-----i 0--T--2->i+1
         # /|\         |
         # ...(i-1)    1->i
@@ -118,24 +123,25 @@ def apply_edge(state, env, vec, verbosity=0):
 
 	#   --------C 
 	#  |        2
-	#  |        0
-	# vec--0 2--T   
-	#  |        1
+	#  |        1    |
+	# vec--0 2--T    |  
+	#  |        0->1 V
 	#   ---1->0
-    S = torch.tensordot(S,T,([0,2],[2,0]))
+    S = torch.tensordot(S,T,([0,2],[2,1]))
     if verbosity>0: print("S=ST "+str(S.size()))
 
 	#   -------C
 	#  |       |
 	# edge-----T
 	#  |       1
-	#  |       1
-	#   --0 0--C
-    S = torch.tensordot(S,C,([0,1],[0,1]))
+	#  |       0
+	#   --0 1--C
+    S = torch.tensordot(S,C,([0,1],[1,0]))
     if verbosity>0: print("S=SC "+str(S.size()))
 
     return S
 
+#TODO check complex
 def apply_edge_L(state, env, vec, verbosity=0):
     r"""
     :param state: underlying 1-site C4v symmetric wavefunction
@@ -153,18 +159,18 @@ def apply_edge_L(state, env, vec, verbosity=0):
     Contracts ``vec`` tensor with the corresponding edge by contracting 
     the following network::
 
-                   ---C
-                  |   |     
-        scalar = vec--T
-                  |  ...
-                  |---T
-                   ---C
+                     ---0   l+1----C
+                 A  |              | |     
+        scalar = | vec--1     l----T |
+                 |  |    ...       | V
+                    |---l     1----T
+                     ---l+1     0--C
     """
     l= len(vec.size())-2
     E= get_edge_L(state, env, l=l, verbosity=verbosity)
 
-    inds=[i for i in range(0,len(vec.size()))]
-    S = torch.tensordot(vec,E,(inds,inds))
+    inds= list(range(len(vec.size())))
+    S = torch.tensordot(vec,E,(inds,inds[::-1]))
     if verbosity>0: print("S "+str(S.size()))
 
     return S
@@ -188,12 +194,14 @@ def apply_TM_1sO(state, env, edge, op=None, verbosity=0):
     
     Applies a single instance of the "transfer matrix" to the ``edge`` tensor  
     by contracting the following network::
-
+            
+             -->
          -----T----------
         |     |     
        edge--(a^+ op a)--
         |     |     
          -----T----------
+             <--
 
     where the physical indices `s` and `s'` of the on-site tensor :math:`a` 
     and it's hermitian conjugate :math:`a^\dagger` are contracted with 
@@ -209,13 +217,14 @@ def apply_TM_1sO(state, env, edge, op=None, verbosity=0):
 	#       -- 0
 	# edge |-- 1
 	#       -- 2
-	#
-	#   --0 0--T--1->2
+	#    
+    #        ---->  
+	#   --0 1--T--0->2
 	#  |       2->3
 	# edge--1->0
 	#  |
 	#   --2->1
-    E = torch.tensordot(edge,T,([0],[0]))
+    E = torch.tensordot(edge,T,([0],[1]))
     if verbosity>0: print("E=edgeT "+str(E.size()))
 
     # TODO - more efficent contraction with uncontracted-double-layer on-site tensor
@@ -234,9 +243,10 @@ def apply_TM_1sO(state, env, edge, op=None, verbosity=0):
     a= next(iter(state.sites.values()))
     dims_a = a.size()
     X= torch.eye(dims_a[0], dtype=a.dtype, device=a.device) if op is None else op
-    A= torch.einsum('mefgh,mn,nabcd->eafbgchd',a,X,a).contiguous()\
+    A= torch.einsum('mefgh,mn,nabcd->eafbgchd',a,X,a.conj()).contiguous()\
         .view(dims_a[1]**2, dims_a[2]**2, dims_a[3]**2, dims_a[4]**2)
 
+    #          ---->
 	#   ---------T--2->1 
 	#  |         3
 	#  |         0
@@ -246,6 +256,7 @@ def apply_TM_1sO(state, env, edge, op=None, verbosity=0):
     E = torch.tensordot(E,A,([0,3],[1,0]))
     if verbosity>0: print("E=EA "+str(E.size()))
 
+    #        ---->
 	#   -------T--1->0
 	#  |       |
 	#  |       |
@@ -253,6 +264,7 @@ def apply_TM_1sO(state, env, edge, op=None, verbosity=0):
 	#  |       2
 	#  |       2
 	#   --0 0--T--1->2
+    #        <----  
     E = torch.tensordot(E,T,([0,2],[0,2]))
     if verbosity>0: print("E=ET "+str(E.size()))
 
@@ -322,11 +334,11 @@ def apply_TM_1sO_2(state, env, edge, op=None, verbosity=0):
         dims_op= None if op is None else op.size()
         if op is None:
             # identity
-            A= torch.einsum('nefgh,nabcd->eafbgchd',a,a).contiguous()\
+            A= torch.einsum('nefgh,nabcd->eafbgchd',a,a.conj()).contiguous()\
                 .view(dims_a[1]**2, dims_a[2]**2, dims_a[3]**2, dims_a[4]**2)
         elif len(dims_op)==2:
             # one-site operator
-            A= torch.einsum('mefgh,mn,nabcd->eafbgchd',a,op,a).contiguous()\
+            A= torch.einsum('mefgh,mn,nabcd->eafbgchd',a,op,a.conj()).contiguous()\
                 .view(dims_a[1]**2, dims_a[2]**2, dims_a[3]**2, dims_a[4]**2)
         elif len(dims_op)==3:
             # edge operators of some MPO within the transfer matrix
@@ -339,7 +351,7 @@ def apply_TM_1sO_2(state, env, edge, op=None, verbosity=0):
             #
             # assume the last index of the op is the MPO dimension.
             # It will become the last index of the resulting edge 
-            A= torch.einsum('mefgh,mnl,nabcd->eafbgchdl',a,op,a).contiguous()\
+            A= torch.einsum('mefgh,mnl,nabcd->eafbgchdl',a,op,a.conj()).contiguous()\
                 .view(dims_a[1]**2, dims_a[2]**2, dims_a[3]**2, dims_a[4]**2, -1)
         if verbosity>0: print(f"aXa {A.size()}")
         return A
@@ -353,14 +365,15 @@ def apply_TM_1sO_2(state, env, edge, op=None, verbosity=0):
     #      |---2
     #       -- 3
     #
-    #   ----0 0--T--1->0
+    #          ---->
+    #   ----0 1--T--0
     #  |         2->1
     # edge--1->2
     #  |
     #   ----2->3
     #  |
     #   ----3->4
-    E = torch.tensordot(T,edge,([0],[0]))
+    E = torch.tensordot(T,edge,([1],[0]))
     if verbosity>0: print("E=edgeT "+str(E.size()))
 
     # TODO - more efficent contraction with uncontracted-double-layer on-site tensor
@@ -404,6 +417,7 @@ def apply_TM_1sO_2(state, env, edge, op=None, verbosity=0):
         torch.tensordot(E,A,([1,3,5],[1,0,4]))
     if verbosity>0: print("E=edgeTAA "+str(E.size()))
 
+    #          ---->
     #   ---------T--0
     #  |         |
     # edge-------A--2->1
@@ -412,6 +426,7 @@ def apply_TM_1sO_2(state, env, edge, op=None, verbosity=0):
     #  |         3
     #  |         2   
     #   ----1 0--T2--1->3
+    #          <-----
     E = torch.tensordot(E,T,([1,3],[0,2]))
     if verbosity>0: print("E=edgeTAAT "+str(E.size()))
 
@@ -476,12 +491,13 @@ def apply_TM_2sO(state, env, edge, op=None, verbosity=0):
 	# edge |-- 1
 	#       -- 2
 	#
-	#   ----0 0--T--1->2
+    #          ---->
+	#   ----0 1--T--0->2
 	#  |         2->3
 	# edge--1->0
 	#  |
 	#   ----2->1
-    E = torch.tensordot(edge,T,([0],[0]))
+    E = torch.tensordot(edge,T,([0],[1]))
     if verbosity>0: print("E=edgeT "+str(E.size()))
 
     # TODO - more efficent contraction with uncontracted-double-layer on-site tensor
@@ -500,7 +516,7 @@ def apply_TM_2sO(state, env, edge, op=None, verbosity=0):
     a= next(iter(state.sites.values()))
     dims_a = a.size()
     X= torch.eye(dims_a[0], dtype=a.dtype, device=a.device)[:,:,None] if op is None else op_l
-    A= torch.einsum('mefgh,mnl,nabcd->eafbgchdl',a,X,a).contiguous()\
+    A= torch.einsum('mefgh,mnl,nabcd->eafbgchdl',a,X,a.conj()).contiguous()\
         .view(dims_a[1]**2, dims_a[2]**2, dims_a[3]**2, dims_a[4]**2, -1)
 
 	#   ---------T--2->1 
@@ -512,6 +528,7 @@ def apply_TM_2sO(state, env, edge, op=None, verbosity=0):
     E = torch.tensordot(E,A,([0,3],[1,0]))
     if verbosity>0: print("E=EA "+str(E.size()))
 
+    #        ----> 
 	#   -------T--1->0
 	#  |       | 4->2
 	#  |       |/
@@ -519,15 +536,17 @@ def apply_TM_2sO(state, env, edge, op=None, verbosity=0):
 	#  |       2
 	#  |       2
 	#   --0 0--T--1->3
+    #        <----
     E = torch.tensordot(E,T,([0,2],[0,2]))
     if verbosity>0: print("E=ET "+str(E.size()))
-
-    #   ----0 0----T--1->3
+                
+    #            ---->
+    #   ----0 1----T--0->3
 	#  |----2->1   2->4
 	# edge--1->0
 	#  |
 	#   ----3->2
-    E = torch.tensordot(E,T,([0],[0]))
+    E = torch.tensordot(E,T,([0],[1]))
     if verbosity>0: print("E=ET "+str(E.size()))
 
     # TODO - more efficent contraction with uncontracted-double-layer on-site tensor
@@ -544,9 +563,10 @@ def apply_TM_2sO(state, env, edge, op=None, verbosity=0):
     #
     # where X is Id or op
     X= torch.eye(dims_a[0], dtype=a.dtype, device=a.device)[:,:,None] if op is None else op_r
-    A= torch.einsum('mefgh,mnl,nabcd->eafbgchdl',a,X,a).contiguous()\
+    A= torch.einsum('mefgh,mnl,nabcd->eafbgchdl',a,X,a.conj()).contiguous()\
         .view(dims_a[1]**2, dims_a[2]**2, dims_a[3]**2, dims_a[4]**2, -1)
 
+    #          ---->
 	#   ---------T--3->1
 	#  |         4
 	#  |----1 4-\0
@@ -556,6 +576,7 @@ def apply_TM_2sO(state, env, edge, op=None, verbosity=0):
     E = torch.tensordot(E,A,([0,1,4],[1,4,0]))
     if verbosity>0: print("E=EA "+str(E.size()))
 
+    #        ----> 
 	#   -------T--1->0
 	#  |       |
 	#  |       |
@@ -563,6 +584,7 @@ def apply_TM_2sO(state, env, edge, op=None, verbosity=0):
 	#  |       2
 	#  |       2
 	#   --0 0--T--1->2
+    #        <----
     E = torch.tensordot(E,T,([0,2],[0,2]))
     if verbosity>0: print("E=ET "+str(E.size()))
 

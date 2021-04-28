@@ -5,16 +5,15 @@ os: linux
 language: python
 
 env:
- - PYTHON_V=3.6 PYTORCH_V=1.4.0
- - PYTHON_V=3.6 PYTORCH_V=1.5.0
- - PYTHON_V=3.6 PYTORCH_V=1.6.0
- - PYTHON_V=3.8 PYTORCH_V=1.4.0
- - PYTHON_V=3.8 PYTORCH_V=1.5.0
- - PYTHON_V=3.8 PYTORCH_V=1.6.0
+ - PYTHON_V=3.6 PYTORCH_V=1.8.0
+ - PYTHON_V=3.7 PYTORCH_V=1.8.0
+ - PYTHON_V=3.8 PYTORCH_V=1.8.0
+ - PYTHON_V=3.9 PYTORCH_V=1.8.0
 
 branches:
   only:
   - master
+  - travis
 
 notifications:
   email: false
@@ -25,7 +24,8 @@ before_install:
 - conda config --set always_yes yes --set changeps1 no
 - conda install python=${PYTHON_V}
 - conda update -q conda
-- conda install pytorch==${PYTORCH_V} cpuonly -c pytorch
+- if [[ "$PYTHON_V" == "3.9" ]]; then export P39C="-c=conda-forge"; fi
+- conda install pytorch==${PYTORCH_V} cpuonly -c pytorch ${P39C}
 - conda install scipy
 
 script: 

@@ -1,11 +1,15 @@
 import torch
-import groups.su2 as su2
 import config as cfg
+from tn_interface import mm, contract, einsum
+import groups.su2 as su2
 from ctm.generic.env import ENV
 from ctm.generic import rdm
 from ctm.generic import corrf
 from math import sqrt
 import itertools
+
+def _cast_to_real(t):
+    return t.real if t.is_complex() else t
 
 class COUPLEDLADDERS():
     def __init__(self, alpha=0.0, global_args=cfg.global_args):
@@ -35,7 +39,7 @@ class COUPLEDLADDERS():
 
         * :math:`h2_{ij} = \mathbf{S}_i.\mathbf{S}_j` with indices of h2 corresponding to :math:`s_i s_j;s'_i s'_j`
         """
-        self.dtype=global_args.dtype
+        self.dtype=global_args.torch_dtype
         self.device=global_args.device
         self.phys_dim=2
         self.alpha=alpha
@@ -46,8 +50,8 @@ class COUPLEDLADDERS():
     def get_h(self):
         s2 = su2.SU2(self.phys_dim, dtype=self.dtype, device=self.device)
         expr_kron = 'ij,ab->iajb'
-        SS = torch.einsum(expr_kron,s2.SZ(),s2.SZ()) + 0.5*(torch.einsum(expr_kron,s2.SP(),s2.SM()) \
-            + torch.einsum(expr_kron,s2.SM(),s2.SP()))
+        SS = einsum(expr_kron,s2.SZ(),s2.SZ()) + 0.5*(einsum(expr_kron,s2.SP(),s2.SM()) \
+            + einsum(expr_kron,s2.SM(),s2.SP()))
         return SS
 
     def get_obs_ops(self):
@@ -57,18 +61,6 @@ class COUPLEDLADDERS():
         obs_ops["sp"]= s2.SP()
         obs_ops["sm"]= s2.SM()
         return obs_ops
-
-    def energy_1x1c4v(self,ipeps):
-        pass
-
-    def energy_2x2(self,ipeps):
-        pass
-
-    # assuming reduced density matrix of 2x2 cluster with indexing of DOFs
-    # as follows rdm2x2=rdm2x2(s0,s1,s2,s3;s0',s1',s2',s3')
-    def energy_2x2(self,rdm2x2):
-        energy = torch.einsum('ijklabkl,ijab',rdm2x2,self.h)
-        return energy
 
     def energy_2x1_1x2(self,state,env):
         r"""
@@ -115,16 +107,18 @@ class COUPLEDLADDERS():
         for coord,site in state.sites.items():
             rdm2x1 = rdm.rdm2x1(coord,state,env)
             rdm1x2 = rdm.rdm1x2(coord,state,env)
-            ss = torch.einsum('ijab,ijab',rdm2x1,self.h2)
+            ss = einsum('ijab,ijab',rdm2x1,self.h2)
             energy += ss
             if coord[1] % 2 == 0:
-                ss = torch.einsum('ijab,ijab',rdm1x2,self.h2)
+                ss = einsum('ijab,ijab',rdm1x2,self.h2)
             else:
-                ss = torch.einsum('ijab,ijab',rdm1x2,self.alpha * self.h2)
+                ss = einsum('ijab,ijab',rdm1x2,self.alpha * self.h2)
             energy += ss
 
         # return energy-per-site
         energy_per_site=energy/len(state.sites.items())
+        energy_per_site= _cast_to_real(energy_per_site)
+
         return energy_per_site
 
     def eval_obs(self,state,env):
@@ -170,7 +164,7 @@ class COUPLEDLADDERS():
             for coord,site in state.sites.items():
                 rdm1x1 = rdm.rdm1x1(coord,state,env)
                 for label,op in self.obs_ops.items():
-                    obs[f"{label}{coord}"]= torch.trace(rdm1x1@op)
+                    obs[f"{label}{coord}"]= einsum('ij,ji',rdm1x1, op)
                 obs[f"m{coord}"]= sqrt(abs(obs[f"sz{coord}"]**2 + obs[f"sp{coord}"]*obs[f"sm{coord}"]))
                 obs["avg_m"] += obs[f"m{coord}"]
             obs["avg_m"]= obs["avg_m"]/len(state.sites.keys())
@@ -178,8 +172,10 @@ class COUPLEDLADDERS():
             for coord,site in state.sites.items():
                 rdm2x1 = rdm.rdm2x1(coord,state,env)
                 rdm1x2 = rdm.rdm1x2(coord,state,env)
-                obs[f"SS2x1{coord}"]= torch.einsum('ijab,ijab',rdm2x1,self.h2)
-                obs[f"SS1x2{coord}"]= torch.einsum('ijab,ijab',rdm1x2,self.h2)
+                SS2x1= einsum('ijab,ijab',rdm2x1,self.h2)
+                SS1x2= einsum('ijab,ijab',rdm1x2,self.h2)
+                obs[f"SS2x1{coord}"]= SS2x1.real if SS2x1.is_complex() else SS2x1
+                obs[f"SS1x2{coord}"]= SS1x2.real if SS1x2.is_complex() else SS1x2
 
         # prepare list with labels and values
         obs_labels=["avg_m"]+[f"m{coord}" for coord in state.sites.keys()]\
@@ -196,7 +192,7 @@ class COUPLEDLADDERS():
             #rot_op= su2.get_rot_op(self.phys_dim, dtype=self.dtype, device=self.device)
             rot_op= torch.eye(self.phys_dim, dtype=self.dtype, device=self.device)
             op_0= op
-            op_rot= torch.einsum('ki,kl,lj->ij',rot_op,op_0,rot_op)
+            op_rot= einsum('ki,kj->ij',rot_op, mm(op_0,rot_op))
             def _gen_op(r):
                 #return op_rot if r%2==0 else op_0
                 return op_0
@@ -211,7 +207,7 @@ class COUPLEDLADDERS():
         nSy0SyR= corrf.corrf_1sO1sO(coord,direction,state,env, op_isy, conjugate_op(op_isy), dist)
 
         res= dict({"ss": Sz0szR+Sx0sxR-nSy0SyR, "szsz": Sz0szR, "sxsx": Sx0sxR, "sysy": -nSy0SyR})
-        return res  
+        return res
 
     def eval_corrf_DD_H(self,coord,direction,state,env,dist,verbosity=0):
         # function generating properly S.S operator
@@ -268,7 +264,7 @@ class COUPLEDLADDERS_D2_BIPARTITE():
 
         * :math:`h2_{ij} = \mathbf{S}_i.\mathbf{S}_j` with indices of h2 corresponding to :math:`s_i s_j;s'_i s'_j`
         """
-        self.dtype=global_args.dtype
+        self.dtype=global_args.torch_dtype
         self.device=global_args.device
         self.phys_dim=2
         self.alpha=alpha
@@ -346,11 +342,14 @@ class COUPLEDLADDERS_D2_BIPARTITE():
             if coord[1] % 2 == 0:
                 ss = torch.einsum('ijab,ijab',rdm1x2,self.h2_rot)
             else:
+                # reverse the orientation of the rotated S.S
                 ss = torch.einsum('ijab,jiba',rdm1x2,self.alpha * self.h2_rot)
             energy += ss
 
         # return energy-per-site
         energy_per_site=energy/len(state.sites.items())
+        energy_per_site= _cast_to_real(energy_per_site)
+
         return energy_per_site
 
     def eval_obs(self,state,env):
@@ -409,13 +408,16 @@ class COUPLEDLADDERS_D2_BIPARTITE():
                 rdm2x1 = rdm.rdm2x1(coord,state,env)
                 rdm1x2 = rdm.rdm1x2(coord,state,env)
                 if (coord[1] % 2 == 0) ^ (coord[0] % 2 == 0):
-                    obs[f"SS1x2{coord}"]= torch.einsum('ijab,ijab',rdm1x2,self.h2_rot)
+                    SS1x2= torch.einsum('ijab,ijab',rdm1x2,self.h2_rot)
                 else:
-                    obs[f"SS1x2{coord}"]= torch.einsum('ijab,jiba',rdm1x2,self.h2_rot)
+                    SS1x2= torch.einsum('ijab,jiba',rdm1x2,self.h2_rot)
+                obs[f"SS1x2{coord}"]= SS1x2.real if SS1x2.is_complex() else SS1x2
+
                 if (coord[0] % 2 == 0) ^ (coord[0] % 2 == 0):
-                    obs[f"SS2x1{coord}"]= torch.einsum('ijab,ijab',rdm2x1,self.h2_rot)
+                    SS2x1= torch.einsum('ijab,ijab',rdm2x1,self.h2_rot)
                 else:
-                    obs[f"SS2x1{coord}"]= torch.einsum('ijab,jiba',rdm2x1,self.h2_rot)
+                    SS2x1= torch.einsum('ijab,jiba',rdm2x1,self.h2_rot)
+                obs[f"SS2x1{coord}"]= SS2x1.real if SS2x1.is_complex() else SS2x1
 
         # prepare list with labels and values
         obs_labels=["avg_m"]+[f"m{coord}" for coord in state.sites.keys()]\

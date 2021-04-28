@@ -1,5 +1,6 @@
 import context
 import torch
+from linalg.custom_svd import truncated_svd_gesdd
 import argparse
 import config as cfg
 from ipeps.ipeps import *
@@ -24,12 +25,8 @@ def main():
     cfg.print_config()
     torch.set_num_threads(args.omp_cores)
     torch.manual_seed(args.seed)
-    
-    model = coupledLadders.COUPLEDLADDERS(alpha=args.alpha)
-    
-    # initialize an ipeps
-    # 1) define lattice-tiling function, that maps arbitrary vertex of square lattice
-    # coord into one of coordinates within unit-cell of iPEPS ansatz    
+
+    model= coupledLadders.COUPLEDLADDERS(alpha=args.alpha)
 
     if args.instate!=None:
         state = read_ipeps(args.instate)
@@ -41,13 +38,13 @@ def main():
         bond_dim = args.bond_dim
         
         A = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-            dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+            dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
         B = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-            dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+            dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
         C = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-            dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+            dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
         D = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-            dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+            dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
 
         sites = {(0,0): A, (1,0): B, (0,1): C, (1,1): D}
 
@@ -57,6 +54,17 @@ def main():
     else:
         raise ValueError("Missing trial state: -instate=None and -ipeps_init_type= "\
             +str(args.ipeps_init_type)+" is not supported")
+    
+    if not state.dtype==model.dtype:
+        cfg.global_args.torch_dtype= state.dtype
+        print(f"dtype of initial state {state.dtype} and model {model.dtype} do not match.")
+        print(f"Setting default dtype to {cfg.global_args.torch_dtype} and reinitializing "\
+        +" the model")
+        model= coupledLadders.COUPLEDLADDERS(alpha=args.alpha)
+
+    # initialize an ipeps
+    # 1) define lattice-tiling function, that maps arbitrary vertex of square lattice
+    # coord into one of coordinates within unit-cell of iPEPS ansatz    
 
     print(state)
 
@@ -109,17 +117,17 @@ def main():
 
     # environment diagnostics
     for c_loc,c_ten in ctm_env_init.C.items(): 
-        u,s,v= torch.svd(c_ten, compute_uv=False)
+        u,s,v= truncated_svd_gesdd(c_ten, c_ten.size(0))
         print(f"\n\nspectrum C[{c_loc}]")
         for i in range(args.chi):
             print(f"{i} {s[i]}")
 
     # transfer operator spectrum
-    for sdp in site_dir_list:
-        print(f"\n\nspectrum(T)[{sdp[0]},{sdp[1]}]")
-        l= transferops.get_Top_spec(args.top_n, *sdp, state, ctm_env_init)
-        for i in range(l.size()[0]):
-            print(f"{i} {l[i,0]} {l[i,1]}")
+    # for sdp in site_dir_list:
+    #     print(f"\n\nspectrum(T)[{sdp[0]},{sdp[1]}]")
+    #     l= transferops.get_Top_spec(args.top_n, *sdp, state, ctm_env_init)
+    #     for i in range(l.size()[0]):
+    #         print(f"{i} {l[i,0]} {l[i,1]}")
 
 if __name__=='__main__':
     if len(unknown_args)>0:
