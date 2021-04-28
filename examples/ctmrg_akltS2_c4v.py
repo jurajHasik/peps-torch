@@ -38,7 +38,7 @@ def main():
     elif args.ipeps_init_type=='RANDOM':
         bond_dim = args.bond_dim
         A= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-            dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+            dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
         A= make_c4v_symm(A)
         A= A/torch.max(torch.abs(A))
         state = IPEPS_C4V(A)

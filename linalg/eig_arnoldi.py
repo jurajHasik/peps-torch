@@ -45,8 +45,8 @@ class SYMARNOLDI(torch.autograd.Function):
         U= U[:,p]
 
         if M.is_cuda:
-            U= U.cuda()
-            D= D.cuda()
+            U= U.to(M.device)
+            D= D.to(M.device)
 
         self.save_for_backward(D, U)
         return D, U
@@ -134,8 +134,8 @@ class ARNOLDI(torch.autograd.Function):
         U= U[:,p,:]
 
         if device.type==torch.device('cuda').type:
-            U= U.cuda()
-            D= D.cuda()
+            U= U.to(device)
+            D= D.to(device)
 
         self.save_for_backward(D, U)
         return D, U

@@ -6,7 +6,7 @@ from ipeps.ipeps_c4v import *
 from groups.pg import make_c4v_symm
 from ctm.one_site_c4v.env_c4v import *
 from ctm.one_site_c4v import ctmrg_c4v, transferops_c4v
-from ctm.one_site_c4v.rdm_c4v import rdm2x1_sl
+from ctm.one_site_c4v.rdm_c4v import rdm2x1_sl, rdm2x1
 from models import j1j2
 import unittest
 import logging
@@ -17,6 +17,9 @@ parser= cfg.get_args_parser()
 # additional model-dependent arguments
 parser.add_argument("--j1", type=float, default=1., help="nearest-neighbour coupling")
 parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour coupling")
+parser.add_argument("--j3", type=float, default=0., help="next-to-next nearest-neighbour coupling")
+parser.add_argument("--hz_stag", type=float, default=0., help="staggered mag. field")
+parser.add_argument("--delta_zz", type=float, default=1., help="easy-axis (nearest-neighbour) anisotropy")
 # additional observables-related arguments
 parser.add_argument("--corrf_canonical", action='store_true', help="align spin operators" \
     + " with the vector of spontaneous magnetization")
@@ -28,6 +31,7 @@ parser.add_argument("--obs_freq", type=int, default=-1, help="frequency of compu
 parser.add_argument("--corrf_dd_v", action='store_true', help="compute vertical dimer-dimer"\
     + " correlation function")
 parser.add_argument("--top2", action='store_true', help="compute transfer matrix for width-2 channel")
+parser.add_argument("--force_cpu", action='store_true', help="evaluate energy on cpu")
 args, unknown_args= parser.parse_known_args()
 
 def main():
@@ -37,7 +41,8 @@ def main():
     torch.set_num_threads(args.omp_cores)
     torch.manual_seed(args.seed)
     
-    model = j1j2.J1J2_C4V_BIPARTITE(j1=args.j1, j2=args.j2)
+    model= j1j2.J1J2_C4V_BIPARTITE(j1=args.j1, j2=args.j2, j3=args.j3, \
+        hz_stag=args.hz_stag, delta_zz=args.delta_zz)
     energy_f= model.energy_1x1_lowmem
     # energy_f= model.energy_1x1
 
@@ -53,7 +58,7 @@ def main():
         bond_dim = args.bond_dim
         
         A= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-            dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+            dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
         A= make_c4v_symm(A)
         A= A/torch.max(torch.abs(A))
 
@@ -68,61 +73,58 @@ def main():
     #    invoked at every CTM step. We also use it to evaluate observables of interest 
     #    during the course of CTM
     # 2a) convergence criterion based on on-site energy
+    @torch.no_grad()
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
-        with torch.no_grad():
-            if not history:
-                history=[]
-            
-            e_curr = energy_f(state, env, force_cpu=ctm_args.conv_check_cpu)
-            history.append(e_curr.item())
+        if not history:
+            history=[]
+        
+        e_curr = energy_f(state, env, force_cpu=ctm_args.conv_check_cpu)
+        history.append(e_curr.item())
 
-            if args.obs_freq>0 and \
-                (len(history)%args.obs_freq==0 or (len(history)-1)%args.obs_freq==0):
-                obs_values, obs_labels = model.eval_obs(state, env)
-                print(", ".join([f"{len(history)}",f"{e_curr}"]+[f"{v}" for v in obs_values]))
-            else:
-                print(", ".join([f"{len(history)}",f"{e_curr}"]))
+        if args.obs_freq>0 and \
+            (len(history)%args.obs_freq==0 or (len(history)-1)%args.obs_freq==0):
+            obs_values, obs_labels = model.eval_obs(state, env)
+            print(", ".join([f"{len(history)}",f"{e_curr}"]+[f"{v}" for v in obs_values]))
+        else:
+            print(", ".join([f"{len(history)}",f"{e_curr}"]))
 
-            if len(history) > 1 and abs(history[-1]-history[-2]) < ctm_args.ctm_conv_tol:
-                log.info({"history_length": len(history), "history": history,
-                    "final_multiplets": compute_multiplets(env)})
-                return True, history
-            elif len(history) >= ctm_args.ctm_max_iter:
-                log.info({"history_length": len(history), "history": history,
-                    "final_multiplets": compute_multiplets(env)})
-                return False, history
+        converged= len(history) > 1 and abs(history[-1]-history[-2]) < ctm_args.ctm_conv_tol
+        if converged or len(history) >= ctm_args.ctm_max_iter:
+            log.info({"history_length": len(history), "history": history,
+                "final_multiplets": compute_multiplets(env)})
+            return converged, history
         return False, history
 
     # 2b) convergence criterion based on 2-site reduced density matrix 
     #     of nearest-neighbours
+    @torch.no_grad()
     def ctmrg_conv_rdm2x1(state, env, history, ctm_args=cfg.ctm_args):
-        with torch.no_grad():
-            if not history:
-                history=dict({"log": []})
-            rdm2x1= rdm2x1_sl(state, env, force_cpu=ctm_args.conv_check_cpu)
-            dist= float('inf')
-            if len(history["log"]) > 1:
-                dist= torch.dist(rdm2x1, history["rdm"], p=2).item()
-            # log dist and observables
-            if args.obs_freq>0 and \
-                (len(history["log"])%args.obs_freq==0 or 
-                (len(history["log"])-1)%args.obs_freq==0):
-                e_curr = energy_f(state, env, force_cpu=ctm_args.conv_check_cpu)
-                obs_values, obs_labels = model.eval_obs(state, env, force_cpu=True)
-                print(", ".join([f"{len(history['log'])}",f"{dist}",f"{e_curr}"]+[f"{v}" for v in obs_values]))
-            else:
-                print(f"{len(history['log'])}, {dist}")
-            # update history
-            history["rdm"]=rdm2x1
-            history["log"].append(dist)
-            if dist<ctm_args.ctm_conv_tol:
-                log.info({"history_length": len(history['log']), "history": history['log'],
-                    "final_multiplets": compute_multiplets(env)})
-                return True, history
-            elif len(history['log']) >= ctm_args.ctm_max_iter:
-                log.info({"history_length": len(history['log']), "history": history['log'],
-                    "final_multiplets": compute_multiplets(env)})
-                return False, history
+        if not history:
+            history=dict({"log": []})
+        rdm= rdm2x1_sl(state, env, force_cpu=ctm_args.conv_check_cpu)
+        # rdm= rdm2x1(state, env, force_cpu=ctm_args.conv_check_cpu,
+        #     verbosity=ctm_args.verbosity_rdm)
+        dist= float('inf')
+        if len(history["log"]) > 1:
+            dist= torch.dist(rdm, history["rdm"], p=2).item()
+        # log dist and observables
+        if args.obs_freq>0 and \
+            (len(history["log"])%args.obs_freq==0 or 
+            (len(history["log"])-1)%args.obs_freq==0):
+            e_curr = energy_f(state, env, force_cpu=ctm_args.conv_check_cpu)
+            obs_values, obs_labels = model.eval_obs(state, env, force_cpu=ctm_args.conv_check_cpu)
+            print(", ".join([f"{len(history['log'])}",f"{dist}",f"{e_curr}"]+[f"{v}" for v in obs_values]))
+        else:
+            print(f"{len(history['log'])}, {dist}")
+        # update history
+        history["rdm"]=rdm
+        history["log"].append(dist)
+
+        converged= dist<ctm_args.ctm_conv_tol
+        if converged or len(history['log']) >= ctm_args.ctm_max_iter:
+            log.info({"history_length": len(history['log']), "history": history['log'],
+                "final_multiplets": compute_multiplets(env)})
+            return converged, history
         return False, history
 
     # 3) initialize environment 
@@ -130,8 +132,8 @@ def main():
     init_env(state, ctm_env_init)
 
     # 4) (optional) compute observables as given by initial environment 
-    e_curr0 = energy_f(state, ctm_env_init)
-    obs_values0, obs_labels = model.eval_obs(state,ctm_env_init)
+    e_curr0 = energy_f(state, ctm_env_init,force_cpu=args.force_cpu)
+    obs_values0, obs_labels = model.eval_obs(state,ctm_env_init,force_cpu=args.force_cpu)
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{e_curr0}"]+[f"{v}" for v in obs_values0]))
 
@@ -139,8 +141,8 @@ def main():
     ctm_env_init, *ctm_log = ctmrg_c4v.run(state, ctm_env_init, conv_check=ctmrg_conv_rdm2x1)
 
     # 6) compute final observables
-    e_curr0 = energy_f(state, ctm_env_init, force_cpu=True)
-    obs_values0, obs_labels = model.eval_obs(state,ctm_env_init,force_cpu=True)
+    e_curr0 = energy_f(state, ctm_env_init, force_cpu=args.force_cpu)
+    obs_values0, obs_labels = model.eval_obs(state,ctm_env_init,force_cpu=args.force_cpu)
     history, t_ctm, t_obs= ctm_log
     print("\n")
     print(", ".join(["epoch","energy"]+obs_labels))

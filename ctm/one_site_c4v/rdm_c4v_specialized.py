@@ -3,7 +3,7 @@ import torch
 from ipeps.ipeps_c4v import IPEPS_C4V
 from ctm.one_site_c4v.env_c4v import ENV_C4V
 from ctm.one_site_c4v.ctm_components_c4v import c2x2_dl
-from ctm.one_site_c4v.rdm_c4v import _log_cuda_mem, _sym_pos_def
+from ctm.one_site_c4v.rdm_c4v import _log_cuda_mem, _sym_pos_def_rdm
 import logging
 log = logging.getLogger(__name__)
 
@@ -65,17 +65,20 @@ def rdm2x1_tiled(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
     #----- building C2x2_LU ----------------------------------------------------
     dimsa = a.size()
 
-    # C--1 0--T--1
+    #       ---->
+    # C--1 1--T--0->1
     # 0       2
     if log_gpu_mem: _log_cuda_mem(loc_device,who,"CT_init")
-    C2x1 = torch.tensordot(C, T, ([1],[0]))
+    C2x1 = torch.tensordot(C, T, ([1],[1]))
+    # C2x1= torch.einsum('i,ijk->ijk',torch.diag(C), T)
     if log_gpu_mem: _log_cuda_mem(loc_device,who,"CT_end")
 
-    # C------T--1->0
-    # 0      2->1
-    # 0
-    # T2--2->3
-    # 1->2
+    #        ---->
+    #   C------T--1->0
+    #   0      2->1
+    # A 0
+    # | T--2->3
+    # | 1->2
     if log_gpu_mem: _log_cuda_mem(loc_device,who,"CTT_init")
     C2x2 = torch.tensordot(C2x1, T, ([0],[0]))
     if log_gpu_mem: _log_cuda_mem(loc_device,who,"CTT_end")
@@ -92,17 +95,23 @@ def rdm2x1_tiled(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
 
     # prepare tensor to store results chi^2 x D^2 x dimsa[0]^2
     #  _______
-    # |       |--1 (chi x D^2)
-    # left_half--2 (dimsa[0]^2)
+    # |       |--1 (chi)
+    # |       |--2 (D^2)
+    # left_half--3 (dimsa[0]^2)
     # |_______|--0 (chi)
     #
-    left_half= torch.zeros(C.size()[0],C.size()[0]*(dimsa[4]**2),dimsa[0],dimsa[0],\
+    left_half= torch.zeros(C.size(0),C.size(0),(dimsa[4]**2),dimsa[0],dimsa[0],\
         device=C2x2.device, dtype=C2x2.dtype)
+
+    # 0       2     
+    # C--1 0--T--1
+    #       <----
+    C2x1= torch.tensordot(C, T, ([1],[0]))
     
     # enter tiled loop over physical index of A
     for p0,p1 in itertools.product(range(dimsa[0]),range(dimsa[0])):
 
-        # first layer "bra" (in principle conjugate)
+        # first layer "ket"
         # 
         # C---------T----0
         # |         |\---2->1
@@ -116,7 +125,7 @@ def rdm2x1_tiled(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
         tmp= torch.tensordot(C2x2, a[p0,:,:,:,:], ([1,4],[0,1]))
         if log_gpu_mem: _log_cuda_mem(loc_device,who,f"CTTa_{p0}{p1}_end")
 
-        # second layer "ket"
+        # second layer "bra"
         # 
         # C----T----------0
         # |    |\-----\
@@ -129,35 +138,42 @@ def rdm2x1_tiled(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
         # |    |
         # 2->1 5->2
         if log_gpu_mem: _log_cuda_mem(loc_device,who,f"CTTaa_{p0}{p1}_init")
-        tmp= torch.tensordot(tmp, a[p1,:,:,:,:], ([1,3],[0,1]))
+        tmp= torch.tensordot(tmp, a[p1,:,:,:,:].conj(), ([1,3],[0,1]))
         if log_gpu_mem: _log_cuda_mem(loc_device,who,f"CTTaa_{p0}{p1}_end")
 
         # permute 012345->124035
-        # reshape 1(24)(035)->012
+        # reshape 1(24)0(35)->0123
+        # -->         -->
         # tmp--0      tmp--2
-        # |_|--3,5 => | |
-        # | |         0 1
-        # 1 2,4
+        # |_|--3,5 => |_|--3
+        # | |         | |
+        # 1 2,4       0 1
         tmp= tmp.permute(1,2,4,0,3,5).contiguous().view(\
-            T.size()[1],dimsa[3]**2,T.size()[1]*(dimsa[4]**2))
+            T.size(1),dimsa[3]**2,T.size(1),dimsa[4]**2)
 
         #----- build left part C2x2_LU--C2x1_LD ------------------------------------
+        # -->
         # tmp--2->1
+        # |_|--3->2
         # | |\p1,p2
         # 0 1
         # 0 2
         # C2x1--1->0
+        # <---
         if log_gpu_mem: _log_cuda_mem(loc_device,who,f"CTTaaTC_{p0}{p1}_init")
-        left_half[:,:,p0,p1]= torch.tensordot(C2x1, tmp, ([0,2],[0,1]))
+        left_half[:,:,:,p0,p1]= torch.tensordot(C2x1, tmp, ([0,2],[0,1]))
         if log_gpu_mem: _log_cuda_mem(loc_device,who,f"CTTaaTC_{p0}{p1}_end")
 
     # construct reduced density matrix by contracting left and right halfs
-    # C2x2--1 1----C2x2
-    # |\2,3->0,1   |\2,3
-    # |            |
-    # C2x1--0 0----C2x1
+    # --->         --->
+    # C2x2--1 0----C2x1
+    # |__|--2 2----|
+    # |\3,4->0,1   |___/3,4->2,3
+    # |            |  |
+    # C2x1--0 1----C2x2
+    # <---         <---
     if log_gpu_mem: _log_cuda_mem(loc_device,who,"rdm_init")
-    rdm = torch.tensordot(left_half,left_half,([0,1],[0,1]))
+    rdm = torch.tensordot(left_half,left_half,([0,1,2],[1,0,2]))
     if log_gpu_mem: _log_cuda_mem(loc_device,who,"rdm_end")
 
     # permute into order of s0,s1;s0',s1' where primed indices
@@ -165,17 +181,9 @@ def rdm2x1_tiled(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
     # 0123->0213
     rdm= rdm.permute(0,2,1,3).contiguous()
 
-    # symmetrize
-    dimsRDM= rdm.size()
-    rdm= rdm.view(dimsRDM[0]**2,dimsRDM[0]**2)
-    
-    if sym_pos_def: 
-        rdm= _sym_pos_def(rdm, verbosity=verbosity, who="rdm2x1")
-
-    # normalize and reshape and move to original device
-    if verbosity>0: log.info(f"Tr(rdm2x1): {torch.trace(rdm)}\n")
-    rdm= rdm / torch.trace(rdm)
-    rdm= rdm.view(dimsRDM).to(env.device)
+    # symmetrize and normalize
+    rdm= _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
+    rdm= rdm.to(env.device)
 
     return rdm
 
@@ -188,17 +196,20 @@ def _get_open_c2x2_LU_sl_elem(C, T, a, idxs, verbosity=0):
     assert len(idxs.size())==1 and idxs.size()[0]==2,"Invalid physical indices"
     dimsa= a.size()
 
-    # C--1 0--T--1
+    #       ---->
+    # C--1 1--T--0->1
     # 0       2
     if log_gpu_mem: _log_cuda_mem(loc_device,who,"CT_init")
-    C2x2 = torch.tensordot(C, T, ([1],[0]))
+    C2x2 = torch.tensordot(C, T, ([1],[1]))
+    # C2x2= torch.einsum('i,ijk->ijk',torch.diag(C), T)
     if log_gpu_mem: _log_cuda_mem(loc_device,who,"CT_end")
 
-    # C------T--1->0
-    # 0      2->1
-    # 0
-    # T2--2->3
-    # 1->2
+    #        ---->
+    #   C------T--1->0
+    #   0      2->1
+    # A 0
+    # | T--2->3
+    # | 1->2
     if log_gpu_mem: _log_cuda_mem(loc_device,who,"CTT_init")
     C2x2 = torch.tensordot(C2x2, T, ([0],[0]))
     if log_gpu_mem: _log_cuda_mem(loc_device,who,"CTT_end")
@@ -210,7 +221,7 @@ def _get_open_c2x2_LU_sl_elem(C, T, a, idxs, verbosity=0):
     # 0
     # T2--3->4,5
     # 2->3
-    C2x2= C2x2.view(C2x2.size()[0], dimsa[1], dimsa[1], C2x2.size()[2], \
+    C2x2= C2x2.view(C2x2.size(0), dimsa[1], dimsa[1], C2x2.size(2), \
         dimsa[2], dimsa[2])
 
     # first layer "bra" (in principle conjugate)
@@ -240,7 +251,7 @@ def _get_open_c2x2_LU_sl_elem(C, T, a, idxs, verbosity=0):
     # |    |
     # 2->1 5->2
     if log_gpu_mem: _log_cuda_mem(loc_device,who,f"CTTaa_{idxs[1]}_init")
-    C2x2= torch.tensordot(C2x2, a[idxs[1],:,:,:,:], ([1,3],[0,1]))
+    C2x2= torch.tensordot(C2x2, a[idxs[1],:,:,:,:].conj(), ([1,3],[0,1]))
     if log_gpu_mem: _log_cuda_mem(loc_device,who,f"CTTaa_{idxs[1]}_end")
 
     # permute 012345->124035
@@ -275,9 +286,10 @@ def rdm2x2_NN_tiled(state, env, sym_pos_def=False, force_cpu=False, verbosity=0)
     # build basic building blocks of RDM elements
     #----- building C2x2_LU ----------------------------------------------------
     dimsa = a.size()
-    A = torch.einsum('sefgh,sabcd->eafbgchd',a,a).contiguous()\
+    A = torch.einsum('sefgh,sabcd->eafbgchd',a,a.conj()).contiguous()\
         .view(dimsa[1]**2, dimsa[2]**2, dimsa[3]**2, dimsa[4]**2)
 
+    # ---->
     # C2x2c--1
     # |
     # 0
@@ -292,12 +304,14 @@ def rdm2x2_NN_tiled(state, env, sym_pos_def=False, force_cpu=False, verbosity=0)
         idxs0= torch.tensor([p00,p01])
         idxs1= torch.tensor([p10,p11])
 
+        # --->
         # C2x2--1
         # |\p0
         # 0
         C2x2= _get_open_c2x2_LU_sl_elem(C, T, a, idxs0, verbosity=verbosity)
 
         #----- build upper part C2x2 -- C2x2c ----------------------------------
+        # ---->       --->    ---->  --->
         # C2x2c--1 0--C2x2    C2x2c--C2x2
         # |           | \     |      | \
         # 0           1  p0   0      1 p0
@@ -306,43 +320,39 @@ def rdm2x2_NN_tiled(state, env, sym_pos_def=False, force_cpu=False, verbosity=0)
         if log_gpu_mem: _log_cuda_mem(loc_device,who,"C2x2c-C2x2p0_end")
 
         #----- complete lower part C2x2 -- C2x2c -------------------------------
-        
+        #     -->
         #  ---tmp-- --p0
         # |        |
         # 0        1
-        # 0        
+        # 1        
         # |        
-        # C2x2c--1->0
+        # C2x2c--0
+        # <----
         if log_gpu_mem: _log_cuda_mem(loc_device,who,"tmp-C2x2p1_init")
-        C2x2= torch.mm(C2x2c.t(),tmp)
+        C2x2= torch.mm(C2x2c,tmp)
         if log_gpu_mem: _log_cuda_mem(loc_device,who,"tmp-C2x2p1_end")
-    
+        
+        # -->
         # tmp--1
         # |\p1
         # 0
         tmp= _get_open_c2x2_LU_sl_elem(C, T, a, idxs1, verbosity=verbosity)
 
+        #     --->
         #  ---C2x2---- --p0
         # |           |
         # |           1
         # |           0
         # |           |
         #  -----0 1---tmp--p1
+        #             <--
         if log_gpu_mem: _log_cuda_mem(loc_device,who,"rdm-p0p1_init")
         rdm[p00,p10,p01,p11]= torch.einsum('ij,ji',C2x2,tmp)
         if log_gpu_mem: _log_cuda_mem(loc_device,who,"rdm-p0p1_end")
 
-    # symmetrize
-    dimsRDM= rdm.size()
-    rdm= rdm.view(dimsRDM[0]**2,dimsRDM[0]**2)
-    
-    if sym_pos_def: 
-        rdm= _sym_pos_def(rdm, verbosity=verbosity, who=who)
-
-    # normalize and reshape and move to original device
-    if verbosity>0: log.info(f"{who} Tr(rdm): {torch.trace(rdm)}\n")
-    rdm= rdm / torch.trace(rdm)
-    rdm= rdm.view(dimsRDM).to(env.device)
+    # symmetrize and normalize
+    rdm= _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
+    rdm= rdm.to(env.device)
 
     return rdm
 
@@ -368,9 +378,10 @@ def rdm2x2_NNN_tiled(state, env, sym_pos_def=False, force_cpu=False, verbosity=0
     # build basic building blocks of RDM elements
     #----- building C2x2_LU ----------------------------------------------------
     dimsa = a.size()
-    A = torch.einsum('sefgh,sabcd->eafbgchd',a,a).contiguous()\
+    A = torch.einsum('sefgh,sabcd->eafbgchd',a,a.conj()).contiguous()\
         .view(dimsa[1]**2, dimsa[2]**2, dimsa[3]**2, dimsa[4]**2)
 
+    # ---->
     # C2x2c--1
     # |
     # 0
@@ -385,12 +396,14 @@ def rdm2x2_NNN_tiled(state, env, sym_pos_def=False, force_cpu=False, verbosity=0
         idxs0= torch.tensor([p00,p01])
         idxs1= torch.tensor([p10,p11])
 
+        # --->
         # C2x2--1
         # |\p0
         # 0
         C2x2= _get_open_c2x2_LU_sl_elem(C, T, a, idxs0, verbosity=verbosity)
 
         #----- build upper part C2x2 -- C2x2c ----------------------------------
+        # ---->       --->    ---->  --->
         # C2x2c--1 0--C2x2    C2x2c--C2x2
         # |           | \     |      | \
         # 0           1  p0   0      1 p0
@@ -399,43 +412,38 @@ def rdm2x2_NNN_tiled(state, env, sym_pos_def=False, force_cpu=False, verbosity=0
         if log_gpu_mem: _log_cuda_mem(loc_device,who,"C2x2c-C2x2p0_end")
 
         #----- complete lower part C2x2 -- C2x2c -------------------------------
+        # --->
         # C2x2--1
         # |\p1
         # 0
         C2x2= _get_open_c2x2_LU_sl_elem(C, T, a, idxs1, verbosity=verbosity)
-
+        #     -->
         #  ---tmp-----
         # |          /|
         # 0    p00p01 1
         # 1 p10p11   
         # |/           
         # C2x2--0
+        # <---
         if log_gpu_mem: _log_cuda_mem(loc_device,who,"tmp-C2x2p1_init")
         tmp= torch.mm(C2x2,tmp)
         if log_gpu_mem: _log_cuda_mem(loc_device,who,"tmp-C2x2p1_end")
-
+        #     -->
         #  ---tmp-----
         # |          /|
         # |    p00p01 1
         # | p10p11    0
         # |/          | 
         #  -----0 1---C2x2c
+        #             <----
         if log_gpu_mem: _log_cuda_mem(loc_device,who,"rdm-p0p1_init")
         tmp= torch.einsum('ij,ji',tmp,C2x2c)
         if log_gpu_mem: _log_cuda_mem(loc_device,who,"rdm-p0p1_end")
 
         rdm[p00,p10,p01,p11]= tmp
 
-    # symmetrize
-    dimsRDM= rdm.size()
-    rdm= rdm.view(dimsRDM[0]**2,dimsRDM[0]**2)
-
-    if sym_pos_def:
-        rdm= _sym_pos_def(rdm, verbosity=verbosity, who=who)
-
-    # normalize and reshape and move to original device
-    if verbosity>0: log.info(f"{who} Tr(rdm): {torch.trace(rdm)}\n")
-    rdm= rdm / torch.trace(rdm)
-    rdm= rdm.view(dimsRDM).to(env.device)
+    # normalize and symmetrize and move to original device
+    rdm= _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
+    rdm= rdm.to(env.device)
 
     return rdm

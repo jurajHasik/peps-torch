@@ -1,10 +1,11 @@
+import warnings
 import torch
 from collections import OrderedDict
 import json
 import itertools
 import math
 import config as cfg
-from tensor_io import *
+from ipeps.tensor_io import *
 
 # TODO drop constrain for aux bond dimension to be identical on 
 # all bond indices
@@ -96,8 +97,13 @@ class IPEPS():
         maps square lattice into elementary unit cell of size ``lX`` x ``lY`` assuming 
         periodic boundary conditions (PBC) along both X and Y directions.
         """
-        self.dtype= global_args.dtype
+        self.dtype= global_args.torch_dtype
         self.device= global_args.device
+
+        for coord,site in sites.items(): 
+            assert site.dtype==self.dtype,"dtype of site "+str(coord)+" and IPEPS does not match"
+            assert site.device==torch.device(self.device),\
+                "device of site "+str(coord)+" and IPEPS does not match"
 
         self.sites= OrderedDict(sites)
         
@@ -141,6 +147,7 @@ class IPEPS():
     def load_checkpoint(self,checkpoint_file):
         checkpoint= torch.load(checkpoint_file)
         self.sites= checkpoint["parameters"]
+        for site_t in self.sites.values(): site_t.requires_grad_(False)
         if True in [s.is_complex() for s in self.sites.values()]:
             self.dtype= torch.complex128
 
@@ -217,9 +224,10 @@ def read_ipeps(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.pep
         0A2 <=> [left, up, right, down]: aux_seq=[1,0,3,2] 
          3
     """
+    WARN_REAL_TO_COMPLEX=False
     asq = [x+1 for x in aux_seq]
     sites = OrderedDict()
-    
+
     with open(jsonfile) as j:
         raw_state = json.load(j)
 
@@ -248,7 +256,19 @@ def read_ipeps(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.pep
                 # default
                 X= torch.from_numpy(read_bare_json_tensor_np_legacy(t))
 
-            sites[coord]= X.permute((0, *asq))
+            sites[coord]= X.permute((0, *asq)) 
+
+            # allow promotion of real to complex dtype
+            _typeT= torch.zeros(1,dtype=global_args.torch_dtype)
+            if _typeT.is_complex() and not sites[coord].is_complex():
+                sites[coord]= sites[coord] + 0.j 
+                WARN_REAL_TO_COMPLEX= True
+
+            # move to selected device
+            sites[coord]= sites[coord].to(global_args.device)
+
+        if WARN_REAL_TO_COMPLEX: warnings.warn("Some of the tensors were promoted from float to"\
+            +" complex dtype", Warning)
 
         # Unless given, construct a function mapping from
         # any site of square-lattice back to unit-cell
@@ -268,8 +288,8 @@ def read_ipeps(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.pep
 
         # set the correct dtype for newly created state (might be different
         # default in cfg.global_args)
-        if True in [s.is_complex() for s in sites.values()]:
-            state.dtype= torch.complex128
+        # if True in [s.is_complex() for s in sites.values()]:
+        #     state.dtype= torch.complex128
     return state
 
 def extend_bond_dim(state, new_d):

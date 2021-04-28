@@ -53,9 +53,9 @@ def main():
         bond_dim = args.bond_dim
         
         A = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-            dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+            dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
         B = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-            dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+            dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
 
         # normalization of initial random tensors
         A = A/torch.max(torch.abs(A))
@@ -65,9 +65,9 @@ def main():
         
         if args.tiling == "4SITE":
             C= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+                dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
             D= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+                dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
             sites[(0,1)]= C/torch.max(torch.abs(C))
             sites[(1,1)]= D/torch.max(torch.abs(D))
 

@@ -4,7 +4,7 @@ from groups.pg import make_c4v_symm
 import config as cfg
 
 class IPEPS_C4V(ipeps.IPEPS):
-    def __init__(self, site, peps_args=cfg.peps_args, global_args=cfg.global_args):
+    def __init__(self, site=None, peps_args=cfg.peps_args, global_args=cfg.global_args):
         r"""
         :param site: on-site tensor
         :param peps_args: ipeps configuration
@@ -24,8 +24,12 @@ class IPEPS_C4V(ipeps.IPEPS):
         where s denotes physical index, and u,l,d,r label four principal directions
         up, left, down, right in anti-clockwise order starting from up.
         """
-        assert isinstance(site,torch.Tensor), "site is not a torch.Tensor"
-        super().__init__(dict({(0,0): site}),peps_args=peps_args,\
+        if site is not None:
+            assert isinstance(site,torch.Tensor), "site is not a torch.Tensor"
+            sites= {(0,0): site}
+        else:
+            sites= dict()
+        super().__init__(sites, lX=1, lY=1, peps_args=peps_args,\
             global_args=global_args)
 
     def site(self,coord=None):
@@ -41,22 +45,31 @@ class IPEPS_C4V(ipeps.IPEPS):
         rand_t = torch.rand( self.site().size(), dtype=self.dtype, device=self.device)
         self.sites[(0,0)]= self.site() + noise * rand_t
         if symmetrize:
-            self.sites[(0,0)]= make_c4v_symm(self.site())
+            if self.sites[(0,0)].is_complex():
+                self.sites[(0,0)]= make_c4v_symm(self.site().real) \
+                + make_c4v_symm(self.site().imag, irreps=["A2"]) * 1.0j
+            else:
+                self.sites[(0,0)]= make_c4v_symm(self.site())
 
     def write_to_file(self,outputfile,symmetrize=True,**kwargs):
         # symmetrize before writing out
-        tmp_t= make_c4v_symm(self.site()) if symmetrize else self.site()
-        tmp_state= IPEPS_C4V(tmp_t)
+        tmp_state= to_ipeps_c4v(self) if symmetrize else self
         ipeps.write_ipeps(tmp_state, outputfile,**kwargs)
 
 def extend_bond_dim(state, new_d):
     return ipeps.extend_bond_dim(state, new_d)
 
 def to_ipeps_c4v(state, normalize=False):
+    #TODO other classes of C4v-symmetric ansatz ?
+    # we choose A1 irrep, in principle, other choices are possible (A2, B1, ...)
     assert len(state.sites.items())==1, "state has more than a single on-site tensor"
     A= next(iter(state.sites.values()))
-    A= make_c4v_symm(A)
-    # if normalize: A= A/torch.max(torch.abs(A))
+    
+    if A.is_complex():
+        A= make_c4v_symm(A.real) + make_c4v_symm(A.imag, irreps=["A2"]) * 1.0j
+    else:
+        A= make_c4v_symm(A)
+    
     if normalize: A= A/A.norm()
     return IPEPS_C4V(A)
 

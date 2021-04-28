@@ -2,6 +2,17 @@ from itertools import product
 import json
 import numpy as np
 
+class NumPy_Encoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        else:
+            return super(NumPy_Encoder, self).default(obj)
+
 # assume bare tensor is defined as JSON object with
 # 
 #      key type content
@@ -34,23 +45,6 @@ def read_bare_json_tensor_np(json_obj):
         raw_data= np.asarray(raw_data, dtype=np.float64)
 
     return raw_data.reshape(dims)
-
-def serialize_bare_tensor_np(t):
-    json_tensor=dict()
-
-    dtype_str= f"{t.dtype}"
-    if dtype_str.find(".")>0:
-        dtype_str= dtype_str[dtype_str.find(".")+1:]
-
-    json_tensor["format"]= "1D"
-    json_tensor["dtype"]= dtype_str
-    json_tensor["dims"]= list(t.size())
-
-    json_tensor["data"]= []
-    t_1d= t.view(-1)
-    for i in range(t.numel()):
-        json_tensor["data"].append(f"{t_1d[i]}")
-    return json_tensor
 
 def read_bare_json_tensor_np_legacy(json_obj):
     t= json_obj
@@ -86,7 +80,46 @@ def read_bare_json_tensor_np_legacy(json_obj):
     
     return X
 
+def serialize_bare_tensor_np(t):
+    r"""
+    Parameters
+    ----------
+    t: numpy.ndarray
+
+    Returns
+    -------
+    json_tensor: dict
+
+        JSON-compliant representation of numpy.ndarray
+    """
+    json_tensor=dict()
+
+    dtype_str= f"{t.dtype}"
+    if dtype_str.find(".")>0:
+        dtype_str= dtype_str[dtype_str.find(".")+1:]
+
+    json_tensor["format"]= "1D"
+    json_tensor["dtype"]= dtype_str
+    json_tensor["dims"]= list(t.size())
+
+    json_tensor["data"]= []
+    t_1d= t.view(-1)
+    for i in range(t.numel()):
+        json_tensor["data"].append(f"{t_1d[i]}")
+    return json_tensor
+
 def serialize_bare_tensor_legacy(t):
+    r"""
+    Parameters
+    ----------
+    t: torch.tensor
+
+    Returns
+    -------
+    json_tensor: dict
+
+        JSON-compliant representation of torch.tensor
+    """
     json_tensor=dict()
 
     dtype_str= f"{t.dtype}"
@@ -94,14 +127,11 @@ def serialize_bare_tensor_legacy(t):
         dtype_str= dtype_str[dtype_str.find(".")+1:]
 
     json_tensor["dtype"]= dtype_str
-    json_tensor["dims"]= list(t.size())
-
-    tlength = t.numel()
-    json_tensor["numEntries"]= tlength
+    json_tensor["dims"]= list(t.shape)
     
     entries = []
-    elem_inds = list(product( *(range(i) for i in t.size()) ))
-    if t.is_complex():
+    elem_inds = list(product( *(range(i) for i in t.shape) ))
+    if "complex" in dtype_str:
         for ei in elem_inds:
             entries.append(" ".join([f"{i}" for i in ei])\
                 +f" {t[ei].real} {t[ei].imag}")
@@ -110,5 +140,6 @@ def serialize_bare_tensor_legacy(t):
             entries.append(" ".join([f"{i}" for i in ei])\
                 +f" {t[ei]}")
 
+    json_tensor["numEntries"]= len(entries)
     json_tensor["entries"]=entries
     return json_tensor

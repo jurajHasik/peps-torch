@@ -114,7 +114,7 @@ def ctm_get_projectors_4x2(direction, coord, state, env, ctm_args=cfg.ctm_args, 
     if direction==(0,-1): # UP
         R= c2x2_RU(coord, state, env, verbosity=verbosity)
         Rt= c2x2_LU((coord[0]-1,coord[1]), state, env, verbosity=verbosity)
-        Rt= transpose(Rt)  
+        Rt= transpose(Rt)
     elif direction==(-1,0): # LEFT
         R= c2x2_LU(coord, state, env, verbosity=verbosity)
         Rt= c2x2_LD((coord[0],coord[1]+1), state, env, verbosity=verbosity)
@@ -222,10 +222,6 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args, \
     else:
         M = mm(transpose(R), Rt)
     U, S, V = truncated_svd(M, chi) # M = USV^{T}
-    
-    # if abs_tol is not None: St = St[St > abs_tol]
-    # if abs_tol is not None: St = torch.where(St > abs_tol, St, Stzeros)
-    # if rel_tol is not None: St = St[St/St[0] > rel_tol]
 
     S_nz= S[S/S[0] > ctm_args.projector_svd_reltol]
     S_sqrt= S*0

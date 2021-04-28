@@ -1,6 +1,5 @@
 import torch
 import config as cfg
-#from ipeps.ipeps import IPEPS
 from tn_interface import einsum
 from tn_interface import conj
 from tn_interface import contiguous, view
@@ -63,9 +62,12 @@ class ENV():
             |       |       |
             C--1 1--T--2 1--C
         """
-        super(ENV, self).__init__()
-        self.dtype = global_args.dtype
-        self.device = global_args.device
+        if state:
+            self.dtype= state.dtype
+            self.device= state.device
+        else:
+            self.dtype= global_args.torch_dtype
+            self.device= global_args.device
         self.chi = chi
 
         # initialize environment tensors
@@ -97,6 +99,22 @@ class ENV():
         for cr,t in self.T.items():
             s+=f"T({cr[0]} {cr[1]}): {t.size()}\n"
         return s
+
+    def clone(self, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+        new_env= ENV(self.chi, ctm_args=ctm_args, global_args=global_args)
+        new_env.C= { k: c.clone() for k,c in self.C.items() }
+        new_env.T= { k: t.clone() for k,t in self.T.items() }
+        return new_env
+
+    def detach(self, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+        new_env= ENV(self.chi, ctm_args=ctm_args, global_args=global_args)
+        new_env.C= { k: c.detach() for k,c in self.C.items() }
+        new_env.T= { k: t.detach() for k,t in self.T.items() }
+        return new_env
+
+    def detach_(self):
+        for c in self.C.values(): c.detach_()
+        for t in self.T.values(): t.detach_()
 
     def extend(self, new_chi, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
         new_env= ENV(new_chi, ctm_args=ctm_args, global_args=global_args)

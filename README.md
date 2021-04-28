@@ -1,14 +1,15 @@
-An extension to tensor with complex number. Avalible for Pytorch version 1.5.
-
 # peps-torch [![Build Status](https://travis-ci.com/jurajHasik/peps-torch.svg?branch=master)](https://travis-ci.com/jurajHasik/tn-torch) [![Documentation Status](https://readthedocs.org/projects/peps-torch/badge/?version=latest)](https://peps-torch.readthedocs.io/en/latest/?badge=latest)
 ### A tensor network library for two-dimensional lattice models
-by Juraj Hasik, Glen Bigan Mbeng
+by Juraj Hasik, Glen Bigan Mbeng\
+with contributions by Wei-Lin Tu
 
 \
 peps-torch performs optimization of infinite Projected entangled-pair states (iPEPS) 
 by direct energy minimization. The energy is evaluated using environments obtained 
 by the corner-transfer matrix (CTM) algorithm. Afterwards, the gradients are computed by reverse-mode 
 automatic differentiation (AD).
+
+Now supporting complex tensors with PyTorch 1.8+
 
 **For the full documentation, continue to** [peps-torch.readthedocs.io](https://peps-torch.readthedocs.io)
 * * *
@@ -72,14 +73,14 @@ python examples/ctmrg_j1j2_u1_c4v.py --instate ex-u1b_state.json --j2 0.2 --chi 
 #### Supports:
 - spin systems
 - arbitrary rectangular unit cells
-- only real-valued tensors
+- both real- and complex-valued tensors
 
 #### Dependencies
-- PyTorch 1.+ (see https://pytorch.org/)
+- PyTorch 1.8+ (see https://pytorch.org/)
 - (optional) scipy 1.3.+
 
 #### Building documentation
-- PyTorch 1.+
+- PyTorch 1.8+
 - sphinx
 - sphinx_rtd_theme
 
