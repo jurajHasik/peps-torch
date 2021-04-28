@@ -1,5 +1,6 @@
 import torch
 from math import factorial, sqrt
+from tn_interface import einsum
 
 class SU2():
     def __init__(self, J, dtype=torch.float64, device='cpu'):
@@ -71,9 +72,9 @@ class SU2():
         expr_kron = 'ij,ab->iajb'
         # spin-spin interaction \vec{S}_1.\vec{S}_2 between spins on sites 1 and 2
         # First as rank-4 tensor
-        SS = xyz[0]*torch.einsum(expr_kron,self.SZ(),self.SZ()) \
-            + 0.5*(torch.einsum(expr_kron,self.SP(),self.SM()) \
-            + torch.einsum(expr_kron,self.SM(),self.SP()))
+        SS = xyz[0]*einsum(expr_kron,self.SZ(),self.SZ()) \
+            + 0.5*(einsum(expr_kron,self.SP(),self.SM()) \
+            + einsum(expr_kron,self.SM(),self.SP()))
         return SS
 
 def get_op(op, m, dtype=torch.float64, device='cpu', dbg = False):
@@ -86,7 +87,7 @@ def get_op(op, m, dtype=torch.float64, device='cpu', dbg = False):
     elif op == "sz":
         if dbg:
             print(">>>>> Constructing 1sO: Sz <<<<<")
-        res = torch.zeros((m, m), dtype=dtype, device=device)
+        res= torch.zeros((m, m), dtype=dtype, device=device)
         for i in range(m):
             res[i,i] = -0.5 * (-(m - 1) + i*2)
         return res
@@ -106,7 +107,7 @@ def get_op(op, m, dtype=torch.float64, device='cpu', dbg = False):
     elif op == "sp":
         if dbg:
             print(">>>>> Constructing 1sO: S^+ <<<<<")
-        res = torch.zeros((m, m), dtype=dtype, device=device)
+        res= torch.zeros((m, m), dtype=dtype, device=device)
         for i in range(m-1):
             res[i,i+1] = sqrt(0.5 * (m - 1) * (0.5 * (m - 1) + 1) - \
                      (-0.5 * (m - 1) + i) * \
@@ -128,7 +129,7 @@ def get_op(op, m, dtype=torch.float64, device='cpu', dbg = False):
     elif op == "sm":
         if dbg:
             print(">>>>> Constructing 1sO: S^- <<<<<")
-        res = torch.zeros((m, m), dtype=dtype, device=device)
+        res= torch.zeros((m, m), dtype=dtype, device=device)
         for i in range(1,m):
             res[i, i - 1] = sqrt(0.5 * (m - 1) * (0.5 * (m - 1) + 1) - \
                      (-0.5 * (m - 1) + i) * \

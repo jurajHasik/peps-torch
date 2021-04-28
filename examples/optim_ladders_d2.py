@@ -17,9 +17,9 @@ log = logging.getLogger(__name__)
 # parse command line args and build necessary configuration objects
 parser= cfg.get_args_parser()
 # additional model-dependent arguments
-parser.add_argument("-alpha", type=float, default=0., help="inter-ladder coupling")
-parser.add_argument("-top_freq", type=int, default=1, help="freuqency of transfer operator spectrum evaluation")
-parser.add_argument("-top_n", type=int, default=2, help="number of leading eigenvalues"+
+parser.add_argument("--alpha", type=float, default=0., help="inter-ladder coupling")
+parser.add_argument("--top_freq", type=int, default=1, help="freuqency of transfer operator spectrum evaluation")
+parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
 args, unknown_args = parser.parse_known_args()
 
@@ -44,7 +44,7 @@ def main():
     elif args.ipeps_init_type=='RANDOM':
         bond_dim = args.bond_dim
         A = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-            dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+            dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
         # A= make_d2_symm(A)
         A= A/torch.max(torch.abs(A))
         state = IPEPS_D2SYM(A)
@@ -72,10 +72,10 @@ def main():
     init_env(state, ctm_env)
 
     ctm_env, *ctm_log = ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
-    loss = model.energy_2x1_1x2(state, ctm_env)
+    loss0 = model.energy_2x1_1x2(state, ctm_env)
     obs_values, obs_labels = model.eval_obs(state,ctm_env)
     print(", ".join(["epoch","energy"]+obs_labels))
-    print(", ".join([f"{-1}",f"{loss}"]+[f"{v}" for v in obs_values]))
+    print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
 
     def loss_fn(state, ctm_env_in, opt_context):
         ctm_args= opt_context["ctm_args"]
@@ -120,9 +120,9 @@ def main():
     ctm_env = ENV(args.chi, state)
     init_env(state, ctm_env)
     ctm_env, *ctm_log = ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
-    opt_energy = model.energy_2x1_1x2(state,ctm_env)
+    loss0 = model.energy_2x1_1x2(state,ctm_env)
     obs_values, obs_labels = model.eval_obs(state,ctm_env)
-    print(", ".join([f"{args.opt_max_iter}",f"{opt_energy}"]+[f"{v}" for v in obs_values]))
+    print(", ".join([f"{args.opt_max_iter}",f"{loss0}"]+[f"{v}" for v in obs_values]))
 
 if __name__=='__main__':
     if len(unknown_args)>0:

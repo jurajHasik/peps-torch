@@ -63,6 +63,7 @@ class SVDSYMARNOLDI(torch.autograd.Function):
     def backward(self, dU, dS, dV):
         raise Exception("backward not implemented")
         U, S, V = self.saved_tensors
+        dA= None
         return dA, None
 
 def test_SVDSYMARNOLDI_random():
@@ -158,6 +159,7 @@ class SVDARNOLDI(torch.autograd.Function):
     def backward(self, dU, dS, dV):
         raise Exception("backward not implemented")
         U, S, V = self.saved_tensors
+        dA= None
         return dA, None
 
 def test_SVDARNOLDI_random():

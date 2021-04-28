@@ -1,4 +1,5 @@
 import torch
+import itertools
 
 # A function to calculate the cycle decomposition of a permutation sigma[]
 # Input sigma[] is a proper permutation of any length
@@ -49,7 +50,7 @@ def cycleDecomp(sigma):
     return cycleList, parity
 
 # define canonical completely anti-symmetric tensor
-def levi_civita_3D(dtype=torch.float64,device='cpu')
+def levi_civita_3D(dtype=torch.float64,device='cpu'):
     lc3D=torch.zeros((3,3,3),dtype=dtype,device=device)
     for p in itertools.permutations(tuple(range(3))):
         lc3D[p]= cycleDecomp(p)[1]
