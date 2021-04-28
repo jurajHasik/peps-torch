@@ -6,7 +6,7 @@ from ipeps.ipeps import *
 from ctm.generic.env import *
 from ctm.generic import ctmrg
 from models import akltS2
-from optim.ad_optim import optimize_state
+from optim.ad_optim_lbfgs_mod import optimize_state
 import unittest
 import logging
 log = logging.getLogger(__name__)
@@ -47,10 +47,10 @@ def main():
         if args.bond_dim > max(state.get_aux_bond_dims()):
             # extend the auxiliary dimensions
             state = extend_bond_dim(state, args.bond_dim)
-        state.add_noise(state, args.instate_noise)
+        state.add_noise(args.instate_noise)
     elif args.opt_resume is not None:
         if args.tiling == "BIPARTITE":
-            state= IPEPS(dict(), lX=2, lY=1)
+            state= IPEPS(dict(), lX=2, lY=1, vertexToSite=lattice_to_site)
         elif args.tiling == "4SITE":
             state= IPEPS(dict(), lX=2, lY=2)
         state.load_checkpoint(args.opt_resume)
@@ -58,9 +58,9 @@ def main():
         bond_dim = args.bond_dim
         
         A = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-            dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+            dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
         B = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-            dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+            dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
 
         # normalization of initial random tensors
         A = A/torch.max(torch.abs(A))
@@ -70,9 +70,9 @@ def main():
         
         if args.tiling == "4SITE":
             C= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+                dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
             D= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+                dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
             sites[(0,1)]= C/torch.max(torch.abs(C))
             sites[(1,1)] = D/torch.max(torch.abs(D))
 
@@ -139,9 +139,9 @@ def main():
     ctm_env = ENV(args.chi, state)
     init_env(state, ctm_env)
     ctm_env, *ctm_log = ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
-    opt_energy = energy_f(state,ctm_env)
+    loss0 = energy_f(state,ctm_env)
     obs_values, obs_labels = model.eval_obs(state,ctm_env)
-    print(", ".join([f"{args.opt_max_iter}",f"{opt_energy}"]+[f"{v}" for v in obs_values]))  
+    print(", ".join([f"{args.opt_max_iter}",f"{loss0}"]+[f"{v}" for v in obs_values]))  
 
 if __name__=='__main__':
     if len(unknown_args)>0:

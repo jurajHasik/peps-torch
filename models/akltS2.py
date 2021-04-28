@@ -9,9 +9,12 @@ from ctm.one_site_c4v import corrf_c4v
 from math import sqrt
 import itertools
 
+def _cast_to_real(t):
+    return t.real if t.is_complex() else t
+
 class AKLTS2():
     def __init__(self, global_args=cfg.global_args):
-        self.dtype=global_args.dtype
+        self.dtype=global_args.torch_dtype
         self.device=global_args.device
         self.phys_dim= 5
 
@@ -102,18 +105,12 @@ class AKLTS2():
 
         # return energy-per-site
         energy_per_site=energy/len(state.sites.items())
+        energy_per_site= _cast_to_real(energy_per_site)
+
         return energy_per_site
         
     # definition of other observables
     def eval_obs(self,state,env):
-        obs= dict()
-        with torch.no_grad():
-            for coord,site in state.sites.items():
-                rdm1x1 = rdm.rdm1x1(coord,state,env)
-                for label,op in self.obs_ops.items():
-                    obs[str(coord)+"|"+label] = torch.trace(rdm1x1@op)
-
-
         obs= dict({"avg_m": 0.})
         with torch.no_grad():
             for coord,site in state.sites.items():
@@ -127,8 +124,10 @@ class AKLTS2():
             for coord,site in state.sites.items():
                 rdm2x1 = rdm.rdm2x1(coord,state,env)
                 rdm1x2 = rdm.rdm1x2(coord,state,env)
-                obs[f"SS2x1{coord}"]= torch.einsum('ijab,ijab',rdm2x1,self.SS)
-                obs[f"SS1x2{coord}"]= torch.einsum('ijab,ijab',rdm1x2,self.SS)
+                SS2x1= torch.einsum('ijab,ijab',rdm2x1,self.SS)
+                SS1x2= torch.einsum('ijab,ijab',rdm1x2,self.SS)
+                obs[f"SS2x1{coord}"]= _cast_to_real(SS2x1)
+                obs[f"SS1x2{coord}"]= _cast_to_real(SS1x2)
         
         # prepare list with labels and values
         obs_labels=["avg_m"]+[f"m{coord}" for coord in state.sites.keys()]\
@@ -140,7 +139,7 @@ class AKLTS2():
 
 class AKLTS2_C4V_BIPARTITE():
     def __init__(self, global_args=cfg.global_args):
-        self.dtype=global_args.dtype
+        self.dtype=global_args.torch_dtype
         self.device=global_args.device
         self.phys_dim= 5
 

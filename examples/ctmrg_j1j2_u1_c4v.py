@@ -7,7 +7,7 @@ from ctm.one_site_c4v.env_c4v import *
 from ctm.one_site_c4v import ctmrg_c4v, transferops_c4v
 from ctm.one_site_c4v.rdm_c4v import rdm2x1_sl
 from models import j1j2
-import u1sym.sym_ten_parser as tenU1 
+import u1sym.sym_ten_parser as tenU1
 import unittest
 import logging
 log = logging.getLogger(__name__)
@@ -15,9 +15,10 @@ log = logging.getLogger(__name__)
 # parse command line args and build necessary configuration objects
 parser= cfg.get_args_parser()
 # additional model-dependent arguments
-parser.add_argument("--u1_class", type=str, default="B", choices=["A", "B", "C", "D", "E"])
+parser.add_argument("--u1_class", type=str, default="B")
 parser.add_argument("--j1", type=float, default=1., help="nearest-neighbour coupling")
 parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour coupling")
+parser.add_argument("--j3", type=float, default=0., help="next-to-next nearest-neighbour coupling")
 parser.add_argument("--hz_stag", type=float, default=0., help="staggered mag. field")
 parser.add_argument("--delta_zz", type=float, default=1., help="easy-axis (nearest-neighbour) anisotropy")
 # additional observables-related arguments
@@ -39,9 +40,11 @@ def main():
     torch.set_num_threads(args.omp_cores)
     torch.manual_seed(args.seed)
     
-    model= j1j2.J1J2_C4V_BIPARTITE(j1=args.j1, j2=args.j2, hz_stag=args.hz_stag, \
-        delta_zz=args.delta_zz)
+    model= j1j2.J1J2_C4V_BIPARTITE(j1=args.j1, j2=args.j2, j3=args.j3, \
+        hz_stag=args.hz_stag, delta_zz=args.delta_zz)
     energy_f= model.energy_1x1_lowmem
+    # energy_f= model.energy_1x1_tiled
+    # energy_f= model.energy_1x1
 
     # initialize an ipeps
     if args.instate!=None:
@@ -52,10 +55,10 @@ def main():
         if args.bond_dim in [2,3,4,5,6,7,8]:
             u1sym_t= tenU1.import_sym_tensors(2,args.bond_dim,"A_1",\
                 infile=f"u1sym/D{args.bond_dim}_U1_{args.u1_class}.txt",\
-                dtype=cfg.global_args.dtype, device=cfg.global_args.device)
+                dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
         else:
             raise ValueError("Unsupported --bond_dim= "+str(args.bond_dim))
-        A= torch.zeros(len(u1sym_t), dtype=cfg.global_args.dtype, device=cfg.global_args.device)
+        A= torch.zeros(len(u1sym_t), dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
         coeffs = {(0,0): A}
         state= IPEPS_U1SYM(u1sym_t, coeffs)
         state.load_checkpoint(args.opt_resume)
@@ -63,11 +66,10 @@ def main():
         if args.bond_dim in [2,3,4,5,6,7,8]:
             u1sym_t= tenU1.import_sym_tensors(2, args.bond_dim, "A_1", \
                 infile=f"u1sym/D{args.bond_dim}_U1_{args.u1_class}.txt", \
-                dtype=cfg.global_args.dtype, device=cfg.global_args.device)
+                dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
         else:
             raise ValueError("Unsupported --bond_dim= "+str(args.bond_dim))
-
-        A= torch.rand(len(u1sym_t), dtype=cfg.global_args.dtype, device=cfg.global_args.device)
+        A= torch.rand(len(u1sym_t), dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
         A= A/torch.max(torch.abs(A))
         coeffs = {(0,0): A}
         state = IPEPS_U1SYM(u1sym_t, coeffs)
@@ -78,7 +80,7 @@ def main():
     print(state)
 
     @torch.no_grad()
-    def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args): 
+    def ctmrg_conv_rdm2x1(state, env, history, ctm_args=cfg.ctm_args): 
         if not history:
             history=dict({"log": []})
         rdm2x1= rdm2x1_sl(state, env, force_cpu=ctm_args.conv_check_cpu)
@@ -97,14 +99,12 @@ def main():
         # update history
         history["rdm"]=rdm2x1
         history["log"].append(dist)
-        if dist<ctm_args.ctm_conv_tol:
+
+        converged= dist<ctm_args.ctm_conv_tol
+        if converged or len(history['log']) >= ctm_args.ctm_max_iter:
             log.info({"history_length": len(history['log']), "history": history['log'],
                 "final_multiplets": compute_multiplets(env)})
-            return True, history
-        elif len(history['log']) >= ctm_args.ctm_max_iter:
-            log.info({"history_length": len(history['log']), "history": history['log'],
-                "final_multiplets": compute_multiplets(env)})
-            return False, history
+            return converged, history
         return False, history
 
     ctm_env_init = ENV_C4V(args.chi, state)
@@ -116,7 +116,7 @@ def main():
     print(", ".join([f"{-1}",f"{e_curr0}"]+[f"{v}" for v in obs_values0]))
 
     ctm_env_init, *ctm_log = ctmrg_c4v.run(state, ctm_env_init, \
-        conv_check=ctmrg_conv_energy)
+        conv_check=ctmrg_conv_rdm2x1)
 
     e_curr0 = energy_f(state, ctm_env_init, force_cpu=True)
     obs_values0, obs_labels = model.eval_obs(state,ctm_env_init,force_cpu=True)
@@ -149,13 +149,13 @@ def main():
     for i in range(args.chi):
         print(f"{i} {s[i]}")
 
-    # transfer operator spectrum
+    # transfer operator spectrum 1-site-width channel
     print("\n\nspectrum(T)")
     l= transferops_c4v.get_Top_spec_c4v(args.top_n, state, ctm_env_init)
     for i in range(l.size()[0]):
         print(f"{i} {l[i,0]} {l[i,1]}")
 
-    # transfer operator spectrum
+    # transfer operator spectrum 2-site-width channel
     if args.top2:
         print("\n\nspectrum(T2)")
         l= transferops_c4v.get_Top2_spec_c4v(args.top_n, state, ctm_env_init)

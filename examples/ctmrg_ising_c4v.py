@@ -47,7 +47,7 @@ def main():
         bond_dim = args.bond_dim
         
         A= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-            dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+            dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
         A= make_c4v_symm(A)
         A= A/torch.max(torch.abs(A))
 
@@ -142,6 +142,11 @@ def main():
     print(f"TIMINGS ctm: {t_ctm} conv_check: {t_obs}")
 
     # 7) ----- additional observables ---------------------------------------------
+    corrSS= model.eval_corrf_SS(state, ctm_env_init, args.corrf_r)
+    print("\n\nSS r "+" ".join([label for label in corrSS.keys()]))
+    for i in range(args.corrf_r):
+        print(f"{i} "+" ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
+
     # environment diagnostics
     print("\n\nspectrum(C)")
     u,s,v= torch.svd(ctm_env_init.C[ctm_env_init.keyC], compute_uv=False)

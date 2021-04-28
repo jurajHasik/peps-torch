@@ -2,9 +2,13 @@ import torch
 import groups.su2 as su2
 from ctm.generic import rdm
 from ctm.one_site_c4v import rdm_c4v
+from ctm.one_site_c4v import corrf_c4v
 import config as cfg
 from math import sqrt
 import itertools
+
+def _cast_to_real(t):
+    return t.real if t.is_complex() else t
 
 class ISING():
     def __init__(self, hx=0.0, q=0.0, global_args=cfg.global_args):
@@ -46,7 +50,7 @@ class ISING():
         
         * :math:`h1_i  = 2S^x_i`
         """
-        self.dtype=global_args.dtype
+        self.dtype=global_args.torch_dtype
         self.device=global_args.device
         self.phys_dim=2
         self.hx=hx
@@ -104,25 +108,9 @@ class ISING():
         #     torch.einsum('ijklajcl,ikac',rdm2x2,self.h2)
         # eSzSzSzSz= torch.einsum('ijklabcd,ijklabcd',rdm2x2,self.h4)
         # energy_per_site = -eSzSz - self.hx*eSx + self.q*eSzSzSzSz
-        return energy_per_site 
+        energy_per_site= _cast_to_real(energy_per_site)
 
-    # assuming reduced density matrix of 2x2 cluster with indexing of DOFs
-    # as follows rdm2x2=rdm2x2(s0,s1,s2,s3;s0',s1',s2',s3')
-    #
-    # s0,s1
-    # s2,s3
-    #                
-    #                          A3--1B   B3  1A
-    #                          2 \/ 2   2 \/ 2
-    #                A B       0 /\ 0   0 /\ 0
-    # Ex.1 unit cell B A terms B3--1A & A3  1B
-    #
-    #                          A3--1B   B3--1A
-    #                          2 \/ 2   2 \/ 2
-    #                A B       0 /\ 0   0 /\ 0
-    # Ex.2 unit cell A B terms A3--1B & B3--1A
-    def energy_2x2_2site(self,state,env):
-        pass
+        return energy_per_site 
 
     def eval_obs(self,state,env):
         r"""
@@ -150,9 +138,12 @@ class ISING():
                 rdm2x1= rdm.rdm2x1(coord,state,env)
                 rdm1x2= rdm.rdm1x2(coord,state,env)
                 rdm2x2= rdm.rdm2x2(coord,state,env)
-                obs[f"SzSz2x1{coord}"]= torch.einsum('ijab,ijab',rdm2x1,self.h2)
-                obs[f"SzSz1x2{coord}"]= torch.einsum('ijab,ijab',rdm1x2,self.h2)
-                obs[f"SzSzSzSz{coord}"]= torch.einsum('ijklabcd,ijklabcd',rdm2x2,self.h4)
+                SzSz2x1= torch.einsum('ijab,ijab',rdm2x1,self.h2)
+                SzSz1x2= torch.einsum('ijab,ijab',rdm1x2,self.h2)
+                SzSzSzSz= torch.einsum('ijklabcd,ijklabcd',rdm2x2,self.h4)
+                obs[f"SzSz2x1{coord}"]= _cast_to_real(SzSz2x1)
+                obs[f"SzSz1x2{coord}"]= _cast_to_real(SzSz1x2)
+                obs[f"SzSzSzSz{coord}"]= _cast_to_real(SzSzSzSz)
 
         # prepare list with labels and values
         obs_labels= [f"{lc[1]}{lc[0]}" for lc in list(itertools.product(state.sites.keys(), ["sz","sx"]))]
@@ -202,7 +193,7 @@ class ISING_C4V():
         
         * :math:`h1_i  = 2S^x_i`
         """
-        self.dtype=global_args.dtype
+        self.dtype=global_args.torch_dtype
         self.device=global_args.device
         self.phys_dim=2
         self.hx=hx
@@ -321,3 +312,20 @@ class ISING_C4V():
         obs_labels+= ["SzSzSzSz"]
         obs_values=[obs[label] for label in obs_labels]
         return obs_values, obs_labels
+
+    def eval_corrf_SS(self,state,env_c4v,dist):
+        Sop_zxy= torch.zeros((3,self.phys_dim,self.phys_dim),dtype=self.dtype,device=self.device)
+        Sop_zxy[0,:,:]= self.obs_ops["sz"]
+        Sop_zxy[1,:,:]= 0.5*(self.obs_ops["sp"] + self.obs_ops["sm"])    # S^x
+
+        # dummy function, since no sublattice rotation is present
+        def get_op(op):
+            op_0= op
+            def _gen_op(r): return op_0
+            return _gen_op
+
+        Sz0szR= corrf_c4v.corrf_1sO1sO(state, env_c4v, Sop_zxy[0,:,:], get_op(Sop_zxy[0,:,:]), dist)
+        Sx0sxR= corrf_c4v.corrf_1sO1sO(state, env_c4v, Sop_zxy[1,:,:], get_op(Sop_zxy[1,:,:]), dist)
+ 
+        res= dict({"ss": Sz0szR+Sx0sxR, "szsz": Sz0szR, "sxsx": Sx0sxR})
+        return res
