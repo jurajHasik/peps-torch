@@ -2,9 +2,13 @@ import torch
 import groups.su2 as su2
 from ctm.generic import rdm
 from ctm.one_site_c4v import rdm_c4v
+from ctm.one_site_c4v import corrf_c4v
 import config as cfg
 from math import sqrt
 import itertools
+
+def _cast_to_real(t):
+    return t.real if t.is_complex() else t
 
 class ISING():
     def __init__(self, hx=0.0, q=0.0, global_args=cfg.global_args):
@@ -46,7 +50,7 @@ class ISING():
         
         * :math:`h1_i  = 2S^x_i`
         """
-        self.dtype=global_args.dtype
+        self.dtype=global_args.torch_dtype
         self.device=global_args.device
         self.phys_dim=2
         self.hx=hx
@@ -104,25 +108,9 @@ class ISING():
         #     torch.einsum('ijklajcl,ikac',rdm2x2,self.h2)
         # eSzSzSzSz= torch.einsum('ijklabcd,ijklabcd',rdm2x2,self.h4)
         # energy_per_site = -eSzSz - self.hx*eSx + self.q*eSzSzSzSz
-        return energy_per_site 
+        energy_per_site= _cast_to_real(energy_per_site)
 
-    # assuming reduced density matrix of 2x2 cluster with indexing of DOFs
-    # as follows rdm2x2=rdm2x2(s0,s1,s2,s3;s0',s1',s2',s3')
-    #
-    # s0,s1
-    # s2,s3
-    #                
-    #                          A3--1B   B3  1A
-    #                          2 \/ 2   2 \/ 2
-    #                A B       0 /\ 0   0 /\ 0
-    # Ex.1 unit cell B A terms B3--1A & A3  1B
-    #
-    #                          A3--1B   B3--1A
-    #                          2 \/ 2   2 \/ 2
-    #                A B       0 /\ 0   0 /\ 0
-    # Ex.2 unit cell A B terms A3--1B & B3--1A
-    def energy_2x2_2site(self,state,env):
-        pass
+        return energy_per_site 
 
     def eval_obs(self,state,env):
         r"""
@@ -150,9 +138,12 @@ class ISING():
                 rdm2x1= rdm.rdm2x1(coord,state,env)
                 rdm1x2= rdm.rdm1x2(coord,state,env)
                 rdm2x2= rdm.rdm2x2(coord,state,env)
-                obs[f"SzSz2x1{coord}"]= torch.einsum('ijab,ijab',rdm2x1,self.h2)
-                obs[f"SzSz1x2{coord}"]= torch.einsum('ijab,ijab',rdm1x2,self.h2)
-                obs[f"SzSzSzSz{coord}"]= torch.einsum('ijklabcd,ijklabcd',rdm2x2,self.h4)
+                SzSz2x1= torch.einsum('ijab,ijab',rdm2x1,self.h2)
+                SzSz1x2= torch.einsum('ijab,ijab',rdm1x2,self.h2)
+                SzSzSzSz= torch.einsum('ijklabcd,ijklabcd',rdm2x2,self.h4)
+                obs[f"SzSz2x1{coord}"]= _cast_to_real(SzSz2x1)
+                obs[f"SzSz1x2{coord}"]= _cast_to_real(SzSz1x2)
+                obs[f"SzSzSzSz{coord}"]= _cast_to_real(SzSzSzSz)
 
         # prepare list with labels and values
         obs_labels= [f"{lc[1]}{lc[0]}" for lc in list(itertools.product(state.sites.keys(), ["sz","sx"]))]
@@ -163,7 +154,7 @@ class ISING():
         return obs_values, obs_labels
 
 class ISING_C4V():
-    def __init__(self, hx=0.0, q=0.0, global_args=cfg.global_args):
+    def __init__(self, hx=0.0, q=0, global_args=cfg.global_args):
         r"""
         :param hx: transverse field
         :param q: plaquette interaction 
@@ -202,13 +193,13 @@ class ISING_C4V():
         
         * :math:`h1_i  = 2S^x_i`
         """
-        self.dtype=global_args.dtype
+        self.dtype=global_args.torch_dtype
         self.device=global_args.device
         self.phys_dim=2
         self.hx=hx
         self.q=q
         
-        self.h2, self.h4, self.h1, self.hp = self.get_h()
+        self.h2, self.hp, self.szszszsz, self.szsz, self.sx = self.get_h()
         self.obs_ops = self.get_obs_ops()
 
     def get_h(self):
@@ -219,11 +210,13 @@ class ISING_C4V():
         SzSzIdId= torch.einsum('ijab,klcd->ijklabcd',SzSz,id2)
         SzSzSzSz= torch.einsum('ijab,klcd->ijklabcd',SzSz,SzSz)
         Sx = s2.SP()+s2.SM()
+        SxId= torch.einsum('ij,ab->iajb', Sx, s2.I())
         SxIdIdId= torch.einsum('ia,jb,kc,ld->ijklabcd',Sx,s2.I(),s2.I(),s2.I())
 
-        hp = -SzSzIdId -SzSzIdId.permute(0,2,1,3,4,6,5,7) -self.q*SzSzSzSz -self.hx*SxIdIdId
+        h2= -SzSz - 0.5*self.hx*SxId
+        hp= -SzSzIdId -SzSzIdId.permute(0,2,1,3,4,6,5,7) -self.q*SzSzSzSz -self.hx*SxIdIdId
 
-        return SzSz, SzSzSzSz, Sx, hp
+        return h2, hp, SzSzSzSz, SzSz, Sx
 
     def get_obs_ops(self):
         obs_ops = dict()
@@ -233,7 +226,33 @@ class ISING_C4V():
         obs_ops["sm"]= 2*s2.SM()
         return obs_ops
 
-    def energy_1x1(self,state,env_c4v):
+    def energy_1x1_nn(self,state,env_c4v):
+        r"""
+        :param state: wavefunction
+        :param env_c4v: CTM c4v symmetric environment
+        :type state: IPEPS
+        :type env_c4v: ENV_C4V
+        :return: energy per site
+        :rtype: float
+
+        For 1-site invariant c4v iPEPS with no 4-site term present in Hamiltonian it is enough 
+        to construct a single reduced density matrix of a 2x1 nearest-neighbour sites. 
+        Afterwards, the energy per site `e` is computed by evaluating individual terms 
+        in the Hamiltonian through :math:`\langle \mathcal{O} \rangle = Tr(\rho_{2x1} \mathcal{O})`
+        
+        .. math:: 
+
+            e = -\langle h2_{<\bf{0},\bf{x}>} \rangle - h_x \langle h1_{\bf{0}} \rangle
+        """
+        assert self.q==0, "Non-zero value of 4-site term coupling"
+
+        rdm2x1= rdm_c4v.rdm2x1_sl(state, env_c4v)
+        eSx= torch.einsum('ijaj,ia',rdm2x1,self.sx)
+        eSzSz= torch.einsum('ijab,ijab',rdm2x1,self.szsz)
+        energy_per_site = -2*eSzSz - self.hx*eSx
+        return energy_per_site
+
+    def energy_1x1_plaqette(self,state,env_c4v):
         r"""
         :param state: wavefunction
         :param env_c4v: CTM c4v symmetric environment
@@ -256,11 +275,10 @@ class ISING_C4V():
         rdm2x2= rdm_c4v.rdm2x2(state,env_c4v)
         energy_per_site= torch.einsum('ijklabcd,ijklabcd',rdm2x2,self.hp)
         
-        # From individual contributions 
-        # rdm2x1= rdm_c4v.rdm2x1(state,env_c4v)
-        # eSx= torch.einsum('ijaj,ia',rdm2x1,self.h1)
-        # eSzSz= torch.einsum('ijab,ijab',rdm2x1,self.h2)
-        # eSzSzSzSz= torch.einsum('ijklabcd,ijklabcd',rdm2x2,self.h4)
+        # From individual contributions
+        # eSx= torch.einsum('ijklajkl,ia',rdm2x2,self.sx)
+        # eSzSz= torch.einsum('ijklabkl,ijab',rdm2x1,self.szsz)
+        # eSzSzSzSz= torch.einsum('ijklabcd,ijklabcd',rdm2x2,self.szszszsz)
         # energy_per_site = -2*eSzSz - self.hx*eSx + self.q*eSzSzSzSz
         return energy_per_site
 
@@ -286,17 +304,28 @@ class ISING_C4V():
                 obs[f"{label}"]= torch.trace(rdm1x1@op)
             obs["sx"]= 0.5*(obs["sp"] + obs["sm"])
             
-            #rdm2x1= rdm.rdm2x1(coord,state,env)
-            #rdm1x2= rdm.rdm1x2(coord,state,env)
             rdm2x2= rdm_c4v.rdm2x2(state,env_c4v)
-            #obs[f"SzSz2x1{coord}"]= torch.einsum('ijab,ijab',rdm2x1,self.h2)
-            #obs[f"SzSz1x2{coord}"]= torch.einsum('ijab,ijab',rdm1x2,self.h2)
-            obs["SzSzSzSz"]= torch.einsum('ijklabcd,ijklabcd',rdm2x2,self.h4)
+            obs["SzSzSzSz"]= torch.einsum('ijklabcd,ijklabcd',rdm2x2,self.szszszsz)
 
         # prepare list with labels and values
         obs_labels= [lc for lc in ["sz","sx"]]
-        #obs_labels+= [f"SzSz2x1{coord}" for coord in state.sites.keys()]
-        #obs_labels+= [f"SzSz1x2{coord}" for coord in state.sites.keys()]
         obs_labels+= ["SzSzSzSz"]
         obs_values=[obs[label] for label in obs_labels]
         return obs_values, obs_labels
+
+    def eval_corrf_SS(self,state,env_c4v,dist):
+        Sop_zxy= torch.zeros((3,self.phys_dim,self.phys_dim),dtype=self.dtype,device=self.device)
+        Sop_zxy[0,:,:]= self.obs_ops["sz"]
+        Sop_zxy[1,:,:]= 0.5*(self.obs_ops["sp"] + self.obs_ops["sm"])    # S^x
+
+        # dummy function, since no sublattice rotation is present
+        def get_op(op):
+            op_0= op
+            def _gen_op(r): return op_0
+            return _gen_op
+
+        Sz0szR= corrf_c4v.corrf_1sO1sO(state, env_c4v, Sop_zxy[0,:,:], get_op(Sop_zxy[0,:,:]), dist)
+        Sx0sxR= corrf_c4v.corrf_1sO1sO(state, env_c4v, Sop_zxy[1,:,:], get_op(Sop_zxy[1,:,:]), dist)
+ 
+        res= dict({"ss": Sz0szR+Sx0sxR, "szsz": Sz0szR, "sxsx": Sx0sxR})
+        return res

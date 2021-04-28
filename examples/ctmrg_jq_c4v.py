@@ -13,14 +13,14 @@ import unittest
 # parse command line args and build necessary configuration objects
 parser= cfg.get_args_parser()
 # additional model-dependent arguments
-parser.add_argument("-c4v_type", default="TI", help="type of C4v ansatz. Supported types:"\
+parser.add_argument("--c4v_type", default="TI", help="type of C4v ansatz. Supported types:"\
     +"TI, BIPARTITE, PLAQUETTE")
-parser.add_argument("-j1", type=float, default=0.0, help="nearest-neighbour coupling")
-parser.add_argument("-q", type=float, default=1.0, help="plaquette interaction strength")
-parser.add_argument("-q_inter", type=float, default=None, help="relevant for c4v_type=PLAQUETTE")
+parser.add_argument("--j1", type=float, default=0.0, help="nearest-neighbour coupling")
+parser.add_argument("--q", type=float, default=1.0, help="plaquette interaction strength")
+parser.add_argument("--q_inter", type=float, default=None, help="relevant for c4v_type=PLAQUETTE")
 # additional observables-related arguments
-parser.add_argument("-corrf_r", type=int, default=1, help="maximal correlation function distance")
-parser.add_argument("-top_n", type=int, default=2, help="number of leading eigenvalues"+
+parser.add_argument("--corrf_r", type=int, default=1, help="maximal correlation function distance")
+parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
 args, unknown_args = parser.parse_known_args()
     
@@ -55,7 +55,7 @@ def main():
     elif args.ipeps_init_type=='RANDOM':
         bond_dim = args.bond_dim
         A= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-            dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+            dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
         A= make_c4v_symm(A)
         A= A/torch.max(torch.abs(A))
         state = IPEPS_C4V(A)

@@ -80,38 +80,30 @@ class LBFGS_MOD(LBFGS):
                  line_search_fn=None,
                  line_search_eps=1.0e-4):
         r"""
-        :param params: iterable of parameters to optimize or dicts defining parameter groups
-        :type params: iterable
-        :param lr: learning rate (default: 1)
-        :type lr: float, optional
-        :param max_iter: maximal number of iterations per optimization step (default: 20)
-        :type max_iter: int
-        :param max_eval: maximal number of function evaluations per optimization
-            step (default: max_iter * 1.25).
-        :type max_eval: int
-        :param tolerance_grad: termination tolerance on first order optimality
-            (default: 1e-5).
-        :type tolerance_grad: float
-        :param tolerance_change: termination tolerance on function
-            value/parameter changes (default: 1e-9).
-        :type tolerance_change: float
-        :param history_size: update history size (default: 100).
-        :type history_size: int
-        :param line_search_fn: line search algorithm. Supported options 
-            ``"strong_wolfe"``, ``"backtracking"`` (default: None)
-        :type line_search_fn: str, optional
-        :param line_search_eps: minimal step size (default: 1.0e-4)
-        :type line_search_eps: float, optional
+        Args:
+            lr (float): learning rate (default: 1)
+            max_iter (int): maximal number of iterations per optimization step
+                (default: 20)
+            max_eval (int): maximal number of function evaluations per optimization
+                step (default: max_iter * 1.25).
+            tolerance_grad (float): termination tolerance on first order optimality
+                (default: 1e-5).
+            tolerance_change (float): termination tolerance on function
+                value/parameter changes (default: 1e-9).
+            history_size (int): update history size (default: 100).
+            line_search_fn (str): either 'strong_wolfe' or None (default: None).
+            line_search_eps (float): minimal step size (default: 1.0e-4).
         """
         super(LBFGS_MOD, self).__init__(
-            params,
-            lr=lr,
-            max_iter=max_iter,
-            max_eval=max_eval,
-            tolerance_grad=tolerance_grad,
-            tolerance_change=tolerance_change,
-            history_size=history_size,
-            line_search_fn=line_search_fn)
+                params,
+                lr=lr,
+                max_iter=max_iter,
+                max_eval=max_eval,
+                tolerance_grad=tolerance_grad,
+                tolerance_change=tolerance_change,
+                history_size=history_size,
+                line_search_fn=line_search_fn)
+        # TODO for each param group ?
         assert len(self.param_groups) == 1
         group = self.param_groups[0]
         group["line_search_eps"]= line_search_eps
@@ -126,22 +118,26 @@ class LBFGS_MOD(LBFGS):
 
     def _directional_evaluate(self, closure, x, t, d):
         self._add_grad(t, d)
-        loss = float(closure(linesearching=True))
+        with torch.enable_grad():
+            loss = float(closure(linesearching=True))
         flat_grad = self._gather_flat_grad()
         self._set_param(x)
         return loss, flat_grad
 
+    @torch.no_grad()
     def step_2c(self, closure, closure_linesearch):
-        r"""
-        Performs a single optimization step.
+        """Performs a single optimization step.
 
-        :param closure: A closure that reevaluates the model and returns the loss.
-        :type closure: callable
-        :param closure_linesearch: A closure that reevaluates the model and returns 
-            the loss in torch.no_grad context
-        :type closure_linesearch: callable, optional 
+        Args:
+            closure (callable): A closure that reevaluates the model
+                and returns the loss.
+            closure_linesearch (callable): A closure that reevaluates the model and returns 
+                the loss in torch.no_grad context
         """
         assert len(self.param_groups) == 1
+
+        # Make sure the closure is always called with grad enabled
+        closure = torch.enable_grad()(closure)
 
         group = self.param_groups[0]
         lr = group['lr']
@@ -153,7 +149,6 @@ class LBFGS_MOD(LBFGS):
         line_search_eps= group['line_search_eps']
         history_size = group['history_size']
 
-
         # NOTE: LBFGS has only global state, but we register it as state for
         # the first param, because this helps with casting in load_state_dict
         state = self.state[self._params[0]]
@@ -161,12 +156,14 @@ class LBFGS_MOD(LBFGS):
         state.setdefault('n_iter', 0)
 
         # evaluate initial f(x) and df/dx
-        orig_loss = closure()
+        with torch.enable_grad():
+            orig_loss = closure()
         loss = float(orig_loss)
         current_evals = 1
         state['func_evals'] += 1
 
         flat_grad = self._gather_flat_grad()
+        is_complex= flat_grad.is_complex()
         opt_cond = flat_grad.abs().max() <= tolerance_grad
 
         # optimal condition
@@ -203,7 +200,7 @@ class LBFGS_MOD(LBFGS):
                 # do lbfgs update (update memory)
                 y = flat_grad.sub(prev_flat_grad)
                 s = d.mul(t)
-                ys = y.dot(s)  # y*s
+                ys = torch.real(y.conj().dot(s)) if is_complex else y.dot(s)
                 if ys > 1e-10:
                     # updating memory
                     if len(old_dirs) == history_size:
@@ -218,7 +215,7 @@ class LBFGS_MOD(LBFGS):
                     ro.append(1. / ys)
 
                     # update scale of initial Hessian approximation
-                    H_diag = ys / y.dot(y)  # (y*y)
+                    H_diag = ys / y.conj().dot(y) if is_complex else ys / y.dot(y)
 
                 # compute the approximate (L-BFGS) inverse Hessian
                 # multiplied by the gradient
@@ -230,19 +227,29 @@ class LBFGS_MOD(LBFGS):
 
                 # iteration in L-BFGS loop collapsed to use just one buffer
                 q = flat_grad.neg()
-                for i in range(num_old - 1, -1, -1):
-                    al[i] = old_stps[i].dot(q) * ro[i]
-                    q.add_(-al[i], old_dirs[i])
+                if is_complex:
+                    for i in range(num_old - 1, -1, -1):
+                        al[i] = torch.real(old_stps[i].conj().dot(q))  * ro[i]
+                        q.add_(old_dirs[i], alpha=-al[i])
+                else:
+                    for i in range(num_old - 1, -1, -1):
+                        al[i] = old_stps[i].dot(q)  * ro[i]
+                        q.add_(old_dirs[i], alpha=-al[i])
 
                 # multiply by initial Hessian
                 # r/d is the final direction
                 d = r = torch.mul(q, H_diag)
-                for i in range(num_old):
-                    be_i = old_dirs[i].dot(r) * ro[i]
-                    r.add_(al[i] - be_i, old_stps[i])
+                if is_complex:
+                    for i in range(num_old):
+                        be_i = torch.real(old_dirs[i].conj().dot(r)) * ro[i]
+                        r.add_(old_stps[i], alpha=al[i] - be_i)
+                else:
+                    for i in range(num_old):
+                        be_i = old_dirs[i].dot(r) * ro[i]
+                        r.add_(old_stps[i], alpha=al[i] - be_i)
 
             if prev_flat_grad is None:
-                prev_flat_grad = flat_grad.clone()
+                prev_flat_grad = flat_grad.clone(memory_format=torch.contiguous_format)
             else:
                 prev_flat_grad.copy_(flat_grad)
             prev_loss = loss
@@ -257,7 +264,7 @@ class LBFGS_MOD(LBFGS):
                 t = lr
 
             # directional derivative
-            gtd = flat_grad.dot(d)
+            gtd = torch.real(flat_grad.conj().dot(d)) if is_complex else flat_grad.dot(d)
 
             # directional derivative is below tolerance
             if gtd > -tolerance_change:
@@ -277,6 +284,7 @@ class LBFGS_MOD(LBFGS):
                     t, loss= _scalar_search_armijo(obj_func, loss, gtd, args=(x_init,d), alpha0=t)
                     if t is None:
                         raise RuntimeError("minimize_scalar failed")
+                
                 elif line_search_fn == "strong_wolfe":
                     x_init = self._clone_param()
 
@@ -287,11 +295,11 @@ class LBFGS_MOD(LBFGS):
                         obj_func, x_init, t, d, loss, flat_grad, gtd)
                 else:
                     raise RuntimeError("unsupported line search")
-                
+
                 log.info(f"LS final step: {t}")
                 self._add_grad(t, d)
                 opt_cond = flat_grad.abs().max() <= tolerance_grad
-                
+            
             else:
                 # no line search, simply move with fixed-step
                 self._add_grad(t, d)
@@ -299,7 +307,8 @@ class LBFGS_MOD(LBFGS):
                     # re-evaluate function only if not in last iteration
                     # the reason we do this: in a stochastic setting,
                     # no use to re-evaluate that function here
-                    loss = float(closure())
+                    with torch.enable_grad():
+                        loss = float(closure())
                     flat_grad = self._gather_flat_grad()
                     opt_cond = flat_grad.abs().max() <= tolerance_grad
                     ls_func_evals = 1

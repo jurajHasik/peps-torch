@@ -16,11 +16,11 @@ log = logging.getLogger(__name__)
 # parse command line args and build necessary configuration objects
 parser= cfg.get_args_parser()
 # additional model-dependent arguments
-parser.add_argument("-c4v_type", default="TI", help="type of C4v ansatz. Supported types:"\
+parser.add_argument("--c4v_type", default="TI", help="type of C4v ansatz. Supported types:"\
     +"TI, BIPARTITE, PLAQUETTE")
-parser.add_argument("-j1", type=float, default=0.0, help="nearest-neighbour coupling")
-parser.add_argument("-q", type=float, default=1.0, help="plaquette interaction strength")
-parser.add_argument("-q_inter", type=float, default=None, help="relevant for c4v_type=PLAQUETTE")
+parser.add_argument("--j1", type=float, default=0.0, help="nearest-neighbour coupling")
+parser.add_argument("--q", type=float, default=1.0, help="plaquette interaction strength")
+parser.add_argument("--q_inter", type=float, default=None, help="relevant for c4v_type=PLAQUETTE")
 args, unknown_args = parser.parse_known_args()
 
 def main():
@@ -52,12 +52,12 @@ def main():
         state.add_noise(args.instate_noise)
         state.sites[(0,0)]= state.sites[(0,0)]/torch.max(torch.abs(state.sites[(0,0)]))
     elif args.opt_resume is not None:
-        state= IPEPS_C4V(torch.tensor(0.))
+        state= IPEPS_C4V()
         state.load_checkpoint(args.opt_resume)
     elif args.ipeps_init_type=='RANDOM':
         bond_dim = args.bond_dim
         A= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-            dtype=cfg.global_args.dtype,device=cfg.global_args.device)
+            dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
         A= make_c4v_symm(A)
         A= A/torch.max(torch.abs(A))
         state = IPEPS_C4V(A)

@@ -134,14 +134,12 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         # 5) log grad metrics for debugging
         if opt_args.opt_logging:
             log_entry=dict({"id": epoch, "t_grad": t_grad1-t_grad0})
+            log_entry["grad_mag"]= [p.grad.norm().item() for p in parameters]
             if opt_args.opt_log_grad: log_entry["grad"]= [p.grad.tolist() for p in parameters]
             log.info(json.dumps(log_entry))
 
         # 6) detach current environment from autograd graph
-        lst_C = list(ctm_env.C.values())
-        lst_T = list(ctm_env.T.values())
-        current_env[0] = ctm_env
-        for el in lst_T + lst_C: el.detach_()
+        current_env[0] = ctm_env.detach().clone()
 
         return loss
     
@@ -158,6 +156,11 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         
         if post_proc is not None:
             post_proc(state, current_env[0], context)
+
+        # terminate condition
+        if len(t_data["loss"])>1 and \
+            abs(t_data["loss"][-1]-t_data["loss"][-2])<opt_args.tolerance_change:
+            break
 
     # optimization is over, store the last checkpoint
     store_checkpoint(checkpoint_file, state, optimizer, \

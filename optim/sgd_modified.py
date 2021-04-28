@@ -72,6 +72,7 @@ class SGD_MOD(SGD):
     .. warning::
         This optimizer doesn't support per-parameter options and parameter
         groups (there can be only one).
+
     """
     def __init__(self, params, lr=1, momentum=0, dampening=0,
                  weight_decay=0, nesterov=False,
@@ -153,7 +154,7 @@ class SGD_MOD(SGD):
         for p in self._params:
             numel = p.numel()
             # view as to avoid deprecated pointwise semantics
-            p.data.add_(step_size, update[offset:offset + numel].view_as(p.data))
+            p.data.add_(update[offset:offset + numel].view_as(p), alpha=step_size)
             offset += numel
         assert offset == self._numel()
 
@@ -164,7 +165,8 @@ class SGD_MOD(SGD):
         for p, pdata in zip(self._params, params_data):
             p.data.copy_(pdata)
 
-    def step_2c(self, closure=None, closure_linesearch=None):
+    @torch.no_grad()
+    def step_2c(self, closure, closure_linesearch=None):
         r"""
         Performs a single optimization step.
 
@@ -175,7 +177,7 @@ class SGD_MOD(SGD):
         :type closure_linesearch: callable, optional 
         """
         loss = None
-        if closure is not None:
+        with torch.enable_grad():
             loss = closure()
 
         lr = self.param_groups[0]['lr']
@@ -220,6 +222,7 @@ class SGD_MOD(SGD):
                     alpha0=lr, amin= line_search_eps)
                 if t is None:
                     raise RuntimeError("minimize_scalar failed")
+                log.info(f"LS final step: {t}")
             else:
                 raise RuntimeError("unsupported line search")
             

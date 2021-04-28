@@ -6,6 +6,9 @@ from ipeps.ipeps import IPEPS
 from ctm.generic.env import *
 from ctm.generic.ctm_components import *
 from ctm.generic.ctm_projectors import *
+from tn_interface import contract, einsum
+from tn_interface import conj
+from tn_interface import contiguous, view, permute
 
 def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.global_args): 
     r"""
@@ -38,8 +41,8 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
     sitesDL=dict()
     for coord,A in state.sites.items():
         dimsA = A.size()
-        a = torch.einsum('mefgh,mabcd->eafbgchd',(A,A)).contiguous().view(dimsA[1]**2,\
-            dimsA[2]**2, dimsA[3]**2, dimsA[4]**2)
+        a = contiguous(einsum('mefgh,mabcd->eafbgchd',A,conj(A)))
+        a = view(a, (dimsA[1]**2,dimsA[2]**2, dimsA[3]**2, dimsA[4]**2))
         sitesDL[coord]=a
     stateDL = IPEPS(sitesDL,state.vertexToSite)
 
@@ -49,7 +52,8 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
     for i in range(ctm_args.ctm_max_iter):
         t0_ctm= time.perf_counter()
         for direction in ctm_args.ctm_move_sequence:
-            ctm_MOVE(direction, stateDL, env, ctm_args=ctm_args, global_args=global_args, verbosity=ctm_args.verbosity_ctm_move)
+            ctm_MOVE(direction, stateDL, env, ctm_args=ctm_args, global_args=global_args, \
+                verbosity=ctm_args.verbosity_ctm_move)
         t1_ctm= time.perf_counter()
 
         t0_obs= time.perf_counter()
@@ -70,7 +74,8 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
 
 # performs CTM move in one of the directions 
 # [Up=(0,-1), Left=(-1,0), Down=(0,1), Right=(1,0)]
-def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.global_args, verbosity=0):
+def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.global_args, \
+    verbosity=0):
     # select projector function
     if ctm_args.projector_method=='4X4':
         ctm_get_projectors=ctm_get_projectors_4x4
@@ -165,19 +170,20 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
         env.C[(new_coord,rel_CandT_vecs["nC1"])] = nC1[coord]
         env.C[(new_coord,rel_CandT_vecs["nC2"])] = nC2[coord]
         env.T[(new_coord,rel_CandT_vecs["nT"])] = nT[coord]
-
+    
 #####################################################################
 # functions performing absorption and truncation step
 #####################################################################
 def absorb_truncate_CTM_MOVE_UP(coord, state, env, P, Pt, verbosity=0):
     vec = (1,0)
+    coord_shift_left= state.vertexToSite((coord[0]-vec[0], coord[1]-vec[1]))
     coord_shift_right = state.vertexToSite((coord[0]+vec[0], coord[1]+vec[1]))
     tensors= env.C[(coord,(1,-1))], env.T[(coord,(1,0))], env.T[(coord,(0,-1))], \
         env.T[(coord,(-1,0))], env.C[(coord,(-1,-1))], state.site(coord), \
-        P[coord].view(env.chi,state.site(coord).size()[3],env.chi), \
-        Pt[coord].view(env.chi,state.site(coord).size()[1],env.chi), \
-        P[coord_shift_right].view(env.chi,state.site(coord).size()[3],env.chi), \
-        Pt[coord_shift_right].view(env.chi,state.site(coord).size()[1],env.chi)
+        view(P[coord], (env.chi,state.site(coord_shift_left).size()[3],env.chi)), \
+        view(Pt[coord], (env.chi,state.site(coord).size()[1],env.chi)), \
+        view(P[coord_shift_right], (env.chi,state.site(coord).size()[3],env.chi)), \
+        view(Pt[coord_shift_right], (env.chi,state.site(coord_shift_right).size()[1],env.chi))
 
     if cfg.ctm_args.fwd_checkpoint_absorb:
         return checkpoint(absorb_truncate_CTM_MOVE_UP_c,*tensors)
@@ -192,7 +198,7 @@ def absorb_truncate_CTM_MOVE_UP_c(*tensors):
     #    0
     # 1--T1
     #    2 
-    nC1 = torch.tensordot(C1,T1,([1],[0]))
+    nC1 = contract(C1,T1,([1],[0]))
 
     #        --0 0--C1
     #       |       |
@@ -200,14 +206,14 @@ def absorb_truncate_CTM_MOVE_UP_c(*tensors):
     #       |       | 
     #        --1 1--T1
     #               2->1
-    nC1 = torch.tensordot(Pt1, nC1,([0,1],[0,1]))
+    nC1 = contract(Pt1, nC1,([0,1],[0,1]))
 
     # C2--1->0
     # 0
     # 0
     # T2--2
     # 1
-    nC2 = torch.tensordot(C2, T2,([0],[0])) 
+    nC2 = contract(C2, T2,([0],[0])) 
 
     # C2--0 0--
     # |        |        
@@ -215,14 +221,14 @@ def absorb_truncate_CTM_MOVE_UP_c(*tensors):
     # |        |
     # T2--2 1--
     # 1->0
-    nC2 = torch.tensordot(nC2, P2,([0,2],[0,1]))
+    nC2 = contract(nC2, P2,([0,2],[0,1]))
 
     #        --0 0--T--2->3
     #       |       1->2
     # 1<-2--Pt2
     #       |
     #        --1->0 
-    nT = torch.tensordot(Pt2, T, ([0],[0]))
+    nT = contract(Pt2, T, ([0],[0]))
 
     #        -------T--3->1
     #       |       2
@@ -230,7 +236,7 @@ def absorb_truncate_CTM_MOVE_UP_c(*tensors):
     #       |       0
     #        --0 1--A--3
     #               2 
-    nT = torch.tensordot(nT, A,([0,2],[1,0]))
+    nT = contract(nT, A,([0,2],[1,0]))
 
     #     -------T--1 0--
     #    |       |       |
@@ -238,8 +244,8 @@ def absorb_truncate_CTM_MOVE_UP_c(*tensors):
     #    |       |       |
     #     -------A--3 1--
     #            2->1 
-    nT = torch.tensordot(nT, P1,([1,3],[0,1]))
-    nT = nT.contiguous()
+    nT = contract(nT, P1,([1,3],[0,1]))
+    nT = contiguous(nT)
 
     # Assign new C,T 
     #
@@ -251,27 +257,22 @@ def absorb_truncate_CTM_MOVE_UP_c(*tensors):
     # =>                            
     #
     # C^new(coord+(0,1),(-1,-1))--      --T^new(coord+(0,1),(0,-1))--   --C^new(coord+(0,1),(1,-1))
-    # |                                   |                               |  
-    # vec = (0,1)
-    # new_coord = ipeps.vertexToSite((coord[0]+vec[0], coord[1]+vec[1]))
-    # print("coord: "+str(coord)+" + "+str(vec)+" -> "+str(new_coord))
-    # env.C[(new_coord,(1,-1))] = nC1/torch.max(torch.abs(nC1))
-    # env.C[(new_coord,(-1,-1))] = nC2/torch.max(torch.abs(nC2))
-    # env.T[(new_coord,(0,-1))] = nT/torch.max(torch.abs(nT))
-    nC1 = nC1/torch.max(torch.abs(nC1))
-    nC2 = nC2/torch.max(torch.abs(nC2))
-    nT = nT/torch.max(torch.abs(nT))
+    # |                                   |                               |
+    nC1 = nC1/nC1.abs().max()
+    nC2 = nC2/nC2.abs().max()
+    nT = nT/nT.abs().max()
     return nC1, nC2, nT
 
 def absorb_truncate_CTM_MOVE_LEFT(coord, state, env, P, Pt, verbosity=0):
     vec = (0,-1)
-    coord_shift_up = state.vertexToSite((coord[0]+vec[0], coord[1]+vec[1]))
+    coord_shift_up= state.vertexToSite((coord[0]+vec[0], coord[1]+vec[1]))
+    coord_shift_down= state.vertexToSite((coord[0]-vec[0], coord[1]-vec[1]))
     tensors = env.C[(coord,(-1,-1))], env.T[(coord,(0,-1))], env.T[(coord,(-1,0))], \
         env.T[(coord,(0,1))], env.C[(coord,(-1,1))], state.site(coord), \
-        P[coord].view(env.chi,state.site(coord).size()[0],env.chi), \
-        Pt[coord].view(env.chi,state.site(coord).size()[2],env.chi), \
-        P[coord_shift_up].view(env.chi,state.site(coord).size()[0],env.chi), \
-        Pt[coord_shift_up].view(env.chi,state.site(coord).size()[2],env.chi)
+        view(P[coord], (env.chi,state.site(coord_shift_down).size()[0],env.chi)), \
+        view(Pt[coord], (env.chi,state.site(coord).size()[2],env.chi)), \
+        view(P[coord_shift_up], (env.chi,state.site(coord).size()[0],env.chi)), \
+        view(Pt[coord_shift_up], (env.chi,state.site(coord_shift_up).size()[2],env.chi))
 
     if cfg.ctm_args.fwd_checkpoint_absorb:
         return checkpoint(absorb_truncate_CTM_MOVE_LEFT_c,*tensors)
@@ -284,7 +285,7 @@ def absorb_truncate_CTM_MOVE_LEFT_c(*tensors):
     # C1--1 0--T1--2
     # |        |
     # 0        1
-    nC1 = torch.tensordot(C1,T1,([1],[0]))
+    nC1 = contract(C1,T1,([1],[0]))
 
     # C1--1 0--T1--2->1
     # |        |
@@ -292,18 +293,18 @@ def absorb_truncate_CTM_MOVE_LEFT_c(*tensors):
     # 0        1
     # |___Pt1__|
     #     2->0
-    nC1 = torch.tensordot(Pt1, nC1,([0,1],[0,1]))
+    nC1 = contract(Pt1, nC1,([0,1],[0,1]))
 
     # 0        0->1
     # C2--1 1--T2--2
-    nC2 = torch.tensordot(C2, T2,([1],[1])) 
+    nC2 = contract(C2, T2,([1],[1])) 
 
     #    2->0
     # ___P2___
     # 0      1
     # 0      1  
     # C2-----T2--2->1
-    nC2 = torch.tensordot(P2, nC2,([0,1],[0,1]))
+    nC2 = contract(P2, nC2,([0,1],[0,1]))
 
     #    2->1
     # ___P1__
@@ -311,7 +312,7 @@ def absorb_truncate_CTM_MOVE_LEFT_c(*tensors):
     # 0
     # T--2->3
     # 1->2
-    nT = torch.tensordot(P1, T,([0],[0]))
+    nT = contract(P1, T,([0],[0]))
 
     #    1->0
     # ___P1____
@@ -319,7 +320,7 @@ def absorb_truncate_CTM_MOVE_LEFT_c(*tensors):
     # |       0
     # T--3 1--A--3
     # 2->1    2
-    nT = torch.tensordot(nT, A,([0,3],[0,1]))
+    nT = contract(nT, A,([0,3],[0,1]))
 
     #    0
     # ___P1___
@@ -330,8 +331,9 @@ def absorb_truncate_CTM_MOVE_LEFT_c(*tensors):
     # 0       1
     # |___Pt2_|
     #     2
-    nT = torch.tensordot(nT, Pt2,([1,2],[0,1]))
-    nT = nT.permute(0,2,1).contiguous()
+    nT = contract(nT, Pt2,([1,2],[0,1]))
+    nT = contiguous(permute(nT, (0,2,1)))
+    
 
     # Assign new C,T 
     #
@@ -352,26 +354,21 @@ def absorb_truncate_CTM_MOVE_LEFT_c(*tensors):
     #  ________P2_______
     # |                 |                    |
     # C(coord,(-1,1))--T(coord,(0,1))--      C^new(coord+(1,0),(-1,1))
-    # vec = (1,0)
-    # new_coord = ipeps.vertexToSite((coord[0]+vec[0], coord[1]+vec[1]))
-    # print("coord: "+str(coord)+" + "+str(vec)+" -> "+str(new_coord))
-    # env.C[(new_coord,(-1,-1))] = nC1/torch.max(torch.abs(nC1))
-    # env.C[(new_coord,(-1,1))] = nC2/torch.max(torch.abs(nC2))
-    # env.T[(new_coord,(-1,0))] = nT/torch.max(torch.abs(nT))
-    nC1 = nC1/torch.max(torch.abs(nC1))
-    nC2 = nC2/torch.max(torch.abs(nC2))
-    nT = nT/torch.max(torch.abs(nT))
+    nC1 = nC1/nC1.abs().max()
+    nC2 = nC2/nC2.abs().max()
+    nT = nT/nT.abs().max()
     return nC1, nC2, nT
 
 def absorb_truncate_CTM_MOVE_DOWN(coord, state, env, P, Pt, verbosity=0):
     vec = (-1,0)
+    coord_shift_right= state.vertexToSite((coord[0]-vec[0], coord[1]-vec[1]))
     coord_shift_left = state.vertexToSite((coord[0]+vec[0], coord[1]+vec[1]))
     tensors= env.C[(coord,(-1,1))], env.T[(coord,(-1,0))], env.T[(coord,(0,1))], \
         env.T[(coord,(1,0))], env.C[(coord,(1,1))], state.site(coord), \
-        P[coord].view(env.chi,state.site(coord).size()[1],env.chi), \
-        Pt[coord].view(env.chi,state.site(coord).size()[3],env.chi), \
-        P[coord_shift_left].view(env.chi,state.site(coord).size()[1],env.chi), \
-        Pt[coord_shift_left].view(env.chi,state.site(coord).size()[3],env.chi)
+        view(P[coord], (env.chi,state.site(coord_shift_right).size()[1],env.chi)), \
+        view(Pt[coord], (env.chi,state.site(coord).size()[3],env.chi)), \
+        view(P[coord_shift_left], (env.chi,state.site(coord).size()[1],env.chi)), \
+        view(Pt[coord_shift_left], (env.chi,state.site(coord_shift_left).size()[3],env.chi))
 
     if cfg.ctm_args.fwd_checkpoint_absorb:
         return checkpoint(absorb_truncate_CTM_MOVE_DOWN_c,*tensors)
@@ -386,7 +383,7 @@ def absorb_truncate_CTM_MOVE_DOWN_c(*tensors):
     # 1
     # 0
     # C1--1->0
-    nC1 = torch.tensordot(C1,T1,([0],[1]))
+    nC1 = contract(C1,T1,([0],[1]))
 
     # 1->0
     # T1--2 1--
@@ -394,14 +391,14 @@ def absorb_truncate_CTM_MOVE_DOWN_c(*tensors):
     # |        Pt1--2->1
     # |        |
     # C1--0 0--   
-    nC1 = torch.tensordot(nC1, Pt1, ([0,2],[0,1]))
+    nC1 = contract(nC1, Pt1, ([0,2],[0,1]))
 
     #    1<-0
     # 2<-1--T2
     #       2
     #       0
     # 0<-1--C2
-    nC2 = torch.tensordot(C2, T2,([0],[2])) 
+    nC2 = contract(C2, T2,([0],[2])) 
 
     #            0<-1
     #        --1 2--T2
@@ -409,14 +406,14 @@ def absorb_truncate_CTM_MOVE_DOWN_c(*tensors):
     # 1<-2--P2      |
     #       |       | 
     #        --0 0--C2
-    nC2 = torch.tensordot(nC2, P2, ([0,2],[0,1]))
+    nC2 = contract(nC2, P2, ([0,2],[0,1]))
 
     #        --1->0
     #       |
     # 1<-2--P1
     #       |       0->2
     #        --0 1--T--2->3 
-    nT = torch.tensordot(P1, T, ([0],[1]))
+    nT = contract(P1, T, ([0],[1]))
 
     #               0->2
     #        --0 1--A--3 
@@ -424,7 +421,7 @@ def absorb_truncate_CTM_MOVE_DOWN_c(*tensors):
     # 0<-1--P1      |
     #       |       2
     #        -------T--3->1
-    nT = torch.tensordot(nT, A,([0,2],[1,2]))
+    nT = contract(nT, A,([0,2],[1,2]))
 
     #               2->1
     #        -------A--3 1--
@@ -432,8 +429,9 @@ def absorb_truncate_CTM_MOVE_DOWN_c(*tensors):
     #    0--P1      |       Pt2--2
     #       |       |       |
     #        -------T--1 0--
-    nT = torch.tensordot(nT, Pt2,([1,3],[0,1]))
-    nT = nT.permute(1,0,2).contiguous()
+    nT = contract(nT, Pt2,([1,3],[0,1]))
+    nT = contiguous(permute(nT, (1,0,2)))
+    
 
     # Assign new C,T
     # 
@@ -446,26 +444,21 @@ def absorb_truncate_CTM_MOVE_DOWN_c(*tensors):
     #
     # |                                 |                              |
     # C^new(coord+(0,-1),(-1,1))--    --T^new(coord+(0,-1),(0,1))--  --C^new(coord+(0,-1),(1,1))
-    # vec = (0,-1)
-    # new_coord = ipeps.vertexToSite((coord[0]+vec[0], coord[1]+vec[1]))
-    # print("coord: "+str(coord)+" + "+str(vec)+" -> "+str(new_coord))
-    # env.C[(new_coord,(-1,1))] = nC1/torch.max(torch.abs(nC1))
-    # env.C[(new_coord,(1,1))] = nC2/torch.max(torch.abs(nC2))
-    # env.T[(new_coord,(0,1))] = nT/torch.max(torch.abs(nT))
-    nC1 = nC1/torch.max(torch.abs(nC1))
-    nC2 = nC2/torch.max(torch.abs(nC2))
-    nT = nT/torch.max(torch.abs(nT))
+    nC1 = nC1/nC1.abs().max()
+    nC2 = nC2/nC2.abs().max()
+    nT = nT/nT.abs().max()
     return nC1, nC2, nT
 
 def absorb_truncate_CTM_MOVE_RIGHT(coord, state, env, P, Pt, verbosity=0):
     vec = (0,1)
     coord_shift_down = state.vertexToSite((coord[0]+vec[0], coord[1]+vec[1]))
+    coord_shift_up = state.vertexToSite((coord[0]-vec[0], coord[1]-vec[1]))
     tensors= env.C[(coord,(1,1))], env.T[(coord,(0,1))], env.T[(coord,(1,0))], \
         env.T[(coord,(0,-1))], env.C[(coord,(1,-1))], state.site(coord), \
-        P[coord].view(env.chi,state.site(coord).size()[2],env.chi), \
-        Pt[coord].view(env.chi,state.site(coord).size()[0],env.chi), \
-        P[coord_shift_down].view(env.chi,state.site(coord).size()[2],env.chi), \
-        Pt[coord_shift_down].view(env.chi,state.site(coord).size()[0],env.chi)
+        view(P[coord], (env.chi,state.site(coord_shift_up).size()[2],env.chi)), \
+        view(Pt[coord], (env.chi,state.site(coord).size()[0],env.chi)), \
+        view(P[coord_shift_down], (env.chi,state.site(coord).size()[2],env.chi)), \
+        view(Pt[coord_shift_down], (env.chi,state.site(coord_shift_down).size()[0],env.chi))
 
     if cfg.ctm_args.fwd_checkpoint_absorb:
         return checkpoint(absorb_truncate_CTM_MOVE_RIGHT_c,*tensors)
@@ -477,25 +470,25 @@ def absorb_truncate_CTM_MOVE_RIGHT_c(*tensors):
 
     #       0->1     0
     # 2<-1--T1--2 1--C1
-    nC1 = torch.tensordot(C1, T1,([1],[2])) 
+    nC1 = contract(C1, T1,([1],[2])) 
 
     #          2->0
     #        __Pt1_
     #       1     0
     #       1     0
     # 1<-2--T1----C1
-    nC1 = torch.tensordot(Pt1, nC1,([0,1],[0,1]))
+    nC1 = contract(Pt1, nC1,([0,1],[0,1]))
 
     # 1<-0--T2--2 0--C2
     #    2<-1     0<-1
-    nC2 = torch.tensordot(C2,T2,([0],[2]))
+    nC2 = contract(C2,T2,([0],[2]))
 
     # 0<-1--T2----C2
     #       2     0
     #       1     0
     #       |__P2_|
     #          2->1
-    nC2 = torch.tensordot(nC2, P2,([0,2],[0,1]))
+    nC2 = contract(nC2, P2,([0,2],[0,1]))
 
     #    1<-2
     #    ___Pt2__
@@ -503,7 +496,7 @@ def absorb_truncate_CTM_MOVE_RIGHT_c(*tensors):
     #           0
     #     2<-1--T
     #        3<-2
-    nT = torch.tensordot(Pt2, T,([0],[0]))
+    nT = contract(Pt2, T,([0],[0]))
 
     #       0<-1 
     #       ___Pt2__
@@ -511,7 +504,7 @@ def absorb_truncate_CTM_MOVE_RIGHT_c(*tensors):
     #       0       |
     # 2<-1--A--3 2--T
     #    3<-2    1<-3
-    nT = torch.tensordot(nT, A,([0,2],[0,3]))
+    nT = contract(nT, A,([0,2],[0,3]))
 
     #          0
     #       ___Pt2__
@@ -522,8 +515,9 @@ def absorb_truncate_CTM_MOVE_RIGHT_c(*tensors):
     #       1       0
     #       |___P1__|
     #           2 
-    nT = torch.tensordot(nT, P1,([1,3],[0,1]))
-    nT = nT.contiguous()
+    nT = contract(nT, P1,([1,3],[0,1]))
+    nT = contiguous(nT)
+    
 
     # Assign new C,T 
     #
@@ -544,13 +538,7 @@ def absorb_truncate_CTM_MOVE_RIGHT_c(*tensors):
     #    ______Pt1______
     #   |               |                    |
     # --T(coord,(0,1))--C(coord,(1,1))     --C^new(coord+(-1,0),(1,1))
-    # vec = (-1,0)
-    # new_coord = ipeps.vertexToSite((coord[0]+vec[0], coord[1]+vec[1]))
-    # print("coord: "+str(coord)+" + "+str(vec)+" -> "+str(new_coord))
-    # env.C[(new_coord,(1,1))] = nC1/torch.max(torch.abs(nC1))
-    # env.C[(new_coord,(1,-1))] = nC2/torch.max(torch.abs(nC2))
-    # env.T[(new_coord,(1,0))] = nT/torch.max(torch.abs(nT))
-    nC1 = nC1/torch.max(torch.abs(nC1))
-    nC2 = nC2/torch.max(torch.abs(nC2))
-    nT = nT/torch.max(torch.abs(nT))
+    nC1 = nC1/nC1.abs().max()
+    nC2 = nC2/nC2.abs().max()
+    nT = nT/nT.abs().max()
     return nC1, nC2, nT

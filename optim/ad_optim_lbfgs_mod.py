@@ -4,7 +4,6 @@ import json
 import logging
 log = logging.getLogger(__name__)
 import torch
-#from memory_profiler import profile
 from optim import lbfgs_modified
 import config as cfg
 
@@ -65,7 +64,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
     checkpoint_file = main_args.out_prefix+"_checkpoint.p"   
     outputstatefile= main_args.out_prefix+"_state.json"
     t_data = dict({"loss": [], "min_loss": 1.0e+16, "loss_ls": [], "min_loss_ls": 1.0e+16})
-    current_env=[ctm_env_init]
+    current_env= [ctm_env_init]
     context= dict({"ctm_args":ctm_args, "opt_args":opt_args, "loss_history": t_data})
     epoch=0
 
@@ -114,10 +113,20 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
     #@profile
     def closure(linesearching=False):
         context["line_search"]= linesearching
-        optimizer.zero_grad()
         
         # 0) evaluate loss
+        optimizer.zero_grad()
         loss, ctm_env, history, t_ctm, t_check = loss_fn(state, current_env[0], context)
+
+        # 4) evaluate gradient
+        t_grad0= time.perf_counter()
+        loss.backward()
+        t_grad1= time.perf_counter()
+
+        # 6) detach current environment from autograd graph
+        ctm_env.detach_()
+        current_env[0]= ctm_env
+        # current_env[0]= ctm_env.detach().clone()
 
         # 1) record loss and store current state if the loss improves
         if linesearching:
@@ -141,12 +150,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
 
         # 3) compute desired observables
         if obs_fn is not None:
-            obs_fn(state, ctm_env, context)
-
-        # 4) evaluate gradient
-        t_grad0= time.perf_counter()
-        loss.backward()
-        t_grad1= time.perf_counter()
+            obs_fn(state, current_env[0], context)
 
         # 5) log grad metrics
         if opt_args.opt_logging:
@@ -154,14 +158,12 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
             if linesearching: log_entry["LS"]=len(t_data["loss_ls"])
             else: 
                 log_entry["t_grad"]=t_grad1-t_grad0
+                # log just l2 and l\infty norm of the full grad
+                # log_entry["grad_mag"]= [p.grad.norm().item() for p in parameters]
+                flat_grad= torch.cat(tuple(p.grad.view(-1) for p in parameters))
+                log_entry["grad_mag"]= [flat_grad.norm().item(), flat_grad.norm(p=float('inf')).item()]
                 if opt_args.opt_log_grad: log_entry["grad"]= [p.grad.tolist() for p in parameters]
-            log.info(json.dumps(log_entry))
-
-        # 6) detach current environment from autograd graph
-        lst_C = list(ctm_env.C.values())
-        lst_T = list(ctm_env.T.values())
-        current_env[0] = ctm_env
-        for el in lst_T + lst_C: el.detach_()
+            log.info(json.dumps(log_entry))        
 
         return loss
     
@@ -180,8 +182,10 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
             loc_ctm_args.projector_svd_method= opt_args.line_search_svd_method
         ls_context= dict({"ctm_args":loc_ctm_args, "opt_args":loc_opt_args, "loss_history": t_data,
             "line_search": linesearching})
+        
         loss, ctm_env, history, t_ctm, t_check = loss_fn(state, current_env[0],\
             ls_context)
+        current_env[0]= ctm_env
 
         # 2) store current state if the loss improves
         t_data["loss_ls"].append(loss.item())
@@ -196,9 +200,8 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
 
         # 4) compute desired observables
         if obs_fn is not None:
-            obs_fn(state, ctm_env, context)
+            obs_fn(state, current_env[0], context)
 
-        current_env[0] = ctm_env
         return loss
 
     for epoch in range(main_args.opt_max_iter):
@@ -216,8 +219,13 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         t_data["loss_ls"]=[]
         t_data["min_loss_ls"]=1.0e+16
 
-        if post_proc is not None:
-            post_proc(state, current_env[0], context)
+        # if post_proc is not None:
+        #     post_proc(state, current_env[0], context)
+
+        # terminate condition
+        if len(t_data["loss"])>1 and \
+            abs(t_data["loss"][-1]-t_data["loss"][-2])<opt_args.tolerance_change:
+            break
 
     # optimization is over, store the last checkpoint
     store_checkpoint(checkpoint_file, state, optimizer, \
