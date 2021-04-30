@@ -102,9 +102,9 @@ class IPEPS_U1SYM(ipeps.IPEPS):
 		self.coeffs= OrderedDict(coeffs)
 		if var_coeffs_allowed == None:
 			# all coefficients are allowed to move (default)
-			self.var_coeffs_allowed = torch.ones(self.coeffs[coord].size())
+			self.var_coeffs_allowed = (1+1j)*torch.ones(self.coeffs[coord].size())
 		else:
-			# only the selected coeffs (with a '1') are allowed to move
+			# only the selected coeffs are allowed to move
 			self.var_coeffs_allowed = var_coeffs_allowed
 		sites= self.build_onsite_tensors()
 
