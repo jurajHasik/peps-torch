@@ -29,9 +29,7 @@ def main():
 	cfg.print_config()
 	print('\n')
 	torch.set_num_threads(args.omp_cores)
-	rseed = randint(1,args.seed)
-	torch.manual_seed(rseed)
-	#torch.manual_seed(args.seed)
+	torch.manual_seed(args.seed)
 	
 	# Import all elementary tensors and build initial state
 	elementary_tensors = []
@@ -39,9 +37,9 @@ def main():
 		ts = load_SU3_tensor(name)
 		elementary_tensors.append(ts)
 	# define initial coefficients
-	coeffs = {(0,0): torch.tensor([0.,0.,0.,0.,0.,0.,0.,0.,0.,0.],dtype=torch.float64)}
+	coeffs = {(0,0): torch.tensor([1.,1.,1.,1.,1.,0.,0.,1.,1.,1.], dtype=torch.float64)}
 	# define which coefficients will be added a noise
-	var_coeffs_allowed = torch.tensor([0,0,0,0,0,1,1, 1,1,1])
+	var_coeffs_allowed = torch.tensor([1,1,1,1,1, 0,0, 1,1,1], dtype=torch.float64)
 	state = IPEPS_U1SYM(elementary_tensors, coeffs, var_coeffs_allowed)
 	state.add_noise(args.instate_noise)
 	print(f'Current state: {state.coeffs[(0,0)].data}')
@@ -49,10 +47,9 @@ def main():
 	model = SU3_chiral.SU3_CHIRAL(theta = math.pi * args.frac_theta / 100.0)
 	
 	def energy_f(state, env):
-		e_dn = model.energy_triangle(state,env)
+		e_dn = model.energy_triangle_dn(state,env)
 		e_up = model.energy_triangle_up(state,env)
-		#print(f'E_up={e_up.item()}, E_dn={e_dn.item()}')
-		return((e_up+e_dn)/2)
+		return((e_up+e_dn)/3)
 		
 	@torch.no_grad()
 	def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
@@ -86,11 +83,19 @@ def main():
 	
 	optimize_state(state, ctm_env_init, loss_fn)
 	ctm_env_final, *ctm_log= ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
-	e_dn_final = model.energy_triangle(state,ctm_env_final)
-	e_up_final = model.energy_triangle_up(state,ctm_env_final)
-	e_tot_final = (e_dn_final + e_up_final)/2
+	
+	# energy per site
+	e_dn_final = model.energy_triangle_dn(state,ctm_env_final) /3.
+	e_up_final = model.energy_triangle_up(state,ctm_env_final) /3.
+	e_tot_final = e_dn_final + e_up_final
+	
+	# P operators
+	P_up = model.P_up(state,ctm_env_final)
+	P_dn = model.P_dn(state,ctm_env_final)
+	
 	print(f'\n\n E_up={e_up_final.item()}, E_dn={e_dn_final.item()}, E_tot={e_tot_final.item()}')
-	print(e_tot_final.item())
+	print(f' Re(P_up)={torch.real(P_up).item()}, Im(P_up)={torch.imag(P_up).item()}')
+	print(f' Re(P_dn)={torch.real(P_dn).item()}, Im(P_dn)={torch.imag(P_dn).item()}')
 	
 	
 if __name__=='__main__':

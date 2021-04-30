@@ -66,6 +66,13 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
     context= dict({"ctm_args":ctm_args, "opt_args":opt_args, "loss_history": t_data})
     epoch= 0
 
+    if main_args.opt_resume is not None:
+        checkpoint = torch.load(main_args.opt_resume)
+        params_r = checkpoint["parameters"]
+        print(params_r)
+        parameters = params_r
+        state.coeffs = parameters
+
     parameters= state.get_parameters()
     for A in parameters: A.requires_grad_(True)
 
@@ -120,7 +127,6 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         loc_context= dict({"ctm_args":loc_ctm_args, "opt_args":loc_opt_args, \
             "loss_history": t_data, "line_search": False})
 
-        # compute components of the grad
         fd_grad=dict()
         with torch.no_grad():
             for k in state.coeffs.keys():
@@ -144,12 +150,14 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         print(f'Current gradient: {fd_grad}')
         return fd_grad
 
+
     #@profile
     def closure(linesearching=False):
         context["line_search"]=linesearching
 
         # 0) evaluate loss
         optimizer.zero_grad()
+        print(f'Current state: {state.coeffs[(0,0)].data}')
         with torch.no_grad():
             loss, ctm_env, history, timings= loss_fn(state, current_env[0], context)
 

@@ -73,6 +73,8 @@ class SU3_CHIRAL():
 		# in-cell triangle permutation operators:
 		self.P123, self.P123m = matP_t, matP_t2
 		self.h_triangle = exp(1j*self.theta) * self.P123 + exp(-1j*self.theta) * self.P123m
+		# in-cell chirality operator:
+		self.chirality = 1j*(self.P123 - self.P123m)
 		
 	
 	def energy_triangle(self,state,env):
@@ -96,7 +98,7 @@ class SU3_CHIRAL():
 		for n1 in range(3):
 			for n2 in range(3):
 				for n3 in range(3):
-					P_up[n3,n1,n2,n2,n3,n1] = 1.
+					P_up[n1,n2,n3,n3,n1,n2] = 1.
 					P_upm[n1,n2,n3,n2,n3,n1] = 1.
 		P_op = exp(1j*self.theta) * P_up + exp(-1j*self.theta) * P_upm
 		id_1site = torch.eye(3, dtype=torch.complex128)
@@ -104,6 +106,40 @@ class SU3_CHIRAL():
 		e_up = rdm.rdm2x2_up_triangle((0,0), state, env, operator = P_op)
 		norm_wf = rdm.rdm2x2_up_triangle_id((0,0), state, env)
 		return(2/3 * torch.real(e_up/norm_wf))
+		
+	def chirality_triangle(self,state,env):
+		id_matrix = torch.eye(27, dtype=torch.complex128)
+		chir = rdm.rdm1x1((0,0), state, env, operator=self.chirality)
+		norm_wf = rdm.rdm1x1((0,0), state, env, operator=id_matrix)
+		chir = torch.real(chir/norm_wf)
+		return(chir)
+		
+	def P_dn(self,state,env):
+		id_matrix = torch.eye(27, dtype=torch.complex128)
+		norm_wf = rdm.rdm1x1((0,0), state, env, operator=id_matrix)
+		vP_dn = rdm.rdm1x1((0,0), state, env, operator= self.P123)/norm_wf
+		return(vP_dn)
+	
+	def P_up(self,state,env):
+		op_P_up = torch.zeros((3,3,3,3,3,3),dtype=torch.complex128)
+		for n1 in range(3):
+			for n2 in range(3):
+				for n3 in range(3):
+					op_P_up[n1,n2,n3,n3,n1,n2] = 1.
+		id_1site = torch.eye(3, dtype=torch.complex128)
+		id_3sites = torch.einsum('ij,kl,mn->ikmjln',id_1site,id_1site,id_1site)
+		vP_up = rdm.rdm2x2_up_triangle((0,0), state, env, operator = op_P_up)
+		norm_wf = rdm.rdm2x2_up_triangle_id((0,0), state, env)
+		vP_up = vP_up/norm_wf
+		return(vP_up)
+		
+	def energy_triangle_dn(self,state,env):
+		vP_dn = self.P_dn(state,env)
+		return(torch.real(exp(1j*self.theta) * vP_dn + exp(-1j*self.theta) * torch.conj(vP_dn)))
+		
+	def energy_triangle_up(self,state,env):
+		vP_up = self.P_up(state,env)
+		return(torch.real(exp(1j*self.theta) * vP_up + exp(-1j*self.theta) * torch.conj(vP_up)))
 		
 		
 	def eval_lambdas(self,state,env):

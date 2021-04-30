@@ -36,19 +36,20 @@ def main():
         ts = load_SU3_tensor(name)
         elementary_tensors.append(ts)
     # define initial coefficients
-    coeffs = {(0,0): torch.tensor([0.,0.,0.,0.,0.,0.,0.,0.,0.,0.],dtype=torch.float64)}
+    coeffs = {(0,0): torch.tensor([1.,1.,1.,1.,1., 0.,0., 1.,1.,1.],dtype=torch.float64)}
     # define which coefficients will be added a noise
-    var_coeffs_allowed = torch.tensor([0,0,0,0,0,1,1, 1,1,1])
+    var_coeffs_allowed = torch.tensor([1,1,1,1,1, 1,1, 1,1,1])
     state = IPEPS_U1SYM(elementary_tensors, coeffs, var_coeffs_allowed)
     state.add_noise(args.instate_noise)
     print(f'Current state: {state.coeffs[(0,0)].data}')
     
     model = SU3_chiral.SU3_CHIRAL(theta = args.theta)
-    
+        
     def energy_f(state, env):
-        e_dn = model.energy_triangle(state,env)
+        e_dn = model.energy_triangle_dn(state,env)
         e_up = model.energy_triangle_up(state,env)
-        return((e_up+e_dn)/2)
+        #print(f'Energy per site: E_up={e_up.item()*1/3}, E_dn={e_dn.item()*1/3}')
+        return((e_up+e_dn)/3)
     
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
@@ -83,22 +84,24 @@ def main():
 
     ctm_env_init = ENV(args.chi, state)
     init_env(state, ctm_env_init)
+    ctm_env_final, *ctm_log= ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
     
-    e_dn_init = model.energy_triangle(state, ctm_env_init)
-    print('*** Energy per site (before CTMRG) -- down triangles: '+str(e_dn_init.item()))
-    e_up_init = model.energy_triangle_up(state, ctm_env_init)
-    print('*** Energy per site (before CTMRG) -- up triangles: '+str(e_up_init.item()))
-    print(f'*** Energy per site (before CTMRG) -- total: {(e_up_init.item()+e_dn_init.item())/2}')
+    # energy per site
+    e_dn_final = model.energy_triangle_dn(state,ctm_env_final) /3.
+    e_up_final = model.energy_triangle_up(state,ctm_env_final) /3.
+    e_tot_final = e_dn_final + e_up_final
     
-    ctm_env_out, *ctm_log= ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
+    # P operators
+    P_up = model.P_up(state,ctm_env_final)
+    P_dn = model.P_dn(state,ctm_env_final)
     
-    e_dn_final = model.energy_triangle(state,ctm_env_out)
-    e_up_final = model.energy_triangle_up(state, ctm_env_out)
-    colors3, colors8 = model.eval_lambdas(state,ctm_env_out)
-    print('*** Energy per site (after CTMRG) -- down triangles: '+str(e_dn_final.item()))
-    print('*** Energy per site (after CTMRG) -- up triangles: '+str(e_up_final.item()))
-    print('*** <Lambda_3> (after CTMRG): '+str(colors3[0].item())+', '+str(colors3[1].item())+', '+str(colors3[2].item()))
-    print('*** <Lambda_8> (after CTMRG): '+str(colors8[0].item())+', '+str(colors8[1].item())+', '+str(colors8[2].item()))
+    print(f'\n\n E_up={e_up_final.item()}, E_dn={e_dn_final.item()}, E_tot={e_tot_final.item()}')
+    print(f' Re(P_up)={torch.real(P_up).item()}, Im(P_up)={torch.imag(P_up).item()}')
+    print(f' Re(P_dn)={torch.real(P_dn).item()}, Im(P_dn)={torch.imag(P_dn).item()}')
+    
+    colors3, colors8 = model.eval_lambdas(state,ctm_env_final)
+    print(f' <Lambda_3> = {torch.real(colors3[0]).item()}, {torch.real(colors3[1]).item()}, {torch.real(colors3[2]).item()}')
+    print(f' <Lambda_8> = {torch.real(colors8[0]).item()}, {torch.real(colors8[1]).item()}, {torch.real(colors8[2]).item()}')
 
 	# environment diagnostics
 	print("\n")
@@ -110,6 +113,16 @@ def main():
 			print(f"{i} {s[i]}")
 	print("\n")
 
+    # environment diagnostics
+    print("\n")
+    print("Final environment")
+    for c_loc,c_ten in ctm_env_final.C.items(): 
+        u,s,v= torch.svd(c_ten, compute_uv=False)
+        print(f"spectrum C[{c_loc}]")
+        for i in range(args.chi):
+            print(f"{i} {s[i]}")
+    print("\n")
+            
 if __name__=='__main__':
     if len(unknown_args)>0:
         print("args not recognized: "+str(unknown_args))
