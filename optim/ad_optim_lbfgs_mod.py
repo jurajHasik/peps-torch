@@ -90,21 +90,23 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
             cp_opt_params["max_iter"] = opt_args.max_iter_per_epoch
             cp_opt_params["tolerance_grad"] = opt_args.tolerance_grad
             cp_opt_params["tolerance_change"] = opt_args.tolerance_change
+            cp_opt_params["line_search_fn"] = opt_args.line_search
+            cp_opt_params["line_search_eps"] = opt_args.line_search_tol
             # resize stored old_dirs, old_stps, ro, al to new history size
             cp_history_size= cp_opt_params["history_size"]
             cp_opt_params["history_size"] = opt_args.history_size
             if opt_args.history_size < cp_history_size:
                 if len(cp_opt_history["old_dirs"]) > opt_args.history_size: 
+                    assert len(cp_opt_history["old_dirs"])==len(cp_opt_history["old_stps"])\
+                        ==len(cp_opt_history["ro"]), "Inconsistent L-BFGS history"
                     cp_opt_history["old_dirs"]= cp_opt_history["old_dirs"][-opt_args.history_size:]
                     cp_opt_history["old_stps"]= cp_opt_history["old_stps"][-opt_args.history_size:]
-            cp_ro_filtered= list(filter(None,cp_opt_history["ro"]))
+                    cp_opt_history["ro"]= cp_opt_history["ro"][-opt_args.history_size:]
             cp_al_filtered= list(filter(None,cp_opt_history["al"]))
-            if len(cp_ro_filtered) > opt_args.history_size:
-                cp_opt_history["ro"]= cp_ro_filtered[-opt_args.history_size:]
+            if len(cp_al_filtered) > opt_args.history_size:
                 cp_opt_history["al"]= cp_al_filtered[-opt_args.history_size:]
             else:
-                cp_opt_history["ro"]= cp_ro_filtered + [None for i in range(opt_args.history_size-len(cp_ro_filtered))]
-                cp_opt_history["al"]= cp_al_filtered + [None for i in range(opt_args.history_size-len(cp_ro_filtered))]
+                cp_opt_history["al"]= cp_al_filtered + [None for i in range(opt_args.history_size-len(cp_al_filtered))]
         cp_state_dict["param_groups"][0]= cp_opt_params
         cp_state_dict["state"][cp_opt_params["params"][0]]= cp_opt_history
         optimizer.load_state_dict(cp_state_dict)

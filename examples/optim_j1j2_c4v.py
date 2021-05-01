@@ -123,22 +123,25 @@ def main():
 
     @torch.no_grad()
     def obs_fn(state, ctm_env, opt_context):
-        if ("line_search" in opt_context.keys() and not opt_context["line_search"]) \
-            or not "line_search" in opt_context.keys():
-            state_sym= to_ipeps_c4v(state, normalize=True)
-            epoch= len(opt_context["loss_history"]["loss"])
+        if opt_context["line_search"]:
+            epoch= len(opt_context["loss_history"]["loss_ls"])
+            loss= opt_context["loss_history"]["loss_ls"][-1]
+            print("LS",end=" ")
+        else:
+            epoch= len(opt_context["loss_history"]["loss"]) 
             loss= opt_context["loss_history"]["loss"][-1]
-            obs_values, obs_labels = model.eval_obs(state_sym, ctm_env)
-            print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]+\
-                [f"{torch.max(torch.abs(state.site((0,0))))}"]))
+        state_sym= to_ipeps_c4v(state, normalize=True)
+        obs_values, obs_labels = model.eval_obs(state_sym, ctm_env)
+        print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]+\
+            [f"{torch.max(torch.abs(state.site((0,0))))}"]))
 
-            if args.top_freq>0 and epoch%args.top_freq==0:
-                coord_dir_pairs=[((0,0), (1,0))]
-                for c,d in coord_dir_pairs:
-                    # transfer operator spectrum
-                    print(f"TOP spectrum(T)[{c},{d}] ",end="")
-                    l= transferops_c4v.get_Top_spec_c4v(args.top_n, state_sym, ctm_env)
-                    print("TOP "+json.dumps(_to_json(l)))
+        if (not opt_context["line_search"]) and args.top_freq>0 and epoch%args.top_freq==0:
+            coord_dir_pairs=[((0,0), (1,0))]
+            for c,d in coord_dir_pairs:
+                # transfer operator spectrum
+                print(f"TOP spectrum(T)[{c},{d}] ",end="")
+                l= transferops_c4v.get_Top_spec_c4v(args.top_n, state_sym, ctm_env)
+                print("TOP "+json.dumps(_to_json(l)))
 
     def post_proc(state, ctm_env, opt_context):
         symm, max_err= verify_c4v_symm_A1(state.site())
