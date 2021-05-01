@@ -13,7 +13,7 @@ def get_args_parser():
     parser.add_argument("--chi", type=int, default=20, help="environment bond dimension")
     parser.add_argument("--opt_max_iter", type=int, default=100, help="maximal number of epochs")
     parser.add_argument("--opt_resume", type=str, default=None, help="file with checkpoint to resume")
-    parser.add_argument("--opt_resume_override_params", type=bool, default=False, help="override optimizer parameters stored in checkpoint")
+    parser.add_argument("--opt_resume_override_params", action='store_true', help="override optimizer parameters stored in checkpoint")
     parser.add_argument("--seed", type=int, default=0, help="PRNG seed")
 
     configs=[global_args, peps_args, ctm_args, opt_args]
