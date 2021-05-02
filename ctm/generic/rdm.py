@@ -177,7 +177,6 @@ def rdm1x1(coord, state, env, operator=None, sym_pos_def=False, verbosity=0):
 	# symmetrize and normalize
 	if operator == None:
 		rdm= _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)	
-	#print(torch.max(torch.abs(rdm)))
 	return rdm
 
 def rdm2x1(coord, state, env, sym_pos_def=False, verbosity=0):

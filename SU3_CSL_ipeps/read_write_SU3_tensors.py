@@ -41,7 +41,7 @@ def write_SU3_tensors():
 	S4[1,4,6] = S4[1,6,4] = S4[6,1,4] = S4[6,4,1] = S4[4,6,1] = S4[4,1,6] = -1./(3.*np.sqrt(2.))
 	S4[2,3,6] = S4[3,6,2] = S4[6,2,3] = S4[2,6,3] = S4[3,2,6] = S4[6,3,2] = 1./(3.*np.sqrt(2.))
 	
-	# S5: {1,1,1}, E
+	# S5: {1,1,1}, E1
 	S5[0,5,6] = S5[2,3,6] = 1./3.
 	S5[1,4,6] = -1./3.
 	S5[3,6,2] = S5[5,6,0] = 1j *(1j+np.sqrt(3.))/6.
@@ -50,7 +50,7 @@ def write_SU3_tensors():
 	S5[6,1,4] = (1+1j*np.sqrt(3.))/6.
 	S5[6,2,3] = -1j*(-1j+np.sqrt(3.))/6.
 	
-	# S6: {1,1,1}, E
+	# S6: {1,1,1}, E1
 	S6[0,6,5] = S6[2,6,3] = 1./3.
 	S6[1,6,4] = -1./3.
 	S6[3,2,6] = S6[5,0,6] = -1j *(-1j+np.sqrt(3.))/6.
@@ -58,7 +58,6 @@ def write_SU3_tensors():
 	S6[6,5,0] = 1j*(1j+np.sqrt(3.))/6.
 	S6[6,4,1] = (1-1j*np.sqrt(3.))/6.
 	S6[6,3,2] = 1j*(1j+np.sqrt(3.))/6.
-	
 	#________________________________
 
 
@@ -84,8 +83,8 @@ def write_SU3_tensors():
 	for tensor,name in zip([S0,S1,S2,S3,S4,S5,S6,L0,L1,L2],['S0','S1','S2','S3','S4','S5','S6','L0','L1','L2']):
 		filename = path+name+'.json'
 		write_json_to_file(tensor,filename)
-		
-
+	
+	
 def load_SU3_tensor(name):
 	with open(path+name+'.json') as j:
 		# load tensor as a json file

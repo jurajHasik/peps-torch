@@ -73,46 +73,6 @@ class SU3_CHIRAL():
 		# in-cell triangle permutation operators:
 		self.P123, self.P123m = matP_t, matP_t2
 		self.h_triangle = exp(1j*self.theta) * self.P123 + exp(-1j*self.theta) * self.P123m
-		# in-cell chirality operator:
-		self.chirality = 1j*(self.P123 - self.P123m)
-		
-	
-	def energy_triangle(self,state,env):
-		# Computes the expectation value of the energy per site for a "down"-triangle (defined by the three sites within the unit cell)
-		id_matrix = torch.eye(27, dtype=torch.complex128)
-		e_dn = rdm.rdm1x1((0,0), state, env, operator=self.h_triangle)
-		norm_wf = rdm.rdm1x1((0,0), state, env, operator=id_matrix)
-		e_dn = torch.real(e_dn / norm_wf)
-		return(2/3*e_dn)
-	
-	def energy_triangle_up(self,state,env):
-		# Computes the expectation value of the energy for a "up"-triangle.
-		# unit cells:      (1,0)      with the index order convention (1,0), (0,1), (1,1)
-		#				   /   \
-		#			    (0,1)--(1,1)
-		# The up-triangle is made of the following 3 sites: (1,0)_2, (0,1)_3, (1,1)_1
-		# where (i,j)_k labels the k-th site of the unit cell (i,j).
-		P_upm = torch.zeros((3,3,3,3,3,3),dtype=torch.complex128)
-		P_up = torch.zeros((3,3,3,3,3,3),dtype=torch.complex128)
-		#				    2 3 1 2'3'1' (prime indices are 'ket' indices)
-		for n1 in range(3):
-			for n2 in range(3):
-				for n3 in range(3):
-					P_up[n1,n2,n3,n3,n1,n2] = 1.
-					P_upm[n1,n2,n3,n2,n3,n1] = 1.
-		P_op = exp(1j*self.theta) * P_up + exp(-1j*self.theta) * P_upm
-		id_1site = torch.eye(3, dtype=torch.complex128)
-		id_3sites = torch.einsum('ij,kl,mn->ikmjln',id_1site,id_1site,id_1site)
-		e_up = rdm.rdm2x2_up_triangle((0,0), state, env, operator = P_op)
-		norm_wf = rdm.rdm2x2_up_triangle_id((0,0), state, env)
-		return(2/3 * torch.real(e_up/norm_wf))
-		
-	def chirality_triangle(self,state,env):
-		id_matrix = torch.eye(27, dtype=torch.complex128)
-		chir = rdm.rdm1x1((0,0), state, env, operator=self.chirality)
-		norm_wf = rdm.rdm1x1((0,0), state, env, operator=id_matrix)
-		chir = torch.real(chir/norm_wf)
-		return(chir)
 		
 	def P_dn(self,state,env):
 		id_matrix = torch.eye(27, dtype=torch.complex128)
