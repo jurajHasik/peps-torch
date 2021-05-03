@@ -51,7 +51,7 @@ def main():
 		e_up = model.energy_triangle_up(state,env)
 		return((e_up+e_dn)/3)
 		
-	@torch.no_grad()
+	#@torch.no_grad()
 	def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
 		if not history:
 			history=[]
