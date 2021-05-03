@@ -85,7 +85,7 @@ class SU3_CHIRAL():
 		for n1 in range(3):
 			for n2 in range(3):
 				for n3 in range(3):
-					op_P_up[n1,n2,n3,n3,n1,n2] = 1.
+					op_P_up[n1,n2,n3,n2,n3,n1] = 1.
 		id_1site = torch.eye(3, dtype=torch.complex128)
 		id_3sites = torch.einsum('ij,kl,mn->ikmjln',id_1site,id_1site,id_1site)
 		vP_up = rdm.rdm2x2_up_triangle((0,0), state, env, operator = op_P_up)
