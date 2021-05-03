@@ -50,15 +50,17 @@ def main():
     def energy_f(state, env):
         e_dn = model.energy_triangle_dn(state,env)
         e_up = model.energy_triangle_up(state,env)
-        print(f'Energy per site: E_up={e_up.item()*1/3}, E_dn={e_dn.item()*1/3}')
+        #print(f'Energy per site: E_up={e_up.item()*1/3}, E_dn={e_dn.item()*1/3}')
         return((e_up+e_dn)/3)
     
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
             history=[]
-        e_curr= energy_f(state,env)
+        e_dn = model.energy_triangle_dn(state,env)/3
+        e_up = model.energy_triangle_up(state,env)/3
+        e_curr = e_up + e_dn
         history.append(e_curr.item())
-        print('Step n°'+str(len(history))+'     E_site = '+str(e_curr.item()))
+        print(f'Step n°{len(history)}    E_site ={e_curr.item()}   (E_up={e_up.item()}, E_dn={e_dn.item()})')
         
         #for c_loc,c_ten in env.C.items():
         #    u,s,v= torch.svd(c_ten, compute_uv=False)
