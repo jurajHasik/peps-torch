@@ -36,7 +36,6 @@ def main():
         ts = load_SU3_tensor(name)
         elementary_tensors.append(ts)
     # define initial coefficients
-    # Ji-Yao's coeffs for theta = 0.25 * pi:
     coeffs = {(0,0): torch.tensor([-0.418167,-0.1490097, -1.87683, 0.146103, 1.64509, 0., 0., 1.14427, 0.277921, 0.],dtype=torch.float64)}
     #coeffs = {(0,0): torch.tensor([1.,1.,1.,1.,1.,0.,0.,1.,1.,0.],dtype=torch.complex128)}
     #coeffs = {(0,0): torch.tensor([0.,0.,0.,0.,0.,0.,0.,0.,0.,0.],dtype=torch.complex128)}
@@ -51,7 +50,7 @@ def main():
     def energy_f(state, env):
         e_dn = model.energy_triangle_dn(state,env)
         e_up = model.energy_triangle_up(state,env)
-        #print(f'Energy per site: E_up={e_up.item()*1/3}, E_dn={e_dn.item()*1/3}')
+        print(f'Energy per site: E_up={e_up.item()*1/3}, E_dn={e_dn.item()*1/3}')
         return((e_up+e_dn)/3)
     
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
