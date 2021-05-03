@@ -94,6 +94,14 @@ def main():
 
     ctm_env_init = ENV(args.chi, state)
     init_env(state, ctm_env_init)
+ 
+    # energy per site
+    e_dn_init = model.energy_triangle_dn(state,ctm_env_init) /3.
+    e_up_init = model.energy_triangle_up(state,ctm_env_init) /3.
+    e_tot_init = e_dn_init + e_up_init
+    print(f'E_up={e_up_init.item()}, E_dn={e_dn_init.item()}, E_tot={e_tot_init.item()}')
+    
+    
     ctm_env_final, *ctm_log= ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
     
     # energy per site
