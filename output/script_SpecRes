@@ -1,0 +1,5 @@
+#!/bin/bash
+for i in `seq 0 7`;
+do 
+	python readSpec.py tensor_N$i.txt
+done
