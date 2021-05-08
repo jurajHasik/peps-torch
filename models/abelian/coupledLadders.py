@@ -37,10 +37,10 @@ class COUPLEDLADDERS_NOSYM():
 
         * :math:`h2_{ij} = \mathbf{S}_i.\mathbf{S}_j` with indices of h2 corresponding to :math:`s_i s_j;s'_i s'_j`
         """
-        assert settings.sym.nsym==0, "No abelian symmetry is assumed"
+        assert settings.sym.NSYM==0, "No abelian symmetry is assumed"
         self.engine= settings
         self.backend= settings.backend
-        self.dtype=settings.dtype
+        self.dtype=settings.default_dtype
         self.device='cpu' if not hasattr(settings, 'device') else settings.device
         self.phys_dim=2
         self.alpha=alpha
@@ -222,10 +222,10 @@ class COUPLEDLADDERS_U1():
 
         * :math:`h2_{ij} = \mathbf{S}_i.\mathbf{S}_j` with indices of h2 corresponding to :math:`s_i s_j;s'_i s'_j`
         """
-        assert settings.sym.nsym==1, "U(1) abelian symmetry is assumed"
+        assert settings.sym.NSYM==1, "U(1) abelian symmetry is assumed"
         self.engine= settings
         self.backend= settings.backend
-        self.dtype=settings.dtype
+        self.dtype=settings.default_dtype
         self.device='cpu' if not hasattr(settings, 'device') else settings.device
         self.phys_dim=2
         self.alpha=alpha

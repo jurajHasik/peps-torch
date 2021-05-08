@@ -77,9 +77,9 @@ class ENV_ABELIAN():
         elif settings:
             self.engine= settings
             self.backend= settings.backend
-            self.dtype= settings.dtype
-            self.nsym = settings.sym.nsym
-            self.sym= settings.sym.name
+            self.dtype= settings.default_dtype
+            self.nsym = settings.sym.NSYM
+            self.sym= settings.sym.SYM_ID
         else:
             raise RuntimeError("Either state or settings must be provided")
         self.device= global_args.device
@@ -309,7 +309,7 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         # a, lo1= a.group_legs((2,3), new_s=-1) # ea(fb->F)->eaF
         # a, lo0= a.group_legs((0,1), new_s=-1) # (ea->E)F->EF
         a= a.fuse_legs( axes=((0,1),(2,3)) )
-        a= a/a.max_abs()
+        a= a/a.norm(p='inf')
         # a._leg_fusion_data[0]= lo0
         # a._leg_fusion_data[1]= lo1
         env.C[(coord,vec)]= a
@@ -332,7 +332,7 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         # a, lo1= a.group_legs((2,3), new_s=-1) # ea(fb->F)->eaF
         # a, lo0= a.group_legs((0,1), new_s=1) # F(ea->E)->EF
         a= a.fuse_legs( axes=((0,1),(2,3)) )
-        a= a/a.max_abs()
+        a= a/a.norm(p='inf')
         # a._leg_fusion_data[0]= lo0
         # a._leg_fusion_data[1]= lo1
         env.C[(coord,vec)]=a
@@ -355,7 +355,7 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         # a, lo1= a.group_legs((2,3), new_s=1) # ea(fb->F)->eaF
         # a, lo0= a.group_legs((0,1), new_s=1) # F(ea->E)->EF
         a= a.fuse_legs( axes=((0,1),(2,3)) )
-        a= a/a.max_abs()
+        a= a/a.norm(p='inf')
         # a._leg_fusion_data[0]= lo0
         # a._leg_fusion_data[1]= lo1
         env.C[(coord,vec)]=a
@@ -378,7 +378,7 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         # a, lo1= a.group_legs((2,3), new_s=-1) # ea(fb->F)->eaF
         # a, lo0= a.group_legs((0,1), new_s=1) # F(ea->E)->EF
         a= a.fuse_legs( axes=((0,1),(2,3)) )
-        a= a/a.max_abs()
+        a= a/a.norm(p='inf')
         # a._leg_fusion_data[0]= lo0
         # a._leg_fusion_data[1]= lo1
         env.C[(coord,vec)]=a
@@ -404,7 +404,7 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         # a, leg_order_aux= a.group_legs((2,3), new_s=-1) # ea(fb->F)G->eaFG
         # a, lo0= a.group_legs((0,1), new_s=1) # (ea->E)FG->EFG
         a= a.fuse_legs( axes=((0,1),(2,3),(4,5)) )
-        a= a/a.max_abs()
+        a= a/a.norm(p='inf')
         # a._leg_fusion_data[0]= lo0
         # a._leg_fusion_data[2]= lo2
         # a._leg_fusion_data[1]= leg_order_aux
@@ -429,7 +429,7 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         # a, lo1= a.group_legs((2,3), new_s=-1) # ea(fb->F)G->eaFG
         # a, lo0= a.group_legs((0,1), new_s=1) # (ea->E)FG->EFG
         a= a.fuse_legs( axes=((0,1),(2,3),(4,5)) )
-        a= a/a.max_abs()
+        a= a/a.norm(p='inf')
         # a._leg_fusion_data[0]= lo0
         # a._leg_fusion_data[1]= lo1
         # a._leg_fusion_data[2]= leg_order_aux
@@ -454,7 +454,7 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         # a, lo1= a.group_legs((2,3), new_s=1) # ea(fb->F)G->eaFG
         # a, leg_order_aux= a.group_legs((0,1), new_s=1) # (ea->E)FG->EFG
         a= a.fuse_legs( axes=((0,1),(2,3),(4,5)) )
-        a= a/a.max_abs()
+        a= a/a.norm(p='inf')
         # a._leg_fusion_data[1]= lo1
         # a._leg_fusion_data[2]= lo2
         # a._leg_fusion_data[0]= leg_order_aux
@@ -479,7 +479,7 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         # a, leg_order_aux= a.group_legs((2,3), new_s=1) # ea(fb->F)G->eaFG
         # a, lo0= a.group_legs((0,1), new_s=1) # (ea->E)FG->EFG
         a= a.fuse_legs( axes=((0,1),(2,3),(4,5)) )
-        a= a/a.max_abs()
+        a= a/a.norm(p='inf')
         # a._leg_fusion_data[0]= lo0
         # a._leg_fusion_data[2]= lo2
         # a._leg_fusion_data[1]= leg_order_aux

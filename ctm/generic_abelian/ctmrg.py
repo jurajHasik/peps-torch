@@ -301,9 +301,9 @@ def absorb_truncate_CTM_MOVE_UP_c(*tensors):
     #
     # C^new(coord+(0,1),(-1,-1))--      --T^new(coord+(0,1),(0,-1))--   --C^new(coord+(0,1),(1,-1))
     # |                                   |                               |
-    nC1 = nC1/nC1.max_abs()
-    nC2 = nC2/nC2.max_abs()
-    nT = nT/nT.max_abs()
+    nC1 = nC1/nC1.norm(p='inf')
+    nC2 = nC2/nC2.norm(p='inf')
+    nT = nT/nT.norm(p='inf')
     # nT._leg_fusion_data[1]= A._leg_fusion_data[2]
     return nC1, nC2, nT
 
@@ -409,9 +409,9 @@ def absorb_truncate_CTM_MOVE_LEFT_c(*tensors):
     #  ________P2_______
     # |                 |                    |
     # C(coord,(-1,1))--T(coord,(0,1))--      C^new(coord+(1,0),(-1,1))
-    nC1 = nC1/nC1.max_abs()
-    nC2 = nC2/nC2.max_abs()
-    nT = nT/nT.max_abs()
+    nC1 = nC1/nC1.norm(p='inf')
+    nC2 = nC2/nC2.norm(p='inf')
+    nT = nT/nT.norm(p='inf')
     # nT._leg_fusion_data[2]= A._leg_fusion_data[3]
     return nC1, nC2, nT
 
@@ -511,9 +511,9 @@ def absorb_truncate_CTM_MOVE_DOWN_c(*tensors):
     #
     # |                                 |                              |
     # C^new(coord+(0,-1),(-1,1))--    --T^new(coord+(0,-1),(0,1))--  --C^new(coord+(0,-1),(1,1))
-    nC1 = nC1/nC1.max_abs()
-    nC2 = nC2/nC2.max_abs()
-    nT = nT/nT.max_abs()
+    nC1 = nC1/nC1.norm(p='inf')
+    nC2 = nC2/nC2.norm(p='inf')
+    nT = nT/nT.norm(p='inf')
     # nT._leg_fusion_data[0]= A._leg_fusion_data[0]
     return nC1, nC2, nT
 
@@ -616,8 +616,8 @@ def absorb_truncate_CTM_MOVE_RIGHT_c(*tensors):
     #    ______Pt1______
     #   |               |                    |
     # --T(coord,(0,1))--C(coord,(1,1))     --C^new(coord+(-1,0),(1,1))
-    nC1 = nC1/nC1.max_abs()
-    nC2 = nC2/nC2.max_abs()
-    nT = nT/nT.max_abs()
+    nC1 = nC1/nC1.norm(p='inf')
+    nC2 = nC2/nC2.norm(p='inf')
+    nT = nT/nT.norm(p='inf')
     #nT._leg_fusion_data[1]= A._leg_fusion_data[1] 
     return nC1, nC2, nT

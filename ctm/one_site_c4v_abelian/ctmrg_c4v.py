@@ -172,8 +172,8 @@ def ctm_MOVE_dl(a_dl, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg
         # 4) symmetrize, normalize and assign new C,T
         C2X2= 0.5*( C2X2 + C2X2.transpose().conj_blocks() )
         nT= 0.5*(nT + nT.transpose((1,0,2)).conj_blocks() )
-        C2X2= C2X2/S.max_abs()
-        nT= nT/nT.max_abs()
+        C2X2= C2X2/S.norm(p='inf')
+        nT= nT/nT.norm(p='inf')
         nT._leg_fusion_data[2]= A._leg_fusion_data[3]
 
         return C2X2, nT
@@ -324,8 +324,8 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
         # 4) symmetrize, normalize and assign new C,T
         C2X2= 0.5*( C2X2 + C2X2.transpose((1,0)).conj_blocks() )
         nT= 0.5*(nT + nT.transpose((1,0,2,3)).conj_blocks() )
-        C2X2= C2X2/S.max_abs()
-        nT= nT/nT.max_abs()
+        C2X2= C2X2/S.norm(p='inf')
+        nT= nT/nT.norm(p='inf')
         # nT._leg_fusion_data[2]= lo2
 
         # 2) Return raw new tensors

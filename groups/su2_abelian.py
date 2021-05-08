@@ -26,11 +26,11 @@ class SU2_NOSYM():
             S^- &=S^x-iS^y\ \Rightarrow\ & S^y &=-i/2(S^+ - S^-)
             \end{align*}
         """
-        assert settings.sym.nsym==0, "No abelian symmetry is assumed"
+        assert settings.sym.NSYM==0, "No abelian symmetry is assumed"
         self.J = J
         self.engine= settings
         self.backend= settings.backend
-        self.dtype= settings.dtype
+        self.dtype= settings.default_dtype
         self.device= 'cpu' if not hasattr(settings, 'device') else settings.device
 
     def _cast(self, op_id, J, dtype, device):
@@ -212,11 +212,11 @@ class SU2_U1():
             S^- &=S^x-iS^y\ \Rightarrow\ & S^y &=-i/2(S^+ - S^-)
             \end{align*}
         """
-        assert settings.sym.nsym==1, "U(1) abelian symmetry is assumed"
+        assert settings.sym.NSYM==1, "U(1) abelian symmetry is assumed"
         self.J = J
         self.engine= settings
         self.backend= settings.backend
-        self.dtype= settings.dtype
+        self.dtype= settings.default_dtype
         self.device= 'cpu' if not hasattr(settings, 'device') else settings.device
 
     def I(self):

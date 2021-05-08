@@ -41,12 +41,12 @@ class IPEPS_ABELIAN_C4V():
         """
         self.engine= settings
         self.backend= settings.backend
-        assert global_args.dtype==settings.dtype, "global_args.dtype "+global_args.dtype\
-            +" settings.dtype "+settings.dtype
+        assert global_args.dtype==settings.default_dtype, "global_args.dtype "+global_args.dtype\
+            +" settings.default_dtype "+settings.default_dtype
         self.dtype= settings.dtype
         self.device= global_args.device
-        self.nsym = settings.sym.nsym
-        self.sym= settings.sym.name
+        self.nsym = settings.sym.NSYM
+        self.sym= settings.sym.SYM_ID
 
         self.lX=1
         self.lY=1
@@ -230,7 +230,7 @@ def read_ipeps_c4v(jsonfile, settings, \
             peps_args=peps_args, global_args=global_args)
 
     # check dtypes of all on-site tensors for newly created state
-    assert (False not in [state.dtype==s.config.dtype for s in sites.values()]), \
+    assert (False not in [state.dtype==s.unique_dtype() for s in sites.values()]), \
         "incompatible dtype among state and on-site tensors"
 
     # move to desired device and return
@@ -254,7 +254,7 @@ def write_ipeps(state, outputfile, tol=None, normalize=False,\
     site_map=[]
     for nid,coord,site in [(t[0], *t[1]) for t in enumerate(state.sites.items())]:
         if normalize:
-            site= site/site.max_abs()
+            site= site/site.norm(p='inf')
         
         site_ids.append(f"A{nid}")
         site_map.append(dict({"siteId": site_ids[-1], "x": coord[0], "y": coord[1]} ))

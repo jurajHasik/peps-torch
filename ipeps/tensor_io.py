@@ -110,43 +110,58 @@ def read_json_abelian_block_np_legacy(json_obj):
 # NOTE: the default settings (abelian group, backend) of Tensor are injected 
 #       by tensor_abelian module 
 #
-def read_json_abelian_tensor_legacy(json_obj, config):
+def read_json_abelian_tensor_legacy(json_obj, config, dtype=None, device=None):
     r"""
+    The dtype and device is either implicitly given by defaults in config
+    or explicity passed through `dtype` and `device` parameters
+
     :param json_obj: dictionary from parsed json file
     :type json_obj: dict
     :param config: yast.Tensor configuration
     :type config: namedtuple
+    :param dtype: dtype 
+    :type dtype: str
+    :param device: device
+    :type device: str
     """
 
     # TODO validation
     tensor_io_format= json_obj["format"]
     assert tensor_io_format=="abelian", "Invalid JSON format of tensor: "+tensor_io_format
     nsym= json_obj["nsym"]
-    assert nsym==config.sym.nsym, "Number of abelian symmetries does not match: "\
-        +" settings.nsym "+str(config.sym.nsym)+" tensor "+str(nsym)
+    assert nsym==config.sym.NSYM, "Number of abelian symmetries does not match: "\
+        +" settings.nsym "+str(config.sym.NSYM)+" tensor "+str(nsym)
     symmetry= json_obj["symmetry"]
     # TODO equivalence between different names such as U1 and U(1)
-    # assert symmetry==config.sym.name, "Symmetries of settings.sym and tensor do not match"
+    # assert symmetry==config.sym.SYM_ID, "Symmetries of settings.sym and tensor do not match"
     s= json_obj["signature"]
     n= json_obj["n"]
     isdiag= json_obj["isdiag"]
+    
+    if not dtype:
+        assert hasattr(config,'default_dtype'), "Either dtype or valid config has to be provided"
+        dtype= config.default_dtype
+    if not device:
+        assert hasattr(config,'default_device'), "Either device or valid config has to be provided"
+        device= config.default_device
+
     dtype_str= json_obj["dtype"].lower()
     assert dtype_str in ["float64","complex128"], "Invalid dtype"+dtype_str
     # allow upcasting from float to complex
     _UPCAST= False
-    if dtype_str== config.dtype: pass
-    elif dtype_str=="float64" and config.dtype=="complex128":
+    if dtype_str== dtype: pass
+    elif dtype_str=="float64" and dtype=="complex128":
         _UPCAST= True
-        warnings.warn(f"Upcasting from "+dtype_str+" to "+config.dtype)
+        warnings.warn(f"Upcasting from "+dtype_str+" to "+dtype)
     else:
-        raise RuntimeError("Incompatible dtypes: input tensor "+dtype_str+" config: "+config.dtype)
+        raise RuntimeError("Incompatible dtypes: input tensor "+dtype_str+" config: "+dtype)
 
     # create empty abelian tensor
-    T= yast.Tensor(config=config, s=s, n=n, isdiag=isdiag, dtype= dtype_str)
+    T= yast.Tensor(config=config, s=s, n=n, isdiag=isdiag, device=device)
     # TODO assign symmetry in constructor or settings ?
     # TODO equivalence between different names such as U1 and U(1)
-    if symmetry!=T.config.sym.name:
-        warnings.warn(f"Incompatible tensor symmetry: Expected {T.config.sym.name},"\
+    if symmetry!=T.config.sym.SYM_ID:
+        warnings.warn(f"Incompatible tensor symmetry: Expected {T.config.sym.SYM_ID},"\
             +f" read {symmetry}")
     # T.sym= symmetry
 
@@ -156,7 +171,8 @@ def read_json_abelian_tensor_legacy(json_obj, config):
         if symmetry:
             assert len(charges)==len(nsym*bare_b.shape), f"Number of charges {len(charges)}"\
                 +f" incompatible with bare tensor rank {len(bare_b.shape)}"
-        T.set_block(ts=tuple(charges), val=(1.+0.j)*bare_b if _UPCAST else bare_b)
+        T.set_block(ts=tuple(charges), val=(1.+0.j)*bare_b if _UPCAST else bare_b,\
+            dtype=dtype)
 
     return T
 
@@ -242,13 +258,15 @@ def serialize_abelian_tensor_legacy(t, native=False):
     json_tensor=dict()
 
     json_tensor["format"]= "abelian"
-    json_tensor["nsym"]= t.config.sym.nsym
-    json_tensor["symmetry"]= t.config.sym.name
+    json_tensor["nsym"]= t.config.sym.NSYM
+    json_tensor["symmetry"]= t.config.sym.SYM_ID
     json_tensor["rank"]= t.get_ndim(native=native)
     json_tensor["signature"]= t.get_signature(native=native)
     json_tensor["n"]= t.n
     json_tensor["isdiag"]= t.isdiag
-    json_tensor["dtype"]= t.config.dtype
+    unique_dtype = t.unique_dtype()
+    if unique_dtype:
+        json_tensor["dtype"]= unique_dtype
 
     json_tensor["blocks"]= []
     for k in t.A.keys():

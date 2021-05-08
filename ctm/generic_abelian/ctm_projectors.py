@@ -1,7 +1,7 @@
 # from torch.utils.checkpoint import checkpoint
 import config as cfg
 from ctm.generic_abelian.ctm_components import *
-import yast.core.linalg
+import yast
 from tn_interface_abelian import mm
 from tn_interface_abelian import transpose
 import logging
@@ -230,7 +230,7 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, direction, \
     if ctm_args.projector_svd_method=='DEFAULT' or ctm_args.projector_svd_method=='GESDD':
         def truncated_svd(M, chi, sU=1):
             # return truncated_svd_gesdd(M, chi, verbosity=ctm_args.verbosity_projectors)
-            return yast.core.linalg.svd(M, (0,1), tol=ctm_args.projector_svd_reltol, D_total=chi, \
+            return yast.linalg.svd(M, (0,1), tol=ctm_args.projector_svd_reltol, D_total=chi, \
                 sU=sU, keep_multiplets=True)
     # elif ctm_args.projector_svd_method == 'ARP':
     #     def truncated_svd(M, chi):
