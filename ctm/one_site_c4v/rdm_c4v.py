@@ -547,9 +547,6 @@ def rdm2x1(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
     return rdm
 
 def rdm2x1_sl(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
-    ### MODIFICATION OF THE PROGRAM
-    ## Description: We want to modify the tensors in the middle in order to have
-    ## two different types of tensor
     r"""
     :param state: underlying 1-site C4v symmetric wavefunction
     :param env: C4v symmetric environment corresponding to ``state``

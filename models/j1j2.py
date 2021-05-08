@@ -6,6 +6,7 @@ from ctm.generic import rdm
 from ctm.generic import corrf
 from ctm.one_site_c4v.env_c4v import ENV_C4V
 from ctm.one_site_c4v import rdm_c4v
+from ctm.one_site_c4v import rdm_c4v_thermal
 from ctm.one_site_c4v.rdm_c4v_specialized import rdm2x2_NNN_tiled,\
     rdm2x2_NN_tiled, rdm2x1_tiled
 from ctm.one_site_c4v import corrf_c4v
@@ -834,3 +835,112 @@ class J1J2_C4V_BIPARTITE():
 
         res= dict({"dd": D0DR})
         return res
+
+
+class J1J2_C4V_BIPARTITE_THERMAL(J1J2_C4V_BIPARTITE):
+
+    def __init__(self, j1=1.0, j2=0, j3=0, hz_stag= 0.0, delta_zz=1.0, \
+        beta=0., global_args=cfg.global_args):
+
+        self.beta= beta
+        super().__init__(j1=j1, j2=j2, j3=j3, hz_stag= hz_stag, delta_zz=delta_zz, \
+            global_args=global_args)
+
+    def energy_1x1(self,state,env_c4v,**kwargs):
+        r"""
+        :param state: wavefunction
+        :param env_c4v: CTM c4v symmetric environment
+        :type state: IPEPS_C4V_THERMAL
+        :type env_c4v: ENV_C4V
+        :return: energy per site
+        :rtype: float
+
+        We assume 1x1 C4v iPEPS which tiles the lattice with a bipartite pattern composed 
+        of two tensors A, and B=RA, where R rotates approriately the physical Hilbert space 
+        of tensor A on every "odd" site::
+
+            1x1 C4v => rotation P => BIPARTITE
+
+            A A A A                  A B A B
+            A A A A                  B A B A
+            A A A A                  A B A B
+            A A A A                  B A B A
+
+        Due to C4v symmetry it is enough to construct a single reduced density matrix 
+        :py:func:`ctm.one_site_c4v.rdm_c4v.rdm2x2` of a 2x2 plaquette. Afterwards, 
+        the energy per site `e` is computed by evaluating a single plaquette term :math:`h_p`
+        containing two nearest-nighbour terms :math:`\bf{S}.\bf{S}` and two next-nearest 
+        neighbour :math:`\bf{S}.\bf{S}`, as:
+
+        .. math::
+
+            e = \langle \mathcal{h_p} \rangle = Tr(\rho_{2x2} \mathcal{h_p})
+        
+        """
+        rdm2x2= rdm_c4v_thermal.rdm2x2(state,env_c4v,sym_pos_def=True,\
+            verbosity=cfg.ctm_args.verbosity_rdm)
+        energy_per_site= torch.einsum('ijklabcd,ijklabcd',rdm2x2,self.hp)
+        if abs(self.j3)>0:
+            raise NotImplementedError()
+
+        energy_per_site= _cast_to_real(energy_per_site)
+        return energy_per_site
+
+    def eval_obs(self,state,env_c4v,force_cpu=False):
+        r"""
+        :param state: wavefunction
+        :param env_c4v: CTM c4v symmetric environment
+        :type state: IPEPS_C4V_THERMAL
+        :type env_c4v: ENV_C4V
+        :return:  expectation values of observables, labels of observables
+        :rtype: list[float], list[str]
+
+        Computes the following observables in order
+
+            1. magnetization
+            2. :math:`\langle S^z \rangle,\ \langle S^+ \rangle,\ \langle S^- \rangle`
+    
+        where the on-site magnetization is defined as
+        
+        .. math::
+            
+            \begin{align*}
+            m &= \sqrt{ \langle S^z \rangle^2+\langle S^x \rangle^2+\langle S^y \rangle^2 }
+            =\sqrt{\langle S^z \rangle^2+1/4(\langle S^+ \rangle+\langle S^- 
+            \rangle)^2 -1/4(\langle S^+\rangle-\langle S^-\rangle)^2} \\
+              &=\sqrt{\langle S^z \rangle^2 + 1/2\langle S^+ \rangle \langle S^- \rangle)}
+            \end{align*}
+
+        Usual spin components can be obtained through the following relations
+        
+        .. math::
+            
+            \begin{align*}
+            S^+ &=S^x+iS^y               & S^x &= 1/2(S^+ + S^-)\\
+            S^- &=S^x-iS^y\ \Rightarrow\ & S^y &=-i/2(S^+ - S^-)
+            \end{align*}
+        """
+        # TODO optimize/unify ?
+        # expect "list" of (observable label, value) pairs ?
+        obs= dict()
+        with torch.no_grad():
+            if abs(self.j3)>0:
+                raise NotImplementedError()
+
+            rdm2x1= rdm_c4v_thermal.rdm2x1_sl(state,env_c4v,force_cpu=force_cpu,\
+                verbosity=cfg.ctm_args.verbosity_rdm)
+            SS2x1= torch.einsum('ijab,ijab',rdm2x1,self.SS_rot)
+            obs[f"SS2x1"]= _cast_to_real(SS2x1)
+
+            # reduce rdm2x1 to 1x1
+            rdm1x1= torch.einsum('ijaj->ia',rdm2x1)
+            rdm1x1= rdm1x1/torch.trace(rdm1x1)
+            for label,op in self.obs_ops.items():
+                obs[f"{label}"]= torch.trace(rdm1x1@op)
+            obs[f"m"]= sqrt(abs(obs[f"sz"]**2 + obs[f"sp"]*obs[f"sm"]))
+            
+        # prepare list with labels and values
+        obs_labels=[f"m"]+[f"{lc}" for lc in self.obs_ops.keys()]+[f"SS2x1"]
+        if abs(self.j3)>0: obs_labels += [f"SS3x1"]
+        obs_values=[obs[label] for label in obs_labels]
+        return obs_values, obs_labels
