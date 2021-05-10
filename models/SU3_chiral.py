@@ -75,9 +75,8 @@ class SU3_CHIRAL():
 		self.h_triangle = exp(1j*self.theta) * self.P123 + exp(-1j*self.theta) * self.P123m
 		
 	def P_dn(self,state,env):
-		id_matrix = torch.eye(27, dtype=torch.complex128)
-		norm_wf = rdm.rdm1x1((0,0), state, env, operator=id_matrix)
-		vP_dn = rdm.rdm1x1((0,0), state, env, operator= self.P123)/norm_wf
+		norm_wf = rdm.rdm2x2_id((0,0), state, env)
+		vP_dn = rdm.rdm2x2_dn_triangle((0,0), state, env, operator= self.P123)/norm_wf
 		return(vP_dn)
 	
 	def P_up(self,state,env):
@@ -89,7 +88,7 @@ class SU3_CHIRAL():
 		id_1site = torch.eye(3, dtype=torch.complex128)
 		id_3sites = torch.einsum('ij,kl,mn->ikmjln',id_1site,id_1site,id_1site)
 		vP_up = rdm.rdm2x2_up_triangle((0,0), state, env, operator = op_P_up)
-		norm_wf = rdm.rdm2x2_up_triangle_id((0,0), state, env)
+		norm_wf = rdm.rdm2x2_id((0,0), state, env)
 		vP_up = vP_up/norm_wf
 		return(vP_up)
 		

@@ -6,22 +6,6 @@ from tn_interface import contiguous, view, permute
 from tn_interface import conj
 from math import sqrt
 
-# function (n1,n2,n3) --> s that maps the basis of states in the fundamental irrep of SU(3) (states n=0,1,2) for the three sites of the unit cell to a single physical index s=0...26
-# NB: the 3 sites are labeled as:
-#        1---3
-#         \ /
-#          2
-def fmap(n1,n2,n3):
-	return n3+3*n2+9*n1
-	
-# reverse mapping s --> (n1, n2, n3)
-def fmap_inv(s):
-	n1 = s//9
-	n2 = (s-9*n1)//3
-	n3 = s-9*n1-3*n2
-	return(n1,n2,n3)
-	
-
 def _sym_pos_def_matrix(rdm, sym_pos_def=False, verbosity=0, who="unknown"):
 	rdm_asym= 0.5*(rdm-rdm.conj().t())
 	rdm= 0.5*(rdm+rdm.conj().t())
@@ -776,7 +760,202 @@ def rdm2x2(coord, state, env, sym_pos_def=False, verbosity=0):
 	
 	return rdm
 	
+######################################################################################################
+
+def fmap(n1, n2, n3):
+	# function (n1,n2,n3) --> s that maps the basis of states in the fundamental irrep of SU(3) (states n=0,1,2) for the three sites of the unit cell to a single physical index s=0...26
+	# NB: the 3 sites are labeled as:
+	#        1---3
+	#         \ /
+	#          2
+	return n3 + 3 * n2 + 9 * n1
+
+def fmap_inv(s):
+	# reverse mapping s --> (n1, n2, n3)
+	n1 = s // 9
+	n2 = (s - 9 * n1) // 3
+	n3 = s - 9 * n1 - 3 * n2
+	return (n1, n2, n3)
+
+def double_layer_a(A_tensor, csites):
+	dimsA = A_tensor.size()
+	A_tensor_reshaped = torch.zeros((3,3,3,dimsA[1],dimsA[2],dimsA[3],dimsA[4]),dtype= A_tensor.dtype)
+	for s in range(27):
+		n1,n2,n3 = fmap_inv(s)
+		A_tensor_reshaped[n1,n2,n3,:,:,:,:] = A_tensor[s,:,:,:,:]
+	dimsa = tuple([dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2] + len(csites) * [3,3])
+	if csites == [1,2,3]:
+		contraction = 'mikefgh,njlabcd->eafbgchdmnijkl'
+	if csites == [2,3]:
+		contraction = 'mikefgh,mjlabcd->eafbgchdijkl'
+	if csites == [1,3]:
+		contraction = 'mikefgh,nilabcd->eafbgchdmnkl'
+	if csites == [1,2]:
+		contraction = 'mikefgh,njkabcd->eafbgchdmnij'
+	if csites == [1]:
+		contraction = 'mikefgh,nikabcd->eafbgchdmn'
+	if csites == [2]:
+		contraction = 'mikefgh,nilabcd->eafbgchdmnkl'
+	if csites == [3]:
+		contraction = 'mikefgh,njkabcd->eafbgchdmnij'
+	if csites == []:
+		contraction = 'mikefgh,mikabcd->eafbgchd'
+	a = contiguous(einsum(contraction, A_tensor_reshaped,conj(A_tensor_reshaped)))
+	a = view(a, dimsa) 
+	return a
 	
+def enlarged_corner(coord, state, env, corner, csites=[1,2,3], verbosity=0):
+
+	if corner == 'LU':
+		C = env.C[(state.vertexToSite(coord),(-1,-1))]
+		T1 = env.T[(state.vertexToSite(coord),(0,-1))]
+		T2 = env.T[(state.vertexToSite(coord),(-1,0))]
+		a = double_layer_a(state.site(coord), csites)
+		
+		# C--10--T1--2
+		# 0	  1
+		C2x2_LU = contract(C, T1, ([1],[0]))
+	
+		# C------T1--2->1
+		# 0	     1->0
+		# 0
+		# T2--2->3
+		# 1->2
+		C2x2_LU = contract(C2x2_LU, T2, ([0],[0]))
+
+		# C-------T1--1->0
+		# |	      0
+		# |	      0
+		# T2--3 1 a--3 
+		# 2->1	  2\...
+		C2x2_LU = contract(C2x2_LU, a, ([0,3],[0,1]))
+
+		# permute 0123...->1203...
+		# reshape (12)(03)...->01...
+		# C2x2--1
+		# |\...
+		# 0
+		C2x2_LU = contiguous(permute(C2x2_LU,tuple([1,2,0,3]+list(range(4,4+2*len(csites))))))
+		C2x2_LU = view(C2x2_LU, tuple([T2.size(1)*a.size(2),T1.size(2)*a.size(3)]+len(csites)*[3,3]))
+		if verbosity>0:
+			print("C2X2 LU "+str(coord)+"->"+str(state.vertexToSite(coord))+" (-1,-1): "+str(C2x2_LU.size()))
+		return(C2x2_LU)
+			
+	if corner == 'RU':
+		vec = (1,0)
+		shitf_coord = state.vertexToSite((coord[0]+vec[0],coord[1]+vec[1]))
+		C = env.C[(shitf_coord,(1,-1))]
+		T1 = env.T[(shitf_coord,(1,0))]
+		T2 = env.T[(shitf_coord,(0,-1))]
+		a = double_layer_a(state.site(shitf_coord),csites)
+
+		# 0--C
+		#	 1
+		#	 0
+		# 1--T1
+		#	  2
+		C2x2_RU = contract(C, T1, ([1],[0]))
+
+		# 2<-0--T2--2 0--C
+		#	 3<-1		 |
+		#		   0<-1--T1
+		#			  1<-2
+		C2x2_RU = contract(C2x2_RU, T2, ([0],[2]))
+
+		# 1<-2--T2------C
+		#	 .. 3	    |
+		#	   \0	    |
+		# 2<-1--a--3 0--T1
+		#	 3<-2  	 0<-1
+		C2x2_RU = contract(C2x2_RU, a, ([0,3],[3,0]))
+
+		# permute 0123...->1203...
+		# reshape (12)(03)...->01...
+		# 0--C2x2
+		# ../|
+		#	 1
+		C2x2_RU = contiguous(permute(C2x2_RU, tuple([1,2,0,3]+list(range(4,4+2*len(csites))))))
+		C2x2_RU = view(C2x2_RU, tuple([T2.size(0)*a.size(1),T1.size(2)*a.size(2)]+len(csites)*[3,3]))
+		if verbosity>0:
+			print("C2X2 RU "+str((coord[0]+vec[0],coord[1]+vec[1]))+"->"+str(shitf_coord)+" (1,-1): "+str(C2x2_RU.size()))
+		
+	if corner == 'RD':
+		vec = (1,1)
+		shitf_coord = state.vertexToSite((coord[0]+vec[0],coord[1]+vec[1]))
+		C = env.C[(shitf_coord,(1,1))]
+		T1 = env.T[(shitf_coord,(0,1))]
+		T2 = env.T[(shitf_coord,(1,0))]
+		a = double_layer_a(state.site(shitf_coord),csites)
+
+		#  	 1<-0 		 0
+		# 2<-1--T1--2 1--C
+		C2x2_RD = contract(C, T1, ([1],[2]))
+
+		#		  2<-0
+		#	   3<-1--T2
+		#			 2
+		#	 0<-1	 0
+		# 1<-2--T1---C
+		C2x2_RD = contract(C2x2_RD, T2, ([0],[2]))
+
+		#	 2<-0	 1<-2
+		# 3<-1--a--3 3--T2
+		#	    2\...	|
+		#	    0	    |
+		# 0<-1--T1------C
+		C2x2_RD = contract(C2x2_RD, a, ([0,3],[2,3]))
+
+		# permute 0123...->1203...
+		# reshape (12)(03)...->01...
+		#	 0 ...
+		#	 |/
+		# 1--C2x2
+		C2x2_RD = contiguous(permute(C2x2_RD, tuple([1,2,0,3]+list(range(4,4+2*len(csites))))))
+		C2x2_RD = view(C2x2_RD, tuple([T2.size(0)*a.size(0),T1.size(1)*a.size(1)]+len(csites)*[3,3]))
+		if verbosity>0:
+			print("C2X2 RD "+str((coord[0]+vec[0],coord[1]+vec[1]))+"->"+str(shitf_coord)+" (1,1): "+str(C2x2_RD.size()))
+		
+	if corner == 'LD':
+		vec = (0,1)
+		shitf_coord = state.vertexToSite((coord[0]+vec[0],coord[1]+vec[1]))
+		C = env.C[(shitf_coord,(-1,1))]
+		T1 = env.T[(shitf_coord,(-1,0))]
+		T2 = env.T[(shitf_coord,(0,1))]
+		a = double_layer_a(state.site(shitf_coord),csites)
+
+		# 0->1
+		# T1--2
+		# 1
+		# 0
+		# C--1->0
+		C2x2_LD = contract(C, T1, ([0],[1]))
+
+		# 1->0
+		# T1--2->1
+		# |
+		# |	   	  0->2
+		# C--0 1--T2--2->3
+		C2x2_LD = contract(C2x2_LD, T2, ([0],[1]))
+
+		# 0		   0->2
+		# T1--1 1--a--3
+		# |		   2\...
+		# |		   2
+		# C--------T2--3->1
+		C2x2_LD = contract(C2x2_LD, a, ([1,2],[1,2]))
+
+		# permute 0123...->0213...
+		# reshape (02)(13)...->01...
+		# 0 ...
+		# |/
+		# C2x2--1
+		C2x2_LD = contiguous(permute(C2x2_LD, tuple([0,2,1,3]+list(range(4,4+2*len(csites))))))
+		C2x2_LD = view(C2x2_LD, tuple([T1.size(0)*a.size(0),T2.size(2)*a.size(3)]+len(csites)*[3,3]))
+		if verbosity>0:
+			print("C2X2 LD "+str((coord[0]+vec[0],coord[1]+vec[1]))+"->"+str(shitf_coord)+" (-1,1): "+str(C2x2_LD.size()))
+		
+		return(C2x2_RU)
+
 def rdm2x2_up_triangle(coord, state, env, operator=None, sym_pos_def=False, verbosity=0):
 	r"""
 	:param coord: vertex (x,y) specifies upper left site of 2x2 subsystem 
@@ -1006,9 +1185,305 @@ def rdm2x2_up_triangle(coord, state, env, operator=None, sym_pos_def=False, verb
 		value_operator = einsum('ikmjln,ikmjln->',rdm,operator)
 		rdm = value_operator
 	return rdm
-	
 
-def rdm2x2_up_triangle_id(coord, state, env, sym_pos_def=False, verbosity=0):
+def rdm2x2_dn_triangle(coord, state, env, operator=None, sym_pos_def=False, verbosity=0):
+	who='rdm2x2_dn_triangle'
+	#----- building C2x2_LU ----------------------------------------------------
+	C = env.C[(state.vertexToSite(coord),(-1,-1))]
+	T1 = env.T[(state.vertexToSite(coord),(0,-1))]
+	T2 = env.T[(state.vertexToSite(coord),(-1,0))]
+
+	dimsA = state.site(coord).size()
+	if operator==None:
+		a = contiguous(einsum('mefgh,nabcd->eafbgchdmn',state.site(coord),conj(state.site(coord))))
+		a = view(a, (dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2, dimsA[0], dimsA[0]))
+	else:
+		a = contiguous(einsum('mefgh,mn,nabcd->eafbgchd',state.site(coord), operator, conj(state.site(coord))))
+		a = view(a, (dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2))
+
+	# C--10--T1--2
+	# 0	  	 1
+	C2x2_LU = contract(C, T1, ([1],[0]))
+
+	# C------T1--2->1
+	# 0	     1->0
+	# 0
+	# T2--2->3
+	# 1->2
+	C2x2_LU = contract(C2x2_LU, T2, ([0],[0]))
+
+	# C-------T1--1->0
+	# |	      0
+	# |	      0
+	# T2--3 1 a--3 
+	# 2->1	  2
+	C2x2_LU = contract(C2x2_LU, a, ([0,3],[0,1]))
+
+	# permute 0123->1203
+	# reshape (12)(03)->01
+	# C2x2--1
+	# |\23
+	# 0
+	C2x2_LU = contiguous(permute(C2x2_LU,(1,2,0,3)))
+	C2x2_LU = view(C2x2_LU, (T2.size(1)*a.size(2),T1.size(2)*a.size(3)))
+	if verbosity>0:
+		print("C2X2 LU "+str(coord)+"->"+str(state.vertexToSite(coord))+" (-1,-1): "+str(C2x2_LU.size()))
+
+	#----- building C2x2_RU ----------------------------------------------------
+	vec = (1,0)
+	shitf_coord = state.vertexToSite((coord[0]+vec[0],coord[1]+vec[1]))
+	C = env.C[(shitf_coord,(1,-1))]
+	T1 = env.T[(shitf_coord,(1,0))]
+	T2 = env.T[(shitf_coord,(0,-1))]
+	dimsA = state.site(shitf_coord).size()
+	a = contiguous(einsum('mefgh,mabcd->eafbgchd',state.site(shitf_coord),conj(state.site(shitf_coord))))
+	a = view(a, (dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2))
+
+	# 0--C
+	#	 1
+	#	 0
+	# 1--T1
+	#	  2
+	C2x2_RU = contract(C, T1, ([1],[0]))
+
+	# 2<-0--T2--2 0--C
+	#	 3<-1		 |
+	#		   0<-1--T1
+	#			  1<-2
+	C2x2_RU = contract(C2x2_RU, T2, ([0],[2]))
+
+	# 1<-2--T2------C
+	#	    3	    |
+	#	    0	    |
+	# 2<-1--a--3 0--T1
+	#	 3<-2  	 0<-1
+	C2x2_RU = contract(C2x2_RU, a, ([0,3],[3,0]))
+
+	# permute 0123->1203
+	# reshape (12)(03)->01
+	# 0--C2x2
+	#    |
+	#	 1
+	C2x2_RU = contiguous(permute(C2x2_RU, (1,2,0,3)))
+	C2x2_RU = view(C2x2_RU, (T2.size(0)*a.size(1),T1.size(2)*a.size(2)))
+	if verbosity>0:
+		print("C2X2 RU "+str((coord[0]+vec[0],coord[1]+vec[1]))+"->"+str(shitf_coord)+" (1,-1): "+str(C2x2_RU.size()))
+
+	#----- build upper part C2x2_LU--C2x2_RU -----------------------------------
+	# C2x2_LU--1 0--C2x2_RU
+	# |          	 |
+	# 0			     1
+	# TODO is it worthy(performance-wise) to instead overwrite one of C2x2_LU,C2x2_RU ?  
+	upper_half = contract(C2x2_LU, C2x2_RU, ([1],[0]))
+
+	#----- building C2x2_RD ----------------------------------------------------
+	vec = (1,1)
+	shitf_coord = state.vertexToSite((coord[0]+vec[0],coord[1]+vec[1]))
+	C = env.C[(shitf_coord,(1,1))]
+	T1 = env.T[(shitf_coord,(0,1))]
+	T2 = env.T[(shitf_coord,(1,0))]
+	dimsA = state.site(shitf_coord).size()
+	a = contiguous(einsum('mefgh,mabcd->eafbgchd',state.site(shitf_coord),conj(state.site(shitf_coord))))
+	a = view(a, (dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2))
+
+	#	1<-0		0
+	# 2<-1--T1--2 1--C
+	C2x2_RD = contract(C, T1, ([1],[2]))
+
+	#		  2<-0
+	#	   3<-1--T2
+	#			 2
+	#	 0<-1	 0
+	# 1<-2--T1---C
+	C2x2_RD = contract(C2x2_RD, T2, ([0],[2]))
+
+	#	 2<-0	 1<-2
+	# 3<-1--a--3 3--T2
+	#	    2   	|
+	#	    0	    |
+	# 0<-1--T1------C
+	C2x2_RD = contract(C2x2_RD, a, ([0,3],[2,3]))
+
+	# permute 0123->1203
+	# reshape (12)(03)->01
+	C2x2_RD = contiguous(permute(C2x2_RD, (1,2,0,3)))
+	C2x2_RD = view(C2x2_RD, (T2.size(0)*a.size(0),T1.size(1)*a.size(1)))
+
+	#	 0
+	#	 |
+	# 1--C2x2
+	if verbosity>0:
+		print("C2X2 RD "+str((coord[0]+vec[0],coord[1]+vec[1]))+"->"+str(shitf_coord)+" (1,1): "+str(C2x2_RD.size()))
+
+	#----- building C2x2_LD ----------------------------------------------------
+	vec = (0,1)
+	shitf_coord = state.vertexToSite((coord[0]+vec[0],coord[1]+vec[1]))
+	C = env.C[(shitf_coord,(-1,1))]
+	T1 = env.T[(shitf_coord,(-1,0))]
+	T2 = env.T[(shitf_coord,(0,1))]
+	dimsA = state.site(shitf_coord).size()
+	a = contiguous(einsum('mefgh,mabcd->eafbgchd',state.site(shitf_coord),conj(state.site(shitf_coord))))
+	a = view(a, (dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2))
+
+	# 0->1
+	# T1--2
+	# 1
+	# 0
+	# C--1->0
+	C2x2_LD = contract(C, T1, ([0],[1]))
+
+	# 1->0
+	# T1--2->1
+	# |
+	# |	   	  0->2
+	# C--0 1--T2--2->3
+	C2x2_LD = contract(C2x2_LD, T2, ([0],[1]))
+
+	# 0		   0->2
+	# T1--1 1--a--3
+	# |		   2
+	# |		   2
+	# C--------T2--3->1
+	C2x2_LD = contract(C2x2_LD, a, ([1,2],[1,2]))
+
+	# permute 0123->0213
+	# reshape (02)(13)->01
+	# 0
+	# |
+	# C2x2--1
+	C2x2_LD = contiguous(permute(C2x2_LD, (0,2,1,3)))
+	C2x2_LD = view(C2x2_LD, (T1.size(0)*a.size(0),T2.size(2)*a.size(3)))
+	if verbosity>0:
+		print("C2X2 LD "+str((coord[0]+vec[0],coord[1]+vec[1]))+"->"+str(shitf_coord)+" (-1,1): "+str(C2x2_LD.size()))
+
+	#----- build lower part C2x2_LD--C2x2_RD -----------------------------------
+	# 0			    0->1
+	# |   	        |         
+	# C2x2_LD--1 1--C2x2_RD	
+	# TODO is it worthy(performance-wise) to instead overwrite one of C2x2_LD,C2x2_RD ?  
+	lower_half = contract(C2x2_LD, C2x2_RD, ([1],[1]))
+
+	# construct reduced density matrix by contracting lower and upper halfs
+	# C2x2_LU------C2x2_RU
+	# |            |
+	# 0			   1	
+	# 0			   1	
+	# |            |
+	# C2x2_LD------C2x2_RD
+	rdm = contract(upper_half,lower_half,([0,1],[0,1]))
+
+	if operator == None:
+		rdm= _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)	
+	return rdm
+	
+def rdm2x2_nnn_1(coord, state, env, operator, verbosity=0):
+
+	C2x2_LU = enlarged_corner(coord, state, env, 'LU', csites=[], verbosity=verbosity)
+	C2x2_RD = enlarged_corner(coord, state, env, 'RD', csites=[], verbosity=verbosity)
+
+	# bond 1--2
+	C2x2_LD = enlarged_corner(coord, state, env, 'LD', csites=[1], verbosity=verbosity)
+	C2x2_RU = enlarged_corner(coord, state, env, 'RU', csites=[2], verbosity=verbosity)
+	upper_half = einsum('ij,jkab->ijab', C2x2_LU, C2x2_RU)
+	lower_half = einsum('ijab,kj->ikab', C2x2_LD, C2x2_RD)
+	bond12 = einsum('ijab,abcd,ijcd->',upper_half,operator,lower_half)
+
+	# bond 3--1
+	C2x2_LD = enlarged_corner(coord, state, env, 'LD', csites=[3], verbosity=verbosity)
+	C2x2_RU = enlarged_corner(coord, state, env, 'RU', csites=[1], verbosity=verbosity)
+	upper_half= einsum('ij,jkab->ijab', C2x2_LU, C2x2_RU)
+	lower_half = einsum('ijab,kj->ikab', C2x2_LD, C2x2_RD)
+	bond31 = einsum('ijab,abcd,ijcd->', upper_half, operator, lower_half)
+
+	return(bond31 + bond12)
+
+def rdm2x2_nnn_2(coord, state, env, operator, verbosity=0):
+
+	#--------------upper half -------------------------------------------------
+	 
+	# build upper part C2x2_LU--C2x2_RU and contract with the 2-cell operator
+	# C2x2_LU-----1     0-----C2x2_RU		
+	# |\23________op_______23/| 
+	# 0			              1
+	
+	# NNN bond 3--2
+	C2x2_LU = enlarged_corner(coord, state, env, corner='LU', csites=[3], verbosity=verbosity)
+	C2x2_RU = enlarged_corner(coord, state, env, corner='RU', csites=[2], verbosity=verbosity)
+	upper_half_32 = einsum('ijab,abcd,jkcd->ij',C2x2_LU,operator,C2x2_RU)
+	
+	# NNN bond 2--1
+	C2x2_LU = enlarged_corner(coord, state, env, corner='LU', csites=[2], verbosity=verbosity)
+	C2x2_RU = enlarged_corner(coord, state, env, corner='RU', csites=[1], verbosity=verbosity)
+	upper_half_21 = einsum('ijab,abcd,jkcd->ij',C2x2_LU,operator,C2x2_RU)
+	
+	#--------------bottom half-------------------------------------------------
+	
+	# 0			    0->1	
+	# |     	    |        
+	# C2x2_LD--1 1--C2x2_RD	
+	C2x2_RD = enlarged_corner(coord, state, env, corner='RD', csites=[], verbosity=verbosity)
+	C2x2_LD = enlarged_corner(coord, state, env, corner='LD', csites=[], verbosity=verbosity)
+	lower_half = contract(C2x2_LD, C2x2_RD, ([1],[1]))
+
+	# contracting lower and upper halfs
+	# C2x2_LU--op--C2x2_RU
+	# |	           |
+	# 0			   1	
+	# 0			   1	
+	# |	  		   |
+	# C2x2_LD------C2x2_RD
+	rdm = contract(upper_half_32 + upper_half_21,lower_half,([0,1],[0,1]))
+	
+	return(rdm)	
+	
+def rdm2x2_nnn_3(coord, state, env, operator, verbosity=0):
+
+	#---------------- left half -----------------------------------
+	
+	# build left half and contract with the 2-cell operator
+	# C2x2_LU--1->0
+	# |\2345
+	# |     \
+	# 0      op
+	# 0      /
+	# |     /
+	# |/2345
+	# C2x2_LD--1
+	
+	# NN bond 3--1
+	C2x2_LU = enlarged_corner(coord, state, env, corner='LU', csites=[3], verbosity=verbosity)
+	C2x2_LD = enlarged_corner(coord, state, env, corner='LD', csites=[1], verbosity=verbosity)
+	left_half_31 = einsum('ijab,abcd,ikcd->jk', C2x2_LU, operator, C2x2_LD)
+	
+	# NN bond 2--3
+	C2x2_LU = enlarged_corner(coord, state, env, corner='LU', csites=[2], verbosity=verbosity)
+	C2x2_LD = enlarged_corner(coord, state, env, corner='LD', csites=[3], verbosity=verbosity)
+	left_half_23 = einsum('ijab,abcd,ikcd->jk', C2x2_LU, operator, C2x2_LD)
+	
+	#---------------- right half -----------------------------------
+
+	# 0--C2x2_RU
+	#    |
+	#	 1
+	#	 0
+	#	 |
+	# 1--C2x2_RD
+	C2x2_RU = enlarged_corner(coord, state, env, corner='RU', csites=[], verbosity=verbosity)
+	C2x2_RD = enlarged_corner(coord, state, env, corner='RD', csites=[], verbosity=verbosity)
+	right_half = contract(C2x2_RU, C2x2_RD, ([1],[0]))
+
+	# construct reduced density matrix by contracting left and right halves
+	# C2x2_LU-0--0-C2x2_RU
+	# |	           |
+	# op		   |	
+	# |		       |
+	# |     	   |
+	# C2x2_LD-1--1-C2x2_RD
+	rdm = contract(left_half_31 + left_half_23,right_half,([0,1],[0,1]))
+
+	return rdm
+
+def rdm2x2_id(coord, state, env, sym_pos_def=False, verbosity=0):
 	r"""
 	:param coord: vertex (x,y) specifies upper left site of 2x2 subsystem 
 	:param state: underlying wavefunction
@@ -1210,3 +1685,4 @@ def rdm2x2_up_triangle_id(coord, state, env, sym_pos_def=False, verbosity=0):
 	rdm = contract(upper_half,lower_half,([0,1],[0,1]))
 
 	return rdm
+

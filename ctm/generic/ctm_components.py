@@ -90,7 +90,7 @@ def halves_of_4x4_CTM_MOVE_LEFT_c(*tensors):
     # 
     # |0            1<-0|      |0  |1
     # C2x2--1 1---------C2x2   half2
-    
+    upper_half = contract(c2x2_LU_c(*tensors[0:4]),c2x2_RU_c(*tensors[4:8]),([1],[0]))
     return contract(c2x2_LU_c(*tensors[0:4]),c2x2_RU_c(*tensors[4:8]),([1],[0])), \
         contract(c2x2_LD_c(*tensors[8:12]),c2x2_RD_c(*tensors[12:16]),([1],[1]))
 
