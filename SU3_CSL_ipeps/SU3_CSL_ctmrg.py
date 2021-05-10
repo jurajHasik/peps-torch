@@ -54,7 +54,7 @@ def main():
     def energy_f(state, env):
         e_dn = model.energy_triangle_dn(state, env)
         e_up = model.energy_triangle_up(state, env)
-        e_nnn = model.energy_nnn(state,env)
+        e_nnn = model.energy_nnn(state, env)
         # print(f'Energy per site: E_up={e_up.item()*1/3}, E_dn={e_dn.item()*1/3}')
         return (e_up + e_dn + e_nnn) / 3
 
