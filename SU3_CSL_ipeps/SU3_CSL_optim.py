@@ -37,19 +37,20 @@ def main():
 		ts = load_SU3_tensor(name)
 		elementary_tensors.append(ts)
 	# define initial coefficients
-	coeffs = {(0,0): torch.tensor([-0.418167,-0.1490097, -1.87683, 0.146103, 1.64509, 0., 0., 1.14427, 0.277921, 0.],dtype=torch.float64)}
+	#coeffs = {(0,0): torch.tensor([-0.418167,-0.1490097, -1.87683, 0.146103, 1.64509, 0., 0., 1.14427, 0.277921, 0.],dtype=torch.float64)}
+	coeffs = {(0, 0): torch.tensor([1., 1., 1., 1., 1., 0., 0., 1., 1., 0.], dtype=torch.complex128)}
 	# define which coefficients will be added a noise
-	var_coeffs_allowed = torch.tensor([1,1,1,1,1, 0,0, 1,1,0])
+	var_coeffs_allowed = torch.tensor([1, 1, 1, 1, 1, 0, 0, 1, 1, 0])
 	state = IPEPS_U1SYM(elementary_tensors, coeffs, var_coeffs_allowed)
 	state.add_noise(args.instate_noise)
 	print(f'Current state: {state.coeffs[(0,0)].data}')
 	
-	model = SU3_chiral.SU3_CHIRAL(theta = math.pi * args.frac_theta / 100.0)
+	model = SU3_chiral.SU3_CHIRAL(theta=math.pi * args.frac_theta / 100.0)
 	
 	def energy_f(state, env):
-		e_dn = model.energy_triangle_dn(state,env)
-		e_up = model.energy_triangle_up(state,env)
-		return((e_up+e_dn)/3)
+		e_dn = model.energy_triangle_dn(state, env)
+		e_up = model.energy_triangle_up(state, env)
+		return (e_up+e_dn) / 3
 		
 	#@torch.no_grad()
 	def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
@@ -85,13 +86,13 @@ def main():
 	ctm_env_final, *ctm_log= ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
 	
 	# energy per site
-	e_dn_final = model.energy_triangle_dn(state,ctm_env_final) /3.
-	e_up_final = model.energy_triangle_up(state,ctm_env_final) /3.
+	e_dn_final = model.energy_triangle_dn(state, ctm_env_final) / 3.
+	e_up_final = model.energy_triangle_up(state, ctm_env_final) / 3.
 	e_tot_final = e_dn_final + e_up_final
 	
 	# P operators
-	P_up = model.P_up(state,ctm_env_final)
-	P_dn = model.P_dn(state,ctm_env_final)
+	P_up = model.P_up(state, ctm_env_final)
+	P_dn = model.P_dn(state, ctm_env_final)
 	
 	print(f'\n\n E_up={e_up_final.item()}, E_dn={e_dn_final.item()}, E_tot={e_tot_final.item()}')
 	print(f' Re(P_up)={torch.real(P_up).item()}, Im(P_up)={torch.imag(P_up).item()}')
