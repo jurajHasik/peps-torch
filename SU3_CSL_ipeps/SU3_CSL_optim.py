@@ -38,7 +38,7 @@ def main():
 		elementary_tensors.append(ts)
 	# define initial coefficients
 	#coeffs = {(0,0): torch.tensor([-0.418167,-0.1490097, -1.87683, 0.146103, 1.64509, 0., 0., 1.14427, 0.277921, 0.],dtype=torch.float64)}
-	coeffs = {(0, 0): torch.tensor([1., 1., 1., 1., 1., 0., 0., 1., 1., 0.], dtype=torch.complex128)}
+	coeffs = {(0, 0): torch.tensor([1., 1., 1., 1., 1., 0., 0., 1., 1., 0.], dtype=torch.float64)}
 	# define which coefficients will be added a noise
 	var_coeffs_allowed = torch.tensor([1, 1, 1, 1, 1, 0, 0, 1, 1, 0])
 	state = IPEPS_U1SYM(elementary_tensors, coeffs, var_coeffs_allowed)
@@ -46,11 +46,13 @@ def main():
 	print(f'Current state: {state.coeffs[(0,0)].data}')
 	
 	model = SU3_chiral.SU3_CHIRAL(theta=math.pi * args.frac_theta / 100.0)
-	
+
 	def energy_f(state, env):
 		e_dn = model.energy_triangle_dn(state, env)
 		e_up = model.energy_triangle_up(state, env)
-		return (e_up+e_dn) / 3
+		e_nnn = model.energy_nnn(state, env)
+		# print(f'Energy per site: E_up={e_up.item()*1/3}, E_dn={e_dn.item()*1/3}')
+		return (e_up + e_dn + e_nnn) / 3
 		
 	#@torch.no_grad()
 	def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
