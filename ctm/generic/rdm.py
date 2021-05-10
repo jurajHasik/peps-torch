@@ -983,7 +983,6 @@ def rdm2x2_up_triangle(coord, state, env, operator=None, sym_pos_def=False, verb
     :type state: IPEPS
     :type env: ENV
     :type verbosity: int
-    :return: 4-site reduced density matrix with indices :math:`s_0s_1s_2s_3;s'_0s'_1s'_2s'_3`
     :rtype: torch.tensor
     """
     who = "rdm2x2"

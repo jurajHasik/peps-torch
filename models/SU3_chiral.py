@@ -110,7 +110,7 @@ class SU3_CHIRAL():
         return torch.real(e_dn)
 
     def energy_triangle_up(self, state, env):
-        e_up = rdm.rdm2x2_dn_triangle((0, 0), state, env, operator=self.h_triangle) / state.norm_wf
+        e_up = rdm.rdm2x2_up_triangle((0, 0), state, env, operator=self.h_triangle) / state.norm_wf
         return torch.real(e_up)
 
     def eval_lambdas(self, state, env):

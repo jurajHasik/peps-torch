@@ -20,7 +20,9 @@ log = logging.getLogger(__name__)
 
 # parse command line args and build necessary configuration objects
 parser= cfg.get_args_parser()
-parser.add_argument("--frac_theta", type=float, default=0., help="rotation angle of the model")
+parser.add_argument("--frac_theta", type=float, default=0., help="angle parametrizing the chiral Hamiltonian")
+parser.add_argument("--j1", type=float, default=0., help="nearest-neighbor exchange coupling")
+parser.add_argument("--j2", type=float, default=0., help="next-nearest-neighbor exchange coupling")
 args, unknown_args= parser.parse_known_args()
 
 def main():
@@ -45,7 +47,7 @@ def main():
 	state.add_noise(args.instate_noise)
 	print(f'Current state: {state.coeffs[(0,0)].data}')
 	
-	model = SU3_chiral.SU3_CHIRAL(theta=math.pi * args.frac_theta / 100.0)
+	model = SU3_chiral.SU3_CHIRAL(theta=math.pi * args.frac_theta / 100.0, j1=args.j1, j2=args.j2)
 
 	def energy_f(state, env):
 		state.norm_wf = rdm.rdm2x2_id((0, 0), state, ctm_env_init)
