@@ -169,7 +169,7 @@ class IPEPS_U1SYM(ipeps.IPEPS):
         # trivalent tensor M
         M_tensor = 1j * m0 * M0 + 1j * m1 * M1 + 1j * m2 * M2 + m3 * M3 + m4 * M4 + m5 * M5 + m6 * M6
         # bivalent tensor L
-        L_tensor = l0 * L0 + l1 * L1 + l2 * L2
+        L_tensor = l0 * L0 + l1 * L1 + 1j * l2 * L2
         # square-lattice tensor with 3 physical indices (d=3)
         a_tensor_temp = torch.einsum('abi,uij,jkl,vkc,wld->uvwabcd', M_tensor, L_tensor, M_tensor, L_tensor, L_tensor)
         # reshape to a single d=27 index

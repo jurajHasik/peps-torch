@@ -32,7 +32,7 @@ def main():
     cfg.print_config()
     print('\n')
     torch.set_num_threads(args.omp_cores)
-    # torch.manual_seed(args.seed)
+    torch.manual_seed(args.seed)
 
     # Import all elementary tensors and build initial state
     elementary_tensors = []
@@ -40,11 +40,11 @@ def main():
         ts = load_SU3_tensor(name)
         elementary_tensors.append(ts)
     # define initial coefficients
-    coeffs = {(0, 0): torch.tensor([-0.418167, -0.1490097, -1.87683, 0.146103, 1.64509, 0., 0., 1.14427, 0.277921, 0.], dtype=torch.float64)}
-    # coeffs = {(0,0): torch.tensor([1.,1.,1.,1.,1.,0.,0.,1.,1.,0.],dtype=torch.complex128)}
+    #coeffs = {(0, 0): torch.tensor([-0.418167, -0.1490097, -1.87683, 0.146103, 1.64509, 0., 0., 1.14427, 0.277921, 0.], dtype=torch.float64)}
+    coeffs = {(0,0): torch.tensor([1.,1.,1.,1.,1.,0.,0.,1.,1.,0.],dtype=torch.float64)}
     #coeffs = {(0,0): torch.tensor([1.,0.,0.,0.,0.,0.,0.,1.,0.,0.], dtype=torch.float64)}
     # define which coefficients will be added a noise
-    var_coeffs_allowed = torch.tensor([1, 1, 1, 1, 1, 0, 0, 1, 1, 0], dtype=torch.float64)
+    var_coeffs_allowed = torch.tensor([1, 1, 1, 0, 0, 0, 0, 1, 1, 0], dtype=torch.float64)
     state = IPEPS_U1SYM(elementary_tensors, coeffs, var_coeffs_allowed)
     state.add_noise(args.instate_noise)
     print(f'Current state: {state.coeffs[(0, 0)].data}')
@@ -52,10 +52,10 @@ def main():
     model = SU3_chiral.SU3_CHIRAL(theta=args.theta, j1=args.j1, j2=args.j2)
 
     def energy_f(state, env):
+        state.norm_wf = rdm.rdm2x2_id((0, 0), state, ctm_env_init)
         e_dn = model.energy_triangle_dn(state, env)
         e_up = model.energy_triangle_up(state, env)
         e_nnn = model.energy_nnn(state, env)
-        # print(f'Energy per site: E_up={e_up.item()*1/3}, E_dn={e_dn.item()*1/3}')
         return (e_up + e_dn + e_nnn) / 3
 
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):

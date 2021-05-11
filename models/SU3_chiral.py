@@ -35,11 +35,11 @@ for i in range(3):
     for j in range(3):
         for k in range(3):
             # 1--2
-            exchange_bond_triangle[i, j, j, i, k, k] = 1.
+            exchange_bond_triangle[i, j, k, j, i, k] = 1.
             # 2--3
-            exchange_bond_triangle[i, i, j, k, k, j] = 1.
+            exchange_bond_triangle[i, j, k, i, k, j] = 1.
             # 3--1
-            exchange_bond_triangle[i, k, j, j, k, i] = 1.
+            exchange_bond_triangle[i, j, k, k, j, i] = 1.
 
 permute_triangle = torch.zeros((3, 3, 3, 3, 3, 3), dtype=torch.complex128)
 permute_triangle_inv = torch.zeros((3, 3, 3, 3, 3, 3), dtype=torch.complex128)

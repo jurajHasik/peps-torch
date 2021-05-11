@@ -1193,8 +1193,12 @@ def rdm2x2_up_triangle(coord, state, env, operator=None, sym_pos_def=False, verb
     # permute into order of s1,s2,s3;s1',s2',s3' where primed indices
     # represent "ket"
     # 012345 -> 024135
-    # symmetrize and normalize
-    # [EDIT FOR KAGOME]: the s0;s0' were already contracted out
+    # C2x2_LU------C2x2_RU
+    # |				|\03
+    # 0				1
+    # 0				1
+    # |/14			|/25
+    # C2x2_LD------C2x2_RD
     rdm = contiguous(permute(rdm, (0, 2, 4, 1, 3, 5)))
 
     if operator == None:
