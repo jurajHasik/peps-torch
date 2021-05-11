@@ -20,6 +20,7 @@ log = logging.getLogger(__name__)
 parser= cfg.get_args_parser()
 # additional model-dependent arguments
 parser.add_argument("--u1_class", type=str, default="B")
+parser.add_argument("--pg_A2", action='store_true', help="include A_2 irrep")
 parser.add_argument("--j1", type=float, default=1., help="nearest-neighbour coupling")
 parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour coupling")
 parser.add_argument("--j3", type=float, default=0., help="next-to-next nearest-neighbour coupling")
@@ -53,10 +54,15 @@ def main():
         if args.bond_dim in [2,3,4,5,6,7,8,9]:
             u1sym_t= tenU1.import_sym_tensors(2,args.bond_dim,"A_1",\
                 infile=f"u1sym/D{args.bond_dim}_U1_{args.u1_class}.txt",\
-                dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
+                dtype=torch.float64, device=cfg.global_args.device)
+            if args.pg_A2:
+                u1sym_t_A2= tenU1.import_sym_tensors(2,args.bond_dim,"A_2",\
+                    infile=f"u1sym/D{args.bond_dim}_U1_{args.u1_class}.txt",\
+                    dtype=torch.float64, device=cfg.global_args.device)
+                u1sym_t+= u1sym_t_A2
         else:
             raise ValueError("Unsupported --bond_dim= "+str(args.bond_dim))
-        A= torch.zeros(len(u1sym_t), dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
+        A= torch.zeros(len(u1sym_t), dtype=torch.float64, device=cfg.global_args.device)
         coeffs = {(0,0): A}
         state= IPEPS_U1SYM(u1sym_t, coeffs)
         state.load_checkpoint(args.opt_resume)
@@ -64,10 +70,15 @@ def main():
         if args.bond_dim in [2,3,4,5,6,7,8,9]:
             u1sym_t= tenU1.import_sym_tensors(2, args.bond_dim, "A_1", \
                 infile=f"u1sym/D{args.bond_dim}_U1_{args.u1_class}.txt", \
-                dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
+                dtype=torch.float64, device=cfg.global_args.device)
+            if args.pg_A2:
+                u1sym_t_A2= tenU1.import_sym_tensors(2,args.bond_dim,"A_2",\
+                    infile=f"u1sym/D{args.bond_dim}_U1_{args.u1_class}.txt",\
+                    dtype=torch.float64, device=cfg.global_args.device)
+                u1sym_t+= u1sym_t_A2
         else:
             raise ValueError("Unsupported --bond_dim= "+str(args.bond_dim))
-        A= torch.rand(len(u1sym_t), dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
+        A= torch.rand(len(u1sym_t), dtype=torch.float64, device=cfg.global_args.device)
         A= A/torch.max(torch.abs(A))
         coeffs = {(0,0): A}
         state = IPEPS_U1SYM(u1sym_t, coeffs)
