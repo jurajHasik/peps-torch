@@ -99,6 +99,8 @@ class IPEPS_U1SYM(ipeps.IPEPS):
         TODO we infer the size of the cluster from the keys of sites. Is it OK?
         """
         self.sym_tensors= sym_tensors
+        # parse sym tensors and identify point-group irreps
+        self.pg_irreps= set([m["meta"]["pg"] for m,t in self.sym_tensors])
         self.coeffs= OrderedDict(coeffs)
         sites= self.build_onsite_tensors()
 
@@ -153,9 +155,19 @@ class IPEPS_U1SYM(ipeps.IPEPS):
         self.sites= self.build_onsite_tensors()
 
     def build_onsite_tensors(self):
-        ts= torch.stack([t for m,t in self.sym_tensors])
+        # check presence of "A_2" irrep
+        if len(self.pg_irreps)==1 and self.pg_irreps==set(["A_1"]):
+            ts= torch.stack([t for m,t in self.sym_tensors])
+        elif len(self.pg_irreps)==2 and self.pg_irreps==set(["A_1","A_2"]):
+            sym_t_A1= list(filter(lambda x: x[0]["meta"]["pg"]=="A_1", self.sym_tensors))
+            sym_t_A2= list(filter(lambda x: x[0]["meta"]["pg"]=="A_2", self.sym_tensors))
+            ts= torch.stack( [t for m,t in sym_t_A1] + [ 1.0j*t for m,t in sym_t_A2] )
+        else:
+            raise NotImplementedError("unexpected point group irrep "+str(self.pg_irreps))
+
         sites=dict()
         for coord,c in self.coeffs.items():
+            if ts.is_complex(): c= c*(1.0+0.j)
             sites[coord]= torch.einsum('i,ipuldr->puldr',c,ts)
 
         return sites
@@ -237,13 +249,14 @@ def read_ipeps_u1(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.
                     loc_dtype= torch.float64
                 else:
                     raise RuntimeError("Invalid dtype: "+symt["dtype"])
-            assert loc_dtype==dtype, "dtypes do not match - iPEPS "\
-                +str(dtype)+" vs elementary tensor "+str(loc_dtype)
+            # NOTE elementary tensors are real, yet the final on-site tensor might be complex
+            # assert loc_dtype==dtype, "dtypes do not match - iPEPS "\
+            #     +str(dtype)+" vs elementary tensor "+str(loc_dtype)
 
             meta=dict({"meta": symt["meta"]})
             dims=[symt["physDim"]]+[symt["auxDim"]]*4
             
-            t= torch.zeros(tuple(dims), dtype=dtype, device=global_args.device)
+            t= torch.zeros(tuple(dims), dtype=loc_dtype, device=global_args.device)
             if t.is_complex():
                 for elem in symt["entries"]:
                     tokens= elem.split(' ')
@@ -279,10 +292,12 @@ def read_ipeps_u1(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.
                     loc_dtype= torch.float64
                 else:
                     raise RuntimeError("Invalid dtype: "+t["dtype"])
-            assert loc_dtype==dtype, "dtypes do not match - iPEPS "\
-                +str(dtype)+" vs elementary tensor "+str(loc_dtype)
+            # NOTE coeff tensors are real, yet the final on-site tensor might be complex
+            #      i.e. A_1 + i * A_2 ansatz
+            # assert loc_dtype==dtype, "dtypes do not match - iPEPS "\
+            #     +str(dtype)+" vs elementary tensor "+str(loc_dtype)
 
-            X = torch.zeros(t["numEntries"], dtype=dtype, device=global_args.device)
+            X = torch.zeros(t["numEntries"], dtype=loc_dtype, device=global_args.device)
 
             # 1) fill the tensor with elements from the list "entries"
             # which list the coefficients in the following
