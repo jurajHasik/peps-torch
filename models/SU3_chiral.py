@@ -89,28 +89,33 @@ class SU3_CHIRAL():
             -1j * self.theta) * permute_triangle_inv + self.j1 * exchange_bond_triangle
 
     def P_dn(self, state, env):
-        vP_dn = rdm.rdm2x2_dn_triangle((0, 0), state, env, operator=permute_triangle) / state.norm_wf
+        norm_wf = rdm.rdm2x2_id((0, 0), state, env)
+        vP_dn = rdm.rdm2x2_dn_triangle((0, 0), state, env, operator=permute_triangle) / norm_wf
         return vP_dn
 
     def P_up(self, state, env):
-        vP_up = rdm.rdm2x2_up_triangle((0, 0), state, env, operator=permute_triangle) / state.norm_wf
+        norm_wf = rdm.rdm2x2_id((0, 0), state, env)
+        vP_up = rdm.rdm2x2_up_triangle((0, 0), state, env, operator=permute_triangle) / norm_wf
         return vP_up
 
     def energy_nnn(self, state, env):
         if self.j2 == 0.:
             return 0.
         else:
+            norm_wf = rdm.rdm2x2_id((0, 0), state, env)
             vNNN1 = rdm.rdm2x2_nnn_1((0, 0), state, env, operator=exchange_bond)
             vNNN2 = rdm.rdm2x2_nnn_2((0, 0), state, env, operator=exchange_bond)
             vNNN3 = rdm.rdm2x2_nnn_3((0, 0), state, env, operator=exchange_bond)
-            return torch.real(self.j2 * (vNNN1 + vNNN2 + vNNN3) / state.norm_wf)
+            return torch.real(self.j2 * (vNNN1 + vNNN2 + vNNN3) / norm_wf)
 
     def energy_triangle_dn(self, state, env):
-        e_dn = rdm.rdm2x2_dn_triangle((0, 0), state, env, operator=self.h_triangle) / state.norm_wf
+        norm_wf = rdm.rdm2x2_id((0, 0), state, env)
+        e_dn = rdm.rdm2x2_dn_triangle((0, 0), state, env, operator=self.h_triangle) / norm_wf
         return torch.real(e_dn)
 
     def energy_triangle_up(self, state, env):
-        e_up = rdm.rdm2x2_up_triangle((0, 0), state, env, operator=self.h_triangle) / state.norm_wf
+        norm_wf = rdm.rdm2x2_id((0, 0), state, env)
+        e_up = rdm.rdm2x2_up_triangle((0, 0), state, env, operator=self.h_triangle) / norm_wf
         return torch.real(e_up)
 
     def eval_lambdas(self, state, env):
