@@ -168,8 +168,12 @@ def ctm_MOVE_dl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
 
     # 0) extract raw tensors as tuple
     dimsa = a.size()
-    A = torch.einsum('sefgh,sabcd->eafbgchd',a,a.conj()).contiguous()\
-        .view(dimsa[1]**2, dimsa[2]**2, dimsa[3]**2, dimsa[4]**2)
+    if len(dimsa)==4:
+        A= a
+    else:
+        A= torch.einsum('sefgh,sabcd->eafbgchd',a,a.conj()).contiguous()\
+            .view(dimsa[1]**2, dimsa[2]**2, dimsa[3]**2, dimsa[4]**2)
+        
     tensors= tuple([A,env.C[env.keyC],env.T[env.keyT]])
     
     # function wrapping up the core of the CTM MOVE segment of CTM algorithm

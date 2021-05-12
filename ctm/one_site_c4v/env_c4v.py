@@ -53,9 +53,9 @@ class ENV_C4V():
         if state:
             assert len(state.sites)==1, "Not a 1-site ipeps"
             site= next(iter(state.sites.values()))
-            assert site.size()[1]==site.size()[1]==site.size()[1]==site.size()[1],\
+            assert site.size(-4)==site.size(-3)==site.size(-2)==site.size(-1),\
                 "bond dimensions of on-site tensor are not equal"
-            bond_dim= site.size()[1]
+            bond_dim= site.size(-1)
         super(ENV_C4V, self).__init__()
         self.dtype= global_args.torch_dtype
         self.device= global_args.device
@@ -125,7 +125,7 @@ class ENV_C4V():
     #     else:
     #         raise RuntimeError(f"Unsupported device {device}")
 
-def init_env(state, env, ctm_args=cfg.ctm_args):
+def init_env(state, env, C_and_T=None, ctm_args=cfg.ctm_args):
     """
     :param state: wavefunction
     :param env: C4v symmetric CTM environment
@@ -144,6 +144,14 @@ def init_env(state, env, ctm_args=cfg.ctm_args):
       distribution [0,1)
     * CTMRG - tensors C and T are built from the on-site tensor of `state` 
     """
+    if C_and_T:
+        assert len(C_and_T)==2 and type(C_and_T[0])==torch.Tensor \
+            and type(C_and_T[1])==torch.Tensor, "Invalid C and T. Expects tuple (C, T)."
+        # assume custom C and T supplied
+        env.C[env.keyC]= C_and_T[0]
+        env.T[env.keyT]= C_and_T[1]
+        return
+
     if ctm_args.ctm_env_init_type=='PROD':
         init_prod(state, env, ctm_args.verbosity_initialization)
     elif ctm_args.ctm_env_init_type=='RANDOM':

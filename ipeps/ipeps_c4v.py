@@ -33,7 +33,7 @@ class IPEPS_C4V(ipeps.IPEPS):
             global_args=global_args)
 
     def site(self,coord=None):
-        return self.sites[(0,0)]
+        return next(iter(self.sites.values()))
 
     def add_noise(self,noise,symmetrize=False):
         r"""
