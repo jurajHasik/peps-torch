@@ -108,7 +108,6 @@ class IPEPS_U1SYM(ipeps.IPEPS):
             # only the selected coeffs are allowed to move
             self.var_coeffs_allowed = var_coeffs_allowed
         sites = self.build_onsite_tensors()
-        self.norm_wf = 0.
 
         super().__init__(sites, vertexToSite=vertexToSite, peps_args=peps_args, \
                          global_args=global_args)

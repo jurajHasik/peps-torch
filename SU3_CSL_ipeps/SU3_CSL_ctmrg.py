@@ -41,8 +41,9 @@ def main():
         elementary_tensors.append(ts)
     # define initial coefficients
     #coeffs = {(0, 0): torch.tensor([-0.418167, -0.1490097, -1.87683, 0.146103, 1.64509, 0., 0., 1.14427, 0.277921, 0.], dtype=torch.float64)}
-    coeffs = {(0,0): torch.tensor([1.,1.,1.,1.,1.,0.,0.,1.,1.,0.],dtype=torch.float64)}
-    #coeffs = {(0,0): torch.tensor([1.,0.,0.,0.,0.,0.,0.,1.,0.,0.], dtype=torch.float64)}
+    #coeffs = {(0,0): torch.tensor([0.9995, 1.0672, 0.9251, 1.0676, 0.9208, 0.0000, 0.0000, 0.9215, 1.0735, 0.9942], dtype=torch.float64)}
+    #coeffs = {(0,0): torch.tensor([1.,1.,1.,1.,1.,0.,0.,1.,1.,0.],dtype=torch.float64)}
+    coeffs = {(0,0): torch.tensor([1.,0.,0.,0.,0.,0.,0.,1.,0.,0.], dtype=torch.float64)}
     # define which coefficients will be added a noise
     var_coeffs_allowed = torch.tensor([1, 1, 1, 0, 0, 0, 0, 1, 1, 0], dtype=torch.float64)
     state = IPEPS_U1SYM(elementary_tensors, coeffs, var_coeffs_allowed)
@@ -52,7 +53,6 @@ def main():
     model = SU3_chiral.SU3_CHIRAL(theta=args.theta, j1=args.j1, j2=args.j2)
 
     def energy_f(state, env):
-        state.norm_wf = rdm.rdm2x2_id((0, 0), state, ctm_env_init)
         e_dn = model.energy_triangle_dn(state, env)
         e_up = model.energy_triangle_up(state, env)
         e_nnn = model.energy_nnn(state, env)
@@ -61,7 +61,6 @@ def main():
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
             history = []
-        state.norm_wf = rdm.rdm2x2_id((0, 0), state, ctm_env_init)
         e_dn = model.energy_triangle_dn(state, env)
         e_up = model.energy_triangle_up(state, env)
         e_nnn = model.energy_nnn(state, env)
@@ -83,7 +82,6 @@ def main():
 
     ctm_env_init = ENV(args.chi, state)
     init_env(state, ctm_env_init)
-    state.norm_wf = rdm.rdm2x2_id((0, 0), state, ctm_env_init)
 
     # energy per site
     e_dn_init = model.energy_triangle_dn(state, ctm_env_init)
@@ -93,7 +91,6 @@ def main():
     print(f'E_up={e_up_init.item()}, E_dn={e_dn_init.item()}, E_tot={e_tot_init.item()}')
 
     ctm_env_final, *ctm_log = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
-    state.norm_wf = rdm.rdm2x2_id((0, 0), state, ctm_env_final)
 
     # energy per site
     e_dn_final = model.energy_triangle_dn(state, ctm_env_final)

@@ -51,7 +51,6 @@ def main():
     model = SU3_chiral.SU3_CHIRAL(theta=math.pi * args.frac_theta / 100.0, j1=args.j1, j2=args.j2)
 
     def energy_f(state, env):
-        state.norm_wf = rdm.rdm2x2_id((0, 0), state, env)
         e_dn = model.energy_triangle_dn(state, env)
         e_up = model.energy_triangle_up(state, env)
         e_nnn = model.energy_nnn(state, env)
@@ -61,7 +60,6 @@ def main():
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
             history = []
-        state.norm_wf = rdm.rdm2x2_id((0, 0), state, ctm_env_init)
         e_dn = model.energy_triangle_dn(state, env)
         e_up = model.energy_triangle_up(state, env)
         e_nnn = model.energy_nnn(state, env)
@@ -76,7 +74,6 @@ def main():
 
     ctm_env_init = ENV(args.chi, state)
     init_env(state, ctm_env_init)
-    state.norm_wf = rdm.rdm2x2_id((0, 0), state, ctm_env_init)
 
     def loss_fn(state, ctm_env_in, opt_context):
         ctm_args = opt_context["ctm_args"]
@@ -95,7 +92,6 @@ def main():
 
     optimize_state(state, ctm_env_init, loss_fn)
     ctm_env_final, *ctm_log = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
-    state.norm_wf = rdm.rdm2x2_id((0, 0), state, ctm_env_init)
 
     # energy per site
     e_dn_final = model.energy_triangle_dn(state, ctm_env_final)
