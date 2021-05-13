@@ -88,15 +88,7 @@ class SU3_CHIRAL():
         self.h_triangle = exp(1j * self.theta) * permute_triangle + exp(
             -1j * self.theta) * permute_triangle_inv + self.j1 * exchange_bond_triangle
 
-    def P_dn(self, state, env):
-        norm_wf = rdm.rdm2x2_id((0, 0), state, env)
-        vP_dn = rdm.rdm2x2_dn_triangle((0, 0), state, env, operator=permute_triangle) / norm_wf
-        return vP_dn
-
-    def P_up(self, state, env):
-        norm_wf = rdm.rdm2x2_id((0, 0), state, env)
-        vP_up = rdm.rdm2x2_up_triangle((0, 0), state, env, operator=permute_triangle) / norm_wf
-        return vP_up
+    # Energy terms
 
     def energy_nnn(self, state, env):
         if self.j2 == 0.:
@@ -117,6 +109,18 @@ class SU3_CHIRAL():
         norm_wf = rdm.rdm2x2_id((0, 0), state, env)
         e_up = rdm.rdm2x2_up_triangle((0, 0), state, env, operator=self.h_triangle) / norm_wf
         return torch.real(e_up)
+
+    # Observables
+
+    def P_dn(self, state, env):
+        norm_wf = rdm.rdm2x2_id((0, 0), state, env)
+        vP_dn = rdm.rdm2x2_dn_triangle((0, 0), state, env, operator=permute_triangle) / norm_wf
+        return vP_dn
+
+    def P_up(self, state, env):
+        norm_wf = rdm.rdm2x2_id((0, 0), state, env)
+        vP_up = rdm.rdm2x2_up_triangle((0, 0), state, env, operator=permute_triangle) / norm_wf
+        return vP_up
 
     def eval_lambdas(self, state, env):
         # computes the expectation value of the SU(3) observables \lambda_3 and \lambda_8 for the three sites of the unit cell
