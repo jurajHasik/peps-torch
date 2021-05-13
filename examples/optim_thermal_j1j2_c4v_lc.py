@@ -144,6 +144,7 @@ def main():
             a.size(3)**2,a.size(5)**2)
         D, P= truncated_eig_sym(tmp_M, D1, keep_multiplets=True,\
                 verbosity=cfg.ctm_args.verbosity_projectors)
+        # import pdb; pdb.set_trace()
         #
         # 1) build 1st layer
         #
@@ -187,7 +188,7 @@ def main():
         # 3) (optional) truncate auxiliary bonds
         if D2<D1**2:
             tmp_M= l2.view( (D1,D1,D1**2)*2 )
-            tmp_M= torch.einsum('ij,l,ij,r->lr').contiguous()
+            tmp_M= torch.einsum('ijlijr->lr',tmp_M).contiguous()
             D, P= truncated_eig_sym(tmp_M, D2, keep_multiplets=True,\
                 verbosity=cfg.ctm_args.verbosity_projectors)
             l2= torch.einsum('xywz,xu,yl,wd,zr->uldr',l2, P, P, P, P).contiguous()
@@ -206,6 +207,7 @@ def main():
         # run CTM
         env_r2, history, t_ctm, t_obs= ctmrg_c4v.run_dl(state_r2, env_r2, \
             conv_check=ctmrg_conv_f2)
+        print(history)
 
         # parition function per site <=> Tr(\rho^2)/N
         #
@@ -244,7 +246,9 @@ def main():
         #   C--2 0--C
         CTC= torch.tensordot(CTC,CTC,([0,1,2],[2,1,0]))
 
+        print(state.coeffs[(0,0)])
         renyi2= -torch.log((rdm / CTC) * (C4 / CTC))
+        print(f"r2 {rdm} {CTC} {C4}")
         return renyi2
 
 
@@ -256,7 +260,7 @@ def main():
 
     e0 = energy_f(state, ctm_env, force_cpu=True)
     S0 = approx_S(state, ctm_env)
-    r2_0 = approx_renyi2(state, args.bond_dim, args.bond_dim**2)
+    r2_0 = approx_renyi2(state, 8, args.bond_dim**2)
     # loss0 = e0 - 1./args.beta * S0
     loss0 = e0 - 1./args.beta * r2_0
     obs_values, obs_labels = model.eval_obs(state, ctm_env,force_cpu=True)
@@ -290,7 +294,7 @@ def main():
         # S1 = approx_S(state, ctm_env_out)
         # loss1 = e1 - 1./args.beta * S1
 
-        r2_0 = approx_renyi2(state, args.bond_dim, args.bond_dim**2)
+        r2_0 = approx_renyi2(state, 8, args.bond_dim**2)
         loss= torch.max(e0,e1) - 1./args.beta * r2_0
         # loss= torch.max(loss0,loss1)
 

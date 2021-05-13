@@ -148,8 +148,12 @@ def init_env(state, env, C_and_T=None, ctm_args=cfg.ctm_args):
         assert len(C_and_T)==2 and type(C_and_T[0])==torch.Tensor \
             and type(C_and_T[1])==torch.Tensor, "Invalid C and T. Expects tuple (C, T)."
         # assume custom C and T supplied
-        env.C[env.keyC]= C_and_T[0]
-        env.T[env.keyT]= C_and_T[1]
+        x= C_and_T[0].size(0)
+        env_aux_D= C_and_T[1].size(2)
+        env.C[env.keyC][:x,:x]= C_and_T[0]
+        env.T[env.keyT]= torch.zeros((env.chi,env.chi,env_aux_D), \
+            dtype=env.dtype, device=env.device)
+        env.T[env.keyT][:x,:x,:]= C_and_T[1]
         return
 
     if ctm_args.ctm_env_init_type=='PROD':
