@@ -21,7 +21,6 @@ log = logging.getLogger(__name__)
 
 # parse command line args and build necessary configuration objects
 parser = cfg.get_args_parser()
-parser.add_argument("--frac_theta", type=float, default=0., help="angle parametrizing the chiral Hamiltonian")
 parser.add_argument("--j1", type=float, default=0., help="nearest-neighbor exchange coupling")
 parser.add_argument("--j2", type=float, default=0., help="next-nearest-neighbor exchange coupling")
 args, unknown_args = parser.parse_known_args()
@@ -38,21 +37,16 @@ def main():
     elementary_tensors = []
     for name in ['S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'L0', 'L1', 'L2']:
         tens = load_SU3_tensor(name)
-        if name in ['S3', 'S4', 'L2']:
-            elementary_tensors.append(1j * tens)
-        else:
-            elementary_tensors.append(tens)
+        elementary_tensors.append(tens)
     # define initial coefficients
-    #coeffs = {(0, 0): torch.tensor([-0.418167, -0.1490097, -1.87683, 0.146103, 1.64509, 0., 0., 1.14427, 0.277921, 0.],dtype=torch.float64)}
-    #coeffs = {(0, 0): torch.tensor([1., 1., 1., 1., 1., 0., 0., 1., 1., 1.], dtype=torch.float64)}
     coeffs = {(0, 0): torch.tensor([1., 0., 0., 0., 0., 0., 0., 1., 0., 0.], dtype=torch.float64)}
     # define which coefficients will be added a noise
-    var_coeffs_allowed = torch.tensor([0, 1, 1, 1, 1, 0, 0, 0, 1, 1])
+    var_coeffs_allowed = torch.tensor([0, 1, 1, 0, 0, 0, 0, 0, 1, 0])
     State = IPEPS_U1SYM(elementary_tensors, coeffs, var_coeffs_allowed)
     State.add_noise(args.instate_noise)
     print(f'Current state: {State.coeffs[(0, 0)].data}')
 
-    model = SU3_chiral.SU3_CHIRAL(theta=math.pi * args.frac_theta / 100.0, j1=args.j1, j2=args.j2)
+    model = SU3_chiral.SU3_CHIRAL(theta=0., j1=args.j1, j2=args.j2)
 
     def energy_f(state, env):
         e_dn = model.energy_triangle_dn(state, env)
