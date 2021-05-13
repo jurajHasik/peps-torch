@@ -40,12 +40,12 @@ def main():
         ts = load_SU3_tensor(name)
         elementary_tensors.append(ts)
     # define initial coefficients
-    coeffs = {(0, 0): torch.tensor([-0.418167, -0.1490097, -1.87683, 0.146103, 1.64509, 0., 0., 1.14427, 0.277921, 0.], dtype=torch.float64)}
+    #coeffs = {(0, 0): torch.tensor([-0.418167, -0.1490097, -1.87683, 0.146103, 1.64509, 0., 0., 1.14427, 0.277921, 0.], dtype=torch.float64)}
     #coeffs = {(0,0): torch.tensor([1.,1.,1.,1.,1.,0.,0.,1.,1.,0.],dtype=torch.float64)}
     coeffs = {(0,0): torch.tensor([1.,0.,0.,0.,0.,0.,0.,1.,0.,0.], dtype=torch.float64)}
     #coeffs = {(0, 0): torch.tensor([0., 0., 0., 0., 0., 0., 0., 0., 0., 0.], dtype=torch.float64)}
     # define which coefficients will be added a noise
-    var_coeffs_allowed = torch.tensor([1, 1, 1, 1, 1, 0, 0, 1, 1, 1], dtype=torch.float64)
+    var_coeffs_allowed = torch.tensor([0, 1, 1, 1, 1, 0, 0, 0, 1, 1], dtype=torch.float64)
     #var_coeffs_allowed = torch.tensor([0, 0, 0, 0, 0, 1, 1, 1, 1, 1], dtype=torch.float64)
     state = IPEPS_U1SYM(elementary_tensors, coeffs, var_coeffs_allowed)
     state.add_noise(args.instate_noise)
