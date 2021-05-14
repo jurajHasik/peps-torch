@@ -43,15 +43,15 @@ def main():
         else:
             elementary_tensors.append(tens)
     # define initial coefficients
-    coeffs = {(0, 0): torch.tensor([1.0000,  0.3563,  4.4882, -0.3494, -3.9341, 0., 0., 1.0000, 0.2429, 0.], dtype=torch.float64)}
-    #coeffs = {(0,0): torch.tensor([1.,0.,0.,0.,0.,0.,0.,1.,0.,0.], dtype=torch.float64)}
+    #coeffs = {(0, 0): torch.tensor([1.0000,  0.3563,  4.4882, -0.3494, -3.9341, 0., 0., 1.0000, 0.2429, 0.], dtype=torch.float64)}
+    coeffs = {(0,0): torch.tensor([1.,0.,0.,0.,0.,0.,0.,1.,0.,0.], dtype=torch.float64)}
     #coeffs = {(0, 0): torch.tensor([0., 0., 0., 0., 0., 0., 0., 0., 0., 0.], dtype=torch.float64)}
     # define which coefficients will be added a noise
     var_coeffs_allowed = torch.tensor([0, 1, 1, 1, 1, 0, 0, 0, 1, 0], dtype=torch.float64)
     #var_coeffs_allowed = torch.tensor([0, 0, 0, 0, 0, 1, 1, 1, 1, 1], dtype=torch.float64)
-    State = IPEPS_U1SYM(elementary_tensors, coeffs, var_coeffs_allowed)
-    State.add_noise(args.instate_noise)
-    print(f'Current state: {State.coeffs[(0, 0)].data}')
+    state = IPEPS_U1SYM(elementary_tensors, coeffs, var_coeffs_allowed)
+    state.add_noise(args.instate_noise)
+    print(f'Current state: {state.coeffs[(0, 0)].data}')
 
     model = SU3_chiral.SU3_CHIRAL(theta=args.theta, j1=args.j1, j2=args.j2)
 
@@ -83,33 +83,33 @@ def main():
             return True, history
         return False, history
 
-    ctm_env_init = ENV(args.chi, State)
-    init_env(State, ctm_env_init)
+    ctm_env_init = ENV(args.chi, state)
+    init_env(state, ctm_env_init)
 
     # energy per site
-    e_dn_init = model.energy_triangle_dn(State, ctm_env_init)
-    e_up_init = model.energy_triangle_up(State, ctm_env_init)
-    e_nnn_init = model.energy_nnn(State, ctm_env_init)
+    e_dn_init = model.energy_triangle_dn(state, ctm_env_init)
+    e_up_init = model.energy_triangle_up(state, ctm_env_init)
+    e_nnn_init = model.energy_nnn(state, ctm_env_init)
     e_tot_init = (e_dn_init + e_up_init + e_nnn_init)/3
     print(f'E_up={e_up_init.item()}, E_dn={e_dn_init.item()}, E_tot={e_tot_init.item()}')
 
-    ctm_env_final, *ctm_log = ctmrg.run(State, ctm_env_init, conv_check=ctmrg_conv_energy)
+    ctm_env_final, *ctm_log = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
 
     # energy per site
-    e_dn_final = model.energy_triangle_dn(State, ctm_env_final)
-    e_up_final = model.energy_triangle_up(State, ctm_env_final)
-    e_nnn_final = model.energy_nnn(State, ctm_env_final)
+    e_dn_final = model.energy_triangle_dn(state, ctm_env_final)
+    e_up_final = model.energy_triangle_up(state, ctm_env_final)
+    e_nnn_final = model.energy_nnn(state, ctm_env_final)
     e_tot_final = (e_dn_final + e_up_final + e_nnn_final)/3
 
     # P operators
-    P_up = model.P_up(State, ctm_env_final)
-    P_dn = model.P_dn(State, ctm_env_final)
+    P_up = model.P_up(state, ctm_env_final)
+    P_dn = model.P_dn(state, ctm_env_final)
 
     print(f'\n\n E_up={e_up_final.item()}, E_dn={e_dn_final.item()}, E_tot={e_tot_final.item()}')
     print(f' Re(P_up)={torch.real(P_up).item()}, Im(P_up)={torch.imag(P_up).item()}')
     print(f' Re(P_dn)={torch.real(P_dn).item()}, Im(P_dn)={torch.imag(P_dn).item()}')
 
-    colors3, colors8 = model.eval_lambdas(State, ctm_env_final)
+    colors3, colors8 = model.eval_lambdas(state, ctm_env_final)
     print(
         f' <Lambda_3> = {torch.real(colors3[0]).item()}, {torch.real(colors3[1]).item()}, {torch.real(colors3[2]).item()}')
     print(
