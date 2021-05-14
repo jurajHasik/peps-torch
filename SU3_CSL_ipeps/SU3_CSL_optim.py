@@ -48,9 +48,9 @@ def main():
     #coeffs = {(0, 0): torch.tensor([1., 0., 0., 0., 0., 0., 0., 1., 0., 0.], dtype=torch.float64)}
     #define which coefficients will be added a noise
     var_coeffs_allowed = torch.tensor([0, 1, 1, 1, 1, 0, 0, 0, 1, 0], dtype=torch.float64)
-    State = IPEPS_U1SYM(elementary_tensors, coeffs, var_coeffs_allowed)
-    State.add_noise(args.instate_noise)
-    print(f'Current state: {State.coeffs[(0, 0)].data}')
+    state = IPEPS_U1SYM(elementary_tensors, coeffs, var_coeffs_allowed)
+    state.add_noise(args.instate_noise)
+    print(f'Current state: {state.coeffs[(0, 0)].data}')
 
     model = SU3_chiral.SU3_CHIRAL(theta=math.pi * args.frac_theta / 100.0, j1=args.j1, j2=args.j2)
 
@@ -76,8 +76,8 @@ def main():
             return True, history
         return False, history
 
-    ctm_env_init = ENV(args.chi, State)
-    init_env(State, ctm_env_init)
+    ctm_env_init = ENV(args.chi, state)
+    init_env(state, ctm_env_init)
 
     def loss_fn(state, ctm_env_in, opt_context):
         ctm_args = opt_context["ctm_args"]
@@ -94,18 +94,18 @@ def main():
         timings = (t_ctm, t_obs)
         return loss, ctm_env_out, history, timings
 
-    optimize_state(State, ctm_env_init, loss_fn)
-    ctm_env_final, *ctm_log = ctmrg.run(State, ctm_env_init, conv_check=ctmrg_conv_energy)
+    optimize_state(state, ctm_env_init, loss_fn)
+    ctm_env_final, *ctm_log = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
 
     # energy per site
-    e_dn_final = model.energy_triangle_dn(State, ctm_env_final)
-    e_up_final = model.energy_triangle_up(State, ctm_env_final)
-    e_nnn_final = model.energy_nnn(State, ctm_env_final)
+    e_dn_final = model.energy_triangle_dn(state, ctm_env_final)
+    e_up_final = model.energy_triangle_up(state, ctm_env_final)
+    e_nnn_final = model.energy_nnn(state, ctm_env_final)
     e_tot_final = (e_dn_final + e_up_final + e_nnn_final) / 3
 
     # P operators
-    P_up = model.P_up(State, ctm_env_final)
-    P_dn = model.P_dn(State, ctm_env_final)
+    P_up = model.P_up(state, ctm_env_final)
+    P_dn = model.P_dn(state, ctm_env_final)
 
     print(f'\n\n E_up={e_up_final.item()}, E_dn={e_dn_final.item()}, E_tot={e_tot_final.item()}')
     print(f' Re(P_up)={torch.real(P_up).item()}, Im(P_up)={torch.imag(P_up).item()}')
