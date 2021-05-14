@@ -43,7 +43,7 @@ def main():
         else:
             elementary_tensors.append(tens)
     # define initial coefficients
-    coeffs = {(0, 0): torch.tensor([-0.418167, -0.1490097, -1.87683, 0.146103, 1.64509, 0., 0., 1.14427, 0.277921, 0.], dtype=torch.float64)}
+    coeffs = {(0, 0): torch.tensor([1.0000,  0.3563,  4.4882, -0.3494, -3.9341, 0., 0., 1.0000, 0.2429, 0.], dtype=torch.float64)}
     #coeffs = {(0,0): torch.tensor([1.,0.,0.,0.,0.,0.,0.,1.,0.,0.], dtype=torch.float64)}
     #coeffs = {(0, 0): torch.tensor([0., 0., 0., 0., 0., 0., 0., 0., 0., 0.], dtype=torch.float64)}
     # define which coefficients will be added a noise
