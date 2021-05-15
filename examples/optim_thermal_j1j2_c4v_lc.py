@@ -21,6 +21,7 @@ log = logging.getLogger(__name__)
 # parse command line args and build necessary configuration objects
 parser= cfg.get_args_parser()
 # additional model-dependent arguments
+parser.add_argument("--l2d", type=int, default=1)
 parser.add_argument("--u1_class", type=str, default="B")
 parser.add_argument("--j1", type=float, default=1., help="nearest-neighbour coupling")
 parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour coupling")
@@ -197,29 +198,12 @@ def main():
 
         return l2, C_0, T_0
 
-    def approx_renyi2(state,D1,D2):
-        # get intial renyi2 on-site tensor and env tensors
-        l2, C0, T0= renyi2_site(state.site(),D1,D2)
-        state_r2= IPEPS_C4V(l2)
-        env_r2= ENV_C4V(args.chi, state_r2)
-        init_env(None, env_r2, (C0,T0))
-
-        # run CTM
-        env_r2, history, t_ctm, t_obs= ctmrg_c4v.run_dl(state_r2, env_r2, \
-            conv_check=ctmrg_conv_f2)
-        print(history)
-
-        # parition function per site <=> Tr(\rho^2)/N
-        #
+    def get_z_per_site(A, C, T):
         # C--T--C            / C--C
         # |  |  |   C--C    /  |  |   C--T--C
         # T--A--T * |  |   /   T--T * |  |  |
         # |  |  |   C--C  /    |  |   C--T--C
         # C--T--C        /     C--C
-
-        C= env_r2.get_C()
-        T= env_r2.get_T()
-        A= state_r2.site()
 
         # closed C^4
         C4= torch.einsum('ij,jk,kl,li',C,C,C,C)
@@ -234,7 +218,7 @@ def main():
         #   C--1->2
         CTC = torch.tensordot(CTC,C,([1],[0]))
         rdm = torch.tensordot(CTC,T,([2],[0]))
-        rdm = torch.tensordot(rdm,state_r2.site(),([1,3],[1,2]))
+        rdm = torch.tensordot(rdm,A,([1,3],[1,2]))
         rdm = torch.tensordot(T,rdm,([1,2],[0,2]))
         rdm = torch.tensordot(rdm,CTC,([0,1,2],[2,0,1]))
 
@@ -245,10 +229,37 @@ def main():
         #   |       | V
         #   C--2 0--C
         CTC= torch.tensordot(CTC,CTC,([0,1,2],[2,1,0]))
+        
+        z_per_site= (rdm / CTC) * (C4 / CTC)
 
-        print(state.coeffs[(0,0)])
-        renyi2= -torch.log((rdm / CTC) * (C4 / CTC))
-        print(f"r2 {rdm} {CTC} {C4}")
+        return z_per_site
+
+    def approx_renyi2(state,env,D1,D2):
+        # get intial renyi2 on-site tensor and env tensors
+        # state.site() rank-6 tensor [apuldr]
+        a= state.site()
+        # l2 - rank-4 tensor [uldr]
+        l2, C0, T0= renyi2_site(a,D1,D2)
+        state_r2= IPEPS_C4V(l2)
+        env_r2= ENV_C4V(args.chi, state_r2)
+        init_env(None, env_r2, (C0,T0))
+
+        # run CTM
+        env_r2, history, t_ctm, t_obs= ctmrg_c4v.run_dl(state_r2, env_r2, \
+            conv_check=ctmrg_conv_f2)
+        print(history)
+
+        # renyi-2 = -log( (Tr \rho^2)/Z^2 ) = -log ( (Tr \rho^2) / (Tr \rho)^2 )
+        #
+
+        rho2_per_site= get_z_per_site( state_r2.site(), env_r2.get_C(), env_r2.get_T() )
+        
+        # double-layer
+        l1= torch.einsum('apuldr,apxywz->uxlydwrz',a,a.conj())\
+            .contiguous().view(a.size(2)**2,a.size(3)**2,a.size(4)**2,a.size(5)**2)
+        rho1_per_site= get_z_per_site( l1, env.get_C(), env.get_T() )
+
+        renyi2= -torch.log(rho2_per_site/(rho1_per_site**2))
         return renyi2
 
 
@@ -260,7 +271,7 @@ def main():
 
     e0 = energy_f(state, ctm_env, force_cpu=True)
     S0 = approx_S(state, ctm_env)
-    r2_0 = approx_renyi2(state, 8, args.bond_dim**2)
+    r2_0 = approx_renyi2(state, ctm_env, args.l2d, args.bond_dim**2)
     # loss0 = e0 - 1./args.beta * S0
     loss0 = e0 - 1./args.beta * r2_0
     obs_values, obs_labels = model.eval_obs(state, ctm_env,force_cpu=True)
@@ -294,7 +305,7 @@ def main():
         # S1 = approx_S(state, ctm_env_out)
         # loss1 = e1 - 1./args.beta * S1
 
-        r2_0 = approx_renyi2(state, 8, args.bond_dim**2)
+        r2_0 = approx_renyi2(state, ctm_env_out, args.l2d, args.bond_dim**2)
         loss= torch.max(e0,e1) - 1./args.beta * r2_0
         # loss= torch.max(loss0,loss1)
 
@@ -317,7 +328,7 @@ def main():
             loss= opt_context["loss_history"]["loss"][-1] 
         e0 = energy_f(state, ctm_env, force_cpu=True)
         S0 = approx_S( state, ctm_env )
-        r2_0 = approx_renyi2(state, args.bond_dim, args.bond_dim**2)
+        r2_0 = approx_renyi2(state, ctm_env, args.l2d, args.bond_dim**2)
         obs_values, obs_labels = model.eval_obs(state,ctm_env,force_cpu=True)
         print(", ".join([f"{epoch}",f"{loss}",f"{e0}", f"{S0}", f"{r2_0}"]+[f"{v}" for v in obs_values]))
 
