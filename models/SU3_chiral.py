@@ -25,12 +25,12 @@ def fmap_inv(s):
     return (n1, n2, n3)
 
 
-exchange_bond = torch.zeros((3, 3, 3, 3), dtype=torch.complex128)
+exchange_bond = torch.zeros((3, 3, 3, 3), dtype=torch.complex128, device=cfg.global_args.device)
 for i in range(3):
     for j in range(3):
         exchange_bond[i, j, j, i] = 1.
 
-exchange_bond_triangle = torch.zeros((3, 3, 3, 3, 3, 3), dtype=torch.complex128)
+exchange_bond_triangle = torch.zeros((3, 3, 3, 3, 3, 3), dtype=torch.complex128, device=cfg.global_args.device)
 for i in range(3):
     for j in range(3):
         for k in range(3):
@@ -41,8 +41,8 @@ for i in range(3):
             # 3--1
             exchange_bond_triangle[i, j, k, k, j, i] = 1.
 
-permute_triangle = torch.zeros((3, 3, 3, 3, 3, 3), dtype=torch.complex128)
-permute_triangle_inv = torch.zeros((3, 3, 3, 3, 3, 3), dtype=torch.complex128)
+permute_triangle = torch.zeros((3, 3, 3, 3, 3, 3), dtype=torch.complex128, device=cfg.global_args.device)
+permute_triangle_inv = torch.zeros((3, 3, 3, 3, 3, 3), dtype=torch.complex128, device=cfg.global_args.device)
 for i in range(3):
     for j in range(3):
         for k in range(3):
@@ -52,14 +52,14 @@ for i in range(3):
             permute_triangle_inv[i, j, k, k, i, j] = 1.
 
 # define the matrices associated with the observables \lambda_3 and \lambda_8 for the 3 sites
-lambda_3 = torch.tensor([[1., 0., 0.], [0., -1., 0.], [0., 0., 0.]], dtype=torch.complex128)
-lambda_8 = 1. / sqrt(3.) * torch.tensor([[1., 0., 0.], [0., 1., 0.], [0., 0., -2.]], dtype=torch.complex128)
-lambda_3_1 = torch.eye(27, dtype=torch.complex128)
-lambda_3_2 = torch.eye(27, dtype=torch.complex128)
-lambda_3_3 = torch.eye(27, dtype=torch.complex128)
-lambda_8_1 = torch.eye(27, dtype=torch.complex128)
-lambda_8_2 = torch.eye(27, dtype=torch.complex128)
-lambda_8_3 = torch.eye(27, dtype=torch.complex128)
+lambda_3 = torch.tensor([[1., 0., 0.], [0., -1., 0.], [0., 0., 0.]], dtype=torch.complex128, device=cfg.global_args.device)
+lambda_8 = 1. / sqrt(3.) * torch.tensor([[1., 0., 0.], [0., 1., 0.], [0., 0., -2.]], dtype=torch.complex128, device=cfg.global_args.device)
+lambda_3_1 = torch.eye(27, dtype=torch.complex128, device=cfg.global_args.device)
+lambda_3_2 = torch.eye(27, dtype=torch.complex128, device=cfg.global_args.device)
+lambda_3_3 = torch.eye(27, dtype=torch.complex128, device=cfg.global_args.device)
+lambda_8_1 = torch.eye(27, dtype=torch.complex128, device=cfg.global_args.device)
+lambda_8_2 = torch.eye(27, dtype=torch.complex128, device=cfg.global_args.device)
+lambda_8_3 = torch.eye(27, dtype=torch.complex128, device=cfg.global_args.device)
 for s in range(27):
     n1, n2, n3 = fmap_inv(s)
     lambda_3_1[s, s] = lambda_3[n1, n1]
@@ -122,9 +122,35 @@ class SU3_CHIRAL():
         vP_up = rdm.rdm2x2_up_triangle((0, 0), state, env, operator=permute_triangle) / norm_wf
         return vP_up
 
+    def P_bonds(self, state, env):
+        id_matrix = torch.eye(27, dtype=torch.complex128, device=cfg.global_args.device)
+        norm_wf = rdm.rdm1x1((0, 0), state, env, operator=id_matrix)
+        # bond 2--3
+        bond_op = torch.zeros((27, 27), dtype=torch.complex128, device=cfg.global_args.device)
+        for i in range(3):
+            for j in range(3):
+                for k in range(3):
+                    bond_op[fmap(i,j,k),fmap(i,k,j)] = 1.
+        vP_23 = rdm.rdm1x1((0,0), state, env, operator=bond_op) / norm_wf
+        # bond 1--3
+        bond_op = torch.zeros((27, 27), dtype=torch.complex128, device=cfg.global_args.device)
+        for i in range(3):
+            for j in range(3):
+                for k in range(3):
+                    bond_op[fmap(i,j,k),fmap(k,j,i)] = 1.
+        vP_13 = rdm.rdm1x1((0, 0), state, env, operator=bond_op) / norm_wf
+        # bond 1--2
+        bond_op = torch.zeros((27, 27), dtype=torch.complex128, device=cfg.global_args.device)
+        for i in range(3):
+            for j in range(3):
+                for k in range(3):
+                    bond_op[fmap(i,j,k),fmap(j,i,k)] = 1.
+        vP_12 = rdm.rdm1x1((0, 0), state, env, operator=bond_op) / norm_wf
+        return(torch.real(vP_23), torch.real(vP_13), torch.real(vP_12))
+
     def eval_lambdas(self, state, env):
         # computes the expectation value of the SU(3) observables \lambda_3 and \lambda_8 for the three sites of the unit cell
-        id_matrix = torch.eye(27, dtype=torch.complex128)
+        id_matrix = torch.eye(27, dtype=torch.complex128, device=cfg.global_args.device)
         norm_wf = rdm.rdm1x1((0, 0), state, env, operator=id_matrix)
         color3_1 = rdm.rdm1x1((0, 0), state, env, operator=lambda_3_1) / norm_wf
         color3_2 = rdm.rdm1x1((0, 0), state, env, operator=lambda_3_2) / norm_wf

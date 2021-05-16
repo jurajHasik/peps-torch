@@ -43,8 +43,8 @@ def main():
         else:
             elementary_tensors.append(tens)
     # define initial coefficients
-    #coeffs = {(0, 0): torch.tensor([1.0000,  0.3563,  4.4882, -0.3494, -3.9341, 0., 0., 1.0000, 0.2429, 0.], dtype=torch.float64)}
-    coeffs = {(0,0): torch.tensor([1.,0.,0.,0.,0.,0.,0.,1.,0.,0.], dtype=torch.float64)}
+    coeffs = {(0, 0): torch.tensor([1.0000,  0.3563,  4.4882, -0.3494, -3.9341, 0., 0., 1.0000, 0.2429, 0.], dtype=torch.float64)}
+    #coeffs = {(0,0): torch.tensor([1.,0.,0.,0.,0.,0.,0.,1.,0.,0.], dtype=torch.float64)}
     #coeffs = {(0, 0): torch.tensor([0., 0., 0., 0., 0., 0., 0., 0., 0., 0.], dtype=torch.float64)}
     # define which coefficients will be added a noise
     var_coeffs_allowed = torch.tensor([0, 1, 1, 1, 1, 0, 0, 0, 1, 0], dtype=torch.float64)
@@ -86,11 +86,11 @@ def main():
     init_env(state, ctm_env_init)
 
     # energy per site
-    e_dn_init = model.energy_triangle_dn(state, ctm_env_init)
-    e_up_init = model.energy_triangle_up(state, ctm_env_init)
-    e_nnn_init = model.energy_nnn(state, ctm_env_init)
-    e_tot_init = (e_dn_init + e_up_init + e_nnn_init)/3
-    print(f'E_up={e_up_init.item()}, E_dn={e_dn_init.item()}, E_tot={e_tot_init.item()}')
+    #e_dn_init = model.energy_triangle_dn(state, ctm_env_init)
+    #e_up_init = model.energy_triangle_up(state, ctm_env_init)
+    #e_nnn_init = model.energy_nnn(state, ctm_env_init)
+    #e_tot_init = (e_dn_init + e_up_init + e_nnn_init)/3
+    #print(f'E_up={e_up_init.item()}, E_dn={e_dn_init.item()}, E_tot={e_tot_init.item()}')
 
     ctm_env_final, *ctm_log = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
 
@@ -104,9 +104,13 @@ def main():
     P_up = model.P_up(state, ctm_env_final)
     P_dn = model.P_dn(state, ctm_env_final)
 
+    # bond operators
+    P23, P13, P12 = model.P_bonds(state, ctm_env_final)
+
     print(f'\n\n E_up={e_up_final.item()}, E_dn={e_dn_final.item()}, E_tot={e_tot_final.item()}')
     print(f' Re(P_up)={torch.real(P_up).item()}, Im(P_up)={torch.imag(P_up).item()}')
     print(f' Re(P_dn)={torch.real(P_dn).item()}, Im(P_dn)={torch.imag(P_dn).item()}')
+    print(f' P_23={P23.item()}, P_13={P13.item()}, P_12={P12.item()}')
 
     colors3, colors8 = model.eval_lambdas(state, ctm_env_final)
     print(
