@@ -262,7 +262,7 @@ def serialize_abelian_tensor_legacy(t, native=False):
     json_tensor["symmetry"]= t.config.sym.SYM_ID
     json_tensor["rank"]= t.get_ndim(native=native)
     json_tensor["signature"]= t.get_signature(native=native)
-    json_tensor["n"]= t.n
+    json_tensor["n"]= t.get_tensor_charge()
     json_tensor["isdiag"]= t.isdiag
     unique_dtype = t.unique_dtype()
     if unique_dtype:

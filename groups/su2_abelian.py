@@ -309,7 +309,7 @@ class SU2_U1():
         op_sz, op_sp, op_sm= self.SZ(), self.SP(), self.SM()
         for op in [op_sz, op_sp, op_sm]:
             for c in op.A:
-                op_v.set_block(ts=(op.n[0],*c), val=op.A[c][None,:,:])
+                op_v.set_block(ts=(op.get_tensor_charge()[0],*c), val=op.A[c][None,:,:])
         return op_v
 
     # TODO: implement xyz for Sx and Sy terms

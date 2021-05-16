@@ -3,12 +3,11 @@ import numpy as np
 import unittest
 import settings_full
 import settings_U1
-import yamps.tensor as TA
-import yamps.peps.config as cfg
-from yamps.peps.ipeps.ipeps_abelian import IPEPS_ABELIAN, read_ipeps
-from yamps.peps.ctm.generic_abelian.env_abelian import ENV_ABELIAN
-import yamps.peps.ctm.generic_abelian.ctmrg as ctmrg_abelian
-import pdb
+import yast
+import config as cfg
+from ipeps.ipeps_abelian import IPEPS_ABELIAN, read_ipeps
+from ctm.generic_abelian.env_abelian import ENV_ABELIAN
+import ctm.generic_abelian.ctmrg as ctmrg_abelian
 
 class Test_env_abelian(unittest.TestCase):
     
@@ -18,22 +17,22 @@ class Test_env_abelian(unittest.TestCase):
 
     @classmethod
     def _get_1x1_full(cls):
-        instate= pathlib.Path(__file__).parent.absolute() / cls.instate
+        instate= pathlib.Path(__file__).parent.absolute() / ".." / cls.instate
         state_U1= read_ipeps(instate, settings_U1)
         state_dense= state_U1.to_dense()
         return state_dense
 
     @classmethod
     def _get_2x1_BIPARTITE_U1(cls):
-        instate= pathlib.Path(__file__).parent.absolute() / cls.instate
+        instate= pathlib.Path(__file__).parent.absolute() / ".." / cls.instate
         state_U1= read_ipeps(instate, settings_U1)
 
         # create 2x1 bipartite
         T0= state_U1.site((0,0))
-        a= TA.Tensor(settings=T0.conf, s=cls._ref_s_dir, n=T0.n)
+        a= yast.Tensor(config=T0.config, s=cls._ref_s_dir, n=T0.get_tensor_charge())
         for c,block in T0.A.items():
             a.set_block(tuple(cls._ref_s_dir*np.asarray(c)), block.shape, val=block) 
-        b= TA.Tensor(settings=a.conf, s=cls._ref_s_dir, n=-a.n)
+        b= yast.Tensor(config=a.config, s=cls._ref_s_dir, n=-np.asarray(a.get_tensor_charge()))
         for c,block in a.A.items():
             b.set_block(tuple(-np.asarray(c)), block.shape, val=block)
 
@@ -61,7 +60,7 @@ class Test_env_abelian(unittest.TestCase):
             history+=1
             print(history)
             for cid,c in env.C.items():
-                u,s,v= c.split_svd((0,1))
+                u,s,v= c.svd((0,1))
                 s= s.to_numpy().diagonal()
                 print(f"{cid}: {s}")
             return False, history
@@ -79,7 +78,7 @@ class Test_env_abelian(unittest.TestCase):
         def ctmrg_conv_f(state, env, history, ctm_args=cfg.ctm_args):
             # compute SVD of corners
             for cid,c in env.C.items():
-                u,s,v= c.split_svd((0,1))
+                u,s,v= c.svd((0,1))
                 s= np.sort(s.to_numpy().diagonal())[::-1]
                 print(f"{cid}: {s}")
             return False, history
@@ -98,7 +97,7 @@ class Test_env_abelian(unittest.TestCase):
         def ctmrg_conv_f(state, env, history, ctm_args=cfg.ctm_args):
             # compute SVD of corners
             for cid,c in env.C.items():
-                u,s,v= c.split_svd((0,1))
+                u,s,v= c.svd((0,1))
                 s= s.to_numpy().diagonal()
                 print(f"{cid}: {s}")
             return False, history

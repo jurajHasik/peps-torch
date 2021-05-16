@@ -22,14 +22,16 @@ class Test_IO_ipeps_abelian(unittest.TestCase):
         self.assertTrue(state0.lY==state1.lY)
         self.assertTrue(state0.sites.keys()==state1.sites.keys())
         for k in state1.sites.keys():
-            self.assertTrue(state1.sites[k].config.sym.nsym==state0.nsym)
-            self.assertTrue(state1.sites[k].config.sym.name==state0.sym)
-            self.assertTrue(state1.sites[k].get_ndim(native=True)==state0.sites[k].get_ndim(native=True))
+            self.assertTrue(state1.sites[k].config.sym.NSYM==state0.nsym)
+            self.assertTrue(state1.sites[k].config.sym.SYM_ID==state0.sym)
             self.assertTrue(state1.sites[k].get_ndim()==state0.sites[k].get_ndim())
-            self.assertTrue(np.array_equal(state1.sites[k].s,state0.sites[k].s))
-            self.assertTrue(np.array_equal(state1.sites[k].n,state0.sites[k].n))
+            self.assertTrue(np.array_equal(\
+                state1.sites[k].get_signature(),state0.sites[k].get_signature()))
+            self.assertTrue(np.array_equal(\
+                state1.sites[k].get_tensor_charge(),state0.sites[k].get_tensor_charge()))
             if state0.nsym>0:
-                self.assertTrue(np.array_equal(state1.sites[k].tset,state0.sites[k].tset))
+                self.assertTrue(np.array_equal(\
+                    state1.sites[k].get_leg_charges_and_dims(),state0.sites[k].get_leg_charges_and_dims()))
             self.assertTrue(state0.sites[k].norm_diff(state1.sites[k])<1.0e-8)
 
     def test_write_full(self):

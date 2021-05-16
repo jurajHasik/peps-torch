@@ -2,7 +2,7 @@ import argparse
 import numpy as np
 import torch
 import config as cfg
-import yamps.tensor as yast
+import yast
 import examples.abelian.settings_full_torch as settings_full
 import examples.abelian.settings_U1_torch as settings_U1
 from ipeps.ipeps_abelian import *

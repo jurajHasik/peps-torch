@@ -21,7 +21,7 @@ class Test_ctmrg_abelian_U1_D5_basic(unittest.TestCase):
         state_U1= read_ipeps(instate, settings_U1)
         # set correct signature
         T0= state_U1.site((0,0))
-        a= yast.Tensor(config=T0.config, s=cls._ref_s_dir, n=T0.n)
+        a= yast.Tensor(config=T0.config, s=cls._ref_s_dir, n=T0.get_tensor_charge())
         for c,block in T0.A.items(): 
             a.set_block(tuple(cls._ref_s_dir*np.asarray(c)), block.shape, val=block) 
         state_U1.sites= {(0,0): a}
@@ -35,10 +35,10 @@ class Test_ctmrg_abelian_U1_D5_basic(unittest.TestCase):
 
         # create 2x1 bipartite
         T0= state_U1.site((0,0))
-        a= yast.Tensor(config=T0.config, s=cls._ref_s_dir, n=T0.n)
+        a= yast.Tensor(config=T0.config, s=cls._ref_s_dir, n=T0.get_tensor_charge())
         for c,block in T0.A.items():
             a.set_block(tuple(cls._ref_s_dir*np.asarray(c)), block.shape, val=block) 
-        b= yast.Tensor(config=a.config, s=cls._ref_s_dir, n=-a.n)
+        b= yast.Tensor(config=a.config, s=cls._ref_s_dir, n=-np.asarray(a.get_tensor_charge()))
         for c,block in a.A.items():
             b.set_block(tuple(-np.asarray(c)), block.shape, val=block)
 
@@ -132,10 +132,11 @@ class Test_ctmrg_abelian_U1_D5_spectra(unittest.TestCase):
 
         # create 2x1 bipartite
         T0= state_U1.site((0,0))
-        a= yast.Tensor(config=T0.config, s=cls._ref_s_dir, n=T0.n)
+        a= yast.Tensor(config=T0.config, s=cls._ref_s_dir, n=T0.get_tensor_charge())
         for c,block in T0.A.items():
             a.set_block(tuple(cls._ref_s_dir*np.asarray(c)), block.shape, val=block) 
-        b= yast.Tensor(config=a.config, s=cls._ref_s_dir, n=-a.n)
+        b= yast.Tensor(config=a.config, s=cls._ref_s_dir, \
+            n=-np.asarray(a.get_tensor_charge()))
         for c,block in a.A.items():
             b.set_block(tuple(-np.asarray(c)), block.shape, val=block)
 

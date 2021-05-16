@@ -11,7 +11,7 @@ from ipeps.tensor_io import *
 # all bond indices
 
 class IPEPS():
-    def __init__(self, sites, vertexToSite=None, lX=None, lY=None, peps_args=cfg.peps_args,\
+    def __init__(self, sites=None, vertexToSite=None, lX=None, lY=None, peps_args=cfg.peps_args,\
         global_args=cfg.global_args):
         r"""
         :param sites: map from elementary unit cell to on-site tensors
@@ -97,28 +97,30 @@ class IPEPS():
         maps square lattice into elementary unit cell of size ``lX`` x ``lY`` assuming 
         periodic boundary conditions (PBC) along both X and Y directions.
         """
-        self.dtype= global_args.torch_dtype
-        self.device= global_args.device
-
-        for coord,site in sites.items(): 
-            assert site.dtype==self.dtype,"dtype of site "+str(coord)+" and IPEPS does not match"
-            assert site.device==torch.device(self.device),\
-                "device of site "+str(coord)+" and IPEPS does not match"
-
-        self.sites= OrderedDict(sites)
+        if not sites:
+            self.dtype= global_args.torch_dtype
+            self.device= global_args.device
+        else:
+            assert len(set( tuple( site.dtype for site in sites.values() ) ))==1,"Mixed dtypes in sites"
+            assert len(set( tuple( site.device for site in sites.values() ) ))==1,"Mixed devices in sites"
+            self.dtype= next(iter(sites.values())).dtype
+            self.device= next(iter(sites.values())).device
+            self.sites= OrderedDict(sites)
         
         # TODO we infer the size of the cluster from the keys of sites. Is it OK?
         # infer the size of the cluster
-        if lX is None or lY is None:
+        if (lX is None or lY is None) and sites:
             min_x = min([coord[0] for coord in sites.keys()])
             max_x = max([coord[0] for coord in sites.keys()])
             min_y = min([coord[1] for coord in sites.keys()])
             max_y = max([coord[1] for coord in sites.keys()])
             self.lX = max_x-min_x + 1
             self.lY = max_y-min_y + 1
-        else:
+        elif lX and lY:
             self.lX = lX
             self.lY = lY
+        else:
+            raise Exception("lX and lY has to set either directly or implicitly by sites")
 
         if vertexToSite is not None:
             self.vertexToSite = vertexToSite

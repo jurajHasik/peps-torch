@@ -62,9 +62,9 @@ def apply_gate_2s(state,bond,gate,su_opts):
 	# (s)--B-- -> 1(s)--rB--(-s)2 0(s)--SB--(-s)1 0(s)--xB--
 	W= state.weight((xy_s1, dxy_w_s1s2))
 	xA, SA, rA= yast.linalg.svd(A, (list(outer_inds_s1),[0, dxy_w_to_ind[dxy_w_s1s2]]), \
-		sU=-A.s[dxy_w_to_ind[dxy_w_s1s2]])
+		sU=-A.get_signature()[dxy_w_to_ind[dxy_w_s1s2]])
 	rB, SB, xB= yast.linalg.svd(B, ([0, dxy_w_to_ind[dxy_w_s2s1]], \
-		list(outer_inds_s2)), sU=-B.s[dxy_w_to_ind[dxy_w_s2s1]])
+		list(outer_inds_s2)), sU=-B.get_signature()[dxy_w_to_ind[dxy_w_s2s1]])
 
 	# contract
 	#                    0      1 
@@ -90,11 +90,11 @@ def apply_gate_2s(state,bond,gate,su_opts):
 	#     0              1
 	#     |              |
 	# 1--nA--2 --W-- 0--nB--2
-	nA, W, nB= yast.linalg.svd(M, ([0,2],[1,3]), sU=A.s[dxy_w_to_ind[dxy_w_s1s2]],\
+	nA, W, nB= yast.linalg.svd(M, ([0,2],[1,3]), sU=A.get_signature()[dxy_w_to_ind[dxy_w_s1s2]],\
 		D_total=max_D_total)
 
 	# normalize new weight
-	W= W / W.max_abs()
+	W= W / W.norm(p="inf")
 
 	# reabsorb nA, nB back to xA, xB
 	#                           0

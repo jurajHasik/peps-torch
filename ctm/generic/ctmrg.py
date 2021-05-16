@@ -91,7 +91,10 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
 
     # function wrapping up the core of the CTM MOVE segment of CTM algorithm
     def ctm_MOVE_c(*tensors):
-        # 1) wrap raw tensors back into IPEPS and ENV classes 
+        if global_args.device=='cpu' and global_args.offload_to_gpu != 'None':
+            tensors= tuple( t.to(global_args.offload_to_gpu) for t in tensors )
+
+        # 1) wrap raw tensors back into IPEPS and ENV classes
         sites_loc= dict(zip(state.sites.keys(),tensors[0:len(state.sites)]))
         state_loc= IPEPS(sites_loc, vertexToSite=state.vertexToSite)
         env_loc= ENV(env.chi)
@@ -129,10 +132,11 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
                 raise ValueError("Invalid direction: "+str(direction))
 
         # 2) Return raw new tensors
-        # ret_list= tuple([nC1[key] for key in nC1.keys()] + [nC2[key] for key in nC2.keys()] \
-        #     + [nT[key] for key in nT.keys()])
         ret_list= tuple(nC1[key] for key in nC1.keys()) + tuple(nC2[key] for key in nC2.keys()) \
             + tuple(nT[key] for key in nT.keys())
+        if global_args.device=='cpu' and global_args.offload_to_gpu != 'None':
+            ret_list= tuple( t.to(global_args.device) for t in ret_list )
+
         return ret_list
 
     # Call the core function, allowing for checkpointing
