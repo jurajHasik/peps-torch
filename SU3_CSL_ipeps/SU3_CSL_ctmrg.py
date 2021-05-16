@@ -38,14 +38,15 @@ def main():
     elementary_tensors = []
     for name in ['S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'L0', 'L1', 'L2']:
         tens = load_SU3_tensor(name)
-        if name in ['S0', 'S1', 'S2', 'L2']:
+        if name in ['aS0', 'aS1', 'aS2', 'aL2']:
             elementary_tensors.append(1j * tens)
         else:
             elementary_tensors.append(tens)
     # define initial coefficients
-    coeffs = {(0, 0): torch.tensor([1.0000,  0.3563,  4.4882, -0.3494, -3.9341, 0., 0., 1.0000, 0.2429, 0.], dtype=torch.float64)}
+    #coeffs = {(0, 0): torch.tensor([1.0000,  0.3563,  4.4882, -0.3494, -3.9341, 0., 0., 1.0000, 0.2429, 0.], dtype=torch.float64)}
     #coeffs = {(0,0): torch.tensor([1.,0.,0.,0.,0.,0.,0.,1.,0.,0.], dtype=torch.float64)}
-    #coeffs = {(0, 0): torch.tensor([0., 0., 0., 0., 0., 0., 0., 0., 0., 0.], dtype=torch.float64)}
+    coeffs = {(0, 0): torch.tensor([1.0000, -0.8700,  1.5465,  0.0000,  0.0000,  0.0000,  0.0000,  1.0000,
+         1.4435,  0.0000], dtype=torch.float64)}
     # define which coefficients will be added a noise
     var_coeffs_allowed = torch.tensor([0, 1, 1, 1, 1, 0, 0, 0, 1, 0], dtype=torch.float64)
     #var_coeffs_allowed = torch.tensor([0, 0, 0, 0, 0, 1, 1, 1, 1, 1], dtype=torch.float64)
