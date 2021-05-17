@@ -1,5 +1,7 @@
+import warnings
 import config as cfg
 from itertools import product
+import yast
 try:
     import torch
     from ctm.generic.env import ENV
@@ -132,39 +134,10 @@ class ENV_ABELIAN():
 
         # return new_env
 
-    def to_dense(self, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+    def to_dense(self, state, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
         r"""
-        :return: returns a copy of the environment with all C,T tensors in their dense 
-                 representation. If the environment already has just dense C,T tensors 
-                 returns ``self``.
-        :rtype: ENV_ABELIAN
-
-        Create a copy of environment with all on-site tensors as dense possesing no explicit
-        block structure (symmetry). This operations preserves gradients on returned
-        dense environment.
-        """
-        if self.nsym==0: return self
-        C_dense= {cid: c.to_nonsymmetric() for cid,c in self.C.items()}
-        T_dense= {}
-        #            UP         LEFT       DOWN     RIGHT
-        # dir_to_leg= {(0,-1): 1, (-1,0): 2, (0,1): 0, (1,0): 1}
-        # tid = (coord,dir)
-        for tid,T in self.T.items():
-            # fused_leg= dir_to_leg[tid[1]]
-            # Td= T.ungroup_leg(fused_leg, T._leg_fusion_data[fused_leg])
-            # Td= Td.to_nonsymmetric()
-            # Td, lo= Td.group_legs((fused_leg, fused_leg+1), new_s=T.s[fused_leg])
-            # Td._leg_fusion_data[fused_leg]= lo
-            # T_dense[tid]= Td
-            T_dense[tid]= T.to_nonsymmetric()
-        env_dense= ENV_ABELIAN(self.chi, settings=next(iter(C_dense.values())).conf, \
-            ctm_args=ctm_args, global_args=global_args)
-        env_dense.C= C_dense
-        env_dense.T= T_dense
-        return env_dense
-
-    def to_dense_torch_env(self, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
-        r"""
+        :param state: state providing the relevant vertexToSite function
+        :type state: IPEPS_ABELIAN
         :return: returns equivalent of the environment with all C,T tensors in their dense 
                  representation on torch backend. 
         :rtype: ENV
@@ -173,32 +146,128 @@ class ENV_ABELIAN():
         block structure (symmetry). This operations preserves gradients on returned
         dense environment.
         """
-        # env_dense= self.to_dense(ctm_args=ctm_args, global_args=global_args)
-        # C_torch= {cid: c.A[()] for cid,c in env_dense.C.items()}
-        # T_torch= {tid: t.A[()] for tid,t in env_dense.T.items()}
-        C_torch= {cid: c.to_dense() for cid,c in self.C.items()}
-        T_torch= {tid: t.to_dense() for tid,t in self.T.items()}
+        vts= state.vertexToSite
+        dir_to_leg= {(0,-1): 1, (0,1): 0, (-1,0): 2, (1,0): 1}
+        C_lss= { cid: dict() for cid in self.C.keys() }
+        T_lss= dict()
+
+        # 0) compute correct leg structure of T's. Unfuse the pair of 
+        #    auxiliary legs connecting T's to on-site tensors. Merge the 
+        #    environment virtual spaces on connected legs
+        tmp_T= { tid: t.unfuse_legs(dir_to_leg[tid[1]]) for tid,t in self.T.items() }
+        for tid in tmp_T.keys():
+            t_xy,t_dir= tid
+            if t_dir==(0,-1): #UP
+                # all legs of current T
+                # 0--T(x-1,y)--3 0--T(x,y)--3 0--T(x+1,y)--3
+                #    1,2            1,2          1,2
+                T_lss[tid]= yast.leg_structures_for_dense( tensors=[tmp_T[tid],\
+                    tmp_T[(vts((t_xy[0]-1, t_xy[1])), t_dir)], {3: 0},\
+                    self.C[((t_xy),(-1,-1))], {1: 0},\
+                    tmp_T[(vts((t_xy[0]+1, t_xy[1])), t_dir)], {0: 3},\
+                    self.C[((t_xy),(1,-1))], {0: 3}] )
+                # upper-left corner
+                # C--1
+                # 0
+                C_lss[(tid[0],(-1,-1))][1]= T_lss[tid][0]
+                # upper-right corner
+                # 0--C
+                #    1
+                C_lss[(tid[0],(1,-1))][0]= T_lss[tid][3]
+            elif t_dir==(0,1): #DOWN
+                #    0,1              0,1        0,1
+                # 2--T(x-1,y)--3 2--T(x,y)--3 2--T(x+1,y)--3
+                T_lss[tid]= yast.leg_structures_for_dense( tensors=[tmp_T[tid],\
+                    tmp_T[(vts((t_xy[0]-1, t_xy[1])), t_dir)], {3: 2},\
+                    self.C[((t_xy),(-1,1))], {1: 2},\
+                    tmp_T[(vts((t_xy[0]+1, t_xy[1])), t_dir)], {2: 3},\
+                    self.C[((t_xy),(1,1))], {1: 3}])
+                # lower-left corner
+                # 0
+                # C--1
+                C_lss[(tid[0],(-1,1))][1]= T_lss[tid][2]
+                # lower-right corner
+                #    0
+                # 1--C
+                C_lss[(tid[0],(1,1))][1]= T_lss[tid][3]
+            elif t_dir==(-1,0): #LEFT
+                # 0
+                # T--2,3
+                # 1
+                T_lss[tid]= yast.leg_structures_for_dense( tensors=[tmp_T[tid],\
+                    tmp_T[(vts((t_xy[0], t_xy[1]-1)), t_dir)], {1: 0},\
+                    self.C[((t_xy),(-1,-1))], {0: 0},\
+                    tmp_T[(vts((t_xy[0], t_xy[1]+1)), t_dir)], {0: 1},\
+                    self.C[((t_xy),(-1,1))], {0: 1}])
+                # upper-left corner
+                # C--1
+                # 0
+                C_lss[(tid[0],(-1,-1))][0]= T_lss[tid][0]
+                # lower-left corner
+                # 0
+                # C--1
+                C_lss[(tid[0],(-1,1))][0]= T_lss[tid][1]
+            elif t_dir==(1,0): #RIGHT
+                #      0
+                # 1,2--T
+                #      3
+                T_lss[tid]= yast.leg_structures_for_dense( tensors=[tmp_T[tid],\
+                    tmp_T[(vts((t_xy[0], t_xy[1]-1)), t_dir)], {3: 0},\
+                    self.C[((t_xy),(1,-1))], {1: 0},\
+                    tmp_T[(vts((t_xy[0], t_xy[1]+1)), t_dir)], {0: 3},\
+                    self.C[((t_xy),(1,1))], {0: 3}])
+                # upper-right corner
+                # 0--C
+                #    1
+                C_lss[(tid[0],(1,-1))][1]= T_lss[tid][0]
+                # lower-right corner
+                #    0
+                # 1--C
+                C_lss[(tid[0],(1,1))][0]= T_lss[tid][3]
+            else:
+                raise RuntimeError("Invalid T-tensor id "+str(tid))
+
+        # 1) convert to dense representation. Reshape T's into double-layer form
+        C_torch= {cid: c.to_dense(leg_structures=C_lss[cid]) for cid,c in self.C.items()}
+        T_torch= dict()
+        for tid,t in tmp_T.items():
+            t_xy,t_dir= tid
+            t= t.to_dense(leg_structures=T_lss[tid])
+            if t_dir==(0,-1):
+                T_torch[tid]= t.view(t.size(0), t.size(1)*t.size(2), t.size(3))
+            elif t_dir==(0,1):
+                T_torch[tid]= t.view(t.size(0)*t.size(1), t.size(2), t.size(3))
+            elif t_dir==(-1,0):
+                T_torch[tid]= t.view(t.size(0), t.size(1), t.size(2)*t.size(3))
+            else:
+                T_torch[tid]= t.view(t.size(0), t.size(1)*t.size(2), t.size(3))
         
-        env_torch= ENV(self.chi, ctm_args=ctm_args, global_args=global_args)
+        max_chi= max(self.chi, max(max([c.size() for c in C_torch.values()])))
+        if max_chi>self.chi:
+            warnings.warn("Increasing chi. Equivalent chi ("+str(max_chi)+") of symmetric"\
+                +" environment is higher than original chi ("+str(self.chi)+").", Warning)
+
+        # 2) Fill the dense environment with dimension chi by dense representations of 
+        #    symmetric environment tensors
+        env_torch= ENV(max_chi, ctm_args=ctm_args, global_args=global_args)
         for cid,c in C_torch.items():
-            env_torch.C[cid]= torch.zeros(self.chi,self.chi,dtype=c.dtype,device=c.device)
+            env_torch.C[cid]= torch.zeros(max_chi,max_chi,dtype=c.dtype,device=c.device)
             env_torch.C[cid][:c.size(0),:c.size(1)]= c
         for tid,t in T_torch.items():
             t_site, t_dir= tid
             if t_dir==(0,-1):
-                env_torch.T[tid]= torch.zeros(self.chi,t.size(1),self.chi,dtype=t.dtype,device=t.device)
+                env_torch.T[tid]= torch.zeros(max_chi,t.size(1),max_chi,dtype=t.dtype,device=t.device)
                 env_torch.T[tid][:t.size(0),:,:t.size(2)]= t
             elif t_dir==(-1,0):
-                env_torch.T[tid]= torch.zeros(self.chi,self.chi,t.size(2),dtype=t.dtype,device=t.device)
+                env_torch.T[tid]= torch.zeros(max_chi,max_chi,t.size(2),dtype=t.dtype,device=t.device)
                 env_torch.T[tid][:t.size(0),:t.size(1),:]= t
             elif t_dir==(0,1):
-                env_torch.T[tid]= torch.zeros(t.size(0),self.chi,self.chi,dtype=t.dtype,device=t.device)
+                env_torch.T[tid]= torch.zeros(t.size(0),max_chi,max_chi,dtype=t.dtype,device=t.device)
                 env_torch.T[tid][:,:t.size(1),:t.size(2)]= t
             elif t_dir==(1,0):
-                env_torch.T[tid]= torch.zeros(self.chi,t.size(1),self.chi,dtype=t.dtype,device=t.device)
+                env_torch.T[tid]= torch.zeros(max_chi,t.size(1),max_chi,dtype=t.dtype,device=t.device)
                 env_torch.T[tid][:t.size(0),:,:t.size(2)]= t
-            else:
-                raise RuntimeError("Invalid T-tensor site "+str(t_site)+" direction: "+str(t_dir))
+
         return env_torch
 
     def clone(self):

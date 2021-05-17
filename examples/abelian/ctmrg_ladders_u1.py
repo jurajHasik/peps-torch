@@ -103,7 +103,7 @@ def main():
 
     # environment diagnostics
     for c_loc,c_ten in ctm_env.C.items(): 
-        u,s,v= c_ten.split_svd(([0],[1]))
+        u,s,v= c_ten.svd(([0],[1]))
         print(f"\n\nspectrum C[{c_loc}]")
         for charges, sector in s.A.items():
             print(charges)
@@ -112,14 +112,22 @@ def main():
                 print(f"{i} {sector_diag[i]}")
 
     # convert to dense env and compute transfer operator spectrum
-    # TODO conversion from symmetric to dense gives wrong environment
-    state_dense= state.to_dense_torch_ipeps()
-    ctm_env_dense= ctm_env.to_dense_torch_env()
-    model_dense= coupledLadders_dense.COUPLEDLADDERS(alpha=args.alpha)
-    loss= model_dense.energy_2x1_1x2(state_dense, ctm_env_dense)
-    obs_values, obs_labels= model_dense.eval_obs(state_dense,ctm_env_dense)
-    print(", ".join(["energy"]+obs_labels))
-    print(", ".join([f"{loss}"]+[f"{v}" for v in obs_values]))
+    state_dense= state.to_dense()
+    ctm_env_dense= ctm_env.to_dense(state)
+
+    # CORRECTNESS check 
+    #
+    # for c_loc,c_ten in ctm_env_dense.C.items(): 
+    #     u,s,v= torch.svd(c_ten, compute_uv=False)
+    #     print(f"\n\nspectrum C[{c_loc}]")
+    #     for i in range(args.chi):
+    #         print(f"{i} {s[i]}")
+    #
+    # model_dense= coupledLadders_dense.COUPLEDLADDERS(alpha=args.alpha)
+    # loss= model_dense.energy_2x1_1x2(state_dense, ctm_env_dense)
+    # obs_values, obs_labels= model_dense.eval_obs(state_dense,ctm_env_dense)
+    # print(", ".join(["energy"]+obs_labels))
+    # print(", ".join([f"{loss}"]+[f"{v}" for v in obs_values]))
 
     site_dir_list=[((0,0), (1,0)),((0,0), (0,1)), ((1,1), (1,0)), ((1,1), (0,1))]
     for sdp in site_dir_list:

@@ -163,25 +163,7 @@ class IPEPS_ABELIAN():
             lX=self.lX, lY=self.lY)
         return state
 
-    def to_dense(self):
-        r"""
-        :return: returns a copy of the state with all on-site tensors in their dense 
-                 representation. If the state already has just dense on-site tensors 
-                 returns ``self``.
-        :rtype: IPEPS_ABELIAN
-
-        Create a copy of state with all on-site tensors as dense possesing no explicit
-        block structure (symmetry). This operations preserves gradients on returned
-        dense state.
-        """
-        if self.nsym==0: return self
-        sites_dense= {ind: t.to_nonsymmetric() for ind,t in self.sites.items()}
-        settings_dense= next(iter(sites_dense.values())).config
-        state_dense= IPEPS_ABELIAN(settings_dense, sites_dense, \
-            vertexToSite=self.vertexToSite, lX=self.lX, lY=self.lY)
-        return state_dense
-
-    def to_dense_torch_ipeps(self, peps_args=cfg.peps_args, global_args=cfg.global_args):
+    def to_dense(self, peps_args=cfg.peps_args, global_args=cfg.global_args):
         r"""
         :return: returns equivalent dense state with all on-site tensors in their dense 
                  representation on torch backend. 

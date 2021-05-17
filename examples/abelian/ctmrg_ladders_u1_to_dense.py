@@ -61,7 +61,7 @@ def main():
         model= coupledLadders.COUPLEDLADDERS(alpha=args.alpha)
 
     print(state_ab)
-    state= state_ab.to_dense_torch_ipeps()
+    state= state_ab.to_dense()
     print(state)
 
     # 2) define convergence criterion for ctmrg
