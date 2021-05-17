@@ -165,20 +165,25 @@ class IPEPS_U1SYM(ipeps.IPEPS):
         # Edited for SU(3) chiral CSL Kagome
         (M0, M1, M2, M3, M4, M5, M6, L0, L1, L2) = self.sym_tensors
         (m0, m1, m2, m3, m4, m5, m6, l0, l1, l2) = self.coeffs[(0, 0)]
+        print(m0.device)
+        print(M0.device)
         # trivalent tensor M
         M_tensor = m0 * M0 + m1 * M1 + m2 * M2 + m3 * M3 + m4 * M4 + m5 * M5 + m6 * M6
+        print(M_tensor.device)
         # bivalent tensor L
         L_tensor = l0 * L0 + l1 * L1 + l2 * L2
         # square-lattice tensor with 3 physical indices (d=3)
         a_tensor_temp = torch.einsum('abi,uij,jkl,vkc,wld->uvwabcd', M_tensor, L_tensor, M_tensor, L_tensor, L_tensor)
+        print(a_tensor_temp.device)
         # reshape to a single d=27 index
-        a_tensor = torch.zeros((27, 7, 7, 7, 7), dtype=torch.complex128)
+        a_tensor = torch.zeros((27, 7, 7, 7, 7), dtype=torch.complex128, device = self.device)
         for si in range(27):
             n1, n2, n3 = fmap_inv(si)
             a_tensor[si, :, :, :, :] = a_tensor_temp[n1, n2, n3, :, :, :, :]
         sites = dict()
         for coord, c in self.coeffs.items():
             sites[coord] = a_tensor
+            print(sites[coord].device)
         return sites
 
     def add_noise(self, noise):
