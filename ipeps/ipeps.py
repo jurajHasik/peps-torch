@@ -97,6 +97,7 @@ class IPEPS():
         maps square lattice into elementary unit cell of size ``lX`` x ``lY`` assuming 
         periodic boundary conditions (PBC) along both X and Y directions.
         """
+<<<<<<< HEAD
         if not sites:
             self.dtype= global_args.torch_dtype
             self.device= global_args.device
@@ -106,6 +107,17 @@ class IPEPS():
             self.dtype= next(iter(sites.values())).dtype
             self.device= next(iter(sites.values())).device
             self.sites= OrderedDict(sites)
+=======
+        self.dtype= global_args.torch_dtype
+        self.device= global_args.device
+
+        for coord,site in sites.items():
+            print(site.device)
+            print(torch.device(self.device))
+            assert site.dtype==self.dtype,"dtype of site "+str(coord)+" and IPEPS does not match"
+            assert site.device==torch.device(self.device),\
+                "device of site "+str(coord)+" and IPEPS does not match"
+>>>>>>> wip: optimization D=7
 
         # TODO we infer the size of the cluster from the keys of sites. Is it OK?
         # infer the size of the cluster

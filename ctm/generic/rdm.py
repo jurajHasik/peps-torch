@@ -34,7 +34,7 @@ def _sym_pos_def_rdm(rdm, sym_pos_def=False, verbosity=0, who=None):
     return rdm
 
 
-def rdm1x1(coord, state, env, operator=None, sym_pos_def=False, verbosity=0):
+def rdm1x1(coord, state, env, operator=None, sym_pos_def=False, force_cpu=False, verbosity=0):
     r"""
     :param coord: vertex (x,y) for which reduced density matrix is constructed
     :param state: underlying wavefunction
@@ -69,7 +69,13 @@ def rdm1x1(coord, state, env, operator=None, sym_pos_def=False, verbosity=0):
     # 0
     # T(-1,0)--2
     # 1
-    rdm = contract(env.C[(coord, (-1, -1))], env.T[(coord, (-1, 0))], ([0], [0]))
+    if force_cpu:
+        C = env.C[(coord, (-1, -1))].cpu()
+        T = env.T[(coord, (-1, 0))].cpu()
+    else:
+        C = env.C[(coord, (-1, -1))]
+        T = env.T[(coord, (-1, 0))]
+    rdm = contract(C, T, ([0], [0]))
     if verbosity > 0:
         print("rdm=CT " + str(rdm.size()))
     # C(-1,-1)--0
@@ -78,7 +84,11 @@ def rdm1x1(coord, state, env, operator=None, sym_pos_def=False, verbosity=0):
     # 1
     # 0
     # C(-1,1)--1->2
-    rdm = contract(rdm, env.C[(coord, (-1, 1))], ([1], [0]))
+    if force_cpu:
+        C = env.C[(coord, (-1, 1))].cpu()
+    else:
+        C = env.C[(coord, (-1, 1))]
+    rdm = contract(rdm, C, ([1], [0]))
     if verbosity > 0:
         print("rdm=CTC " + str(rdm.size()))
     # C(-1,-1)--0
@@ -86,7 +96,11 @@ def rdm1x1(coord, state, env, operator=None, sym_pos_def=False, verbosity=0):
     # T(-1,0)--1
     # |			    0->2
     # C(-1,1)--2 1--T(0,1)--2->3
-    rdm = contract(rdm, env.T[(coord, (0, 1))], ([2], [1]))
+    if force_cpu:
+        T = env.T[(coord, (0, 1))].cpu()
+    else:
+        T = env.T[(coord, (0, 1))]
+    rdm = contract(rdm, T, ([2], [1]))
     if verbosity > 0:
         print("rdm=CTCT " + str(rdm.size()))
     # TODO - more efficent contraction with uncontracted-double-layer on-site tensor
@@ -101,12 +115,16 @@ def rdm1x1(coord, state, env, operator=None, sym_pos_def=False, verbosity=0):
     # --A--
     #  /
     #
-    dimsA = state.site(coord).size()
+    if force_cpu:
+        a_1layer = state.site(coord).cpu()
+    else:
+        a_1layer = state.site(coord)
+    dimsA = a_1layer.size()
     if operator == None:
-        a = contiguous(einsum('mefgh,nabcd->eafbgchdmn', state.site(coord), conj(state.site(coord))))
+        a = contiguous(einsum('mefgh,nabcd->eafbgchdmn', a_1layer, conj(a_1layer)))
         a = view(a, (dimsA[1] ** 2, dimsA[2] ** 2, dimsA[3] ** 2, dimsA[4] ** 2, dimsA[0], dimsA[0]))
     else:
-        a = contiguous(einsum('mefgh,mn,nabcd->eafbgchd', state.site(coord), operator, conj(state.site(coord))))
+        a = contiguous(einsum('mefgh,mn,nabcd->eafbgchd', a_1layer, operator, conj(a_1layer)))
         a = view(a, (dimsA[1] ** 2, dimsA[2] ** 2, dimsA[3] ** 2, dimsA[4] ** 2))
     # C(-1,-1)--0
     # |
@@ -125,7 +143,11 @@ def rdm1x1(coord, state, env, operator=None, sym_pos_def=False, verbosity=0):
     # |			  	 |\45->34(s,s')
     # |			  	 |
     # C(-1,1)--------T(0,1)--1
-    rdm = contract(env.T[(coord, (0, -1))], rdm, ([0, 1], [0, 2]))
+    if force_cpu:
+        T = env.T[(coord, (0, -1))].cpu()
+    else:
+        T = env.T[(coord, (0, -1))]
+    rdm = contract(T, rdm, ([0, 1], [0, 2]))
     if verbosity > 0:
         print("rdm=CTCTaT " + str(rdm.size()))
     # C(-1,-1)--T(0,-1)--0 0--C(1,-1)
@@ -135,7 +157,11 @@ def rdm1x1(coord, state, env, operator=None, sym_pos_def=False, verbosity=0):
     # |		    |\34(s,s')
     # |		    |
     # C(-1,1)---T(0,1)--0->1
-    rdm = contract(env.C[(coord, (1, -1))], rdm, ([0], [0]))
+    if force_cpu:
+        C = env.C[(coord, (1, -1))].cpu()
+    else:
+        C = env.C[(coord, (1, -1))]
+    rdm = contract(C, rdm, ([0], [0]))
     if verbosity > 0:
         print("rdm=CTCTaTC " + str(rdm.size()))
     # C(-1,-1)--T(0,-1)-----C(1,-1)
@@ -145,7 +171,11 @@ def rdm1x1(coord, state, env, operator=None, sym_pos_def=False, verbosity=0):
     # |		    |\34->23(s,s')  2->0
     # |		    |
     # C(-1,1)---T(0,1)--1
-    rdm = contract(env.T[(coord, (1, 0))], rdm, ([0, 1], [0, 2]))
+    if force_cpu:
+        T= env.T[(coord, (1, 0))].cpu()
+    else :
+        T= env.T[(coord, (1, 0))]
+    rdm = contract(T, rdm, ([0, 1], [0, 2]))
     if verbosity > 0:
         print("rdm=CTCTaTCT " + str(rdm.size()))
     # C(-1,-1)--T(0,-1)--------C(1,-1)
@@ -155,7 +185,11 @@ def rdm1x1(coord, state, env, operator=None, sym_pos_def=False, verbosity=0):
     # |		    |\23->12(s,s')   0
     # |		    |			     0
     # C(-1,1)---T(0,1)--1 1----C(1,1)
-    rdm = contract(rdm, env.C[(coord, (1, 1))], ([0, 1], [0, 1]))
+    if force_cpu:
+        C = env.C[(coord, (1, 1))].cpu()
+    else:
+        C = env.C[(coord, (1, 1))]
+    rdm = contract(rdm, C, ([0, 1], [0, 1]))
     if verbosity > 0:
         print("rdm=CTCTaTCTC " + str(rdm.size()))
 
@@ -973,7 +1007,7 @@ def enlarged_corner(coord, state, env, corner, csites=[1, 2, 3], verbosity=0):
         return C2x2_LD
 
 
-def rdm2x2_up_triangle(coord, state, env, operator=None, sym_pos_def=False, verbosity=0):
+def rdm2x2_up_triangle(coord, state, env, operator=None, sym_pos_def=False, force_cpu=False, verbosity=0):
     r"""
     :param coord: vertex (x,y) specifies upper left site of 2x2 subsystem
     :param state: underlying wavefunction
@@ -987,12 +1021,19 @@ def rdm2x2_up_triangle(coord, state, env, operator=None, sym_pos_def=False, verb
     """
     who = "rdm2x2"
     # ----- building C2x2_LU ----------------------------------------------------
-    C = env.C[(state.vertexToSite(coord), (-1, -1))]
-    T1 = env.T[(state.vertexToSite(coord), (0, -1))]
-    T2 = env.T[(state.vertexToSite(coord), (-1, 0))]
-    dimsA = state.site(coord).size()
+    if force_cpu:
+        C = env.C[(state.vertexToSite(coord), (-1, -1))].cpu()
+        T1 = env.T[(state.vertexToSite(coord), (0, -1))].cpu()
+        T2 = env.T[(state.vertexToSite(coord), (-1, 0))].cpu()
+        a_1layer = state.site(coord).cpu()
+    else:
+        C = env.C[(state.vertexToSite(coord), (-1, -1))]
+        T1 = env.T[(state.vertexToSite(coord), (0, -1))]
+        T2 = env.T[(state.vertexToSite(coord), (-1, 0))]
+        a_1layer = state.site(coord)
+    dimsA = a_1layer.size()
     # contract all physical sites of this unit cell (index m)
-    a = contiguous(einsum('mefgh,mabcd->eafbgchd', state.site(coord), conj(state.site(coord))))
+    a = contiguous(einsum('mefgh,mabcd->eafbgchd', a_1layer, conj(a_1layer)))
     a = view(a, (dimsA[1] ** 2, dimsA[2] ** 2, dimsA[3] ** 2, dimsA[4] ** 2))
 
     # C--10--T1--2
@@ -1026,15 +1067,22 @@ def rdm2x2_up_triangle(coord, state, env, operator=None, sym_pos_def=False, verb
     # ----- building C2x2_RU ----------------------------------------------------
     vec = (1, 0)
     shitf_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
-    C = env.C[(shitf_coord, (1, -1))]
-    T1 = env.T[(shitf_coord, (1, 0))]
-    T2 = env.T[(shitf_coord, (0, -1))]
+    if force_cpu:
+        C = env.C[(shitf_coord, (1, -1))].cpu()
+        T1 = env.T[(shitf_coord, (1, 0))].cpu()
+        T2 = env.T[(shitf_coord, (0, -1))].cpu()
+        a_1layer = state.site(shitf_coord).cpu()
+    else:
+        C = env.C[(shitf_coord, (1, -1))]
+        T1 = env.T[(shitf_coord, (1, 0))]
+        T2 = env.T[(shitf_coord, (0, -1))]
+        a_1layer = state.site(shitf_coord)
     dimsA = state.site(shitf_coord).size()
     # reshape 27 = 3*3*3
-    A_reshaped = torch.zeros((3, 3, 3, dimsA[1], dimsA[2], dimsA[3], dimsA[4]), dtype=state.site(shitf_coord).dtype)
+    A_reshaped = torch.zeros((3, 3, 3, dimsA[1], dimsA[2], dimsA[3], dimsA[4]), dtype=a_1layer.dtype, device=a_1layer.device)
     for s in range(27):
         n1, n2, n3 = fmap_inv(s)
-        A_reshaped[n1, n2, n3, :, :, :, :] = state.site(shitf_coord)[s, :, :, :, :]
+        A_reshaped[n1, n2, n3, :, :, :, :] = a_1layer[s, :, :, :, :]
     # double layer tensor with sites 1 and 3 contracted
     a = contiguous(einsum('mikefgh,mjkabcd->eafbgchdij', A_reshaped, conj(A_reshaped)))
     a = view(a, (dimsA[1] ** 2, dimsA[2] ** 2, dimsA[3] ** 2, dimsA[4] ** 2, 3, 3))
@@ -1082,15 +1130,22 @@ def rdm2x2_up_triangle(coord, state, env, operator=None, sym_pos_def=False, verb
     # ----- building C2x2_RD ----------------------------------------------------
     vec = (1, 1)
     shitf_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
-    C = env.C[(shitf_coord, (1, 1))]
-    T1 = env.T[(shitf_coord, (0, 1))]
-    T2 = env.T[(shitf_coord, (1, 0))]
+    if force_cpu:
+        C = env.C[(shitf_coord, (1, 1))].cpu()
+        T1 = env.T[(shitf_coord, (0, 1))].cpu()
+        T2 = env.T[(shitf_coord, (1, 0))].cpu()
+        a_1layer = state.site(shitf_coord).cpu()
+    else:
+        C = env.C[(shitf_coord, (1, 1))]
+        T1 = env.T[(shitf_coord, (0, 1))]
+        T2 = env.T[(shitf_coord, (1, 0))]
+        a_1layer = state.site(shitf_coord)
     dimsA = state.site(shitf_coord).size()
     # reshape 27 = 3*3*3
-    A_reshaped = torch.zeros((3, 3, 3, dimsA[1], dimsA[2], dimsA[3], dimsA[4]), dtype=state.site(shitf_coord).dtype)
+    A_reshaped = torch.zeros((3, 3, 3, dimsA[1], dimsA[2], dimsA[3], dimsA[4]), dtype=a_1layer.dtype, device=a_1layer.device)
     for s in range(27):
         n1, n2, n3 = fmap_inv(s)
-        A_reshaped[n1, n2, n3, :, :, :, :] = state.site(shitf_coord)[s, :, :, :, :]
+        A_reshaped[n1, n2, n3, :, :, :, :] = a_1layer[s, :, :, :, :]
     # double layer tensor with sites 2 and 3 contracted
     a = contiguous(einsum('mikefgh,nikabcd->eafbgchdmn', A_reshaped, conj(A_reshaped)))
     a = view(a, (dimsA[1] ** 2, dimsA[2] ** 2, dimsA[3] ** 2, dimsA[4] ** 2, 3, 3))
@@ -1128,15 +1183,22 @@ def rdm2x2_up_triangle(coord, state, env, operator=None, sym_pos_def=False, verb
     # ----- building C2x2_LD ----------------------------------------------------
     vec = (0, 1)
     shitf_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
-    C = env.C[(shitf_coord, (-1, 1))]
-    T1 = env.T[(shitf_coord, (-1, 0))]
-    T2 = env.T[(shitf_coord, (0, 1))]
-    dimsA = state.site(shitf_coord).size()
+    if force_cpu:
+        C = env.C[(shitf_coord, (-1, 1))].cpu()
+        T1 = env.T[(shitf_coord, (-1, 0))].cpu()
+        T2 = env.T[(shitf_coord, (0, 1))].cpu()
+        a_1layer = state.site(shitf_coord).cpu()
+    else:
+        C = env.C[(shitf_coord, (1, -1))]
+        T1 = env.T[(shitf_coord, (-1, 0))]
+        T2 = env.T[(shitf_coord, (0, 1))]
+        a_1layer = state.site(shitf_coord)
+    dimsA = a_1layer.size()
     # reshape 27 = 3*3*3
-    A_reshaped = torch.zeros((3, 3, 3, dimsA[1], dimsA[2], dimsA[3], dimsA[4]), dtype=state.site(shitf_coord).dtype)
+    A_reshaped = torch.zeros((3, 3, 3, dimsA[1], dimsA[2], dimsA[3], dimsA[4]), dtype=a_1layer.dtype, device=a_1layer.device)
     for s in range(27):
         n1, n2, n3 = fmap_inv(s)
-        A_reshaped[n1, n2, n3, :, :, :, :] = state.site(shitf_coord)[s, :, :, :, :]
+        A_reshaped[n1, n2, n3, :, :, :, :] = a_1layer[s, :, :, :, :]
     # double layer tensor with sites 1 and 2 contracted
     a = contiguous(einsum('mikefgh,milabcd->eafbgchdkl', A_reshaped, conj(A_reshaped)))
     a = view(a, (dimsA[1] ** 2, dimsA[2] ** 2, dimsA[3] ** 2, dimsA[4] ** 2, 3, 3))
@@ -1210,20 +1272,26 @@ def rdm2x2_up_triangle(coord, state, env, operator=None, sym_pos_def=False, verb
     return rdm
 
 
-def rdm2x2_dn_triangle(coord, state, env, operator=None, sym_pos_def=False, verbosity=0):
+def rdm2x2_dn_triangle(coord, state, env, operator=None, sym_pos_def=False, force_cpu=False, verbosity=0):
     who = 'rdm2x2_dn_triangle'
     # ----- building C2x2_LU ----------------------------------------------------
-    C = env.C[(state.vertexToSite(coord), (-1, -1))]
-    T1 = env.T[(state.vertexToSite(coord), (0, -1))]
-    T2 = env.T[(state.vertexToSite(coord), (-1, 0))]
-
-    dimsA = state.site(coord).size()
+    if force_cpu:
+        C = env.C[(state.vertexToSite(coord), (-1, -1))].cpu()
+        T1 = env.T[(state.vertexToSite(coord), (0, -1))].cpu()
+        T2 = env.T[(state.vertexToSite(coord), (-1, 0))].cpu()
+        a_1layer = state.site(coord).cpu()
+    else:
+        C = env.C[(state.vertexToSite(coord), (-1, -1))]
+        T1 = env.T[(state.vertexToSite(coord), (0, -1))]
+        T2 = env.T[(state.vertexToSite(coord), (-1, 0))]
+        a_1layer = state.site(coord)
+    dimsA = a_1layer.size()
     if operator == None:
-        a = contiguous(einsum('mefgh,nabcd->eafbgchdmn', state.site(coord), conj(state.site(coord))))
+        a = contiguous(einsum('mefgh,nabcd->eafbgchdmn', a_1layer, conj(a_1layer)))
         a = view(a, (dimsA[1] ** 2, dimsA[2] ** 2, dimsA[3] ** 2, dimsA[4] ** 2, dimsA[0], dimsA[0]))
     else:
         # fuse the three d indices into a single d^3 index
-        operator_matrixform = torch.zeros((dimsA[0], dimsA[0]), dtype=torch.complex128)
+        operator_matrixform = torch.zeros((dimsA[0], dimsA[0]), dtype=torch.complex128, device=operator.device)
         for n1 in range(3):
             for n2 in range(3):
                 for n3 in range(3):
@@ -1233,7 +1301,7 @@ def rdm2x2_dn_triangle(coord, state, env, operator=None, sym_pos_def=False, verb
                                 operator_matrixform[fmap(n1, n2, n3), fmap(m1, m2, m3)] = operator[
                                     n1, n2, n3, m1, m2, m3]
         a = contiguous(
-            einsum('mefgh,mn,nabcd->eafbgchd', state.site(coord), operator_matrixform, conj(state.site(coord))))
+            einsum('mefgh,mn,nabcd->eafbgchd', a_1layer, operator_matrixform, conj(a_1layer)))
         a = view(a, (dimsA[1] ** 2, dimsA[2] ** 2, dimsA[3] ** 2, dimsA[4] ** 2))
 
     # C--10--T1--2
@@ -1267,11 +1335,18 @@ def rdm2x2_dn_triangle(coord, state, env, operator=None, sym_pos_def=False, verb
     # ----- building C2x2_RU ----------------------------------------------------
     vec = (1, 0)
     shitf_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
-    C = env.C[(shitf_coord, (1, -1))]
-    T1 = env.T[(shitf_coord, (1, 0))]
-    T2 = env.T[(shitf_coord, (0, -1))]
-    dimsA = state.site(shitf_coord).size()
-    a = contiguous(einsum('mefgh,mabcd->eafbgchd', state.site(shitf_coord), conj(state.site(shitf_coord))))
+    if force_cpu:
+        C = env.C[(shitf_coord, (1, -1))].cpu()
+        T1 = env.T[(shitf_coord, (1, 0))].cpu()
+        T2 = env.T[(shitf_coord, (0, -1))].cpu()
+        a_1layer = state.site(shitf_coord).cpu()
+    else:
+        C = env.C[(shitf_coord, (1, -1))]
+        T1 = env.T[(shitf_coord, (1, 0))]
+        T2 = env.T[(shitf_coord, (0, -1))]
+        a_1layer = state.site(shitf_coord)
+    dimsA = a_1layer.size()
+    a = contiguous(einsum('mefgh,mabcd->eafbgchd', a_1layer, conj(a_1layer)))
     a = view(a, (dimsA[1] ** 2, dimsA[2] ** 2, dimsA[3] ** 2, dimsA[4] ** 2))
 
     # 0--C
@@ -1315,11 +1390,18 @@ def rdm2x2_dn_triangle(coord, state, env, operator=None, sym_pos_def=False, verb
     # ----- building C2x2_RD ----------------------------------------------------
     vec = (1, 1)
     shitf_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
-    C = env.C[(shitf_coord, (1, 1))]
-    T1 = env.T[(shitf_coord, (0, 1))]
-    T2 = env.T[(shitf_coord, (1, 0))]
-    dimsA = state.site(shitf_coord).size()
-    a = contiguous(einsum('mefgh,mabcd->eafbgchd', state.site(shitf_coord), conj(state.site(shitf_coord))))
+    if force_cpu:
+        C = env.C[(shitf_coord, (1, 1))].cpu()
+        T1 = env.T[(shitf_coord, (0, 1))].cpu()
+        T2 = env.T[(shitf_coord, (1, 0))].cpu()
+        a_1layer = state.site(shitf_coord).cpu()
+    else:
+        C = env.C[(shitf_coord, (1, 1))]
+        T1 = env.T[(shitf_coord, (0, 1))]
+        T2 = env.T[(shitf_coord, (1, 0))]
+        a_1layer = state.site(shitf_coord)
+    dimsA = a_1layer.size()
+    a = contiguous(einsum('mefgh,mabcd->eafbgchd', a_1layer, conj(a_1layer)))
     a = view(a, (dimsA[1] ** 2, dimsA[2] ** 2, dimsA[3] ** 2, dimsA[4] ** 2))
 
     #	1<-0		0
@@ -1355,11 +1437,18 @@ def rdm2x2_dn_triangle(coord, state, env, operator=None, sym_pos_def=False, verb
     # ----- building C2x2_LD ----------------------------------------------------
     vec = (0, 1)
     shitf_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
-    C = env.C[(shitf_coord, (-1, 1))]
-    T1 = env.T[(shitf_coord, (-1, 0))]
-    T2 = env.T[(shitf_coord, (0, 1))]
-    dimsA = state.site(shitf_coord).size()
-    a = contiguous(einsum('mefgh,mabcd->eafbgchd', state.site(shitf_coord), conj(state.site(shitf_coord))))
+    if force_cpu:
+        C = env.C[(shitf_coord, (-1, 1))].cpu()
+        T1 = env.T[(shitf_coord, (-1, 0))].cpu()
+        T2 = env.T[(shitf_coord, (0, 1))].cpu()
+        a_1layer = state.site(shitf_coord).cpu()
+    else:
+        C = env.C[(shitf_coord, (-1, 1))]
+        T1 = env.T[(shitf_coord, (-1, 0))]
+        T2 = env.T[(shitf_coord, (0, 1))]
+        a_1layer = state.site(shitf_coord)
+    dimsA = a_1layer.size()
+    a = contiguous(einsum('mefgh,mabcd->eafbgchd', a_1layer, conj(a_1layer)))
     a = view(a, (dimsA[1] ** 2, dimsA[2] ** 2, dimsA[3] ** 2, dimsA[4] ** 2))
 
     # 0->1
@@ -1522,14 +1611,13 @@ def rdm2x2_nnn_3(coord, state, env, operator, verbosity=0):
     return rdm
 
 
-def rdm2x2_id(coord, state, env, verbosity=0):
+def rdm2x2_id(coord, state, env, force_cpu=False, verbosity=0):
     r"""
     :param coord: vertex (x,y) specifies upper left site of 2x2 subsystem
     :param state: underlying wavefunction
     :param env: environment corresponding to ``state``
     :param verbosity: logging verbosity
-    :type co
-d: tuple(int,int)
+    :type coord: tuple(int,int)
     :type state: IPEPS
     :type env: ENV
     :type verbosity: int
@@ -1540,12 +1628,19 @@ d: tuple(int,int)
     """
     who = "rdm2x2"
     # ----- building C2x2_LU ----------------------------------------------------
-    C = env.C[(state.vertexToSite(coord), (-1, -1))]
-    T1 = env.T[(state.vertexToSite(coord), (0, -1))]
-    T2 = env.T[(state.vertexToSite(coord), (-1, 0))]
-    dimsA = state.site(coord).size()
+    if force_cpu:
+        C = env.C[(state.vertexToSite(coord), (-1, -1))].cpu()
+        T1 = env.T[(state.vertexToSite(coord), (0, -1))].cpu()
+        T2 = env.T[(state.vertexToSite(coord), (-1, 0))].cpu()
+        a_1layer = state.site(coord).cpu()
+    else:
+        C = env.C[(state.vertexToSite(coord), (-1, -1))]
+        T1 = env.T[(state.vertexToSite(coord), (0, -1))]
+        T2 = env.T[(state.vertexToSite(coord), (-1, 0))]
+        a_1layer = state.site(coord)
+    dimsA = a_1layer.size()
     # contract all physical sites of this unit cell (index m)
-    a = contiguous(einsum('mefgh,mabcd->eafbgchd', state.site(coord), conj(state.site(coord))))
+    a = contiguous(einsum('mefgh,mabcd->eafbgchd', a_1layer, conj(a_1layer)))
     a = view(a, (dimsA[1] ** 2, dimsA[2] ** 2, dimsA[3] ** 2, dimsA[4] ** 2))
 
     # C--10--T1--2
@@ -1579,12 +1674,19 @@ d: tuple(int,int)
     # ----- building C2x2_RU ----------------------------------------------------
     vec = (1, 0)
     shitf_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
-    C = env.C[(shitf_coord, (1, -1))]
-    T1 = env.T[(shitf_coord, (1, 0))]
-    T2 = env.T[(shitf_coord, (0, -1))]
-    dimsA = state.site(shitf_coord).size()
+    if force_cpu:
+        C = env.C[(state.vertexToSite(shitf_coord), (1, -1))].cpu()
+        T1 = env.T[(state.vertexToSite(shitf_coord), (1, 0))].cpu()
+        T2 = env.T[(state.vertexToSite(shitf_coord), (0, -1))].cpu()
+        a_1layer = state.site(shitf_coord).cpu()
+    else:
+        C = env.C[(state.vertexToSite(shitf_coord), (1, -1))]
+        T1 = env.T[(state.vertexToSite(shitf_coord), (1, 0))]
+        T2 = env.T[(state.vertexToSite(shitf_coord), (0, -1))]
+        a_1layer = state.site(shitf_coord)
+    dimsA = a_1layer.size()
     # contract all physical sites of this unit cell (index m)
-    a = contiguous(einsum('mefgh,mabcd->eafbgchd', state.site(shitf_coord), conj(state.site(shitf_coord))))
+    a = contiguous(einsum('mefgh,mabcd->eafbgchd', a_1layer, conj(a_1layer)))
     a = view(a, (dimsA[1] ** 2, dimsA[2] ** 2, dimsA[3] ** 2, dimsA[4] ** 2))
 
     # 0--C
@@ -1630,12 +1732,19 @@ d: tuple(int,int)
     # ----- building C2x2_RD ----------------------------------------------------
     vec = (1, 1)
     shitf_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
-    C = env.C[(shitf_coord, (1, 1))]
-    T1 = env.T[(shitf_coord, (0, 1))]
-    T2 = env.T[(shitf_coord, (1, 0))]
-    dimsA = state.site(shitf_coord).size()
+    if force_cpu:
+        C = env.C[(state.vertexToSite(shitf_coord), (1, 1))].cpu()
+        T1 = env.T[(state.vertexToSite(shitf_coord), (0, 1))].cpu()
+        T2 = env.T[(state.vertexToSite(shitf_coord), (1, 0))].cpu()
+        a_1layer = state.site(shitf_coord).cpu()
+    else:
+        C = env.C[(state.vertexToSite(shitf_coord), (1, 1))]
+        T1 = env.T[(state.vertexToSite(shitf_coord), (0, 1))]
+        T2 = env.T[(state.vertexToSite(shitf_coord), (1, 0))]
+        a_1layer = state.site(shitf_coord)
+    dimsA = a_1layer.size()
     # contract all physical sites of this unit cell (index m)
-    a = contiguous(einsum('mefgh,mabcd->eafbgchd', state.site(shitf_coord), conj(state.site(shitf_coord))))
+    a = contiguous(einsum('mefgh,mabcd->eafbgchd', a_1layer, conj(a_1layer)))
     a = view(a, (dimsA[1] ** 2, dimsA[2] ** 2, dimsA[3] ** 2, dimsA[4] ** 2))
 
     #	 1<-0	   	0
@@ -1671,12 +1780,19 @@ d: tuple(int,int)
     # ----- building C2x2_LD ----------------------------------------------------
     vec = (0, 1)
     shitf_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
-    C = env.C[(shitf_coord, (-1, 1))]
-    T1 = env.T[(shitf_coord, (-1, 0))]
-    T2 = env.T[(shitf_coord, (0, 1))]
-    dimsA = state.site(shitf_coord).size()
+    if force_cpu:
+        C = env.C[(state.vertexToSite(shitf_coord), (-1, 1))].cpu()
+        T1 = env.T[(state.vertexToSite(shitf_coord), (-1, 0))].cpu()
+        T2 = env.T[(state.vertexToSite(shitf_coord), (0, 1))].cpu()
+        a_1layer = state.site(shitf_coord).cpu()
+    else:
+        C = env.C[(state.vertexToSite(shitf_coord), (-1, 1))]
+        T1 = env.T[(state.vertexToSite(shitf_coord), (-1, 0))]
+        T2 = env.T[(state.vertexToSite(shitf_coord), (0, 1))]
+        a_1layer = state.site(shitf_coord)
+    dimsA = a_1layer.size()
     # contract all physical sites of this unit cell (index m)
-    a = contiguous(einsum('mefgh,mabcd->eafbgchd', state.site(shitf_coord), conj(state.site(shitf_coord))))
+    a = contiguous(einsum('mefgh,mabcd->eafbgchd', a_1layer, conj(a_1layer)))
     a = view(a, (dimsA[1] ** 2, dimsA[2] ** 2, dimsA[3] ** 2, dimsA[4] ** 2))
 
     # 0->1

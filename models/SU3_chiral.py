@@ -100,14 +100,14 @@ class SU3_CHIRAL():
             vNNN3 = rdm.rdm2x2_nnn_3((0, 0), state, env, operator=exchange_bond)
             return torch.real(self.j2 * (vNNN1 + vNNN2 + vNNN3) / norm_wf)
 
-    def energy_triangle_dn(self, state, env):
+    def energy_triangle_dn(self, state, env, force_cpu=False):
         norm_wf = rdm.rdm2x2_id((0, 0), state, env)
-        e_dn = rdm.rdm2x2_dn_triangle((0, 0), state, env, operator=self.h_triangle) / norm_wf
+        e_dn = rdm.rdm2x2_dn_triangle((0, 0), state, env, operator=self.h_triangle, force_cpu=force_cpu) / norm_wf
         return torch.real(e_dn)
 
-    def energy_triangle_up(self, state, env):
+    def energy_triangle_up(self, state, env, force_cpu=False):
         norm_wf = rdm.rdm2x2_id((0, 0), state, env)
-        e_up = rdm.rdm2x2_up_triangle((0, 0), state, env, operator=self.h_triangle) / norm_wf
+        e_up = rdm.rdm2x2_up_triangle((0, 0), state, env, operator=self.h_triangle, force_cpu=force_cpu) / norm_wf
         return torch.real(e_up)
 
     # Observables
