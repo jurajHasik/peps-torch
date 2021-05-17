@@ -48,7 +48,7 @@ def main():
     coeffs = {(0, 0): torch.tensor([1.0000, -0.8699,  1.5465,  0.0000,  0.0000,  0.0000,  0.0000,  1.0000,
          1.4435,  0.0000], dtype=torch.float64)}
     # define which coefficients will be added a noise
-    var_coeffs_allowed = torch.tensor([0, 1, 1, 1, 1, 0, 0, 0, 1, 0], dtype=torch.float64)
+    var_coeffs_allowed = torch.tensor([0, 1, 1, 1, 1, 0, 0, 0, 1, 0], dtype=torch.float64, device=args.GLOBALARGS_device)
     #var_coeffs_allowed = torch.tensor([0, 0, 0, 0, 0, 1, 1, 1, 1, 1], dtype=torch.float64)
     state = IPEPS_U1SYM(elementary_tensors, coeffs, var_coeffs_allowed)
     state.add_noise(args.instate_noise)
