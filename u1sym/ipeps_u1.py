@@ -163,6 +163,8 @@ class IPEPS_U1SYM(ipeps.IPEPS):
         # Edited for SU(3) chiral CSL Kagome
         (M0, M1, M2, M3, M4, M5, M6, L0, L1, L2) = self.sym_tensors
         (m0, m1, m2, m3, m4, m5, m6, l0, l1, l2) = self.coeffs[(0, 0)]
+        print(M0.device)
+        print(m0.device)
         # trivalent tensor M
         M_tensor = m0 * M0 + m1 * M1 + m2 * M2 + m3 * M3 + m4 * M4 + m5 * M5 + m6 * M6
         # bivalent tensor L
