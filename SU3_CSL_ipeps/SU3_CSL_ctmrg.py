@@ -44,7 +44,7 @@ def main():
     for name in ['S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'L0', 'L1', 'L2']:
         tens = load_SU3_tensor(name)
         tens = tens.to(t_device)
-        if name in ['aS0', 'aS1', 'aS2', 'aL2']:
+        if name in ['S0', 'S1', 'S2', 'L2']:
             elementary_tensors.append(1j * tens)
         else:
             elementary_tensors.append(tens)
