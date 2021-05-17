@@ -112,6 +112,8 @@ class IPEPS():
         self.device= global_args.device
 
         for coord,site in sites.items():
+            print(site.device)
+            print(torch.device(self.device))
             assert site.dtype==self.dtype,"dtype of site "+str(coord)+" and IPEPS does not match"
             assert site.device==torch.device(self.device),\
                 "device of site "+str(coord)+" and IPEPS does not match"
