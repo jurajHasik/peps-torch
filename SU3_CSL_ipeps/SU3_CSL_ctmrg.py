@@ -34,10 +34,17 @@ def main():
     torch.set_num_threads(args.omp_cores)
     torch.manual_seed(args.seed)
 
+    if args.GLOBALARGS_device == "cpu":
+        t_device = "cpu"
+    else:
+        t_device = torch.device(args.GLOBALARGS_device)
+
     # Import all elementary tensors and build initial state
     elementary_tensors = []
     for name in ['S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'L0', 'L1', 'L2']:
         tens = load_SU3_tensor(name)
+        tens = tens.to(t_device)
+        print(tens.device)
         if name in ['aS0', 'aS1', 'aS2', 'aL2']:
             elementary_tensors.append(1j * tens)
         else:
@@ -46,9 +53,9 @@ def main():
     #coeffs = {(0, 0): torch.tensor([1.0000,  0.3563,  4.4882, -0.3494, -3.9341, 0., 0., 1.0000, 0.2429, 0.], dtype=torch.float64)}
     #coeffs = {(0,0): torch.tensor([1.,0.,0.,0.,0.,0.,0.,1.,0.,0.], dtype=torch.float64)}
     coeffs = {(0, 0): torch.tensor([1.0000, -0.8699,  1.5465,  0.0000,  0.0000,  0.0000,  0.0000,  1.0000,
-         1.4435,  0.0000], dtype=torch.float64, device=args.GLOBALARGS_device)}
+         1.4435,  0.0000], dtype=torch.float64, device=t_device)}
     # define which coefficients will be added a noise
-    var_coeffs_allowed = torch.tensor([0, 1, 1, 1, 1, 0, 0, 0, 1, 0], dtype=torch.float64, device=args.GLOBALARGS_device)
+    var_coeffs_allowed = torch.tensor([0, 1, 1, 1, 1, 0, 0, 0, 1, 0], dtype=torch.float64, device=t_device)
     #var_coeffs_allowed = torch.tensor([0, 0, 0, 0, 0, 1, 1, 1, 1, 1], dtype=torch.float64)
     state = IPEPS_U1SYM(elementary_tensors, coeffs, var_coeffs_allowed)
     state.add_noise(args.instate_noise)
