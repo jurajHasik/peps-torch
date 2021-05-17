@@ -176,7 +176,7 @@ class IPEPS_U1SYM(ipeps.IPEPS):
         a_tensor_temp = torch.einsum('abi,uij,jkl,vkc,wld->uvwabcd', M_tensor, L_tensor, M_tensor, L_tensor, L_tensor)
         print(a_tensor_temp.device)
         # reshape to a single d=27 index
-        a_tensor = torch.zeros((27, 7, 7, 7, 7), dtype=torch.complex128, device = self.device)
+        a_tensor = torch.zeros((27, 7, 7, 7, 7), dtype=torch.complex128, device = a_tensor_temp.device)
         for si in range(27):
             n1, n2, n3 = fmap_inv(si)
             a_tensor[si, :, :, :, :] = a_tensor_temp[n1, n2, n3, :, :, :, :]
