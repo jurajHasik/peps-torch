@@ -1077,7 +1077,7 @@ def rdm2x2_up_triangle(coord, state, env, operator=None, sym_pos_def=False, forc
         T1 = env.T[(shitf_coord, (1, 0))]
         T2 = env.T[(shitf_coord, (0, -1))]
         a_1layer = state.site(shitf_coord)
-    dimsA = state.site(shitf_coord).size()
+    dimsA = a_1layer.size()
     # reshape 27 = 3*3*3
     A_reshaped = torch.zeros((3, 3, 3, dimsA[1], dimsA[2], dimsA[3], dimsA[4]), dtype=a_1layer.dtype, device=a_1layer.device)
     for s in range(27):
@@ -1140,7 +1140,7 @@ def rdm2x2_up_triangle(coord, state, env, operator=None, sym_pos_def=False, forc
         T1 = env.T[(shitf_coord, (0, 1))]
         T2 = env.T[(shitf_coord, (1, 0))]
         a_1layer = state.site(shitf_coord)
-    dimsA = state.site(shitf_coord).size()
+    dimsA = a_1layer.size()
     # reshape 27 = 3*3*3
     A_reshaped = torch.zeros((3, 3, 3, dimsA[1], dimsA[2], dimsA[3], dimsA[4]), dtype=a_1layer.dtype, device=a_1layer.device)
     for s in range(27):
@@ -1189,7 +1189,7 @@ def rdm2x2_up_triangle(coord, state, env, operator=None, sym_pos_def=False, forc
         T2 = env.T[(shitf_coord, (0, 1))].cpu()
         a_1layer = state.site(shitf_coord).cpu()
     else:
-        C = env.C[(shitf_coord, (1, -1))]
+        C = env.C[(shitf_coord, (-1, 1))]
         T1 = env.T[(shitf_coord, (-1, 0))]
         T2 = env.T[(shitf_coord, (0, 1))]
         a_1layer = state.site(shitf_coord)
