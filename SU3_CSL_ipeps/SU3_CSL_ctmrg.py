@@ -64,8 +64,8 @@ def main():
     model = SU3_chiral.SU3_CHIRAL(theta=args.theta, j1=args.j1, j2=args.j2)
 
     def energy_f(state, env):
-        e_dn = model.energy_triangle_dn(state, env, False)
-        e_up = model.energy_triangle_up(state, env, False)
+        e_dn = model.energy_triangle_dn(state, env, force_cpu=False)
+        e_up = model.energy_triangle_up(state, env, force_cpu=False)
         e_nnn = model.energy_nnn(state, env)
         return (e_up + e_dn + e_nnn) / 3
 
