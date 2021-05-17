@@ -53,7 +53,7 @@ def main():
     #coeffs = {(0,0): torch.tensor([1.,0.,0.,0.,0.,0.,0.,1.,0.,0.], dtype=torch.float64, device=t_device)} # AKLT state
     #coeffs = {(0, 0): torch.tensor([1.0000, -0.8699,  1.5465,  0.0000,  0.0000,  0.0000,  0.0000,  1.0000,
     #     1.4435,  0.0000], dtype=torch.float64, device=t_device)} # for J1=1.2, no ctmrg convergence
-    coeffs = {(0, 0): torch.tensor([1.0000, -0.4633,  2.8641,  0.4433,  2.2301,  0.0000,  0.0000,  1.0000,
+    coeffs = {(0, 0): torch.tensor([1.0000, -0.4633,  2.8642,  0.4433,  2.2300,  0.0000,  0.0000,  1.0000,
          0.6117,  0.0000], dtype=torch.float64, device=t_device)} # for J1=0, theta = 0.45*pi, problem with svd convergence during ctmrg
     # define which coefficients will be added a noise
     var_coeffs_allowed = torch.tensor([0, 1, 1, 1, 1, 0, 0, 0, 1, 0], dtype=torch.float64, device=t_device)
@@ -64,8 +64,8 @@ def main():
     model = SU3_chiral.SU3_CHIRAL(theta=args.theta, j1=args.j1, j2=args.j2)
 
     def energy_f(state, env):
-        e_dn = model.energy_triangle_dn(state, env)
-        e_up = model.energy_triangle_up(state, env)
+        e_dn = model.energy_triangle_dn(state, env, False)
+        e_up = model.energy_triangle_up(state, env, False)
         e_nnn = model.energy_nnn(state, env)
         return (e_up + e_dn + e_nnn) / 3
 
@@ -104,8 +104,8 @@ def main():
     ctm_env_final, *ctm_log = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
 
     # energy per site
-    e_dn_final = model.energy_triangle_dn(state, ctm_env_final, force_cpu=True)
-    e_up_final = model.energy_triangle_up(state, ctm_env_final, force_cpu=True)
+    e_dn_final = model.energy_triangle_dn(state, ctm_env_final, force_cpu=False)
+    e_up_final = model.energy_triangle_up(state, ctm_env_final, force_cpu=False)
     e_nnn_final = model.energy_nnn(state, ctm_env_final)
     e_tot_final = (e_dn_final + e_up_final + e_nnn_final)/3
 
