@@ -80,8 +80,7 @@ def main():
             print("{:2} {:01.14f}        {:2} {:01.14f}        {:2} {:01.14f}        {:2} {:01.14f}".format(i, spectra[0][1][i], i, spectra[1][1][i], i, spectra[2][1][i], i, spectra[3][1][i]))
 
 
-    # ???
-    # @torch.no_grad()
+    @torch.no_grad()
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
             history = []

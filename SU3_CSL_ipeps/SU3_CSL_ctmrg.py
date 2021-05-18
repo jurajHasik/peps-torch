@@ -8,7 +8,7 @@ from u1sym.ipeps_u1 import IPEPS_U1SYM
 from read_write_SU3_tensors import *
 from models import SU3_chiral
 from ctm.generic.env import *
-from ctm.generic import ctmrg
+from ctm.generic import ctmrg, transferops
 from ctm.generic import rdm
 import json
 import unittest
@@ -79,6 +79,13 @@ def main():
         print(f"\n\nspectrum C[{spectra[0][0]}]             spectrum C[{spectra[1][0]}]             spectrum C[{spectra[2][0]}]             spectrum C[{spectra[3][0]}] ")
         for i in range(args.chi):
             print("{:2} {:01.14f}        {:2} {:01.14f}        {:2} {:01.14f}        {:2} {:01.14f}".format(i, spectra[0][1][i], i, spectra[1][1][i], i, spectra[2][1][i], i, spectra[3][1][i]))
+
+        site_dir_list = [((0, 0), (1, 0)), ((0, 0), (0, 1))]
+        for sdp in site_dir_list:
+            print(f"\n\nspectrum(T)[{sdp[0]},{sdp[1]}]")
+            l = transferops.get_Top_spec(args.top_n, *sdp, state, env)
+            for i in range(l.size()[0]):
+                print(f"{i} {l[i, 0]} {l[i, 1]}")
 
 
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
