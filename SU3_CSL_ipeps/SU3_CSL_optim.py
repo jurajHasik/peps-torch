@@ -62,6 +62,7 @@ def main():
         e_nnn = model.energy_nnn(state, env)
         return (e_up + e_dn + e_nnn) / 3
 
+    # ???
     # @torch.no_grad()
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
