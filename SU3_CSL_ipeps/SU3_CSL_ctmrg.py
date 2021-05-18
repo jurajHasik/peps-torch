@@ -33,11 +33,7 @@ def main():
     print('\n')
     torch.set_num_threads(args.omp_cores)
     torch.manual_seed(args.seed)
-
-    if args.GLOBALARGS_device == "cpu":
-        t_device = "cpu"
-    else:
-        t_device = torch.device(args.GLOBALARGS_device)
+    t_device = torch.device(args.GLOBALARGS_device)
 
     # Import all elementary tensors and build initial state
     elementary_tensors = []
