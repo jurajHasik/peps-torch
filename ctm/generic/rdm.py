@@ -1269,6 +1269,8 @@ def rdm2x2_up_triangle(coord, state, env, operator=None, sym_pos_def=False, forc
         # contract the 3-site operator with the rdm
         value_operator = einsum('ikmjln,ikmjln->', rdm, operator)
         rdm = value_operator
+
+    rdm = rdm.to(env.device)
     return rdm
 
 
@@ -1501,6 +1503,8 @@ def rdm2x2_dn_triangle(coord, state, env, operator=None, sym_pos_def=False, forc
 
     if operator == None:
         rdm = _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
+
+    rdm = rdm.to(env.device)
     return rdm
 
 
