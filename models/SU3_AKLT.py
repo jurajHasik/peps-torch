@@ -100,7 +100,7 @@ class SU3_AKLT():
 					P_upm[n1,n2,n3,n2,n3,n1] = 1.		
 		# contract rho3 and the operator
 		P_op = P_up + P_upm
-		norm_wf = rdm.rdm2x2_up_triangle_id((0,0), state, env)
+		norm_wf = rdm.rdm2x2_id((0,0), state, env)
 		energy = rdm.rdm2x2_up_triangle((0,0), state, env, operator = P_op)
 		return(2/3*energy/norm_wf)
 		
