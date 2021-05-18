@@ -56,9 +56,9 @@ def main():
 
     model = SU3_chiral.SU3_CHIRAL(theta=math.pi * args.frac_theta / 100.0, j1=args.j1, j2=args.j2)
 
-    def energy_f(state, env):
-        e_dn = model.energy_triangle_dn(state, env, force_cpu=False)
-        e_up = model.energy_triangle_up(state, env, force_cpu=False)
+    def energy_f(state, env, force_cpu=False):
+        e_dn = model.energy_triangle_dn(state, env, force_cpu=force_cpu)
+        e_up = model.energy_triangle_up(state, env, force_cpu=force_cpu)
         e_nnn = model.energy_nnn(state, env)
         return (e_up + e_dn + e_nnn) / 3
 
@@ -89,7 +89,7 @@ def main():
         e_nnn = model.energy_nnn(state, env)
         e_curr = (e_up + e_dn + e_nnn) / 3
         history.append(e_curr.item())
-        print_corner_spectra(env)
+        #print_corner_spectra(env)
         print(f'Step n°{len(history)}    E_site ={e_curr.item()}   (E_up={e_up.item()}, E_dn={e_dn.item()})')
         if (len(history) > 1 and abs(history[-1] - history[-2]) < ctm_args.ctm_conv_tol) \
                 or len(history) >= ctm_args.ctm_max_iter:
@@ -109,18 +109,24 @@ def main():
         if opt_args.opt_ctm_reinit:
             init_env(state, ctm_env_in)
         # compute environment by CTMRG
-        ctm_env_out, history, t_ctm, t_obs = ctmrg.run(state, ctm_env_in, conv_check=ctmrg_conv_energy,
-                                                       ctm_args=ctm_args)
-        loss = energy_f(state, ctm_env_out)
-        timings = (t_ctm, t_obs)
+        ctm_env_out, history, t_ctm, t_obs = ctmrg.run(state, ctm_env_in, conv_check=ctmrg_conv_energy, ctm_args=ctm_args)
+        loss0 = energy_f(state, ctm_env_out, force_cpu=cfg.ctm_args.conv_check_cpu)
+
+        loc_ctm_args = copy.deepcopy(ctm_args)
+        loc_ctm_args.ctm_max_iter = 1
+        ctm_env_out, history1, t_ctm1, t_obs1 = ctmrg.run(state, ctm_env_out, ctm_args=loc_ctm_args)
+        loss1 = energy_f(state, ctm_env_out, force_cpu=cfg.ctm_args.conv_check_cpu)
+
+        timings = (t_ctm+t_ctm1, t_obs+t_obs1)
+        loss = torch.max(loss0, loss1)
         return loss, ctm_env_out, history, timings
 
     optimize_state(state, ctm_env_init, loss_fn)
     ctm_env_final, *ctm_log = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
 
     # energy per site
-    e_dn_final = model.energy_triangle_dn(state, ctm_env_final, force_cpu=False)
-    e_up_final = model.energy_triangle_up(state, ctm_env_final, force_cpu=False)
+    e_dn_final = model.energy_triangle_dn(state, ctm_env_final, force_cpu=cfg.ctm_args.conv_check_cpu)
+    e_up_final = model.energy_triangle_up(state, ctm_env_final, force_cpu=cfg.ctm_args.conv_check_cpu)
     e_nnn_final = model.energy_nnn(state, ctm_env_final)
     e_tot_final = (e_dn_final + e_up_final + e_nnn_final) / 3
 
