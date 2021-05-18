@@ -105,7 +105,7 @@ class IPEPS_U1SYM(ipeps.IPEPS):
         self.coeffs = OrderedDict(coeffs)
         if var_coeffs_allowed == None:
             # all coefficients are allowed to move (default)
-            self.var_coeffs_allowed = (1 + 1j) * torch.ones(self.coeffs[(0, 0)].size())
+            self.var_coeffs_allowed = torch.ones(self.coeffs[(0, 0)].size())
         else:
             # only the selected coeffs are allowed to move
             self.var_coeffs_allowed = var_coeffs_allowed
@@ -162,7 +162,7 @@ class IPEPS_U1SYM(ipeps.IPEPS):
         self.sites = self.build_onsite_tensors()
 
     def build_onsite_tensors(self):
-        # Edited for SU(3) chiral CSL Kagome
+        # written for SU(3) chiral CSL Kagome
         (M0, M1, M2, M3, M4, M5, M6, L0, L1, L2) = self.sym_tensors
         (m0, m1, m2, m3, m4, m5, m6, l0, l1, l2) = self.coeffs[(0, 0)]
         # trivalent tensor M
@@ -170,7 +170,7 @@ class IPEPS_U1SYM(ipeps.IPEPS):
         # bivalent tensor L
         L_tensor = l0 * L0 + l1 * L1 + l2 * L2
         # square-lattice tensor with 3 physical indices (d=3)
-        a_tensor_temp = torch.einsum('abi,uij,jkl,vkc,wld->uvwabcd', M_tensor, L_tensor, M_tensor, L_tensor, L_tensor)
+        a_tensor_temp = torch.einsum('iab,uji,jkl,vkc,wld->uvwabcd', M_tensor, L_tensor, M_tensor, L_tensor, L_tensor)
         # reshape to a single d=27 index
         a_tensor = torch.zeros((27, 7, 7, 7, 7), dtype=torch.complex128, device = a_tensor_temp.device)
         for si in range(27):
