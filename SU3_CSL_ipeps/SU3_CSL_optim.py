@@ -71,6 +71,13 @@ def main():
         e_nnn = model.energy_nnn(state, env)
         e_curr = (e_up + e_dn + e_nnn) / 3
         history.append(e_curr.item())
+
+        for c_loc,c_ten in env.C.items():
+            u,s,v= torch.svd(c_ten, compute_uv=False)
+            print(f"\n\nspectrum C[{c_loc}]")
+            for i in range(args.chi):
+                print(f"{i} {s[i]}")
+
         print(f'Step n°{len(history)}    E_site ={e_curr.item()}   (E_up={e_up.item()}, E_dn={e_dn.item()})')
         if (len(history) > 1 and abs(history[-1] - history[-2]) < ctm_args.ctm_conv_tol) \
                 or len(history) >= ctm_args.ctm_max_iter:
