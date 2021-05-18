@@ -100,7 +100,7 @@ def main():
 
     ctm_env_init = ENV(args.chi, state)
     init_env(state, ctm_env_init)
-    # print_corner_spectra(ctm_env_init)
+    print_corner_spectra(ctm_env_init)
 
     # energy per site
     #e_dn_init = model.energy_triangle_dn(state, ctm_env_init)
