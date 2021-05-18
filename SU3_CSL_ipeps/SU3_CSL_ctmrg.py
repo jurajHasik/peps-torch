@@ -45,8 +45,8 @@ def main():
         else:
             elementary_tensors.append(tens)
     # define initial coefficients
-    coeffs = {(0, 0): torch.tensor([1.0000,  0.3563,  4.4882, -0.3494, -3.9341, 0., 0., 1.0000, 0.2429, 0.], dtype=torch.float64, device=t_device)} # Ji-yao's ground state for theta=pi/4
-    #coeffs = {(0,0): torch.tensor([1.,0.,0.,0.,0.,0.,0.,1.,0.,0.], dtype=torch.float64, device=t_device)} # AKLT state
+    # coeffs = {(0, 0): torch.tensor([1.0000,  0.3563,  4.4882, -0.3494, -3.9341, 0., 0., 1.0000, 0.2429, 0.], dtype=torch.float64, device=t_device)} # Ji-yao's ground state for theta=pi/4
+    coeffs = {(0,0): torch.tensor([1.,0.,0.,0.,0.,0.,0.,1.,0.,0.], dtype=torch.float64, device=t_device)} # AKLT state
     #coeffs = {(0, 0): torch.tensor([1.0000, -0.8699,  1.5465,  0.0000,  0.0000,  0.0000,  0.0000,  1.0000,
     #     1.4435,  0.0000], dtype=torch.float64, device=t_device)} # for J1=1.2, no ctmrg convergence
     # define which coefficients will be added a noise
@@ -63,6 +63,24 @@ def main():
         e_nnn = model.energy_nnn(state, env)
         return (e_up + e_dn + e_nnn) / 3
 
+    def print_corner_spectra(env):
+        spectra = []
+        for c_loc,c_ten in env.C.items():
+            u,s,v= torch.svd(c_ten, compute_uv=False)
+            if c_loc[1] == (-1, -1):
+                label = 'LU'
+            if c_loc[1] == (-1, 1):
+                label = 'LD'
+            if c_loc[1] == (1, -1):
+                label = 'RU'
+            if c_loc[1] == (1, 1):
+                label = 'RD'
+            spectra.append([label, s])
+        print(f"\n\nspectrum C[{spectra[0][0]}]             spectrum C[{spectra[1][0]}]             spectrum C[{spectra[2][0]}]             spectrum C[{spectra[3][0]}] ")
+        for i in range(args.chi):
+            print("{:2} {:01.14f}        {:2} {:01.14f}        {:2} {:01.14f}        {:2} {:01.14f}".format(i, spectra[0][1][i], i, spectra[1][1][i], i, spectra[2][1][i], i, spectra[3][1][i]))
+
+
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
             history = []
@@ -71,14 +89,8 @@ def main():
         e_nnn = model.energy_nnn(state, env)
         e_curr = (e_up + e_dn + e_nnn)/3
         history.append(e_curr.item())
+        print_corner_spectra(env)
         print(f'Step n°{len(history)}    E_site ={e_curr.item()}   (E_up={e_up.item()}, E_dn={e_dn.item()})')
-
-        for c_loc,c_ten in env.C.items():
-            u,s,v= torch.svd(c_ten, compute_uv=False)
-            print(f"\n\nspectrum C[{c_loc}]")
-            for i in range(args.chi):
-                print(f"{i} {s[i]}")
-
         if (len(history) > 1 and abs(history[-1] - history[-2]) < ctm_args.ctm_conv_tol) \
                 or len(history) >= ctm_args.ctm_max_iter:
             log.info({"history_length": len(history), "history": history})
@@ -87,6 +99,7 @@ def main():
 
     ctm_env_init = ENV(args.chi, state)
     init_env(state, ctm_env_init)
+    # print_corner_spectra(ctm_env_init)
 
     # energy per site
     #e_dn_init = model.energy_triangle_dn(state, ctm_env_init)
@@ -124,12 +137,7 @@ def main():
     # environment diagnostics
     print("\n")
     print("Final environment")
-    for c_loc, c_ten in ctm_env_final.C.items():
-        u, s, v = torch.svd(c_ten, compute_uv=False)
-        print(f"spectrum C[{c_loc}]")
-        for i in range(args.chi):
-            print(f"{i} {s[i]}")
-    print("\n")
+    print_corner_spectra(ctm_env_final)
 
 
 if __name__ == '__main__':
