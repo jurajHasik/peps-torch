@@ -75,11 +75,11 @@ def main():
         history.append(e_curr.item())
         print(f'Step n°{len(history)}    E_site ={e_curr.item()}   (E_up={e_up.item()}, E_dn={e_dn.item()})')
 
-        # for c_loc,c_ten in env.C.items():
-        #    u,s,v= torch.svd(c_ten, compute_uv=False)
-        #    print(f"\n\nspectrum C[{c_loc}]")
-        #    for i in range(args.chi):
-        #        print(f"{i} {s[i]}")
+        for c_loc,c_ten in env.C.items():
+            u,s,v= torch.svd(c_ten, compute_uv=False)
+            print(f"\n\nspectrum C[{c_loc}]")
+            for i in range(args.chi):
+                print(f"{i} {s[i]}")
 
         if (len(history) > 1 and abs(history[-1] - history[-2]) < ctm_args.ctm_conv_tol) \
                 or len(history) >= ctm_args.ctm_max_iter:
