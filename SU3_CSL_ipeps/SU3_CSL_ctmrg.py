@@ -35,22 +35,24 @@ def main():
     torch.manual_seed(args.seed)
     t_device = torch.device(args.GLOBALARGS_device)
 
-    # Import all elementary tensors and build initial state
+    # Import all elementary tensors
     elementary_tensors = []
     for name in ['S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'L0', 'L1', 'L2']:
         tens = load_SU3_tensor(name)
         tens = tens.to(t_device)
-        if name in ['aS0', 'aS1', 'aS2', 'aL2']:
+        if name in ['S0', 'S1', 'S2', 'L2']:
             elementary_tensors.append(1j * tens)
         else:
             elementary_tensors.append(tens)
+
     # define initial coefficients
     #coeffs = {(0, 0): torch.tensor([1.0000,  0.3563,  4.4882, -0.3494, -3.9341, 0., 0., 1.0000, 0.2429, 0.], dtype=torch.float64, device=t_device)} # Ji-yao's ground state for theta=pi/4
     coeffs = {(0,0): torch.tensor([1.,0.,0.,0.,0.,0.,0.,1.,0.,0.], dtype=torch.float64, device=t_device)} # AKLT state
     #coeffs = {(0, 0): torch.tensor([1.0000, -0.8699,  1.5465,  0.0000,  0.0000,  0.0000,  0.0000,  1.0000,
     #     1.4435,  0.0000], dtype=torch.float64, device=t_device)} # for J1=1.2, no ctmrg convergence
     # define which coefficients will be added a noise
-    var_coeffs_allowed = torch.tensor([0, 1, 1, 1, 1, 0, 0, 0, 1, 0], dtype=torch.float64, device=t_device)
+    var_coeffs_allowed = torch.tensor([0, 1, 1, 1, 1, 0, 0, 0, 1, 1], dtype=torch.float64, device=t_device)
+
     state = IPEPS_U1SYM(elementary_tensors, coeffs, var_coeffs_allowed)
     state.add_noise(args.instate_noise)
     print(f'Current state: {state.coeffs[(0, 0)].data}')
@@ -80,13 +82,6 @@ def main():
         for i in range(args.chi):
             print("{:2} {:01.14f}        {:2} {:01.14f}        {:2} {:01.14f}        {:2} {:01.14f}".format(i, spectra[0][1][i], i, spectra[1][1][i], i, spectra[2][1][i], i, spectra[3][1][i]))
 
-        site_dir_list = [((0, 0), (1, 0)), ((0, 0), (0, 1))]
-        for sdp in site_dir_list:
-            print(f"\n\nspectrum(T)[{sdp[0]},{sdp[1]}]")
-            l = transferops.get_Top_spec(args.top_n, *sdp, state, env)
-            for i in range(l.size()[0]):
-                print(f"{i} {l[i, 0]} {l[i, 1]}")
-
 
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
@@ -96,7 +91,7 @@ def main():
         e_nnn = model.energy_nnn(state, env)
         e_curr = (e_up + e_dn + e_nnn)/3
         history.append(e_curr.item())
-        print_corner_spectra(env)
+        #print_corner_spectra(env)
         print(f'Step n°{len(history)}    E_site ={e_curr.item()}   (E_up={e_up.item()}, E_dn={e_dn.item()})')
         if (len(history) > 1 and abs(history[-1] - history[-2]) < ctm_args.ctm_conv_tol) \
                 or len(history) >= ctm_args.ctm_max_iter:
@@ -106,7 +101,7 @@ def main():
 
     ctm_env_init = ENV(args.chi, state)
     init_env(state, ctm_env_init)
-    print_corner_spectra(ctm_env_init)
+    #print_corner_spectra(ctm_env_init)
 
     # energy per site
     #e_dn_init = model.energy_triangle_dn(state, ctm_env_init)
