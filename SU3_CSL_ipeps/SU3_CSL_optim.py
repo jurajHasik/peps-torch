@@ -24,6 +24,7 @@ parser = cfg.get_args_parser()
 parser.add_argument("--frac_theta", type=float, default=0., help="angle parametrizing the chiral Hamiltonian")
 parser.add_argument("--j1", type=float, default=0., help="nearest-neighbor exchange coupling")
 parser.add_argument("--j2", type=float, default=0., help="next-nearest-neighbor exchange coupling")
+parser.add_argument("--ansatz", type=str, default="A1+iA2, B", help="choice of the tensor ansatz")
 args, unknown_args = parser.parse_known_args()
 
 
@@ -35,7 +36,7 @@ def main():
     torch.manual_seed(args.seed)
     t_device = torch.device(args.GLOBALARGS_device)
 
-    # Import all elementary tensors and build initial state
+    # Import all elementary tensors
     elementary_tensors = []
     for name in ['S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'L0', 'L1', 'L2']:
         tens = load_SU3_tensor(name)
@@ -44,12 +45,22 @@ def main():
             elementary_tensors.append(1j * tens)
         else:
             elementary_tensors.append(tens)
-    # define initial coefficients
-    #coeffs = {(0, 0): torch.tensor([1.0000,  0.3563,  4.4882, -0.3494, -3.9341, 0., 0., 1.0000, 0.2429, 0.], dtype=torch.float64, device=t_device)}
-    #coeffs = {(0, 0): torch.tensor([1., 1., 1., 1., 1., 0., 0., 1., 1., 1.], dtype=torch.float64, device=t_device)}
-    coeffs = {(0, 0): torch.tensor([1., 0., 0., 0., 0., 0., 0., 1., 0., 0.], dtype=torch.float64, device=t_device)}
-    #define which coefficients will be added a noise
-    var_coeffs_allowed = torch.tensor([0, 1, 1, 1, 1, 0, 0, 0, 1, 0], dtype=torch.float64, device=t_device)
+
+    # define initial coefficients and which coefficients will vary / will be added a noise
+    if args.ansatz == "A1+iA2, B":
+        #coeffs = {(0, 0): torch.tensor([1.0000,  0.3563,  4.4882, -0.3494, -3.9341, 0., 0., 1.0000, 0.2429, 0.], dtype=torch.float64, device=t_device)}
+        coeffs = {(0, 0): torch.tensor([1., 0., 0., 0., 0., 0., 0., 1., 0., 0.], dtype=torch.float64, device=t_device)}
+        var_coeffs_allowed = torch.tensor([0, 1, 1, 1, 1, 0, 0, 0, 1, 0], dtype=torch.float64, device=t_device)
+    elif args.ansatz == "A1+iA2, B+iA":
+        coeffs = {(0, 0): torch.tensor([1., 0., 0., 0., 0., 0., 0., 1., 0., 0.], dtype=torch.float64, device=t_device)}
+        var_coeffs_allowed = torch.tensor([0, 1, 1, 1, 1, 0, 0, 0, 1, 1], dtype=torch.float64, device=t_device)
+    elif args.ansatz == "E1, B":
+        coeffs = {(0, 0): torch.tensor([0., 0., 0., 0., 0., 1., 0., 1., 0., 0.], dtype=torch.float64, device=t_device)}
+        var_coeffs_allowed = torch.tensor([0, 0, 0, 0, 0, 0, 1, 0, 1, 0], dtype=torch.float64, device=t_device)
+    elif args.ansatz == "E1, B+iA":
+        coeffs = {(0, 0): torch.tensor([0., 0., 0., 0., 0., 1., 0., 1., 0., 0.], dtype=torch.float64, device=t_device)}
+        var_coeffs_allowed = torch.tensor([0, 0, 0, 0, 0, 0, 1, 0, 1, 1], dtype=torch.float64, device=t_device)
+
     state = IPEPS_U1SYM(elementary_tensors, coeffs, var_coeffs_allowed)
     state.add_noise(args.instate_noise)
     print(f'Current state: {state.coeffs[(0, 0)].data}')

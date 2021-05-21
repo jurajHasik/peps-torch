@@ -21,13 +21,13 @@ def fmap_inv(s):
 	return(n1,n2,n3)
 	
 # star (trivalent) tensor S
-S = torch.zeros(3,3,3)
+S = torch.zeros((3,3,3), dtype = torch.float64)
 S[0,1,2] = S[1,2,0] = S[2,0,1] = -1.
 S[0,2,1] = S[2,1,0] = S[1,0,2] = 1.
 S = S * 1./np.sqrt(6.)
 
 # leg (on-site projector) tensor L
-L = torch.zeros(3,3,3)
+L = torch.zeros((3,3,3), dtype = torch.float64)
 L[0,0,1] = -1.
 L[0,1,0] = 1.
 L[1,0,2] = -1.
@@ -37,9 +37,9 @@ L[2,2,1] = 1.
 L = L * 1./np.sqrt(2.)
 
 # a tensor: a^uvw_abc ~ 'SLSLL' (uvw are the d=3 physical indices)
-a_temp = torch.einsum('abi,uij,jkl,vkc,wld->uvwabcd', S,L,S,L,L)
+a_temp = torch.einsum('iab,uji,jkl,vkc,wld->uvwabcd', S,L,S,L,L)
 # reshape the 3 physical indices (d=3) to a single index (d=27)
-a = torch.zeros(27,3,3,3,3)
+a = torch.zeros((27,3,3,3,3), dtype = torch.float64)
 for si in range(27):
 	n1,n2,n3 = fmap_inv(si)
 	a[si,:,:,:,:] = a_temp[n1,n2,n3,:,:,:,:]
@@ -49,6 +49,6 @@ for si in range(27):
 sites = {(0,0):a}
 def vertexToSite(coord): 
 	return (0,0)
-state = IPEPS(sites,vertexToSite)
+state = IPEPS(sites, vertexToSite)
 # write the ipeps
 write_ipeps(state, 'SU3_AKLT_ipeps/SU3_AKLT_ipeps.json')
