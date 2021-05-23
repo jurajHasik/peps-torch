@@ -30,6 +30,11 @@ for i in range(3):
     for j in range(3):
         exchange_bond[i, j, j, i] = 1.
 
+id2 = torch.zeros((3, 3, 3, 3), dtype=torch.complex128, device=cfg.global_args.device)
+for i in range(3):
+    for j in range(3):
+        exchange_bond[i, j, i, j] = 1.
+
 exchange_bond_triangle = torch.zeros((3, 3, 3, 3, 3, 3), dtype=torch.complex128, device=cfg.global_args.device)
 for i in range(3):
     for j in range(3):
@@ -90,39 +95,51 @@ class SU3_CHIRAL():
 
     # Energy terms
 
-    def energy_nnn(self, state, env):
-        if self.j2 == 0.:
-            return 0.
-        else:
-            norm_wf = rdm.rdm2x2_id((0, 0), state, env)
-            vNNN1 = rdm.rdm2x2_nnn_1((0, 0), state, env, operator=exchange_bond)
-            vNNN2 = rdm.rdm2x2_nnn_2((0, 0), state, env, operator=exchange_bond)
-            vNNN3 = rdm.rdm2x2_nnn_3((0, 0), state, env, operator=exchange_bond)
-            return torch.real(self.j2 * (vNNN1 + vNNN2 + vNNN3) / norm_wf)
 
     def energy_triangle_dn(self, state, env, force_cpu=False):
-        norm_wf = rdm.rdm2x2_id((0, 0), state, env)
+        norm_wf = rdm.rdm2x2_id((0, 0), state, env, force_cpu=force_cpu)
         e_dn = rdm.rdm2x2_dn_triangle((0, 0), state, env, operator=self.h_triangle, force_cpu=force_cpu) / norm_wf
         return torch.real(e_dn)
 
     def energy_triangle_up(self, state, env, force_cpu=False):
-        norm_wf = rdm.rdm2x2_id((0, 0), state, env)
+        norm_wf = rdm.rdm2x2_id((0, 0), state, env, force_cpu=force_cpu)
         e_up = rdm.rdm2x2_up_triangle((0, 0), state, env, operator=self.h_triangle, force_cpu=force_cpu) / norm_wf
         return torch.real(e_up)
 
+    def energy_nnn(self, state, env, force_cpu=False):
+        if self.j2 == 0.:
+            return 0.
+        else:
+            vNNN = self.P_bonds_nnn(state, env, force_cpu=force_cpu)
+            return(self.j2*(vNNN[0]+vNNN[1]+vNNN[2]+vNNN[3]+vNNN[4]+vNNN[5]))
+
     # Observables
 
-    def P_dn(self, state, env):
-        norm_wf = rdm.rdm2x2_id((0, 0), state, env)
-        vP_dn = rdm.rdm2x2_dn_triangle((0, 0), state, env, operator=permute_triangle) / norm_wf
+    def P_dn(self, state, env, force_cpu=False):
+        norm_wf = rdm.rdm2x2_id((0, 0), state, env, force_cpu=force_cpu)
+        vP_dn = rdm.rdm2x2_dn_triangle((0, 0), state, env, operator=permute_triangle, force_cpu=force_cpu) / norm_wf
         return vP_dn
 
-    def P_up(self, state, env):
-        norm_wf = rdm.rdm2x2_id((0, 0), state, env)
-        vP_up = rdm.rdm2x2_up_triangle((0, 0), state, env, operator=permute_triangle) / norm_wf
+    def P_up(self, state, env, force_cpu=False):
+        norm_wf = rdm.rdm2x2_id((0, 0), state, env, force_cpu=force_cpu)
+        vP_up = rdm.rdm2x2_up_triangle((0, 0), state, env, operator=permute_triangle, force_cpu=force_cpu) / norm_wf
         return vP_up
 
-    def P_bonds(self, state, env):
+    def P_bonds_nnn(self, state, env, force_cpu=False):
+        norm_wf = rdm.rdm2x2_id((0, 0), state, env, force_cpu=force_cpu)
+        #TODO !!
+        vNNN1_a = rdm.rdm2x2_nnn_1((0, 0), state, env, operators=(exchange_bond, id2), force_cpu=force_cpu) / norm_wf
+        vNNN1_b = rdm.rdm2x2_nnn_1((0, 0), state, env, operators=(id2, exchange_bond), force_cpu=force_cpu) / norm_wf
+        vNNN2_a = rdm.rdm2x2_nnn_2((0, 0), state, env, operators=(exchange_bond, id2), force_cpu=force_cpu) / norm_wf
+        vNNN2_b = rdm.rdm2x2_nnn_2((0, 0), state, env, operators=(id2, exchange_bond), force_cpu=force_cpu) / norm_wf
+        vNNN3_a = rdm.rdm2x2_nnn_1((0, 0), state, env, operators=(exchange_bond, id2), force_cpu=force_cpu) / norm_wf
+        vNNN3_b = rdm.rdm2x2_nnn_1((0, 0), state, env, operators=(id2, exchange_bond), force_cpu=force_cpu) / norm_wf
+        vNNN1 = vNNN1_a + vNNN1_b
+        vNNN2 = vNNN2_a + vNNN2_b
+        vNNN3 = vNNN3_a + vNNN3_b
+        return(torch.real(vNNN1_a),torch.real(vNNN2_b), torch.real(vNNN2_a),torch.real(vNNN3_b), torch.real(vNNN3_a),torch.real(vNNN1_b))
+
+    def P_bonds_nn(self, state, env):
         id_matrix = torch.eye(27, dtype=torch.complex128, device=cfg.global_args.device)
         norm_wf = rdm.rdm1x1((0, 0), state, env, operator=id_matrix)
         # bond 2--3
