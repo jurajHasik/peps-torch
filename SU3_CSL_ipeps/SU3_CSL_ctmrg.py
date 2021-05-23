@@ -51,7 +51,7 @@ def main():
     #coeffs = {(0, 0): torch.tensor([1.0000, -0.8699,  1.5465,  0.0000,  0.0000,  0.0000,  0.0000,  1.0000,
     #     1.4435,  0.0000], dtype=torch.float64, device=t_device)} # for J1=1.2, no ctmrg convergence
     # define which coefficients will be added a noise
-    var_coeffs_allowed = torch.tensor([0, 1, 1, 1, 1, 0, 0, 0, 1, 1], dtype=torch.float64, device=t_device)
+    var_coeffs_allowed = torch.tensor([0, 1, 1, 0, 0, 0, 0, 0, 1, 0], dtype=torch.float64, device=t_device)
 
     state = IPEPS_U1SYM(elementary_tensors, coeffs, var_coeffs_allowed)
     state.add_noise(args.instate_noise)
@@ -88,12 +88,15 @@ def main():
             history = []
         e_dn = model.energy_triangle_dn(state, env, force_cpu=ctm_args.conv_check_cpu)
         e_up = model.energy_triangle_up(state, env, force_cpu=ctm_args.conv_check_cpu)
-        e_nnn = model.energy_nnn(state, env)
+        e_nnn = model.energy_nnn(state, env, force_cpu=ctm_args.conv_check_cpu)
         e_curr = (e_up + e_dn + e_nnn)/3
         history.append(e_curr.item())
+        if len(history)==1:
+            e_prev = 0
+        else:
+            e_prev = history[-2]
         #print_corner_spectra(env)
-        print(f'Step n°{len(history)}    E_site ={e_curr.item()}   (E_up={e_up.item()}, E_dn={e_dn.item()})')
-
+        print('Step n°{:2}    E_site ={:01.14f}   (E_up={:01.14f}, E_dn={:01.14f}, E_nnn={:01.14f})  delta_E={:01.14f}'.format(len(history), e_curr.item(), e_up.item(), e_dn.item(), e_nnn, e_curr.item()-e_prev))
         if (len(history) > 1 and abs(history[-1] - history[-2]) < ctm_args.ctm_conv_tol) \
                 or len(history) >= ctm_args.ctm_max_iter:
             log.info({"history_length": len(history), "history": history})
@@ -114,22 +117,24 @@ def main():
     ctm_env_final, *ctm_log = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
 
     # energy per site
-    e_dn_final = model.energy_triangle_dn(state, ctm_env_final, force_cpu=False)
-    e_up_final = model.energy_triangle_up(state, ctm_env_final, force_cpu=False)
-    e_nnn_final = model.energy_nnn(state, ctm_env_final)
+    e_dn_final = model.energy_triangle_dn(state, ctm_env_final, force_cpu=True)
+    e_up_final = model.energy_triangle_up(state, ctm_env_final, force_cpu=True)
+    e_nnn_final = model.energy_nnn(state, ctm_env_final, force_cpu=True)
     e_tot_final = (e_dn_final + e_up_final + e_nnn_final)/3
 
     # P operators
-    P_up = model.P_up(state, ctm_env_final)
-    P_dn = model.P_dn(state, ctm_env_final)
+    P_up = model.P_up(state, ctm_env_final, force_cpu=True)
+    P_dn = model.P_dn(state, ctm_env_final, force_cpu=True)
 
     # bond operators
-    P23, P13, P12 = model.P_bonds(state, ctm_env_final)
+    P23, P13, P12 = model.P_bonds_nn(state, ctm_env_final)
+    b1, b2, b3, b4, b5, b6 = model.P_bonds_nnn(state, ctm_env_final, force_cpu = True)
 
     print(f'\n\n E_up={e_up_final.item()}, E_dn={e_dn_final.item()}, E_tot={e_tot_final.item()}')
     print(f' Re(P_up)={torch.real(P_up).item()}, Im(P_up)={torch.imag(P_up).item()}')
     print(f' Re(P_dn)={torch.real(P_dn).item()}, Im(P_dn)={torch.imag(P_dn).item()}')
     print(f' P_23={P23.item()}, P_13={P13.item()}, P_12={P12.item()}')
+    print(f'{b1.item()}, {b2.item()}, {b3.item()}, {b4.item()}, {b5.item()}, {b6.item()}')
 
     colors3, colors8 = model.eval_lambdas(state, ctm_env_final)
     print(

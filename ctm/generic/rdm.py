@@ -172,9 +172,9 @@ def rdm1x1(coord, state, env, operator=None, sym_pos_def=False, force_cpu=False,
     # |		    |
     # C(-1,1)---T(0,1)--1
     if force_cpu:
-        T= env.T[(coord, (1, 0))].cpu()
-    else :
-        T= env.T[(coord, (1, 0))]
+        T = env.T[(coord, (1, 0))].cpu()
+    else:
+        T = env.T[(coord, (1, 0))]
     rdm = contract(T, rdm, ([0, 1], [0, 2]))
     if verbosity > 0:
         print("rdm=CTCTaTCT " + str(rdm.size()))
@@ -823,7 +823,8 @@ def fmap_inv(s):
 
 def double_layer_a(A_tensor, csites):
     dimsA = A_tensor.size()
-    A_tensor_reshaped = torch.zeros((3, 3, 3, dimsA[1], dimsA[2], dimsA[3], dimsA[4]), dtype=A_tensor.dtype)
+    A_tensor_reshaped = torch.zeros((3, 3, 3, dimsA[1], dimsA[2], dimsA[3], dimsA[4]), dtype=A_tensor.dtype,
+                                    device=A_tensor.device)
     for s in range(27):
         n1, n2, n3 = fmap_inv(s)
         A_tensor_reshaped[n1, n2, n3, :, :, :, :] = A_tensor[s, :, :, :, :]
@@ -849,12 +850,19 @@ def double_layer_a(A_tensor, csites):
     return a
 
 
-def enlarged_corner(coord, state, env, corner, csites=[1, 2, 3], verbosity=0):
+def enlarged_corner(coord, state, env, corner, csites=[1, 2, 3], force_cpu=False, verbosity=0):
     if corner == 'LU':
-        C = env.C[(state.vertexToSite(coord), (-1, -1))]
-        T1 = env.T[(state.vertexToSite(coord), (0, -1))]
-        T2 = env.T[(state.vertexToSite(coord), (-1, 0))]
-        a = double_layer_a(state.site(coord), csites)
+        if force_cpu:
+            C = env.C[(state.vertexToSite(coord), (-1, -1))].cpu()
+            T1 = env.T[(state.vertexToSite(coord), (0, -1))].cpu()
+            T2 = env.T[(state.vertexToSite(coord), (-1, 0))].cpu()
+            A_tensor = state.site(coord).cpu()
+        else:
+            C = env.C[(state.vertexToSite(coord), (-1, -1))]
+            T1 = env.T[(state.vertexToSite(coord), (0, -1))]
+            T2 = env.T[(state.vertexToSite(coord), (-1, 0))]
+            A_tensor = state.site(coord)
+        a = double_layer_a(A_tensor, csites)
 
         # C--10--T1--2
         # 0	  1
@@ -888,10 +896,17 @@ def enlarged_corner(coord, state, env, corner, csites=[1, 2, 3], verbosity=0):
     if corner == 'RU':
         vec = (1, 0)
         shitf_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
-        C = env.C[(shitf_coord, (1, -1))]
-        T1 = env.T[(shitf_coord, (1, 0))]
-        T2 = env.T[(shitf_coord, (0, -1))]
-        a = double_layer_a(state.site(shitf_coord), csites)
+        if force_cpu:
+            C = env.C[(shitf_coord, (1, -1))].cpu()
+            T1 = env.T[(shitf_coord, (1, 0))].cpu()
+            T2 = env.T[(shitf_coord, (0, -1))].cpu()
+            A_tensor = state.site(shitf_coord).cpu()
+        else:
+            C = env.C[(shitf_coord, (1, -1))]
+            T1 = env.T[(shitf_coord, (1, 0))]
+            T2 = env.T[(shitf_coord, (0, -1))]
+            A_tensor = state.site(shitf_coord)
+        a = double_layer_a(A_tensor, csites)
 
         # 0--C
         #	 1
@@ -929,10 +944,17 @@ def enlarged_corner(coord, state, env, corner, csites=[1, 2, 3], verbosity=0):
     if corner == 'RD':
         vec = (1, 1)
         shitf_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
-        C = env.C[(shitf_coord, (1, 1))]
-        T1 = env.T[(shitf_coord, (0, 1))]
-        T2 = env.T[(shitf_coord, (1, 0))]
-        a = double_layer_a(state.site(shitf_coord), csites)
+        if force_cpu:
+            C = env.C[(shitf_coord, (1, 1))].cpu()
+            T1 = env.T[(shitf_coord, (0, 1))].cpu()
+            T2 = env.T[(shitf_coord, (1, 0))].cpu()
+            A_tensor = state.site(shitf_coord).cpu()
+        else:
+            C = env.C[(shitf_coord, (1, 1))]
+            T1 = env.T[(shitf_coord, (0, 1))]
+            T2 = env.T[(shitf_coord, (1, 0))]
+            A_tensor = state.site(shitf_coord)
+        a = double_layer_a(A_tensor, csites)
 
         #  	 1<-0 		 0
         # 2<-1--T1--2 1--C
@@ -967,10 +989,17 @@ def enlarged_corner(coord, state, env, corner, csites=[1, 2, 3], verbosity=0):
     if corner == 'LD':
         vec = (0, 1)
         shitf_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
-        C = env.C[(shitf_coord, (-1, 1))]
-        T1 = env.T[(shitf_coord, (-1, 0))]
-        T2 = env.T[(shitf_coord, (0, 1))]
-        a = double_layer_a(state.site(shitf_coord), csites)
+        if force_cpu:
+            C = env.C[(shitf_coord, (-1, 1))].cpu()
+            T1 = env.T[(shitf_coord, (-1, 0))].cpu()
+            T2 = env.T[(shitf_coord, (0, 1))].cpu()
+            A_tensor = state.site(shitf_coord).cpu()
+        else:
+            C = env.C[(shitf_coord, (-1, 1))]
+            T1 = env.T[(shitf_coord, (-1, 0))]
+            T2 = env.T[(shitf_coord, (0, 1))]
+            A_tensor = state.site(shitf_coord)
+        a = double_layer_a(A_tensor, csites)
 
         # 0->1
         # T1--2
@@ -1079,7 +1108,8 @@ def rdm2x2_up_triangle(coord, state, env, operator=None, sym_pos_def=False, forc
         a_1layer = state.site(shitf_coord)
     dimsA = a_1layer.size()
     # reshape 27 = 3*3*3
-    A_reshaped = torch.zeros((3, 3, 3, dimsA[1], dimsA[2], dimsA[3], dimsA[4]), dtype=a_1layer.dtype, device=a_1layer.device)
+    A_reshaped = torch.zeros((3, 3, 3, dimsA[1], dimsA[2], dimsA[3], dimsA[4]), dtype=a_1layer.dtype,
+                             device=a_1layer.device)
     for s in range(27):
         n1, n2, n3 = fmap_inv(s)
         A_reshaped[n1, n2, n3, :, :, :, :] = a_1layer[s, :, :, :, :]
@@ -1142,7 +1172,8 @@ def rdm2x2_up_triangle(coord, state, env, operator=None, sym_pos_def=False, forc
         a_1layer = state.site(shitf_coord)
     dimsA = a_1layer.size()
     # reshape 27 = 3*3*3
-    A_reshaped = torch.zeros((3, 3, 3, dimsA[1], dimsA[2], dimsA[3], dimsA[4]), dtype=a_1layer.dtype, device=a_1layer.device)
+    A_reshaped = torch.zeros((3, 3, 3, dimsA[1], dimsA[2], dimsA[3], dimsA[4]), dtype=a_1layer.dtype,
+                             device=a_1layer.device)
     for s in range(27):
         n1, n2, n3 = fmap_inv(s)
         A_reshaped[n1, n2, n3, :, :, :, :] = a_1layer[s, :, :, :, :]
@@ -1195,7 +1226,8 @@ def rdm2x2_up_triangle(coord, state, env, operator=None, sym_pos_def=False, forc
         a_1layer = state.site(shitf_coord)
     dimsA = a_1layer.size()
     # reshape 27 = 3*3*3
-    A_reshaped = torch.zeros((3, 3, 3, dimsA[1], dimsA[2], dimsA[3], dimsA[4]), dtype=a_1layer.dtype, device=a_1layer.device)
+    A_reshaped = torch.zeros((3, 3, 3, dimsA[1], dimsA[2], dimsA[3], dimsA[4]), dtype=a_1layer.dtype,
+                             device=a_1layer.device)
     for s in range(27):
         n1, n2, n3 = fmap_inv(s)
         A_reshaped[n1, n2, n3, :, :, :, :] = a_1layer[s, :, :, :, :]
@@ -1267,7 +1299,10 @@ def rdm2x2_up_triangle(coord, state, env, operator=None, sym_pos_def=False, forc
         rdm = _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
     else:
         # contract the 3-site operator with the rdm
-        value_operator = einsum('ikmjln,ikmjln->', rdm, operator)
+        if force_cpu:
+            value_operator = einsum('ikmjln,ikmjln->', rdm, operator.cpu())
+        else:
+            value_operator = einsum('ikmjln,ikmjln->', rdm, operator)
         rdm = value_operator
 
     rdm = rdm.to(env.device)
@@ -1293,7 +1328,7 @@ def rdm2x2_dn_triangle(coord, state, env, operator=None, sym_pos_def=False, forc
         a = view(a, (dimsA[1] ** 2, dimsA[2] ** 2, dimsA[3] ** 2, dimsA[4] ** 2, dimsA[0], dimsA[0]))
     else:
         # fuse the three d indices into a single d^3 index
-        operator_matrixform = torch.zeros((dimsA[0], dimsA[0]), dtype=torch.complex128, device=operator.device)
+        operator_matrixform = torch.zeros((dimsA[0], dimsA[0]), dtype=torch.complex128, device=a_1layer.device)
         for n1 in range(3):
             for n2 in range(3):
                 for n3 in range(3):
@@ -1508,28 +1543,32 @@ def rdm2x2_dn_triangle(coord, state, env, operator=None, sym_pos_def=False, forc
     return rdm
 
 
-def rdm2x2_nnn_1(coord, state, env, operator, verbosity=0):
-    C2x2_LU = enlarged_corner(coord, state, env, 'LU', csites=[], verbosity=verbosity)
-    C2x2_RD = enlarged_corner(coord, state, env, 'RD', csites=[], verbosity=verbosity)
+def rdm2x2_nnn_1(coord, state, env, operators, force_cpu=False, verbosity=0):
+    C2x2_LU = enlarged_corner(coord, state, env, 'LU', csites=[], force_cpu=force_cpu, verbosity=verbosity)
+    C2x2_RD = enlarged_corner(coord, state, env, 'RD', csites=[], force_cpu=force_cpu, verbosity=verbosity)
 
     # bond 1--2
-    C2x2_LD = enlarged_corner(coord, state, env, 'LD', csites=[1], verbosity=verbosity)
-    C2x2_RU = enlarged_corner(coord, state, env, 'RU', csites=[2], verbosity=verbosity)
+    C2x2_LD = enlarged_corner(coord, state, env, 'LD', csites=[1], force_cpu=force_cpu, verbosity=verbosity)
+    C2x2_RU = enlarged_corner(coord, state, env, 'RU', csites=[2], force_cpu=force_cpu, verbosity=verbosity)
     upper_half = einsum('ij,jkab->ijab', C2x2_LU, C2x2_RU)
     lower_half = einsum('ijab,kj->ikab', C2x2_LD, C2x2_RD)
-    bond12 = einsum('ijab,acbd,ijcd->', upper_half, operator, lower_half)
+    operator12 = operators[0].to(C2x2_LD.device)
+    bond12 = einsum('ijab,acbd,ijcd->', upper_half, operator12, lower_half)
 
     # bond 3--1
-    C2x2_LD = enlarged_corner(coord, state, env, 'LD', csites=[3], verbosity=verbosity)
-    C2x2_RU = enlarged_corner(coord, state, env, 'RU', csites=[1], verbosity=verbosity)
+    C2x2_LD = enlarged_corner(coord, state, env, 'LD', csites=[3], force_cpu=force_cpu, verbosity=verbosity)
+    C2x2_RU = enlarged_corner(coord, state, env, 'RU', csites=[1], force_cpu=force_cpu, verbosity=verbosity)
     upper_half = einsum('ij,jkab->ijab', C2x2_LU, C2x2_RU)
     lower_half = einsum('ijab,kj->ikab', C2x2_LD, C2x2_RD)
-    bond31 = einsum('ijab,acbd,ijcd->', upper_half, operator, lower_half)
+    operator31 = operators[1].to(C2x2_LD.device)
+    bond31 = einsum('ijab,acbd,ijcd->', upper_half, operator31, lower_half)
 
-    return bond31 + bond12
+    rdm = bond31 + bond12
+    rdm = rdm.to(env.device)
+    return rdm
 
 
-def rdm2x2_nnn_2(coord, state, env, operator, verbosity=0):
+def rdm2x2_nnn_2(coord, state, env, operators, force_cpu=False, verbosity=0):
     # --------------upper half -------------------------------------------------
 
     # build upper part C2x2_LU--C2x2_RU and contract with the 2-cell operator
@@ -1538,22 +1577,24 @@ def rdm2x2_nnn_2(coord, state, env, operator, verbosity=0):
     # 0			              1
 
     # NNN bond 3--2
-    C2x2_LU = enlarged_corner(coord, state, env, corner='LU', csites=[3], verbosity=verbosity)
-    C2x2_RU = enlarged_corner(coord, state, env, corner='RU', csites=[2], verbosity=verbosity)
-    upper_half_32 = einsum('ijab,acbd,jkcd->ij', C2x2_LU, operator, C2x2_RU)
+    C2x2_LU = enlarged_corner(coord, state, env, corner='LU', csites=[3], force_cpu=force_cpu, verbosity=verbosity)
+    C2x2_RU = enlarged_corner(coord, state, env, corner='RU', csites=[2], force_cpu=force_cpu, verbosity=verbosity)
+    operator32 = operators[0].to(C2x2_LU.device)
+    upper_half_32 = einsum('ijab,acbd,jkcd->ij', C2x2_LU, operator32, C2x2_RU)
 
     # NNN bond 2--1
-    C2x2_LU = enlarged_corner(coord, state, env, corner='LU', csites=[2], verbosity=verbosity)
-    C2x2_RU = enlarged_corner(coord, state, env, corner='RU', csites=[1], verbosity=verbosity)
-    upper_half_21 = einsum('ijab,acbd,jkcd->ij', C2x2_LU, operator, C2x2_RU)
+    C2x2_LU = enlarged_corner(coord, state, env, corner='LU', csites=[2], force_cpu=force_cpu, verbosity=verbosity)
+    C2x2_RU = enlarged_corner(coord, state, env, corner='RU', csites=[1], force_cpu=force_cpu, verbosity=verbosity)
+    operator21 = operators[1].to(C2x2_LU.device)
+    upper_half_21 = einsum('ijab,acbd,jkcd->ij', C2x2_LU, operator21, C2x2_RU)
 
     # --------------bottom half-------------------------------------------------
 
     # 0			    0->1
     # |     	    |
     # C2x2_LD--1 1--C2x2_RD
-    C2x2_RD = enlarged_corner(coord, state, env, corner='RD', csites=[], verbosity=verbosity)
-    C2x2_LD = enlarged_corner(coord, state, env, corner='LD', csites=[], verbosity=verbosity)
+    C2x2_RD = enlarged_corner(coord, state, env, corner='RD', csites=[], force_cpu=force_cpu, verbosity=verbosity)
+    C2x2_LD = enlarged_corner(coord, state, env, corner='LD', csites=[], force_cpu=force_cpu, verbosity=verbosity)
     lower_half = contract(C2x2_LD, C2x2_RD, ([1], [1]))
 
     # contracting lower and upper halfs
@@ -1565,10 +1606,11 @@ def rdm2x2_nnn_2(coord, state, env, operator, verbosity=0):
     # C2x2_LD------C2x2_RD
     rdm = contract(upper_half_32 + upper_half_21, lower_half, ([0, 1], [0, 1]))
 
+    rdm = rdm.to(env.device)
     return rdm
 
 
-def rdm2x2_nnn_3(coord, state, env, operator, verbosity=0):
+def rdm2x2_nnn_3(coord, state, env, operators, force_cpu=False, verbosity=0):
     # ---------------- left half -----------------------------------
 
     # build left half and contract with the 2-cell operator
@@ -1582,14 +1624,16 @@ def rdm2x2_nnn_3(coord, state, env, operator, verbosity=0):
     # C2x2_LD--1
 
     # NN bond 3--1
-    C2x2_LU = enlarged_corner(coord, state, env, corner='LU', csites=[3], verbosity=verbosity)
-    C2x2_LD = enlarged_corner(coord, state, env, corner='LD', csites=[1], verbosity=verbosity)
-    left_half_31 = einsum('ijab,abcd,ikcd->jk', C2x2_LU, operator, C2x2_LD)
+    C2x2_LU = enlarged_corner(coord, state, env, corner='LU', csites=[3], force_cpu=force_cpu, verbosity=verbosity)
+    C2x2_LD = enlarged_corner(coord, state, env, corner='LD', csites=[1], force_cpu=force_cpu, verbosity=verbosity)
+    operator31 = operators[0].to(C2x2_LU.device)
+    left_half_31 = einsum('ijab,abcd,ikcd->jk', C2x2_LU, operator31, C2x2_LD)
 
     # NN bond 2--3
-    C2x2_LU = enlarged_corner(coord, state, env, corner='LU', csites=[2], verbosity=verbosity)
-    C2x2_LD = enlarged_corner(coord, state, env, corner='LD', csites=[3], verbosity=verbosity)
-    left_half_23 = einsum('ijab,abcd,ikcd->jk', C2x2_LU, operator, C2x2_LD)
+    C2x2_LU = enlarged_corner(coord, state, env, corner='LU', csites=[2], force_cpu=force_cpu, verbosity=verbosity)
+    C2x2_LD = enlarged_corner(coord, state, env, corner='LD', csites=[3], force_cpu=force_cpu, verbosity=verbosity)
+    operator23 = operators[0].to(C2x2_LU.device)
+    left_half_23 = einsum('ijab,abcd,ikcd->jk', C2x2_LU, operator23, C2x2_LD)
 
     # ---------------- right half -----------------------------------
 
@@ -1599,8 +1643,8 @@ def rdm2x2_nnn_3(coord, state, env, operator, verbosity=0):
     #	 0
     #	 |
     # 1--C2x2_RD
-    C2x2_RU = enlarged_corner(coord, state, env, corner='RU', csites=[], verbosity=verbosity)
-    C2x2_RD = enlarged_corner(coord, state, env, corner='RD', csites=[], verbosity=verbosity)
+    C2x2_RU = enlarged_corner(coord, state, env, corner='RU', csites=[], force_cpu=force_cpu, verbosity=verbosity)
+    C2x2_RD = enlarged_corner(coord, state, env, corner='RD', csites=[], force_cpu=force_cpu, verbosity=verbosity)
     right_half = contract(C2x2_RU, C2x2_RD, ([1], [0]))
 
     # construct reduced density matrix by contracting left and right halves
@@ -1612,6 +1656,7 @@ def rdm2x2_nnn_3(coord, state, env, operator, verbosity=0):
     # C2x2_LD-1--1-C2x2_RD
     rdm = contract(left_half_31 + left_half_23, right_half, ([0, 1], [0, 1]))
 
+    rdm = rdm.to(env.device)
     return rdm
 
 
@@ -1847,4 +1892,5 @@ def rdm2x2_id(coord, state, env, force_cpu=False, verbosity=0):
     # C2x2_LD------C2x2_RD
     rdm = contract(upper_half, lower_half, ([0, 1], [0, 1]))
 
+    rdm = rdm.to(env.device)
     return rdm
