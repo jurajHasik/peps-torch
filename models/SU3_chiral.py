@@ -30,11 +30,6 @@ for i in range(3):
     for j in range(3):
         exchange_bond[i, j, j, i] = 1.
 
-id2 = torch.zeros((3, 3, 3, 3), dtype=torch.complex128, device=cfg.global_args.device)
-for i in range(3):
-    for j in range(3):
-        exchange_bond[i, j, i, j] = 1.
-
 exchange_bond_triangle = torch.zeros((3, 3, 3, 3, 3, 3), dtype=torch.complex128, device=cfg.global_args.device)
 for i in range(3):
     for j in range(3):
@@ -127,17 +122,10 @@ class SU3_CHIRAL():
 
     def P_bonds_nnn(self, state, env, force_cpu=False):
         norm_wf = rdm.rdm2x2_id((0, 0), state, env, force_cpu=force_cpu)
-        #TODO !!
-        vNNN1_a = rdm.rdm2x2_nnn_1((0, 0), state, env, operators=(exchange_bond, id2), force_cpu=force_cpu) / norm_wf
-        vNNN1_b = rdm.rdm2x2_nnn_1((0, 0), state, env, operators=(id2, exchange_bond), force_cpu=force_cpu) / norm_wf
-        vNNN2_a = rdm.rdm2x2_nnn_2((0, 0), state, env, operators=(exchange_bond, id2), force_cpu=force_cpu) / norm_wf
-        vNNN2_b = rdm.rdm2x2_nnn_2((0, 0), state, env, operators=(id2, exchange_bond), force_cpu=force_cpu) / norm_wf
-        vNNN3_a = rdm.rdm2x2_nnn_1((0, 0), state, env, operators=(exchange_bond, id2), force_cpu=force_cpu) / norm_wf
-        vNNN3_b = rdm.rdm2x2_nnn_1((0, 0), state, env, operators=(id2, exchange_bond), force_cpu=force_cpu) / norm_wf
-        vNNN1 = vNNN1_a + vNNN1_b
-        vNNN2 = vNNN2_a + vNNN2_b
-        vNNN3 = vNNN3_a + vNNN3_b
-        return(torch.real(vNNN1_a),torch.real(vNNN2_b), torch.real(vNNN2_a),torch.real(vNNN3_b), torch.real(vNNN3_a),torch.real(vNNN1_b))
+        vNNN1_12, vNNN1_31 = rdm.rdm2x2_nnn_1((0, 0), state, env, operator=exchange_bond, force_cpu=force_cpu)
+        vNNN2_32, vNNN2_21 = rdm.rdm2x2_nnn_2((0, 0), state, env, operator=exchange_bond, force_cpu=force_cpu)
+        vNNN3_31, vNNN3_23 = rdm.rdm2x2_nnn_3((0, 0), state, env, operator=exchange_bond, force_cpu=force_cpu)
+        return torch.real(vNNN1_12 / norm_wf), torch.real(vNNN2_21 / norm_wf), torch.real(vNNN1_31 / norm_wf), torch.real(vNNN3_31 / norm_wf), torch.real(vNNN2_32 / norm_wf), torch.real(vNNN3_23 / norm_wf)
 
     def P_bonds_nn(self, state, env):
         id_matrix = torch.eye(27, dtype=torch.complex128, device=cfg.global_args.device)

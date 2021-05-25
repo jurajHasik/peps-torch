@@ -51,7 +51,7 @@ def main():
     #coeffs = {(0, 0): torch.tensor([1.0000, -0.8699,  1.5465,  0.0000,  0.0000,  0.0000,  0.0000,  1.0000,
     #     1.4435,  0.0000], dtype=torch.float64, device=t_device)} # for J1=1.2, no ctmrg convergence
     # define which coefficients will be added a noise
-    var_coeffs_allowed = torch.tensor([0, 1, 1, 0, 0, 0, 0, 0, 1, 0], dtype=torch.float64, device=t_device)
+    var_coeffs_allowed = torch.tensor([0, 1, 1, 1, 1, 0, 0, 0, 1, 0], dtype=torch.float64, device=t_device)
 
     state = IPEPS_U1SYM(elementary_tensors, coeffs, var_coeffs_allowed)
     state.add_noise(args.instate_noise)
@@ -78,7 +78,7 @@ def main():
             if c_loc[1] == (1, 1):
                 label = 'RD'
             spectra.append([label, s])
-        print(f"\n\nspectrum C[{spectra[0][0]}]             spectrum C[{spectra[1][0]}]             spectrum C[{spectra[2][0]}]             spectrum C[{spectra[3][0]}] ")
+        print(f"\n spectrum C[{spectra[0][0]}]             spectrum C[{spectra[1][0]}]             spectrum C[{spectra[2][0]}]             spectrum C[{spectra[3][0]}] ")
         for i in range(args.chi):
             print("{:2} {:01.14f}        {:2} {:01.14f}        {:2} {:01.14f}        {:2} {:01.14f}".format(i, spectra[0][1][i], i, spectra[1][1][i], i, spectra[2][1][i], i, spectra[3][1][i]))
 
@@ -120,27 +120,33 @@ def main():
     e_dn_final = model.energy_triangle_dn(state, ctm_env_final, force_cpu=True)
     e_up_final = model.energy_triangle_up(state, ctm_env_final, force_cpu=True)
     e_nnn_final = model.energy_nnn(state, ctm_env_final, force_cpu=True)
-    e_tot_final = (e_dn_final + e_up_final + e_nnn_final)/3
+    e_tot_final = (e_dn_final + e_up_final + e_nnn_final) / 3
 
     # P operators
     P_up = model.P_up(state, ctm_env_final, force_cpu=True)
     P_dn = model.P_dn(state, ctm_env_final, force_cpu=True)
 
     # bond operators
-    P23, P13, P12 = model.P_bonds_nn(state, ctm_env_final)
-    b1, b2, b3, b4, b5, b6 = model.P_bonds_nnn(state, ctm_env_final, force_cpu = True)
+    Pnn_23, Pnn_13, Pnn_12 = model.P_bonds_nn(state, ctm_env_final)
+    Pnnn = model.P_bonds_nnn(state, ctm_env_final, force_cpu = True)
 
-    print(f'\n\n E_up={e_up_final.item()}, E_dn={e_dn_final.item()}, E_tot={e_tot_final.item()}')
+    print('\n\n Energy density')
+    print(f' E_up={e_up_final.item()}, E_dn={e_dn_final.item()}, E_tot={e_tot_final.item()}')
+    print('\n Triangular permutations')
     print(f' Re(P_up)={torch.real(P_up).item()}, Im(P_up)={torch.imag(P_up).item()}')
     print(f' Re(P_dn)={torch.real(P_dn).item()}, Im(P_dn)={torch.imag(P_dn).item()}')
-    print(f' P_23={P23.item()}, P_13={P13.item()}, P_12={P12.item()}')
-    print(f'{b1.item()}, {b2.item()}, {b3.item()}, {b4.item()}, {b5.item()}, {b6.item()}')
+    print('\n Nearest-neighbor permutations')
+    print(' P_23={:01.14f} \n P_13={:01.14f} \n P_12={:01.14f}'.format(Pnn_23.item(), Pnn_13.item(), Pnn_12.item()))
+    print('\n Next-nearest neighbor permutations')
+    print(' P_23_a={:01.14f}, P_23_b={:01.14f} \n P_31_a={:01.14f}, P_31_b={:01.14f} \n P_12_a={:01.14f}, '
+          'P_12_b={:01.14f}'.format(Pnnn[4].item(), Pnnn[5].item(), Pnnn[0].item(), Pnnn[1].item(), Pnnn[2].item(),
+                                    Pnnn[3].item()))
 
     colors3, colors8 = model.eval_lambdas(state, ctm_env_final)
     print(
-        f' <Lambda_3> = {torch.real(colors3[0]).item()}, {torch.real(colors3[1]).item()}, {torch.real(colors3[2]).item()}')
+        f'\n Lambda_3 = {torch.real(colors3[0]).item()}, {torch.real(colors3[1]).item()}, {torch.real(colors3[2]).item()}')
     print(
-        f' <Lambda_8> = {torch.real(colors8[0]).item()}, {torch.real(colors8[1]).item()}, {torch.real(colors8[2]).item()}')
+        f' Lambda_8 = {torch.real(colors8[0]).item()}, {torch.real(colors8[1]).item()}, {torch.real(colors8[2]).item()}')
 
     # environment diagnostics
     print("\n")
