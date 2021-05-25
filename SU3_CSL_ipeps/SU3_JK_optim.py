@@ -98,18 +98,41 @@ def main():
     ctm_env_final, *ctm_log = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
 
     # energy per site
-    e_dn_final = model.energy_triangle_dn(state, ctm_env_final, force_cpu=False)
-    e_up_final = model.energy_triangle_up(state, ctm_env_final, force_cpu=False)
-    e_nnn_final = model.energy_nnn(state, ctm_env_final)
+    e_dn_final = model.energy_triangle_dn(state, ctm_env_final, force_cpu=True)
+    e_up_final = model.energy_triangle_up(state, ctm_env_final, force_cpu=True)
+    e_nnn_final = model.energy_nnn(state, ctm_env_final, force_cpu=True)
     e_tot_final = (e_dn_final + e_up_final + e_nnn_final) / 3
 
     # P operators
-    P_up = model.P_up(state, ctm_env_final)
-    P_dn = model.P_dn(state, ctm_env_final)
+    P_up = model.P_up(state, ctm_env_final, force_cpu=True)
+    P_dn = model.P_dn(state, ctm_env_final, force_cpu=True)
 
-    print(f'\n\n E_up={e_up_final.item()}, E_dn={e_dn_final.item()}, E_tot={e_tot_final.item()}')
+    # bond operators
+    Pnn_23, Pnn_13, Pnn_12 = model.P_bonds_nn(state, ctm_env_final)
+    Pnnn = model.P_bonds_nnn(state, ctm_env_final, force_cpu=True)
+
+    print('\n\n Energy density')
+    print(f' E_up={e_up_final.item()}, E_dn={e_dn_final.item()}, E_tot={e_tot_final.item()}')
+    print('\n Triangular permutations')
     print(f' Re(P_up)={torch.real(P_up).item()}, Im(P_up)={torch.imag(P_up).item()}')
     print(f' Re(P_dn)={torch.real(P_dn).item()}, Im(P_dn)={torch.imag(P_dn).item()}')
+    print('\n Nearest-neighbor permutations')
+    print(' P_23={:01.14f} \n P_13={:01.14f} \n P_12={:01.14f}'.format(Pnn_23.item(), Pnn_13.item(), Pnn_12.item()))
+    print('\n Next-nearest neighbor permutations')
+    print(' P_23_a={:01.14f}, P_23_b={:01.14f} \n P_31_a={:01.14f}, P_31_b={:01.14f} \n P_12_a={:01.14f}, '
+          'P_12_b={:01.14f}'.format(Pnnn[4].item(), Pnnn[5].item(), Pnnn[0].item(), Pnnn[1].item(), Pnnn[2].item(),
+                                    Pnnn[3].item()))
+
+    colors3, colors8 = model.eval_lambdas(state, ctm_env_final)
+    print(
+        f'\n Lambda_3 = {torch.real(colors3[0]).item()}, {torch.real(colors3[1]).item()}, {torch.real(colors3[2]).item()}')
+    print(
+        f' Lambda_8 = {torch.real(colors8[0]).item()}, {torch.real(colors8[1]).item()}, {torch.real(colors8[2]).item()}')
+
+    # environment diagnostics
+    print("\n")
+    print("Final environment")
+    print_corner_spectra(ctm_env_final)
 
 
 if __name__ == '__main__':
