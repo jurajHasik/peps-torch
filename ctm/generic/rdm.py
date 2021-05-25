@@ -1543,7 +1543,7 @@ def rdm2x2_dn_triangle(coord, state, env, operator=None, sym_pos_def=False, forc
     return rdm
 
 
-def rdm2x2_nnn_1(coord, state, env, operators, force_cpu=False, verbosity=0):
+def rdm2x2_nnn_1(coord, state, env, operator, force_cpu=False, verbosity=0):
     C2x2_LU = enlarged_corner(coord, state, env, 'LU', csites=[], force_cpu=force_cpu, verbosity=verbosity)
     C2x2_RD = enlarged_corner(coord, state, env, 'RD', csites=[], force_cpu=force_cpu, verbosity=verbosity)
 
@@ -1552,23 +1552,22 @@ def rdm2x2_nnn_1(coord, state, env, operators, force_cpu=False, verbosity=0):
     C2x2_RU = enlarged_corner(coord, state, env, 'RU', csites=[2], force_cpu=force_cpu, verbosity=verbosity)
     upper_half = einsum('ij,jkab->ijab', C2x2_LU, C2x2_RU)
     lower_half = einsum('ijab,kj->ikab', C2x2_LD, C2x2_RD)
-    operator12 = operators[0].to(C2x2_LD.device)
-    bond12 = einsum('ijab,acbd,ijcd->', upper_half, operator12, lower_half)
+    bond_operator = operator.to(C2x2_LD.device)
+    bond12 = einsum('ijab,acbd,ijcd->', upper_half, bond_operator, lower_half)
 
     # bond 3--1
     C2x2_LD = enlarged_corner(coord, state, env, 'LD', csites=[3], force_cpu=force_cpu, verbosity=verbosity)
     C2x2_RU = enlarged_corner(coord, state, env, 'RU', csites=[1], force_cpu=force_cpu, verbosity=verbosity)
     upper_half = einsum('ij,jkab->ijab', C2x2_LU, C2x2_RU)
     lower_half = einsum('ijab,kj->ikab', C2x2_LD, C2x2_RD)
-    operator31 = operators[1].to(C2x2_LD.device)
-    bond31 = einsum('ijab,acbd,ijcd->', upper_half, operator31, lower_half)
+    bond31 = einsum('ijab,acbd,ijcd->', upper_half, bond_operator, lower_half)
 
-    rdm = bond31 + bond12
-    rdm = rdm.to(env.device)
-    return rdm
+    bond12 = bond12.to(env.device)
+    bond31 = bond31.to(env.device)
+    return(bond12, bond31)
 
 
-def rdm2x2_nnn_2(coord, state, env, operators, force_cpu=False, verbosity=0):
+def rdm2x2_nnn_2(coord, state, env, operator, force_cpu=False, verbosity=0):
     # --------------upper half -------------------------------------------------
 
     # build upper part C2x2_LU--C2x2_RU and contract with the 2-cell operator
@@ -1579,14 +1578,13 @@ def rdm2x2_nnn_2(coord, state, env, operators, force_cpu=False, verbosity=0):
     # NNN bond 3--2
     C2x2_LU = enlarged_corner(coord, state, env, corner='LU', csites=[3], force_cpu=force_cpu, verbosity=verbosity)
     C2x2_RU = enlarged_corner(coord, state, env, corner='RU', csites=[2], force_cpu=force_cpu, verbosity=verbosity)
-    operator32 = operators[0].to(C2x2_LU.device)
-    upper_half_32 = einsum('ijab,acbd,jkcd->ij', C2x2_LU, operator32, C2x2_RU)
+    bond_operator = operator.to(C2x2_LU.device)
+    upper_half_32 = einsum('ijab,acbd,jkcd->ij', C2x2_LU, bond_operator, C2x2_RU)
 
     # NNN bond 2--1
     C2x2_LU = enlarged_corner(coord, state, env, corner='LU', csites=[2], force_cpu=force_cpu, verbosity=verbosity)
     C2x2_RU = enlarged_corner(coord, state, env, corner='RU', csites=[1], force_cpu=force_cpu, verbosity=verbosity)
-    operator21 = operators[1].to(C2x2_LU.device)
-    upper_half_21 = einsum('ijab,acbd,jkcd->ij', C2x2_LU, operator21, C2x2_RU)
+    upper_half_21 = einsum('ijab,acbd,jkcd->ij', C2x2_LU, bond_operator, C2x2_RU)
 
     # --------------bottom half-------------------------------------------------
 
@@ -1604,13 +1602,13 @@ def rdm2x2_nnn_2(coord, state, env, operators, force_cpu=False, verbosity=0):
     # 0			   1
     # |	  		   |
     # C2x2_LD------C2x2_RD
-    rdm = contract(upper_half_32 + upper_half_21, lower_half, ([0, 1], [0, 1]))
 
-    rdm = rdm.to(env.device)
-    return rdm
+    bond32 = contract(upper_half_32, lower_half, ([0, 1], [0, 1])).to(env.device)
+    bond21 = contract(upper_half_21, lower_half, ([0, 1], [0, 1])).to(env.device)
+    return(bond32, bond21)
 
 
-def rdm2x2_nnn_3(coord, state, env, operators, force_cpu=False, verbosity=0):
+def rdm2x2_nnn_3(coord, state, env, operator, force_cpu=False, verbosity=0):
     # ---------------- left half -----------------------------------
 
     # build left half and contract with the 2-cell operator
@@ -1626,14 +1624,13 @@ def rdm2x2_nnn_3(coord, state, env, operators, force_cpu=False, verbosity=0):
     # NN bond 3--1
     C2x2_LU = enlarged_corner(coord, state, env, corner='LU', csites=[3], force_cpu=force_cpu, verbosity=verbosity)
     C2x2_LD = enlarged_corner(coord, state, env, corner='LD', csites=[1], force_cpu=force_cpu, verbosity=verbosity)
-    operator31 = operators[0].to(C2x2_LU.device)
-    left_half_31 = einsum('ijab,abcd,ikcd->jk', C2x2_LU, operator31, C2x2_LD)
+    bond_operator = operator.to(C2x2_LU.device)
+    left_half_31 = einsum('ijab,abcd,ikcd->jk', C2x2_LU, bond_operator, C2x2_LD)
 
     # NN bond 2--3
     C2x2_LU = enlarged_corner(coord, state, env, corner='LU', csites=[2], force_cpu=force_cpu, verbosity=verbosity)
     C2x2_LD = enlarged_corner(coord, state, env, corner='LD', csites=[3], force_cpu=force_cpu, verbosity=verbosity)
-    operator23 = operators[0].to(C2x2_LU.device)
-    left_half_23 = einsum('ijab,abcd,ikcd->jk', C2x2_LU, operator23, C2x2_LD)
+    left_half_23 = einsum('ijab,abcd,ikcd->jk', C2x2_LU, bond_operator, C2x2_LD)
 
     # ---------------- right half -----------------------------------
 
@@ -1654,10 +1651,9 @@ def rdm2x2_nnn_3(coord, state, env, operators, force_cpu=False, verbosity=0):
     # |		       |
     # |     	   |
     # C2x2_LD-1--1-C2x2_RD
-    rdm = contract(left_half_31 + left_half_23, right_half, ([0, 1], [0, 1]))
-
-    rdm = rdm.to(env.device)
-    return rdm
+    bond31 = contract(left_half_31, right_half, ([0, 1], [0, 1])).to(env.device)
+    bond23 = contract(left_half_23, right_half, ([0, 1], [0, 1])).to(env.device)
+    return(bond31, bond23)
 
 
 def rdm2x2_id(coord, state, env, force_cpu=False, verbosity=0):
