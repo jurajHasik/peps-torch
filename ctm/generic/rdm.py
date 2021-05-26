@@ -1560,7 +1560,7 @@ def rdm2x2_nnn_1(coord, state, env, operator, force_cpu=False, verbosity=0):
     C2x2_RU = enlarged_corner(coord, state, env, 'RU', csites=[1], force_cpu=force_cpu, verbosity=verbosity)
     upper_half = einsum('ij,jkab->ijab', C2x2_LU, C2x2_RU)
     lower_half = einsum('ijab,kj->ikab', C2x2_LD, C2x2_RD)
-    bond31 = einsum('ijab,acbd,ijcd->', upper_half, bond_operator, lower_half)
+    bond31 = einsum('ijab,acbd,jicd->', upper_half, bond_operator, lower_half)
 
     bond12 = bond12.to(env.device)
     bond31 = bond31.to(env.device)

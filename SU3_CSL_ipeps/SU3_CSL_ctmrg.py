@@ -24,6 +24,7 @@ parser.add_argument("--j2", type=float, default=0., help="next-nearest-neighbor 
 parser.add_argument("--top_freq", type=int, default=-1, help="frequency of transfer operator spectrum evaluation")
 parser.add_argument("--top_n", type=int, default=2,
                     help="number of leading eigenvalues of transfer operator to compute")
+parser.add_argument("--import_state", type=str, default=None, help="input state for ctmrg")
 args, unknown_args = parser.parse_known_args()
 
 
@@ -46,9 +47,10 @@ def main():
             elementary_tensors.append(tens)
 
     # define initial coefficients
-    if args.opt_resume is not None:
-        checkpoint = torch.load(args.opt_resume)
-        coeffs = checkpoint["parameters"]
+    if args.import_state is not None:
+        checkpoint = torch.load(args.import_state)
+        coeffs = np.array(checkpoint["parameters"][(0,0)].detach())
+        coeffs = {(0,0): torch.tensor(coeffs, dtype = torch.float64, device = t_device)}
     else:
         #coeffs = {(0, 0): torch.tensor([1.0000,  0.3563,  4.4882, -0.3494, -3.9341, 0., 0., 1.0000, 0.2429, 0.], dtype=torch.float64, device=t_device)} # Ji-yao's ground state for theta=pi/4
         coeffs = {(0,0): torch.tensor([1.,0.,0.,0.,0.,0.,0.,1.,0.,0.], dtype=torch.float64, device=t_device)} # AKLT state
@@ -142,8 +144,7 @@ def main():
     print(' P_23={:01.14f} \n P_13={:01.14f} \n P_12={:01.14f}'.format(Pnn_23.item(), Pnn_13.item(), Pnn_12.item()))
     print('\n Next-nearest neighbor permutations')
     print(' P_23_a={:01.14f}, P_23_b={:01.14f} \n P_31_a={:01.14f}, P_31_b={:01.14f} \n P_12_a={:01.14f}, '
-          'P_12_b={:01.14f}'.format(Pnnn[4].item(), Pnnn[5].item(), Pnnn[0].item(), Pnnn[1].item(), Pnnn[2].item(),
-                                    Pnnn[3].item()))
+          'P_12_b={:01.14f}'.format(Pnnn[2].item(), Pnnn[3].item(), Pnnn[4].item(), Pnnn[5].item(), Pnnn[0].item(), Pnnn[1].item()))
 
     colors3, colors8 = model.eval_lambdas(state, ctm_env_final)
     print(
