@@ -54,6 +54,24 @@ def main():
         e_nnn = model.energy_nnn(state, env)
         return (e_up + e_dn + e_nnn) / 3
 
+    def print_corner_spectra(env):
+        spectra = []
+        for c_loc,c_ten in env.C.items():
+            u,s,v= torch.svd(c_ten, compute_uv=False)
+            if c_loc[1] == (-1, -1):
+                label = 'LU'
+            if c_loc[1] == (-1, 1):
+                label = 'LD'
+            if c_loc[1] == (1, -1):
+                label = 'RU'
+            if c_loc[1] == (1, 1):
+                label = 'RD'
+            spectra.append([label, s])
+        print(f"\n\nspectrum C[{spectra[0][0]}]             spectrum C[{spectra[1][0]}]             spectrum C[{spectra[2][0]}]             spectrum C[{spectra[3][0]}] ")
+        for i in range(args.chi):
+            print("{:2} {:01.14f}        {:2} {:01.14f}        {:2} {:01.14f}        {:2} {:01.14f}".format(i, spectra[0][1][i], i, spectra[1][1][i], i, spectra[2][1][i], i, spectra[3][1][i]))
+
+
     @torch.no_grad()
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:

@@ -60,8 +60,8 @@ def main():
     model = SU3_chiral.SU3_CHIRAL(theta=args.theta, j1=args.j1, j2=args.j2)
 
     def energy_f(state, env):
-        e_dn = model.energy_triangle_dn(state, env, force_cpu=False)
-        e_up = model.energy_triangle_up(state, env, force_cpu=False)
+        e_dn = model.energy_triangle_dn(state, env, force_cpu=True)
+        e_up = model.energy_triangle_up(state, env, force_cpu=True)
         e_nnn = model.energy_nnn(state, env)
         return (e_up + e_dn + e_nnn) / 3
 
@@ -95,7 +95,7 @@ def main():
             e_prev = 0
         else:
             e_prev = history[-2]
-        #print_corner_spectra(env)
+        print_corner_spectra(env)
         print('Step n°{:2}    E_site ={:01.14f}   (E_up={:01.14f}, E_dn={:01.14f}, E_nnn={:01.14f})  delta_E={:01.14f}'.format(len(history), e_curr.item(), e_up.item(), e_dn.item(), e_nnn, e_curr.item()-e_prev))
         if (len(history) > 1 and abs(history[-1] - history[-2]) < ctm_args.ctm_conv_tol) \
                 or len(history) >= ctm_args.ctm_max_iter:
@@ -128,10 +128,10 @@ def main():
 
     # bond operators
     Pnn_23, Pnn_13, Pnn_12 = model.P_bonds_nn(state, ctm_env_final)
-    Pnnn = model.P_bonds_nnn(state, ctm_env_final, force_cpu = True)
+    Pnnn = model.P_bonds_nnn(state, ctm_env_final, force_cpu=True)
 
     print('\n\n Energy density')
-    print(f' E_up={e_up_final.item()}, E_dn={e_dn_final.item()}, E_tot={e_tot_final.item()}')
+    print(f' E_up={e_up_final.item()}, E_dn={e_dn_final.item()}, E_site={e_tot_final.item()}')
     print('\n Triangular permutations')
     print(f' Re(P_up)={torch.real(P_up).item()}, Im(P_up)={torch.imag(P_up).item()}')
     print(f' Re(P_dn)={torch.real(P_dn).item()}, Im(P_dn)={torch.imag(P_dn).item()}')
