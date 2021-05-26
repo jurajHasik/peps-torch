@@ -101,14 +101,14 @@ def main():
         with torch.no_grad():
             if not history:
                 history = []
-            e_curr = model.energy_triangle(state, env)
+            e_curr = (model.energy_triangle(state, env) + model.energy_triangle_up(state, env))/2
             history.append([e_curr])
             if len(history) <= 1:
                 Delta_E = 'not defined'
             else:
                 Delta_E = torch.norm(history[-1][0] - history[-2][0]).item()
             print_corner_spectra(env)
-            print('Step n°' + str(len(history)) + '     E_down = ' + str(e_curr.item()))
+            print('Step n°' + str(len(history)) + '     E_site = ' + str(e_curr.item()))
             if len(history) > 1 and Delta_E < ctm_args.ctm_conv_tol:
                 return True, history
         return False, history
