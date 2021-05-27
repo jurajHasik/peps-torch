@@ -35,9 +35,11 @@ def main():
 
     # Import all elementary tensors and build initial state
     elementary_tensors = []
+    path = "SU3_CSL_ipeps/SU3_D7_tensors/"
     for name in ['S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'L0', 'L1', 'L2']:
-        tens = load_SU3_tensor(name)
+        tens = load_SU3_tensor(path+name)
         elementary_tensors.append(tens)
+
     # define initial coefficients
     coeffs = {(0, 0): torch.tensor([1., 0., 0., 0., 0., 0., 0., 1., 0., 0.], dtype=torch.float64)}
     # define which coefficients will be added a noise
@@ -70,7 +72,6 @@ def main():
         print(f"\n\nspectrum C[{spectra[0][0]}]             spectrum C[{spectra[1][0]}]             spectrum C[{spectra[2][0]}]             spectrum C[{spectra[3][0]}] ")
         for i in range(args.chi):
             print("{:2} {:01.14f}        {:2} {:01.14f}        {:2} {:01.14f}        {:2} {:01.14f}".format(i, spectra[0][1][i], i, spectra[1][1][i], i, spectra[2][1][i], i, spectra[3][1][i]))
-
 
     @torch.no_grad()
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
@@ -129,6 +130,9 @@ def main():
     Pnn_23, Pnn_13, Pnn_12 = model.P_bonds_nn(state, ctm_env_final)
     Pnnn = model.P_bonds_nnn(state, ctm_env_final, force_cpu=True)
 
+    # magnetization
+    lambda3, lambda8 = model.eval_lambdas(state, ctm_env_final)
+
     print('\n\n Energy density')
     print(f' E_up={e_up_final.item()}, E_dn={e_dn_final.item()}, E_tot={e_tot_final.item()}')
     print('\n Triangular permutations')
@@ -140,12 +144,11 @@ def main():
     print(' P_23_a={:01.14f}, P_23_b={:01.14f} \n P_31_a={:01.14f}, P_31_b={:01.14f} \n P_12_a={:01.14f}, '
           'P_12_b={:01.14f}'.format(Pnnn[4].item(), Pnnn[5].item(), Pnnn[0].item(), Pnnn[1].item(), Pnnn[2].item(),
                                     Pnnn[3].item()))
-
-    colors3, colors8 = model.eval_lambdas(state, ctm_env_final)
+    print('\n Magnetization')
     print(
-        f'\n Lambda_3 = {torch.real(colors3[0]).item()}, {torch.real(colors3[1]).item()}, {torch.real(colors3[2]).item()}')
+        f' Lambda_3 = {torch.real(lambda3[0]).item()}, {torch.real(lambda3[1]).item()}, {torch.real(lambda3[2]).item()}')
     print(
-        f' Lambda_8 = {torch.real(colors8[0]).item()}, {torch.real(colors8[1]).item()}, {torch.real(colors8[2]).item()}')
+        f' Lambda_8 = {torch.real(lambda8[0]).item()}, {torch.real(lambda8[1]).item()}, {torch.real(lambda8[2]).item()}')
 
     # environment diagnostics
     print("\n")

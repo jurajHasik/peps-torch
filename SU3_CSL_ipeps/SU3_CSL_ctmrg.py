@@ -38,8 +38,9 @@ def main():
 
     # Import all elementary tensors
     elementary_tensors = []
+    path = "SU3_CSL_ipeps/SU3_D7_tensors/"
     for name in ['S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'L0', 'L1', 'L2']:
-        tens = load_SU3_tensor(name)
+        tens = load_SU3_tensor(path+name)
         tens = tens.to(t_device)
         if name in ['S0', 'S1', 'S2', 'L2']:
             elementary_tensors.append(1j * tens)
@@ -135,8 +136,11 @@ def main():
     Pnn_23, Pnn_13, Pnn_12 = model.P_bonds_nn(state, ctm_env_final)
     Pnnn = model.P_bonds_nnn(state, ctm_env_final, force_cpu=True)
 
+    # magnetization
+    lambda3, lambda8 = model.eval_lambdas(state, ctm_env_final)
+
     print('\n\n Energy density')
-    print(f' E_up={e_up_final.item()}, E_dn={e_dn_final.item()}, E_site={e_tot_final.item()}')
+    print(f' E_up={e_up_final.item()}, E_dn={e_dn_final.item()}, E_tot={e_tot_final.item()}')
     print('\n Triangular permutations')
     print(f' Re(P_up)={torch.real(P_up).item()}, Im(P_up)={torch.imag(P_up).item()}')
     print(f' Re(P_dn)={torch.real(P_dn).item()}, Im(P_dn)={torch.imag(P_dn).item()}')
@@ -144,13 +148,13 @@ def main():
     print(' P_23={:01.14f} \n P_13={:01.14f} \n P_12={:01.14f}'.format(Pnn_23.item(), Pnn_13.item(), Pnn_12.item()))
     print('\n Next-nearest neighbor permutations')
     print(' P_23_a={:01.14f}, P_23_b={:01.14f} \n P_31_a={:01.14f}, P_31_b={:01.14f} \n P_12_a={:01.14f}, '
-          'P_12_b={:01.14f}'.format(Pnnn[2].item(), Pnnn[3].item(), Pnnn[4].item(), Pnnn[5].item(), Pnnn[0].item(), Pnnn[1].item()))
-
-    colors3, colors8 = model.eval_lambdas(state, ctm_env_final)
+          'P_12_b={:01.14f}'.format(Pnnn[4].item(), Pnnn[5].item(), Pnnn[0].item(), Pnnn[1].item(), Pnnn[2].item(),
+                                    Pnnn[3].item()))
+    print('\n Magnetization')
     print(
-        f'\n Lambda_3 = {torch.real(colors3[0]).item()}, {torch.real(colors3[1]).item()}, {torch.real(colors3[2]).item()}')
+        f' Lambda_3 = {torch.real(lambda3[0]).item()}, {torch.real(lambda3[1]).item()}, {torch.real(lambda3[2]).item()}')
     print(
-        f' Lambda_8 = {torch.real(colors8[0]).item()}, {torch.real(colors8[1]).item()}, {torch.real(colors8[2]).item()}')
+        f' Lambda_8 = {torch.real(lambda8[0]).item()}, {torch.real(lambda8[1]).item()}, {torch.real(lambda8[2]).item()}')
 
     # environment diagnostics
     print("\n")
