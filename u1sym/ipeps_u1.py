@@ -7,9 +7,17 @@ import config as cfg
 import ipeps.ipeps as ipeps
 from ctm.generic import rdm
 
+
 class IPEPS_U1SYM(ipeps.IPEPS):
+<<<<<<< HEAD
 	def __init__(self, sym_tensors, coeffs, var_coeffs_allowed=None, vertexToSite=None, lX=None, lY=None, \
                  peps_args=cfg.peps_args, global_args=cfg.global_args):
+=======
+    def __init__(self, sym_tensors_triangle, sym_tensors_site, coeffs_triangle_up, coeffs_site, sym_up_dn=True,
+                 coeffs_triangle_dn=None,
+                 var_coeffs_triangle=None, var_coeffs_site=None, vertexToSite=None,
+                 lX=None, lY=None, peps_args=cfg.peps_args, global_args=cfg.global_args):
+>>>>>>> now supporting different triangle tensors, and and more general input of symmetrics tensors
         r"""
         :param sym_tensors: list of selected symmetric tensors
         :param coeffs: map from elementary unit cell to vector of coefficients
@@ -101,17 +109,34 @@ class IPEPS_U1SYM(ipeps.IPEPS):
 
         TODO we infer the size of the cluster from the keys of sites. Is it OK?
         """
-        self.sym_tensors = sym_tensors
-        self.coeffs = OrderedDict(coeffs)
-        if var_coeffs_allowed == None:
+        self.sym_up_dn = sym_up_dn
+        self.sym_tensors_triangle = sym_tensors_triangle
+        self.coeffs_triangle_up = OrderedDict(coeffs_triangle_up)
+        if (coeffs_triangle_dn is not None) and self.sym_up_dn is False:
+            self.coeffs_triangle_dn = OrderedDict(coeffs_triangle_dn)
+        else:
+            self.coeffs_triangle_dn = OrderedDict(coeffs_triangle_up)
+
+        self.sym_tensors_site = sym_tensors_site
+        self.coeffs_site = OrderedDict(coeffs_site)
+
+        self.coeffs = OrderedDict({'t_up': self.coeffs_triangle_up[(0, 0)], 't_dn': self.coeffs_triangle_dn[(0, 0)], 'site': self.coeffs_site[(0, 0)]})
+
+        if var_coeffs_triangle is None:
             # all coefficients are allowed to move (default)
-            self.var_coeffs_allowed = torch.ones(self.coeffs[(0, 0)].size())
+            self.var_coeffs_triangle = torch.ones(self.coeffs_triangle[(0, 0)].size())
         else:
             # only the selected coeffs are allowed to move
-            self.var_coeffs_allowed = var_coeffs_allowed
+            self.var_coeffs_triangle = var_coeffs_triangle
+
+        if var_coeffs_site is None:
+            self.var_coeffs_site = torch.ones(self.coeffs_site[(0, 0)].size())
+        else:
+            self.var_coeffs_site = var_coeffs_site
+
         sites = self.build_onsite_tensors()
 
-        super().__init__(sites, vertexToSite=vertexToSite, peps_args=peps_args, \
+        super().__init__(sites, vertexToSite=vertexToSite, peps_args=peps_args,
                          global_args=global_args)
 
     def __str__(self):
@@ -135,8 +160,8 @@ class IPEPS_U1SYM(ipeps.IPEPS):
             print("")
 
         # print meta-information of considered symmetric tensors
-        for i, su2t in enumerate(self.sym_tensors):
-            print(f"{i} {su2t[0]}")
+        # for i, su2t in enumerate(self.sym_tensors):
+        #    print(f"{i} {su2t[0]}")
 
         # print coefficients
         for nid, coord, c in [(t[0], *t[1]) for t in enumerate(self.coeffs.items())]:
@@ -150,7 +175,8 @@ class IPEPS_U1SYM(ipeps.IPEPS):
         return ""
 
     def get_parameters(self):
-        return self.coeffs.values()
+        parameters = self.coeffs.values()
+        return parameters
 
     def get_checkpoint(self):
         return self.coeffs
@@ -158,42 +184,72 @@ class IPEPS_U1SYM(ipeps.IPEPS):
     def load_checkpoint(self, checkpoint_file):
         checkpoint = torch.load(checkpoint_file)
         self.coeffs = checkpoint["parameters"]
-        for coeff_t in self.coeffs.values(): coeff_t.requires_grad_(False)
+        self.coeffs_triangle_up = self.coeffs['t_up']
+        self.coeffs_triangle_dn = self.coeffs['t_dn']
+        self.coeffs_site = self.coeffs['site']
+        for coeff_t in self.coeffs_triangle_dn.values(): coeff_t.requires_grad_(False)
+        for coeff_t in self.coeffs_triangle_up.values(): coeff_t.requires_grad_(False)
+        for coeff_t in self.coeffs_site.values(): coeff_t.requires_grad_(False)
         self.sites = self.build_onsite_tensors()
 
+    def print_coeffs(self):
+        def print_1d_array(x):
+            out=''
+            for i in x:
+                out += ' {:01.4f} '.format(i)
+            return out
+        print(" Current state:")
+        print(" # Up triangles:   " + print_1d_array(self.coeffs_triangle_up[(0,0)]))
+        print(" # Down triangles: " + print_1d_array(self.coeffs_triangle_dn[(0,0)]))
+        print(" # Sites:          " + print_1d_array(self.coeffs_site[(0,0)]))
+
     def build_onsite_tensors(self):
-        # written for SU(3) chiral CSL Kagome
-        (M0, M1, M2, M3, M4, M5, M6, L0, L1, L2) = self.sym_tensors
-        (m0, m1, m2, m3, m4, m5, m6, l0, l1, l2) = self.coeffs[(0, 0)]
-        # trivalent tensor M
-        M_tensor = m0 * M0 + m1 * M1 + m2 * M2 + m3 * M3 + m4 * M4 + m5 * M5 + m6 * M6
-        # bivalent tensor L
-        L_tensor = l0 * L0 + l1 * L1 + l2 * L2
+        # triangle tensor M
+        M_tensor_up = 0 * self.sym_tensors_triangle[0]
+        M_tensor_dn = 0 * self.sym_tensors_triangle[0]
+        for k in range(len(self.sym_tensors_triangle)):
+            M_tensor_up += self.coeffs_triangle_up[(0, 0)][k] * self.sym_tensors_triangle[k]
+            M_tensor_dn += self.coeffs_triangle_dn[(0, 0)][k] * self.sym_tensors_triangle[k]
+        # site tensor L
+        L_tensor = 0 * self.sym_tensors_site[0]
+        for k in range(len(self.sym_tensors_site)):
+            L_tensor += self.coeffs_site[(0, 0)][k] * self.sym_tensors_site[k]
         # square-lattice tensor with 3 physical indices (d=3)
-        a_tensor_temp = torch.einsum('iab,uji,jkl,vkc,wld->uvwabcd', M_tensor, L_tensor, M_tensor, L_tensor, L_tensor)
+        a_tensor_temp = torch.einsum('iab,uji,jkl,vkc,wld->uvwabcd', M_tensor_up, L_tensor, M_tensor_dn, L_tensor,
+                                     L_tensor)
         # reshape to a single d=27 index
-        a_tensor = torch.zeros((27, 7, 7, 7, 7), dtype=torch.complex128, device = a_tensor_temp.device)
+        a_tensor = torch.zeros((27, 7, 7, 7, 7), dtype=torch.complex128, device=a_tensor_temp.device)
         for si in range(27):
             n1, n2, n3 = fmap_inv(si)
             a_tensor[si, :, :, :, :] = a_tensor_temp[n1, n2, n3, :, :, :, :]
         sites = dict()
-        for coord, c in self.coeffs.items():
-            sites[coord] = a_tensor
+        sites[(0, 0)] = a_tensor
         return sites
 
     def add_noise(self, noise):
-        for coord in self.coeffs.keys():
-            rand_t = torch.rand(self.coeffs[coord].size(), dtype=torch.float64, device=self.device)
-            tmp_t = self.coeffs[coord] + noise * 2 * (
-                    rand_t - 0.5 * torch.ones(self.coeffs[coord].size(), dtype=torch.float64,
-                                              device=self.device)) * self.var_coeffs_allowed
-            self.coeffs[coord] = tmp_t
+        noise_site = torch.rand(self.coeffs_site[(0, 0)].size(), dtype=torch.float64, device=self.device)
+        noise_triangle_up = torch.rand(self.coeffs_triangle_up[(0, 0)].size(), dtype=torch.float64, device=self.device)
+        if self.sym_up_dn:
+            noise_triangle_dn = noise_triangle_up.clone()
+        else:
+            noise_triangle_dn = torch.rand(self.coeffs_triangle_dn[(0, 0)].size(), dtype=torch.float64,
+                                           device=self.device)
+        for coeffs_set, var_coeffs_set, noise_set in zip(
+                [self.coeffs_triangle_dn, self.coeffs_triangle_up, self.coeffs_site],
+                [self.var_coeffs_triangle, self.var_coeffs_triangle, self.var_coeffs_site],
+                [noise_triangle_dn, noise_triangle_up, noise_site]):
+            tmp_t = coeffs_set[(0, 0)] + noise * 2 * (
+                    noise_set - 0.5 * torch.ones(coeffs_set[(0, 0)].size(), dtype=torch.float64,
+                                                 device=self.device)) * var_coeffs_set
+            coeffs_set[(0, 0)] = tmp_t
         self.sites = self.build_onsite_tensors()
 
     def get_aux_bond_dims(self):
-        return [max(t[1].size()[1:]) for t in self.sym_tensors]
+        return [max(t[1].size()[1:]) for t in self.sym_tensors_triangle]
 
-    def write_to_file(self, outputfile, aux_seq=[0, 1, 2, 3], tol=1.0e-14, normalize=False):
+    def write_to_file(self, outputfile, aux_seq=None, tol=1.0e-14, normalize=False):
+        if aux_seq is None:
+            aux_seq = [0, 1, 2, 3]
         write_ipeps_u1(self, outputfile, aux_seq=aux_seq, tol=tol, normalize=normalize)
 
 
@@ -201,8 +257,7 @@ def extend_bond_dim(state, new_d):
     return ipeps.extend_bond_dim(state, new_d)
 
 
-def read_ipeps_u1(jsonfile, vertexToSite=None, aux_seq=[0, 1, 2, 3], peps_args=cfg.peps_args, \
-                  global_args=cfg.global_args):
+def read_ipeps_u1(jsonfile, vertexToSite=None, aux_seq=None, peps_args=cfg.peps_args, global_args=cfg.global_args):
     r"""
     :param jsonfile: input file describing iPEPS in json format
     :param vertexToSite: function mapping arbitrary vertex of a square lattice
@@ -235,6 +290,8 @@ def read_ipeps_u1(jsonfile, vertexToSite=None, aux_seq=[0, 1, 2, 3], peps_args=c
         0A2 <=> [left, up, right, down]: aux_seq=[1,0,3,2]
          3
     """
+    if aux_seq is None:
+        aux_seq = [0, 1, 2, 3]
     dtype = global_args.torch_dtype
     asq = [x + 1 for x in aux_seq]
     sites = OrderedDict()
@@ -453,7 +510,7 @@ def write_coeffs(state, outputfile):
 def read_coeffs(inputfile):
     with open(inputfile, 'r') as read_file:
         coeffs = json.loads(read_file.read())
-    return (coeffs)
+    return coeffs
 
 
 def fmap(n1, n2, n3):
@@ -464,4 +521,4 @@ def fmap_inv(s):
     n1 = s // 9
     n2 = (s - 9 * n1) // 3
     n3 = s - 9 * n1 - 3 * n2
-    return (n1, n2, n3)
+    return n1, n2, n3
