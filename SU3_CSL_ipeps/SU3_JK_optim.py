@@ -32,21 +32,41 @@ def main():
     print('\n')
     torch.set_num_threads(args.omp_cores)
     torch.manual_seed(args.seed)
+    t_device = torch.device(args.GLOBALARGS_device)
 
-    # Import all elementary tensors and build initial state
-    elementary_tensors = []
+    # Import all elementary tensors
+    tensors_site = []
+    tensors_triangle = []
     path = "SU3_CSL_ipeps/SU3_D7_tensors/"
     for name in ['S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'L0', 'L1', 'L2']:
-        tens = load_SU3_tensor(path+name)
-        elementary_tensors.append(tens)
+        tens = load_SU3_tensor(path + name)
+        tens = tens.to(t_device)
+        if name in ['S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6']:
+            tensors_triangle.append(tens)
+        else:
+            tensors_site.append(tens)
 
-    # define initial coefficients
-    coeffs = {(0, 0): torch.tensor([1., 0., 0., 0., 0., 0., 0., 1., 0., 0.], dtype=torch.float64)}
-    # define which coefficients will be added a noise
-    var_coeffs_allowed = torch.tensor([0, 1, 1, 0, 0, 0, 0, 0, 1, 0])
-    state = IPEPS_U1SYM(elementary_tensors, coeffs, var_coeffs_allowed)
-    state.add_noise(args.instate_noise)
-    print(f'Current state: {state.coeffs[(0, 0)].data}')
+        # define initial coefficients
+        if args.import_state is not None:
+            checkpoint = torch.load(args.import_state)
+            coeffs = checkpoint["parameters"]
+            coeffs_triangle_up, coeffs_triangle_dn, coeffs_site = coeffs[(0, 0)]
+            for coeff_t in coeffs_triangle_dn.values(): coeff_t.requires_grad_(False)
+            for coeff_t in coeffs_triangle_up.values(): coeff_t.requires_grad_(False)
+            for coeff_t in coeffs_site.values(): coeff_t.requires_grad_(False)
+            # coeffs ... .to(t_device)
+        else:
+            # AKLT state
+            coeffs_triangle = {(0, 0): torch.tensor([1., 0., 0., 0., 0., 0., 0.], dtype=torch.float64, device=t_device)}
+            coeffs_site = {(0, 0): torch.tensor([1., 0., 0.], dtype=torch.float64, device=t_device)}
+
+        # define which coefficients will be added a noise
+        var_coeffs_site = torch.tensor([0, 1, 0], dtype=torch.float64, device=t_device)
+        var_coeffs_triangle = torch.tensor([0, 1, 1, 0, 0, 0, 0], dtype=torch.float64, device=t_device)
+
+        state = IPEPS_U1SYM(tensors_triangle, tensors_site, coeffs_triangle, coeffs_site,
+                            sym_up_dn=True,
+                            var_coeffs_triangle=var_coeffs_triangle, var_coeffs_site=var_coeffs_site)
 
     model = SU3_chiral.SU3_CHIRAL(theta=0., j1=args.frac_j1/100., j2=args.j2)
 
