@@ -198,13 +198,13 @@ class IPEPS_U1SYM(ipeps.IPEPS):
 
     def build_onsite_tensors(self):
         # triangle tensor M
-        M_tensor_up = 0 * self.sym_tensors_triangle[0]
-        M_tensor_dn = 0 * self.sym_tensors_triangle[0]
+        M_tensor_up = 0 * self.sym_tensors_triangle[0].clone()
+        M_tensor_dn = 0 * self.sym_tensors_triangle[0].clone()
         for k in range(len(self.sym_tensors_triangle)):
             M_tensor_up += self.coeffs_triangle_up[(0, 0)][k] * self.sym_tensors_triangle[k]
             M_tensor_dn += self.coeffs_triangle_dn[(0, 0)][k] * self.sym_tensors_triangle[k]
         # site tensor L
-        L_tensor = 0 * self.sym_tensors_site[0]
+        L_tensor = 0 * self.sym_tensors_site[0].clone()
         for k in range(len(self.sym_tensors_site)):
             L_tensor += self.coeffs_site[(0, 0)][k] * self.sym_tensors_site[k]
         # square-lattice tensor with 3 physical indices (d=3)

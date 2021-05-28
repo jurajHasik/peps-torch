@@ -26,6 +26,7 @@ parser.add_argument("--j1", type=float, default=0., help="nearest-neighbor excha
 parser.add_argument("--j2", type=float, default=0., help="next-nearest-neighbor exchange coupling")
 parser.add_argument("--ansatz", type=str, default="A1+iA2, B", help="choice of the tensor ansatz")
 parser.add_argument("--import_state", type=str, default=None, help="input state")
+parser.add_argument("--sym_up_dn", type=bool, default=True, help="same trivalent tensors for up and down triangles")
 args, unknown_args = parser.parse_known_args()
 
 
@@ -64,14 +65,18 @@ def main():
         # coeffs ... .to(t_device)
     else:
         # AKLT state
-        coeffs_triangle = {(0, 0): torch.tensor([1., 0., 0., 0., 0., 0., 0.], dtype=torch.float64, device=t_device)}
-        coeffs_site = {(0, 0): torch.tensor([1., 0., 0.], dtype=torch.float64, device=t_device)}
+        #coeffs_triangle = {(0, 0): torch.tensor([1., 0., 0., 0., 0., 0., 0.], dtype=torch.float64, device=t_device)}
+        #coeffs_site = {(0, 0): torch.tensor([1., 0., 0.], dtype=torch.float64, device=t_device)}
+        # Ji-Yao's state
+        coeffs_triangle = {(0, 0): torch.tensor([1.0000, 0.3563, 4.4882, -0.3494, -3.9341, 0., 0.], dtype=torch.float64,
+                                                device=t_device)}
+        coeffs_site = {(0, 0): torch.tensor([1.0000, 0.2429, 0.], dtype=torch.float64, device=t_device)}
 
     # define which coefficients will be added a noise
-    var_coeffs_site = torch.tensor([0, 1, 1], dtype=torch.float64, device=t_device)
+    var_coeffs_site = torch.tensor([0, 1, 0], dtype=torch.float64, device=t_device)
     var_coeffs_triangle = torch.tensor([0, 1, 1, 1, 1, 0, 0], dtype=torch.float64, device=t_device)
 
-    state = IPEPS_U1SYM(tensors_triangle, tensors_site, coeffs_triangle, coeffs_site, sym_up_dn=True,
+    state = IPEPS_U1SYM(tensors_triangle, tensors_site, coeffs_triangle, coeffs_site, sym_up_dn=bool(args.sym_up_dn),
                         var_coeffs_triangle=var_coeffs_triangle, var_coeffs_site=var_coeffs_site)
     state.add_noise(args.instate_noise)
     state.print_coeffs()
