@@ -26,7 +26,7 @@ parser.add_argument("--j1", type=float, default=0., help="nearest-neighbor excha
 parser.add_argument("--j2", type=float, default=0., help="next-nearest-neighbor exchange coupling")
 parser.add_argument("--ansatz", type=str, default="A1+iA2, B", help="choice of the tensor ansatz")
 parser.add_argument("--import_state", type=str, default=None, help="input state")
-parser.add_argument("--sym_up_dn", type=bool, default=True, help="same trivalent tensors for up and down triangles")
+parser.add_argument("--sym_up_dn", type=int, default=1, help="same trivalent tensors for up and down triangles")
 args, unknown_args = parser.parse_known_args()
 
 
