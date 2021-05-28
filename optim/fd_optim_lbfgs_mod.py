@@ -67,14 +67,13 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
     epoch= 0
 
     if main_args.opt_resume is not None:
-        checkpoint = torch.load(main_args.opt_resume)
-        params_r = checkpoint["parameters"]
-        print(params_r)
-        parameters = params_r
-        state.coeffs = parameters
+        state.load_checkpoint(checkpoint_file)
+        state.print_coeffs()
 
     parameters= state.get_parameters()
-    for A in parameters: A.requires_grad_(True)
+    for param_set in parameters:
+        for A in param_set:
+            A.requires_grad_(True)
 
     optimizer = lbfgs_modified.LBFGS_MOD(parameters, max_iter=opt_args.max_iter_per_epoch, lr=opt_args.lr, \
         tolerance_grad=opt_args.tolerance_grad, tolerance_change=opt_args.tolerance_change, \
@@ -119,43 +118,48 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         loc_opt_args= copy.deepcopy(opt_args)
         loc_opt_args.opt_ctm_reinit= opt_args.fd_ctm_reinit
         loc_ctm_args= copy.deepcopy(ctm_args)
-        # TODO check if we are optimizing C4v symmetric ansatz
         if opt_args.line_search_svd_method != 'DEFAULT':
             loc_ctm_args.projector_svd_method= opt_args.line_search_svd_method
         loc_context= dict({"ctm_args":loc_ctm_args, "opt_args":loc_opt_args, \
             "loss_history": t_data, "line_search": False})
 
-        fd_grad=dict()
+        print('\n')
+        fd_grad_site=dict()
+        fd_grad_up=dict()
+        fd_grad_dn=dict()
         with torch.no_grad():
-            for k in state.coeffs.keys():
-                A_orig= state.coeffs[k].clone()
-                assert len(A_orig.size())==1, "coefficient tensor is not 1D"
-                fd_grad[k]= torch.zeros(A_orig.size(),dtype=A_orig.dtype,device=A_orig.device)
-                for i in range(state.coeffs[k].size()[0]):
-                    if state.var_coeffs_allowed[i] > 0:
-                        print('* gradient component n. '+str(i))
-                        e_i= torch.zeros(A_orig.size()[0],dtype=A_orig.dtype,device=A_orig.device)
-                        e_i[i]= opt_args.fd_eps
-                        state.coeffs[k]+=e_i
-                        loc_env= current_env[0].clone()
-                        loss1, ctm_env, history, timings = loss_fn(state, loc_env,\
-                        loc_context)
-                        fd_grad[k][i]=(float(loss1-loss0)/opt_args.fd_eps)
-                        log.info(f"FD_GRAD {i} loss1 {loss1} grad_i {fd_grad[k][i]}"\
-                        +f" timings {timings}")
-                        state.coeffs[k].data.copy_(A_orig)
-        log.info(f"FD_GRAD grad {fd_grad}")
-        print(f'Current gradient: {fd_grad}')
-        return fd_grad
+            for k in state.coeffs_site.keys():
+                for coeffs_set, var_coeffs_set, fd_grad_set, set_name in zip([state.coeffs_triangle_up, state.coeffs_triangle_dn, state.coeffs_site],
+                                                                [state.var_coeffs_triangle, state.var_coeffs_triangle, state.var_coeffs_site],
+                                                                [fd_grad_up, fd_grad_dn, fd_grad_site],
+                                                                ["t_up", "t_dn", "site"]):
+                    A_orig = coeffs_set[k].clone()
+                    if set_name=="t_dn" and state.sym_up_dn and len(fd_grad_up) > 0:
+                        fd_grad_set[k] = fd_grad_up[k]
+                    else:
+                        fd_grad_set[k]= torch.zeros(A_orig.size(),dtype=A_orig.dtype,device=A_orig.device)
+                        for i in range(coeffs_set[k].size()[0]):
+                            if var_coeffs_set[i] > 0:
+                                print('* Tensor '+set_name+': gradient component n. '+str(i))
+                                e_i= torch.zeros(A_orig.size()[0],dtype=A_orig.dtype,device=A_orig.device)
+                                e_i[i]= opt_args.fd_eps
+                                coeffs_set[k]+=e_i
+                                loc_env= current_env[0].clone()
+                                loss1, ctm_env, history, timings = loss_fn(state, loc_env, loc_context)
+                                fd_grad_set[k][i]=(float(loss1-loss0)/opt_args.fd_eps)
+                                log.info(f"FD_GRAD {set_name}[{i}] loss1 {loss1} grad_i {fd_grad_set[k][i]}"\
+                                +f" timings {timings}")
+                                coeffs_set[k].data.copy_(A_orig)
+                    log.info(f"FD_GRAD grad {k}, {set_name}: {fd_grad_set}")
+        return fd_grad_up, fd_grad_dn, fd_grad_site
 
 
     #@profile
     def closure(linesearching=False):
         context["line_search"]=linesearching
-
         # 0) evaluate loss
         optimizer.zero_grad()
-        print(f'Current state: {state.coeffs[(0,0)].data}')
+        state.print_coeffs()
         with torch.no_grad():
             loss, ctm_env, history, timings= loss_fn(state, current_env[0], context)
 
@@ -184,11 +188,15 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
 
         # 4) evaluate gradient
         t_grad0= time.perf_counter()
-        grad= grad_fd(loss)
-        for k in state.coeffs.keys():
-            state.coeffs[k].grad= grad[k]
+        grad_up, grad_dn, grad_site= grad_fd(loss)
+        for k in state.coeffs_site.keys():
+            state.coeffs_triangle_up[k].grad = grad_up[k]
+            print(f'Gradient up triangle:   {grad_up[k]}')
+            state.coeffs_triangle_dn[k].grad = grad_dn[k]
+            print(f'Gradient down triangle: {grad_dn[k]}')
+            state.coeffs_site[k].grad = grad_site[k]
+            print(f'Gradient sites:         {grad_site[k]}')
         t_grad1= time.perf_counter()
-        print(f'Current state: {state.coeffs[(0,0)].data}')
 
         # 5) log grad metrics
         if opt_args.opt_logging:
@@ -241,8 +249,9 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         # checkpoint the optimizer
         # checkpointing before step, guarantees the correspondence between the wavefunction
         # and the last computed value of loss t_data["loss"][-1]
-        print('\n')
+        print('\n\n')
         print('***** epoch n. '+str(epoch))
+        print('\n')
         if epoch>0:
             store_checkpoint(checkpoint_file, state, optimizer, epoch, t_data["loss"][-1])
 
@@ -257,7 +266,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         if post_proc is not None:
             post_proc(state, current_env[0], context)
         
-        # terminate condition
+        # terminate condition :
         if len(t_data["loss"])>1 and \
             abs(t_data["loss"][-1]-t_data["loss"][-2])<opt_args.tolerance_change:
             break
