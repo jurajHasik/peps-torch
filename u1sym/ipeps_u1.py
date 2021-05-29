@@ -1,6 +1,7 @@
 import torch
 from collections import OrderedDict
 import json
+import warnings
 import math
 import config as cfg
 import ipeps.ipeps as ipeps
@@ -146,12 +147,23 @@ class IPEPS_U1SYM(ipeps.IPEPS):
         return self.coeffs.values()
 
     def get_checkpoint(self):
-        return self.coeffs
+        checkpoint= {"coeffs": self.coeffs, "elem_tensors": self.sym_tensors,\
+            "pg_irreps": self.pg_irreps}
+        return checkpoint
 
     def load_checkpoint(self,checkpoint_file):
         checkpoint= torch.load(checkpoint_file)
-        self.coeffs= checkpoint["parameters"]
+        params= checkpoint["parameters"]
+        self.coeffs= params["coeffs"]
         for coeff_t in self.coeffs.values(): coeff_t.requires_grad_(False)
+        if "elem_tensors" in params.keys():
+            assert any([ coeff_t.numel()==len(params["elem_tensors"]) for coeff_t \
+                in params["coeffs"].values()]),"Length of coefficient vectors does "\
+                +"not match the set of elementary tensors"
+            self.sym_tensors= params["elem_tensors"]
+        else:
+            warnings.warn("Elementary tensors not included in checkpoint. Using class file instead", Warning)
+        self.pg_irreps= set([m["meta"]["pg"] for m,t in self.sym_tensors])
         self.sites= self.build_onsite_tensors()
 
     def build_onsite_tensors(self):
@@ -430,3 +442,19 @@ def write_ipeps_u1(state, outputfile, aux_seq=[0,1,2,3], tol=1.0e-14, normalize=
 
     with open(outputfile,'w') as f:
         json.dump(json_state, f, indent=4, separators=(',', ': '))
+
+def load_checkpoint(checkpoint_file, vertexToSite=None, lX=None, lY=None,\
+    peps_args=cfg.peps_args, global_args=cfg.global_args):
+    checkpoint= torch.load(checkpoint_file)
+    params= checkpoint["parameters"]
+    assert "coeffs" in params,"missing 'coeffs' in checkpoint" 
+    assert "elem_tensors" in params,"missing 'elem_tensors' in checkpoint"
+    assert "pg_irreps" in params,"missing 'pg_irreps' in checkpoint"
+    assert any([ coeff_t.numel()==len(params["elem_tensors"]) for coeff_t in params["coeffs"].values()]),\
+        "Length of coefficient vectors does not match the set of elementary tensors"
+    assert params["pg_irreps"]==set([m["meta"]["pg"] for m,t in params["elem_tensors"]]),\
+        "Expected point groups do not match"
+    state= IPEPS_U1SYM(params["elem_tensors"], params["coeffs"], vertexToSite=vertexToSite,\
+        lX=lX, lY=lY, peps_args=peps_args, global_args=global_args)
+    for coeff_t in state.coeffs.values(): coeff_t.requires_grad_(False)
+    return state
