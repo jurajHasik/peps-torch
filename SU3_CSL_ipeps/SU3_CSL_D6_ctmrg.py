@@ -78,7 +78,7 @@ def main():
     state = IPEPS_U1SYM(tensors_triangle, tensors_site, coeffs_triangle_up=coeffs_triangle, coeffs_site=coeffs_site,
                         sym_up_dn=bool(args.sym_up_dn),
                         var_coeffs_triangle=var_coeffs_triangle, var_coeffs_site=var_coeffs_site)
-    #state.add_noise(args.instate_noise)
+    state.add_noise(args.instate_noise)
     state.print_coeffs()
 
     model = SU3_chiral.SU3_CHIRAL(theta=args.theta, j1=args.j1, j2=args.j2)
