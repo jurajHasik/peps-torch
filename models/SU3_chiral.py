@@ -90,7 +90,6 @@ class SU3_CHIRAL():
 
     # Energy terms
 
-
     def energy_triangle_dn(self, state, env, force_cpu=False):
         norm_wf = rdm.rdm2x2_id((0, 0), state, env, force_cpu=force_cpu)
         e_dn = rdm.rdm2x2_dn_triangle((0, 0), state, env, operator=self.h_triangle, force_cpu=force_cpu) / norm_wf

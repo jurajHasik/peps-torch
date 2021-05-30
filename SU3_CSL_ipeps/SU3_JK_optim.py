@@ -23,6 +23,7 @@ log = logging.getLogger(__name__)
 parser = cfg.get_args_parser()
 parser.add_argument("--frac_j1", type=float, default=0., help="ratio 100*J1/K")
 parser.add_argument("--j2", type=float, default=0., help="next-nearest-neighbor exchange coupling")
+parser.add_argument("--import_state", type=str, default=None, help="input state for ctmrg")
 args, unknown_args = parser.parse_known_args()
 
 
