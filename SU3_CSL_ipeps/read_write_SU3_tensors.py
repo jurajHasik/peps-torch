@@ -110,14 +110,14 @@ def write_SU3_D6_tensors():
 	# D=6, virtual space V = \bar{3} + \bar{3}
 
 	# ______ Trivalent tensors _______
-	M0 = torch.zeros((7, 7, 7), dtype=torch.complex128)
-	M1 = torch.zeros((7, 7, 7), dtype=torch.complex128)
-	M2 = torch.zeros((7, 7, 7), dtype=torch.complex128)
-	M3 = torch.zeros((7, 7, 7), dtype=torch.complex128)
-	M4 = torch.zeros((7, 7, 7), dtype=torch.complex128)
-	M5 = torch.zeros((7, 7, 7), dtype=torch.complex128)
-	M6 = torch.zeros((7, 7, 7), dtype=torch.complex128)
-	M7 = torch.zeros((7, 7, 7), dtype=torch.complex128)
+	M0 = torch.zeros((6, 6, 6), dtype=torch.complex128)
+	M1 = torch.zeros((6, 6, 6), dtype=torch.complex128)
+	M2 = torch.zeros((6, 6, 6), dtype=torch.complex128)
+	M3 = torch.zeros((6, 6, 6), dtype=torch.complex128)
+	M4 = torch.zeros((6, 6, 6), dtype=torch.complex128)
+	M5 = torch.zeros((6, 6, 6), dtype=torch.complex128)
+	M6 = torch.zeros((6, 6, 6), dtype=torch.complex128)
+	M7 = torch.zeros((6, 6, 6), dtype=torch.complex128)
 
 	# M0: {3,0}, A2
 	M0[0, 1, 2] = M0[1, 2, 0] = M0[2, 0, 1] = -1 / np.sqrt(6)
@@ -132,8 +132,8 @@ def write_SU3_D6_tensors():
 	M1[0, 2, 4] = M1[2, 4, 0] = M1[4, 0, 2] = 1 / (3 * np.sqrt(2))
 
 	# M2: {1,2}, A2
-	M2[0, 4, 5] = M2[0, 5, 4] = M2[4, 5, 0] = -1 / (3 * np.sqrt(2))
-	M2[0, 5, 4] = M2[0, 4, 5] = M2[4, 0, 5] = 1 / (3 * np.sqrt(2))
+	M2[0, 4, 5] = M2[5, 0, 4] = M2[4, 5, 0] = -1 / (3 * np.sqrt(2))
+	M2[0, 5, 4] = M2[5, 4, 0] = M2[4, 0, 5] = 1 / (3 * np.sqrt(2))
 	M2[1, 5, 3] = M2[5, 3, 1] = M2[3, 1, 5] = -1 / (3 * np.sqrt(2))
 	M2[1, 3, 5] = M2[5, 1, 3] = M2[3, 5, 1] = 1 / (3 * np.sqrt(2))
 	M2[2, 3, 4] = M2[3, 4, 2] = M2[4, 2, 3] = -1 / (3 * np.sqrt(2))
@@ -179,10 +179,10 @@ def write_SU3_D6_tensors():
 	# ________________________________
 
 	# ______ Bivalent tensors ________
-	L0 = torch.zeros((3, 7, 7), dtype=torch.complex128)
-	L1 = torch.zeros((3, 7, 7), dtype=torch.complex128)
-	L2 = torch.zeros((3, 7, 7), dtype=torch.complex128)
-	L3 = torch.zeros((3, 7, 7), dtype=torch.complex128)
+	L0 = torch.zeros((3, 6, 6), dtype=torch.complex128)
+	L1 = torch.zeros((3, 6, 6), dtype=torch.complex128)
+	L2 = torch.zeros((3, 6, 6), dtype=torch.complex128)
+	L3 = torch.zeros((3, 6, 6), dtype=torch.complex128)
 
 	# L0: {2, 0}, B
 	L0[0, 0, 1] = L0[1, 0, 2] = L0[2, 1, 2] = -1. / np.sqrt(2.)
