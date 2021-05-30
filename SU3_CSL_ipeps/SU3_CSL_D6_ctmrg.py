@@ -99,8 +99,8 @@ def main():
             return True, history
         return False, history
 
-    E = -0.3602015
-    while np.abs(E + 0.3602015) < 1.0e-4:
+    E = -2/3 * np.cos(args.theta)
+    while np.abs(E + 2/3 * np.cos(args.theta)) < 1.0e-4:
         # define initial coefficients
         if args.import_state is not None:
             checkpoint = torch.load(args.import_state)
