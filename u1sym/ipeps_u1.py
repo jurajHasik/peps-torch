@@ -211,7 +211,8 @@ class IPEPS_U1SYM(ipeps.IPEPS):
         a_tensor_temp = torch.einsum('iab,uji,jkl,vkc,wld->uvwabcd', M_tensor_up, L_tensor, M_tensor_dn, L_tensor,
                                      L_tensor)
         # reshape to a single d=27 index
-        a_tensor = torch.zeros((27, 7, 7, 7, 7), dtype=torch.complex128, device=a_tensor_temp.device)
+        D = a_tensor_temp.size(3)
+        a_tensor = torch.zeros((27, D, D, D, D), dtype=torch.complex128, device=a_tensor_temp.device)
         for si in range(27):
             n1, n2, n3 = fmap_inv(si)
             a_tensor[si, :, :, :, :] = a_tensor_temp[n1, n2, n3, :, :, :, :]
@@ -223,7 +224,7 @@ class IPEPS_U1SYM(ipeps.IPEPS):
         noise_site = torch.rand(self.coeffs_site[(0, 0)].size(), dtype=torch.float64, device=self.device)
         noise_triangle_up = torch.rand(self.coeffs_triangle_up[(0, 0)].size(), dtype=torch.float64, device=self.device)
         if self.sym_up_dn:
-            noise_triangle_dn = noise_triangle_up.clone()
+            noise_triangle_dn = noise_triangle_up
         else:
             noise_triangle_dn = torch.rand(self.coeffs_triangle_dn[(0, 0)].size(), dtype=torch.float64,
                                            device=self.device)
