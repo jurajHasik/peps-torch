@@ -124,7 +124,7 @@ class IPEPS_U1SYM(ipeps.IPEPS):
 
         if var_coeffs_triangle is None:
             # all coefficients are allowed to move (default)
-            self.var_coeffs_triangle = torch.ones(self.coeffs_triangle[(0, 0)].size())
+            self.var_coeffs_triangle = torch.ones(self.coeffs_triangle_up[(0, 0)].size())
         else:
             # only the selected coeffs are allowed to move
             self.var_coeffs_triangle = var_coeffs_triangle
