@@ -2,25 +2,27 @@ from math import sqrt
 import itertools
 import config as cfg
 import yamps.yast as yast
-from tn_interface_abelian import contract
+from tn_interface_abelian import contract, permute  
 import groups.su2_abelian as su2
 from ctm.generic_abelian import rdm
+import torch
 
 def _cast_to_real(t):
     return t.real if t.is_complex() else t
 
 class COUPLEDLADDERS_NOSYM():
-    def __init__(self, settings, alpha=0.0, global_args=cfg.global_args):
+    def __init__(self, settings, alpha=0.0, Bz=0.0, global_args=cfg.global_args):
         r"""
         :param alpha: nearest-neighbour interaction
         :param global_args: global configuration
         :type alpha: float
+        :type Bz: float
         :type global_args: GLOBALARGS
 
         Build Hamiltonian of spin-1/2 coupled ladders
 
         .. math:: H = \sum_{i=(x,y)} h2_{i,i+\vec{x}} + \sum_{i=(x,2y)} h2_{i,i+\vec{y}}
-                   + \alpha \sum_{i=(x,2y+1)} h2_{i,i+\vec{y}}
+                   + \alpha \sum_{i=(x,2y+1)} h2_{i,i+\vec{y}} + Bz h1_{i}
 
         on the square lattice. The spin-1/2 ladders are coupled with strength :math:`\alpha`::
 
@@ -36,6 +38,9 @@ class COUPLEDLADDERS_NOSYM():
         where
 
         * :math:`h2_{ij} = \mathbf{S}_i.\mathbf{S}_j` with indices of h2 corresponding to :math:`s_i s_j;s'_i s'_j`
+
+        * :math:`h1_{i} = \mathbf{S}^z_i` with indices of h1 corresponding to :math:`s_i ;s'_i`
+
         """
         assert settings.sym.NSYM==0, "No abelian symmetry is assumed"
         self.engine= settings
@@ -44,11 +49,20 @@ class COUPLEDLADDERS_NOSYM():
         self.device='cpu' if not hasattr(settings, 'device') else settings.device
         self.phys_dim=2
         self.alpha=alpha
+        self.Bz=Bz
 
-        self.h2 = self.get_h()
+        self.h1 = self.get_h1()
+        self.h2 = self.get_h2()
         self.obs_ops = self.get_obs_ops()
 
-    def get_h(self):
+    def get_h1(self):
+        irrep = su2.SU2_NOSYM(self.engine, self.phys_dim)
+        I1, SP, SM, Sz = irrep.I(), irrep.SP(), irrep.SM(), irrep.SZ()
+        SzId= contract(Sz,I1,([],[]))
+        SzId= permute(SzId, (0,2,1,3))
+        return SzId
+
+    def get_h2(self):
         irrep = su2.SU2_NOSYM(self.engine, self.phys_dim)
         SS = irrep.SS()
         return SS
@@ -120,6 +134,10 @@ class COUPLEDLADDERS_NOSYM():
             else:
                 ss = contract(rdm1x2,self.alpha * self.h2,_ci)
             energy += ss
+
+            # local field enegy
+            sz = contract(rdm1x2, self.Bz * self.h1, _ci)
+            energy += sz
 
         # return energy-per-site
         energy_per_site=energy/len(state.sites.items())
@@ -195,7 +213,7 @@ class COUPLEDLADDERS_NOSYM():
         return obs_values, obs_labels
 
 class COUPLEDLADDERS_U1():
-    def __init__(self, settings, alpha=0.0, global_args=cfg.global_args):
+    def __init__(self, settings, alpha=0.0, Bz=0.0, global_args=cfg.global_args):
         r"""
         :param alpha: nearest-neighbour interaction
         :param global_args: global configuration
@@ -205,7 +223,7 @@ class COUPLEDLADDERS_U1():
         Build Hamiltonian of spin-1/2 coupled ladders
 
         .. math:: H = \sum_{i=(x,y)} h2_{i,i+\vec{x}} + \sum_{i=(x,2y)} h2_{i,i+\vec{y}}
-                   + \alpha \sum_{i=(x,2y+1)} h2_{i,i+\vec{y}}
+                   + \alpha \sum_{i=(x,2y+1)} h2_{i,i+\vec{y}} + Bz h1_{i}
 
         on the square lattice. The spin-1/2 ladders are coupled with strength :math:`\alpha`::
 
@@ -221,6 +239,8 @@ class COUPLEDLADDERS_U1():
         where
 
         * :math:`h2_{ij} = \mathbf{S}_i.\mathbf{S}_j` with indices of h2 corresponding to :math:`s_i s_j;s'_i s'_j`
+
+        * :math:`h1_{i} = \mathbf{S}^z_i` with indices of h1 corresponding to :math:`s_i ;s'_i`
         """
         assert settings.sym.NSYM==1, "U(1) abelian symmetry is assumed"
         self.engine= settings
@@ -229,11 +249,20 @@ class COUPLEDLADDERS_U1():
         self.device='cpu' if not hasattr(settings, 'device') else settings.device
         self.phys_dim=2
         self.alpha=alpha
+        self.Bz=Bz
 
-        self.h2 = self.get_h()
+        self.h1 = self.get_h1()
+        self.h2 = self.get_h2()
         self.obs_ops = self.get_obs_ops()
 
-    def get_h(self):
+    def get_h1(self):
+        irrep = su2.SU2_U1(self.engine, self.phys_dim-1)
+        I1, SP, SM, Sz = irrep.I(), irrep.SP(), irrep.SM(), irrep.SZ()
+        SzId= contract(Sz,I1,([],[]))
+        SzId= permute(SzId, (0,2,1,3))
+        return SzId
+
+    def get_h2(self):
         irrep = su2.SU2_U1(self.engine, self.phys_dim-1)
         SS = irrep.SS()
         return SS
@@ -306,6 +335,10 @@ class COUPLEDLADDERS_U1():
                 ss = contract(rdm1x2,self.alpha * self.h2,_ci)
             energy += ss
 
+            # local field enegy
+            sz = contract(rdm1x2, self.Bz * self.h1, _ci)
+            energy += sz
+
         # return energy-per-site
         energy_per_site=energy/len(state.sites.items())
         energy_per_site=_cast_to_real(energy_per_site)
@@ -341,6 +374,10 @@ class COUPLEDLADDERS_U1():
             else:   
                 ss = contract(rdm2x1,self.alpha * self.h2,_ci)
             energy += ss
+
+            # local field energy
+            sz = contract(rdm1x2, self.Bz * self.h1, _ci)
+            energy += sz
 
         # return energy-per-site
         energy_per_site=energy/len(state.sites.items())
@@ -415,6 +452,14 @@ class COUPLEDLADDERS_U1():
         obs_values=[obs[label] for label in obs_labels]
         return obs_values, obs_labels
 
+    def _gen_gate_Sz(self,t):
+        gate_Sz= self.h1
+        D, U= yast.linalg.eigh(gate_Sz, axes=([0,1],[2,3]))
+        D= D.exp(t)
+        gate_Sz = U.tensordot(D, ([2],[0]))
+        gate_Sz = gate_Sz.tensordot(U, ([2,2]), conj=(0,1))
+        return gate_Sz
+
     def _gen_gate_SS(self,t):
         gate_SS= self.h2
         D, U= yast.linalg.eigh(gate_SS, axes=([0,1],[2,3]))
@@ -443,10 +488,15 @@ class COUPLEDLADDERS_U1():
             g[6]--(0,1)--g[7]--(1,1)--[g[6]]
                    [g[0]]       [g[2]]
 
-        The g[0] and g[2] are the "weak" links, with alpha * S.S interaction, coupling the ladders
+        The g[0] and g[2] are the "weak" links, with alpha * S.S interaction, coupling the ladders. We also have the on-site gates 
+
+        
         """
         gate_SS_1= self._gen_gate_SS(-t)
         gate_SS_alpha= self._gen_gate_SS(-t*self.alpha)
+        gate_Sz_Bz= self._gen_gate_Sz(-t*self.Bz)
+
+        # two spin gates 
         gate_seq=[
             (((0,0),(1,0),(1,0)), gate_SS_1),
             (((1,0),(1,0),(0,0)), gate_SS_1),
@@ -455,8 +505,18 @@ class COUPLEDLADDERS_U1():
             (((0,0),(0,1),(0,1)), gate_SS_1),
             (((1,0),(0,1),(1,1)), gate_SS_1),
             (((0,1),(0,1),(0,0)), gate_SS_alpha),
-            (((1,1),(0,1),(1,0)), gate_SS_alpha)
+            (((1,1),(0,1),(1,0)), gate_SS_alpha) 
         ]
+
+        # single spin gates 
+        # Note: it would be better to join the single spin and the two spin gates
+        if self.Bz != 0.0:
+            gate_seq+=[
+                (((0,0),(1,0),(1,0)), gate_Sz_Bz),
+                (((1,0),(1,0),(0,0)), gate_Sz_Bz),
+                (((0,1),(1,0),(1,1)), gate_Sz_Bz),
+                (((1,1),(1,0),(0,1)), gate_Sz_Bz)
+            ]
         return gate_seq
 
     def gen_gate_seq_2S_2ndOrder(self,t):
@@ -464,6 +524,9 @@ class COUPLEDLADDERS_U1():
         gate_SS_2= self._gen_gate_SS(-2*t)
         gate_SS_alpha= self._gen_gate_SS(-t*self.alpha)
         gate_SS_2alpha= self._gen_gate_SS(-2*t*self.alpha)
+        gate_Sz_Bz= self._gen_gate_Sz(-t*self.Bz)
+
+        # two spin gates 
         gate_seq=[
             (((0,0),(1,0),(1,0)), gate_SS_1),
             (((1,0),(1,0),(0,0)), gate_SS_1),
@@ -473,7 +536,21 @@ class COUPLEDLADDERS_U1():
             (((1,0),(0,1),(1,1)), gate_SS_1),
             (((0,1),(0,1),(0,0)), gate_SS_alpha)
         ]
+
+        # single spin gates 
+        # Note: it would be better to join the single spin gates and the two spin gates
+        if self.Bz != 0.0:
+            gate_seq+=[
+                (((0,0),(1,0),(1,0)), gate_Sz_Bz),
+                (((1,0),(1,0),(0,0)), gate_Sz_Bz),
+                (((0,1),(1,0),(1,1)), gate_Sz_Bz),
+                (((1,1),(1,0),(0,1)), gate_Sz_Bz)
+            ]
+
+        # last gate
         gate_seq.append( (((1,1),(0,1),(1,0)), gate_SS_2alpha) ) 
+ 
+        # repeat the sequence in inverse order
         for i in range(6,-1,-1): gate_seq.append(gate_seq[i])
         return gate_seq
 
@@ -501,6 +578,8 @@ class COUPLEDLADDERS_U1():
         """
         gate_SS_1= self._gen_gate_SS(-t)
         gate_SS_alpha= self._gen_gate_SS(-t*self.alpha)
+        gate_Sz_Bz= self._gen_gate_Sz(-t*self.Bz)
+
         gate_seq=[
             (((0,0),(0,1),(0,1)), gate_SS_1),
             (((1,0),(0,1),(1,1)), gate_SS_1),
@@ -511,6 +590,17 @@ class COUPLEDLADDERS_U1():
             (((1,0),(1,0),(0,0)), gate_SS_alpha),
             (((1,1),(1,0),(0,1)), gate_SS_alpha)
         ]
+
+        # single spin gates 
+        # Note: it would be better to join the single spin gates and the two spin gates
+        if self.Bz != 0.0:
+            gate_seq+=[
+                (((0,0),(1,0),(1,0)), gate_Sz_Bz),
+                (((1,0),(1,0),(0,0)), gate_Sz_Bz),
+                (((0,1),(1,0),(1,1)), gate_Sz_Bz),
+                (((1,1),(1,0),(0,1)), gate_Sz_Bz)
+            ]
+
         return gate_seq
 
     def gen_gate_seq_2S_2ndOrder_H(self,t):
@@ -518,6 +608,8 @@ class COUPLEDLADDERS_U1():
         gate_SS_2= self._gen_gate_SS(-2*t)
         gate_SS_alpha= self._gen_gate_SS(-t*self.alpha)
         gate_SS_2alpha= self._gen_gate_SS(-2*t*self.alpha)
+        gate_Sz_Bz= self._gen_gate_Sz(-t*self.Bz)
+
         gate_seq=[
             (((0,0),(0,1),(0,1)), gate_SS_1),
             (((1,0),(0,1),(1,1)), gate_SS_1),
@@ -527,6 +619,20 @@ class COUPLEDLADDERS_U1():
             (((0,1),(1,0),(1,1)), gate_SS_1),
             (((1,0),(1,0),(0,0)), gate_SS_alpha)            
         ]
+
+        # single spin gates 
+        # Note: it would be better to join the single spin gates and the two spin gates
+        if self.Bz != 0.0:
+            gate_seq+=[
+                (((0,0),(1,0),(1,0)), gate_Sz_Bz),
+                (((1,0),(1,0),(0,0)), gate_Sz_Bz),
+                (((0,1),(1,0),(1,1)), gate_Sz_Bz),
+                (((1,1),(1,0),(0,1)), gate_Sz_Bz)
+            ]
+
+        # last gate 
         gate_seq.append(  (((1,1),(1,0),(0,1)), gate_SS_2alpha) ) 
+        
+        # repeat the sequence in inverse order
         for i in range(6,-1,-1): gate_seq.append(gate_seq[i])
         return gate_seq
