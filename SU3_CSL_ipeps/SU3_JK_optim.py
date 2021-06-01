@@ -21,9 +21,9 @@ log = logging.getLogger(__name__)
 
 # parse command line args and build necessary configuration objects
 parser = cfg.get_args_parser()
-parser.add_argument("--frac_j1", type=float, default=0., help="ratio 100*J1/K")
-parser.add_argument("--j2", type=float, default=0., help="next-nearest-neighbor exchange coupling")
-parser.add_argument("--import_state", type=str, default=None, help="input state for ctmrg")
+parser.add_argument("--theta", type=float, default=0., help="angle, in degrees, parametrizing the ratio K/J1")
+parser.add_argument("--phi", type=float, default=0., help="angle, in degrees, parametrizing the ratio J2/K")
+parser.add_argument("--C", type=float, default=0., help="amplitude/sign of the J2 curve")
 args, unknown_args = parser.parse_known_args()
 
 
@@ -70,7 +70,7 @@ def main():
                         var_coeffs_triangle=var_coeffs_triangle, var_coeffs_site=var_coeffs_site)
     state.add_noise(args.instate_noise)
 
-    model = SU3_chiral.SU3_CHIRAL(theta=0., j1=args.frac_j1/100., j2=args.j2)
+    model = SU3_chiral.SU3_CHIRAL(Kr=math.sin(args.theta * math.pi/180) * math.cos(args.phi/2 * math.pi/180), Ki=0., j1=math.cos(args.theta * math.pi/180), j2=args.C * math.sin(args.phi *math.pi/180))
 
     def energy_f(state, env, force_cpu=False):
         e_dn = model.energy_triangle_dn(state, env, force_cpu=force_cpu)

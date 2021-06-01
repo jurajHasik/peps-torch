@@ -79,7 +79,8 @@ def main():
                         var_coeffs_triangle=var_coeffs_triangle, var_coeffs_site=var_coeffs_site)
     state.add_noise(args.instate_noise)
     state.print_coeffs()
-    model = SU3_chiral.SU3_CHIRAL(theta=args.theta, j1=args.j1, j2=args.j2)
+
+    model = SU3_chiral.SU3_CHIRAL(Kr=math.cos(args.theta * math.pi/180), Ki=math.sin(args.theta *math.pi/180))
 
     def energy_f(state, env):
         e_dn = model.energy_triangle_dn(state, env, force_cpu=True)
