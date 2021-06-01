@@ -24,6 +24,7 @@ parser = cfg.get_args_parser()
 parser.add_argument("--theta", type=float, default=0., help="angle, in degrees, parametrizing the ratio K/J1")
 parser.add_argument("--phi", type=float, default=0., help="angle, in degrees, parametrizing the ratio J2/K")
 parser.add_argument("--C", type=float, default=0., help="amplitude/sign of the J2 curve")
+parser.add_argument("--import_state", type=str, default=None, help="input state")
 args, unknown_args = parser.parse_known_args()
 
 
