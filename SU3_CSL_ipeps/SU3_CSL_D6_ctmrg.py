@@ -46,16 +46,12 @@ def main():
         tens = tens.to(t_device)
         if name in ['M4', 'M5']:
             tensors_triangle.append(1j * tens)
-            print('imported '+name)
         if name in ['M0', 'M1', 'M2', 'M3']:
             tensors_triangle.append(tens)
-            print('imported ' + name)
         if name in ['L0', 'L1', 'L2']:
             tensors_site.append(tens)
-            print('imported ' + name)
         if name == 'L3':
             tensors_site.append(1j * tens)
-            print('imported ' + name)
 
     # define initial coefficients
     if args.import_state is not None:

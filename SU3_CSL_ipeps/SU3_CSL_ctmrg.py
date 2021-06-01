@@ -117,9 +117,34 @@ def main():
             e_prev = 0
         else:
             e_prev = history[-2]
-        print_corner_spectra(env)
+        #print_corner_spectra(env)
         print('Step n°{:2}    E_site ={:01.14f}   (E_up={:01.14f}, E_dn={:01.14f}, E_nnn={:01.14f})  delta_E={:01.14f}'.format(len(history), e_curr.item(), e_up.item(), e_dn.item(), e_nnn, e_curr.item()-e_prev))
         if (len(history) > 1 and abs(history[-1] - history[-2]) < ctm_args.ctm_conv_tol) \
+                or len(history) >= ctm_args.ctm_max_iter:
+            log.info({"history_length": len(history), "history": history})
+            return True, history
+        return False, history
+
+    def ctmrg_conv_corners(state, env, history, ctm_args=cfg.ctm_args):
+        if not history:
+            history = []
+        e_dn = torch.tensor(0.)# model.energy_triangle_dn(state, env, force_cpu=ctm_args.conv_check_cpu)
+        e_up = torch.tensor(0.)# model.energy_triangle_up(state, env, force_cpu=ctm_args.conv_check_cpu)
+        e_nnn = torch.tensor(0.)# model.energy_nnn(state, env, force_cpu=ctm_args.conv_check_cpu)
+        e_curr = (e_up + e_dn + e_nnn)/3
+        spectra = []
+        for c_loc, c_ten in env.C.items():
+            u, s, v = torch.svd(c_ten, compute_uv=False)
+            spectra += list(s/s[0])
+        spectra = torch.tensor(spectra)
+        history.append([e_curr.item(), spectra])
+        if len(history)==1:
+            delta_s = 0
+        else:
+            delta_s = torch.norm(history[-2][1] - history[-1][1]).item()
+        print_corner_spectra(env)
+        print('Step n°{:2}    E_site ={:01.14f}   (E_up={:01.14f}, E_dn={:01.14f}, E_nnn={:01.14f})  delta_s={:01.14f}'.format(len(history), e_curr.item(), e_up.item(), e_dn.item(), e_nnn, delta_s))
+        if (len(history) > 1 and delta_s < ctm_args.ctm_conv_tol) \
                 or len(history) >= ctm_args.ctm_max_iter:
             log.info({"history_length": len(history), "history": history})
             return True, history
@@ -136,7 +161,7 @@ def main():
     #e_tot_init = (e_dn_init + e_up_init + e_nnn_init)/3
     #print(f'E_up={e_up_init.item()}, E_dn={e_dn_init.item()}, E_tot={e_tot_init.item()}')
 
-    ctm_env_final, *ctm_log = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
+    ctm_env_final, *ctm_log = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_corners)
 
     # energy per site
     e_dn_final = model.energy_triangle_dn(state, ctm_env_final, force_cpu=True)
