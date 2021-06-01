@@ -72,21 +72,15 @@ for s in range(27):
 
 class SU3_CHIRAL():
 
-    def __init__(self, theta=0., j1=0., j2=0., global_args=cfg.global_args):
-        r"""
-        :param theta: rotation angle of the hamiltonian which parametrizes the ratio between real and imaginary permutations
-        :param global_args: global configuration
-        :type theta: float
-        :type global_args: GLOBALARGS
-        """
+    def __init__(self, Kr=0., Ki=0., j1=0., j2=0., global_args=cfg.global_args):
         self.j1 = j1
         self.j2 = j2
-        self.theta = theta
+        self.Kr = Kr
+        self.Ki = Ki
         self.dtype = global_args.dtype
         self.device = global_args.device
         self.phys_dim = 27
-        self.h_triangle = exp(1j * self.theta) * permute_triangle + exp(
-            -1j * self.theta) * permute_triangle_inv + self.j1 * exchange_bond_triangle
+        self.h_triangle = (Kr+1j*Ki) * permute_triangle + (Kr-1j*Ki) * permute_triangle_inv + self.j1 * exchange_bond_triangle
 
     # Energy terms
 
