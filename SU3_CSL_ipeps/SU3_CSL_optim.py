@@ -116,7 +116,7 @@ def main():
         e_nnn = model.energy_nnn(state, env)
         e_curr = (e_up + e_dn + e_nnn) / 3
         history.append(e_curr.item())
-        print_corner_spectra(env)
+        #print_corner_spectra(env)
         print(f'Step n°{len(history)}    E_site ={e_curr.item()}   (E_up={e_up.item()}, E_dn={e_dn.item()})')
         if (len(history) > 1 and abs(history[-1] - history[-2]) < ctm_args.ctm_conv_tol) \
                 or len(history) >= ctm_args.ctm_max_iter:

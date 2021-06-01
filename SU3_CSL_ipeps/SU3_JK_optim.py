@@ -105,12 +105,11 @@ def main():
         e_nnn = model.energy_nnn(state, env)
         e_curr = (e_up + e_dn + e_nnn) / 3
         history.append(e_curr.item())
-        print(f'Step n°{len(history)}    E_site ={e_curr.item()}   (E_up={e_up.item()}, E_dn={e_dn.item()})')
         if len(history) == 1:
             e_prev = 0
         else:
             e_prev = history[-2]
-        print_corner_spectra(env)
+        #print_corner_spectra(env)
         print(
             'Step n°{:2}    E_site ={:01.14f}   (E_up={:01.14f}, E_dn={:01.14f}, E_nnn={:01.14f})  delta_E={:01.14f}'.format(
                 len(history), e_curr.item(), e_up.item(), e_dn.item(), e_nnn, e_curr.item() - e_prev))
