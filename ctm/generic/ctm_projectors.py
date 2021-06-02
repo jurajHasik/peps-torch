@@ -209,7 +209,7 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args, \
 
     if ctm_args.projector_svd_method=='DEFAULT' or ctm_args.projector_svd_method=='GESDD':
         def truncated_svd(M, chi):
-            return truncated_svd_gesdd(M, chi, keep_multiplets=True, abs_tol=1.0e-10, eps_multiplet=1.0e-10, verbosity=ctm_args.verbosity_projectors)
+            return truncated_svd_gesdd(M, chi, keep_multiplets=True, abs_tol=1.0e-8, eps_multiplet=1.0e-8, verbosity=ctm_args.verbosity_projectors)
     elif ctm_args.projector_svd_method == 'ARP':
         def truncated_svd(M, chi):
             return truncated_svd_arnoldi(M, chi, keep_multiplets=True, verbosity=ctm_args.verbosity_projectors)
