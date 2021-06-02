@@ -154,7 +154,10 @@ class IPEPS_U1SYM(ipeps.IPEPS):
     def load_checkpoint(self,checkpoint_file):
         checkpoint= torch.load(checkpoint_file)
         params= checkpoint["parameters"]
-        self.coeffs= params["coeffs"]
+        if "coeffs" in params.keys():
+            self.coeffs= params["coeffs"]
+        else:
+            self.coeffs= params
         for coeff_t in self.coeffs.values(): coeff_t.requires_grad_(False)
         if "elem_tensors" in params.keys():
             assert any([ coeff_t.numel()==len(params["elem_tensors"]) for coeff_t \
