@@ -10,8 +10,21 @@ import torch
 def _cast_to_real(t):
     return t.real if t.is_complex() else t
 
+def _null_Bz(coord):
+    return 0.0
+
+class StaggeredLocalField():
+    # staggered field 
+    # Given the coordinates (x, y), a minus sign is used when x+y is odd
+    def __init__(self, B):
+        self.B = float(B)
+
+    def __call__(self, coord):
+        x, y = coord
+        return self.B * (-1) ** ((x+y)%2)
+
 class COUPLEDLADDERS_NOSYM():
-    def __init__(self, settings, alpha=0.0, Bz=0.0, global_args=cfg.global_args):
+    def __init__(self, settings, alpha=0.0, Bz_val=0.0, global_args=cfg.global_args):
         r"""
         :param alpha: nearest-neighbour interaction
         :param global_args: global configuration
@@ -22,7 +35,7 @@ class COUPLEDLADDERS_NOSYM():
         Build Hamiltonian of spin-1/2 coupled ladders
 
         .. math:: H = \sum_{i=(x,y)} h2_{i,i+\vec{x}} + \sum_{i=(x,2y)} h2_{i,i+\vec{y}}
-                   + \alpha \sum_{i=(x,2y+1)} h2_{i,i+\vec{y}} + Bz h1_{i}
+                   + \alpha \sum_{i=(x,2y+1)} h2_{i,i+\vec{y}} + (-1)^{x+y} Bz h1_{i}
 
         on the square lattice. The spin-1/2 ladders are coupled with strength :math:`\alpha`::
 
@@ -49,7 +62,8 @@ class COUPLEDLADDERS_NOSYM():
         self.device='cpu' if not hasattr(settings, 'device') else settings.device
         self.phys_dim=2
         self.alpha=alpha
-        self.Bz=Bz
+        self.Bz_val=Bz_val
+        self.Bz=StaggeredLocalField(self.Bz_val)
 
         self.h1 = self.get_h1()
         self.h2 = self.get_h2()
@@ -136,7 +150,7 @@ class COUPLEDLADDERS_NOSYM():
             energy += ss
 
             # local field enegy
-            sz = contract(rdm1x2, self.Bz * self.h1, _ci)
+            sz = contract(rdm1x2, self.Bz(coord) * self.h1, _ci)
             energy += sz
 
         # return energy-per-site
@@ -213,7 +227,7 @@ class COUPLEDLADDERS_NOSYM():
         return obs_values, obs_labels
 
 class COUPLEDLADDERS_U1():
-    def __init__(self, settings, alpha=0.0, Bz=0.0, global_args=cfg.global_args):
+    def __init__(self, settings, alpha=0.0, Bz_val=0.0, global_args=cfg.global_args):
         r"""
         :param alpha: nearest-neighbour interaction
         :param global_args: global configuration
@@ -223,7 +237,7 @@ class COUPLEDLADDERS_U1():
         Build Hamiltonian of spin-1/2 coupled ladders
 
         .. math:: H = \sum_{i=(x,y)} h2_{i,i+\vec{x}} + \sum_{i=(x,2y)} h2_{i,i+\vec{y}}
-                   + \alpha \sum_{i=(x,2y+1)} h2_{i,i+\vec{y}} + Bz h1_{i}
+                   + \alpha \sum_{i=(x,2y+1)} h2_{i,i+\vec{y}} + (-1)^{x+y} Bz h1_{i}
 
         on the square lattice. The spin-1/2 ladders are coupled with strength :math:`\alpha`::
 
@@ -249,7 +263,8 @@ class COUPLEDLADDERS_U1():
         self.device='cpu' if not hasattr(settings, 'device') else settings.device
         self.phys_dim=2
         self.alpha=alpha
-        self.Bz=Bz
+        self.Bz_val=Bz_val
+        self.Bz=StaggeredLocalField(self.Bz_val)
 
         self.h1 = self.get_h1()
         self.h2 = self.get_h2()
@@ -336,7 +351,7 @@ class COUPLEDLADDERS_U1():
             energy += ss
 
             # local field enegy
-            sz = contract(rdm1x2, self.Bz * self.h1, _ci)
+            sz = contract(rdm1x2, self.Bz(coord) * self.h1, _ci)
             energy += sz
 
         # return energy-per-site
@@ -376,7 +391,7 @@ class COUPLEDLADDERS_U1():
             energy += ss
 
             # local field energy
-            sz = contract(rdm1x2, self.Bz * self.h1, _ci)
+            sz = contract(rdm1x2, self.Bz(coord) * self.h1, _ci)
             energy += sz
 
         # return energy-per-site
@@ -494,7 +509,6 @@ class COUPLEDLADDERS_U1():
         """
         gate_SS_1= self._gen_gate_SS(-t)
         gate_SS_alpha= self._gen_gate_SS(-t*self.alpha)
-        gate_Sz_Bz= self._gen_gate_Sz(-t*self.Bz)
 
         # two spin gates 
         gate_seq=[
@@ -510,13 +524,15 @@ class COUPLEDLADDERS_U1():
 
         # single spin gates 
         # Note: it would be better to join the single spin and the two spin gates
-        if self.Bz != 0.0:
-            gate_seq+=[
-                (((0,0),(1,0),(1,0)), gate_Sz_Bz),
-                (((1,0),(1,0),(0,0)), gate_Sz_Bz),
-                (((0,1),(1,0),(1,1)), gate_Sz_Bz),
-                (((1,1),(1,0),(0,1)), gate_Sz_Bz)
-            ]
+        if self.Bz != _null_Bz:
+            for x_1 in range(2):
+                for y_1 in range(2):
+                    dx, dy = (1, 0)
+                    x_2 = (x_1 + dx) % 2
+                    y_2 = (y_1 + dy) % 2
+                    gate_Sz_Bz= self._gen_gate_Sz(-t*self.Bz((x_1, y_2)))
+                    gate_seq+=[(((x_1,y_1),(dx,dy),(x_2,y_2)), gate_Sz_Bz)]
+            
         return gate_seq
 
     def gen_gate_seq_2S_2ndOrder(self,t):
@@ -524,7 +540,6 @@ class COUPLEDLADDERS_U1():
         gate_SS_2= self._gen_gate_SS(-2*t)
         gate_SS_alpha= self._gen_gate_SS(-t*self.alpha)
         gate_SS_2alpha= self._gen_gate_SS(-2*t*self.alpha)
-        gate_Sz_Bz= self._gen_gate_Sz(-t*self.Bz)
 
         # two spin gates 
         gate_seq=[
@@ -539,13 +554,15 @@ class COUPLEDLADDERS_U1():
 
         # single spin gates 
         # Note: it would be better to join the single spin gates and the two spin gates
-        if self.Bz != 0.0:
-            gate_seq+=[
-                (((0,0),(1,0),(1,0)), gate_Sz_Bz),
-                (((1,0),(1,0),(0,0)), gate_Sz_Bz),
-                (((0,1),(1,0),(1,1)), gate_Sz_Bz),
-                (((1,1),(1,0),(0,1)), gate_Sz_Bz)
-            ]
+        if self.Bz != _null_Bz:
+            for x_1 in range(2):
+                for y_1 in range(2):
+                    dx, dy = (1, 0)
+                    x_2 = (x_1 + dx) % 2
+                    y_2 = (y_1 + dy) % 2
+                    gate_Sz_Bz= self._gen_gate_Sz(-t*self.Bz((x_1, y_2)))
+                    gate_seq+=[(((x_1,y_1),(dx,dy),(x_2,y_2)), gate_Sz_Bz)]
+
 
         # last gate
         gate_seq.append( (((1,1),(0,1),(1,0)), gate_SS_2alpha) ) 
@@ -578,7 +595,6 @@ class COUPLEDLADDERS_U1():
         """
         gate_SS_1= self._gen_gate_SS(-t)
         gate_SS_alpha= self._gen_gate_SS(-t*self.alpha)
-        gate_Sz_Bz= self._gen_gate_Sz(-t*self.Bz)
 
         gate_seq=[
             (((0,0),(0,1),(0,1)), gate_SS_1),
@@ -593,13 +609,15 @@ class COUPLEDLADDERS_U1():
 
         # single spin gates 
         # Note: it would be better to join the single spin gates and the two spin gates
-        if self.Bz != 0.0:
-            gate_seq+=[
-                (((0,0),(1,0),(1,0)), gate_Sz_Bz),
-                (((1,0),(1,0),(0,0)), gate_Sz_Bz),
-                (((0,1),(1,0),(1,1)), gate_Sz_Bz),
-                (((1,1),(1,0),(0,1)), gate_Sz_Bz)
-            ]
+        if self.Bz != _null_Bz:
+            for x_1 in range(2):
+                for y_1 in range(2):
+                    dx, dy = (1, 0)
+                    x_2 = (x_1 + dx) % 2
+                    y_2 = (y_1 + dy) % 2
+                    gate_Sz_Bz= self._gen_gate_Sz(-t*self.Bz((x_1, y_2)))
+                    gate_seq+=[(((x_1,y_1),(dx,dy),(x_2,y_2)), gate_Sz_Bz)]
+
 
         return gate_seq
 
@@ -608,7 +626,6 @@ class COUPLEDLADDERS_U1():
         gate_SS_2= self._gen_gate_SS(-2*t)
         gate_SS_alpha= self._gen_gate_SS(-t*self.alpha)
         gate_SS_2alpha= self._gen_gate_SS(-2*t*self.alpha)
-        gate_Sz_Bz= self._gen_gate_Sz(-t*self.Bz)
 
         gate_seq=[
             (((0,0),(0,1),(0,1)), gate_SS_1),
@@ -622,13 +639,15 @@ class COUPLEDLADDERS_U1():
 
         # single spin gates 
         # Note: it would be better to join the single spin gates and the two spin gates
-        if self.Bz != 0.0:
-            gate_seq+=[
-                (((0,0),(1,0),(1,0)), gate_Sz_Bz),
-                (((1,0),(1,0),(0,0)), gate_Sz_Bz),
-                (((0,1),(1,0),(1,1)), gate_Sz_Bz),
-                (((1,1),(1,0),(0,1)), gate_Sz_Bz)
-            ]
+        if self.Bz != _null_Bz:
+            for x_1 in range(2):
+                for y_1 in range(2):
+                    dx, dy = (1, 0)
+                    x_2 = (x_1 + dx) % 2
+                    y_2 = (y_1 + dy) % 2
+                    gate_Sz_Bz= self._gen_gate_Sz(-t*self.Bz((x_1, y_2)))
+                    gate_seq+=[(((x_1,y_1),(dx,dy),(x_2,y_2)), gate_Sz_Bz)]
+
 
         # last gate 
         gate_seq.append(  (((1,1),(1,0),(0,1)), gate_SS_2alpha) ) 
