@@ -12,15 +12,15 @@ class OnSiteTensor():
     :param symmetry: symmetry of the onsite tensor
     :param bond_dim: bond dimension
     """
-    def __init__(self, symmetry, coeff, base_tensor_dict, file,
-                 bond_dim=4, dtype=torch.float64):
-        self.symmetry = symmetry
-        self.coeff = coeff
-        self.dict = base_tensor_dict
-        self.base_tensor = bt.base_tensor_sym(base_tensor_dict, self.symmetry)
-        self.bond_dim = bond_dim
-        self.dtype = dtype     
-        self.write_to_json(file)
+    def __init__(self, param):
+        self.symmetry = param['symmetry']
+        self.coeff = param['coeff']
+        self.dict = param['base_tensor_dict']
+        self.bond_dim = param['bond_dim']
+        self.dtype = param['dtype'] 
+        self.base_tensor = bt.base_tensor_sym(param['base_tensor_dict'],
+                                              self.symmetry, self.bond_dim)
+        self.write_to_json(param['file'])
         self.coeff_list = list(); self.coeff_list.append(self.coeff)
         
     def site(self):

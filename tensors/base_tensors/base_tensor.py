@@ -1,5 +1,6 @@
 import tensors.base_tensors.tensors_R3 as r3
 import tensors.base_tensors.tensors_D4 as d4
+import tensors.base_tensors.tensors_D7 as d7
 import torch
 
 
@@ -8,11 +9,11 @@ def contract_R3R5(bond_dim, tensor_r3, tensor_r5, phys_dim=4):
                 .view(tuple([phys_dim]+[tensor_r5.size(1)]*4)).contiguous()
 
 
-def base_tensor_dict(bond_dim=4):
+def base_tensor_dict(bond_dim):
     """ Create a dictionary with all the tensors of the according bond
     dimension."""
     # Define import to use
-    bond = {'4': d4}
+    bond = {'4': d4, '7': d7}
     r5 = bond[str(bond_dim)]
     # Initialize dictionary
     base_tensor_dict = r5.__dict__.copy()
@@ -29,10 +30,10 @@ def base_tensor_dict(bond_dim=4):
     return base_tensor_dict
     
 
-def base_tensor_sym(base_tensor_dict, sym, bond_dim=4):
+def base_tensor_sym(base_tensor_dict, sym, bond_dim):
     """Create the list with the tensors of the symmetry considered."""
     # Define import to use
-    bond = {'4': d4}
+    bond = {'4': d4, '7': d7}
     r5 = bond[str(bond_dim)]
     # Select appropriate symmetry
     name_list = r5.symmetry['list_'+sym]
@@ -46,10 +47,10 @@ def base_tensor_sym(base_tensor_dict, sym, bond_dim=4):
     return sym_list
 
 
-def convert_list(OnSiteTensor, new_symmetry, bond_dim=4):
+def convert_list(OnSiteTensor, new_symmetry, bond_dim):
     """Convert the coefficients list."""
     # Define import to use
-    bond = {'4': d4}
+    bond = {'4': d4, '7': d7}
     r5 = bond[str(bond_dim)]
     # Select appropriate symmetry
     name_list_ini = r5.symmetry['list_'+OnSiteTensor.symmetry]

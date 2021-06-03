@@ -120,33 +120,35 @@ def optimization_2sites(onsite1, new_symmetry, permutation, env, gate, noise,
     return onsite2
 
 ####################### Plaquette functions for NNN term ######################
-def rdm2x2_sl_NNN_plaquette(tensor1, tensor2, env):
-    """Tensor 1 and 2 are the diagonal onsite tensors. Tensor 3 and 4 are on
-    the off-diagonal."""
+def rdm2x2_sl_NNN_plaquette(tensor1, tensor2, tensor_off, diag, env):
     C = env.C[env.keyC]
     T = env.T[env.keyT]
-    C2x2LU = C2x2_LU(tensor1, tensor1, C, T)
-    C2x2RU = C2x2_RU(tensor1, tensor2, C, T)
+    if diag == 'diag':
+        C2x2off = C2x2_LU(tensor_off, tensor_off, C, T)
+        C2x2diag = C2x2_RU(tensor1, tensor2, C, T)
+    if diag == 'off':
+        C2x2off = C2x2_RU(tensor_off, tensor_off, C, T)
+        C2x2diag = C2x2_LU(tensor1, tensor2, C, T)   
     C2x2c = torch.einsum('abii->ab', 
-                C2x2LU.view([C2x2LU.size(0)*C2x2LU.size(1)]+list(C2x2LU.size()[2:])))
-    C2x2RU = C2x2RU.view(T.size()[1]*(tensor1.size()[2]**2),
-                         T.size()[1]*(tensor2.size()[3]**2),tensor1.size()[0]**2)
-    C2x2RU = torch.einsum('ab,bci->aci', C2x2c, C2x2RU)
-    rdm = torch.einsum('abi,baj->ij', C2x2RU, C2x2RU)
+                C2x2off.view([C2x2off.size(0)*C2x2off.size(1)]+list(C2x2off.size()[2:])))
+    C2x2diag = C2x2diag.view(T.size()[1]*(tensor1.size()[2]**2),
+                         T.size()[1]*(tensor2.size()[3]**2),tensor_off.size()[0]**2)
+    C2x2diag = torch.einsum('ab,bci->aci', C2x2c, C2x2diag)
+    rdm = torch.einsum('abi,baj->ij', C2x2diag, C2x2diag)
     rdm = rdm.view(tuple([tensor1.size()[0] for i in range(4)]))
     rdm = rdm.permute(0,2,1,3).contiguous()
     rdm = torch.einsum('abcdafch', rdm.view((*[2]*8)).contiguous())
     return rdm
 
-def const_w2_NNN_plaquette(tensor, env, gate):
-    rdm2 = rdm2x2_sl_NNN_plaquette(tensor, tensor, env=env)
+def const_w2_NNN_plaquette(tensor, tensor_off, diag, env, gate):
+    rdm2 = rdm2x2_sl_NNN_plaquette(tensor, tensor, tensor_off, diag, env)
     # Compute \omega_2, norm of tensor2*gate
     w2 = torch.einsum('cdij,ijkl,klcd', rdm2, gate, gate)
     return w2
 
-def cost_function_NNN_plaquette(tensor1, tensor2, env, gate, w2):
-    rdm0 = rdm2x2_sl_NNN_plaquette(tensor2, tensor2, env=env)
-    rdm1 = rdm2x2_sl_NNN_plaquette(tensor1, tensor2, env=env)
+def cost_function_NNN_plaquette(tensor1, tensor2, tensor_off, diag, env, gate, w2):
+    rdm0 = rdm2x2_sl_NNN_plaquette(tensor2, tensor2, tensor_off, diag, env=env)
+    rdm1 = rdm2x2_sl_NNN_plaquette(tensor1, tensor2, tensor_off, diag, env=env)
     # Compute \omega_0, norm of tensor2
     w0 = torch.einsum('abab', rdm0)
     # Compute \omega_1, overlap of tensor1 and tensor2*gate
@@ -155,35 +157,72 @@ def cost_function_NNN_plaquette(tensor1, tensor2, env, gate, w2):
     return cost_function
 
 
-"""
-def rdm2x2_sl_NNN_plaquette(tensor1, tensor2, tensor3, tensor4, env):
+####################### 1 site functions for NNN term #########################
+def rdm1x1_sl(tensor1, tensor2, env):
+    """Return a tensor([2,2,2,2])."""
     C = env.C[env.keyC]
     T = env.T[env.keyT]
-    C2x2LU = C2x2_LU(tensor3, tensor4, C, T)
-    C2x2RU = C2x2_RU(tensor1, tensor2, C, T)
-    C2x2c = torch.einsum('abii->ab', 
-                C2x2LU.view([C2x2LU.size(0)*C2x2LU.size(1)]+list(C2x2LU.size()[2:])))
-    C2x2RU = C2x2RU.view(T.size()[1]*(tensor1.size()[2]**2),
-                         T.size()[1]*(tensor2.size()[3]**2),tensor3.size()[0]**2)
-    C2x2RU = torch.einsum('ab,bci->aci', C2x2c, C2x2RU)
-    rdm = torch.einsum('abi,baj->ij', C2x2RU, C2x2RU)
-    rdm = rdm.view(tuple([tensor1.size()[0] for i in range(4)]))
-    rdm = rdm.permute(0,2,1,3).contiguous()
+    CTC = torch.tensordot(C,T,([0],[0]))
+    CTC = torch.tensordot(CTC,C,([1],[0]))
+    rdm = torch.tensordot(CTC,T,([2],[0]))
+    dimsA = tensor1.size()
+    a = torch.einsum('mefgh,nabcd->eafbgchdmn', tensor1, tensor2).contiguous()\
+        .view(dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2, dimsA[0], dimsA[0])
+    rdm = torch.tensordot(rdm,a,([1,3],[1,2]))
+    rdm = torch.tensordot(T,rdm,([0,2],[0,2]))
+    rdm = torch.tensordot(rdm,CTC,([0,1,2],[0,2,1]))
+    rdm = torch.einsum('abac', rdm.view((*[2]*4)).contiguous())
     return rdm
 
-def const_w2_NNN_plaquette(tensor, tensor_off, env, gate):
-    rdm2 = rdm2x2_sl_NNN_plaquette(tensor, tensor, tensor_off, tensor_off, env=env)
+def const_w2_NNN_1site(tensor, env, gate):
+    rdm2 = rdm2x1_sl_2sites(tensor, tensor, env=env)
     # Compute \omega_2, norm of tensor2*gate
     w2 = torch.einsum('cdij,ijkl,klcd', rdm2, gate, gate)
     return w2
 
-def cost_function_NNN_plaquette(tensor1, tensor2, tensor_off, env, gate, w2):
-    rdm0 = rdm2x2_sl_NNN_plaquette(tensor2, tensor2, tensor_off, tensor_off, env=env)
-    rdm1 = rdm2x2_sl_NNN_plaquette(tensor1, tensor2, tensor_off, tensor_off, env=env)
+def cost_function_NNN_1site(tensor1, tensor2, env, gate, w2):
+    rdm0 = rdm2x1_sl_2sites(tensor2, tensor2, env=env)
+    rdm1 = rdm2x1_sl_2sites(tensor1, tensor2, env=env)
     # Compute \omega_0, norm of tensor2
     w0 = torch.einsum('abab', rdm0)
     # Compute \omega_1, overlap of tensor1 and tensor2*gate
     w1 = torch.einsum('abcd, cdab', rdm1, gate)
     cost_function = w1/torch.sqrt(w0*w2)
     return cost_function
-"""
+
+######### Not working ##########
+# =============================================================================
+# def rdm2x2_sl_NNN_plaquette(tensor1, tensor2, env):
+#     """Tensor 1 and 2 are the diagonal onsite tensors. Tensor 3 and 4 are on
+#     the off-diagonal."""
+#     C = env.C[env.keyC]
+#     T = env.T[env.keyT]
+#     C2x2LU = C2x2_LU(tensor1, tensor1, C, T)
+#     C2x2RU = C2x2_RU(tensor1, tensor2, C, T)
+#     C2x2c = torch.einsum('abii->ab', 
+#                 C2x2LU.view([C2x2LU.size(0)*C2x2LU.size(1)]+list(C2x2LU.size()[2:])))
+#     C2x2RU = C2x2RU.view(T.size()[1]*(tensor1.size()[2]**2),
+#                          T.size()[1]*(tensor2.size()[3]**2),tensor1.size()[0]**2)
+#     C2x2RU = torch.einsum('ab,bci->aci', C2x2c, C2x2RU)
+#     rdm = torch.einsum('abi,baj->ij', C2x2RU, C2x2RU)
+#     rdm = rdm.view(tuple([tensor1.size()[0] for i in range(4)]))
+#     rdm = rdm.permute(0,2,1,3).contiguous()
+#     rdm = torch.einsum('abcdafch', rdm.view((*[2]*8)).contiguous())
+#     return rdm
+# 
+# def const_w2_NNN_plaquette(tensor, env, gate):
+#     rdm2 = rdm2x2_sl_NNN_plaquette(tensor, tensor, env=env)
+#     # Compute \omega_2, norm of tensor2*gate
+#     w2 = torch.einsum('cdij,ijkl,klcd', rdm2, gate, gate)
+#     return w2
+# 
+# def cost_function_NNN_plaquette(tensor1, tensor2, env, gate, w2):
+#     rdm0 = rdm2x2_sl_NNN_plaquette(tensor2, tensor2, env=env)
+#     rdm1 = rdm2x2_sl_NNN_plaquette(tensor1, tensor2, env=env)
+#     # Compute \omega_0, norm of tensor2
+#     w0 = torch.einsum('abab', rdm0)
+#     # Compute \omega_1, overlap of tensor1 and tensor2*gate
+#     w1 = torch.einsum('abcd, cdab', rdm1, gate)
+#     cost_function = w1/torch.sqrt(w0*w2)
+#     return cost_function
+# =============================================================================

@@ -23,8 +23,10 @@ log = logging.getLogger(__name__)
 parser = cfg.get_args_parser()
 parser.add_argument("--j1", type=float, default=1., help="nearest-neighbour coupling")
 parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour coupling")
+parser.add_argument("--tau", type=float, default=1/8, help=r"\tau = \frac{\beta}{N}")
 parser.add_argument("--bd", type=int, default=4, help="bond dimension")
 parser.add_argument("--f", type=str, default="output/obs/output_coeff_bin", help="name of the file")
+parser.add_argument("--of", type=str, default="output/obs/output_res", help="name of the output file")
 args, unknown_args = parser.parse_known_args()
 
 # Create dictionary containing all the tensors 
@@ -33,7 +35,7 @@ base_tensor_dict = bt.base_tensor_dict(args.bd)
 ################################ Main ########################################
 # Class of the observables
 class J1J2_ipepo():
-    def __init__(self, j1=1.0, j2=0.0, tau=1/8, global_args=cfg.global_args):
+    def __init__(self, j1, j2, tau, file, global_args=cfg.global_args):
         self.dtype=global_args.dtype
         self.device=global_args.device
         self.phys_dim=2
@@ -41,17 +43,29 @@ class J1J2_ipepo():
         self.j1=j1
         self.j2=j2
         self.s2 = su2.SU2(self.phys_dim, dtype=self.dtype, device=self.device)
+        self.file = file
+        with open(file, 'a+') as fp:
+            fp.write('0. 0.\n')
         
     def energy(self, tensor, env):
         expr_kron = 'ij,ab->iajb'
-        # S_1 * S_2 but with S_2 rotated of pi to respect the metric
-        SS = - torch.einsum(expr_kron, self.s2.SZ(), self.s2.SZ())\
+        # Energy of the j1 term
+        SS1 = - torch.einsum(expr_kron, self.s2.SZ(), self.s2.SZ())\
             - 0.5*(torch.einsum(expr_kron, self.s2.SP(), self.s2.SP())
             + torch.einsum(expr_kron, self.s2.SM(), self.s2.SM()))
-        rdm = ts.rdm2x1_sl_2sites(tensor, tensor, env)
-        w0 = torch.einsum('abab', rdm)
-        energy = torch.einsum('abcd, cdab', rdm, SS)
-        return 2*self.j1*energy/w0
+        rdm1 = ts.rdm2x1_sl_2sites(tensor, tensor, env)
+        norm1 = torch.einsum('abab', rdm1)
+        energy1 = torch.einsum('abcd, cdab', rdm1, SS1)
+        energy1 = (energy1/norm1).item()
+        # Energy of the j2 term
+        SS2 = torch.einsum(expr_kron, self.s2.SZ(), self.s2.SZ())\
+            + 0.5*(torch.einsum(expr_kron, self.s2.SP(), self.s2.SM())\
+                   + torch.einsum(expr_kron, self.s2.SM(), self.s2.SP()))
+        rdm2 = ts.rdm2x2_sl_NNN_plaquette(tensor, tensor, tensor, 'diag', env)
+        norm2 = torch.einsum('abab', rdm2)
+        energy2 = torch.einsum('abcd, cdab', rdm2, SS2)
+        energy2 = (energy2/norm2).item()
+        return 2*self.j1*energy1 + 2*self.j2*energy2
         
     def magnetization(self, tensor, env):
         Sz = self.s2.SZ()
@@ -66,6 +80,11 @@ class J1J2_ipepo():
         ymag = torch.einsum('ij,ji', rdm1x1, Sy)
         return (xmag/w0, torch.abs(ymag)/w0, zmag/w0)
 
+    def save_obs(self, tensor, env, step):
+        fp = open(self.file, "a+")
+        energy = self.energy(tensor, env)
+        fp.write(' '.join((str((step+1)*self.tau), str(energy)))+'\n')
+        fp.close()
 
 def main():
     cfg.configure(args)
@@ -101,7 +120,7 @@ def main():
     
     n_iter = len(coeff)
     results = {'energy': np.zeros(n_iter), 'magnetization': np.zeros((n_iter, 3))}
-    model = J1J2_ipepo(j1=args.j1, j2=args.j2)
+    model = J1J2_ipepo(j1=args.j1, j2=args.j2, tau=args.tau)
     
     for step in tqdm(range(n_iter)):
         onsite = ons.OnSiteTensor('C4v', coeff[step], base_tensor_dict=base_tensor_dict,  
@@ -117,7 +136,7 @@ def main():
         results['energy'][step] = model.energy(tensor=onsite.site(), env=ctm_env)
         results['magnetization'][step] = model.magnetization(tensor=onsite.site(), env=ctm_env)
         
-    file = open("output/obs/output_res", "wb")
+    file = open(args.out, "wb")
     pickler = pickle.Pickler(file)
     pickler.dump(results)
     file.close

@@ -7,6 +7,8 @@ from tqdm import tqdm  # progress bars
 import tensors.base_tensors.base_tensor as bt
 import tensors.onsite as ons
 import optim.ts_lbfgs as ts
+import output.observables as obs
+import output.read_output as ro
 # peps-torch imports
 import config as cfg
 from ipeps.ipeps_c4v import read_ipeps_c4v
@@ -21,7 +23,6 @@ log = logging.getLogger(__name__)
 parser = cfg.get_args_parser()
 parser.add_argument("--j1", type=float, default=1., help="nearest-neighbour coupling")
 parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour coupling")
-parser.add_argument("--bd", type=int, default=4, help="bond dimension")
 parser.add_argument("--n", type=int, default=40, help="max number of optimization steps")
 parser.add_argument("--it", type=int, default=10, help="imaginary time steps")
 parser.add_argument("--tau", type=float, default=1/8, help=r"\tau = \frac{\beta}{N}")
@@ -30,10 +31,11 @@ parser.add_argument("--no", type=float, default=1e-2, help="noise to add to the 
 parser.add_argument("--lr", type=float, default=1, help="learning rate")
 parser.add_argument("--p", type=int, default=3, help="patience of the convergence")
 parser.add_argument("--sf", type=str, default='output/obs/output_coeff', help="save file")
+parser.add_argument("--out", type=str, default='output/obs/output_observables.txt', help="save file")
 args, unknown_args = parser.parse_known_args()
 
 # Create dictionary containing all the tensors 
-base_tensor_dict = bt.base_tensor_dict(args.bd)
+base_tensor_dict = bt.base_tensor_dict(args.bond_dim)
 
 # Create dictionary of the parameters
 params_j1 = {'a': {'permutation': (0,1,2,3,4), 'new_symmetry' : 'Cx'},
@@ -46,6 +48,13 @@ params_j2 = {'a': {'permutation': (0,1,2,3,4), 'new_symmetry' : 'Cs', 'diag': 'd
              'c': {'permutation': (0,1,2,3,4), 'new_symmetry' : '', 'diag' : 'off'},
              'd': {'permutation': (0,1,2,3,4), 'new_symmetry' : 'C4v', 'diag' : 'off'}}
 
+coeff_ini = {'4': [0.,0.,0.,0.,1.,0.,0.,0.],
+             '7': [0.,0.,0.,0.,1.]+[0.]*44}
+
+params_onsite = {'symmetry':'C4v', 'coeff': coeff_ini[f'{args.bond_dim}'],
+                 'base_tensor_dict': base_tensor_dict,  
+                 'file': "tensors/input-states/init_tensor.json",
+                 'bond_dim': args.bond_dim, 'dtype':torch.float64}
 
 ################################ Main ########################################
 def main():
@@ -73,10 +82,8 @@ def main():
     gate = ts.build_gate(args.j1, args.tau)
     gate2 = ts.build_gate(args.j2, args.tau)
     # Initialize onsite tensor
-    onsite1 = ons.OnSiteTensor(symmetry='C4v', coeff=[0.,0.,0.,0.,1.,0.,0.,0.],
-                               base_tensor_dict=base_tensor_dict,  
-                               file="tensors/input-states/init_tensor.json",
-                               bond_dim=args.bd)
+    onsite1 = ons.OnSiteTensor(params_onsite)
+    model = obs.J1J2_ipepo(j1=args.j1, j2=args.j2, tau=args.tau, file=args.out)
     
     for step in tqdm(range(args.it)):
         
@@ -119,9 +126,13 @@ def main():
         
         # Save coefficients
         onsite1.write_to_json("tensors/input-states/init_tensor.json")
-        onsite1.history(); onsite1.save_coeff_to_txt(args.sf)
+        onsite1.history(); model.save_obs(onsite1.site(), ctm_env, step)
         
     onsite1.save_coeff_to_bin(args.sf+'_bin')
     
 if __name__ == '__main__':
     main()
+    if args.j2!=0:
+        ro.plot_j2(args.out, args.j1, args.j2, args.tau)
+    else:
+        ro.plot_j1(args.out, args.j1, args.tau)
