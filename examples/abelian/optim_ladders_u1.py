@@ -20,6 +20,7 @@ log = logging.getLogger(__name__)
 parser= cfg.get_args_parser()
 # additional model-dependent arguments
 parser.add_argument("--alpha", type=float, default=0., help="inter-ladder coupling")
+parser.add_argument("--bz_stag", type=float, default=0., help="staggered magnetic field")
 parser.add_argument("--symmetry", default=None, help="symmetry structure", choices=["NONE","U1"])
 parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
@@ -45,7 +46,8 @@ def main():
     settings.backend.set_num_threads(args.omp_cores)
     settings.backend.random_seed(args.seed)
 
-    model= coupledLadders.COUPLEDLADDERS_NOSYM(settings_full,alpha=args.alpha)
+    model= coupledLadders.COUPLEDLADDERS_NOSYM(settings_full,alpha=args.alpha,\
+        Bz_val=args.bz_stag)
 
     # initialize an ipeps
     # 1) define lattice-tiling function, that maps arbitrary vertex of square lattice
@@ -66,7 +68,8 @@ def main():
         print(f"dtype of initial state {state.dtype} and model {model.dtype} do not match.")
         print(f"Setting default dtype to {cfg.global_args.dtype} and reinitializing "\
         +" the model")
-        model= coupledLadders.COUPLEDLADDERS_NOSYM(settings_full,alpha=args.alpha)
+        model= coupledLadders.COUPLEDLADDERS_NOSYM(settings_full,alpha=args.alpha,\
+            Bz_val=args.bz_stag)
 
     print(state)
 
