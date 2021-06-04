@@ -22,7 +22,6 @@ def read_txt(file):
             liste_val.append(float(re.split('[ \n]', line)[1])) 
     return liste_beta, liste_val
     
-
 def read_results(list_energy):
     res_b, res_val = read_txt("output/obs/res_didier.txt")
     res2_b, res2_val = read_txt("output/obs/res_QMC.txt")

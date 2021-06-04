@@ -38,7 +38,7 @@ class OnSiteTensor():
         new_coeff = bt.convert_list(self, new_symmetry, self.bond_dim)
         self.coeff = new_coeff
         self.symmetry = new_symmetry
-        self.base_tensor = bt.base_tensor_sym(self.dict, new_symmetry)
+        self.base_tensor = bt.base_tensor_sym(self.dict, new_symmetry, self.bond_dim)
 
     def add_noise(self, noise):
         """Add noise to onsite tensor for the optimization."""
