@@ -9,7 +9,7 @@ def contract_R3R5(bond_dim, tensor_r3, tensor_r5, phys_dim=4):
                 .view(tuple([phys_dim]+[tensor_r5.size(1)]*4)).contiguous()
 
 
-def base_tensor_dict(bond_dim):
+def base_tensor_dict(bond_dim, device='cpu'):
     """ Create a dictionary with all the tensors of the according bond
     dimension."""
     # Define import to use
@@ -27,10 +27,11 @@ def base_tensor_dict(bond_dim):
         base_tensor_dict[key] = contract_R3R5(bond_dim, r3.T_S0, base_tensor_dict[key])
     for key in S1 : 
         base_tensor_dict[key] = contract_R3R5(bond_dim, r3.T_S1, base_tensor_dict[key])
+    base_tensor_dict= { key: base_tensor_dict[key].to(device) for key in base_tensor_dict }
     return base_tensor_dict
     
 
-def base_tensor_sym(base_tensor_dict, sym, bond_dim):
+def base_tensor_sym(base_tensor_dict, sym, bond_dim, device="cpu"):
     """Create the list with the tensors of the symmetry considered."""
     # Define import to use
     bond = {'4': d4, '7': d7}
@@ -44,6 +45,7 @@ def base_tensor_sym(base_tensor_dict, sym, bond_dim):
         for name in names.split('+'):
             tensor += base_tensor_dict[name]
         sym_list.append(tensor)
+    sym_list= [ t.to(device) for t in sym_list ]
     return sym_list
 
 

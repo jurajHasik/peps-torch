@@ -17,9 +17,10 @@ class OnSiteTensor():
         self.coeff = param['coeff']
         self.dict = param['base_tensor_dict']
         self.bond_dim = param['bond_dim']
-        self.dtype = param['dtype'] 
+        self.dtype = param['dtype']
+        self.device = param['device'] 
         self.base_tensor = bt.base_tensor_sym(param['base_tensor_dict'],
-                                              self.symmetry, self.bond_dim)
+                                              self.symmetry, self.bond_dim, device=self.device)
         self.write_to_json(param['file'])
         self.coeff_list = list(); self.coeff_list.append(self.coeff)
         

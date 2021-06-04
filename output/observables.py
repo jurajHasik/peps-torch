@@ -4,7 +4,7 @@ the environment for each step of imaginary time. """
 import torch
 import pickle
 import numpy as np
-from tqdm import tqdm  # progress bars
+# from tqdm import tqdm  # progress bars
 # peps-torch imports
 import tensors.onsite as ons
 import tensors.base_tensors.base_tensor as bt
@@ -122,6 +122,7 @@ def main():
     results = {'energy': np.zeros(n_iter), 'magnetization': np.zeros((n_iter, 3))}
     model = J1J2_ipepo(j1=args.j1, j2=args.j2, tau=args.tau)
     
+    # for step in tqdm(range(n_iter)):
     for step in tqdm(range(n_iter)):
         onsite = ons.OnSiteTensor('C4v', coeff[step], base_tensor_dict=base_tensor_dict,  
                        file="tensors/input-states/init_tensor.json",

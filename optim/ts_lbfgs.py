@@ -93,12 +93,15 @@ def optimization_2sites(onsite1, new_symmetry, permutation, env, gate, noise,
     best_loss = float('inf')
     threshold = threshold
     patience = patience
+    loc_history=[]
 
     def closure():
         optimizer.zero_grad()
         loss = -cost_function(onsite1.site(), onsite2.site(), env, gate, w2)
         # Compute gradient
         loss.backward()
+        # might be too much 
+        loc_history.append( (loss.item(), max(abs(onsite2.coeff.grad))) )
         # Clip norm gradients to 1.0 to garantee they are not exploding
         torch.nn.utils.clip_grad_norm_(onsite2.coeff, 1.0)
         return loss
@@ -117,7 +120,7 @@ def optimization_2sites(onsite1, new_symmetry, permutation, env, gate, noise,
             
     # Return optimized tensor
     onsite2.coeff = onsite2.coeff.detach(); onsite2.unpermute(permutation)
-    return onsite2
+    return onsite2, loc_history
 
 ####################### Plaquette functions for NNN term ######################
 def rdm2x2_sl_NNN_plaquette(tensor1, tensor2, tensor_off, diag, env):

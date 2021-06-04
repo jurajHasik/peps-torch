@@ -3,7 +3,12 @@ maximizes the ratio of overlaps w.r.t the coefficients of the basic Cs tensors
 and updates them."""
 
 import torch
-from tqdm import tqdm  # progress bars
+import warnings
+try:
+    from tqdm import tqdm  # progress bars
+except ImportError as e:
+    TQDM=False
+    warnings.warn("tqdm not available", Warning)
 import tensors.base_tensors.base_tensor as bt
 import tensors.onsite as ons
 import optim.ts_lbfgs as ts
@@ -35,7 +40,7 @@ parser.add_argument("--out", type=str, default='output/obs/output_observables.tx
 args, unknown_args = parser.parse_known_args()
 
 # Create dictionary containing all the tensors 
-base_tensor_dict = bt.base_tensor_dict(args.bond_dim)
+base_tensor_dict = bt.base_tensor_dict(args.bond_dim, device=cfg.global_args.device)
 
 # Create dictionary of the parameters
 params_j1 = {'a': {'permutation': (0,1,2,3,4), 'new_symmetry' : 'Cx'},
@@ -85,7 +90,8 @@ def main():
     onsite1 = ons.OnSiteTensor(params_onsite)
     model = obs.J1J2_ipepo(j1=args.j1, j2=args.j2, tau=args.tau, file=args.out)
     
-    for step in tqdm(range(args.it)):
+    loop_range= tqdm(range(args.it)) if TQDM else range(args.it)
+    for step in loop_range:
         
         # Read IPEPS from .json file and update environment
         state_env = read_ipeps_c4v("tensors/input-states/init_tensor.json")
@@ -100,11 +106,12 @@ def main():
                 permutation = params_j1[bond_type]['permutation']
                 
                 # Optimize
-                onsite1 = ts.optimization_2sites(onsite1=onsite1, new_symmetry=new_symmetry,
+                onsite1, loc_h = ts.optimization_2sites(onsite1=onsite1, new_symmetry=new_symmetry,
                             permutation=permutation, env=ctm_env, gate=gate,
                             const_w2=ts.const_w2_2sites, cost_function=ts.cost_function_2sites,
                             noise=args.no, max_iter=args.n, threshold=args.t, patience=args.p,
                             optimizer_class=torch.optim.LBFGS, lr=args.lr)
+                log.info(f"{step} {bond_type} {loc_h[-1]}")
 
         if args.j2 != 0:
             # Apply j2 gate
@@ -118,11 +125,12 @@ def main():
                     return ts.cost_function_NNN_plaquette(tensor1, tensor2, onsite1.site(), diag, env, gate, w2)
                 
                 # Optimize
-                onsite1 = ts.optimization_2sites(onsite1=onsite1, new_symmetry=new_symmetry,
+                onsite1, loc_h = ts.optimization_2sites(onsite1=onsite1, new_symmetry=new_symmetry,
                             permutation=permutation, env=ctm_env, gate=gate2,
                             const_w2=const_w2, cost_function=cost_function,
                             noise=args.no, max_iter=args.n, threshold=args.t, patience=args.p,
                             optimizer_class=torch.optim.LBFGS, lr=args.lr)
+
         
         # Save coefficients
         onsite1.write_to_json("tensors/input-states/init_tensor.json")
