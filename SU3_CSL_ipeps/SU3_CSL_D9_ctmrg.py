@@ -51,14 +51,15 @@ def main():
     MM3 = load_t(path, 'M10')
     tensors_triangle = [MM0, MM1, MM2, 1j*MM3]
     names_M = ['M0', 'M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7', 'M8', 'M9', 'M10']
-    tensors_triangle_2 = sum(load_t(path, name) for name in names_M)
+    tensors_triangle_2 = [load_t(path, name) for name in names_M]
+
 
     LL0 = load_t(path, 'L0') + load_t(path, 'L1') + load_t(path, 'L2')
     LL1 = load_t(path, 'L3') + load_t(path, 'L4') + load_t(path, 'L5')
     LL2 = load_t(path, 'L6') + load_t(path, 'L7') + load_t(path, 'L8')
     names_L = ['L0', 'L1', 'L2', 'L3', 'L4', 'L5', 'L6', 'L7', 'L8']
     tensors_site = [LL0, LL1, 1j*LL2]
-    tensors_site_2 = sum(load_t(path, name) for name in names_L)
+    tensors_site_2 = [load_t(path, name) for name in names_L]
 
     # define initial coefficients
     if args.import_state is not None:
@@ -79,8 +80,8 @@ def main():
     # define which coefficients will be added a noise
     var_coeffs_triangle = torch.tensor([0, 1, 1, 1], dtype=torch.float64, device=t_device)
     var_coeffs_site = torch.tensor([0, 1, 1], dtype=torch.float64, device=t_device)
-    var_coeffs_triangle2 = {(0, 0): torch.tensor([1. for name in names_M], dtype=torch.float64, device=t_device)}
-    var_coeffs_site2 = {(0, 0): torch.tensor([1. for name in names_L], dtype=torch.float64, device=t_device)}
+    var_coeffs_triangle2 = torch.tensor([1. for name in names_M], dtype=torch.float64, device=t_device)
+    var_coeffs_site2 = torch.tensor([1. for name in names_L], dtype=torch.float64, device=t_device)
 
     state = IPEPS_U1SYM(tensors_triangle_2, tensors_site_2, coeffs_triangle_up=coeffs_triangle2, coeffs_site=coeffs_site2,
                         sym_up_dn=bool(args.sym_up_dn),
