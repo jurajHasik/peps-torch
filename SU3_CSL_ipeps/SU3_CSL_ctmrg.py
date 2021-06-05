@@ -41,13 +41,14 @@ def main():
     tensors_site = []
     tensors_triangle = []
     path = "SU3_CSL_ipeps/SU3_D7_tensors/"
-    for name in ['S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'L0', 'L1', 'L2']:
+    for name in ['S0', 'S1', 'S2', 'L0', 'L1']:
+    #for name in ['S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'L0', 'L1', 'L2']:
         tens = load_SU3_tensor(path+name)
         tens = tens.to(t_device)
         if name in ['S0', 'S1', 'S2']:
-            tensors_triangle.append(1j * tens)
-        elif name in ['S3', 'S4', 'S5', 'S6']:
             tensors_triangle.append(tens)
+        #elif name in ['S3', 'S4', 'S5', 'S6']:
+        #    tensors_triangle.append(tens)
         elif name in ['L0', 'L1']:
             tensors_site.append(tens)
         else:
@@ -64,16 +65,16 @@ def main():
         # coeffs ... .to(t_device)
     else:
         # AKLT state
-        coeffs_triangle = {(0, 0): torch.tensor([1., 0., 0., 0., 0., 0., 0.], dtype=torch.float64, device=t_device)}
-        coeffs_site = {(0, 0): torch.tensor([1., 0., 0.], dtype=torch.float64, device=t_device)}
+        coeffs_triangle = {(0, 0): torch.tensor([1., 0., 0.], dtype=torch.float64, device=t_device)}
+        coeffs_site = {(0, 0): torch.tensor([1., 0.], dtype=torch.float64, device=t_device)}
         # Ji-Yao's state for theta = pi/4
         #coeffs_triangle = {(0, 0): torch.tensor([1.0000, 0.3563, 4.4882, -0.3494, -3.9341, 0., 0.], dtype=torch.float64, device=t_device)}
         #coeffs_site = {(0, 0): torch.tensor([1.0000, 0.2429, 0.], dtype=torch.float64, device=t_device)}
 
 
     # define which coefficients will be added a noise
-    var_coeffs_site = torch.tensor([0, 1, 0], dtype=torch.float64, device=t_device)
-    var_coeffs_triangle = torch.tensor([0, 1, 1, 0, 0, 0, 0], dtype=torch.float64, device=t_device)
+    var_coeffs_site = torch.tensor([0, 1], dtype=torch.float64, device=t_device)
+    var_coeffs_triangle = torch.tensor([0, 1, 1], dtype=torch.float64, device=t_device)
 
     state = IPEPS_U1SYM(tensors_triangle, tensors_site, coeffs_triangle_up = coeffs_triangle, coeffs_site=coeffs_site, sym_up_dn=bool(args.sym_up_dn),
                         var_coeffs_triangle=var_coeffs_triangle, var_coeffs_site=var_coeffs_site)
@@ -153,16 +154,8 @@ def main():
 
     ctm_env_init = ENV(args.chi, state)
     init_env(state, ctm_env_init)
-    #print_corner_spectra(ctm_env_init)
 
-    # energy per site
-    #e_dn_init = model.energy_triangle_dn(state, ctm_env_init)
-    #e_up_init = model.energy_triangle_up(state, ctm_env_init)
-    #e_nnn_init = model.energy_nnn(state, ctm_env_init)
-    #e_tot_init = (e_dn_init + e_up_init + e_nnn_init)/3
-    #print(f'E_up={e_up_init.item()}, E_dn={e_dn_init.item()}, E_tot={e_tot_init.item()}')
-
-    ctm_env_final, *ctm_log = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_corners)
+    ctm_env_final, *ctm_log = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
 
     # energy per site
     e_dn_final = model.energy_triangle_dn(state, ctm_env_final, force_cpu=True)
