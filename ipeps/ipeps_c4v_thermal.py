@@ -5,33 +5,18 @@ import math
 import config as cfg
 import ipeps.ipeps as ipeps
 from ipeps.ipeps_c4v import IPEPS_C4V
-from tensors.tensors_D4_R3 import list_S0 as D4_R3_S0
-from tensors.tensors_D4_R3 import list_S1 as D4_R3_S1
-from tensors.tensors_D4_R5 import list_S0 as D4_R5_S0
-from tensors.tensors_D4_R5 import list_S1 as D4_R5_S1
 
 class IPEPS_C4V_THERMAL(ipeps.IPEPS):
-    def __init__(self, site=None, vertexToSite=None, lX=None, lY=None, \
-        peps_args=cfg.peps_args, global_args=cfg.global_args):
+    def __init__(self, site=None, peps_args=cfg.peps_args, global_args=cfg.global_args):
         r"""
-        :param elem_tensors: list of selected elementary tensors
-        :param coeffs: map from elementary unit cell to vector of coefficients
-        :param vertexToSite: function mapping arbitrary vertex of a square lattice 
-                             into a vertex within elementary unit cell
-        :param lX: length of the elementary unit cell in X direction
-        :param lY: length of the elementary unit cell in Y direction
+        :param site: on-site rank-6 tensor 
         :param peps_args: ipeps configuration
         :param global_args: global configuration
-        :type elem_tensors: list[tuple(dict, torch.tensor)]
-        :type coeffs: dict[tuple(int,int) : torch.tensor]
-        :type vertexToSite: function(tuple(int,int))->tuple(int,int)
-        :type lX: int
-        :type lY: int
+        :type site: torch.Tensor
         :type peps_args: PEPSARGS
         :type global_args: GLOBALARGS
 
-        Member ``sites`` is a dictionary of non-equivalent on-site tensors
-        indexed by tuple of coordinates (x,y) within the elementary unit cell.
+        Thermal ipepo defined by single rank-6 tensor with C4v symmetry.
         The index-position convetion for on-site tensors is defined as follows::
 
                u s 
@@ -44,65 +29,6 @@ class IPEPS_C4V_THERMAL(ipeps.IPEPS):
             four principal directions up, left, down, right in anti-clockwise order 
             starting from up
 
-        Member ``vertexToSite`` is a mapping function from vertex on a square lattice
-        passed in as tuple(x,y) to a corresponding tuple(x,y) within elementary unit cell.
-        
-        On-site tensor of an IPEPS object ``wfc`` at vertex (x,y) is conveniently accessed 
-        through the member function ``site``, which internally uses ``vertexToSite`` mapping::
-            
-            coord= (0,0)
-            A_00= wfc.site(coord)  
-
-        By combining the appropriate ``vertexToSite`` mapping function with elementary unit 
-        cell specified through ``sites`` various tilings of a square lattice can be achieved:: 
-
-            # Example 1: 1-site translational iPEPS
-            
-            sites={(0,0): A}
-            def vertexToSite(coord):
-                return (0,0)
-            wfc= IPEPS(sites,vertexToSite)
-        
-            # resulting tiling:
-            # y\x -2 -1 0 1 2
-            # -2   A  A A A A
-            # -1   A  A A A A
-            #  0   A  A A A A
-            #  1   A  A A A A
-
-            # Example 2: 2-site bipartite iPEPS
-            
-            sites={(0,0): A, (1,0): B}
-            def vertexToSite(coord):
-                x = (coord[0] + abs(coord[0]) * 2) % 2
-                y = abs(coord[1])
-                return ((x + y) % 2, 0)
-            wfc= IPEPS(sites,vertexToSite)
-        
-            # resulting tiling:
-            # y\x -2 -1 0 1 2
-            # -2   A  B A B A
-            # -1   B  A B A B
-            #  0   A  B A B A
-            #  1   B  A B A B
-        
-            # Example 3: iPEPS with 3x2 unit cell with PBC 
-            
-            sites={(0,0): A, (1,0): B, (2,0): C, (0,1): D, (1,1): E, (2,1): F}
-            wfc= IPEPS(sites,lX=3,lY=2)
-            
-            # resulting tiling:
-            # y\x -2 -1 0 1 2
-            # -2   B  C A B C
-            # -1   E  F D E F
-            #  0   B  C A B C
-            #  1   E  F D E F
-
-        where in the last example we used default setting for ``vertexToSite``, which
-        maps square lattice into elementary unit cell of size `lX` x `lY` assuming 
-        periodic boundary conditions (PBC) along both X and Y directions.
-
-        TODO we infer the size of the cluster from the keys of sites. Is it OK?
         """
         if site is not None:
             assert isinstance(site,torch.Tensor), "site is not a torch.Tensor"
@@ -126,6 +52,8 @@ class IPEPS_C4V_THERMAL(ipeps.IPEPS):
         self.sites[(0,0)]= self.site() + noise * rand_t
         if symmetrize:
             dims= self.site().size()
+            # C4v group assumes rank-5 tensor with last four indices corresponding
+            # to u,l,d,r
             _tmp_rank5= self.site().view(dims[0]*dims[1], *dims[2:])
             if _tmp_rank5.is_complex():
                 _tmp_rank5= make_c4v_symm(_tmp_rank5.real ) \
@@ -135,6 +63,13 @@ class IPEPS_C4V_THERMAL(ipeps.IPEPS):
             self.sites[(0,0)]= _tmp_rank5.view(dims)
 
     def to_fused_ipeps_c4v(self):
+        r"""
+        Transform ipepo into ipeps defined by single rank-5 tensor with the
+        physical and ancilla dimensions fused.
+
+        Returns:
+            IPEPS_C4v: ipeps representaion of the ipepo 
+        """
         site= self.site()
         site= site.view(site.size(0)*site.size(1), site.size(2), site.size(3),\
             site.size(4), site.size(5))
@@ -162,20 +97,6 @@ def to_ipeps_c4v_thermal(state, normalize=False):
     if normalize: A= A/A.norm()
     return IPEPS_C4V_THERMAL(A)
 
-
-def _build_elem_t():
-
-    def _fuse(t_r3,t_r5):
-        """ 
-        Contract rank-5 and rank-3 into a elementary rank-6 tensor
-        with index-order convention: (ancilla, physical, u, l, d, r) 
-        """
-        return torch.einsum('atp,auldr->tpuldr', t_r3, t_r5).contiguous()
-
-    elem_t=[]
-    elem_t+= [ ( {"meta": "S=0 + S=0"}, _fuse(D4_R3_S0[0], t) ) for t in D4_R5_S0 ]
-    elem_t+= [ ( {"meta": "S=1 + S=1"}, _fuse(D4_R3_S1[0], t) ) for t in D4_R5_S1 ]
-    return elem_t
 
 class IPEPS_C4V_THERMAL_LC(IPEPS_C4V_THERMAL):
     def __init__(self, elem_tensors, coeffs, vertexToSite=None, lX=None, lY=None, \
@@ -347,7 +268,6 @@ class IPEPS_C4V_THERMAL_LC(IPEPS_C4V_THERMAL):
 
     def write_to_file(self, outputfile, aux_seq=[0,1,2,3], tol=1.0e-14, normalize=False):
         write_ipeps_thermal_lc(self, outputfile, aux_seq=aux_seq, tol=tol, normalize=normalize)
-
 
 def read_ipeps_thermal_lc(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.peps_args,\
     global_args=cfg.global_args):

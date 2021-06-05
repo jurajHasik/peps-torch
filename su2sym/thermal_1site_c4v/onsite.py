@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 import pickle
-import tensors.base_tensors.base_tensor as bt
+import su2sym.thermal_1site_c4v.base_tensors.base_tensor as bt
 import ipeps.ipeps as ipeps
 import ipeps.ipeps_c4v as ipepsc4v
 import copy
@@ -20,22 +20,26 @@ class OnSiteTensor():
         self.dtype = param['dtype']
         self.device = param['device'] 
         self.base_tensor = bt.base_tensor_sym(param['base_tensor_dict'],
-                                              self.symmetry, self.bond_dim, device=self.device)
-        self.write_to_json(param['file'])
+            self.symmetry, self.bond_dim, device=self.device)
+        # self.write_to_json(param['file'])
         self.coeff_list = list(); self.coeff_list.append(self.coeff)
         
     def site(self):
-        """Return the onsite tensor."""
+        """Return the on-site tensor with physical and ancilla index fused."""
         tensor = torch.zeros(tuple([4]+[self.bond_dim]*4), dtype=self.dtype)
         for i in range(len(self.coeff)):
             tensor += self.coeff[i]*self.base_tensor[i]
         return tensor
-    
+
+    def site_unfused(self):
+        _tmp= self.site()
+        return _tmp.view( tuple([2,2]+[self.bond_dim]*4) )
+
     def normalize(self):
         self.coeff = list(np.array(self.coeff)/np.max(np.abs(np.array(self.coeff))))
 
     def convert(self, new_symmetry):
-        """Convert coeff list from a symmetry to an other."""
+        """Convert coeff list from a symmetry to another."""
         new_coeff = bt.convert_list(self, new_symmetry, self.bond_dim)
         self.coeff = new_coeff
         self.symmetry = new_symmetry

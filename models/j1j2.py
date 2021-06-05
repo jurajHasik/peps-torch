@@ -811,7 +811,6 @@ class J1J2_C4V_BIPARTITE():
         res= dict({"dd": D0DR})
         return res
 
-
 class J1J2_C4V_BIPARTITE_THERMAL(J1J2_C4V_BIPARTITE):
 
     def __init__(self, j1=1.0, j2=0, j3=0, hz_stag= 0.0, delta_zz=1.0, \

@@ -1,12 +1,12 @@
-import tensors.base_tensors.tensors_R3 as r3
-import tensors.base_tensors.tensors_D4 as d4
-import tensors.base_tensors.tensors_D7 as d7
+from . import tensors_R3 as r3
+from . import tensors_D4 as d4
+from . import tensors_D7 as d7
 import torch
 
 
-def contract_R3R5(bond_dim, tensor_r3, tensor_r5, phys_dim=4):
+def contract_R3R5(bond_dim, tensor_r3, tensor_r5, fused_dim=4):
         return torch.einsum('atp,auldr->tpuldr', tensor_r3, tensor_r5)\
-                .view(tuple([phys_dim]+[tensor_r5.size(1)]*4)).contiguous()
+                .view(tuple([fused_dim]+[tensor_r5.size(1)]*4)).contiguous()
 
 
 def base_tensor_dict(bond_dim, device='cpu'):
@@ -41,11 +41,10 @@ def base_tensor_sym(base_tensor_dict, sym, bond_dim, device="cpu"):
     # Initialize list
     sym_list = list()
     for names in name_list:
-        tensor = torch.zeros(tuple([4]+[bond_dim]*4), dtype=torch.float64)
+        tensor = torch.zeros(tuple([4]+[bond_dim]*4), dtype=torch.float64, device=device)
         for name in names.split('+'):
             tensor += base_tensor_dict[name]
         sym_list.append(tensor)
-    sym_list= [ t.to(device) for t in sym_list ]
     return sym_list
 
 
