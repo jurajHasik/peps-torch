@@ -1,14 +1,12 @@
-import pickle
-import re
+import argparse
+import json
+import numpy as np
 import matplotlib.pyplot as plt
-import config as cfg
 
 ############################ Initialization ##################################
 # Get parser from config
-parser = cfg.get_args_parser()
-parser.add_argument("--obs", type=str, default='energy', help="Observable to compute")
-parser.add_argument("--res", type=str, default="output/obs/output_res", help="Observable to compute")
-parser.add_argument("--coeff", type=str, default="output/obs/output_coeff_bin", help="Observable to compute")
+parser = argparse.ArgumentParser(description='',allow_abbrev=False)
+parser.add_argument("--sim_data_file", type=str, help="file holding simulation data")
 args, unknown_args = parser.parse_known_args()
 
 ################################ Energy ######################################
@@ -22,39 +20,39 @@ def read_txt(file):
             liste_val.append(float(re.split('[ \n]', line)[1])) 
     return liste_beta, liste_val
     
-def read_results(list_energy):
+# TODO
+def read_results(results):
     res_b, res_val = read_txt("output/obs/res_didier.txt")
     res2_b, res2_val = read_txt("output/obs/res_QMC.txt")
-    beta_list = [i*(1/8) for i in range(len(list_energy))]
+    obs= np.asarray(results['obs'])
     fig, (ax1, ax2) = plt.subplots(1, 2)
     ax1.set(xlabel=r"$\beta$", ylabel=r"$\langle H \rangle_T /site$")
+    
     fig.suptitle("Imaginary time evolution of the bond energy")
-    ax1.plot(beta_list, list_energy, 'bo-', markersize=3, label='Results')
-    ax1.plot(beta_list[:15], [-(3/8)*val for val in beta_list[:15]], 
+    ax1.plot(obs[:,1], obs[:,2], 'bo-', markersize=3, label='Results')
+    ax1.plot(obs[:,1], -(3/8)*obs[:,1], 
              linestyle='dashed', markersize=3, label=r'$\mathcal{O}(\tau)$')
-    ax1.plot(res_b, res_val, markersize=3, label='Expected')
-    ax1.plot(res2_b, res2_val, linestyle='dashed', markersize=3, label='QMC')
+    # ax1.plot(res_b, res_val, markersize=3, label='Expected')
+    # ax1.plot(res2_b, res2_val, linestyle='dashed', markersize=3, label='QMC')
     ax2.set(xlabel=r"$\beta$", ylabel=r"$\langle H \rangle_T /site + (3/8) \times \tau$")
     ax2.yaxis.tick_right()
     ax2.yaxis.set_label_position("right")
-    ax2.plot(beta_list[:12], 
-             [val1 + (3/8)*val2 for val1,val2 in zip(list_energy[:12],beta_list[:12])],
-             'bo-', markersize=3, label='Results')
-    ax2.plot(beta_list[:6], [-(3/32)*val**2 for val in beta_list[:6]],
+    ax2.plot(obs[:,1], obs[:,2] + (3/8)*obs[:,1], 'bo-', markersize=3, label='Results')
+    ax2.plot(obs[:,1], -(3/32)*(obs[:,1]**2),
              linestyle='dashed', markersize=3, label=r'$\mathcal{O}(\tau^2)$')
-    ax2.plot(res_b[:13], 
-             [val1 + (3/8)*val2 for val1,val2 in zip(res_val[:13],res_b[:13])],
-             label='Expected')
-    ax2.plot(res2_b[:30], 
-             [val1 + (3/8)*val2 for val1,val2 in zip(res2_val[:30],res2_b[:30])],
-             label='Expected')
+    # ax2.plot(res_b[:13], 
+    #          [val1 + (3/8)*val2 for val1,val2 in zip(res_val[:13],res_b[:13])],
+    #          label='Expected')
+    # ax2.plot(res2_b[:30], 
+    #          [val1 + (3/8)*val2 for val1,val2 in zip(res2_val[:30],res2_b[:30])],
+    #          label='Expected')
     ax1.legend()
     ax2.legend()
     plt.show()
 
 def plot_j1(file, j1, tau):
-    res_b, res_val = read_txt("output/obs/res_didier.txt")
-    res2_b, res2_val = read_txt("output/obs/res_QMC.txt")
+    # res_b, res_val = read_txt("output/obs/res_didier.txt")
+    # res2_b, res2_val = read_txt("output/obs/res_QMC.txt")
     res_x, res_y = read_txt(file)
     fig, (ax1, ax2) = plt.subplots(1, 2)
     ax1.set(xlabel=r"$\beta$", ylabel=r"$\langle H \rangle_T /site$")
@@ -119,16 +117,17 @@ def read_coeff(dico):
     plt.ylabel("Coefficients of the C4v tensor")
     plt.xlabel('Imaginary Time Steps')
     plt.title("Imaginary time evolution of symmetric C4v tensor")
-    for key in dico.keys():
-        plt.plot([i*(1/8) for i in range(len(dico[key]))], dico[key], markersize=3, label=f"{key}")
+    obs= np.asarray(results['obs'])       # this holds observables including beta
+    coeffs= np.asarray(results['coeffs']) # this holds coeffs lambda
+    for i in range(coeffs.shape[1]):     # iterate over columns of coeffs
+        # column  beta      i-th coeff
+        plt.plot( obs[:,1], coeffs[:,i], markersize=3, label=f"{i}")
     plt.legend()
     plt.show()
 
 
 if __name__ == '__main__':
-    file_res = open(args.res, "rb")
-    file_coeff = open(args.coeff, "rb")
-    depickler = pickle.Unpickler(file_res)
-    results = depickler.load()
-    read_coeff(make_dico(file_coeff))
-    read_results(results[args.obs])
+    with open(args.sim_data_file) as j:
+        results= json.load(j) 
+    read_coeff(results)
+    read_results(results)

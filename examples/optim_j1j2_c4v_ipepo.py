@@ -19,9 +19,10 @@ import output.read_output as ro
 import config as cfg
 from ipeps.ipeps_c4v_thermal import IPEPS_C4V_THERMAL
 from ctm.one_site_c4v import ctmrg_c4v
-from ctm.one_site_c4v.rdm_c4v import rdm2x1_sl
-from ctm.one_site_c4v.env_c4v import ENV_C4V, init_env
+from ctm.one_site_c4v.rdm_c4v_thermal import rdm2x1_sl
+from ctm.one_site_c4v.env_c4v import *
 import logging
+import json
 log = logging.getLogger(__name__)
 
 ############################ Initialization ##################################
@@ -56,12 +57,6 @@ params_j2 = {'a': {'permutation': (0,1,2,3,4), 'new_symmetry' : 'Cs', 'diag': 'd
 coeff_ini = {'4': [0.,0.,0.,0.,1.,0.,0.,0.],
              '7': [0.,0.,0.,0.,1.]+[0.]*44}
 
-params_onsite = {
-    'symmetry':'C4v', 'coeff': coeff_ini[f'{args.bond_dim}'],
-    'base_tensor_dict': base_tensor_dict, 'bond_dim': args.bond_dim, 
-    'dtype':torch.float64, 'device': cfg.global_args.device
-}
-
 ################################ Main ########################################
 def main():
     ### Initialization ###
@@ -70,29 +65,50 @@ def main():
     cfg.print_config()
     torch.set_num_threads(args.omp_cores)
     torch.manual_seed(args.seed)
+
+    # `cfg` now holds all parsed command line options (and defaults) 
+    params_onsite = {
+        'symmetry':'C4v', 'coeff': coeff_ini[f'{args.bond_dim}'],
+        'base_tensor_dict': base_tensor_dict, 'bond_dim': args.bond_dim, 
+        'dtype':torch.float64, 'device': cfg.global_args.device
+    }
     
     # Define convergence criterion on the 2 sites reduced density matrix
     def ctmrg_conv_rdm2x1(state, env, history, ctm_args=cfg.ctm_args):
-        with torch.no_grad():
-            if not history:
-                history = dict({"log": []})
-            rdm2x1 = rdm2x1_sl(state, env, force_cpu=ctm_args.conv_check_cpu)
-            dist = float('inf')
-            if len(history["log"]) > 1:
-                dist = torch.dist(rdm2x1, history["rdm"], p=2).item()
-            # update history
-            history["rdm"] = rdm2x1
-            history["log"].append(dist)
+        if not history:
+            history = dict({"log": []})
+        # we use specialized rdm2x1_sl for ipepo (rank-6) ansatz while the 
+        # `state` is (fused ipepo) ipeps
+        _tmp= IPEPS_C4V_THERMAL( state.site().view( 2,2,*state.site().size()[1:] ) )
+        rdm2x1 = rdm2x1_sl(_tmp, env, force_cpu=ctm_args.conv_check_cpu)
+        dist = float('inf')
+        if len(history["log"]) > 1:
+            dist = torch.dist(rdm2x1, history["rdm"], p=2).item()
+        # update history
+        history["rdm"] = rdm2x1
+        history["log"].append(dist)
+        if dist<ctm_args.ctm_conv_tol:
+            log.info({"history_length": len(history['log']), "history": history['log'],
+                "final_multiplets": compute_multiplets(ctm_env)})
+            return True, history
+        elif len(history['log']) >= ctm_args.ctm_max_iter:
+            log.info({"history_length": len(history['log']), "history": history['log'],
+                "final_multiplets": compute_multiplets(ctm_env)})
+            return False, history
         return False, history
 
     # Define relevant observables to be evaluated at each full step of imag. time evolution
+    simulation_history={'labels': None, 'obs': [], 'coeffs': []}
     def obs_fn(state, ctm_env, opt_context):
         epoch= opt_context["epoch"]
         beta= opt_context["beta"]
         e0 = model.energy_1x1(state, ctm_env, force_cpu=False)
         obs_values, obs_labels = model.eval_obs(state,ctm_env,force_cpu=False)
-        if epoch==0: print(", ".join(["epoch","beta","e0"]+obs_labels))
-        print(", ".join([f"{epoch}",f"{e0}"]+[f"{v}" for v in obs_values]))
+        if epoch==0: 
+            print(", ".join(["epoch","beta","e0"]+obs_labels))
+            simulation_history['labels']= ", ".join(["epoch","beta","e0"]+obs_labels)
+        simulation_history['obs'].append([epoch, beta, e0.item()]+[v.item() for v in obs_values])
+        print(", ".join([f"{epoch}",f"{beta}",f"{e0}"]+[f"{v}" for v in obs_values]))
 
     # Initialize parameters for J1 and J2 term
     gate = ts.build_gate(args.j1, args.tau)
@@ -100,26 +116,37 @@ def main():
     # Initialize onsite tensor
     onsite1= ons.OnSiteTensor(params_onsite)
     
-    state= IPEPS_C4V_THERMAL(onsite1.site_unfused())
+    # define model holding the relevant energy and observable evaluation functions
     model= J1J2_C4V_BIPARTITE_THERMAL(j1=args.j1, j2=args.j2)
 
     # enter imag. time evolution loop
+    print("\n\n",end="")
     loop_range= tqdm(range(args.opt_max_iter)) if TQDM else range(args.opt_max_iter)
     for step in loop_range:
         
-        # convert ipepo to ipeps
+        # 0) convert ipepo to ipeps
+        onsite1.normalize()
+        state= IPEPS_C4V_THERMAL(onsite1.site_unfused())
         state_fused= state.to_fused_ipeps_c4v()
         ctm_env = ENV_C4V(args.chi, state_fused)
-        # (optional) reinitialize environment from scratch. Default: True 
+        # 1a) (optional) reinitialize environment from scratch. Default: True 
         if cfg.opt_args.opt_ctm_reinit:
             init_env(state_fused, ctm_env)
+        # 1b) compute environment for 1site C4v symmetric ipepo
         ctm_env, ctm_history, t_ctm, t_conv_check= ctmrg_c4v.run_dl(state_fused, ctm_env, \
             conv_check=ctmrg_conv_rdm2x1, ctm_args=cfg.ctm_args)
-        
-        import pdb; pdb.set_trace()
+        # 1c) store diagonostic information from CTMRG
+        log_entry=dict({"id": step, "t_ctm": t_ctm, "t_check": t_conv_check})
+        log.info(json.dumps(log_entry))
 
-        # compute observables with converged environment
+        # 2) compute observables with converged environment
         obs_fn(state, ctm_env, {"epoch": step, "beta": step*args.tau})
+        # 3) Save obs and coeffs for post-processing. At this point the last observables
+        #    coincide with last coeff entry
+        simulation_history['coeffs'].append( \
+            onsite1.coeff if isinstance(onsite1.coeff,list) else onsite1.coeff.tolist() )
+        with open(args.out_prefix+"_sim-data.dat", 'w') as outfile:
+            json.dump(simulation_history, outfile, indent=4)
 
         # apply nearest-neighbour gates
         if args.j1 != 0:
@@ -134,7 +161,8 @@ def main():
                             const_w2=ts.const_w2_2sites, cost_function=ts.cost_function_2sites,
                             noise=args.no, max_iter=args.n, threshold=args.t, patience=args.p,
                             optimizer_class=torch.optim.LBFGS, lr=cfg.opt_args.lr)
-                log.info(f"{step} {bond_type} {loc_h[-1]}")
+                # log number of internal optimizer steps, final cost function, l1-norm of final gradient     
+                log.info(f"NN-gate {step} {bond_type} {len(loc_h)} {loc_h[-1]}")
 
         # apply next nearest-neighbour gates
         if args.j2 != 0:
@@ -154,19 +182,12 @@ def main():
                             const_w2=const_w2, cost_function=cost_function,
                             noise=args.no, max_iter=args.n, threshold=args.t, patience=args.p,
                             optimizer_class=torch.optim.LBFGS, lr=cfg.opt_args.lr)
-        
-        # update C4v-symmetric ipepo state
-        state= IPEPS_C4V_THERMAL(onsite1.site_unfused())
+                log.info(f"NNN-gate {step} {bond_type} {len(loc_h)} {loc_h[-1]}")
 
-        # Save coefficients
-        # onsite1.write_to_json("tensors/input-states/init_tensor.json")
-        # onsite1.history(); model.save_obs(onsite1.site(), ctm_env, step)
-        
-    # onsite1.save_coeff_to_bin(args.sf+'_bin')
-    
+        # update C4v-symmetric ipepo state
+        # TEMPORARY BUGFIX
+        from groups.pg import make_c4v_symm_A1
+        onsite1.base_tensor[5]= make_c4v_symm_A1(onsite1.base_tensor[5])
+
 if __name__ == '__main__':
     main()
-    if args.j2!=0:
-        ro.plot_j2(args.out, args.j1, args.j2, args.tau)
-    else:
-        ro.plot_j1(args.out, args.j1, args.tau)

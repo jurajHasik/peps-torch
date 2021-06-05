@@ -911,7 +911,7 @@ class J1J2_C4V_BIPARTITE_THERMAL(J1J2_C4V_BIPARTITE):
             rdm1x1= rdm1x1/torch.trace(rdm1x1)
             for label,op in self.obs_ops.items():
                 obs[f"{label}"]= torch.trace(rdm1x1@op)
-            obs[f"m"]= sqrt(abs(obs[f"sz"]**2 + obs[f"sp"]*obs[f"sm"]))
+            obs[f"m"]= torch.sqrt(torch.abs(obs[f"sz"]**2 + obs[f"sp"]*obs[f"sm"]))
             
         # prepare list with labels and values
         obs_labels=[f"m"]+[f"{lc}" for lc in self.obs_ops.keys()]+[f"SS2x1"]

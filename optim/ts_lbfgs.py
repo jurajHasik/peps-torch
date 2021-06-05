@@ -84,7 +84,8 @@ def optimization_2sites(onsite1, new_symmetry, permutation, env, gate, noise,
     onsite2 = onsite1.copy(); onsite2.convert(new_symmetry)
     # Initialize coefficients to optimize
     onsite2.add_noise(noise=noise)
-    onsite2.coeff = torch.tensor(onsite2.coeff, dtype=onsite2.dtype, requires_grad=True)
+    onsite2.coeff = torch.tensor(onsite2.coeff, dtype=onsite2.dtype, device=onsite2.device,\
+        requires_grad=True)
     optimizer = optimizer_class([onsite2.coeff], max_iter=max_iter, **optimizer_kwargs)
     # Compute the constant \omega_2
     w2 = const_w2(onsite1.site(), env, gate)
@@ -101,7 +102,7 @@ def optimization_2sites(onsite1, new_symmetry, permutation, env, gate, noise,
         # Compute gradient
         loss.backward()
         # might be too much 
-        loc_history.append( (loss.item(), max(abs(onsite2.coeff.grad))) )
+        loc_history.append( (loss.item(), max(abs(onsite2.coeff.grad)).item()) )
         # Clip norm gradients to 1.0 to garantee they are not exploding
         torch.nn.utils.clip_grad_norm_(onsite2.coeff, 1.0)
         return loss
