@@ -9,7 +9,7 @@ from ctm.generic import corrf
 
 def get_Top_spec(n, coord, direction, state, env, verbosity=0):
     chi= env.chi
-    #             up        left       right     down          
+    #             up        left       right     down
     dir_to_ind= {(0,-1): 1, (-1,0): 2, (0,1): 3, (1,0): 4}
     ad= state.site(coord).size( dir_to_ind[direction] )
 

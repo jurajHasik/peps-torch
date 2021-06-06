@@ -96,8 +96,8 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
 
         # 1) wrap raw tensors back into IPEPS and ENV classes
         sites_loc= dict(zip(state.sites.keys(),tensors[0:len(state.sites)]))
-        state_loc= IPEPS(sites_loc, vertexToSite=state.vertexToSite, global_args=loc_global_args)
-        env_loc= ENV(env.chi, global_args=loc_global_args)
+        state_loc= IPEPS(sites_loc, vertexToSite=state.vertexToSite)
+        env_loc= ENV(env.chi)
         env_loc.C= dict(zip(env.C.keys(),tensors[len(state.sites):len(state.sites)+len(env.C)]))
         env_loc.T= dict(zip(env.T.keys(),tensors[len(state.sites)+len(env.C):]))
         # Loop over all non-equivalent sites of ipeps

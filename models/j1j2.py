@@ -10,8 +10,6 @@ from ctm.one_site_c4v.rdm_c4v_specialized import rdm2x2_NNN_tiled,\
     rdm2x2_NN_tiled, rdm2x1_tiled
 from ctm.one_site_c4v import corrf_c4v
 from math import sqrt
-from tn_interface import einsum, mm
-from tn_interface import view, permute, contiguous
 import itertools
 
 def _cast_to_real(t):
@@ -70,12 +68,10 @@ class J1J2():
 
         SS_rot= torch.einsum('ki,kjcb,ca->ijab',rot_op,SS,rot_op)
         
-        h2x2_SS= einsum('ijab,klcd->ijklabcd',SS,id2)
-        h2x2_nn= h2x2_SS + permute(h2x2_SS, (2,3,0,1,6,7,4,5)) + permute(h2x2_SS, (0,2,1,3,4,6,5,7))\
-            + permute(h2x2_SS, (2,0,3,1,6,4,7,5))
-        h2x2_nnn= permute(h2x2_SS, (0,3,2,1,4,7,6,5)) + permute(h2x2_SS, (2,0,1,3,6,4,5,7))
-        h2x2_nn= contiguous(h2x2_nn)
-        h2x2_nnn= contiguous(h2x2_nnn)
+        h2x2_SS= torch.einsum('ijab,klcd->ijklabcd',SS,id2)
+        h2x2_nn= h2x2_SS + h2x2_SS.permute(2,3,0,1,6,7,4,5) + h2x2_SS.permute(0,2,1,3,4,6,5,7)\
+            + h2x2_SS.permute(2,0,3,1,6,4,7,5)
+        h2x2_nnn= h2x2_SS.permute(0,3,2,1,4,7,6,5) + h2x2_SS.permute(2,0,1,3,6,4,5,7)
         
         h2x2_nn= h2x2_nn.contiguous()
         h2x2_nnn= h2x2_nnn.contiguous()
@@ -288,8 +284,8 @@ class J1J2():
         energy_nnn=0
         for coord in state.sites.keys():
             tmp_rdm= rdm.rdm2x2(coord,state,env)
-            energy_nn += einsum('ijklabcd,ijklabcd',tmp_rdm,self.h2x2_nn)
-            energy_nnn += einsum('ijklabcd,ijklabcd',tmp_rdm,self.h2x2_nnn)
+            energy_nn += torch.einsum('ijklabcd,ijklabcd',tmp_rdm,self.h2x2_nn)
+            energy_nnn += torch.einsum('ijklabcd,ijklabcd',tmp_rdm,self.h2x2_nnn)
         energy_per_site= 2.0*(self.j1*energy_nn/32.0 + self.j2*energy_nnn/16.0)
         energy_per_site= _cast_to_real(energy_per_site)
 
@@ -379,8 +375,7 @@ class J1J2():
             for coord,site in state.sites.items():
                 rdm1x1 = rdm.rdm1x1(coord,state,env)
                 for label,op in self.obs_ops.items():
-                    # obs[f"{label}{coord}"]= torch.sum(torch.diagonal(mm(rdm1x1, op)))
-                    obs[f"{label}{coord}"]= einsum('ij,ji',rdm1x1, op)
+                    obs[f"{label}{coord}"]= torch.trace(rdm1x1@op)
                 obs[f"m{coord}"]= sqrt(abs(obs[f"sz{coord}"]**2 + obs[f"sp{coord}"]*obs[f"sm{coord}"]))
                 obs["avg_m"] += obs[f"m{coord}"]
             obs["avg_m"]= obs["avg_m"]/len(state.sites.keys())
@@ -408,7 +403,7 @@ class J1J2():
             #rot_op= su2.get_rot_op(self.phys_dim, dtype=self.dtype, device=self.device)
             rot_op= torch.eye(self.phys_dim, dtype=self.dtype, device=self.device)
             op_0= op
-            op_rot= einsum('ki,kj->ij',rot_op, mm(op_0,rot_op))
+            op_rot= torch.einsum('ki,kl,lj->ij',rot_op,op_0,rot_op)
             def _gen_op(r):
                 #return op_rot if r%2==0 else op_0
                 return op_0
@@ -439,13 +434,18 @@ class J1J2_C4V_BIPARTITE():
         :type hz_stag: float
         :type detla_zz: float
         :type global_args: GLOBALARGS
+
         Build Spin-1/2 :math:`J_1-J_2` Hamiltonian
-        .. math:: 
+
+        .. math::
+
             H = J_1\sum_{<i,j>} \mathbf{S}_i.\mathbf{S}_j + J_2\sum_{<<i,j>>} \mathbf{S}_i.\mathbf{S}_j
             = \sum_{p} h_p
+
         on the square lattice. Where the first sum runs over the pairs of sites `i,j` 
         which are nearest-neighbours (denoted as `<.,.>`), and the second sum runs over 
         pairs of sites `i,j` which are next nearest-neighbours (denoted as `<<.,.>>`)::
+
             y\x
                _:__:__:__:_
             ..._|__|__|__|_...
@@ -454,7 +454,9 @@ class J1J2_C4V_BIPARTITE():
             ..._|__|__|__|_...
             ..._|__|__|__|_...
                 :  :  :  :
+
         where
+
         * :math:`h_p = J_1(S^x_{r}.S^x_{r+\vec{x}} 
           + S^y_{r}.S^y_{r+\vec{x}} + \delta_{zz} S^z_{r}.S^z_{r+\vec{x}} + (x<->y))
           + J_2(\mathbf{S}_{r}.\mathbf{S}_{r+\vec{x}+\vec{y}} + \mathbf{S}_{r+\vec{x}}.\mathbf{S}_{r+\vec{y}})
@@ -521,20 +523,25 @@ class J1J2_C4V_BIPARTITE():
         :type env_c4v: ENV_C4V
         :return: energy per site
         :rtype: float
+
         We assume 1x1 C4v iPEPS which tiles the lattice with a bipartite pattern composed 
         of two tensors A, and B=RA, where R rotates approriately the physical Hilbert space 
         of tensor A on every "odd" site::
+
             1x1 C4v => rotation P => BIPARTITE
             A A A A                  A B A B
             A A A A                  B A B A
             A A A A                  A B A B
             A A A A                  B A B A
+
         Due to C4v symmetry it is enough to construct a single reduced density matrix 
         :py:func:`ctm.one_site_c4v.rdm_c4v.rdm2x2` of a 2x2 plaquette. Afterwards, 
         the energy per site `e` is computed by evaluating a single plaquette term :math:`h_p`
         containing two nearest-nighbour terms :math:`\bf{S}.\bf{S}` and two next-nearest 
         neighbour :math:`\bf{S}.\bf{S}`, as:
+
         .. math::
+
             e = \langle \mathcal{h_p} \rangle = Tr(\rho_{2x2} \mathcal{h_p})
         
         """
@@ -558,21 +565,26 @@ class J1J2_C4V_BIPARTITE():
         :type env_c4v: ENV_C4V
         :return: energy per site
         :rtype: float
+
         We assume 1x1 C4v iPEPS which tiles the lattice with a bipartite pattern composed 
         of two tensors A, and B=RA, where R rotates approriately the physical Hilbert space 
         of tensor A on every "odd" site::
+
             1x1 C4v => rotation P => BIPARTITE
             A A A A                  A B A B
             A A A A                  B A B A
             A A A A                  A B A B
             A A A A                  B A B A
+
         Due to C4v symmetry it is enough to construct two reduced density matrices.
         In particular, :py:func:`ctm.one_site_c4v.rdm_c4v.rdm2x1` of a NN-neighbour pair
         and :py:func:`ctm.one_site_c4v.rdm_c4v.rdm2x1_diag` of NNN-neighbour pair. 
         Afterwards, the energy per site `e` is computed by evaluating a term :math:`h2_rot`
         containing :math:`\bf{S}.\bf{S}` for nearest- and :math:`h2` term for 
         next-nearest- expectation value as:
+
         .. math::
+
             e = 2*\langle \mathcal{h2} \rangle_{NN} + 2*\langle \mathcal{h2} \rangle_{NNN}
             = 2*Tr(\rho_{2x1} \mathcal{h2_rot}) + 2*Tr(\rho_{2x1_diag} \mathcal{h2})
         
@@ -603,20 +615,24 @@ class J1J2_C4V_BIPARTITE():
         :type env_c4v: ENV_C4V
         :return: energy per site
         :rtype: float
+
         We assume 1x1 C4v iPEPS which tiles the lattice with a bipartite pattern composed 
         of two tensors A, and B=RA, where R rotates approriately the physical Hilbert space 
         of tensor A on every "odd" site::
+
             1x1 C4v => rotation P => BIPARTITE
             A A A A                  A B A B
             A A A A                  B A B A
             A A A A                  A B A B
             A A A A                  B A B A
+
         Due to C4v symmetry it is enough to construct two reduced density matrices.
         In particular, :py:func:`ctm.one_site_c4v.rdm_c4v.rdm2x1` of a NN-neighbour pair
         and :py:func:`ctm.one_site_c4v.rdm_c4v.rdm2x1_diag` of NNN-neighbour pair. 
         Afterwards, the energy per site `e` is computed by evaluating a term :math:`h2_rot`
         containing :math:`\bf{S}.\bf{S}` for nearest- and :math:`h2` term for 
         next-nearest- expectation value as:
+
         .. math::
             e = 2*\langle \mathcal{h2} \rangle_{NN} + 2*\langle \mathcal{h2} \rangle_{NNN}
             = 2*Tr(\rho_{2x1} \mathcal{h2_rot}) + 2*Tr(\rho_{2x1_diag} \mathcal{h2})
@@ -648,7 +664,9 @@ class J1J2_C4V_BIPARTITE():
         :type env_c4v: ENV_C4V
         :return:  expectation values of observables, labels of observables
         :rtype: list[float], list[str]
+
         Computes the following observables in order
+        
             1. magnetization
             2. :math:`\langle S^z \rangle,\ \langle S^+ \rangle,\ \langle S^- \rangle`
     
