@@ -191,6 +191,9 @@ class IPEPS_U1SYM(ipeps.IPEPS):
         for coeff_t in self.coeffs_triangle_up.values(): coeff_t.requires_grad_(False)
         for coeff_t in self.coeffs_site.values(): coeff_t.requires_grad_(False)
         self.sites = self.build_onsite_tensors()
+        self.coeffs = OrderedDict({'t_up': self.coeffs_triangle_up[(0, 0)], 't_dn': self.coeffs_triangle_dn[(0, 0)],
+                                   'site': self.coeffs_site[(0, 0)]})
+
 
     def print_coeffs(self):
         def print_1d_array(x):
@@ -231,7 +234,7 @@ class IPEPS_U1SYM(ipeps.IPEPS):
         noise_site = torch.rand(self.coeffs_site[(0, 0)].size(), dtype=torch.float64, device=self.device)
         noise_triangle_up = torch.rand(self.coeffs_triangle_up[(0, 0)].size(), dtype=torch.float64, device=self.device)
         if self.sym_up_dn:
-            noise_triangle_dn = noise_triangle_up
+            noise_triangle_dn = noise_triangle_up.clone()
         else:
             noise_triangle_dn = torch.rand(self.coeffs_triangle_dn[(0, 0)].size(), dtype=torch.float64,
                                            device=self.device)
@@ -244,6 +247,8 @@ class IPEPS_U1SYM(ipeps.IPEPS):
                                                  device=self.device)) * var_coeffs_set
             coeffs_set[(0, 0)] = tmp_t
         self.sites = self.build_onsite_tensors()
+        self.coeffs = OrderedDict({'t_up': self.coeffs_triangle_up[(0, 0)], 't_dn': self.coeffs_triangle_dn[(0, 0)],
+                                   'site': self.coeffs_site[(0, 0)]})
 
     def get_aux_bond_dims(self):
         return [max(t[1].size()[1:]) for t in self.sym_tensors_triangle]
