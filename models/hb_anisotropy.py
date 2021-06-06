@@ -34,7 +34,7 @@ class HB():
         obs_ops["isy"] = 0.5 * (obs_ops["sp"] - obs_ops["sm"])
         obs_ops["SS"] = irrep.SS()
         obs_ops["SS_square"] = torch.einsum('ijab,abkl->ijkl', obs_ops["SS"], obs_ops["SS"])
-        return obs_ops
+        vireturn obs_ops
 
     def get_h(self):
         pd = self.phys_dim
@@ -67,7 +67,6 @@ class HB():
 
     def energy_2x1_1x2(self, state, env):
         energy = 0.
-        print("-----------")
         for coord, site in state.sites.items():
             rdm2x1 = rdm.rdm2x1(coord, state, env)
             rdm1x2 = rdm.rdm1x2(coord, state, env)
@@ -120,10 +119,21 @@ class HB():
 
             obs["avg_II_Q"] = obs["avg_II_Q"] / len(state.sites.keys())
             obs["avg_III_Q"] = obs["avg_III_Q"] / len(state.sites.keys())
+
+            # two-site observables
+            _ss_and_ss2_labels=[]
+            for coord, site in state.sites.items():
+                rdm2x1 = rdm.rdm2x1(coord, state, env)
+                rdm1x2 = rdm.rdm1x2(coord, state, env)
+                obs[f"SS_2x1{coord}"]= torch.einsum('ijab,abij',rdm2x1,self.obs_ops["SS"])
+                obs[f"SS_1x2{coord}"]= torch.einsum('ijab,abij',rdm1x2,self.obs_ops["SS"])
+                obs[f"SS2_2x1{coord}"]= torch.einsum('ijab,abij',rdm2x1,self.obs_ops["SS_square"])
+                obs[f"SS2_1x2{coord}"]= torch.einsum('ijab,abij',rdm1x2,self.obs_ops["SS_square"])
+                _ss_and_ss2_labels+=[f"SS_2x1{coord}",f"SS2_2x1{coord}",f"SS_1x2{coord}",f"SS2_1x2{coord}"]
             obs["dimer_op"] = self.eval_dimer_operator(state, env)
 
         # prepare list with labels and values
-        obs_labels = ["avg_m", "avg_II_Q", "avg_III_Q", "anti_fm", "dimer_op"]
+        obs_labels = ["avg_m", "avg_II_Q", "avg_III_Q", "anti_fm", "dimer_op"] + _ss_and_ss2_labels
         obs_values = [obs[label] for label in obs_labels]
         return obs_values, obs_labels
 
@@ -154,41 +164,18 @@ class HB():
         return obs
 
     def eval_dimer_operator(self, state, env, direction=(1,0)):
-        def conjugate_op(op):
-            # rot_op= su2.get_rot_op(self.phys_dim, dtype=self.dtype, device=self.device)
-            rot_op = torch.eye(self.phys_dim, dtype=self.dtype, device=self.device)
-            op_0 = op
-            op_rot = torch.einsum('ki,kl,lj->ij', rot_op, op_0, rot_op)
-
-            def _gen_op(r):
-                # return op_rot if r%2==0 else op_0
-                return op_0
-
-            return _gen_op
-
-        op_sz = self.obs_ops["sz"]
-        op_sx = self.obs_ops["sx"]
-        op_isy = self.obs_ops["isy"]
+        assert direction==(1,0) or direction==(0,1),"Invalid direction"
         ss = []
-
-        print("op_sz = ", op_sz)
-        print("conj_sz = ", conjugate_op(op_sz)(0))
-
         with torch.no_grad():
-            # one-site observables
             for coord, site in state.sites.items():
-                Sz0szR = corrf.corrf_1sO1sO(coord, direction, state, env, op_sz,
-                                            conjugate_op(op_sz), 0)
-                Sx0sxR = corrf.corrf_1sO1sO(coord, direction, state, env, op_sx,
-                                            conjugate_op(op_sx), 0)
-                nSy0SyR = corrf.corrf_1sO1sO(coord, direction, state, env, op_isy,
-                                             conjugate_op(op_isy), 0)
+                if direction==(1,0):
+                    _tmp_rdm= rdm.rdm2x1(coord, state, env)
+                elif direction==(0,1):
+                    _tmp_rdm= rdm.rdm1x2(coord, state, env)
 
-                print([Sx0sxR, -nSy0SyR, Sz0szR])
-                ss.append(Sz0szR + Sx0sxR - nSy0SyR)
+                ss.append( torch.einsum('ijab,abij',_tmp_rdm,self.obs_ops["SS"]) )
 
         dimer_op = torch.abs(ss[0] - ss[1])
-        print(ss)
         return dimer_op
 
     def get_Q(self):
