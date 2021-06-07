@@ -6,15 +6,14 @@ import torch
 import warnings
 try:
     from tqdm import tqdm  # progress bars
+    TQDM = True
 except ImportError as e:
-    TQDM=False
+    TQDM = False
     warnings.warn("tqdm not available", Warning)
 import su2sym.thermal_1site_c4v.base_tensors.base_tensor as bt
 import su2sym.thermal_1site_c4v.onsite as ons
 import optim.ts_lbfgs as ts
 from models.j1j2 import J1J2_C4V_BIPARTITE_THERMAL
-# import output.observables as obs
-import output.read_output as ro
 # peps-torch imports
 import config as cfg
 from ipeps.ipeps_c4v_thermal import IPEPS_C4V_THERMAL
@@ -44,15 +43,15 @@ args, unknown_args = parser.parse_known_args()
 base_tensor_dict = bt.base_tensor_dict(args.bond_dim, device=cfg.global_args.device)
 
 # Create dictionary of the parameters
-params_j1 = {'a': {'permutation': (0,1,2,3,4), 'new_symmetry' : 'Cx'},
-             'b': {'permutation': (0,3,4,1,2), 'new_symmetry' : 'Cx'},
-             'c': {'permutation': (0,2,3,4,1), 'new_symmetry' : ''},
-             'd': {'permutation': (0,4,1,2,3), 'new_symmetry' : 'C4v'}}
+params_j1 = {'a': {'permutation': (0,1,2,3,4), 'new_symmetry': 'Cx'},
+             'b': {'permutation': (0,3,4,1,2), 'new_symmetry': 'Cx'},
+             'c': {'permutation': (0,2,3,4,1), 'new_symmetry': ''},
+             'd': {'permutation': (0,4,1,2,3), 'new_symmetry': 'C4v'}}
 
-params_j2 = {'a': {'permutation': (0,1,2,3,4), 'new_symmetry' : 'Cs', 'diag': 'diag'},
-             'b': {'permutation': (0,1,2,3,4), 'new_symmetry' : 'Cs', 'diag' : 'diag'},
-             'c': {'permutation': (0,1,2,3,4), 'new_symmetry' : '', 'diag' : 'off'},
-             'd': {'permutation': (0,1,2,3,4), 'new_symmetry' : 'C4v', 'diag' : 'off'}}
+params_j2 = {'a': {'permutation': (0,1,2,3,4), 'new_symmetry': 'Cs', 'diag': 'diag'},
+             'b': {'permutation': (0,1,2,3,4), 'new_symmetry': 'Cs', 'diag': 'diag'},
+             'c': {'permutation': (0,1,2,3,4), 'new_symmetry': '',   'diag': 'off'},
+             'd': {'permutation': (0,1,2,3,4), 'new_symmetry': 'C4v','diag': 'off'}}
 
 coeff_ini = {'4': [0.,0.,0.,0.,1.,0.,0.,0.],
              '7': [0.,0.,0.,0.,1.]+[0.]*44}
@@ -184,10 +183,6 @@ def main():
                             optimizer_class=torch.optim.LBFGS, lr=cfg.opt_args.lr)
                 log.info(f"NNN-gate {step} {bond_type} {len(loc_h)} {loc_h[-1]}")
 
-        # update C4v-symmetric ipepo state
-        # TEMPORARY BUGFIX
-        from groups.pg import make_c4v_symm_A1
-        onsite1.base_tensor[5]= make_c4v_symm_A1(onsite1.base_tensor[5])
 
 if __name__ == '__main__':
     main()
