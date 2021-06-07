@@ -3,7 +3,7 @@ import numpy as np
 import groups.su2 as su2
 
 ############################ Basic functions ##################################
-def build_gate(j, tau):
+def build_gate(j_label, j, tau, device):
     """Compute the gate that is applied to the reduced density matrix."""
     # Spin-spin operator
     #   s1|   |s2
@@ -11,13 +11,17 @@ def build_gate(j, tau):
     #   [  S.S  ]
     #     |   |
     #  s1'|   |s2'
-    
-    s2 = su2.SU2(2, dtype=torch.float64, device='cpu')
+    s2 = su2.SU2(2, dtype=torch.float64, device=device)
     expr_kron = 'ij,ab->iajb'
-    # S_1 * S_2 but with S_2 rotated of pi to respect the metric
-    SS = - torch.einsum(expr_kron, s2.SZ(), s2.SZ())\
-        - 0.5*(torch.einsum(expr_kron, s2.SP(), s2.SP())
-               + torch.einsum(expr_kron, s2.SM(), s2.SM()))
+    if j_label == 'j1':
+        # S_1 * S_2 but with S_2 rotated of pi to respect the metric
+        SS = - torch.einsum(expr_kron, s2.SZ(), s2.SZ())\
+            - 0.5*(torch.einsum(expr_kron, s2.SP(), s2.SP())
+                   + torch.einsum(expr_kron, s2.SM(), s2.SM()))
+    else:
+        SS = torch.einsum(expr_kron, s2.SZ(), s2.SZ())\
+            + 0.5*(torch.einsum(expr_kron, s2.SP(), s2.SM())\
+                   + torch.einsum(expr_kron, s2.SM(), s2.SP()))
     SS = SS.view(4,4).contiguous()
     # Diagonalization of SS and creation of Hamiltonian Ha
     eig_va, eig_vec = np.linalg.eigh(SS)
@@ -27,7 +31,7 @@ def build_gate(j, tau):
     # SS = U*D*U.T
     gate = torch.einsum('ij,jk,lk->il', U, D, U)
     gate = gate.view(2,2,2,2).contiguous()
-    return gate 
+    return gate
 
 def C2x2_LU(tensor1, tensor2, C, T):
     C2x1 = torch.tensordot(C, T, ([1],[0]))
@@ -73,9 +77,14 @@ def cost_function_2sites(tensor1, tensor2, env, gate, w2):
     cost_function = w1/torch.sqrt(w0*w2)
     return cost_function
 
-def optimization_2sites(onsite1, new_symmetry, permutation, env, gate, noise,
+def optimization_2sites(onsite1, params_j, env, gate,
                         const_w2, cost_function,
-                        max_iter, threshold, patience, optimizer_class, **optimizer_kwargs):
+                        params_opt):
+    # Parameters
+    permutation = params_j['permutation']; new_symmetry = params_j['new_symmetry']
+    max_iter = params_opt['max_iter']; threshold = params_opt['threshold']
+    patience = params_opt['patience']; noise = params_opt['noise']
+    optimizer_class = params_opt['optimizer_class']; lr = params_opt['lr']
     # Normalize tensor
     onsite1.normalize()
     # Permute the on site tensors according to the bond considered
@@ -84,16 +93,13 @@ def optimization_2sites(onsite1, new_symmetry, permutation, env, gate, noise,
     onsite2 = onsite1.copy(); onsite2.convert(new_symmetry)
     # Initialize coefficients to optimize
     onsite2.add_noise(noise=noise)
-    onsite2.coeff = torch.tensor(onsite2.coeff, dtype=onsite2.dtype, device=onsite2.device,\
-        requires_grad=True)
-    optimizer = optimizer_class([onsite2.coeff], max_iter=max_iter, **optimizer_kwargs)
+    onsite2.coeff = torch.tensor(onsite2.coeff, dtype=onsite2.dtype, requires_grad=True)
+    optimizer = optimizer_class([onsite2.coeff], max_iter=max_iter, lr=lr)
     # Compute the constant \omega_2
     w2 = const_w2(onsite1.site(), env, gate)
     # Criterion for convergence of the L-BFGS optimizer
-    n_bad_steps = 0
-    best_loss = float('inf')
-    threshold = threshold
-    patience = patience
+    n_bad_steps = 0; best_loss = float('inf')
+    threshold = threshold; patience = patience
     loc_history=[]
 
     def closure():
