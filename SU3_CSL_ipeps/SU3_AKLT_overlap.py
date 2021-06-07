@@ -212,7 +212,7 @@ def main():
                 (0, 0): torch.tensor([ 1.0000, -0.0215,  1.0923, 0., 0., 0., 0.], dtype=torch.float64, device=t_device)}
             coeffs_site_2 = {(0, 0): torch.tensor([1., -0.7737, 0.], dtype=torch.float64, device=t_device)}
             var_coeffs_site = torch.tensor([0, 1, 0], dtype=torch.float64, device=t_device)
-            var_coeffs_triangle = torch.tensor([0, 1, 1, 1, 1, 0, 0], dtype=torch.float64, device=t_device)
+            var_coeffs_triangle = torch.tensor([0, 1, 1, 0, 0, 0, 0], dtype=torch.float64, device=t_device)
             state2 = IPEPS_U1SYM(tensors_triangle_D7, tensors_site_D7,
                                  coeffs_triangle_up=coeffs_triangle_2, coeffs_site=coeffs_site_2,
                                  var_coeffs_site=var_coeffs_site, var_coeffs_triangle=var_coeffs_triangle)

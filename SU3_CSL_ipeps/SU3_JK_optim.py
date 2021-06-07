@@ -60,10 +60,10 @@ def main():
     else:
         # AKLT state
         coeffs_triangle = {(0, 0): torch.tensor([1., 0., 0.], dtype=torch.float64, device=t_device)}
-        coeffs_site = {(0, 0): torch.tensor([1., 0.], dtype=torch.float64, device=t_device)}
+        coeffs_site = {(0, 0): torch.tensor([1., 1.], dtype=torch.float64, device=t_device)}
 
     # define which coefficients will be added a noise and will vary in optimization
-    var_coeffs_site = torch.tensor([0, 1], dtype=torch.float64, device=t_device)
+    var_coeffs_site = torch.tensor([0, 0], dtype=torch.float64, device=t_device)
     var_coeffs_triangle = torch.tensor([0, 1, 1], dtype=torch.float64, device=t_device)
 
     state = IPEPS_U1SYM(tensors_triangle, tensors_site, coeffs_triangle, coeffs_site,
