@@ -7,7 +7,7 @@ class SU2_NOSYM():
 
     def __init__(self, settings, J):
         r"""
-        :param J: highest weight
+        :param J: dimension of irrep
         :param dtype: data type of matrix representation of operators
         :param device: device on which the torch.tensor objects are stored
         :type J: int
@@ -193,7 +193,7 @@ class SU2_U1():
 
     def __init__(self, settings, J):
         r"""
-        :param J: highest weight
+        :param J: dimension of irrep
         :param dtype: data type of matrix representation of operators
         :param device: device on which the torch.tensor objects are stored
         :type J: int
@@ -213,7 +213,12 @@ class SU2_U1():
             \end{align*}
         """
         assert settings.sym.NSYM==1, "U(1) abelian symmetry is assumed"
-        self.J = J
+        self.J, self.HW = J, (J-1) # HW highest weight state in mathematical notation
+                                   # spin (J-1)/2 irrep with dim J has HW J-1 with states
+                                   # spaced by 2 i.e.
+                                   # spin 1/2, dim 2, HW 1, irrep 1, -1
+                                   # spin 1,   dim 3, HW 2, irrep 2, 0, -2
+                                   # spin 3/2, dim 4, HW 3, irrep 3, 1, -1, 3 
         self.engine= settings
         self.backend= settings.backend
         self.dtype= settings.default_dtype
@@ -225,8 +230,8 @@ class SU2_U1():
         :rtype: torch.tensor
         """
         op= yast.Tensor(self.engine, s=self._REF_S_DIRS, n=0)
-        for j in range(-self.J,self.J+1,2):
-            c= (j,j) #if j%2==1 else (j//2,j//2)
+        for j in range(-self.HW,self.HW+1,2):
+            c= (j,j)
             op.set_block(ts=c, Ds=(1,1), val='ones')
         op= op.to(self.device)
         return op
@@ -238,8 +243,8 @@ class SU2_U1():
         """
         unit_block= np.ones((1,1), dtype=self.dtype)
         op= yast.Tensor(self.engine, s=self._REF_S_DIRS, n=0)
-        for j in range(-self.J,self.J+1,2):
-            c= (j,j) #if j%2==1 else (j//2,j//2)
+        for j in range(-self.HW,self.HW+1,2):
+            c= (j,j)
             op.set_block(ts=c, val= (0.5*j)*unit_block)
         op= op.to(self.device)
         return op
@@ -264,9 +269,9 @@ class SU2_U1():
         """
         unit_block= np.ones((1,1), dtype=self.dtype)
         op= yast.Tensor(self.engine, s=self._REF_S_DIRS, n=-2)
-        for j in range(-self.J,self.J,2):
+        for j in range(-self.HW,self.HW,2):
             c= (j+2,j) #if j%2==1 else (j//2+1,j//2)
-            c_p= sqrt(0.5 * self.J * (0.5 * self.J + 1) - 0.5*j * (0.5*j + 1))
+            c_p= sqrt(0.5 * self.HW * (0.5 * self.HW + 1) - 0.5*j * (0.5*j + 1))
             op.set_block(ts=c, val= c_p*unit_block)
         op= op.to(self.device) 
         return op
@@ -291,9 +296,9 @@ class SU2_U1():
         """
         unit_block= np.ones((1,1), dtype=self.dtype)
         op= yast.Tensor(self.engine, s=self._REF_S_DIRS, n=2)
-        for j in range(-self.J+2,self.J+1,2):
+        for j in range(-self.HW+2,self.HW+1,2):
             c= (j-2,j) #if j%2==1 else (j//2,j//2-1)
-            c_p= sqrt(0.5 * self.J * (0.5 * self.J + 1) - 0.5*j * (0.5*j - 1))
+            c_p= sqrt(0.5 * self.HW * (0.5 * self.HW + 1) - 0.5*j * (0.5*j - 1))
             op.set_block(ts=c, val= c_p*unit_block)
         op= op.to(self.device) 
         return op

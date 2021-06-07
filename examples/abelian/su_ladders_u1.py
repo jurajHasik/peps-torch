@@ -19,6 +19,7 @@ log = logging.getLogger(__name__)
 parser= cfg.get_args_parser()
 # additional model-dependent arguments
 parser.add_argument("--alpha", type=float, default=0., help="inter-ladder coupling")
+parser.add_argument("--bz_stag", type=float, default=0., help="staggered magnetic field")
 parser.add_argument("--symmetry", default="None", help="symmetry structure", choices=["None","U1"])
 parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
@@ -44,11 +45,11 @@ def main():
     if not args.symmetry or args.symmetry=="None":
         settings= settings_full
         settings_full.dtype= settings.dtype= cfg.global_args.dtype
-        model= coupledLadders.COUPLEDLADDERS_NOSYM(settings,alpha=args.alpha)
+        model= coupledLadders.COUPLEDLADDERS_NOSYM(settings,alpha=args.alpha,Bz_val=args.bz_stag)
     elif args.symmetry=="U1":
         settings= settings_U1
         settings_full.dtype= settings.dtype= cfg.global_args.dtype
-        model= coupledLadders.COUPLEDLADDERS_U1(settings,alpha=args.alpha)
+        model= coupledLadders.COUPLEDLADDERS_U1(settings,alpha=args.alpha,Bz_val=args.bz_stag)
         # model= coupledLadders.COUPLEDLADDERS_NOSYM(settings_full,alpha=args.alpha)
     # override default device specified in settings
     default_device= 'cpu' if not hasattr(settings, 'device') else settings.device
@@ -78,7 +79,7 @@ def main():
         print(f"dtype of initial state {state.dtype} and model {model.dtype} do not match.")
         print(f"Setting default dtype to {cfg.global_args.dtype} and reinitializing "\
         +" the model")
-        model= coupledLadders.COUPLEDLADDERS_NOSYM(settings_full,alpha=args.alpha)
+        model= coupledLadders.COUPLEDLADDERS_NOSYM(settings_full,alpha=args.alpha,Bz_val=args.bz_stag)
 
     print(state)
 
@@ -169,13 +170,16 @@ def main():
 
     state_w= get_weighted_ipeps(state, generate_weights(state))
 
+    # 4) select gate sequence
+    # gen_gate_seq= model.gen_gate_seq_2S_2ndOrder       #  separate S.S and Sz.Id gates
+    gen_gate_seq= model.gen_gate_seq_2S_SS_hz_2ndOrder # combined S.S + Sz.Id - Id.Sz gates
     # 5) enter simple update imaginary time evolution
     outputstatefile= args.out_prefix+"_state.json"
     opt_context= {"loss_history": {"loss":[loss], "beta": 0, \
         "time_step": [args.SU_init_step]}}
     su_opts={"weight_inv_cutoff": 1.0e-14, "max_D_total": args.bond_dim, \
         "log_level": 0}
-    gate_seq_SS= model.gen_gate_seq_2S_2ndOrder(args.SU_init_step)
+    gate_seq_SS= gen_gate_seq(args.SU_init_step)
     for tstep in range(args.opt_max_iter):
         state_w= run_seq_2s(state_w, gate_seq_SS, su_opts)
         opt_context["loss_history"]["beta"] += opt_context["loss_history"]["time_step"][-1]
@@ -206,7 +210,7 @@ def main():
             # generate new gate sequence
             new_ts= args.SU_adaptive_slowdown_factor * opt_context["loss_history"]["time_step"][-1] 
             opt_context["loss_history"]["time_step"].append(new_ts)
-            gate_seq_SS= model.gen_gate_seq_2S_2ndOrder(new_ts)
+            gate_seq_SS= gen_gate_seq(new_ts)
             
         elif _energy_criterion < -args.SU_min_energy_diff:
             # store new state

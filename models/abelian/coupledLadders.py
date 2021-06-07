@@ -138,9 +138,13 @@ class COUPLEDLADDERS_NOSYM():
         # (-1)1--|   |--3(+1) (-1)1--|   |--3(+1)
         # _ci= ([0,1,2,3],[2,3,0,1])
         _ci= ([0,1,2,3],[0,1,2,3])
+        _tmp_t= yast.ones(config=state.engine, s=(-1, -1, 1, 1),
+                  t=((-1, 1), (-1, 1), (-1, 1), (-1, 1)),
+                  D=((1, 1), (1, 1), (1, 1), (1, 1)))
+        _lss_dense= yast.leg_structures_for_dense(tensors=(_tmp_t,))
         for coord,site in state.sites.items():
-            rdm2x1= rdm.rdm2x1(coord,state,env).to_nonsymmetric()
-            rdm1x2= rdm.rdm1x2(coord,state,env).to_nonsymmetric()
+            rdm2x1= rdm.rdm2x1(coord,state,env).to_nonsymmetric(_lss_dense,reverse=True)
+            rdm1x2= rdm.rdm1x2(coord,state,env).to_nonsymmetric(_lss_dense,reverse=True)
             ss= contract(rdm2x1, self.h2, _ci)
             energy += ss
             if coord[1] % 2 == 0:
@@ -200,8 +204,12 @@ class COUPLEDLADDERS_NOSYM():
         obs= dict({"avg_m": 0.})
         # _ci= ([0,1],[1,0])
         _ci= ([0,1],[0,1])
+        _tmp_t= yast.ones(config=state.engine, s=(-1, 1),
+                  t=((-1, 1), (-1, 1)),
+                  D=((1, 1), (1, 1)))
+        _lss_dense= yast.leg_structures_for_dense(tensors=(_tmp_t,))
         for coord,site in state.sites.items():
-            rdm1x1 = rdm.rdm1x1(coord,state,env).to_nonsymmetric()
+            rdm1x1 = rdm.rdm1x1(coord,state,env).to_nonsymmetric(_lss_dense,reverse=True)
             for label,op in self.obs_ops.items():
                 obs[f"{label}{coord}"]= contract(rdm1x1, op, _ci).to_number()
             obs[f"m{coord}"]= sqrt(abs(obs[f"sz{coord}"]**2 + obs[f"sp{coord}"]*obs[f"sm{coord}"]))
@@ -210,9 +218,13 @@ class COUPLEDLADDERS_NOSYM():
     
         # _ci= ([0,1,2,3],[2,3,0,1])
         _ci= ([0,1,2,3],[0,1,2,3])
+        _tmp_t= yast.ones(config=state.engine, s=(-1, -1, 1, 1),
+                  t=((-1, 1), (-1, 1), (-1, 1), (-1, 1)),
+                  D=((1, 1), (1, 1), (1, 1), (1, 1)))
+        _lss_dense= yast.leg_structures_for_dense(tensors=(_tmp_t,))
         for coord,site in state.sites.items():
-            rdm2x1 = rdm.rdm2x1(coord,state,env).to_nonsymmetric()
-            rdm1x2 = rdm.rdm1x2(coord,state,env).to_nonsymmetric()
+            rdm2x1 = rdm.rdm2x1(coord,state,env).to_nonsymmetric(_lss_dense,reverse=True)
+            rdm1x2 = rdm.rdm1x2(coord,state,env).to_nonsymmetric(_lss_dense,reverse=True)
             SS2x1= contract(rdm2x1,self.h2,_ci).to_number()
             SS1x2= contract(rdm1x2,self.h2,_ci).to_number()
             obs[f"SS2x1{coord}"]= _cast_to_real(SS2x1)
@@ -271,20 +283,20 @@ class COUPLEDLADDERS_U1():
         self.obs_ops = self.get_obs_ops()
 
     def get_h1(self):
-        irrep = su2.SU2_U1(self.engine, self.phys_dim-1)
+        irrep = su2.SU2_U1(self.engine, self.phys_dim)
         I1, SP, SM, Sz = irrep.I(), irrep.SP(), irrep.SM(), irrep.SZ()
         SzId= contract(Sz,I1,([],[]))
         SzId= permute(SzId, (0,2,1,3))
         return SzId
 
     def get_h2(self):
-        irrep = su2.SU2_U1(self.engine, self.phys_dim-1)
+        irrep = su2.SU2_U1(self.engine, self.phys_dim)
         SS = irrep.SS()
         return SS
 
     def get_obs_ops(self):
         obs_ops = dict()
-        irrep = su2.SU2_U1(self.engine, self.phys_dim-1)
+        irrep = su2.SU2_U1(self.engine, self.phys_dim)
         obs_ops["sz"]= irrep.SZ()
         obs_ops["sp"]= irrep.SP()
         obs_ops["sm"]= irrep.SM()
@@ -483,6 +495,14 @@ class COUPLEDLADDERS_U1():
         gate_SS= gate_SS.tensordot(U, ([2,2]), conj=(0,1))
         return gate_SS
 
+    def _gen_gate_SS_hz(self, t, alpha, hz_stag):
+        gate_SS_Sz= alpha*self.h2 + hz_stag*(self.h1 - self.h1.transpose((1,0,3,2)) )
+        D, U= yast.linalg.eigh(gate_SS_Sz, axes=([0,1],[2,3]))
+        D= D.exp(t)
+        gate_SS= U.tensordot(D, ([2],[0]))
+        gate_SS= gate_SS.tensordot(U, ([2,2]), conj=(0,1))
+        return gate_SS
+
     def gen_gate_seq_2S(self,t):
         r"""
         :param t: imaginary time step
@@ -503,9 +523,8 @@ class COUPLEDLADDERS_U1():
             g[6]--(0,1)--g[7]--(1,1)--[g[6]]
                    [g[0]]       [g[2]]
 
-        The g[0] and g[2] are the "weak" links, with alpha * S.S interaction, coupling the ladders. We also have the on-site gates 
-
-        
+        The g[0] and g[2] are the "weak" links, with alpha * S.S interaction, coupling the ladders. 
+        We also have the on-site gates.
         """
         gate_SS_1= self._gen_gate_SS(-t)
         gate_SS_alpha= self._gen_gate_SS(-t*self.alpha)
@@ -541,19 +560,9 @@ class COUPLEDLADDERS_U1():
         gate_SS_alpha= self._gen_gate_SS(-t*self.alpha)
         gate_SS_2alpha= self._gen_gate_SS(-2*t*self.alpha)
 
-        # two spin gates 
-        gate_seq=[
-            (((0,0),(1,0),(1,0)), gate_SS_1),
-            (((1,0),(1,0),(0,0)), gate_SS_1),
-            (((0,1),(1,0),(1,1)), gate_SS_1),
-            (((1,1),(1,0),(0,1)), gate_SS_1),
-            (((0,0),(0,1),(0,1)), gate_SS_1),
-            (((1,0),(0,1),(1,1)), gate_SS_1),
-            (((0,1),(0,1),(0,0)), gate_SS_alpha)
-        ]
-
         # single spin gates 
         # Note: it would be better to join the single spin gates and the two spin gates
+        gate_seq= []
         if self.Bz != _null_Bz:
             for x_1 in range(2):
                 for y_1 in range(2):
@@ -563,12 +572,54 @@ class COUPLEDLADDERS_U1():
                     gate_Sz_Bz= self._gen_gate_Sz(-t*self.Bz((x_1, y_2)))
                     gate_seq+=[(((x_1,y_1),(dx,dy),(x_2,y_2)), gate_Sz_Bz)]
 
+        # two spin gates 
+        gate_seq+=[
+            (((0,0),(1,0),(1,0)), gate_SS_1),
+            (((1,0),(1,0),(0,0)), gate_SS_1),
+            (((0,1),(1,0),(1,1)), gate_SS_1),
+            (((1,1),(1,0),(0,1)), gate_SS_1),
+            (((0,0),(0,1),(0,1)), gate_SS_1),
+            (((1,0),(0,1),(1,1)), gate_SS_1),
+            (((0,1),(0,1),(0,0)), gate_SS_alpha),
+            (((1,1),(0,1),(1,0)), gate_SS_2alpha)
+        ]
 
-        # last gate
-        gate_seq.append( (((1,1),(0,1),(1,0)), gate_SS_2alpha) ) 
- 
         # repeat the sequence in inverse order
-        for i in range(6,-1,-1): gate_seq.append(gate_seq[i])
+        for i in range( len(gate_seq)-2 ,-1,-1): gate_seq.append(gate_seq[i])
+        return gate_seq
+
+    def gen_gate_seq_2S_SS_hz(self,t):
+        # two spin gates
+        # on-site term is applied 4 times on each site, hence its coupling is rescaled
+        # accordingly
+        gate_seq=[
+            (((0,0),(1,0),(1,0)), self._gen_gate_SS_hz(-t, 1, self.Bz((0,0))/4 ) ),
+            (((1,0),(1,0),(0,0)), self._gen_gate_SS_hz(-t, 1, self.Bz((1,0))/4 ) ),
+            (((0,1),(1,0),(1,1)), self._gen_gate_SS_hz(-t, 1, self.Bz((0,1))/4 ) ),
+            (((1,1),(1,0),(0,1)), self._gen_gate_SS_hz(-t, 1, self.Bz((1,1))/4 ) ),
+            (((0,0),(0,1),(0,1)), self._gen_gate_SS_hz(-t, 1, self.Bz((0,0))/4 ) ),
+            (((1,0),(0,1),(1,1)), self._gen_gate_SS_hz(-t, 1, self.Bz((1,0))/4 ) ),
+            (((0,1),(0,1),(0,0)), self._gen_gate_SS_hz(-t, self.alpha, self.Bz((0,1))/4 ) ),
+            (((1,1),(0,1),(1,0)), self._gen_gate_SS_hz(-t, self.alpha, self.Bz((1,1))/4 ) ) 
+        ]
+
+    def gen_gate_seq_2S_SS_hz_2ndOrder(self,t):
+        # two spin gates
+        # on-site term is applied 4 times on each site, hence its coupling is rescaled
+        # accordingly
+        gate_seq=[
+            (((0,0),(1,0),(1,0)), self._gen_gate_SS_hz(-t, 1, self.Bz((0,0))/4 ) ),
+            (((1,0),(1,0),(0,0)), self._gen_gate_SS_hz(-t, 1, self.Bz((1,0))/4 ) ),
+            (((0,1),(1,0),(1,1)), self._gen_gate_SS_hz(-t, 1, self.Bz((0,1))/4 ) ),
+            (((1,1),(1,0),(0,1)), self._gen_gate_SS_hz(-t, 1, self.Bz((1,1))/4 ) ),
+            (((0,0),(0,1),(0,1)), self._gen_gate_SS_hz(-t, 1, self.Bz((0,0))/4 ) ),
+            (((1,0),(0,1),(1,1)), self._gen_gate_SS_hz(-t, 1, self.Bz((1,0))/4 ) ),
+            (((0,1),(0,1),(0,0)), self._gen_gate_SS_hz(-t, self.alpha, self.Bz((0,1))/4 ) ),
+            (((1,1),(0,1),(1,0)), self._gen_gate_SS_hz(-2*t, self.alpha, self.Bz((1,1))/4 ) )
+        ]
+
+        # repeat the sequence in inverse order
+        for i in range( len(gate_seq)-2 ,-1,-1): gate_seq.append(gate_seq[i])
         return gate_seq
 
     def gen_gate_seq_2S_H(self,t):

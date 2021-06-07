@@ -277,7 +277,7 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, direction, \
         #       ?=-1  (-?)0--Vh--1(+1)=>CT=> (+1)0--Rt--1(+1)(-1)1--Vh--0(?)   = (+1)Pt(-1)
         #       RIGHT (+1)0--U--1(?)=>C=> (+1)0--R--1(+1)(-1)0--U--1(-?)S_sqrt = (+1)P(-1)
         #             (-?)0--Vh--1(-1)=>CT=> (-1)0--Rt--1(-1)(+1)1--Vh--0(?)   = (-1)Pt(+1)
-        P= mm(mm(R, U, conj=(0,1)), S_sqrt)
+        P= mm(mm(R, U, conj=(0,1)), S_sqrt.transpose((1,0)) )
         # P._leg_fusion_data[0]= R._leg_fusion_data[0]
         Pt= mm(mm(Rt,transpose(Vh), conj=(0,1)),S_sqrt)
         # Pt._leg_fusion_data[0]= Rt._leg_fusion_data[0]
