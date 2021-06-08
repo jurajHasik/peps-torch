@@ -189,7 +189,7 @@ class IPEPS_U1SYM(ipeps.IPEPS):
         self.coeffs_site = self.coeffs['site']
         for coeffs_set in [self.coeffs_triangle_dn, self.coeffs_triangle_up, self.coeffs_site]:
             coeffs_set[(0,0)] = coeffs_set[(0,0)].to(torch.device(self.device))
-            coeffs_set[(0,0)].requires_grad_(False)
+            for coeff_t in coeffs_set.values(): coeff_t.requires_grad_(False)
         self.sites = self.build_onsite_tensors()
         self.coeffs = OrderedDict({'t_up': self.coeffs_triangle_up[(0, 0)], 't_dn': self.coeffs_triangle_dn[(0, 0)],
                                    'site': self.coeffs_site[(0, 0)]})
