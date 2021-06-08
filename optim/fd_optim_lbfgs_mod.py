@@ -67,7 +67,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
     epoch= 0
 
     if main_args.opt_resume is not None:
-        state.load_checkpoint(checkpoint_file)
+        state.load_checkpoint(main_args.opt_resume+"_checkpoint.p")
         state.print_coeffs()
 
     parameters= state.get_parameters()
