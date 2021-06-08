@@ -86,6 +86,7 @@ class SU3_CHIRAL():
         self.device = global_args.device
         self.phys_dim = 27
         self.h_triangle = (Kr+1j*Ki) * permute_triangle + (Kr-1j*Ki) * permute_triangle_inv + self.j1 * exchange_bond_triangle
+        self.h_triangle = self.h_triangle.to(self.device)
 
     # Energy terms
 

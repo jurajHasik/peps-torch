@@ -137,9 +137,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
             t_data["loss"].append(loss.item())
             if t_data["min_loss"] > t_data["loss"][-1]:
                 t_data["min_loss"]= t_data["loss"][-1]
-                #state.write_to_file(outputstatefile, normalize=True)
-                print('Updated state : ')
-                print(state.coeffs)
+                state.write_to_file(outputstatefile, normalize=True)
 
         # 2) log CTM metrics for debugging
         if opt_args.opt_logging:
@@ -210,7 +208,6 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         # checkpoint the optimizer
         # checkpointing before step, guarantees the correspondence between the wavefunction
         # and the last computed value of loss t_data["loss"][-1]
-        print('***** epoch n. '+str(epoch))
         if epoch>0:
             store_checkpoint(checkpoint_file, state, optimizer, epoch, t_data["loss"][-1])
 
