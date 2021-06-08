@@ -5,7 +5,7 @@ import math
 import torch
 import copy
 from collections import OrderedDict
-from ipeps.ipeps_kagome import IPEPS_KAGOME, read_ipeps_kagome
+from ipeps.ipeps_kagome import IPEPS_KAGOME, read_ipeps_kagome, extend_bond_dim
 from models import SU3_chiral
 from ctm.generic.env import *
 from ctm.generic import ctmrg
@@ -40,9 +40,9 @@ def main():
     # initialize the ipeps
     if args.instate!=None:
         state= read_ipeps_kagome(args.instate)
-        # if args.bond_dim > max(state.get_aux_bond_dims()):
-        #     # extend the auxiliary dimensions
-        #     state= extend_bond_dim(state, args.bond_dim)
+        if args.bond_dim > max(state.get_aux_bond_dims()):
+            # extend the auxiliary dimensions
+            state= extend_bond_dim(state, args.bond_dim)
         state.add_noise(args.instate_noise)
     elif args.opt_resume is not None:
         T_U= torch.zeros(bond_dim, bond_dim, bond_dim,\
