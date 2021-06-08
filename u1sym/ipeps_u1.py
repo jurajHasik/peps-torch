@@ -176,13 +176,10 @@ class IPEPS_U1SYM(ipeps.IPEPS):
 
     def load_checkpoint(self, checkpoint_file):
         checkpoint = torch.load(checkpoint_file)
-        self.coeffs = checkpoint["parameters"]
-        self.coeffs_triangle_up = self.coeffs['t_up']
-        self.coeffs_triangle_dn = self.coeffs['t_dn']
-        self.coeffs_site = self.coeffs['site']
-        for coeff_t in self.coeffs_triangle_dn.values(): coeff_t.requires_grad_(False)
-        for coeff_t in self.coeffs_triangle_up.values(): coeff_t.requires_grad_(False)
-        for coeff_t in self.coeffs_site.values(): coeff_t.requires_grad_(False)
+        coeffs = checkpoint["parameters"]
+        self.coeffs_triangle_up = {(0,0): coeffs['t_up'].to(torch.device(self.device)).requires_grad_(False)}
+        self.coeffs_triangle_dn = {(0,0): coeffs['t_dn'].to(torch.device(self.device)).requires_grad_(False)}
+        self.coeffs_site = {(0,0): coeffs['site'].to(torch.device(self.device)).requires_grad_(False)}
         self.sites = self.build_onsite_tensors()
         self.coeffs = OrderedDict({'t_up': self.coeffs_triangle_up[(0, 0)], 't_dn': self.coeffs_triangle_dn[(0, 0)],
                                    'site': self.coeffs_site[(0, 0)]})
