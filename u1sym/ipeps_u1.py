@@ -181,6 +181,7 @@ class IPEPS_U1SYM(ipeps.IPEPS):
         self.coeffs_triangle_dn = self.coeffs['t_dn']
         self.coeffs_site = self.coeffs['site']
         for coeffs_set in [self.coeffs_triangle_dn, self.coeffs_triangle_up, self.coeffs_site]:
+            print(coeffs_set)
             print(coeffs_set[(0,0)])
             coeffs_set[(0,0)] = coeffs_set[(0,0)].to(torch.device(self.device))
             for coeff_t in coeffs_set.values(): coeff_t.requires_grad_(False)
