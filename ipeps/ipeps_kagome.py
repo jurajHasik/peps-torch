@@ -178,9 +178,45 @@ class IPEPS_KAGOME(ipeps.IPEPS):
             self.elem_tensors['DOWN_T']= self.elem_tensors['UP_T']
         self.sites = self.build_onsite_tensors()
 
+    def get_aux_bond_dims(self):
+        auxd_set= set(self.elem_tensors['UP_T'].size()).union(set(self.elem_tensors['DOWN_T'].size()),\
+            set(self.elem_tensors['UP_T'].size()[1:]))
+        return auxd_set
+
     def write_to_file(self, outputfile, aux_seq=None, tol=1.0e-14, normalize=False):
         write_ipeps_kagome(self, outputfile, tol=tol, normalize=normalize)
 
+def extend_bond_dim(state, new_d):
+    r"""
+    :param state: wavefunction to modify
+    :param new_d: new enlarged auxiliary bond dimension
+    :type state: IPEPS
+    :type new_d: int
+    :return: wavefunction with enlarged auxiliary bond dimensions
+    :rtype: IPEPS
+
+    Take IPEPS and enlarge all auxiliary bond dimensions of all on-site tensors up to 
+    size ``new_d``
+    """
+    auxd_set= list(state.get_aux_bond_dims())
+    assert len(auxd_set)==1, "different auxiliary dimensions for elem tensors"
+    assert new_d>=auxd_set[0], "Desired dimension is smaller than current aux dimension"
+    ad= auxd_set[0]
+    pd= state.elem_tensors['BOND_S'].size(0)
+    new_elem_tensors= dict()
+    new_elem_tensors['UP_T']= torch.zeros(new_d,new_d,new_d, dtype=state.dtype, device=state.device)
+    new_elem_tensors['UP_T'][:ad,:ad,:ad]= state.elem_tensors['UP_T']
+    new_elem_tensors['DOWN_T']= torch.zeros(new_d,new_d,new_d, dtype=state.dtype, device=state.device)
+    new_elem_tensors['DOWN_T'][:ad,:ad,:ad]= state.elem_tensors['DOWN_T']
+    new_elem_tensors['BOND_S']= torch.zeros(pd,new_d,new_d, dtype=state.dtype, device=state.device)
+    new_elem_tensors['BOND_S'][:,:ad,:ad]= state.elem_tensors['UP_T']
+
+    new_state= state.__class__(new_elem_tensors['UP_T'], new_elem_tensors['BOND_S'],\
+        triangle_down=new_elem_tensors['DOWN_T'],\
+        SYM_UP_DOWN=state.SYM_UP_DOWN,\
+        peps_args=cfg.peps_args, global_args=cfg.global_args)
+
+    return new_state
 
 def read_ipeps_kagome(jsonfile, peps_args=cfg.peps_args, global_args=cfg.global_args):
     r"""
@@ -227,7 +263,8 @@ def read_ipeps_kagome(jsonfile, peps_args=cfg.peps_args, global_args=cfg.global_
         assert set(('UP_T', 'BOND_S', 'DOWN_T'))==set(list(raw_state["elem_tensors"].keys())),\
             "missing elementary tensors"
         for key,t in raw_state["elem_tensors"].items():
-            elem_tensors[key]= torch.from_numpy(read_bare_json_tensor_np_legacy(t))
+            elem_tensors[key]= torch.from_numpy(read_bare_json_tensor_np_legacy(t))\
+                .to(global_args.device)
 
         if SYM_UP_DOWN: elem_tensors['DOWN_T']=None
 
