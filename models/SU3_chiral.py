@@ -77,6 +77,11 @@ class SU3_CHIRAL():
         self.j2 = j2
         self.Kr = Kr
         self.Ki = Ki
+        print('Hamiltonian coupling constants:')
+        print("Kr = {}".format(Kr))
+        print("Ki = {}".format(Ki))
+        print("j1 = {}".format(j1))
+        print("j2 = {}".format(j2))
         self.dtype = global_args.dtype
         self.device = global_args.device
         self.phys_dim = 27

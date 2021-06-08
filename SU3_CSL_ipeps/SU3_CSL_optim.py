@@ -65,12 +65,11 @@ def main():
         # coeffs ... .to(t_device)
     else:
         # AKLT state
-        #coeffs_triangle = {(0, 0): torch.tensor([1., 0., 0., 0., 0., 0., 0.], dtype=torch.float64, device=t_device)}
-        #coeffs_site = {(0, 0): torch.tensor([1., 0., 0.], dtype=torch.float64, device=t_device)}
+        coeffs_triangle = {(0, 0): torch.tensor([1., 0., 0., 0., 0., 0., 0.], dtype=torch.float64, device=t_device)}
+        coeffs_site = {(0, 0): torch.tensor([1., 0., 0.], dtype=torch.float64, device=t_device)}
         # Ji-Yao's state
-        coeffs_triangle = {(0, 0): torch.tensor([1.0000, 0.3563, 4.4882, -0.3494, -3.9341, 0., 0.], dtype=torch.float64,
-                                                device=t_device)}
-        coeffs_site = {(0, 0): torch.tensor([1.0000, 0.2429, 0.], dtype=torch.float64, device=t_device)}
+        #coeffs_triangle = {(0, 0): torch.tensor([1.0000, 0.3563, 4.4882, -0.3494, -3.9341, 0., 0.], dtype=torch.float64,device=t_device)}
+        #coeffs_site = {(0, 0): torch.tensor([1.0000, 0.2429, 0.], dtype=torch.float64, device=t_device)}
 
     # define which coefficients will be added a noise
     var_coeffs_site = torch.tensor([0, 1, 0], dtype=torch.float64, device=t_device)

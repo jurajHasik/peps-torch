@@ -64,12 +64,12 @@ def main():
         # coeffs ... .to(t_device)
     else:
         # AKLT state
-        coeffs_triangle = {(0, 0): torch.tensor([0., 0., 0., 0., 0., 0.], dtype=torch.float64, device=t_device)}
+        coeffs_triangle = {(0, 0): torch.tensor([1., 0., 0., 0., 0., 0.], dtype=torch.float64, device=t_device)}
         coeffs_site = {(0, 0): torch.tensor([1., 0., 0., 0.], dtype=torch.float64, device=t_device)}
 
     # define which coefficients will be added a noise
     var_coeffs_site = torch.tensor([0, 1, 1, 1], dtype=torch.float64, device=t_device)
-    var_coeffs_triangle = torch.tensor([0, 0, 0, 0, 1, 1], dtype=torch.float64, device=t_device)
+    var_coeffs_triangle = torch.tensor([0, 1, 1, 1, 1, 1], dtype=torch.float64, device=t_device)
 
     state = IPEPS_U1SYM(tensors_triangle, tensors_site, coeffs_triangle_up=coeffs_triangle, coeffs_site=coeffs_site,
                         sym_up_dn=bool(args.sym_up_dn),
@@ -115,7 +115,7 @@ def main():
             e_prev = 0
         else:
             e_prev = history[-2]
-        print_corner_spectra(env)
+        #print_corner_spectra(env)
         print('Step n°{:2}    E_site ={:01.14f}   (E_up={:01.14f}, E_dn={:01.14f}, E_nnn={:01.14f})  delta_E={:01.14f}'.format(len(history), e_curr.item(), e_up.item(), e_dn.item(), e_nnn, e_curr.item()-e_prev))
         if (len(history) > 1 and abs(history[-1] - history[-2]) < ctm_args.ctm_conv_tol) \
                 or len(history) >= ctm_args.ctm_max_iter:
