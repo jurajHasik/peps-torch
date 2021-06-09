@@ -182,7 +182,11 @@ class IPEPS_U1SYM(ipeps.IPEPS):
         return self.coeffs
 
     def load_checkpoint(self, checkpoint_file):
-        checkpoint = torch.load(checkpoint_file)
+        if torch.cuda.is_available():
+            map_location = lambda storage, loc: storage.cuda()
+        else:
+            map_location = 'cpu'
+        checkpoint = torch.load(checkpoint_file, map_location = map_location)
         coeffs = checkpoint["parameters"]
         self.coeffs_triangle_up = {(0,0): coeffs['t_up'].to(torch.device(self.device)).requires_grad_(False)}
         self.coeffs_triangle_dn = {(0,0): coeffs['t_dn'].to(torch.device(self.device)).requires_grad_(False)}
