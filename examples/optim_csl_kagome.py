@@ -67,8 +67,8 @@ def main():
             +str(args.ipeps_init_type)+" is not supported")
 
     def energy_f(state, env, force_cpu=False):
-        e_dn = model.energy_triangle_dn(state, env, force_cpu=force_cpu)
-        e_up = model.energy_triangle_up(state, env, force_cpu=force_cpu)
+        e_dn = model.energy_triangle_dn_v2(state, env, force_cpu=force_cpu)
+        e_up = model.energy_triangle_up_v2(state, env, force_cpu=force_cpu)
         e_nnn = model.energy_nnn(state, env)
         return (e_up + e_dn + e_nnn) / 3
 
@@ -94,8 +94,8 @@ def main():
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
             history = []
-        e_dn = model.energy_triangle_dn(state, env, force_cpu=ctm_args.conv_check_cpu)
-        e_up = model.energy_triangle_up(state, env, force_cpu=ctm_args.conv_check_cpu)
+        e_dn = model.energy_triangle_dn_v2(state, env, force_cpu=ctm_args.conv_check_cpu)
+        e_up = model.energy_triangle_up_v2(state, env, force_cpu=ctm_args.conv_check_cpu)
         e_nnn = model.energy_nnn(state, env)
         e_curr = (e_up + e_dn + e_nnn) / 3
         history.append(e_curr.item())
@@ -110,6 +110,9 @@ def main():
     ctm_env_init = ENV(args.chi, state)
     init_env(state, ctm_env_init)
 
+    ctm_env_out, history, t_ctm, t_conv_check = ctmrg.run(state, ctm_env_init, \
+            conv_check=ctmrg_conv_energy, ctm_args=cfg.ctm_args)
+
     def loss_fn(state, ctm_env_in, opt_context):
         ctm_args = opt_context["ctm_args"]
         opt_args = opt_context["opt_args"]
@@ -123,12 +126,13 @@ def main():
             conv_check=ctmrg_conv_energy, ctm_args=ctm_args)
         loss0 = energy_f(state, ctm_env_out, force_cpu=cfg.ctm_args.conv_check_cpu)
 
-        loc_ctm_args = copy.deepcopy(ctm_args)
-        loc_ctm_args.ctm_max_iter = 1
-        ctm_env_out, history1, t_ctm1, t_obs1 = ctmrg.run(state, ctm_env_out, ctm_args=loc_ctm_args)
-        loss1 = energy_f(state, ctm_env_out, force_cpu=cfg.ctm_args.conv_check_cpu)
-
-        loss = torch.max(loss0, loss1)
+        # loc_ctm_args = copy.deepcopy(ctm_args)
+        # loc_ctm_args.ctm_max_iter = 1
+        # ctm_env_out, history1, t_ctm1, t_obs1 = ctmrg.run(state, ctm_env_out, ctm_args=loc_ctm_args)
+        # loss1 = energy_f(state, ctm_env_out, force_cpu=cfg.ctm_args.conv_check_cpu)
+        # loss = torch.max(loss0, loss1)
+        
+        loss= loss0
         return loss, ctm_env_out, history, t_ctm, t_conv_check
 
     @torch.no_grad()
