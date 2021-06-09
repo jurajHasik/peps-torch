@@ -21,6 +21,7 @@ parser = cfg.get_args_parser()
 parser.add_argument("--theta", type=float, default=0., help="angle, in degrees, parametrizing the ratio K/J1")
 parser.add_argument("--phi", type=float, default=0., help="angle, in degrees, parametrizing the ratio J2/K")
 parser.add_argument("--C", type=float, default=0., help="amplitude/sign of the J2 curve")
+parser.add_argument("--npts", type=int, default=9, help="number of points along each direction in parameter space")
 args, unknown_args = parser.parse_known_args()
 
 
@@ -212,7 +213,7 @@ def main():
         return(list_energies)
 
 
-    U1_landscape(1, 10)
+    U1_landscape(1, args.npts)
 
 
 
