@@ -176,7 +176,7 @@ def main():
                 
                 # Optimize
                 onsite1, loc_h = ts.optimization_2sites(onsite1=onsite1, params_j=params_j2[bond_type],
-                            env=ctm_env, gate=gate2, step=step, bond_type=bond_type,
+                            env=ctm_env, gate=gate2,
                             const_w2=const_w2, cost_function=cost_function,
                             params_opt=params_opt)
                 log.info(f"NNN-gate {step} {bond_type} {len(loc_h)} {loc_h[-1]}")
