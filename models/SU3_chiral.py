@@ -2,6 +2,7 @@ import torch
 import config as cfg
 from ctm.generic.env import ENV
 from ctm.generic import rdm
+from ctm.generic import rdm_kagome
 from ctm.generic import corrf
 from math import sqrt
 from numpy import exp
@@ -95,8 +96,20 @@ class SU3_CHIRAL():
         e_up = rdm.rdm2x2_up_triangle((0, 0), state, env, operator=self.h_triangle, force_cpu=force_cpu) / norm_wf
         return torch.real(e_up)
 
+    def energy_triangle_dn_v2(self, state, env, force_cpu=False):
+        rdm_dn= rdm_kagome.rdm2x2_up_triangle_open(\
+            (0, 0), state, env, force_cpu=force_cpu)
+        e_dn= torch.einsum('ijkmno,mnoijk', rdm_dn, self.h_triangle )
+        return torch.real(e_dn)
+
+    def energy_triangle_up_v2(self, state, env, force_cpu=False):
+        e_up= rdm_kagome.rdm2x2_dn_triangle_with_operator(\
+            (0, 0), state, env, self.h_triangle, force_cpu=force_cpu)
+        return torch.real(e_up)
+
+
     def energy_nnn(self, state, env, force_cpu=False):
-        if self.j2 == 0.:
+        if self.j2 == 0:
             return 0.
         else:
             vNNN = self.P_bonds_nnn(state, env, force_cpu=force_cpu)
