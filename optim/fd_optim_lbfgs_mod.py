@@ -83,7 +83,11 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
     # load and/or modify optimizer state from checkpoint
     if main_args.opt_resume is not None:
         print(f"INFO: resuming from check point. resume = {main_args.opt_resume}")
-        checkpoint = torch.load(main_args.opt_resume)
+        if torch.cuda.is_available():
+            map_location = lambda storage, loc: storage.cuda()
+        else:
+            map_location = 'cpu'
+        checkpoint = torch.load(main_args.opt_resume, map_location = map_location)
         epoch0 = checkpoint["epoch"]
         loss0 = checkpoint["loss"]
         cp_state_dict= checkpoint["optimizer_state_dict"]
