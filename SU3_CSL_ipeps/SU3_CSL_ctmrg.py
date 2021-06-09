@@ -62,8 +62,8 @@ def main():
             map_location = 'cpu'
         checkpoint = torch.load(args.import_state, map_location = map_location)
         coeffs = checkpoint["parameters"]
-        coeffs_triangle = {(0,0): coeffs['t_up'].requires_grad_(False)}
-        coeffs_site = {(0,0): coeffs['site'].requires_grad_(False)}
+        coeffs_triangle = {(0,0): coeffs['t_up'].requires_grad_(False).to(t_device)}
+        coeffs_site = {(0,0): coeffs['site'].requires_grad_(False).to(t_device)}
         # coeffs ... .to(t_device)
     else:
         # AKLT state
