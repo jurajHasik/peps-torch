@@ -45,11 +45,11 @@ def main():
             state= extend_bond_dim(state, args.bond_dim)
         state.add_noise(args.instate_noise)
     elif args.opt_resume is not None:
-        T_U= torch.zeros(bond_dim, bond_dim, bond_dim,\
+        T_U= torch.zeros(args.bond_dim, args.bond_dim, args.bond_dim,\
             dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)-1.0
-        T_D= None if args.sym_up_dn else (torch.zeros(bond_dim, bond_dim, bond_dim,\
-            dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)-1.0)
-        B_S= torch.zeros(3, bond_dim, bond_dim,\
+        T_D= None if args.sym_up_dn else (torch.zeros(args.bond_dim, args.bond_dim,\
+            args.bond_dim, dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)-1.0)
+        B_S= torch.zeros(3, args.bond_dim, args.bond_dim,\
             dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)-1.0
         state= IPEPS_KAGOME(T_U, B_S, T_D, SYM_UP_DOWN=args.sym_up_dn)
         state.load_checkpoint(args.opt_resume)
