@@ -8,6 +8,11 @@ from math import sqrt
 from numpy import exp
 import itertools
 
+def _cast_to_real(t, check=True, imag_eps=1.0e-12):
+    if t.is_complex():
+        assert abs(t.imag) < imag_eps,"unexpected imaginary part" 
+        return t.real
+    return t
 
 # function (n1,n2,n3) --> s that maps the basis of states in the fundamental irrep of SU(3) (states n=0,1,2) for the three sites of the unit cell to a single physical index s=0...26
 # NB: the 3 sites are labeled as:
@@ -88,7 +93,9 @@ class SU3_CHIRAL():
         self.phys_dim = 27
         self.h_triangle = (Kr+1j*Ki) * permute_triangle + (Kr-1j*Ki) * permute_triangle_inv + self.j1 * exchange_bond_triangle
         self.h_triangle = self.h_triangle.to(self.device)
-
+        _tmp_l_labels = ["l3","l8","l3_1","l3_2","l3_3","l8_1","l8_2","l8_3"]
+        _tmp_l_op= [lambda_3, lambda_8, lambda_3_1, lambda_3_2, lambda_3_3, lambda_8_1, lambda_8_2, lambda_8_3]
+        self.obs_ops= { l: op.to(self.device) for l,op in zip(_tmp_l_labels, _tmp_l_op)}
     # Energy terms
 
     def energy_triangle_dn(self, state, env, force_cpu=False):
@@ -176,3 +183,24 @@ class SU3_CHIRAL():
         color8_2 = rdm.rdm1x1((0, 0), state, env, operator=lambda_8_2) / norm_wf
         color8_3 = rdm.rdm1x1((0, 0), state, env, operator=lambda_8_3) / norm_wf
         return (color3_1, color3_2, color3_3), (color8_1, color8_2, color8_3)
+
+    def eval_obs(self,state,env,force_cpu=True):
+        r"""
+        :param state: wavefunction
+        :param env: CTM environment
+        :type state: IPEPS
+        :type env: ENV
+        :return:  expectation values of observables, labels of observables
+        :rtype: list[float], list[str]
+        """
+        selected_ops= ["l3_1","l3_2","l3_3","l8_1","l8_2","l8_3"]
+        id_matrix = torch.eye(27, dtype=torch.complex128, device=cfg.global_args.device)
+        norm_wf = rdm.rdm1x1((0, 0), state, env, operator=id_matrix)
+        obs= {}
+        with torch.no_grad():
+            for label in selected_ops:
+                obs_val= rdm.rdm1x1((0, 0), state, env, operator=self.obs_ops[label]) / norm_wf
+                obs[f"{label}"]= _cast_to_real(obs_val)
+
+        # prepare list with labels and values
+        return list(obs.values()), list(obs.keys())

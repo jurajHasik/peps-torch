@@ -46,11 +46,11 @@ def main():
         state.add_noise(args.instate_noise)
     elif args.opt_resume is not None:
         T_U= torch.zeros(args.bond_dim, args.bond_dim, args.bond_dim,\
-            dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)-1.0
+            dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
         T_D= None if args.sym_up_dn else (torch.zeros(args.bond_dim, args.bond_dim,\
             args.bond_dim, dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)-1.0)
         B_S= torch.zeros(3, args.bond_dim, args.bond_dim,\
-            dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)-1.0
+            dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
         state= IPEPS_KAGOME(T_U, B_S, T_D, SYM_UP_DOWN=args.sym_up_dn)
         state.load_checkpoint(args.opt_resume)
     elif args.ipeps_init_type=='RANDOM':
@@ -65,6 +65,7 @@ def main():
     else:
         raise ValueError("Missing trial state: -instate=None and -ipeps_init_type= "\
             +str(args.ipeps_init_type)+" is not supported")
+
 
     def energy_f(state, env, force_cpu=False):
         e_dn = model.energy_triangle_dn_v2(state, env, force_cpu=force_cpu)
@@ -110,8 +111,13 @@ def main():
     ctm_env_init = ENV(args.chi, state)
     init_env(state, ctm_env_init)
 
-    ctm_env_out, history, t_ctm, t_conv_check = ctmrg.run(state, ctm_env_init, \
+    ctm_env_init, history, t_ctm, t_conv_check = ctmrg.run(state, ctm_env_init, \
             conv_check=ctmrg_conv_energy, ctm_args=cfg.ctm_args)
+    loss0 = energy_f(state, ctm_env_init, force_cpu=cfg.ctm_args.conv_check_cpu)
+    obs_values, obs_labels = model.eval_obs(state,ctm_env_init,force_cpu=False)
+    print("\n\n",end="")
+    print(", ".join(["epoch",f"loss"]+[label for label in obs_labels]))
+    print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
 
     def loss_fn(state, ctm_env_in, opt_context):
         ctm_args = opt_context["ctm_args"]
@@ -144,14 +150,12 @@ def main():
         else:
             epoch= len(opt_context["loss_history"]["loss"]) 
             loss= opt_context["loss_history"]["loss"][-1] 
-        # obs_values, obs_labels = model.eval_obs(state,ctm_env,force_cpu=True)
-        obs_values=[]
+        obs_values, obs_labels = model.eval_obs(state,ctm_env,force_cpu=False)
         print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
 
-    print("\n\n",end="")
     optimize_state(state, ctm_env_init, loss_fn, obs_fn=obs_fn)
-    ctm_env_final, *ctm_log = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
 
+    # ctm_env_final, *ctm_log = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
     # # energy per site
     # e_dn_final = model.energy_triangle_dn(state, ctm_env_final, force_cpu=True)
     # e_up_final = model.energy_triangle_up(state, ctm_env_final, force_cpu=True)
