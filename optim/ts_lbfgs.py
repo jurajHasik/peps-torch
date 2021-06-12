@@ -24,12 +24,10 @@ def build_gate(j_label, j, tau, device):
                    + torch.einsum(expr_kron, s2.SM(), s2.SP()))
     SS = SS.view(4,4).contiguous()
     # Diagonalization of SS and creation of Hamiltonian Ha
-    eig_va, eig_vec = torch.symeig(SS, eigenvectors=True)
-    eig_va = torch.exp(-0.5*tau*j*eig_va)
-    U = torch.tensor(eig_vec)
-    D = torch.diag(torch.tensor(eig_va))
+    D, U = torch.symeig(SS, eigenvectors=True)
+    expD = torch.exp(-0.5*tau*j*D)
     # SS = U*D*U.T
-    gate = torch.einsum('ij,jk,lk->il', U, D, U)
+    gate = torch.einsum('ij,jk,lk->il', U, torch.diag(expD), U)
     gate = gate.view(2,2,2,2).contiguous()
     return gate
 
@@ -100,9 +98,18 @@ def single_layer_trotter_decompo_ansatz(j1, tau0, global_args):
     # (0,1)--U--S--Vh--(2,3)
     U,S,Vh= torch.linalg.svd(expSS_12)
     # sort in ascending fashion
-    U= U.flip(1)
-    S= S.flip(0)
-    Vh= Vh.flip(0)
+    # U= U.flip(1)
+    # S= S.flip(0)
+    # Vh= Vh.flip(0)
+    # 1,2,3
+    # 3,2,1
+    # 1,3,2 *
+    # 2,1,3
+    # 2,3,1 *
+    # 3,1,2
+    U= U[:,torch.as_tensor([1,3,2,0])]
+    S= S[torch.as_tensor([1,3,2,0])]
+    Vh= Vh[torch.as_tensor([1,3,2,0]),:]
 
     # split into two MPOs MPO1, MPO2 since U is not equivalent to Vh
     #

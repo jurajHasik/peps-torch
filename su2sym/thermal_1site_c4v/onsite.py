@@ -20,7 +20,8 @@ class OnSiteTensor():
         
     def site(self):
         """Return the on-site tensor with physical and ancilla index fused."""
-        tensor = torch.zeros(tuple([4]+[self.bond_dim]*4), dtype=self.dtype)
+        tensor = torch.zeros(tuple([4]+[self.bond_dim]*4), dtype=self.dtype,\
+            device=self.device)
         for i in range(len(self.coeff)):
             tensor += self.coeff[i]*self.base_tensor[i]
         return tensor
@@ -35,9 +36,10 @@ class OnSiteTensor():
     def convert(self, new_symmetry):
         """Convert coeff list from a symmetry to another."""
         new_coeff = bt.convert_list(self, new_symmetry, self.bond_dim)
-        self.coeff = new_coeff
+        self.coeff = torch.tensor(new_coeff, dtype=self.dtype, device=self.device)
         self.symmetry = new_symmetry
-        self.base_tensor = bt.base_tensor_sym(self.dict, new_symmetry, self.bond_dim)
+        self.base_tensor = bt.base_tensor_sym(self.dict, new_symmetry, self.bond_dim,\
+            device=self.device)
 
     def add_noise(self, noise):
         """Add noise to onsite tensor for the optimization."""
