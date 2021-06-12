@@ -1,16 +1,12 @@
 import torch
-import numpy as np
-import pickle
 import su2sym.thermal_1site_c4v.base_tensors.base_tensor as bt
-import ipeps.ipeps as ipeps
-import ipeps.ipeps_c4v as ipepsc4v
 import copy
 
 class OnSiteTensor():
     r"""Onsite tensor object. Contains the tensor and every information about it.
-    :param coeff: list of the tensor coefficients
-    :param symmetry: symmetry of the onsite tensor
-    :param bond_dim: bond dimension
+    :param param: dict containing the base tensors, their symmetry, the
+    coefficients and also the basic parameters of bond dimension, type of the
+    torch.tensor and device.
     """
     def __init__(self, param):
         self.symmetry = param['symmetry']
@@ -21,8 +17,6 @@ class OnSiteTensor():
         self.base_tensor = bt.base_tensor_sym(param['base_tensor_dict'],
             self.symmetry, self.bond_dim, device=self.device)
         self.coeff = torch.tensor(param['coeff'], dtype=self.dtype, device=self.device)
-        # self.write_to_json(param['file'])
-        # self.coeff_list = list(); self.coeff_list.append(self.coeff)
         
     def site(self):
         """Return the on-site tensor with physical and ancilla index fused."""
@@ -64,21 +58,3 @@ class OnSiteTensor():
                 inverse[p] = i
             return inverse
         return self.permute(inv(permutation))
-    
-    # def history(self):
-    #     self.normalize()
-    #     self.coeff_list.append(self.coeff)
-            
-    # def write_to_json(self, file):
-    #     self.normalize()
-    #     ipeps.write_ipeps(ipepsc4v.IPEPS_C4V(self.site()), file)
-
-    # def save_coeff_to_txt(self, output_file):
-    #     with open(output_file, "a+") as fo:
-    #         fo.write(' '.join([str(val) for val in self.coeff])+'\n')
-            
-    # def save_coeff_to_bin(self, output_file):
-    #     file =  open(output_file, "ab")
-    #     pickler = pickle.Pickler(file)
-    #     pickler.dump(self.coeff_list)
-    #     file.close()

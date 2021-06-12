@@ -3,7 +3,7 @@ import numpy as np
 import groups.su2 as su2
 
 ############################ Basic functions ##################################
-def build_gate(j, tau):
+def build_gate(j_label, j, tau, device):
     """Compute the gate that is applied to the reduced density matrix."""
     # Spin-spin operator
     #   s1|   |s2
@@ -11,23 +11,129 @@ def build_gate(j, tau):
     #   [  S.S  ]
     #     |   |
     #  s1'|   |s2'
-    
-    s2 = su2.SU2(2, dtype=torch.float64, device='cpu')
+    s2 = su2.SU2(2, dtype=torch.float64, device=device)
     expr_kron = 'ij,ab->iajb'
-    # S_1 * S_2 but with S_2 rotated of pi to respect the metric
-    SS = - torch.einsum(expr_kron, s2.SZ(), s2.SZ())\
-        - 0.5*(torch.einsum(expr_kron, s2.SP(), s2.SP())
-               + torch.einsum(expr_kron, s2.SM(), s2.SM()))
+    if j_label == 'j1':
+        # S_1 * S_2 but with S_2 rotated of pi to respect the metric
+        SS = - torch.einsum(expr_kron, s2.SZ(), s2.SZ())\
+            - 0.5*(torch.einsum(expr_kron, s2.SP(), s2.SP())
+                   + torch.einsum(expr_kron, s2.SM(), s2.SM()))
+    else:
+        SS = torch.einsum(expr_kron, s2.SZ(), s2.SZ())\
+            + 0.5*(torch.einsum(expr_kron, s2.SP(), s2.SM())\
+                   + torch.einsum(expr_kron, s2.SM(), s2.SP()))
     SS = SS.view(4,4).contiguous()
     # Diagonalization of SS and creation of Hamiltonian Ha
-    eig_va, eig_vec = np.linalg.eigh(SS)
-    eig_va = np.exp(-0.5*tau*j*eig_va)
+    eig_va, eig_vec = torch.symeig(SS, eigenvectors=True)
+    eig_va = torch.exp(-0.5*tau*j*eig_va)
     U = torch.tensor(eig_vec)
     D = torch.diag(torch.tensor(eig_va))
     # SS = U*D*U.T
     gate = torch.einsum('ij,jk,lk->il', U, D, U)
     gate = gate.view(2,2,2,2).contiguous()
-    return gate 
+    return gate
+
+def single_layer_trotter_decompo_ansatz(j1, tau0, global_args):
+    # very special first step
+    #
+    # build tower from gates exp(-tau_0 S.S) decomposed as MPO
+    #
+    #    |
+    # --MPO
+    #    |        |/
+    #   MPO-- = --T--
+    #    | /     /|
+    #   MPO
+    #    |
+    #   MPO
+    #   /|
+    #
+    expSS_NN= build_gate('j1', j1, tau0, global_args.device)
+
+    # permute indices
+    #
+    # 0        1     0        2    
+    # exp(-tauSS) => exp(-tauSS) => reshape into matrix (0,1)--exp(-tauSS)--(2,3)
+    # 2        3     1        3
+    expSS_12= expSS_NN.view(2,2,2,2).permute(0,2,1,3).reshape(4,4)
+
+    # print("\n")
+    # print("Using symmetric hermitian decomposition")
+    # # diagonalize to split into MPO
+    # #
+    # # (0,1)--U--D--U--(2,3)
+    # D,U= np.linalg.eigh(expSS_12)
+    # print("D of expSS_12")
+    # print(D)
+
+    # # split into 2-site MPO where diagonal D is split symmetrically. This necessarily
+    # # involves going to complex numbers as D has some negative values
+    # #
+    # # 0                       2
+    # # U--sqrt(D)-- --sqrt(D)--U
+    # # 1                       3
+    # MPO= (U@np.diag(np.sqrt(D+0.j))).reshape(2,2,4)
+
+    # # verify we get back the expected operator
+    # print("MPO--MPO")
+    # print(np.tensordot(MPO,MPO,([2],[2])).reshape(4,4))
+
+    # # build tower
+    # #    
+    # #        0              0
+    # #        |              |
+    # # 1<-2--MPO       = 1--MPO
+    # #        |1            MPO--3
+    # #        |0             |
+    # #       MPO--2->3       2
+    # #        |
+    # #        1->2
+    # #
+    # X= np.tensordot(MPO,MPO,([1],[0]))
+
+    # # get the difference
+    # print("symmetry error (eigendecomp)")
+    # print(np.linalg.norm(X-X.transpose(0,3,2,1)))
+
+    # diagonalize to split into MPO
+    #
+    # (0,1)--U--S--Vh--(2,3)
+    U,S,Vh= torch.linalg.svd(expSS_12)
+    # sort in ascending fashion
+    U= U.flip(1)
+    S= S.flip(0)
+    Vh= Vh.flip(0)
+
+    # split into two MPOs MPO1, MPO2 since U is not equivalent to Vh
+    #
+    # 0                          1
+    # U--sqrt(S)--2  0--sqrt(S)--Vh
+    # 1                          2
+    MPO1= (U@torch.diag(torch.sqrt(S))).view(2,2,4)
+    MPO2= (torch.diag(torch.sqrt(S))@Vh).view(4,2,2)
+
+    # build tower
+    #    
+    #        0               0
+    #        |               |
+    # 3<-2--MPO1       = 3--MPO1
+    #        |1             MPO1--5
+    #        |0              |  2
+    #       MPO1--2->5       | /
+    #        |              MPO1
+    #        1  2->2        MPO1
+    #        0 /           / |  
+    #       MPO1          4  1
+    #        1
+    #        0
+    #       MPO1
+    #      / |
+    #  4<-2  1
+    #
+    X= torch.einsum('xyl,yvr,vwu,wzd->xzuldr',MPO1,MPO1,MPO1,MPO1).contiguous()
+
+    # X is not C4v-symmetric due to Trotter error
+    return X
 
 def C2x2_LU(tensor1, tensor2, C, T):
     C2x1 = torch.tensordot(C, T, ([1],[0]))
@@ -73,9 +179,14 @@ def cost_function_2sites(tensor1, tensor2, env, gate, w2):
     cost_function = w1/torch.sqrt(w0*w2)
     return cost_function
 
-def optimization_2sites(onsite1, new_symmetry, permutation, env, gate, noise,
+def optimization_2sites(onsite1, params_j, env, gate,
                         const_w2, cost_function,
-                        max_iter, threshold, patience, optimizer_class, **optimizer_kwargs):
+                        params_opt):
+    # Parameters
+    permutation = params_j['permutation']; new_symmetry = params_j['new_symmetry']
+    max_iter = params_opt['max_iter']; threshold = params_opt['threshold']
+    patience = params_opt['patience']; noise = params_opt['noise']
+    optimizer_class = params_opt['optimizer_class']; lr = params_opt['lr']
     # Normalize tensor
     onsite1.normalize()
     # Permute the on site tensors according to the bond considered
@@ -84,16 +195,14 @@ def optimization_2sites(onsite1, new_symmetry, permutation, env, gate, noise,
     onsite2 = onsite1.copy(); onsite2.convert(new_symmetry)
     # Initialize coefficients to optimize
     onsite2.add_noise(noise=noise)
-    onsite2.coeff = torch.tensor(onsite2.coeff, dtype=onsite2.dtype, device=onsite2.device,\
-        requires_grad=True)
-    optimizer = optimizer_class([onsite2.coeff], max_iter=max_iter, **optimizer_kwargs)
+    onsite2.coeff = torch.tensor(onsite2.coeff, dtype=onsite2.dtype, requires_grad=True)
+    optimizer = optimizer_class([onsite2.coeff], max_iter=max_iter, lr=lr,\
+        tolerance_grad=params_opt['tolerance_grad'], tolerance_change=params_opt['tolerance_change'] )
     # Compute the constant \omega_2
     w2 = const_w2(onsite1.site(), env, gate)
     # Criterion for convergence of the L-BFGS optimizer
-    n_bad_steps = 0
-    best_loss = float('inf')
-    threshold = threshold
-    patience = patience
+    n_bad_steps = 0; best_loss = float('inf')
+    threshold = threshold; patience = patience
     loc_history=[]
 
     def closure():

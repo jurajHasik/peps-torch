@@ -199,7 +199,7 @@ class IPEPS_C4V_THERMAL_LC(IPEPS_C4V_THERMAL):
         return super().to_fused_ipeps_c4v()
 
     def write_to_file(self, outputfile, aux_seq=[0,1,2,3], tol=1.0e-14, normalize=False):
-        write_ipeps_thermal_lc(self, outputfile, aux_seq=aux_seq, tol=tol, normalize=normalize)
+        write_ipeps_c4v_thermal_lc(self, outputfile, aux_seq=aux_seq, tol=tol, normalize=normalize)
 
 def read_ipeps_c4v_thermal_lc(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.peps_args,\
     global_args=cfg.global_args):
