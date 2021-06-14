@@ -1453,7 +1453,7 @@ def _rdm2x2_NNN_lowmem(state, env, f_c2x2, sym_pos_def=False, force_cpu=False, v
     return rdm
 
 
-def rdm2x2(state, env, sym_pos_def=False, verbosity=0):
+def rdm2x2(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
     r"""
     :param state: underlying 1-site C4v symmetric wavefunction
     :param env: C4v symmetric environment corresponding to ``state``
@@ -1492,9 +1492,15 @@ def rdm2x2(state, env, sym_pos_def=False, verbosity=0):
     """
     #----- building C2x2_LU ----------------------------------------------------
     who= "rdm2x2"
-    C = env.C[env.keyC]
-    T = env.T[env.keyT]
-    a = next(iter(state.sites.values()))
+    if force_cpu:
+        # move to cpu
+        C = env.C[env.keyC].cpu()
+        T = env.T[env.keyT].cpu()
+        a = next(iter(state.sites.values())).cpu()
+    else:
+        C = env.C[env.keyC]
+        T = env.T[env.keyT]
+        a = next(iter(state.sites.values()))
     loc_device=C.device
     is_cpu= loc_device==torch.device('cpu')
 
@@ -1542,6 +1548,7 @@ def rdm2x2(state, env, sym_pos_def=False, verbosity=0):
 
     # symmetrize and normalize
     rdm= _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
+    rdm= rdm.to(env.device)
 
     return rdm
 

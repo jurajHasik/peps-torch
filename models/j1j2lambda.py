@@ -99,7 +99,7 @@ class J1J2LAMBDA_C4V_BIPARTITE():
         obs_ops["sm"]= s2.SM()
         return obs_ops
 
-    def energy_1x1(self,state,env_c4v,**kwargs):
+    def energy_1x1(self,state,env_c4v,force_cpu=False,**kwargs):
         r"""
         :param state: wavefunction
         :param env_c4v: CTM c4v symmetric environment
@@ -131,11 +131,11 @@ class J1J2LAMBDA_C4V_BIPARTITE():
         
         """
         rdm2x2= rdm_c4v.rdm2x2(state,env_c4v,sym_pos_def=False,\
-            verbosity=cfg.ctm_args.verbosity_rdm)
+            force_cpu=force_cpu, verbosity=cfg.ctm_args.verbosity_rdm)
         energy_per_site= torch.einsum('ijklabcd,ijklabcd',rdm2x2,self.hp + self.hp_chiral)
         if abs(self.j3)>0:
             rdm3x1= rdm_c4v.rdm3x1(state,env_c4v,sym_pos_def=True,\
-                force_cpu=False,verbosity=cfg.ctm_args.verbosity_rdm)
+                force_cpu=force_cpu, verbosity=cfg.ctm_args.verbosity_rdm)
             ss_3x1= torch.einsum('ijab,ijab',rdm3x1,self.SS)
             energy_per_site= energy_per_site + 2*self.j3*ss_3x1
 
