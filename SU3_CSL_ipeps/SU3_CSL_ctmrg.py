@@ -18,9 +18,10 @@ log = logging.getLogger(__name__)
 
 # parse command line args and build necessary configuration objects
 parser = cfg.get_args_parser()
-parser.add_argument("--theta", type=float, default=0., help="angle parametrizing the chiral Hamiltonian")
-parser.add_argument("--j1", type=float, default=0., help="nearest-neighbor exchange coupling")
-parser.add_argument("--j2", type=float, default=0., help="next-nearest-neighbor exchange coupling")
+parser.add_argument("--chiral_angle", type=float, default=0., help="angle parametrizing the chiral Hamiltonian")
+parser.add_argument("--theta", type=float, default=0., help="angle, in degrees, parametrizing the ratio K/J1")
+parser.add_argument("--phi", type=float, default=0., help="angle, in degrees, parametrizing the ratio J2/K")
+parser.add_argument("--C", type=float, default=0., help="amplitude/sign of the J2 curve")
 parser.add_argument("--top_freq", type=int, default=-1, help="frequency of transfer operator spectrum evaluation")
 parser.add_argument("--top_n", type=int, default=2,
                     help="number of leading eigenvalues of transfer operator to compute")
@@ -84,11 +85,14 @@ def main():
     state.add_noise(args.instate_noise)
     state.print_coeffs()
 
-    model = SU3_chiral.SU3_CHIRAL(Kr=math.cos(args.theta * math.pi/180), Ki=math.sin(args.theta *math.pi/180), j1 = args.j1, j2 = args.j2)
+    model = SU3_chiral.SU3_CHIRAL(Kr=math.sin(args.theta * math.pi/180) * math.cos(args.phi/2 * math.pi/180) * math.cos(args.chiral_angle * math.pi/180),
+                                  Ki=math.sin(args.chiral_angle * math.pi/180),
+                                  j1=math.cos(args.theta * math.pi/180), j2=args.C * math.sin(args.phi *math.pi/180))
+
 
     def energy_f(state, env):
-        e_dn = model.energy_triangle_dn(state, env, force_cpu=True)
-        e_up = model.energy_triangle_up(state, env, force_cpu=True)
+        e_dn = model.energy_triangle_dn_v2(state, env, force_cpu=True)
+        e_up = model.energy_triangle_up_v2(state, env, force_cpu=True)
         e_nnn = model.energy_nnn(state, env)
         return (e_up + e_dn + e_nnn) / 3
 
@@ -113,8 +117,8 @@ def main():
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
             history = []
-        e_dn = model.energy_triangle_dn(state, env, force_cpu=ctm_args.conv_check_cpu)
-        e_up = model.energy_triangle_up(state, env, force_cpu=ctm_args.conv_check_cpu)
+        e_dn = model.energy_triangle_dn_v2(state, env, force_cpu=ctm_args.conv_check_cpu)
+        e_up = model.energy_triangle_up_v2(state, env, force_cpu=ctm_args.conv_check_cpu)
         e_nnn = model.energy_nnn(state, env, force_cpu=ctm_args.conv_check_cpu)
         e_curr = (e_up + e_dn + e_nnn)/3
         history.append(e_curr.item())

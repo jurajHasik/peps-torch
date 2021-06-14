@@ -74,8 +74,8 @@ def main():
     model = SU3_chiral.SU3_CHIRAL(Kr=math.sin(args.theta * math.pi/180) * math.cos(args.phi/2 * math.pi/180), Ki=0., j1=math.cos(args.theta * math.pi/180), j2=args.C * math.sin(args.phi *math.pi/180))
 
     def energy_f(state, env, force_cpu=False):
-        e_dn = model.energy_triangle_dn(state, env, force_cpu=force_cpu)
-        e_up = model.energy_triangle_up(state, env, force_cpu=force_cpu)
+        e_dn = model.energy_triangle_dn_v2(state, env, force_cpu=force_cpu)
+        e_up = model.energy_triangle_up_v2(state, env, force_cpu=force_cpu)
         e_nnn = model.energy_nnn(state, env)
         return (e_up + e_dn + e_nnn) / 3
 
@@ -100,8 +100,8 @@ def main():
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
             history = []
-        e_dn = model.energy_triangle_dn(state, env, force_cpu=ctm_args.conv_check_cpu)
-        e_up = model.energy_triangle_up(state, env, force_cpu=ctm_args.conv_check_cpu)
+        e_dn = model.energy_triangle_dn_v2(state, env, force_cpu=ctm_args.conv_check_cpu)
+        e_up = model.energy_triangle_up_v2(state, env, force_cpu=ctm_args.conv_check_cpu)
         e_nnn = model.energy_nnn(state, env)
         e_curr = (e_up + e_dn + e_nnn) / 3
         history.append(e_curr.item())
@@ -147,8 +147,8 @@ def main():
     ctm_env_final, *ctm_log = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
 
     # energy per site
-    e_dn_final = model.energy_triangle_dn(state, ctm_env_final, force_cpu=True)
-    e_up_final = model.energy_triangle_up(state, ctm_env_final, force_cpu=True)
+    e_dn_final = model.energy_triangle_dn_v2(state, ctm_env_final, force_cpu=True)
+    e_up_final = model.energy_triangle_up_v2(state, ctm_env_final, force_cpu=True)
     e_nnn_final = model.energy_nnn(state, ctm_env_final, force_cpu=True)
     e_tot_final = (e_dn_final + e_up_final + e_nnn_final) / 3
 
