@@ -76,7 +76,7 @@ def main():
 
 
     # define which coefficients will be added a noise
-    var_coeffs_triangle = torch.tensor([0, 1, 1], dtype=torch.float64, device=t_device)
+    var_coeffs_triangle = torch.tensor([0, 0, 1], dtype=torch.float64, device=t_device)
     var_coeffs_site = torch.tensor([0, 0], dtype=torch.float64, device=t_device)
 
 
