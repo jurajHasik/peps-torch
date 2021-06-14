@@ -161,7 +161,7 @@ def main():
     Pnnn = model.P_bonds_nnn(state, ctm_env_final, force_cpu=True)
 
     # magnetization
-    lambda3, lambda8 = model.eval_lambdas(state, ctm_env_final)
+    lambda3, lambda8 = model.eval_lambdas(state, ctm_env_final, )
 
     print('\n\n Energy density')
     print(f' E_up={e_up_final.item()}, E_dn={e_dn_final.item()}, E_tot={e_tot_final.item()}')
