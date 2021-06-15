@@ -76,7 +76,7 @@ def main():
     def energy_f(state, env, force_cpu=False):
         e_dn = model.energy_triangle_dn_v2(state, env, force_cpu=force_cpu)
         e_up = model.energy_triangle_up_v2(state, env, force_cpu=force_cpu)
-        e_nnn = model.energy_nnn(state, env)
+        e_nnn = model.energy_nnn(state, env, force_cpu=force_cpu)
         return (e_up + e_dn + e_nnn) / 3
 
     def print_corner_spectra(env):
@@ -102,7 +102,7 @@ def main():
             history = []
         e_dn = model.energy_triangle_dn_v2(state, env, force_cpu=ctm_args.conv_check_cpu)
         e_up = model.energy_triangle_up_v2(state, env, force_cpu=ctm_args.conv_check_cpu)
-        e_nnn = model.energy_nnn(state, env)
+        e_nnn = model.energy_nnn(state, env, force_cpu=ctm_args.conv_check_cpu)
         e_curr = (e_up + e_dn + e_nnn) / 3
         history.append(e_curr.item())
         if len(history) == 1:
