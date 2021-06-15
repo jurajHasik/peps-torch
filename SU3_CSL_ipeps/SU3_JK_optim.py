@@ -24,6 +24,7 @@ parser = cfg.get_args_parser()
 parser.add_argument("--theta", type=float, default=0., help="angle, in degrees, parametrizing the ratio K/J1")
 parser.add_argument("--phi", type=float, default=0., help="angle, in degrees, parametrizing the ratio J2/K")
 parser.add_argument("--C", type=float, default=0., help="amplitude/sign of the J2 curve")
+parser.add_argument("--show_corner_spectra", type=bool, default=False, help="plot the corner spectra at each CTM step")
 parser.add_argument("--import_state", type=str, default=None, help="input state")
 args, unknown_args = parser.parse_known_args()
 
@@ -109,7 +110,8 @@ def main():
             e_prev = 0
         else:
             e_prev = history[-2]
-        #print_corner_spectra(env)
+        if args.show_corner_spectra:
+            print_corner_spectra(env)
         print(
             'Step n°{:2}    E_site ={:01.14f}   (E_up={:01.14f}, E_dn={:01.14f}, E_nnn={:01.14f})  delta_E={:01.14f}'.format(
                 len(history), e_curr.item(), e_up.item(), e_dn.item(), e_nnn, e_curr.item() - e_prev))
