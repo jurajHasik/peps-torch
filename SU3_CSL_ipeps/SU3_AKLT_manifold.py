@@ -204,11 +204,11 @@ def main():
         list_energies = []
         list_overlaps = []
         for mu1 in list_mu1:
-            energy, aklt_overlap = state_U1(mu1, True)
+            energy = state_U1(mu1, False)
             list_energies.append(energy)
-            list_overlaps.append(aklt_overlap)
+            #list_overlaps.append(aklt_overlap)
             np.save(filename+'_energies', np.array(list_energies))
-            np.save(filename + '_overlaps', np.array(list_overlaps))
+            #np.save(filename + '_overlaps', np.array(list_overlaps))
         print('\n '+filename)
         return(list_energies)
 
