@@ -199,7 +199,7 @@ def main():
 
 
     def U1_landscape(Mu1, n_points):
-        list_mu1 = np.linspace(-Mu1, Mu1, n_points)
+        list_mu1 = np.linspace(0, Mu1, n_points)
         filename = 'U1_chi{}_1Mu{}'.format(args.chi, Mu1)
         list_energies = []
         list_overlaps = []
@@ -213,7 +213,7 @@ def main():
         return(list_energies)
 
 
-    U1_landscape(1, args.npts)
+    U1_landscape(2, args.npts)
 
 
 
