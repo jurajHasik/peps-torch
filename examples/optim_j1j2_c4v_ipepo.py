@@ -75,7 +75,8 @@ def main():
         'max_iter': args.n, 'threshold': args.t, 'patience': args.p,
         'noise': args.no, 'optimizer_class': torch.optim.LBFGS,
         'lr': cfg.opt_args.lr, 'tolerance_grad': cfg.opt_args.tolerance_grad,
-        'tolerance_change': cfg.opt_args.tolerance_change
+        'tolerance_change': cfg.opt_args.tolerance_change,
+        'line_search_fn': 'strong_wolfe'
     }
     
     # Define convergence criterion on the 2 sites reduced density matrix
@@ -125,12 +126,12 @@ def main():
     model= J1J2_C4V_BIPARTITE_THERMAL(j1=args.j1, j2=args.j2)
 
 
-    on_site_T0= ts.single_layer_trotter_decompo_ansatz(args.j1, 0.0001, cfg.global_args)
-    on_site_T0= torch.einsum('ijuldr,aj->aiuldr',on_site_T0, torch.as_tensor([[0,-1],[1,0]],\
-        dtype=torch.float64, device=cfg.global_args.device))
-    # decompose onto symmetric tensors
-    lambdas_0= [torch.tensordot( on_site_T0, t.view( [2,2]+[args.bond_dim]*4), ([0,1,2,3,4,5],[0,1,2,3,4,5]) ).item() for t in onsite1.base_tensor]
-    onsite1.coeff= torch.tensor(lambdas_0, dtype=onsite1.dtype, device=onsite1.device)
+    # on_site_T0= ts.single_layer_trotter_decompo_ansatz(args.j1, 0.0001, cfg.global_args)
+    # on_site_T0= torch.einsum('ijuldr,aj->aiuldr',on_site_T0, torch.as_tensor([[0,-1],[1,0]],\
+    #     dtype=torch.float64, device=cfg.global_args.device))
+    # # decompose onto symmetric tensors
+    # lambdas_0= [torch.tensordot( on_site_T0, t.view( [2,2]+[args.bond_dim]*4), ([0,1,2,3,4,5],[0,1,2,3,4,5]) ).item() for t in onsite1.base_tensor]
+    # onsite1.coeff= torch.tensor(lambdas_0, dtype=onsite1.dtype, device=onsite1.device)
 
     # enter imag. time evolution loop
     print("\n\n",end="")

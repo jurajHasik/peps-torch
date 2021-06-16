@@ -25,6 +25,11 @@ def build_gate(j_label, j, tau, device):
     SS = SS.view(4,4).contiguous()
     # Diagonalization of SS and creation of Hamiltonian Ha
     D, U = torch.symeig(SS, eigenvectors=True)
+    # extra factor 0.5 since we are building following ansatz for thermal expectation
+    # values
+    #
+    # <O(\beta)> = Tr(\rho(\beta) O) = Tr (\rho(\beta/2) O \rho(\beta/2))
+    # 
     expD = torch.exp(-0.5*tau*j*D)
     # SS = U*D*U.T
     gate = torch.einsum('ij,jk,lk->il', U, torch.diag(expD), U)
@@ -204,7 +209,8 @@ def optimization_2sites(onsite1, params_j, env, gate,
     onsite2.add_noise(noise=noise)
     onsite2.coeff = torch.tensor(onsite2.coeff, dtype=onsite2.dtype, requires_grad=True)
     optimizer = optimizer_class([onsite2.coeff], max_iter=max_iter, lr=lr,\
-        tolerance_grad=params_opt['tolerance_grad'], tolerance_change=params_opt['tolerance_change'] )
+        tolerance_grad=params_opt['tolerance_grad'], tolerance_change=params_opt['tolerance_change'],\
+        line_search_fn=params_opt['line_search_fn'] )
     # Compute the constant \omega_2
     w2 = const_w2(onsite1.site(), env, gate)
     # Criterion for convergence of the L-BFGS optimizer
@@ -220,7 +226,7 @@ def optimization_2sites(onsite1, params_j, env, gate,
         # might be too much 
         loc_history.append( (loss.item(), max(abs(onsite2.coeff.grad)).item()) )
         # Clip norm gradients to 1.0 to garantee they are not exploding
-        torch.nn.utils.clip_grad_norm_(onsite2.coeff, 1.0)
+        # torch.nn.utils.clip_grad_norm_(onsite2.coeff, 1.0)
         return loss
 
     for i in range(1,max_iter):     
