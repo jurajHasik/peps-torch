@@ -24,6 +24,7 @@ parser = cfg.get_args_parser()
 parser.add_argument("--theta", type=float, default=0., help="angle, in degrees, parametrizing the ratio K/J1")
 parser.add_argument("--phi", type=float, default=0., help="angle, in degrees, parametrizing the ratio J2/K")
 parser.add_argument("--C", type=float, default=0., help="amplitude/sign of the J2 curve")
+parser.add_argument("--show_corner_spectra", type=bool, default=False, help="plot the corner spectra at each CTM step")
 parser.add_argument("--import_state", type=str, default=None, help="input state")
 args, unknown_args = parser.parse_known_args()
 
@@ -64,7 +65,7 @@ def main():
 
     # define which coefficients will be added a noise and will vary in optimization
     var_coeffs_site = torch.tensor([0, 0], dtype=torch.float64, device=t_device)
-    var_coeffs_triangle = torch.tensor([0, 1, 1], dtype=torch.float64, device=t_device)
+    var_coeffs_triangle = torch.tensor([0, 0, 1], dtype=torch.float64, device=t_device)
 
     state = IPEPS_U1SYM(tensors_triangle, tensors_site, coeffs_triangle, coeffs_site,
                         sym_up_dn=True,
@@ -74,9 +75,9 @@ def main():
     model = SU3_chiral.SU3_CHIRAL(Kr=math.sin(args.theta * math.pi/180) * math.cos(args.phi/2 * math.pi/180), Ki=0., j1=math.cos(args.theta * math.pi/180), j2=args.C * math.sin(args.phi *math.pi/180))
 
     def energy_f(state, env, force_cpu=False):
-        e_dn = model.energy_triangle_dn(state, env, force_cpu=force_cpu)
-        e_up = model.energy_triangle_up(state, env, force_cpu=force_cpu)
-        e_nnn = model.energy_nnn(state, env)
+        e_dn = model.energy_triangle_dn_v2(state, env, force_cpu=force_cpu)
+        e_up = model.energy_triangle_up_v2(state, env, force_cpu=force_cpu)
+        e_nnn = model.energy_nnn(state, env, force_cpu=force_cpu)
         return (e_up + e_dn + e_nnn) / 3
 
     def print_corner_spectra(env):
@@ -100,16 +101,17 @@ def main():
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
             history = []
-        e_dn = model.energy_triangle_dn(state, env, force_cpu=ctm_args.conv_check_cpu)
-        e_up = model.energy_triangle_up(state, env, force_cpu=ctm_args.conv_check_cpu)
-        e_nnn = model.energy_nnn(state, env)
+        e_dn = model.energy_triangle_dn_v2(state, env, force_cpu=ctm_args.conv_check_cpu)
+        e_up = model.energy_triangle_up_v2(state, env, force_cpu=ctm_args.conv_check_cpu)
+        e_nnn = model.energy_nnn(state, env, force_cpu=ctm_args.conv_check_cpu)
         e_curr = (e_up + e_dn + e_nnn) / 3
         history.append(e_curr.item())
         if len(history) == 1:
             e_prev = 0
         else:
             e_prev = history[-2]
-        #print_corner_spectra(env)
+        if args.show_corner_spectra:
+            print_corner_spectra(env)
         print(
             'Step n°{:2}    E_site ={:01.14f}   (E_up={:01.14f}, E_dn={:01.14f}, E_nnn={:01.14f})  delta_E={:01.14f}'.format(
                 len(history), e_curr.item(), e_up.item(), e_dn.item(), e_nnn, e_curr.item() - e_prev))
@@ -147,8 +149,8 @@ def main():
     ctm_env_final, *ctm_log = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
 
     # energy per site
-    e_dn_final = model.energy_triangle_dn(state, ctm_env_final, force_cpu=True)
-    e_up_final = model.energy_triangle_up(state, ctm_env_final, force_cpu=True)
+    e_dn_final = model.energy_triangle_dn_v2(state, ctm_env_final, force_cpu=True)
+    e_up_final = model.energy_triangle_up_v2(state, ctm_env_final, force_cpu=True)
     e_nnn_final = model.energy_nnn(state, ctm_env_final, force_cpu=True)
     e_tot_final = (e_dn_final + e_up_final + e_nnn_final) / 3
 
@@ -161,7 +163,7 @@ def main():
     Pnnn = model.P_bonds_nnn(state, ctm_env_final, force_cpu=True)
 
     # magnetization
-    lambda3, lambda8 = model.eval_lambdas(state, ctm_env_final)
+    lambda3, lambda8 = model.eval_lambdas(state, ctm_env_final, )
 
     print('\n\n Energy density')
     print(f' E_up={e_up_final.item()}, E_dn={e_dn_final.item()}, E_tot={e_tot_final.item()}')
