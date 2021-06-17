@@ -75,6 +75,15 @@ for s in range(27):
     lambda_8_2[s, s] = lambda_8[n2, n2]
     lambda_8_3[s, s] = lambda_8[n3, n3]
 
+su3_gens= torch.zeros(3,3,8, dtype= torch.complex128, device=cfg.global_args.device)
+su3_gens[:,:,0]= torch.tensor([[0., 1., 0.], [1., 0., 0.], [0., 0., 0.]], dtype=torch.complex128, device=cfg.global_args.device)
+su3_gens[:,:,1]= torch.tensor([[0., -1.j, 0.], [1.j, 0., 0.], [0., 0., 0.]], dtype=torch.complex128, device=cfg.global_args.device)
+su3_gens[:,:,2]= lambda_3
+su3_gens[:,:,3]= torch.tensor([[0., 0., 1.], [0., 0., 0.], [1., 0., 0.]], dtype=torch.complex128, device=cfg.global_args.device)
+su3_gens[:,:,4]= torch.tensor([[0., 0., -1.j], [0., 0., 0.], [1.j, 0., 0.]], dtype=torch.complex128, device=cfg.global_args.device)
+su3_gens[:,:,5]= torch.tensor([[0., 0., 0.], [0., 0., 1.], [0., 1., 0.]], dtype=torch.complex128, device=cfg.global_args.device)
+su3_gens[:,:,6]= torch.tensor([[0., 0., 0.], [0., 0., -1.j], [0., 1.j, 0.]], dtype=torch.complex128, device=cfg.global_args.device)
+su3_gens[:,:,7]= lambda_8
 
 class SU3_CHIRAL():
 
@@ -96,6 +105,7 @@ class SU3_CHIRAL():
         _tmp_l_labels = ["l3","l8","l3_1","l3_2","l3_3","l8_1","l8_2","l8_3"]
         _tmp_l_op= [lambda_3, lambda_8, lambda_3_1, lambda_3_2, lambda_3_3, lambda_8_1, lambda_8_2, lambda_8_3]
         self.obs_ops= { l: op.to(self.device) for l,op in zip(_tmp_l_labels, _tmp_l_op)}
+        self.su3_gens= su3_gens.to(self.device)
     # Energy terms
 
     def energy_triangle_dn(self, state, env, force_cpu=False):
@@ -183,6 +193,33 @@ class SU3_CHIRAL():
         color8_2 = rdm.rdm1x1((0, 0), state, env, operator=lambda_8_2) / norm_wf
         color8_3 = rdm.rdm1x1((0, 0), state, env, operator=lambda_8_3) / norm_wf
         return (color3_1, color3_2, color3_3), (color8_1, color8_2, color8_3)
+
+    def eval_su3_gens(self, state, env):
+        id_matrix2 = torch.eye(9, dtype=torch.complex128, device=cfg.global_args.device)
+        id_matrix2 = id_matrix2.reshape(3,3,3,3)
+        id_matrix = torch.eye(27, dtype=torch.complex128, device=cfg.global_args.device)
+        norm_wf = rdm.rdm1x1((0, 0), state, env, operator=id_matrix)
+        # site 0
+        l8_ops_0= torch.einsum('ijx,klmn->ikmjlnx', self.su3_gens, id_matrix2).contiguous()
+        l8_ops_0= l8_ops_0.reshape(27,27,8)
+        for x in range(8):
+            l8_x_1x1= rdm.rdm1x1((0, 0), state, env, operator=l8_ops_0[:,:,x])
+            print(f"{x} {l8_x_1x1}")
+
+        # site 1
+        l8_ops_1= torch.einsum('ijx,klmn->kimljnx', self.su3_gens, id_matrix2).contiguous()
+        l8_ops_1= l8_ops_1.reshape(27,27,8)
+        for x in range(8):
+            l8_x_1x1= rdm.rdm1x1((0, 0), state, env, operator=l8_ops_1[:,:,x])
+            print(f"{x} {l8_x_1x1}")
+
+        # site 2
+        l8_ops_2= torch.einsum('ijx,klmn->kmilnjx', self.su3_gens, id_matrix2).contiguous()
+        l8_ops_2= l8_ops_2.reshape(27,27,8)
+        for x in range(8):
+            l8_x_1x1= rdm.rdm1x1((0, 0), state, env, operator=l8_ops_2[:,:,x])
+            print(f"{x} {l8_x_1x1}")
+
 
     def eval_obs(self,state,env,force_cpu=True):
         r"""

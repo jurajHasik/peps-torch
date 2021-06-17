@@ -113,11 +113,18 @@ def main():
 
     ctm_env_init, history, t_ctm, t_conv_check = ctmrg.run(state, ctm_env_init, \
             conv_check=ctmrg_conv_energy, ctm_args=cfg.ctm_args)
+    
+    # evaluate expectation values of SU(3) generators
+    print("\n\n",end="")
+    model.eval_su3_gens(state, ctm_env_init)
+
+
     loss0 = energy_f(state, ctm_env_init, force_cpu=cfg.ctm_args.conv_check_cpu)
     obs_values, obs_labels = model.eval_obs(state,ctm_env_init,force_cpu=False)
     print("\n\n",end="")
     print(", ".join(["epoch",f"loss"]+[label for label in obs_labels]))
     print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
+
 
     def loss_fn(state, ctm_env_in, opt_context):
         ctm_args = opt_context["ctm_args"]
