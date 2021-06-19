@@ -10,7 +10,7 @@ import itertools
 
 def _cast_to_real(t, check=True, imag_eps=1.0e-12):
     if t.is_complex():
-        assert abs(t.imag) < imag_eps,"unexpected imaginary part" 
+        assert abs(t.imag) < imag_eps,"unexpected imaginary part "+str(t.imag)
         return t.real
     return t
 
@@ -203,21 +203,21 @@ class SU3_CHIRAL():
         l8_ops_0= torch.einsum('ijx,klmn->ikmjlnx', self.su3_gens, id_matrix2).contiguous()
         l8_ops_0= l8_ops_0.reshape(27,27,8)
         for x in range(8):
-            l8_x_1x1= rdm.rdm1x1((0, 0), state, env, operator=l8_ops_0[:,:,x])
+            l8_x_1x1= rdm.rdm1x1((0, 0), state, env, operator=l8_ops_0[:,:,x]) / norm_wf
             print(f"{x} {l8_x_1x1}")
 
         # site 1
         l8_ops_1= torch.einsum('ijx,klmn->kimljnx', self.su3_gens, id_matrix2).contiguous()
         l8_ops_1= l8_ops_1.reshape(27,27,8)
         for x in range(8):
-            l8_x_1x1= rdm.rdm1x1((0, 0), state, env, operator=l8_ops_1[:,:,x])
+            l8_x_1x1= rdm.rdm1x1((0, 0), state, env, operator=l8_ops_1[:,:,x]) / norm_wf
             print(f"{x} {l8_x_1x1}")
 
         # site 2
         l8_ops_2= torch.einsum('ijx,klmn->kmilnjx', self.su3_gens, id_matrix2).contiguous()
         l8_ops_2= l8_ops_2.reshape(27,27,8)
         for x in range(8):
-            l8_x_1x1= rdm.rdm1x1((0, 0), state, env, operator=l8_ops_2[:,:,x])
+            l8_x_1x1= rdm.rdm1x1((0, 0), state, env, operator=l8_ops_2[:,:,x]) / norm_wf
             print(f"{x} {l8_x_1x1}")
 
 
@@ -237,7 +237,7 @@ class SU3_CHIRAL():
         with torch.no_grad():
             for label in selected_ops:
                 obs_val= rdm.rdm1x1((0, 0), state, env, operator=self.obs_ops[label]) / norm_wf
-                obs[f"{label}"]= _cast_to_real(obs_val)
+                obs[f"{label}"]= obs_val #_cast_to_real(obs_val)
 
         # prepare list with labels and values
         return list(obs.values()), list(obs.keys())

@@ -8,7 +8,7 @@ from ipeps.tensor_io import *
 
 class IPEPS_KAGOME(ipeps.IPEPS):
     def __init__(self, triangle_up, bond_site, triangle_down=None, 
-                 SYM_UP_DOWN=True, 
+                 SYM_UP_DOWN=True, pgs=None,
                  peps_args=cfg.peps_args, global_args=cfg.global_args):
         r"""
         :param sym_tensors: list of selected symmetric tensors
@@ -101,6 +101,9 @@ class IPEPS_KAGOME(ipeps.IPEPS):
         TODO we infer the size of the cluster from the keys of sites. Is it OK?
         """
         self.SYM_UP_DOWN= SYM_UP_DOWN
+        if pgs==None: pgs= (None,None,None)
+        assert isinstance(pgs,tuple) and len(pgs)==3,"Invalid point-group symmetries"
+        self.pgs= pgs
         self.elem_tensors= OrderedDict({'UP_T': triangle_up, 'BOND_S': bond_site})
         if not SYM_UP_DOWN:
             assert isinstance(triangle_down,torch.Tensor),\
@@ -109,6 +112,8 @@ class IPEPS_KAGOME(ipeps.IPEPS):
         else:
             self.elem_tensors['DOWN_T']= triangle_up
 
+        # TODO
+        # self.to_PG_symmetric_()
         sites = self.build_onsite_tensors()
 
         super().__init__(sites, lX=1, lY=1, peps_args=peps_args,
@@ -162,6 +167,8 @@ class IPEPS_KAGOME(ipeps.IPEPS):
         # reshape to a single d=27 index
         # TODO can we substitute this by a simple reshape ? 
         D = a_tensor_temp.size(3)
+        # a_tensor= a_tensor.reshape(27,D,D,D,D)
+        # a_tensor= a_tensor/a_tensor.abs().max()
         a_tensor = torch.zeros((27, D, D, D, D), dtype=torch.complex128, device=a_tensor_temp.device)
         for si in range(27):
             n1, n2, n3 = fmap_inv(si)
@@ -176,7 +183,29 @@ class IPEPS_KAGOME(ipeps.IPEPS):
             self.elem_tensors[k]= self.elem_tensors[k] + noise * (rand_t-1.0)
         if self.SYM_UP_DOWN:
             self.elem_tensors['DOWN_T']= self.elem_tensors['UP_T']
+        self.to_PG_symmetric_()
         self.sites = self.build_onsite_tensors()
+
+    def to_PG_symmetric_(self):
+        if self.pgs==(None, None, None): return
+
+        if self.pgs[2]=="B": 
+            self.elem_tensors["BOND_S"]= 0.5*(self.elem_tensors["BOND_S"]\
+                - self.elem_tensors["BOND_S"].permute(0,2,1).conj())
+        else:
+            raise RuntimeError("Unsupported point-group "+pgs[2])
+
+        # trivalent tensor "up" and "down" A_2 + iA_1
+        for pg, elem_t_id in zip( self.pgs[0:2], ("UP_T", "DOWN_T") ):
+            if pg=="A_2":
+                self.elem_tensors[elem_t_id]= \
+                    0.5*(self.elem_tensors[elem_t_id] + self.elem_tensors[elem_t_id].permute(1,2,0))
+                self.elem_tensors[elem_t_id]= \
+                    0.5*(self.elem_tensors[elem_t_id] + self.elem_tensors[elem_t_id].permute(2,0,1))
+                self.elem_tensors[elem_t_id]= \
+                    0.5*(self.elem_tensors[elem_t_id] - self.elem_tensors[elem_t_id].permute(0,2,1).conj())
+            else:
+                raise RuntimeError("Unsupported point-group "+pgs[1])
 
     def get_aux_bond_dims(self):
         auxd_set= set(self.elem_tensors['UP_T'].size()).union(set(self.elem_tensors['DOWN_T'].size()),\
@@ -218,6 +247,34 @@ def extend_bond_dim(state, new_d):
 
     return new_state
 
+def to_PG_symmetric(state, pgs=(None,None,None)):
+    if pgs==(None, None, None): return state
+    
+    symm_el_t= {}
+    # bond tensor B + iA
+    if pgs[2]=="B": 
+        symm_el_t["BOND_S"]= 0.5*(state.elem_tensors["BOND_S"]\
+            - state.elem_tensors["BOND_S"].permute(0,2,1).conj())
+    else:
+        raise RuntimeError("Unsupported point-group "+pgs[2])
+
+    # trivalent tensor "up" and "down" A_2 + iA_1
+    for pg, elem_t_id in zip( pgs[0:2], ("UP_T", "DOWN_T") ):
+        if pg=="A_2":
+            tmp_t= state.elem_tensors[elem_t_id]
+            tmp_t= 0.5*(tmp_t + tmp_t.permute(1,2,0))
+            tmp_t= 0.5*(tmp_t + tmp_t.permute(2,0,1))
+            symm_el_t[elem_t_id]= 0.5*(tmp_t - tmp_t.permute(0,2,1).conj())
+        else:
+            raise RuntimeError("Unsupported point-group "+pgs[1])
+
+    symm_state= state.__class__(symm_el_t["UP_T"], symm_el_t["BOND_S"], \
+        triangle_down=None if state.SYM_UP_DOWN else symm_el_t["DOWN_T"], \
+        SYM_UP_DOWN= state.SYM_UP_DOWN, pgs=pgs,
+        peps_args=cfg.peps_args, global_args=cfg.global_args)
+
+    return symm_state
+
 def read_ipeps_kagome(jsonfile, peps_args=cfg.peps_args, global_args=cfg.global_args):
     r"""
     :param jsonfile: input file describing iPEPS in json format
@@ -256,7 +313,11 @@ def read_ipeps_kagome(jsonfile, peps_args=cfg.peps_args, global_args=cfg.global_
     with open(jsonfile) as j:
         raw_state = json.load(j)
 
-        SYM_UP_DOWN= raw_state["SYM_UP_DOWN"] 
+        SYM_UP_DOWN= raw_state["SYM_UP_DOWN"]
+
+        pgs=None
+        if "pgs" in raw_state.keys():
+            pgs= tuple( raw_state["pgs"] )
 
         # Loop over non-equivalent tensor,coeffs pairs in the unit cell
         elem_tensors= OrderedDict()
@@ -270,7 +331,7 @@ def read_ipeps_kagome(jsonfile, peps_args=cfg.peps_args, global_args=cfg.global_
 
         state = IPEPS_KAGOME(elem_tensors['UP_T'], elem_tensors['BOND_S'], \
             triangle_down=elem_tensors['DOWN_T'], SYM_UP_DOWN=SYM_UP_DOWN, \
-            peps_args=peps_args, global_args=global_args)
+            pgs= pgs, peps_args=peps_args, global_args=global_args)
     return state
 
 def write_ipeps_kagome(state, outputfile, tol=1.0e-14, normalize=False):
@@ -306,7 +367,10 @@ def write_ipeps_kagome(state, outputfile, tol=1.0e-14, normalize=False):
     TODO implement cutoff on elements with magnitude below tol
     """
     json_state = dict({"lX": state.lX, "lY": state.lY, \
-        "elem_tensors": {}, "SYM_UP_DOWN": state.SYM_UP_DOWN})
+        "elem_tensors": {}, "SYM_UP_DOWN": state.SYM_UP_DOWN, \
+        "pgs": list(state.pgs)})
+    # if state.pgs!=(None, None, None):
+    #     state= to_PG_symmetric(state, state.pgs)
 
     # write list of considered elementary tensors
     for key, t in state.elem_tensors.items():
