@@ -262,8 +262,7 @@ def to_PG_symmetric(state, pgs=(None,None,None)):
     for pg, elem_t_id in zip( pgs[0:2], ("UP_T", "DOWN_T") ):
         if pg=="A_2":
             tmp_t= state.elem_tensors[elem_t_id]
-            tmp_t= 0.5*(tmp_t + tmp_t.permute(1,2,0))
-            tmp_t= 0.5*(tmp_t + tmp_t.permute(2,0,1))
+            tmp_t= (1./3)*(tmp_t + tmp_t.permute(1,2,0) + tmp_t.permute(2,0,1))
             symm_el_t[elem_t_id]= 0.5*(tmp_t - tmp_t.permute(0,2,1).conj())
         else:
             raise RuntimeError("Unsupported point-group "+pgs[1])
