@@ -241,8 +241,8 @@ def extend_bond_dim(state, new_d):
     new_elem_tensors['BOND_S'][:,:ad,:ad]= state.elem_tensors['UP_T']
 
     new_state= state.__class__(new_elem_tensors['UP_T'], new_elem_tensors['BOND_S'],\
-        triangle_down=new_elem_tensors['DOWN_T'],\
-        SYM_UP_DOWN=state.SYM_UP_DOWN,\
+        triangle_down=None if state.SYM_UP_DOWN else new_elem_tensors['DOWN_T'],\
+        SYM_UP_DOWN=state.SYM_UP_DOWN, pgs= state.pgs,\
         peps_args=cfg.peps_args, global_args=cfg.global_args)
 
     return new_state
