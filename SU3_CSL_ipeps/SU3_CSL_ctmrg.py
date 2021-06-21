@@ -28,6 +28,7 @@ parser.add_argument("--top_n", type=int, default=2,
 parser.add_argument("--import_state", type=str, default=None, help="input state for ctmrg")
 parser.add_argument("--sym_up_dn", type=int, default=1, help="same trivalent tensors for up and down triangles")
 parser.add_argument("--show_corner_spectra", type=bool, default=False, help="plot the corner spectra at each CTM step")
+parser.add_argument("--filter_noise_spectra", type=bool, default=False, help="discard the noise in the corner spectra")
 args, unknown_args = parser.parse_known_args()
 
 
@@ -49,8 +50,8 @@ def main():
         tens = tens.to(t_device)
         if name in ['S0', 'S1', 'S2']:
             tensors_triangle.append(tens)
-        elif name in ['S3', 'S4', 'S5', 'S6']:
-            tensors_triangle.append(tens)
+        #elif name in ['S3', 'S4', 'S5', 'S6']:
+        #    tensors_triangle.append(tens)
         elif name in ['L0', 'L1']:
             tensors_site.append(tens)
         else:
@@ -119,6 +120,13 @@ def main():
         e_up = model.energy_triangle_up_v2(state, env, force_cpu=ctm_args.conv_check_cpu)
         e_nnn = model.energy_nnn(state, env, force_cpu=ctm_args.conv_check_cpu)
         e_curr = (e_up + e_dn + e_nnn)/3
+        if args.filter_noise_spectra:
+            for c_loc, c_ten in env.C.items():
+                u,s,v = torch.svd(c_ten, compute_uv=True)
+                for i in range(args.chi):
+                    if s[i] < 1e-11:
+                        s[i] = 0
+                c_ten = torch.einsum('ia,a,ja->ij', u, s, torch.conj(v))
         history.append(e_curr.item())
         if len(history)==1:
             e_prev = 0
