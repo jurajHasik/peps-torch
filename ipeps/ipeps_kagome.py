@@ -198,10 +198,9 @@ class IPEPS_KAGOME(ipeps.IPEPS):
         # trivalent tensor "up" and "down" A_2 + iA_1
         for pg, elem_t_id in zip( self.pgs[0:2], ("UP_T", "DOWN_T") ):
             if pg=="A_2":
-                self.elem_tensors[elem_t_id]= \
-                    0.5*(self.elem_tensors[elem_t_id] + self.elem_tensors[elem_t_id].permute(1,2,0))
-                self.elem_tensors[elem_t_id]= \
-                    0.5*(self.elem_tensors[elem_t_id] + self.elem_tensors[elem_t_id].permute(2,0,1))
+                self.elem_tensors[elem_t_id]= (1./3)*(self.elem_tensors[elem_t_id]\
+                    + self.elem_tensors[elem_t_id].permute(1,2,0)\
+                    + self.elem_tensors[elem_t_id].permute(2,0,1))
                 self.elem_tensors[elem_t_id]= \
                     0.5*(self.elem_tensors[elem_t_id] - self.elem_tensors[elem_t_id].permute(0,2,1).conj())
             else:
