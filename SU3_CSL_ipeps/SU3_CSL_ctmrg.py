@@ -124,9 +124,9 @@ def main():
             for c_loc, c_ten in env.C.items():
                 u,s,v = torch.svd(c_ten, compute_uv=True)
                 for i in range(args.chi):
-                    if s[i] < 1e-11:
+                    if s[i] < 1e-10:
                         s[i] = 0
-                c_ten = torch.einsum('ia,a,ja->ij', u, s, torch.conj(v))
+                env.C[c_loc] = torch.einsum('ia,a,ja->ij', u, s, torch.conj(v))
         history.append(e_curr.item())
         if len(history)==1:
             e_prev = 0
