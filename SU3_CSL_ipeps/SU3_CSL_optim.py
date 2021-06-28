@@ -21,11 +21,12 @@ log = logging.getLogger(__name__)
 
 # parse command line args and build necessary configuration objects
 parser = cfg.get_args_parser()
-parser.add_argument("--theta", type=float, default=0., help="angle parametrizing the chiral Hamiltonian")
-parser.add_argument("--j1", type=float, default=0., help="nearest-neighbor exchange coupling")
-parser.add_argument("--j2", type=float, default=0., help="next-nearest-neighbor exchange coupling")
-parser.add_argument("--ansatz", type=str, default="A1+iA2, B", help="choice of the tensor ansatz")
+parser.add_argument("--chiral_angle", type=float, default=0., help="angle parametrizing the chiral Hamiltonian")
+parser.add_argument("--theta", type=float, default=0., help="angle, in degrees, parametrizing the ratio K/J1")
+parser.add_argument("--phi", type=float, default=0., help="angle, in degrees, parametrizing the ratio J2/K")
+parser.add_argument("--C", type=float, default=0., help="amplitude/sign of the J2 curve")
 parser.add_argument("--import_state", type=str, default=None, help="input state")
+parser.add_argument("--show_corner_spectra", type=bool, default=False, help="plot the corner spectra at each CTM step")
 parser.add_argument("--sym_up_dn", type=int, default=1, help="same trivalent tensors for up and down triangles")
 args, unknown_args = parser.parse_known_args()
 
@@ -42,49 +43,52 @@ def main():
     tensors_site = []
     tensors_triangle = []
     path = "SU3_CSL_ipeps/SU3_D7_tensors/"
-    for name in ['S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'L0', 'L1', 'L2']:
-        tens = load_SU3_tensor(path + name)
+    for name in ['S0', 'S1', 'S2', 'S3', 'S4', 'L0', 'L1', 'L2']:
+        tens = load_SU3_tensor(path+name)
         tens = tens.to(t_device)
         if name in ['S0', 'S1', 'S2']:
-            tensors_triangle.append(1j * tens)
-        elif name in ['S3', 'S4', 'S5', 'S6']:
             tensors_triangle.append(tens)
+        elif name in ['S3', 'S4']:
+            tensors_triangle.append(1j*tens)
         elif name in ['L0', 'L1']:
             tensors_site.append(tens)
-        else:
+        elif name in ['L2']:
             tensors_site.append(1j * tens)
 
     # define initial coefficients
     if args.import_state is not None:
-        checkpoint = torch.load(args.import_state)
+        if torch.cuda.is_available():
+            map_location = lambda storage, loc: storage.cuda()
+        else:
+            map_location = 'cpu'
+        checkpoint = torch.load(args.import_state, map_location = map_location)
         coeffs = checkpoint["parameters"]
-        coeffs_triangle_up, coeffs_triangle_dn, coeffs_site = coeffs[(0, 0)]
-        for coeff_t in coeffs_triangle_dn.values(): coeff_t.requires_grad_(False)
-        for coeff_t in coeffs_triangle_up.values(): coeff_t.requires_grad_(False)
-        for coeff_t in coeffs_site.values(): coeff_t.requires_grad_(False)
-        # coeffs ... .to(t_device)
+        coeffs_triangle = {(0,0): coeffs['t_up'].requires_grad_(False).to(t_device)}
+        coeffs_site = {(0,0): coeffs['site'].requires_grad_(False).to(t_device)}
     else:
         # AKLT state
-        coeffs_triangle = {(0, 0): torch.tensor([1., 0., 0., 0., 0., 0., 0.], dtype=torch.float64, device=t_device)}
-        coeffs_site = {(0, 0): torch.tensor([1., 0., 0.], dtype=torch.float64, device=t_device)}
-        # Ji-Yao's state
-        #coeffs_triangle = {(0, 0): torch.tensor([1.0000, 0.3563, 4.4882, -0.3494, -3.9341, 0., 0.], dtype=torch.float64,device=t_device)}
-        #coeffs_site = {(0, 0): torch.tensor([1.0000, 0.2429, 0.], dtype=torch.float64, device=t_device)}
+        coeffs_triangle = {(0, 0): torch.tensor([1., 0., 0., 0., 0.], dtype=torch.float64, device=t_device)}
+        coeffs_site = {(0, 0): torch.tensor([1., 1., 0], dtype=torch.float64, device=t_device)}
+
 
     # define which coefficients will be added a noise
-    var_coeffs_site = torch.tensor([0, 1, 0], dtype=torch.float64, device=t_device)
-    var_coeffs_triangle = torch.tensor([0, 1, 1, 1, 1, 0, 0], dtype=torch.float64, device=t_device)
+    var_coeffs_triangle = torch.tensor([0, 1, 1, 1, 1], dtype=torch.float64, device=t_device)
+    var_coeffs_site = torch.tensor([0, 0, 0], dtype=torch.float64, device=t_device)
 
-    state = IPEPS_U1SYM(tensors_triangle, tensors_site, coeffs_triangle, coeffs_site, sym_up_dn=bool(args.sym_up_dn),
+
+    state = IPEPS_U1SYM(tensors_triangle, tensors_site, coeffs_triangle_up = coeffs_triangle, coeffs_site=coeffs_site, sym_up_dn=bool(args.sym_up_dn),
                         var_coeffs_triangle=var_coeffs_triangle, var_coeffs_site=var_coeffs_site)
     state.add_noise(args.instate_noise)
     state.print_coeffs()
 
-    model = SU3_chiral.SU3_CHIRAL(Kr=math.cos(args.theta * math.pi/180), Ki=math.sin(args.theta * math.pi/180), j1=args.j1, j2=args.j2)
+    model = SU3_chiral.SU3_CHIRAL(Kr=math.sin(args.theta * math.pi/180) * math.cos(args.phi/2 * math.pi/180) * math.cos(args.chiral_angle * math.pi/180),
+                                  Ki=math.sin(args.chiral_angle * math.pi/180),
+                                  j1=math.cos(args.theta * math.pi/180), j2=args.C * math.sin(args.phi *math.pi/180))
+
 
     def energy_f(state, env, force_cpu=False):
-        e_dn = model.energy_triangle_dn(state, env, force_cpu=force_cpu)
-        e_up = model.energy_triangle_up(state, env, force_cpu=force_cpu)
+        e_dn = model.energy_triangle_dn_v2(state, env, force_cpu=force_cpu)
+        e_up = model.energy_triangle_up_v2(state, env, force_cpu=force_cpu)
         e_nnn = model.energy_nnn(state, env)
         return (e_up + e_dn + e_nnn) / 3
 
@@ -110,13 +114,20 @@ def main():
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
             history = []
-        e_dn = model.energy_triangle_dn(state, env, force_cpu=ctm_args.conv_check_cpu)
-        e_up = model.energy_triangle_up(state, env, force_cpu=ctm_args.conv_check_cpu)
+        e_dn = model.energy_triangle_dn_v2(state, env, force_cpu=ctm_args.conv_check_cpu)
+        e_up = model.energy_triangle_up_v2(state, env, force_cpu=ctm_args.conv_check_cpu)
         e_nnn = model.energy_nnn(state, env)
         e_curr = (e_up + e_dn + e_nnn) / 3
         history.append(e_curr.item())
-        #print_corner_spectra(env)
-        print(f'Step n°{len(history)}    E_site ={e_curr.item()}   (E_up={e_up.item()}, E_dn={e_dn.item()})')
+        if len(history) == 1:
+            e_prev = 0
+        else:
+            e_prev = history[-2]
+        if args.show_corner_spectra:
+            print_corner_spectra(env)
+        print(
+            'Step n°{:2}    E_site ={:01.14f}   (E_up={:01.14f}, E_dn={:01.14f}, E_nnn={:01.14f})  delta_E={:01.14f}'.format(
+                len(history), e_curr.item(), e_up.item(), e_dn.item(), e_nnn, e_curr.item() - e_prev))
         if (len(history) > 1 and abs(history[-1] - history[-2]) < ctm_args.ctm_conv_tol) \
                 or len(history) >= ctm_args.ctm_max_iter:
             log.info({"history_length": len(history), "history": history})

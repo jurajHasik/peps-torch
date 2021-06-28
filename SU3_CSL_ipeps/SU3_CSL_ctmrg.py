@@ -44,17 +44,16 @@ def main():
     tensors_site = []
     tensors_triangle = []
     path = "SU3_CSL_ipeps/SU3_D7_tensors/"
-    for name in ['S0', 'S1', 'S2', 'L0', 'L1']:
-    #for name in ['S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'L0', 'L1', 'L2']:
-        tens = load_SU3_tensor(path+name)
+    for name in ['S0', 'S1', 'S2', 'S3', 'S4', 'L0', 'L1', 'L2']:
+        tens = load_SU3_tensor(path + name)
         tens = tens.to(t_device)
         if name in ['S0', 'S1', 'S2']:
             tensors_triangle.append(tens)
-        #elif name in ['S3', 'S4', 'S5', 'S6']:
-        #    tensors_triangle.append(tens)
+        elif name in ['S3', 'S4']:
+            tensors_triangle.append(1j * tens)
         elif name in ['L0', 'L1']:
             tensors_site.append(tens)
-        else:
+        elif name in ['L2']:
             tensors_site.append(1j * tens)
 
     # define initial coefficients
@@ -63,31 +62,30 @@ def main():
             map_location = lambda storage, loc: storage.cuda()
         else:
             map_location = 'cpu'
-        checkpoint = torch.load(args.import_state, map_location = map_location)
+        checkpoint = torch.load(args.import_state, map_location=map_location)
         coeffs = checkpoint["parameters"]
-        coeffs_triangle = {(0,0): coeffs['t_up'].requires_grad_(False).to(t_device)}
-        coeffs_site = {(0,0): coeffs['site'].requires_grad_(False).to(t_device)}
-        # coeffs ... .to(t_device)
+        coeffs_triangle = {(0, 0): coeffs['t_up'].requires_grad_(False).to(t_device)}
+        coeffs_site = {(0, 0): coeffs['site'].requires_grad_(False).to(t_device)}
     else:
         # AKLT state
-        coeffs_triangle = {(0, 0): torch.tensor([1., 0., 0.], dtype=torch.float64, device=t_device)}
-        coeffs_site = {(0, 0): torch.tensor([1., 1.], dtype=torch.float64, device=t_device)}
-
+        coeffs_triangle = {(0, 0): torch.tensor([1., 0., 0., 0., 0.], dtype=torch.float64, device=t_device)}
+        coeffs_site = {(0, 0): torch.tensor([1., 1., 0], dtype=torch.float64, device=t_device)}
 
     # define which coefficients will be added a noise
-    var_coeffs_triangle = torch.tensor([0, 0, 1], dtype=torch.float64, device=t_device)
-    var_coeffs_site = torch.tensor([0, 0], dtype=torch.float64, device=t_device)
+    var_coeffs_triangle = torch.tensor([0, 1, 1, 1, 1], dtype=torch.float64, device=t_device)
+    var_coeffs_site = torch.tensor([0, 0, 0], dtype=torch.float64, device=t_device)
 
-
-    state = IPEPS_U1SYM(tensors_triangle, tensors_site, coeffs_triangle_up = coeffs_triangle, coeffs_site=coeffs_site, sym_up_dn=bool(args.sym_up_dn),
+    state = IPEPS_U1SYM(tensors_triangle, tensors_site, coeffs_triangle_up=coeffs_triangle, coeffs_site=coeffs_site,
+                        sym_up_dn=bool(args.sym_up_dn),
                         var_coeffs_triangle=var_coeffs_triangle, var_coeffs_site=var_coeffs_site)
     state.add_noise(args.instate_noise)
     state.print_coeffs()
 
-    model = SU3_chiral.SU3_CHIRAL(Kr=math.sin(args.theta * math.pi/180) * math.cos(args.phi/2 * math.pi/180) * math.cos(args.chiral_angle * math.pi/180),
-                                  Ki=math.sin(args.chiral_angle * math.pi/180),
-                                  j1=math.cos(args.theta * math.pi/180), j2=args.C * math.sin(args.phi *math.pi/180))
-
+    model = SU3_chiral.SU3_CHIRAL(
+        Kr=math.sin(args.theta * math.pi / 180) * math.cos(args.phi / 2 * math.pi / 180) * math.cos(
+            args.chiral_angle * math.pi / 180),
+        Ki=math.sin(args.chiral_angle * math.pi / 180),
+        j1=math.cos(args.theta * math.pi / 180), j2=args.C * math.sin(args.phi * math.pi / 180))
 
     def energy_f(state, env):
         e_dn = model.energy_triangle_dn_v2(state, env, force_cpu=True)
