@@ -1,7 +1,7 @@
 # from torch.utils.checkpoint import checkpoint
 import config as cfg
 from ctm.generic_abelian.ctm_components import *
-import yast
+import yamps.yast as yast
 from tn_interface_abelian import mm
 from tn_interface_abelian import transpose
 import logging

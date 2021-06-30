@@ -1,7 +1,7 @@
 import warnings
 import config as cfg
 from itertools import product
-import yast
+import yamps.yast as yast
 try:
     import torch
     from ctm.generic.env import ENV

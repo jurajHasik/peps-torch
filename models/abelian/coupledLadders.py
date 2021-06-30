@@ -4,7 +4,8 @@ import config as cfg
 import yamps.yast as yast
 from tn_interface_abelian import contract, permute  
 import groups.su2_abelian as su2
-from ctm.generic_abelian import rdm
+# from ctm.generic_abelian import rdm
+from ctm.generic_abelian_hard_merge import rdm
 import torch
 
 def _cast_to_real(t):
