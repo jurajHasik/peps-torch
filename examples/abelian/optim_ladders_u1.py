@@ -1,13 +1,15 @@
 import context
-import torch
-import numpy as np
 import argparse
+import numpy as np
+import torch
 import config as cfg
 import examples.abelian.settings_full_torch as settings_full
 import examples.abelian.settings_U1_torch as settings_U1
 from ipeps.ipeps_abelian import *
-from ctm.generic_abelian.env_abelian import *
-import ctm.generic_abelian.ctmrg as ctmrg
+# from ctm.generic_abelian.env_abelian import *
+# import ctm.generic_abelian.ctmrg as ctmrg
+from ctm.generic_abelian_hard_merge.env_abelian import *
+import ctm.generic_abelian_hard_merge.ctmrg as ctmrg
 from models.abelian import coupledLadders
 # from optim.ad_optim import optimize_state
 from optim.ad_optim_lbfgs_mod import optimize_state
@@ -98,6 +100,9 @@ def main():
     def loss_fn(state, ctm_env_in, opt_context):
         ctm_args= opt_context["ctm_args"]
         opt_args= opt_context["opt_args"]
+
+        # build double-layer open on-site tensors
+        state.build_sites_dl_open()
 
         # possibly re-initialize the environment
         if opt_args.opt_ctm_reinit:

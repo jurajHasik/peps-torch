@@ -224,6 +224,7 @@ class IPEPS_ABELIAN():
         # TODO set requires_grad False
         self.sites= {ind: yast.import_from_dict(config= self.engine, d=t_dict_repr) \
             for ind,t_dict_repr in checkpoint["parameters"].items()}
+        self.build_sites_dl_open()
 
     def write_to_file(self, outputfile, tol=None, normalize=False):
         write_ipeps(self, outputfile, tol=tol, normalize=normalize)
@@ -394,7 +395,7 @@ def write_ipeps(state, outputfile, tol=None, normalize=False,\
 class IPEPS_ABELIAN_WEIGHTED(IPEPS_ABELIAN):
 
     def __init__(self, settings, sites, weights, vertexToSite=None, lX=None, lY=None, 
-        peps_args=cfg.peps_args, global_args=cfg.global_args):
+        build_open_dl=True, peps_args=cfg.peps_args, global_args=cfg.global_args):
         r"""
         :param settings: TODO
         :param sites: map from elementary unit cell to on-site tensors
@@ -488,7 +489,7 @@ class IPEPS_ABELIAN_WEIGHTED(IPEPS_ABELIAN):
         self.weights= OrderedDict(weights)
 
         super().__init__(settings, sites, vertexToSite=vertexToSite, lX=lX, lY=lY, 
-            peps_args=peps_args, global_args=global_args)
+            build_open_dl=build_open_dl, peps_args=peps_args, global_args=global_args)
 
     def absorb_weights(self, peps_args=cfg.peps_args, global_args=cfg.global_args):
         dxy_w_to_ind= OrderedDict({(0,-1): 1, (-1,0): 2, (0,1): 3, (1,0): 4})
