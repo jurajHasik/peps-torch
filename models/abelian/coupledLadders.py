@@ -5,7 +5,9 @@ import yamps.yast as yast
 from tn_interface_abelian import contract, permute  
 import groups.su2_abelian as su2
 # from ctm.generic_abelian import rdm
-from ctm.generic_abelian_hard_merge import rdm
+# from ctm.generic_abelian_hard_merge import rdm
+from ctm.generic_abelian_hard_merge import rdm_v1 as rdm
+# from ctm.generic_abelian_hard_merge import rdm_v2 as rdm
 import torch
 
 def _cast_to_real(t):

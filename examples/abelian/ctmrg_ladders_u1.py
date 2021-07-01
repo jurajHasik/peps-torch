@@ -78,6 +78,7 @@ def main():
         e_curr = model.energy_2x1_1x2(state, env).item()
         history.append(e_curr)
         obs_values, obs_labels = model.eval_obs(state, env)
+        # obs_values, obs_labels= ["None"], [None]
         print(", ".join([f"{len(history)}",f"{e_curr}"]+[f"{v}" for v in obs_values]))
 
 

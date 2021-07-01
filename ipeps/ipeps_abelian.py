@@ -13,12 +13,30 @@ import config as cfg
 import yamps.yast as yast
 from ipeps.tensor_io import *
 
+def _fused_open_dl_site(a, fusion_level="full"):
+    #  0 1 
+    #   \|                      (16)(05)           1  0
+    # 2--a--4                    || //             | /
+    #    |     1->6      = (27)==aa*==(49) =>  2--(aa*)--4
+    #    3     |                 ||                |
+    #       2--a*--4->9         (38)               3
+    #     ->7  |\0->5
+    #          3->8
+    A= a.tensordot(a, axes=([],[]), conj=(0,1))
+    if fusion_level=="full":
+        A= A.fuse_legs_hard( axes=((0,5),(1,6),(2,7),(3,8),(4,9)) )
+    elif fusion_level=="basic":
+        A= A.fuse_legs_hard( axes=(0,5,(1,6),(2,7),(3,8),(4,9)) )
+    else:
+        raise RuntimeError("Unsupported fusion_level option "+fusion_level)
+    return A
+
 class IPEPS_ABELIAN():
     
     _REF_S_DIRS=(-1,-1,-1,1,1)
 
     def __init__(self, settings, sites, vertexToSite=None, lX=None, lY=None, 
-        peps_args=cfg.peps_args, global_args=cfg.global_args):
+        build_open_dl=True, peps_args=cfg.peps_args, global_args=cfg.global_args):
         r"""
         :param settings: TODO
         :param sites: map from elementary unit cell to on-site tensors
@@ -115,6 +133,8 @@ class IPEPS_ABELIAN():
         self.sym= settings.sym.SYM_ID
 
         self.sites= OrderedDict(sites)
+        self.sites_dl_open= None
+        if build_open_dl: self.build_sites_dl_open()
         
         # TODO we infer the size of the cluster from the keys of sites. Is it OK?
         # infer the size of the cluster
@@ -138,6 +158,11 @@ class IPEPS_ABELIAN():
                 return ( (x + abs(x)*self.lX)%self.lX, (y + abs(y)*self.lY)%self.lY )
             self.vertexToSite = vertexToSite
 
+    def build_sites_dl_open(self,fusion_level="full"):
+        self.sites_dl_open= OrderedDict(
+            { coord: _fused_open_dl_site(site_t, fusion_level=fusion_level) for coord, site_t in self.sites.items() }
+        )
+
     def site(self, coord):
         """
         :param coord: tuple (x,y) specifying vertex on a square lattice
@@ -146,6 +171,9 @@ class IPEPS_ABELIAN():
         :rtype: yamps.tensor.Tensor
         """
         return self.sites[self.vertexToSite(coord)]
+
+    def site_dl_open(self, coord):
+        return self.sites_dl_open[self.vertexToSite(coord)]
 
     def to(self, device):
         r"""

@@ -38,25 +38,6 @@ def _sym_pos_def_rdm(rdm, sym_pos_def=False, verbosity=0, who=None):
 # double-layer on-site tensor
 
 # ----- COMPONENTS ------------------------------------------------------------
-def fused_open_dl_site(a, fusion_level="full"):
-    #  0 1 
-    #   \|                      (16)(05)           1  0
-    # 2--a--4                    || //             | /
-    #    |     1->6      = (27)==aa*==(49) =>  2--(aa*)--4
-    #    3     |                 ||                |
-    #       2--a*--4->9         (38)               3
-    #     ->7  |\0->5
-    #          3->8
-    A= contract(a, conj(a), axes=([],[]))
-    if fusion_level=="full":
-        A= A.fuse_legs_hard( axes=((0,5),(1,6),(2,7),(3,8),(4,9)) )
-    elif fusion_level=="basic":
-        A= A.fuse_legs_hard( axes=(0,5,(1,6),(2,7),(3,8),(4,9)) )
-    else:
-        raise RuntimeError("Unsupported fusion_level option "+fusion_level)
-
-    return A
-
 def open_C2x2_LU(coord, state, env, fusion_level="full", verbosity=0):
     r= state.vertexToSite(coord)
     C = env.C[(state.vertexToSite(r),(-1,-1))]
@@ -105,7 +86,7 @@ def open_C2x2_LU(coord, state, env, fusion_level="full", verbosity=0):
     # |          3
     # 0 
     #                
-    A= fused_open_dl_site(state.site(r), fusion_level=fusion_level)
+    A= state.site_dl_open(r)
     c2x2= contract(c2x2, A, ([1,2],[2,1]))
 
     # C----T--1->3                   C----T--2
@@ -206,7 +187,7 @@ def open_C2x2_LD(coord, state, env, fusion_level="full", verbosity=0):
     # |          2
     # C----------T--3->1
     # 
-    A= fused_open_dl_site(state.site(r), fusion_level=fusion_level)
+    A= state.site_dl_open(r)
     c2x2= contract(c2x2, A, ([1,2],[2,3]))
     
     # 0    3,6->1,2->1                 0    1  4,5
@@ -279,7 +260,7 @@ def open_C2x2_RU(coord, state, env, fusion_level="full", verbosity=0):
     #  3<-2--a--4 2--T1
     #     4<-3    1<-3
     # 
-    A= fused_open_dl_site(state.site(r), fusion_level=fusion_level)
+    A= state.site_dl_open(r)
     c2x2= contract(c2x2,A,([1,2],[1,4]))
 
     #          0--T2----C  =>              0--T2----C
@@ -349,7 +330,7 @@ def open_C2x2_RD(coord, state, env, fusion_level="full", verbosity=0):
     #       2          |
     # 1<-3--T1---------C
     #                   
-    A= fused_open_dl_site(state.site(r), fusion_level=fusion_level)
+    A= state.site_dl_open(r)
     c2x2= contract(c2x2,A,([1,2],[4,3]))
 
     #      1,2<-3,6    0  =>          (+1)1<-1,2   0
