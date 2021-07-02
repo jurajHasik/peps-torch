@@ -194,7 +194,7 @@ class IPEPS_ABELIAN():
     def to_dense(self, peps_args=cfg.peps_args, global_args=cfg.global_args):
         r"""
         :return: returns equivalent dense state with all on-site tensors in their dense 
-                 representation on torch backend. 
+                 representation on torch backend.
         :rtype: IPEPS
 
         Create an IPEPS state with all on-site tensors as dense possesing no explicit

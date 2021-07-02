@@ -30,6 +30,7 @@ class COUPLEDLADDERS_NOSYM():
     def __init__(self, settings, alpha=0.0, Bz_val=0.0, global_args=cfg.global_args):
         r"""
         :param alpha: nearest-neighbour interaction
+        :param Bz_val: staggered magnetic field
         :param global_args: global configuration
         :type alpha: float
         :type Bz: float
@@ -56,7 +57,6 @@ class COUPLEDLADDERS_NOSYM():
         * :math:`h2_{ij} = \mathbf{S}_i.\mathbf{S}_j` with indices of h2 corresponding to :math:`s_i s_j;s'_i s'_j`
 
         * :math:`h1_{i} = \mathbf{S}^z_i` with indices of h1 corresponding to :math:`s_i ;s'_i`
-
         """
         assert settings.sym.NSYM==0, "No abelian symmetry is assumed"
         self.engine= settings

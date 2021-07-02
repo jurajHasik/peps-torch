@@ -21,6 +21,7 @@ log = logging.getLogger(__name__)
 parser= cfg.get_args_parser()
 # additional model-dependent arguments
 parser.add_argument("--alpha", type=float, default=0., help="inter-ladder coupling")
+parser.add_argument("--bz_stag", type=float, default=0., help="staggered magnetic field")
 parser.add_argument("--symmetry", default=None, help="symmetry structure", choices=["NONE","U1"])
 parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
@@ -46,7 +47,7 @@ def main():
     settings.backend.set_num_threads(args.omp_cores)
     settings.backend.random_seed(args.seed)
 
-    model= coupledLadders.COUPLEDLADDERS(alpha=args.alpha)
+    model= coupledLadders.COUPLEDLADDERS(alpha=args.alpha, bz_val=args.bz_stag)
 
     # initialize an ipeps
     # 1) define lattice-tiling function, that maps arbitrary vertex of square lattice
@@ -67,11 +68,11 @@ def main():
         print(f"dtype of initial state {state.dtype} and model {model.dtype} do not match.")
         print(f"Setting default dtype to {cfg.global_args.dtype} and reinitializing "\
         +" the model")
-        model= coupledLadders.COUPLEDLADDERS(alpha=args.alpha)
+        model= coupledLadders.COUPLEDLADDERS(alpha=args.alpha, bz_val=args.bz_stag)
 
     print(state)
     # convert to dense
-    state_d= state.to_dense_torch_ipeps()
+    state_d= state.to_dense()
     print(state_d)
 
     @torch.no_grad()
@@ -100,7 +101,7 @@ def main():
         ctm_args= opt_context["ctm_args"]
         opt_args= opt_context["opt_args"]
 
-        state_d= state.to_dense_torch_ipeps()
+        state_d= state.to_dense()
 
         # possibly re-initialize the environment
         if opt_args.opt_ctm_reinit:
@@ -129,7 +130,7 @@ def main():
         else:
             epoch= len(opt_context["loss_history"]["loss"]) 
             loss= opt_context["loss_history"]["loss"][-1] 
-        state_d= state.to_dense_torch_ipeps()
+        state_d= state.to_dense()
         obs_values, obs_labels = model.eval_obs(state_d,ctm_env_d)
         print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
 
@@ -149,7 +150,7 @@ def main():
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"
     state= read_ipeps(outputstatefile, settings)
-    state_d= state.to_dense_torch_ipeps()
+    state_d= state.to_dense()
     ctm_env_d = ENV(args.chi, state_d)
     init_env(state_d, ctm_env_d)
     ctm_env_d, *ctm_log = ctmrg.run(state_d, ctm_env_d, conv_check=ctmrg_conv_energy)
