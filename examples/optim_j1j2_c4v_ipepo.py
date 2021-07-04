@@ -1,7 +1,7 @@
 """Optimizer for one step of Trotter-Suzuki decomposition. The optimizer
 maximizes the ratio of overlaps w.r.t the coefficients of the basic Cs tensors
 and updates them."""
-
+import context
 import torch
 import warnings
 try:
@@ -32,6 +32,7 @@ parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour
 parser.add_argument("--n", type=int, default=40, help="max number of optimization steps within a single gate application")
 # argument --opt_max_iter defines the total number of complete imaginary time steps
 parser.add_argument("--tau", type=float, default=1/8, help=r"\tau = \frac{\beta}{N}")
+parser.add_argument("--init_tau", type=float, default=1.0e-3, help="MPO tower ansatz")
 parser.add_argument("--t", type=float, default=1e-4, help="threshold of optimizer")
 parser.add_argument("--no", type=float, default=1e-2, help="noise added to the coefficients during single gate application")
 # --OPTARGS_lr defines learning rate of the gradient optimizer within single gate application
@@ -126,12 +127,14 @@ def main():
     model= J1J2_C4V_BIPARTITE_THERMAL(j1=args.j1, j2=args.j2)
 
 
-    # on_site_T0= ts.single_layer_trotter_decompo_ansatz(args.j1, 0.0001, cfg.global_args)
-    # on_site_T0= torch.einsum('ijuldr,aj->aiuldr',on_site_T0, torch.as_tensor([[0,-1],[1,0]],\
-    #     dtype=torch.float64, device=cfg.global_args.device))
-    # # decompose onto symmetric tensors
-    # lambdas_0= [torch.tensordot( on_site_T0, t.view( [2,2]+[args.bond_dim]*4), ([0,1,2,3,4,5],[0,1,2,3,4,5]) ).item() for t in onsite1.base_tensor]
-    # onsite1.coeff= torch.tensor(lambdas_0, dtype=onsite1.dtype, device=onsite1.device)
+    mpo_tower_tau= args.init_tau
+    on_site_T0= ts.single_layer_trotter_decompo_ansatz_analytical(args.j1, mpo_tower_tau, cfg.global_args)
+    on_site_T0= torch.einsum('ijuldr,aj->aiuldr',on_site_T0, torch.as_tensor([[0,-1],[1,0]],\
+        dtype=torch.float64, device=cfg.global_args.device))
+    # decompose onto symmetric tensors
+    lambdas_0= [torch.tensordot( on_site_T0, t.view( [2,2]+[args.bond_dim]*4),\
+        ([0,1,2,3,4,5],[0,1,2,3,4,5]) ).item() for t in onsite1.base_tensor]
+    onsite1.coeff= torch.tensor(lambdas_0, dtype=onsite1.dtype, device=onsite1.device)
 
     # enter imag. time evolution loop
     print("\n\n",end="")
@@ -158,7 +161,7 @@ def main():
         log.info(json.dumps(log_entry))
 
         # 2) compute observables with converged environment
-        obs_fn(state, ctm_env, {"epoch": step, "beta": step*args.tau})
+        obs_fn(state, ctm_env, {"epoch": step, "beta": init_step_tau + step*args.tau})
         # 3) Save obs and coeffs for post-processing. At this point the last observables
         #    coincide with last coeff entry
         simulation_history['coeffs'].append( \

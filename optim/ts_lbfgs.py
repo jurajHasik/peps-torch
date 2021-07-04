@@ -36,7 +36,7 @@ def build_gate(j_label, j, tau, device):
     gate = gate.view(2,2,2,2).contiguous()
     return gate
 
-def single_layer_trotter_decompo_ansatz(j1, tau0, global_args):
+def single_layer_trotter_decompo_ansatz_svd(j1, tau0, global_args):
     # very special first step
     #
     # build tower from gates exp(-tau_0 S.S) decomposed as MPO
@@ -124,6 +124,7 @@ def single_layer_trotter_decompo_ansatz(j1, tau0, global_args):
     MPO1= (U@torch.diag(torch.sqrt(S))).view(2,2,4)
     MPO2= (torch.diag(torch.sqrt(S))@Vh).view(4,2,2)
 
+
     # build tower
     #    
     #        0               0
@@ -143,6 +144,82 @@ def single_layer_trotter_decompo_ansatz(j1, tau0, global_args):
     #  4<-2  1
     #
     X= torch.einsum('xyl,yvr,vwu,wzd->xzuldr',MPO1,MPO1,MPO1,MPO1).contiguous()
+
+    import pdb; pdb.set_trace()
+
+    # X is not C4v-symmetric due to Trotter error
+    return X
+
+def single_layer_trotter_decompo_ansatz_analytical(j1, tau0, global_args):
+    # very special first step
+    #
+    # build tower from gates exp(-tau_0 S.S) decomposed as MPO
+    #
+    #    |
+    # --MPO
+    #    |        |/
+    #   MPO-- = --T--
+    #    | /     /|
+    #   MPO
+    #    |
+    #   MPO
+    #   /|
+    #
+    
+    # build 2-site NN gate and its permute indices
+    #
+    # 0        1     0        2    
+    # exp(-tauSS) => exp(-tauSS) => reshape into matrix (0,1)--exp(-tauSS)--(2,3)
+    # 2        3     1        3
+    # expSS_NN= build_gate('j1', j1, tau0, global_args.device)
+    # expSS_12= expSS_NN.view(2,2,2,2).permute(0,2,1,3).reshape(4,4)
+
+    # diagonalize to split into MPO
+    #
+    # (0,1)--U--D--U--(2,3)
+    # D,U= np.linalg.eigh(expSS_12)
+     
+    # We take analytical solution instead, with exact Sz ordering of the eigenvectors
+    # in U
+    tau0= 0.5*tau0 # to be consistent with the definition of the gate
+    D= torch.as_tensor([0.5*np.exp(-j1*tau0/4)*(np.exp(j1*tau0)-1)]*3\
+        +[0.5*np.exp(-j1*tau0/4)*(np.exp(j1*tau0)+3)])
+    U= torch.as_tensor([
+        [-1/np.sqrt(2.0), 0, 0, 1/np.sqrt(2.0)],
+        [              0, 0, 1,             0 ], 
+        [              0, 1, 0,             0 ], 
+        [ 1/np.sqrt(2.0), 0, 0, 1/np.sqrt(2.0)]
+    ],dtype=torch.float64)
+    # columns of U are to be understood as eigenvectors. We have to permute their order within triplet
+    # in accordance with the definition of order in the virtual spaces of base SU(2)-symmetric tensors
+    U= U[:,torch.as_tensor([1,0,2,3])]
+
+    # split into 2-site MPO where diagonal D is split symmetrically. This necessarily
+    # involves going to complex numbers as D has some negative values
+    #
+    # 0                       2
+    # U--sqrt(D)-- --sqrt(D)--U
+    # 1                       3
+    MPO= (U@torch.diag(torch.sqrt(D))).reshape(2,2,4)
+    
+    # build tower
+    #    
+    #        0               0
+    #        |               |
+    #       MPO        =    MPO
+    #       1|\2->4          |\4
+    #       0|               |
+    #       MPO--2->5       MPO--5
+    #        1  2->2         |  2
+    #        0 /             | /
+    #       MPO             MPO
+    #        1           3--MPO
+    #        0               |  
+    # 3<-2--MPO              1
+    #        |
+    #        1
+    #
+    X= torch.einsum('xyd,yvr,vwu,wzl->xzuldr',MPO,MPO,MPO,MPO).contiguous()
 
     # X is not C4v-symmetric due to Trotter error
     return X
@@ -206,9 +283,9 @@ def optimization_2sites(onsite1, params_j, env, gate,
     # Create on site tensor to optimize
     onsite2 = onsite1.copy(); onsite2.convert(new_symmetry)
     # Initialize coefficients to optimize
-    onsite2.add_noise(noise=noise)
+    # onsite2.add_noise(noise=noise)
     onsite2.coeff = torch.tensor(onsite2.coeff, dtype=onsite2.dtype, requires_grad=True)
-    optimizer = optimizer_class([onsite2.coeff], max_iter=max_iter, lr=lr,\
+    optimizer = optimizer_class([onsite2.coeff], max_iter=1, lr=lr,\
         tolerance_grad=params_opt['tolerance_grad'], tolerance_change=params_opt['tolerance_change'],\
         line_search_fn=params_opt['line_search_fn'] )
     # Compute the constant \omega_2
@@ -233,13 +310,10 @@ def optimization_2sites(onsite1, params_j, env, gate,
         # Update value of the coefficients
         loss_res = optimizer.step(closure)
         # Convergence of the optimizer
-        if abs(loss_res.item() - best_loss) > threshold:
-                best_loss = loss_res.item()
-                n_bad_steps = 0
-        else:
-                n_bad_steps += 1
-        if n_bad_steps > patience:
-                break
+        if -(loss_res.item() - best_loss) > params_opt['tolerance_change']:
+            best_loss = loss_res.item()
+        else:        
+            break
             
     # Return optimized tensor
     onsite2.coeff = onsite2.coeff.detach(); onsite2.unpermute(permutation)
