@@ -1,8 +1,9 @@
-# from torch.utils.checkpoint import checkpoint
 from config import ctm_args
 from tn_interface_abelian import contract
 
-# TODO verify if ctm_args is injected into halves_* and c2x2_* function
+# TODO inject ctm_args from env into halves_* and c2x2_* function
+# TODO checkpointing for construction of halves ?
+# torch.utils.checkpoint import checkpoint
 
 #####################################################################
 # functions building pair of 4x2 (or 2x4) halves of 4x4 TN
@@ -252,8 +253,7 @@ def c2x2_LU_c(*tensors):
 
         # permute 0123->1203
         # reshape (12)(03)->01
-        C2x2= C2x2.transpose((1,2,0,3))
-        C2x2= C2x2.fuse_legs_hard(axes=((0,1),(2,3)))
+        C2x2= C2x2.fuse_legs(axes=((1,2),(0,3)))
 
         # C2x2--1(-1)
         # |
@@ -311,9 +311,7 @@ def c2x2_RU_c(*tensors):
 
         # permute 0123->1203
         # reshape (12)(03)->01
-        ## C2x2 = contiguous(permute(C2x2,(1,2,0,3)))
-        C2x2= C2x2.transpose((1,2,0,3))
-        C2x2= C2x2.fuse_legs_hard(axes=((0,1),(2,3)))
+        C2x2= C2x2.fuse_legs(axes=((1,2),(0,3)))
 
         # (+1)0--C2x2
         #        |
@@ -369,9 +367,7 @@ def c2x2_RD_c(*tensors):
 
         # permute 0123->1203
         # reshape (12)(03)->01
-        ## C2x2 = contiguous(permute(C2x2,(1,2,0,3)))
-        C2x2= C2x2.transpose((1,2,0,3))
-        C2x2= C2x2.fuse_legs_hard(axes=((0,1),(2,3)))
+        C2x2= C2x2.fuse_legs(axes=((1,2),(0,3)))
 
         #    (+1)0
         #        |
@@ -430,8 +426,7 @@ def c2x2_LD_c(*tensors):
 
         # permute 0123->0213
         # reshape (02)(13)->01
-        C2x2 = C2x2.transpose((0,2,1,3))
-        C2x2= C2x2.fuse_legs_hard(axes=((0,1),(2,3)))
+        C2x2= C2x2.fuse_legs(axes=((0,2),(1,3)))
 
         # 0(+1)
         # |

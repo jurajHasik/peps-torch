@@ -1,6 +1,5 @@
 import warnings
 import config as cfg
-from itertools import product
 import yamps.yast as yast
 try:
     import torch
@@ -14,10 +13,12 @@ class ENV_ABELIAN():
         r"""
         :param chi: environment bond dimension :math:`\chi`
         :param state: wavefunction
+        :param settings: abelian-symmetric tensor engine configuration
         :param ctm_args: CTM algorithm configuration
         :param global_args: global configuration
         :type chi: int
         :type state: IPEPS_ABELIAN
+        :type settings: NamedTuple or SimpleNamespace (TODO link to definition)
         :type ctm_args: CTMARGS
         :type global_args: GLOBALARGS
 
@@ -69,16 +70,13 @@ class ENV_ABELIAN():
             C--1 1--T--2 1--C        C(-1) (+1)T(-1) (+1)C
 
         """
-        
         if state:
             self.engine= state.engine
-            self.backend= state.backend
             self.dtype= state.dtype
             self.nsym = state.nsym
             self.sym= state.sym
         elif settings:
             self.engine= settings
-            self.backend= settings.backend
             self.dtype= settings.default_dtype
             self.nsym = settings.sym.NSYM
             self.sym= settings.sym.SYM_ID
@@ -127,7 +125,7 @@ class ENV_ABELIAN():
         :rtype: ENV
 
         Create a copy of environment with all on-site tensors as dense possesing no explicit
-        block structure (symmetry). This operations preserves gradients on returned
+        block structure (symmetry). This operations preserves gradients on the returned
         dense environment.
         """
         vts= state.vertexToSite
@@ -138,7 +136,7 @@ class ENV_ABELIAN():
         # 0) compute correct leg structure of T's. Unfuse the pair of 
         #    auxiliary legs connecting T's to on-site tensors. Merge the 
         #    environment virtual spaces on connected legs
-        tmp_T= { tid: t.unfuse_legs_hard(dir_to_leg[tid[1]]) for tid,t in self.T.items() }
+        tmp_T= { tid: t.unfuse_legs(dir_to_leg[tid[1]]) for tid,t in self.T.items() }
         for tid in tmp_T.keys():
             t_xy,t_dir= tid
             if t_dir==(0,-1): #UP
@@ -307,24 +305,10 @@ def init_env(state, env, init_method=None, ctm_args=cfg.ctm_args):
     * CTMRG - tensors C and T are built from the on-site tensors of `state` 
     """
     if not init_method: init_method= ctm_args.ctm_env_init_type
-    if init_method=='CONST':
-        init_const(env, ctm_args.verbosity_initialization)
-    elif init_method=='RANDOM':
-        init_random(env, ctm_args.verbosity_initialization)
-    elif init_method=='CTMRG':
+    if init_method=='CTMRG':
         init_from_ipeps_pbc(state, env, ctm_args.verbosity_initialization)
-    elif init_method=='CTMRG_OBC':
-        init_from_ipeps_obc(state, env, ctm_args.verbosity_initialization)
     else:
         raise ValueError("Invalid environment initialization: "+init_method)
-
-def init_const(env, verbosity=0):
-    raise NotImplementedError
-
-def init_random(env, verbosity=0):
-    # The symmetry sectors (= allowed blocks) are given by the on-site tensors of 
-    # the iPEPS ansatz
-    raise NotImplementedError
 
 def init_from_ipeps_pbc(state, env, verbosity=0):
     if verbosity>0:
@@ -345,9 +329,8 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         #     3
         vec = (-1,-1)
         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
-        a= A.tensordot(A, ((0,1,2), (0,1,2)), conj=(0,1)) # mijef,mijab->efab
-        a= a.transpose((0,2,1,3)) # efab->eafb
-        a= a.fuse_legs_hard( axes=((0,1),(2,3)) )
+        a= A.tensordot(A, ((0,1,2), (0,1,2)), conj=(0,1)) # mijef,mijab->efab; efab->eafb
+        a= a.fuse_legs( axes=((0,2),(1,3)) )
         a= a/a.norm(p='inf')
         env.C[(coord,vec)]= a
 
@@ -363,9 +346,8 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         #     3
         vec = (1,-1)
         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
-        a= A.tensordot(A, ((0,1,4), (0,1,4)), conj=(0,1)) # miefj,miabj->efab
-        a= a.transpose((0,2,1,3)) # efab->eafb
-        a= a.fuse_legs_hard( axes=((0,1),(2,3)) )
+        a= A.tensordot(A, ((0,1,4), (0,1,4)), conj=(0,1)) # miefj,miabj->efab; efab->eafb
+        a= a.fuse_legs( axes=((0,2),(1,3)) )
         a= a/a.norm(p='inf')
         env.C[(coord,vec)]=a
 
@@ -381,9 +363,8 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         #     i
         vec = (1,1)
         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
-        a= A.tensordot(A, ((0,3,4), (0,3,4)), conj=(0,1)) # miefj,miabj->efab
-        a= a.transpose((0,2,1,3)) # efab->eafb
-        a= a.fuse_legs_hard( axes=((0,1),(2,3)) )
+        a= A.tensordot(A, ((0,3,4), (0,3,4)), conj=(0,1)) # miefj,miabj->efab; efab->eafb
+        a= a.fuse_legs( axes=((0,2),(1,3)) )
         a= a/a.norm(p='inf')
         env.C[(coord,vec)]=a
 
@@ -399,9 +380,8 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         #     j
         vec = (-1,1)
         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
-        a= A.tensordot(A, ((0,2,3), (0,2,3)), conj=(0,1)) # miefj,miabj->efab
-        a= a.transpose((0,2,1,3)) # efab->eafb
-        a= a.fuse_legs_hard( axes=((0,1),(2,3)) )
+        a= A.tensordot(A, ((0,2,3), (0,2,3)), conj=(0,1)) # miefj,miabj->efab; efab->eafb
+        a= a.fuse_legs( axes=((0,2),(1,3)) )
         a= a/a.norm(p='inf')
         env.C[(coord,vec)]=a
 
@@ -419,9 +399,8 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         #     3
         vec = (0,-1)
         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
-        a= A.tensordot(A, ((0,1), (0,1)), conj=(0,1)) # miefg,miabc->efgabc
-        a= a.transpose((0,3,1,4,2,5)) # efgabc->eafbgc
-        a= a.fuse_legs_hard( axes=((0,1),(2,3),(4,5)) )
+        a= A.tensordot(A, ((0,1), (0,1)), conj=(0,1)) # miefg,miabc->efgabc ; efgabc->eafbgc
+        a= a.fuse_legs( axes=((0,3),(1,4),(2,5)) )
         a= a/a.norm(p='inf')
         env.T[(coord,vec)]=a 
 
@@ -437,9 +416,8 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         #     3
         vec = (-1,0)
         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
-        a= A.tensordot(A, ((0,2), (0,2)), conj=(0,1)) # meifg,maibc->efgabc
-        a= a.transpose((0,3,1,4,2,5)) # efgabc->eafbgc
-        a= a.fuse_legs_hard( axes=((0,1),(2,3),(4,5)) )
+        a= A.tensordot(A, ((0,2), (0,2)), conj=(0,1)) # meifg,maibc->efgabc ; efgabc->eafbgc
+        a= a.fuse_legs( axes=((0,3),(1,4),(2,5)) )
         a= a/a.norm(p='inf')
         env.T[(coord,vec)]=a
 
@@ -455,9 +433,8 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         #     i
         vec = (0,1)
         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
-        a= A.tensordot(A, ((0,3), (0,3)), conj=(0,1)) # mefig,mabic->efgabc
-        a= a.transpose((0,3,1,4,2,5)) # efgabc->eafbgc
-        a= a.fuse_legs_hard( axes=((0,1),(2,3),(4,5)) )
+        a= A.tensordot(A, ((0,3), (0,3)), conj=(0,1)) # mefig,mabic->efgabc; efgabc->eafbgc
+        a= a.fuse_legs( axes=((0,3),(1,4),(2,5)) )
         a= a/a.norm(p='inf')
         env.T[(coord,vec)]=a
 
@@ -473,11 +450,7 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         #     3
         vec = (1,0)
         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
-        a= A.tensordot(A, ((0,4), (0,4)), conj=(0,1)) # mefig,mabic->efgabc
-        a= a.transpose((0,3,1,4,2,5)) # efgabc->eafbgc
-        a= a.fuse_legs_hard( axes=((0,1),(2,3),(4,5)) )
+        a= A.tensordot(A, ((0,4), (0,4)), conj=(0,1)) # mefig,mabic->efgabc; efgabc->eafbgc
+        a= a.fuse_legs( axes=((0,3),(1,4),(2,5)) )
         a= a/a.norm(p='inf')
         env.T[(coord,vec)]=a
-
-def init_from_ipeps_obc(state, env, verbosity=0):
-    raise NotImplementedError

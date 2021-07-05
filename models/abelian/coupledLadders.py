@@ -1,14 +1,12 @@
 from math import sqrt
 import itertools
 import config as cfg
+import torch
 import yamps.yast as yast
 from tn_interface_abelian import contract, permute  
 import groups.su2_abelian as su2
 # from ctm.generic_abelian import rdm
-# from ctm.generic_abelian_hard_merge import rdm
-from ctm.generic_abelian_hard_merge import rdm_v1 as rdm
-# from ctm.generic_abelian_hard_merge import rdm_v2 as rdm
-import torch
+from ctm.generic_abelian_hard_merge import rdm
 
 def _cast_to_real(t):
     return t.real if t.is_complex() else t
@@ -60,7 +58,6 @@ class COUPLEDLADDERS_NOSYM():
         """
         assert settings.sym.NSYM==0, "No abelian symmetry is assumed"
         self.engine= settings
-        self.backend= settings.backend
         self.dtype=settings.default_dtype
         self.device='cpu' if not hasattr(settings, 'device') else settings.device
         self.phys_dim=2
@@ -273,7 +270,6 @@ class COUPLEDLADDERS_U1():
         """
         assert settings.sym.NSYM==1, "U(1) abelian symmetry is assumed"
         self.engine= settings
-        self.backend= settings.backend
         self.dtype=settings.default_dtype
         self.device='cpu' if not hasattr(settings, 'device') else settings.device
         self.phys_dim=2

@@ -1,6 +1,6 @@
 import time
 import warnings
-from types import SimpleNamespace
+from typing import NamedTuple
 import config as cfg
 from yamps.yast import decompress_from_1d
 from ipeps.ipeps_abelian import IPEPS_ABELIAN
@@ -31,8 +31,8 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
     TODO add reference
     """
 
-    # 0) Create double-layer (DL) tensors, preserving the same convenction
-    # for order of indices 
+    # 0) Create double-layer (DL) tensors, preserving the same convention
+    #    for order of indices 
     #
     #     /               /(+1)
     #  --A^dag-- = (+1)--a--(-1)
@@ -43,9 +43,8 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
     #
     sitesDL=dict()
     for coord,A in state.sites.items():
-        a= contract(A,A, ((0),(0)), conj=(0,1)) # mefgh,mabcd->efghabcd
-        a= a.transpose((0,4,1,5,2,6,3,7)) # efghabcd->eafbgchd
-        a= a.fuse_legs_hard( axes=((0,1),(2,3),(4,5),(6,7)) )
+        a= contract(A,A, ((0),(0)), conj=(0,1)) # mefgh,mabcd->efghabcd; efghabcd->eafbgchd
+        a= a.fuse_legs( axes=((0,4),(1,5),(2,6),(3,7)) )
         sitesDL[coord]=a
     stateDL = IPEPS_ABELIAN(state.engine, sitesDL, vertexToSite=state.vertexToSite, build_open_dl=False)
 
@@ -100,11 +99,13 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
         #
         # keep inputs for autograd stored on cpu, move to gpu for the core 
         # of the computation if desired
-        _loc_engine= env.engine
+        _loc_engine= env.engine #if isinstance(env.engine,NamedTuple) else 
         if global_args.offload_to_gpu != 'None' and global_args.device=='cpu':
             tensors=  tuple(r1d.to(global_args.offload_to_gpu) for r1d in tensors)
-            _loc_engine= SimpleNamespace(backend=_loc_engine.backend, sym=_loc_engine.sym,\
-                dtype=_loc_engine.dtype, device=global_args.offload_to_gpu)
+            _loc_engine= NamedTuple(
+                backend=_loc_engine.backend, sym=_loc_engine.sym,\
+                dtype=_loc_engine.dtype, device=global_args.offload_to_gpu,\
+                default_fusion= _loc_engine.default_fusion, force_fusion= _loc_engine.force_fusion)
 
         # 0) reconstruct the tensors from their 1D representation
         tensors= tuple(decompress_from_1d(r1d, _loc_engine, meta) \
@@ -227,7 +228,7 @@ def absorb_truncate_CTM_MOVE_UP_c(*tensors):
     # (+1)1--T1 
     #    (-1)2 
     nC1= contract(C1,T1,([1],[0]))
-    nC1= nC1.fuse_legs_hard( axes=((0,1),2) )
+    nC1= nC1.fuse_legs( axes=((0,1),2) )
 
     #        --0 0--C1    <=>  (?)1--Pt1--0(-1) (+1)0--C1T1
     #       |       |                                  |
@@ -235,7 +236,6 @@ def absorb_truncate_CTM_MOVE_UP_c(*tensors):
     #       |       | 
     #        --1 1--T1
     #               2->1
-    # nC1 = contract(Pt1, nC1,([0,1],[0,1]))
     nC1 = contract(Pt1, nC1,([0],[0]))
 
     # C2--1->0(-1) => C2T2--(02->0)(-1)
@@ -244,7 +244,7 @@ def absorb_truncate_CTM_MOVE_UP_c(*tensors):
     # T2--2(-1)
     # 1(-1)
     nC2= contract(C2, T2,([0],[0]))
-    nC2= nC2.fuse_legs_hard( axes=((0,2),1) )
+    nC2= nC2.fuse_legs( axes=((0,2),1) )
 
     # C2--0 0--         <=> C2T2--0(-1) (+1)0--P2--1(-?)
     # |        |            |
@@ -253,14 +253,13 @@ def absorb_truncate_CTM_MOVE_UP_c(*tensors):
     # T2--2 1--
     # 1->0
     nC2 = contract(nC2, P2,([0],[0]))
-    # nC2= contract(nC2, P2,([0,2],[0,1]))
     
     #                                        --0(-1) (+1)0--T--2->3(-1)
     #                       0(-1)           |               1->2(-1)
     # (+1)2<-1--Pt2--0(-1)->|      => 1<-2--Pt2
     #                       1(-1)           |
     #                                        --1->0(-1)
-    Pt2= Pt2.unfuse_legs_hard(axes=0)
+    Pt2= Pt2.unfuse_legs(axes=0)
     nT = contract(Pt2, T, ([0],[0]))
 
     #            -------T--3->1(-1) =>         ----T-----
@@ -270,7 +269,7 @@ def absorb_truncate_CTM_MOVE_UP_c(*tensors):
     #            --0 1--A--3(-1)
     #                   2(-1) 
     nT = contract(nT, A,([0,2],[1,0]))
-    nT = nT.fuse_legs_hard( axes=(0,(1,3),2) )
+    nT = nT.fuse_legs( axes=(0,(1,3),2) )
 
     #         -------T---
     #        |       |  | 
@@ -278,7 +277,6 @@ def absorb_truncate_CTM_MOVE_UP_c(*tensors):
     #        |       |  |
     #         -------A---
     #                2->1(-1)
-    # nT= contract(nT, P1, ([1,3],[0,1]))
     nT = contract(nT, P1,([1],[0]))
 
     # Assign new C,T 
@@ -321,7 +319,7 @@ def absorb_truncate_CTM_MOVE_LEFT_c(*tensors):
     # |        |             (01->0)(-1)
     # 0(-1)    1(-1)
     nC1= contract(C1,T1,([1],[0]))
-    nC1= nC1.fuse_legs_hard( axes=((0,1),2) )
+    nC1= nC1.fuse_legs( axes=((0,1),2) )
 
     # C1--1 0--T1--2->1 <=> C1T1--1(-1)
     # |        |            0(-1)
@@ -330,12 +328,11 @@ def absorb_truncate_CTM_MOVE_LEFT_c(*tensors):
     # |___Pt1__|            1->0(-1) 
     #     2->0
     nC1= contract(Pt1, nC1,([0],[0]))
-    # nC1= contract(Pt1, nC1, ([0,1],[0,1]))
 
     # 0        0->1  <=> (01->0)(+1)
     # C2--1 1--T2--2     C2T2--2->1(-1)
     nC2= contract(C2, T2,([1],[1]))
-    nC2= nC2.fuse_legs_hard( axes=((0,1),2) )
+    nC2= nC2.fuse_legs( axes=((0,1),2) )
 
     #    2->0         <=> 1(+1)
     # ___P2___            P2
@@ -343,7 +340,6 @@ def absorb_truncate_CTM_MOVE_LEFT_c(*tensors):
     # 0      1            0(+1)
     # C2-----T2--2->1     C2T2--1(-1)
     nC2 = contract(P2, nC2,([0],[0]))
-    # nC2 = contract(P2, nC2,([0,1],[0,1]))
 
     #    2->1    <=>  1(+1)    2->1(+1)
     # ___P1__         P1    => P1------
@@ -351,7 +347,7 @@ def absorb_truncate_CTM_MOVE_LEFT_c(*tensors):
     # 0                        0(+1)
     # T--2->3                  T--2->3(-1)
     # 1->2                     1->2(-1)
-    P1= P1.unfuse_legs_hard(axes=0)
+    P1= P1.unfuse_legs(axes=0)
     nT = contract(P1, T,([0],[0]))
 
     #    1->0(+1)        =>     0(+1)
@@ -361,7 +357,7 @@ def absorb_truncate_CTM_MOVE_LEFT_c(*tensors):
     # T--3 1----A--3(-1)     \-------/
     # 2->1(-1)  2(-1)           1(-1)
     nT= contract(nT, A,([0,3],[0,1]))
-    nT= nT.fuse_legs_hard( axes=(0,(1,2),3) )
+    nT= nT.fuse_legs( axes=(0,(1,2),3) )
 
     #    0            <=>     0(+1)
     # ___P1___             ___P1____
@@ -372,8 +368,7 @@ def absorb_truncate_CTM_MOVE_LEFT_c(*tensors):
     # 0       1               0(+1) 
     # |___Pt2_|               Pt2
     #     2                   1->2(-1)
-    nT = contract(nT, Pt2,([1],[0]))
-    # nT = contract(nT, Pt2,([1,2],[0,1]))    
+    nT = contract(nT, Pt2,([1],[0]))    
     nT = nT.transpose((0,2,1))
     
 
@@ -427,7 +422,7 @@ def absorb_truncate_CTM_MOVE_DOWN_c(*tensors):
     # 0
     # C1--1->0
     nC1 = contract(C1,T1,([0],[1]))
-    nC1 = nC1.fuse_legs_hard( axes=((0,2),1) )
+    nC1 = nC1.fuse_legs( axes=((0,2),1) )
 
     # 1->0               <=> 1->0(+1)
     # T1--2 1--              C1T1--0(-1)(+1)0--Pt1--1(-1)
@@ -436,7 +431,6 @@ def absorb_truncate_CTM_MOVE_DOWN_c(*tensors):
     # |        |
     # C1--0 0--
     nC1 = contract(nC1, Pt1, ([0],[0]))
-    # nC1 = contract(nC1, Pt1, ([0,2],[0,1]))
 
     #    1<-0  <=>          (+1)1  
     # 2<-1--T2     (+1)(0<-02)--C2T2
@@ -444,7 +438,7 @@ def absorb_truncate_CTM_MOVE_DOWN_c(*tensors):
     #       0
     # 0<-1--C2     
     nC2 = contract(C2, T2,([0],[2]))
-    nC2 = nC2.fuse_legs_hard( axes=((0,2),1) )
+    nC2 = nC2.fuse_legs( axes=((0,2),1) )
 
     #            0<-1  <=>                 (+1)0<-1
     #        --1 2--T2     (+1)1--P2--0(-1)(+1)0--C2T2
@@ -453,14 +447,13 @@ def absorb_truncate_CTM_MOVE_DOWN_c(*tensors):
     #       |       | 
     #        --0 0--C2
     nC2 = contract(nC2, P2, ([0],[0]))
-    # nC2 = contract(nC2, P2, ([0,2],[0,1]))
 
     #        --1->0         <=>                                    --1(-1)
     #       |                                                     |
     # 1<-2--P1                  (+1)1--P1--0(-1) => (+1)2<-1--P1--|  
     #       |       0->2                                          |              0->2(+1)
     #        --0 1--T--2->3                                        --0(-1)(+1)1--T--2->3(-1)
-    P1= P1.unfuse_legs_hard(axes=0)
+    P1= P1.unfuse_legs(axes=0)
     nT = contract(P1, T, ([0],[1]))
 
     #                   0->2(+1)    =>           2(+1)
@@ -470,7 +463,7 @@ def absorb_truncate_CTM_MOVE_DOWN_c(*tensors):
     #           |       2                     |  |  |
     #            -------T--3->1(-1)            --T--
     nT = contract(nT, A,([0,2],[1,2]))
-    nT = nT.fuse_legs_hard( axes=(0,(1,3),2) )
+    nT = nT.fuse_legs( axes=(0,(1,3),2) )
 
     #                2->1(+1)
     #         -------A-- 
@@ -479,7 +472,6 @@ def absorb_truncate_CTM_MOVE_DOWN_c(*tensors):
     #        |       |  |
     #         -------T--
     nT = contract(nT, Pt2,([1],[0]))
-    # nT = contract(nT, Pt2,([1,3],[0,1]))
     nT = nT.transpose((1,0,2))
     
 
@@ -522,7 +514,7 @@ def absorb_truncate_CTM_MOVE_RIGHT_c(*tensors):
     #       0->1     0        (+1)(0<-01)    
     # 2<-1--T1--2 1--C1 <=> (+1)1<-2--C1T1
     nC1= contract(C1, T1,([1],[2]))
-    nC1= nC1.fuse_legs_hard( axes=((0,1),2) ) 
+    nC1= nC1.fuse_legs( axes=((0,1),2) ) 
 
     #          2->0      (+1)0<-1
     #        __Pt1_             Pt1
@@ -530,12 +522,11 @@ def absorb_truncate_CTM_MOVE_RIGHT_c(*tensors):
     #       1     0         (+1)0  
     # 1<-2--T1----C1 <=> (+1)1--C1T1
     nC1= contract(Pt1, nC1,([0],[0]))
-    # nC1= contract(Pt1, nC1,([0,1],[0,1]))
 
     # 1<-0--T2--2 0--C2 <=>  (+1)1--C2T2
     #    2<-1     0<-1      (-1)(0<-02) 
     nC2= contract(C2,T2,([0],[2]))
-    nC2= nC2.fuse_legs_hard( axes=((0,2),1) )
+    nC2= nC2.fuse_legs( axes=((0,2),1) )
 
     # 0<-1--T2----C2 <=> (+1)0<-1--C2T2
     #       2     0            (-1)0
@@ -543,7 +534,6 @@ def absorb_truncate_CTM_MOVE_RIGHT_c(*tensors):
     #       |__P2_|                P2
     #          2->1            (-1)1
     nC2= contract(nC2, P2,([0],[0]))
-    # nC2= contract(nC2, P2,([0,2],[0,1]))
 
     #    1<-2     <=> (+1)1   =>    (+1)1<-2
     #    ___Pt2__         Pt2            __Pt2__
@@ -551,7 +541,7 @@ def absorb_truncate_CTM_MOVE_RIGHT_c(*tensors):
     #           0                           (+1)0
     #     2<-1--T                     (+1)2<-1--T
     #        3<-2                        (-1)3<-2
-    Pt2= Pt2.unfuse_legs_hard(axes=0)
+    Pt2= Pt2.unfuse_legs(axes=0)
     nT= contract(Pt2, T,([0],[0]))
 
     #       (+1)0<-1        =>        (+1)0  
@@ -561,7 +551,7 @@ def absorb_truncate_CTM_MOVE_RIGHT_c(*tensors):
     # (+1)2<-1--A--3 2----T           (-1)1
     #    (+1)3<-2  (-1)1<-3 
     nT= contract(nT, A,([0,2],[0,3]))
-    nT= nT.fuse_legs_hard( axes=(0,(1,3),2) )
+    nT= nT.fuse_legs( axes=(0,(1,3),2) )
 
     #          0        <=>          (+1)0
     #       ___Pt2__                  ___Pt2___
@@ -573,7 +563,6 @@ def absorb_truncate_CTM_MOVE_RIGHT_c(*tensors):
     #       |___P1__|             (-1)2<-1
     #           2 
     nT= contract(nT, P1,([1],[0]))
-    # nT= contract(nT, P1,([1,3],[0,1]))
     
     
     # Assign new C,T 

@@ -53,7 +53,7 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
         # a._leg_fusion_data= {k: v for k,v in enumerate([lo0, lo1, lo2, lo3])}
         a= a.fuse_legs( axes=((0,1),(2,3),(4,5),(6,7)) )
         sitesDL[coord]=a
-    stateDL = IPEPS_ABELIAN(state.engine, sitesDL, vertexToSite=state.vertexToSite)
+    stateDL = IPEPS_ABELIAN(state.engine, sitesDL, build_open_dl=False, vertexToSite=state.vertexToSite)
 
     # 1) perform CTMRG
     t_obs=t_ctm=0.
@@ -118,7 +118,7 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
 
         # 1) wrap raw tensors back into IPEPS and ENV classes 
         sites_loc= dict(zip(state.sites.keys(),tensors[0:len(state.sites)]))
-        state_loc= IPEPS_ABELIAN(_loc_engine, sites_loc, state.vertexToSite)
+        state_loc= IPEPS_ABELIAN(_loc_engine, sites_loc, state.vertexToSite, build_open_dl=False)
         env_loc= ENV_ABELIAN(env.chi, settings=_loc_engine)
         env_loc.C= dict(zip(env.C.keys(),tensors[len(state.sites):len(state.sites)+len(env.C)]))
         env_loc.T= dict(zip(env.T.keys(),tensors[len(state.sites)+len(env.C):]))

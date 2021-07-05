@@ -72,13 +72,11 @@ class ENV_ABELIAN():
         
         if state:
             self.engine= state.engine
-            self.backend= state.backend
             self.dtype= state.dtype
             self.nsym = state.nsym
             self.sym= state.sym
         elif settings:
             self.engine= settings
-            self.backend= settings.backend
             self.dtype= settings.default_dtype
             self.nsym = settings.sym.NSYM
             self.sym= settings.sym.SYM_ID
