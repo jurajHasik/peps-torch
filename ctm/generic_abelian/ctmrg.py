@@ -35,17 +35,17 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
     #    for order of indices 
     #
     #     /               /(+1)
-    #  --A^dag-- = (+1)--a--(-1)
+    #  --a---   =  (+1)--A--(-1)
     #   /|              /
     #    |/           (-1)
-    #  --A--
+    #  --a*--
     #   /
     #
     sitesDL=dict()
-    for coord,A in state.sites.items():
-        a= contract(A,A, ((0),(0)), conj=(0,1)) # mefgh,mabcd->efghabcd; efghabcd->eafbgchd
-        a= a.fuse_legs( axes=((0,4),(1,5),(2,6),(3,7)) )
-        sitesDL[coord]=a
+    for coord,a in state.sites.items():
+        A= contract(a,a, ((0),(0)), conj=(0,1)) # mefgh,mabcd->efghabcd; efghabcd->eafbgchd
+        A= A.fuse_legs( axes=((0,4),(1,5),(2,6),(3,7)) )
+        sitesDL[coord]=A
     stateDL = IPEPS_ABELIAN(state.engine, sitesDL, vertexToSite=state.vertexToSite, build_open_dl=False)
 
     # 1) perform CTMRG

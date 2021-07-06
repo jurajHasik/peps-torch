@@ -1,3 +1,4 @@
+import context
 import torch
 import numpy as np
 import argparse
@@ -141,6 +142,9 @@ def main():
     def loss_fn(state, ctm_env_in, opt_context):
         ctm_args= opt_context["ctm_args"]
         opt_args= opt_context["opt_args"]
+
+        # build double-layer open on-site tensors
+        state.build_sites_dl_open()
 
         # possibly re-initialize the environment
         if opt_args.opt_ctm_reinit:

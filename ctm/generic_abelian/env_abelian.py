@@ -298,10 +298,6 @@ def init_env(state, env, init_method=None, ctm_args=cfg.ctm_args):
     Initializes the environment `env` according to one of the supported options specified 
     by :class:`CTMARGS.ctm_env_init_type <config.CTMARGS>` 
     
- 
-    * CONST - all C and T tensors have all their elements intialized to a value 1
-    * RANDOM - all C and T tensors have elements with random numbers drawn from uniform
-      distribution [0,1)
     * CTMRG - tensors C and T are built from the on-site tensors of `state` 
     """
     if not init_method: init_method= ctm_args.ctm_env_init_type
@@ -320,11 +316,11 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         # Left-upper corner
         #
         #     i      = C--1(-1)  
-        # j--A--4      0(-1)
+        # j--a--4      0(-1)
         #   /\
         #  3  m
         #      \ i
-        #    j--A--4
+        #    j--a*--4
         #      /
         #     3
         vec = (-1,-1)
@@ -337,11 +333,11 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         # right-upper corner
         #
         #     i      = (+1)0--C     
-        # 2--A--j         (-1)1
+        # 2--a--j         (-1)1
         #   /\
         #  3  m
         #      \ i
-        #    2--A--j
+        #    2--a*--j
         #      /
         #     3
         vec = (1,-1)
@@ -354,11 +350,11 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         # right-lower corner
         #
         #     1      =    (+1)0     
-        # 2--A--j      (+1)1--C
+        # 2--a--j      (+1)1--C
         #   /\
         #  i  m
         #      \ 1
-        #    2--A--j
+        #    2--a*--j
         #      /
         #     i
         vec = (1,1)
@@ -371,11 +367,11 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         # left-lower corner
         #
         #     1      = 0(+1)     
-        # i--A--4      C--1(-1)
+        # i--a--4      C--1(-1)
         #   /\
         #  j  m
         #      \ 1
-        #    i--A--4
+        #    i--a*--4
         #      /
         #     j
         vec = (-1,1)
@@ -390,11 +386,11 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         # upper transfer matrix
         #
         #     i      = (+1)0--T--2(-1)     
-        # 2--A--4         (-1)1
+        # 2--a--4         (-1)1
         #   /\
         #  3  m
         #      \ i
-        #    2--A--4
+        #    2--a*--4
         #      /
         #     3
         vec = (0,-1)
@@ -407,11 +403,11 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         # left transfer matrix
         #
         #     1      = 0(+1)     
-        # i--A--4      T--2(-1)
+        # i--a--4      T--2(-1)
         #   /\         1(-1)
         #  3  m
         #      \ 1
-        #    i--A--4
+        #    i--a*--4
         #      /
         #     3
         vec = (-1,0)
@@ -424,11 +420,11 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         # lower transfer matrix
         #
         #     1      =    (+1)0     
-        # 2--A--4      (+1)1--T--2(-1)
+        # 2--a--4      (+1)1--T--2(-1)
         #   /\
         #  i  m
         #      \ 1
-        #    2--A--4
+        #    2--a*--4
         #      /
         #     i
         vec = (0,1)
@@ -441,11 +437,11 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         # right transfer matrix
         #
         #     1      =    (+1)0     
-        # 2--A--i      (+1)1--T
+        # 2--a--i      (+1)1--T
         #   /\            (-1)2
         #  3  m
         #      \ 1
-        #    2--A--i
+        #    2--a*--i
         #      /
         #     3
         vec = (1,0)
