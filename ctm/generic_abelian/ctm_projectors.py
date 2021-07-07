@@ -1,10 +1,11 @@
-# from torch.utils.checkpoint import checkpoint
 import config as cfg
-from ctm.generic_abelian.ctm_components import *
 import yamps.yast as yast
+from ctm.generic_abelian.ctm_components import *
 from tn_interface_abelian import mm
 from tn_interface_abelian import transpose
 import logging
+# TODO checkpointing for projector construction
+# from torch.utils.checkpoint import checkpoint
 log = logging.getLogger(__name__)
 
 def ctm_get_projectors_4x4(direction, coord, state, env, ctm_args=cfg.ctm_args, \
@@ -224,14 +225,11 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, direction, \
     assert R.get_ndim() == Rt.get_ndim() and R.get_ndim() == 2
     verbosity = ctm_args.verbosity_projectors
 
-    # TODO autograd
-    # TODO chi, chi_block ?
-    # TODO returns right singular vectors as matrix of "dual" vectors
     if ctm_args.projector_svd_method=='DEFAULT' or ctm_args.projector_svd_method=='GESDD':
         def truncated_svd(M, chi, sU=1):
-            # return truncated_svd_gesdd(M, chi, verbosity=ctm_args.verbosity_projectors)
-            return yast.linalg.svd(M, (0,1), tol=ctm_args.projector_svd_reltol, D_total=chi, \
-                sU=sU, keep_multiplets=True)
+            return yast.linalg.svd(M, (0,1), sU=sU, keep_multiplets=True, D_total=chi,\
+                tol=ctm_args.projector_svd_reltol, tol_block=ctm_args.projector_svd_reltol_block,  \
+                )
     # elif ctm_args.projector_svd_method == 'ARP':
     #     def truncated_svd(M, chi):
     #         return truncated_svd_arnoldi(M, chi, verbosity=ctm_args.verbosity_projectors)
@@ -245,23 +243,15 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, direction, \
     #       RIGHT (+1)0--R--1(+1) =>T=> (+1)1--R--0(+1)(-1)0--Rt--1(-1) =>SVD=> (+1)U(?)S(-?)Vh(-1)
     #
     if ctm_args.fwd_checkpoint_projectors:
-        # M = checkpoint(mm, transpose(R), Rt)
-        raise RuntimeError("Checkpointing not implemented")
+        M = checkpoint(mm, transpose(R), Rt)
     else:
         M = mm(transpose(R), Rt)
 
-    # 1) SVD decomposition
-    #
-    # Diagonal tensor S has no signature nor charge
+    # 1) SVD decomposition and Truncation
     signature_U={(0,-1): 1, (-1,0): -1, (0,1): -1, (1,0): 1}
     U, S, Vh = truncated_svd(M, chi, signature_U[direction]) # M = USV^{+}
-    
-    # 2) Truncation
-    # S_nz= S[S/S[0] > ctm_args.projector_svd_reltol]
-    # S_sqrt= S*0
-    # S_sqrt[:S_nz.size(0)]= torch.rsqrt(S_nz)
     S_sqrt= S.rsqrt()
-
+    
     if verbosity>0: 
         print(S_sqrt.to_dense().A[()].diag())
 
@@ -278,11 +268,7 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, direction, \
         #       RIGHT (+1)0--U--1(?)=>C=> (+1)0--R--1(+1)(-1)0--U--1(-?)S_sqrt = (+1)P(-1)
         #             (-?)0--Vh--1(-1)=>CT=> (-1)0--Rt--1(-1)(+1)1--Vh--0(?)   = (-1)Pt(+1)
         P= mm(mm(R, U, conj=(0,1)), S_sqrt.transpose((1,0)) )
-        # P._leg_fusion_data[0]= R._leg_fusion_data[0]
         Pt= mm(mm(Rt,transpose(Vh), conj=(0,1)),S_sqrt)
-        # Pt._leg_fusion_data[0]= Rt._leg_fusion_data[0]
-        P= P.unfuse_legs(axes=0, inplace=True)
-        Pt= Pt.unfuse_legs(axes=0, inplace=True)
         return P, Pt
 
     tensors= R, Rt, U, Vh, S_sqrt

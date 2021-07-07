@@ -1,4 +1,5 @@
 import logging
+import warnings
 from tn_interface_abelian import contract, permute, conj
 
 log= logging.getLogger('peps.ctm.generic_abelian.rdm')
@@ -22,15 +23,27 @@ def _sym_pos_def_matrix(rdm, sym_pos_def=False, verbosity=0, who="unknown"):
 def _sym_pos_def_rdm(rdm, sym_pos_def=False, verbosity=0, who=None):
     assert rdm.get_ndim()%2==0, "invalid rank of RDM"
     nsites= rdm.get_ndim()//2
-    # rdm, lo_bra= rdm.group_legs(tuple(nsites+i for i in range(nsites)), new_s=1)
-    # rdm, lo_ket= rdm.group_legs(tuple(i for i in range(nsites)), new_s=-1)
     rdm= rdm.fuse_legs(axes=(tuple(nsites+i for i in range(nsites)),\
         tuple(i for i in range(nsites))) )
     rdm= _sym_pos_def_matrix(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
-    # rdm= rdm.ungroup_leg(1, lo_bra)
-    # rdm= rdm.ungroup_leg(0, lo_ket)
     rdm= rdm.unfuse_legs(axes=(0,1), inplace=True)
     return rdm
+
+def _validate_open_dl(state,env):
+    assert state.sites_dl_open!=None,"state's member sites_open_dl is not initialized"
+    assert len(state.sites_dl_open)==len(state.sites),\
+        "Inconsistent state.sites and state.sites_open_dl"
+
+    requires_grad_state= any([ t.requires_grad for t in state.sites.values() ])
+    requires_grad_env= any([ t.requires_grad for t in env.C.values()]) \
+        or any([ t.requires_grad for t in env.T.values()])
+    requires_grad_open_dl= any( [t.requires_grad for t in state.sites_dl_open.values()] )
+    
+    if requires_grad_state and not requires_grad_open_dl:
+        warnings.warn("state members sites and sites_open_dl have different requires_grad", Warning)
+
+    return True
+
 
 # CONVENTION:
 #
@@ -38,8 +51,7 @@ def _sym_pos_def_rdm(rdm, sym_pos_def=False, verbosity=0, who=None):
 # double-layer on-site tensor
 
 # ----- COMPONENTS ------------------------------------------------------------
-
-def open_C2x2_LU(coord, state, env, verbosity=0):
+def open_C2x2_LU(coord, state, env, fusion_level="full", verbosity=0):
     r= state.vertexToSite(coord)
     C = env.C[(state.vertexToSite(r),(-1,-1))]
     T1 = env.T[(state.vertexToSite(r),(0,-1))]
@@ -55,62 +67,43 @@ def open_C2x2_LU(coord, state, env, verbosity=0):
     # T2--2->1
     # 1->0
     c2x2= contract(T2, c2x2, ([0],[0]))
-
-    # Open indices connecting Ts to on-site tensor. The unmerged index pairs are ordered 
-    # as ket,bra
-    #
-    # C-------T1--3->4->5
-    # |       2->2,3->3,4
-    # T2--1->1,2
-    # |
-    # 0
-    c2x2= c2x2.unfuse_legs(axes=(1,2),inplace=True)
-
-    # C----------T1--5->3     C--------T1--3->1
-    # |          3 \4->2      |   2<-4\| \
-    # |          1            T--------a-------6->4
-    # T2----1 2--a--4->6      |\       |  2
-    # |\2->1     |\0->4       | \      |  1 /0->5 
-    # |          3->5         |  \1 2-----a*--4->7
-    # 0                       |        |  3->6 
-    #                         0     3<-5
-    #                         
-    #
-    c2x2= contract(c2x2, state.site(r), ([1,3], [2,1]))
-    c2x2= contract(c2x2, conj(state.site(r)), ([1,2], [2,1]))
-
+    
+    # C----------T1--3->1
+    # |          2
+    # |          1
+    # T2----1 2--A--4
+    # |          |\0->2
+    # |          3
+    # 0 
+    #                
+    A= state.site_dl_open(r)
+    c2x2= contract(c2x2, A, ([1,2],[2,1]))
 
     # C----T--1->3                   C----T--2
     # |    |                     =>  |    |
     # T---a*a--4,7->4,5->4->3        T---a*a--3
     # |    |\2,5->6,7->5,6->4,5      |    |\4,5
     # 0    3,6->1,2->2               0    1 
-    c2x2= permute(c2x2, (0,3,6,1,4,7,2,5))
-    # c2x2, lo= c2x2.group_legs((4,5), new_s=-1)
-    # c2x2, lo= c2x2.group_legs((1,2), new_s=-1)
-    c2x2= c2x2.fuse_legs(axes=(0,(1,2),3,(4,5),6,7))
+    if fusion_level=="full":
+        c2x2= c2x2.fuse_legs( axes=((0,3),(1,4),2) )
+    elif fusion_level=="basic":
+        pass
+    else:
+        raise RuntimeError("Unsupported fusion_level option "+fusion_level)
 
     return c2x2
 
-def _group_legs_C2x2_LU(C2x2_LU):
-    # C----T--2  => C----T---2
-    # |    |        |    |    >--2->1(-1)
-    # T---a*a--3    T---a*a--3 
-    # |    |\4,5     \ /  \4,5->3,4->2,3
-    # 0    1          0(-1)
-    C2x2_LU, lo= C2x2_LU.group_legs((2,3), new_s=-1)
-    C2x2_LU, lo= C2x2_LU.group_legs((0,1), new_s=-1)
-    return C2x2_LU
-
-def open_C2x2_LD(coord, state, env, verbosity=0):
+def open_C2x2_LD(coord, state, env, fusion_level="full", verbosity=0):
     r"""
     :param coord: vertex (x,y) for which reduced density matrix is constructed
     :param state: underlying wavefunction
     :param env: environment corresponding to ``state``
+    :param fusion_level: controls fusion of indices of open enlarged corner
     :param verbosity: logging verbosity
     :type coord: tuple(int,int) 
     :type state: IPEPS_ABELIAN
     :type env: ENV_ABELIAN
+    :type fusion_level: str
     :type verbosity: int
     :return: left-down enlarged corner with open physical indices
     :rtype: torch.tensor
@@ -126,6 +119,18 @@ def open_C2x2_LD(coord, state, env, verbosity=0):
 
     The physical indices `s` and `s'` of on-site tensor :math:`a` at vertex ``coord`` 
     and its hermitian conjugate :math:`a^\dagger` are left uncontracted
+
+    Depending on `fusion_level`, the resulting tensor is: 
+
+        rank-3 : fusion_level= 'full'             rank-5 : fusion_level= 'basic'
+
+          0
+         /\   2 (s,s')                            0  1  4 (s,s')
+        |  | /                                    |  | /
+        T--a^+a--\                                T--a^+a--3
+        |  |      >--1                            |  |     
+        C--T-----/                                C--T-----2
+ 
     """
     r= state.vertexToSite(coord)
     # 0
@@ -135,64 +140,43 @@ def open_C2x2_LD(coord, state, env, verbosity=0):
     # 0
     # C(-1,1)--1->2
     c2x2 = contract(env.T[(r,(-1,0))],env.C[(r,(-1,1))],([1],[0]))
-    if verbosity>0:
-        print("c2x2=TC "+str(c2x2))
+    if verbosity>0: print("c2x2=TC "+str(c2x2))
+    
     # 0
     # |
     # T(-1,0)--1
     # |             0->2
     # C(-1,1)--2 1--T(0,1)--2->3
     c2x2 = contract(c2x2,env.T[(r,(0,1))],([2],[1]))
-    if verbosity>0:
-        print("c2x2=TCT "+str(c2x2))
+    if verbosity>0: print("c2x2=TCT "+str(c2x2))
     
-    # Open indices connecting Ts to on-site tensor. The unmerged index pairs are ordered 
-    # as ket,bra
-    #
-    # 0
-    # T--1->1,2
-    # |       2->2,3->3,4
-    # C-------T--3->4->5
-    # c2x2= c2x2.ungroup_leg(2, env.T[(r,(0,1))]._leg_fusion_data[0])
-    # c2x2= c2x2.ungroup_leg(1, env.T[(r,(-1,0))]._leg_fusion_data[2])
-    c2x2= c2x2.unfuse_legs(axes=(1,2),inplace=True)
-
-    # 0            0->4       0      5->3/4->2
-    # |       5<-1/           T------a-------6->4
-    # T-----1 2--a--4->6      |\     |     1->6/0->5
-    # |\2->1     3            | \1 2-------a*--4->7
-    # |          3/--4->2     |      |     3
-    # C----------T--5->3      |      \----\2
-    #                         C------------T--3->1
-    #
-    c2x2= contract(c2x2, state.site(r), ([1,3], [2,3]))
-    c2x2= contract(c2x2, conj(state.site(r)), ([1,2], [2,3]))
+    # 0            0->2
+    # |       3<-1/
+    # T-----1 2--A--4
+    # |          3
+    # |          2
+    # C----------T--3->1
+    # 
+    A= state.site_dl_open(r)
+    c2x2= contract(c2x2, A, ([1,2],[2,3]))
     
     # 0    3,6->1,2->1                 0    1  4,5
     # |    |/--2,5->6,7->5,6->4,5  =>  |    | /
-    # T---a*a--4,7->4,5->4->3          T---a*a--3
+    # T----A---4,7->4,5->4->3          T----A---3
     # |    |                           |    |
     # C----T--1->3                     C----T---2
-    c2x2= permute(c2x2, (0,3,6,1,4,7,2,5))
-    # c2x2, lo= c2x2.group_legs((4,5), new_s=-1)
-    # c2x2, lo= c2x2.group_legs((1,2), new_s=1)
-    c2x2= c2x2.fuse_legs(axes=(0,(1,2),3,(4,5),6,7))
-    if verbosity>0:
-        print("c2x2=TCTa*a "+str(c2x2))
+    if fusion_level=="full":
+        c2x2= c2x2.fuse_legs( axes=((0,3),(1,4),2) )
+    elif fusion_level=="basic":
+        pass
+    else:
+        raise RuntimeError("Unsupported fusion_level option "+fusion_level)
+
+    if verbosity>0: print("c2x2=TCTa*a "+str(c2x2))
 
     return c2x2
 
-def _group_legs_C2x2_LD(C2x2_LD):
-    # 0    1  4,5 => (+1)0   4,5->3,4->2,3
-    # |    | /          / \ /
-    # T---a*a--3       T-a*a--3
-    # |    |           |  |    >2->1(-1)
-    # C----T---2       C--T---2
-    C2x2_LD, lo= C2x2_LD.group_legs((2,3), new_s=-1)
-    C2x2_LD, lo= C2x2_LD.group_legs((0,1), new_s=1)
-    return C2x2_LD
-
-def open_C2x2_RU(coord, state, env, verbosity=0):
+def open_C2x2_RU(coord, state, env, fusion_level="full", verbosity=0):
     r= state.vertexToSite(coord)
     C = env.C[(r,(1,-1))]
     T1 = env.T[(r,(1,0))]
@@ -208,25 +192,17 @@ def open_C2x2_RU(coord, state, env, verbosity=0):
     # 0--T2--2 0--C
     #    1        |
     #       2<-1--T1
-    #           3<-2
+    #          3<-2
     c2x2 =contract(T2, c2x2, ([2],[0]))
 
-    #   0--T2-------C
-    # 1,2<-1        |
-    #  3,4<-2,3<-2--T1
-    #         5<-4<-3
-    # c2x2= c2x2.ungroup_leg(2, T1._leg_fusion_data[1])
-    # c2x2= c2x2.ungroup_leg(1, T2._leg_fusion_data[1])
-    c2x2= c2x2.unfuse_legs(axes=(1,2),inplace=True)
-
-    #     0--T2------C          0--T2--------C
-    # 1<-2--/1       |      3<-5--/-a------\ |
-    # 4<-0--\1  2<-4\|           1  |\4->2  \T1 
-    #  5<-2--a--4 3--T1     5<-0\1  |       /|
-    #     6<-3    3<-5     6<-2--a*--4 2---/ |
-    #                         7<-3  6->4  1<-3
-    c2x2 =contract(c2x2, state.site(r), ([1,3],[1,4]))
-    c2x2 =contract(c2x2, conj(state.site(r)), ([1,2],[1,4]))
+    #     0--T2------C
+    #        1       |
+    # 2<-0--\1       | 
+    #  3<-2--a--4 2--T1
+    #     4<-3    1<-3
+    # 
+    A= state.site_dl_open(r)
+    c2x2= contract(c2x2,A,([1,2],[1,4]))
 
     #          0--T2----C  =>              0--T2----C
     #             |     |                     |     |
@@ -234,24 +210,16 @@ def open_C2x2_RU(coord, state, env, verbosity=0):
     #    6,7<-2,5/|     |     4,5<-5,6<-6,7<-/|     |
     #      4,5<-4,7  3<-1         (-1)3<-4<-4,5  2<-3
     #
-    c2x2= permute(c2x2, (0,3,6,1,4,7,2,5))
-    # c2x2, lo= c2x2.group_legs((4,5), new_s=-1)
-    # c2x2, lo= c2x2.group_legs((1,2), new_s=1)
-    c2x2= c2x2.fuse_legs(axes=(0,(1,2),3,(4,5),6,7))
+    if fusion_level=="full":
+        c2x2= c2x2.fuse_legs( axes=((0,3),(1,4),2) )
+    elif fusion_level=="basic":
+        pass
+    else:
+        raise RuntimeError("Unsupported fusion_level option "+fusion_level)
 
     return c2x2
 
-def _group_legs_C2x2_RU(C2x2_RU):
-    #  0--T-----C  =>           0---T----C
-    #     |     |       (+1)0--<    |    |
-    # 1--a*a----T               1--a*a---T
-    # 4,5/|     |     2,3<-3,4<-4,5/  \ /
-    #     3     2               (-1)1<-2
-    C2x2_RU, lo= C2x2_RU.group_legs((2,3), new_s=-1)
-    C2x2_RU, lo= C2x2_RU.group_legs((0,1), new_s=1)
-    return C2x2_RU
-
-def open_C2x2_RD(coord, state, env, verbosity=0):
+def open_C2x2_RD(coord, state, env, fusion_level="full", verbosity=0):
     r= state.vertexToSite(coord)
     C = env.C[(r,(1,1))]
     T1 = env.T[(r,(0,1))]
@@ -268,48 +236,30 @@ def open_C2x2_RD(coord, state, env, verbosity=0):
     # 3<-2--T1---C
     c2x2 = contract(T2, c2x2, ([2],[0]))
 
-    #                0   
-    #        1,2<-1--T2
-    # 3,4<-2,3<-2    | 
-    #  5<-4<-3--T1---C
-    # c2x2= c2x2.ungroup_leg(2, T1._leg_fusion_data[0])
-    # c2x2= c2x2.ungroup_leg(1, T2._leg_fusion_data[1])
-    c2x2= c2x2.unfuse_legs(axes=(1,2),inplace=True)
-
-    #    5<-1          0         6<-1          0
-    # 6<-2--a--4 1-----T2     7<-2--a*--4 1----T2
-    #  4<-0/3     1<-2/|       5<-0/3         /| 
-    #       3/4->2     |      3<-5  2        / |
-    # 3<-5--T1---------C   4<-6--a--|-------/  |
-    #                       2<-4/| /           |
-    #                      1<-3--T1------------C
-    c2x2 = contract(c2x2, state.site(r), ([1,3],[4,3]))
-    c2x2 = contract(c2x2, conj(state.site(r)), ([1,2],[4,3]))
+    #    3<-1          0 
+    # 4<-2--A--4 1-----T2
+    #  2<-0/3          | 
+    #       2          |
+    # 1<-3--T1---------C
+    #                   
+    A= state.site_dl_open(r)
+    c2x2= contract(c2x2,A,([1,2],[4,3]))
 
     #      1,2<-3,6    0  =>          (+1)1<-1,2   0
     #  6,7<-2,5\  |    |        4,5<-5,6<-6,7\|    |
-    #  4,5<-4,7--a*a---T2     (+1)3<-4<-4,5--a*a---T2
+    #   4,5<-4,7--A----T2     (+1)3<-4<-4,5---A----T2
     #             |    |                      |    |
     #       3<-1--T1---C                2<-3--T1---C
-    c2x2= permute(c2x2, (0,3,6,1,4,7,2,5))
-    # c2x2, lo= c2x2.group_legs((4,5), new_s=1)
-    # c2x2, lo= c2x2.group_legs((1,2), new_s=1)
-    c2x2= c2x2.fuse_legs(axes=(0,(1,2),3,(4,5),6,7))
+    if fusion_level=="full":
+        c2x2= c2x2.fuse_legs( axes=((0,3),(1,4),2) )
+    elif fusion_level=="basic":
+        pass
+    else:
+        raise RuntimeError("Unsupported fusion_level option "+fusion_level)
 
     return c2x2
 
-def _group_legs_C2x2_RD(C2x2_RD):
-    #     1     0  =>              (+1)0
-    # 4,5\|     |     2,3<-3,4<-4,5\ /  \
-    # 3--a*a----T               3--a*a---T
-    #     |     |    (+1)1<-2--<    |    |
-    #  2--T-----C               2---T----C
-    C2x2_RD, lo= C2x2_RD.group_legs((2,3), new_s=1)
-    C2x2_RD, lo= C2x2_RD.group_legs((0,1), new_s=1)
-    return C2x2_RD
-
 # ----- 1-site RDM ------------------------------------------------------------
-
 def rdm1x1(coord, state, env, sym_pos_def=False, verbosity=0):
     r"""
     :param coord: vertex (x,y) for which reduced density matrix is constructed
@@ -317,8 +267,8 @@ def rdm1x1(coord, state, env, sym_pos_def=False, verbosity=0):
     :param env: environment corresponding to ``state``
     :param verbosity: logging verbosity
     :type coord: tuple(int,int) 
-    :type state: IPEPS
-    :type env: ENV
+    :type state: IPEPS_ABELIAN
+    :type env: ENV_ABELIAN
     :type verbosity: int
     :return: 1-site reduced density matrix with indices :math:`s;s'`
     :rtype: torch.tensor
@@ -328,7 +278,7 @@ def rdm1x1(coord, state, env, sym_pos_def=False, verbosity=0):
 
         C--T-----C
         |  |     |
-        T--A^+A--T
+        T--a^+a--T
         |  |     |
         C--T-----C
 
@@ -336,33 +286,23 @@ def rdm1x1(coord, state, env, sym_pos_def=False, verbosity=0):
     and it's hermitian conjugate :math:`A^\dagger` are left uncontracted
     """
     who= "rdm1x1"
+    assert _validate_open_dl(state,env),"Inconsistent requires_grad for state and/or env tensors"
     r= state.vertexToSite(coord)
     rdm= open_C2x2_LD(r, state, env, verbosity=verbosity)
-    # rdm= _group_legs_C2x2_LD(rdm)
-
 
     # C(-1,-1)--1 0--T(0,-1)--2  => C---T--2->1(-1)
     # 0              1               \ /
     #                                 0(-1)
     C2x1_LU= contract(env.C[(r,(-1,-1))], env.T[(r,(0,-1))],([1],[0]))
-    # C2x1_LU, lo= C2x1_LU.group_legs((0,1), new_s=-1) 
+    C2x1_LU= C2x1_LU.fuse_legs( axes=((0,1),2) ) 
 
-    # C2x1_LU--1->0 => C2x1_LU--0
-    # |                |         \0(-1)
-    # 0      2,3       |___      /
-    # 0__ _/           |rdm|----1
-    # |    |               \2,3->1,2
-    # |rdm_|--1 <-NOTE: contains both env index and double layer aux-indices)
-    #rdm= contract(C2x1_LU, rdm, ([0],[0]))
-    #rdm, lo= rdm.group_legs((0,1), new_s=-1)
-    # C----T--2->0
-    # 0    1
-    # 0    1  4,5->3,4
-    # |    | /
-    # T---a*a--3->2
+    # C2x1_LU--1->0
+    # |
+    # 0     2
+    # 0__ _/
     # |    |
-    # C----T---2->1
-    rdm= contract(C2x1_LU, rdm, ([0,1],[0,1]))
+    # |rdm_|--1 <-NOTE: contains both env index and double layer aux-indices)
+    rdm= contract(C2x1_LU, rdm, ([0],[0]))
 
     if verbosity>0:
         print("rdm=CTCTaT "+str(rdm))
@@ -373,43 +313,28 @@ def rdm1x1(coord, state, env, sym_pos_def=False, verbosity=0):
     #       0          0--<   |
     # 0<-1--C(1,1)         0--C(1,1)
     E= contract(env.C[(r,(1,1))], env.T[(r,(1,0))], ([0],[2]))
-    # E, lo= E.group_legs((0,2), new_s=1)
+    E= E.fuse_legs( axes=((0,2),1) )
 
     #    0--C(1,-1) =>          0--C
-    #       1           (+1)0--<   |
+    #       1                      |
     #       1                   1--E
     # 1<-0--E
-    # E= contract(env.C[(r,(1,-1))], E, ([1],[1]))
-    # E, lo= E.group_legs((0,1), new_s=1)
-    #    0--C
-    #       1 
-    #       1  
-    #    2--T(1,0)
-    #       |
-    #       |
-    # 1<-0--C(1,1)
     E= contract(env.C[(r,(1,-1))], E, ([1],[1]))
 
     if verbosity>0:
         print("rdm=CTC "+str(E))
 
-    # C(-1,-1)--T(0,-1)--------\       /--C(1,-1)
-    # |         |              |       |  |
-    # |         |/23->01(s,s') |       |  |
-    # T(-1,0)---a--------------|--0 0--|--T(1,0) 
-    # |         |              |       |  | 
-    # |         |              |       |  |
-    # C(-1,1)---T(0,1)---------/       \--C(1,1)
-    # rdm = contract(rdm,E,([0],[0]))
-    # C----T------0 0--C
-    # |    |           |
-    # |    |  3,4      | 
-    # |    | /         |
-    # T---a*a-----2 2--T
-    # |    |           |
-    # C----T------1 1--C
-    rdm = contract(rdm,E,([0,2,1],[0,2,1]))
+    # C(-1,-1)--T(0,-1)---------0 0-----C(1,-1)
+    # |         |                       |
+    # |         |/2->0                  |
+    # T(-1,0)---a------------\       /--T(1,0) 
+    # |         |            |--1 1--|  | 
+    # |         |            |       |  |
+    # C(-1,1)---T(0,1)-------/       \--C(1,1)
+    rdm = contract(rdm,E,([0,1],[0,1]))
 
+    # unfuse physical indices into ket,bra: 0 -> s0,s0'
+    rdm= rdm.unfuse_legs(axes=0)
     if verbosity>0:
         print("rdm=CTCTaTCTC "+str(rdm))
 
@@ -452,9 +377,9 @@ def rdm2x1(coord, state, env, sym_pos_def=False, verbosity=0):
     at vertices ``coord``, ``coord+(1,0)`` are left uncontracted
     """
     who="rdm2x1"
+    assert _validate_open_dl(state,env),"Inconsistent requires_grad for state and/or env tensors"
     #----- building C2x2_LU ----------------------------------------------------
     C2x2_LU= open_C2x2_LU(coord, state, env, verbosity=verbosity)
-    # C2x2_LU= _group_legs_C2x2_LU(C2x2_LU)
 
     if verbosity>0:
         print(f"C2X2 LU {coord} -> f{state.vertexToSite(coord)} (-1,-1): {C2x2_LU}")
@@ -467,33 +392,23 @@ def rdm2x1(coord, state, env, sym_pos_def=False, verbosity=0):
     # 0       0->1      / \
     # C--1 1--T2--2 => C---T--2->1
     C2x1_LD= contract(C, T2, ([1],[1]))
-    # C2x1_LD, lo= C2x1_LD.group_legs((0,1), new_s=1)
+    C2x1_LD= C2x1_LD.fuse_legs(axes=((0,1),2))
 
     if verbosity>0:
         print(f"C2X1 LD {coord} -> {state.vertexToSite(coord)} (-1,1): {C2x1_LD}")
 
     #----- build left part C2x2_LU--C2x1_LD ------------------------------------
     # C2x2_LU--1 
-    # |\23
+    # |\2
     # 0
     # 0
     # C2x1_LD--1->0
-    # TODO is it worthy(performance-wise) to instead overwrite one of C2x2_LU,C2x2_RU ?  
-    # left_half= contract(C2x1_LD, C2x2_LU, ([0],[0]))
-    # C----T--2->1  
-    # |    |     
-    # T---a*a--3->2  
-    # |    |\4,5->3,4 
-    # 0    1     
-    # 0    1
-    # C----T2--2->0
-    left_half= contract(C2x1_LD, C2x2_LU, ([0,1],[0,1]))
+    left_half= contract(C2x1_LD, C2x2_LU, ([0],[0]))
 
     #----- building C2x2_RU ----------------------------------------------------
     vec = (1,0)
     shift_r = state.vertexToSite((coord[0]+vec[0],coord[1]+vec[1]))
     C2x2_RU= open_C2x2_RU(shift_r, state, env, verbosity=verbosity)
-    # C2x2_RU= _group_legs_C2x2_RU(C2x2_RU)
     
     if verbosity>0:
         print(f"C2X2 RU {(coord[0]+vec[0],coord[1]+vec[1])} -> {shift_r} "\
@@ -507,7 +422,7 @@ def rdm2x1(coord, state, env, sym_pos_def=False, verbosity=0):
     #    1<-0        0           / \  
     # 2<-1--T1--2 1--C => 1<-2--T1--C
     C2x1_RD= contract(C, T1, ([1],[2]))
-    # C2x1_RD, lo= C2x1_RD.group_legs((0,1), new_s=1)
+    C2x1_RD= C2x1_RD.fuse_legs(axes=((0,1),2))
 
     if verbosity>0:
         print(f"C2X1 RD {(coord[0]+vec[0],coord[1]+vec[1])} -> {shitf_coord} "\
@@ -515,38 +430,25 @@ def rdm2x1(coord, state, env, sym_pos_def=False, verbosity=0):
 
     #----- build right part C2x2_RU--C2x1_RD -----------------------------------
     # 1<-0--C2x2_RU
-    #       |\23
+    #       |\2
     #       1
     #       0
     # 0<-1--C2x1_RD
-    # right_half =contract(C2x1_RD, C2x2_RU, ([0],[1]))
-    #       1<-0--T2----C
-    #             |     |
-    #       2<-1-a*a----T1
-    #   3,4<-4,5-/|     |
-    #         (-1)3     2
-    #             1     0
-    #       0<-2--T1----C
-    right_half =contract(C2x1_RD, C2x2_RU, ([0,1],[2,3]))
+    right_half =contract(C2x1_RD, C2x2_RU, ([0],[1]))
 
     # construct reduced density matrix by contracting left and right halfs
     # C2x2_LU--1 1----C2x2_RU
-    # |\23->01        |\23
+    # |\2->0          |\2->1
     # |               |    
     # C2x1_LD--0 0----C2x1_RD
-    # rdm =contract(left_half,right_half,([0,1],[0,1]))
-    # C2x2_LU--1 1----C2x2_RU
-    # |     \--2 2--/ |
-    # |\34->01        |\34->23
-    # |               |    
-    # C2x1_LD--0 0----C2x1_RD
-    rdm =contract(left_half,right_half,([0,1,2],[0,1,2]))
+    rdm =contract(left_half,right_half,([0,1],[0,1]))
 
-    # permute into order of s0,s1;s0',s1' where primed indices
-    # represent "bra"
+    # unfuse physical indices into ket,bra: 01 -> s0,s0',s1,s1'
+    # permute into order of s0,s1;s0',s1'
     # 0123->0213
-    # and normalize
+    rdm= rdm.unfuse_legs(axes=(0,1))
     rdm= permute(rdm, (0,2,1,3))
+    # symmetrize and normalize
     rdm= _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity,\
         who=who)
 
@@ -586,6 +488,7 @@ def rdm1x2(coord, state, env, sym_pos_def=False, verbosity=0):
     at vertices ``coord``, ``coord+(0,1)`` are left uncontracted
     """
     who="rdm1x2"
+    assert _validate_open_dl(state,env),"Inconsistent requires_grad for state and/or env tensors"
     #----- building C2x2_LU ----------------------------------------------------
     C2x2_LU= open_C2x2_LU(coord, state, env, verbosity=verbosity)
     # C2x2_LU= _group_legs_C2x2_LU(C2x2_LU)
@@ -606,28 +509,21 @@ def rdm1x2(coord, state, env, sym_pos_def=False, verbosity=0):
     # 1--T1             1<-2
     #    2
     C1x2_RU= contract(C, T1, ([1],[0]))
-    # C1x2_RU, lo= C1x2_RU.group_legs((0,1), new_s=1)
+    C1x2_RU= C1x2_RU.fuse_legs(axes=((0,1),2))
 
     if verbosity>0:
         print(f"C1X2 RU {coord} -> {state.vertexToSite(coord)} (1,-1): {C1x2_RU}")
 
     #----- build upper part C2x2_LU--C1x2_RU -----------------------------------
     # C2x2_LU--1 0--C1x2_RU
-    # |\23          |
+    # |\2           |
     # 0->1          1->0
-    # upper_half =contract(C1x2_RU, C2x2_LU, ([0],[1]))
-    # C----T--------2 0--C  
-    # |    |             |
-    # T---a*a-------3 1--T1
-    # |    |\4,5->3,4    2->0
-    # 0->1 1->2
-    upper_half =contract(C1x2_RU, C2x2_LU, ([0,1],[2,3]))
+    upper_half =contract(C1x2_RU, C2x2_LU, ([0],[1]))
 
     #----- building C2x2_LD ----------------------------------------------------
     vec = (0,1)
     shift_r = state.vertexToSite((coord[0]+vec[0],coord[1]+vec[1]))
     C2x2_LD= open_C2x2_LD(shift_r, state, env, verbosity=verbosity)
-    # C2x2_LD= _group_legs_C2x2_LD(C2x2_LD)
 
     if verbosity>0:
         print(f"C2X2 LD {(coord[0]+vec[0],coord[1]+vec[1])} -> {shift_r} "\
@@ -643,8 +539,7 @@ def rdm1x2(coord, state, env, sym_pos_def=False, verbosity=0):
     #       0      (+1)1--<      |
     # 2<-1--C              1<-2--C
     C1x2_RD= contract(T2, C, ([2],[0]))
-    C1x2_RD= permute(C1x2_RD, (0,2,1))
-    # C1x2_RD, lo= C1x2_RD.group_legs((1,2), new_s=1)
+    C1x2_RD= C1x2_RD.fuse_legs(axes=(0,(2,1)))
 
     if verbosity>0:
         print(f"C1X2 RD {(coord[0]+vec[0],coord[1]+vec[1])} -> {shift_r} "\
@@ -652,37 +547,25 @@ def rdm1x2(coord, state, env, sym_pos_def=False, verbosity=0):
 
     #----- build lower part C2x2_LD--C1x2_RD -----------------------------------
     # 0->1(+1)      0
-    # |/23          |
-    # C2x2_LD--1 1--C1x2_RD 
-    # lower_half =contract(C1x2_RD, C2x2_LD, ([1],[1]))
-    # 0->1 1->2 4,5->3,4
-    # |    | --/          0
-    # T---a*a--------3 2--T2
-    # |    |              |
-    # C----T---------2 1--C
-    lower_half =contract(C1x2_RD, C2x2_LD, ([1,2],[2,3]))
+    # |/2           |
+    # C2x2_LD--1 1--C1x2_RD
+    lower_half =contract(C1x2_RD, C2x2_LD, ([1],[1]))
 
     # construct reduced density matrix by contracting lower and upper halfs
     # C2x2_LU------C1x2_RU
-    # |\23->01     |
+    # |\2->0       |
     # 1            0
     # 1            0
-    # |/23         |
+    # |/2->1       |
     # C2x2_LD------C1x2_RD
-    # rdm =contract(upper_half,lower_half,([0,1],[0,1]))
-    # C2x2_LU------C1x2_RU
-    # | | \34->01     |
-    # 1 2             0
-    # 1 2             0
-    # | | /34         |
-    # C2x2_LD------C1x2_RD
-    rdm =contract(upper_half,lower_half,([0,1,2],[0,1,2]))
+    rdm =contract(upper_half,lower_half,([0,1],[0,1]))
 
-    # permute into order of s0,s1;s0',s1' where primed indices
-    # represent "bra"
+    # unfuse physical indices into ket,bra: 01 -> s0,s0',s1,s1'
+    # permute into order of s0,s1;s0',s1'
     # 0123->0213
-    # and normalize
+    rdm= rdm.unfuse_legs(axes=(0,1))
     rdm= permute(rdm, (0,2,1,3))
+    # symmetrize and normalize
     rdm= _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity,\
         who=who)
 
@@ -714,9 +597,9 @@ def rdm2x2(coord, state, env, sym_pos_def=False, verbosity=0):
 
         C--T------------------T------------------C = C2x2_LU(coord)--------C2x2(coord+(1,0))
         |  |                  |                  |   |                     |
-        T--A^+A(coord)--------A^+A(coord+(1,0))--T   C2x2_LD(coord+(0,1))--C2x2(coord+(1,1))
+        T--a^+a(coord)--------a^+a(coord+(1,0))--T   C2x2_LD(coord+(0,1))--C2x2(coord+(1,1))
         |  |                  |                  |
-        T--A^+A(coord+(0,1))--A^+A(coord+(1,1))--T
+        T--a^+a(coord+(0,1))--a^+a(coord+(1,1))--T
         |  |                  |                  |
         C--T------------------T------------------C
         
@@ -729,9 +612,9 @@ def rdm2x2(coord, state, env, sym_pos_def=False, verbosity=0):
 
     """
     who= "rdm2x2"
+    assert _validate_open_dl(state,env),"Inconsistent requires_grad for state and/or env tensors"
     #----- building C2x2_LU ----------------------------------------------------
     C2x2_LU= open_C2x2_LU(coord, state, env, verbosity=verbosity)
-    # C2x2_LU= _group_legs_C2x2_LU(C2x2_LU)
 
     if verbosity>0:
         print(f"C2X2 LU {coord} -> {state.vertexToSite(coord)} (-1,-1):\n{C2x2_LU}")
@@ -740,34 +623,24 @@ def rdm2x2(coord, state, env, sym_pos_def=False, verbosity=0):
     vec = (1,0)
     shift_r = state.vertexToSite((coord[0]+vec[0],coord[1]+vec[1]))
     C2x2_RU= open_C2x2_RU(shift_r, state, env, verbosity=verbosity)
-    # C2x2_RU= _group_legs_C2x2_RU(C2x2_RU)
     
     if verbosity>0:
         print(f"C2X2 RU {(coord[0]+vec[0],coord[1]+vec[1])} -> {shift_r} "\
             f"(1,-1):\n{C2x2_RU}")
 
     #----- build upper part C2x2_LU--C2x2_RU -----------------------------------
-    # C2x2_LU--1 0--C2x2_RU              C2x2_LU------C2x2_RU
-    # |\23->12      |\23->45   & permute |\12->23      |\45
-    # 0             1->3                 0             3->1
-    # TODO is it worthy(performance-wise) to instead overwrite one of C2x2_LU,C2x2_RU ?  
-    # upper_half = contract(C2x2_LU, C2x2_RU, ([1],[0]))
-    # upper_half = permute(upper_half, (0,3,1,2,4,5))
-    # C2x2_LU--2 0--C2x2_RU                    C2x2_LU------C2x2_RU
-    # |_____|--3 1--|_____|                    |_____|       |____|
-    # |  |  \45->23  |    |\45->67  & permute  |  |  \23->45 |    |\67
-    # 0  1           3->5 2->4                 0  1          5->3 4->2
-    upper_half = contract(C2x2_LU, C2x2_RU, ([2,3],[0,1]))
-    upper_half = permute(upper_half, (0,1,4,5,2,3,6,7))
+    # C2x2_LU--1 0--C2x2_RU
+    # |\2->1        |\2->3
+    # 0             1->2 
+    upper_half = contract(C2x2_LU, C2x2_RU, ([1],[0]))
 
     #----- building C2x2_RD ----------------------------------------------------
     vec = (1,1)
     shift_r = state.vertexToSite((coord[0]+vec[0],coord[1]+vec[1]))
     C2x2_RD= open_C2x2_RD(shift_r, state, env, verbosity=verbosity)
-    # C2x2_RD= _group_legs_C2x2_RD(C2x2_RD)
 
     #    0
-    #    |/23
+    #    |/2
     # 1--C2x2
     if verbosity>0:
         print(f"C2X2 RD {(coord[0]+vec[0],coord[1]+vec[1])} -> {shift_r} "\
@@ -777,40 +650,32 @@ def rdm2x2(coord, state, env, sym_pos_def=False, verbosity=0):
     vec = (0,1)
     shift_r = state.vertexToSite((coord[0]+vec[0],coord[1]+vec[1]))
     C2x2_LD= open_C2x2_LD(shift_r, state, env, verbosity=verbosity)
-    # C2x2_LD= _group_legs_C2x2_LD(C2x2_LD)
 
     if verbosity>0:
         print(f"C2X2 LD {(coord[0]+vec[0],coord[1]+vec[1])} -> {shift_r} "\
             +f"(-1,1): {C2x2_LD}")
 
     #----- build lower part C2x2_LD--C2x2_RD -----------------------------------
-    # 0             0->3                 0             3->1
-    # |/23->12      |/23->45   & permute |/12->23      |/45
-    # C2x2_LD--1 1--C2x2_RD              C2x2_LD------C2x2_RD
-    # TODO is it worthy(performance-wise) to instead overwrite one of C2x2_LD,C2x2_RD ?  
-    # lower_half = contract(C2x2_LD, C2x2_RD, ([1],[1]))
-    # lower_half = permute(lower_half, (0,3,1,2,4,5))
-    # 0   1          1->5 0->4               0   1          5->3 4->2
-    # |___|_/45->23  |____|/23->67 & permute |___|_/23->45  |____|/67
-    # |     |--3 3--|     |                  |     |       |     |
-    # C2x2_LD--2 2--C2x2_RD                  C2x2_LD-------C2x2_RD
-    lower_half = contract(C2x2_LD, C2x2_RD, ([2,3],[2,3]))
-    lower_half = permute(lower_half, (0,1,4,5,2,3,6,7))
-
+    # 0             0->2
+    # |/2->1        |/2->3
+    # C2x2_LD--1 1--C2x2_RD
+    lower_half = contract(C2x2_LD, C2x2_RD, ([1],[1]))
+    
     # construct reduced density matrix by contracting lower and upper halfs
     # C2x2_LU------C2x2_RU
-    # |  |\45->01     |  |\67->23
-    # 0  1            3  2
-    # 0  1            3  2  
-    # |  |/45         |  |/67->67
+    # | \1->0      | \3->1
+    # 0            2
+    # 0            2  
+    # | /1->2      | /3
     # C2x2_LD------C2x2_RD
-    rdm = contract(upper_half,lower_half,([0,1,2,3],[0,1,2,3]))
+    rdm = contract(upper_half,lower_half,([0,2],[0,2]))
 
-    # permute into order of s0,s1,s2,s3;s0',s1',s2',s3' where primed indices
-    # represent "bra"
+    # unfuse physical indices into ket,bra: 0123 -> s0,s0',s1,s1',s2,s2',s3,s3'
+    # permute into order of s0,s1,s2,s3;s0',s1',s2',s3'
     # 01234567->02461357
-    # and normalize
+    rdm= rdm.unfuse_legs(axes=(0,1,2,3))
     rdm= permute(rdm, (0,2,4,6,1,3,5,7))
+    # symmetrize and normalize
     rdm= _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
 
     return rdm
