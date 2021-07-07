@@ -1,11 +1,11 @@
 from math import sqrt
 import itertools
 import config as cfg
+import torch
 import yamps.yast as yast
 from tn_interface_abelian import contract, permute  
 import groups.su2_abelian as su2
 from ctm.generic_abelian import rdm
-import torch
 
 def _cast_to_real(t):
     return t.real if t.is_complex() else t
@@ -27,6 +27,7 @@ class COUPLEDLADDERS_NOSYM():
     def __init__(self, settings, alpha=0.0, Bz_val=0.0, global_args=cfg.global_args):
         r"""
         :param alpha: nearest-neighbour interaction
+        :param Bz_val: staggered magnetic field
         :param global_args: global configuration
         :type alpha: float
         :type Bz: float
@@ -53,11 +54,9 @@ class COUPLEDLADDERS_NOSYM():
         * :math:`h2_{ij} = \mathbf{S}_i.\mathbf{S}_j` with indices of h2 corresponding to :math:`s_i s_j;s'_i s'_j`
 
         * :math:`h1_{i} = \mathbf{S}^z_i` with indices of h1 corresponding to :math:`s_i ;s'_i`
-
         """
         assert settings.sym.NSYM==0, "No abelian symmetry is assumed"
         self.engine= settings
-        self.backend= settings.backend
         self.dtype=settings.default_dtype
         self.device='cpu' if not hasattr(settings, 'device') else settings.device
         self.phys_dim=2
@@ -270,7 +269,6 @@ class COUPLEDLADDERS_U1():
         """
         assert settings.sym.NSYM==1, "U(1) abelian symmetry is assumed"
         self.engine= settings
-        self.backend= settings.backend
         self.dtype=settings.default_dtype
         self.device='cpu' if not hasattr(settings, 'device') else settings.device
         self.phys_dim=2

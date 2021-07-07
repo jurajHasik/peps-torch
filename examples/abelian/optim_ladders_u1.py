@@ -1,6 +1,7 @@
-import torch
-import numpy as np
+import context
 import argparse
+import numpy as np
+import torch
 import config as cfg
 import examples.abelian.settings_full_torch as settings_full
 import examples.abelian.settings_U1_torch as settings_U1
@@ -97,6 +98,9 @@ def main():
     def loss_fn(state, ctm_env_in, opt_context):
         ctm_args= opt_context["ctm_args"]
         opt_args= opt_context["opt_args"]
+
+        # build double-layer open on-site tensors
+        state.build_sites_dl_open()
 
         # possibly re-initialize the environment
         if opt_args.opt_ctm_reinit:

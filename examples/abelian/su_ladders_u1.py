@@ -1,8 +1,9 @@
+import context
 import argparse
 import numpy as np
 import torch
 import config as cfg
-import yast
+import yamps.yast as yast
 import examples.abelian.settings_full_torch as settings_full
 import examples.abelian.settings_U1_torch as settings_U1
 from ipeps.ipeps_abelian import *
@@ -172,7 +173,7 @@ def main():
 
     # 4) select gate sequence
     # gen_gate_seq= model.gen_gate_seq_2S_2ndOrder       #  separate S.S and Sz.Id gates
-    gen_gate_seq= model.gen_gate_seq_2S_SS_hz_2ndOrder # combined S.S + Sz.Id - Id.Sz gates
+    gen_gate_seq= model.gen_gate_seq_2S_SS_hz_2ndOrder   # combined S.S + Sz.Id - Id.Sz gates
     # 5) enter simple update imaginary time evolution
     outputstatefile= args.out_prefix+"_state.json"
     opt_context= {"loss_history": {"loss":[loss], "beta": 0, \
@@ -187,13 +188,9 @@ def main():
         if args.SU_policy=="ADAPTIVE" or (args.SU_ctm_obs_freq>0 \
             and tstep%args.SU_ctm_obs_freq==0):
             _tmp_state= state_w.absorb_weights()
-            try:
-                loss, ctm_env, *ctm_log= loss_fn(_tmp_state, ctm_env)
-                opt_context["loss_history"]["loss"].append(loss)
-                obs_fn(_tmp_state, ctm_env, opt_context)
-            except Exception as err:
-                _tmp_state.write_to_file(args.out_prefix+"_ERR_state.json")
-                raise err
+            loss, ctm_env, *ctm_log= loss_fn(_tmp_state, ctm_env)
+            opt_context["loss_history"]["loss"].append(loss)
+            obs_fn(_tmp_state, ctm_env, opt_context)
 
         # check CTM energy and depending on policy adjust time step
         _energy_criterion=-1.0
