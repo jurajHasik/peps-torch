@@ -25,7 +25,6 @@ parser.add_argument("--theta", type=float, default=0., help="angle, in degrees, 
 parser.add_argument("--phi", type=float, default=0., help="angle, in degrees, parametrizing the ratio J2/K")
 parser.add_argument("--C", type=float, default=0., help="amplitude/sign of the J2 curve")
 parser.add_argument("--show_corner_spectra", type=bool, default=False, help="plot the corner spectra at each CTM step")
-parser.add_argument("--filter_noise_spectra", type=bool, default=False, help="discard the noise in the corner spectra")
 parser.add_argument("--import_state", type=str, default=None, help="input state")
 args, unknown_args = parser.parse_known_args()
 
@@ -76,8 +75,8 @@ def main():
     model = SU3_chiral.SU3_CHIRAL(Kr=math.sin(args.theta * math.pi/180) * math.cos(args.phi/2 * math.pi/180), Ki=0., j1=math.cos(args.theta * math.pi/180), j2=args.C * math.sin(args.phi *math.pi/180))
 
     def energy_f(state, env, force_cpu=False):
-        e_dn = model.energy_triangle_dn_v2(state, env, force_cpu=force_cpu)
-        e_up = model.energy_triangle_up_v2(state, env, force_cpu=force_cpu)
+        e_dn = model.energy_triangle_dn(state, env, force_cpu=force_cpu)
+        e_up = model.energy_triangle_up(state, env, force_cpu=force_cpu)
         e_nnn = model.energy_nnn(state, env, force_cpu=force_cpu)
         return (e_up + e_dn + e_nnn) / 3
 
@@ -102,17 +101,10 @@ def main():
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
             history = []
-        e_dn = model.energy_triangle_dn_v2(state, env, force_cpu=ctm_args.conv_check_cpu)
-        e_up = model.energy_triangle_up_v2(state, env, force_cpu=ctm_args.conv_check_cpu)
+        e_dn = model.energy_triangle_dn(state, env, force_cpu=ctm_args.conv_check_cpu)
+        e_up = model.energy_triangle_up(state, env, force_cpu=ctm_args.conv_check_cpu)
         e_nnn = model.energy_nnn(state, env, force_cpu=ctm_args.conv_check_cpu)
         e_curr = (e_up + e_dn + e_nnn) / 3
-        if args.filter_noise_spectra:
-            for c_loc, c_ten in env.C.items():
-                u,s,v = torch.svd(c_ten, compute_uv=True)
-                for i in range(args.chi):
-                    if s[i] < 1e-11:
-                        s[i] = 0
-                c_ten = torch.einsum('ia,a,ja->ij', u, s, torch.conj(v))
         history.append(e_curr.item())
         if len(history) == 1:
             e_prev = 0
@@ -157,8 +149,8 @@ def main():
     ctm_env_final, *ctm_log = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
 
     # energy per site
-    e_dn_final = model.energy_triangle_dn_v2(state, ctm_env_final, force_cpu=True)
-    e_up_final = model.energy_triangle_up_v2(state, ctm_env_final, force_cpu=True)
+    e_dn_final = model.energy_triangle_dn(state, ctm_env_final, force_cpu=True)
+    e_up_final = model.energy_triangle_up(state, ctm_env_final, force_cpu=True)
     e_nnn_final = model.energy_nnn(state, ctm_env_final, force_cpu=True)
     e_tot_final = (e_dn_final + e_up_final + e_nnn_final) / 3
 

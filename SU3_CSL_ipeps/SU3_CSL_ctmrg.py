@@ -28,7 +28,6 @@ parser.add_argument("--top_n", type=int, default=2,
 parser.add_argument("--import_state", type=str, default=None, help="input state for ctmrg")
 parser.add_argument("--sym_up_dn", type=int, default=1, help="same trivalent tensors for up and down triangles")
 parser.add_argument("--show_corner_spectra", type=bool, default=False, help="plot the corner spectra at each CTM step")
-parser.add_argument("--filter_noise_spectra", type=bool, default=False, help="discard the noise in the corner spectra")
 args, unknown_args = parser.parse_known_args()
 
 
@@ -48,9 +47,9 @@ def main():
         tens = load_SU3_tensor(path + name)
         tens = tens.to(t_device)
         if name in ['S0', 'S1', 'S2']:
-            tensors_triangle.append(tens)
-        elif name in ['S3', 'S4']:
             tensors_triangle.append(1j * tens)
+        elif name in ['S3', 'S4']:
+            tensors_triangle.append(tens)
         elif name in ['L0', 'L1']:
             tensors_site.append(tens)
         elif name in ['L2']:
@@ -70,6 +69,8 @@ def main():
         # AKLT state
         coeffs_triangle = {(0, 0): torch.tensor([1., 0., 0., 0., 0.], dtype=torch.float64, device=t_device)}
         coeffs_site = {(0, 0): torch.tensor([1., 1., 0], dtype=torch.float64, device=t_device)}
+        #coeffs_triangle = {(0, 0): torch.tensor([1.0000, 0.3563, 4.4882, -0.3494, -3.9341], dtype=torch.float64, device=t_device)}
+        #coeffs_site = {(0, 0): torch.tensor([1.0000, 0.2429, 0.], dtype=torch.float64, device=t_device)}
 
     # define which coefficients will be added a noise
     var_coeffs_triangle = torch.tensor([0, 1, 1, 1, 1], dtype=torch.float64, device=t_device)
@@ -87,8 +88,8 @@ def main():
                                   j2=args.C * math.sin(args.phi * math.pi/180))
 
     def energy_f(state, env):
-        e_dn = model.energy_triangle_dn_v2(state, env, force_cpu=True)
-        e_up = model.energy_triangle_up_v2(state, env, force_cpu=True)
+        e_dn = model.energy_triangle_dn(state, env, force_cpu=True)
+        e_up = model.energy_triangle_up(state, env, force_cpu=True)
         e_nnn = model.energy_nnn(state, env, force_cpu=True)
         return (e_up + e_dn + e_nnn) / 3
 
@@ -117,13 +118,6 @@ def main():
         e_up = model.energy_triangle_up_v2(state, env, force_cpu=ctm_args.conv_check_cpu)
         e_nnn = model.energy_nnn(state, env, force_cpu=ctm_args.conv_check_cpu)
         e_curr = (e_up + e_dn + e_nnn)/3
-        if args.filter_noise_spectra:
-            for c_loc, c_ten in env.C.items():
-                u,s,v = torch.svd(c_ten, compute_uv=True)
-                for i in range(args.chi):
-                    if s[i] < 1e-10:
-                        s[i] = 0
-                env.C[c_loc] = torch.einsum('ia,a,ja->ij', u, s, torch.conj(v))
         history.append(e_curr.item())
         if len(history)==1:
             e_prev = 0

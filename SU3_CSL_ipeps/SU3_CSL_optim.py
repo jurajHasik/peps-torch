@@ -47,9 +47,9 @@ def main():
         tens = load_SU3_tensor(path+name)
         tens = tens.to(t_device)
         if name in ['S0', 'S1', 'S2']:
-            tensors_triangle.append(tens)
-        elif name in ['S3', 'S4']:
             tensors_triangle.append(1j*tens)
+        elif name in ['S3', 'S4']:
+            tensors_triangle.append(tens)
         elif name in ['L0', 'L1']:
             tensors_site.append(tens)
         elif name in ['L2']:
@@ -88,8 +88,8 @@ def main():
 
 
     def energy_f(state, env, force_cpu=False):
-        e_dn = model.energy_triangle_dn_v2(state, env, force_cpu=force_cpu)
-        e_up = model.energy_triangle_up_v2(state, env, force_cpu=force_cpu)
+        e_dn = model.energy_triangle_dn(state, env, force_cpu=force_cpu)
+        e_up = model.energy_triangle_up(state, env, force_cpu=force_cpu)
         e_nnn = model.energy_nnn(state, env)
         return (e_up + e_dn + e_nnn) / 3
 
@@ -115,8 +115,8 @@ def main():
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
             history = []
-        e_dn = model.energy_triangle_dn_v2(state, env, force_cpu=ctm_args.conv_check_cpu)
-        e_up = model.energy_triangle_up_v2(state, env, force_cpu=ctm_args.conv_check_cpu)
+        e_dn = model.energy_triangle_dn(state, env, force_cpu=ctm_args.conv_check_cpu)
+        e_up = model.energy_triangle_up(state, env, force_cpu=ctm_args.conv_check_cpu)
         e_nnn = model.energy_nnn(state, env)
         e_curr = (e_up + e_dn + e_nnn) / 3
         history.append(e_curr.item())
