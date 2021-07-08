@@ -81,10 +81,9 @@ def main():
     state.add_noise(args.instate_noise)
     state.print_coeffs()
 
-    model = SU3_chiral.SU3_CHIRAL(Kr=math.sin(args.theta * math.pi/180) * math.cos(args.phi/2 * math.pi/180) * math.cos(args.chiral_angle * math.pi/180),
-                                  Ki=math.sin(args.theta * math.pi/180) * math.cos(args.phi/2 * math.pi/180) * math.sin(args.chiral_angle * math.pi/180),
-                                  j1=math.cos(args.theta * math.pi/180),
-                                  j2=args.C * math.sin(args.phi * math.pi/180))
+    model = SU3_chiral.SU3_CHIRAL(Kr=math.sin(args.theta * math.pi/180) * math.cos(args.chiral_angle * math.pi/180),
+                                  Ki=math.sin(args.theta * math.pi/180) * math.sin(args.chiral_angle * math.pi/180),
+                                  j1=math.cos(args.theta * math.pi/180) * math.cos(args.chiral_angle * math.pi/180))
 
 
     def energy_f(state, env, force_cpu=False):
