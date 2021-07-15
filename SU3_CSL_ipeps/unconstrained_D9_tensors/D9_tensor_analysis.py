@@ -54,12 +54,13 @@ def main():
     # Build double-layer matrix with bra-ket indices uncontracted
 
     a_1layer = state.sites[(0,0)]
-    # /---A*--\
-    # |  /|\  |      :=     --M--
-    # |   |/  |
-    # \---A---/
-    #    /
-    M = einsum('mibcd,njbcd->ij', a_1layer, conj(a_1layer))
+    #      /|
+    # /---A*----
+    # |  /| |       :=     --M--
+    # | | |/
+    # \-|-A-----
+    #   |/
+    M = einsum('mibcd,mjbcd->ij', a_1layer, conj(a_1layer))
 
     M_eigenvalues, eigv = torch.eig(M, eigenvectors=False)
     print('M eigenvalues')
