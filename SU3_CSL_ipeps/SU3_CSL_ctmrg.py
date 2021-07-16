@@ -113,8 +113,8 @@ def main():
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
             history = []
-        e_dn = model.energy_triangle_dn_v2(state, env, force_cpu=ctm_args.conv_check_cpu)
-        e_up = model.energy_triangle_up_v2(state, env, force_cpu=ctm_args.conv_check_cpu)
+        e_dn = model.energy_triangle_dn(state, env, force_cpu=ctm_args.conv_check_cpu)
+        e_up = model.energy_triangle_up(state, env, force_cpu=ctm_args.conv_check_cpu)
         e_nnn = model.energy_nnn(state, env, force_cpu=ctm_args.conv_check_cpu)
         e_curr = (e_up + e_dn + e_nnn)/3
         history.append(e_curr.item())
