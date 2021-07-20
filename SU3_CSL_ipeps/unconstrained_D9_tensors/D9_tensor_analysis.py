@@ -96,8 +96,8 @@ def main():
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
             history = []
-        e_dn = model.energy_triangle_dn(state, env, force_cpu=ctm_args.conv_check_cpu)
-        e_up = model.energy_triangle_up(state, env, force_cpu=ctm_args.conv_check_cpu)
+        e_dn = model.energy_triangle_dn_v2(state, env, force_cpu=ctm_args.conv_check_cpu)
+        e_up = model.energy_triangle_up_v2(state, env, force_cpu=ctm_args.conv_check_cpu)
         e_nnn = model.energy_nnn(state, env, force_cpu=ctm_args.conv_check_cpu)
         e_curr = (e_up + e_dn + e_nnn)/3
         history.append(e_curr.item())
@@ -120,8 +120,8 @@ def main():
     ctm_env_final, *ctm_log = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
 
     # energy per site
-    e_dn_final = model.energy_triangle_dn(state, ctm_env_final, force_cpu=True)
-    e_up_final = model.energy_triangle_up(state, ctm_env_final, force_cpu=True)
+    e_dn_final = model.energy_triangle_dn_v2(state, ctm_env_final, force_cpu=True)
+    e_up_final = model.energy_triangle_up_v2(state, ctm_env_final, force_cpu=True)
     e_nnn_final = model.energy_nnn(state, ctm_env_final, force_cpu=True)
     e_tot_final = (e_dn_final + e_up_final + e_nnn_final) / 3
 

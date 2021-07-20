@@ -86,12 +86,6 @@ def main():
                                   Ki=math.sin(args.theta * math.pi/180) * math.sin(args.chiral_angle * math.pi/180),
                                   j1=math.cos(args.theta * math.pi/180) * math.cos(args.chiral_angle * math.pi/180))
 
-    def energy_f(state, env):
-        e_dn = model.energy_triangle_dn(state, env, force_cpu=True)
-        e_up = model.energy_triangle_up(state, env, force_cpu=True)
-        e_nnn = model.energy_nnn(state, env, force_cpu=True)
-        return (e_up + e_dn + e_nnn) / 3
-
     def print_corner_spectra(env):
         spectra = []
         for c_loc,c_ten in env.C.items():
@@ -113,8 +107,8 @@ def main():
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
             history = []
-        e_dn = model.energy_triangle_dn(state, env, force_cpu=ctm_args.conv_check_cpu)
-        e_up = model.energy_triangle_up(state, env, force_cpu=ctm_args.conv_check_cpu)
+        e_dn = model.energy_triangle_dn_v2(state, env, force_cpu=ctm_args.conv_check_cpu)
+        e_up = model.energy_triangle_up_v2(state, env, force_cpu=ctm_args.conv_check_cpu)
         e_nnn = model.energy_nnn(state, env, force_cpu=ctm_args.conv_check_cpu)
         e_curr = (e_up + e_dn + e_nnn)/3
         history.append(e_curr.item())

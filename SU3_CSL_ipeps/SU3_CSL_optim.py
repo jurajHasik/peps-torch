@@ -51,9 +51,9 @@ def main():
         elif name in ['S3', 'S4']:
             tensors_triangle.append(tens)
         elif name in ['L0', 'L1']:
-            tensors_site.append(tens)
-        elif name in ['L2']:
             tensors_site.append(1j * tens)
+        elif name in ['L2']:
+            tensors_site.append(tens)
 
     # define initial coefficients
     if args.import_state is not None:
