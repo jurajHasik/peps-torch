@@ -161,7 +161,32 @@ class IPEPS_KAGOME(ipeps.IPEPS):
 
     def build_onsite_tensors(self):
         # square-lattice tensor with 3 physical indices (d=3)
-        a_tensor_temp = torch.einsum('iab,uji,jkl,vkc,wld->uvwabcd', self.elem_tensors['UP_T'],\
+        #                                              
+        #      2(d)              2(c)                             c                                  b
+        #       \               /            rot. pi/4            |           reflection             |
+        #  0(w)==B             B==0(v)   counter-clockwise       s1          along (1,1) line     a--\                     
+        #         \           /                 ->              / |                                   \
+        #         1(l)       1(k)                              /  |           1  (1,1)                 s0--s2--c
+        #          2(l)     1(k)                           d--s2--s0          | /                      |  /
+        #            \      /                                      \          |/__1                    | /
+        #             DOWN_T                                        \--b                               s1
+        #              |                                            |                                  |
+        #              0(j)                                         a                                  d
+        #              1(j)                               
+        #              |                rot. pi to on-site tensor convention    
+        #              B==0(u)             ->                
+        #              |                             a 
+        #              2(i)                          | <- UP_T
+        #              0(i)                       b--\ 
+        #              |                              \ 
+        #            UP_T                             s0--s2--d
+        #           /    \                             | /
+        #          1(a)   2(b)                         |/  <- DOWN_T
+        #                                             s1
+        #                                              |
+        #                                              c
+        #789uio
+        a_tensor_temp = torch.einsum('iab,uji,jkl,vkc,wld->uvwabcd', self.elem_tensors['UP_T'],
             self.elem_tensors['BOND_S'], self.elem_tensors['DOWN_T'], self.elem_tensors['BOND_S'], \
             self.elem_tensors['BOND_S'])
         # reshape to a single d=27 index
