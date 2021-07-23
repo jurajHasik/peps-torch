@@ -1300,9 +1300,9 @@ def rdm2x2_up_triangle(coord, state, env, operator=None, sym_pos_def=False, forc
     else:
         # contract the 3-site operator with the rdm
         if force_cpu:
-            value_operator = einsum('ikmjln,ikmjln->', rdm, operator.cpu())
+            value_operator = einsum('ijkmno,mnoijk', rdm, operator.cpu())
         else:
-            value_operator = einsum('ikmjln,ikmjln->', rdm, operator)
+            value_operator = einsum('ijkmno,mnoijk', rdm, operator)
         rdm = value_operator
 
     rdm = rdm.to(env.device)
@@ -1338,7 +1338,7 @@ def rdm2x2_dn_triangle(coord, state, env, operator=None, sym_pos_def=False, forc
                                 operator_matrixform[fmap(n1, n2, n3), fmap(m1, m2, m3)] = operator[
                                     n1, n2, n3, m1, m2, m3]
         a = contiguous(
-            einsum('mefgh,mn,nabcd->eafbgchd', a_1layer, operator_matrixform, conj(a_1layer)))
+            einsum('mefgh,nm,nabcd->eafbgchd', a_1layer, operator_matrixform, conj(a_1layer)))
         a = view(a, (dimsA[1] ** 2, dimsA[2] ** 2, dimsA[3] ** 2, dimsA[4] ** 2))
 
     # C--10--T1--2

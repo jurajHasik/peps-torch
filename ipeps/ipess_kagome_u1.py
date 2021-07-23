@@ -402,11 +402,11 @@ def read_ipeps_u1(jsonfile, vertexToSite=None, aux_seq=None, peps_args=cfg.peps_
                 y = coord[1]
                 return ((x + abs(x) * lX) % lX, (y + abs(y) * lY) % lY)
 
-            state = IPEPS_U1SYM(sym_tensors=sym_tensors, coeffs=coeffs, \
+            state = IPESS_KAGOME_U1SYM(sym_tensors=sym_tensors, coeffs=coeffs, \
                                 vertexToSite=vertexToSite, \
                                 lX=lX, lY=lY, peps_args=peps_args, global_args=global_args)
         else:
-            state = IPEPS_U1SYM(sym_tensors=sym_tensors, coeffs=coeffs, \
+            state = IPESS_KAGOME_U1SYM(sym_tensors=sym_tensors, coeffs=coeffs, \
                                 vertexToSite=vertexToSite, \
                                 peps_args=peps_args, global_args=global_args)
     return state

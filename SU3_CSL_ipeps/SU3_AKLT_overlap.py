@@ -205,6 +205,7 @@ def main():
             for coeff_t in coeffs_triangle_dn_2.values(): coeff_t.requires_grad_(False)
             for coeff_t in coeffs_triangle_up_2.values(): coeff_t.requires_grad_(False)
             for coeff_t in coeffs_site_2.values(): coeff_t.requires_grad_(False)
+
             state2 = IPESS_KAGOME_U1SYM(tensors_triangle_D7, tensors_site_D7,
                                  coeffs_triangle_up=coeffs_triangle_up_2, coeffs_site=coeffs_site_2)
         else:
@@ -214,6 +215,7 @@ def main():
             coeffs_site_2 = {(0, 0): torch.tensor([1., -0.7737, 0.], dtype=torch.float64, device=t_device)}
             var_coeffs_site = torch.tensor([0, 1, 0], dtype=torch.float64, device=t_device)
             var_coeffs_triangle = torch.tensor([0, 1, 1, 0, 0, 0, 0], dtype=torch.float64, device=t_device)
+
             state2 = IPESS_KAGOME_U1SYM(tensors_triangle_D7, tensors_site_D7,
                                  coeffs_triangle_up=coeffs_triangle_2, coeffs_site=coeffs_site_2,
                                  var_coeffs_site=var_coeffs_site, var_coeffs_triangle=var_coeffs_triangle)
@@ -230,6 +232,7 @@ def main():
             for coeff_t in coeffs_triangle_dn_1.values(): coeff_t.requires_grad_(False)
             for coeff_t in coeffs_triangle_up_1.values(): coeff_t.requires_grad_(False)
             for coeff_t in coeffs_site_1.values(): coeff_t.requires_grad_(False)
+
             state1 = IPESS_KAGOME_U1SYM(tensors_triangle_D6, tensors_site_D6,
                                  coeffs_triangle_up=coeffs_triangle_up_1, coeffs_site=coeffs_site_1)
         else:
@@ -251,6 +254,7 @@ def main():
             for coeff_t in coeffs_triangle_dn_2.values(): coeff_t.requires_grad_(False)
             for coeff_t in coeffs_triangle_up_2.values(): coeff_t.requires_grad_(False)
             for coeff_t in coeffs_site_2.values(): coeff_t.requires_grad_(False)
+
             state2 = IPESS_KAGOME_U1SYM(tensors_triangle_D6, tensors_site_D6,
                                  coeffs_triangle_up=coeffs_triangle_up_2, coeffs_site=coeffs_site_2)
         else:
@@ -259,6 +263,7 @@ def main():
             coeffs_site_2 = {(0, 0): torch.tensor([1., 0., 0., 0.], dtype=torch.float64, device=t_device)}
             var_coeffs_site = torch.tensor([0, 1, 1, 1], dtype=torch.float64, device=t_device)
             var_coeffs_triangle = torch.tensor([0, 1, 1, 1, 1, 1], dtype=torch.float64, device=t_device)
+
             state2 = IPESS_KAGOME_U1SYM(tensors_triangle_D6, tensors_site_D6,
                                  coeffs_triangle_up=coeffs_triangle_2, coeffs_site=coeffs_site_2,
                                  var_coeffs_site=var_coeffs_site, var_coeffs_triangle=var_coeffs_triangle)
