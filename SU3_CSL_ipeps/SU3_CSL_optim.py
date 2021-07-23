@@ -6,7 +6,7 @@ import torch
 import copy
 from random import randint
 from collections import OrderedDict
-from u1sym.ipeps_u1 import IPEPS_U1SYM, write_coeffs, read_coeffs
+from ipeps.ipess_kagome_u1 import IPESS_KAGOME_U1SYM, write_coeffs, read_coeffs
 from read_write_SU3_tensors import *
 from models import SU3_chiral
 from ctm.generic.env import *
@@ -75,7 +75,7 @@ def main():
     var_coeffs_site = torch.tensor([0, 1, 0], dtype=torch.float64, device=t_device)
     var_coeffs_triangle = torch.tensor([0, 1, 1, 1, 1, 0, 0], dtype=torch.float64, device=t_device)
 
-    state = IPEPS_U1SYM(tensors_triangle, tensors_site, coeffs_triangle, coeffs_site, sym_up_dn=bool(args.sym_up_dn),
+    state = IPESS_KAGOME_U1SYM(tensors_triangle, tensors_site, coeffs_triangle, coeffs_site, sym_up_dn=bool(args.sym_up_dn),
                         var_coeffs_triangle=var_coeffs_triangle, var_coeffs_site=var_coeffs_site)
     state.add_noise(args.instate_noise)
     state.print_coeffs()

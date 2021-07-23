@@ -1,10 +1,11 @@
+import context
 import torch
 import math
 import numpy as np
 import config as cfg
 import copy
 from collections import OrderedDict
-from u1sym.ipeps_u1 import IPEPS_U1SYM
+from ipeps.ipess_kagome_u1 import IPESS_KAGOME_U1SYM
 from read_write_SU3_tensors import *
 from models import SU3_chiral
 from ctm.generic.env import *
@@ -182,7 +183,7 @@ def main():
             for coeff_t in coeffs_triangle_dn_1.values(): coeff_t.requires_grad_(False)
             for coeff_t in coeffs_triangle_up_1.values(): coeff_t.requires_grad_(False)
             for coeff_t in coeffs_site_1.values(): coeff_t.requires_grad_(False)
-            state1 = IPEPS_U1SYM(tensors_triangle_D7, tensors_site_D7,
+            state1 = IPESS_KAGOME_U1SYM(tensors_triangle_D7, tensors_site_D7,
                                  coeffs_triangle_up=coeffs_triangle_up_1, coeffs_site=coeffs_site_1)
         else:
             # AKLT + small noise
@@ -192,7 +193,7 @@ def main():
             var_coeffs_site = torch.tensor([0, 1, 0], dtype=torch.float64, device=t_device)
             var_coeffs_triangle = torch.tensor([0, 1, 1, 1, 1, 0, 0], dtype=torch.float64, device=t_device)
 
-            state1 = IPEPS_U1SYM(tensors_triangle_D7, tensors_site_D7,
+            state1 = IPESS_KAGOME_U1SYM(tensors_triangle_D7, tensors_site_D7,
                                  coeffs_triangle_up=coeffs_triangle_1, coeffs_site=coeffs_site_1,
                                  var_coeffs_site=var_coeffs_site, var_coeffs_triangle=var_coeffs_triangle)
             #state1.add_noise(args.instate_noise)
@@ -204,7 +205,7 @@ def main():
             for coeff_t in coeffs_triangle_dn_2.values(): coeff_t.requires_grad_(False)
             for coeff_t in coeffs_triangle_up_2.values(): coeff_t.requires_grad_(False)
             for coeff_t in coeffs_site_2.values(): coeff_t.requires_grad_(False)
-            state2 = IPEPS_U1SYM(tensors_triangle_D7, tensors_site_D7,
+            state2 = IPESS_KAGOME_U1SYM(tensors_triangle_D7, tensors_site_D7,
                                  coeffs_triangle_up=coeffs_triangle_up_2, coeffs_site=coeffs_site_2)
         else:
             # AKLT + small noise
@@ -213,7 +214,7 @@ def main():
             coeffs_site_2 = {(0, 0): torch.tensor([1., -0.7737, 0.], dtype=torch.float64, device=t_device)}
             var_coeffs_site = torch.tensor([0, 1, 0], dtype=torch.float64, device=t_device)
             var_coeffs_triangle = torch.tensor([0, 1, 1, 0, 0, 0, 0], dtype=torch.float64, device=t_device)
-            state2 = IPEPS_U1SYM(tensors_triangle_D7, tensors_site_D7,
+            state2 = IPESS_KAGOME_U1SYM(tensors_triangle_D7, tensors_site_D7,
                                  coeffs_triangle_up=coeffs_triangle_2, coeffs_site=coeffs_site_2,
                                  var_coeffs_site=var_coeffs_site, var_coeffs_triangle=var_coeffs_triangle)
             state2.add_noise(args.instate_noise)
@@ -229,7 +230,7 @@ def main():
             for coeff_t in coeffs_triangle_dn_1.values(): coeff_t.requires_grad_(False)
             for coeff_t in coeffs_triangle_up_1.values(): coeff_t.requires_grad_(False)
             for coeff_t in coeffs_site_1.values(): coeff_t.requires_grad_(False)
-            state1 = IPEPS_U1SYM(tensors_triangle_D6, tensors_site_D6,
+            state1 = IPESS_KAGOME_U1SYM(tensors_triangle_D6, tensors_site_D6,
                                  coeffs_triangle_up=coeffs_triangle_up_1, coeffs_site=coeffs_site_1)
         else:
             # AKLT + small noise
@@ -238,7 +239,7 @@ def main():
             var_coeffs_site = torch.tensor([0, 1, 1, 1], dtype=torch.float64, device=t_device)
             var_coeffs_triangle = torch.tensor([0, 1, 1, 1, 1, 1], dtype=torch.float64, device=t_device)
 
-            state1 = IPEPS_U1SYM(tensors_triangle_D6, tensors_site_D6,
+            state1 = IPESS_KAGOME_U1SYM(tensors_triangle_D6, tensors_site_D6,
                                  coeffs_triangle_up=coeffs_triangle_1, coeffs_site=coeffs_site_1,
                                  var_coeffs_site=var_coeffs_site, var_coeffs_triangle=var_coeffs_triangle)
             #state1.add_noise(args.instate_noise)
@@ -250,7 +251,7 @@ def main():
             for coeff_t in coeffs_triangle_dn_2.values(): coeff_t.requires_grad_(False)
             for coeff_t in coeffs_triangle_up_2.values(): coeff_t.requires_grad_(False)
             for coeff_t in coeffs_site_2.values(): coeff_t.requires_grad_(False)
-            state2 = IPEPS_U1SYM(tensors_triangle_D6, tensors_site_D6,
+            state2 = IPESS_KAGOME_U1SYM(tensors_triangle_D6, tensors_site_D6,
                                  coeffs_triangle_up=coeffs_triangle_up_2, coeffs_site=coeffs_site_2)
         else:
             # AKLT + small noise
@@ -258,7 +259,7 @@ def main():
             coeffs_site_2 = {(0, 0): torch.tensor([1., 0., 0., 0.], dtype=torch.float64, device=t_device)}
             var_coeffs_site = torch.tensor([0, 1, 1, 1], dtype=torch.float64, device=t_device)
             var_coeffs_triangle = torch.tensor([0, 1, 1, 1, 1, 1], dtype=torch.float64, device=t_device)
-            state2 = IPEPS_U1SYM(tensors_triangle_D6, tensors_site_D6,
+            state2 = IPESS_KAGOME_U1SYM(tensors_triangle_D6, tensors_site_D6,
                                  coeffs_triangle_up=coeffs_triangle_2, coeffs_site=coeffs_site_2,
                                  var_coeffs_site=var_coeffs_site, var_coeffs_triangle=var_coeffs_triangle)
             state2.add_noise(args.instate_noise)
