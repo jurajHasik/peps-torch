@@ -42,18 +42,18 @@ def main():
     # Import all elementary tensors
     tensors_site = []
     tensors_triangle = []
-    path = "SU3_CSL_ipeps/SU3_D7_tensors/"
-    for name in ['S0', 'S1', 'S2', 'S3', 'S4', 'L0', 'L1', 'L2']:
-        tens = load_SU3_tensor(path+name)
+    path = "SU3_CSL_ipeps/SU3_D9_bar3p6_tensors/"
+    for name in ['M0', 'M1', 'M2', 'L0', 'L1', 'L2']:
+        tens = load_SU3_tensor(path + name)
         tens = tens.to(t_device)
-        if name in ['S0', 'S1', 'S2']:
-            tensors_triangle.append(1j*tens)
-        elif name in ['S3', 'S4']:
+        if name in ['M0']:
             tensors_triangle.append(tens)
-        elif name in ['L0', 'L1']:
-            tensors_site.append(1j * tens)
-        elif name in ['L2']:
+        if name in ['M1', 'M2']:
+            tensors_triangle.append(1j * tens)
+        elif name in ['L0', 'L2']:
             tensors_site.append(tens)
+        elif name in ['L1']:
+            tensors_site.append(1j * tens)
 
     # define initial coefficients
     if args.import_state is not None:
@@ -67,12 +67,11 @@ def main():
         coeffs_site = {(0,0): coeffs['site'].requires_grad_(False).to(t_device)}
     else:
         # AKLT state
-        coeffs_triangle = {(0, 0): torch.tensor([1., 0., 0., 0., 0.], dtype=torch.float64, device=t_device)}
-        coeffs_site = {(0, 0): torch.tensor([1., 1., 0], dtype=torch.float64, device=t_device)}
-
+        coeffs_triangle = {(0, 0): torch.tensor([1., 0., 0.], dtype=torch.float64, device=t_device)}
+        coeffs_site = {(0, 0): torch.tensor([1., 0., 1.], dtype=torch.float64, device=t_device)}
 
     # define which coefficients will be added a noise
-    var_coeffs_triangle = torch.tensor([0, 1, 1, 1, 1], dtype=torch.float64, device=t_device)
+    var_coeffs_triangle = torch.tensor([0, 1, 1], dtype=torch.float64, device=t_device)
     var_coeffs_site = torch.tensor([0, 0, 0], dtype=torch.float64, device=t_device)
 
 
