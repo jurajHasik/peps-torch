@@ -286,7 +286,7 @@ def rdm2x2_dn_triangle_with_operator(coord, state, env, operator, force_cpu=Fals
     a = contiguous(einsum('mefgh,mabcd->eafbgchd', a_1layer, conj(a_1layer)))
     a = view(a, (dimsA[1] ** 2, dimsA[2] ** 2, dimsA[3] ** 2, dimsA[4] ** 2))
     a_op = contiguous(
-        einsum('mefgh,mn,nabcd->eafbgchd', a_1layer, operator.view(27,27), conj(a_1layer)))
+        einsum('mefgh,nm,nabcd->eafbgchd', a_1layer, operator.view(27,27), conj(a_1layer)))
     a_op = view(a_op, (dimsA[1] ** 2, dimsA[2] ** 2, dimsA[3] ** 2, dimsA[4] ** 2))
 
     # C--10--T1--2

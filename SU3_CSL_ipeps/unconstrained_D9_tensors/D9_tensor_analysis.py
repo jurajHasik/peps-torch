@@ -68,7 +68,7 @@ def main():
     print('\n')
     u, M_singvalues, v = torch.svd(M, compute_uv=False)
     print('M singluar values')
-    print(M_singvalues)
+    print(M_singvalues/M_singvalues[0])
     print('\n')
 
 

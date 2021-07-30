@@ -5,11 +5,10 @@ import config as cfg
 import copy
 from collections import OrderedDict
 from u1sym.ipeps_u1 import IPEPS_U1SYM
-from read_write_SU3_tensors import *
+from read_write_SU3_bar3p6_tensors import *
 from models import SU3_chiral
 from ctm.generic.env import *
-from ctm.generic import ctmrg, transferops
-from ctm.generic import rdm
+from ctm.generic import ctmrg
 import json
 import unittest
 import logging
@@ -43,39 +42,37 @@ def main():
     # Import all elementary tensors
     tensors_site = []
     tensors_triangle = []
-    path = "SU3_CSL_ipeps/SU3_D7_tensors/"
-    for name in ['S0', 'S1', 'S2', 'S3', 'S4', 'L0', 'L1', 'L2']:
+    path = "SU3_CSL_ipeps/SU3_D9_bar3p6_tensors/"
+    for name in ['M0', 'M1', 'M2', 'L0', 'L1', 'L2']:
         tens = load_SU3_tensor(path + name)
         tens = tens.to(t_device)
-        if name in ['S0', 'S1', 'S2']:
-            tensors_triangle.append(1j * tens)
-        elif name in ['S3', 'S4']:
+        if name in ['M0']:
             tensors_triangle.append(tens)
-        elif name in ['L0', 'L1']:
+        if name in ['M1', 'M2']:
+            tensors_triangle.append(1j * tens)
+        elif name in ['L0', 'L2']:
             tensors_site.append(tens)
-        elif name in ['L2']:
+        elif name in ['L1']:
             tensors_site.append(1j * tens)
+
 
     # define initial coefficients
     if args.import_state is not None:
-        if torch.cuda.is_available():
-            map_location = lambda storage, loc: storage.cuda()
-        else:
-            map_location = 'cpu'
-        checkpoint = torch.load(args.import_state, map_location=map_location)
+        checkpoint = torch.load(args.import_state)
         coeffs = checkpoint["parameters"]
-        coeffs_triangle = {(0, 0): coeffs['t_up'].requires_grad_(False).to(t_device)}
-        coeffs_site = {(0, 0): coeffs['site'].requires_grad_(False).to(t_device)}
+        coeffs_triangle_up, coeffs_triangle_dn, coeffs_site = coeffs[(0, 0)]
+        for coeff_t in coeffs_triangle_dn.values(): coeff_t.requires_grad_(False)
+        for coeff_t in coeffs_triangle_up.values(): coeff_t.requires_grad_(False)
+        for coeff_t in coeffs_site.values(): coeff_t.requires_grad_(False)
+        # coeffs ... .to(t_device)
     else:
         # AKLT state
-        coeffs_triangle = {(0, 0): torch.tensor([1., 0., 0., 0., 0.], dtype=torch.float64, device=t_device)}
-        coeffs_site = {(0, 0): torch.tensor([1., 1., 0], dtype=torch.float64, device=t_device)}
-        #coeffs_triangle = {(0, 0): torch.tensor([1.0000, 0.3563, 4.4882, -0.3494, -3.9341], dtype=torch.float64, device=t_device)}
-        #coeffs_site = {(0, 0): torch.tensor([1.0000, 0.2429, 0.], dtype=torch.float64, device=t_device)}
+        coeffs_triangle = {(0, 0): torch.tensor([1., 0., 0.], dtype=torch.float64, device=t_device)}
+        coeffs_site = {(0, 0): torch.tensor([1., 0., 1.], dtype=torch.float64, device=t_device)}
 
     # define which coefficients will be added a noise
-    var_coeffs_triangle = torch.tensor([0, 1, 1, 1, 1], dtype=torch.float64, device=t_device)
-    var_coeffs_site = torch.tensor([0, 0, 0], dtype=torch.float64, device=t_device)
+    var_coeffs_triangle = torch.tensor([0, 1, 1], dtype=torch.float64, device=t_device)
+    var_coeffs_site = torch.tensor([0, 1, 0], dtype=torch.float64, device=t_device)
 
     state = IPEPS_U1SYM(tensors_triangle, tensors_site, coeffs_triangle_up=coeffs_triangle, coeffs_site=coeffs_site,
                         sym_up_dn=bool(args.sym_up_dn),
@@ -87,6 +84,12 @@ def main():
                                   Ki=math.sin(args.theta * math.pi/180) * math.sin(args.chiral_angle * math.pi/180),
                                   j1=math.cos(args.theta * math.pi/180) * math.cos(args.chiral_angle * math.pi/180),
                                   j2=args.j2)
+
+    def energy_f(state, env):
+        e_dn = model.energy_triangle_dn_v2(state, env, force_cpu=True)
+        e_up = model.energy_triangle_up_v2(state, env, force_cpu=True)
+        e_nnn = model.energy_nnn(state, env)
+        return (e_up + e_dn + e_nnn) / 3
 
     def print_corner_spectra(env):
         spectra = []
@@ -100,7 +103,7 @@ def main():
                 label = 'RU'
             if c_loc[1] == (1, 1):
                 label = 'RD'
-            spectra.append([label, s/s[0]])
+            spectra.append([label, s])
         print(f"\n spectrum C[{spectra[0][0]}]             spectrum C[{spectra[1][0]}]             spectrum C[{spectra[2][0]}]             spectrum C[{spectra[3][0]}] ")
         for i in range(args.chi):
             print("{:2} {:01.14f}        {:2} {:01.14f}        {:2} {:01.14f}        {:2} {:01.14f}".format(i, spectra[0][1][i], i, spectra[1][1][i], i, spectra[2][1][i], i, spectra[3][1][i]))
@@ -118,8 +121,7 @@ def main():
             e_prev = 0
         else:
             e_prev = history[-2]
-        if args.show_corner_spectra:
-            print_corner_spectra(env)
+        print_corner_spectra(env)
         print('Step n°{:2}    E_site ={:01.14f}   (E_up={:01.14f}, E_dn={:01.14f}, E_nnn={:01.14f})  delta_E={:01.14f}'.format(len(history), e_curr.item(), e_up.item(), e_dn.item(), e_nnn, e_curr.item()-e_prev))
         if (len(history) > 1 and abs(history[-1] - history[-2]) < ctm_args.ctm_conv_tol) \
                 or len(history) >= ctm_args.ctm_max_iter:
@@ -127,29 +129,9 @@ def main():
             return True, history
         return False, history
 
-    def ctmrg_conv_corners(state, env, history, ctm_args=cfg.ctm_args):
-        if not history:
-            history = []
-        spectra = []
-        for c_loc, c_ten in env.C.items():
-            u, s, v = torch.svd(c_ten, compute_uv=False)
-            spectra += list(s/s[0])
-        spectra = torch.tensor(spectra)
-        history.append([spectra])
-        if len(history)==1:
-            delta_s = 0
-        else:
-            delta_s = torch.norm(history[-2][0] - history[-1][0]).item()
-        print_corner_spectra(env)
-        print('Step n°{:2}    delta_s={:01.14f}'.format(len(history), delta_s))
-        if (len(history) > 1 and delta_s < ctm_args.ctm_conv_tol) \
-                or len(history) >= ctm_args.ctm_max_iter:
-            log.info({"history_length": len(history), "history": history})
-            return True, history
-        return False, history
-
     ctm_env_init = ENV(args.chi, state)
     init_env(state, ctm_env_init)
+    #print_corner_spectra(ctm_env_init)
 
     ctm_env_final, *ctm_log = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
 
