@@ -77,8 +77,10 @@ def main():
 
     state = IPEPS_U1SYM(tensors_triangle, tensors_site, coeffs_triangle_up = coeffs_triangle, coeffs_site=coeffs_site, sym_up_dn=bool(args.sym_up_dn),
                         var_coeffs_triangle=var_coeffs_triangle, var_coeffs_site=var_coeffs_site)
-    state.add_noise(args.instate_noise)
-    state.print_coeffs()
+
+    if not args.opt_resume:
+        state.add_noise(args.instate_noise)
+        state.print_coeffs()
 
     model = SU3_chiral.SU3_CHIRAL(Kr=math.sin(args.theta * math.pi/180) * math.cos(args.chiral_angle * math.pi/180),
                                   Ki=math.sin(args.theta * math.pi/180) * math.sin(args.chiral_angle * math.pi/180),

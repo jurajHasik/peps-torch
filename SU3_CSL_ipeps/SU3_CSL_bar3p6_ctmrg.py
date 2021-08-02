@@ -60,10 +60,9 @@ def main():
     if args.import_state is not None:
         checkpoint = torch.load(args.import_state)
         coeffs = checkpoint["parameters"]
-        coeffs_triangle_up, coeffs_triangle_dn, coeffs_site = coeffs[(0, 0)]
-        for coeff_t in coeffs_triangle_dn.values(): coeff_t.requires_grad_(False)
-        for coeff_t in coeffs_triangle_up.values(): coeff_t.requires_grad_(False)
-        for coeff_t in coeffs_site.values(): coeff_t.requires_grad_(False)
+        coeffs_triangle_up = {(0,0): coeffs['t_up']}
+        coeffs_triangle_dn = {(0,0): coeffs['t_dn']}
+        coeffs_site = {(0,0): coeffs['site']}
         # coeffs ... .to(t_device)
     else:
         # AKLT state
@@ -74,7 +73,7 @@ def main():
     var_coeffs_triangle = torch.tensor([0, 1, 1], dtype=torch.float64, device=t_device)
     var_coeffs_site = torch.tensor([0, 1, 0], dtype=torch.float64, device=t_device)
 
-    state = IPEPS_U1SYM(tensors_triangle, tensors_site, coeffs_triangle_up=coeffs_triangle, coeffs_site=coeffs_site,
+    state = IPEPS_U1SYM(tensors_triangle, tensors_site, coeffs_triangle_up=coeffs_triangle_up, coeffs_site=coeffs_site,
                         sym_up_dn=bool(args.sym_up_dn),
                         var_coeffs_triangle=var_coeffs_triangle, var_coeffs_site=var_coeffs_site)
     state.add_noise(args.instate_noise)
