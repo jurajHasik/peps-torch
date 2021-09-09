@@ -7,7 +7,7 @@ import ipeps.ipeps as ipeps
 from ipeps.tensor_io import *
 
 class IPEPS_KAGOME(ipeps.IPEPS):
-    def __init__(self, kagome_tensors, vertexToSite=None, lX=None, lY=None, \
+    def __init__(self, kagome_tensors, restrictions=False, vertexToSite=None, lX=None, lY=None, \
         peps_args=cfg.peps_args, global_args=cfg.global_args):
         r"""
         :param kagome_tensors: list of selected KAGOME-type tensors A, B, C, R1, R2; A', B', C', R1', R2'; ...
@@ -99,6 +99,7 @@ class IPEPS_KAGOME(ipeps.IPEPS):
                 return ((x + abs(x)*self.lX) % self.lX, (y + abs(y)*self.lY) % self.lY)
             self.vertexToSite = vertexToSite
 
+        self.restrictions = restrictions
         self.kagome_tensors = kagome_tensors
         self.phys_dim = self.get_physical_dim()
         self.bond_dims = self.get_aux_bond_dims()
@@ -152,13 +153,18 @@ class IPEPS_KAGOME(ipeps.IPEPS):
             tmp_coord = self.kagome_vertex_to_vertex(coord_kagome)
             if torch.all(torch.tensor(coords != tmp_coord, dtype=torch.bool)):
                 coords.append(tmp_coord)
+        if self.restrictions:
+            for coord in coords:
+                self.kagome_tensors[(coord[0], coord[1], 1)] = self.kagome_tensors[(coord[0], coord[1], 0)]
+                self.kagome_tensors[(coord[0], coord[1], 2)] = self.kagome_tensors[(coord[0], coord[1], 0)]
+                self.kagome_tensors[(coord[0], coord[1], 4)] = self.kagome_tensors[(coord[0], coord[1], 3)]
         for coord in coords:
             t_a = self.kagome_tensors[(coord[0], coord[1], 0)]
             t_b = self.kagome_tensors[(coord[0], coord[1], 1)]
             t_c = self.kagome_tensors[(coord[0], coord[1], 2)]
             t_r1 = self.kagome_tensors[(coord[0], coord[1], 3)]
             t_r2 = self.kagome_tensors[(coord[0], coord[1], 4)]
-            sites[coord] = torch.einsum('akl,lno,bmn,cop,pqr->abcmrqk', t_a, t_r1, t_b, t_c, t_r2).flatten(start_dim=0, end_dim=2)
+            sites[coord] = torch.einsum('akl,lno,bmn,cop,pqr->abckrqm', t_a, t_r1, t_b, t_c, t_r2).flatten(start_dim=0, end_dim=2)
 
         return sites
 
@@ -181,7 +187,6 @@ class IPEPS_KAGOME(ipeps.IPEPS):
                 self.kagome_tensors[coord_kagome] = self.kagome_tensors[coord_kagome] + noise * rand_t_img * 1j
         else:
             raise Exception("Unsuppoted data type. Optional: \"float64\", \"complex128\".")
-
 
     def get_physical_dim(self):
         phys_dim = None
@@ -237,7 +242,7 @@ def extend_bond_dim_kagome(state, new_d):
     return new_state
 
 
-def read_ipeps_kagome(jsonfile, vertexToSite=None, peps_args=cfg.peps_args,\
+def read_ipeps_kagome(jsonfile, restrictions=False, vertexToSite=None, peps_args=cfg.peps_args,\
     global_args=cfg.global_args):
     r"""
     :param jsonfile: input file describing iPEPS in json format
@@ -294,10 +299,10 @@ def read_ipeps_kagome(jsonfile, vertexToSite=None, peps_args=cfg.peps_args,\
                 y = coord[1]
                 return ( (x + abs(x)*lX)%lX, (y + abs(y)*lY)%lY )
 
-            state = IPEPS_KAGOME(kagome_tensors=kagome_tensors, vertexToSite=vertexToSite, \
+            state = IPEPS_KAGOME(kagome_tensors=kagome_tensors, restrictions=restrictions, vertexToSite=vertexToSite, \
                 lX=lX, lY=lY, peps_args=peps_args, global_args=global_args)
         else:
-            state = IPEPS_KAGOME(kagome_tensors=kagome_tensors, vertexToSite=vertexToSite, \
+            state = IPEPS_KAGOME(kagome_tensors=kagome_tensors, restrictions=restrictions, vertexToSite=vertexToSite, \
                 peps_args=peps_args, global_args=global_args)
     return state
 
@@ -344,4 +349,3 @@ def write_ipeps_kagome(state, outputfile, tol=1.0e-14, normalize=False):
 
     with open(outputfile, 'w') as f:
         json.dump(json_state, f, indent=4, separators=(',', ': '))
-
