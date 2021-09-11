@@ -237,7 +237,7 @@ def extend_bond_dim(state, new_d):
     new_elem_tensors['DOWN_T']= torch.zeros(new_d,new_d,new_d, dtype=state.dtype, device=state.device)
     new_elem_tensors['DOWN_T'][:ad,:ad,:ad]= state.elem_tensors['DOWN_T']
     new_elem_tensors['BOND_S']= torch.zeros(pd,new_d,new_d, dtype=state.dtype, device=state.device)
-    new_elem_tensors['BOND_S'][:,:ad,:ad]= state.elem_tensors['UP_T']
+    new_elem_tensors['BOND_S'][:,:ad,:ad]= state.elem_tensors['BOND_S']
 
     new_state= state.__class__(new_elem_tensors['UP_T'], new_elem_tensors['BOND_S'],\
         triangle_down=None if state.SYM_UP_DOWN else new_elem_tensors['DOWN_T'],\
