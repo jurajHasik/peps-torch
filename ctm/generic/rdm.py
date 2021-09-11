@@ -1300,9 +1300,9 @@ def rdm2x2_up_triangle(coord, state, env, operator=None, sym_pos_def=False, forc
     else:
         # contract the 3-site operator with the rdm
         if force_cpu:
-            value_operator = einsum('ikmjln,ikmjln->', rdm, operator.cpu())
+            value_operator = einsum('ijkmno,mnoijk', rdm, operator.cpu())
         else:
-            value_operator = einsum('ikmjln,ikmjln->', rdm, operator)
+            value_operator = einsum('ijkmno,mnoijk', rdm, operator)
         rdm = value_operator
 
     rdm = rdm.to(env.device)
@@ -1338,7 +1338,7 @@ def rdm2x2_dn_triangle(coord, state, env, operator=None, sym_pos_def=False, forc
                                 operator_matrixform[fmap(n1, n2, n3), fmap(m1, m2, m3)] = operator[
                                     n1, n2, n3, m1, m2, m3]
         a = contiguous(
-            einsum('mefgh,mn,nabcd->eafbgchd', a_1layer, operator_matrixform, conj(a_1layer)))
+            einsum('mefgh,nm,nabcd->eafbgchd', a_1layer, operator_matrixform, conj(a_1layer)))
         a = view(a, (dimsA[1] ** 2, dimsA[2] ** 2, dimsA[3] ** 2, dimsA[4] ** 2))
 
     # C--10--T1--2
@@ -1553,14 +1553,14 @@ def rdm2x2_nnn_1(coord, state, env, operator, force_cpu=False, verbosity=0):
     upper_half = einsum('ij,jkab->ikab', C2x2_LU, C2x2_RU)
     lower_half = einsum('ijab,kj->ikab', C2x2_LD, C2x2_RD)
     bond_operator = operator.to(C2x2_LD.device)
-    bond12 = einsum('ijab,acbd,ijcd->', upper_half, bond_operator, lower_half)
+    bond12 = einsum('ijab,badc,ijcd->', upper_half, bond_operator, lower_half)
 
     # bond 3--1
     C2x2_LD = enlarged_corner(coord, state, env, 'LD', csites=[3], force_cpu=force_cpu, verbosity=verbosity)
     C2x2_RU = enlarged_corner(coord, state, env, 'RU', csites=[1], force_cpu=force_cpu, verbosity=verbosity)
     upper_half = einsum('ij,jkab->ikab', C2x2_LU, C2x2_RU)
     lower_half = einsum('ijab,kj->ikab', C2x2_LD, C2x2_RD)
-    bond31 = einsum('ijab,acbd,ijcd->', upper_half, bond_operator, lower_half)
+    bond31 = einsum('ijab,badc,ijcd->', upper_half, bond_operator, lower_half)
 
     bond12 = bond12.to(env.device)
     bond31 = bond31.to(env.device)
@@ -1579,12 +1579,12 @@ def rdm2x2_nnn_2(coord, state, env, operator, force_cpu=False, verbosity=0):
     C2x2_LU = enlarged_corner(coord, state, env, corner='LU', csites=[3], force_cpu=force_cpu, verbosity=verbosity)
     C2x2_RU = enlarged_corner(coord, state, env, corner='RU', csites=[2], force_cpu=force_cpu, verbosity=verbosity)
     bond_operator = operator.to(C2x2_LU.device)
-    upper_half_32 = einsum('ijab,acbd,jkcd->ik', C2x2_LU, bond_operator, C2x2_RU)
+    upper_half_32 = einsum('ijab,badc,jkcd->ik', C2x2_LU, bond_operator, C2x2_RU)
 
     # NNN bond 2--1
     C2x2_LU = enlarged_corner(coord, state, env, corner='LU', csites=[2], force_cpu=force_cpu, verbosity=verbosity)
     C2x2_RU = enlarged_corner(coord, state, env, corner='RU', csites=[1], force_cpu=force_cpu, verbosity=verbosity)
-    upper_half_21 = einsum('ijab,acbd,jkcd->ik', C2x2_LU, bond_operator, C2x2_RU)
+    upper_half_21 = einsum('ijab,badc,jkcd->ik', C2x2_LU, bond_operator, C2x2_RU)
 
     # --------------bottom half-------------------------------------------------
 
@@ -1625,12 +1625,12 @@ def rdm2x2_nnn_3(coord, state, env, operator, force_cpu=False, verbosity=0):
     C2x2_LU = enlarged_corner(coord, state, env, corner='LU', csites=[3], force_cpu=force_cpu, verbosity=verbosity)
     C2x2_LD = enlarged_corner(coord, state, env, corner='LD', csites=[1], force_cpu=force_cpu, verbosity=verbosity)
     bond_operator = operator.to(C2x2_LU.device)
-    left_half_31 = einsum('ijab,acbd,ikcd->jk', C2x2_LU, bond_operator, C2x2_LD)
+    left_half_31 = einsum('ijab,badc,ikcd->jk', C2x2_LU, bond_operator, C2x2_LD)
 
     # NN bond 2--3
     C2x2_LU = enlarged_corner(coord, state, env, corner='LU', csites=[2], force_cpu=force_cpu, verbosity=verbosity)
     C2x2_LD = enlarged_corner(coord, state, env, corner='LD', csites=[3], force_cpu=force_cpu, verbosity=verbosity)
-    left_half_23 = einsum('ijab,acbd,ikcd->jk', C2x2_LU, bond_operator, C2x2_LD)
+    left_half_23 = einsum('ijab,badc,ikcd->jk', C2x2_LU, bond_operator, C2x2_LD)
 
     # ---------------- right half -----------------------------------
 

@@ -9,15 +9,10 @@ from ctm.generic import rdm
 
 
 class IPEPS_U1SYM(ipeps.IPEPS):
-<<<<<<< HEAD
-	def __init__(self, sym_tensors, coeffs, var_coeffs_allowed=None, vertexToSite=None, lX=None, lY=None, \
-                 peps_args=cfg.peps_args, global_args=cfg.global_args):
-=======
     def __init__(self, sym_tensors_triangle, sym_tensors_site, coeffs_triangle_up, coeffs_site, sym_up_dn=True,
                  coeffs_triangle_dn=None,
                  var_coeffs_triangle=None, var_coeffs_site=None, vertexToSite=None,
                  lX=None, lY=None, peps_args=cfg.peps_args, global_args=cfg.global_args):
->>>>>>> now supporting different triangle tensors, and and more general input of symmetrics tensors
         r"""
         :param sym_tensors: list of selected symmetric tensors
         :param coeffs: map from elementary unit cell to vector of coefficients
@@ -38,7 +33,6 @@ class IPEPS_U1SYM(ipeps.IPEPS):
         Member ``sites`` is a dictionary of non-equivalent on-site tensors
         indexed by tuple of coordinates (x,y) within the elementary unit cell.
         The index-position convetion for on-site tensors is defined as follows::
-
 
                u s
                |/
@@ -89,7 +83,6 @@ class IPEPS_U1SYM(ipeps.IPEPS):
             # -1   B  A B A B
             #  0   A  B A B A
             #  1   B  A B A B
-
 
             # Example 3: iPEPS with 3x2 unit cell with PBC
 

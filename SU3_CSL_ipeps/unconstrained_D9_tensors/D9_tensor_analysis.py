@@ -1,38 +1,33 @@
 import torch
 import math
-import numpy as np
 import config as cfg
 import copy
 from collections import OrderedDict
-from u1sym.ipeps_u1 import IPEPS_U1SYM
-from read_write_SU3_tensors import *
+from ipeps import ipeps_kagome
 from models import SU3_chiral
 from ctm.generic.env import *
-from ctm.generic import ctmrg, transferops
-from ctm.generic import rdm
+from ctm.generic import ctmrg
 import json
+from ipeps.tensor_io import *
 import unittest
 import logging
+from tn_interface import einsum
+from tn_interface import conj
 
 log = logging.getLogger(__name__)
 
 # parse command line args and build necessary configuration objects
 parser = cfg.get_args_parser()
 parser.add_argument("--chiral_angle", type=float, default=0., help="angle parametrizing the chiral Hamiltonian")
-parser.add_argument("--theta", type=float, default=0., help="angle, in degrees, parametrizing the ratio K/J1")
-parser.add_argument("--phi", type=float, default=0., help="angle, in degrees, parametrizing the ratio J2/K")
-parser.add_argument("--C", type=float, default=0., help="amplitude/sign of the J2 curve")
-parser.add_argument("--j2", type=float, default=0.)
 parser.add_argument("--top_freq", type=int, default=-1, help="frequency of transfer operator spectrum evaluation")
 parser.add_argument("--top_n", type=int, default=2,
                     help="number of leading eigenvalues of transfer operator to compute")
-parser.add_argument("--import_state", type=str, default=None, help="input state for ctmrg")
-parser.add_argument("--sym_up_dn", type=int, default=1, help="same trivalent tensors for up and down triangles")
+parser.add_argument("--input_filename", type=str, default=None, help="input state for ctmrg")
 parser.add_argument("--show_corner_spectra", type=bool, default=False, help="plot the corner spectra at each CTM step")
 args, unknown_args = parser.parse_known_args()
 
-
 def main():
+
     cfg.configure(args)
     cfg.print_config()
     print('\n')
@@ -40,53 +35,46 @@ def main():
     torch.manual_seed(args.seed)
     t_device = torch.device(args.GLOBALARGS_device)
 
-    # Import all elementary tensors
-    tensors_site = []
-    tensors_triangle = []
-    path = "SU3_CSL_ipeps/SU3_D7_tensors/"
-    for name in ['S0', 'S1', 'S2', 'S3', 'S4', 'L0', 'L1', 'L2']:
-        tens = load_SU3_tensor(path + name)
-        tens = tens.to(t_device)
-        if name in ['S0', 'S1', 'S2']:
-            tensors_triangle.append(1j * tens)
-        elif name in ['S3', 'S4']:
-            tensors_triangle.append(tens)
-        elif name in ['L0', 'L1']:
-            tensors_site.append(tens)
-        elif name in ['L2']:
-            tensors_site.append(1j * tens)
 
-    # define initial coefficients
-    if args.import_state is not None:
-        if torch.cuda.is_available():
-            map_location = lambda storage, loc: storage.cuda()
-        else:
-            map_location = 'cpu'
-        checkpoint = torch.load(args.import_state, map_location=map_location)
-        coeffs = checkpoint["parameters"]
-        coeffs_triangle = {(0, 0): coeffs['t_up'].requires_grad_(False).to(t_device)}
-        coeffs_site = {(0, 0): coeffs['site'].requires_grad_(False).to(t_device)}
-    else:
-        # AKLT state
-        coeffs_triangle = {(0, 0): torch.tensor([1., 0., 0., 0., 0.], dtype=torch.float64, device=t_device)}
-        coeffs_site = {(0, 0): torch.tensor([1., 1., 0], dtype=torch.float64, device=t_device)}
-        #coeffs_triangle = {(0, 0): torch.tensor([1.0000, 0.3563, 4.4882, -0.3494, -3.9341], dtype=torch.float64, device=t_device)}
-        #coeffs_site = {(0, 0): torch.tensor([1.0000, 0.2429, 0.], dtype=torch.float64, device=t_device)}
+    # Import tensors and build the ipeps object
+    location = 'SU3_CSL_ipeps/unconstrained_D9_tensors/'
+    with open(location+args.input_filename+'.json') as j:
+        # load tensor as a json file
+        tensor_set = json.load(j)
+        triangle_up = tensor_set['elem_tensors']['UP_T']
+        triangle_dn = tensor_set['elem_tensors']['DOWN_T']
+        bond_site = tensor_set['elem_tensors']['BOND_S']
+    triangle_up = torch.tensor(read_bare_json_tensor_np_legacy(triangle_up), dtype=torch.complex128)
+    triangle_dn = torch.tensor(read_bare_json_tensor_np_legacy(triangle_dn), dtype=torch.complex128)
+    bond_site = torch.tensor(read_bare_json_tensor_np_legacy(bond_site), dtype=torch.complex128)
+    state = ipeps_kagome.IPEPS_KAGOME(triangle_up, bond_site, triangle_dn)
 
-    # define which coefficients will be added a noise
-    var_coeffs_triangle = torch.tensor([0, 1, 1, 1, 1], dtype=torch.float64, device=t_device)
-    var_coeffs_site = torch.tensor([0, 0, 0], dtype=torch.float64, device=t_device)
+    # investigate underlying virtual space
 
-    state = IPEPS_U1SYM(tensors_triangle, tensors_site, coeffs_triangle_up=coeffs_triangle, coeffs_site=coeffs_site,
-                        sym_up_dn=bool(args.sym_up_dn),
-                        var_coeffs_triangle=var_coeffs_triangle, var_coeffs_site=var_coeffs_site)
-    state.add_noise(args.instate_noise)
-    state.print_coeffs()
+    # Build double-layer matrix with bra-ket indices uncontracted
 
-    model = SU3_chiral.SU3_CHIRAL(Kr=math.sin(args.theta * math.pi/180) * math.cos(args.chiral_angle * math.pi/180),
-                                  Ki=math.sin(args.theta * math.pi/180) * math.sin(args.chiral_angle * math.pi/180),
-                                  j1=math.cos(args.theta * math.pi/180) * math.cos(args.chiral_angle * math.pi/180),
-                                  j2=args.j2)
+    a_1layer = state.sites[(0,0)]
+    #      /|
+    # /---A*----
+    # |  /| |       :=     --M--
+    # | | |/
+    # \-|-A-----
+    #   |/
+    M = einsum('mibcd,mjbcd->ij', a_1layer, conj(a_1layer))
+
+    M_eigenvalues, eigv = torch.eig(M, eigenvectors=False)
+    print('M eigenvalues')
+    print(M_eigenvalues)
+    print('\n')
+    u, M_singvalues, v = torch.svd(M, compute_uv=False)
+    print('M singluar values')
+    print(M_singvalues/M_singvalues[0])
+    print('\n')
+
+
+    # CTMRG to compute associated observables
+
+    model = SU3_chiral.SU3_CHIRAL(Kr=math.cos(args.chiral_angle * math.pi/180), Ki=math.sin(args.chiral_angle * math.pi/180))
 
     def print_corner_spectra(env):
         spectra = []
@@ -105,7 +93,6 @@ def main():
         for i in range(args.chi):
             print("{:2} {:01.14f}        {:2} {:01.14f}        {:2} {:01.14f}        {:2} {:01.14f}".format(i, spectra[0][1][i], i, spectra[1][1][i], i, spectra[2][1][i], i, spectra[3][1][i]))
 
-
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
             history = []
@@ -122,27 +109,6 @@ def main():
             print_corner_spectra(env)
         print('Step n°{:2}    E_site ={:01.14f}   (E_up={:01.14f}, E_dn={:01.14f}, E_nnn={:01.14f})  delta_E={:01.14f}'.format(len(history), e_curr.item(), e_up.item(), e_dn.item(), e_nnn, e_curr.item()-e_prev))
         if (len(history) > 1 and abs(history[-1] - history[-2]) < ctm_args.ctm_conv_tol) \
-                or len(history) >= ctm_args.ctm_max_iter:
-            log.info({"history_length": len(history), "history": history})
-            return True, history
-        return False, history
-
-    def ctmrg_conv_corners(state, env, history, ctm_args=cfg.ctm_args):
-        if not history:
-            history = []
-        spectra = []
-        for c_loc, c_ten in env.C.items():
-            u, s, v = torch.svd(c_ten, compute_uv=False)
-            spectra += list(s/s[0])
-        spectra = torch.tensor(spectra)
-        history.append([spectra])
-        if len(history)==1:
-            delta_s = 0
-        else:
-            delta_s = torch.norm(history[-2][0] - history[-1][0]).item()
-        print_corner_spectra(env)
-        print('Step n°{:2}    delta_s={:01.14f}'.format(len(history), delta_s))
-        if (len(history) > 1 and delta_s < ctm_args.ctm_conv_tol) \
                 or len(history) >= ctm_args.ctm_max_iter:
             log.info({"history_length": len(history), "history": history})
             return True, history
@@ -191,7 +157,6 @@ def main():
     print("\n")
     print("Final environment")
     print_corner_spectra(ctm_env_final)
-
 
 if __name__ == '__main__':
     if len(unknown_args) > 0:

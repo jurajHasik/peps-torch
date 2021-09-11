@@ -69,6 +69,10 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
     if main_args.opt_resume is not None:
         state.load_checkpoint(main_args.opt_resume)
         state.print_coeffs()
+        if main_args.instate_noise != 0.:
+            print("\n Adding noise with amplitude {}".format(main_args.instate_noise))
+            state.add_noise(main_args.instate_noise)
+            state.print_coeffs()
 
     parameters= state.get_parameters()
     for param_set in parameters:
