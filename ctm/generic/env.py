@@ -78,7 +78,7 @@ class ENV():
             for coord, site in state.sites.items():
                 #for vec in [(0,-1), (-1,0), (0,1), (1,0)]:
                 #    self.T[(coord,vec)]="T"+str(ipeps.site(coord))
-                self.T[(coord,(0,-1))]=torch.empty((self.chi,site.size(1)*site.size(2),self.chi), 
+                self.T[(coord,(0,-1))]=torch.empty((self.chi,site.size(1)*site.size(1),self.chi), 
                     dtype=self.dtype, device=self.device)
                 self.T[(coord,(-1,0))]=torch.empty((self.chi,self.chi,site.size(2)*site.size(2)), 
                     dtype=self.dtype, device=self.device)
