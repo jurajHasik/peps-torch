@@ -1,6 +1,7 @@
 import torch
 from collections import OrderedDict
 import json
+import warnings
 import math
 import config as cfg
 import ipeps.ipeps as ipeps
@@ -44,7 +45,6 @@ class IPESS_KAGOME_U1SYM(ipeps.IPEPS):
 
         Member ``vertexToSite`` is a mapping function from vertex on a square lattice
         passed in as tuple(x,y) to a corresponding tuple(x,y) within elementary unit cell.
-
         On-site tensor of an IPEPS object ``wfc`` at vertex (x,y) is conveniently accessed
         through the member function ``site``, which internally uses ``vertexToSite`` mapping::
 
@@ -369,7 +369,7 @@ def read_ipeps_u1(jsonfile, vertexToSite=None, aux_seq=None, peps_args=cfg.peps_
             # 1) fill the tensor with elements from the list "entries"
             # which list the coefficients in the following
             # notation: Dimensions are indexed starting from 0
-            #
+
             # index (integer) of coeff, (float) Re, Im
             if X.is_complex():
                 for entry in t["entries"]:

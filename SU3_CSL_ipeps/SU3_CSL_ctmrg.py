@@ -5,7 +5,7 @@ import numpy as np
 import config as cfg
 import copy
 from collections import OrderedDict
-from ipeps.ipess_kagome_u1 import IPESS_KAGOME_U1SYM
+from u1sym.ipess_kagome_u1 import IPESS_KAGOME_U1SYM
 from read_write_SU3_tensors import *
 from models import SU3_chiral
 from ctm.generic.env import *
@@ -23,6 +23,7 @@ parser.add_argument("--chiral_angle", type=float, default=0., help="angle parame
 parser.add_argument("--theta", type=float, default=0., help="angle, in degrees, parametrizing the ratio K/J1")
 parser.add_argument("--phi", type=float, default=0., help="angle, in degrees, parametrizing the ratio J2/K")
 parser.add_argument("--C", type=float, default=0., help="amplitude/sign of the J2 curve")
+parser.add_argument("--j2", type=float, default=0.)
 parser.add_argument("--top_freq", type=int, default=-1, help="frequency of transfer operator spectrum evaluation")
 parser.add_argument("--top_n", type=int, default=2,
                     help="number of leading eigenvalues of transfer operator to compute")
@@ -85,7 +86,8 @@ def main():
 
     model = SU3_chiral.SU3_CHIRAL(Kr=math.sin(args.theta * math.pi/180) * math.cos(args.chiral_angle * math.pi/180),
                                   Ki=math.sin(args.theta * math.pi/180) * math.sin(args.chiral_angle * math.pi/180),
-                                  j1=math.cos(args.theta * math.pi/180) * math.cos(args.chiral_angle * math.pi/180))
+                                  j1=math.cos(args.theta * math.pi/180) * math.cos(args.chiral_angle * math.pi/180),
+                                  j2=args.j2)
 
     def print_corner_spectra(env):
         spectra = []
@@ -153,8 +155,8 @@ def main():
     ctm_env_final, *ctm_log = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
 
     # energy per site
-    e_dn_final = model.energy_triangle_dn(state, ctm_env_final, force_cpu=True)
-    e_up_final = model.energy_triangle_up(state, ctm_env_final, force_cpu=True)
+    e_dn_final = model.energy_triangle_dn_v2(state, ctm_env_final, force_cpu=True)
+    e_up_final = model.energy_triangle_up_v2(state, ctm_env_final, force_cpu=True)
     e_nnn_final = model.energy_nnn(state, ctm_env_final, force_cpu=True)
     e_tot_final = (e_dn_final + e_up_final + e_nnn_final) / 3
 

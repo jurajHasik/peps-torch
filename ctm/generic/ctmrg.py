@@ -90,7 +90,7 @@ def run_overlap(state1, state2, env, conv_check=None, ctm_args=cfg.ctm_args, glo
     TODO add reference
     """
 
-    # 0) Create double-layer (DL) tensors, preserving the same convenction
+    # 0) Create double-layer (DL) tensors, preserving the same convention
     # for order of indices
     #
     #     /           /

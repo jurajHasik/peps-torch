@@ -5,7 +5,7 @@ import math
 import torch
 import copy
 from collections import OrderedDict
-from ipeps.ipeps_kagome import IPEPS_KAGOME, read_ipeps_kagome, extend_bond_dim, to_PG_symmetric
+from ipeps.ipess_kagome import IPESS_KAGOME, read_ipess_kagome, extend_bond_dim, to_PG_symmetric
 from models import SU3_chiral
 from ctm.generic.env import *
 from ctm.generic import ctmrg
@@ -44,7 +44,7 @@ def main():
     elif args.ansatz== None or args.ansatz== "":
         ansatz_pgs= None
     if args.instate!=None:
-        state= read_ipeps_kagome(args.instate)
+        state= read_ipess_kagome(args.instate)
 
         # possibly symmetrize by PG
         if ansatz_pgs!=None and state.pgs==(None,None,None):
@@ -65,7 +65,7 @@ def main():
             args.bond_dim, dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)-1.0)
         B_S= torch.zeros(3, args.bond_dim, args.bond_dim,\
             dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
-        state= IPEPS_KAGOME(T_U, B_S, T_D, SYM_UP_DOWN=args.sym_up_dn, pgs=ansatz_pgs)
+        state= IPESS_KAGOME(T_U, B_S, T_D, SYM_UP_DOWN=args.sym_up_dn, pgs=ansatz_pgs)
         state.load_checkpoint(args.opt_resume)
     elif args.ipeps_init_type=='RANDOM':
         bond_dim = args.bond_dim
@@ -75,15 +75,15 @@ def main():
             dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)-1.0)
         B_S= torch.rand(3, bond_dim, bond_dim,\
             dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)-1.0
-        state = IPEPS_KAGOME(T_U, B_S, T_D, SYM_UP_DOWN=args.sym_up_dn, pgs=ansatz_pgs)
+        state = IPESS_KAGOME(T_U, B_S, T_D, SYM_UP_DOWN=args.sym_up_dn, pgs=ansatz_pgs)
     else:
         raise ValueError("Missing trial state: -instate=None and -ipeps_init_type= "\
             +str(args.ipeps_init_type)+" is not supported")
 
 
     def energy_f(state, env, force_cpu=False):
-        e_dn = model.energy_triangle_dn_v2(state, env, force_cpu=force_cpu)
-        e_up = model.energy_triangle_up_v2(state, env, force_cpu=force_cpu)
+        e_dn = model.energy_triangle_dn(state, env, force_cpu=force_cpu)
+        e_up = model.energy_triangle_up(state, env, force_cpu=force_cpu)
         e_nnn = model.energy_nnn(state, env)
         return (e_up + e_dn + e_nnn) / 3
 
@@ -108,8 +108,8 @@ def main():
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
             history = []
-        e_dn = model.energy_triangle_dn_v2(state, env, force_cpu=ctm_args.conv_check_cpu)
-        e_up = model.energy_triangle_up_v2(state, env, force_cpu=ctm_args.conv_check_cpu)
+        e_dn = model.energy_triangle_dn(state, env, force_cpu=ctm_args.conv_check_cpu)
+        e_up = model.energy_triangle_up(state, env, force_cpu=ctm_args.conv_check_cpu)
         e_nnn = model.energy_nnn(state, env)
         e_curr = (e_up + e_dn + e_nnn) / 3
         history.append(e_curr.item())

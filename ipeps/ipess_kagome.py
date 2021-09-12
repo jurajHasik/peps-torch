@@ -6,7 +6,7 @@ import config as cfg
 import ipeps.ipeps as ipeps
 from ipeps.tensor_io import *
 
-class IPEPS_KAGOME(ipeps.IPEPS):
+class IPESS_KAGOME(ipeps.IPEPS):
     def __init__(self, triangle_up, bond_site, triangle_down=None, 
                  SYM_UP_DOWN=True, pgs=None,
                  peps_args=cfg.peps_args, global_args=cfg.global_args):
@@ -185,20 +185,12 @@ class IPEPS_KAGOME(ipeps.IPEPS):
         #                                             s1
         #                                              |
         #                                              c
-        #789uio
-        a_tensor_temp = torch.einsum('iab,uji,jkl,vkc,wld->uvwabcd', self.elem_tensors['UP_T'],
+        #
+        a_tensor = torch.einsum('iab,uji,jkl,vkc,wld->uvwabcd', self.elem_tensors['UP_T'],
             self.elem_tensors['BOND_S'], self.elem_tensors['DOWN_T'], self.elem_tensors['BOND_S'], \
             self.elem_tensors['BOND_S'])
-        # reshape to a single d=27 index
-        # TODO can we substitute this by a simple reshape ? 
-        D = a_tensor_temp.size(3)
-        # a_tensor= a_tensor.reshape(27,D,D,D,D)
-        # a_tensor= a_tensor/a_tensor.abs().max()
-        a_tensor = torch.zeros((27, D, D, D, D), dtype=torch.complex128, device=a_tensor_temp.device)
-        for si in range(27):
-            n1, n2, n3 = fmap_inv(si)
-            a_tensor[si, :, :, :, :] = a_tensor_temp[n1, n2, n3, :, :, :, :]
-        # END TODO
+        aux_D= self.elem_tensors['UP_T'].size(0)
+        a_tensor= a_tensor.reshape([27]+[aux_D]*4) / a_tensor.abs().max()
         sites= {(0, 0): a_tensor}
         return sites
 
@@ -237,7 +229,7 @@ class IPEPS_KAGOME(ipeps.IPEPS):
         return auxd_set
 
     def write_to_file(self, outputfile, aux_seq=None, tol=1.0e-14, normalize=False):
-        write_ipeps_kagome(self, outputfile, tol=tol, normalize=normalize)
+        write_ipess_kagome(self, outputfile, tol=tol, normalize=normalize)
 
 def extend_bond_dim(state, new_d):
     r"""
@@ -262,7 +254,7 @@ def extend_bond_dim(state, new_d):
     new_elem_tensors['DOWN_T']= torch.zeros(new_d,new_d,new_d, dtype=state.dtype, device=state.device)
     new_elem_tensors['DOWN_T'][:ad,:ad,:ad]= state.elem_tensors['DOWN_T']
     new_elem_tensors['BOND_S']= torch.zeros(pd,new_d,new_d, dtype=state.dtype, device=state.device)
-    new_elem_tensors['BOND_S'][:,:ad,:ad]= state.elem_tensors['UP_T']
+    new_elem_tensors['BOND_S'][:,:ad,:ad]= state.elem_tensors['BOND_S']
 
     new_state= state.__class__(new_elem_tensors['UP_T'], new_elem_tensors['BOND_S'],\
         triangle_down=None if state.SYM_UP_DOWN else new_elem_tensors['DOWN_T'],\
@@ -298,7 +290,7 @@ def to_PG_symmetric(state, pgs=(None,None,None)):
 
     return symm_state
 
-def read_ipeps_kagome(jsonfile, peps_args=cfg.peps_args, global_args=cfg.global_args):
+def read_ipess_kagome(jsonfile, peps_args=cfg.peps_args, global_args=cfg.global_args):
     r"""
     :param jsonfile: input file describing iPEPS in json format
     :param vertexToSite: function mapping arbitrary vertex of a square lattice
@@ -352,12 +344,12 @@ def read_ipeps_kagome(jsonfile, peps_args=cfg.peps_args, global_args=cfg.global_
 
         if SYM_UP_DOWN: elem_tensors['DOWN_T']=None
 
-        state = IPEPS_KAGOME(elem_tensors['UP_T'], elem_tensors['BOND_S'], \
+        state = IPESS_KAGOME(elem_tensors['UP_T'], elem_tensors['BOND_S'], \
             triangle_down=elem_tensors['DOWN_T'], SYM_UP_DOWN=SYM_UP_DOWN, \
             pgs= pgs, peps_args=peps_args, global_args=global_args)
     return state
 
-def write_ipeps_kagome(state, outputfile, tol=1.0e-14, normalize=False):
+def write_ipess_kagome(state, outputfile, tol=1.0e-14, normalize=False):
     r"""
     :param state: wavefunction to write out in json format
     :param outputfile: target file
@@ -401,13 +393,3 @@ def write_ipeps_kagome(state, outputfile, tol=1.0e-14, normalize=False):
 
     with open(outputfile, 'w') as f:
         json.dump(json_state, f, indent=4, separators=(',', ': '))
-
-
-def fmap(n1, n2, n3):
-    return n3 + 3 * n2 + 9 * n1
-
-def fmap_inv(s):
-    n1 = s // 9
-    n2 = (s - 9 * n1) // 3
-    n3 = s - 9 * n1 - 3 * n2
-    return n1, n2, n3

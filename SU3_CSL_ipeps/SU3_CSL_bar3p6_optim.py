@@ -6,7 +6,7 @@ import torch
 import copy
 from random import randint
 from collections import OrderedDict
-from u1sym.ipess_kagome_u1 import IPESS_KAGOME_U1SYM, write_coeffs, read_coeffs
+from u1sym.ipeps_u1 import IPEPS_U1SYM, write_coeffs, read_coeffs
 from read_write_SU3_tensors import *
 from models import SU3_chiral
 from ctm.generic.env import *
@@ -42,18 +42,18 @@ def main():
     # Import all elementary tensors
     tensors_site = []
     tensors_triangle = []
-    path = "SU3_CSL_ipeps/SU3_D7_tensors/"
-    for name in ['S0', 'S1', 'S2', 'S3', 'S4', 'L0', 'L1', 'L2']:
-        tens = load_SU3_tensor(path+name)
+    path = "SU3_CSL_ipeps/SU3_D9_bar3p6_tensors/"
+    for name in ['M0', 'M1', 'M2', 'L0', 'L1', 'L2']:
+        tens = load_SU3_tensor(path + name)
         tens = tens.to(t_device)
-        if name in ['S0', 'S1', 'S2']:
-            tensors_triangle.append(1j*tens)
-        elif name in ['S3', 'S4']:
+        if name in ['M0']:
             tensors_triangle.append(tens)
-        elif name in ['L0', 'L1']:
-            tensors_site.append(1j * tens)
-        elif name in ['L2']:
+        if name in ['M1', 'M2']:
+            tensors_triangle.append(1j * tens)
+        elif name in ['L0', 'L2']:
             tensors_site.append(tens)
+        elif name in ['L1']:
+            tensors_site.append(1j * tens)
 
     # define initial coefficients
     if args.import_state is not None:
@@ -67,23 +67,25 @@ def main():
         coeffs_site = {(0,0): coeffs['site'].requires_grad_(False).to(t_device)}
     else:
         # AKLT state
-        coeffs_triangle = {(0, 0): torch.tensor([1., 0., 0., 0., 0.], dtype=torch.float64, device=t_device)}
-        coeffs_site = {(0, 0): torch.tensor([1., 1., 0], dtype=torch.float64, device=t_device)}
-
+        coeffs_triangle = {(0, 0): torch.tensor([1., 0., 0.], dtype=torch.float64, device=t_device)}
+        coeffs_site = {(0, 0): torch.tensor([1., 0., 1.], dtype=torch.float64, device=t_device)}
 
     # define which coefficients will be added a noise
-    var_coeffs_triangle = torch.tensor([0, 1, 1, 1, 1], dtype=torch.float64, device=t_device)
+    var_coeffs_triangle = torch.tensor([0, 1, 1], dtype=torch.float64, device=t_device)
     var_coeffs_site = torch.tensor([0, 0, 0], dtype=torch.float64, device=t_device)
 
 
-    state = IPESS_KAGOME_U1SYM(tensors_triangle, tensors_site, coeffs_triangle_up = coeffs_triangle, coeffs_site=coeffs_site, sym_up_dn=bool(args.sym_up_dn),
+    state = IPEPS_U1SYM(tensors_triangle, tensors_site, coeffs_triangle_up = coeffs_triangle, coeffs_site=coeffs_site, sym_up_dn=bool(args.sym_up_dn),
                         var_coeffs_triangle=var_coeffs_triangle, var_coeffs_site=var_coeffs_site)
-    state.add_noise(args.instate_noise)
-    state.print_coeffs()
+
+    if not args.opt_resume:
+        state.add_noise(args.instate_noise)
+        state.print_coeffs()
 
     model = SU3_chiral.SU3_CHIRAL(Kr=math.sin(args.theta * math.pi/180) * math.cos(args.chiral_angle * math.pi/180),
                                   Ki=math.sin(args.theta * math.pi/180) * math.sin(args.chiral_angle * math.pi/180),
                                   j1=math.cos(args.theta * math.pi/180) * math.cos(args.chiral_angle * math.pi/180))
+
 
     def energy_f(state, env, force_cpu=False):
         e_dn = model.energy_triangle_dn_v2(state, env, force_cpu=force_cpu)
@@ -118,7 +120,6 @@ def main():
         e_nnn = model.energy_nnn(state, env)
         e_curr = (e_up + e_dn + e_nnn) / 3
         history.append(e_curr.item())
-
         if len(history) == 1:
             e_prev = 0
         else:
@@ -128,7 +129,6 @@ def main():
         print(
             'Step n°{:2}    E_site ={:01.14f}   (E_up={:01.14f}, E_dn={:01.14f}, E_nnn={:01.14f})  delta_E={:01.14f}'.format(
                 len(history), e_curr.item(), e_up.item(), e_dn.item(), e_nnn, e_curr.item() - e_prev))
-
         if (len(history) > 1 and abs(history[-1] - history[-2]) < ctm_args.ctm_conv_tol) \
                 or len(history) >= ctm_args.ctm_max_iter:
             log.info({"history_length": len(history), "history": history})

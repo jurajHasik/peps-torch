@@ -10,7 +10,6 @@ from tn_interface import conj, transpose
 import logging
 log = logging.getLogger(__name__)
 
-import pdb
 
 def ctm_get_projectors_4x4(direction, coord, state, env, ctm_args=cfg.ctm_args, \
     global_args=cfg.global_args):

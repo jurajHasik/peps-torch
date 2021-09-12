@@ -2,7 +2,7 @@ import torch
 import config as cfg
 from ctm.generic.env import ENV
 from ctm.generic import rdm
-from ctm.generic import rdm_kagome
+from ctm.pess_kagome import rdm_kagome
 from ctm.generic import corrf
 from math import sqrt
 from numpy import exp
@@ -97,9 +97,10 @@ class SU3_CHIRAL():
         print("Ki = {}".format(Ki))
         print("j1 = {}".format(j1))
         print("j2 = {}".format(j2))
-        self.dtype = global_args.dtype
+        self.dtype = global_args.torch_dtype
         self.device = global_args.device
         self.phys_dim = 27
+        self.id_downT = torch.eye(27, dtype=self.dtype, device=self.device)
         self.h_triangle = (Kr+1j*Ki) * permute_triangle + (Kr-1j*Ki) * permute_triangle_inv + self.j1 * exchange_bond_triangle
         self.h_triangle = self.h_triangle.to(self.device)
         _tmp_l_labels = ["l3","l8","l3_1","l3_2","l3_3","l8_1","l8_2","l8_3"]
@@ -109,26 +110,15 @@ class SU3_CHIRAL():
     # Energy terms
 
     def energy_triangle_dn(self, state, env, force_cpu=False):
-        norm_wf = rdm.rdm2x2_id((0, 0), state, env, force_cpu=force_cpu)
-        e_dn = rdm.rdm2x2_dn_triangle((0, 0), state, env, operator=self.h_triangle, force_cpu=force_cpu) / norm_wf
-        return torch.real(e_dn)
+        e_dn= rdm_kagome.rdm2x2_dn_triangle_with_operator(\
+            (0, 0), state, env, self.h_triangle, force_cpu=force_cpu)
+        return _cast_to_real(e_dn)
 
     def energy_triangle_up(self, state, env, force_cpu=False):
-        norm_wf = rdm.rdm2x2_id((0, 0), state, env, force_cpu=force_cpu)
-        e_up = rdm.rdm2x2_up_triangle((0, 0), state, env, operator=self.h_triangle, force_cpu=force_cpu) / norm_wf
-        return torch.real(e_up)
-
-    def energy_triangle_dn_v2(self, state, env, force_cpu=False):
-        rdm_dn= rdm_kagome.rdm2x2_up_triangle_open(\
+        rdm_up= rdm_kagome.rdm2x2_up_triangle_open(\
             (0, 0), state, env, force_cpu=force_cpu)
-        e_dn= torch.einsum('ijkmno,mnoijk', rdm_dn, self.h_triangle )
-        return torch.real(e_dn)
-
-    def energy_triangle_up_v2(self, state, env, force_cpu=False):
-        e_up= rdm_kagome.rdm2x2_dn_triangle_with_operator(\
-            (0, 0), state, env, self.h_triangle, force_cpu=force_cpu)
-        return torch.real(e_up)
-
+        e_up= torch.einsum('ijkmno,mnoijk', rdm_up, self.h_triangle )
+        return _cast_to_real(e_up)
 
     def energy_nnn(self, state, env, force_cpu=False):
         if self.j2 == 0:
@@ -140,21 +130,24 @@ class SU3_CHIRAL():
     # Observables
 
     def P_dn(self, state, env, force_cpu=False):
-        norm_wf = rdm.rdm2x2_id((0, 0), state, env, force_cpu=force_cpu)
-        vP_dn = rdm.rdm2x2_dn_triangle((0, 0), state, env, operator=permute_triangle, force_cpu=force_cpu) / norm_wf
+        vP_dn= rdm_kagome.rdm2x2_dn_triangle_with_operator((0, 0), state, env,\
+            operator=permute_triangle, force_cpu=force_cpu)
         return vP_dn
 
     def P_up(self, state, env, force_cpu=False):
-        norm_wf = rdm.rdm2x2_id((0, 0), state, env, force_cpu=force_cpu)
-        vP_up = rdm.rdm2x2_up_triangle((0, 0), state, env, operator=permute_triangle, force_cpu=force_cpu) / norm_wf
+        rdm_up= rdm_kagome.rdm2x2_up_triangle_open((0, 0), state, env, force_cpu=force_cpu)
+        vP_up= torch.einsum('ijkmno,mnoijk', rdm_up, permute_triangle)
         return vP_up
 
     def P_bonds_nnn(self, state, env, force_cpu=False):
-        norm_wf = rdm.rdm2x2_id((0, 0), state, env, force_cpu=force_cpu)
-        vNNN1_12, vNNN1_31 = rdm.rdm2x2_nnn_1((0, 0), state, env, operator=exchange_bond, force_cpu=force_cpu)
-        vNNN2_32, vNNN2_21 = rdm.rdm2x2_nnn_2((0, 0), state, env, operator=exchange_bond, force_cpu=force_cpu)
-        vNNN3_31, vNNN3_23 = rdm.rdm2x2_nnn_3((0, 0), state, env, operator=exchange_bond, force_cpu=force_cpu)
-        return torch.real(vNNN1_12 / norm_wf), torch.real(vNNN2_21 / norm_wf), torch.real(vNNN1_31 / norm_wf), torch.real(vNNN3_31 / norm_wf), torch.real(vNNN2_32 / norm_wf), torch.real(vNNN3_23 / norm_wf)
+        norm_wf = rdm_kagome.rdm2x2_dn_triangle_with_operator((0, 0), state, env, \
+            self.id_downT, force_cpu=force_cpu)
+        vNNN1_12, vNNN1_31 = rdm_kagome.rdm2x2_nnn_1((0, 0), state, env, operator=exchange_bond, force_cpu=force_cpu)
+        vNNN2_32, vNNN2_21 = rdm_kagome.rdm2x2_nnn_2((0, 0), state, env, operator=exchange_bond, force_cpu=force_cpu)
+        vNNN3_31, vNNN3_23 = rdm_kagome.rdm2x2_nnn_3((0, 0), state, env, operator=exchange_bond, force_cpu=force_cpu)
+        return _cast_to_real(vNNN1_12 / norm_wf), _cast_to_real(vNNN2_21 / norm_wf), \
+            _cast_to_real(vNNN1_31 / norm_wf), _cast_to_real(vNNN3_31 / norm_wf), \
+            _cast_to_real(vNNN2_32 / norm_wf), _cast_to_real(vNNN3_23 / norm_wf)
 
     def P_bonds_nn(self, state, env):
         id_matrix = torch.eye(27, dtype=torch.complex128, device=cfg.global_args.device)
@@ -219,7 +212,6 @@ class SU3_CHIRAL():
         for x in range(8):
             l8_x_1x1= rdm.rdm1x1((0, 0), state, env, operator=l8_ops_2[:,:,x]) / norm_wf
             print(f"{x} {l8_x_1x1}")
-
 
     def eval_obs(self,state,env,force_cpu=True):
         r"""

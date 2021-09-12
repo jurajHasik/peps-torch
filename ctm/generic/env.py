@@ -163,6 +163,13 @@ def init_env(state, env, ctm_args=cfg.ctm_args):
     else:
         raise ValueError("Invalid environment initialization: "+str(ctm_args.ctm_env_init_type))
 
+# TODO restrict random corners to have pos-semidef spectrum
+def init_random(env, verbosity=0):
+    for key,t in env.C.items():
+        env.C[key] = torch.rand(t.size(), dtype=env.dtype, device=env.device)
+    for key,t in env.T.items():
+        env.T[key] = torch.rand(t.size(), dtype=env.dtype, device=env.device)
+
 def init_prod(state, env, verbosity=0):
     for key,t in env.C.items():
         env.C[key]= torch.zeros(t.size(), dtype=env.dtype, device=env.device)
@@ -244,13 +251,6 @@ def init_prod(state, env, verbosity=0):
         a= a/a.abs().max()
         env.T[(coord,vec)] = torch.zeros((env.chi,dimsA[2]**2,env.chi), dtype=env.dtype, device=env.device)
         env.T[(coord,vec)][0,:,0]= a
-
-# TODO restrict random corners to have pos-semidef spectrum
-def init_random(env, verbosity=0):
-    for key,t in env.C.items():
-        env.C[key] = torch.rand(t.size(), dtype=env.dtype, device=env.device)
-    for key,t in env.T.items():
-        env.T[key] = torch.rand(t.size(), dtype=env.dtype, device=env.device)
 
 def init_from_ipeps_pbc(state, env, verbosity=0):
     if verbosity>0:
@@ -572,20 +572,6 @@ def init_from_ipeps_obc(state, env, verbosity=0):
         env.T[(coord,vec)][:min(env.chi,dimsA[1]**2),:,:min(env.chi,dimsA[3]**2)]=\
             a[:min(env.chi,dimsA[1]**2),:,:min(env.chi,dimsA[3]**2)]
 
-def print_env(env, verbosity=0):
-    print("dtype "+str(env.dtype))
-    print("device "+str(env.device))
-
-    for key,t in env.C.items():
-        print(str(key)+" "+str(t.size()))
-        if verbosity>0: 
-            print(t)
-    for key,t in env.T.items():
-        print(str(key)+" "+str(t.size()))
-        if verbosity>0:
-            print(t)
-
-
 def init_prod_overlap(state1, state2, env, verbosity=0):
     for key,t in env.C.items():
         env.C[key]= torch.zeros(t.size(), dtype=env.dtype, device=env.device)
@@ -671,3 +657,16 @@ def init_prod_overlap(state1, state2, env, verbosity=0):
         a= a/a.abs().max()
         env.T[(coord,vec)] = torch.zeros((env.chi,dimsA[2]**2,env.chi), dtype=env.dtype, device=env.device)
         env.T[(coord,vec)][0,:,0]= a
+
+def print_env(env, verbosity=0):
+    print("dtype "+str(env.dtype))
+    print("device "+str(env.device))
+
+    for key,t in env.C.items():
+        print(str(key)+" "+str(t.size()))
+        if verbosity>0: 
+            print(t)
+    for key,t in env.T.items():
+        print(str(key)+" "+str(t.size()))
+        if verbosity>0:
+            print(t)

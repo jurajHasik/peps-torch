@@ -40,8 +40,7 @@ class IPEPS_U1SYM(ipeps.IPEPS):
             up, left, down, right in anti-clockwise order starting from up
 
         Member ``vertexToSite`` is a mapping function from vertex on a square lattice
-        passed in as tuple(x,y) to a corresponding tuple(x,y) within elementary unit cell.
-        
+        passed in as tuple(x,y) to a corresponding tuple(x,y) within elementary unit cell.        
         On-site tensor of an IPEPS object ``wfc`` at vertex (x,y) is conveniently accessed 
         through the member function ``site``, which internally uses ``vertexToSite`` mapping::
             
@@ -317,7 +316,7 @@ def read_ipeps_u1(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.
             # 1) fill the tensor with elements from the list "entries"
             # which list the coefficients in the following
             # notation: Dimensions are indexed starting from 0
-            # 
+            #
             # index (integer) of coeff, (float) Re, Im
             if X.is_complex():
                 for entry in t["entries"]:

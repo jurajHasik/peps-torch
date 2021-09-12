@@ -106,7 +106,7 @@ class IPEPS():
             self.dtype= next(iter(sites.values())).dtype
             self.device= next(iter(sites.values())).device
             self.sites= OrderedDict(sites)
-        
+
         # TODO we infer the size of the cluster from the keys of sites. Is it OK?
         # infer the size of the cluster
         if (lX is None or lY is None) and sites:
