@@ -16,6 +16,32 @@ def rdm2x2_up_triangle_open(coord, state, env, sym_pos_def=False, force_cpu=Fals
     :type env: ENV
     :type verbosity: int
     :rtype: torch.tensor
+
+
+        C    T             T          C => C2x2_LU(coord)--------C2x2(coord+(1,0))
+             a             a               |                  s1/|
+             |             |               |/s2               s0\|
+        T b--\          b--\               C2x2_LD(coord+(0,1))--C2x2(coord+(1,1))
+              \        /    \              
+              XX--XX--d     XX--XX--d T
+               | /           | /
+               |/            |/
+              XX            s1
+               |             |
+               c             c  
+              /             /
+             a             a
+             |             |
+        T b--\          b--\
+              \        /    \
+              XX--s2--d     s0--XX--d T
+               | /           | /
+               |/            |/
+              XX            XX
+               |             |
+               c             c
+        C      T             T        C
+
     """
     who = "rdm2x2"
     # ----- building C2x2_LU ----------------------------------------------------
@@ -79,7 +105,7 @@ def rdm2x2_up_triangle_open(coord, state, env, sym_pos_def=False, force_cpu=Fals
     dimsA = a_1layer.size()
 
     A_reshaped= a_1layer.view( [3,3,3] + list(dimsA[1:]) )
-    # double layer tensor with sites 1 and 3 contracted
+    # double layer tensor with sites 0 and 2 contracted
     a = contiguous(einsum('mikefgh,mjkabcd->eafbgchdij', A_reshaped, conj(A_reshaped)))
     a = view(a, (dimsA[1] ** 2, dimsA[2] ** 2, dimsA[3] ** 2, dimsA[4] ** 2, 3, 3))
 
@@ -137,7 +163,7 @@ def rdm2x2_up_triangle_open(coord, state, env, sym_pos_def=False, force_cpu=Fals
         T2 = env.T[(shitf_coord, (1, 0))]
         a_1layer = state.site(shitf_coord)
     dimsA = a_1layer.size()
-    # double layer tensor with sites 2 and 3 contracted
+    # double layer tensor with sites 1 and 2 contracted
     a = contiguous(einsum('mikefgh,nikabcd->eafbgchdmn', A_reshaped, conj(A_reshaped)))
     a = view(a, (dimsA[1] ** 2, dimsA[2] ** 2, dimsA[3] ** 2, dimsA[4] ** 2, 3, 3))
 
@@ -185,7 +211,7 @@ def rdm2x2_up_triangle_open(coord, state, env, sym_pos_def=False, force_cpu=Fals
         T2 = env.T[(shitf_coord, (0, 1))]
         a_1layer = state.site(shitf_coord)
     dimsA = a_1layer.size()
-    # double layer tensor with sites 1 and 2 contracted
+    # double layer tensor with sites 0 and 1 contracted
     a = contiguous(einsum('mikefgh,milabcd->eafbgchdkl', A_reshaped, conj(A_reshaped)))
     a = view(a, (dimsA[1] ** 2, dimsA[2] ** 2, dimsA[3] ** 2, dimsA[4] ** 2, 3, 3))
 
@@ -256,6 +282,31 @@ def rdm2x2_up_triangle_open(coord, state, env, sym_pos_def=False, force_cpu=Fals
 
 
 def rdm2x2_dn_triangle_with_operator(coord, state, env, operator, force_cpu=False, verbosity=0):
+    r"""
+        C    T             T          C
+             a             a
+             |             |
+        T b--\          b--\
+              \        /    \
+              s0--s2--d     XX--XX--d T
+               | /           | /
+               |/            |/
+              s1            XX
+               |             |
+               c             c  
+              /             /
+             a             a
+             |             |
+        T b--\          b--\
+              \        /    \
+              XX--XX--d     XX--XX--d T
+               | /           | /
+               |/            |/
+              XX            XX
+               |             |
+               c             c
+        C      T             T        C
+    """
     who = 'rdm2x2_dn_triangle'
     # ----- building C2x2_LU ----------------------------------------------------
     if force_cpu:

@@ -160,31 +160,53 @@ class IPESS_KAGOME(ipeps.IPEPS):
         self.sites = self.build_onsite_tensors()
 
     def build_onsite_tensors(self):
-        # square-lattice tensor with 3 physical indices (d=3)
+        # square-lattice tensor with 3 physical indices (d=3) and its placement on square lattice
+        # in accordance with on-site tensor convention  
         #                                              
-        #      2(d)              2(c)                             c                                  b
-        #       \               /            rot. pi/4            |           reflection             |
-        #  0(w)==B             B==0(v)   counter-clockwise       s1          along (1,1) line     a--\                     
-        #         \           /                 ->              / |                                   \
-        #         1(l)       1(k)                              /  |           1  (1,1)                 s0--s2--c
-        #          2(l)     1(k)                           d--s2--s0          | /                      |  /
-        #            \      /                                      \          |/__1                    | /
-        #             DOWN_T                                        \--b                               s1
-        #              |                                            |                                  |
-        #              0(j)                                         a                                  d
+        #      2(d)              2(c)                  a
+        #       \               /         rot. pi      |
+        #  0(w)==B             B==0(v)   clockwise  b--\                     
+        #         \           /             =>          \
+        #         1(l)       1(k)                      s0--s2--d
+        #          2(l)     1(k)                        | / 
+        #            \      /                           |/   <- DOWN_T
+        #             DOWN_T                           s1
+        #              |                                |
+        #              0(j)                             c
         #              1(j)                               
-        #              |                rot. pi to on-site tensor convention    
-        #              B==0(u)             ->                
-        #              |                             a 
-        #              2(i)                          | <- UP_T
-        #              0(i)                       b--\ 
-        #              |                              \ 
-        #            UP_T                             s0--s2--d
-        #           /    \                             | /
-        #          1(a)   2(b)                         |/  <- DOWN_T
-        #                                             s1
-        #                                              |
-        #                                              c
+        #              |                 
+        #              B==0(u)        
+        #              |
+        #              2(i)
+        #              0(i)  
+        #              |
+        #            UP_T
+        #           /    \ 
+        #          1(a)   2(b)        
+        #
+        # C    T             T          C
+        #      a             a
+        #      |             |
+        # T b--\          b--\
+        #       \        /    \
+        #       s0--s2--d     s0--s2--d T
+        #        | /           | /
+        #        |/            |/
+        #       s1            s1
+        #        |             |
+        #        c             c  
+        #       /             /
+        #      a             a
+        #      |             |
+        # T b--\          b--\
+        #       \        /    \
+        #       s0--s2--d     s0--s2--d T
+        #        | /           | /
+        #        |/            |/
+        #       s1            s1
+        #        |             |
+        #        c             c
+        # C      T             T        C
         #
         a_tensor = torch.einsum('iab,uji,jkl,vkc,wld->uvwabcd', self.elem_tensors['UP_T'],
             self.elem_tensors['BOND_S'], self.elem_tensors['DOWN_T'], self.elem_tensors['BOND_S'], \
@@ -389,7 +411,8 @@ def write_ipess_kagome(state, outputfile, tol=1.0e-14, normalize=False):
 
     # write list of considered elementary tensors
     for key, t in state.elem_tensors.items():
-        json_state["elem_tensors"][key]= serialize_bare_tensor_legacy(t)
+        tmp_t=t # tmp_t= t/t.abs().max()
+        json_state["elem_tensors"][key]= serialize_bare_tensor_legacy(tmp_t)
 
     with open(outputfile, 'w') as f:
         json.dump(json_state, f, indent=4, separators=(',', ': '))

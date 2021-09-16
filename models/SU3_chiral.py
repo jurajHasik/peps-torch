@@ -8,7 +8,7 @@ from math import sqrt
 from numpy import exp
 import itertools
 
-def _cast_to_real(t, check=True, imag_eps=1.0e-12):
+def _cast_to_real(t, check=True, imag_eps=1.0e-8):
     if t.is_complex():
         assert abs(t.imag) < imag_eps,"unexpected imaginary part "+str(t.imag)
         return t.real

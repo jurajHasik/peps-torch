@@ -39,8 +39,8 @@ class S1_KAGOME():
         Id1= irrep.I()
         self.Id3_t= torch.eye(self.phys_dim**3, dtype=self.dtype, device=self.device)
         SS= irrep.SS()
-        SSnnId= torch.einsum('ijkl,ab->ijaklb',SS,Id1)
-        SSnn_t= SSnnId + SSnnId.permute(1,2,0, 4,5,3) + SSnnId.permute(2,0,1, 5,3,4)
+        self.SSnnId= torch.einsum('ijkl,ab->ijaklb',SS,Id1)
+        SSnn_t= self.SSnnId + self.SSnnId.permute(1,2,0, 4,5,3) + self.SSnnId.permute(2,0,1, 5,3,4)
         SS2= torch.einsum('ijab,abkl->ijkl',SS,SS)
         SS2nnId= torch.einsum('ijkl,ab->ijaklb',SS2,Id1)
         SS2nn_t= SS2nnId + SS2nnId.permute(1,2,0, 4,5,3) + SS2nnId.permute(2,0,1, 5,3,4)
@@ -144,44 +144,6 @@ class S1_KAGOME():
         vP_12 = rdm.rdm1x1((0, 0), state, env, operator=bond_op) / norm_wf
         return(torch.real(vP_23), torch.real(vP_13), torch.real(vP_12))
 
-    def eval_lambdas(self, state, env):
-        # computes the expectation value of the SU(3) observables \lambda_3 and \lambda_8 for the three sites of the unit cell
-        id_matrix = torch.eye(27, dtype=torch.complex128, device=cfg.global_args.device)
-        norm_wf = rdm.rdm1x1((0, 0), state, env, operator=id_matrix)
-        color3_1 = rdm.rdm1x1((0, 0), state, env, operator=lambda_3_1) / norm_wf
-        color3_2 = rdm.rdm1x1((0, 0), state, env, operator=lambda_3_2) / norm_wf
-        color3_3 = rdm.rdm1x1((0, 0), state, env, operator=lambda_3_3) / norm_wf
-        color8_1 = rdm.rdm1x1((0, 0), state, env, operator=lambda_8_1) / norm_wf
-        color8_2 = rdm.rdm1x1((0, 0), state, env, operator=lambda_8_2) / norm_wf
-        color8_3 = rdm.rdm1x1((0, 0), state, env, operator=lambda_8_3) / norm_wf
-        return (color3_1, color3_2, color3_3), (color8_1, color8_2, color8_3)
-
-    def eval_su3_gens(self, state, env):
-        id_matrix2 = torch.eye(9, dtype=torch.complex128, device=cfg.global_args.device)
-        id_matrix2 = id_matrix2.reshape(3,3,3,3)
-        id_matrix = torch.eye(27, dtype=torch.complex128, device=cfg.global_args.device)
-        norm_wf = rdm.rdm1x1((0, 0), state, env, operator=id_matrix)
-        # site 0
-        l8_ops_0= torch.einsum('ijx,klmn->ikmjlnx', self.su3_gens, id_matrix2).contiguous()
-        l8_ops_0= l8_ops_0.reshape(27,27,8)
-        for x in range(8):
-            l8_x_1x1= rdm.rdm1x1((0, 0), state, env, operator=l8_ops_0[:,:,x]) / norm_wf
-            print(f"{x} {l8_x_1x1}")
-
-        # site 1
-        l8_ops_1= torch.einsum('ijx,klmn->kimljnx', self.su3_gens, id_matrix2).contiguous()
-        l8_ops_1= l8_ops_1.reshape(27,27,8)
-        for x in range(8):
-            l8_x_1x1= rdm.rdm1x1((0, 0), state, env, operator=l8_ops_1[:,:,x]) / norm_wf
-            print(f"{x} {l8_x_1x1}")
-
-        # site 2
-        l8_ops_2= torch.einsum('ijx,klmn->kmilnjx', self.su3_gens, id_matrix2).contiguous()
-        l8_ops_2= l8_ops_2.reshape(27,27,8)
-        for x in range(8):
-            l8_x_1x1= rdm.rdm1x1((0, 0), state, env, operator=l8_ops_2[:,:,x]) / norm_wf
-            print(f"{x} {l8_x_1x1}")
-
     def eval_obs(self,state,env,force_cpu=True):
         r"""
         :param state: wavefunction
@@ -209,6 +171,24 @@ class S1_KAGOME():
                     obs[f"sz_{i}"]*obs[f"sz_{i}"]\
                     + obs[f"sp_{i}"].conj()*obs[f"sm_{i}"])
                 )
+ 
+            # nn S.S pattern
+            SS_dn_01= rdm_kagome.rdm2x2_dn_triangle_with_operator(\
+                (0, 0), state, env, self.SSnnId, force_cpu=force_cpu)
+            SS_dn_12= rdm_kagome.rdm2x2_dn_triangle_with_operator(\
+                (0, 0), state, env, self.SSnnId.permute(2,1,0, 5,4,3).contiguous(),\
+                force_cpu=force_cpu)
+            SS_dn_02= rdm_kagome.rdm2x2_dn_triangle_with_operator(\
+                (0, 0), state, env, self.SSnnId.permute(0,2,1, 3,5,4).contiguous(),\
+                force_cpu=force_cpu)
+            rdm_up= rdm_kagome.rdm2x2_up_triangle_open(\
+                (0, 0), state, env, force_cpu=force_cpu)
+            SS_up_01= torch.einsum('ijkmno,mnoijk', rdm_up, self.SSnnId )
+            SS_up_12= torch.einsum('ijkmno,mnoijk', rdm_up, self.SSnnId.permute(2,1,0, 5,4,3) )
+            SS_up_02= torch.einsum('ijkmno,mnoijk', rdm_up, self.SSnnId.permute(0,2,1, 3,5,4) )
+
+            obs.update({"SS_dn_01": SS_dn_01, "SS_dn_12": SS_dn_12, "SS_dn_02": SS_dn_02,\
+                "SS_up_01": SS_up_01, "SS_up_12": SS_up_12, "SS_up_02": SS_up_02 })
 
         # prepare list with labels and values
         return list(obs.values()), list(obs.keys())
