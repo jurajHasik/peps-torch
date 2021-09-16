@@ -99,7 +99,7 @@ class SU3_CHIRAL():
         print("j2 = {}".format(j2))
         self.dtype = global_args.torch_dtype
         self.device = global_args.device
-        self.phys_dim = 27
+        self.phys_dim = 3
         self.id_downT = torch.eye(27, dtype=self.dtype, device=self.device)
         self.h_triangle = (Kr+1j*Ki) * permute_triangle + (Kr-1j*Ki) * permute_triangle_inv + self.j1 * exchange_bond_triangle
         self.h_triangle = self.h_triangle.to(self.device)

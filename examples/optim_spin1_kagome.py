@@ -140,9 +140,9 @@ def main():
 
         # build on-site tensors
         if args.ansatz in ["IPESS", "A_2,B"]:
-                # explicit rebuild of on-site tensors
-                state_sym= to_PG_symmetric(state, state.pgs)
-                state_sym.sites= state_sym.build_onsite_tensors()
+            # explicit rebuild of on-site tensors
+            state_sym= to_PG_symmetric(state, state.pgs)
+            state_sym.sites= state_sym.build_onsite_tensors()
         else:
             A= state.sites[(0,0)]
             A= A/A.abs().max()
