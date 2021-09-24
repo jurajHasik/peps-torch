@@ -79,7 +79,7 @@ python examples/optim_j1j2_c4v.py --GLOBALARGS_dtype complex128 --bond_dim 3 --c
 The computation of expectations values can be done right away, as the state stored in `ex-c4v_state.json` carries the 
 datatype (dtype) of its tensors
 ```
-python examples/ctmrg_j1j2_c4v.py --instate ex-c4v_state.json --chi 48 --j2 0.5 --corrf_r 20 --GLOBALARGS_dtype complex12
+python examples/ctmrg_j1j2_c4v.py  --GLOBALARGS_dtype complex128 --instate ex-c4v_state.json --chi 48 --j2 0.5 --corrf_r 20
 ```
 
 
