@@ -102,6 +102,30 @@ class IPEPS_KAGOME(ipeps.IPEPS):
         super().__init__(sites, vertexToSite=vertexToSite, lX=lX, lY=lY,\
             peps_args=peps_args, global_args=global_args)
 
+def extend_bond_dim(state, new_d):
+    r"""
+    :param state: wavefunction to modify
+    :param new_d: new enlarged auxiliary bond dimension
+    :type state: IPEPS_KAGOME
+    :type new_d: int
+    :return: wavefunction with enlarged auxiliary bond dimensions
+    :rtype: IPEPS_KAGOME
+
+    Take IPEPS_KAGOME and enlarge all auxiliary bond dimensions of all on-site tensors up to 
+    size ``new_d``
+    """
+    new_state = state
+    for coord,site in new_state.sites.items():
+        dims = site.size()
+        size_check = [new_d >= d for d in dims[1:]]
+        if False in size_check:
+            raise ValueError("Desired dimension is smaller than following aux dimensions: "+str(size_check))
+
+        new_site = torch.zeros((dims[0],new_d,new_d,new_d,new_d), dtype=state.dtype, device=state.device)
+        new_site[:,:dims[1],:dims[2],:dims[3],:dims[4]] = site
+        new_state.sites[coord] = new_site
+    return new_state
+
 def read_ipeps_kagome(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.peps_args,\
     global_args=cfg.global_args):
     

@@ -45,18 +45,24 @@ class S1_KAGOME():
         SS2nnId= torch.einsum('ijkl,ab->ijaklb',SS2,Id1)
         SS2nn_t= SS2nnId + SS2nnId.permute(1,2,0, 4,5,3) + SS2nnId.permute(2,0,1, 5,3,4)
 
+        if jtrip != 0:
+            assert self.dtype==torch.complex128 or self.dtype==torch.complex64,"jtrip requires complex dtype"  
         Svec= irrep.S()
         levicivit3= torch.zeros(3,3,3, dtype=self.dtype, device=self.device)
         levicivit3[0,1,2]=levicivit3[1,2,0]=levicivit3[2,0,1]=1.
         levicivit3[0,2,1]=levicivit3[2,1,0]=levicivit3[1,0,2]=-1.
         SxSS_t= torch.einsum('abc,bij,ckl,amn->ikmjln',levicivit3,Svec,Svec,Svec)
 
-        permute_triangle = torch.zeros([3]*6, dtype=self.dtype, device=self.device)
-        permute_triangle_inv = torch.zeros([3]*6, dtype=self.dtype, device=self.device)
+        permute_triangle = torch.zeros([self.phys_dim]*6, dtype=self.dtype, device=self.device)
+        permute_triangle_inv = torch.zeros([self.phys_dim]*6, dtype=self.dtype, device=self.device)
         for i in range(self.phys_dim):
             for j in range(self.phys_dim):
                 for k in range(self.phys_dim):
                     # anticlockwise (direct)
+                    #
+                    # 2---1 <- 0---2
+                    #  \ /      \ /
+                    #   0        1
                     permute_triangle[i, j, k, j, k, i] = 1.
                     # clockwise (inverse)
                     permute_triangle_inv[i, j, k, k, i, j] = 1.
@@ -168,8 +174,10 @@ class S1_KAGOME():
 
             for i in range(3):
                 obs[f"m_{i}"]= sqrt(_cast_to_real(
-                    obs[f"sz_{i}"]*obs[f"sz_{i}"]\
-                    + obs[f"sp_{i}"].conj()*obs[f"sm_{i}"])
+                    obs[f"sz_{i}"]**2\
+                    +0.25*(obs[f"sp_{i}"] + obs[f"sm_{i}"])**2
+                    +0.25*( -1.0j*(obs[f"sp_{i}"] - obs[f"sm_{i}"]) )**2
+                    )
                 )
  
             # nn S.S pattern

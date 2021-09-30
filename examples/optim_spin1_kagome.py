@@ -5,8 +5,10 @@ import math
 import torch
 import copy
 from collections import OrderedDict
-from ipeps.ipess_kagome import IPESS_KAGOME, read_ipess_kagome, extend_bond_dim, to_PG_symmetric
+from ipeps.ipess_kagome import IPESS_KAGOME, read_ipess_kagome, to_PG_symmetric
+from ipeps.ipess_kagome import extend_bond_dim as ipess_extend_bond_dim
 from ipeps.ipeps_kagome import IPEPS_KAGOME, read_ipeps_kagome
+from ipeps.ipeps_kagome import extend_bond_dim as ipeps_extend_bond_dim
 from models import spin1_kagome
 from ctm.generic.env import *
 from ctm.generic import ctmrg
@@ -61,7 +63,7 @@ def main():
 
             if args.bond_dim > max(state.get_aux_bond_dims()):
                 # extend the auxiliary dimensions
-                state= extend_bond_dim(state, args.bond_dim)
+                state= ipeps_extend_bond_dim(state, args.bond_dim)
             state.add_noise(args.instate_noise)
         elif args.opt_resume is not None:
             T_U= torch.zeros(args.bond_dim, args.bond_dim, args.bond_dim,\
@@ -85,11 +87,11 @@ def main():
     elif args.ansatz in ["IPEPS"]:    
         ansatz_pgs=None
         if args.instate!=None:
-            state= read_ipeps_kagome(args.instate, lX=1, lY=1)
+            state= read_ipeps_kagome(args.instate)
 
             if args.bond_dim > max(state.get_aux_bond_dims()):
                 # extend the auxiliary dimensions
-                state= extend_bond_dim(state, args.bond_dim)
+                state= ipeps_extend_bond_dim(state, args.bond_dim)
             state.add_noise(args.instate_noise)
         elif args.opt_resume is not None:
             state= IPEPS_KAGOME(dict(), lX=1, lY=1)
