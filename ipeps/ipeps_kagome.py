@@ -158,13 +158,22 @@ class IPEPS_KAGOME(ipeps.IPEPS):
                 self.kagome_tensors[(coord[0], coord[1], 1)] = self.kagome_tensors[(coord[0], coord[1], 0)]
                 self.kagome_tensors[(coord[0], coord[1], 2)] = self.kagome_tensors[(coord[0], coord[1], 0)]
                 self.kagome_tensors[(coord[0], coord[1], 4)] = self.kagome_tensors[(coord[0], coord[1], 3)]
-        for coord in coords:
-            t_a = self.kagome_tensors[(coord[0], coord[1], 0)]
-            t_b = self.kagome_tensors[(coord[0], coord[1], 1)]
-            t_c = self.kagome_tensors[(coord[0], coord[1], 2)]
-            t_r1 = self.kagome_tensors[(coord[0], coord[1], 3)]
-            t_r2 = self.kagome_tensors[(coord[0], coord[1], 4)]
-            sites[coord] = torch.einsum('akl,lno,bmn,cop,pqr->abckrqm', t_a, t_r1, t_b, t_c, t_r2).flatten(start_dim=0, end_dim=2)
+            for coord in coords:
+                tmp_tensor_transpose = (self.kagome_tensors[(coord[0], coord[1], 0)].transpose(1, 2)).contiguous()
+                t_a = (self.kagome_tensors[(coord[0], coord[1], 0)] + tmp_tensor_transpose) / 2
+                t_b = t_a
+                t_c = t_a
+                t_r1 = self.kagome_tensors[(coord[0], coord[1], 3)]
+                t_r2 = t_r1
+                sites[coord] = torch.einsum('akl,lno,bmn,cpo,qrp->abckrqm', t_a, t_r1, t_b, t_c, t_r2).flatten(start_dim=0, end_dim=2)
+        else:
+            for coord in coords:
+                t_a = self.kagome_tensors[(coord[0], coord[1], 0)]
+                t_b = self.kagome_tensors[(coord[0], coord[1], 1)]
+                t_c = self.kagome_tensors[(coord[0], coord[1], 2)]
+                t_r1 = self.kagome_tensors[(coord[0], coord[1], 3)]
+                t_r2 = self.kagome_tensors[(coord[0], coord[1], 4)]
+                sites[coord] = torch.einsum('akl,lno,bmn,cop,pqr->abckrqm', t_a, t_r1, t_b, t_c, t_r2).flatten(start_dim=0, end_dim=2)
 
         return sites
 
