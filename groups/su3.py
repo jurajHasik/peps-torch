@@ -1,10 +1,10 @@
 import torch
 from math import factorial, sqrt
 from tn_interface import einsum
-
+import numpy as np
 
 class SU3_DEFINING():
-    def __init__(self, p=1, q=0, dtype=torch.float64, device='cpu'):
+    def __init__(self, p=1, q=0, dtype=torch.complex128, device='cpu'):
         r"""
         :param (p, q): labels of highest weight for su(3) representations. (1, 0) - defining representation
         :param dtype: data type of matrix representation of operators
@@ -101,17 +101,41 @@ class SU3_DEFINING():
 
     def C1(self):
         r"""
-        :return: SU(3) spin-spin interaction as rank-4 for tensor
+        :return: The quadratic Casimir of su(3) as rank-4 for tensor
         :rtype: torch.tensor
         """
         expr_kron = 'ij,ab->iajb'
-        # spin-spin interaction \vec{S}_1.\vec{S}_2 between spins on sites 1 and 2
-        # First as rank-4 tensor
+        # spin-spin interaction \sum_k{\vec{F}_{1,k}\vec{S}_{2,k}} between F-spins on sites 1 and 2
         C1 = einsum(expr_kron, self.TZ(), self.TZ()) + 0.75 * einsum(expr_kron, self.Y(), self.Y())\
             + 0.5 * (einsum(expr_kron, self.TP(), self.TM()) + einsum(expr_kron, self.TM(), self.TP())
                      + einsum(expr_kron, self.VP(), self.VM()) + einsum(expr_kron, self.VM(), self.VP())
                      + einsum(expr_kron, self.UP(), self.UM()) + einsum(expr_kron, self.UM(), self.UP()))
         return C1
+
+    def C2(self):
+        r"""
+        :return: The cubic Casimir of su(3) as rank-6 for tensor
+        :rtype: torch.tensor
+        """
+        expr_kron = 'ia,jb,kc->ijkabc'
+        Fs = dict()
+        Fs["f1"] = 0.5 * (self.TP() + self.TM())
+        Fs["f2"] = - 0.5j * (self.TP() - self.TM())
+        Fs["f3"] = self.TZ()
+        Fs["f4"] = 0.5 * (self.VP() + self.VM())
+        Fs["f5"] = - 0.5j * (self.VP() - self.VM())
+        Fs["f6"] = 0.5 * (self.UP() + self.UM())
+        Fs["f7"] = - 0.5j * (self.UP() - self.UM())
+        Fs["f8"] = np.sqrt(3.0) / 2 * self.Y()
+        C2 = torch.zeros((3, 3, 3, 3, 3, 3), dtype=torch.complex128, device='cpu')
+        # C2 = None
+        for i in range(8):
+            for j in range(8):
+                for k in range(8):
+                    d = 2 * torch.trace((Fs[f"f{i+1}"]@Fs[f"f{j+1}"]+Fs[f"f{j+1}"]@Fs[f"f{i+1}"])@Fs[f"f{k+1}"])
+                    C2 += d * einsum(expr_kron, Fs[f"f{i+1}"], Fs[f"f{j+1}"], Fs[f"f{k+1}"])
+
+        return C2
 
 
 def get_op(op, dtype=torch.complex128, device='cpu', dbg=False):
