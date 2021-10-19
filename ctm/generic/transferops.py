@@ -9,7 +9,9 @@ from ctm.generic import corrf
 
 def get_Top_spec(n, coord, direction, state, env, verbosity=0):
     chi= env.chi
-    ad= state.get_aux_bond_dims()[0]
+    #             up        left       right     down
+    dir_to_ind= {(0,-1): 1, (-1,0): 2, (0,1): 3, (1,0): 4}
+    ad= state.site(coord).size( dir_to_ind[direction] )
 
     # depending on the direction, get unit-cell length
     if direction==(1,0) or direction==(-1,0):

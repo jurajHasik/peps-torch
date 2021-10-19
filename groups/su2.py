@@ -59,6 +59,17 @@ class SU2():
     def BP_rot(self):
         return get_rot_op(self.J,dtype=self.dtype,device=self.device)
 
+    def S(self):
+        r"""
+        :return: rank-3 tensor containing spin generators [S^z, S^x, S^y]
+        :rtype: torch.tensor
+        """
+        S= torch.zeros(3, self.J, self.J,dtype=self.dtype,device=self.device)
+        S[0,:,:]= self.SZ()
+        S[1,:,:]= 0.5*(self.SP() + self.SM())
+        S[2,:,:]= -0.5j*(self.SP() - self.SM())
+        return S
+
     # TODO: implement xyz for Sx and Sy terms
     def SS(self, xyz=(1.,1.,1.)):
         r"""
