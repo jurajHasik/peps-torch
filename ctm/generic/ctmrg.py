@@ -6,7 +6,7 @@ from ipeps.ipeps import IPEPS
 from ctm.generic.env import *
 from ctm.generic.ctm_components import *
 from ctm.generic.ctm_projectors import *
-from tn_interface import contract, einsum, max_abs
+from tn_interface import contract, einsum
 from tn_interface import conj
 from tn_interface import contiguous, view, permute
 
@@ -41,9 +41,7 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
     sitesDL=dict()
     for coord,A in state.sites.items():
         dimsA = A.size()
-        # a = contiguous(einsum('mefgh,mabcd->eafbgchd',A,conj(A)))
-        a= contract(A,conj(A),([0],[0]))
-        a= contiguous(a.permute(0,4,1,5,2,6,3,7))
+        a = contiguous(einsum('mefgh,mabcd->eafbgchd',A,conj(A)))
         a= view(a, (dimsA[1]**2,dimsA[2]**2, dimsA[3]**2, dimsA[4]**2))
         sitesDL[coord]=a
     stateDL = IPEPS(sitesDL,state.vertexToSite)
@@ -260,9 +258,9 @@ def absorb_truncate_CTM_MOVE_UP_c(*tensors):
     #
     # C^new(coord+(0,1),(-1,-1))--      --T^new(coord+(0,1),(0,-1))--   --C^new(coord+(0,1),(1,-1))
     # |                                   |                               |
-    nC1 = nC1/max_abs(nC1)
-    nC2 = nC2/max_abs(nC2)
-    nT = nT/max_abs(nT)
+    nC1 = nC1/nC1.abs().max()
+    nC2 = nC2/nC2.abs().max()
+    nT = nT/nT.abs().max()
     return nC1, nC2, nT
 
 def absorb_truncate_CTM_MOVE_LEFT(coord, state, env, P, Pt, verbosity=0):
@@ -356,9 +354,9 @@ def absorb_truncate_CTM_MOVE_LEFT_c(*tensors):
     #  ________P2_______
     # |                 |                    |
     # C(coord,(-1,1))--T(coord,(0,1))--      C^new(coord+(1,0),(-1,1))
-    nC1 = nC1/max_abs(nC1)
-    nC2 = nC2/max_abs(nC2)
-    nT = nT/max_abs(nT)
+    nC1 = nC1/nC1.abs().max()
+    nC2 = nC2/nC2.abs().max()
+    nT = nT/nT.abs().max()
     return nC1, nC2, nT
 
 def absorb_truncate_CTM_MOVE_DOWN(coord, state, env, P, Pt, verbosity=0):
@@ -446,9 +444,9 @@ def absorb_truncate_CTM_MOVE_DOWN_c(*tensors):
     #
     # |                                 |                              |
     # C^new(coord+(0,-1),(-1,1))--    --T^new(coord+(0,-1),(0,1))--  --C^new(coord+(0,-1),(1,1))
-    nC1 = nC1/max_abs(nC1)
-    nC2 = nC2/max_abs(nC2)
-    nT = nT/max_abs(nT)
+    nC1 = nC1/nC1.abs().max()
+    nC2 = nC2/nC2.abs().max()
+    nT = nT/nT.abs().max()
     return nC1, nC2, nT
 
 def absorb_truncate_CTM_MOVE_RIGHT(coord, state, env, P, Pt, verbosity=0):
@@ -540,7 +538,7 @@ def absorb_truncate_CTM_MOVE_RIGHT_c(*tensors):
     #    ______Pt1______
     #   |               |                    |
     # --T(coord,(0,1))--C(coord,(1,1))     --C^new(coord+(-1,0),(1,1))
-    nC1 = nC1/max_abs(nC1)
-    nC2 = nC2/max_abs(nC2)
-    nT = nT/max_abs(nT)
+    nC1 = nC1/nC1.abs().max()
+    nC2 = nC2/nC2.abs().max()
+    nT = nT/nT.abs().max()
     return nC1, nC2, nT

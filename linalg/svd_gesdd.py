@@ -6,14 +6,6 @@ import torch
 import numpy as np
 from tn_interface import mm
 from tn_interface import conj, transpose
-import pdb
-
-# from math import exp, log10
-# def inverse_sharp_cutoff(x, order=10, rate=50):
-#     mask= [x==0]
-#     x= 1/(x+x*torch.exp(-rate*(torch.log10(x.abs())+order)))
-#     x[mask]= 0
-#     return x
 
 def safe_inverse(x, epsilon=1E-12):
     return x/(x**2 + epsilon)
@@ -41,10 +33,10 @@ class SVDGESDD(torch.autograd.Function):
         NS = S.size(0)
 
         F = (S - S[:, None])
-        mask0= F==0
+        # mask0= F==0
         F = safe_inverse(F, cutoff)
         F.diagonal().fill_(0)
-        F[mask0]= 0
+        # F[mask0]= 0
 
         G = (S + S[:, None])
         G = safe_inverse(G)

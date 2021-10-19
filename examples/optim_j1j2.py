@@ -13,7 +13,6 @@ from optim.ad_optim_lbfgs_mod import optimize_state
 import unittest
 import logging
 log = logging.getLogger(__name__)
-import pdb
 
 # parse command line args and build necessary configuration objects
 parser= cfg.get_args_parser()

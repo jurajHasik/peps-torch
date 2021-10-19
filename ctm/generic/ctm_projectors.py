@@ -224,7 +224,7 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args, \
     U, S, V = truncated_svd(M, chi) # M = USV^{T}
 
     S_nz= S[S/S[0] > ctm_args.projector_svd_reltol]
-    S_sqrt= torch.zeros_like(S)
+    S_sqrt= S*0
     S_sqrt[:S_nz.size(0)]= torch.rsqrt(S_nz)
     
     if verbosity>0: print(S_sqrt)

@@ -1,6 +1,4 @@
-from math import prod
 import torch
-import pdb
 
 def contract(t1, t2, *args):
     return torch.tensordot(t1, t2, *args)
