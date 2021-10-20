@@ -59,10 +59,8 @@ def main():
         
         A= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
             dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
-        A= make_c4v_symm(A)
-        A= A/torch.max(torch.abs(A))
-
         state = IPEPS_C4V(A)
+        state = to_ipeps_c4v(state)
     else:
         raise ValueError("Missing trial state: -instate=None and -ipeps_init_type= "\
             +str(args.ipeps_init_type)+" is not supported")
@@ -219,6 +217,7 @@ class TestRVB(unittest.TestCase):
         args.bond_dim=3
         args.chi=16
         args.GLOBALARGS_device="cpu"
+        args.GLOBALARGS_dtype="complex128"
         args.CTMARGS_ctm_max_iter=200
 
     # basic tests
