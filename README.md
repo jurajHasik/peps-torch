@@ -1,4 +1,4 @@
-# peps-torch [![Build Status](https://travis-ci.com/jurajHasik/peps-torch.svg?branch=master)](https://travis-ci.com/jurajHasik/tn-torch) [![Documentation Status](https://readthedocs.org/projects/peps-torch/badge/?version=latest)](https://peps-torch.readthedocs.io/en/latest/?badge=latest)
+# peps-torch ![Test Status](https://github.com/jurajHasik/peps-torch/actions/workflows/main.yml/badge.svg?branch=master)[![Documentation Status](https://readthedocs.org/projects/peps-torch/badge/?version=latest)](https://peps-torch.readthedocs.io/en/latest/?badge=latest)
 ### A tensor network library for two-dimensional lattice models
 by Juraj Hasik, Glen Bigan Mbeng\
 with contributions by Wei-Lin Tu, Seydou-Samba Diop
@@ -80,7 +80,7 @@ python examples/optim_j1j2_c4v.py --GLOBALARGS_dtype complex128 --bond_dim 3 --c
 The computation of expectations values can be done right away, as the state stored in `ex-c4v_state.json` carries the 
 datatype (dtype) of its tensors
 ```
-python examples/ctmrg_j1j2_c4v.py --instate ex-c4v_state.json --chi 48 --j2 0.5 --corrf_r 20
+python examples/ctmrg_j1j2_c4v.py --GLOBALARGS_dtype complex128 --instate ex-c4v_state.json --chi 48 --j2 0.5 --corrf_r 20
 ```
 
 
