@@ -207,9 +207,25 @@ class TestOpt(unittest.TestCase):
 
     # basic tests
     def test_opt_SYMEIG_LS(self):
+        from io import StringIO
+        from unittest.mock import patch
+        
         args.CTMARGS_projector_svd_method="SYMEIG"
         args.OPTARGS_line_search="backtracking"
-        main()
+        args.seed= 9
+        args.opt_max_iter=100
+
+        with patch('sys.stdout', new = StringIO()) as fake_out:
+            main()
+            output= fake_out.getvalue()
+
+        print(output)
+
+        # test final output against expected result
+        final_obs= [float(x) for x in output.splitlines()[-1].split(',')]
+        final_e= final_obs[1]
+        self.assertTrue(abs(final_e + 0.664601392878597) < 1.0e-8)
+
 
     def test_opt_SYMEIG_LS_SYMARP(self):
         if not self.SCIPY: self.skipTest("test skipped: missing scipy")
