@@ -3,7 +3,7 @@ import copy
 import torch
 import argparse
 import config as cfg
-from u1sym.ipeps_u1 import *
+from ipeps.ipeps_lc import *
 from ctm.one_site_c4v.env_c4v import *
 from ctm.one_site_c4v import ctmrg_c4v
 from ctm.one_site_c4v.rdm_c4v import rdm2x1_sl
@@ -14,6 +14,7 @@ import u1sym.sym_ten_parser as tenU1
 import json
 import unittest
 import logging
+import warnings
 log = logging.getLogger(__name__)
 
 # parse command line args and build necessary configuration objects
@@ -43,7 +44,7 @@ def main():
 
     # initialize an ipeps
     if args.instate!=None:
-        state = read_ipeps_u1(args.instate, vertexToSite=None)
+        state = read_ipeps_lc_1site_pg(args.instate)
         assert len(state.coeffs)==1, "Not a 1-site ipeps"
 
         # TODO extending from smaller bond-dim to higher bond-dim is 
@@ -51,21 +52,25 @@ def main():
 
         state.add_noise(args.instate_noise)
     elif args.opt_resume is not None:
-        if args.bond_dim in [2,3,4,5,6,7,8,9]:
-            u1sym_t= tenU1.import_sym_tensors(2,args.bond_dim,"A_1",\
-                infile=f"u1sym/D{args.bond_dim}_U1_{args.u1_class}.txt",\
-                dtype=torch.float64, device=cfg.global_args.device)
-            if args.pg_A2:
-                u1sym_t_A2= tenU1.import_sym_tensors(2,args.bond_dim,"A_2",\
+        try:
+            state= load_checkpoint_lc_1site_pg(args.opt_resume)
+        except Exception as e:
+            warnings.warn("Invoking legacy load_checkpoint", Warning)
+            if args.bond_dim in [2,3,4,5,6,7,8,9]:
+                u1sym_t= tenU1.import_sym_tensors(2,args.bond_dim,"A_1",\
                     infile=f"u1sym/D{args.bond_dim}_U1_{args.u1_class}.txt",\
                     dtype=torch.float64, device=cfg.global_args.device)
-                u1sym_t+= u1sym_t_A2
-        else:
-            raise ValueError("Unsupported --bond_dim= "+str(args.bond_dim))
-        A= torch.zeros(len(u1sym_t), dtype=torch.float64, device=cfg.global_args.device)
-        coeffs = {(0,0): A}
-        state= IPEPS_U1SYM(u1sym_t, coeffs)
-        state.load_checkpoint(args.opt_resume)
+                if args.pg_A2:
+                    u1sym_t_A2= tenU1.import_sym_tensors(2,args.bond_dim,"A_2",\
+                        infile=f"u1sym/D{args.bond_dim}_U1_{args.u1_class}.txt",\
+                        dtype=torch.float64, device=cfg.global_args.device)
+                    u1sym_t+= u1sym_t_A2
+            else:
+                raise ValueError("Unsupported --bond_dim= "+str(args.bond_dim))
+            A= torch.zeros(len(u1sym_t), dtype=torch.float64, device=cfg.global_args.device)
+            coeffs = {(0,0): A}
+            state= IPEPS_LC_1SITE_PG(u1sym_t, coeffs)
+            state.load_checkpoint(args.opt_resume)
     elif args.ipeps_init_type=='RANDOM':
         if args.bond_dim in [2,3,4,5,6,7,8,9]:
             u1sym_t= tenU1.import_sym_tensors(2, args.bond_dim, "A_1", \
@@ -81,7 +86,7 @@ def main():
         A= torch.rand(len(u1sym_t), dtype=torch.float64, device=cfg.global_args.device)
         A= A/torch.max(torch.abs(A))
         coeffs = {(0,0): A}
-        state = IPEPS_U1SYM(u1sym_t, coeffs)
+        state = IPEPS_LC_1SITE_PG(u1sym_t, coeffs)
     else:
         raise ValueError("Missing trial state: -instate=None and -ipeps_init_type= "\
             +str(args.ipeps_init_type)+" is not supported")
@@ -173,7 +178,7 @@ def main():
 
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"
-    state= read_ipeps_u1(outputstatefile)
+    state= read_ipeps_lc_1site_pg(outputstatefile)
     ctm_env = ENV_C4V(args.chi, state)
     init_env(state, ctm_env)
     ctm_env, *ctm_log = ctmrg_c4v.run(state, ctm_env, conv_check=ctmrg_conv_f)
@@ -202,9 +207,25 @@ class TestOpt(unittest.TestCase):
 
     # basic tests
     def test_opt_SYMEIG_LS(self):
+        from io import StringIO
+        from unittest.mock import patch
+        
         args.CTMARGS_projector_svd_method="SYMEIG"
         args.OPTARGS_line_search="backtracking"
-        main()
+        args.seed= 9
+        args.opt_max_iter=100
+
+        with patch('sys.stdout', new = StringIO()) as fake_out:
+            main()
+            output= fake_out.getvalue()
+
+        print(output)
+
+        # test final output against expected result
+        final_obs= [float(x) for x in output.splitlines()[-1].split(',')]
+        final_e= final_obs[1]
+        self.assertTrue(abs(final_e + 0.664601392878597) < 1.0e-8)
+
 
     def test_opt_SYMEIG_LS_SYMARP(self):
         if not self.SCIPY: self.skipTest("test skipped: missing scipy")

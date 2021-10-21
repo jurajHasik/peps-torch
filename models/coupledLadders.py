@@ -11,18 +11,33 @@ import itertools
 def _cast_to_real(t):
     return t.real if t.is_complex() else t
 
+def _null_Bz(coord):
+    return 0.0
+
+class StaggeredLocalField():
+    # staggered field 
+    # Given the coordinates (x, y), a minus sign is used when x+y is odd
+    def __init__(self, B):
+        self.B = float(B)
+
+    def __call__(self, coord):
+        x, y = coord
+        return self.B * (-1) ** ((x+y)%2)
+
 class COUPLEDLADDERS():
-    def __init__(self, alpha=0.0, global_args=cfg.global_args):
+    def __init__(self, alpha=0.0, bz_val=0.0, global_args=cfg.global_args):
         r"""
         :param alpha: nearest-neighbour interaction
+        :param bz_val: staggered magnetic field
         :param global_args: global configuration
         :type alpha: float
+        :type Bz: float
         :type global_args: GLOBALARGS
 
         Build Hamiltonian of spin-1/2 coupled ladders
 
         .. math:: H = \sum_{i=(x,y)} h2_{i,i+\vec{x}} + \sum_{i=(x,2y)} h2_{i,i+\vec{y}}
-                   + \alpha \sum_{i=(x,2y+1)} h2_{i,i+\vec{y}}
+                   + \alpha \sum_{i=(x,2y+1)} h2_{i,i+\vec{y}} + (-1)^{x+y} Bz h1_{i}
 
         on the square lattice. The spin-1/2 ladders are coupled with strength :math:`\alpha`::
 
@@ -38,13 +53,17 @@ class COUPLEDLADDERS():
         where
 
         * :math:`h2_{ij} = \mathbf{S}_i.\mathbf{S}_j` with indices of h2 corresponding to :math:`s_i s_j;s'_i s'_j`
+        
+        * :math:`h1_{i} = \mathbf{S}^z_i` with indices of h1 corresponding to :math:`s_i ;s'_i`
         """
         self.dtype=global_args.torch_dtype
         self.device=global_args.device
         self.phys_dim=2
         self.alpha=alpha
+        self.bz_val=bz_val
+        self.bz=StaggeredLocalField(self.bz_val)
 
-        self.h2 = self.get_h()
+        self.h2, self.h1 = self.get_h()
         self.obs_ops = self.get_obs_ops()
 
     def get_h(self):
@@ -52,7 +71,8 @@ class COUPLEDLADDERS():
         expr_kron = 'ij,ab->iajb'
         SS = einsum(expr_kron,s2.SZ(),s2.SZ()) + 0.5*(einsum(expr_kron,s2.SP(),s2.SM()) \
             + einsum(expr_kron,s2.SM(),s2.SP()))
-        return SS
+        SzId= einsum(expr_kron,s2.SZ(),s2.I())
+        return SS, SzId
 
     def get_obs_ops(self):
         obs_ops = dict()
@@ -114,6 +134,10 @@ class COUPLEDLADDERS():
             else:
                 ss = einsum('ijab,ijab',rdm1x2,self.alpha * self.h2)
             energy += ss
+
+            # local field enegy
+            sz = einsum('ijab,ijab',rdm1x2,self.bz(coord) * self.h1)
+            energy += sz
 
         # return energy-per-site
         energy_per_site=energy/len(state.sites.items())

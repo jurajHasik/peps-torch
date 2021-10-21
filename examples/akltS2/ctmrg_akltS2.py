@@ -164,7 +164,7 @@ class TestCtmrg(unittest.TestCase):
 class TestAKLT_BIPARTITE(unittest.TestCase):
     def setUp(self):
         import os
-        args.instate=os.path.dirname(os.path.realpath(__file__))+"/../test-input/AKLT-S2_2x1_biLat.in"
+        args.instate=os.path.dirname(os.path.realpath(__file__))+"/../../test-input/AKLT-S2_2x1_biLat.in"
         args.chi=32
         args.opt_max_iter=50
 
@@ -222,7 +222,7 @@ class TestAKLT_BIPARTITE(unittest.TestCase):
 class TestAKLT_4SITE(unittest.TestCase):
     def setUp(self):
         import os
-        args.instate=os.path.dirname(os.path.realpath(__file__))+"/../test-input/AKLT-S2_2x2_ABCD.in"
+        args.instate=os.path.dirname(os.path.realpath(__file__))+"/../../test-input/AKLT-S2_2x2_ABCD.in"
         args.chi=32
         args.opt_max_iter=50
 

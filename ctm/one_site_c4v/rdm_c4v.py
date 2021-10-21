@@ -1022,6 +1022,109 @@ def rdm3x1_sl(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
 
     return rdm
 
+def rdm3x2_NNNN(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
+    who= "_rdm2x2_NN_lowmem"
+    if force_cpu:
+        C = env.C[env.keyC].cpu()
+        T = env.T[env.keyT].cpu()
+        a = next(iter(state.sites.values())).cpu()
+    else:
+        C = env.C[env.keyC]
+        T = env.T[env.keyT]
+        a = next(iter(state.sites.values()))
+
+    #----- building C2x2_LU ----------------------------------------------------
+    loc_device=C.device
+    is_cpu= loc_device==torch.device('cpu')
+    def ten_size(t):
+        return t.element_size() * t.numel()
+
+    dimsa = a.size()
+    A = torch.einsum('mefgh,mabcd->eafbgchd',a,a.conj()).contiguous()\
+        .view(dimsa[1]**2, dimsa[2]**2, dimsa[3]**2, dimsa[4]**2)
+
+    #   --->
+    # A C2x2--1
+    # | |__|
+    #   |\23
+    #   0
+    C2x2= _get_open_C2x2_LU_sl(C, T, a, verbosity=verbosity)
+
+    #   ---->
+    # A C2x2c--1
+    # | |___|
+    #   |
+    #   0
+    C2x2c= torch.einsum('abii->ab',C2x2)
+    if not is_cpu and verbosity>1: 
+        _log_cuda_mem(loc_device,who)
+        log.info(f"{who} C2x2,C2x2c: {ten_size(C2x2)+ten_size(C2x2c)}")
+
+    # prolong top left corner
+    #
+    #   --->         -->            --->____                 --->___
+    # A C2x2--1--1 1--T--0->4  =>   C3x2 ___|--4->3     =>   C3x2   |--3->2\
+    # | |  |   \-2    2->5        A |   |   5 0            A |      |       >2
+    #   |__|     ->1              | |___|1 1--A--3->5      | |______|--5->3/
+    #   |\23->34->23                |  \      2->4           | |     \
+    #   0                           0   23->12               0 4>1   12>45>34
+    #
+    C3x2= C2x2.view(C2x2.size(0),C.size(1),dimsa[4]**2,dimsa[0],dimsa[0])
+    C3x2= torch.tensordot(C3x2, T, ([1],[1]))
+    C3x2= torch.tensordot(C3x2, A, ([1,5],[1,0]))
+    C3x2= C3x2.permute(0,4,3,5,1,2).contiguous()\
+        .view(C2x2.size(0),A.size(2),C2x2.size(1),dimsa[0],dimsa[0])
+
+    # prolong bottom left corners
+    #
+    #   <---         <---            <--- ____               <--- __
+    #   C2x2c--0--0 0--T--1->2  =>   C3x2c ___|--2->1   =>   C3x2c  |--1->2\
+    # | |   |   \-1    2->3        | |    |   3 0          | |      |       >2
+    # V |___|    ->0               V |____|0 1--A--3       V |______|--3---/
+    #   |                            |          |            |  |   
+    #   1>2>1                        1>0        2            0  2>1
+    #
+    C3x2c= C2x2c.view(C.size(0),dimsa[3]**2,C2x2c.size(1))
+    C3x2c= torch.tensordot(C3x2c, T, ([0],[0]))
+    C3x2c= torch.tensordot(C3x2c, A, ([0,3],[1,0]))
+    C3x2c= C3x2c.permute(0,2,1,3).contiguous()\
+        .view(C2x2c.size(1),A.size(2),C2x2c.size(0))
+
+    # build left edge
+    #
+    #       --->
+    #   34--C3x2--2->1
+    # ->23  |  |
+    #       0  1
+    #       0  1
+    #       |  |
+    #       C3x2c--2->0
+    #       <---
+    #
+    rdm= torch.tensordot(C3x2c,C3x2,([0,1],[0,1]))
+
+    # build right edge
+    #
+    #       --->                        --->        --->
+    #   34--C3x2---1                23--C3x2---1 0--C2x2--23->12
+    # ->23  |  |                        |  |           1 
+    #       |  |           0            |  |           0
+    #       C3x2c--0 1--C2x2c           C3x2c-------C2x2c
+    #       <---        <---            <---        <---
+    rdm= torch.tensordot(C2x2c,rdm,([1],[0]))
+    rdm= torch.tensordot(C2x2,rdm,([0,1],[1,0]))
+
+    # permute into order of s0,s1;s0',s1' where primed indices
+    # represent "ket"
+    # 0123->0213
+    rdm= rdm.permute(0,2,1,3).contiguous()
+
+    # symmetrize and normalize
+    rdm= _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
+    rdm= rdm.to(env.device)
+
+    return rdm
+
 
 def rdm2x2_NN_lowmem(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
     r"""
@@ -1350,7 +1453,7 @@ def _rdm2x2_NNN_lowmem(state, env, f_c2x2, sym_pos_def=False, force_cpu=False, v
     return rdm
 
 
-def rdm2x2(state, env, sym_pos_def=False, verbosity=0):
+def rdm2x2(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
     r"""
     :param state: underlying 1-site C4v symmetric wavefunction
     :param env: C4v symmetric environment corresponding to ``state``
@@ -1389,9 +1492,15 @@ def rdm2x2(state, env, sym_pos_def=False, verbosity=0):
     """
     #----- building C2x2_LU ----------------------------------------------------
     who= "rdm2x2"
-    C = env.C[env.keyC]
-    T = env.T[env.keyT]
-    a = next(iter(state.sites.values()))
+    if force_cpu:
+        # move to cpu
+        C = env.C[env.keyC].cpu()
+        T = env.T[env.keyT].cpu()
+        a = next(iter(state.sites.values())).cpu()
+    else:
+        C = env.C[env.keyC]
+        T = env.T[env.keyT]
+        a = next(iter(state.sites.values()))
     loc_device=C.device
     is_cpu= loc_device==torch.device('cpu')
 
@@ -1439,6 +1548,7 @@ def rdm2x2(state, env, sym_pos_def=False, verbosity=0):
 
     # symmetrize and normalize
     rdm= _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
+    rdm= rdm.to(env.device)
 
     return rdm
 
