@@ -3,7 +3,7 @@ import copy
 import torch
 import argparse
 import config as cfg
-from u1sym.ipeps_u1 import *
+from ipeps.ipeps_lc import *
 from ctm.one_site_c4v.env_c4v import *
 from ctm.one_site_c4v import ctmrg_c4v
 from ctm.one_site_c4v.rdm_c4v import rdm2x1_sl
@@ -44,7 +44,7 @@ def main():
 
     # initialize an ipeps
     if args.instate!=None:
-        state = read_ipeps_u1(args.instate, vertexToSite=None)
+        state = read_ipeps_lc_1site_pg(args.instate)
         assert len(state.coeffs)==1, "Not a 1-site ipeps"
 
         # TODO extending from smaller bond-dim to higher bond-dim is 
@@ -53,7 +53,7 @@ def main():
         state.add_noise(args.instate_noise)
     elif args.opt_resume is not None:
         try:
-            state= load_checkpoint(args.opt_resume)
+            state= load_checkpoint_lc_1site_pg(args.opt_resume)
         except Exception as e:
             warnings.warn("Invoking legacy load_checkpoint", Warning)
             if args.bond_dim in [2,3,4,5,6,7,8,9]:
@@ -69,7 +69,7 @@ def main():
                 raise ValueError("Unsupported --bond_dim= "+str(args.bond_dim))
             A= torch.zeros(len(u1sym_t), dtype=torch.float64, device=cfg.global_args.device)
             coeffs = {(0,0): A}
-            state= IPEPS_U1SYM(u1sym_t, coeffs)
+            state= IPEPS_LC_1SITE_PG(u1sym_t, coeffs)
             state.load_checkpoint(args.opt_resume)
     elif args.ipeps_init_type=='RANDOM':
         if args.bond_dim in [2,3,4,5,6,7,8,9]:
@@ -86,7 +86,7 @@ def main():
         A= torch.rand(len(u1sym_t), dtype=torch.float64, device=cfg.global_args.device)
         A= A/torch.max(torch.abs(A))
         coeffs = {(0,0): A}
-        state = IPEPS_U1SYM(u1sym_t, coeffs)
+        state = IPEPS_LC_1SITE_PG(u1sym_t, coeffs)
     else:
         raise ValueError("Missing trial state: -instate=None and -ipeps_init_type= "\
             +str(args.ipeps_init_type)+" is not supported")
@@ -178,7 +178,7 @@ def main():
 
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"
-    state= read_ipeps_u1(outputstatefile)
+    state= read_ipeps_lc_1site_pg(outputstatefile)
     ctm_env = ENV_C4V(args.chi, state)
     init_env(state, ctm_env)
     ctm_env, *ctm_log = ctmrg_c4v.run(state, ctm_env, conv_check=ctmrg_conv_f)
