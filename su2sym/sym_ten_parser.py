@@ -152,11 +152,27 @@ def import_sym_tensors(p, D, pg, infile=None, dtype=torch.float64, device='cpu')
     infile= f"{os.path.dirname(__file__)}/D{D}.txt" if infile is None else infile 
 
     tensors_coo= parse_symten_file(infile)
-    print(tensors_coo)
     for tcoo in tensors_coo:
         if pg==tcoo[0]["meta"]["pg"]:
             t= torch.zeros(dims, dtype=dtype, device=device)
             t= fill_from_sparse_coo(t, tcoo[1])
             tensors.append((tcoo[0],t))
+
+    return tensors
+
+def import_sym_bonds(D, pg=None, infile=None, dtype=torch.float64, device='cpu'):
+    dims=(1,D,D)
+    tensors=[]
+
+    infile= f"{os.path.dirname(__file__)}/D{D}_bonds.txt" if infile is None else infile 
+
+    tensors_coo= parse_symten_file(infile)
+    print(tensors_coo)
+    for tcoo in tensors_coo:
+        if not pg==None and not pg==tcoo[0]["meta"]["pg"]: continue
+        t= torch.zeros(dims, dtype=dtype, device=device)
+        t= fill_from_sparse_coo(t, tcoo[1])
+        t= torch.squeeze(t)
+        tensors.append((tcoo[0],t))
 
     return tensors
