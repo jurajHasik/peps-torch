@@ -138,7 +138,7 @@ class IPEPS_LC_BP(IPEPS_LC):
     def add_noise(self,noise):
         for c_type in self.coeffs.keys():
             rand_t = torch.rand( self.coeffs[c_type].size(), dtype=self.dtype, device=self.device)
-            tmp_t = self.coeffs[c_type] + noise * rand_t
+            self.coeffs[c_type] = self.coeffs[c_type] + noise * (rand_t - 0.5)
         self.coeffs["site"]= self.coeffs["site"]/self.coeffs["site"].abs().max()
         self.coeffs["bond"]= self.coeffs["bond"]/(self.coeffs["site"].abs().max()**(1/4))
         self.sites= self.build_onsite_tensors()

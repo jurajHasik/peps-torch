@@ -178,7 +178,7 @@ class IPEPS_LC_1SITE_PG(IPEPS_LC):
     def add_noise(self,noise):
         for coord in self.coeffs.keys():
             rand_t = torch.rand( self.coeffs[coord].size(), dtype=self.dtype, device=self.device)
-            tmp_t = self.coeffs[coord] + noise * rand_t
+            tmp_t = self.coeffs[coord] + noise * (rand_t-0.5)
             self.coeffs[coord]= tmp_t/torch.max(torch.abs(tmp_t))
         self.sites= self.build_onsite_tensors()
 

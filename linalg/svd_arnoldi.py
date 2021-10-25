@@ -147,11 +147,6 @@ class SVDARNOLDI(torch.autograd.Function):
         # V= torch.as_tensor(V)
         # V= V.t()
 
-        if M.is_cuda:
-            U= U.cuda()
-            V= V.cuda()
-            S= S.cuda()
-
         self.save_for_backward(U, S, V)
         return U, S, V
 
