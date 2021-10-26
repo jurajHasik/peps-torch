@@ -104,7 +104,7 @@ class SVDARNOLDI(torch.autograd.Function):
         
         # ----- Option 0
         M_nograd = M.clone().detach()
-        MMt= M_nograd@M_nograd.t()
+        MMt= M_nograd@M_nograd.t().conj()
         
         def mv(v):
             B= torch.as_tensor(v,dtype=M.dtype,device=M.device)
@@ -123,7 +123,7 @@ class SVDARNOLDI(torch.autograd.Function):
         U= U[:,p]
 
         # compute right singular vectors as Mt = V.S.Ut /.U => Mt.U = V.S
-        V = M_nograd.t() @ U
+        V = M_nograd.t().conj() @ U
         V = Functional.normalize(V, p=2, dim=0)
 
         # TODO there seems to be a bug in scipy's svds
