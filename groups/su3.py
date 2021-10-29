@@ -99,6 +99,23 @@ class SU3_DEFINING():
         """
         return get_op("um", dtype=self.dtype, device=self.device)
 
+    def J_Gell_Mann(self):
+        r"""
+        :return: :math:`\vec{\lambda}` vector of Gell-Mann matrices
+        :rtype: torch.tensor
+        """
+        J = torch.zeros(8, 3, 3, dtype=self.dtype, device=self.device)
+        J[0, :, :] = self.TP() + self.TM()
+        J[1, :, :] = -1j * (self.TP() - self.TM())
+        J[2, :, :] = 2 * self.TZ()
+        J[3, :, :] = self.VP() + self.VM()
+        J[4, :, :] = -1j * (self.VP() - self.VM())
+        J[5, :, :] = self.UP() + self.UM()
+        J[6, :, :] = -1j * (self.UP() - self.UM())
+        J[7, :, :] = np.sqrt(3) * self.Y()
+
+        return J
+
     def C1(self):
         r"""
         :return: The quadratic Casimir of su(3) as rank-4 for tensor
