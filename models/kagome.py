@@ -27,7 +27,8 @@ class KAGOME():
 
         # For now, only one-site
         self.obs_ops = self.get_obs_ops()
-        self.h2, self.h3_l, self.h3_r = self.get_h()
+        self.perm2_tri, self.perm3_l, self.perm3_r, self.h2_tri, self.h3_tri, self.h_tri = self.get_h()
+
 
     def get_obs_ops(self):
         obs_ops = dict()
@@ -54,81 +55,63 @@ class KAGOME():
         pd = self.phys_dim
         irrep = su2.SU2(pd, dtype=self.dtype, device=self.device)
         # identity operator on two spin-S spins
+        idp = torch.eye(pd, dtype=self.dtype, device=self.device)
         idp2x2 = torch.eye(pd ** 2, dtype=self.dtype, device=self.device)
         SS = irrep.SS()
         SS = SS.view(pd ** 2, pd ** 2)
-        perm_2site = SS + SS @ SS - idp2x2
-        # Reshape back into rank-4 tensor for later use with reduced density matrices
-        perm_2site = perm_2site.view(pd, pd, pd, pd).contiguous()
+        perm2 = SS + SS @ SS - idp2x2
+        perm2 = perm2.view(pd, pd, pd, pd).contiguous()
+        # Equivalently
+        # irrep_su3_def = su3.SU3_DEFINING(dtype=self.dtype, device=self.device)
+        # perm2 = 2 * irrep_su3_def.C1() - idp2x2.view(pd, pd, pd, pd).contiguous() / 3
+        perm3_l = torch.einsum('ijal,lkbc->ijkabc', perm2, perm2)
+        perm3_r = torch.einsum('ijal,klbc->ikjabc', perm2, perm2)
 
-        h2 = perm_2site
-        h3_l = torch.einsum('ijal,lkbc->ijkabc', perm_2site, perm_2site)
-        h3_r = torch.einsum('ijal,klbc->ikjabc', perm_2site, perm_2site)
+        perm2_tri = torch.einsum('ijab,kc->ijkabc', perm2, idp)
+        perm2_tri += torch.einsum('ikac,jb->ijkabc', perm2, idp)
+        perm2_tri += torch.einsum('jkbc,ia->ijkabc', perm2, idp)
 
-        return h2, h3_l, h3_r
+        h2_tri = self.j * perm2_tri
+        h3_tri = (self.k + self.h * 1j) * perm3_l + (self.k - self.h * 1j) * perm3_r
+        h_tri = h2_tri + h3_tri
+
+        return perm2_tri, perm3_l, perm3_r, h2_tri, h3_tri, h_tri
 
     def energy_1site(self, state, env):
         pd = self.phys_dim
         energy = 0.0
         idp = torch.eye(pd, dtype=self.dtype, device=self.device)
         for coord, site in state.sites.items():
-            # intra-cell 2-site exchange terms
-            norm = rdm_kagome.trace1x1_kagome(coord, state, env, torch.einsum('ia,jb,kc->ijkabc', idp, idp, idp))
-            energy += self.j * rdm_kagome.trace1x1_kagome(coord, state, env, torch.einsum('ijab,kc->ijkabc', self.h2, idp)) / norm
-            energy += self.j * rdm_kagome.trace1x1_kagome(coord, state, env, torch.einsum('jkbc,ia->ijkabc', self.h2, idp)) / norm
-            energy += self.j * rdm_kagome.trace1x1_kagome(coord, state, env, torch.einsum('ikac,jb->ijkabc', self.h2, idp)) / norm
-
-            # intra-cell 3-site ring exchange terms
-            energy += (self.k + self.h * 1j) * rdm_kagome.trace1x1_kagome(coord, state, env, self.h3_l) / norm
-            energy += (self.k - self.h * 1j) * rdm_kagome.trace1x1_kagome(coord, state, env, self.h3_r) / norm
-
-            # inter-cell 2-site exchange terms
-            rdm2x2_ab = rdm_kagome.rdm2x2_kagome(coord, state, env, sites_to_keep_00=('B'), sites_to_keep_10=(),
-                                                 sites_to_keep_01=(), sites_to_keep_11=('A'))
-            energy += self.j * torch.einsum('ilad,ilad', rdm2x2_ab, self.h2)
-            rdm1x2_bc = rdm_kagome.rdm2x1_kagome(coord, state, env, sites_to_keep_00=('B'), sites_to_keep_10=('C'))
-            energy += self.j * torch.einsum('ijab,ijab', rdm1x2_bc, self.h2)
-            rdm2x1_ac = rdm_kagome.rdm1x2_kagome(coord, state, env, sites_to_keep_00=('C'), sites_to_keep_01=('A'))
-            energy += self.j * torch.einsum('ijab,ijab', rdm2x1_ac, self.h2)
-
-            # inter-cell 3-site ring exchange terms
+            # intra-cell (down triangle)
+            norm = rdm_kagome.trace1x1_dn_kagome(coord, state, env, torch.einsum('ia,jb,kc->ijkabc', idp, idp, idp))
+            energy += rdm_kagome.trace1x1_dn_kagome(coord, state, env, self.h_tri) / norm
+            # inter-cell (up triangle)
             rdm2x2_ring = rdm_kagome.rdm2x2_kagome(coord, state, env, sites_to_keep_00=('B'), sites_to_keep_10=('C'),
                                                    sites_to_keep_01=(), sites_to_keep_11=('A'))
-            energy += (self.k + self.h * 1j) * torch.einsum('ijlabd,lijdab', rdm2x2_ring, self.h3_l)
-            energy += (self.k - self.h * 1j) * torch.einsum('ijlabd,lijdab', rdm2x2_ring, self.h3_r)
-
+            energy += torch.einsum('ijlabd,lijdab', rdm2x2_ring, self.h3_tri)
         energy_per_site = energy / (len(state.sites.items()) * 3.0)
         energy_per_site = _cast_to_real(energy_per_site)
         return energy_per_site
 
     def eval_obs(self, state, env):
         pd = self.phys_dim
-        chirality = self.h3_l - self.h3_r
+        chirality = 1j * (self.perm3_l - self.perm3_r)
         idp = torch.eye(pd, dtype=self.dtype, device=self.device)
         obs = dict()
         with torch.no_grad():
             for coord, site in state.sites.items():
-                norm = rdm_kagome.trace1x1_kagome(coord, state, env, torch.einsum('ia,jb,kc->ijkabc', idp, idp, idp))
-                obs["chirality_dn"] = rdm_kagome.trace1x1_kagome(coord, state, env, chirality) / norm
-                obs["chirality_dn"] = _cast_to_real(obs["chirality_dn"] * 1j)
+                norm = rdm_kagome.trace1x1_dn_kagome(coord, state, env, torch.einsum('ia,jb,kc->ijkabc', idp, idp, idp))
+                obs["chirality_dn"] = rdm_kagome.trace1x1_dn_kagome(coord, state, env, chirality) / norm
+                obs["chirality_dn"] = _cast_to_real(obs["chirality_dn"])
+                obs["avg_bonds_dn"] = rdm_kagome.trace1x1_dn_kagome(coord, state, env, self.perm2_tri) / norm
+                obs["avg_bonds_dn"] = _cast_to_real(obs["avg_bonds_dn"]) / 3.0
+
                 rdm2x2_ring = rdm_kagome.rdm2x2_kagome(coord, state, env, sites_to_keep_00=('B'),
                                                        sites_to_keep_10=('C'), sites_to_keep_01=(),
                                                        sites_to_keep_11=('A'))
                 obs["chirality_up"] = torch.einsum('ijlabd,lijdab', rdm2x2_ring, chirality)
-                obs["chirality_up"] = _cast_to_real(obs["chirality_up"] * 1j)
-
-                obs["avg_bonds_dn"] = rdm_kagome.trace1x1_kagome(coord, state, env, torch.einsum('ijab,kc->ijkabc', self.h2, idp)) / norm
-                obs["avg_bonds_dn"] += rdm_kagome.trace1x1_kagome(coord, state, env, torch.einsum('jkbc,ia->ijkabc', self.h2, idp)) / norm
-                obs["avg_bonds_dn"] += rdm_kagome.trace1x1_kagome(coord, state, env, torch.einsum('ikac,jb->ijkabc', self.h2, idp)) / norm
-                obs["avg_bonds_dn"] = _cast_to_real(obs["avg_bonds_dn"]) / 3.0
-
-                rdm2x2_ab = rdm_kagome.rdm2x2_kagome(coord, state, env, sites_to_keep_00=('B'), sites_to_keep_10=(),
-                                                     sites_to_keep_01=(), sites_to_keep_11=('A'))
-                obs["avg_bonds_up"] = torch.einsum('ilad,ilad', rdm2x2_ab, self.h2)
-                rdm1x2_bc = rdm_kagome.rdm2x1_kagome(coord, state, env, sites_to_keep_00=('B'), sites_to_keep_10=('C'))
-                obs["avg_bonds_up"] += torch.einsum('ijab,ijab', rdm1x2_bc, self.h2)
-                rdm2x1_ac = rdm_kagome.rdm1x2_kagome(coord, state, env, sites_to_keep_00=('C'), sites_to_keep_01=('A'))
-                obs["avg_bonds_up"] += torch.einsum('ijab,ijab', rdm2x1_ac, self.h2)
+                obs["chirality_up"] = _cast_to_real(obs["chirality_up"])
+                obs["avg_bonds_up"] = torch.einsum('ijlabd,lijdab', rdm2x2_ring, self.perm2_tri)
                 obs["avg_bonds_up"] = _cast_to_real(obs["avg_bonds_up"]) / 3.0
 
         # prepare list with labels and values
@@ -142,32 +125,16 @@ class KAGOME():
         pd = self.phys_dim
         idp = torch.eye(pd, dtype=self.dtype, device=self.device)
         for coord, site in state.sites.items():
-            # intra-cell 2-site exchange terms
-            norm = rdm_kagome.trace1x1_kagome(coord, state, env, torch.einsum('ia,jb,kc->ijkabc', idp, idp, idp))
-            energy_dn += self.j * rdm_kagome.trace1x1_kagome(coord, state, env, torch.einsum('ijab,kc->ijkabc', self.h2, idp)) / norm
-            energy_dn += self.j * rdm_kagome.trace1x1_kagome(coord, state, env, torch.einsum('jkbc,ia->ijkabc', self.h2, idp)) / norm
-            energy_dn += self.j * rdm_kagome.trace1x1_kagome(coord, state, env, torch.einsum('ikac,jb->ijkabc', self.h2, idp)) / norm
-            # intra-cell 3-site ring exchange terms
-            energy_dn += (self.k + self.h * 1j) * rdm_kagome.trace1x1_kagome(coord, state, env, self.h3_l) / norm
-            energy_dn += (self.k - self.h * 1j) * rdm_kagome.trace1x1_kagome(coord, state, env, self.h3_r) / norm
-
-            # inter-cell 2-site exchange terms
-            rdm2x2_ab = rdm_kagome.rdm2x2_kagome(coord, state, env, sites_to_keep_00=('B'), sites_to_keep_10=(),
-                                                 sites_to_keep_01=(), sites_to_keep_11=('A'))
-            energy_up += self.j * torch.einsum('ilad,ilad', rdm2x2_ab, self.h2)
-            rdm1x2_bc = rdm_kagome.rdm2x1_kagome(coord, state, env, sites_to_keep_00=('B'), sites_to_keep_10=('C'))
-            energy_up += self.j * torch.einsum('ijab,ijab', rdm1x2_bc, self.h2)
-            rdm2x1_ac = rdm_kagome.rdm1x2_kagome(coord, state, env, sites_to_keep_00=('C'), sites_to_keep_01=('A'))
-            energy_up += self.j * torch.einsum('ijab,ijab', rdm2x1_ac, self.h2)
-
-            # inter-cell 3-site ring exchange terms
+            # intra-cell (down)
+            norm = rdm_kagome.trace1x1_dn_kagome(coord, state, env, torch.einsum('ia,jb,kc->ijkabc', idp, idp, idp))
+            energy_dn = rdm_kagome.trace1x1_dn_kagome(coord, state, env, self.h_tri) / norm
+            # inter-cell (up)
             rdm2x2_up = rdm_kagome.rdm2x2_kagome(coord, state, env, sites_to_keep_00=('B'), sites_to_keep_10=('C'),
                                                  sites_to_keep_01=(), sites_to_keep_11=('A'))
-            energy_up += (self.k + self.h * 1j) * torch.einsum('ijlabd,lijdab', rdm2x2_up, self.h3_l)
-            energy_up += (self.k - self.h * 1j) * torch.einsum('ijlabd,lijdab', rdm2x2_up, self.h3_r)
+            energy_up = torch.einsum('ijlabd,lijdab', rdm2x2_up, self.h_tri)
         energy_dn = energy_dn / (len(state.sites.items()) * 3.0)
         energy_up = energy_up / (len(state.sites.items()) * 3.0)
-        return energy_dn, energy_up
+        return _cast_to_real(energy_dn), _cast_to_real(energy_up)
 
     def eval_generators(self, state, env):
         pd = self.phys_dim
@@ -197,8 +164,8 @@ class KAGOME():
         c2_list = dict({"C2_dn": 0., "C2_up": 0.})
         with torch.no_grad():
             for coord, site in state.sites.items():
-                norm = rdm_kagome.trace1x1_kagome(coord, state, env, torch.einsum('ia,jb,kc->ijkabc', idp, idp, idp))
-                c2_list["C2_dn"] += rdm_kagome.trace1x1_kagome(coord, state, env, c2) / norm
+                norm = rdm_kagome.trace1x1_dn_kagome(coord, state, env, torch.einsum('ia,jb,kc->ijkabc', idp, idp, idp))
+                c2_list["C2_dn"] += rdm_kagome.trace1x1_dn_kagome(coord, state, env, c2) / norm
 
                 rdm2x2_up = rdm_kagome.rdm2x2_kagome(coord, state, env, sites_to_keep_00=('B'), sites_to_keep_10=('C'),
                                                      sites_to_keep_01=(), sites_to_keep_11=('A'))
@@ -216,10 +183,10 @@ class KAGOME():
         c1_dict = dict({"C1_AB_dn": 0., "C1_BC_dn": 0., "C1_AC_dn": 0., "C1_AB_up": 0., "C1_BC_up": 0., "C1_AC_up": 0.})
         with torch.no_grad():
             for coord, site in state.sites.items():
-                norm = rdm_kagome.trace1x1_kagome(coord, state, env, torch.einsum('ia,jb,kc->ijkabc', idp, idp, idp))
-                c1_dict["C1_AB_dn"] += rdm_kagome.trace1x1_kagome(coord, state, env, torch.einsum('ijab,kc->ijkabc', c1, idp)) / norm
-                c1_dict["C1_BC_dn"] += rdm_kagome.trace1x1_kagome(coord, state, env, torch.einsum('jkbc,ia->ijkabc', c1, idp)) / norm
-                c1_dict["C1_AC_dn"] += rdm_kagome.trace1x1_kagome(coord, state, env, torch.einsum('ikac,jb->ijkabc', c1, idp)) / norm
+                norm = rdm_kagome.trace1x1_dn_kagome(coord, state, env, torch.einsum('ia,jb,kc->ijkabc', idp, idp, idp))
+                c1_dict["C1_AB_dn"] += rdm_kagome.trace1x1_dn_kagome(coord, state, env, torch.einsum('ijab,kc->ijkabc', c1, idp)) / norm
+                c1_dict["C1_BC_dn"] += rdm_kagome.trace1x1_dn_kagome(coord, state, env, torch.einsum('jkbc,ia->ijkabc', c1, idp)) / norm
+                c1_dict["C1_AC_dn"] += rdm_kagome.trace1x1_dn_kagome(coord, state, env, torch.einsum('ikac,jb->ijkabc', c1, idp)) / norm
 
                 rdm2x2_ab = rdm_kagome.rdm2x2_kagome(coord, state, env, sites_to_keep_00=('B'), sites_to_keep_10=(),
                                                      sites_to_keep_01=(), sites_to_keep_11=('A'))
