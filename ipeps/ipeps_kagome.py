@@ -358,3 +358,4 @@ def write_ipeps_kagome(state, outputfile, tol=1.0e-14, normalize=False):
 
     with open(outputfile, 'w') as f:
         json.dump(json_state, f, indent=4, separators=(',', ': '))
+
