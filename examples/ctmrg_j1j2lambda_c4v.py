@@ -6,7 +6,7 @@ from ipeps.ipeps_c4v import *
 from groups.pg import make_c4v_symm
 from ctm.one_site_c4v.env_c4v import *
 from ctm.one_site_c4v import ctmrg_c4v, transferops_c4v
-from ctm.one_site_c4v.rdm_c4v import rdm2x1_sl, rdm2x1
+from ctm.one_site_c4v.rdm_c4v import rdm2x1_sl, rdm2x1, aux_rdm1x1
 from models import j1j2lambda
 import unittest
 import logging
@@ -146,6 +146,40 @@ def main():
     print(", ".join(["epoch","energy"]+obs_labels))
     print("FINAL "+", ".join([f"{e_curr0}"]+[f"{v}" for v in obs_values0]))
     print(f"TIMINGS ctm: {t_ctm} conv_check: {t_obs}")
+
+
+    # print("\n")
+    # # aux_rdm1x1
+    # D= state.site().size(1)
+    # AR1x1= aux_rdm1x1(state,ctm_env_init)
+    # AR1x1_1= torch.einsum('ijkxijky->xy',AR1x1)
+    # U,S,V= torch.svd(AR1x1_1)
+    # print(f"AR1x1_1 {S/S[0]}")
+    # U,S,V= torch.svd(AR1x1.reshape(D**4,D**4))
+    # print(f"AR1x1 {S[:D**2]/S[0]}")
+    # # edge Hamiltonian
+    # print("edgeH for L=1,...,6")
+    # T= ctm_env_init.get_T()
+    # mh1= torch.einsum('iix->x',T)
+    # U,S,V= torch.svd(mh1.reshape([D]*2))
+    # print(S/S[0])
+    # mh2_open= torch.einsum('ijx,jky->ikxy',T,T)
+    # mh2= torch.einsum('iixy->xy',mh2_open)
+    # U,S,V= torch.svd(mh2.reshape([D]*4).permute(0,2,1,3).reshape(D**2,D**2))
+    # print(S/S[0])
+    # mh3_open= torch.einsum('ijx,jky,klz->ilxyz',T,T,T)
+    # mh3= torch.einsum('iixyz->xyz',mh3_open)
+    # U,S,V= torch.svd(mh3.reshape([D]*6).permute(0,2,4,1,3,5).reshape(D**3,D**3))
+    # print(S[:D**2]/S[0])
+    # mh4= torch.einsum('ijxy,jizv->xyzv',mh2_open,mh2_open)
+    # U,S,V= torch.svd(mh4.reshape([D]*8).permute(list(range(0,2*4,2)) + list(range(1,2*4+1,2))).reshape(D**4,D**4))
+    # print(S[:D**2]/S[0])
+    # mh5= torch.einsum('ijxy,jizvw->xyzvw',mh2_open,mh3_open)
+    # U,S,V= torch.svd(mh5.reshape([D]*10).permute(list(range(0,2*5,2)) + list(range(1,2*5+1,2))).reshape(D**5,D**5))
+    # print(S[:D**2]/S[0])
+    # mh6= torch.einsum('ijxyz,jiuvw->xyzuvw',mh3_open,mh3_open)
+    # U,S,V= torch.svd(mh6.reshape([D]*12).permute(list(range(0,2*6,2)) + list(range(1,2*6+1,2))).reshape(D**6,D**6))
+    # print(S[:D**2]/S[0])
 
     # 7) ----- additional observables ---------------------------------------------
     corrSS= model.eval_corrf_SS(state, ctm_env_init, args.corrf_r, canonical=args.corrf_canonical)
