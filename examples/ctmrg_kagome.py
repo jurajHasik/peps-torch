@@ -1,3 +1,5 @@
+import os
+os.environ['MKL_THREADING_LAYER'] = 'GNU'
 import context
 import torch
 import argparse
@@ -5,10 +7,11 @@ import config as cfg
 from ipeps.ipeps_kagome import *
 from ctm.generic.env import *
 from ctm.generic import ctmrg
-from ctm.generic import transferops
+# from ctm.generic import transferops
 from models import kagome
 import unittest
 import numpy as np
+import pickle
 
 # parse command line args and build necessary configuration objects
 parser= cfg.get_args_parser()
@@ -20,7 +23,9 @@ parser.add_argument("--tiling", default="1SITE", help="tiling of the lattice")
 parser.add_argument("--corrf_r", type=int, default=1, help="maximal correlation function distance")
 parser.add_argument("--top_n", type=int, default=8, help="number of leading eigenvalues"+
     "of transfer operator to compute")
-parser.add_argument("--output_prefix", type=str, default="output", help="filename of output data")
+parser.add_argument("--input_prefix", type=str, default="theta_0_phi_0_bonddim_3_chi_16", help="parameters of input state")
+parser.add_argument("--output_path", type=str, default="/scratch/yx51/kagome", help="path of output")
+parser.add_argument("--restrictions", type=bool, default=False, help="restrictions on the 5 site tensors")
 args, unknown_args = parser.parse_known_args()
 
 
@@ -68,7 +73,7 @@ def main():
 
     # initialize an ipeps
     if args.instate != None:
-        state = read_ipeps_kagome(args.instate, vertexToSite=lattice_to_site)
+        state = read_ipeps_kagome(args.instate, restrictions=args.restrictions, vertexToSite=lattice_to_site)
         if args.bond_dim > max(state.get_aux_bond_dims()):
             # extend the auxiliary dimensions
             state = extend_bond_dim_kagome(state, args.bond_dim)
@@ -137,7 +142,7 @@ def main():
             kagome_sites[(1, 1, 3)] = RD4 / torch.max(torch.abs(RD4))
             kagome_sites[(1, 1, 4)] = RU4 / torch.max(torch.abs(RU4))
 
-        state = IPEPS_KAGOME(kagome_sites, vertexToSite=lattice_to_site)
+        state = IPEPS_KAGOME(kagome_sites, restrictions=args.restrictions, vertexToSite=lattice_to_site)
     else:
         raise ValueError("Missing trial state: -instate=None and -ipeps_init_type= " \
                          + str(args.ipeps_init_type) + " is not supported")
@@ -191,28 +196,52 @@ def main():
 
     ctm_env_init, *ctm_log = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
 
-    # corrSS = model.eval_corrf((0, 0), (1, 0), state, ctm_env_init, 40)
-    # print("\n\nSS[(0,0),(1,0)] r " + " ".join([label for label in corrSS.keys()]))
-    # for i in range(args.corrf_r):
-    #     print(f"{i} " + " ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
-    # # save spin-spin correlation function
-    # filename = "./output/corr_ss_theta_"+str(args.theta)+".csv"
-    # corr_ss_data = np.zeros(args.corrf_r)
-    # for i in range(args.corrf_r):
-    #     corr_ss_data[i] = corrSS["ss"][i]
-    # np.savetxt(filename, corr_ss_data, fmt="%.10f", delimiter=',')
+    e_final = energy_f(state, ctm_env_init)
+    obs_values, obs_labels = model.eval_obs(state, ctm_env_init)
+    print(", ".join(["epoch", "energy"] + obs_labels))
+    print(", ".join([f"{-1}", f"{e_final}"] + [f"{v}" for v in obs_values]))
+    energy_dn, energy_up = model.energy_1triangle(state, ctm_env_init)
 
-    # e_final = energy_f(state, ctm_env_init)
-    # obs_values, obs_labels = model.eval_obs(state, ctm_env_init)
-    # print(", ".join(["epoch", "energy"] + obs_labels))
-    # print(", ".join([f"{-1}", f"{e_final}"] + [f"{v}" for v in obs_values]))
+    obs = dict()
+    obs["energy"] = e_final
+    obs["energy_dn"] = energy_dn
+    obs["energy_up"] = energy_up
+    generators = model.eval_generators(state, ctm_env_init)
+    c1 = model.eval_C1(state, ctm_env_init)
+    for label, value in generators.items():
+        obs[label] = value
+    for label, value in c1.items():
+        obs[label] = value
+    c2s = model.eval_C2(state, ctm_env_init)
+    for label, value in c2s.items():
+        obs[label] = value
 
-    # # save average magnetization and dimer operator
-    # filename = "./output/onsite_obs_theta_"+str(args.theta)+".csv"
-    # onsite_obs = np.zeros(2)
-    # onsite_obs[0] = obs_values["avg_m"]
-    # onsite_obs[1] = obs_values["dimer_op"]
-    # np.savetxt(filename, onsite_obs, fmt="%.10f", delimiter=',')
+    def inner_prod(gens1, gens2):
+        dot_prod = gens1[0] * gens2[0] + 0.75 * gens1[7] * gens2[7] + 0.5 * (gens1[1] * gens2[2]
+                                                                             + gens1[3] * gens2[4] + gens1[5] * gens2[6]
+                                                                             + gens1[1] * gens2[2] + gens1[3] * gens2[4]
+                                                                             + gens1[5] * gens2[6])
+        return dot_prod
+
+    obs["f_spin_A"] = inner_prod(generators["generators_A"], generators["generators_A"])
+    obs["f_spin_B"] = inner_prod(generators["generators_B"], generators["generators_B"])
+    obs["f_spin_C"] = inner_prod(generators["generators_C"], generators["generators_C"])
+    obs["avg_bonds_dn"] = obs_values[0]
+    obs["avg_bonds_up"] = obs_values[1]
+    obs["chirality_dn"] = obs_values[2]
+    obs["chirality_up"] = obs_values[3]
+    print(obs)
+    # if args.restrictions:
+    #     filename_obs = "./data/onsite_obs_restricted_theta_{}_phi_{}_bonddim_{}_chi_{}.json".format(int(args.theta*100), int(args.phi*100), args.bond_dim, args.chi)
+    # else:
+    #     filename_obs = "./data/onsite_obs_theta_{}_phi_{}_bonddim_{}_chi_{}.json".format(int(args.theta * 100), int(args.phi * 100), args.bond_dim, args.chi)
+    # filename_obs = "{}/obs_{}.pkl".format(args.output_path, args.input_prefix)
+    # with open(filename_obs, "wb") as fp:
+    #     pickle.dump(obs, fp)
+    #
+    # with open(filename_obs, "rb") as fp:
+    #     tmp = pickle.load(fp)
+    # print(tmp)
 
     # corrSS = model.eval_corrf_SS((0, 0), (1, 0), state, ctm_env_init, args.corrf_r)
     # print("\n\nSS[(0,0),(1,0)] r " + " ".join([label for label in corrSS.keys()]))
@@ -251,15 +280,6 @@ def main():
     #     print(f"\n\nspectrum C[{c_loc}]")
     #     for i in range(args.chi):
     #         print(f"{i} {s[i]}")
-
-    # perm_2, h3_l, h3_r = model.get_h()
-    # idp = torch.eye(3, dtype=state.dtype)
-    # perm_2_tmp = torch.einsum('ij,ab->iabj', idp, idp)
-    # h3_l_tmp = torch.einsum('ia,jb,kc->ijkbca', idp, idp, idp)
-    # h3_r_tmp = torch.einsum('ia,jb,kc->ijkcab', idp, idp, idp)
-    # print(torch.sum(torch.abs(perm_2_tmp - perm_2)))
-    # print(torch.sum(torch.abs(h3_l - h3_l_tmp)))
-    # print(torch.sum(torch.abs(h3_r - h3_r_tmp)))
 
 
 if __name__ == '__main__':

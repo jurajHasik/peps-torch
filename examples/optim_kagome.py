@@ -252,13 +252,13 @@ def main():
 
     # compute final observables for the best variational state
     outputstatefile = args.out_prefix + "_state.json"
-    state = read_ipeps_kagome(outputstatefile, vertexToSite=state.vertexToSite)
+    state = read_ipeps_kagome(outputstatefile, restrictions=args.restrictions, vertexToSite=state.vertexToSite)
     ctm_env = ENV(args.chi, state)
     init_env(state, ctm_env)
     ctm_env, *ctm_log = ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
     opt_energy = energy_f(state, ctm_env)
-    # obs_values, obs_labels = model.eval_obs(state, ctm_env)
-    # print(", ".join([f"{args.opt_max_iter}", f"{opt_energy}"] + [f"{v}" for v in obs_values]))
+    obs_values, obs_labels = model.eval_obs(state, ctm_env)
+    print(", ".join([f"{args.opt_max_iter}", f"{opt_energy}"] + [f"{v}" for v in obs_values]))
 
 
 if __name__ == '__main__':
