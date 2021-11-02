@@ -333,7 +333,7 @@ def rdm1x1_kagome(coord, state, env, sites_to_keep=('A', 'B', 'C'), sym_pos_def=
     return rdm
 
 
-def trace1x1_kagome(coord, state, env, op, verbosity=0):
+def trace1x1_dn_kagome(coord, state, env, op, verbosity=0):
     r"""
     :param coord: vertex (x,y) for which reduced density matrix is constructed
     :param state: underlying wavefunction
