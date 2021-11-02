@@ -59,11 +59,11 @@ class KAGOME():
         idp2x2 = torch.eye(pd ** 2, dtype=self.dtype, device=self.device)
         SS = irrep.SS()
         SS = SS.view(pd ** 2, pd ** 2)
-        perm2 = SS + SS @ SS - idp2x2
-        perm2 = perm2.view(pd, pd, pd, pd).contiguous()
+        # perm2 = SS + SS @ SS - idp2x2
+        # perm2 = perm2.view(pd, pd, pd, pd).contiguous()
         # Equivalently
-        # irrep_su3_def = su3.SU3_DEFINING(dtype=self.dtype, device=self.device)
-        # perm2 = 2 * irrep_su3_def.C1() - idp2x2.view(pd, pd, pd, pd).contiguous() / 3
+        irrep_su3_def = su3.SU3_DEFINING(dtype=self.dtype, device=self.device)
+        perm2 = 2 * irrep_su3_def.C1() + idp2x2.view(pd, pd, pd, pd).contiguous() / 3
         perm3_l = torch.einsum('ijal,lkbc->ijkabc', perm2, perm2)
         perm3_r = torch.einsum('ijal,klbc->ikjabc', perm2, perm2)
 
