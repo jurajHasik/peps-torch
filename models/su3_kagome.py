@@ -125,7 +125,7 @@ class KAGOME_SU3():
         obs_values = [obs[label] for label in obs_labels]
         return obs_values, obs_labels
 
-    def energy_down_t_1x1subsystem(self, state, env):
+    def energy_down_t_1x1subsystem(self, state, env, force_cpu=False):
         r"""
         Evaluate the energy contribution from the down triangle on 1x1 subsystem
         embedded in the environment.

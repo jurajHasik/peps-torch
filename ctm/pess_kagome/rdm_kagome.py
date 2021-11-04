@@ -27,7 +27,7 @@ def _expand_perm(n_inds):
         c_sum+= n
     return expanded_bra+expanded_ket
 
-def double_layer_a(state, coord, open_sites=[]):
+def double_layer_a(state, coord, open_sites=[], force_cpu=False):
     r"""
     :param open_sites: DoFs to contract
     :type open_sites: list(int)
@@ -51,7 +51,10 @@ def double_layer_a(state, coord, open_sites=[]):
     Default results in contraction over all 3 DoFs. Physical indices are aggregated into
     a single index with structure s'0,...,s'2;s0,...,s2.
     """
-    A= state.site(coord)
+    if force_cpu:
+        A= state.site(coord).cpu()
+    else:
+        A= state.site(coord)
     dimsA= A.size()
     dof1_pd= state.get_physical_dim()
     A_reshaped= A.view( [dof1_pd]*3 + list(dimsA[1:]) )
@@ -87,13 +90,11 @@ def enlarged_corner(coord, state, env, corner, open_sites=[], force_cpu=False, v
             C = env.C[(state.vertexToSite(coord), (-1, -1))].cpu()
             T1 = env.T[(state.vertexToSite(coord), (0, -1))].cpu()
             T2 = env.T[(state.vertexToSite(coord), (-1, 0))].cpu()
-            A_tensor = state.site(coord).cpu()
         else:
             C = env.C[(state.vertexToSite(coord), (-1, -1))]
             T1 = env.T[(state.vertexToSite(coord), (0, -1))]
             T2 = env.T[(state.vertexToSite(coord), (-1, 0))]
-            A_tensor = state.site(coord)
-        a = double_layer_a(state, coord, open_sites)
+        a = double_layer_a(state, coord, open_sites, force_cpu=force_cpu)
 
         # C--10--T1--2
         # 0   1
@@ -130,13 +131,11 @@ def enlarged_corner(coord, state, env, corner, open_sites=[], force_cpu=False, v
             C = env.C[(coord, (1, -1))].cpu()
             T1 = env.T[(coord, (1, 0))].cpu()
             T2 = env.T[(coord, (0, -1))].cpu()
-            A_tensor = state.site(coord).cpu()
         else:
             C = env.C[(coord, (1, -1))]
             T1 = env.T[(coord, (1, 0))]
             T2 = env.T[(coord, (0, -1))]
-            A_tensor = state.site(coord)
-        a = double_layer_a(state, coord, open_sites)
+        a = double_layer_a(state, coord, open_sites, force_cpu=force_cpu)
 
         # 0--C
         #    1
@@ -177,13 +176,11 @@ def enlarged_corner(coord, state, env, corner, open_sites=[], force_cpu=False, v
             C = env.C[(coord, (1, 1))].cpu()
             T1 = env.T[(coord, (0, 1))].cpu()
             T2 = env.T[(coord, (1, 0))].cpu()
-            A_tensor = state.site(coord).cpu()
         else:
             C = env.C[(coord, (1, 1))]
             T1 = env.T[(coord, (0, 1))]
             T2 = env.T[(coord, (1, 0))]
-            A_tensor = state.site(coord)
-        a = double_layer_a(state, coord, open_sites)
+        a = double_layer_a(state, coord, open_sites, force_cpu=force_cpu)
 
         #    1<-0        0
         # 2<-1--T1--2 1--C
@@ -221,13 +218,11 @@ def enlarged_corner(coord, state, env, corner, open_sites=[], force_cpu=False, v
             C = env.C[(coord, (-1, 1))].cpu()
             T1 = env.T[(coord, (-1, 0))].cpu()
             T2 = env.T[(coord, (0, 1))].cpu()
-            A_tensor = state.site(coord).cpu()
         else:
             C = env.C[(coord, (-1, 1))]
             T1 = env.T[(coord, (-1, 0))]
             T2 = env.T[(coord, (0, 1))]
-            A_tensor = state.site(coord)
-        a = double_layer_a(state, coord, open_sites)
+        a = double_layer_a(state, coord, open_sites, force_cpu=force_cpu)
 
         # 0->1
         # T1--2
@@ -898,7 +893,7 @@ def rdm2x2_dn_triangle_with_operator(coord, state, env, op, force_cpu=False, ver
         T1 = env.T[(state.vertexToSite(coord), (0, -1))].cpu()
         T2 = env.T[(state.vertexToSite(coord), (-1, 0))].cpu()
         a_1layer = state.site(coord).cpu()
-        operator = operator.cpu()
+        op = op.cpu()
     else:
         C = env.C[(state.vertexToSite(coord), (-1, -1))]
         T1 = env.T[(state.vertexToSite(coord), (0, -1))]
@@ -1111,6 +1106,7 @@ def rdm2x2_kagome(coord, state, env, sites_to_keep_00=('A', 'B', 'C'),\
     # symmetrize and normalize
     rdm = _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
 
+    rdm = rdm.to(env.device)
     return rdm
 
 

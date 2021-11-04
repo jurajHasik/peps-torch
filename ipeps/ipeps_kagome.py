@@ -132,13 +132,13 @@ class IPEPS_KAGOME(ipeps.IPEPS):
             if False in size_check:
                 raise ValueError("Desired dimension is smaller than following aux dimensions: "+str(size_check))
 
-            new_site = torch.zeros((dims[0],new_d,new_d,new_d,new_d), dtype=state.dtype, device=state.device)
+            new_site = torch.zeros((dims[0],new_d,new_d,new_d,new_d), dtype=self.dtype, device=self.device)
             new_site[:,:dims[1],:dims[2],:dims[3],:dims[4]] = site
             new_sites[coord] = new_site
         
         new_state= self.__class__(new_sites, vertexToSite=self.vertexToSite,\
-            lX=self.lX, ly=self.lY, peps_args=peps_args, global_args=global_args)
-        return 
+            peps_args=peps_args, global_args=global_args)
+        return new_state
 
 def read_ipeps_kagome(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.peps_args,\
     global_args=cfg.global_args):

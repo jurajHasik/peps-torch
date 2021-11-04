@@ -32,6 +32,7 @@ parser.add_argument("--no_sym_up_dn", action='store_false', dest='sym_up_dn',\
     help="same trivalent tensors for up and down triangles")
 parser.add_argument("--legacy_instate", action='store_true', dest='legacy_instate',\
     help="legacy format of states")
+parser.add_argument("--force_cpu", action='store_true', help="evaluate energy on cpu")
 args, unknown_args = parser.parse_known_args()
 
 
@@ -154,7 +155,7 @@ def main():
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
             history = []
-        e_curr = energy_f_down_t_1x1subsystem(state, env)
+        e_curr = energy_f_down_t_1x1subsystem(state, env, force_cpu=args.force_cpu)
         history.append(e_curr.item())
 
         if (len(history) > 1 and abs(history[-1] - history[-2]) < ctm_args.ctm_conv_tol) \
@@ -168,8 +169,8 @@ def main():
 
     # comupte initial observables
     ctm_env, *ctm_log = ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
-    loss0= energy_f(state, ctm_env)
-    obs_values, obs_labels = model.eval_obs(state, ctm_env)
+    loss0= energy_f(state, ctm_env, force_cpu=args.force_cpu)
+    obs_values, obs_labels = model.eval_obs(state, ctm_env, force_cpu=force_cpu)
     print(", ".join(["epoch", "energy"] + obs_labels))
     print(", ".join([f"{-1}", f"{loss0}"] + [f"{v}" for v in obs_values]))
 
@@ -203,7 +204,7 @@ def main():
             conv_check=ctmrg_conv_energy, ctm_args=ctm_args)
 
         # 2) evaluate loss with the converged environment
-        loss= energy_f(state, ctm_env_out)
+        loss= energy_f(state, ctm_env_out, force_cpu=args.force_cpu)
 
         return (loss, ctm_env_out, *ctm_log)
 
@@ -220,7 +221,7 @@ def main():
         else:
             epoch= len(opt_context["loss_history"]["loss"])
             loss= opt_context["loss_history"]["loss"][-1]
-        obs_values, obs_labels = model.eval_obs(state, ctm_env)
+        obs_values, obs_labels = model.eval_obs(state, ctm_env,force_cpu=force_cpu)
         print(", ".join([f"{epoch}", f"{loss}"] + [f"{v}" for v in obs_values]))
         log.info("Norm(sites): " + ", ".join([f"{t.norm()}" for c, t in state.sites.items()]))
 
