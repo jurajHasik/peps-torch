@@ -1,36 +1,37 @@
 import context
+import torch
 import argparse
 import config as cfg
-import math
-import torch
-import copy
-from collections import OrderedDict
 from ipeps.ipess_kagome import *
 from ipeps.ipeps_kagome import *
-from models import spin1_kagome
 from ctm.generic.env import *
 from ctm.generic import ctmrg
-from ctm.generic import rdm
+# from ctm.generic import ctmrg_sl as ctmrg
+from models import su3_kagome
 from optim.ad_optim_lbfgs_mod import optimize_state
-import json
 import unittest
 import logging
+import numpy as np
 
 log = logging.getLogger(__name__)
 
 # parse command line args and build necessary configuration objects
 parser = cfg.get_args_parser()
-parser.add_argument("--theta", type=float, default=0, help="angle [<value> x pi] parametrizing the chiral Hamiltonian")
-parser.add_argument("--j1", type=float, default=1., help="nearest-neighbor exchange coupling")
-parser.add_argument("--j1sq", type=float, default=0, help="nearest-neighbor biquadratic exchange coupling")
-parser.add_argument("--j2", type=float, default=0, help="next-nearest-neighbor exchange coupling")
-parser.add_argument("--j2sq", type=float, default=0, help="next-nearest-neighbor biquadratic exchange coupling")
-parser.add_argument("--jtrip", type=float, default=0, help="(SxS).S")
-parser.add_argument("--jperm", type=float, default=0, help="triangle permutation")
+# additional model-dependent arguments
+
+# parser.add_argument("--j", type=float, default=0., help="coupling for 2-site exchange terms")
+# parser.add_argument("--k", type=float, default=-1., help="coupling for 3-site ring exchange terms")
+# parser.add_argument("--h", type=float, default=0., help="coupling for chiral terms")
+parser.add_argument("--phi", type=float, default=0.5, help="parametrization between "\
+    +"2-site exchange and 3-site permutation terms in the units of pi")
+parser.add_argument("--theta", type=float, default=0., help="parametrization between "\
+    +"normal and chiral terms in the units of pi")
 parser.add_argument("--ansatz", type=str, default=None, help="choice of the tensor ansatz",\
      choices=["IPEPS", "IPESS", "IPESS_PG", "A_2,B"])
 parser.add_argument("--no_sym_up_dn", action='store_false', dest='sym_up_dn',\
     help="same trivalent tensors for up and down triangles")
+parser.add_argument("--legacy_instate", action='store_true', dest='legacy_instate',\
+    help="legacy format of states")
 args, unknown_args = parser.parse_known_args()
 
 
@@ -40,9 +41,12 @@ def main():
     torch.set_num_threads(args.omp_cores)
     torch.manual_seed(args.seed)
 
-    model= spin1_kagome.S1_KAGOME(j1=args.j1,j1sq=args.j1sq,j2=args.j2,j2sq=args.j2sq,\
-        jtrip=args.jtrip,jperm=args.jperm)
-
+    param_j = np.round(np.cos(np.pi*args.phi), decimals=12)
+    param_k = np.round(np.sin(np.pi*args.phi) * np.cos(np.pi*args.theta), decimals=12)
+    param_h = np.round(np.sin(np.pi*args.phi) * np.sin(np.pi*args.theta), decimals=12)
+    print("J = {}; K = {}; H = {}".format(param_j, param_k, param_h))
+    model = su3_kagome.KAGOME_SU3(phys_dim=3, j=param_j, k=param_k, h=param_h)
+    
     # initialize the ipess/ipeps
     if args.ansatz in ["IPESS","IPESS_PG","A_2,B"]:
         ansatz_pgs=None
@@ -50,9 +54,15 @@ def main():
         
         if args.instate!=None:
             if args.ansatz=="IPESS":
-                state= read_ipess_kagome_generic(args.instate)
+                if not args.legacy_instate:
+                    state= read_ipess_kagome_generic(args.instate)
+                else:
+                    state= read_ipess_kagome_generic_legacy(args.instate, ansatz=args.ansatz)
             elif args.ansatz in ["IPESS_PG","A_2,B"]:
-                state= read_ipess_kagome_pg(args.instate)
+                if not args.legacy_instate:
+                    state= read_ipess_kagome_pg(args.instate)
+                else:
+                    state= read_ipess_kagome_generic_legacy(args.instate, ansatz=args.ansatz)
 
             # possibly symmetrize by PG
             if ansatz_pgs!=None:
@@ -126,37 +136,47 @@ def main():
         raise ValueError("Missing ansatz specification --ansatz "\
             +str(args.ansatz)+" is not supported")
 
-    def energy_f(state, env, force_cpu=False):
-        e_dn = model.energy_triangle_dn(state, env, force_cpu=force_cpu)
-        e_up = model.energy_triangle_up(state, env, force_cpu=force_cpu)
-        # e_nnn = model.energy_nnn(state, env)
-        return (e_up + e_dn)/3 #+ e_nnn) / 3
+    if not state.dtype == model.dtype:
+        cfg.global_args.dtype= state.dtype
+        print(f"dtype of initial state {state.dtype} and model {model.dtype} do not match.")
+        print(f"Setting default dtype to {cfg.global_args.dtype} and reinitializing "\
+        +" the model")
+        model = kagome.KAGOME(phys_dim=3, j=param_j, k=param_k, h=param_h)
+
+    print(state)
+    # we want to use single triangle energy evaluation for CTM
+    # converge as its much cheaper than considering up triangles
+    # which require 2x2 subsystem
+    energy_f_down_t_1x1subsystem= model.energy_down_t_1x1subsystem
+    energy_f= model.energy_per_site_2x2subsystem
 
     @torch.no_grad()
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
             history = []
-        e_curr = energy_f(state, env, force_cpu=ctm_args.conv_check_cpu)
+        e_curr = energy_f_down_t_1x1subsystem(state, env)
         history.append(e_curr.item())
+
         if (len(history) > 1 and abs(history[-1] - history[-2]) < ctm_args.ctm_conv_tol) \
                 or len(history) >= ctm_args.ctm_max_iter:
             log.info({"history_length": len(history), "history": history})
             return True, history
         return False, history
 
-    ctm_env_init = ENV(args.chi, state)
-    init_env(state, ctm_env_init)
+    ctm_env = ENV(args.chi, state)
+    init_env(state, ctm_env)
 
-    ctm_env_init, history, t_ctm, t_conv_check = ctmrg.run(state, ctm_env_init, \
-            conv_check=ctmrg_conv_energy, ctm_args=cfg.ctm_args)
-    
-    loss0 = energy_f(state, ctm_env_init, force_cpu=cfg.ctm_args.conv_check_cpu)
-    obs_values, obs_labels = model.eval_obs(state,ctm_env_init,force_cpu=False)
-    print("\n\n",end="")
-    print(", ".join(["epoch",f"loss"]+[label for label in obs_labels]))
-    print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
+    # comupte initial observables
+    ctm_env, *ctm_log = ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
+    loss0= energy_f(state, ctm_env)
+    obs_values, obs_labels = model.eval_obs(state, ctm_env)
+    print(", ".join(["epoch", "energy"] + obs_labels))
+    print(", ".join([f"{-1}", f"{loss0}"] + [f"{v}" for v in obs_values]))
 
     def loss_fn(state, ctm_env_in, opt_context):
+        ctm_args = opt_context["ctm_args"]
+        opt_args = opt_context["opt_args"]
+
         ctm_args = opt_context["ctm_args"]
         opt_args = opt_context["opt_args"]
 
@@ -178,19 +198,14 @@ def main():
         if opt_args.opt_ctm_reinit:
             init_env(tmp_state, ctm_env_in)
 
-        # compute environment by CTMRG
-        ctm_env_out, history, t_ctm, t_conv_check = ctmrg.run(tmp_state, ctm_env_in, \
+        # 1) compute environment by CTMRG
+        ctm_env_out, *ctm_log = ctmrg.run(tmp_state, ctm_env_in, \
             conv_check=ctmrg_conv_energy, ctm_args=ctm_args)
-        loss0 = energy_f(tmp_state, ctm_env_out, force_cpu=cfg.ctm_args.conv_check_cpu)
 
-        # loc_ctm_args = copy.deepcopy(ctm_args)
-        # loc_ctm_args.ctm_max_iter = 1
-        # ctm_env_out, history1, t_ctm1, t_obs1 = ctmrg.run(state, ctm_env_out, ctm_args=loc_ctm_args)
-        # loss1 = energy_f(state, ctm_env_out, force_cpu=cfg.ctm_args.conv_check_cpu)
-        # loss = torch.max(loss0, loss1)
-        
-        loss= loss0
-        return loss, ctm_env_out, history, t_ctm, t_conv_check
+        # 2) evaluate loss with the converged environment
+        loss= energy_f(state, ctm_env_out)
+
+        return (loss, ctm_env_out, *ctm_log)
 
     @torch.no_grad()
     def obs_fn(state, ctm_env, opt_context):
@@ -203,18 +218,23 @@ def main():
             loss= opt_context["loss_history"]["loss_ls"][-1]
             print("LS",end=" ")
         else:
-            epoch= len(opt_context["loss_history"]["loss"]) 
-            loss= opt_context["loss_history"]["loss"][-1] 
-        obs_values, obs_labels = model.eval_obs(state_sym,ctm_env,force_cpu=False)
-        print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]), end="")
-        log.info("Norm(sites): "+", ".join([f"{t.norm()}" for c,t in state.sites.items()]))
-        print(" "+", ".join([f"{t.norm()}" for c,t in state.sites.items()]) )
+            epoch= len(opt_context["loss_history"]["loss"])
+            loss= opt_context["loss_history"]["loss"][-1]
+        obs_values, obs_labels = model.eval_obs(state, ctm_env)
+        print(", ".join([f"{epoch}", f"{loss}"] + [f"{v}" for v in obs_values]))
+        log.info("Norm(sites): " + ", ".join([f"{t.norm()}" for c, t in state.sites.items()]))
 
-    def post_proc(state, ctm_env, opt_context):
-        pass
+    # optimize
+    optimize_state(state, ctm_env, loss_fn, obs_fn=obs_fn)
 
-    optimize_state(state, ctm_env_init, loss_fn, obs_fn=obs_fn,
-        post_proc=post_proc)
+    # compute final observables for the best variational state
+    ctm_env = ENV(args.chi, state)
+    init_env(state, ctm_env)
+    ctm_env, *ctm_log = ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
+    opt_energy = energy_f(state, ctm_env)
+    obs_values, obs_labels = model.eval_obs(state, ctm_env)
+    print(", ".join([f"{args.opt_max_iter}", f"{opt_energy}"] + [f"{v}" for v in obs_values]))
+
 
 if __name__ == '__main__':
     if len(unknown_args) > 0:
