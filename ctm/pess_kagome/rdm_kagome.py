@@ -79,7 +79,8 @@ def double_layer_a(state, coord, open_sites=[], force_cpu=False):
     a = view(a, dimsa)
     return a
 
-def enlarged_corner(coord, state, env, corner, open_sites=[], force_cpu=False, verbosity=0):
+def enlarged_corner(coord, state, env, corner, open_sites=[], force_cpu=False,
+    verbosity=0):
     r"""
     Builds enlarged corner relative to site at ``coord``. If some DoFs are left open,
     their indices are aggregated into the last index of the resulting tensor.
@@ -378,7 +379,8 @@ def trace1x1_dn_kagome(coord, state, env, op, verbosity=0):
 
     return trace
 
-def rdm1x1_kagome(coord, state, env, sites_to_keep=('A', 'B', 'C'), sym_pos_def=False, verbosity=0):
+def rdm1x1_kagome(coord, state, env, sites_to_keep=('A', 'B', 'C'), sym_pos_def=False,\
+    verbosity=0):
     r"""
     :param coord: vertex (x,y) for which reduced density matrix is constructed
     :param state: underlying wavefunction
@@ -734,7 +736,8 @@ def rdm1x2_kagome(coord, state, env, sites_to_keep_00=('A', 'B', 'C'),\
 
 
 # ----- 2x2 subsystem -----
-def rdm2x2_up_triangle_open(coord, state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
+def rdm2x2_up_triangle_open(coord, state, env, sym_pos_def=False, force_cpu=False,\
+    verbosity=0):
     r"""
     :param coord: vertex (x,y) specifies upper left site of 2x2 subsystem
     :param state: underlying wavefunction
@@ -848,7 +851,8 @@ def rdm2x2_up_triangle_open(coord, state, env, sym_pos_def=False, force_cpu=Fals
     rdm = rdm.to(env.device)
     return rdm
 
-def rdm2x2_dn_triangle_with_operator(coord, state, env, op, force_cpu=False, verbosity=0):
+def rdm2x2_dn_triangle_with_operator(coord, state, env, op, force_cpu=False,\
+    verbosity=0):
     r"""
     :param op: operator to be contracted. It is expected that the op is either 
         rank-6 tensor of shape [physical_dim]*6 or rank-2 tensor 
@@ -1110,115 +1114,209 @@ def rdm2x2_kagome(coord, state, env, sites_to_keep_00=('A', 'B', 'C'),\
     return rdm
 
 
+# ----- next-to-next nearest neighbour interactions -----
+# TODO? recomputing corners from scratch might be not neccessary if the only difference
+#       is which DoF remains uncontracted
+def rdm2x2_nnn_1(coord, state, env, operator, force_cpu=False, verbosity=0):
+    r"""
+    :param operator: two-site operator (rank-4 tensor), which acts on two DoFs of Kagome
+                     lattice
+    :type operator: torch.tensor
+        
+       C    T       T       C     and     C    T       T       C   
+          / |     / |                        / |     / |  
+         /  |    /  |                       /  |    /  |
+       T --XX--XX--XX--XX-- T             T --XX--XX--s0--XX-- T
+            | /     | /                        | /     | /
+            |/      |/                         |/      |/
+           XX      s1                         XX      XX
+          / |     / |                        / |     / | 
+         /  |    /  |                       /  |    /  |
+       T --s0--XX--XX--XX-- T             T --XX--s2--XX--XX-- T
+            | /     | /                        | /     | /
+            |/      |/                         |/      |/
+           XX       XX                        XX       XX
+            |       |                          |       |
+       C    T       T       C             C    T       T       C
+    """
+    C2x2_LU= enlarged_corner(coord, state, env, 'LU', csites=[],\
+        force_cpu=force_cpu, verbosity=verbosity)
+    shift_coord= _shift_coord(state,coord,(1,1))
+    C2x2_RD= enlarged_corner(shift_coord, state, env, 'RD', csites=[],\
+        force_cpu=force_cpu, verbosity=verbosity)
 
-# def rdm2x2_nnn_1(coord, state, env, operator, force_cpu=False, verbosity=0):
-#     C2x2_LU = enlarged_corner(coord, state, env, 'LU', csites=[], force_cpu=force_cpu, verbosity=verbosity)
-#     C2x2_RD = enlarged_corner(coord, state, env, 'RD', csites=[], force_cpu=force_cpu, verbosity=verbosity)
+    # bond 1--2
+    # TODO? split operator by SVD and apply to individual corners
+    shift_coord= _shift_coord(state,coord,(0,1))
+    C2x2_LD = enlarged_corner(shift_coord, state, env, 'LD', csites=[0],\
+        force_cpu=force_cpu, verbosity=verbosity)
+    shift_coord= _shift_coord(state,coord,(1,0))
+    C2x2_RU = enlarged_corner(shift_coord, state, env, 'RU', csites=[1],\
+        force_cpu=force_cpu, verbosity=verbosity)
+    upper_half = einsum('ij,jkab->ikab', C2x2_LU, C2x2_RU)
+    lower_half = einsum('ijab,kj->ikab', C2x2_LD, C2x2_RD)
+    bond_operator = operator.to(C2x2_LD.device)
+    bond12 = einsum('ijab,badc,ijcd->', upper_half, bond_operator, lower_half)
 
-#     # bond 1--2
-#     C2x2_LD = enlarged_corner(coord, state, env, 'LD', csites=[1], force_cpu=force_cpu, verbosity=verbosity)
-#     C2x2_RU = enlarged_corner(coord, state, env, 'RU', csites=[2], force_cpu=force_cpu, verbosity=verbosity)
-#     upper_half = einsum('ij,jkab->ikab', C2x2_LU, C2x2_RU)
-#     lower_half = einsum('ijab,kj->ikab', C2x2_LD, C2x2_RD)
-#     bond_operator = operator.to(C2x2_LD.device)
-#     bond12 = einsum('ijab,badc,ijcd->', upper_half, bond_operator, lower_half)
+    # bond 3--1
+    shift_coord= _shift_coord(state,coord,(0,1))
+    C2x2_LD = enlarged_corner(shift_coord, state, env, 'LD', csites=[2],\
+        force_cpu=force_cpu, verbosity=verbosity)
+    shift_coord= _shift_coord(state,coord,(1,0))
+    C2x2_RU = enlarged_corner(shift_coord, state, env, 'RU', csites=[0],\
+        force_cpu=force_cpu, verbosity=verbosity)
+    upper_half = einsum('ij,jkab->ikab', C2x2_LU, C2x2_RU)
+    lower_half = einsum('ijab,kj->ikab', C2x2_LD, C2x2_RD)
+    bond31 = einsum('ijab,badc,ijcd->', upper_half, bond_operator, lower_half)
 
-#     # bond 3--1
-#     C2x2_LD = enlarged_corner(coord, state, env, 'LD', csites=[3], force_cpu=force_cpu, verbosity=verbosity)
-#     C2x2_RU = enlarged_corner(coord, state, env, 'RU', csites=[1], force_cpu=force_cpu, verbosity=verbosity)
-#     upper_half = einsum('ij,jkab->ikab', C2x2_LU, C2x2_RU)
-#     lower_half = einsum('ijab,kj->ikab', C2x2_LD, C2x2_RD)
-#     bond31 = einsum('ijab,badc,ijcd->', upper_half, bond_operator, lower_half)
+    bond12 = bond12.to(env.device)
+    bond31 = bond31.to(env.device)
+    return (bond12, bond31)
 
-#     bond12 = bond12.to(env.device)
-#     bond31 = bond31.to(env.device)
-#     return(bond12, bond31)
+def rdm2x2_nnn_2(coord, state, env, operator, force_cpu=False, verbosity=0):
+    r"""
+    :param operator: two-site operator (rank-4 tensor), which acts on two DoFs of Kagome
+                     lattice
+    :type operator: torch.tensor
+        
+       C    T       T       C     and     C    T       T       C   
+          / |     / |                        / |     / |  
+         /  |    /  |                       /  |    /  |
+       T --XX--s2--XX--XX-- T             T --XX--XX--s0--XX-- T
+            | /     | /                        | /     | /
+            |/      |/                         |/      |/
+           XX      s1                         s1      XX
+          / |     / |                        / |     / | 
+         /  |    /  |                       /  |    /  |
+       T --XX--XX--XX--XX-- T             T --XX--XX--XX--XX-- T
+            | /     | /                        | /     | /
+            |/      |/                         |/      |/
+           XX       XX                        XX       XX
+            |       |                          |       |
+       C    T       T       C             C    T       T       C
+    """
+    # --------------upper half -------------------------------------------------
 
+    # build upper part C2x2_LU--C2x2_RU and contract with the 2-cell operator
+    # C2x2_LU-----1     0-----C2x2_RU
+    # |\23________op_______23/|
+    # 0                       1
 
-# def rdm2x2_nnn_2(coord, state, env, operator, force_cpu=False, verbosity=0):
-#     # --------------upper half -------------------------------------------------
+    # NNN bond 3--2
+    C2x2_LU = enlarged_corner(coord, state, env, corner='LU', csites=[2],\
+        force_cpu=force_cpu, verbosity=verbosity)
+    shift_coord= _shift_coord(state,coord,(1,0))
+    C2x2_RU = enlarged_corner(shift_coord, state, env, corner='RU', csites=[1],\
+        force_cpu=force_cpu, verbosity=verbosity)
+    bond_operator = operator.to(C2x2_LU.device)
+    upper_half_32 = einsum('ijab,badc,jkcd->ik', C2x2_LU, bond_operator, C2x2_RU)
 
-#     # build upper part C2x2_LU--C2x2_RU and contract with the 2-cell operator
-#     # C2x2_LU-----1     0-----C2x2_RU
-#     # |\23________op_______23/|
-#     # 0                       1
+    # NNN bond 2--1
+    C2x2_LU = enlarged_corner(coord, state, env, corner='LU', csites=[1],\
+        force_cpu=force_cpu, verbosity=verbosity)
+    shift_coord= _shift_coord(state,coord,(1,0))
+    C2x2_RU = enlarged_corner(shift_coord, state, env, corner='RU', csites=[0],\
+        force_cpu=force_cpu, verbosity=verbosity)
+    upper_half_21 = einsum('ijab,badc,jkcd->ik', C2x2_LU, bond_operator, C2x2_RU)
 
-#     # NNN bond 3--2
-#     C2x2_LU = enlarged_corner(coord, state, env, corner='LU', csites=[3], force_cpu=force_cpu, verbosity=verbosity)
-#     C2x2_RU = enlarged_corner(coord, state, env, corner='RU', csites=[2], force_cpu=force_cpu, verbosity=verbosity)
-#     bond_operator = operator.to(C2x2_LU.device)
-#     upper_half_32 = einsum('ijab,badc,jkcd->ik', C2x2_LU, bond_operator, C2x2_RU)
+    # --------------bottom half-------------------------------------------------
 
-#     # NNN bond 2--1
-#     C2x2_LU = enlarged_corner(coord, state, env, corner='LU', csites=[2], force_cpu=force_cpu, verbosity=verbosity)
-#     C2x2_RU = enlarged_corner(coord, state, env, corner='RU', csites=[1], force_cpu=force_cpu, verbosity=verbosity)
-#     upper_half_21 = einsum('ijab,badc,jkcd->ik', C2x2_LU, bond_operator, C2x2_RU)
+    # 0             0->1
+    # |             |
+    # C2x2_LD--1 1--C2x2_RD
+    shift_coord= _shift_coord(state,coord,(1,1))
+    C2x2_RD = enlarged_corner(shift_coord, state, env, corner='RD', csites=[],\
+        force_cpu=force_cpu, verbosity=verbosity)
+    shift_coord= _shift_coord(state,coord,(0,1))
+    C2x2_LD = enlarged_corner(shift_coord, state, env, corner='LD', csites=[],\
+        force_cpu=force_cpu, verbosity=verbosity)
+    lower_half = contract(C2x2_LD, C2x2_RD, ([1], [1]))
 
-#     # --------------bottom half-------------------------------------------------
+    # contracting lower and upper halfs
+    # C2x2_LU--op--C2x2_RU
+    # |            |
+    # 0            1
+    # 0            1
+    # |            |
+    # C2x2_LD------C2x2_RD
 
-#     # 0             0->1
-#     # |             |
-#     # C2x2_LD--1 1--C2x2_RD
-#     C2x2_RD = enlarged_corner(coord, state, env, corner='RD', csites=[], force_cpu=force_cpu, verbosity=verbosity)
-#     C2x2_LD = enlarged_corner(coord, state, env, corner='LD', csites=[], force_cpu=force_cpu, verbosity=verbosity)
-#     lower_half = contract(C2x2_LD, C2x2_RD, ([1], [1]))
+    bond32 = contract(upper_half_32, lower_half, ([0, 1], [0, 1])).to(env.device)
+    bond21 = contract(upper_half_21, lower_half, ([0, 1], [0, 1])).to(env.device)
+    return (bond32, bond21)
 
-#     # contracting lower and upper halfs
-#     # C2x2_LU--op--C2x2_RU
-#     # |            |
-#     # 0            1
-#     # 0            1
-#     # |            |
-#     # C2x2_LD------C2x2_RD
+def rdm2x2_nnn_3(coord, state, env, operator, force_cpu=False, verbosity=0):
+    r"""
+    :param operator: two-site operator (rank-4 tensor), which acts on two DoFs of Kagome
+                     lattice
+    :type operator: torch.tensor
+        
+       C    T       T       C     and     C    T       T       C   
+          / |     / |                        / |     / |  
+         /  |    /  |                       /  |    /  |
+       T --XX--s2--XX--XX-- T             T --XX--XX--XX--XX-- T
+            | /     | /                        | /     | /
+            |/      |/                         |/      |/
+           XX      XX                         s1      XX
+          / |     / |                        / |     / | 
+         /  |    /  |                       /  |    /  |
+       T --s0--XX--XX--XX-- T             T --XX--s2--XX--XX-- T
+            | /     | /                        | /     | /
+            |/      |/                         |/      |/
+           XX       XX                        XX       XX
+            |       |                          |       |
+       C    T       T       C             C    T       T       C
+    """
+    # ---------------- left half -----------------------------------
+    # build left half and contract with the 2-cell operator
+    # C2x2_LU--1->0
+    # |\23
+    # |   \
+    # 0    op
+    # 0    /
+    # |   /
+    # |/23
+    # C2x2_LD--1
 
-#     bond32 = contract(upper_half_32, lower_half, ([0, 1], [0, 1])).to(env.device)
-#     bond21 = contract(upper_half_21, lower_half, ([0, 1], [0, 1])).to(env.device)
-#     return(bond32, bond21)
+    # NN bond 3--1
+    C2x2_LU = enlarged_corner(coord, state, env, corner='LU', csites=[2],\
+        force_cpu=force_cpu, verbosity=verbosity)
+    shift_coord= _shift_coord(state,coord,(0,1))
+    C2x2_LD = enlarged_corner(shift_coord, state, env, corner='LD', csites=[0],\
+        force_cpu=force_cpu, verbosity=verbosity)
+    bond_operator = operator.to(C2x2_LU.device)
+    left_half_31 = einsum('ijab,badc,ikcd->jk', C2x2_LU, bond_operator, C2x2_LD)
 
+    # NN bond 2--3
+    C2x2_LU = enlarged_corner(coord, state, env, corner='LU', csites=[1],\
+        force_cpu=force_cpu, verbosity=verbosity)
+    shift_coord= _shift_coord(state,coord,(0,1))
+    C2x2_LD = enlarged_corner(shift_coord, state, env, corner='LD', csites=[2],\
+        force_cpu=force_cpu, verbosity=verbosity)
+    left_half_23 = einsum('ijab,badc,ikcd->jk', C2x2_LU, bond_operator, C2x2_LD)
 
-# def rdm2x2_nnn_3(coord, state, env, operator, force_cpu=False, verbosity=0):
-#     # ---------------- left half -----------------------------------
+    # ---------------- right half -----------------------------------
 
-#     # build left half and contract with the 2-cell operator
-#     # C2x2_LU--1->0
-#     # |\23
-#     # |   \
-#     # 0    op
-#     # 0    /
-#     # |   /
-#     # |/23
-#     # C2x2_LD--1
+    # 0--C2x2_RU
+    #    |
+    #    1
+    #    0
+    #    |
+    # 1--C2x2_RD
+    shift_coord= _shift_coord(state,coord,(1,0))
+    C2x2_RU = enlarged_corner(shift_coord, state, env, corner='RU', csites=[],\
+        force_cpu=force_cpu, verbosity=verbosity)
+    shift_coord= _shift_coord(state,coord,(1,1))
+    C2x2_RD = enlarged_corner(shift_coord, state, env, corner='RD', csites=[],\
+        force_cpu=force_cpu, verbosity=verbosity)
+    right_half = contract(C2x2_RU, C2x2_RD, ([1], [0]))
 
-#     # NN bond 3--1
-#     C2x2_LU = enlarged_corner(coord, state, env, corner='LU', csites=[3], force_cpu=force_cpu, verbosity=verbosity)
-#     C2x2_LD = enlarged_corner(coord, state, env, corner='LD', csites=[1], force_cpu=force_cpu, verbosity=verbosity)
-#     bond_operator = operator.to(C2x2_LU.device)
-#     left_half_31 = einsum('ijab,badc,ikcd->jk', C2x2_LU, bond_operator, C2x2_LD)
-
-#     # NN bond 2--3
-#     C2x2_LU = enlarged_corner(coord, state, env, corner='LU', csites=[2], force_cpu=force_cpu, verbosity=verbosity)
-#     C2x2_LD = enlarged_corner(coord, state, env, corner='LD', csites=[3], force_cpu=force_cpu, verbosity=verbosity)
-#     left_half_23 = einsum('ijab,badc,ikcd->jk', C2x2_LU, bond_operator, C2x2_LD)
-
-#     # ---------------- right half -----------------------------------
-
-#     # 0--C2x2_RU
-#     #    |
-#     #    1
-#     #    0
-#     #    |
-#     # 1--C2x2_RD
-#     C2x2_RU = enlarged_corner(coord, state, env, corner='RU', csites=[], force_cpu=force_cpu, verbosity=verbosity)
-#     C2x2_RD = enlarged_corner(coord, state, env, corner='RD', csites=[], force_cpu=force_cpu, verbosity=verbosity)
-#     right_half = contract(C2x2_RU, C2x2_RD, ([1], [0]))
-
-#     # construct reduced density matrix by contracting left and right halves
-#     # C2x2_LU-0--0-C2x2_RU
-#     # |            |
-#     # op           |
-#     # |            |
-#     # |            |
-#     # C2x2_LD-1--1-C2x2_RD
-#     bond31 = contract(left_half_31, right_half, ([0, 1], [0, 1])).to(env.device)
-#     bond23 = contract(left_half_23, right_half, ([0, 1], [0, 1])).to(env.device)
-#     return(bond31, bond23)
+    # construct reduced density matrix by contracting left and right halves
+    # C2x2_LU-0--0-C2x2_RU
+    # |            |
+    # op           |
+    # |            |
+    # |            |
+    # C2x2_LD-1--1-C2x2_RD
+    bond31 = contract(left_half_31, right_half, ([0, 1], [0, 1])).to(env.device)
+    bond23 = contract(left_half_23, right_half, ([0, 1], [0, 1])).to(env.device)
+    return (bond31, bond23)
