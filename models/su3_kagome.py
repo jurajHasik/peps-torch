@@ -164,17 +164,32 @@ class KAGOME_SU3():
 
     def eval_generators(self, state, env, force_cpu=False):
         pd = self.phys_dim
+        idp2= torch.eye(pd**2, dtype=self.dtype, device=self.device)
+        idp3= torch.eye(pd**3, dtype=self.dtype, device=self.device)
+        idp2= idp2.view(pd,pd,pd,pd)
         gens = {"A": torch.zeros(8, dtype=self.dtype, device=self.device), 
             "B": torch.zeros(8, dtype=self.dtype, device=self.device),
             "C": torch.zeros(8, dtype=self.dtype, device=self.device)}
         
         # vector of su(3) generators in Gell-Mann basis
+        norm= _cast_to_real(rdm_kagome.trace1x1_dn_kagome((0,0), state, env, idp3))
         J= self.obs_ops["J"]
         with torch.no_grad():
+            # for site_type in ['A', 'B', 'C']:
+            #     rdm1x1 = rdm_kagome.rdm1x1_kagome((0,0), state, env, sites_to_keep=(site_type))
+            #     for i in range(J.size(0)):
+            #         gens[site_type][i]= torch.einsum('ij,ji', rdm1x1, J[i,:,:])
+            
+            for i in range(J.size(0)):
+                gens['A'][i]= _cast_to_real(rdm_kagome.trace1x1_dn_kagome((0,0), state, env,\
+                    torch.einsum('ab,ijkl->aijbkl',J[i,:,:],idp2))) / norm
+            for i in range(J.size(0)):
+                gens['B'][i]= _cast_to_real(rdm_kagome.trace1x1_dn_kagome((0,0), state, env,\
+                    torch.einsum('ab,ijkl->iajkbl',J[i,:,:],idp2))) / norm
+            for i in range(J.size(0)):
+                gens['C'][i]= _cast_to_real(rdm_kagome.trace1x1_dn_kagome((0,0), state, env,\
+                    torch.einsum('ab,ijkl->ijaklb',J[i,:,:],idp2))) / norm
             for site_type in ['A', 'B', 'C']:
-                rdm1x1 = rdm_kagome.rdm1x1_kagome((0,0), state, env, sites_to_keep=(site_type))
-                for i in range(J.size(0)):
-                    gens[site_type][i]= torch.einsum('ij,ji', rdm1x1, J[i,:,:])
                 gens[f"m2_{site_type}"]= torch.dot(gens[site_type],gens[site_type])
         return gens
 

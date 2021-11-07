@@ -379,8 +379,8 @@ def trace1x1_dn_kagome(coord, state, env, op, verbosity=0):
 
     return trace
 
-def rdm1x1_kagome(coord, state, env, sites_to_keep=('A', 'B', 'C'), sym_pos_def=False,\
-    verbosity=0):
+def rdm1x1_kagome(coord, state, env, sites_to_keep=('A', 'B', 'C'), force_cpu=False, 
+    sym_pos_def=False, verbosity=0):
     r"""
     :param coord: vertex (x,y) for which reduced density matrix is constructed
     :param state: underlying wavefunction
@@ -397,30 +397,53 @@ def rdm1x1_kagome(coord, state, env, sites_to_keep=('A', 'B', 'C'), sym_pos_def=
     Compute 1-kagome-site reduced density matrix :math:`\rho{1x1}_{sites_to_keep}` centered on vertex ``coord``.
     Inherited from the rdm1x1() method.
     """
+    #    y\x -1 0 1
+    # -1  C1 T4 C4
+    #  0  T1 A  T3
+    #  1  C2 T2 C3 
     who= "rdm1x1_kagome"
-    # C(-1,-1)--1->0
+    if force_cpu:
+        # counter-clockwise
+        C1 = env.C[(state.vertexToSite(coord), (-1, -1))].cpu()
+        C2 = env.C[(state.vertexToSite(coord), (-1, 1))].cpu()
+        C3 = env.C[(state.vertexToSite(coord), (1, 1))].cpu()
+        C4 = env.C[(state.vertexToSite(coord), (1, -1))].cpu()
+        T1 = env.T[(state.vertexToSite(coord), (-1, 0))].cpu()
+        T2 = env.T[(state.vertexToSite(coord), (0, 1))].cpu()
+        T3 = env.T[(state.vertexToSite(coord), (1, 0))].cpu()
+        T4 = env.T[(state.vertexToSite(coord), (0,-1))].cpu()
+    else:
+        C1 = env.C[(state.vertexToSite(coord), (-1, -1))]
+        C2 = env.C[(state.vertexToSite(coord), (-1, 1))]
+        C3 = env.C[(state.vertexToSite(coord), (1, 1))]
+        C4 = env.C[(state.vertexToSite(coord), (1, -1))]
+        T1 = env.T[(state.vertexToSite(coord), (-1, 0))]
+        T2 = env.T[(state.vertexToSite(coord), (0, 1))]
+        T3 = env.T[(state.vertexToSite(coord), (1, 0))]
+        T4 = env.T[(state.vertexToSite(coord), (0,-1))]        
+    # C1(-1,-1)--1->0
     # 0
     # 0
-    # T(-1,0)--2
+    # T1(-1,0)--2
     # 1
-    rdm = contract(env.C[(coord,(-1,-1))],env.T[(coord,(-1,0))],([0],[0]))
+    rdm = contract(C1,T1,([0],[0]))
     if verbosity>0:
         print("rdm=CT "+str(rdm.size()))
-    # C(-1,-1)--0
+    # C1(-1,-1)--0
     # |
-    # T(-1,0)--2->1
+    # T1(-1,0)--2->1
     # 1
     # 0
-    # C(-1,1)--1->2
-    rdm = contract(rdm,env.C[(coord,(-1,1))],([1],[0]))
+    # C2(-1,1)--1->2
+    rdm = contract(rdm,C2,([1],[0]))
     if verbosity>0:
         print("rdm=CTC "+str(rdm.size()))
     # C(-1,-1)--0
     # |
     # T(-1,0)--1
     # |             0->2
-    # C(-1,1)--2 1--T(0,1)--2->3
-    rdm = contract(rdm,env.T[(coord,(0,1))],([2],[1]))
+    # C(-1,1)--2 1--T2(0,1)--2->3
+    rdm = contract(rdm,T2,([2],[1]))
     if verbosity>0:
         print("rdm=CTCT "+str(rdm.size()))
     # TODO - more efficent contraction with uncontracted-double-layer on-site tensor
@@ -435,56 +458,56 @@ def rdm1x1_kagome(coord, state, env, sites_to_keep=('A', 'B', 'C'), sym_pos_def=
     # --A--
     #  /
     #
-    a= double_layer_a(state,coord,_abc_to_012_site(sites_to_keep))
+    a= double_layer_a(state,coord,_abc_to_012_site(sites_to_keep), force_cpu=force_cpu)
 
-    # C(-1,-1)--0
+    # C1(-1,-1)--0
     # |
-    # |             0->2
-    # T(-1,0)--1 1--a--3
-    # |             2\4(s,s')
-    # |             2
-    # C(-1,1)-------T(0,1)--3->1
+    # |              0->2
+    # T1(-1,0)--1 1--a--3
+    # |              2\4(s,s')
+    # |              2
+    # C1(-1,1)-------T2(0,1)--3->1
     rdm = contract(rdm,a,([1,2],[1,2]))
     if verbosity>0:
         print("rdm=CTCTa "+str(rdm.size()))
-    # C(-1,-1)--0 0--T(0,-1)--2->0
-    # |              1
-    # |              2
-    # T(-1,0)--------a--3->2
-    # |              |\4->3(s,s')
-    # |              |
-    # C(-1,1)--------T(0,1)--1
-    rdm = contract(env.T[(coord,(0,-1))],rdm,([0,1],[0,2]))
+    # C1(-1,-1)--0 0--T4(0,-1)--2->0
+    # |               1
+    # |               2
+    # T1(-1,0)--------a--3->2
+    # |               |\4->3(s,s')
+    # |               |
+    # C2(-1,1)--------T2(0,1)--1
+    rdm = contract(T4,rdm,([0,1],[0,2]))
     if verbosity>0:
         print("rdm=CTCTaT "+str(rdm.size()))
-    # C(-1,-1)--T(0,-1)--0 0--C(1,-1)
+    # C(-1,-1)--T(0,-1)--0 0--C4(1,-1)
     # |         |             1->0
     # |         |
     # T(-1,0)---a--2
     # |         |\3(s,s')
     # |         |
     # C(-1,1)---T(0,1)--0->1
-    rdm = contract(env.C[(coord,(1,-1))],rdm,([0],[0]))
+    rdm = contract(C4,rdm,([0],[0]))
     if verbosity>0:
         print("rdm=CTCTaTC "+str(rdm.size()))
-    # C(-1,-1)--T(0,-1)-------C(1,-1)
+    # C(-1,-1)--T(0,-1)-------C4(1,-1)
     # |         |             0
     # |         |             0
-    # T(-1,0)---a--2 1--------T(1,0)
+    # T(-1,0)---a--2 1--------T3(1,0)
     # |         |\3->2(s,s')  2->0
     # |         |
     # C(-1,1)---T(0,1)--1
-    rdm = contract(env.T[(coord,(1,0))],rdm,([0,1],[0,2]))
+    rdm = contract(T3,rdm,([0,1],[0,2]))
     if verbosity>0:
         print("rdm=CTCTaTCT "+str(rdm.size()))
-    # C(-1,-1)--T(0,-1)--------C(1,-1)
+    # C(-1,-1)--T(0,-1)--------C4(1,-1)
     # |         |              |
     # |         |              |
-    # T(-1,0)---a--------------T(1,0)
+    # T(-1,0)---a--------------T3(1,0)
     # |         |\2->1(s,s')   0
     # |         |              0
-    # C(-1,1)---T(0,1)--1 1----C(1,1)
-    rdm = contract(rdm,env.C[(coord,(1,1))],([0,1],[0,1]))
+    # C(-1,1)---T(0,1)--1 1----C3(1,1)
+    rdm = contract(rdm,C3,([0,1],[0,1]))
     if verbosity>0:
         print("rdm=CTCTaTCTC "+str(rdm.size()))
 
@@ -492,6 +515,7 @@ def rdm1x1_kagome(coord, state, env, sites_to_keep=('A', 'B', 'C'), sym_pos_def=
     dof1_pd= state.get_physical_dim()
     rdm= rdm.view([dof1_pd]*(2*len(sites_to_keep)))
     rdm= _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
+    rdm= rdm.to(env.device)
 
     return rdm
 
