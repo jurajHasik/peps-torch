@@ -890,15 +890,14 @@ def apply_TM_2sO_1sChannel(coord, direction, state, env, edge, op=None, verbosit
 
     return E
 
-def corrf_1sO1sO(coord, direction, state, env, op1, get_op2, dist, verbosity=0):
+def corrf_1sO1sO(coord, direction, state, env, op1, op2, dist, verbosity=0):
     r"""
     :param coord: tuple (x,y) specifying vertex on a square lattice
     :param direction: orientation of correlation function
     :param state: underlying wavefunction
     :param env: environment corresponding to ``state``
     :param op1: first one-site operator :math:`O_1`
-    :param get_op2: function returning (position-dependent) second
-                    one-site operator :math:`\text{get_op2}(r)=O_2`
+    :param op2: `O_2`
     :param dist: maximal distance of correlation function
     :param verbosity: logging verbosity
     :type coord: tuple(int,int)
@@ -906,7 +905,7 @@ def corrf_1sO1sO(coord, direction, state, env, op1, get_op2, dist, verbosity=0):
     :type state: IPEPS
     :type env: ENV
     :type op1: torch.tensor
-    :type get_op2: function(int)->torch.tensor
+    :type op2: torch.tensor
     :type dist: int
     :type verbosity: int
     :return: vector ``corrf`` of length ``dist`` holding the values of 
@@ -953,7 +952,7 @@ def corrf_1sO1sO(coord, direction, state, env, op1, get_op2, dist, verbosity=0):
         # E12 = T--O1-- [ --A-- ]   --O2--
         #       C--T--- [ --T-- ]   --T---
         c0= shift_c(c0,direction)
-        E12= apply_TM_1sO(c0, direction, state, env, E1, op=get_op2(r), verbosity=verbosity)
+        E12= apply_TM_1sO(c0, direction, state, env, E1, op2, verbosity=verbosity)
         # and corresponding normalization network
         E0 = apply_TM_1sO(c0, direction, state, env, E0, verbosity=verbosity)
         # and to network with only a op1 operator
@@ -971,15 +970,14 @@ def corrf_1sO1sO(coord, direction, state, env, op1, get_op2, dist, verbosity=0):
 
     return corrf
 
-def corrf_2sOH2sOH_E1(coord, direction, state, env, op1, get_op2, dist, verbosity=0):
+def corrf_2sOH2sOH_E1(coord, direction, state, env, op1, op2, dist, verbosity=0):
     r"""
     :param coord: tuple (x,y) specifying vertex on a square lattice
     :param direction: orientation of correlation function
     :param state: underlying wavefunction
     :param env: environment corresponding to ``state``
     :param op1: first two-site operator :math:`O_1`
-    :param get_op2: function returning (position-dependent) second
-                    two-site operator :math:`\text{get_op2}(r)=O_2`
+    :param op2: first two-site operator :math:`O_2`
     :param dist: maximal distance of correlation function
     :param verbosity: logging verbosity
     :type coord: tuple(int,int)
@@ -987,7 +985,7 @@ def corrf_2sOH2sOH_E1(coord, direction, state, env, op1, get_op2, dist, verbosit
     :type state: IPEPS
     :type env: ENV
     :type op1: torch.tensor
-    :type get_op2: function(int)->torch.tensor
+    :type op2: torch.tensor
     :type dist: int
     :type verbosity: int
     :return: vector ``corrf`` of length ``dist`` holding the values of 
@@ -1037,7 +1035,7 @@ def corrf_2sOH2sOH_E1(coord, direction, state, env, op1, get_op2, dist, verbosit
         #       C--T--T-- [ --T-- ]^r --T--T--
         # E12 = T--|O1|-- [ --A-- ]   --|O2|--
         #       C--T--T-- [ --T-- ]   --T--T--
-        E12= apply_TM_2sO_1sChannel(c0, direction, state, env, E1, op=get_op2(r), verbosity=verbosity)
+        E12= apply_TM_2sO_1sChannel(c0, direction, state, env, E1, op2, verbosity=verbosity)
         #c12_e= shift_c(c0,direction)
         #print(f"c0: {c0} c12_e: {c12_e}")
         # grow normalization network by single TM
@@ -1060,15 +1058,14 @@ def corrf_2sOH2sOH_E1(coord, direction, state, env, op1, get_op2, dist, verbosit
 
     return corrf
 
-def corrf_2sOV2sOV_E2(coord, direction, state, env, op1, get_op2, dist, verbosity=0):
+def corrf_2sOV2sOV_E2(coord, direction, state, env, op1, op2, dist, verbosity=0):
     r"""
     :param coord: tuple (x,y) specifying vertex on a square lattice
     :param direction: orientation of correlation function
     :param state: underlying wavefunction
     :param env: environment corresponding to ``state``
     :param op1: first two-site operator :math:`O_1`
-    :param get_op2: function returning (position-dependent) second
-                    two-site operator :math:`\text{get_op2}(r)=O_2`
+    :param op2: first two-site operator :math:`O_2`
     :param dist: maximal distance of correlation function
     :param verbosity: logging verbosity
     :type coord: tuple(int,int)
@@ -1076,7 +1073,7 @@ def corrf_2sOV2sOV_E2(coord, direction, state, env, op1, get_op2, dist, verbosit
     :type state: IPEPS
     :type env: ENV
     :type op1: torch.tensor
-    :type get_op2: function(int)->torch.tensor
+    :type op2: torch.tensor
     :type dist: int
     :type verbosity: int
     :return: vector ``corrf`` of length ``dist`` holding the values of 
@@ -1125,7 +1122,7 @@ def corrf_2sOV2sOV_E2(coord, direction, state, env, op1, get_op2, dist, verbosit
         #       T--O1-- [ --A-- ]   --O2--
         #       C--T--- [ --T-- ]   --T---
         c0= shift_c(c0,direction)
-        E12= apply_TM_2sO_2sChannel(c0, direction, state, env, E1, op=get_op2(r), verbosity=verbosity)
+        E12= apply_TM_2sO_2sChannel(c0, direction, state, env, E1, op2, verbosity=verbosity)
         # and corresponding normalization network
         E0 = apply_TM_2sO_2sChannel(c0, direction, state, env, E0, verbosity=verbosity)
         # and to network with only a op1 operator
