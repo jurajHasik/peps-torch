@@ -61,8 +61,24 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
     as dictionary ``{"ctm_args":ctm_args, "opt_args":opt_args}``
     """
     verbosity = opt_args.verbosity_opt_epoch
-    checkpoint_file = main_args.out_prefix+"_checkpoint.p"   
-    outputstatefile= main_args.out_prefix+"_state.json"
+      
+
+    #sen niu
+    #print(main_args)
+    if main_args.ansatz in ["IPESS"]:
+        outputstatefile='IPESS_D_'+str(main_args.bond_dim)+'_chi_'+str(main_args.chi)+".json"
+        checkpoint_file='IPESS_D_'+str(main_args.bond_dim)+'_chi_'+str(main_args.chi)+"_checkpoint.p"
+        if abs(main_args.JD)>0:
+            outputstatefile='IPESS_J'+str(main_args.j1)+'_JD'+str(main_args.JD)+'_D'+str(main_args.bond_dim)+'_chi'+str(main_args.chi)+".json"
+            checkpoint_file='IPESS_J'+str(main_args.j1)+'_JD'+str(main_args.JD)+'_D'+str(main_args.bond_dim)+'_chi'+str(main_args.chi)+"_checkpoint.p"
+    elif main_args.ansatz in ["IPEPS"]:
+        outputstatefile='IPEPS_D_'+str(main_args.bond_dim)+'_chi_'+str(main_args.chi)+".json"
+        checkpoint_file='IPEPS_D_'+str(main_args.bond_dim)+'_chi_'+str(main_args.chi)+"_checkpoint.p"
+        if abs(main_args.JD)>0:
+            outputstatefile='IPEPS_J'+str(main_args.j1)+'_JD'+str(main_args.JD)+'_D'+str(main_args.bond_dim)+'_chi'+str(main_args.chi)+".json"
+            checkpoint_file='IPEPS_J'+str(main_args.j1)+'_JD'+str(main_args.JD)+'_D'+str(main_args.bond_dim)+'_chi'+str(main_args.chi)+"_checkpoint.p"
+    #checkpoint_file = main_args.out_prefix+"_checkpoint.p"
+    #outputstatefile= main_args.out_prefix+"_state.json"
     t_data = dict({"loss": [], "min_loss": 1.0e+16, "loss_ls": [], "min_loss_ls": 1.0e+16})
     current_env= [ctm_env_init]
     context= dict({"ctm_args":ctm_args, "opt_args":opt_args, "loss_history": t_data})
