@@ -7,8 +7,8 @@ import ipeps.ipeps as ipeps
 from ipeps.tensor_io import *
 
 class IPESS_KAGOME(ipeps.IPEPS):
-    def __init__(self, triangle_up, bond_site, triangle_down=None, 
-                 SYM_UP_DOWN=True, pgs=None,
+    def __init__(self, triangle_up, bond_site1, triangle_down=None, bond_site2=None, bond_site3=None, 
+                 SYM_UP_DOWN=True, SYM_BOND_S=True, pgs=None,
                  peps_args=cfg.peps_args, global_args=cfg.global_args):
         r"""
         :param sym_tensors: list of selected symmetric tensors
@@ -101,52 +101,69 @@ class IPESS_KAGOME(ipeps.IPEPS):
         TODO we infer the size of the cluster from the keys of sites. Is it OK?
         """
         self.SYM_UP_DOWN= SYM_UP_DOWN
+        self.SYM_BOND_S=SYM_BOND_S
         if pgs==None: pgs= (None,None,None)
         assert isinstance(pgs,tuple) and len(pgs)==3,"Invalid point-group symmetries"
         self.pgs= pgs
-        self.elem_tensors= OrderedDict({'UP_T': triangle_up, 'BOND_S': bond_site})
+        self.elem_tensors= OrderedDict({'UP_T': triangle_up, 'BOND_S1': bond_site1})
         if not SYM_UP_DOWN:
             assert isinstance(triangle_down,torch.Tensor),\
                 "rank-3 tensor for down triangle must be provided"
             self.elem_tensors['DOWN_T']= triangle_down
         else:
             self.elem_tensors['DOWN_T']= triangle_up
-
+        if not SYM_BOND_S:
+            self.elem_tensors['BOND_S2']= bond_site2
+            self.elem_tensors['BOND_S3']= bond_site3
+        else:
+            self.elem_tensors['BOND_S2']= bond_site1
+            self.elem_tensors['BOND_S3']= bond_site1
+            
         # TODO
         # self.to_PG_symmetric_()
+
         sites = self.build_onsite_tensors()
 
         super().__init__(sites, lX=1, lY=1, peps_args=peps_args,
                          global_args=global_args)
 
-    def __str__(self):
-        print(f"Symmetric up and down triangle: {self.SYM_UP_DOWN}")
-        print(f"lX x lY: {self.lX} x {self.lY}")
-        for nid, coord, site in [(t[0], *t[1]) for t in enumerate(self.coeffs.items())]:
-            print(f"A{nid} {coord}: {site.size()}")
+    # def __str__(self):
+    #     print(f"Symmetric up and down triangle: {self.SYM_UP_DOWN}")
+    #     print(f"lX x lY: {self.lX} x {self.lY}")
+    #     for nid, coord, site in [(t[0], *t[1]) for t in enumerate(self.coeffs.items())]:
+    #         print(f"A{nid} {coord}: {site.size()}")
 
-        # show tiling of a square lattice
-        coord_list = list(self.coeffs.keys())
-        mx, my = 3 * self.lX, 3 * self.lY
-        label_spacing = 1 + int(math.log10(len(self.coeffs.keys())))
-        for y in range(-my, my):
-            if y == -my:
-                print("y\\x ", end="")
-                for x in range(-mx, mx):
-                    print(str(x) + label_spacing * " " + " ", end="")
-                print("")
-            print(f"{y:+} ", end="")
-            for x in range(-mx, mx):
-                print(f"A{coord_list.index(self.vertexToSite((x, y)))} ", end="")
-            print("")
+    #     # show tiling of a square lattice
+    #     coord_list = list(self.coeffs.keys())
+    #     mx, my = 3 * self.lX, 3 * self.lY
+    #     label_spacing = 1 + int(math.log10(len(self.coeffs.keys())))
+    #     for y in range(-my, my):
+    #         if y == -my:
+    #             print("y\\x ", end="")
+    #             for x in range(-mx, mx):
+    #                 print(str(x) + label_spacing * " " + " ", end="")
+    #             print("")
+    #         print(f"{y:+} ", end="")
+    #         for x in range(-mx, mx):
+    #             print(f"A{coord_list.index(self.vertexToSite((x, y)))} ", end="")
+    #         print("")
 
-        return ""
+    #     return ""
 
     def get_parameters(self):
+        #print(self)
         if self.SYM_UP_DOWN:
-            return [self.elem_tensors['UP_T'], self.elem_tensors['BOND_S']]
+            if self.SYM_BOND_S:
+                return [self.elem_tensors['UP_T'], self.elem_tensors['BOND_S1']]
+            else:
+                return [self.elem_tensors['UP_T'], self.elem_tensors['BOND_S1'], \
+                    self.elem_tensors['BOND_S2'], self.elem_tensors['BOND_S3']]
         else:
-            return self.elem_tensors.values()
+            if self.SYM_BOND_S:
+                return [self.elem_tensors['UP_T'], self.elem_tensors['BOND_S1'], \
+                    self.elem_tensors['DOWN_T']]
+            else:
+                return self.elem_tensors.values()
 
     def get_checkpoint(self):
         return self.elem_tensors
@@ -156,6 +173,9 @@ class IPESS_KAGOME(ipeps.IPEPS):
         self.elem_tensors= checkpoint["parameters"]
         if self.SYM_UP_DOWN:
             self.elem_tensors['DOWN_T']= self.elem_tensors['UP_T']
+        if self.SYM_BOND_S:
+            self.elem_tensors['BOND_S2']= self.elem_tensors['BOND_S1']
+            self.elem_tensors['BOND_S3']= self.elem_tensors['BOND_S1']
         for t in self.elem_tensors.values(): t.requires_grad_(False)
         self.sites = self.build_onsite_tensors()
 
@@ -208,11 +228,14 @@ class IPESS_KAGOME(ipeps.IPEPS):
         #        c             c
         # C      T             T        C
         #
+        
+
         a_tensor = torch.einsum('iab,uji,jkl,vkc,wld->uvwabcd', self.elem_tensors['UP_T'],
-            self.elem_tensors['BOND_S'], self.elem_tensors['DOWN_T'], self.elem_tensors['BOND_S'], \
-            self.elem_tensors['BOND_S'])
+            self.elem_tensors['BOND_S1'], self.elem_tensors['DOWN_T'], self.elem_tensors['BOND_S2'], \
+            self.elem_tensors['BOND_S3'])
         aux_D= self.elem_tensors['UP_T'].size(0)
-        a_tensor= a_tensor.reshape([27]+[aux_D]*4) / a_tensor.abs().max()
+        #niusen revised
+        a_tensor= a_tensor.reshape([(torch.Tensor.size(a_tensor)[0]**3)]+[aux_D]*4) / a_tensor.abs().max()
         sites= {(0, 0): a_tensor}
         return sites
 
@@ -222,6 +245,9 @@ class IPESS_KAGOME(ipeps.IPEPS):
             self.elem_tensors[k]= self.elem_tensors[k] + noise * (rand_t-1.0)
         if self.SYM_UP_DOWN:
             self.elem_tensors['DOWN_T']= self.elem_tensors['UP_T']
+        if self.SYM_BOND_S:
+            self.elem_tensors['BOND_S2']= self.elem_tensors['BOND_S1']
+            self.elem_tensors['BOND_S3']= self.elem_tensors['BOND_S1']
         self.to_PG_symmetric_()
         self.sites = self.build_onsite_tensors()
 
@@ -269,18 +295,23 @@ def extend_bond_dim(state, new_d):
     assert len(auxd_set)==1, "different auxiliary dimensions for elem tensors"
     assert new_d>=auxd_set[0], "Desired dimension is smaller than current aux dimension"
     ad= auxd_set[0]
-    pd= state.elem_tensors['BOND_S'].size(0)
+    pd= state.elem_tensors['BOND_S1'].size(0)
     new_elem_tensors= dict()
     new_elem_tensors['UP_T']= torch.zeros(new_d,new_d,new_d, dtype=state.dtype, device=state.device)
     new_elem_tensors['UP_T'][:ad,:ad,:ad]= state.elem_tensors['UP_T']
     new_elem_tensors['DOWN_T']= torch.zeros(new_d,new_d,new_d, dtype=state.dtype, device=state.device)
     new_elem_tensors['DOWN_T'][:ad,:ad,:ad]= state.elem_tensors['DOWN_T']
-    new_elem_tensors['BOND_S']= torch.zeros(pd,new_d,new_d, dtype=state.dtype, device=state.device)
-    new_elem_tensors['BOND_S'][:,:ad,:ad]= state.elem_tensors['BOND_S']
-
-    new_state= state.__class__(new_elem_tensors['UP_T'], new_elem_tensors['BOND_S'],\
+    new_elem_tensors['BOND_S1']= torch.zeros(pd,new_d,new_d, dtype=state.dtype, device=state.device)
+    new_elem_tensors['BOND_S1'][:,:ad,:ad]= state.elem_tensors['BOND_S1']
+    new_elem_tensors['BOND_S2']= torch.zeros(pd,new_d,new_d, dtype=state.dtype, device=state.device)
+    new_elem_tensors['BOND_S2'][:,:ad,:ad]= state.elem_tensors['BOND_S2']
+    new_elem_tensors['BOND_S3']= torch.zeros(pd,new_d,new_d, dtype=state.dtype, device=state.device)
+    new_elem_tensors['BOND_S3'][:,:ad,:ad]= state.elem_tensors['BOND_S3']
+    new_state= state.__class__(new_elem_tensors['UP_T'], new_elem_tensors['BOND_S1'],\
         triangle_down=None if state.SYM_UP_DOWN else new_elem_tensors['DOWN_T'],\
-        SYM_UP_DOWN=state.SYM_UP_DOWN, pgs= state.pgs,\
+        bond_site2=None if state.SYM_BOND_S else new_elem_tensors['BOND_S2'],\
+        bond_site3=None if state.SYM_BOND_S else new_elem_tensors['BOND_S3'],\
+        SYM_UP_DOWN=state.SYM_UP_DOWN, SYM_BOND_S=state.SYM_BOND_S, pgs= state.pgs,\
         peps_args=cfg.peps_args, global_args=cfg.global_args)
 
     return new_state
@@ -351,6 +382,7 @@ def read_ipess_kagome(jsonfile, peps_args=cfg.peps_args, global_args=cfg.global_
         raw_state = json.load(j)
 
         SYM_UP_DOWN= raw_state["SYM_UP_DOWN"]
+        SYM_BOND_S= raw_state["SYM_BOND_S"]
 
         pgs=None
         if "pgs" in raw_state.keys():
@@ -358,17 +390,18 @@ def read_ipess_kagome(jsonfile, peps_args=cfg.peps_args, global_args=cfg.global_
 
         # Loop over non-equivalent tensor,coeffs pairs in the unit cell
         elem_tensors= OrderedDict()
-        assert set(('UP_T', 'BOND_S', 'DOWN_T'))==set(list(raw_state["elem_tensors"].keys())),\
+        assert set(('UP_T', 'BOND_S1', 'DOWN_T', 'BOND_S2', 'BOND_S3'))==set(list(raw_state["elem_tensors"].keys())),\
             "missing elementary tensors"
         for key,t in raw_state["elem_tensors"].items():
             elem_tensors[key]= torch.from_numpy(read_bare_json_tensor_np_legacy(t))\
                 .to(global_args.device)
 
         if SYM_UP_DOWN: elem_tensors['DOWN_T']=None
-
-        state = IPESS_KAGOME(elem_tensors['UP_T'], elem_tensors['BOND_S'], \
-            triangle_down=elem_tensors['DOWN_T'], SYM_UP_DOWN=SYM_UP_DOWN, \
-            pgs= pgs, peps_args=peps_args, global_args=global_args)
+        if SYM_BOND_S: elem_tensors['BOND_S2']=None
+        if SYM_BOND_S: elem_tensors['BOND_S3']=None
+        state = IPESS_KAGOME(elem_tensors['UP_T'], elem_tensors['BOND_S1'], \
+            triangle_down=elem_tensors['DOWN_T'], bond_site2=elem_tensors['BOND_S2'], bond_site3=elem_tensors['BOND_S3'],\
+            SYM_UP_DOWN=SYM_UP_DOWN, SYM_BOND_S=SYM_BOND_S, pgs= pgs, peps_args=peps_args, global_args=global_args)
     return state
 
 def write_ipess_kagome(state, outputfile, tol=1.0e-14, normalize=False):
@@ -404,7 +437,7 @@ def write_ipess_kagome(state, outputfile, tol=1.0e-14, normalize=False):
     TODO implement cutoff on elements with magnitude below tol
     """
     json_state = dict({"lX": state.lX, "lY": state.lY, \
-        "elem_tensors": {}, "SYM_UP_DOWN": state.SYM_UP_DOWN, \
+        "elem_tensors": {}, "SYM_UP_DOWN": state.SYM_UP_DOWN, "SYM_BOND_S": state.SYM_BOND_S,\
         "pgs": list(state.pgs)})
     # if state.pgs!=(None, None, None):
     #     state= to_PG_symmetric(state, state.pgs)
