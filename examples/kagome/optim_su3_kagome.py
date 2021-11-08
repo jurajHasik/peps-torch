@@ -30,6 +30,8 @@ parser.add_argument("--ansatz", type=str, default=None, help="choice of the tens
      choices=["IPEPS", "IPESS", "IPESS_PG", "A_2,B"])
 parser.add_argument("--no_sym_up_dn", action='store_false', dest='sym_up_dn',\
     help="same trivalent tensors for up and down triangles")
+parser.add_argument("--no_sym_bonds", action='store_false', dest='sym_bond_S',\
+    help="same bond tensors for sites A,B and C")
 parser.add_argument("--legacy_instate", action='store_true', dest='legacy_instate',\
     help="legacy format of states")
 parser.add_argument("--force_cpu", action='store_true', help="evaluate energy on cpu")
@@ -50,8 +52,8 @@ def main():
     
     # initialize the ipess/ipeps
     if args.ansatz in ["IPESS","IPESS_PG","A_2,B"]:
-        ansatz_pgs=None
-        if args.ansatz=="A_2,B": ansatz_pgs= ("A_2", "A_2", "B")
+        ansatz_pgs= None
+        if args.ansatz=="A_2,B": ansatz_pgs= IPESS_KAGOME_PG.PG_A2_B
         
         if args.instate!=None:
             if args.ansatz=="IPESS":
@@ -68,10 +70,12 @@ def main():
             # possibly symmetrize by PG
             if ansatz_pgs!=None:
                 if type(state)==IPESS_KAGOME_GENERIC:
-                    state= to_PG_symmetric(state, SYM_UP_DOWN=args.sym_up_dn, pgs=ansatz_pgs)
+                    state= to_PG_symmetric(state, SYM_UP_DOWN=args.sym_up_dn,\
+                        SYM_BOND_S=args.sym_bond_S, pgs=ansatz_pgs)
                 elif type(state)==IPESS_KAGOME_PG:
-                    if state.pgs==(None,None,None):
-                        state= to_PG_symmetric(state, SYM_UP_DOWN=args.sym_up_dn, pgs=ansatz_pgs)
+                    if state.pgs==None or state.pgs==dict():
+                        state= to_PG_symmetric(state, SYM_UP_DOWN=args.sym_up_dn,\
+                            SYM_BOND_S=args.sym_bond_S, pgs=ansatz_pgs)
                     elif state.pgs==ansatz_pgs:
                         # nothing to do here
                         pass
@@ -87,16 +91,18 @@ def main():
                 dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
             T_d= torch.zeros(args.bond_dim, args.bond_dim,\
                 args.bond_dim, dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
+            B_c= torch.zeros(3, args.bond_dim, args.bond_dim,\
+                dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
             B_a= torch.zeros(3, args.bond_dim, args.bond_dim,\
                 dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
+            B_b= torch.zeros(3, args.bond_dim, args.bond_dim,\
+                dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
             if args.ansatz in ["IPESS_PG", "A_2,B"]:
-                state= IPESS_KAGOME_PG(T_u, B_a, T_d, SYM_UP_DOWN=args.sym_up_dn, pgs=ansatz_pgs)
+                state= IPESS_KAGOME_PG(T_u, B_c, T_d, T_d=T_d, B_a=B_a, B_b=B_b,\
+                    SYM_UP_DOWN=args.sym_up_dn,SYM_BOND_S=args.sym_bond_S, pgs=ansatz_pgs)
             elif args.ansatz in ["IPESS"]:
-                B_b= torch.zeros(3, args.bond_dim, args.bond_dim,\
-                    dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
-                B_c= torch.zeros(3, args.bond_dim, args.bond_dim,\
-                    dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
-                state= IPESS_KAGOME_GENERIC({'T_u': T_u, 'B_a': B_a, 'T_d': T_d, 'B_b': B_b, 'B_c': B_c})
+                state= IPESS_KAGOME_GENERIC({'T_u': T_u, 'B_a': B_a, 'T_d': T_d,\
+                    'B_b': B_b, 'B_c': B_c})
             state.load_checkpoint(args.opt_resume)
         elif args.ipeps_init_type=='RANDOM':
             bond_dim = args.bond_dim
@@ -104,16 +110,18 @@ def main():
                 dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)-1.0
             T_d= torch.rand(bond_dim, bond_dim, bond_dim,\
                 dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)-1.0
-            B_a= torch.rand(3, bond_dim, bond_dim,\
+            B_c= torch.rand(3, bond_dim, bond_dim,\
+                dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)-1.0
+            B_a= torch.rand(3, args.bond_dim, args.bond_dim,\
+                dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)-1.0
+            B_b= torch.rand(3, args.bond_dim, args.bond_dim,\
                 dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)-1.0
             if args.ansatz in ["IPESS_PG", "A_2,B"]:
-                state = IPESS_KAGOME_PG(T_u, B_a, T_d, SYM_UP_DOWN=args.sym_up_dn, pgs=ansatz_pgs)
+                state = IPESS_KAGOME_PG(T_u, B_c, T_d=T_d, B_a=B_a, B_b=B_b,\
+                    SYM_UP_DOWN=args.sym_up_dn,SYM_BOND_S=args.sym_bond_S, pgs=ansatz_pgs)
             elif args.ansatz in ["IPESS"]:
-                B_b= torch.rand(3, args.bond_dim, args.bond_dim,\
-                    dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
-                B_c= torch.rand(3, args.bond_dim, args.bond_dim,\
-                    dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
-                state= IPESS_KAGOME_GENERIC({'T_u': T_u, 'B_a': B_a, 'T_d': T_d, 'B_b': B_b, 'B_c': B_c})
+                state= IPESS_KAGOME_GENERIC({'T_u': T_u, 'B_a': B_a, 'T_d': T_d,\
+                    'B_b': B_b, 'B_c': B_c})
     
     elif args.ansatz in ["IPEPS"]:    
         ansatz_pgs=None
@@ -210,7 +218,7 @@ def main():
 
     @torch.no_grad()
     def obs_fn(state, ctm_env, opt_context):
-        if args.ansatz in ["IPESS_PG", "A_2,B"]:
+        if args.ansatz in ["A_2,B"]:
             state_sym= to_PG_symmetric(state, state.pgs)
         else:
             state_sym= state
