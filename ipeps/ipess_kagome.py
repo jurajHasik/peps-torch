@@ -198,11 +198,23 @@ def read_ipess_kagome_generic(jsonfile, peps_args=cfg.peps_args, global_args=cfg
 
         # Loop over non-equivalent tensor,coeffs pairs in the unit cell
         ipess_tensors= OrderedDict()
-        assert set(('T_u','T_d','B_a','B_b','B_c'))==set(list(raw_state["ipess_tensors"].keys())),\
-            "missing elementary tensors"
-        for key,t in raw_state["ipess_tensors"].items():
-            ipess_tensors[key]= torch.from_numpy(read_bare_json_tensor_np_legacy(t))\
-                .to(global_args.device)
+        # legacy
+        if "elem_tensors" in raw_state.keys():
+            assert set(("UP_T","DOWN_T","BOND_S1","BOND_S2","BOND_S3"))\
+                ==set(list(raw_state["elem_tensors"].keys())),"missing elementary tensors"
+            keymap={"UP_T": "T_u", "DOWN_T": "T_d", "BOND_S1": "B_c","BOND_S3": "B_a","BOND_S2": "B_b"}
+            for key,t in raw_state["elem_tensors"].items():
+                ipess_tensors[keymap[key]]= torch.from_numpy(read_bare_json_tensor_np_legacy(t))\
+                    .to(global_args.device)
+        # default
+        elif "ipess_tensors" in raw_state.keys(): 
+            assert set(('T_u','T_d','B_a','B_b','B_c'))==set(list(raw_state["ipess_tensors"].keys())),\
+                "missing ipess tensors"
+            for key,t in raw_state["ipess_tensors"].items():
+                ipess_tensors[key]= torch.from_numpy(read_bare_json_tensor_np_legacy(t))\
+                    .to(global_args.device)
+        else:
+            raise RuntimeError("Not a valid IPESS_KAGOME_GENERIC state.")
 
         state = IPESS_KAGOME_GENERIC(ipess_tensors, peps_args=peps_args, \
             global_args=global_args)
@@ -448,26 +460,26 @@ def _to_PG_symmetric(pgs, elem_t):
     for t_id,pg in pgs.items():
         if pg is None: continue
         # bond-tensors        
-        if t_id in ["B_a", "B_b", "B_c"]:
+        if t_id in ["B_a", "B_b", "B_c"] and t_id in elem_t.keys():
             # A+iB
             if pg=="A":
-                elem_t[t_id]= 0.5*(elem_t["B_a"]\
-                    + elem_t["B_a"].permute(0,2,1).conj())
+                elem_t[t_id]= 0.5*(elem_t[t_id]\
+                    + elem_t[t_id].permute(0,2,1).conj())
             elif pg=="B":
             # B + iA 
-                elem_t["B_a"]= 0.5*(elem_t["B_a"]\
-                    - elem_t["B_a"].permute(0,2,1).conj())
+                elem_t[t_id]= 0.5*(elem_t[t_id]\
+                    - elem_t[t_id].permute(0,2,1).conj())
             else:
                 raise RuntimeError("Unsupported point-group "+t_id+" "+pg)
         # trivalent tensor "up" and "down" 
-        if t_id in ["T_u", "T_d"]:    
+        if t_id in ["T_u", "T_d"] and t_id in elem_t.keys():    
             # A_2 + iA_1
             if pg=="A_2":
-                elem_t[elem_t_id]= (1./3)*(elem_t[elem_t_id]\
-                    + elem_t[elem_t_id].permute(1,2,0)\
-                    + elem_t[elem_t_id].permute(2,0,1))
-                elem_t[elem_t_id]= \
-                    0.5*(elem_t[elem_t_id] - elem_t[elem_t_id].permute(0,2,1).conj())
+                elem_t[t_id]= (1./3)*(elem_t[t_id]\
+                    + elem_t[t_id].permute(1,2,0)\
+                    + elem_t[t_id].permute(2,0,1))
+                elem_t[t_id]= \
+                    0.5*(elem_t[t_id] - elem_t[t_id].permute(0,2,1).conj())
             else:
                 raise RuntimeError("Unsupported point-group "+t_id+" "+pg)
     return elem_t

@@ -47,7 +47,7 @@ def main():
     torch.set_num_threads(args.omp_cores)
     torch.manual_seed(args.seed)
 
-    model= spin_half_kagome.S_HALF_KAGOME(j1=args.j1,  JD=args.JD, j1sq=args.j1sq,j2=args.j2,\
+    model= spin_half_kagome.S_HALF_KAGOME(j1=args.j1,JD=args.JD,j1sq=args.j1sq,j2=args.j2,\
         j2sq=args.j2sq,jtrip=args.jtrip,jperm=args.jperm)
 
     # initialize the ipess/ipeps
@@ -147,6 +147,12 @@ def main():
         e_up = model.energy_triangle_up(state, env, force_cpu=force_cpu)
         # e_nnn = model.energy_nnn(state, env)
         return (e_up + e_dn)/3 #+ e_nnn) / 3
+    def energy_f_complex(state, env, force_cpu=False):
+        #print(env)
+        e_dn = model.energy_triangle_dn_NoCheck(state, env, force_cpu=force_cpu)
+        e_up = model.energy_triangle_up_NoCheck(state, env, force_cpu=force_cpu)
+        # e_nnn = model.energy_nnn(state, env)
+        return (e_up + e_dn)/3 #+ e_nnn) / 3
     def dn_energy_f(state, env, force_cpu=False):
         #print(env)
         e_dn = model.energy_triangle_dn(state, env, force_cpu=force_cpu)
@@ -241,27 +247,27 @@ def main():
         chi_set=numpy.array([10,20,40,80,100,120,160])
     else:
         chi_set=numpy.array([10,20,40,80])
-    energies=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='float64')
-    e_t_dns=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='float64')
-    e_t_ups=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='float64')
-    m_0=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='float64')
-    m_1=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='float64')
-    m_2=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='float64')
-    sz_0=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='float64')
-    sp_0=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='float64')
-    sm_0=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='float64')
-    sz_1=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='float64')
-    sp_1=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='float64')
-    sm_1=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='float64')
-    sz_2=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='float64')
-    sp_2=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='float64')
-    sm_2=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='float64')
-    SS_dn_01=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='float64')
-    SS_up_01=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='float64')
-    SS_dn_02=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='float64')
-    SS_up_02=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='float64')
-    SS_dn_12=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='float64')
-    SS_up_12=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='float64')
+    energies=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='complex128')
+    e_t_dns=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='complex128')
+    e_t_ups=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='complex128')
+    m_0=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='complex128')
+    m_1=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='complex128')
+    m_2=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='complex128')
+    sz_0=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='complex128')
+    sp_0=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='complex128')
+    sm_0=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='complex128')
+    sz_1=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='complex128')
+    sp_1=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='complex128')
+    sm_1=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='complex128')
+    sz_2=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='complex128')
+    sp_2=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='complex128')
+    sm_2=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='complex128')
+    SS_dn_01=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='complex128')
+    SS_up_01=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='complex128')
+    SS_dn_02=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='complex128')
+    SS_up_02=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='complex128')
+    SS_dn_12=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='complex128')
+    SS_up_12=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='complex128')
     CTMspectras= numpy.empty([4,numpy.size(chi_set)], dtype=object)
     CTMspectra_name= numpy.empty(4, dtype=object)
     for cchi in range(0, numpy.size(chi_set)):
@@ -272,13 +278,13 @@ def main():
         ctm_env, history, t_ctm, t_conv_check = ctmrg.run(state, ctm_env_init, \
              conv_check=ctmrg_conv_energy, ctm_args=ctmargs)
         spect=print_corner_spectra(ctm_env)
-        energies[cchi]=energy_f(state, ctm_env, force_cpu=False).numpy()
+        energies[cchi]=energy_f_complex(state, ctm_env, force_cpu=False).numpy()
         obs_values, obs_labels=obs_fn(state, ctm_env, None)
         e_t_dns[cchi]=obs_values[0]
         e_t_ups[cchi]=obs_values[1]
-        m_0[cchi]=obs_values[2]
-        m_1[cchi]=obs_values[3]
-        m_2[cchi]=obs_values[4]
+        m_0[cchi]=numpy.sqrt(obs_values[2])
+        m_1[cchi]=numpy.sqrt(obs_values[3])
+        m_2[cchi]=numpy.sqrt(obs_values[4])
         sz_0[cchi]=obs_values[5]
         sp_0[cchi]=obs_values[6]
         sm_0[cchi]=obs_values[7]
@@ -299,14 +305,14 @@ def main():
             CTMspectra_name[n_corner]=spect[n_corner][0]
     D=args.bond_dim
     chi=chi_origin
-    if args.ansatz in ["IPESS"]:
+    if args.ansatz in ["IPESS","IPESS_PG","A_2,B"]:
         filenm='ob_IPESS_D_'+str(D)+'_chi_'+str(chi)
-        if abs(args.JD)>0:
-            filenm='ob_IPESS_J'+str(args.j1)+'_JD'+str(args.JD)+'_D'+str(D)+'_chi'+str(chi)
+        # if abs(args.JD)>0:
+        #     filenm='ob_IPESS_J'+str(args.j1)+'_JD'+str(args.JD)+'_D'+str(D)+'_chi'+str(chi)
     elif args.ansatz in ["IPEPS"]:
         filenm='ob_IPEPS_D_'+str(D)+'_chi_'+str(chi)
-        if abs(args.JD)>0:
-            filenm='ob_IPEPS_J'+str(args.j1)+'_JD'+str(args.JD)+'_D'+str(D)+'_chi'+str(chi)
+        # if abs(args.JD)>0:
+        #     filenm='ob_IPEPS_J'+str(args.j1)+'_JD'+str(args.JD)+'_D'+str(D)+'_chi'+str(chi)
     filenm=filenm+'.mat'
     io.savemat(filenm,{'chi_set':chi_set,'e_t_dns':e_t_dns,'e_t_ups':e_t_ups,'m_0':m_0,'m_1':m_1,'m_2':m_2,\
         'sz_0':sz_0,'sp_0':sp_0,'sm_0':sm_0,'sz_1':sz_1,'sp_1':sp_1,'sm_1':sm_1,'sz_2':sz_2,'sp_2':sp_2,'sm_2':sm_2,\

@@ -137,10 +137,6 @@ def main():
             +str(args.ansatz)+" is not supported")
 
 
-    import pdb;
-    pdb.set_trace()
-        
-
     def energy_f(state, env, force_cpu=False):
         #print(env)
         e_dn = model.energy_triangle_dn(state, env, force_cpu=force_cpu)
