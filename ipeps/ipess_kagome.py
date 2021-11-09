@@ -320,7 +320,7 @@ class IPESS_KAGOME_PG(IPESS_KAGOME_GENERIC):
         ipess_tensors= OrderedDict({'T_u': T_u, 'T_d': T_u,\
             'B_c': B_c, 'B_a': B_c, 'B_b': B_c})
         if not SYM_UP_DOWN:
-            assert isinstance(triangle_down,torch.Tensor),\
+            assert isinstance(T_d,torch.Tensor),\
                 "rank-3 tensor for down triangle must be provided"
             self.elem_tensors['T_d']=ipess_tensors['T_d'] = T_d
         if not SYM_BOND_S:
@@ -531,8 +531,11 @@ def read_ipess_kagome_pg(jsonfile, peps_args=cfg.peps_args, global_args=cfg.glob
         pgs=None
         if "pgs" in raw_state.keys():
             # legacy
-            if not isinstance(dict,raw_state["pgs"]):
+            if not isinstance(raw_state["pgs"],dict):
                 pgs= tuple( raw_state["pgs"] )
+                if pgs==(None,None,None): pgs=None
+                elif pgs==("A_2","A_2","B"):
+                    pgs= {"T_u": "A_2", "T_d": "A_2", "B_c": "B", "B_a": "B", "B_b": "B"}
             else:
                 pgs= raw_state["pgs"]
 

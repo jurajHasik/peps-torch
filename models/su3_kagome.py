@@ -117,6 +117,12 @@ class KAGOME_SU3():
             obs["avg_bonds_up"] = torch.einsum('ijlabd,lijdab', rdm2x2_ring, self.perm2_tri)
             obs["avg_bonds_up"] = _cast_to_real(obs["avg_bonds_up"]) / 3.0
 
+            # chirality for 2x2 subsystem
+            _tmp1= torch.einsum('ijlabc,abcijl', rdm2x2_ring, chirality)
+            _tmp2= rdm_kagome.rdm2x2_dn_triangle_with_operator((0,0), state, env,\
+                chirality.view(pd**3,pd**3), force_cpu=force_cpu)
+            print(f"{_tmp1} {_tmp2}")
+
             obs.update(self.eval_generators(state, env, force_cpu=force_cpu))
 
         # prepare list with labels and values

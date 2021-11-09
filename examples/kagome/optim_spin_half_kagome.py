@@ -54,15 +54,9 @@ def main():
         
         if args.instate!=None:
             if args.ansatz=="IPESS":
-                if not args.legacy_instate:
-                    state= read_ipess_kagome_generic(args.instate)
-                else:
-                    state= read_ipess_kagome_generic_legacy(args.instate, ansatz=args.ansatz)
+                state= read_ipess_kagome_generic(args.instate)
             elif args.ansatz in ["IPESS_PG","A_2,B"]:
-                if not args.legacy_instate:
-                    state= read_ipess_kagome_pg(args.instate)
-                else:
-                    state= read_ipess_kagome_generic_legacy(args.instate, ansatz=args.ansatz)
+                state= read_ipess_kagome_pg(args.instate)
 
             # possibly symmetrize by PG
             if ansatz_pgs!=None:
@@ -142,6 +136,9 @@ def main():
         raise ValueError("Missing ansatz specification --ansatz "\
             +str(args.ansatz)+" is not supported")
 
+
+    import pdb;
+    pdb.set_trace()
         
 
     def energy_f(state, env, force_cpu=False):
