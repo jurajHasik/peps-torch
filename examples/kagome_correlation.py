@@ -5,15 +5,14 @@ import math
 import torch
 import copy
 from collections import OrderedDict
-from ipeps.ipess_kagome_NS import IPESS_KAGOME, read_ipess_kagome, extend_bond_dim, to_PG_symmetric
+from ipeps.ipess_kagome import IPESS_KAGOME, read_ipess_kagome, extend_bond_dim, to_PG_symmetric
 from ipeps.ipeps_kagome import IPEPS_KAGOME, read_ipeps_kagome
-from models import spin_half_kagome_NS
+from models import spin_half_kagome
 from ctm.generic.env import *
-from ctm.generic import ctmrg_NS
+from ctm.generic import ctmrg
 from ctm.generic import rdm
-from ctm.generic import corrf_NS
+from ctm.generic import corrf
 from ctm.generic import transferops
-from optim.ad_optim_lbfgs_mod_NS import optimize_state
 import json
 import unittest
 import logging
@@ -26,6 +25,7 @@ log = logging.getLogger(__name__)
 parser = cfg.get_args_parser()
 parser.add_argument("--theta", type=float, default=0, help="angle [<value> x pi] parametrizing the chiral Hamiltonian")
 parser.add_argument("--j1", type=float, default=1., help="nearest-neighbor exchange coupling")
+parser.add_argument("--JD", type=float, default=0, help="two-spin DM interaction")
 parser.add_argument("--j1sq", type=float, default=0, help="nearest-neighbor biquadratic exchange coupling")
 parser.add_argument("--j2", type=float, default=0, help="next-nearest-neighbor exchange coupling")
 parser.add_argument("--j2sq", type=float, default=0, help="next-nearest-neighbor biquadratic exchange coupling")
@@ -50,7 +50,7 @@ def main():
     torch.set_num_threads(args.omp_cores)
     torch.manual_seed(args.seed)
 
-    model= spin_half_kagome_NS.S1_KAGOME(j1=args.j1, j1sq=args.j1sq,j2=args.j2,j2sq=args.j2sq,\
+    model= spin_half_kagome.S1_KAGOME(j1=args.j1, JD=args.JD, j1sq=args.j1sq,j2=args.j2,j2sq=args.j2sq,\
         jtrip=args.jtrip,jperm=args.jperm)
 
     #sen niu
@@ -281,19 +281,19 @@ def main():
         chi_set=numpy.array([10,20,40,80])
     TransSpec_x=numpy.array(torch.zeros(Ns,2,numpy.size(chi_set)), dtype='float64')
     TransSpec_y=numpy.array(torch.zeros(Ns,2,numpy.size(chi_set)), dtype='float64')
-    dimer_correl=numpy.array(torch.zeros(dist+1,2,numpy.size(chi_set)), dtype='float64')
-    szsz_correl=numpy.array(torch.zeros(dist+1,2,numpy.size(chi_set)), dtype='float64')
-    spsp_correl=numpy.array(torch.zeros(dist+1,2,numpy.size(chi_set)), dtype='float64')
-    smsm_correl=numpy.array(torch.zeros(dist+1,2,numpy.size(chi_set)), dtype='float64')
-    spsm_correl=numpy.array(torch.zeros(dist+1,2,numpy.size(chi_set)), dtype='float64')
-    smsp_correl=numpy.array(torch.zeros(dist+1,2,numpy.size(chi_set)), dtype='float64')
+    dimer_correl=numpy.array(torch.zeros(dist+1,2,numpy.size(chi_set)), dtype='complex128')
+    szsz_correl=numpy.array(torch.zeros(dist+1,2,numpy.size(chi_set)), dtype='complex128')
+    spsp_correl=numpy.array(torch.zeros(dist+1,2,numpy.size(chi_set)), dtype='complex128')
+    smsm_correl=numpy.array(torch.zeros(dist+1,2,numpy.size(chi_set)), dtype='complex128')
+    spsm_correl=numpy.array(torch.zeros(dist+1,2,numpy.size(chi_set)), dtype='complex128')
+    smsp_correl=numpy.array(torch.zeros(dist+1,2,numpy.size(chi_set)), dtype='complex128')
 
     for cchi in range(0, numpy.size(chi_set)):
         args.chi=chi_set[cchi]
         ctmargs.chi=chi_set[cchi]
         ctm_env_init = ENV(args.chi, state)
         init_env(state, ctm_env_init)
-        ctm_env, history, t_ctm, t_conv_check = ctmrg_NS.run(state, ctm_env_init, \
+        ctm_env, history, t_ctm, t_conv_check = ctmrg.run(state, ctm_env_init, \
              conv_check=ctmrg_conv_energy, ctm_args=ctmargs)
 
         #Correlation length
@@ -311,73 +311,73 @@ def main():
         direction=(1,0)
         op1=SS01_op
         op2=SS01_op
-        dimer_correl[:,0,cchi]=corrf_NS.corrf_1sO1sO(coord, direction, state, ctm_env, op1, op2, dist)
+        dimer_correl[:,0,cchi]=corrf.corrf_1sO1sO(coord, direction, state, ctm_env, op1, op2, dist)
 
         direction=(0,1)
         op1=SS01_op
         op2=SS01_op
-        dimer_correl[:,1,cchi]=corrf_NS.corrf_1sO1sO(coord, direction, state, ctm_env, op1, op2, dist)
+        dimer_correl[:,1,cchi]=corrf.corrf_1sO1sO(coord, direction, state, ctm_env, op1, op2, dist)
 
         direction=(1,0)
         op1=sz_0_op
         op2=sz_0_op
-        szsz_correl[:,0,cchi]=corrf_NS.corrf_1sO1sO(coord, direction, state, ctm_env, op1, op2, dist)
+        szsz_correl[:,0,cchi]=corrf.corrf_1sO1sO(coord, direction, state, ctm_env, op1, op2, dist)
 
         direction=(0,1)
         op1=sz_0_op
         op2=sz_0_op
-        szsz_correl[:,1,cchi]=corrf_NS.corrf_1sO1sO(coord, direction, state, ctm_env, op1, op2, dist)
+        szsz_correl[:,1,cchi]=corrf.corrf_1sO1sO(coord, direction, state, ctm_env, op1, op2, dist)
 
         direction=(1,0)
         op1=sp_0_op
         op2=sp_0_op
-        spsp_correl[:,0,cchi]=corrf_NS.corrf_1sO1sO(coord, direction, state, ctm_env, op1, op2, dist)
+        spsp_correl[:,0,cchi]=corrf.corrf_1sO1sO(coord, direction, state, ctm_env, op1, op2, dist)
 
         direction=(0,1)
         op1=sp_0_op
         op2=sp_0_op
-        spsp_correl[:,1,cchi]=corrf_NS.corrf_1sO1sO(coord, direction, state, ctm_env, op1, op2, dist)
+        spsp_correl[:,1,cchi]=corrf.corrf_1sO1sO(coord, direction, state, ctm_env, op1, op2, dist)
 
         direction=(1,0)
         op1=sm_0_op
         op2=sm_0_op
-        smsm_correl[:,0,cchi]=corrf_NS.corrf_1sO1sO(coord, direction, state, ctm_env, op1, op2, dist)
+        smsm_correl[:,0,cchi]=corrf.corrf_1sO1sO(coord, direction, state, ctm_env, op1, op2, dist)
 
         direction=(0,1)
         op1=sm_0_op
         op2=sm_0_op
-        smsm_correl[:,1,cchi]=corrf_NS.corrf_1sO1sO(coord, direction, state, ctm_env, op1, op2, dist)
+        smsm_correl[:,1,cchi]=corrf.corrf_1sO1sO(coord, direction, state, ctm_env, op1, op2, dist)
 
         direction=(1,0)
         op1=sp_0_op
         op2=sm_0_op
-        spsm_correl[:,0,cchi]=corrf_NS.corrf_1sO1sO(coord, direction, state, ctm_env, op1, op2, dist)
+        spsm_correl[:,0,cchi]=corrf.corrf_1sO1sO(coord, direction, state, ctm_env, op1, op2, dist)
 
         direction=(0,1)
         op1=sp_0_op
         op2=sm_0_op
-        spsm_correl[:,1,cchi]=corrf_NS.corrf_1sO1sO(coord, direction, state, ctm_env, op1, op2, dist)
+        spsm_correl[:,1,cchi]=corrf.corrf_1sO1sO(coord, direction, state, ctm_env, op1, op2, dist)
 
         direction=(1,0)
         op1=sm_0_op
         op2=sp_0_op
-        smsp_correl[:,0,cchi]=corrf_NS.corrf_1sO1sO(coord, direction, state, ctm_env, op1, op2, dist)
+        smsp_correl[:,0,cchi]=corrf.corrf_1sO1sO(coord, direction, state, ctm_env, op1, op2, dist)
 
         direction=(0,1)
         op1=sm_0_op
         op2=sp_0_op
-        smsp_correl[:,1,cchi]=corrf_NS.corrf_1sO1sO(coord, direction, state, ctm_env, op1, op2, dist)
+        smsp_correl[:,1,cchi]=corrf.corrf_1sO1sO(coord, direction, state, ctm_env, op1, op2, dist)
 
     D=args.bond_dim
     chi=chi_origin
     if args.ansatz in ["IPESS"]:
         filenm='correl_IPESS_D_'+str(D)+'_chi_'+str(chi)
-        if abs(args.JD)>0:
-            filenm='correl_IPESS_J'+str(args.j1)+'_JD'+str(args.JD)+'_D'+str(D)+'_chi'+str(chi)
+        # if abs(args.JD)>0:
+        #     filenm='correl_IPESS_J'+str(args.j1)+'_JD'+str(args.JD)+'_D'+str(D)+'_chi'+str(chi)
     elif args.ansatz in ["IPEPS"]:
         filenm='correl_IPEPS_D_'+str(D)+'_chi_'+str(chi)
-        if abs(args.JD)>0:
-            filenm='correl_IPEPS_J'+str(args.j1)+'_JD'+str(args.JD)+'_D'+str(D)+'_chi'+str(chi)
+        # if abs(args.JD)>0:
+        #     filenm='correl_IPEPS_J'+str(args.j1)+'_JD'+str(args.JD)+'_D'+str(D)+'_chi'+str(chi)
     filenm=filenm+'.mat'
     io.savemat(filenm,{'chi_set':chi_set,'TransSpec_x':TransSpec_x,'TransSpec_y':TransSpec_y,\
         'dimer_correl':dimer_correl,'szsz_correl':szsz_correl,'spsp_correl':spsp_correl,'smsm_correl':smsm_correl,'spsm_correl':spsm_correl,'smsp_correl':smsp_correl})
