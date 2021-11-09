@@ -150,7 +150,7 @@ def main():
         print(f"dtype of initial state {state.dtype} and model {model.dtype} do not match.")
         print(f"Setting default dtype to {cfg.global_args.dtype} and reinitializing "\
         +" the model")
-        model = kagome.KAGOME(phys_dim=3, j=param_j, k=param_k, h=param_h)
+        model = su3_kagome.KAGOME_SU3(phys_dim=3, j=param_j, k=param_k, h=param_h)
 
     print(state)
     # we want to use single triangle energy evaluation for CTM
@@ -186,9 +186,6 @@ def main():
         ctm_args = opt_context["ctm_args"]
         opt_args = opt_context["opt_args"]
 
-        ctm_args = opt_context["ctm_args"]
-        opt_args = opt_context["opt_args"]
-
         # build on-site tensors
         if args.ansatz in ["IPESS", "IPESS_PG", "A_2,B"]:
             if args.ansatz in ["IPESS_PG", "A_2,B"]:
@@ -212,7 +209,7 @@ def main():
             conv_check=ctmrg_conv_energy, ctm_args=ctm_args)
 
         # 2) evaluate loss with the converged environment
-        loss= energy_f(state, ctm_env_out, force_cpu=args.force_cpu)
+        loss= energy_f(tmp_state, ctm_env_out, force_cpu=args.force_cpu)
 
         return (loss, ctm_env_out, *ctm_log)
 
