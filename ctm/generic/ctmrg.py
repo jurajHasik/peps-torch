@@ -42,7 +42,7 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
     for coord,A in state.sites.items():
         dimsA = A.size()
         a = contiguous(einsum('mefgh,mabcd->eafbgchd',A,conj(A)))
-        a = view(a, (dimsA[1]**2,dimsA[2]**2, dimsA[3]**2, dimsA[4]**2))
+        a= view(a, (dimsA[1]**2,dimsA[2]**2, dimsA[3]**2, dimsA[4]**2))
         sitesDL[coord]=a
     stateDL = IPEPS(sitesDL,state.vertexToSite)
 

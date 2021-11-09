@@ -1,4 +1,0 @@
-[submodule "yamps"]
-	path = yamps
-	url = git@gitlab.com:marekrams/yamps.git
-	branch = pure-module

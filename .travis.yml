@@ -29,5 +29,15 @@ before_install:
 - conda install scipy
 
 script: 
+- python -m unittest discover -s examples/akltS2 -p "ctmrg_*.py"
+- python -m unittest discover -s examples/akltS2 -p "optim_*.py"
+- python -m unittest discover -s examples/ising -p "ctmrg_*.py"
+- python -m unittest discover -s examples/ising -p "optim_*.py"
+- python -m unittest discover -s examples/jq -p "ctmrg_*.py"
+- python -m unittest discover -s examples/jq -p "optim_*.py"
+- python -m unittest discover -s examples/ladders -p "ctmrg_*.py"
+- python -m unittest discover -s examples/ladders -p "ctmrg_*.py"
+- python -m unittest discover -s examples/kagome -p "optim_*.py"
+- python -m unittest discover -s examples/kagome -p "optim_*.py"
 - python -m unittest discover -s examples -p "ctmrg_*.py"
 - python -m unittest discover -s examples -p "optim_*.py"

@@ -18,7 +18,7 @@ def _cast_to_real(t, check=True, imag_eps=1.0e-10):
         return t.real
     return t
 
-class S1_KAGOME():
+class S_HALF_KAGOME():
 
     def __init__(self, j1=1., JD=0, j1sq=0., j2=0., j2sq=0., jtrip=0., jperm=0., global_args=cfg.global_args):
         r"""
