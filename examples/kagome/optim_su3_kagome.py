@@ -178,7 +178,7 @@ def main():
     # comupte initial observables
     ctm_env, *ctm_log = ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
     loss0= energy_f(state, ctm_env, force_cpu=args.force_cpu)
-    obs_values, obs_labels = model.eval_obs(state, ctm_env, force_cpu=args.force_cpu)
+    obs_values, obs_labels = model.eval_obs_2x2subsystem(state, ctm_env, force_cpu=args.force_cpu)
     print(", ".join(["epoch", "energy"] + obs_labels))
     print(", ".join([f"{-1}", f"{loss0}"] + [f"{v}" for v in obs_values]))
 
@@ -226,20 +226,12 @@ def main():
         else:
             epoch= len(opt_context["loss_history"]["loss"])
             loss= opt_context["loss_history"]["loss"][-1]
-        obs_values, obs_labels = model.eval_obs(state, ctm_env,force_cpu=args.force_cpu)
+        obs_values, obs_labels = model.eval_obs_2x2subsystem(state, ctm_env,force_cpu=args.force_cpu)
         print(", ".join([f"{epoch}", f"{loss}"] + [f"{v}" for v in obs_values]))
         log.info("Norm(sites): " + ", ".join([f"{t.norm()}" for c, t in state.sites.items()]))
 
     # optimize
     optimize_state(state, ctm_env, loss_fn, obs_fn=obs_fn)
-
-    # compute final observables for the best variational state
-    ctm_env = ENV(args.chi, state)
-    init_env(state, ctm_env)
-    ctm_env, *ctm_log = ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
-    opt_energy = energy_f(state, ctm_env)
-    obs_values, obs_labels = model.eval_obs(state, ctm_env)
-    print(", ".join([f"{args.opt_max_iter}", f"{opt_energy}"] + [f"{v}" for v in obs_values]))
 
 
 if __name__ == '__main__':

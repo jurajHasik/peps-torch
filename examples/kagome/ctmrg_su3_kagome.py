@@ -145,7 +145,7 @@ def main():
         print(f"dtype of initial state {state.dtype} and model {model.dtype} do not match.")
         print(f"Setting default dtype to {cfg.global_args.dtype} and reinitializing "\
         +" the model")
-        model = kagome.KAGOME(phys_dim=3, j=param_j, k=param_k, h=param_h)
+        model = su3_kagome.KAGOME_SU3(phys_dim=3, j=param_j, k=param_k, h=param_h)
 
     print(state)
 
