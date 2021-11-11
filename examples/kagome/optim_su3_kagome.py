@@ -98,7 +98,7 @@ def main():
             B_b= torch.zeros(3, args.bond_dim, args.bond_dim,\
                 dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
             if args.ansatz in ["IPESS_PG", "A_2,B"]:
-                state= IPESS_KAGOME_PG(T_u, B_c, T_d, T_d=T_d, B_a=B_a, B_b=B_b,\
+                state= IPESS_KAGOME_PG(T_u, B_c, T_d=T_d, B_a=B_a, B_b=B_b,\
                     SYM_UP_DOWN=args.sym_up_dn,SYM_BOND_S=args.sym_bond_S, pgs=ansatz_pgs)
             elif args.ansatz in ["IPESS"]:
                 state= IPESS_KAGOME_GENERIC({'T_u': T_u, 'B_a': B_a, 'T_d': T_d,\
@@ -190,7 +190,7 @@ def main():
         if args.ansatz in ["IPESS", "IPESS_PG", "A_2,B"]:
             if args.ansatz in ["IPESS_PG", "A_2,B"]:
                 # explicit rebuild of on-site tensors
-                tmp_state= to_PG_symmetric(state, state.pgs)
+                tmp_state= to_PG_symmetric(state)
             else:
                 tmp_state= state
             # include normalization of new on-site tensor
@@ -215,8 +215,8 @@ def main():
 
     @torch.no_grad()
     def obs_fn(state, ctm_env, opt_context):
-        if args.ansatz in ["A_2,B"]:
-            state_sym= to_PG_symmetric(state, state.pgs)
+        if args.ansatz in ["IPESS_PG","A_2,B"]:
+            state_sym= to_PG_symmetric(state)
         else:
             state_sym= state
         if opt_context["line_search"]:
@@ -239,3 +239,8 @@ if __name__ == '__main__':
         print("args not recognized: " + str(unknown_args))
         raise Exception("Unknown command line arguments")
     main()
+
+
+# python examples/kagome/optim_su3_kagome.py --GLOBALARGS_dtype complex128 --bond_dim 3 --chi 18 --phi 0.5 --theta 0. --ansatz IPESS --OPTARGS_tolerance_grad 1.0e-8 --seed 43 --opt_max_iter 500 --OPTARGS_line_search backtracking
+
+#nohup python examples/kagome/optim_su3_kagome.py --GLOBALARGS_dtype complex128 --bond_dim 3 --chi 9 --phi 0.5 --theta 0. --OPTARGS_tolerance_grad 1.0e-8 --seed 321 --opt_max_iter 500 --OPTARGS_line_search backtracking --ansatz "A_2,B" > BFGSLS_A2B_D3-chi9_P0.5-theta0.0.out &

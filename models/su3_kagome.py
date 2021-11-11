@@ -133,7 +133,7 @@ class KAGOME_SU3():
             obs["chirality_dn"] = _cast_to_real(obs["chirality_dn"])
             obs["e_t_dn"] = rdm_kagome.rdm2x2_dn_triangle_with_operator((0,0), state, env, self.h_tri,\
                 force_cpu=force_cpu)
-            obs["e_t_dn"] = _cast_to_real(obs["e_t_down"])
+            obs["e_t_dn"] = _cast_to_real(obs["e_t_dn"])
             obs["avg_bonds_dn"] = rdm_kagome.rdm2x2_dn_triangle_with_operator((0,0), state, env, self.perm2_tri,\
                 force_cpu=force_cpu)
             obs["avg_bonds_dn"] = _cast_to_real(obs["avg_bonds_dn"])/3
