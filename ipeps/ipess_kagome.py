@@ -269,7 +269,7 @@ class IPESS_KAGOME_PG(IPESS_KAGOME_GENERIC):
 
     def __init__(self, T_u, B_c, T_d=None,\
                 B_a=None, B_b=None,\
-                SYM_UP_DOWN=True, SYM_BOND_S=True, pgs=None,\
+                SYM_UP_DOWN=True, SYM_BOND_S=True, pgs=None, pg_symmetrize=False,\
                 peps_args=cfg.peps_args, global_args=cfg.global_args):
         r"""
         :param T_u: rank-3 tensor
@@ -346,7 +346,8 @@ class IPESS_KAGOME_PG(IPESS_KAGOME_GENERIC):
         assert isinstance(pgs,dict) and set(list(pgs.keys()))<=set(['T_u','T_d','B_a','B_b','B_c']),\
             "Invalid point-group specification "+str(pgs)
         self.pgs= pgs
-        # TODO? self.to_PG_symmetric_()
+        if pg_symmetrize:
+            self.elem_tensors= _to_PG_symmetric(self.pgs, self.elem_tensors)
         
         super().__init__(ipess_tensors, peps_args=peps_args,
                          global_args=global_args)
@@ -593,6 +594,8 @@ def read_ipess_kagome_pg(jsonfile, peps_args=cfg.peps_args, global_args=cfg.glob
         if SYM_BOND_S: 
             elem_tensors['B_a']=None
             elem_tensors['B_b']=None
+
+        import pdb; pdb.set_trace()
 
         state = IPESS_KAGOME_PG(elem_tensors['T_u'], elem_tensors['B_c'], \
             T_d=elem_tensors['T_d'], B_a= elem_tensors['B_a'],\
