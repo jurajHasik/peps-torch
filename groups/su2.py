@@ -84,8 +84,8 @@ class SU2():
         # spin-spin interaction \vec{S}_1.\vec{S}_2 between spins on sites 1 and 2
         # First as rank-4 tensor
         SS = xyz[0]*einsum(expr_kron,self.SZ(),self.SZ()) \
-            + 0.5*(einsum(expr_kron,self.SP(),self.SM()) \
-            + einsum(expr_kron,self.SM(),self.SP()))
+            + 0.5*xyz[1]*einsum(expr_kron,self.SP(),self.SM()) \
+            + 0.5*xyz[2]*einsum(expr_kron,self.SM(),self.SP())
         return SS
 
 def get_op(op, m, dtype=torch.float64, device='cpu', dbg = False):
