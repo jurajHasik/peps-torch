@@ -281,6 +281,7 @@ class TestOpt(unittest.TestCase):
             self.SCIPY= False
 
     # test AKLT point
+    @unittest.skip("long runtime")
     def test_opt_AKLT_IPESS(self):
         from io import StringIO
         from unittest.mock import patch
@@ -310,6 +311,7 @@ class TestOpt(unittest.TestCase):
         self.assertTrue(abs(final_f_vecs[1]) < 1.0e-4)
         self.assertTrue(abs(final_f_vecs[2]) < 1.0e-4)
 
+    @unittest.skip("long runtime")
     def test_opt_AKLT_A2B(self):
         from io import StringIO
         from unittest.mock import patch

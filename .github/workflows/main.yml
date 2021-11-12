@@ -74,9 +74,9 @@ jobs:
       - name: test ladders
         run: |
           $CONDA/bin/python -m unittest discover -s examples/ladders -p "ctmrg_*.py"
-          $CONDA/bin/python -m unittest discover -s examples/ladders -p "ctmrg_*.py"
+          $CONDA/bin/python -m unittest discover -s examples/ladders -p "optim_*.py"
           
       - name: test kagome
         run: |
-          $CONDA/bin/python -m unittest discover -s examples/kagome -p "optim_*.py"
+          $CONDA/bin/python -m unittest discover -s examples/kagome -p "ctmrg_*.py"
           $CONDA/bin/python -m unittest discover -s examples/kagome -p "optim_*.py"
