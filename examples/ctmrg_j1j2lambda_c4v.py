@@ -59,10 +59,8 @@ def main():
         
         A= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
             dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
-        A= make_c4v_symm(A)
-        A= A/torch.max(torch.abs(A))
-
         state = IPEPS_C4V(A)
+        state = to_ipeps_c4v(state)
     else:
         raise ValueError("Missing trial state: -instate=None and -ipeps_init_type= "\
             +str(args.ipeps_init_type)+" is not supported")
@@ -198,6 +196,7 @@ class TestCtmrg(unittest.TestCase):
         args.bond_dim=2
         args.chi=16
         args.GLOBALARGS_device="cpu"
+        args.GLOBALARGS_dtype="complex128"
 
     # basic tests
     def test_ctmrg_SYMEIG(self):
@@ -218,6 +217,7 @@ class TestRVB(unittest.TestCase):
         args.bond_dim=3
         args.chi=16
         args.GLOBALARGS_device="cpu"
+        args.GLOBALARGS_dtype="complex128"
         args.CTMARGS_ctm_max_iter=200
 
     # basic tests
@@ -225,8 +225,8 @@ class TestRVB(unittest.TestCase):
         cfg.configure(args)
         torch.set_num_threads(args.omp_cores)
         
-        model = j1j2.J1J2_C4V_BIPARTITE(j1=args.j1, j2=args.j2)
-        energy_f= model.energy_1x1_lowmem
+        model = j1j2lambda.J1J2LAMBDA_C4V_BIPARTITE(j1=args.j1, j2=args.j2)
+        energy_f= model.energy_1x1
 
         state = read_ipeps_c4v(args.instate)
 

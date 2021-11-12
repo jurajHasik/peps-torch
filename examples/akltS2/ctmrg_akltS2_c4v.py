@@ -141,7 +141,7 @@ class TestCtmrg(unittest.TestCase):
 class TestAKLT(unittest.TestCase):
     def setUp(self):
         import os
-        args.instate=os.path.dirname(os.path.realpath(__file__))+"/../test-input/AKLT-S2_1x1.in"
+        args.instate=os.path.dirname(os.path.realpath(__file__))+"/../../test-input/AKLT-S2_1x1.in"
         args.chi=32
         args.opt_max_iter=50
 

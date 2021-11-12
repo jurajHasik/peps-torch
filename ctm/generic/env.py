@@ -331,7 +331,7 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
         dimsA = A.size()
         a = contiguous(einsum('meijf,maijb->eafb',A,conj(A)))
-        a = view(a, (dimsA[1]**2, dimsA[4]**2)) 
+        a = view(a, (dimsA[1]**2, dimsA[4]**2))
         a= a/a.abs().max()
         env.C[(coord,vec)][:min(env.chi,dimsA[1]**2),:min(env.chi,dimsA[4]**2)]=\
             a[:min(env.chi,dimsA[1]**2),:min(env.chi,dimsA[4]**2)]

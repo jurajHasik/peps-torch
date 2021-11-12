@@ -5,7 +5,7 @@ import math
 import torch
 import copy
 from collections import OrderedDict
-from ipeps.ipess_kagome import IPESS_KAGOME, read_ipess_kagome, extend_bond_dim, to_PG_symmetric
+from ipeps.ipess_kagome import IPESS_KAGOME_PG, read_ipess_kagome, extend_bond_dim, to_PG_symmetric
 from ipeps.ipeps_kagome import IPEPS_KAGOME, read_ipeps_kagome
 from models import SU3_chiral
 from ctm.generic.env import *
