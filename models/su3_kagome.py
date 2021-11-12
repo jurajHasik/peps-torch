@@ -93,7 +93,7 @@ class KAGOME_SU3():
         # inter-cell (up triangle)
         rdm2x2_ring = rdm_kagome.rdm2x2_kagome((0,0), state, env, sites_to_keep_00=('B'), sites_to_keep_10=('C'),
                                                    sites_to_keep_01=(), sites_to_keep_11=('A'))
-        energy += torch.einsum('ijlabd,lijdab', rdm2x2_ring, self.h3_tri)
+        energy += torch.einsum('ijlabd,lijdab', rdm2x2_ring, self.h_tri)
         energy_per_site = energy / (len(state.sites.items()) * 3.0)
         energy_per_site = _cast_to_real(energy_per_site)
         return energy_per_site

@@ -595,8 +595,6 @@ def read_ipess_kagome_pg(jsonfile, peps_args=cfg.peps_args, global_args=cfg.glob
             elem_tensors['B_a']=None
             elem_tensors['B_b']=None
 
-        import pdb; pdb.set_trace()
-
         state = IPESS_KAGOME_PG(elem_tensors['T_u'], elem_tensors['B_c'], \
             T_d=elem_tensors['T_d'], B_a= elem_tensors['B_a'],\
             B_b=elem_tensors['B_b'], SYM_UP_DOWN=SYM_UP_DOWN, SYM_BOND_S=SYM_BOND_S,\
