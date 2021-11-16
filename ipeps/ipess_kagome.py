@@ -88,7 +88,7 @@ class IPESS_KAGOME_GENERIC(ipeps.IPEPS):
         return self.ipess_tensors
 
     def load_checkpoint(self, checkpoint_file):
-        checkpoint= torch.load(checkpoint_file)
+        checkpoint= torch.load(checkpoint_file, map_location=self.device)
         self.ipess_tensors= checkpoint["parameters"]
         for t in self.ipess_tensors.values(): t.requires_grad_(False)
         self.sites = self.build_onsite_tensors()
@@ -142,8 +142,8 @@ class IPESS_KAGOME_GENERIC(ipeps.IPEPS):
         Take IPESS_KAGOME_GENERIC and enlarge all auxiliary bond dimensions of ``T_u``, ``T_d``, 
         ``B_a``, ``B_b``, and ``B_c`` tensors to the new size ``new_d``.
         """
-        current_auxd= self.get_aux_bond_dims()
-        assert new_d>=current_auxd, "Desired dimension is smaller than current aux dimension"
+        ad= self.get_aux_bond_dims()
+        assert new_d>=ad, "Desired dimension is smaller than current aux dimension"
         new_ipess_tensors= dict()
         for k in ['T_u','T_d']:
             new_ipess_tensors[k]= torch.zeros(new_d,new_d,new_d, dtype=self.dtype, device=self.device)
@@ -366,7 +366,7 @@ class IPESS_KAGOME_PG(IPESS_KAGOME_GENERIC):
         return self.elem_tensors
 
     def load_checkpoint(self, checkpoint_file):
-        checkpoint= torch.load(checkpoint_file)
+        checkpoint= torch.load(checkpoint_file, map_location=self.device)
         elem_t= checkpoint["parameters"]
 
         # legacy handling
@@ -429,8 +429,8 @@ class IPESS_KAGOME_PG(IPESS_KAGOME_GENERIC):
         Take IPESS_KAGOME_PG and enlarge all auxiliary bond dimensions of T_u, [T_d,] B_a, 
         to the new size ``new_d``
         """
-        current_auxd= self.get_aux_bond_dims()
-        assert new_d>=current_auxd, "Desired dimension is smaller than current aux dimension"
+        ad= self.get_aux_bond_dims()
+        assert new_d>=ad, "Desired dimension is smaller than current aux dimension"
         new_elem_tensors= dict()
         new_elem_tensors['T_u']= torch.zeros(new_d,new_d,new_d, dtype=self.dtype, device=self.device)
         new_elem_tensors['T_u'][:ad,:ad,:ad]= self.elem_tensors['T_u']
