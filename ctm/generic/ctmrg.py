@@ -42,7 +42,7 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
     for coord,A in state.sites.items():
         dimsA = A.size()
         a = contiguous(einsum('mefgh,mabcd->eafbgchd',A,conj(A)))
-        a = view(a, (dimsA[1]**2,dimsA[2]**2, dimsA[3]**2, dimsA[4]**2))
+        a= view(a, (dimsA[1]**2,dimsA[2]**2, dimsA[3]**2, dimsA[4]**2))
         sitesDL[coord]=a
     stateDL = IPEPS(sitesDL,state.vertexToSite)
 
@@ -60,9 +60,73 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
         if conv_check is not None:
             # evaluate convergence of the CTMRG procedure
             converged, history = conv_check(state, env, history, ctm_args=ctm_args)
-            if ctm_args.verbosity_ctm_convergence>1: print(history[-1])
+            if ctm_args.verbosity_ctm_convergence>1: print(history)
             if converged:
                 if ctm_args.verbosity_ctm_convergence>0: 
+                    print(f"CTMRG  converged at iter= {i}, history= {history[-1]}")
+                break
+        t1_obs= time.perf_counter()
+
+        t_ctm+= t1_ctm-t0_ctm
+        t_obs+= t1_obs-t0_obs
+
+    return env, history, t_ctm, t_obs
+
+def run_overlap(state1, state2, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+    r"""
+    :param state: wavefunction
+    :param env: environment
+    :param conv_check: function which determines the convergence of CTM algorithm. If ``None``,
+                       the algorithm performs ``ctm_args.ctm_max_iter`` iterations.
+    :param ctm_args: CTM algorithm configuration
+    :param global_args: global configuration
+    :type state: IPEPS
+    :type env: ENV
+    :type conv_check: function(IPEPS,ENV,list[float],CTMARGS)->bool
+    :type ctm_args: CTMARGS
+    :type global_args: GLOBALARGS
+
+    Executes directional CTM algorithm for generic iPEPS starting from the intial environment ``env``.
+    TODO add reference
+    """
+
+    # 0) Create double-layer (DL) tensors, preserving the same convention
+    # for order of indices
+    #
+    #     /           /
+    #  --A1^dag-- = --a--
+    #   /|          /
+    #    |/
+    #  --A2--
+    #   /
+    #
+    sitesDL=dict()
+    for coord,site in state1.sites.items():
+        A1 = state1.site((coord[0], coord[1]))
+        A2 = state2.site((coord[0], coord[1]))
+        dimsA = A1.size()
+        a = contiguous(einsum('mefgh,mabcd->eafbgchd',A1,conj(A2)))
+        a = view(a, (dimsA[1]**2,dimsA[2]**2, dimsA[3]**2, dimsA[4]**2))
+        sitesDL[coord]=a
+    stateDL = IPEPS(sitesDL,state1.vertexToSite)
+
+    # 1) perform CTMRG
+    t_obs=t_ctm=0.
+    history=None
+    for i in range(ctm_args.ctm_max_iter):
+        t0_ctm= time.perf_counter()
+        for direction in ctm_args.ctm_move_sequence:
+            ctm_MOVE(direction, stateDL, env, ctm_args=ctm_args, global_args=global_args, \
+                verbosity=ctm_args.verbosity_ctm_move)
+        t1_ctm= time.perf_counter()
+
+        t0_obs= time.perf_counter()
+        if conv_check is not None:
+            # evaluate convergence of the CTMRG procedure
+            converged, history = conv_check(state1, state2, env, history, ctm_args=ctm_args)
+            if ctm_args.verbosity_ctm_convergence>1: print(history)
+            if converged:
+                if ctm_args.verbosity_ctm_convergence>0:
                     print(f"CTMRG  converged at iter= {i}, history= {history[-1]}")
                 break
         t1_obs= time.perf_counter()

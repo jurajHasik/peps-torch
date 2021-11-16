@@ -3,6 +3,7 @@ import torch
 import argparse
 import config as cfg
 from ipeps.ipeps_c4v import *
+from ipeps.ipeps_lc import *
 from groups.pg import *
 from ctm.one_site_c4v.env_c4v import *
 from ctm.one_site_c4v import ctmrg_c4v
@@ -12,6 +13,7 @@ from models import j1j2lambda
 # from optim.ad_optim_sgd_mod import optimize_state
 from optim.ad_optim_lbfgs_mod import optimize_state
 # from optim.ad_optim import optimize_state
+import u1sym.sym_ten_parser as tenU1
 import json
 import unittest
 import logging
@@ -20,6 +22,7 @@ log = logging.getLogger(__name__)
 # parse command line args and build necessary configuration objects
 parser= cfg.get_args_parser()
 # additional model-dependent arguments
+parser.add_argument("--u1_class", type=str, default=None)
 parser.add_argument("--j1", type=float, default=1., help="nearest-neighbour coupling")
 parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour coupling")
 parser.add_argument("--j3", type=float, default=0., help="next-to-next nearest-neighbour coupling")
@@ -44,24 +47,50 @@ def main():
 
     # initialize the ipeps
     if args.instate!=None:
-        state= read_ipeps_c4v(args.instate)
-        if args.bond_dim > max(state.get_aux_bond_dims()):
-            # extend the auxiliary dimensions
-            state= extend_bond_dim(state, args.bond_dim)
+        if args.u1_class is None:
+            state= read_ipeps_c4v(args.instate)
+            if args.bond_dim > max(state.get_aux_bond_dims()):
+                # extend the auxiliary dimensions
+                state= extend_bond_dim(state, args.bond_dim)
+        else:
+            state= read_ipeps_lc_1site_pg(args.instate)
         state.add_noise(args.instate_noise)
-        # state.sites[(0,0)]= state.sites[(0,0)]/torch.max(torch.abs(state.sites[(0,0)]))
-        state.sites[(0,0)]= state.site()/state.site().norm()
     elif args.opt_resume is not None:
-        state= IPEPS_C4V()
-        state.load_checkpoint(args.opt_resume)
+        if args.u1_class is None:
+            state= IPEPS_C4V()
+            state.load_checkpoint(args.opt_resume)
+        else:
+            u1sym_t= tenU1.import_sym_tensors(2, args.bond_dim, "A_1", \
+                infile=f"u1sym/D{args.bond_dim}_{args.u1_class}.txt", \
+                dtype=torch.float64, device=cfg.global_args.device)
+            u1sym_t_A2= tenU1.import_sym_tensors(2,args.bond_dim,"A_2",\
+                infile=f"u1sym/D{args.bond_dim}_{args.u1_class}.txt",\
+                dtype=torch.float64, device=cfg.global_args.device)
+            u1sym_t+= u1sym_t_A2
+            A= torch.zeros(len(u1sym_t), dtype=torch.float64, device=cfg.global_args.device)
+            coeffs = {(0,0): A}
+            state = IPEPS_LC_1SITE_PG(u1sym_t, coeffs)
+            state.load_checkpoint(args.opt_resume)
     elif args.ipeps_init_type=='RANDOM':
         bond_dim = args.bond_dim
-        A= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-            dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
-        # A= make_c4v_symm(A)
-        # A= A/torch.max(torch.abs(A))
-        A= A/A.norm()
-        state = IPEPS_C4V(A)
+        if args.u1_class is None:
+            A= torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+                dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
+            # A= make_c4v_symm(A)
+            A= A/A.norm()
+            state = IPEPS_C4V(A)
+        else:
+            u1sym_t= tenU1.import_sym_tensors(2, args.bond_dim, "A_1", \
+                infile=f"u1sym/D{args.bond_dim}_{args.u1_class}.txt", \
+                dtype=torch.float64, device=cfg.global_args.device)
+            u1sym_t_A2= tenU1.import_sym_tensors(2,args.bond_dim,"A_2",\
+                infile=f"u1sym/D{args.bond_dim}_{args.u1_class}.txt",\
+                dtype=torch.float64, device=cfg.global_args.device)
+            u1sym_t+= u1sym_t_A2
+            A= torch.rand(len(u1sym_t), dtype=torch.float64, device=cfg.global_args.device)
+            A= A/torch.max(torch.abs(A))
+            coeffs = {(0,0): A}
+            state = IPEPS_LC_1SITE_PG(u1sym_t, coeffs)
     else:
         raise ValueError("Missing trial state: -instate=None and -ipeps_init_type= "\
             +str(args.ipeps_init_type)+" is not supported")
@@ -101,7 +130,12 @@ def main():
         # create a copy of state, symmetrize and normalize making all operations
         # tracked. This does not "overwrite" the parameters tensors, living outside
         # the scope of loss_fn
-        state_sym= to_ipeps_c4v(state, normalize=True)
+        if args.u1_class is None:
+            state_sym= to_ipeps_c4v(state, normalize=True)
+        else:
+            # build on-site tensors from components
+            state_sym= state
+            state_sym.sites= state_sym.build_onsite_tensors()
 
         # possibly re-initialize the environment
         if opt_args.opt_ctm_reinit:
@@ -178,6 +212,7 @@ class TestOpt(unittest.TestCase):
         args.bond_dim=2
         args.chi=16
         args.opt_max_iter=3
+        args.GLOBALARGS_dtype="complex128"
         try:
             import scipy.sparse.linalg
             self.SCIPY= True
@@ -190,6 +225,7 @@ class TestOpt(unittest.TestCase):
         args.CTMARGS_projector_svd_method="SYMEIG"
         main()
 
+    @unittest.expectedFailure
     def test_opt_SYMEIG_LS_strong_wolfe(self):
         args.CTMARGS_projector_svd_method="SYMEIG"
         args.OPTARGS_line_search="strong_wolfe"
@@ -211,6 +247,7 @@ class TestOpt(unittest.TestCase):
     @unittest.skipIf(not torch.cuda.is_available(), "CUDA not available")
     def test_opt_SYMEIG_gpu(self):
         args.GLOBALARGS_device="cuda:0"
+        args.OPTARGS_line_search="default"
         args.CTMARGS_projector_svd_method="SYMEIG"
         main()
 

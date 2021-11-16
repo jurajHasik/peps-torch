@@ -177,8 +177,9 @@ def main():
 
         # 1) compute environment by CTMRG
         ctm_env_out, *ctm_log= ctmrg.run(state, ctm_env_in, \
-            conv_check=ctmrg_conv_energy, ctm_args=ctm_args)
-        
+             conv_check=ctmrg_conv_energy, ctm_args=ctm_args)
+        ctm_env_out= ctm_env_in
+
         # 2) evaluate loss with the converged environment
         loss = energy_f(state, ctm_env_out)
         

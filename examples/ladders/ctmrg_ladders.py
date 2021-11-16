@@ -156,7 +156,7 @@ class TestCtmrg(unittest.TestCase):
 class TestLadders_VBS2x2(unittest.TestCase):
     def setUp(self):
         import os
-        args.instate=os.path.dirname(os.path.realpath(__file__))+"/../test-input/VBS_2x2_ABCD.in"
+        args.instate=os.path.dirname(os.path.realpath(__file__))+"/../../test-input/VBS_2x2_ABCD.in"
         args.chi=16
         args.opt_max_iter=50
 
@@ -202,7 +202,7 @@ class TestLadders_VBS2x2(unittest.TestCase):
 class TestLadders_VBS1x2(unittest.TestCase):
     def setUp(self):
         import os
-        args.instate=os.path.dirname(os.path.realpath(__file__))+"/../test-input/VBS_1x2_AB_D2.in"
+        args.instate=os.path.dirname(os.path.realpath(__file__))+"/../../test-input/VBS_1x2_AB_D2.in"
         args.chi=16
         args.opt_max_iter=50
 
