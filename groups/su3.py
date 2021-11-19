@@ -99,6 +99,24 @@ class SU3_DEFINING():
         """
         return get_op("um", pq=(self.p,self.q), dtype=self.dtype, device=self.device)
 
+    def Cartan_Weyl(self):
+        r"""
+        :return: vector of generators forming Cartan-Weyl basis ordered
+                 as [T^+, T^-, T^z, V^+, V^-, U^+, U^-, Y]
+        :rtype: torch.tensor
+        """
+        J = torch.zeros(8, 3, 3, dtype=self.dtype, device=self.device)
+        J[0, :, :] = self.TP()
+        J[1, :, :] = self.TM()
+        J[2, :, :] = self.TZ()
+        J[3, :, :] = self.VP()
+        J[4, :, :] = self.VM()        
+        J[5, :, :] = self.UP()
+        J[6, :, :] = self.UM()
+        J[7, :, :] = self.Y()
+
+        return J
+
     def J_Gell_Mann(self):
         r"""
         :return: :math:`\vec{\lambda}` vector of Gell-Mann matrices
