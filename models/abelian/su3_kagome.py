@@ -7,8 +7,7 @@ import yamps.yast as yast
 import config as cfg
 import groups.su3_abelian as su3
 
-from ctm.generic.env import ENV
-from ctm.pess_kagome import rdm_kagome
+import ctm.pess_kagome_abelian.rdm_kagome as rdm_kagome
 
 def _cast_to_real(t, check=True, imag_eps=1.0e-8):
     if check and t.is_complex():
@@ -184,6 +183,7 @@ class KAGOME_SU3_U1xU1():
         # intra-cell (down)
         energy_dn= rdm_kagome.rdm2x2_dn_triangle_with_operator(\
             (0, 0), state, env, self.h_tri, force_cpu=force_cpu)
+        energy_dn= energy_dn.to_number()
         energy_dn = _cast_to_real(energy_dn)
         # inter-cell (up)
         # rdm2x2_up = rdm_kagome.rdm2x2_up_triangle_open(\
@@ -192,7 +192,11 @@ class KAGOME_SU3_U1xU1():
             (0,0), state, env, sites_to_keep_00=(), sites_to_keep_10=('B'),\
             sites_to_keep_01=('A'), sites_to_keep_11=('C'),
             force_cpu=force_cpu, sym_pos_def=False)
-        energy_up = torch.einsum('ijlabc,abcijl', rdm2x2_up, self.h_tri)
+        # energy_up = torch.einsum('ijlabc,abcijl', rdm2x2_up, self.h_tri)
+        # energy_up= yast.tensordot(rdm2x2_up, self.h_tri.fuse_legs(axes=((0,1,2),(3,4,5))),\
+        #     ([0,1],[1,0]))
+        energy_up= yast.tensordot(rdm2x2_up, self.h_tri,([0,1,2,3,4,5],[3,4,5,0,1,2]))
+        energy_up= energy_up.to_number()
         energy_up = _cast_to_real(energy_up)
         energy_per_site= (energy_dn + energy_up)/3
         return energy_dn, energy_up

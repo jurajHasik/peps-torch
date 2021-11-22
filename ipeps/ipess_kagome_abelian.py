@@ -137,7 +137,9 @@ class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
         """
         A= yast.ncon([self.ipess_tensors['T_u'], self.ipess_tensors['B_c'],\
             self.ipess_tensors['T_d'], self.ipess_tensors['B_b'], self.ipess_tensors['B_a']],\
-            [[0,-4,-5], [-1,1,0], [1,2,3], [-2,2,-6], [-3,3,-7]])
+            [[1,-3,-4], [-0,2,1], [2,3,4], [-1,3,-5], [-2,4,-6]])
+        #    [[0,-4,-5], [-1,1,0], [1,2,3], [-2,2,-6], [-3,3,-7]]
+        print(A)
         A= A.fuse_legs(axes=((0,1,2),3,4,5,6))
         A= A/A.norm(p='inf')
         sites= {(0, 0): A}
