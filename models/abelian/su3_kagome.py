@@ -192,9 +192,6 @@ class KAGOME_SU3_U1xU1():
             (0,0), state, env, sites_to_keep_00=(), sites_to_keep_10=('B'),\
             sites_to_keep_01=('A'), sites_to_keep_11=('C'),
             force_cpu=force_cpu, sym_pos_def=False)
-        # energy_up = torch.einsum('ijlabc,abcijl', rdm2x2_up, self.h_tri)
-        # energy_up= yast.tensordot(rdm2x2_up, self.h_tri.fuse_legs(axes=((0,1,2),(3,4,5))),\
-        #     ([0,1],[1,0]))
         energy_up= yast.tensordot(rdm2x2_up, self.h_tri,([0,1,2,3,4,5],[3,4,5,0,1,2]))
         energy_up= energy_up.to_number()
         energy_up = _cast_to_real(energy_up)

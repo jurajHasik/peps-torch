@@ -1140,7 +1140,6 @@ def rdm2x2_kagome(coord, state, env, sites_to_keep_00=('A', 'B', 'C'),\
     # permute into order of ket;bra order
     i_ket, i_bra= _expand_perm([l00,l10,l01,l11])
     rdm= permute(rdm,tuple(i_ket+i_bra))
-    # rdm= rdm.fuse_legs((tuple(i_bra), tuple(i_ket)))
 
     # symmetrize and normalize
     rdm = _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
