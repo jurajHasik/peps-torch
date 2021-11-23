@@ -20,7 +20,7 @@ def _cast_to_real(t, check=True, imag_eps=1.0e-10):
 
 class S_HALF_KAGOME():
 
-    def __init__(self, j1=1., JD=0, j1sq=0., j2=0., j2sq=0., jtrip=0., jperm=0., global_args=cfg.global_args):
+    def __init__(self, j1=1., JD=0, j1sq=0., j2=0., j2sq=0., jtrip=0., jperm=0., h=0, global_args=cfg.global_args):
         r"""
         H = J_1 \sum_{<ij>} S_i.S_j + J_{1sq} \sum_{<ij>} (S_i.S_j)^2
             + J_2 \sum_{<<ij>>} S_i.S_j + J_{2sq} \sum_{<<ij>>} (S_i.S_j)^2
@@ -57,6 +57,10 @@ class S_HALF_KAGOME():
         SS2nnId= torch.einsum('ijkl,ab->ijaklb',SS2,Id1)
         SS2nn_t= SS2nnId + SS2nnId.permute(1,2,0, 4,5,3) + SS2nnId.permute(2,0,1, 5,3,4)
 
+        mag_field=h*(irrep.SZ())
+        mag_field=torch.einsum('ij,kl,ab->ikajlb',mag_field,Id1,Id1)
+        mag_field=mag_field + mag_field.permute(1,2,0, 4,5,3) + mag_field.permute(2,0,1, 5,3,4)
+
         Svec= irrep.S()
         levicivit3= torch.zeros(3,3,3, dtype=self.dtype, device=self.device)
         levicivit3[0,1,2]=levicivit3[1,2,0]=levicivit3[2,0,1]=1.
@@ -74,7 +78,7 @@ class S_HALF_KAGOME():
                     permute_triangle_inv[i, j, k, k, i, j] = 1.
 
         self.h_triangle= SSnn_t + self.j1sq*SS2nn_t + self.jtrip*SxSS_t \
-            + self.jperm * permute_triangle + (self.jperm * permute_triangle_inv).conj()
+            + self.jperm * permute_triangle + (self.jperm * permute_triangle_inv).conj()+mag_field
         szId2= torch.einsum('ij,kl,ab->ikajlb',irrep.SZ(),Id1,Id1).contiguous()
         spId2= torch.einsum('ij,kl,ab->ikajlb',irrep.SP(),Id1,Id1).contiguous()
         smId2= torch.einsum('ij,kl,ab->ikajlb',irrep.SM(),Id1,Id1).contiguous()
