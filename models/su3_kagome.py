@@ -89,12 +89,11 @@ class KAGOME_SU3():
         # intra-cell (down triangle)
         norm = rdm_kagome.trace1x1_dn_kagome((0,0), state, env, torch.einsum('ia,jb,kc->ijkabc', idp, idp, idp))
         energy += rdm_kagome.trace1x1_dn_kagome((0,0), state, env, self.h_tri) / norm
-        print(energy)
 
         # inter-cell (up triangle)
         rdm2x2_ring = rdm_kagome.rdm2x2_kagome((0,0), state, env, sites_to_keep_00=('B'), sites_to_keep_10=('C'),
                                                    sites_to_keep_01=(), sites_to_keep_11=('A'))
-        energy += torch.einsum('ijlabd,lijdab', rdm2x2_ring, self.h3_tri)
+        energy += torch.einsum('ijlabd,lijdab', rdm2x2_ring, self.h_tri)
         energy_per_site = energy / (len(state.sites.items()) * 3.0)
         energy_per_site = _cast_to_real(energy_per_site)
         return energy_per_site
@@ -112,21 +111,45 @@ class KAGOME_SU3():
             obs["avg_bonds_dn"] = _cast_to_real(obs["avg_bonds_dn"]) / 3.0
 
             rdm2x2_ring = rdm_kagome.rdm2x2_up_triangle_open((0,0), state, env, force_cpu=force_cpu)
-            obs["chirality_up"] = torch.einsum('ijlabd,lijdab', rdm2x2_ring, chirality)
+            obs["chirality_up"] = torch.einsum('ijlabc,ijlabc', rdm2x2_ring, chirality)
             obs["chirality_up"] = _cast_to_real(obs["chirality_up"])
-            obs["avg_bonds_up"] = torch.einsum('ijlabd,lijdab', rdm2x2_ring, self.perm2_tri)
+            obs["avg_bonds_up"] = torch.einsum('ijlabc,ijlabc', rdm2x2_ring, self.perm2_tri)
             obs["avg_bonds_up"] = _cast_to_real(obs["avg_bonds_up"]) / 3.0
-
-            # chirality for 2x2 subsystem
-            _tmp1= torch.einsum('ijlabc,abcijl', rdm2x2_ring, chirality)
-            _tmp2= rdm_kagome.rdm2x2_dn_triangle_with_operator((0,0), state, env,\
-                chirality.view(pd**3,pd**3), force_cpu=force_cpu)
-            print(f"{_tmp1} {_tmp2}")
 
             obs.update(self.eval_generators(state, env, force_cpu=force_cpu))
 
         # prepare list with labels and values
         obs_labels = ["avg_bonds_dn", "avg_bonds_up", "chirality_dn", "chirality_up"]\
+            + ["m2_A", "m2_B", "m2_C"]
+        obs_values = [obs[label] for label in obs_labels]
+        return obs_values, obs_labels
+
+    def eval_obs_2x2subsystem(self, state, env, force_cpu=False):
+        chirality = 1j * (self.perm3_l - self.perm3_r)
+        obs = dict()
+        with torch.no_grad():
+            obs["chirality_dn"] = rdm_kagome.rdm2x2_dn_triangle_with_operator((0,0), state, env, chirality,\
+                force_cpu=force_cpu)
+            obs["chirality_dn"] = _cast_to_real(obs["chirality_dn"])
+            obs["e_t_dn"] = rdm_kagome.rdm2x2_dn_triangle_with_operator((0,0), state, env, self.h_tri,\
+                force_cpu=force_cpu)
+            obs["e_t_dn"] = _cast_to_real(obs["e_t_dn"])
+            obs["avg_bonds_dn"] = rdm_kagome.rdm2x2_dn_triangle_with_operator((0,0), state, env, self.perm2_tri,\
+                force_cpu=force_cpu)
+            obs["avg_bonds_dn"] = _cast_to_real(obs["avg_bonds_dn"])/3
+
+            rdm2x2_ring = rdm_kagome.rdm2x2_up_triangle_open((0,0), state, env, force_cpu=force_cpu)
+            obs["chirality_up"] = torch.einsum('ijlabc,abcijl', rdm2x2_ring, chirality)
+            obs["chirality_up"] = _cast_to_real(obs["chirality_up"])
+            obs["e_t_up"] = torch.einsum('ijlabc,abcijl', rdm2x2_ring, self.h_tri)
+            obs["e_t_up"] = _cast_to_real(obs["e_t_up"])
+            obs["avg_bonds_up"] = torch.einsum('ijlabc,abcijl', rdm2x2_ring, self.perm2_tri)
+            obs["avg_bonds_up"] = _cast_to_real(obs["avg_bonds_up"])/3
+
+            obs.update(self.eval_generators(state, env, force_cpu=force_cpu))
+
+        # prepare list with labels and values
+        obs_labels = ["e_t_dn","e_t_up","avg_bonds_dn","avg_bonds_up","chirality_dn","chirality_up"]\
             + ["m2_A", "m2_B", "m2_C"]
         obs_values = [obs[label] for label in obs_labels]
         return obs_values, obs_labels

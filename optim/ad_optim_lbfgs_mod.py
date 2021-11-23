@@ -229,6 +229,8 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
             abs(t_data["loss"][-1]-t_data["loss"][-2])<opt_args.tolerance_change:
             break
 
-    # optimization is over, store the last checkpoint
-    store_checkpoint(checkpoint_file, state, optimizer, \
-        main_args.opt_max_iter, t_data["loss"][-1])
+
+    # optimization is over, store the last checkpoint if at least a single step was made
+    if len(t_data["loss"])>0:
+        store_checkpoint(checkpoint_file, state, optimizer, \
+            main_args.opt_max_iter, t_data["loss"][-1])

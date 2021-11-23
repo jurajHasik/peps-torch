@@ -269,7 +269,7 @@ class IPESS_KAGOME_PG(IPESS_KAGOME_GENERIC):
 
     def __init__(self, T_u, B_c, T_d=None,\
                 B_a=None, B_b=None,\
-                SYM_UP_DOWN=True, SYM_BOND_S=True, pgs=None,\
+                SYM_UP_DOWN=True, SYM_BOND_S=True, pgs=None, pg_symmetrize=False,\
                 peps_args=cfg.peps_args, global_args=cfg.global_args):
         r"""
         :param T_u: rank-3 tensor
@@ -346,7 +346,8 @@ class IPESS_KAGOME_PG(IPESS_KAGOME_GENERIC):
         assert isinstance(pgs,dict) and set(list(pgs.keys()))<=set(['T_u','T_d','B_a','B_b','B_c']),\
             "Invalid point-group specification "+str(pgs)
         self.pgs= pgs
-        # TODO? self.to_PG_symmetric_()
+        if pg_symmetrize:
+            self.elem_tensors= _to_PG_symmetric(self.pgs, self.elem_tensors)
         
         super().__init__(ipess_tensors, peps_args=peps_args,
                          global_args=global_args)
@@ -456,44 +457,48 @@ class IPESS_KAGOME_PG(IPESS_KAGOME_GENERIC):
 
         return new_state
 
-def _to_PG_symmetric(pgs, elem_t):
+def _to_PG_symmetric(pgs, elem_ts):
+    pg_elem_ts= OrderedDict({})
     for t_id,pg in pgs.items():
         if pg is None: continue
         # bond-tensors        
-        if t_id in ["B_a", "B_b", "B_c"] and t_id in elem_t.keys():
+        if t_id in ["B_a", "B_b", "B_c"] and t_id in elem_ts.keys():
             # A+iB
             if pg=="A":
-                elem_t[t_id]= 0.5*(elem_t[t_id]\
-                    + elem_t[t_id].permute(0,2,1).conj())
+                pg_elem_ts[t_id]= 0.5*(elem_ts[t_id]\
+                    + elem_ts[t_id].permute(0,2,1).conj())
             elif pg=="B":
             # B + iA 
-                elem_t[t_id]= 0.5*(elem_t[t_id]\
-                    - elem_t[t_id].permute(0,2,1).conj())
+                pg_elem_ts[t_id]= 0.5*(elem_ts[t_id]\
+                    - elem_ts[t_id].permute(0,2,1).conj())
             else:
                 raise RuntimeError("Unsupported point-group "+t_id+" "+pg)
         # trivalent tensor "up" and "down" 
-        if t_id in ["T_u", "T_d"] and t_id in elem_t.keys():    
+        if t_id in ["T_u", "T_d"] and t_id in elem_ts.keys():    
             # A_2 + iA_1
             if pg=="A_2":
-                elem_t[t_id]= (1./3)*(elem_t[t_id]\
-                    + elem_t[t_id].permute(1,2,0)\
-                    + elem_t[t_id].permute(2,0,1))
-                elem_t[t_id]= \
-                    0.5*(elem_t[t_id] - elem_t[t_id].permute(0,2,1).conj())
+                tmp_t= (1./3)*(elem_ts[t_id]\
+                    + elem_ts[t_id].permute(1,2,0)\
+                    + elem_ts[t_id].permute(2,0,1))
+                tmp_t= 0.5*(tmp_t - tmp_t.permute(0,2,1).conj())
+                pg_elem_ts[t_id]= tmp_t
             else:
                 raise RuntimeError("Unsupported point-group "+t_id+" "+pg)
-    return elem_t
+    return pg_elem_ts
 
-def to_PG_symmetric(state, SYM_UP_DOWN=False, pgs=dict()):
+def to_PG_symmetric(state, SYM_UP_DOWN=None, SYM_BOND_S=None, pgs=None):
     assert type(state)==IPESS_KAGOME_PG, "Expected IPESS_KAGOME_PG instance"
+    if SYM_UP_DOWN is None: SYM_UP_DOWN= state.SYM_UP_DOWN
+    if SYM_BOND_S is None: SYM_BOND_S= state.SYM_BOND_S
+    if pgs is None: pgs= state.pgs
     
-    symm_elem_t= _to_PG_symmetric(pgs, state.elem_tensors)
+    symm_elem_ts= _to_PG_symmetric(pgs, state.elem_tensors)
 
-    symm_state= state.__class__(symm_elem_t['T_u'], symm_elem_t['B_c'],\
-            T_d=None if state.SYM_UP_DOWN else symm_elem_t['T_d'],\
-            B_a=None if state.SYM_BOND_S else symm_elem_t['B_a'],\
-            B_b=None if state.SYM_BOND_S else symm_elem_t['B_b'],\
-            SYM_UP_DOWN=state.SYM_UP_DOWN, SYM_BOND_S=state.SYM_BOND_S, pgs= state.pgs,\
+    symm_state= state.__class__(symm_elem_ts['T_u'], symm_elem_ts['B_c'],\
+            T_d=None if SYM_UP_DOWN else symm_elem_ts['T_d'],\
+            B_a=None if SYM_BOND_S else symm_elem_ts['B_a'],\
+            B_b=None if SYM_BOND_S else symm_elem_ts['B_b'],\
+            SYM_UP_DOWN=SYM_UP_DOWN, SYM_BOND_S=SYM_BOND_S, pgs= pgs,\
             peps_args=cfg.peps_args, global_args=cfg.global_args)
 
     return symm_state
@@ -629,7 +634,7 @@ def write_ipess_kagome_pg(state, outputfile, tol=1.0e-14, normalize=False):
     TODO implement cutoff on elements with magnitude below tol
     """
     json_state = dict({"elem_tensors": {}, "SYM_UP_DOWN": state.SYM_UP_DOWN, \
-        "SYM_BOND_S": state.SYM_UP_DOWN, "pgs": list(state.pgs)})
+        "SYM_BOND_S": state.SYM_UP_DOWN, "pgs": state.pgs})
 
     # write list of considered elementary tensors
     for key, t in state.elem_tensors.items():

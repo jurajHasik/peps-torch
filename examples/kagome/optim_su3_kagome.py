@@ -44,13 +44,14 @@ def main():
     torch.set_num_threads(args.omp_cores)
     torch.manual_seed(args.seed)
 
+    # 0) initialize model
     param_j = np.round(np.cos(np.pi*args.phi), decimals=12)
     param_k = np.round(np.sin(np.pi*args.phi) * np.cos(np.pi*args.theta), decimals=12)
     param_h = np.round(np.sin(np.pi*args.phi) * np.sin(np.pi*args.theta), decimals=12)
     print("J = {}; K = {}; H = {}".format(param_j, param_k, param_h))
     model = su3_kagome.KAGOME_SU3(phys_dim=3, j=param_j, k=param_k, h=param_h)
     
-    # initialize the ipess/ipeps
+    # 1) initialize the ipess/ipeps
     if args.ansatz in ["IPESS","IPESS_PG","A_2,B"]:
         ansatz_pgs= None
         if args.ansatz=="A_2,B": ansatz_pgs= IPESS_KAGOME_PG.PG_A2_B
@@ -98,7 +99,7 @@ def main():
             B_b= torch.zeros(3, args.bond_dim, args.bond_dim,\
                 dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
             if args.ansatz in ["IPESS_PG", "A_2,B"]:
-                state= IPESS_KAGOME_PG(T_u, B_c, T_d, T_d=T_d, B_a=B_a, B_b=B_b,\
+                state= IPESS_KAGOME_PG(T_u, B_c, T_d=T_d, B_a=B_a, B_b=B_b,\
                     SYM_UP_DOWN=args.sym_up_dn,SYM_BOND_S=args.sym_bond_S, pgs=ansatz_pgs)
             elif args.ansatz in ["IPESS"]:
                 state= IPESS_KAGOME_GENERIC({'T_u': T_u, 'B_a': B_a, 'T_d': T_d,\
@@ -118,7 +119,8 @@ def main():
                 dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)-1.0
             if args.ansatz in ["IPESS_PG", "A_2,B"]:
                 state = IPESS_KAGOME_PG(T_u, B_c, T_d=T_d, B_a=B_a, B_b=B_b,\
-                    SYM_UP_DOWN=args.sym_up_dn,SYM_BOND_S=args.sym_bond_S, pgs=ansatz_pgs)
+                    SYM_UP_DOWN=args.sym_up_dn,SYM_BOND_S=args.sym_bond_S, pgs=ansatz_pgs,\
+                    pg_symmetrize=True)
             elif args.ansatz in ["IPESS"]:
                 state= IPESS_KAGOME_GENERIC({'T_u': T_u, 'B_a': B_a, 'T_d': T_d,\
                     'B_b': B_b, 'B_c': B_c})
@@ -150,7 +152,7 @@ def main():
         print(f"dtype of initial state {state.dtype} and model {model.dtype} do not match.")
         print(f"Setting default dtype to {cfg.global_args.dtype} and reinitializing "\
         +" the model")
-        model = kagome.KAGOME(phys_dim=3, j=param_j, k=param_k, h=param_h)
+        model = su3_kagome.KAGOME_SU3(phys_dim=3, j=param_j, k=param_k, h=param_h)
 
     print(state)
     # we want to use single triangle energy evaluation for CTM
@@ -175,17 +177,15 @@ def main():
     ctm_env = ENV(args.chi, state)
     init_env(state, ctm_env)
 
-    # comupte initial observables
+    # 2) compute initial observables
     ctm_env, *ctm_log = ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
     loss0= energy_f(state, ctm_env, force_cpu=args.force_cpu)
-    obs_values, obs_labels = model.eval_obs(state, ctm_env, force_cpu=args.force_cpu)
+    obs_values, obs_labels = model.eval_obs_2x2subsystem(state, ctm_env, force_cpu=args.force_cpu)
     print(", ".join(["epoch", "energy"] + obs_labels))
     print(", ".join([f"{-1}", f"{loss0}"] + [f"{v}" for v in obs_values]))
 
+    # 3) define loss function
     def loss_fn(state, ctm_env_in, opt_context):
-        ctm_args = opt_context["ctm_args"]
-        opt_args = opt_context["opt_args"]
-
         ctm_args = opt_context["ctm_args"]
         opt_args = opt_context["opt_args"]
 
@@ -193,33 +193,33 @@ def main():
         if args.ansatz in ["IPESS", "IPESS_PG", "A_2,B"]:
             if args.ansatz in ["IPESS_PG", "A_2,B"]:
                 # explicit rebuild of on-site tensors
-                tmp_state= to_PG_symmetric(state, state.pgs)
+                sym_state= to_PG_symmetric(state)
             else:
-                tmp_state= state
+                sym_state= state
             # include normalization of new on-site tensor
-            tmp_state.sites= tmp_state.build_onsite_tensors()
+            sym_state.sites= sym_state.build_onsite_tensors()
         else:
             A= state.sites[(0,0)]
             A= A/A.abs().max()
-            tmp_state= IPEPS_KAGOME({(0,0): A}, lX=1, lY=1)
+            sym_state= IPEPS_KAGOME({(0,0): A}, lX=1, lY=1)
 
         # possibly re-initialize the environment
         if opt_args.opt_ctm_reinit:
-            init_env(tmp_state, ctm_env_in)
+            init_env(sym_state, ctm_env_in)
 
         # 1) compute environment by CTMRG
-        ctm_env_out, *ctm_log = ctmrg.run(tmp_state, ctm_env_in, \
+        ctm_env_out, *ctm_log = ctmrg.run(sym_state, ctm_env_in, \
             conv_check=ctmrg_conv_energy, ctm_args=ctm_args)
 
         # 2) evaluate loss with the converged environment
-        loss= energy_f(state, ctm_env_out, force_cpu=args.force_cpu)
+        loss= energy_f(sym_state, ctm_env_out, force_cpu=args.force_cpu)
 
         return (loss, ctm_env_out, *ctm_log)
 
     @torch.no_grad()
     def obs_fn(state, ctm_env, opt_context):
-        if args.ansatz in ["A_2,B"]:
-            state_sym= to_PG_symmetric(state, state.pgs)
+        if args.ansatz in ["IPESS_PG","A_2,B"]:
+            state_sym= to_PG_symmetric(state)
         else:
             state_sym= state
         if opt_context["line_search"]:
@@ -229,20 +229,30 @@ def main():
         else:
             epoch= len(opt_context["loss_history"]["loss"])
             loss= opt_context["loss_history"]["loss"][-1]
-        obs_values, obs_labels = model.eval_obs(state, ctm_env,force_cpu=args.force_cpu)
+        obs_values, obs_labels = model.eval_obs_2x2subsystem(state_sym, ctm_env,force_cpu=args.force_cpu)
         print(", ".join([f"{epoch}", f"{loss}"] + [f"{v}" for v in obs_values]))
         log.info("Norm(sites): " + ", ".join([f"{t.norm()}" for c, t in state.sites.items()]))
 
-    # optimize
+    # 4) optimize
     optimize_state(state, ctm_env, loss_fn, obs_fn=obs_fn)
 
-    # compute final observables for the best variational state
+    # 5) compute final observables for the best variational state
+    outputstatefile= args.out_prefix+"_state.json"
+    if args.ansatz in ["IPESS"]:
+        state= read_ipess_kagome_generic(outputstatefile)
+    elif args.ansatz in ["IPESS_PG","A_2,B"]:
+        state= read_ipess_kagome_pg(outputstatefile)
+    elif args.ansatz in ["IPEPS"]:
+        state= read_ipeps_kagome(outputstatefile)
+    else:
+        raise ValueError("Missing ansatz specification --ansatz "\
+            +str(args.ansatz)+" is not supported")
     ctm_env = ENV(args.chi, state)
     init_env(state, ctm_env)
     ctm_env, *ctm_log = ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
-    opt_energy = energy_f(state, ctm_env)
-    obs_values, obs_labels = model.eval_obs(state, ctm_env)
-    print(", ".join([f"{args.opt_max_iter}", f"{opt_energy}"] + [f"{v}" for v in obs_values]))
+    loss0= energy_f(state, ctm_env, force_cpu=args.force_cpu)
+    obs_values, obs_labels = model.eval_obs_2x2subsystem(state, ctm_env, force_cpu=args.force_cpu)
+    print(", ".join([f"{args.opt_max_iter}", f"{loss0}"] + [f"{v}" for v in obs_values]))
 
 
 if __name__ == '__main__':
@@ -250,3 +260,81 @@ if __name__ == '__main__':
         print("args not recognized: " + str(unknown_args))
         raise Exception("Unknown command line arguments")
     main()
+
+
+class TestOpt(unittest.TestCase):
+    def setUp(self):
+        args.theta=0.0
+        args.phi=0.5
+        args.bond_dim=3
+        args.chi=18
+        args.instate= None
+        args.GLOBALARGS_dtype= "complex128"
+        args.OPTARGS_tolerance_grad= 1.0e-8
+        args.OPTARGS_tolerance_change= 1.0e-8
+        args.OPTARGS_line_search= "backtracking"
+        try:
+            import scipy.sparse.linalg
+            self.SCIPY= True
+        except:
+            print("Warning: Missing scipy. ARNOLDISVD is not available.")
+            self.SCIPY= False
+
+    # test AKLT point
+    def test_opt_AKLT_IPESS(self):
+        from io import StringIO
+        from unittest.mock import patch
+        
+        args.ansatz= "IPESS"
+        args.seed= 43
+        args.opt_max_iter= 500
+        args.out_prefix= f"TEST_IPESS_D{args.bond_dim}-chi{args.chi}_AKLT"
+
+        # run the main simulation
+        main()
+
+        args.instate= args.out_prefix+"_state.json"
+        args.opt_max_iter= 1
+        with patch('sys.stdout', new = StringIO()) as fake_out:
+            main()
+            output= fake_out.getvalue()
+
+        print(output)
+
+        # test final output against expected result
+        final_obs= [float(x) for x in output.splitlines()[-1].split(',')[:2]]
+        final_f_vecs= [complex(x) for x in output.splitlines()[-1].split(',')[-3:]]
+        final_e= final_obs[1]
+        self.assertTrue(abs(final_e + 2/3.) < 1.0e-3)
+        self.assertTrue(abs(final_f_vecs[0]) < 1.0e-4)
+        self.assertTrue(abs(final_f_vecs[1]) < 1.0e-4)
+        self.assertTrue(abs(final_f_vecs[2]) < 1.0e-4)
+
+    def test_opt_AKLT_A2B(self):
+        from io import StringIO
+        from unittest.mock import patch
+        
+        args.ansatz= "A_2,B"
+        args.seed= 61892471
+        args.opt_max_iter= 500
+        args.out_prefix= f"TEST_A2B_D{args.bond_dim}-chi{args.chi}_AKLT"
+
+        # run the main simulation
+        main()
+
+        args.instate= args.out_prefix+"_state.json"
+        args.opt_max_iter= 1
+        with patch('sys.stdout', new = StringIO()) as fake_out:
+            main()
+            output= fake_out.getvalue()
+
+        print(output)
+
+        # test final output against expected result
+        final_obs= [float(x) for x in output.splitlines()[-1].split(',')[:2]]
+        final_f_vecs= [complex(x) for x in output.splitlines()[-1].split(',')[-3:]]
+        final_e= final_obs[1]
+        self.assertTrue(abs(final_e + 2/3.) < 1.0e-7)
+        self.assertTrue(abs(final_f_vecs[0]) < 1.0e-5)
+        self.assertTrue(abs(final_f_vecs[1]) < 1.0e-5)
+        self.assertTrue(abs(final_f_vecs[2]) < 1.0e-5)
