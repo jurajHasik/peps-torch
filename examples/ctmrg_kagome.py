@@ -230,6 +230,65 @@ def main():
     obs["avg_bonds_up"] = obs_values[1]
     obs["chirality_dn"] = obs_values[2]
     obs["chirality_up"] = obs_values[3]
+    
+    def boundary_spectrum(env, n_site=2, top_n=9):
+        spectrum = dict()
+        chi = env.C[((0, 0), (1, 1))].shape[0]
+        aux_dim = int(sqrt(env.T[((0, 0), (1, 0))].shape[1]))
+        for t_loc, t_ten in env.T.items():
+            if t_loc == ((0, 0), (-1, 0)):
+                t_ten = t_ten.transpose(1, 2).reshape(chi, aux_dim, aux_dim, chi).contiguous()
+            elif t_loc == ((0, 0), (0, 1)):
+                t_ten = t_ten.transpose(0, 1).reshape(chi, aux_dim, aux_dim, chi).contiguous()
+            elif t_loc == ((0, 0), (0, -1)):
+                t_ten = t_ten.reshape(chi, aux_dim, aux_dim, chi).contiguous()
+            elif t_loc == ((0, 0), (1, 0)):
+                t_ten = t_ten.reshape(chi, aux_dim, aux_dim, chi).contiguous()
+            # # 1 one-by-one growing
+            # boundary_tensor = t_ten
+            # for n in range(n_site-1):
+            #     boundary_tensor = torch.einsum('iabj,jcdk->iacbdk', boundary_tensor, t_ten)
+            #     boundary_tensor = boundary_tensor.flatten(start_dim=3, end_dim=4).contiguous()
+            #     boundary_tensor = boundary_tensor.flatten(start_dim=1, end_dim=2).contiguous()
+            # boundary_tensor = torch.einsum('ijki->jk', boundary_tensor)
+
+            # 2 exponentiation by squaring
+            n = n_site
+            tmp_t_ten = t_ten
+            boundary_tensor = torch.eye(chi, dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
+            boundary_tensor = boundary_tensor.view(chi, 1, 1, chi).contiguous()
+            while n > 0:
+                if n == 1:
+                    boundary_tensor = torch.einsum('iabj,jcdi->acbd', boundary_tensor, tmp_t_ten)
+                    boundary_tensor = boundary_tensor.flatten(start_dim=2, end_dim=3).contiguous()
+                    boundary_tensor = boundary_tensor.flatten(start_dim=0, end_dim=1).contiguous()
+                    n = (n - n % 2) / 2
+                elif n == 2:
+                    boundary_tensor = torch.einsum('iabj,jcdk->iacbdk', boundary_tensor, tmp_t_ten)
+                    boundary_tensor = boundary_tensor.flatten(start_dim=3, end_dim=4).contiguous()
+                    boundary_tensor = boundary_tensor.flatten(start_dim=1, end_dim=2).contiguous()
+                    boundary_tensor = torch.einsum('iabj,jcdi->acbd', boundary_tensor, tmp_t_ten)
+                    boundary_tensor = boundary_tensor.flatten(start_dim=2, end_dim=3).contiguous()
+                    boundary_tensor = boundary_tensor.flatten(start_dim=0, end_dim=1).contiguous()
+                    n = 0
+                else:
+                    if n % 2 == 1:
+                        boundary_tensor = torch.einsum('iabj,jcdk->iacbdk', boundary_tensor, tmp_t_ten)
+                        boundary_tensor = boundary_tensor.flatten(start_dim=3, end_dim=4).contiguous()
+                        boundary_tensor = boundary_tensor.flatten(start_dim=1, end_dim=2).contiguous()
+                    tmp_t_ten = torch.einsum('iabj,jcdk->iacbdk', tmp_t_ten, tmp_t_ten)
+                    tmp_t_ten = tmp_t_ten.flatten(start_dim=3, end_dim=4).contiguous()
+                    tmp_t_ten = tmp_t_ten.flatten(start_dim=1, end_dim=2).contiguous()
+                    n = (n - n % 2) / 2
+            u, s, v = torch.svd(boundary_tensor, compute_uv=False)
+            spectrum[t_loc] = s[:top_n]
+
+        return spectrum
+    
+    for nt in [1,2,3,4,5,6,7]:
+        t_spec = boundary_spectrum(ctm_env_init, n_site=nt, top_n=args.top_n)
+        obs["spectrum_nt_{}".format(nt)] = t_spec
+        
     print(obs)
     # if args.restrictions:
     #     filename_obs = "./data/onsite_obs_restricted_theta_{}_phi_{}_bonddim_{}_chi_{}.json".format(int(args.theta*100), int(args.phi*100), args.bond_dim, args.chi)
