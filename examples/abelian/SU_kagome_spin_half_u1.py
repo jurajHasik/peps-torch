@@ -56,7 +56,7 @@ def main():
 
     import config_U1
     import config_Z2
-    from yamps.yast.tensor._output import to_number, to_dense, to_numpy, to_raw_tensor, to_nonsymmetric
+    from yamps.yast.tensor._output import show_properties, to_number, to_dense, to_numpy, to_raw_tensor, to_nonsymmetric
     # a = yast.rand(config=config_U1, s=(-1, 1, 1, -1),\
     #               t=((0, 1), (0, 1), (0, 1), (0, 1)),\
     #               D=((1, 1), (1, 1), (1, 1), (1, 1)))
@@ -336,11 +336,15 @@ def main():
     ctm_env_init, *ctm_log = ctmrg.run(state, ctm_env_init)
     #import pdb; pdb.set_trace()
     coord=(0,0)
+
     #rho=rdm_kagome.rdm2x2_up_triangle_open(coord, state, ctm_env_init)
     #print(to_dense(H))
-    # E_dn=rdm_kagome.rdm2x2_dn_triangle_with_operator(coord, state, ctm_env_init, to_dense(H))
-    # print(E_dn)
-    rdm=rdm_kagome.rdm2x2_kagome(coord, state, ctm_env_init)
+
+    E_dn=rdm_kagome.rdm2x2_dn_triangle_with_operator(coord, state, ctm_env_init, H).to_number()
+    print(E_dn)
+
+    #rdm=rdm_kagome.rdm2x2_kagome(coord, state, ctm_env_init, sites_to_keep_00=(), sites_to_keep_10=('B'), sites_to_keep_01=('A'), sites_to_keep_11=('C'))
+
     import pdb; pdb.set_trace()
 
     obs_values, obs_labels = model.eval_obs(state,ctm_env_init,force_cpu=False, disp_corre_len=args.disp_corre_len)
