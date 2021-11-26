@@ -67,7 +67,22 @@ class KAGOME_U1():
         self.h_triangle= SSnn_t +mag_field
 
         
+    def energy_1site(self, state, env):
+        pd = self.phys_dim
+        energy = 0.0
+        idp = torch.eye(pd, dtype=self.dtype, device=self.device)
+        
+        # intra-cell (down triangle)
+        norm = rdm_kagome.trace1x1_dn_kagome((0,0), state, env, torch.einsum('ia,jb,kc->ijkabc', idp, idp, idp))
+        energy += rdm_kagome.trace1x1_dn_kagome((0,0), state, env, self.h_tri) / norm
 
+        # inter-cell (up triangle)
+        rdm2x2_ring = rdm_kagome.rdm2x2_kagome((0,0), state, env, sites_to_keep_00=('B'), sites_to_keep_10=('C'),
+                                                   sites_to_keep_01=(), sites_to_keep_11=('A'))
+        energy += torch.einsum('ijlabd,lijdab', rdm2x2_ring, self.h_tri)
+        energy_per_site = energy / (len(state.sites.items()) * 3.0)
+        energy_per_site = _cast_to_real(energy_per_site)
+        return energy_per_site
 
 
 class S_HALF_KAGOME():
