@@ -922,9 +922,9 @@ def rdm2x2_dn_triangle_with_operator(coord, state, env, op, force_cpu=False,\
         C      T             T        C
     """
     who = 'rdm2x2_dn_triangle'
-    assert op.get_ndim()==2 or op.get_ndim()==6,"Invalid operator"
-    # TODO perform compatibility check ?
-    if op.get_ndim()==6: op= op.fuse_legs(axes=((0,1,2),(3,4,5)))
+    # assert op.get_ndim()==2 or op.get_ndim()==6,"Invalid operator"
+    # # TODO perform compatibility check ?
+    # if op.get_ndim()==6: op= op.fuse_legs(axes=((0,1,2),(3,4,5)))
 
     # ----- building C2x2_LU ----------------------------------------------------
     if force_cpu:
