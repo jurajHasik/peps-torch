@@ -1,6 +1,7 @@
 import yamps.yast as yast
 import numpy as np
 from math import factorial, sqrt
+from yamps.yast.tensor._output import to_number, to_dense, to_numpy, to_raw_tensor, to_nonsymmetric
 
 class SU2_NOSYM():
     _REF_S_DIRS=(-1,1)
@@ -88,38 +89,38 @@ class SU2_NOSYM():
         return op
 
     # TODO: implement xyz for Sx and Sy terms
-    def SS(self, xyz=(1.,0.5,0.5)):
-        r"""
-        :param xyz: coefficients of anisotropy of spin-spin interaction
-                    xyz[0]*(S^z S^z) + xyz[1]*(S^x S^x) + xyz[2]*(S^y S^y)
-        :type xyz: tuple(float)
-        :return: spin-spin interaction as rank-4 for tensor 
-        :rtype: torch.tensor
-        """
-        # expr_kron = 'ij,ab->iajb'
-        # spin-spin interaction \vec{S}_1.\vec{S}_2 between spins on sites 1 and 2
-        # First as rank-4 tensor
-        # SS = xyz[0]*np.einsum(expr_kron,get_op("sz", J, self.dtype),get_op("sz", J, self.dtype)) \
-        #     + 0.5*(np.einsum(expr_kron,get_op("sp", J, self.dtype),get_op("sm", J, self.dtype)) \
-        #     + np.einsum(expr_kron,get_op("sm", J, self.dtype),get_op("sp", J, self.dtype)))
-        S_vec= self.S_zpm()
-        S_vec_dag= S_vec.conj().transpose((0,2,1))
-        g= yast.Tensor(self.engine, s=self._REF_S_DIRS)
-        tmp_block= np.diag(np.asarray(xyz, dtype=self.dtype))
-        g.set_block(val=tmp_block)
-        #
-        # 1->0
-        # S--0(-1) (+1)1--g--0->2(-1)
-        # 2->1
-        SS= S_vec.tensordot(g,([0],[1]))
+    # def SS(self, xyz=(1.,0.5,0.5)):
+    #     r"""
+    #     :param xyz: coefficients of anisotropy of spin-spin interaction
+    #                 xyz[0]*(S^z S^z) + xyz[1]*(S^x S^x) + xyz[2]*(S^y S^y)
+    #     :type xyz: tuple(float)
+    #     :return: spin-spin interaction as rank-4 for tensor 
+    #     :rtype: torch.tensor
+    #     """
+    #     # expr_kron = 'ij,ab->iajb'
+    #     # spin-spin interaction \vec{S}_1.\vec{S}_2 between spins on sites 1 and 2
+    #     # First as rank-4 tensor
+    #     # SS = xyz[0]*np.einsum(expr_kron,get_op("sz", J, self.dtype),get_op("sz", J, self.dtype)) \
+    #     #     + 0.5*(np.einsum(expr_kron,get_op("sp", J, self.dtype),get_op("sm", J, self.dtype)) \
+    #     #     + np.einsum(expr_kron,get_op("sm", J, self.dtype),get_op("sp", J, self.dtype)))
+    #     S_vec= self.S_zpm()
+    #     S_vec_dag= S_vec.conj().transpose((0,2,1))
+    #     g= yast.Tensor(self.engine, s=self._REF_S_DIRS)
+    #     tmp_block= np.diag(np.asarray(xyz, dtype=self.dtype))
+    #     g.set_block(val=tmp_block)
+    #     #
+    #     # 1->0
+    #     # S--0(-1) (+1)1--g--0->2(-1)
+    #     # 2->1
+    #     SS= S_vec.tensordot(g,([0],[1]))
         
-        #
-        # 0          1->2
-        # S--g--2 0--S
-        # 1          2->3
-        SS= SS.tensordot(S_vec_dag,([2],[0]))
-        SS= SS.transpose((0,2,1,3))
-        return SS
+    #     #
+    #     # 0          1->2
+    #     # S--g--2 0--S
+    #     # 1          2->3
+    #     SS= SS.tensordot(S_vec_dag,([2],[0]))
+    #     SS= SS.transpose((0,2,1,3))
+    #     return SS
 
     @staticmethod
     def get_op(op, m, dtype="float64", dbg = False):
@@ -321,23 +322,20 @@ class SU2_U1():
     def SS(self, zpm=(1.,0.5,0.5)):
         r"""
         :param zpm: coefficients of anisotropy of spin-spin interaction
-                    zpm[0]*(S^z S^z) + zpm[1]*(S^p S^m) + zpm[2]*(S^m S^p)
+                    zpm[0]*(S^z S^z) + zpm[1]*(S^p S^m)/2 + zpm[2]*(S^m S^p)/2
         :type zpm: tuple(float)
         :return: spin-spin interaction as rank-4 for tensor 
         :rtype: torch.tensor
         """
-        # expr_kron = 'ij,ab->iajb'
-        # spin-spin interaction \vec{S}_1.\vec{S}_2 between spins on sites 1 and 2
-        # First as rank-4 tensor
-        # SS = xyz[0]*np.einsum(expr_kron,get_op("sz", J, self.dtype),get_op("sz", J, self.dtype)) \
-        #     + 0.5*(np.einsum(expr_kron,get_op("sp", J, self.dtype),get_op("sm", J, self.dtype)) \
-        #     + np.einsum(expr_kron,get_op("sm", J, self.dtype),get_op("sp", J, self.dtype)))
+
         unit_block= np.ones((1,1), dtype=self.dtype)
         g= yast.Tensor(self.engine, s=self._REF_S_DIRS)
-        g.set_block(ts=(2,2), val=zpm[1]*unit_block)
+        g.set_block(ts=(2,2), val=zpm[1]/2*unit_block)
         g.set_block(ts=(0,0), val=zpm[0]*unit_block)
-        g.set_block(ts=(-2,-2), val=zpm[2]*unit_block)
+        g.set_block(ts=(-2,-2), val=zpm[2]/2*unit_block)
         g= g.to(self.device)
+
+        
 
         S_vec= self.S_zpm()
         S_vec_dag= S_vec.conj().transpose((0,2,1))
@@ -353,6 +351,10 @@ class SU2_U1():
         # 1          2->3
         SS= SS.tensordot(S_vec_dag,([2],[0]))
         SS= SS.transpose((0,2,1,3))
+
+        
+        #import pdb; pdb.set_trace()
+
         return SS
 
 # Assume tupples J1=(J1,m1), J2=(J2,m2) and J=(J,m)
