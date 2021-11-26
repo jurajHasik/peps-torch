@@ -374,6 +374,7 @@ def main():
     
     #itebd
     phys_dim=torch.Tensor.size(model.h_triangle)[0]
+    #print(model.h_triangle)
     H=model.h_triangle.reshape(phys_dim**3, phys_dim**3)
     #print(H)
     id=torch.eye(args.bond_dim, args.bond_dim, dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
