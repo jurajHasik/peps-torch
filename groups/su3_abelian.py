@@ -148,6 +148,30 @@ class SU3_DEFINING_U1xU1():
         op= op.to(self.device)
         return op
 
+    def G(self):
+        # metric tensor on adjoint irrep
+        unit_block= np.ones((1,1), dtype=self.dtype)
+        
+        # charges on 0-th index, indexing generators of su(3) defined in the space
+        # of (1,0) irrep. Equivalently, these generators span (1,1) (adjoint) irrep. 
+        #
+        # (-2, 0): 1,  TP n=(-2,0)
+        # (-1, -3): 1, VP n=(-1,-3)
+        # (-1, 3): 1,  UM n=(-1,3)
+        # (0, 0): 2,   TZ, Y n=(0,0)
+        # (1, -3): 1,  UP n=(1,-3)
+        # (1, 3): 1,   VM n=(1,3) 
+        # (2, 0): 1    TM n=(2,0)
+        G= yast.Tensor(self.engine, s=(1,1), n=(0,0))
+        G.set_block(ts=(0,0,0,0), Ds=(2,2), val=np.asarray([[1.,0.],[0.,3./4]], self.dtype))
+        G.set_block(ts=(-1,-3,1,3), Ds=(1,1), val=0.5*unit_block)
+        G.set_block(ts=(1,3,-1,-3), Ds=(1,1), val=0.5*unit_block)
+        G.set_block(ts=(-1,3,1,-3), Ds=(1,1), val=0.5*unit_block)
+        G.set_block(ts=(1,-3,-1,3), Ds=(1,1), val=0.5*unit_block)
+        G.set_block(ts=(-2,0,2,0), Ds=(1,1), val=0.5*unit_block)
+        G.set_block(ts=(2,0,-2,0), Ds=(1,1), val=0.5*unit_block)
+        return G
+
     def Cartan_Weyl(self):
         r"""
         :return: vector of generators forming Cartan-Weyl basis ordered
@@ -189,57 +213,36 @@ class SU3_DEFINING_U1xU1():
         """
         # spin-spin interaction \sum_k{\vec{F}_{1,k}\vec{S}_{2,k}} between F-spins on sites 1 and 2
         
-        # metric tensor on adjoint irrep
-        unit_block= np.ones((1,1), dtype=self.dtype)
         CW_basis= self.Cartan_Weyl()
-        
-        # charges on 0-th index, indexing generators of su(3) defined in the space
-        # of (1,0) irrep. Equivalently, these generators span (1,1) (adjoint) irrep. 
-        #
-        # (-2, 0): 1,  TP n=(-2,0)
-        # (-1, -3): 1, VP n=(-1,-3)
-        # (-1, 3): 1,  UM n=(-1,3)
-        # (0, 0): 2,   TZ, Y n=(0,0)
-        # (1, -3): 1,  UP n=(1,-3)
-        # (1, 3): 1,   VM n=(1,3) 
-        # (2, 0): 1    TM n=(2,0)
-        G= yast.Tensor(self.engine, s=(1,1), n=(0,0))
-        G.set_block(ts=(0,0,0,0), Ds=(2,2), val=np.asarray([[1.,0.],[0.,3./4]], self.dtype))
-        G.set_block(ts=(-1,-3,1,3), Ds=(1,1), val=0.5*unit_block)
-        G.set_block(ts=(1,3,-1,-3), Ds=(1,1), val=0.5*unit_block)
-        G.set_block(ts=(-1,3,1,-3), Ds=(1,1), val=0.5*unit_block)
-        G.set_block(ts=(1,-3,-1,3), Ds=(1,1), val=0.5*unit_block)
-        G.set_block(ts=(-2,0,2,0), Ds=(1,1), val=0.5*unit_block)
-        G.set_block(ts=(2,0,-2,0), Ds=(1,1), val=0.5*unit_block)
 
         #             1    1->0       1->2
         # 0--G--1 0--CW => CW--0 0--GCW
         #             2    2->1       2->3
-        C1= yast.tensordot(G, CW_basis, ([1],[0]))
+        C1= yast.tensordot(self.G(), CW_basis, ([1],[0]))
         C1= yast.tensordot(CW_basis, C1, ([0],[0])).transpose(axes=(0,2,1,3))
         return C1
 
-    def C2(self):
-        r"""
-        :return: The cubic Casimir of su(3) as rank-6 for tensor
-        :rtype: torch.tensor
-        """
-        expr_kron = 'ia,jb,kc->ijkabc'
-        Fs = dict()
-        Fs["f1"] = 0.5 * (self.TP() + self.TM())
-        Fs["f2"] = - 0.5j * (self.TP() - self.TM())
-        Fs["f3"] = self.TZ()
-        Fs["f4"] = 0.5 * (self.VP() + self.VM())
-        Fs["f5"] = - 0.5j * (self.VP() - self.VM())
-        Fs["f6"] = 0.5 * (self.UP() + self.UM())
-        Fs["f7"] = - 0.5j * (self.UP() - self.UM())
-        Fs["f8"] = np.sqrt(3.0) / 2 * self.Y()
-        C2 = torch.zeros((3, 3, 3, 3, 3, 3), dtype=torch.complex128, device='cpu')
-        # C2 = None
-        for i in range(8):
-            for j in range(8):
-                for k in range(8):
-                    d = 2 * torch.trace((Fs[f"f{i+1}"]@Fs[f"f{j+1}"]+Fs[f"f{j+1}"]@Fs[f"f{i+1}"])@Fs[f"f{k+1}"])
-                    C2 += d * einsum(expr_kron, Fs[f"f{i+1}"], Fs[f"f{j+1}"], Fs[f"f{k+1}"])
+    # def C2(self):
+    #     r"""
+    #     :return: The cubic Casimir of su(3) as rank-6 for tensor
+    #     :rtype: torch.tensor
+    #     """
+    #     expr_kron = 'ia,jb,kc->ijkabc'
+    #     Fs = dict()
+    #     Fs["f1"] = 0.5 * (self.TP() + self.TM())
+    #     Fs["f2"] = - 0.5j * (self.TP() - self.TM())
+    #     Fs["f3"] = self.TZ()
+    #     Fs["f4"] = 0.5 * (self.VP() + self.VM())
+    #     Fs["f5"] = - 0.5j * (self.VP() - self.VM())
+    #     Fs["f6"] = 0.5 * (self.UP() + self.UM())
+    #     Fs["f7"] = - 0.5j * (self.UP() - self.UM())
+    #     Fs["f8"] = np.sqrt(3.0) / 2 * self.Y()
+    #     C2 = torch.zeros((3, 3, 3, 3, 3, 3), dtype=torch.complex128, device='cpu')
+    #     # C2 = None
+    #     for i in range(8):
+    #         for j in range(8):
+    #             for k in range(8):
+    #                 d = 2 * torch.trace((Fs[f"f{i+1}"]@Fs[f"f{j+1}"]+Fs[f"f{j+1}"]@Fs[f"f{i+1}"])@Fs[f"f{k+1}"])
+    #                 C2 += d * einsum(expr_kron, Fs[f"f{i+1}"], Fs[f"f{j+1}"], Fs[f"f{k+1}"])
 
-        return C2
+    #     return C2

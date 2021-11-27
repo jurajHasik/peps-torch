@@ -15,6 +15,9 @@ class Test_IO_ipeps_abelian(unittest.TestCase):
     outf_U1= "test-write-U1_state.json"
     outf_U1_U1= "test-write-U1-U1_state.json"
 
+    def setUp(self):
+        cfg.global_args.dtype= "float64"
+
     def _ipeps_abelian_test_equal(self, state0, state1):
         self.assertTrue(state0.nsym==state1.nsym)
         self.assertTrue(state0.sym==state1.sym)

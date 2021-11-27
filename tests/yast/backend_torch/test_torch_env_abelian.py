@@ -61,7 +61,7 @@ class Test_env_abelian(unittest.TestCase):
         return IPEPS_ABELIAN(settings_U1_U1, sites, vertexToSite)
 
     def setUp(self):
-        pass
+        cfg.global_args.dtype= "float64"
 
     # basic tests
     def test_env_abelian_init_full(self):

@@ -36,12 +36,23 @@ import ctm.generic_abelian.ctmrg as ctmrg
 def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
     if not history:
         history=[]
+    e_down_1x1= model.energy_down_t_1x1subsystem(state,env)
     e_down, e_up = model.energy_triangles_2x2subsystem(state, env)
+    print(e_down_1x1)
     print(e_down, e_up)
     e_curr= (e_down+e_up)/3
     history.append(e_curr)
-    print(e_curr)
     
+    obs_values, obs_labels= model.eval_obs(state,env)
+    print(", ".join(["epoch","energy"]+obs_labels))
+    print(", ".join([f"{-1}",f"{e_curr}"]+[f"{v}" for v in obs_values]))
+
+    obs_values, obs_labels= model.eval_obs_2x2subsystem(state,env)
+    print(", ".join(["epoch","energy"]+obs_labels))
+    print(", ".join([f"{-1}",f"{e_curr}"]+[f"{v}" for v in obs_values]))
+
+    import pdb; pdb.set_trace()
+
     if len(history) >= ctm_args.ctm_max_iter:
 #         log.info({"history_length": len(history), "history": history})
         return True, history

@@ -53,6 +53,7 @@ class Test_env_abelian_full_torch(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        cfg.global_args.dtype= "float64"
         cls.state_full, cls.env_full= cls._get_2x1_BIPARTITE_full()
 
     def test_rdm1x1_abelian_2x1_BIPARTITE_full(self):
@@ -124,6 +125,7 @@ class Test_env_abelian_U1_torch(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        cfg.global_args.dtype= "float64"
         cls.state_u1, cls.env_u1= cls._get_2x1_BIPARTITE_U1()
 
     def test_rdm1x1_abelian_2x1_BIPARTITE_U1(self):
