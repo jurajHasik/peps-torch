@@ -62,7 +62,7 @@ def main():
     #               D=((1, 1), (1, 1), (1, 1), (1, 1)))
     #print(a)
     #import pdb; pdb.set_trace()
-    print(to_dense(H))
+    
 
 
 
@@ -146,19 +146,19 @@ def main():
 
     def energy_f(state, env, force_cpu=False):
         #print(env)
-        e_dn = model.energy_triangle_dn(state, env, force_cpu=force_cpu)
-        e_up = model.energy_triangle_up(state, env, force_cpu=force_cpu)
+        e_dn = model_u1.energy_triangle_dn(state, env, force_cpu=force_cpu)
+        e_up = model_u1.energy_triangle_up(state, env, force_cpu=force_cpu)
         # e_nnn = model.energy_nnn(state, env)
         return (e_up + e_dn)/3 #+ e_nnn) / 3
     def energy_f_NoCheck(state, env, force_cpu=False):
         #print(env)
-        e_dn = model.energy_triangle_dn_NoCheck(state, env, force_cpu=force_cpu)
-        e_up = model.energy_triangle_up_NoCheck(state, env, force_cpu=force_cpu)
+        e_dn = model_u1.energy_triangle_dn_NoCheck(state, env, force_cpu=force_cpu)
+        e_up = model_u1.energy_triangle_up_NoCheck(state, env, force_cpu=force_cpu)
         # e_nnn = model.energy_nnn(state, env)
         return (e_up + e_dn)/3 #+ e_nnn) / 3
     def dn_energy_f_NoCheck(state, env, force_cpu=False):
         #print(env)
-        e_dn = model.energy_triangle_dn_NoCheck(state, env, force_cpu=force_cpu)
+        e_dn = model_u1.energy_triangle_dn_NoCheck(state, env, force_cpu=force_cpu)
         return e_dn
 
     @torch.no_grad()
@@ -326,31 +326,24 @@ def main():
     
     #itebd
     H= H.fuse_legs(axes=((0,1,2),(3,4,5)))
-    print(H)
+    #print(H)
     id=torch.eye(args.bond_dim, args.bond_dim, dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
     
     lambdas={"lambda_up_a":id,"lambda_up_b":id, "lambda_up_c":id, "lambda_dn_a":id, "lambda_dn_b":id, "lambda_dn_c":id}
 
     ctm_env_init= ENV_ABELIAN(args.chi, state=state, init=True)
-    print(ctm_env_init)
+    #print(ctm_env_init)
     ctm_env_init, *ctm_log = ctmrg.run(state, ctm_env_init)
     #import pdb; pdb.set_trace()
-    coord=(0,0)
 
-    #rho=rdm_kagome.rdm2x2_up_triangle_open(coord, state, ctm_env_init)
-    #print(to_dense(H))
 
-    E_dn=rdm_kagome.rdm2x2_dn_triangle_with_operator(coord, state, ctm_env_init, H).to_number()
-    print(E_dn)
-
-    #rdm=rdm_kagome.rdm2x2_kagome(coord, state, ctm_env_init, sites_to_keep_00=(), sites_to_keep_10=('B'), sites_to_keep_01=('A'), sites_to_keep_11=('C'))
-
-    import pdb; pdb.set_trace()
-
-    obs_values, obs_labels = model.eval_obs(state,ctm_env_init,force_cpu=False, disp_corre_len=args.disp_corre_len)
 
     loss0 = energy_f_NoCheck(state, ctm_env_init, force_cpu=cfg.ctm_args.conv_check_cpu)
-    obs_values, obs_labels = model.eval_obs(state,ctm_env_init,force_cpu=False, disp_corre_len=args.disp_corre_len)
+    print(loss0)
+    #import pdb; pdb.set_trace()
+
+    loss0 = energy_f_NoCheck(state, ctm_env_init, force_cpu=cfg.ctm_args.conv_check_cpu)
+    obs_values, obs_labels = model_u1.eval_obs(state,ctm_env_init,force_cpu=False, disp_corre_len=args.disp_corre_len)
     print("\n\n",end="")
     print(", ".join(["epoch",f"loss"]+[label for label in obs_labels]))
     print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
@@ -367,10 +360,9 @@ def main():
         #print(lambdas['lambda_dn_a'])
 
         ctm_env_init, history, t_ctm, t_conv_check = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy, ctm_args=cfg.ctm_args)
-        obs_values, obs_labels = model.eval_obs(state,ctm_env_init,force_cpu=False, disp_corre_len=args.disp_corre_len)
 
         loss0 = energy_f_NoCheck(state, ctm_env_init, force_cpu=cfg.ctm_args.conv_check_cpu)
-        obs_values, obs_labels = model.eval_obs(state,ctm_env_init,force_cpu=False, disp_corre_len=args.disp_corre_len)
+        obs_values, obs_labels = model_u1.eval_obs(state,ctm_env_init,force_cpu=False, disp_corre_len=args.disp_corre_len)
         print("\n\n",end="")
         print(", ".join(["epoch",f"loss"]+[label for label in obs_labels]))
         print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
