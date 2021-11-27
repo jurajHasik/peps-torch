@@ -41,7 +41,7 @@ args, unknown_args = parser.parse_known_args()
 
 def main():
     cfg.configure(args)
-    cfg.print_config() 
+    cfg.print_config()
     # TODO(?) choose symmetry group and override default dtype
     if not args.symmetry or args.symmetry=="None":
         settings= settings_full

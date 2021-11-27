@@ -1,6 +1,12 @@
 import unittest
 import os
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__),\
+    '../../../')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__),\
+    '../../../examples/abelian')))
 from math import isclose
+import config as cfg
 from ipeps.ipeps_abelian import IPEPS_ABELIAN
 from ipeps.ipeps_abelian import read_ipeps
 from examples.abelian.su_ladders_u1 import args
@@ -24,6 +30,7 @@ class Test_IO_ipeps_abelian(unittest.TestCase):
         args.chi=8
         args.alpha=1.0
         args.out_prefix=self.OUT_PRFX
+        args.GLOBALARGS_dtype="float64"
 
         main_exec()
 

@@ -224,7 +224,7 @@ class ENV_ABELIAN():
             else:
                 T_torch[tid]= t.view(t.size(0), t.size(1)*t.size(2), t.size(3))
         
-        max_chi= max(self.chi, max(max([c.size() for c in C_torch.values()])))
+        max_chi= max(self.chi, max([max(c.size()) for c in C_torch.values()]))
         if max_chi>self.chi:
             warnings.warn("Increasing chi. Equivalent chi ("+str(max_chi)+") of symmetric"\
                 +" environment is higher than original chi ("+str(self.chi)+").", Warning)

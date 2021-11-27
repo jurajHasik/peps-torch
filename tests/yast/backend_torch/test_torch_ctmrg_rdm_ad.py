@@ -56,6 +56,10 @@ class Test_ctmrg_abelian_full_torch(unittest.TestCase):
 
         return state, env_out
 
+    @classmethod
+    def setUpClass(cls):
+        cfg.global_args.dtype= "float64"
+
     def test_rdm1x1_abelian_2x1_BIPARTITE_full(self):
         state, env= self._get_2x1_BIPARTITE_full()
         rho1x1= rdm.rdm1x1((0,0), state, env)
@@ -121,6 +125,10 @@ class Test_ctmrg_abelian_U1_torch(unittest.TestCase):
             ctm_args= cfg.ctm_args)
 
         return state, env
+
+    @classmethod
+    def setUpClass(cls):
+        cfg.global_args.dtype= "float64"
 
     def test_rdm1x1_abelian_2x1_BIPARTITE_U1(self):
         state, env= self._get_2x1_BIPARTITE_U1()
