@@ -7,7 +7,7 @@ import config as cfg
 import groups.su2_abelian as su2
 import ctm.pess_kagome_abelian.rdm_kagome as rdm_kagome
 from yamps.yast.tensor._output import to_number, to_dense, to_numpy, to_raw_tensor, to_nonsymmetric
-
+from ctm.generic import transferops
 
 def _cast_to_real(t, check=True, imag_eps=1.0e-8):
     if t.is_complex():
@@ -195,6 +195,12 @@ class KAGOME_U1():
             obs.update({"SS_dn_01": SS_dn_01, "SS_dn_12": SS_dn_12, "SS_dn_02": SS_dn_02,\
                 "SS_up_01": SS_up_01, "SS_up_12": SS_up_12, "SS_up_02": SS_up_02 })
             if disp_corre_len:
+
+                #convert to dense env and compute transfer operator spectrum
+                env= env.to_dense(state)
+                state= state.to_dense()
+                
+                
                 #Correlation length
                 Ns=3
                 coord=(0,0)
