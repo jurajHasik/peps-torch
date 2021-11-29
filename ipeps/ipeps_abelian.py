@@ -258,7 +258,6 @@ class IPEPS_ABELIAN():
         """
         return {ind: self.sites[ind].export_to_dict() for ind in self.sites}
 
-    # TODO set requires_grad False
     def load_checkpoint(self, checkpoint_file):
         r"""
         :param checkpoint_file: path to checkpoint file
@@ -268,9 +267,10 @@ class IPEPS_ABELIAN():
         function IS NOT a part of checkpoint and must be provided either when instantiating 
         IPEPS_ABELIAN or afterwards. 
         """
-        checkpoint= torch.load(checkpoint_file) 
+        checkpoint= torch.load(checkpoint_file, map_location=self.device) 
         self.sites= {ind: yast.import_from_dict(config= self.engine, d=t_dict_repr) \
             for ind,t_dict_repr in checkpoint["parameters"].items()}
+        for site in self.sites: site_t.requires_grad_(False)
         self.build_sites_dl_open()
 
     def write_to_file(self, outputfile, tol=None, normalize=False):

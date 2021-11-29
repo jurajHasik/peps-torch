@@ -3,7 +3,7 @@ import warnings
 from types import SimpleNamespace
 import config as cfg
 # from yamps.tensor import decompress_from_1d
-import yast
+import yamps.yast as yast
 from tn_interface_abelian import contract, permute
 from ctm.one_site_c4v_abelian.ctm_components_c4v import *
 try:
@@ -27,12 +27,12 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
     :type ctm_args: CTMARGS
     :type global_args: GLOBALARGS
 
-    Executes specialized CTM algorithm for 1-site C4v symmetric iPEPS starting from the intial 
-    environment ``env``. To establish the convergence of CTM before the maximal number of iterations 
-    is reached  a ``conv_check`` function is invoked. Its expected signature is 
-    ``conv_check(IPEPS,ENV_C4V,Object,CTMARGS)`` where ``Object`` is an arbitary argument. For 
-    example it can be a list or dict used for storing CTM data from previous steps to   
-    check convergence.
+    Executes specialized CTM algorithm for 1-site C4v symmetric iPEPS starting 
+    from the intial environment ``env``. To establish the convergence of CTM before 
+    the maximal number of iterations is reached  a ``conv_check`` function is invoked. 
+    Its expected signature is ``conv_check(IPEPS_ABELIAN_C4V,ENV_ABELIAN_C4V,Object,CTMARGS)``
+    where ``Object`` is an arbitary argument. For example it can be a list or dict used 
+    for storing CTM data from previous steps to check convergence.
     """
 
     if ctm_args.projector_svd_method=='DEFAULT' or ctm_args.projector_svd_method=='GESDD':
@@ -47,13 +47,19 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
         raise Exception(f"Projector eig/svd method \"{cfg.ctm_args.projector_svd_method}\" not implemented")
 
     a= state.site()
-    # a_dl= contract(a,a, ([0],[0]), conj=(0,1)) # mefgh,mabcd->efghabcd
-    # a_dl= a_dl.transpose((0,4,1,5,2,6,3,7)) # efghabcd->eafbgchd
-    # a_dl, lo3= a_dl.group_legs((6,7), new_s=1) # eafbgc(hd->H)->eafbgcH
-    # a_dl, lo2= a_dl.group_legs((4,5), new_s=1) # eafb(gc->G)H->eafbGH
-    # a_dl, lo1= a_dl.group_legs((2,3), new_s=1) # ea(fb->F)GH->eaFGH
-    # a_dl, lo0= a_dl.group_legs((0,1), new_s=1) # (ea->E)F->EFGH
-    # a_dl._leg_fusion_data= {k: v for k,v in enumerate([lo0, lo1, lo2, lo3])}
+    if ctm_args.ctm_force_dl:
+        # 0) Create double-layer (DL) tensors, preserving the same convention
+        #    for order of indices 
+        #
+        #     /               /(+1)
+        #  --a---   =  (+1)--A--(+1)
+        #   /|              /
+        #    |/           (+1)
+        #  --a*--
+        #   /
+        #
+        a_dl= contract(a,a, ((0),(0)), conj=(0,1)) # mefgh,mabcd->efghabcd; efghabcd->eafbgchd
+        a_dl= a_dl.fuse_legs( axes=((0,4),(1,5),(2,6),(3,7)) )
 
     # 1) perform CTMRG
     t_obs=t_ctm=t_fpcm=0.
@@ -63,8 +69,10 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
     for i in range(ctm_args.ctm_max_iter):
 
         t0_ctm= time.perf_counter()
-        # ctm_MOVE_dl(a_dl, env, truncated_decomp, ctm_args=ctm_args, global_args=global_args)
-        ctm_MOVE_sl(a, env, truncated_decomp, ctm_args=ctm_args, global_args=global_args)
+        if ctm_args.ctm_force_dl:
+            ctm_MOVE_dl(a_dl, env, truncated_decomp, ctm_args=ctm_args, global_args=global_args)
+        else:
+            ctm_MOVE_sl(a, env, truncated_decomp, ctm_args=ctm_args, global_args=global_args)
         t1_ctm= time.perf_counter()
 
         t0_obs= time.perf_counter()
@@ -84,66 +92,66 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
 
 # performs CTM move
 def ctm_MOVE_dl(a_dl, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
-    # TODO migration
-    raise RuntimeError("Not implemented")
     # 0) compress abelian symmetric tensor into 1D representation for the purposes of 
     #    checkpointing
     metadata_store= {}
     tmp= tuple([a_dl.compress_to_1d(), \
         env.C[env.keyC].compress_to_1d(), env.T[env.keyT].compress_to_1d()])
-    metadata_store["in"], tensors= list(zip(*tmp))
+    tensors, metadata_store["in"]= list(zip(*tmp))
     
     # function wrapping up the core of the CTM MOVE segment of CTM algorithm
     def ctm_MOVE_dl_c(*tensors):
-        tensors= tuple(decompress_from_1d(r1d, settings=env.engine, d=meta) \
+        #
+        # keep inputs for autograd stored on cpu, move to gpu for the core 
+        # of the computation if desired
+        _loc_engine= env.engine
+        if global_args.offload_to_gpu != 'None' and global_args.device=='cpu':
+            tensors=  tuple(r1d.to(global_args.offload_to_gpu) for r1d in tensors)
+            _loc_engine= SimpleNamespace(backend=_loc_engine.backend, sym=_loc_engine.sym,\
+                dtype=_loc_engine.dtype, device=global_args.offload_to_gpu)
+
+        tensors= tuple(yast.decompress_from_1d(r1d, _loc_engine, meta) \
             for r1d,meta in zip(tensors,metadata_store["in"]))
         A, C, T= tensors
+        
+        # Fuse on-site tensor indices into single index  
+        # 0(+)
+        # T--2(-),3(+)->2(-)
+        # 1(+)
+        T= T.fuse_legs(axes=(0,1,(2,3)))
 
         # 1) build enlarged corner upper left corner
         C2X2= c2x2_dl(A, C, T, verbosity=ctm_args.verbosity_projectors)
+        # import pdb; pdb.set_trace()
 
         # 2) build projector
-        # (-1)--M--(-1) = (-1)0--P--1(+1)(-1)--S--(+1)--(-1)0--Vh--1(-1)
+        # (+1)--M--(+1) = (+1)0--P--1(+1)(-1)--S--(+1)--(-1)0--Vh--1(+1)
         P, S, Vh = f_c2x2_decomp(C2X2, env.chi)
-
-        # (-1)0--P--1(+1) => (+1)0---P--1->2(+1)
-        #                    (+1)1--/
-        P= P.ungroup_leg(0, C2X2._leg_fusion_data[0])
-
-        # NOTE is Vh necessary ?
-        # (-1)0--Vh--1(-1) => (-1)0--Vh--1(+1) => (+1)0--Vh--1(-1)
-        #                             \--2(+1)            \--2(-1)
-        # Vh= Vh.ungroup_leg(1, C2X2._leg_fusion_data[1])
- 
-        # C2X2--1(-1) => C2X2---1(+1) => C2X2   |--1->2(+1)
-        # |              |   \--2(+1)    |______|--2->3(+1)  
-        # |              |               |     |
-        # 0(-1)          0(-1)           0(+1) 1(+1)
-        lo0, lo1= C2X2._leg_fusion_data[0], C2X2._leg_fusion_data[1]
-        C2X2= C2X2.ungroup_leg(1, lo1)
-        C2X2= C2X2.ungroup_leg(0, lo0)
 
         # 3) absorb and truncate
         #     __
-        # C2X2  |--2->1(+1) =>  C2X2---1(+1) (1->-1)0---P--1(1->-1) => C2X2--1(-1)
-        # |_____|--3->2(+1)     |   \--2(+1) (1->-1)1--/               |
-        # |     |               0(-1)                                  0(-1)
-        # 0(+1) 1(+1)
-        # 0(-1) 1(-1)
-        # |    /         
+        # C2X2  |--1(+1) =>  C2X2---1(+1) (1->-1)0---P--1(1->-1) => C2X2--1(-1)
+        # |_____|            |                                      |
+        # |                  0(-1)                                  0(-1)
+        # 0(+1)
+        # 0(-1)
+        # |         
         # P*--
-        # 2->0(-1)
+        # 1->0(-1)
         # NOTE change signature <=> hermitian-conj since C2X2= UDU^\dag where U=U^\dag ?
-        C2X2= contract(P.conj(), C2X2, ([0,1],[0,1]))
-        C2X2= contract(C2X2, P.negate_signature(), ([1,2],[0,1]))
-        
+        C2X2= contract(P.conj(), C2X2, ([0],[0]))
+        C2X2= contract(C2X2, P.flip_signature(), ([1],[0]))
+
+        # import pdb; pdb.set_trace()
+
         #        2->1(+1->-1)
         #  ______P___
         # 0(+1->-1)  1->0(+1->-1)
         # 0(+1)
         # T--2->3(-1)
         # 1->2(+1)
-        nT= contract(P.negate_signature(), T,([0],[0]))
+        P= P.unfuse_legs(axes=0)
+        nT= contract(P.flip_signature(), T,([0],[0]))
 
         #    1->0(-1)
         #  __P____________
@@ -157,24 +165,26 @@ def ctm_MOVE_dl(a_dl, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg
         #    0(-1)
         #  __P____
         # |       |
-        # |       |              0(+1)  
-        # T-------A--3->1(+1) => T--1(+1)->2(-1)
-        # 1(+1)   2(+1)          2->1(+1)
+        # |       |              0(-1)  
+        # T-------A--3->1(+1) => T--1(+1)
+        # 1(+1)   2(+1)          2->1(-1)
         # 0(-1)   1(-1)
         # |___P*__|
         #     2(-1)
         # TODO do we conjugate here ?
         nT= contract(nT, P.conj(),([1,2],[0,1]))
-        
-        nT= nT.transpose((0,2,1)).negate_signature()
-        nT._leg_fusion_data[2]= A._leg_fusion_data[3]
+        nT= nT.transpose((0,2,1)).flip_signature()
 
         # 4) symmetrize, normalize and assign new C,T
-        C2X2= 0.5*( C2X2 + C2X2.transpose().conj_blocks() )
+        C2X2= 0.5*( C2X2 + C2X2.transpose((1,0)).conj_blocks() )
         nT= 0.5*(nT + nT.transpose((1,0,2)).conj_blocks() )
         C2X2= C2X2/S.norm(p='inf')
         nT= nT/nT.norm(p='inf')
-        nT._leg_fusion_data[2]= A._leg_fusion_data[3]
+
+        # 0(-)
+        # T--2(+)->2(-),3(+)
+        # 1(-)
+        nT= nT.unfuse_legs(axes=2)
 
         return C2X2, nT
 
@@ -270,7 +280,6 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
         # 0(+1->-1)
         # T--2(-)->2(-),3(+)->2(-1->+1),3(+1->-1)
         # 1(+1->-1)
-        # T= T.ungroup_leg(2, T._leg_fusion_data[2]).negate_signature()
         T= T.flip_signature()
 
         #       3(+)->2(+)                        0 
@@ -310,7 +319,7 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
         #  __P____
         # |       |
         # |       |                           0(+)  
-        # T'-----a*a--4(-),5(+)->1(-),2(+) => T--1(-),2(+)->2,3(-)
+        # T'-----a*a--4(-),5(+)->1(-),2(+) => T--1(-),2(+)->2(-),3(+)
         # 1(-1)   2(-),3(+)                   2->1(+)
         # 0(+1)   1(+),2(-)
         # |___P__|
@@ -319,14 +328,12 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
         nT= contract(nT, P,([1,2,3],[0,1,2]))
         
         nT= nT.transpose((0,3,1,2))
-        # nT, lo2= nT.group_legs((2,3), new_s=-1)
 
         # 4) symmetrize, normalize and assign new C,T
         C2X2= 0.5*( C2X2 + C2X2.transpose((1,0)).conj_blocks() )
         nT= 0.5*(nT + nT.transpose((1,0,2,3)).conj_blocks() )
         C2X2= C2X2/S.norm(p='inf')
         nT= nT/nT.norm(p='inf')
-        # nT._leg_fusion_data[2]= lo2
 
         # 2) Return raw new tensors
         tmp_loc= tuple([C2X2.compress_to_1d(), nT.compress_to_1d()])

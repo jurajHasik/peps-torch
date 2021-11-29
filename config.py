@@ -215,6 +215,8 @@ class CTMARGS():
 
                              Default: ``[(0,-1), (-1,0), (0,1), (1,0)]``
     :vartype ctm_move_sequence: list[tuple(int,int)]
+    :ivar ctm_force_dl: precompute and use on-site double-layer tensors in CTMRG 
+    :vartype ctm_force_dl: bool
     :ivar fwd_checkpoint_c2x2: recompute forward pass of enlarged corner functions (c2x2_*) during 
                                backward pass within optimization to save memory. Default: ``False``
     :vartype fwd_checkpoint_c2x2: bool
@@ -273,6 +275,7 @@ class CTMARGS():
         self.projector_svd_reltol_block = 0.0
         self.ad_decomp_reg= 1.0e-12
         self.ctm_move_sequence = [(0,-1), (-1,0), (0,1), (1,0)]
+        self.ctm_force_dl = False
         self.ctm_logging = False
         self.verbosity_initialization = 0
         self.verbosity_ctm_convergence = 0

@@ -45,7 +45,6 @@ class J1J2_NOSYM():
         """
         assert settings.sym.NSYM==0, "No abelian symmetry is assumed"
         self.engine= settings
-        self.backend= settings.backend
         self.dtype=settings.default_dtype
         self.device='cpu' if not hasattr(settings, 'device') else settings.device
         self.phys_dim=2
@@ -389,7 +388,6 @@ class J1J2_C4V_BIPARTITE_NOSYM():
         """
         assert settings.sym.NSYM==0, "No abelian symmetry is assumed"
         self.engine= settings
-        self.backend= settings.backend
         self.dtype=settings.default_dtype
         self.device='cpu' if not hasattr(settings, 'device') else settings.device
         self.phys_dim=2

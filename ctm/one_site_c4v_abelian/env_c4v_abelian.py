@@ -1,6 +1,6 @@
 import config as cfg
 import numpy as np
-import yast
+import yamps.yast as yast
 
 class ENV_C4V_ABELIAN():
     def __init__(self, chi=1, state=None, settings=None, init=False, 
@@ -49,19 +49,18 @@ class ENV_C4V_ABELIAN():
         if state:
             assert len(state.sites)==1, "Not a 1-site ipeps"
             self.engine= state.engine
-            self.backend= state.backend
             self.dtype= state.dtype
+            self.device= state.device
             self.nsym = state.nsym
             self.sym= state.sym
         elif settings:
             self.engine= settings
-            self.backend= settings.backend
             self.dtype= settings.default_dtype
+            self.device= settings.default_device
             self.nsym = settings.sym.NSYM
             self.sym= settings.sym.SYM_ID
         else:
             raise RuntimeError("Either state or settings must be provided")
-        self.device= global_args.device
 
         self.chi= chi
 
@@ -239,23 +238,18 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
     #     (+1)3
     vec = (-1,-1)
     A = state.site()
-    ## a= contiguous(einsum('mijef,mijab->eafb',A,conj(A)))
     a= A.tensordot(A, ((0,1,2), (0,1,2)), conj=(0,1)) # mijef,mijab->efab
     a= a.transpose((0,2,1,3)) # efab->eafb
     ## here we need to group-legs / reshape
-    # a, lo1= a.group_legs((2,3), new_s=-1) # ea(fb->F)->eaF
-    # a, lo0= a.group_legs((0,1), new_s=-1) # (ea->E)F->EF
     a= a.fuse_legs( axes=((0,1),(2,3)) )
     a= a/a.norm(p='inf')
-    # a._leg_fusion_data[0]= lo0
-    # a._leg_fusion_data[1]= lo1
     env.C[env.keyC]= a
 
     # left transfer matrix
     #
-    #     (+1)1             0(-1),1(+1)->0(+1)     
-    # (+1)i--A*--4(+1)    = T--4(-1),5(+1)->2,3(-1)
-    #       /\(+1)          2(-1),3(+1)->1(+1)
+    #     (+1)1             A 0(-1),1(+1)->0(+1)     
+    # (+1)i--A*--4(+1)    = | T--4(-1),5(+1)->2(-),3(+1)
+    #       /\(+1)          | 2(-1),3(+1)->1(+1)
     #  (+1)3  m
     #          \(-1) 1(-1)
     #    (-1)i--A--4(-1)
@@ -265,14 +259,8 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
     B= A.flip_signature()
     a= B.tensordot(B, ((0,2), (0,2)), conj=(0,1)) # meifg,maibc->efgabc
     a= a.transpose((0,3,1,4,2,5)) # efgabc->eafbgc
-    # a, leg_order_aux= a.group_legs((4,5), new_s=-1) # eafb(gc->G)->eafbG
-    # a, lo1= a.group_legs((2,3), new_s=1) # ea(fb->F)G->eaFG
-    # a, lo0= a.group_legs((0,1), new_s=1) # (ea->E)FG->EFG
     a= a.fuse_legs( axes=((0,1),(2,3),4,5) )
     a= a/a.norm(p='inf')
-    # a._leg_fusion_data[0]= lo0
-    # a._leg_fusion_data[1]= lo1
-    # a._leg_fusion_data[2]= leg_order_aux
     env.T[env.keyT]=a
 
 def compute_multiplets(C, eps_multiplet_gap=1.0e-10):
@@ -291,4 +279,5 @@ def compute_multiplets(C, eps_multiplet_gap=1.0e-10):
             #print(f"{l}", end=" ")
             m.append(l)
             l=0
+    D=D/max(D)
     return D[:chi], m

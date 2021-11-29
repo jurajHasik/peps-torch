@@ -10,10 +10,11 @@ except ImportError as e:
     warnings.warn("torch not available", Warning)
 import config as cfg
 import yamps.yast as yast
+from ipeps.ipeps_abelian import IPEPS_ABELIAN, write_ipeps
 from groups.pg_abelian import make_c4v_symm_A1
 from ipeps.tensor_io import *
 
-class IPEPS_ABELIAN_C4V():
+class IPEPS_ABELIAN_C4V(IPEPS_ABELIAN):
     
     _REF_S_DIRS=(1,1,1,1,1)
 
@@ -39,25 +40,27 @@ class IPEPS_ABELIAN_C4V():
         where s denotes physical index, and u,l,d,r label four principal directions
         up, left, down, right in anti-clockwise order starting from up.
         """
-        self.engine= settings
-        self.backend= settings.backend
-        assert global_args.dtype==settings.default_dtype, "global_args.dtype "+global_args.dtype\
-            +" settings.default_dtype "+settings.default_dtype
-        self.dtype= settings.dtype
-        self.device= global_args.device
-        self.nsym = settings.sym.NSYM
-        self.sym= settings.sym.SYM_ID
+        # self.engine= settings
+        # self.backend= settings.backend
+        # assert global_args.dtype==settings.default_dtype, "global_args.dtype "+global_args.dtype\
+        #     +" settings.default_dtype "+settings.default_dtype
+        # self.dtype= settings.default_device
+        # self.device= global_args.device
+        # self.nsym = settings.sym.NSYM
+        # self.sym= settings.sym.SYM_ID
 
-        self.lX=1
-        self.lY=1
+        # self.lX=1
+        # self.lY=1
 
         def vertexToSite(coord): return (0,0)
-        self.vertexToSite= vertexToSite
+        # self.vertexToSite= vertexToSite
 
-        self.sites= OrderedDict({(0,0): site})
+        sites= OrderedDict({(0,0): site})
+        super().__init__(settings, sites, vertexToSite=vertexToSite, lX=1, lY=1,\
+            build_open_dl=True, peps_args=peps_args, global_args=global_args)
 
-    def site(self, coord=None):
-        return self.sites[(0,0)]
+    def site(self, coord=(0,0)):
+        return super().site(coord)
 
     def to(self, device):
         r"""
@@ -90,25 +93,6 @@ class IPEPS_ABELIAN_C4V():
         settings_dense= site_dense.config
         state_dense= IPEPS_ABELIAN_C4V(settings_dense, site_dense)
         return state_dense
-
-    def get_parameters(self):
-        return list(chain( *(self.sites[ind].A.values() for ind in self.sites)))
-
-    def get_checkpoint(self):
-        r"""
-        :return: serializable (pickle-able) representation of IPEPS_ABELIAN state
-        :rtype: dict
-
-        Return dict containing serialized on-site (block-sparse) tensors. The individual
-        blocks are serialized into Numpy ndarrays
-        """
-        return {ind: self.sites[ind].to_dict() for ind in self.sites}
-
-    def load_checkpoint(self, checkpoint_file):
-        checkpoint= torch.load(checkpoint_file)
-        # TODO set requires_grad False
-        self.sites= {ind: yast.import_from_dict(config= self.engine, d=t_dict_repr) \
-            for ind,t_dict_repr in checkpoint["parameters"].items()}
 
     def write_to_file(self, outputfile, tol=None, normalize=False):
         write_ipeps(self, outputfile, tol=tol, normalize=normalize)
@@ -235,37 +219,3 @@ def read_ipeps_c4v(jsonfile, settings, \
 
     # move to desired device and return
     return state.to(global_args.device)
-
-def write_ipeps(state, outputfile, tol=None, normalize=False,\
-    peps_args=cfg.peps_args, global_args=cfg.global_args):
-    r"""
-    :param state: wavefunction to write out in json format
-    :param outputfile: target file
-    :param tol: minimum magnitude of tensor elements which are written out
-    :param normalize: if True, on-site tensors are normalized before writing
-    :type state: IPEPS_ABELIAN
-    :type ouputfile: str or Path object
-    :type tol: float
-    :type normalize: bool
-    """
-    json_state=dict({"lX": state.lX, "lY": state.lY, "sites": []})
-    
-    site_ids=[]
-    site_map=[]
-    for nid,coord,site in [(t[0], *t[1]) for t in enumerate(state.sites.items())]:
-        if normalize:
-            site= site/site.norm(p='inf')
-        
-        site_ids.append(f"A{nid}")
-        site_map.append(dict({"siteId": site_ids[-1], "x": coord[0], "y": coord[1]} ))
-        
-        json_tensor= serialize_abelian_tensor_legacy(site)
-
-        json_tensor["siteId"]=site_ids[-1]
-        json_state["sites"].append(json_tensor)
-
-    json_state["siteIds"]=site_ids
-    json_state["map"]=site_map
-
-    with open(outputfile,'w') as f:
-        json.dump(json_state, f, indent=4, separators=(',', ': '), cls=NumPy_Encoder)

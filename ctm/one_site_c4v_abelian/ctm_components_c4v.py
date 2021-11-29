@@ -1,17 +1,17 @@
 from tn_interface_abelian import contract, permute
 
 def c2x2_dl(A, C, T, verbosity=0):
-    # TODO migration
-    raise RuntimeError("Not implemented")
-    # C--1(-1) (+1)0--T--1(+1)
+    #               ----->
+    # C--1(-1) (+1)1--T--0->1(+1)
     # 0(-1)           2(-1)
-    C2x2= contract(C, T, ([1],[0]))
+    C2x2= contract(C, T, ([1],[1]))
 
-    # C------T--1->0(+1)
-    # 0(-1)  2->1(-1)
-    # 0(+1)
-    # T--2->3(-1)
-    # 1->2(+1)
+    #        ---->
+    #   C------T--1->0(+1)
+    #   0(-1)  2->1(-1)
+    # A 0(+1)
+    # | T--2->3(-1)
+    # | 1->2(+1)
     C2x2 = contract(C2x2, T, ([0],[0]))
 
     # C---------------T--0(+1)
@@ -23,15 +23,11 @@ def c2x2_dl(A, C, T, verbosity=0):
 
     # permute 0123->1203
     # reshape (12)(03)->01
-    C2x2= C2x2.transpose((1,2,0,3))
-    C2x2, lo1= C2x2.group_legs((2,3), new_s=-1)
-    C2x2, lo0= C2x2.group_legs((0,1), new_s=-1)
-    C2x2._leg_fusion_data[1]= lo1
-    C2x2._leg_fusion_data[0]= lo0
+    C2x2= C2x2.fuse_legs(axes=((1,2),(0,3)))
     
-    # C2x2--1(-1)
+    # C2x2--1(+1)
     # |
-    # 0(-1)
+    # 0(+1)
     if verbosity>1: print(C2x2)
 
     return C2x2
