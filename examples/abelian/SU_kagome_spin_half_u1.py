@@ -356,7 +356,7 @@ def main():
         state, lambdas=itebd(state, lambdas, H, args.itebd_tol, tau, dt, args.bond_dim)
 
         #print(lambdas['lambda_dn_a'])
-
+        ctm_env_init= ENV_ABELIAN(args.chi, state=state, init=True)
         ctm_env_init, history, t_ctm, t_conv_check = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy, ctm_args=cfg.ctm_args)
 
         loss0 = energy_f_NoCheck(state, ctm_env_init, force_cpu=cfg.ctm_args.conv_check_cpu)
