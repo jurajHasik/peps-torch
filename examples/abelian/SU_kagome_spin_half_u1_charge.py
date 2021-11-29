@@ -363,7 +363,7 @@ def main():
 
     #filenm='IPESS_D_'+str(D)+'_chi_'+str(chi)
     # if abs(args.JD)>0:
-    filenm='IPESS_J'+str(args.j1)+'_JD'+str(args.JD)+'_D'+str(args.bond_dim)+'.mat'
+    filenm='charge_IPESS_J'+str(args.j1)+'_JD'+str(args.JD)+'_D'+str(args.bond_dim)+'.mat'
     io.savemat(filenm,{'Tu_Ts':Tu_Ts,'Tu_Ds':Tu_Ds, 'Td_Ts':Td_Ts,'Td_Ds':Td_Ds})
 
 
