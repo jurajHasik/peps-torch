@@ -56,9 +56,9 @@ def main():
     #print(H)
 
 
-    import config_U1
-    import config_Z2
-    from yamps.yast.tensor._output import show_properties, to_number, to_dense, to_numpy, to_raw_tensor, to_nonsymmetric
+    # import config_U1
+    # import config_Z2
+    # from yamps.yast.tensor._output import show_properties, to_number, to_dense, to_numpy, to_raw_tensor, to_nonsymmetric
     # a = yast.rand(config=config_U1, s=(-1, 1, 1, -1),\
     #               t=((0, 1), (0, 1), (0, 1), (0, 1)),\
     #               D=((1, 1), (1, 1), (1, 1), (1, 1)))
