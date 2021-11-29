@@ -12,6 +12,7 @@ from models import kagome
 import unittest
 import numpy as np
 import pickle
+from math import sqrt
 
 # parse command line args and build necessary configuration objects
 parser= cfg.get_args_parser()
@@ -21,8 +22,8 @@ parser.add_argument("--phi", type=float, default=0., help="parametrization betwe
 parser.add_argument("--tiling", default="1SITE", help="tiling of the lattice")
 # additional observables-related arguments
 parser.add_argument("--corrf_r", type=int, default=1, help="maximal correlation function distance")
-parser.add_argument("--top_n", type=int, default=8, help="number of leading eigenvalues"+
-    "of transfer operator to compute")
+parser.add_argument("--top_n", type=int, default=50, help="number of leading eigenvalues")
+parser.add_argument("--max_nt", type=int, default=5, help="maximum sites on boundary")
 parser.add_argument("--input_prefix", type=str, default="theta_0_phi_0_bonddim_3_chi_16", help="parameters of input state")
 parser.add_argument("--output_path", type=str, default="/scratch/yx51/kagome", help="path of output")
 parser.add_argument("--restrictions", type=bool, default=False, help="restrictions on the 5 site tensors")
@@ -230,7 +231,7 @@ def main():
     obs["avg_bonds_up"] = obs_values[1]
     obs["chirality_dn"] = obs_values[2]
     obs["chirality_up"] = obs_values[3]
-    
+    print(obs)
     def boundary_spectrum(env, n_site=2, top_n=9):
         spectrum = dict()
         chi = env.C[((0, 0), (1, 1))].shape[0]
@@ -285,11 +286,17 @@ def main():
 
         return spectrum
     
-    for nt in [1,2,3,4,5,6,7]:
-        t_spec = boundary_spectrum(ctm_env_init, n_site=nt, top_n=args.top_n)
-        obs["spectrum_nt_{}".format(nt)] = t_spec
-        
-    print(obs)
+    # for nt in range(1, args.max_nt+1, 1):
+    #     t_spec = boundary_spectrum(ctm_env_init, n_site=nt, top_n=args.top_n)
+    #     tmp_filename = "{}/edge_spectrum_nt_{}_{}.pkl".format(args.output_path, nt, args.input_prefix)
+    #     with open(tmp_filename, "wb") as fp:
+    #         pickle.dump(t_spec, fp)
+
+    for nt in [4]:
+        t_spec = boundary_spectrum(ctm_env_init, n_site=nt, top_n=81)
+        # obs["spectrum_nt_{}".format(nt)] = t_spec
+        print(t_spec)
+
     # if args.restrictions:
     #     filename_obs = "./data/onsite_obs_restricted_theta_{}_phi_{}_bonddim_{}_chi_{}.json".format(int(args.theta*100), int(args.phi*100), args.bond_dim, args.chi)
     # else:
