@@ -11,7 +11,9 @@ from ctm.generic_abelian.env_abelian import *
 import ctm.generic_abelian.ctmrg as ctmrg
 import ctm.pess_kagome_abelian.rdm_kagome as rdm_kagome
 import models.abelian.kagome_spin_half_u1 as model
+from simple_update.itebd_kagome_u1 import itebd 
 #from optim.ad_optim_lbfgs_mod import optimize_state
+import scipy.io as io
 import json
 import unittest
 import logging
@@ -139,10 +141,6 @@ def main():
                 'B_b': B_b, 'B_c': B_c})
             
             #import pdb; pdb.set_trace()
-
-    
-
-
 
     def energy_f(state, env, force_cpu=False):
         #print(env)
@@ -327,20 +325,20 @@ def main():
     #itebd
     H= H.fuse_legs(axes=((0,1,2),(3,4,5)))
     #print(H)
-    id=torch.eye(args.bond_dim, args.bond_dim, dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
-    
+    #id=torch.eye(args.bond_dim, args.bond_dim, dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
+    unit_block= np.ones((1,1), dtype=args.GLOBALARGS_dtype)
+    id= yast.Tensor(settings_U1, s=(-1, 1), n=0)
+    id.set_block(ts=(1,1), val= unit_block)
+    id.set_block(ts=(-1,-1), val= unit_block)
+    id.set_block(ts=(0,0), val= unit_block)
+
     lambdas={"lambda_up_a":id,"lambda_up_b":id, "lambda_up_c":id, "lambda_dn_a":id, "lambda_dn_b":id, "lambda_dn_c":id}
 
     ctm_env_init= ENV_ABELIAN(args.chi, state=state, init=True)
     #print(ctm_env_init)
     ctm_env_init, *ctm_log = ctmrg.run(state, ctm_env_init)
     #import pdb; pdb.set_trace()
-
-
-
-    loss0 = energy_f_NoCheck(state, ctm_env_init, force_cpu=cfg.ctm_args.conv_check_cpu)
-    print(loss0)
-    #import pdb; pdb.set_trace()
+    
 
     loss0 = energy_f_NoCheck(state, ctm_env_init, force_cpu=cfg.ctm_args.conv_check_cpu)
     obs_values, obs_labels = model_u1.eval_obs(state,ctm_env_init,force_cpu=False, disp_corre_len=args.disp_corre_len)
@@ -349,13 +347,13 @@ def main():
     print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
 
 
-
+    #import pdb; pdb.set_trace()
 
     print('itebd start')
     for ctt in range(len(itebd_list)):
         tau=itebd_list[ctt][1]
         dt=itebd_list[ctt][0]
-        state, lambdas=itebd(state, lambdas, H, args.itebd_tol, tau, dt)
+        state, lambdas=itebd(state, lambdas, H, args.itebd_tol, tau, dt, args.bond_dim)
 
         #print(lambdas['lambda_dn_a'])
 
@@ -367,7 +365,7 @@ def main():
         print(", ".join(["epoch",f"loss"]+[label for label in obs_labels]))
         print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
 
-        energies[ctt]=torch.real(loss0).np()
+        energies[ctt]=torch.real(loss0).numpy()
         m[ctt]=(np.sqrt(obs_values[2])+np.sqrt(obs_values[3])+np.sqrt(obs_values[4]))/3
         if args.disp_corre_len:
             correl_len_x[ctt]=obs_values[26]
