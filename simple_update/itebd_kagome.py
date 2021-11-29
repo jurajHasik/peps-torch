@@ -57,6 +57,8 @@ def Tri_T_dn(T_d, B_a, B_b, B_c, lambda_up_a, lambda_up_b, lambda_up_c, gate, it
     B_b_new=torch.einsum('vkc,cm->vkm', B_b_new, lambda_up_b_inv)
     B_a_new=torch.einsum('wld,dn->wln', B_a_new, lambda_up_a_inv)
 
+    #print(lambda_dn_a)
+
     return B_a_new, B_b_new, B_c_new, lambda_dn_a, lambda_dn_b, lambda_dn_c, S_trun
 
 def Tri_T_up(T_u, B_a, B_b, B_c, lambda_dn_a, lambda_dn_b, lambda_dn_c, gate, itebd_tol):
@@ -93,6 +95,8 @@ def Tri_T_up(T_u, B_a, B_b, B_c, lambda_dn_a, lambda_dn_b, lambda_dn_c, gate, it
     B_b_new=torch.einsum('vka,km->vma', B_b_new, lambda_dn_b_inv)
     B_a_new=torch.einsum('wlb,ln->wnb', B_a_new, lambda_dn_a_inv)
 
+    #print(lambda_up_a)
+
     return B_a_new, B_b_new, B_c_new, lambda_up_a, lambda_up_b, lambda_up_c, S_trun
 
 def itebd_step(state, lambdas, itebd_tol, gate, posit):
@@ -121,7 +125,9 @@ def itebd_step(state, lambdas, itebd_tol, gate, posit):
 
 def itebd(state, lambdas, H, itebd_tol, tau, dt):
     gate, gate_half=trotter_gate(state, H, dt)
+    
     state, lambdas=itebd_step(state, lambdas, itebd_tol, gate_half, 'dn')
+    
     for cs in range(0,round(tau/dt)):
         #start=time.clock()
         state, lambdas=itebd_step(state, lambdas, itebd_tol, gate, 'up')
