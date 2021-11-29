@@ -10,7 +10,7 @@ from ipeps.ipeps_kagome import *
 from models import spin_half_kagome
 from ctm.generic.env import *
 from ctm.generic import ctmrg
-from optim.ad_optim_lbfgs_mod import optimize_state
+from simple_update.itebd_kagome import itebd 
 import json
 import unittest
 import logging
@@ -35,6 +35,7 @@ parser.add_argument("--no_sym_up_dn", action='store_false', dest='sym_up_dn',hel
 parser.add_argument("--no_sym_bond_S", action='store_false', dest='sym_bond_S',help="same bond site tensors")
 parser.add_argument("--disp_corre_len", action='store_true', dest='disp_corre_len',help="display correlation length during optimization")
 parser.add_argument("--CTM_check", type=str, default='Partial_energy', help="method to check CTM convergence",choices=["Energy", "SingularValue", "Partial_energy"])
+parser.add_argument("--itebd_tol", type=float, default=1e-12, help="itebd truncation tol")
 args, unknown_args = parser.parse_known_args()
 
 
@@ -330,8 +331,30 @@ def main():
 
 
 
+    #itebd
+    phys_dim=torch.Tensor.size(model.h_triangle)[0]
+    #print(model.h_triangle)
+    H=model.h_triangle.reshape(phys_dim**3, phys_dim**3)
+    #print(H)
+    id=torch.eye(args.bond_dim, args.bond_dim, dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
     
+    lambdas={"lambda_up_a":id,"lambda_up_b":id, "lambda_up_c":id, "lambda_dn_a":id, "lambda_dn_b":id, "lambda_dn_c":id}
 
+
+    print('itebd start')
+    for ctt in range(len(itebd_list)):
+        tau=itebd_list[ctt][1]
+        dt=itebd_list[ctt][0]
+        state, lambdas=itebd(state, lambdas, H, args.itebd_tol, tau, dt)
+
+        ctm_env_init, history, t_ctm, t_conv_check = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy, ctm_args=cfg.ctm_args)
+        obs_values, obs_labels = model.eval_obs(state,ctm_env_init,force_cpu=False, disp_corre_len=args.disp_corre_len)
+
+        loss0 = energy_f_NoCheck(state, ctm_env_init, force_cpu=cfg.ctm_args.conv_check_cpu)
+        obs_values, obs_labels = model.eval_obs(state,ctm_env_init,force_cpu=False, disp_corre_len=args.disp_corre_len)
+        print("\n\n",end="")
+        print(", ".join(["epoch",f"loss"]+[label for label in obs_labels]))
+        print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
 
 
 
