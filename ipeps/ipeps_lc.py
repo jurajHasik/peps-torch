@@ -130,6 +130,9 @@ class IPEPS_LC_1SITE_PG(IPEPS_LC):
 
         return ""
 
+    def site(self,coord=(0,0)):
+        return super().site(coord)
+
     def get_parameters(self):
         return self.coeffs.values()
 
