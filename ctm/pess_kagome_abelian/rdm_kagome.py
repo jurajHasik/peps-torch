@@ -940,7 +940,8 @@ def rdm2x2_dn_triangle_with_operator(coord, state, env, op, force_cpu=False,\
         T2 = env.T[(state.vertexToSite(coord), (-1, 0))]
         a_1layer = state.site(coord)
 
-    a = double_layer_a(state,coord,force_cpu=force_cpu)
+    #a = double_layer_a(state,coord,force_cpu=force_cpu)
+    a = contract(a_1layer,a_1layer.conj(),([0],[0])).fuse_legs(axes=((0,4),(1,5),(2,6),(3,7)))
     a_op = contract(op,a_1layer,([0],[0]),conj=(0,1))
     a_op = contract(a_1layer,a_op,([0],[0]))
     a_op = a_op.fuse_legs(axes=((0,4),(1,5),(2,6),(3,7)))
@@ -1018,9 +1019,11 @@ def rdm2x2_dn_triangle_with_operator(coord, state, env, op, force_cpu=False,\
     rdm_op = contract(upper_half_op, lower_half, ([0, 1], [0, 1]))
     rdm_id = contract(upper_half, lower_half, ([0, 1], [0, 1]))
 
+
     exp_val_op = rdm_op/rdm_id.to_number()
     exp_val_op = exp_val_op.to(env.device)
     return exp_val_op
+
 
 def rdm2x2_kagome(coord, state, env, sites_to_keep_00=('A', 'B', 'C'),\
     sites_to_keep_10=('A', 'B', 'C'), sites_to_keep_01=('A', 'B', 'C'),\
