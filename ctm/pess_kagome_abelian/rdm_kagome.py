@@ -940,8 +940,8 @@ def rdm2x2_dn_triangle_with_operator(coord, state, env, op, force_cpu=False,\
         T2 = env.T[(state.vertexToSite(coord), (-1, 0))]
         a_1layer = state.site(coord)
 
-    #a = double_layer_a(state,coord,force_cpu=force_cpu)
-    a = contract(a_1layer,a_1layer.conj(),([0],[0])).fuse_legs(axes=((0,4),(1,5),(2,6),(3,7)))
+    a = double_layer_a(state,coord,force_cpu=force_cpu)
+    #a = contract(a_1layer,a_1layer.conj(),([0],[0])).fuse_legs(axes=((0,4),(1,5),(2,6),(3,7)))
     a_op = contract(op,a_1layer,([0],[0]),conj=(0,1))
     a_op = contract(a_1layer,a_op,([0],[0]))
     a_op = a_op.fuse_legs(axes=((0,4),(1,5),(2,6),(3,7)))
