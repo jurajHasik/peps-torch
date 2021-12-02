@@ -310,6 +310,7 @@ def main():
 
     #itebd time steps
     itebd_list=[[0.5,10],[0.1,5],[0.01,1]]
+    #itebd_list=[[0.1,0.2]]
 
 
     #observables
@@ -366,6 +367,8 @@ def main():
     filenm='charge_IPESS_J'+str(args.j1)+'_JD'+str(args.JD)+'_D'+str(args.bond_dim)+'.mat'
     io.savemat(filenm,{'Tu_Ts':Tu_Ts,'Tu_Ds':Tu_Ds, 'Td_Ts':Td_Ts,'Td_Ds':Td_Ds})
 
+    filenm='IPESS_J'+str(args.j1)+'_JD'+str(args.JD)+'_D'+str(args.bond_dim)+'.json'
+    write_ipess_kagome_generic(state, filenm, peps_args=cfg.peps_args, global_args=cfg.global_args)
 
 if __name__ == '__main__':
     if len(unknown_args) > 0:
