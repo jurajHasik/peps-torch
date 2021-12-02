@@ -47,6 +47,7 @@ class KAGOME_U1():
         #self.Id3_t= torch.eye(self.phys_dim**3, dtype=self.dtype, device=self.device)
 
         id2= yast.tensordot(irrep.I(),irrep.I(),([],[])).transpose(axes=(0,2,1,3))
+        self.Id2=id2
         self.Id3_t= yast.tensordot(id2,irrep.I(),([],[])).transpose(axes=(0,1,4,2,3,5)).fuse_legs(axes=((0,1,2), (3,4,5)))
 
         
@@ -183,11 +184,17 @@ class KAGOME_U1():
                 obs[f"m_{i}"]= ((obs[f"sz_{i}"]*obs[f"sz_{i}"]+ obs[f"sp_{i}"]*obs[f"sm_{i}"]))
  
             # nn S.S pattern
+            
+            
+            print(rdm_kagome.rdm2x2_dn_triangle_with_operator((0, 0), state, env, self.Id3_t, force_cpu=force_cpu).to_number())
+            
             SS_dn_01= rdm_kagome.rdm2x2_dn_triangle_with_operator((0, 0), state, env, self.SS01, force_cpu=force_cpu).to_number()
             SS_dn_12= rdm_kagome.rdm2x2_dn_triangle_with_operator((0, 0), state, env, self.SS12, force_cpu=force_cpu).to_number()
             SS_dn_02= rdm_kagome.rdm2x2_dn_triangle_with_operator((0, 0), state, env, self.SS02, force_cpu=force_cpu).to_number()
             
             rdm_up= rdm_kagome.rdm2x2_up_triangle_open((0, 0), state, env, force_cpu=force_cpu)
+            #bb=yast.tensordot(rdm_up.fuse_legs(axes=((0,1,2),(3,4,5))),self.Id3_t,([0,1],[1,0])).to_number()
+            #print(bb)
             SS_up_01= yast.tensordot(rdm_up.fuse_legs(axes=((0,1,2),(3,4,5))),self.SS01.fuse_legs(axes=((0,1,2),(3,4,5))),([0,1],[1,0])).to_number()
             SS_up_12= yast.tensordot(rdm_up.fuse_legs(axes=((0,1,2),(3,4,5))),self.SS12.fuse_legs(axes=((0,1,2),(3,4,5))),([0,1],[1,0])).to_number()
             SS_up_02= yast.tensordot(rdm_up.fuse_legs(axes=((0,1,2),(3,4,5))),self.SS02.fuse_legs(axes=((0,1,2),(3,4,5))),([0,1],[1,0])).to_number()
