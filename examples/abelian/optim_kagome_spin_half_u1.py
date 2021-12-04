@@ -37,7 +37,7 @@ parser.add_argument("--no_sym_bond_S", action='store_false', dest='sym_bond_S',h
 parser.add_argument("--disp_corre_len", action='store_true', dest='disp_corre_len',help="display correlation length during optimization")
 parser.add_argument("--CTM_check", type=str, default='Partial_energy', help="method to check CTM convergence",choices=["Energy", "SingularValue", "Partial_energy"])
 parser.add_argument("--itebd_tol", type=float, default=1e-12, help="itebd truncation tol")
-parser.add_argument("--initial_RVB", type=float, default=1,help="D=3 RVB state")
+parser.add_argument("--initial_RVB", type=float, default=0,help="D=3 RVB state")
 args, unknown_args = parser.parse_known_args()
 
 @torch.no_grad()
@@ -71,7 +71,33 @@ def main():
         ansatz_pgs= None
         if args.ansatz=="A_2,B": ansatz_pgs= IPESS_KAGOME_PG.PG_A2_B
         
-        if args.instate!=None:
+
+        if args.initial_RVB==1:
+            
+            unit_block= np.ones((1,1,1), dtype=args.GLOBALARGS_dtype)
+            B_c= yast.Tensor(settings_U1, s=(-1, 1, 1), n=0)
+            B_c.set_block(ts=(1,1,0), val= unit_block)
+            B_c.set_block(ts=(1,0,1), val= unit_block)
+            B_c.set_block(ts=(-1,-1,0), val= unit_block)
+            B_c.set_block(ts=(-1,0,-1), val= unit_block)
+            B_b=B_c
+            B_a=B_c
+
+            unit_block= np.ones((1,1,1), dtype=args.GLOBALARGS_dtype)
+            T_u= yast.Tensor(settings_U1, s=(-1, -1, -1), n=0)
+            T_u.set_block(ts=(1,-1,0), val= unit_block)
+            T_u.set_block(ts=(-1,1,0), val= -1*unit_block)
+            T_u.set_block(ts=(0,1,-1), val= unit_block)
+            T_u.set_block(ts=(0,-1,1), val= -1*unit_block)
+            T_u.set_block(ts=(-1,0,1), val= unit_block)
+            T_u.set_block(ts=(1,0,-1), val= -1*unit_block)
+            T_u.set_block(ts=(0,0,0), val= unit_block)
+            T_d=T_u
+            state= IPESS_KAGOME_GENERIC_ABELIAN(settings_U1, {'T_u': T_u, 'B_a': B_a, 'T_d': T_d,\
+                'B_b': B_b, 'B_c': B_c})
+            
+            #import pdb; pdb.set_trace()
+        elif args.instate!=None:
             if args.ansatz=="IPESS":
                 state= read_ipess_kagome_generic(args.instate, settings_U1)
             elif args.ansatz in ["IPESS_PG","A_2,B"]:
@@ -184,39 +210,18 @@ def main():
                     D=((1, 2, 3, 2, 1), (1, 2, 3, 2, 1), (1, 2, 3, 2, 1)))
                 T_d = yast.rand(config=settings_U1, s=(-1, -1, -1), n=0,
                     t=((-2, -1, 0, 1, 2), (-2, -1, 0, 1, 2), (-2, -1, 0, 1, 2)),
-                    D=((1, 2, 3, 2, 1), (1, 2, 3, 2, 1), (1, 2, 3, 2, 1)))            state= IPESS_KAGOME_GENERIC_ABELIAN(settings_U1, {'T_u': T_u, 'B_a': B_a, 'T_d': T_d,\
-                'B_b': B_b, 'B_c': B_c})
-        elif args.initial_RVB==1:
-            
-            unit_block= np.ones((1,1,1), dtype=args.GLOBALARGS_dtype)
-            B_c= yast.Tensor(settings_U1, s=(-1, 1, 1), n=0)
-            B_c.set_block(ts=(1,1,0), val= unit_block)
-            B_c.set_block(ts=(1,0,1), val= unit_block)
-            B_c.set_block(ts=(-1,-1,0), val= unit_block)
-            B_c.set_block(ts=(-1,0,-1), val= unit_block)
-            B_b=B_c
-            B_a=B_c
-
-            unit_block= np.ones((1,1,1), dtype=args.GLOBALARGS_dtype)
-            T_u= yast.Tensor(settings_U1, s=(-1, -1, -1), n=0)
-            T_u.set_block(ts=(1,-1,0), val= unit_block)
-            T_u.set_block(ts=(-1,1,0), val= -1*unit_block)
-            T_u.set_block(ts=(0,1,-1), val= unit_block)
-            T_u.set_block(ts=(0,-1,1), val= -1*unit_block)
-            T_u.set_block(ts=(-1,0,1), val= unit_block)
-            T_u.set_block(ts=(1,0,-1), val= -1*unit_block)
-            T_u.set_block(ts=(0,0,0), val= unit_block)
-            T_d=T_u
+                    D=((1, 2, 3, 2, 1), (1, 2, 3, 2, 1), (1, 2, 3, 2, 1)))            
             state= IPESS_KAGOME_GENERIC_ABELIAN(settings_U1, {'T_u': T_u, 'B_a': B_a, 'T_d': T_d,\
                 'B_b': B_b, 'B_c': B_c})
-            
-            #import pdb; pdb.set_trace()
+
 
     def energy_f(state, env, force_cpu=False):
         #print(env)
         e_dn = model_u1.energy_triangle_dn(state, env, force_cpu=force_cpu)
         e_up = model_u1.energy_triangle_up(state, env, force_cpu=force_cpu)
         # e_nnn = model.energy_nnn(state, env)
+        print(e_dn)
+        print(e_up)
         return (e_up + e_dn)/3 #+ e_nnn) / 3
     
     @torch.no_grad()
@@ -320,7 +325,9 @@ def main():
         ctm_args = opt_context["ctm_args"]
         opt_args = opt_context["opt_args"]
 
-        # build on-site tensors
+        # build double-layer open on-site tensors
+        state.build_sites_dl_open()
+
         # build on-site tensors
         if args.ansatz in ["IPESS", "IPESS_PG", "A_2,B"]:
             if args.ansatz in ["IPESS_PG", "A_2,B"]:
