@@ -89,6 +89,7 @@ class KAGOME_U1():
         #print(self.h_triangle)
         e_dn= rdm_kagome.rdm2x2_dn_triangle_with_operator(\
             (0, 0), state, env, self.h_triangle.fuse_legs(axes=((0,1,2),(3,4,5))), force_cpu=force_cpu).to_number()
+        print(rdm_kagome.rdm2x2_dn_triangle_with_operator((0, 0), state, env, self.Id3_t, force_cpu=force_cpu).to_number())
         return _cast_to_real(e_dn)
 
     def energy_triangle_up(self, state, env, force_cpu=False):
@@ -184,9 +185,6 @@ class KAGOME_U1():
                 obs[f"m_{i}"]= ((obs[f"sz_{i}"]*obs[f"sz_{i}"]+ obs[f"sp_{i}"]*obs[f"sm_{i}"]))
  
             # nn S.S pattern
-            
-            
-            print(rdm_kagome.rdm2x2_dn_triangle_with_operator((0, 0), state, env, self.Id3_t, force_cpu=force_cpu).to_number())
             
             SS_dn_01= rdm_kagome.rdm2x2_dn_triangle_with_operator((0, 0), state, env, self.SS01, force_cpu=force_cpu).to_number()
             SS_dn_12= rdm_kagome.rdm2x2_dn_triangle_with_operator((0, 0), state, env, self.SS12, force_cpu=force_cpu).to_number()
