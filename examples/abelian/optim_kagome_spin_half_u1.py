@@ -220,8 +220,8 @@ def main():
         e_dn = model_u1.energy_triangle_dn(state, env, force_cpu=force_cpu)
         e_up = model_u1.energy_triangle_up(state, env, force_cpu=force_cpu)
         # e_nnn = model.energy_nnn(state, env)
-        print(e_dn)
-        print(e_up)
+        #print(e_dn)
+        #print(e_up)
         return (e_up + e_dn)/3 #+ e_nnn) / 3
     
     @torch.no_grad()
