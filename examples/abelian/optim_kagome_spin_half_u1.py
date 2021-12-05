@@ -143,6 +143,8 @@ def main():
 
         elif args.ipeps_init_type=='RANDOM':
             bond_dim = args.bond_dim
+
+            #su(2) sectors
             if bond_dim==3:
                 B_c = yast.rand(config=settings_U1, s=(-1, 1, 1), n=0,
                     t=((-1, 1), (-1, 0, 1), (-1, 0, 1)),
@@ -211,6 +213,25 @@ def main():
                 T_d = yast.rand(config=settings_U1, s=(-1, -1, -1), n=0,
                     t=((-2, -1, 0, 1, 2), (-2, -1, 0, 1, 2), (-2, -1, 0, 1, 2)),
                     D=((1, 2, 3, 2, 1), (1, 2, 3, 2, 1), (1, 2, 3, 2, 1)))            
+
+            #non-su(2) sectors
+            elif bond_dim==4:
+                B_c = yast.rand(config=settings_U1, s=(-1, 1, 1), n=0,
+                    t=((-1, 1), (-1, 0, 1), (-1, 0, 1)),
+                    D=((1, 1), (1, 2, 1), (1, 2, 1)))
+                B_b = yast.rand(config=settings_U1, s=(-1, 1, 1), n=0,
+                    t=((-1, 1), (-1, 0, 1), (-1, 0, 1)),
+                    D=((1, 1), (1, 2, 1), (1, 2, 1)))
+                B_a = yast.rand(config=settings_U1, s=(-1, 1, 1), n=0,
+                    t=((-1, 1), (-1, 0, 1), (-1, 0, 1)),
+                    D=((1, 1), (1, 2, 1), (1, 2, 1)))
+
+                T_u = yast.rand(config=settings_U1, s=(-1, -1, -1), n=0,
+                    t=((-1, 0, 1), (-1, 0, 1), (-1, 0, 1)),
+                    D=((1, 2, 1), (1, 2, 1), (1, 2, 1)))
+                T_d = yast.rand(config=settings_U1, s=(-1, -1, -1), n=0,
+                    t=((-1, 0, 1), (-1, 0, 1), (-1, 0, 1)),
+                    D=((1, 2, 1), (1, 2, 1), (1, 2, 1)))
             state= IPESS_KAGOME_GENERIC_ABELIAN(settings_U1, {'T_u': T_u, 'B_a': B_a, 'T_d': T_d,\
                 'B_b': B_b, 'B_c': B_c})
 
@@ -325,9 +346,6 @@ def main():
         ctm_args = opt_context["ctm_args"]
         opt_args = opt_context["opt_args"]
 
-        # build double-layer open on-site tensors
-        state.build_sites_dl_open()
-
         # build on-site tensors
         if args.ansatz in ["IPESS", "IPESS_PG", "A_2,B"]:
             if args.ansatz in ["IPESS_PG", "A_2,B"]:
@@ -341,6 +359,9 @@ def main():
             A= state.sites[(0,0)]
             A= A/A.abs().max()
             state_sym= IPEPS_KAGOME({(0,0): A}, lX=1, lY=1)
+
+        # build double-layer open on-site tensors
+        state.build_sites_dl_open()
 
         # possibly re-initialize the environment
         if opt_args.opt_ctm_reinit:
