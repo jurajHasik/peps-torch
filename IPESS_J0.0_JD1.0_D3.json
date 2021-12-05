@@ -1,0 +1,538 @@
+{
+    "lX": 1,
+    "lY": 1,
+    "ipess_tensors": {
+        "T_u": {
+            "format": "abelian",
+            "nsym": 1,
+            "symmetry": "U(1)",
+            "rank": 3,
+            "signature": [
+                -1,
+                -1,
+                -1
+            ],
+            "n": [
+                0
+            ],
+            "isdiag": false,
+            "dtype": "complex128",
+            "blocks": [
+                {
+                    "dtype": "complex128",
+                    "dims": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "numEntries": 1,
+                    "entries": [
+                        "0 0 0 0.5046610890657096 -0.5015935108036975"
+                    ],
+                    "charges": [
+                        -1,
+                        0,
+                        1
+                    ]
+                },
+                {
+                    "dtype": "complex128",
+                    "dims": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "numEntries": 1,
+                    "entries": [
+                        "0 0 0 -0.5046610890657134 -0.501593510803713"
+                    ],
+                    "charges": [
+                        -1,
+                        1,
+                        0
+                    ]
+                },
+                {
+                    "dtype": "complex128",
+                    "dims": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "numEntries": 1,
+                    "entries": [
+                        "0 0 0 0.5046610890657072 0.5015935108037108"
+                    ],
+                    "charges": [
+                        0,
+                        -1,
+                        1
+                    ]
+                },
+                {
+                    "dtype": "complex128",
+                    "dims": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "numEntries": 1,
+                    "entries": [
+                        "0 0 0 1.0 -4.373440598348231e-16"
+                    ],
+                    "charges": [
+                        0,
+                        0,
+                        0
+                    ]
+                },
+                {
+                    "dtype": "complex128",
+                    "dims": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "numEntries": 1,
+                    "entries": [
+                        "0 0 0 -0.5046610890657327 0.5015935108037347"
+                    ],
+                    "charges": [
+                        0,
+                        1,
+                        -1
+                    ]
+                },
+                {
+                    "dtype": "complex128",
+                    "dims": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "numEntries": 1,
+                    "entries": [
+                        "0 0 0 0.5046610890657319 -0.5015935108037354"
+                    ],
+                    "charges": [
+                        1,
+                        -1,
+                        0
+                    ]
+                },
+                {
+                    "dtype": "complex128",
+                    "dims": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "numEntries": 1,
+                    "entries": [
+                        "0 0 0 -0.504661089065756 -0.5015935108037439"
+                    ],
+                    "charges": [
+                        1,
+                        0,
+                        -1
+                    ]
+                }
+            ]
+        },
+        "B_a": {
+            "format": "abelian",
+            "nsym": 1,
+            "symmetry": "U(1)",
+            "rank": 3,
+            "signature": [
+                -1,
+                1,
+                1
+            ],
+            "n": [
+                0
+            ],
+            "isdiag": false,
+            "dtype": "complex128",
+            "blocks": [
+                {
+                    "dtype": "complex128",
+                    "dims": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "numEntries": 1,
+                    "entries": [
+                        "0 0 0 -1.0018627537908955 1.748892562778303e-44"
+                    ],
+                    "charges": [
+                        -1,
+                        -1,
+                        0
+                    ]
+                },
+                {
+                    "dtype": "complex128",
+                    "dims": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "numEntries": 1,
+                    "entries": [
+                        "0 0 0 -1.0 0.0"
+                    ],
+                    "charges": [
+                        -1,
+                        0,
+                        -1
+                    ]
+                },
+                {
+                    "dtype": "complex128",
+                    "dims": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "numEntries": 1,
+                    "entries": [
+                        "0 0 0 1.0 0.0"
+                    ],
+                    "charges": [
+                        1,
+                        0,
+                        1
+                    ]
+                },
+                {
+                    "dtype": "complex128",
+                    "dims": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "numEntries": 1,
+                    "entries": [
+                        "0 0 0 1.0018627537908962 -4.664570142383538e-17"
+                    ],
+                    "charges": [
+                        1,
+                        1,
+                        0
+                    ]
+                }
+            ]
+        },
+        "T_d": {
+            "format": "abelian",
+            "nsym": 1,
+            "symmetry": "U(1)",
+            "rank": 3,
+            "signature": [
+                -1,
+                -1,
+                -1
+            ],
+            "n": [
+                0
+            ],
+            "isdiag": false,
+            "dtype": "complex128",
+            "blocks": [
+                {
+                    "dtype": "complex128",
+                    "dims": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "numEntries": 1,
+                    "entries": [
+                        "0 0 0 -0.4996678219735246 0.496600592353876"
+                    ],
+                    "charges": [
+                        -1,
+                        0,
+                        1
+                    ]
+                },
+                {
+                    "dtype": "complex128",
+                    "dims": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "numEntries": 1,
+                    "entries": [
+                        "0 0 0 -0.49966782197353354 -0.49660059235389803"
+                    ],
+                    "charges": [
+                        -1,
+                        1,
+                        0
+                    ]
+                },
+                {
+                    "dtype": "complex128",
+                    "dims": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "numEntries": 1,
+                    "entries": [
+                        "0 0 0 -0.4996678219735327 -0.4966005923538976"
+                    ],
+                    "charges": [
+                        0,
+                        -1,
+                        1
+                    ]
+                },
+                {
+                    "dtype": "complex128",
+                    "dims": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "numEntries": 1,
+                    "entries": [
+                        "0 0 0 1.0 3.6922059780542767e-16"
+                    ],
+                    "charges": [
+                        0,
+                        0,
+                        0
+                    ]
+                },
+                {
+                    "dtype": "complex128",
+                    "dims": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "numEntries": 1,
+                    "entries": [
+                        "0 0 0 0.4996678219735593 -0.4966005923539198"
+                    ],
+                    "charges": [
+                        0,
+                        1,
+                        -1
+                    ]
+                },
+                {
+                    "dtype": "complex128",
+                    "dims": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "numEntries": 1,
+                    "entries": [
+                        "0 0 0 0.499667821973554 -0.4966005923539172"
+                    ],
+                    "charges": [
+                        1,
+                        -1,
+                        0
+                    ]
+                },
+                {
+                    "dtype": "complex128",
+                    "dims": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "numEntries": 1,
+                    "entries": [
+                        "0 0 0 0.4996678219735691 0.49660059235391935"
+                    ],
+                    "charges": [
+                        1,
+                        0,
+                        -1
+                    ]
+                }
+            ]
+        },
+        "B_b": {
+            "format": "abelian",
+            "nsym": 1,
+            "symmetry": "U(1)",
+            "rank": 3,
+            "signature": [
+                -1,
+                1,
+                1
+            ],
+            "n": [
+                0
+            ],
+            "isdiag": false,
+            "dtype": "complex128",
+            "blocks": [
+                {
+                    "dtype": "complex128",
+                    "dims": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "numEntries": 1,
+                    "entries": [
+                        "0 0 0 -1.0018627537908895 -1.3816079441454293e-45"
+                    ],
+                    "charges": [
+                        -1,
+                        -1,
+                        0
+                    ]
+                },
+                {
+                    "dtype": "complex128",
+                    "dims": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "numEntries": 1,
+                    "entries": [
+                        "0 0 0 1.0 0.0"
+                    ],
+                    "charges": [
+                        -1,
+                        0,
+                        -1
+                    ]
+                },
+                {
+                    "dtype": "complex128",
+                    "dims": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "numEntries": 1,
+                    "entries": [
+                        "0 0 0 -1.0 0.0"
+                    ],
+                    "charges": [
+                        1,
+                        0,
+                        1
+                    ]
+                },
+                {
+                    "dtype": "complex128",
+                    "dims": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "numEntries": 1,
+                    "entries": [
+                        "0 0 0 1.0018627537908897 3.926680646653765e-17"
+                    ],
+                    "charges": [
+                        1,
+                        1,
+                        0
+                    ]
+                }
+            ]
+        },
+        "B_c": {
+            "format": "abelian",
+            "nsym": 1,
+            "symmetry": "U(1)",
+            "rank": 3,
+            "signature": [
+                -1,
+                1,
+                1
+            ],
+            "n": [
+                0
+            ],
+            "isdiag": false,
+            "dtype": "complex128",
+            "blocks": [
+                {
+                    "dtype": "complex128",
+                    "dims": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "numEntries": 1,
+                    "entries": [
+                        "0 0 0 -1.0018627537908988 -3.8312310140639854e-44"
+                    ],
+                    "charges": [
+                        -1,
+                        -1,
+                        0
+                    ]
+                },
+                {
+                    "dtype": "complex128",
+                    "dims": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "numEntries": 1,
+                    "entries": [
+                        "0 0 0 1.0 0.0"
+                    ],
+                    "charges": [
+                        -1,
+                        0,
+                        -1
+                    ]
+                },
+                {
+                    "dtype": "complex128",
+                    "dims": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "numEntries": 1,
+                    "entries": [
+                        "0 0 0 -1.0 0.0"
+                    ],
+                    "charges": [
+                        1,
+                        0,
+                        1
+                    ]
+                },
+                {
+                    "dtype": "complex128",
+                    "dims": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "numEntries": 1,
+                    "entries": [
+                        "0 0 0 1.0018627537908997 8.289811898983548e-17"
+                    ],
+                    "charges": [
+                        1,
+                        1,
+                        0
+                    ]
+                }
+            ]
+        }
+    }
+}
