@@ -87,14 +87,12 @@ class KAGOME_U1():
 
     def energy_triangle_dn(self, state, env, force_cpu=False):
         #print(self.h_triangle)
-        e_dn= rdm_kagome.rdm2x2_dn_triangle_with_operator(\
-            (0, 0), state, env, self.h_triangle.fuse_legs(axes=((0,1,2),(3,4,5))), force_cpu=force_cpu).to_number()
-        print(rdm_kagome.rdm2x2_dn_triangle_with_operator((0, 0), state, env, self.Id3_t, force_cpu=force_cpu).to_number())
+        e_dn= rdm_kagome.rdm2x2_dn_triangle_with_operator((0, 0), state, env, self.h_triangle.fuse_legs(axes=((0,1,2),(3,4,5))), force_cpu=force_cpu).to_number()
+        #print(rdm_kagome.rdm2x2_dn_triangle_with_operator((0, 0), state, env, self.Id3_t, force_cpu=force_cpu).to_number())
         return _cast_to_real(e_dn)
 
     def energy_triangle_up(self, state, env, force_cpu=False):
-        rdm_up= rdm_kagome.rdm2x2_up_triangle_open(\
-            (0, 0), state, env, force_cpu=force_cpu)
+        rdm_up= rdm_kagome.rdm2x2_up_triangle_open((0, 0), state, env, force_cpu=force_cpu)
         e_up=yast.tensordot(rdm_up.fuse_legs(axes=((0,1,2),(3,4,5))),self.h_triangle.fuse_legs(axes=((0,1,2),(3,4,5))),([0,1],[1,0])).to_number()
         # rdm=rdm_kagome.rdm2x2_kagome(coord, state, ctm_env_init, sites_to_keep_00=(), sites_to_keep_10=('B'), sites_to_keep_01=('A'), sites_to_keep_11=('C'))
         # print(rdm.fuse_legs(axes=((0,1,2),(3,4,5))))
@@ -103,13 +101,11 @@ class KAGOME_U1():
 
     def energy_triangle_dn_NoCheck(self, state, env, force_cpu=False):
         #print(self.h_triangle)
-        e_dn= rdm_kagome.rdm2x2_dn_triangle_with_operator(\
-            (0, 0), state, env, self.h_triangle.fuse_legs(axes=((0,1,2),(3,4,5))), force_cpu=force_cpu).to_number()
+        e_dn= rdm_kagome.rdm2x2_dn_triangle_with_operator((0, 0), state, env, self.h_triangle.fuse_legs(axes=((0,1,2),(3,4,5))), force_cpu=force_cpu).to_number()
         return e_dn
 
     def energy_triangle_up_NoCheck(self, state, env, force_cpu=False):
-        rdm_up= rdm_kagome.rdm2x2_up_triangle_open(\
-            (0, 0), state, env, force_cpu=force_cpu)
+        rdm_up= rdm_kagome.rdm2x2_up_triangle_open((0, 0), state, env, force_cpu=force_cpu)
         e_up=yast.tensordot(rdm_up.fuse_legs(axes=((0,1,2),(3,4,5))),self.h_triangle.fuse_legs(axes=((0,1,2),(3,4,5))),([0,1],[1,0])).to_number()
         return e_up
         
