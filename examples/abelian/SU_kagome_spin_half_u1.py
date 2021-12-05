@@ -309,7 +309,7 @@ def main():
         
 
     #itebd time steps
-    itebd_list=[[0.5,10],[0.1,20],[0.05,10],[0.01,10],[0.001,1]]
+    itebd_list=[[0.5,10],[0.1,20],[0.05,10],[0.01,1]]
 
 
     #observables
@@ -381,7 +381,9 @@ def main():
     else:
         io.savemat(filenm,{'energies':energies,'m':m, 'itebd_list':itebd_list})
 
-
+    filenm='IPESS_J'+str(args.j1)+'_JD'+str(args.JD)+'_D'+str(args.bond_dim)+'.json'
+    write_ipess_kagome_generic(state, filenm, peps_args=cfg.peps_args, global_args=cfg.global_args)
+    
 if __name__ == '__main__':
     if len(unknown_args) > 0:
         print("args not recognized: " + str(unknown_args))
