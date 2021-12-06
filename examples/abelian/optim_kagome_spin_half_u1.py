@@ -11,6 +11,7 @@ import ctm.generic_abelian.ctmrg as ctmrg
 import ctm.pess_kagome_abelian.rdm_kagome as rdm_kagome
 import models.abelian.kagome_spin_half_u1 as model
 from optim.ad_optim_lbfgs_mod import optimize_state
+from simple_update.itebd_kagome_u1 import itebd 
 import scipy.io as io
 import json
 import unittest
@@ -38,6 +39,7 @@ parser.add_argument("--disp_corre_len", action='store_true', dest='disp_corre_le
 parser.add_argument("--CTM_check", type=str, default='Partial_energy', help="method to check CTM convergence",choices=["Energy", "SingularValue", "Partial_energy"])
 parser.add_argument("--itebd_tol", type=float, default=1e-12, help="itebd truncation tol")
 parser.add_argument("--initial_RVB", type=float, default=0,help="D=3 RVB state")
+parser.add_argument("--itebd", action='store_true', dest='do_itebd', help="do itebd as initial state")
 args, unknown_args = parser.parse_known_args()
 
 @torch.no_grad()
@@ -72,7 +74,7 @@ def main():
         if args.ansatz=="A_2,B": ansatz_pgs= IPESS_KAGOME_PG.PG_A2_B
         
 
-        if args.initial_RVB==1:
+        if args.do_itebd or args.initial_RVB==1:
             
             unit_block= np.ones((1,1,1), dtype=args.GLOBALARGS_dtype)
             B_c= yast.Tensor(settings_U1, s=(-1, 1, 1), n=0)
@@ -96,6 +98,36 @@ def main():
             state= IPESS_KAGOME_GENERIC_ABELIAN(settings_U1, {'T_u': T_u, 'B_a': B_a, 'T_d': T_d,\
                 'B_b': B_b, 'B_c': B_c})
             
+            #Simple update itebd
+            if args.do_itebd:
+                #itebd time steps
+                itebd_list=[[0.5,10],[0.1,5],[0.01,1]]
+                H= H.fuse_legs(axes=((0,1,2),(3,4,5)))
+                #print(H)
+                #id=torch.eye(args.bond_dim, args.bond_dim, dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
+                unit_block= np.ones((1,1), dtype=args.GLOBALARGS_dtype)
+                id= yast.Tensor(settings_U1, s=(-1, 1), n=0)
+                id.set_block(ts=(1,1), val= unit_block)
+                id.set_block(ts=(-1,-1), val= unit_block)
+                id.set_block(ts=(0,0), val= unit_block)
+
+                lambdas={"lambda_up_a":id,"lambda_up_b":id, "lambda_up_c":id, "lambda_dn_a":id, "lambda_dn_b":id, "lambda_dn_c":id}
+                #state.ipess_tensors['T_u'], 'B_a': state.ipess_tensors['B_a'], 'T_d': state.ipess_tensors['T_d'], 'B_b': state.ipess_tensors['B_b'], 'B_c': state.ipess_tensors['B_c']
+                #T_u=state.ipess_tensors['T_u']
+                #T_d=state.ipess_tensors['T_d']
+
+                print('itebd start')
+                for ctt in range(len(itebd_list)):
+                    tau=itebd_list[ctt][1]
+                    dt=itebd_list[ctt][0]
+                    state, lambdas=itebd(state, lambdas, H, args.itebd_tol, tau, dt, args.bond_dim)
+                    #T_u=state.ipess_tensors['T_u']
+                    #T_d=state.ipess_tensors['T_d']
+                    #Tu_Ts, Tu_Ds=T_u.get_leg_charges_and_dims()
+                    #Td_Ts, Td_Ds=T_d.get_leg_charges_and_dims()
+                print('itebd end')
+
+
             #import pdb; pdb.set_trace()
         elif args.instate!=None:
             if args.ansatz=="IPESS":
@@ -261,7 +293,15 @@ def main():
     def print_corner_spectra(env):
         spectra = []
         for c_loc,c_ten in env.C.items():
+            c_ten=c_ten.to_dense()
+            #print(torch.Tensor.size(c_ten))
+            #print(c_ten)
             u,s,v= torch.svd(c_ten, compute_uv=False)
+            # none, none, none, s=yast.svd(c_ten, axes=((0),(1)), untruncated_S=True)
+            # print(s)
+            # s=s.to_dense()
+            # s=torch.diag(s)
+            # print(s)
             if c_loc[1] == (-1, -1):
                 label = 'LU'
             if c_loc[1] == (-1, 1):
@@ -335,11 +375,14 @@ def main():
     ctm_env_init= ENV_ABELIAN(args.chi, state=state, init=True)
     ctm_env_init, history, t_ctm, t_conv_check = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy, ctm_args=cfg.ctm_args)
 
-    # loss0 = energy_f_NoCheck(state, ctm_env_init, force_cpu=cfg.ctm_args.conv_check_cpu).real
-    # obs_values, obs_labels = model_u1.eval_obs(state,ctm_env_init,force_cpu=False, disp_corre_len=args.disp_corre_len)
-    # print("\n\n",end="")
-    # print(", ".join(["epoch",f"loss"]+[label for label in obs_labels]))
-    # print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
+    print(state.ipess_tensors['T_u'])
+    print(state.ipess_tensors['T_d'])
+
+    loss0 = energy_f_NoCheck(state, ctm_env_init, force_cpu=cfg.ctm_args.conv_check_cpu).real
+    obs_values, obs_labels = model_u1.eval_obs(state,ctm_env_init,force_cpu=False, disp_corre_len=args.disp_corre_len)
+    print("\n\n",end="")
+    print(", ".join(["epoch",f"loss"]+[label for label in obs_labels]))
+    print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
 
     
     def loss_fn(state, ctm_env_in, opt_context):
@@ -401,6 +444,8 @@ def main():
             print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]), end="")
             log.info("Norm(sites): "+", ".join([f"{t.norm()}" for c,t in state.sites.items()]))
             print(" "+", ".join([f"{t.norm()}" for c,t in state.sites.items()]) )
+
+
 
 
         
