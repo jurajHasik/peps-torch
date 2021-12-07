@@ -10,7 +10,7 @@ from ctm.generic_abelian.env_abelian import *
 import ctm.generic_abelian.ctmrg as ctmrg
 import ctm.pess_kagome_abelian.rdm_kagome as rdm_kagome
 import models.abelian.kagome_spin_half_u1 as model
-from optim.ad_optim_lbfgs_mod import optimize_state
+from optim.ad_optim_lbfgs_mod_NS import optimize_state
 from simple_update.itebd_kagome_u1 import itebd 
 import scipy.io as io
 import json
@@ -264,6 +264,23 @@ def main():
                 T_d = yast.rand(config=settings_U1, s=(-1, -1, -1), n=0,
                     t=((-1, 0, 1), (-1, 0, 1), (-1, 0, 1)),
                     D=((1, 2, 1), (1, 2, 1), (1, 2, 1)))
+            elif bond_dim==5:
+                B_c = yast.rand(config=settings_U1, s=(-1, 1, 1), n=0,
+                    t=((-1, 1), (-2, -1, 0, 1, 2), (-2,-1, 0, 1, 2)),
+                    D=((1, 1), (1, 1, 1, 1, 1), (1, 1, 1, 1, 1)))
+                B_b = yast.rand(config=settings_U1, s=(-1, 1, 1), n=0,
+                    t=((-1, 1), (-2, -1, 0, 1, 2), (-2,-1, 0, 1, 2)),
+                    D=((1, 1), (1, 1, 1, 1, 1), (1, 1, 1, 1, 1)))
+                B_a = yast.rand(config=settings_U1, s=(-1, 1, 1), n=0,
+                    t=((-1, 1), (-2, -1, 0, 1, 2), (-2,-1, 0, 1, 2)),
+                    D=((1, 1), (1, 1, 1, 1, 1), (1, 1, 1, 1, 1)))
+
+                T_u = yast.rand(config=settings_U1, s=(-1, -1, -1), n=0,
+                    t=((-2, -1, 0, 1, 2), (-2, -1, 0, 1, 2), (-2, -1, 0, 1, 2)),
+                    D=((1, 1, 1, 1, 1), (1, 1, 1, 1, 1), (1, 1, 1, 1, 1)))
+                T_d = yast.rand(config=settings_U1, s=(-1, -1, -1), n=0,
+                    t=((-2, -1, 0, 1, 2), (-2, -1, 0, 1, 2), (-2, -1, 0, 1, 2)),
+                    D=((1, 1, 1, 1, 1), (1, 1, 1, 1, 1), (1, 1, 1, 1, 1)))
             state= IPESS_KAGOME_GENERIC_ABELIAN(settings_U1, {'T_u': T_u, 'B_a': B_a, 'T_d': T_d,\
                 'B_b': B_b, 'B_c': B_c})
 
