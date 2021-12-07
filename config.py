@@ -82,6 +82,32 @@ def configure(parsed_args):
     logging.basicConfig(filename=main_args.out_prefix+".log", filemode='w', level=logging.INFO)
 
 def print_config():
+    import numpy as np
+    print(f"NumPy: {np.__version__}")
+    print(f"PyTorch: {torch.__version__}")
+    try:
+        import scipy
+        print(f"SciPy: {scipy.__version__}")
+    except ImportError:
+        print(f"SciPy: N/A")
+    try:
+        import subprocess
+        import pathlib
+        root_dir= pathlib.Path(__file__).parent.resolve()
+        ret= subprocess.run(f"cd {root_dir} ; git rev-parse --short HEAD",\
+            stdout=subprocess.PIPE, shell=True, check=True, text=True)
+        print(f"peps-torch git ref: {ret.stdout.rstrip()}")
+    except subprocess.CalledProcessError as e:
+        print(f"peps-torch git ref: N/A")
+    try:
+        import subprocess
+        import pathlib
+        root_dir= pathlib.Path(__file__).parent.resolve()
+        ret= subprocess.run(f"cd {root_dir}/yamps ; git rev-parse --short HEAD",\
+            stdout=subprocess.PIPE, shell=True, check=True,  text=True)
+        print(f"yast git ref: {ret.stdout.rstrip()}")
+    except subprocess.CalledProcessError as e:
+        print(f"yast git ref: N/A")
     print(main_args)
     print(global_args)
     print(peps_args)
