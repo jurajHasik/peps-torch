@@ -162,7 +162,11 @@ class LBFGS_MOD(LBFGS):
         current_evals = 1
         state['func_evals'] += 1
 
-        flat_grad = self._gather_flat_grad().contiguous()
+        #sen niu
+        for cc in range(len(self._params)):
+            self._params[cc]=self._params[cc].contiguous()
+
+        flat_grad = self._gather_flat_grad()
         is_complex= flat_grad.is_complex()
         opt_cond = flat_grad.abs().max() <= tolerance_grad
 
