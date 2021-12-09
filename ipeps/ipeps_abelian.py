@@ -270,7 +270,7 @@ class IPEPS_ABELIAN():
         checkpoint= torch.load(checkpoint_file, map_location=self.device) 
         self.sites= {ind: yast.import_from_dict(config= self.engine, d=t_dict_repr) \
             for ind,t_dict_repr in checkpoint["parameters"].items()}
-        for site in self.sites: site_t.requires_grad_(False)
+        for site_t in self.sites.values(): site_t.requires_grad_(False)
         self.build_sites_dl_open()
 
     def write_to_file(self, outputfile, tol=None, normalize=False):
