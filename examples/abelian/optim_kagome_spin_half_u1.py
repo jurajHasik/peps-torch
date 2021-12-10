@@ -75,7 +75,6 @@ def main():
         
 
         if args.do_itebd or args.initial_RVB==1:
-            
             unit_block= np.ones((1,1,1), dtype=args.GLOBALARGS_dtype)
             B_c= yast.Tensor(settings_U1, s=(-1, 1, 1), n=0)
             B_c.set_block(ts=(1,1,0), val= unit_block)
@@ -102,6 +101,8 @@ def main():
             if args.do_itebd:
                 #itebd time steps
                 itebd_list=[[0.5,10],[0.1,5],[0.01,1]]
+                model_u1_itebd= model.KAGOME_U1(settings_U1, j1=0, JD=1, j1sq=args.j1sq, j2=args.j2, j2sq=args.j2sq, jtrip=args.jtrip, jperm=args.jperm, h=args.h)
+                H=model_u1_itebd.h_triangle
                 H= H.fuse_legs(axes=((0,1,2),(3,4,5)))
                 #print(H)
                 #id=torch.eye(args.bond_dim, args.bond_dim, dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
