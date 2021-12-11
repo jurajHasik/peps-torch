@@ -101,7 +101,7 @@ def main():
             if args.do_itebd:
                 #itebd time steps
                 itebd_list=[[0.5,10],[0.1,5],[0.01,1]]
-                model_u1_itebd= model.KAGOME_U1(settings_U1, j1=0, JD=1, j1sq=args.j1sq, j2=args.j2, j2sq=args.j2sq, jtrip=args.jtrip, jperm=args.jperm, h=args.h)
+                model_u1_itebd= model.KAGOME_U1(settings_U1, j1=1, JD=1, j1sq=args.j1sq, j2=args.j2, j2sq=args.j2sq, jtrip=args.jtrip, jperm=args.jperm, h=args.h)
                 H=model_u1_itebd.h_triangle
                 H= H.fuse_legs(axes=((0,1,2),(3,4,5)))
                 #print(H)
