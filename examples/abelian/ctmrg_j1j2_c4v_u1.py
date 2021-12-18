@@ -1,10 +1,10 @@
+import context
 import torch
 import numpy as np
 import argparse
 import config as cfg
 import examples.abelian.settings_full_torch as settings_full
 import examples.abelian.settings_U1_torch as settings_U1
-import yamps.yast as TA
 from ipeps.ipeps_abelian_c4v import *
 from models.abelian import j1j2
 from ctm.one_site_c4v_abelian.env_c4v_abelian import *
@@ -45,9 +45,10 @@ def main():
     # override default device specified in settings
     default_device= 'cpu' if not hasattr(settings, 'device') else settings.device
     if not cfg.global_args.device == default_device:
-        settings.device = cfg.global_args.device
-        settings_full.device = cfg.global_args.device
+        settings.device= settings_full.device= cfg.global_args.device
         print("Setting backend device: "+settings.device)
+    # override default dtype specified in settings
+    settings.default_dtype= settings_full.default_dtype= cfg.global_args.dtype
     settings.backend.set_num_threads(args.omp_cores)
     settings.backend.random_seed(args.seed)
 
@@ -57,8 +58,7 @@ def main():
     # initialize the ipeps
     if args.instate!=None:
         state= read_ipeps_c4v(args.instate, settings)
-        state= state.add_noise(args.instate_noise)
-        state.sites[(0,0)]= state.sites[(0,0)]/state.sites[(0,0)].max_abs()
+        # state= state.add_noise(args.instate_noise)
     elif args.opt_resume is not None:
         state= IPEPS_ABELIAN_C4V(settings, None)
         state.load_checkpoint(args.opt_resume)
@@ -67,7 +67,7 @@ def main():
             +str(args.ipeps_init_type)+" is not supported")
 
     print(state)
-    
+
     # 2) convergence criterion based on 2-site reduced density matrix 
     #    of nearest-neighbours
     @torch.no_grad()
@@ -121,6 +121,7 @@ def main():
     print(", ".join(["epoch","energy"]+obs_labels))
     print("FINAL "+", ".join([f"{e_curr0}"]+[f"{v}" for v in obs_values0]))
     print(f"TIMINGS ctm: {t_ctm} conv_check: {t_obs}")
+
 
     # ----- additional observables ---------------------------------------------
     corrSS= model.eval_corrf_SS(state, ctm_env, args.corrf_r)
