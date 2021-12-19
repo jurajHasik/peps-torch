@@ -21,8 +21,8 @@ def _sym_pos_def_matrix(rdm, sym_pos_def=False, verbosity=0, who="unknown"):
     return rdm
 
 def _sym_pos_def_rdm(rdm, sym_pos_def=False, verbosity=0, who=None):
-    assert rdm.get_ndim()%2==0, "invalid rank of RDM"
-    nsites= rdm.get_ndim()//2
+    assert rdm.ndim%2==0, "invalid rank of RDM"
+    nsites= rdm.ndim//2
     rdm= rdm.fuse_legs(axes=(tuple(nsites+i for i in range(nsites)),\
         tuple(i for i in range(nsites))) )
     rdm= _sym_pos_def_matrix(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)

@@ -45,54 +45,37 @@ def main():
         settings_full.device = cfg.global_args.device
         print("Setting backend device: "+settings.device)
     # override default dtype
-    settings_full.dtype= settings.dtype= cfg.global_args.dtype
+    settings_full.default_dtype= settings.default_dtype= cfg.global_args.dtype
     settings.backend.set_num_threads(args.omp_cores)
     settings.backend.random_seed(args.seed)
     
     # the model (in particular operators forming Hamiltonian) is defined in a dense form
     # with no symmetry structure
-    model= su3_kagome.KAGOME_SU3_U1xU1(settings_U1xU1,j=param_j,k=param_k,h=param_h,global_args=cfg.global_args)
+    model= su3_kagome.KAGOME_SU3_U1xU1(settings,j=param_j,k=param_k,h=param_h,global_args=cfg.global_args)
 
     # initialize an ipeps
-    # 1) define lattice-tiling function, that maps arbitrary vertex of square lattice
-    # coord into one of coordinates within unit-cell of iPEPS ansatz
-    if args.tiling == "1SITE":
-        def lattice_to_site(coord):
-            return (0, 0)
-    else:
-        raise ValueError("Invalid tiling: "+str(args.tiling)+" Supported options: "+"1SITE")
-
     if args.instate!=None:
         state= read_ipess_kagome_generic(args.instate, settings)
         state.add_noise(args.instate_noise)
     elif args.opt_resume is not None:
-        if args.tiling == "BIPARTITE" or args.tiling == "2SITE":
-            state= IPESS_KAGOME_GENERIC_ABELIAN(settings, dict())
-        elif args.tiling == "1SITE":
-            state = IPESS_KAGOME_GENERIC_ABELIAN(settings, dict())
-        elif args.tiling == "4SITE":
-            state = IPESS_KAGOME_GENERIC_ABELIAN(settings, dict())
-        elif args.tiling == "8SITE":
-            state = IPESS_KAGOME_GENERIC_ABELIAN(settings, dict())
+        T_u= torch.zeros(config=settings, s=(-1,-1,-1))
+        T_d= torch.zeros(config=settings, s=(-1,-1,-1))
+        B_c= torch.zeros(config=settings, s=(-1,1,1))
+        B_a= torch.zeros(config=settings, s=(-1,1,1))
+        B_b= torch.zeros(config=settings, s=(-1,1,1))
+        state= IPESS_KAGOME_GENERIC_ABELIAN(settings, {'T_u': T_u, 'B_a': B_a,\
+            'T_d': T_d, 'B_b': B_b, 'B_c': B_c})
         state.load_checkpoint(args.opt_resume)
     else:
         raise ValueError("Missing trial state: --instate=None and --ipeps_init_type= "\
             +str(args.ipeps_init_type)+" is not supported")
 
-    if not state.dtype==model.dtype:
-        cfg.global_args.dtype= state.dtype
-        print(f"dtype of initial state {state.dtype} and model {model.dtype} do not match.")
-        print(f"Setting default dtype to {cfg.global_args.dtype} and reinitializing "\
-        +" the model")
-        model= su3_kagome.KAGOME_SU3_U1xU1(settings_U1xU1,j=param_j,k=param_k,h=param_h,global_args=cfg.global_args)
+    print(state)
 
-    # 2) select the "energy" function 
-    if args.tiling=="1SITE":
-        energy_f_down_t_1x1subsystem = model.energy_down_t_1x1subsystem
-        energy_f = model.energy_per_site_2x2subsystem
-    else:
-        raise ValueError("Invalid tiling: "+str(args.tiling)+" Supported options: 1SITE")
-
+    # 2) select the "energy" function
+    energy_f_down_t_1x1subsystem = model.energy_down_t_1x1subsystem
+    energy_f = model.energy_per_site_2x2subsystem
+    
     @torch.no_grad()
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
@@ -119,8 +102,13 @@ def main():
         ctm_args= opt_context["ctm_args"]
         opt_args= opt_context["opt_args"]
 
-        # build double-layer open on-site tensors
-        # state.build_sites_dl_open()
+        # 0) force recomputation of on-site tensors in the active autograd context
+        #    Otherwise, this operation is not recorded and hence not differentiated
+        state.sites= state.build_onsite_tensors()
+
+        # 1) build double-layer open on-site tensors
+        #    Some objects, in this case open-double layer tensors, are pre-computed
+        state.build_sites_dl_open()
 
         # possibly re-initialize the environment
         if opt_args.opt_ctm_reinit:
@@ -132,7 +120,7 @@ def main():
         
         # 2) evaluate loss with the converged environment
         loss= energy_f(state, ctm_env_out)
-        # print(loss.requires_grad)
+
         return (loss, ctm_env_out, *ctm_log)
 
     @torch.no_grad()

@@ -290,9 +290,9 @@ def trace1x1_dn_kagome(coord, state, env, op, verbosity=0):
     Compute 1-kagome-site trace :math:`Tr{\rho{1x1}_{ABC} O}` centered on vertex ``coord``.
     Inherited from the rdm1x1() method.
     """
-    assert op.get_ndim()==2 or op.get_ndim()==6,"Invalid operator"
+    assert op.ndim==2 or op.ndim==6,"Invalid operator"
     # TODO perform compatibility check ?
-    if op.get_ndim()==6: op= op.fuse_legs(axes=((0,1,2),(3,4,5)))
+    if op.ndim==6: op= op.fuse_legs(axes=((0,1,2),(3,4,5)))
 
     # C(-1,-1)--1->0
     # 0
@@ -924,9 +924,9 @@ def rdm2x2_dn_triangle_with_operator(coord, state, env, op, force_cpu=False,\
         C      T             T        C
     """
     who = 'rdm2x2_dn_triangle'
-    assert op.get_ndim()==2 or op.get_ndim()==6,"Invalid operator"
+    assert op.ndim==2 or op.ndim==6,"Invalid operator"
     # TODO perform compatibility check ?
-    if op.get_ndim()==6: op= op.fuse_legs(axes=((0,1,2),(3,4,5)))
+    if op.ndim==6: op= op.fuse_legs(axes=((0,1,2),(3,4,5)))
 
     # ----- building C2x2_LU ----------------------------------------------------
     if force_cpu:

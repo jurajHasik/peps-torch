@@ -1,3 +1,4 @@
+import warnings
 from collections import OrderedDict
 from itertools import chain
 import json
@@ -194,16 +195,18 @@ def read_ipess_kagome_generic(jsonfile, settings, peps_args=cfg.peps_args,\
             assert "format" in t.keys(), "\"format\" not specified"
             if t["format"]=="abelian":
                 X= read_json_abelian_tensor_legacy(t, settings)
-                ipess_tensors[key]= X.to(global_args.device)
+                # move all tensors to desired dtype and device
+                # TODO improve
+                if X.is_complex() and X.unique_dtype() in ["float64", "float32"]:
+                    warnings.warn("Downcasting complex tensor to real", RuntimeWarning)
+                ipess_tensors[key]= X.to(dtype=global_args.dtype, device=global_args.device)
             else:
                 raise Exception("Unsupported format "+t["format"])
 
     state = IPESS_KAGOME_GENERIC_ABELIAN(settings, ipess_tensors, peps_args=peps_args, \
             global_args=global_args)
 
-    # check dtypes of all on-site tensors for newly created state
-    assert (False not in [state.dtype==s.unique_dtype() for s in ipess_tensors.values()]),\
-        "incompatible dtype among state and ipess tensors"
+    
     
     return state
 

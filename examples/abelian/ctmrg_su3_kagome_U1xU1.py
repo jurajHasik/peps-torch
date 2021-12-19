@@ -45,10 +45,12 @@ def main():
         settings.device = cfg.global_args.device
         settings_full.device = cfg.global_args.device
         print("Setting backend device: "+settings.device)
+    # override default dtype specified in settings
+    settings.default_dtype= cfg.global_args.dtype
     torch.set_num_threads(args.omp_cores)
     torch.manual_seed(args.seed)
 
-    model= su3_kagome.KAGOME_SU3_U1xU1(settings_U1xU1,j=param_j,k=param_k,h=param_h,global_args=cfg.global_args)
+    model= su3_kagome.KAGOME_SU3_U1xU1(settings,j=param_j,k=param_k,h=param_h,global_args=cfg.global_args)
 
     # initialize an ipeps
     # 1) define lattice-tiling function, that maps arbitrary vertex of square lattice
@@ -59,13 +61,6 @@ def main():
     else:
         raise ValueError("Missing trial state: --instate=None and --ipeps_init_type= "\
             +str(args.ipeps_init_type)+" is not supported")
-
-    if not state.dtype==model.dtype:
-        cfg.global_args.dtype= state.dtype
-        print(f"dtype of initial state {state.dtype} and model {model.dtype} do not match.")
-        print(f"Setting default dtype to {cfg.global_args.dtype} and reinitializing "\
-        +" the model")
-        model= su3_kagome.KAGOME_SU3_U1xU1(settings_U1xU1,j=param_j,k=param_k,h=param_h,global_args=cfg.global_args)
 
     print(state)
 
