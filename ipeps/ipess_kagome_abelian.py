@@ -164,6 +164,7 @@ class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
             t_noise= yast.rand(config= t.config, s=t.s, n=t.n, t=ts, D=Ds, isdiag=t.isdiag)
             self.ipess_tensors[ind]= t + noise*t_noise
         self.sites = self.build_onsite_tensors()
+        self.build_sites_dl_open()
 
     def write_to_file(self, outputfile, tol=None, normalize=False):
         write_ipess_kagome_generic(self, outputfile, tol=tol, normalize=normalize)
