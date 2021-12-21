@@ -140,7 +140,6 @@ class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
             self.ipess_tensors['T_d'], self.ipess_tensors['B_b'], self.ipess_tensors['B_a']],\
             [[1,-3,-4], [-0,2,1], [2,3,4], [-1,3,-5], [-2,4,-6]])
         #    [[0,-4,-5], [-1,1,0], [1,2,3], [-2,2,-6], [-3,3,-7]]
-        print(A)
         A= A.fuse_legs(axes=((0,1,2),3,4,5,6))
         A= A/A.norm(p='inf')
         sites= {(0, 0): A}
@@ -164,6 +163,7 @@ class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
             t_noise= yast.rand(config= t.config, s=t.s, n=t.n, t=ts, D=Ds, isdiag=t.isdiag)
             self.ipess_tensors[ind]= t + noise*t_noise
         self.sites = self.build_onsite_tensors()
+        self.build_sites_dl_open()
 
     def write_to_file(self, outputfile, tol=None, normalize=False):
         write_ipess_kagome_generic(self, outputfile, tol=tol, normalize=normalize)
