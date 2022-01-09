@@ -27,7 +27,7 @@ class Test_IO_ipeps_abelian(unittest.TestCase):
         for k in state1.sites.keys():
             self.assertTrue(state1.sites[k].config.sym.NSYM==state0.nsym)
             self.assertTrue(state1.sites[k].config.sym.SYM_ID==state0.sym)
-            self.assertTrue(state1.sites[k].get_ndim()==state0.sites[k].get_ndim())
+            self.assertTrue(state1.sites[k].get_rank()==state0.sites[k].get_rank())
             self.assertTrue(np.array_equal(
                 state1.sites[k].get_signature(),state0.sites[k].get_signature()))
             self.assertTrue(np.array_equal(\
@@ -35,7 +35,7 @@ class Test_IO_ipeps_abelian(unittest.TestCase):
             if state0.nsym>0:
                 self.assertTrue(np.array_equal(\
                     state1.sites[k].get_leg_charges_and_dims(),state0.sites[k].get_leg_charges_and_dims()))
-            self.assertTrue(state0.sites[k].norm_diff(state1.sites[k])<1.0e-8)
+            self.assertTrue(yast.linalg.norm(state0.sites[k]-state1.sites[k])<1.0e-8)
 
     def test_write_full(self):
         a = yast.rand(config=settings_full, s=(-1, 1, 1, -1, -1), D=(2, 3, 2, 3, 2))

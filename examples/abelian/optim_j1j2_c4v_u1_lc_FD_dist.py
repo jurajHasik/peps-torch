@@ -76,7 +76,7 @@ def loss_functional(energy_f, state, ctm_env, opt_context):
 
     # build on-site tensors from su2sym components
     state.sites[(0,0)]= state.build_onsite_tensors()
-    state.sites[(0,0)]= state.sites[(0,0)]/state.sites[(0,0)].max_abs()
+    state.sites[(0,0)]= state.sites[(0,0)]/state.sites[(0,0)].norm(p='inf')()
 
     # possibly re-initialize the environment
     if opt_args.opt_ctm_reinit:
@@ -361,7 +361,7 @@ def main(rank, size, pipes_to_workers):
     if args.instate!=None:
         state= read_ipeps_c4v_lc(args.instate, settings)
         state= state.add_noise(args.instate_noise)
-        # state.sites[(0,0)]= state.sites[(0,0)]/state.sites[(0,0)].max_abs()
+        # state.sites[(0,0)]= state.sites[(0,0)]/state.sites[(0,0)].norm(p='inf')()
     elif args.opt_resume is not None:
         state= IPEPS_ABELIAN_C4V_LC(settings, None, None, None)
         state.load_checkpoint(args.opt_resume)

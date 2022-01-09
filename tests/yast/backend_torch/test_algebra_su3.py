@@ -51,8 +51,6 @@ def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{e_curr}"]+[f"{v}" for v in obs_values]))
 
-    import pdb; pdb.set_trace()
-
     if len(history) >= ctm_args.ctm_max_iter:
 #         log.info({"history_length": len(history), "history": history})
         return True, history

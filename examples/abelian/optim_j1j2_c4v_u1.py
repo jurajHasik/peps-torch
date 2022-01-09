@@ -1,3 +1,4 @@
+import context
 import copy
 import torch
 import numpy as np
@@ -58,7 +59,7 @@ def main():
     if args.instate!=None:
         state= read_ipeps_c4v(args.instate, settings)
         state= state.add_noise(args.instate_noise)
-        state.sites[(0,0)]= state.sites[(0,0)]/state.sites[(0,0)].max_abs()
+        state.sites[(0,0)]= state.sites[(0,0)]/state.sites[(0,0)].norm(p="inf")
     elif args.opt_resume is not None:
         state= IPEPS_ABELIAN_C4V(settings, None)
         state.load_checkpoint(args.opt_resume)
@@ -145,7 +146,7 @@ def main():
             loss= opt_context["loss_history"]["loss"][-1]
             obs_values, obs_labels = model.eval_obs(state_sym, ctm_env, force_cpu=args.force_cpu)
             print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]+\
-                [f"{state.site().max_abs()}"]))
+                [f"{state.site().norm(p='inf')}"]))
 
     #         if args.top_freq>0 and epoch%args.top_freq==0:
     #             coord_dir_pairs=[((0,0), (1,0))]

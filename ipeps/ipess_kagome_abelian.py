@@ -102,11 +102,11 @@ class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
         return list(chain( *(self.ipess_tensors[ind].A.values() for ind in self.ipess_tensors)))
 
     def get_checkpoint(self):
-        return {ind: self.ipess_tensors[ind].export_to_dict() for ind in self.ipess_tensors}
+        return {ind: self.ipess_tensors[ind].save_to_dict() for ind in self.ipess_tensors}
 
     def load_checkpoint(self, checkpoint_file):
         checkpoint= torch.load(checkpoint_file, map_location=self.device)
-        self.ipess_tensors= {ind: yast.import_from_dict(config= self.engine, d=t_dict_repr) \
+        self.ipess_tensors= {ind: yast.load_from_dict(config= self.engine, d=t_dict_repr) \
             for ind,t_dict_repr in checkpoint["parameters"].items()}
         for t in self.ipess_tensors.values(): t.requires_grad_(False)
         self.sites = self.build_onsite_tensors()

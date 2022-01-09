@@ -20,10 +20,10 @@ def _cast_to_real(t, check=True, imag_eps=1.0e-10):
 
 class S_HALF_KAGOME():
 
-    def __init__(self, j1=1., JD=0, j1sq=0., j2=0., j2sq=0., jtrip=0., jperm=0., global_args=cfg.global_args):
+    def __init__(self, j1=1., JD=0, j2=0., jtrip=0., jperm=0., global_args=cfg.global_args):
         r"""
-        H = J_1 \sum_{<ij>} S_i.S_j + J_{1sq} \sum_{<ij>} (S_i.S_j)^2
-            + J_2 \sum_{<<ij>>} S_i.S_j + J_{2sq} \sum_{<<ij>>} (S_i.S_j)^2
+        H = J_1 \sum_{<ij>} S_i.S_j
+            + J_2 \sum_{<<ij>>} S_i.S_j
             - J_{trip} \sum_t (S_{t_1} \times S_{t_2}).S_{t_3}
             + J_{perm} \sum_t P_t + J*_{perm} \sum_t P^{-1}_t
         """
@@ -32,30 +32,20 @@ class S_HALF_KAGOME():
         self.phys_dim = 2
         self.j1 = j1
         self.JD = JD
-        self.j1sq = j1sq
         self.j2 = j2
-        self.j2sq = j2sq
         self.jtrip = jtrip
         self.jperm = jperm
         
         irrep = su2.SU2(self.phys_dim, dtype=self.dtype, device=self.device)
-        
-        #import pdb; pdb.set_trace()
 
         Id1= irrep.I()
         self.Id3_t= torch.eye(self.phys_dim**3, dtype=self.dtype, device=self.device)
-        #SS= irrep.SS()
-        #sen niu
         if abs(JD)==0:
             SS= irrep.SS(xyz=(j1, j1, j1))
         else:
             SS= irrep.SS(xyz=(j1, j1+1j*JD, j1-1j*JD))
-        #SS= irrep.SS(xyz=(j1, j1, j1))
         self.SSnnId= torch.einsum('ijkl,ab->ijaklb',SS,Id1)
         SSnn_t= self.SSnnId + self.SSnnId.permute(1,2,0, 4,5,3) + self.SSnnId.permute(2,0,1, 5,3,4)
-        SS2= torch.einsum('ijab,abkl->ijkl',SS,SS)
-        SS2nnId= torch.einsum('ijkl,ab->ijaklb',SS2,Id1)
-        SS2nn_t= SS2nnId + SS2nnId.permute(1,2,0, 4,5,3) + SS2nnId.permute(2,0,1, 5,3,4)
 
         Svec= irrep.S()
         levicivit3= torch.zeros(3,3,3, dtype=self.dtype, device=self.device)
@@ -69,12 +59,17 @@ class S_HALF_KAGOME():
             for j in range(self.phys_dim):
                 for k in range(self.phys_dim):
                     # anticlockwise (direct)
+                    #
+                    # 2---1 <- 0---2
+                    #  \ /      \ /
+                    #   0        1
                     permute_triangle[i, j, k, j, k, i] = 1.
                     # clockwise (inverse)
                     permute_triangle_inv[i, j, k, k, i, j] = 1.
 
-        self.h_triangle= SSnn_t + self.j1sq*SS2nn_t + self.jtrip*SxSS_t \
+        self.h_triangle= SSnn_t + self.jtrip*SxSS_t \
             + self.jperm * permute_triangle + (self.jperm * permute_triangle_inv).conj()
+        
         szId2= torch.einsum('ij,kl,ab->ikajlb',irrep.SZ(),Id1,Id1).contiguous()
         spId2= torch.einsum('ij,kl,ab->ikajlb',irrep.SP(),Id1,Id1).contiguous()
         smId2= torch.einsum('ij,kl,ab->ikajlb',irrep.SM(),Id1,Id1).contiguous()

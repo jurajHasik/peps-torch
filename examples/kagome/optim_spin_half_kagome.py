@@ -22,12 +22,10 @@ log = logging.getLogger(__name__)
 
 # parse command line args and build necessary configuration objects
 parser = cfg.get_args_parser()
-parser.add_argument("--theta", type=float, default=0, help="angle [<value> x pi] parametrizing the chiral Hamiltonian")
+parser.add_argument("--theta", type=float, default=None, help="angle [<value> x pi] parametrizing the chiral Hamiltonian")
 parser.add_argument("--j1", type=float, default=1., help="nearest-neighbor exchange coupling")
 parser.add_argument("--JD", type=float, default=0, help="two-spin DM interaction")
-parser.add_argument("--j1sq", type=float, default=0, help="nearest-neighbor biquadratic exchange coupling")
 parser.add_argument("--j2", type=float, default=0, help="next-nearest-neighbor exchange coupling")
-parser.add_argument("--j2sq", type=float, default=0, help="next-nearest-neighbor biquadratic exchange coupling")
 parser.add_argument("--jtrip", type=float, default=0, help="(SxS).S")
 parser.add_argument("--jperm", type=float, default=0, help="triangle permutation")
 parser.add_argument("--ansatz", type=str, default=None, help="choice of the tensor ansatz",choices=["IPEPS", "IPESS", "IPESS_PG", 'A_2,B'])
@@ -35,6 +33,7 @@ parser.add_argument("--no_sym_up_dn", action='store_false', dest='sym_up_dn',hel
 parser.add_argument("--no_sym_bond_S", action='store_false', dest='sym_bond_S',help="same bond site tensors")
 parser.add_argument("--disp_corre_len", action='store_true', dest='disp_corre_len',help="display correlation length during optimization")
 parser.add_argument("--CTM_check", type=str, default='Partial_energy', help="method to check CTM convergence",choices=["Energy", "SingularValue", "Partial_energy"])
+parser.add_argument("--force_cpu", action='store_true', dest='force_cpu', help="force RDM contractions on CPU")
 args, unknown_args = parser.parse_known_args()
 
 
@@ -44,8 +43,12 @@ def main():
     torch.set_num_threads(args.omp_cores)
     torch.manual_seed(args.seed)
 
-    model= spin_half_kagome.S_HALF_KAGOME(j1=args.j1, JD=args.JD, j1sq=args.j1sq,\
-        j2=args.j2, j2sq=args.j2sq, jtrip=args.jtrip, jperm=args.jperm)
+    if not args.theta is None:
+        args.j1= args.j1*math.cos(args.theta*math.pi)
+        args.jtrip= args.j1*math.sin(args.theta*math.pi)
+    print("j1={args.j1}; jD={args.jD}; j2={args.j2}; jtrip={args.jtrip}")
+    model= spin_half_kagome.S_HALF_KAGOME(j1=args.j1, JD=args.JD,\
+        j2=args.j2, jtrip=args.jtrip, jperm=args.jperm)
 
     # initialize the ipess/ipeps
     if args.ansatz in ["IPESS","IPESS_PG","A_2,B"]:
@@ -171,6 +174,7 @@ def main():
         return spectra
 
     if args.CTM_check=="Energy":
+        @torch.no_grad()
         def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
             if not history:
                 history = []
@@ -182,6 +186,7 @@ def main():
                 return True, history
             return False, history
     elif args.CTM_check=="Partial_energy":
+        @torch.no_grad()
         def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
             if not history:
                 history = []
@@ -197,6 +202,7 @@ def main():
                 return True, history
             return False, history
     elif args.CTM_check=="SingularValue":
+        @torch.no_grad()
         def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
             if not history:
                 history_spec = []
@@ -235,18 +241,17 @@ def main():
             conv_check=ctmrg_conv_energy, ctm_args=cfg.ctm_args)
     
     loss0 = energy_f(state, ctm_env_init, force_cpu=cfg.ctm_args.conv_check_cpu)
-    obs_values, obs_labels = model.eval_obs(state,ctm_env_init,force_cpu=False, disp_corre_len=args.disp_corre_len)
+    obs_values, obs_labels = model.eval_obs(state,ctm_env_init,force_cpu=args.force_cpu,\
+        disp_corre_len=args.disp_corre_len)
     print("\n\n",end="")
     print(", ".join(["epoch",f"loss"]+[label for label in obs_labels]))
     print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
 
     
-
     def loss_fn(state, ctm_env_in, opt_context):
         ctm_args = opt_context["ctm_args"]
         opt_args = opt_context["opt_args"]
 
-        # build on-site tensors
         # build on-site tensors
         if args.ansatz in ["IPESS", "IPESS_PG", "A_2,B"]:
             if args.ansatz in ["IPESS_PG", "A_2,B"]:
@@ -295,7 +300,8 @@ def main():
             print(", ".join([f"{epoch}",f"{loss}"]))
             log.info("Norm(sites): "+", ".join([f"{t.norm()}" for c,t in state.sites.items()]))
         else:
-            obs_values, obs_labels = model.eval_obs(state_sym,ctm_env,force_cpu=False, disp_corre_len=args.disp_corre_len)
+            obs_values, obs_labels = model.eval_obs(state_sym,ctm_env,force_cpu=args.force_cpu,\
+                disp_corre_len=args.disp_corre_len)
             print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]), end="")
             log.info("Norm(sites): "+", ".join([f"{t.norm()}" for c,t in state.sites.items()]))
             print(" "+", ".join([f"{t.norm()}" for c,t in state.sites.items()]) )

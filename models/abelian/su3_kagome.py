@@ -227,11 +227,11 @@ class KAGOME_SU3_U1xU1():
                 # generators
                 for i,g_id in gen_lr:
                     # identify lowering and raising operators
-                    if self.obs_ops[g_id].get_tensor_charge() in obs_CW.get_blocks_charges():
+                    if self.obs_ops[g_id].get_tensor_charge() in obs_CW.get_blocks_charge():
                         gens[site][i]= obs_CW[self.obs_ops[g_id].get_tensor_charge()].item()
                 # identify center
                 center_charge= self.obs_ops[gen_center[0][1]].get_tensor_charge()
-                if center_charge in obs_CW.get_blocks_charges():
+                if center_charge in obs_CW.get_blocks_charge():
                     # i indexes expectation value inside block of center charge. The expectation
                     # value is then mapped back to its position in Cartan-Weyl basis
                     for i, g_index_g_id in enumerate(gen_center):
