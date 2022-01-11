@@ -53,8 +53,8 @@ class S_HALF_KAGOME():
         levicivit3[0,2,1]=levicivit3[2,1,0]=levicivit3[1,0,2]=-1.
         SxSS_t= torch.einsum('abc,bij,ckl,amn->ikmjln',levicivit3,Svec,Svec,Svec)
 
-        permute_triangle = torch.zeros([self.phys_dim]*6, dtype=self.dtype, device=self.device)
-        permute_triangle_inv = torch.zeros([self.phys_dim]*6, dtype=self.dtype, device=self.device)
+        self.P_triangle = torch.zeros([self.phys_dim]*6, dtype=self.dtype, device=self.device)
+        self.P_triangle_inv = torch.zeros([self.phys_dim]*6, dtype=self.dtype, device=self.device)
         for i in range(self.phys_dim):
             for j in range(self.phys_dim):
                 for k in range(self.phys_dim):
@@ -63,12 +63,12 @@ class S_HALF_KAGOME():
                     # 2---1 <- 0---2
                     #  \ /      \ /
                     #   0        1
-                    permute_triangle[i, j, k, j, k, i] = 1.
+                    self.P_triangle[i, j, k, j, k, i] = 1.
                     # clockwise (inverse)
-                    permute_triangle_inv[i, j, k, k, i, j] = 1.
+                    self.P_triangle_inv[i, j, k, k, i, j] = 1.
 
         self.h_triangle= SSnn_t + self.jtrip*SxSS_t \
-            + self.jperm * permute_triangle + (self.jperm * permute_triangle_inv).conj()
+            + self.jperm * self.P_triangle + (self.jperm * self.P_triangle_inv).conj()
         
         szId2= torch.einsum('ij,kl,ab->ikajlb',irrep.SZ(),Id1,Id1).contiguous()
         spId2= torch.einsum('ij,kl,ab->ikajlb',irrep.SP(),Id1,Id1).contiguous()
@@ -161,12 +161,12 @@ class S_HALF_KAGOME():
 
     def P_dn(self, state, env, force_cpu=False):
         vP_dn= rdm_kagome.rdm2x2_dn_triangle_with_operator((0, 0), state, env,\
-            operator=permute_triangle, force_cpu=force_cpu)
+            operator=self.P_triangle, force_cpu=force_cpu)
         return vP_dn
 
     def P_up(self, state, env, force_cpu=False):
         rdm_up= rdm_kagome.rdm2x2_up_triangle_open((0, 0), state, env, force_cpu=force_cpu)
-        vP_up= torch.einsum('ijkmno,mnoijk', rdm_up, permute_triangle)
+        vP_up= torch.einsum('ijkmno,mnoijk', rdm_up, self.P_triangle)
         return vP_up
 
     def P_bonds_nnn(self, state, env, force_cpu=False):

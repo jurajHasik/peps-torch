@@ -46,7 +46,7 @@ def main():
     if not args.theta is None:
         args.j1= args.j1*math.cos(args.theta*math.pi)
         args.jtrip= args.j1*math.sin(args.theta*math.pi)
-    print("j1={args.j1}; jD={args.jD}; j2={args.j2}; jtrip={args.jtrip}")
+    print(f"j1={args.j1}; jD={args.JD}; j2={args.j2}; jtrip={args.jtrip}")
     model= spin_half_kagome.S_HALF_KAGOME(j1=args.j1, JD=args.JD,\
         j2=args.j2, jtrip=args.jtrip, jperm=args.jperm)
 
