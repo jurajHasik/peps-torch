@@ -11,6 +11,7 @@ from models import spin_half_kagome
 from ctm.generic.env import *
 from ctm.pess_kagome import rdm_kagome
 from ctm.generic import ctmrg
+from ctm.generic import transferops
 import json
 import unittest
 import logging
@@ -34,6 +35,8 @@ parser.add_argument("--CTM_check", type=str, default='Partial_energy', help="met
 parser.add_argument("--force_cpu", action='store_true', dest='force_cpu', help="force RDM contractions on CPU")
 parser.add_argument("--obs_freq", type=int, default=-1, help="frequency of computing observables"
     + " during CTM convergence")
+parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
+    "of transfer operator to compute")
 args, unknown_args = parser.parse_known_args()
 
 
@@ -290,6 +293,14 @@ def main():
     ev_chi_R_upT= torch.einsum('ijkmno,mnoijk',rho_upT, chi_R)
     ev_chi_I_upT= torch.einsum('ijkmno,mnoijk',rho_upT, chi_I)
     print(f"Re(Chi) upT {ev_chi_R_upT} Im(Chi) upT {ev_chi_I_upT}")
+
+    # transfer operator spectrum
+    site_dir_list=[((0,0), (1,0)),((0,0), (0,1)), ((1,1), (1,0)), ((1,1), (0,1))]
+    for sdp in site_dir_list:
+        print(f"\n\nspectrum(T)[{sdp[0]},{sdp[1]}]")
+        l= transferops.get_Top_spec(args.top_n, *sdp, state, ctm_env_init)
+        for i in range(l.size()[0]):
+            print(f"{i} {l[i,0]} {l[i,1]}")
 
 
 if __name__ == '__main__':
