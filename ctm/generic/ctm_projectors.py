@@ -10,7 +10,6 @@ from tn_interface import conj, transpose
 import logging
 log = logging.getLogger(__name__)
 
-import pdb
 
 def ctm_get_projectors_4x4(direction, coord, state, env, ctm_args=cfg.ctm_args, \
     global_args=cfg.global_args):
@@ -209,10 +208,10 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args, \
 
     if ctm_args.projector_svd_method=='DEFAULT' or ctm_args.projector_svd_method=='GESDD':
         def truncated_svd(M, chi):
-            return truncated_svd_gesdd(M, chi, verbosity=ctm_args.verbosity_projectors)
+            return truncated_svd_gesdd(M, chi, keep_multiplets=True, abs_tol=1.0e-8, eps_multiplet=1.0e-8, verbosity=ctm_args.verbosity_projectors)
     elif ctm_args.projector_svd_method == 'ARP':
         def truncated_svd(M, chi):
-            return truncated_svd_arnoldi(M, chi, verbosity=ctm_args.verbosity_projectors)
+            return truncated_svd_arnoldi(M, chi, keep_multiplets=True, verbosity=ctm_args.verbosity_projectors)
     else:
         raise(f"Projector svd method \"{cfg.ctm_args.projector_svd_method}\" not implemented")
 
@@ -226,7 +225,7 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args, \
     S_nz= S[S/S[0] > ctm_args.projector_svd_reltol]
     S_sqrt= S*0
     S_sqrt[:S_nz.size(0)]= torch.rsqrt(S_nz)
-
+    
     if verbosity>0: print(S_sqrt)
 
     # Construct projectors

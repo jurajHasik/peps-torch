@@ -82,6 +82,32 @@ def configure(parsed_args):
     logging.basicConfig(filename=main_args.out_prefix+".log", filemode='w', level=logging.INFO)
 
 def print_config():
+    import numpy as np
+    print(f"NumPy: {np.__version__}")
+    print(f"PyTorch: {torch.__version__}")
+    try:
+        import scipy
+        print(f"SciPy: {scipy.__version__}")
+    except ImportError:
+        print(f"SciPy: N/A")
+    try:
+        import subprocess
+        import pathlib
+        root_dir= pathlib.Path(__file__).parent.resolve()
+        ret= subprocess.run(f"cd {root_dir} ; git rev-parse --short HEAD",\
+            stdout=subprocess.PIPE, shell=True, check=True, text=True)
+        print(f"peps-torch git ref: {ret.stdout.rstrip()}")
+    except subprocess.CalledProcessError as e:
+        print(f"peps-torch git ref: N/A")
+    try:
+        import subprocess
+        import pathlib
+        root_dir= pathlib.Path(__file__).parent.resolve()
+        ret= subprocess.run(f"cd {root_dir}/yamps ; git rev-parse --short HEAD",\
+            stdout=subprocess.PIPE, shell=True, check=True,  text=True)
+        print(f"yast git ref: {ret.stdout.rstrip()}")
+    except subprocess.CalledProcessError as e:
+        print(f"yast git ref: N/A")
     print(main_args)
     print(global_args)
     print(peps_args)
@@ -200,6 +226,11 @@ class CTMARGS():
                                 singular value spectrum used in the construction of projectors. 
                                 Default: ``1.0e-8``
     :vartype projector_svd_reltol: float
+    :ivar projector_svd_reltol_block: (relevant only for decompositions of blocks-sparse tensors) 
+                                relative threshold on the magnitude of the smallest elements of 
+                                singular value spectrum per block used in the construction of projectors.
+                                Default: ``0.0``
+    :vartype projector_svd_reltol_block: float
     :ivar ctm_move_sequence: sequence of directional moves within single CTM iteration. The possible 
                              directions are encoded as tuples(int,int) 
                                 
@@ -210,6 +241,8 @@ class CTMARGS():
 
                              Default: ``[(0,-1), (-1,0), (0,1), (1,0)]``
     :vartype ctm_move_sequence: list[tuple(int,int)]
+    :ivar ctm_force_dl: precompute and use on-site double-layer tensors in CTMRG 
+    :vartype ctm_force_dl: bool
     :ivar fwd_checkpoint_c2x2: recompute forward pass of enlarged corner functions (c2x2_*) during 
                                backward pass within optimization to save memory. Default: ``False``
     :vartype fwd_checkpoint_c2x2: bool
@@ -265,8 +298,10 @@ class CTMARGS():
         self.projector_method = '4X4'
         self.projector_svd_method = 'DEFAULT'
         self.projector_svd_reltol = 1.0e-8
+        self.projector_svd_reltol_block = 0.0
         self.ad_decomp_reg= 1.0e-12
         self.ctm_move_sequence = [(0,-1), (-1,0), (0,1), (1,0)]
+        self.ctm_force_dl = False
         self.ctm_logging = False
         self.verbosity_initialization = 0
         self.verbosity_ctm_convergence = 0
