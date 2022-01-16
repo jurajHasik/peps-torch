@@ -37,6 +37,14 @@ parser.add_argument("--obs_freq", type=int, default=-1, help="frequency of compu
     + " during CTM convergence")
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
+parser.add_argument("--EH_n", type=int, default=1, help="number of leading eigenvalues"+
+    "of transfer operator to compute")
+parser.add_argument("--EH_T_ED_L", type=int, default=0, help="number of leading eigenvalues"+
+    "of transfer operator to compute")
+parser.add_argument("--EH_T_ARP_minL", type=int, default=0, help="number of leading eigenvalues"+
+    "of transfer operator to compute")
+parser.add_argument("--EH_T_ARP_maxL", type=int, default=0, help="number of leading eigenvalues"+
+    "of transfer operator to compute")
 args, unknown_args = parser.parse_known_args()
 
 
@@ -145,8 +153,8 @@ def main():
 
     def energy_f(state, env, force_cpu=False):
         #print(env)
-        e_dn = model.energy_triangle_dn(state, env, force_cpu=args.force_cpu)
-        e_up = model.energy_triangle_up(state, env, force_cpu=args.force_cpu)
+        e_dn = model.energy_triangle_dn_NoCheck(state, env, force_cpu=args.force_cpu)
+        e_up = model.energy_triangle_up_NoCheck(state, env, force_cpu=args.force_cpu)
         # e_nnn = model.energy_nnn(state, env)
         return (e_up + e_dn)/3 #+ e_nnn) / 3
     def energy_f_complex(state, env, force_cpu=False):
@@ -157,7 +165,7 @@ def main():
         return (e_up + e_dn)/3 #+ e_nnn) / 3
     def dn_energy_f(state, env, force_cpu=False):
         #print(env)
-        e_dn = model.energy_triangle_dn(state, env, force_cpu=args.force_cpu)
+        e_dn = model.energy_triangle_dn_NoCheck(state, env, force_cpu=args.force_cpu)
         return e_dn
         
     def eval_corner_spectra(env):
@@ -302,6 +310,22 @@ def main():
         for i in range(l.size()[0]):
             print(f"{i} {l[i,0]} {l[i,1]}")
 
+    # entanglement spectrum
+    site_dir_list=[((0,0), (1,0)), ((0,0), (0,1))]
+    for sdp in site_dir_list:
+
+        for L in range(1,args.EH_T_ED_L):
+            S= transferops.get_full_EH_spec_Ttensor(L, *sdp, state, ctm_env_init)
+            print(f"\nEH_T_ED[{sdp[0]},{sdp[1]}] L={L}")
+            for i in range(min(S.size(0),args.EH_n)):
+                print(f"{i} {S.real[i]} {S.imag[i]}")
+
+        for L in range(args.EH_T_ARP_minL,args.EH_T_ARP_maxL):
+            S=transferops.get_EH_spec_Ttensor(args.EH_n, L, *sdp, state, ctm_env_init)
+
+            print(f"\nEH_T_ARP[{sdp[0]},{sdp[1]}] L={L}")
+            for i in range(args.EH_n):
+                print(f"{i} {S[i,0]} {S[i,1]}")
 
 if __name__ == '__main__':
     if len(unknown_args) > 0:
