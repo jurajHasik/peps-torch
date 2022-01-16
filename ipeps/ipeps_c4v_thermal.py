@@ -4,7 +4,9 @@ import json
 import math
 import config as cfg
 import ipeps.ipeps as ipeps
+from groups.pg import make_c4v_symm
 from ipeps.ipeps_c4v import IPEPS_C4V
+from linalg.custom_eig import truncated_eig_sym
 
 class IPEPS_C4V_THERMAL(ipeps.IPEPS):
     def __init__(self, site=None, peps_args=cfg.peps_args, global_args=cfg.global_args):
@@ -16,7 +18,7 @@ class IPEPS_C4V_THERMAL(ipeps.IPEPS):
         :type peps_args: PEPSARGS
         :type global_args: GLOBALARGS
 
-        Thermal ipepo defined by single rank-6 tensor with C4v symmetry.
+        Thermal iPEPO defined by single rank-6 tensor with C4v symmetry.
         The index-position convetion for on-site tensors is defined as follows::
 
                u s 
@@ -25,9 +27,9 @@ class IPEPS_C4V_THERMAL(ipeps.IPEPS):
               /|
              a d
             
-            where a denotes ancilla index, s denotes physical index, and u,l,d,r label 
-            four principal directions up, left, down, right in anti-clockwise order 
-            starting from up
+        where a denotes ancilla index, s denotes physical index, and u,l,d,r label 
+        four principal directions up, left, down, right in anti-clockwise order 
+        starting from up
 
         """
         if site is not None:
@@ -97,6 +99,8 @@ def to_ipeps_c4v_thermal(state, normalize=False):
     if normalize: A= A/A.norm()
     return IPEPS_C4V_THERMAL(A)
 
+def write_ipeps_c4v_thermal(state, outputfile, tol=1.0e-14, normalize=False):
+    pass
 
 class IPEPS_C4V_THERMAL_LC(IPEPS_C4V_THERMAL):
     def __init__(self, elem_tensors, coeffs, \
@@ -417,3 +421,125 @@ def write_ipeps_c4v_thermal_lc(state, outputfile, aux_seq=[0,1,2,3], tol=1.0e-14
 
     with open(outputfile,'w') as f:
         json.dump(json_state, f, indent=4, separators=(',', ': '))
+
+
+class IPEPS_C4V_THERMAL_TTN(IPEPS_C4V_THERMAL):
+    def __init__(self, seed_site, isometries=[],\
+            peps_args=cfg.peps_args, global_args=cfg.global_args):
+        r"""
+        :param seed_site: seed on-site rank-6 tensor
+        :param isometries: isometries used for compression of iPEPO layers
+        :param peps_args: ipeps configuration
+        :param global_args: global configuration
+        :type seed_site: torch.Tensor
+        :type isometries: list(torch.Tensor)
+        :type peps_args: PEPSARGS
+        :type global_args: GLOBALARGS
+
+        Thermal iPEPO defined by single seed rank-6 tensor with C4v symmetry.
+        The index-position convetion for on-site tensors is defined as follows::
+
+               u s 
+               |/ 
+            l--A--r  <=> A[a,s,u,l,d,r]
+              /|
+             a d
+            
+        where a denotes ancilla index, s denotes physical index, and u,l,d,r label 
+        four principal directions up, left, down, right in anti-clockwise order 
+        starting from up.
+
+        The on-site tensor is built from tower of seed tensors, with auxiliary indices
+        reduced by TTN isometry. The height of the tower is 2**len(isometries)
+
+                    |   
+                   /A\
+                 W0 | W0
+                /  \A/  \
+            --W1    |    W1--
+                \  /A\  /
+                 W0 | W0
+                   \A/
+                    |
+
+        where W0 is D x D x D_0, W1 is D_0 x D_0 x D_1, etc.
+
+        """
+        if seed_site is not None:
+            assert isinstance(seed_site,torch.Tensor), "site is not a torch.Tensor"
+            self.seed_site= seed_site
+        self.isometries= isometries
+        super().__init__(self.build_onsite_tensors(), peps_args=peps_args,\
+            global_args=global_args)
+
+    def __str__(self):
+        super().__str__()
+        print(f"norm(seed_site) {self.seed_site.norm()}")
+        return ""
+
+    def build_onsite_tensors(self):
+        A0= self.seed_site
+        A= A0.clone()
+        for i in range(len(self.isometries)):
+            # create hermitian matrix
+            M= self.isometries[i]
+            D_i, D_ip1= M.size(0), M.size(2)
+            MMdag= M.view(D_i*D_i,D_ip1)@(M.view(D_i*D_i,D_ip1).T.conj())
+            D,U= truncated_eig_sym(MMdag, M.size(2), keep_multiplets=True,\
+                verbosity=cfg.ctm_args.verbosity_projectors)
+            U= U.view(M.size())
+            #   
+            #            |/
+            #     /--tmp_A--\
+            # l--U      /|   U--r   s^2 x (D_i)^4 x (D_i+1)^2
+            #     \x       y/
+            #
+            #              a
+            #            |/
+            #     /--tmp_A--\
+            # l--U      /|   U--r   s^2 x (D_i)^4 x (D_i+1)^2
+            #     \x   b   y/
+            #
+            tmp_A_lr= torch.einsum('mxl,nyr,spambn->spalxbry',U,U,A)
+            #
+            #             a   u
+            #              \ /  
+            #               U
+            #             |/
+            #      x--tmp_A--y
+            #            /|  
+            #        b\ /
+            #          U
+            #         / 
+            #        d
+            #
+            tmp_A_ud= torch.einsum('amu,bnd,spmxny->spauxbdy',U,U,A)
+            A= torch.einsum('skalxbry,kpauxbdy->spuldr',tmp_A_lr,tmp_A_ud).contiguous()
+        return A
+
+    def update_(self):
+        self.sites= {(0,0): self.build_onsite_tensors()}
+
+    def get_parameters(self):
+        return self.isometries
+
+    # def add_noise(self,noise,symmetrize=False):
+    #     r"""
+    #     :param noise: magnitude of the noise
+    #     :type noise: float
+
+    #     Take IPEPS and add random uniform noise with magnitude ``noise`` to on-site tensor
+    #     """
+    #     rand_t = torch.rand( self.site().size(), dtype=self.dtype, device=self.device)
+    #     self.sites[(0,0)]= self.site() + noise * rand_t
+    #     if symmetrize:
+    #         dims= self.site().size()
+    #         # C4v group assumes rank-5 tensor with last four indices corresponding
+    #         # to u,l,d,r
+    #         _tmp_rank5= self.site().view(dims[0]*dims[1], *dims[2:])
+    #         if _tmp_rank5.is_complex():
+    #             _tmp_rank5= make_c4v_symm(_tmp_rank5.real ) \
+    #             + make_c4v_symm(_tmp_rank5.imag, irreps=["A2"]) * 1.0j
+    #         else:
+    #             _tmp_rank5= make_c4v_symm(_tmp_rank5)
+    #         self.sites[(0,0)]= _tmp_rank5.view(dims)

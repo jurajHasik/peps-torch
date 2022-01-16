@@ -1,7 +1,9 @@
 import torch
+import math
 import groups.su2 as su2
 from ctm.generic import rdm
 from ctm.one_site_c4v import rdm_c4v
+from ctm.one_site_c4v import rdm_c4v_thermal
 from ctm.one_site_c4v import corrf_c4v
 import config as cfg
 from math import sqrt
@@ -203,7 +205,7 @@ class ISING_C4V():
         self.obs_ops = self.get_obs_ops()
 
     def get_h(self):
-        s2 = su2.SU2(self.phys_dim, dtype=self.dtype, device=self.device) 
+        s2 = su2.SU2(self.phys_dim, dtype=self.dtype, device=self.device)
         id2= torch.eye(4,dtype=self.dtype,device=self.device)
         id2= id2.view(2,2,2,2).contiguous()
         SzSz = 4*torch.einsum('ij,ab->iajb',s2.SZ(),s2.SZ())
@@ -226,7 +228,7 @@ class ISING_C4V():
         obs_ops["sm"]= 2*s2.SM()
         return obs_ops
 
-    def energy_1x1_nn(self,state,env_c4v):
+    def energy_1x1_nn(self,state,env_c4v,force_cpu=False):
         r"""
         :param state: wavefunction
         :param env_c4v: CTM c4v symmetric environment
@@ -246,7 +248,7 @@ class ISING_C4V():
         """
         assert self.q==0, "Non-zero value of 4-site term coupling"
 
-        rdm2x1= rdm_c4v.rdm2x1_sl(state, env_c4v)
+        rdm2x1= rdm_c4v.rdm2x1_sl(state, env_c4v, force_cpu=force_cpu)
         eSx= torch.einsum('ijaj,ia',rdm2x1,self.sx)
         eSzSz= torch.einsum('ijab,ijab',rdm2x1,self.szsz)
         energy_per_site = -2*eSzSz - self.hx*eSx
@@ -329,3 +331,131 @@ class ISING_C4V():
  
         res= dict({"ss": Sz0szR+Sx0sxR, "szsz": Sz0szR, "sxsx": Sx0sxR})
         return res
+
+    def energy_1x1_nn_thermal(self,state,env_c4v,force_cpu=False):
+        r"""
+        :param state: iPEPO density matrix
+        :param env_c4v: CTM c4v symmetric environment
+        :type state: IPEPS_C4V_THERMAL
+        :type env_c4v: ENV_C4V
+        :return: energy per site
+        :rtype: float
+
+        For 1-site invariant c4v iPEPO with no 4-site term present in Hamiltonian it is enough 
+        to construct a single reduced density matrix of a 2x1 nearest-neighbour sites. 
+        Afterwards, the energy per site `e` is computed by evaluating individual terms 
+        in the Hamiltonian through :math:`\langle \mathcal{O} \rangle = Tr(\rho_{2x1} \mathcal{O})`
+        
+        .. math:: 
+
+            e = -\langle h2_{<\bf{0},\bf{x}>} \rangle - h_x \langle h1_{\bf{0}} \rangle
+        """
+        assert self.q==0, "Non-zero value of 4-site term coupling"
+
+        rdm2x1= rdm_c4v_thermal.rdm2x1_sl(state, env_c4v, force_cpu=force_cpu)
+        eSx= torch.einsum('ijaj,ia',rdm2x1,self.sx)
+        eSzSz= torch.einsum('ijab,ijab',rdm2x1,self.szsz)
+        energy_per_site = -2*eSzSz - self.hx*eSx
+        return energy_per_site
+
+    def eval_obs_thermal(self,state,env_c4v,force_cpu=False):
+        r"""
+        :param state: iPEPO density matrix
+        :param env_c4v: CTM c4v symmetric environment
+        :type state: IPEPS_C4V_THERMAL
+        :type env_c4v: ENV_C4V
+        :return:  expectation values of observables, labels of observables
+        :rtype: list[float], list[str]
+
+        Computes the following observables in order
+
+            1. :math:`\langle 2S^z \rangle,\ \langle 2S^x \rangle` for each site in the unit cell
+
+        TODO 2site observable SzSz
+        """
+        obs= dict()
+        with torch.no_grad():
+            rdm1x1= rdm_c4v_thermal.rdm1x1_sl(state,env_c4v)
+            for label,op in self.obs_ops.items():
+                obs[f"{label}"]= torch.trace(rdm1x1@op)
+            obs["sx"]= 0.5*(obs["sp"] + obs["sm"])
+            
+            if self.q==0:
+                obs["SzSzSzSz"]= 0
+            else: 
+                rdm2x2= rdm_c4v_thermal.rdm2x2(state,env_c4v)
+                obs["SzSzSzSz"]= torch.einsum('ijklabcd,ijklabcd',rdm2x2,self.szszszsz)
+
+        # prepare list with labels and values
+        obs_labels= [lc for lc in ["sz","sx"]]
+        obs_labels+= ["SzSzSzSz"]
+        obs_values=[obs[label] for label in obs_labels]
+        return obs_values, obs_labels
+
+    def ipepo_trotter_suzuki(self,tau):
+        r"""
+        Based on arXiv:1503.01077v3
+
+        Build C4v-symmetric rank-6 tensor T defining 1-site TI iPEPO operator of 
+        infinitesimal imag. time evolution operator
+
+            U(tau) := U_X(tau/2)U_{ZZ}(tau)U_X(tau/2)
+
+        where
+
+            U_X(tau) := \prod_m exp(tau/2 hx 2S^x)
+
+            U_{ZZ}(tau) := \prod_<m,m'> exp(tau/2 4S^z_mS^z_m')
+
+            <m,m'> denote nearest-neighbours
+
+        The indices of T are [s,s',u,l,d,r], where s,s' are physical indices and 
+        T is C4v-symmetric in auxiliary indices u,l,d,r.
+
+        One can rewrite 2-site gate exp(tau/2 4S^z_mS^z_m') using SVD as
+
+            exp(tau/2 4S^z_mS^z_m') = \sum_b z_{m,b} z_{m',b}
+
+        where b={0,1} and z_{m,b} := \sqrt(\Lambda_b) (2S^z)^b with 
+        \Lambda_0 = cosh \tau/2 and \Lambda_1 = sinh \tau/2
+
+        Now one can rewrite U(tau) as iPEPO
+
+            U(tau) = Tr_{b} \prod_m ( exp(tau/4 hx 2S^x) \prod_{m'} z_m,b_<m,m'>  exp(tau/4 hx 2S^x))
+            
+                   = Tr_{b} \prod_m T(tau)_m
+            
+        where b_<m,m'> is index on a bond connecting nearest-neighbour sites m,m'.
+        The T(tau)_m is a rank-6 tensor with 4 bond indices and two physical (bra,ket) indices.
+
+            |s'
+            eX
+            |p/        |/
+          --eZ-- =   --T(tau)_m--
+           /|p'       /|
+            eX
+            |s
+
+        """
+        tau= torch.tensor(tau, dtype=self.dtype, device=self.device)
+        s2 = su2.SU2(self.phys_dim, dtype=self.dtype, device=self.device)
+        Dx,Ux= torch.linalg.eigh( 0.5*(s2.SP() + s2.SM()) )
+        eX= Ux@torch.diag(torch.exp((tau/4)*self.hx*2*Dx))@(Ux.T.conj())
+
+        z= torch.zeros([self.phys_dim]*3, dtype=self.dtype, device=self.device)
+        z[0,:,:]= torch.sqrt(torch.cosh(tau/2))*s2.I()
+        z[1,:,:]= torch.sqrt(torch.sinh(tau/2))*(2*s2.SZ())
+        #
+        #   |/
+        #   z
+        #   |
+        # --z
+        #   |
+        #   z
+        #  /|
+        #   z--
+        #   |
+        #
+        eZ= torch.einsum('usa,lab,dbc,rcp->spuldr',z,z,z,z)
+        T= torch.einsum('sx,xyuldr,yp->spuldr',eX,eZ,eX).contiguous()
+        return T
