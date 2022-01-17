@@ -40,6 +40,7 @@ parser.add_argument("--disp_corre_len", action='store_true', dest='disp_corre_le
 parser.add_argument("--CTM_check", type=str, default='Partial_energy', help="method to check CTM convergence",choices=["Energy", "SingularValue", "Partial_energy"])
 parser.add_argument("--itebd_tol", type=float, default=1e-12, help="itebd truncation tol")
 parser.add_argument("--initial_RVB", type=float, default=1,help="D=3 RVB state")
+parser.add_argument("--keep_multiplet", action='store_true', dest='keep_multiplet',help="keep multiplet when perform svd")
 args, unknown_args = parser.parse_known_args()
 
 @torch.no_grad()
@@ -350,7 +351,7 @@ def main():
     for ctt in range(len(itebd_list)):
         tau=itebd_list[ctt][1]
         dt=itebd_list[ctt][0]
-        state, lambdas=itebd(state, lambdas, H, args.itebd_tol, tau, dt, args.bond_dim)
+        state, lambdas=itebd(state, lambdas, H, args.itebd_tol, tau, dt, args.bond_dim, args.keep_multiplet)
 
         T_u=state.ipess_tensors['T_u']
         T_d=state.ipess_tensors['T_d']

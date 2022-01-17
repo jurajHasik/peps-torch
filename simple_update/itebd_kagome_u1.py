@@ -27,7 +27,7 @@ def pinv(A, itebd_tol):
     return B
 
 
-def Tri_T_dn(T_d, B_a, B_b, B_c, lambda_up_a, lambda_up_b, lambda_up_c, gate, itebd_tol,bond_dim):
+def Tri_T_dn(T_d, B_a, B_b, B_c, lambda_up_a, lambda_up_b, lambda_up_c, gate, itebd_tol,bond_dim,keep_multiplet):
     #B_c_new=torch.einsum('uji,ik->ujk', B_c, lambda_up_c)
     B_c_new=yast.ncon([B_c, lambda_up_c],[[-1+1,-2+1,1+1],[1+1,-3+1]])
     #B_b_new=torch.einsum('vkc,cm->vkm', B_b, lambda_up_b)
@@ -50,7 +50,7 @@ def Tri_T_dn(T_d, B_a, B_b, B_c, lambda_up_a, lambda_up_b, lambda_up_c, gate, it
     A=yast.ncon([gate, A],[[-1+1,-3+1,-5+1,1+1,2+1,3+1],[1+1,-2+1,2+1,-4+1,3+1,-6+1]])
     #A=A.reshape(d*D, d*D, d*D)
     #A=A.fuse_legs(axes=((0,1),(2,3),(4,5)))
-    S_trun, U_set, lambda_set=hosvd_u1(A,itebd_tol,bond_dim)
+    S_trun, U_set, lambda_set=hosvd_u1(A,itebd_tol,bond_dim,keep_multiplet)
 
     B_c_new=U_set[0]
     B_b_new=U_set[1]
@@ -74,7 +74,7 @@ def Tri_T_dn(T_d, B_a, B_b, B_c, lambda_up_a, lambda_up_b, lambda_up_c, gate, it
     #print(lambda_dn_a.to_dense())
     return B_a_new, B_b_new, B_c_new, lambda_dn_a, lambda_dn_b, lambda_dn_c, S_trun
 
-def Tri_T_up(T_u, B_a, B_b, B_c, lambda_dn_a, lambda_dn_b, lambda_dn_c, gate, itebd_tol,bond_dim):
+def Tri_T_up(T_u, B_a, B_b, B_c, lambda_dn_a, lambda_dn_b, lambda_dn_c, gate, itebd_tol,bond_dim,keep_multiplet):
     #B_c_new=torch.einsum('uji,jk->uki', B_c, lambda_dn_c)
     B_c_new=yast.ncon([B_c, lambda_dn_c],[[-1+1,1+1,-3+1],[1+1,-2+1]])
     #B_b_new=torch.einsum('vka,km->vma', B_b, lambda_dn_b)
@@ -90,7 +90,7 @@ def Tri_T_up(T_u, B_a, B_b, B_c, lambda_dn_a, lambda_dn_b, lambda_dn_c, gate, it
     A=yast.ncon([gate, A],[[-1+1,-3+1,-5+1,1+1,2+1,3+1],[1+1,-2+1,2+1,-4+1,3+1,-6+1]])
     #A=A.reshape(d*D, d*D, d*D)
     #A=A.fuse_legs(axes=((0,1),(2,3),(4,5)))
-    S_trun, U_set, lambda_set=hosvd_u1(A,itebd_tol,bond_dim)
+    S_trun, U_set, lambda_set=hosvd_u1(A,itebd_tol,bond_dim,keep_multiplet)
 
     B_c_new=U_set[0]
     B_b_new=U_set[1]
@@ -110,11 +110,11 @@ def Tri_T_up(T_u, B_a, B_b, B_c, lambda_dn_a, lambda_dn_b, lambda_dn_c, gate, it
     #print(lambda_up_a.to_dense())
     return B_a_new, B_b_new, B_c_new, lambda_up_a, lambda_up_b, lambda_up_c, S_trun
 
-def itebd_step(state, lambdas, itebd_tol, gate, posit, bond_dim):
+def itebd_step(state, lambdas, itebd_tol, gate, posit, bond_dim, keep_multiplet):
     
     if posit=='dn':
         B_a_new, B_b_new, B_c_new, lambda_dn_a, lambda_dn_b, lambda_dn_c, S_trun=Tri_T_dn(state.ipess_tensors['T_d'], state.ipess_tensors['B_a'], state.ipess_tensors['B_b'], state.ipess_tensors['B_c'], \
-            lambdas['lambda_up_a'], lambdas['lambda_up_b'], lambdas['lambda_up_c'], gate, itebd_tol, bond_dim)
+            lambdas['lambda_up_a'], lambdas['lambda_up_b'], lambdas['lambda_up_c'], gate, itebd_tol, bond_dim, keep_multiplet)
         state.ipess_tensors['T_d']=S_trun/(torch.max(abs(S_trun.to_dense())))
         state.ipess_tensors['B_a']=B_a_new
         state.ipess_tensors['B_b']=B_b_new
@@ -124,7 +124,7 @@ def itebd_step(state, lambdas, itebd_tol, gate, posit, bond_dim):
         lambdas['lambda_dn_c']=lambda_dn_c
     elif posit=='up':
         B_a_new, B_b_new, B_c_new, lambda_up_a, lambda_up_b, lambda_up_c, S_trun=Tri_T_up(state.ipess_tensors['T_u'], state.ipess_tensors['B_a'], state.ipess_tensors['B_b'], state.ipess_tensors['B_c'], \
-            lambdas['lambda_dn_a'], lambdas['lambda_dn_b'], lambdas['lambda_dn_c'], gate, itebd_tol, bond_dim)
+            lambdas['lambda_dn_a'], lambdas['lambda_dn_b'], lambdas['lambda_dn_c'], gate, itebd_tol, bond_dim, keep_multiplet)
         state.ipess_tensors['T_u']=S_trun/(torch.max(abs(S_trun.to_dense())))
         state.ipess_tensors['B_a']=B_a_new
         state.ipess_tensors['B_b']=B_b_new
@@ -134,18 +134,18 @@ def itebd_step(state, lambdas, itebd_tol, gate, posit, bond_dim):
         lambdas['lambda_up_c']=lambda_up_c
     return state, lambdas
 
-def itebd(state, lambdas, H, itebd_tol, tau, dt, bond_dim):
+def itebd(state, lambdas, H, itebd_tol, tau, dt, bond_dim, keep_multiplet):
     gate, gate_half=trotter_gate(H, dt)
     #import pdb; pdb.set_trace()
 
-    state, lambdas=itebd_step(state, lambdas, itebd_tol, gate_half, 'dn', bond_dim)
+    state, lambdas=itebd_step(state, lambdas, itebd_tol, gate_half, 'dn', bond_dim, keep_multiplet)
     for cs in range(0,round(tau/dt)):
         #start=time.clock()
-        state, lambdas=itebd_step(state, lambdas, itebd_tol, gate, 'up', bond_dim)
-        state, lambdas=itebd_step(state, lambdas, itebd_tol, gate, 'dn', bond_dim)
+        state, lambdas=itebd_step(state, lambdas, itebd_tol, gate, 'up', bond_dim, keep_multiplet)
+        state, lambdas=itebd_step(state, lambdas, itebd_tol, gate, 'dn', bond_dim, keep_multiplet)
         #end=time.clock()
         #print (end-start)
-    state, lambdas=itebd_step(state, lambdas, itebd_tol, gate_half, 'up', bond_dim)
+    state, lambdas=itebd_step(state, lambdas, itebd_tol, gate_half, 'up', bond_dim, keep_multiplet)
 
     state=IPESS_KAGOME_GENERIC_ABELIAN(settings_U1, {'T_u': state.ipess_tensors['T_u'], 'B_a': state.ipess_tensors['B_a'], 'T_d': state.ipess_tensors['T_d'],\
                     'B_b': state.ipess_tensors['B_b'], 'B_c': state.ipess_tensors['B_c']})
