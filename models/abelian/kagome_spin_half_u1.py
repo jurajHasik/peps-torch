@@ -65,7 +65,13 @@ class KAGOME_U1():
         mag_field= yast.tensordot(mag_field,irrep.I(),([],[])).transpose(axes=(0,1,4,2,3,5))
         mag_field=mag_field + mag_field.transpose(axes=(1,2,0, 4,5,3)) + mag_field.transpose(axes=(2,0,1, 5,3,4))
 
-        self.h_triangle= SSnn_t +mag_field
+        smsp= yast.tensordot(irrep.SM(),irrep.SP(),([],[])).transpose(axes=(0,2,1,3))
+        spsm= yast.tensordot(irrep.SP(),irrep.SM(),([],[])).transpose(axes=(0,2,1,3))
+        SxSS_t= yast.tensordot(smsp-spsm,irrep.SZ()/(2j),([],[])).transpose(axes=(0,1,4,2,3,5))
+        SxSS_t= SxSS_t+ SxSS_t.transpose(axes=(1,2,0, 4,5,3)) + SxSS_t.transpose(axes=(2,0,1, 5,3,4))
+        SxSS_t= jtrip*SxSS_t
+
+        self.h_triangle= SSnn_t +mag_field + SxSS_t
 
         szId2= yast.tensordot(irrep.SZ(),id2,([],[])).transpose(axes=(0,2,3,1,4,5))
         spId2= yast.tensordot(irrep.SP(),id2,([],[])).transpose(axes=(0,2,3,1,4,5))
