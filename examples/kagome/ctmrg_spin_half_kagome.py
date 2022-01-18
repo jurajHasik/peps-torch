@@ -35,16 +35,16 @@ parser.add_argument("--CTM_check", type=str, default='Partial_energy', help="met
 parser.add_argument("--force_cpu", action='store_true', dest='force_cpu', help="force RDM contractions on CPU")
 parser.add_argument("--obs_freq", type=int, default=-1, help="frequency of computing observables"
     + " during CTM convergence")
-parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
+parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues "+
     "of transfer operator to compute")
-parser.add_argument("--EH_n", type=int, default=1, help="number of leading eigenvalues"+
-    "of transfer operator to compute")
-parser.add_argument("--EH_T_ED_L", type=int, default=0, help="number of leading eigenvalues"+
-    "of transfer operator to compute")
-parser.add_argument("--EH_T_ARP_minL", type=int, default=0, help="number of leading eigenvalues"+
-    "of transfer operator to compute")
-parser.add_argument("--EH_T_ARP_maxL", type=int, default=0, help="number of leading eigenvalues"+
-    "of transfer operator to compute")
+parser.add_argument("--EH_n", type=int, default=1, help="number of leading eigenvalues "+
+    "of EH to compute")
+parser.add_argument("--EH_T_ED_L", type=int, default=0, help="max. cylinder width "+
+    "of EH constructed as T-tensor MPO and diagionalized by ED")
+parser.add_argument("--EH_T_ARP_minL", type=int, default=0, help="min. cylinder width "+
+    "of EH constructed as T-tensor MPO and diagionalized by Arnoldi")
+parser.add_argument("--EH_T_ARP_maxL", type=int, default=0, help="max. cylinder width "+
+    "of EH constructed as T-tensor MPO and diagionalized by Arnoldi")
 args, unknown_args = parser.parse_known_args()
 
 
