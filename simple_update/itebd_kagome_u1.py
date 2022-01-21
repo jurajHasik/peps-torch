@@ -18,6 +18,7 @@ def trotter_gate(H,dt):
     gate_half= gate_half.tensordot(U, ([1,1]), conj=(0,1))
     return gate, gate_half
 
+@torch.no_grad()
 def pinv(A, itebd_tol):
     # A is diagonal elements, not the full matrix
     A=A/A[0]
@@ -26,7 +27,7 @@ def pinv(A, itebd_tol):
     B[abs(A) > itebd_tol]=1/A_keep
     return B
 
-
+@torch.no_grad()
 def Tri_T_dn(T_d, B_a, B_b, B_c, lambda_up_a, lambda_up_b, lambda_up_c, gate, itebd_tol,bond_dim,keep_multiplet):
     #B_c_new=torch.einsum('uji,ik->ujk', B_c, lambda_up_c)
     B_c_new=yast.ncon([B_c, lambda_up_c],[[-1+1,-2+1,1+1],[1+1,-3+1]])
@@ -74,6 +75,7 @@ def Tri_T_dn(T_d, B_a, B_b, B_c, lambda_up_a, lambda_up_b, lambda_up_c, gate, it
     #print(lambda_dn_a.to_dense())
     return B_a_new, B_b_new, B_c_new, lambda_dn_a, lambda_dn_b, lambda_dn_c, S_trun
 
+@torch.no_grad()
 def Tri_T_up(T_u, B_a, B_b, B_c, lambda_dn_a, lambda_dn_b, lambda_dn_c, gate, itebd_tol,bond_dim,keep_multiplet):
     #B_c_new=torch.einsum('uji,jk->uki', B_c, lambda_dn_c)
     B_c_new=yast.ncon([B_c, lambda_dn_c],[[-1+1,1+1,-3+1],[1+1,-2+1]])
@@ -110,6 +112,7 @@ def Tri_T_up(T_u, B_a, B_b, B_c, lambda_dn_a, lambda_dn_b, lambda_dn_c, gate, it
     #print(lambda_up_a.to_dense())
     return B_a_new, B_b_new, B_c_new, lambda_up_a, lambda_up_b, lambda_up_c, S_trun
 
+@torch.no_grad()
 def itebd_step(state, lambdas, itebd_tol, gate, posit, bond_dim, keep_multiplet):
     
     if posit=='dn':
@@ -134,6 +137,7 @@ def itebd_step(state, lambdas, itebd_tol, gate, posit, bond_dim, keep_multiplet)
         lambdas['lambda_up_c']=lambda_up_c
     return state, lambdas
 
+@torch.no_grad()
 def itebd(state, lambdas, H, itebd_tol, tau, dt, bond_dim, keep_multiplet):
     gate, gate_half=trotter_gate(H, dt)
     #import pdb; pdb.set_trace()

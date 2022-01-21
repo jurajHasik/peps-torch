@@ -310,7 +310,7 @@ def main():
         
 
     #itebd time steps
-    itebd_list=[[0.5,10],[0.1,5],[0.01,1]]
+    itebd_list=[[0.5,10],[0.1,5],[0.01,1],[0.005,2]]
     #itebd_list=[[0.1,0.2]]
 
 
@@ -335,7 +335,6 @@ def main():
     id.set_block(ts=(0,0), val= unit_block)
 
     lambdas={"lambda_up_a":id,"lambda_up_b":id, "lambda_up_c":id, "lambda_dn_a":id, "lambda_dn_b":id, "lambda_dn_c":id}
-
     #state.ipess_tensors['T_u'], 'B_a': state.ipess_tensors['B_a'], 'T_d': state.ipess_tensors['T_d'], 'B_b': state.ipess_tensors['B_b'], 'B_c': state.ipess_tensors['B_c']
 
     
@@ -351,8 +350,13 @@ def main():
     for ctt in range(len(itebd_list)):
         tau=itebd_list[ctt][1]
         dt=itebd_list[ctt][0]
-        state, lambdas=itebd(state, lambdas, H, args.itebd_tol, tau, dt, args.bond_dim, args.keep_multiplet)
 
+        import os, psutil
+        process = psutil.Process(os.getpid())
+        print(process.memory_info().rss/1000/1000/1000)
+        
+        state, lambdas=itebd(state, lambdas, H, args.itebd_tol, tau, dt, args.bond_dim, args.keep_multiplet)
+        #import pdb; pdb.set_trace()
         T_u=state.ipess_tensors['T_u']
         T_d=state.ipess_tensors['T_d']
         print(T_u)
