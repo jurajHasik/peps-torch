@@ -124,20 +124,28 @@ def get_EH_spec_Ttensor(n, L, coord, direction, state, env, verbosity=0):
 
         infinite exact TM; exact TM of L-leg cylinder  
 
-    The exp(EH) is then given by reshaping (D^2)^L leading eigenvector of TM
-    into D^L x D^L operator.
+    The exp(EH) is then given by
 
-    We approximate the exp(EH) of L-leg cylinder as MPO formed by T-tensors
-    of the CTM environment. Then, the spectrum of this approximate exp(EH)
-    is obtained through iterative solver using matrix-vector product
+    .. math::
+        
+        exp(-H_{ent}) = \sqrt{\sigma_R}\sigma_L\sqrt{\sigma_R}
 
-           0
-           |                __
-         --T(x,y)------  --|  |
-         --T(x,y+1)----  --|v0|
-          ...           ...|  |
-         --T(x,y+L-1)--  --|__|
-           0(PBC)
+    where :math:`\sigma_L,\sigma_R` are reshaped (D^2)^L left and right 
+    leading eigenvectors of TM into D^L x D^L operator. Given, that spectrum
+    of :math:`AB` is equivalent to :math:`BA`. It is enough to diagonalize
+    product :math:`\sigma_R\sigma_L` or :math:`\sigma_R\sigma_L`. 
+
+    We approximate the :math:`\sigma_L,\sigma_R` of L-leg cylinder as MPO formed 
+    by T-tensors of the CTM environment. Then, the spectrum of this approximate 
+    exp(EH) is obtained through iterative solver using matrix-vector product
+
+           0                    1
+           |                    |                    __
+         --T[(x,y),(-1,0)]------T[(x,y),(1,0)]------|  |
+         --T[(x,y+1),(-1,0)]----T[(x,y+1),(1,0)]----|v0|
+          ...                  ...                  |  |
+         --T[(x,y+L-1),(-1,0)]--T[(x,y+L-1),(1,0)]--|__|
+           0(PBC)               1(PBC)
     """
     assert L>1,"L must be larger than 1"
     assert state.lX==state.lY==1,"only single-site unit cell is supported" #TODO
@@ -149,50 +157,48 @@ def get_EH_spec_Ttensor(n, L, coord, direction, state, env, verbosity=0):
     #
     # TM in direction (1,0) [right], grow in direction (0,1) [down]
     # TM in direction (0,1) [down], grow in direction (-1,0) [left]
-    d= ind_to_dir[ dir_to_ind[direction]-1 + ((4-dir_to_ind[direction]+1)//4)*4 ]
-    ads= [ state.site( (coord[0]+i*d[0],coord[1]+i*d[1]) )\
+    d_grow= ind_to_dir[ dir_to_ind[direction]-1 + ((4-dir_to_ind[direction]+1)//4)*4 ]
+    d_opp= (-direction[0],-direction[1])
+    ads= [ state.site( (coord[0]+i*d_grow[0],coord[1]+i*d_grow[1]) )\
         .size( dir_to_ind[direction] ) for i in range(L) ]
     if np.prod(ads)<=n:
         warnings.warn("Total dimension of H_ent operator is <= n.",RuntimeWarning)
         return None
 
-    def _get_and_transform_T(coord):
-        if direction==(0,-1):
+    def _get_and_transform_T(c,d=direction):
+        if d==(0,-1):
             #                              3
             # 0--T--2->1 => 0--T--1 ==> 0--T--1
             #    1->2          2           2
-            return env.T[(coord,(0,-1))].permute(0,2,1).contiguous().view(\
-                [chi]*2 + [state.site(coord).size(dir_to_ind[(0,-1)])]*2)
-        elif direction==(-1,0):
+            return env.T[(c,(0,-1))].permute(0,2,1).contiguous().view(\
+                [chi]*2 + [state.site(c).size(dir_to_ind[(0,-1)])]*2)
+        elif d==(-1,0):
             # 0          0
             # T--2 => 2--T--3
             # 1          1
-            return env.T[(coord,(-1,0))].view([chi]*2\
-                + [state.site(coord).size(dir_to_ind[(-1,0)])]*2)
-        elif direction==(0,1):
+            return env.T[(c,(-1,0))].view([chi]*2\
+                + [state.site(c).size(dir_to_ind[(-1,0)])]*2)
+        elif d==(0,1):
             #    0->2         2           2
             # 1--T--2   => 0--T--1 ==> 0--T--1
             # ->0   ->1                   3
-            return env.T[(coord,(0,1))].permute(1,2,0).contiguous().view(\
-                [chi]*2 + [state.site(coord).size(dir_to_ind[(0,1)])]*2)
-        elif direction==(1,0):
+            return env.T[(c,(0,1))].permute(1,2,0).contiguous().view(\
+                [chi]*2 + [state.site(c).size(dir_to_ind[(0,1)])]*2)
+        elif d==(1,0):
             #       0          0         0
             # 2<-1--T =>    2--T  =>  2--T--3
             #    1<-2          1         1
-            return env.T[(coord,(1,0))].permute(0,2,1).contiguous().view(\
-                [chi]*2 + [state.site(coord).size(dir_to_ind[(1,0)])]*2)
+            return env.T[(c,(1,0))].permute(0,2,1).contiguous().view(\
+                [chi]*2 + [state.site(c).size(dir_to_ind[(1,0)])]*2)
 
-    def _mv(v0):
-        V= torch.as_tensor(v0,dtype=env.dtype,device=env.device)
-        V= V.view(ads)
-        
+    def mv_sigma(V,d_sigma,d_grow):
         # 0) apply 0th T
         #
         #    0                       0                L-1+2<-0
         # 2--T--3 0--V--1..L-1 -> 2--T--V--3..L-1+2 -> 1<-2--T--V--2..L-1+1
         #    1                       1                    0<-1
         c= state.vertexToSite(coord)
-        V= torch.tensordot(_get_and_transform_T(c),V,([3],[0]))
+        V= torch.tensordot(_get_and_transform_T(c,d_sigma),V,([3],[0]))
         V= V.permute([1,2]+list(range(3,L-1+3))+[0])
 
         # 1) apply 1st to L-2th T
@@ -207,8 +213,8 @@ def get_EH_spec_Ttensor(n, L, coord, direction, state, env, verbosity=0):
             #     1<-2--T--3 i--|_|
             #           1->0
             # 
-            c= state.vertexToSite( (c[0]+d[0],c[1]+d[1]) )
-            V= torch.tensordot(_get_and_transform_T(c),\
+            c= state.vertexToSite( (c[0]+d_grow[0],c[1]+d_grow[1]) )
+            V= torch.tensordot(_get_and_transform_T(c,d_sigma),\
                 V,([0,3],[0,i+1]))
 
 
@@ -224,10 +230,18 @@ def get_EH_spec_Ttensor(n, L, coord, direction, state, env, verbosity=0):
         #        1
         #       PBC
         #
-        c= state.vertexToSite( (c[0]+d[0],c[1]+d[1]) )
-        V= torch.tensordot(_get_and_transform_T(c),\
+        c= state.vertexToSite( (c[0]+d_grow[0],c[1]+d_grow[1]) )
+        V= torch.tensordot(_get_and_transform_T(c,d_sigma),\
             V,([0,3,1],[0,L-1+1,L-1+2]))
-        V= V.permute(list(range(L-1,-1,-1)))
+        V= V.permute(list(range(L-1,-1,-1))).contiguous()
+        return V
+
+    def _mv(v0):
+        V= torch.as_tensor(v0,dtype=env.dtype,device=env.device)
+        V= V.view(ads)
+        V= mv_sigma(V,direction,d_grow)
+        V= mv_sigma(V,d_opp,d_grow)
+        V= V.view(np.prod(ads))
         return V.cpu().numpy()
 
     _test_T= torch.zeros(1,dtype=env.dtype)
