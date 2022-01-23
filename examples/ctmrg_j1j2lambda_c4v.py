@@ -33,6 +33,14 @@ parser.add_argument("--corrf_dd_v", action='store_true', help="compute vertical 
     + " correlation function")
 parser.add_argument("--top2", action='store_true', help="compute transfer matrix for width-2 channel")
 parser.add_argument("--force_cpu", action='store_true', help="evaluate energy on cpu")
+parser.add_argument("--EH_n", type=int, default=1, help="number of leading eigenvalues "+
+    "of EH to compute")
+parser.add_argument("--EH_T_ED_L", type=int, default=0, help="max. cylinder width "+
+    "of EH constructed as T-tensor MPO and diagionalized by ED")
+parser.add_argument("--EH_T_ARP_minL", type=int, default=0, help="min. cylinder width "+
+    "of EH constructed as T-tensor MPO and diagionalized by Arnoldi")
+parser.add_argument("--EH_T_ARP_maxL", type=int, default=0, help="max. cylinder width "+
+    "of EH constructed as T-tensor MPO and diagionalized by Arnoldi")
 args, unknown_args= parser.parse_known_args()
 
 def main():
@@ -183,6 +191,20 @@ def main():
         l= transferops_c4v.get_Top2_spec_c4v(args.top_n, state, ctm_env_init)
         for i in range(l.size()[0]):
             print(f"{i} {l[i,0]} {l[i,1]}")
+
+    # entanglement spectrum
+    # for L in range(1,args.EH_T_ED_L):
+    #     S= transferops.get_full_EH_spec_Ttensor(L, *sdp, state, ctm_env_init)
+    #     print(f"\nEH_T_ED[{sdp[0]},{sdp[1]}] L={L}")
+    #     for i in range(min(S.size(0),args.EH_n)):
+    #         print(f"{i} {S.real[i]} {S.imag[i]}")
+
+    for L in range(args.EH_T_ARP_minL,args.EH_T_ARP_maxL+1):
+        S=transferops_c4v.get_EH_spec_Ttensor(args.EH_n, L, state, ctm_env_init)
+        print(f"\nEH_T_ARP L={L}")
+        for i in range(args.EH_n):
+            print(f"{i} {S[i,0]} {S[i,1]}")
+
 
 if __name__=='__main__':
     if len(unknown_args)>0:

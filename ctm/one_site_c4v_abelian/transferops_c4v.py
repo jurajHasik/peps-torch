@@ -105,6 +105,14 @@ def get_Top_spec_c4v(n, state, env_c4v, verbosity=0):
 
 def get_full_EH_spec_exactTM(state):
 
+    def get_max_ev(S):
+        ev_list=[]
+        for c,b in S.A.items():
+            ev_list.extend( [ [b[i].item(), c] for i in range(len(b))] )
+        # find largest spectral value across all sectors
+        ev_list.sort(key=lambda x: abs(x[0]), reverse=True)
+        return ev_list[0]
+
     def print_EVs(S,normalize=True):
         # print spectrum (value, charge)
         ev_list=[]
@@ -148,9 +156,11 @@ def get_full_EH_spec_exactTM(state):
         if c_max is None:
             for c in S.A.keys():
                 if max_val<max(S[c]): c_max, max_val=c, max(S[c])
+        if verbosity>0:
+            print(S[c_max])
 
         L,R= get_eigenvecs(U,S,V,c=c_max,ev_ind=ev_ind)
-        return L,R
+        return L,R,c_max
 
     # compute exact transfer matrix
     # get double layer tensor
@@ -179,12 +189,13 @@ def get_full_EH_spec_exactTM(state):
     #   \A/
     #    1
     TM2_closed= yast.ncon([TM2_open.fuse_legs(axes=(0,1,(2,3),(4,5)))],[[1,1,-0,-1]])
+    print(f"TM2_closed size {TM2_closed.size}")
     # signatures on left & right legs are identical
     U,S,V= TM2_closed.svd((0,1))
 
     import pdb; pdb.set_trace()
 
-    L,R= get_leading_ev(U,S,V,verbosity=1)
+    L,R,c_max= get_leading_ev(U,S,V,verbosity=1)
     #
     #     0                   0
     #  1--R => 1(bra),2(ket)--R => 0<-0,1--R--2 <=> 0--exp(EH)--1
@@ -206,16 +217,17 @@ def get_full_EH_spec_exactTM(state):
 
     import pdb; pdb.set_trace()
 
-    # for i in range(1,19):
-    #     L,R= get_leading_ev(U,S,V, c=(0,0), ev_ind=i)
-    #     R= R.unfuse_legs(axes=1)
-    #     R= R.unfuse_legs(axes=(1,2))
-    #     R= R.fuse_legs(axes=((0,1,3),(2,4)))
-    #     _,Sr_c00_1,_= R.svd((0,1))
+    for i in range(1,S[c_max].size(0)):
+        L,R= get_eigenvecs(U,S,V,c_max,i)
+        R= R.unfuse_legs(axes=1)
+        R= R.fuse_legs(axes=((0,1),2))
+        _,Sr,_= R.svd((0,1))
 
-    #     print(f"{i} ",end="")
-    #     print_EVs(Sr_c00_1)
-
+        ev_val, ev_charge= get_max_ev(Sr)
+        print(f"{i} TM_ev= {S[c_max][i]} ev= {ev_val} {ev_charge}")
+        if ev_charge[0]%2!=0:
+            print_EVs(Sr)
+            break
 
     #    0            0
     # 2--A--4  =>  2--A--3
@@ -234,7 +246,8 @@ def get_full_EH_spec_exactTM(state):
     TM4_closed= yast.ncon([TM2_open,TM2_open],[[1,2,-0,-2],[2,1,-1,-3]])
     TM4_closed= TM4_closed.fuse_legs(axes=((0,1),(2,3)))
     U,S,V= TM4_closed.svd((0,1))
-    L,R= get_leading_ev(U,S,V,verbosity=1)
+    print(f"TM4_closed size {TM4_closed.size}")
+    L,R,c_max= get_leading_ev(U,S,V,verbosity=1)
     #
     #    0         0                         0    
     # 1--R => 1,2--R => 1(b),2(k),3(b),4(k)--R => 0<-(0,1,3)--R--(2,4)->1 
@@ -247,16 +260,18 @@ def get_full_EH_spec_exactTM(state):
 
     import pdb; pdb.set_trace()
 
-    for i in range(1,19):
-        L,R= get_leading_ev(U,S,V, c=(0,0), ev_ind=i)
+    for i in range(1,S[c_max].size(0)):
+        L,R= get_eigenvecs(U,S,V,c_max,i)
         R= R.unfuse_legs(axes=1)
         R= R.unfuse_legs(axes=(1,2))
-        R= R.unfuse_legs(axes=(1,2,3,4))
-        R= R.fuse_legs(axes=((0,1,3,5,7),(2,4,6,8)))
-        _,Sr_c00_1,_= R.svd((0,1))
+        R= R.fuse_legs(axes=((0,1,3),(2,4)))
+        _,Sr,_= R.svd((0,1))
 
-        print(f"{i} ",end="")
-        print_EVs(Sr_c00_1)
+        ev_val, ev_charge= get_max_ev(Sr)
+        print(f"{i} TM_ev= {S[c_max][i]} ev= {ev_val} {ev_charge}")
+        if ev_charge[0]%2!=0:
+            print_EVs(Sr)
+            break
 
     #     1         0
     # -0--A-- -3 -> A--1-> 1,2
@@ -292,114 +307,3 @@ def get_full_EH_spec_exactTM(state):
 
     #     print(f"{i} ",end="")
     #     print_EVs(Sr_c00_1)
-
-
-    T= ctm_env.get_T().fuse_legs(axes=(0,1,(2,3)))
-    
-    def _get_edge_spectra(edge_H,fuse=True):
-        if fuse:
-            n= edge_H.get_ndim()//2
-            _unfuse_i= [i for i in range(2*n)]
-            print(_unfuse_i)
-            edge_H= edge_H.unfuse_legs(axes=tuple(_unfuse_i))
-
-            i_bra, i_ket= [i for i in range(0,4*n,2)], [1+i for i in range(0,4*n,2)]
-            # for i in range(1,2*n,2):
-            #     _tmp= i_bra[i]
-            #     i_bra[i]= i_ket[i]
-            #     i_ket[i]= _tmp
-            print(i_bra+i_ket)
-            # edge_H= edge_H.transpose(axes=tuple(i_bra + i_ket))
-
-            # fuse into matrix
-            edge_H= edge_H.fuse_legs(axes=(tuple(i_bra),tuple(i_ket)))
-
-        # check hermicity
-        # h_error= edge_H - edge_H.conj().transpose((1,0))
-        # print(h_error.norm())
-        for c,b in edge_H.A.items(): print(f"{c} {b.size()}")
-
-        D,U= edge_H.eigh((0,1))
-
-        ev_list=[]
-        for c,b in D.A.items():
-            ev_list.extend( [ [b[i].item(), c] for i in range(len(b))] )
-        ev_list.sort(key=lambda x: abs(x[0]), reverse=True)
-        max_ev= ev_list[0][0]
-        for i in range(len(ev_list)): ev_list[i][0]= ev_list[i][0]/max_ev 
-        print(ev_list)
-    # A 0(+)
-    # | T--2(+),3(-)->2(-)
-    # | 1(+)
-    T= ctm_env.get_T().fuse_legs(axes=(0,1,(2,3)))
-
-    # ts_T, Ds_T= T.get_leg_charges_and_dims()
-    # j1_symbol= yast.Tensor(config=T.config, s=(-T.get_signature()[1],-T.get_signature()[1]),n=0)
-    # for c,D in zip(ts_T[1],Ds_T[1]):
-    #     _cs= (c[0],-c[0])
-    #     _Ds= (D,D)
-    #     block= np.eye(D,dtype=T.config.default_dtype)
-    #     j1_symbol.set_block(ts= _cs, Ds=_Ds, val=block)
-    # T_oriented= yast.tensordot(T,j1_symbol,([1],[0]))
-    # #    2->1                   1->2
-    # # 0--T--1 0--j1--1->2 => 0--T_oriented--2->1 
-    # T_oriented= T_oriented.transpose(axes=(0,2,1))
-
-    edge_H= dict()
-    for n in range(1,3):
-        _ts= [T, T.flip_signature()]*n
-        _con= [ [i+1,i+2,-i] for i in range(2*n) ]
-        _con[-1][1]=1
-        print(_con)
-        edge_H[n]= yast.ncon(_ts, _con)
-        edge_H[n].show_properties()
-
-        _get_edge_spectra(edge_H[n])
-
-    _ts= [T, T.flip_signature()]
-    _con= [ [-2,2,-0],[2,-3,-1] ]
-    _proto2= yast.ncon(_ts, _con)
-
-    _proto4= yast.ncon([_proto2,_proto2],[[-0,-1,-4,1],[-2,-3,1,-5]])
-    # edge_H= yast.ncon([_proto2,_proto4],[[-0,-1,1,2],[-2,-3,-4,-5,2,1]])
-    # edge_H.show_properties()
-    # _get_edge_spectra(edge_H)
-
-    _proto4= _proto4.unfuse_legs(axes=(0,1,2,3))
-    _proto4= _proto4.fuse_legs(axes=((0,2,4,6),(1,3,5,7),8,9))
-
-    # import pdb; pdb.set_trace()
-    # index 0 holds all four virtual bra indices, index 1 ket
-    #
-    edgeH_4= yast.trace(_proto4,axes=(2,3))
-
-    # compute overlaps ?
-    #
-    # get length of (0,0) sector of N_v=4 exact TM
-    norm_edgeH_4= edgeH_4.norm()
-    Pr= yast.eye(config=S.config, 
-            n=S.get_tensor_charge(), t=list(zip((0,0))), D=list(S[0,0].size()) )
-    # get the leading (right?) singular vector
-    R= yast.tensordot(Pr,V,([1],[0]))
-    R= R.unfuse_legs(axes=1)
-    R= R.unfuse_legs(axes=(1,2))
-    R= R.unfuse_legs(axes=(1,2,3,4))
-    #                       bra       ket
-    R= R.fuse_legs(axes=(0,(1,3,5,7),(2,4,6,8)))
-    # norm_R= R.norm() R's are normalized
-    overlap= yast.tensordot(R,edgeH_4,([1,2],[0,1]))/(norm_edgeH_4)
-    overlap= overlap.to_dense().abs()
-    print(sum(overlap**2))
-    overlap[overlap<1.0e-8]=0.
-    inds_nz= overlap.nonzero()
-    for i in inds_nz: print(f"{i} {overlap[i].item()}")
-    
-    # edge_H= yast.ncon([_proto4,_proto4],[[-0,-1,1,2],[-2,-3,2,1]])
-    # edge_H= edge_H.fuse_legs(axes=( (0,2),(1,3) ))
-    # edge_H.show_properties()
-    # _get_edge_spectra(edge_H, fuse=False)
-
-    # _proto6= yast.ncon([_proto2,_proto4],[[-0,-1,-6,1],[-2,-3,-4,-5,1,-7]])
-    # edge_H= yast.ncon([_proto4,_proto6],[[-0,-1,-2,-3,1,2],[-4,-5,-6,-7,-8,-9,2,1]])
-    # edge_H.show_properties()
-    # _get_edge_spectra(edge_H)

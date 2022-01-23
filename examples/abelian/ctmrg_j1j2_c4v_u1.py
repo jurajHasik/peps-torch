@@ -68,6 +68,8 @@ def main():
 
     print(state)
 
+    transferops_c4v.get_full_EH_spec_exactTM(state)
+
     # 2) convergence criterion based on 2-site reduced density matrix 
     #    of nearest-neighbours
     @torch.no_grad()
@@ -121,7 +123,6 @@ def main():
     print(", ".join(["epoch","energy"]+obs_labels))
     print("FINAL "+", ".join([f"{e_curr0}"]+[f"{v}" for v in obs_values0]))
     print(f"TIMINGS ctm: {t_ctm} conv_check: {t_obs}")
-
 
     # ----- additional observables ---------------------------------------------
     corrSS= model.eval_corrf_SS(state, ctm_env, args.corrf_r)
