@@ -1,7 +1,7 @@
 import logging
 import torch
 import yamps.yast as yast
-from ipeps.ipeps_abelian import _fused_open_dl_site
+from ipeps.ipeps_abelian import _fused_open_dl_site, _fused_dl_site
 from ctm.generic_abelian.rdm import _sym_pos_def_rdm
 from tn_interface_abelian import contract, permute, conj
 
@@ -61,36 +61,32 @@ def double_layer_a(state, coord, open_sites=[], force_cpu=False, verbosity=0):
     
     # special handling of all physical indices open (provided by IPEPS_ABELIAN
     # pre-computation
-    if not state.sites_dl_open is None and (open_sites==[] or open_sites==[0,1,2]):
-        if open_sites == [0, 1, 2]:
+    if open_sites==[0,1,2]: 
+        if not state.sites_dl_open is None:
             a= state.site_dl_open(coord).to('cpu') if force_cpu else state.site_dl_open(coord)
             # move physical index to last position
             a= permute(a,(1,2,3,4,0))
-        # special handling of no physical spaces open (most common case)
-        if open_sites == []:
-            a= state.site_dl_open(coord).to('cpu') if force_cpu else state.site_dl_open(coord)
-            # unfuse bra and ket parts of physical space and trace over it
-            a= a.unfuse_legs(axes=0)
-            a= a.trace(axes=(0,1))
-    else:
-        # no open double-layer present in state, recompute from scratch
-        A= state.site(coord).to('cpu') if force_cpu else state.site(coord)
-    
-        if open_sites == []:
-            a= contract(A,A,([0],[0]),conj=(0,1))
-            a= a.fuse_legs(axes=((0,4),(1,5),(2,6),(3,7)))
-        elif open_sites == [0,1,2]:
-            a= _fused_open_dl_site(A, fusion_level="full")
-        # partial contraction over physical space
         else:
-            A= A.unfuse_legs(axes=0)
-            contracted_sites= list(set([0,1,2]) - set(open_sites))
-            aux_indsK= list(range(len(open_sites),len(open_sites)+4))
-            aux_indsB= [i+4+len(open_sites) for i in aux_indsK]
-            p_indsK= tuple(range(len(open_sites)))
-            p_indsB= tuple(i+4+len(open_sites) for i in p_indsK)
-            a= contract(A,A,(contracted_sites,contracted_sites),conj=(0,1))
-            a= a.fuse_legs(axes=tuple(zip(aux_indsK,aux_indsB))+(p_indsB+p_indsK,))
+            A= state.site(coord).to('cpu') if force_cpu else state.site(coord)
+            a= _fused_open_dl_site(A, fusion_level="full")
+    elif open_sites==[]:
+        # special handling of no physical spaces open (most common case)
+        if not state.sites_dl is None:
+            a= state.site_dl(coord).to('cpu') if force_cpu else state.site_dl(coord)
+        else:
+            # no open double-layer present in state, recompute from scratch
+            A= state.site(coord).to('cpu') if force_cpu else state.site(coord)
+            a= _fused_dl_site(A)
+    else:
+        A= state.site(coord).to('cpu') if force_cpu else state.site(coord)
+        A= A.unfuse_legs(axes=0)
+        contracted_sites= list(set([0,1,2]) - set(open_sites))
+        aux_indsK= list(range(len(open_sites),len(open_sites)+4))
+        aux_indsB= [i+4+len(open_sites) for i in aux_indsK]
+        p_indsK= tuple(range(len(open_sites)))
+        p_indsB= tuple(i+4+len(open_sites) for i in p_indsK)
+        a= contract(A,A,(contracted_sites,contracted_sites),conj=(0,1))
+        a= a.fuse_legs(axes=tuple(zip(aux_indsK,aux_indsB))+(p_indsB+p_indsK,))
     
     if verbosity>0: print(f"double_layer_a({coord},{open_sites}) {a}")
     return a

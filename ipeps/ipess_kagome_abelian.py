@@ -93,7 +93,7 @@ class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
         assert ipess_tensors['B_b'].get_signature()==(-1,1,1),"Unexpected signature"
         assert ipess_tensors['B_c'].get_signature()==(-1,1,1),"Unexpected signature"
         self.ipess_tensors= ipess_tensors
-        sites = self.build_onsite_tensors()
+        sites= self.build_onsite_tensors()
 
         super().__init__(settings, sites, lX=1, lY=1, peps_args=peps_args,
                          global_args=global_args)
@@ -110,6 +110,7 @@ class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
             for ind,t_dict_repr in checkpoint["parameters"].items()}
         for t in self.ipess_tensors.values(): t.requires_grad_(False)
         self.sites = self.build_onsite_tensors()
+        self.sync_precomputed()
 
     def build_onsite_tensors(self):
         r"""
@@ -145,7 +146,7 @@ class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
         sites= {(0, 0): A}
         return sites
 
-    def add_noise(self, noise=0):
+    def add_noise(self, noise=0, peps_args=cfg.peps_args):
         r"""
         :param noise: magnitude of the noise
         :type noise: float
@@ -158,12 +159,39 @@ class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
         the individual tensors.
         """
         if noise==0: return
+        ipess_tensors= {}
         for ind,t in self.ipess_tensors.items():
             ts, Ds= t.get_leg_charges_and_dims(native=True)
             t_noise= yast.rand(config= t.config, s=t.s, n=t.n, t=ts, D=Ds, isdiag=t.isdiag)
-            self.ipess_tensors[ind]= t + noise*t_noise
-        self.sites = self.build_onsite_tensors()
-        self.build_sites_dl_open()
+            ipess_tensors[ind]= t + noise*t_noise
+        return IPESS_KAGOME_GENERIC_ABELIAN(self.engine, ipess_tensors,\
+                 peps_args=peps_args)
+
+    def __str__(self):
+        print(f"lX x lY: {self.lX} x {self.lY}")
+        for t_id,t in self.ipess_tensors.items():
+            print(f"{t_id}")
+            print(f"{t}")
+        print("")    
+        for nid,coord,site in [(t[0], *t[1]) for t in enumerate(self.sites.items())]:
+            print(f"a{nid} {coord}: {site}")
+        
+        # show tiling of a square lattice
+        coord_list = list(self.sites.keys())
+        mx, my = 3*self.lX, 3*self.lY
+        label_spacing = 1+int(math.log10(len(self.sites.keys())))
+        for y in range(-my,my):
+            if y == -my:
+                print("y\\x ", end="")
+                for x in range(-mx,mx):
+                    print(str(x)+label_spacing*" "+" ", end="")
+                print("")
+            print(f"{y:+} ", end="")
+            for x in range(-mx,mx):
+                print(f"a{coord_list.index(self.vertexToSite((x,y)))} ", end="")
+            print("")
+        
+        return ""
 
     def write_to_file(self, outputfile, tol=None, normalize=False):
         write_ipess_kagome_generic(self, outputfile, tol=tol, normalize=normalize)

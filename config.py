@@ -180,7 +180,8 @@ class GLOBALARGS():
 
 class PEPSARGS():
     def __init__(self):
-        pass
+        self.build_dl= True
+        self.build_dl_open= False
 
     def __str__(self):
         res=type(self).__name__+"\n"

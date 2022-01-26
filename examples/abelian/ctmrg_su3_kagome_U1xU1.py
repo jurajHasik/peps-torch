@@ -57,12 +57,13 @@ def main():
     # coord into one of coordinates within unit-cell of iPEPS ansatz
     if args.instate!=None:
         state= read_ipess_kagome_generic(args.instate, settings)
-        state.add_noise(args.instate_noise)
+        state= state.add_noise(args.instate_noise)
     else:
         raise ValueError("Missing trial state: --instate=None and --ipeps_init_type= "\
             +str(args.ipeps_init_type)+" is not supported")
 
     print(state)
+    import pdb; pdb.set_trace()
 
     # 2) define convergence criterion for ctmrg
     @torch.no_grad()
@@ -82,6 +83,7 @@ def main():
 
     ctm_env = ENV_ABELIAN(args.chi, state=state, init=True)
     print(ctm_env)
+    import pdb; pdb.set_trace()
 
     # 3) evaluate observables for initial environment
     loss= model.energy_per_site_2x2subsystem(state, ctm_env)

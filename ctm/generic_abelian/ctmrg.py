@@ -1,9 +1,10 @@
 import time
 import warnings
+import copy
 from typing import NamedTuple
 import config as cfg
 from yamps.yast import decompress_from_1d
-from ipeps.ipeps_abelian import IPEPS_ABELIAN
+from ipeps.ipeps_abelian import IPEPS_ABELIAN, _fused_dl_site
 from ctm.generic_abelian.env_abelian import ENV_ABELIAN
 from ctm.generic_abelian.ctm_components import *
 from ctm.generic_abelian.ctm_projectors import *
@@ -42,11 +43,15 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
     #   /
     #
     sitesDL=dict()
-    for coord,a in state.sites.items():
-        A= contract(a,a, ((0),(0)), conj=(0,1)) # mefgh,mabcd->efghabcd; efghabcd->eafbgchd
-        A= A.fuse_legs( axes=((0,4),(1,5),(2,6),(3,7)) )
-        sitesDL[coord]=A
-    stateDL = IPEPS_ABELIAN(state.engine, sitesDL, vertexToSite=state.vertexToSite, build_open_dl=False)
+    if not state.sites_dl is None:
+        sitesDL= state.sites_dl
+    else:
+        for coord,a in state.sites.items():
+            sitesDL[coord]= _fused_dl_site(a)
+    dl_peps_args= copy.deepcopy(cfg.peps_args)
+    dl_peps_args.build_dl= dl_peps_args.build_dl_open= False
+    stateDL = IPEPS_ABELIAN(state.engine, sitesDL, vertexToSite=state.vertexToSite,\
+        peps_args=dl_peps_args)
 
     # 1) perform CTMRG
     t_obs=t_ctm=0.
@@ -86,6 +91,10 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
     else:
         raise ValueError("Invalid Projector method: "+str(ctm_args.projector_method))
 
+    # prepare custom for peps_args for double-layer iPEPS
+    dl_peps_args= copy.deepcopy(cfg.peps_args)
+    dl_peps_args.build_dl= dl_peps_args.build_dl_open= False
+
     # 0) compress tensors into 1D representation
     metadata_store= {}
     tmp= tuple(state.sites[key].compress_to_1d() for key in state.sites.keys()) \
@@ -113,7 +122,7 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
 
         # 1) wrap raw tensors back into IPEPS and ENV classes 
         sites_loc= dict(zip(state.sites.keys(),tensors[0:len(state.sites)]))
-        state_loc= IPEPS_ABELIAN(_loc_engine, sites_loc, state.vertexToSite, build_open_dl=False)
+        state_loc= IPEPS_ABELIAN(_loc_engine, sites_loc, state.vertexToSite, peps_args=dl_peps_args)
         env_loc= ENV_ABELIAN(env.chi, settings=_loc_engine)
         env_loc.C= dict(zip(env.C.keys(),tensors[len(state.sites):len(state.sites)+len(env.C)]))
         env_loc.T= dict(zip(env.T.keys(),tensors[len(state.sites)+len(env.C):]))

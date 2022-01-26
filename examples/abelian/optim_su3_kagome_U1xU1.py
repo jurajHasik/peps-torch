@@ -56,7 +56,7 @@ def main():
     # initialize an ipeps
     if args.instate!=None:
         state= read_ipess_kagome_generic(args.instate, settings)
-        state.add_noise(args.instate_noise)
+        state= state.add_noise(args.instate_noise)
     elif args.opt_resume is not None:
         T_u= torch.zeros(config=settings, s=(-1,-1,-1))
         T_d= torch.zeros(config=settings, s=(-1,-1,-1))
@@ -106,9 +106,9 @@ def main():
         #    Otherwise, this operation is not recorded and hence not differentiated
         state.sites= state.build_onsite_tensors()
 
-        # 1) build double-layer open on-site tensors
+        # 1) re-build precomputed double-layer on-site tensors
         #    Some objects, in this case open-double layer tensors, are pre-computed
-        state.build_sites_dl_open()
+        state.sync_precomputed()
 
         # possibly re-initialize the environment
         if opt_args.opt_ctm_reinit:
