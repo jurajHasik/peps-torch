@@ -3,7 +3,7 @@ import unittest
 import settings_full
 import settings_U1
 # import settings_U1_U1
-import yamps.yast as yast
+import yast.yast as yast
 import config as cfg
 from ipeps.ipeps_abelian import IPEPS_ABELIAN
 from ctm.generic_abelian.env_abelian import ENV_ABELIAN
