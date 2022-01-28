@@ -2,7 +2,7 @@ from math import sqrt
 import numpy as np
 import itertools
 import config as cfg
-import yamps.yast as yast
+import yast.yast as yast
 from tn_interface_abelian import contract, permute
 import groups.su2_abelian as su2
 from ctm.generic_abelian import rdm

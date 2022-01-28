@@ -9,7 +9,7 @@ try:
 except ImportError as e:
     warnings.warn("torch not available", Warning)
 import config as cfg
-import yamps.yast as yast
+import yast.yast as yast
 from ipeps.ipeps_abelian import IPEPS_ABELIAN, write_ipeps
 from groups.pg_abelian import make_c4v_symm_A1
 from ipeps.tensor_io import *

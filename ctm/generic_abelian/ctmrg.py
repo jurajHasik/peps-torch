@@ -3,7 +3,7 @@ import warnings
 import copy
 from typing import NamedTuple
 import config as cfg
-from yamps.yast import decompress_from_1d
+from yast.yast import decompress_from_1d
 from ipeps.ipeps_abelian import IPEPS_ABELIAN, _fused_dl_site
 from ctm.generic_abelian.env_abelian import ENV_ABELIAN
 from ctm.generic_abelian.ctm_components import *

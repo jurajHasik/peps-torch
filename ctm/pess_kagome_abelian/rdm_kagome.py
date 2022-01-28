@@ -1,6 +1,6 @@
 import logging
 import torch
-import yamps.yast as yast
+import yast.yast as yast
 from ipeps.ipeps_abelian import _fused_open_dl_site, _fused_dl_site
 from ctm.generic_abelian.rdm import _sym_pos_def_rdm
 from tn_interface_abelian import contract, permute, conj

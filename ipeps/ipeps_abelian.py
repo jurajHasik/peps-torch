@@ -9,7 +9,7 @@ try:
 except ImportError as e:
     warnings.warn("torch not available", Warning)
 import config as cfg
-import yamps.yast as yast
+import yast.yast as yast
 from ipeps.tensor_io import *
 
 def _fused_open_dl_site(a, fusion_level="full"):

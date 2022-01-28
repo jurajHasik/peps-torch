@@ -1,7 +1,7 @@
 import itertools
 import numpy as np
 import torch
-import yamps.yast as yast
+import yast.yast as yast
 from tn_interface_abelian import contract, permute
 try:
     from scipy.sparse.linalg import LinearOperator

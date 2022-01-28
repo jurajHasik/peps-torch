@@ -3,8 +3,9 @@ from collections import OrderedDict
 from itertools import chain
 import json
 import math
+import torch
 import config as cfg
-import yamps.yast as yast
+import yast.yast as yast
 import ipeps.ipeps_kagome_abelian as ipeps_kagome
 from ipeps.tensor_io import *
 
@@ -156,9 +157,9 @@ class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
 
         Create a new state by adding random uniform noise with magnitude ``noise`` to all 
         copies of ipess tensors. The noise is added to all allowed blocks making up 
-        the individual tensors.
+        the individual tensors. If noise is 0, returns ``self``.
         """
-        if noise==0: return
+        if noise==0: return self
         ipess_tensors= {}
         for ind,t in self.ipess_tensors.items():
             ts, Ds= t.get_leg_charges_and_dims(native=True)

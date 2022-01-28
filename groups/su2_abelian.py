@@ -1,4 +1,4 @@
-import yamps.yast as yast
+import yast.yast as yast
 import numpy as np
 from math import factorial, sqrt
 

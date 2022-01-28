@@ -1,6 +1,6 @@
 import warnings
 import config as cfg
-import yamps.yast as yast
+import yast.yast as yast
 try:
     import torch
     from ctm.generic.env import ENV
