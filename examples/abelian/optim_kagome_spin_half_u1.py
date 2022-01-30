@@ -1,3 +1,4 @@
+import os
 import context
 import argparse
 import numpy as np
@@ -39,6 +40,7 @@ parser.add_argument("--force_cpu", action='store_true', dest='force_cpu', help="
 # --ipeps_init_type RVB
 parser.add_argument("--itebd", action='store_true', dest='do_itebd', help="do itebd as initial state")
 parser.add_argument("--itebd_tol", type=float, default=1e-12, help="itebd truncation tol")
+parser.add_argument("--no_keep_multiplets", action='store_false', dest='keep_multiplets',help="keep multiplets when performing svd")
 parser.add_argument("--SU_ctm_obs_freq", type=int, default=0)
 parser.add_argument("--SU_schedule", type=str, default="[[0.5,10],[0.1,5],[0.01,1]]")
 args, unknown_args = parser.parse_known_args()
@@ -49,10 +51,13 @@ def main():
     cfg.print_config()
     torch.set_num_threads(args.omp_cores)
     torch.manual_seed(args.seed)
-
-    # 0) initialize model
     settings_U1.default_dtype=cfg.global_args.dtype
     settings_U1.default_device=cfg.global_args.device
+
+    # 0) initialize model
+    if not args.theta is None:
+        args.j1= args.j1*math.cos(args.theta*math.pi)
+        args.jtrip= args.j1*math.sin(args.theta*math.pi)
     model= kagome_spin_half_u1.KAGOME_U1(settings_U1, j1=args.j1, JD=args.JD, j1sq=args.j1sq,\
         j2=args.j2, j2sq=args.j2sq, jtrip=args.jtrip, jperm=args.jperm, h=args.h)
 
@@ -61,6 +66,7 @@ def main():
         ansatz_pgs= None
         if args.ansatz=="A_2,B": ansatz_pgs= IPESS_KAGOME_PG.PG_A2_B
 
+        # 1.1) reading from instate file
         if args.instate!=None:
             if args.ansatz=="IPESS":
                 state= read_ipess_kagome_generic(args.instate, settings_U1)
@@ -84,7 +90,9 @@ def main():
             #             pass
             #         elif state.pgs!=ansatz_pgs:
             #             raise RuntimeError("instate has incompatible PG symmetry with "+args.ansatz)
-            state.add_noise(args.instate_noise)
+            state= state.add_noise(args.instate_noise)
+        
+        # 1.2) reading from checkpoint file
         elif args.opt_resume is not None:
             T_u= yast.Tensor(config=settings_U1, s=(-1,-1,-1))
             T_d= yast.Tensor(config=settings_U1, s=(-1,-1,-1))
@@ -101,8 +109,9 @@ def main():
             #     state= IPESS_KAGOME_PG(T_u, B_c, T_d=T_d, B_a=B_a, B_b=B_b,\
             #         SYM_UP_DOWN=args.sym_up_dn,SYM_BOND_S=args.sym_bond_S, pgs=ansatz_pgs)
             state.load_checkpoint(args.opt_resume)
-
-        elif args.ipeps_init_type=='RANDOM':
+    elif args.instate==None and args.opt_resume==None:
+        args.ansatz="IPESS"
+        if args.ipeps_init_type=='RANDOM':
 
             #su(2) sectors
             if args.bond_dim==3:
@@ -212,15 +221,15 @@ def main():
             state= IPESS_KAGOME_GENERIC_ABELIAN(settings_U1, {'T_u': T_u, 'B_a': B_a,\
                 'T_d': T_d,'B_b': B_b, 'B_c': B_c})
         
-        if args.ipeps_init_type=="RVB":
+        elif args.ipeps_init_type=="RVB":
             unit_block= np.ones((1,1,1), dtype=cfg.global_args.dtype)
             B_c= yast.Tensor(settings_U1, s=(-1, 1, 1), n=0)
             B_c.set_block(ts=(1,1,0), val= unit_block)
             B_c.set_block(ts=(1,0,1), val= unit_block)
             B_c.set_block(ts=(-1,-1,0), val= unit_block)
             B_c.set_block(ts=(-1,0,-1), val= unit_block)
-            B_b=B_c
-            B_a=B_c
+            B_b=B_c.copy()
+            B_a=B_c.copy()
 
             unit_block= np.ones((1,1,1), dtype=cfg.global_args.dtype)
             T_u= yast.Tensor(settings_U1, s=(-1, -1, -1), n=0)
@@ -231,16 +240,20 @@ def main():
             T_u.set_block(ts=(-1,0,1), val= unit_block)
             T_u.set_block(ts=(1,0,-1), val= -1*unit_block)
             T_u.set_block(ts=(0,0,0), val= unit_block)
-            T_d=T_u
-            state= IPESS_KAGOME_GENERIC_ABELIAN(settings_U1, {'T_u': T_u, 'B_a': B_a, 'T_d': T_d,\
-                'B_b': B_b, 'B_c': B_c})
+            T_d=T_u.copy()
+            state= IPESS_KAGOME_GENERIC_ABELIAN(settings_U1, {'T_u': T_u, 'B_a': B_a,\
+                'T_d': T_d,'B_b': B_b, 'B_c': B_c})
+            state= state.add_noise(args.instate_noise)
             
     # 2) (optional) perform iTEBD on top of the initial state
     if args.do_itebd:
+        print("-"*20 + " iTEBD initialization "+"-"*20)
         from examples.abelian.SU_kagome_spin_half_u1 import main as itebd_main
-        itebd_main()
+        state.write_to_file(args.out_prefix+"_state.json")
+        args.instate= args.out_prefix+"_state.json"
+        itebd_main(args=args)
         state= read_ipess_kagome_generic(args.out_prefix+"_state.json", settings_U1)
-            
+
     # 3) define auxilliary functions
     def energy_f(state, env, force_cpu=False, fail_on_check=False,\
         warn_on_check=True):
@@ -342,13 +355,14 @@ def main():
             history[0]=history[0]+1
             return False, history
 
+    print(state)
 
     # 4) compute initial environment and observables
     ctm_env_init= ENV_ABELIAN(args.chi, state=state, init=True)
     ctm_env_init, history, t_ctm, t_conv_check = ctmrg.run(state, ctm_env_init, \
         conv_check=ctmrg_conv_f, ctm_args=cfg.ctm_args)
 
-    loss0 = energy_f(state, ctm_env_init, force_cpu=cfg.ctm_args.conv_check_cpu)
+    loss0 = energy_f(state, ctm_env_init, force_cpu=args.force_cpu)
     obs_values, obs_labels = model.eval_obs(state,ctm_env_init,force_cpu=args.force_cpu,\
         disp_corre_len=args.disp_corre_len)
     print(", ".join(["epoch",f"loss"]+[label for label in obs_labels]))
@@ -377,7 +391,7 @@ def main():
 
         # 1) re-build precomputed double-layer on-site tensors
         #    Some objects, in this case open-double layer tensors, are pre-computed
-        state.sync_precomputed()
+        state_sym.sync_precomputed()
 
         # possibly re-initialize the environment
         if opt_args.opt_ctm_reinit:
@@ -414,13 +428,12 @@ def main():
             print(" "+", ".join([f"{t.norm()}" for c,t in state.sites.items()]) )
         
     # 4) optimize
-    ctm_env_init= ENV_ABELIAN(args.chi, state=state, init=True)
     optimize_state(state, ctm_env_init, loss_fn, obs_fn=obs_fn)
     
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"
     if args.ansatz=="IPESS":
-        state= read_ipess_kagome_generic(outputstatefile)
+        state= read_ipess_kagome_generic(outputstatefile, settings_U1)
     #
     # TODO allow PGs
     #
@@ -439,3 +452,69 @@ if __name__ == '__main__':
         print("args not recognized: " + str(unknown_args))
         raise Exception("Unknown command line arguments")    
     main()
+
+class TestOptim_RVB(unittest.TestCase):
+    tol= 1.0e-6
+    DIR_PATH = os.path.dirname(os.path.realpath(__file__))
+    OUT_PRFX = "RESULT_test_run-opt_u1_RVB"
+
+    def setUp(self):
+        args.theta=0.2
+        args.j1=1.0
+        args.bond_dim=3
+        args.chi=18
+        args.out_prefix=self.OUT_PRFX
+        args.GLOBALARGS_dtype= "complex128"
+        args.ipeps_init_type="RVB"
+
+    def test_basic_opt_rvb(self):
+        from io import StringIO
+        from unittest.mock import patch 
+        from cmath import isclose
+
+        with patch('sys.stdout', new = StringIO()) as tmp_out: 
+            main()
+        tmp_out.seek(0)
+
+        # parse FINAL observables
+        final_obs=None
+        final_opt_line=None
+        OPT_OBS= OPT_OBS_DONE= False
+        l= tmp_out.readline()
+        while l:
+            print(l,end="")
+            if OPT_OBS and not OPT_OBS_DONE and l.rstrip()=="": OPT_OBS_DONE= True
+            if OPT_OBS and not OPT_OBS_DONE and len(l.split(','))>2:
+                final_opt_line= l
+            if "epoch, energy," in l and not OPT_OBS_DONE: 
+                OPT_OBS= True
+            if "FINAL" in l:
+                final_obs= l.rstrip()
+                break
+            l= tmp_out.readline()
+        assert final_obs
+        assert final_opt_line
+
+        # compare with the reference
+        ref_data="""
+        -0.6666666666666664, 0j, 0j, 0j, 0.0, 0.0, 0.3333333333333333, 0.3333333333333333, 
+        0.3333333333333333, -0.9999999999999999, -0.9999999999999999, -0.9999999999999999
+        """
+        # compare final observables from optimization and the observables from the 
+        # final state
+        final_opt_line_t= [complex(x) for x in final_opt_line.split(",")[1:]]
+        fobs_tokens= [complex(x) for x in final_obs[len("FINAL"):].split(",")]
+        for val0,val1 in zip(final_opt_line_t, fobs_tokens):
+            assert isclose(val0,val1, rel_tol=self.tol, abs_tol=self.tol)
+
+        # compare final observables from final state against expected reference 
+        # drop first token, corresponding to iteration step
+        ref_tokens= [complex(x) for x in ref_data.split(",")]
+        for val,ref_val in zip(fobs_tokens, ref_tokens):
+            assert isclose(val,ref_val, rel_tol=self.tol, abs_tol=self.tol)
+
+    def tearDown(self):
+        args.opt_resume=None
+        args.instate=None
+        # for f in [self.OUT_PRFX+"_state.json",self.OUT_PRFX+"_checkpoint.p",self.OUT_PRFX+".log"]:
+        #     if os.path.isfile(f): os.remove(f)

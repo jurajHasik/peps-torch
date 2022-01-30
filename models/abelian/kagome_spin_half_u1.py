@@ -102,15 +102,16 @@ class KAGOME_U1():
     def energy_triangle_dn(self, state, env, force_cpu=False, fail_on_check=False,\
             warn_on_check=True):
         e_dn= rdm_kagome.rdm2x2_dn_triangle_with_operator((0, 0), state, env, \
-            self.h_triangle.fuse_legs(axes=((0,1,2),(3,4,5))), force_cpu=force_cpu).to_number()
-        return _cast_to_real(e_dn)
+            self.h_triangle.fuse_legs(axes=((0,1,2),(3,4,5))), force_cpu=force_cpu,).to_number()
+        return _cast_to_real(e_dn, fail_on_check=fail_on_check, warn_on_check=warn_on_check)
 
     def energy_triangle_up(self, state, env, force_cpu=False, fail_on_check=False,\
             warn_on_check=True):
-        rdm_up= rdm_kagome.rdm2x2_up_triangle_open((0, 0), state, env, force_cpu=force_cpu)
+        rdm_up= rdm_kagome.rdm2x2_up_triangle_open((0, 0), state, env, force_cpu=force_cpu,\
+            verbosity=1 if warn_on_check else 0)
         e_up=yast.tensordot(rdm_up.fuse_legs(axes=((0,1,2),(3,4,5))),\
             self.h_triangle.fuse_legs(axes=((0,1,2),(3,4,5))),([0,1],[1,0])).to_number()
-        return _cast_to_real(e_up)
+        return _cast_to_real(e_up, fail_on_check=fail_on_check, warn_on_check=warn_on_check)
 
     def energy_triangle_dn_NoCheck(self, state, env, force_cpu=False):
         e_dn= rdm_kagome.rdm2x2_dn_triangle_with_operator((0, 0), state, env,\

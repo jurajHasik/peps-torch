@@ -13,8 +13,8 @@ def hosvd(A,itebd_tol,bond_dim,keep_multiplet):
     #AA=torch.einsum('abc,dbc->ad', A, A.conj())
     #AA=yast.ncon([A,A.conj()],[[-1+1,0+1,1+1],[-2+1,0+1,1+1]])
     #u,lamb,_=torch.svd(AA)
-    u, lamb, V, ulamb=yast.svd(A, axes=((0,1),(2,3,4,5)), sU=1, tol=itebd_tol, \
-        D_total=bond_dim, untruncated_S=True, keep_multiplets=keep_multiplet)
+    u, lamb, V=yast.svd(A, axes=((0,1),(2,3,4,5)), sU=1, tol=itebd_tol, \
+        D_total=bond_dim, untruncated_S=False, keep_multiplets=keep_multiplet)
     lamb=lamb/lamb.norm(p='inf')
     #print(lamb.to_dense())
     U_set.append(u)
@@ -26,8 +26,8 @@ def hosvd(A,itebd_tol,bond_dim,keep_multiplet):
     #AA=torch.einsum('bac,bdc->ad', A, A.conj())
     #AA=yast.ncon([A,A.conj()],[[0+1,-1+1,1+1],[0+1,-2+1,1+1]])
     #u,lamb,_=torch.svd(AA)
-    u, lamb, V, ulamb=yast.svd(A.transpose(axes=(2,3,0,1,4,5)), axes=((0,1),(2,3,4,5)), sU=1,\
-        tol=itebd_tol, D_total=bond_dim, untruncated_S=True, keep_multiplets=keep_multiplet)
+    u, lamb, V=yast.svd(A.transpose(axes=(2,3,0,1,4,5)), axes=((0,1),(2,3,4,5)), sU=1,\
+        tol=itebd_tol, D_total=bond_dim, untruncated_S=False, keep_multiplets=keep_multiplet)
     lamb=lamb/lamb.norm(p='inf')
     U_set.append(u)
     lambda_set.append(lamb)
@@ -38,13 +38,17 @@ def hosvd(A,itebd_tol,bond_dim,keep_multiplet):
     #AA=torch.einsum('bca,bcd->ad', A, A.conj())
     #AA=yast.ncon([A,A.con()],[[0+1,1+1,-1+1],[0+1,1+1,-2+1]])
     #u,lamb,_=torch.svd(AA)
-    u, lamb, V, ulamb=yast.svd(A.transpose(axes=(4,5,0,1,2,3)), axes=((0,1),(2,3,4,5)), sU=1,\
-        tol=itebd_tol, D_total=bond_dim, untruncated_S=True, keep_multiplets=keep_multiplet)
+    u, lamb, V=yast.svd(A.transpose(axes=(4,5,0,1,2,3)), axes=((0,1),(2,3,4,5)), sU=1,\
+        tol=itebd_tol, D_total=bond_dim, untruncated_S=False, keep_multiplets=keep_multiplet)
     lamb=lamb/lamb.norm(p='inf')
     U_set.append(u)
     lambda_set.append(lamb)
     #S=torch.einsum('ad,bcd->bca', u.t().conj(), S)
     S=yast.ncon([u.conj(),S],[[1+1,2+1,-3+1],[-1+1,-2+1,1+1,2+1]])
+
+    # for l in lambda_set:
+    #     if sum(l.get_leg_structure(0).values())>bond_dim:
+    #         import pdb; pdb.set_trace()
 
     return S, U_set, lambda_set
 

@@ -1,3 +1,5 @@
+import os
+import warnings
 import context
 import argparse
 import numpy as np
@@ -42,14 +44,15 @@ parser.add_argument("--no_keep_multiplets", action='store_false', dest='keep_mul
 parser.add_argument("--SU_schedule", type=str, default="[[0.5,10],[0.1,20],[0.05,10],[0.01,1]]")
 # for large bond dimension, observables from CTM approximation
 # might be prohibitively expensive. Either reduce the frequency of evaluation
-# or skip their computation by setting SU_ctm_obs_freq < 1
+# or skip their computation by setting SU_ctm_obs_freq = 0
+# To compute observables only at the end of SU, set SU_ctm_obs_freq = -1
 parser.add_argument("--SU_ctm_obs_freq", type=int, default=0)
 # iTEBD can be initialized by D=3 RVB state by passing 
 # --ipeps_init_type RVB
 args, unknown_args = parser.parse_known_args()
 
 @torch.no_grad()
-def main():
+def main(args=args):
     cfg.configure(args)
     cfg.print_config()
     torch.set_num_threads(args.omp_cores)
@@ -73,29 +76,28 @@ def main():
         
         if args.instate!=None:
             if args.ansatz=="IPESS":
-                state= read_ipess_kagome_generic(args.instate)
-            elif args.ansatz in ["IPESS_PG","A_2,B"]:
-                state= read_ipess_kagome_pg(args.instate)
+                state= read_ipess_kagome_generic(args.instate, settings_U1)
+            #
+            # TODO allow PGs
+            #
+            # elif args.ansatz in ["IPESS_PG","A_2,B"]:
+            #     state= read_ipess_kagome_pg(args.instate)
 
             # possibly symmetrize by PG
-            if ansatz_pgs!=None:
-                if type(state)==IPESS_KAGOME_GENERIC:
-                    state= to_PG_symmetric(state, SYM_UP_DOWN=args.sym_up_dn,\
-                        SYM_BOND_S=args.sym_bond_S, pgs=ansatz_pgs)
-                elif type(state)==IPESS_KAGOME_PG:
-                    if state.pgs==None or state.pgs==dict():
-                        state= to_PG_symmetric(state, SYM_UP_DOWN=args.sym_up_dn,\
-                            SYM_BOND_S=args.sym_bond_S, pgs=ansatz_pgs)
-                    elif state.pgs==ansatz_pgs:
-                        # nothing to do here
-                        pass
-                    elif state.pgs!=ansatz_pgs:
-                        raise RuntimeError("instate has incompatible PG symmetry with "+args.ansatz)
-
-            if args.bond_dim > state.get_aux_bond_dims():
-                # extend the auxiliary dimensions
-                state= state.extend_bond_dim(args.bond_dim)
-            state.add_noise(args.instate_noise)
+            # if ansatz_pgs!=None:
+            #     if type(state)==IPESS_KAGOME_GENERIC:
+            #         state= to_PG_symmetric(state, SYM_UP_DOWN=args.sym_up_dn,\
+            #             SYM_BOND_S=args.sym_bond_S, pgs=ansatz_pgs)
+            #     elif type(state)==IPESS_KAGOME_PG:
+            #         if state.pgs==None or state.pgs==dict():
+            #             state= to_PG_symmetric(state, SYM_UP_DOWN=args.sym_up_dn,\
+            #                 SYM_BOND_S=args.sym_bond_S, pgs=ansatz_pgs)
+            #         elif state.pgs==ansatz_pgs:
+            #             # nothing to do here
+            #             pass
+            #         elif state.pgs!=ansatz_pgs:
+            #             raise RuntimeError("instate has incompatible PG symmetry with "+args.ansatz)
+            state= state.add_noise(args.instate_noise)
         elif args.opt_resume is not None:
             T_u= torch.zeros(args.bond_dim, args.bond_dim, args.bond_dim,\
                 dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
@@ -107,15 +109,20 @@ def main():
                 dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
             B_b= torch.zeros(model.phys_dim, args.bond_dim, args.bond_dim,\
                 dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
-            if args.ansatz in ["IPESS_PG", "A_2,B"]:
-                state= IPESS_KAGOME_PG(T_u, B_c, T_d, T_d=T_d, B_a=B_a, B_b=B_b,\
-                    SYM_UP_DOWN=args.sym_up_dn,SYM_BOND_S=args.sym_bond_S, pgs=ansatz_pgs)
-            elif args.ansatz in ["IPESS"]:
-                state= IPESS_KAGOME_GENERIC({'T_u': T_u, 'B_a': B_a, 'T_d': T_d,\
-                    'B_b': B_b, 'B_c': B_c})
+            if args.ansatz in ["IPESS"]:
+                state= IPESS_KAGOME_GENERIC(settings_U1, {'T_u': T_u, 'B_a': B_a,\
+                    'T_d': T_d, 'B_b': B_b, 'B_c': B_c})
+            #
+            # TODO allow PGs
+            # 
+            # elif args.ansatz in ["IPESS_PG", "A_2,B"]:
+            #     state= IPESS_KAGOME_PG(T_u, B_c, T_d, T_d=T_d, B_a=B_a, B_b=B_b,\
+            #         SYM_UP_DOWN=args.sym_up_dn,SYM_BOND_S=args.sym_bond_S, pgs=ansatz_pgs)
+            
             state.load_checkpoint(args.opt_resume)
         elif args.ipeps_init_type=="RVB":
-            unit_block= np.ones((1,1,1), dtype=args.GLOBALARGS_dtype)
+            args.ansatz= "IPESS"
+            unit_block= np.ones((1,1,1), dtype=cfg.global_args.dtype)
             B_c= yast.Tensor(settings_U1, s=(-1, 1, 1), n=0)
             B_c.set_block(ts=(1,1,0), val= unit_block)
             B_c.set_block(ts=(1,0,1), val= unit_block)
@@ -124,7 +131,7 @@ def main():
             B_b=B_c
             B_a=B_c
 
-            unit_block= np.ones((1,1,1), dtype=args.GLOBALARGS_dtype)
+            unit_block= np.ones((1,1,1), dtype=cfg.global_args.dtype)
             T_u= yast.Tensor(settings_U1, s=(-1, -1, -1), n=0)
             T_u.set_block(ts=(1,-1,0), val= unit_block)
             T_u.set_block(ts=(-1,1,0), val= -1*unit_block)
@@ -299,6 +306,11 @@ def main():
     H= H.fuse_legs(axes=((0,1,2),(3,4,5)))
     # initialize weights with identity matrices
     lambdas= state.generate_weights()
+    # if the minimal bond dimension is smaller, than the desired one, issue warning
+    init_min_D= min([ sum(l.get_leg_structure(0).values()) for l in lambdas.values() ])
+    if args.bond_dim<init_min_D:
+        warnings.warn("Minimal bond dim ("+str(init_min_D)+") of ansatz"\
+            +" is larger then args.bond_dim "+str(args.bond_dim), RuntimeWarning)
 
     # 4) (optional) evaluate initial observables
     ctm_env= ENV_ABELIAN(args.chi, state=state, init=True)
@@ -329,7 +341,7 @@ def main():
         delta_lambdas= sum([ weight_diff(lambdas[k],lambdas0[k]) for k in lambdas0.keys() ])
         print(f"{(tau,dt)}, {delta_lambdas}", end="")
 
-        if args.SU_ctm_obs_freq>0:
+        if args.SU_ctm_obs_freq>0 or (args.SU_ctm_obs_freq<0 and itebd_list[ctt]==itebd_list[-1]):
             loss, ctm_env, history, t_ctm, t_conv_check= loss_fn(state, ctm_env)
             obs_values, obs_labels= obs_fn(state, ctm_env, None)
             print(", "+", ".join([f"{loss}"]+[f"{v}" for v in obs_values]))
@@ -346,8 +358,8 @@ def main():
         for l_id,l in lambdas.items():
             print(f"{l_id} {l.get_leg_structure(0)}")
 
-
-    print(state)
+    # 5) save the final state
+    # print(state)
     write_ipess_kagome_generic(state, args.out_prefix+"_state.json",\
         peps_args=cfg.peps_args, global_args=cfg.global_args)
 
@@ -366,3 +378,56 @@ if __name__ == '__main__':
         print("args not recognized: " + str(unknown_args))
         raise Exception("Unknown command line arguments")
     main()
+
+class TestSU_RVB_Ansatz(unittest.TestCase):
+    tol= 1.0e-6
+    DIR_PATH = os.path.dirname(os.path.realpath(__file__))
+    OUT_PRFX = "RESULT_test_run-SU_RVB"
+
+    def setUp(self):
+        args.j1= 1.0
+        args.theta=0.2
+        args.JD=0.0
+        args.bond_dim=6
+        args.chi=36
+        args.instate_noise=0
+        args.ipeps_init_type= "RVB"
+        args.GLOBALARGS_dtype= "complex128"
+        args.SU_ctm_obs_freq= -1
+        args.SU_schedule= "[[0.5,10],[0.1,20],[0.05,10],[0.01,1]]"
+
+    def test_su_ipess_rvb(self):
+        from io import StringIO
+        from unittest.mock import patch
+        from cmath import isclose
+
+        # i) run optimization and store the optimization data
+        with patch('sys.stdout', new = StringIO()) as tmp_out: 
+            main()
+        tmp_out.seek(0)
+
+        # parse FINAL observables
+        final_obs=None
+        l= tmp_out.readline()
+        while l:
+            print(l,end="")
+            if "(1, 0.01)" in l:
+                final_obs= l.rstrip()
+                break
+            l= tmp_out.readline()
+        assert final_obs
+ 
+        ref_data="""
+        (1, 0.01), 0.00024571275573539693, -0.37415279185615224, 
+        (-0.5615371279641982+7.681199294136548e-17j), (-0.5609212476042584+0j)
+        """
+        # compare final observables against expected reference.
+        ref_tokens= [complex(x) for x in ref_data.replace('\n','')\
+            .strip()[len("(1, 0.01),"):].split(",")]
+        fobs_tokens= [complex(x) for x in final_obs[len("(1, 0.01),"):].split(",")]
+        for val,ref_val in zip(fobs_tokens[:4], ref_tokens):
+            assert isclose(val,ref_val, rel_tol=self.tol, abs_tol=self.tol)
+
+    def tearDown(self):
+        for f in [self.OUT_PRFX+"_state.json",self.OUT_PRFX+".log"]:
+            if os.path.isfile(f): os.remove(f)

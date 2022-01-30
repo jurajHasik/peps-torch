@@ -88,7 +88,7 @@ def double_layer_a(state, coord, open_sites=[], force_cpu=False, verbosity=0):
         a= contract(A,A,(contracted_sites,contracted_sites),conj=(0,1))
         a= a.fuse_legs(axes=tuple(zip(aux_indsK,aux_indsB))+(p_indsB+p_indsK,))
     
-    if verbosity>0: print(f"double_layer_a({coord},{open_sites}) {a}")
+    if verbosity>1: print(f"double_layer_a({coord},{open_sites}) {a}")
     return a
 
 def enlarged_corner(coord, state, env, corner, open_sites=[], force_cpu=False,
@@ -135,9 +135,9 @@ def enlarged_corner(coord, state, env, corner, open_sites=[], force_cpu=False,
         # 0(-)
         fuse_axes= ((1,2),(0,3)) if len(open_sites)==0 else ((1,2),(0,3),4)
         C2x2_LU = C2x2_LU.fuse_legs(axes=fuse_axes)
-        if verbosity > 0:
+        if verbosity > 1:
             print("C2X2 LU " + str(coord) + "->" + str(state.vertexToSite(coord))\
-                + " (-1,-1): " + str(C2x2_LU.show_propeties()))
+                + " (-1,-1): " + str(C2x2_LU.show_properties()))
         return C2x2_LU
 
     elif corner == 'RU':
@@ -177,9 +177,9 @@ def enlarged_corner(coord, state, env, corner, open_sites=[], force_cpu=False,
         #       1(-)
         fuse_axes= ((1,2),(0,3)) if len(open_sites)==0 else ((1,2),(0,3),4)
         C2x2_RU = C2x2_RU.fuse_legs(axes=fuse_axes)
-        if verbosity > 0:
+        if verbosity > 1:
             print("C2X2 RU " + str((coord[0] + vec[0], coord[1] + vec[1])) + "->"\
-                + str(shitf_coord) + " (1,-1): " + str(C2x2_RU.show_propeties()))
+                + str(shitf_coord) + " (1,-1): " + str(C2x2_RU.show_properties()))
         return C2x2_RU
 
     elif corner == 'RD':
@@ -217,9 +217,9 @@ def enlarged_corner(coord, state, env, corner, open_sites=[], force_cpu=False,
         # (+)1--C2x2
         fuse_axes= ((1,2),(0,3)) if len(open_sites)==0 else ((1,2),(0,3),4)
         C2x2_RD = C2x2_RD.fuse_legs(axes=fuse_axes)
-        if verbosity > 0:
+        if verbosity > 1:
             print("C2X2 RD " + str((coord[0] + vec[0], coord[1] + vec[1])) + "->"\
-                + str(shitf_coord) + " (1,1): " + str(C2x2_RD.show_propeties()))
+                + str(shitf_coord) + " (1,1): " + str(C2x2_RD.show_properties()))
         return C2x2_RD
 
     elif corner == 'LD':
@@ -260,9 +260,9 @@ def enlarged_corner(coord, state, env, corner, open_sites=[], force_cpu=False,
         #    C2x2--1(-)
         fuse_axes= ((0,2),(1,3)) if len(open_sites)==0 else ((0,2),(1,3),4)
         C2x2_LD = C2x2_LD.fuse_legs(axes=fuse_axes)
-        if verbosity > 0:
+        if verbosity > 1:
             print("C2X2 LD " + str((coord[0] + vec[0], coord[1] + vec[1])) + "->"\
-                + str(shitf_coord) + " (-1,1): " + str(C2x2_LD.show_propeties()))
+                + str(shitf_coord) + " (-1,1): " + str(C2x2_LD.show_properties()))
         return C2x2_LD
 
 # ----- main environment contraction functions - 1x1 subsytem -----
@@ -937,7 +937,7 @@ def rdm2x2_dn_triangle_with_operator(coord, state, env, op, force_cpu=False,\
         T2 = env.T[(state.vertexToSite(coord), (-1, 0))]
         a_1layer = state.site(coord)
 
-    a = double_layer_a(state,coord,force_cpu=force_cpu)
+    a = double_layer_a(state,coord,force_cpu=force_cpu,verbosity=verbosity)
     #a = contract(a_1layer,a_1layer.conj(),([0],[0])).fuse_legs(axes=((0,4),(1,5),(2,6),(3,7)))
     a_op = contract(op,a_1layer,([0],[0]),conj=(0,1))
     a_op = contract(a_1layer,a_op,([0],[0]))
