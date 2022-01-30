@@ -147,7 +147,7 @@ def main():
     obs_values, obs_labels = model.eval_obs(state,ctm_env)
     print("\n")
     print(", ".join(["epoch","energy"]+obs_labels))
-    print("FINAL "+", ".join([f"{opt_energy}"]+[f"{v}" for v in obs_values]))  
+    print("FINAL "+", ".join([f"{opt_energy}"]+[f"{v}" for v in obs_values]))
 
 if __name__=='__main__':
     if len(unknown_args)>0:
@@ -177,13 +177,13 @@ class TestOptim_TrimerState(unittest.TestCase):
         from unittest.mock import patch 
         from cmath import isclose
 
-        final_obs=None
-        final_opt_line=None
         with patch('sys.stdout', new = StringIO()) as tmp_out: 
             main()
         tmp_out.seek(0)
 
         # parse FINAL observables
+        final_obs=None
+        final_opt_line=None
         OPT_OBS= OPT_OBS_DONE= False
         l= tmp_out.readline()
         while l:
@@ -221,7 +221,7 @@ class TestOptim_TrimerState(unittest.TestCase):
     def tearDown(self):
         args.opt_resume=None
         args.instate=None
-        for f in [self.OUT_PRFX+"_state.json"]:
+        for f in [self.OUT_PRFX+"_state.json",self.OUT_PRFX+"_checkpoint.p",self.OUT_PRFX+".log"]:
             if os.path.isfile(f): os.remove(f)
 
 class TestCheckpoint_TrimerState(unittest.TestCase):
@@ -247,13 +247,13 @@ class TestCheckpoint_TrimerState(unittest.TestCase):
         from cmath import isclose
 
         # i) run optimization and store the optimization data
-        obs_opt_lines=[]
-        final_obs=None
         with patch('sys.stdout', new = StringIO()) as tmp_out: 
             main()
         tmp_out.seek(0)
 
         # parse FINAL observables
+        obs_opt_lines=[]
+        final_obs=None
         OPT_OBS= OPT_OBS_DONE= False
         l= tmp_out.readline()
         while l:
@@ -306,7 +306,6 @@ class TestCheckpoint_TrimerState(unittest.TestCase):
         opt_line_i= [complex(x) for x in obs_opt_lines[4].split(",")[1:]]
         fobs_tokens= [complex(x) for x in final_obs[len("FINAL"):].split(",")]
         for val3,val1 in zip(opt_line_iii, opt_line_i):
-            print(f"{val3} {val1}")
             assert isclose(val3,val1, rel_tol=self.tol, abs_tol=self.tol)
 
         # compare final observables from optimization (i) and the final observables 
@@ -331,5 +330,5 @@ class TestCheckpoint_TrimerState(unittest.TestCase):
     def tearDown(self):
         args.opt_resume=None
         args.instate=None
-        for f in [self.OUT_PRFX+"_state.json"]:
+        for f in [self.OUT_PRFX+"_state.json",self.OUT_PRFX+"_checkpoint.p",self.OUT_PRFX+".log"]:
             if os.path.isfile(f): os.remove(f)

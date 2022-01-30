@@ -10,7 +10,7 @@ from ipeps.ipeps_abelian import *
 from ctm.generic_abelian.env_abelian import *
 import ctm.generic_abelian.ctmrg as ctmrg
 from models.abelian import coupledLadders
-from optim.su_abelian import run_seq_2s
+from itevol.su_2site_abelian import run_seq_2s
 import json
 import unittest
 import logging

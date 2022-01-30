@@ -169,7 +169,7 @@ class TestCtmrg_TrimerState(unittest.TestCase):
             assert isclose(val,ref_val, rel_tol=self.tol, abs_tol=self.tol)
 
     def tearDown(self):
-        for f in [self.OUT_PRFX+"_state.json"]:
+        for f in [self.OUT_PRFX+"_state.json",self.OUT_PRFX+".log"]:
             if os.path.isfile(f): os.remove(f)
 
 class TestCtmrg_AKLTState(unittest.TestCase):
@@ -217,5 +217,5 @@ class TestCtmrg_AKLTState(unittest.TestCase):
             assert isclose(val,ref_val, rel_tol=self.tol, abs_tol=self.tol)
 
     def tearDown(self):
-        for f in [self.OUT_PRFX+"_state.json"]:
+        for f in [self.OUT_PRFX+"_state.json",self.OUT_PRFX+".log"]:
             if os.path.isfile(f): os.remove(f)

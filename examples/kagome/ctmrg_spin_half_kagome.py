@@ -27,7 +27,7 @@ parser.add_argument("--j1", type=float, default=1., help="nearest-neighbor excha
 parser.add_argument("--JD", type=float, default=0, help="two-spin DM interaction")
 parser.add_argument("--j2", type=float, default=0, help="next-nearest-neighbor exchange coupling")
 parser.add_argument("--jtrip", type=float, default=0, help="(SxS).S")
-parser.add_argument("--jperm", type=float, default=0, help="triangle permutation")
+parser.add_argument("--jperm", type=complex, default=0+0j, help="triangle permutation")
 parser.add_argument("--ansatz", type=str, default=None, help="choice of the tensor ansatz",\
      choices=["IPEPS", "IPESS", "IPESS_PG", 'A_2,B'])
 parser.add_argument("--CTM_check", type=str, default='Partial_energy', help="method to check CTM convergence",\
@@ -151,20 +151,21 @@ def main():
             +str(args.ansatz)+" is not supported")
 
 
-    def energy_f(state, env, force_cpu=False):
+    def energy_f(state, env, force_cpu=False, fail_on_check=False,\
+        warn_on_check=True):
         #print(env)
-        e_dn = model.energy_triangle_dn_NoCheck(state, env, force_cpu=args.force_cpu)
-        e_up = model.energy_triangle_up_NoCheck(state, env, force_cpu=args.force_cpu)
+        e_dn = model.energy_triangle_dn(state, env, force_cpu=args.force_cpu,\
+            fail_on_check=fail_on_check, warn_on_check=warn_on_check)
+        e_up = model.energy_triangle_up(state, env, force_cpu=args.force_cpu,\
+            fail_on_check=fail_on_check, warn_on_check=warn_on_check)
         # e_nnn = model.energy_nnn(state, env)
         return (e_up + e_dn)/3 #+ e_nnn) / 3
     def energy_f_complex(state, env, force_cpu=False):
-        #print(env)
         e_dn = model.energy_triangle_dn_NoCheck(state, env, force_cpu=args.force_cpu)
         e_up = model.energy_triangle_up_NoCheck(state, env, force_cpu=args.force_cpu)
         # e_nnn = model.energy_nnn(state, env)
         return (e_up + e_dn)/3 #+ e_nnn) / 3
     def dn_energy_f(state, env, force_cpu=False):
-        #print(env)
         e_dn = model.energy_triangle_dn_NoCheck(state, env, force_cpu=args.force_cpu)
         return e_dn
         
@@ -183,10 +184,11 @@ def main():
             spectra.append([label, s])
         return spectra
 
-    def report_conv_fn(state, ctm_env, conv_step, conv_crit):
+    def report_conv_fn(state, ctm_env, conv_step, conv_crit, e_curr=None):
         if args.obs_freq>0 and \
             (conv_step%args.obs_freq==0 or (conv_step-1)%args.obs_freq==0):
-            e_curr = energy_f(state, env, force_cpu=args.force_cpu)
+            if e_curr is None: 
+                e_curr = energy_f(state, env, force_cpu=args.force_cpu, warn_on_check=False)
             obs_values, obs_labels = model.eval_obs(state, env, force_cpu=args.force_cpu)
             print(", ".join([f"{conv_step}",f"{conv_crit}",f"{e_curr}"]+[f"{v}" for v in obs_values]))
         else:
@@ -200,7 +202,7 @@ def main():
 
             # log conv_crit and observables
             report_conv_fn(state,env,len(history),\
-                float('inf') if len(history) < 2 else abs(history[-1] - history[-2]))
+                float('inf') if len(history) < 2 else abs(history[-1] - history[-2]), e_curr=e_curr)
 
             if (len(history) > 1 and abs(history[-1] - history[-2]) < ctm_args.ctm_conv_tol) \
                     or len(history) >= ctm_args.ctm_max_iter:
@@ -266,7 +268,7 @@ def main():
     init_env(state, ctm_env_init)
 
     # 4) (optional) compute observables as given by initial environment
-    e_curr0 = energy_f(state, ctm_env_init,force_cpu=args.force_cpu)
+    e_curr0 = energy_f(state, ctm_env_init, force_cpu=args.force_cpu, warn_on_check=False)
     obs_values0, obs_labels = model.eval_obs(state,ctm_env_init,force_cpu=args.force_cpu)
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{e_curr0}"]+[f"{v}" for v in obs_values0]))
@@ -292,12 +294,12 @@ def main():
     chi_I= 1.0j * (Pijk - Pijk_inv)
 
     ev_chi_R_downT= rdm_kagome.rdm2x2_dn_triangle_with_operator((0,0), state, ctm_env_init,\
-        chi_R)
+        chi_R, force_cpu=force_cpu)
     ev_chi_I_downT= rdm_kagome.rdm2x2_dn_triangle_with_operator((0,0), state, ctm_env_init,\
-        chi_I)
+        chi_I, force_cpu=force_cpu)
     print(f"Re(Chi) downT {ev_chi_R_downT} Im(Chi) downT {ev_chi_I_downT}")
 
-    rho_upT= rdm_kagome.rdm2x2_up_triangle_open((0,0), state, ctm_env_init)
+    rho_upT= rdm_kagome.rdm2x2_up_triangle_open((0,0), state, ctm_env_init, force_cpu=force_cpu)
     ev_chi_R_upT= torch.einsum('ijkmno,mnoijk',rho_upT, chi_R)
     ev_chi_I_upT= torch.einsum('ijkmno,mnoijk',rho_upT, chi_I)
     print(f"Re(Chi) upT {ev_chi_R_upT} Im(Chi) upT {ev_chi_I_upT}")

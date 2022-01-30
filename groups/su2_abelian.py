@@ -321,22 +321,16 @@ class SU2_U1():
     def SS(self, zpm=(1.,0.5,0.5)):
         r"""
         :param zpm: coefficients of anisotropy of spin-spin interaction
-                    zpm[0]*(S^z S^z) + zpm[1]*(S^p S^m) + zpm[2]*(S^m S^p)
+                    zpm[0]*(S^z S^z) + zpm[1]*(S^p S^m)/2 + zpm[2]*(S^m S^p)/2
         :type zpm: tuple(float)
         :return: spin-spin interaction as rank-4 for tensor 
-        :rtype: torch.tensor
+        :rtype: yast.Tensor
         """
-        # expr_kron = 'ij,ab->iajb'
-        # spin-spin interaction \vec{S}_1.\vec{S}_2 between spins on sites 1 and 2
-        # First as rank-4 tensor
-        # SS = xyz[0]*np.einsum(expr_kron,get_op("sz", J, self.dtype),get_op("sz", J, self.dtype)) \
-        #     + 0.5*(np.einsum(expr_kron,get_op("sp", J, self.dtype),get_op("sm", J, self.dtype)) \
-        #     + np.einsum(expr_kron,get_op("sm", J, self.dtype),get_op("sp", J, self.dtype)))
         unit_block= np.ones((1,1), dtype=self.dtype)
         g= yast.Tensor(self.engine, s=self._REF_S_DIRS)
-        g.set_block(ts=(2,2), val=zpm[1]*unit_block)
+        g.set_block(ts=(2,2), val=zpm[1]/2*unit_block)
         g.set_block(ts=(0,0), val=zpm[0]*unit_block)
-        g.set_block(ts=(-2,-2), val=zpm[2]*unit_block)
+        g.set_block(ts=(-2,-2), val=zpm[2]/2*unit_block)
         g= g.to(self.device)
 
         S_vec= self.S_zpm()
@@ -353,35 +347,5 @@ class SU2_U1():
         # 1          2->3
         SS= SS.tensordot(S_vec_dag,([2],[0]))
         SS= SS.transpose((0,2,1,3))
+
         return SS
-
-# Assume tupples J1=(J1,m1), J2=(J2,m2) and J=(J,m)
-# return scalar product of <J,m|J1,m1;J2,m2>
-def get_CG(J, J1, J2):
-    # (!) Use Dynkin notation to pass desired irreps
-    # physical         J_Dynkin = 2*J_physical    Dynkin
-    # J=0   m=0                 => J=0 m=0
-    # J=1/2 m=-1/2,1/2          => J=1 m=-1,1
-    # J=1   m=-1,0,1            => J=2 m=-2,0,2
-    # J=3/2 m=-3/2,-1/2,1/2,3/2 => J=3 m=-3,-1,1,2
-
-    cg=0.
-    if (J[1] == J1[1] + J2[1]):
-        prefactor = sqrt((J[0] + 1.0) * factorial((J[0] + J1[0] - J2[0]) / 2) * \
-           factorial((J[0] - J1[0] + J2[0]) / 2) * factorial((J1[0] + J2[0] - J[0]) / 2) /\
-           factorial((J1[0] + J2[0] + J[0]) / 2 + 1)) *\
-      sqrt(factorial((J[0] + J[1]) / 2) * factorial((J[0] - J[1]) / 2) *\
-           factorial((J1[0] - J1[1]) / 2) * factorial((J1[0] + J1[1]) / 2) *\
-           factorial((J2[0] - J2[1]) / 2) * factorial((J2[0] + J2[1]) / 2))
-    
-        min_k = min((J1[0] + J2[0]) // 2, J2[0])
-        sum_k = 0
-        for k in range(min_k+1):
-            if ((J1[0] + J2[0] - J[0]) / 2 - k >= 0) and ((J1[0] - J1[1]) / 2 - k >= 0) and \
-                ((J2[0] + J2[1]) / 2 - k >= 0) and ((J[0] - J2[0] + J1[1]) / 2 + k >= 0) and \
-                ((J[0] - J1[0] - J2[1]) / 2 + k >= 0): 
-                sum_k += ((-1) ** k) / (factorial(k) * factorial((J1[0] + J2[0] - J[0]) / 2 - k) *\
-                    factorial((J1[0] - J1[1]) / 2 - k) * factorial((J2[0] + J2[1]) / 2 - k) *\
-                    factorial((J[0] - J2[0] + J1[1]) / 2 + k) * factorial((J[0] - J1[0] - J2[1]) / 2 + k))
-        cg = prefactor * sum_k
-    return cg

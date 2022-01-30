@@ -168,6 +168,50 @@ class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
         return IPESS_KAGOME_GENERIC_ABELIAN(self.engine, ipess_tensors,\
                  peps_args=peps_args)
 
+    def generate_weights(self):
+        r"""
+        Generate set of identity tensors, weights W, for each non-equivalent link 
+        in the iPESS ansatz. 
+
+                2(d)            2(c)                    (-)a
+                 \             /          rot. pi          |
+            0(w)==B_a         B_b==0(v)   clockwise  (-)b--\                     
+                   \         /             =>               \
+                   1(l)     1(k)                            s0--s2--d(+)
+                 W_down_a  W_down_b                          |  /
+                    2(l)   1(k)                              | / 
+                      \   /                                  |/   <- DOWN_T
+                       T_d                                  s1
+                        |                                    |
+                        0(j)                                 c(+)
+                      W_down_c
+                        1(j)
+                        |                 
+                        B_c==0(u)        
+                        |
+                        2(i)
+                       W_up_c
+                        0(i)  
+                        |
+                       T_u
+                      /   \ 
+                    1(a)   2(b)
+                  W_up_b   W_up_a
+        """
+        weights=dict()
+        for w_id, ind1, ind2 in [ 
+                ('lambda_up_c', ('T_u',0), ('B_c',2)), 
+                ('lambda_up_a', ('T_u',2), ('B_a',2)),
+                ('lambda_up_b', ('T_u',1), ('B_b',2)),
+                ('lambda_dn_c', ('T_d',0), ('B_c',1)),
+                ('lambda_dn_a', ('T_d',2), ('B_a',1)),
+                ('lambda_up_b', ('T_u',1), ('B_b',1))
+            ]:
+            W= yast.match_legs( tensors=[self.ipess_tensors[ind1[0]], self.ipess_tensors[ind2[0]]],\
+                legs=[ ind1[1] , ind2[1] ], isdiag=True ).flip_signature()
+            weights[w_id]= W
+        return weights
+
     def __str__(self):
         print(f"lX x lY: {self.lX} x {self.lY}")
         for t_id,t in self.ipess_tensors.items():
