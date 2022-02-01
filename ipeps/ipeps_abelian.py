@@ -301,7 +301,7 @@ class IPEPS_ABELIAN():
         self.sites= {ind: yast.load_from_dict(config= self.engine, d=t_dict_repr) \
             for ind,t_dict_repr in checkpoint["parameters"].items()}
         for site_t in self.sites.values(): site_t.requires_grad_(False)
-        self.build_sites_dl_open()
+        self.sync_precomputed()
 
     def write_to_file(self, outputfile, tol=None, normalize=False):
         write_ipeps(self, outputfile, tol=tol, normalize=normalize)

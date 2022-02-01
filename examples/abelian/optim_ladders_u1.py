@@ -37,12 +37,13 @@ def main():
     elif args.symmetry=="U1":
         settings= settings_U1
     # override default device specified in settings
-    default_device= 'cpu' if not hasattr(settings, 'device') else settings.device
+    default_device= 'cpu' if not hasattr(settings, 'default_device') else settings.default_device
     if not cfg.global_args.device == default_device:
-        settings.device = cfg.global_args.device
-        settings_full.device = cfg.global_args.device
+        settings.device= settings.default_device = cfg.global_args.device
+        settings_full.device = settings_full.default_device = cfg.global_args.device
         print("Setting backend device: "+settings.device)
     # override default dtype
+    settings_full.default_dtype= settings.default_dtype= cfg.global_args.dtype
     settings_full.dtype= settings.dtype= cfg.global_args.dtype
     settings.backend.set_num_threads(args.omp_cores)
     settings.backend.random_seed(args.seed)
@@ -100,7 +101,7 @@ def main():
         opt_args= opt_context["opt_args"]
 
         # build double-layer open on-site tensors
-        state.build_sites_dl_open()
+        state.sync_precomputed()
 
         # possibly re-initialize the environment
         if opt_args.opt_ctm_reinit:

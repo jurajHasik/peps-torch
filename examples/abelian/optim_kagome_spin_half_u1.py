@@ -109,7 +109,7 @@ def main():
             #     state= IPESS_KAGOME_PG(T_u, B_c, T_d=T_d, B_a=B_a, B_b=B_b,\
             #         SYM_UP_DOWN=args.sym_up_dn,SYM_BOND_S=args.sym_bond_S, pgs=ansatz_pgs)
             state.load_checkpoint(args.opt_resume)
-    elif args.instate==None and args.opt_resume==None:
+    if args.instate==None and args.opt_resume==None:
         args.ansatz="IPESS"
         if args.ipeps_init_type=='RANDOM':
 

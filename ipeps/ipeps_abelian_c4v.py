@@ -57,7 +57,7 @@ class IPEPS_ABELIAN_C4V(IPEPS_ABELIAN):
 
         sites= OrderedDict({(0,0): site})
         super().__init__(settings, sites, vertexToSite=vertexToSite, lX=1, lY=1,\
-            build_open_dl=True, peps_args=peps_args, global_args=global_args)
+            peps_args=peps_args, global_args=global_args)
 
     def site(self, coord=(0,0)):
         return super().site(coord)

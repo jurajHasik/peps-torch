@@ -113,6 +113,7 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
             tensors=  tuple(r1d.to(global_args.offload_to_gpu) for r1d in tensors)
             _loc_engine= NamedTuple(
                 backend=_loc_engine.backend, sym=_loc_engine.sym,\
+                default_dtype=_loc_engine.dtype, default_device= global_args.offload_to_gpu,\
                 dtype=_loc_engine.dtype, device=global_args.offload_to_gpu,\
                 default_fusion= _loc_engine.default_fusion, force_fusion= _loc_engine.force_fusion)
 
