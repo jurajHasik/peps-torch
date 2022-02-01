@@ -94,8 +94,9 @@ class IPEPS_ABELIAN_C4V(IPEPS_ABELIAN):
         state_dense= IPEPS_ABELIAN_C4V(settings_dense, site_dense)
         return state_dense
 
-    def write_to_file(self, outputfile, tol=None, normalize=False):
-        write_ipeps(self, outputfile, tol=tol, normalize=normalize)
+    def write_to_file(self, outputfile, tol=None, symmetrize=True, normalize=False):
+        sym_state= self.symmetrize() if symmetrize else self
+        write_ipeps(sym_state, outputfile, tol=tol, normalize=normalize)
 
     def symmetrize(self):
         site= make_c4v_symm_A1(self.site())

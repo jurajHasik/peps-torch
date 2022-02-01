@@ -1,3 +1,4 @@
+import os
 import context
 import argparse
 import numpy as np
@@ -161,3 +162,88 @@ if __name__=='__main__':
         print("args not recognized: "+str(unknown_args))
         raise Exception("Unknown command line arguments")
     main()
+
+class TestCheckpoint_VBSstate(unittest.TestCase):
+    tol= 1.0e-6
+    DIR_PATH = os.path.dirname(os.path.realpath(__file__))
+    OUT_PRFX = "RESULT_test_run-opt-chck_u1_vbs"
+
+    def setUp(self):
+        args.instate=self.DIR_PATH+"/../../test-input/abelian/ABU1_BFGS100LS_D2-chi24-a0.1-run0-svd8_i2SUVBSn0_state.json"
+        args.symmetry="U1"
+        args.alpha=0.1
+        args.bond_dim=2
+        args.chi=16
+        args.instate_noise=0.1
+        args.seed=300
+        args.out_prefix=self.OUT_PRFX
+
+    def test_checkpoint_noisy_vbs(self):
+        from io import StringIO
+        from unittest.mock import patch
+        from cmath import isclose
+
+        # i) run optimization and store the optimization data
+        args.opt_max_iter= 10
+        with patch('sys.stdout', new = StringIO()) as tmp_out: 
+            main()
+        tmp_out.seek(0)
+
+        # parse FINAL observables
+        obs_opt_lines=[]
+        OPT_OBS= OPT_OBS_DONE= False
+        l= tmp_out.readline()
+        while l:
+            print(l,end="")
+            if OPT_OBS and not OPT_OBS_DONE and l.rstrip()=="": OPT_OBS_DONE= True
+            if OPT_OBS and not OPT_OBS_DONE and len(l.split(','))>2:
+                obs_opt_lines.append(l)
+            if "epoch, energy," in l and not OPT_OBS_DONE: 
+                OPT_OBS= True
+            l= tmp_out.readline()
+        assert len(obs_opt_lines)>0
+
+        # ii) run optimization for 3 steps
+        args.opt_max_iter= 3
+        main()
+        
+        # iii) run optimization from checkpoint
+        args.instate=None
+        args.opt_resume= self.OUT_PRFX+"_checkpoint.p"
+        args.opt_max_iter= 7
+        with patch('sys.stdout', new = StringIO()) as tmp_out: 
+            main()
+        tmp_out.seek(0)
+
+        obs_opt_lines_chk=[]
+        OPT_OBS= OPT_OBS_DONE= False
+        l= tmp_out.readline()
+        while l:
+            print(l,end="")
+            if OPT_OBS and not OPT_OBS_DONE and l.rstrip()=="": OPT_OBS_DONE= True
+            if OPT_OBS and not OPT_OBS_DONE and len(l.split(','))>2:
+                obs_opt_lines_chk.append(l)
+            if "checkpoint.loss" in l and not OPT_OBS_DONE: 
+                OPT_OBS= True
+            l= tmp_out.readline()
+        assert len(obs_opt_lines_chk)>0
+
+        # compare initial observables from checkpointed optimization (iii) and the observables 
+        # from original optimization (i) at one step after total number of steps done in (ii)
+        opt_line_iii= [float(x) for x in obs_opt_lines_chk[0].split(",")[1:]]
+        opt_line_i= [float(x) for x in obs_opt_lines[4].split(",")[1:]]
+        for val3,val1 in zip(opt_line_iii, opt_line_i):
+            assert isclose(val3,val1, rel_tol=self.tol, abs_tol=self.tol)
+
+        # compare final observables from optimization (i) and the final observables 
+        # from the checkpointed optimization (iii)
+        fobs_tokens_1= [float(x) for x in obs_opt_lines[-1].split(",")[1:]]
+        fobs_tokens_3= [float(x) for x in obs_opt_lines_chk[-1].split(",")[1:]]
+        for val3,val1 in zip(fobs_tokens_3, fobs_tokens_1):
+            assert isclose(val3,val1, rel_tol=self.tol, abs_tol=self.tol)
+
+    def tearDown(self):
+        args.opt_resume=None
+        args.instate=None
+        for f in [self.OUT_PRFX+"_state.json",self.OUT_PRFX+"_checkpoint.p",self.OUT_PRFX+".log"]:
+            if os.path.isfile(f): os.remove(f)
