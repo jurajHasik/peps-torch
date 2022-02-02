@@ -1,6 +1,6 @@
 import warnings
 import config as cfg
-import yamps.yast as yast
+import yast.yast as yast
 try:
     import torch
     from ctm.generic.env import ENV
@@ -57,17 +57,17 @@ class ENV_ABELIAN():
         Start from the index in the **direction "up"** <=> (0,-1) and continue **anti-clockwise**.
         The reference symmetry signatures are shown on the right::
 
-            C--1 0--T--2 0--C        C(-1) (+1)T(-1) (+1)C
-            |       |       |       (-1)     (-1)      (-1)
+            C--1 0--T--2 0--C        C(+1) (-1)T(+1) (-1)C
+            |       |       |       (+1)     (+1)      (+1)
             0       1       1  
             0               0  
-            |               |       (+1)               (+1)
-            T--2         1--T        T(-1)           (+1)T
             |               |       (-1)               (-1)
+            T--2         1--T        T(+1)           (-1)T
+            |               |       (+1)               (+1)
             1               2
             0       0       0
-            |       |       |       (+1)     (+1)      (+1)
-            C--1 1--T--2 1--C        C(-1) (+1)T(-1) (+1)C
+            |       |       |       (-1)     (-1)      (-1)
+            C--1 1--T--2 1--C        C(+1) (-1)T(+1) (-1)C
 
         """
         if state:
@@ -315,8 +315,8 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
 
         # Left-upper corner
         #
-        #     i      = C--1(-1)  
-        # j--a--4      0(-1)
+        #     i      = C--1(+1)  
+        # j--a--4      0(+1)
         #   /\
         #  3  m
         #      \ i
@@ -332,8 +332,8 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
 
         # right-upper corner
         #
-        #     i      = (+1)0--C     
-        # 2--a--j         (-1)1
+        #     i      = (-1)0--C     
+        # 2--a--j         (+1)1
         #   /\
         #  3  m
         #      \ i
@@ -349,8 +349,8 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
 
         # right-lower corner
         #
-        #     1      =    (+1)0     
-        # 2--a--j      (+1)1--C
+        #     1      =    (-1)0     
+        # 2--a--j      (-1)1--C
         #   /\
         #  i  m
         #      \ 1
@@ -366,8 +366,8 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
 
         # left-lower corner
         #
-        #     1      = 0(+1)     
-        # i--a--4      C--1(-1)
+        #     1      = 0(-1)     
+        # i--a--4      C--1(+1)
         #   /\
         #  j  m
         #      \ 1
@@ -385,8 +385,8 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
     for coord,site in state.sites.items():
         # upper transfer matrix
         #
-        #     i      = (+1)0--T--2(-1)     
-        # 2--a--4         (-1)1
+        #     i      = (-1)0--T--2(+1)     
+        # 2--a--4         (+1)1
         #   /\
         #  3  m
         #      \ i
@@ -402,9 +402,9 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
 
         # left transfer matrix
         #
-        #     1      = 0(+1)     
-        # i--a--4      T--2(-1)
-        #   /\         1(-1)
+        #     1      = 0(-1)     
+        # i--a--4      T--2(+1)
+        #   /\         1(+1)
         #  3  m
         #      \ 1
         #    i--a*--4
@@ -419,8 +419,8 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
 
         # lower transfer matrix
         #
-        #     1      =    (+1)0     
-        # 2--a--4      (+1)1--T--2(-1)
+        #     1      =    (-1)0     
+        # 2--a--4      (-1)1--T--2(+1)
         #   /\
         #  i  m
         #      \ 1
@@ -436,9 +436,9 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
 
         # right transfer matrix
         #
-        #     1      =    (+1)0     
-        # 2--a--i      (+1)1--T
-        #   /\            (-1)2
+        #     1      =    (-1)0     
+        # 2--a--i      (-1)1--T
+        #   /\            (+1)2
         #  3  m
         #      \ 1
         #    2--a*--i

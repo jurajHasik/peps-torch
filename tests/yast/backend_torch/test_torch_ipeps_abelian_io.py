@@ -1,7 +1,7 @@
-import yamps.yast as yast
+import yast.yast as yast
 import settings_full_torch as settings_full
 import settings_U1_torch as settings_U1
-# import yamps.yast.backend_torch.config_U1_U1_R as settings_U1_U1
+# import yast.yast.backend_torch.config_U1_U1_R as settings_U1_U1
 import config as cfg
 from ipeps.ipeps_abelian import IPEPS_ABELIAN
 from ipeps.ipeps_abelian import write_ipeps, read_ipeps

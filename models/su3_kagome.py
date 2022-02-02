@@ -10,9 +10,9 @@ from tn_interface import view, permute, contiguous
 import itertools
 import numpy as np
 
-def _cast_to_real(t, check=True, imag_eps=1.0e-8):
+def _cast_to_real(t, check=False, imag_eps=1.0e-8):
     if t.is_complex():
-        assert abs(t.imag) < imag_eps,"unexpected imaginary part "+str(t.imag)
+        if check: assert abs(t.imag) < imag_eps,"unexpected imaginary part "+str(t.imag)
         return t.real
     return t
 

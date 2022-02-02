@@ -65,3 +65,96 @@ def get_Top2_spec_c4v(n, state, env_c4v, verbosity=0):
     L[:,1]= torch.as_tensor(np.imag(vals))
 
     return L
+
+def get_EH_spec_Ttensor(n, L, state, env_c4v, verbosity=0):
+    r"""
+    Compute leading part of spectrum of exp(EH), where EH is boundary
+    Hamiltonian. Exact exp(EH) is given by the leading eigenvector of 
+    transfer matrix ::
+          
+         ...         PBC                          /
+          |           |                  |     --a*--
+        --A--       --A(0)--           --A-- =  /| 
+        --A--       --A(1)--             |       |/
+        --A--        ...                       --a--
+          |         --A(L-1)--                  /
+         ...          |
+                     PBC
+
+        infinite exact TM; exact TM of L-leg cylinder  
+
+    The exp(EH) is then given by reshaping (D^2)^L leading eigenvector of TM
+    into D^L x D^L operator.
+
+    We approximate the exp(EH) of L-leg cylinder as MPO formed by T-tensors
+    of the CTM environment. Then, the spectrum of this approximate exp(EH)
+    is obtained through iterative solver using matrix-vector product
+
+           0
+           |            __
+         --T(0)----  --|  |
+         --T(1)----  --|v0|
+          ...       ...|  |
+         --T(L-1)--  --|__|
+           0(PBC)
+    """
+    assert L>1,"L must be larger than 1"
+    chi= env_c4v.chi
+    ad= state.site().size(4)
+    T= env_c4v.get_T().view(chi,chi,ad,ad)
+
+    def _mv(v0):
+        V= torch.as_tensor(v0,dtype=env_c4v.dtype,device=env_c4v.device)
+        V= V.view([ad]*L)
+        
+        # 0) apply 0th T
+        #
+        #    0                       0                L-1+2<-0
+        # 2--T--3 0--V--1..L-1 -> 2--T--V--3..L-1+2 -> 1<-2--T--V--2..L-1+1
+        #    1                       1                    0<-1
+        V= torch.tensordot(T,V,([3],[0]))
+        V= V.permute([1,2]+list(range(3,L-1+3))+[0])
+
+        # 1) apply 1st to L-2th T
+        for i in range(1,L-1):
+            #                    _
+            #   i<-i-1--T-------|V|--i+1..L-1+1,L-1+2
+            # i-1<-1-2--T-------| |
+            #          ...     
+            #     2<-1--T-------| |
+            #           0       | |
+            #           0       | |
+            #     1<-2--T--3 i--|_|
+            #           1->0
+            #
+            V= torch.tensordot(T,V,([0,3],[0,i+1]))
+
+
+        # apply L-1th T
+        #                     _
+        #   L-1--T-----------|V|--L-1+2
+        #   L-2--T-----------| |
+        #       ...
+        #     1--T-----------| |
+        #        0           | |
+        #        0           | |
+        #  0<-2--T--3 L-1+1--|_|
+        #        1
+        #       PBC
+        #
+        V= torch.tensordot(T,V,([0,3,1],[0,L-1+1,L-1+2]))
+        V= V.permute(list(range(L-1,-1,-1)))
+        return V.cpu().numpy()
+
+    _test_T= torch.zeros(1,dtype=env_c4v.dtype)
+    expEH= LinearOperator((ad**L,ad**L), matvec=_mv, \
+        dtype="complex128" if _test_T.is_complex() else "float64")
+    vals= eigs(expEH, k=n, v0=None, return_eigenvectors=False)
+
+    vals= np.copy(vals[::-1]) # descending order
+    vals= (1.0/np.abs(vals[0])) * vals
+    S= torch.zeros((n,2), dtype=torch.float64, device=state.device)
+    S[:,0]= torch.as_tensor(np.real(vals))
+    S[:,1]= torch.as_tensor(np.imag(vals))
+
+    return S

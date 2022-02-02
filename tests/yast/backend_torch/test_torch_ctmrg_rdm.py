@@ -2,7 +2,7 @@ import numpy as np
 import unittest
 import settings_full_torch
 import settings_U1_torch
-import yamps.yast as yast
+import yast.yast as yast
 import config as cfg
 from ipeps.ipeps_abelian import IPEPS_ABELIAN
 from ctm.generic_abelian.env_abelian import ENV_ABELIAN

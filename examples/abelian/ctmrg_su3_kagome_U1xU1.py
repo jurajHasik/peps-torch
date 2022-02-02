@@ -1,3 +1,4 @@
+import os
 import context
 import torch
 import numpy as np
@@ -57,7 +58,7 @@ def main():
     # coord into one of coordinates within unit-cell of iPEPS ansatz
     if args.instate!=None:
         state= read_ipess_kagome_generic(args.instate, settings)
-        state.add_noise(args.instate_noise)
+        state= state.add_noise(args.instate_noise)
     else:
         raise ValueError("Missing trial state: --instate=None and --ipeps_init_type= "\
             +str(args.ipeps_init_type)+" is not supported")
@@ -86,7 +87,7 @@ def main():
     # 3) evaluate observables for initial environment
     loss= model.energy_per_site_2x2subsystem(state, ctm_env)
     obs_values, obs_labels= model.eval_obs(state,ctm_env)
-    print(", ".join(["epoch","energy"]+obs_labels))
+    print(", ".join(["epoch","energy/conv-crit"]+obs_labels))
     print(", ".join([f"{-1}",f"{loss}"]+[f"{v}" for v in obs_values]))
 
     # 4) execute ctmrg
@@ -121,3 +122,100 @@ if __name__=='__main__':
         print("args not recognized: "+str(unknown_args))
         raise Exception("Unknown command line arguments")
     main()
+
+class TestCtmrg_TrimerState(unittest.TestCase):
+    tol= 1.0e-6
+    DIR_PATH = os.path.dirname(os.path.realpath(__file__))
+    OUT_PRFX = "RESULT_test_run_u1xu1_trimerized"
+
+    def setUp(self):
+        args.instate=self.DIR_PATH+"/../../test-input/abelian/IPESS_TRIMER_1-3_1x1_abelian-U1xU1_T3T8_state.json"
+        args.symmetry="U1xU1"
+        args.theta=0
+        args.phi=0
+        args.bond_dim=4
+        args.chi=16
+        args.out_prefix=self.OUT_PRFX
+        args.GLOBALARGS_dtype= "complex128"
+
+    def test_ctmrg_trimer(self):
+        from io import StringIO
+        from unittest.mock import patch 
+        from cmath import isclose
+
+        with patch('sys.stdout', new = StringIO()) as tmp_out: 
+            main()
+        tmp_out.seek(0)
+
+        # parse FINAL observables
+        final_obs=None
+        l= tmp_out.readline()
+        while l:
+            print(l,end="")
+            if "FINAL" in l:
+                final_obs= l.rstrip()
+                break
+            l= tmp_out.readline()
+        assert final_obs
+
+        # compare with the reference
+        ref_data="""
+        -0.6666666666666664, 0j, 0j, 0j, 0.0, 0.0, 0.3333333333333333, 0.3333333333333333, 
+        0.3333333333333333, -0.9999999999999999, -0.9999999999999999, -0.9999999999999999
+        """
+        fobs_tokens= [complex(x) for x in final_obs[len("FINAL"):].split(",")]
+        ref_tokens= [complex(x) for x in ref_data.split(",")]
+        for val,ref_val in zip(fobs_tokens, ref_tokens):
+            assert isclose(val,ref_val, rel_tol=self.tol, abs_tol=self.tol)
+
+    def tearDown(self):
+        for f in [self.OUT_PRFX+"_state.json",self.OUT_PRFX+".log"]:
+            if os.path.isfile(f): os.remove(f)
+
+class TestCtmrg_AKLTState(unittest.TestCase):
+    tol= 1.0e-6
+    DIR_PATH = os.path.dirname(os.path.realpath(__file__))
+    OUT_PRFX = "RESULT_test_run_u1xu1_aklt"
+
+    def setUp(self):
+        args.instate=self.DIR_PATH+"/../../test-input/abelian/IPESS_AKLT_b3_1x1_abelian-U1xU1_T3T8_state.json"
+        args.symmetry="U1xU1"
+        args.theta=0
+        args.phi=0.5
+        args.bond_dim=3
+        args.chi=18
+        args.out_prefix=self.OUT_PRFX
+        args.GLOBALARGS_dtype= "complex128"
+
+    def test_ctmrg_aklt(self):
+        from io import StringIO
+        from unittest.mock import patch
+        from cmath import isclose
+
+        with patch('sys.stdout', new = StringIO()) as tmp_out: 
+            main()
+        tmp_out.seek(0)
+
+        # parse FINAL observables
+        final_obs=None
+        l= tmp_out.readline()
+        while l:
+            print(l,end="")
+            if "FINAL" in l:
+                final_obs= l.rstrip()
+                break
+            l= tmp_out.readline()
+        assert final_obs
+
+        # compare with the reference
+        ref_data="""
+        -0.6666666666666664, 0j, 0j, 0j, 0.0, 0.0, 0., 0., 0., 0., 0., 0.
+        """
+        fobs_tokens= [complex(x) for x in final_obs[len("FINAL"):].split(",")]
+        ref_tokens= [complex(x) for x in ref_data.split(",")]
+        for val,ref_val in zip(fobs_tokens, ref_tokens):
+            assert isclose(val,ref_val, rel_tol=self.tol, abs_tol=self.tol)
+
+    def tearDown(self):
+        for f in [self.OUT_PRFX+"_state.json",self.OUT_PRFX+".log"]:
+            if os.path.isfile(f): os.remove(f)

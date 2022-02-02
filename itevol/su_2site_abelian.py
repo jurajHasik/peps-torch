@@ -1,4 +1,4 @@
-import yamps.yast as yast
+import yast.yast as yast
 from tn_interface_abelian import contract
 
 def run_seq_2s(state, gate_seq, su_opts={"weight_inv_cutoff": 1.0e-14, \

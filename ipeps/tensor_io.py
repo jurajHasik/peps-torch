@@ -3,7 +3,7 @@ from itertools import product
 import json
 import numpy as np
 try:
-    import yamps.yast as yast
+    import yast.yast as yast
 except ImportError as e:
     warnings.warn("yast not available", Warning)
 

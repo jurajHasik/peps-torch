@@ -103,7 +103,7 @@ def print_config():
         import subprocess
         import pathlib
         root_dir= pathlib.Path(__file__).parent.resolve()
-        ret= subprocess.run(f"cd {root_dir}/yamps ; git rev-parse --short HEAD",\
+        ret= subprocess.run(f"cd {root_dir}/yast ; git rev-parse --short HEAD",\
             stdout=subprocess.PIPE, shell=True, check=True,  text=True)
         print(f"yast git ref: {ret.stdout.rstrip()}")
     except subprocess.CalledProcessError as e:
@@ -180,7 +180,8 @@ class GLOBALARGS():
 
 class PEPSARGS():
     def __init__(self):
-        pass
+        self.build_dl= True
+        self.build_dl_open= False
 
     def __str__(self):
         res=type(self).__name__+"\n"

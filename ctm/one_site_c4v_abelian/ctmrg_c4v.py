@@ -3,7 +3,7 @@ import warnings
 from types import SimpleNamespace
 import config as cfg
 # from yamps.tensor import decompress_from_1d
-import yamps.yast as yast
+import yast.yast as yast
 from tn_interface_abelian import contract, permute
 from ctm.one_site_c4v_abelian.ctm_components_c4v import *
 try:

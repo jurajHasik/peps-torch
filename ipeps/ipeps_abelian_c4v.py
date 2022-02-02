@@ -9,7 +9,7 @@ try:
 except ImportError as e:
     warnings.warn("torch not available", Warning)
 import config as cfg
-import yamps.yast as yast
+import yast.yast as yast
 from ipeps.ipeps_abelian import IPEPS_ABELIAN, write_ipeps
 from groups.pg_abelian import make_c4v_symm_A1
 from ipeps.tensor_io import *
@@ -57,7 +57,7 @@ class IPEPS_ABELIAN_C4V(IPEPS_ABELIAN):
 
         sites= OrderedDict({(0,0): site})
         super().__init__(settings, sites, vertexToSite=vertexToSite, lX=1, lY=1,\
-            build_open_dl=True, peps_args=peps_args, global_args=global_args)
+            peps_args=peps_args, global_args=global_args)
 
     def site(self, coord=(0,0)):
         return super().site(coord)
@@ -94,8 +94,9 @@ class IPEPS_ABELIAN_C4V(IPEPS_ABELIAN):
         state_dense= IPEPS_ABELIAN_C4V(settings_dense, site_dense)
         return state_dense
 
-    def write_to_file(self, outputfile, tol=None, normalize=False):
-        write_ipeps(self, outputfile, tol=tol, normalize=normalize)
+    def write_to_file(self, outputfile, tol=None, symmetrize=True, normalize=False):
+        sym_state= self.symmetrize() if symmetrize else self
+        write_ipeps(sym_state, outputfile, tol=tol, normalize=normalize)
 
     def symmetrize(self):
         site= make_c4v_symm_A1(self.site())

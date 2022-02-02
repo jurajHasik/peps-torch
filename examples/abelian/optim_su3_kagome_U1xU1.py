@@ -1,8 +1,10 @@
+import os
 import context
 import torch
 import numpy as np
 import argparse
 import config as cfg
+import yast.yast as yast
 import examples.abelian.settings_full_torch as settings_full
 import examples.abelian.settings_U1xU1_torch as settings_U1xU1
 from ipeps.ipess_kagome_abelian import *
@@ -56,13 +58,13 @@ def main():
     # initialize an ipeps
     if args.instate!=None:
         state= read_ipess_kagome_generic(args.instate, settings)
-        state.add_noise(args.instate_noise)
+        state= state.add_noise(args.instate_noise)
     elif args.opt_resume is not None:
-        T_u= torch.zeros(config=settings, s=(-1,-1,-1))
-        T_d= torch.zeros(config=settings, s=(-1,-1,-1))
-        B_c= torch.zeros(config=settings, s=(-1,1,1))
-        B_a= torch.zeros(config=settings, s=(-1,1,1))
-        B_b= torch.zeros(config=settings, s=(-1,1,1))
+        T_u= yast.Tensor(config=settings, s=(-1,-1,-1))
+        T_d= yast.Tensor(config=settings, s=(-1,-1,-1))
+        B_c= yast.Tensor(config=settings, s=(-1,1,1))
+        B_a= yast.Tensor(config=settings, s=(-1,1,1))
+        B_b= yast.Tensor(config=settings, s=(-1,1,1))
         state= IPESS_KAGOME_GENERIC_ABELIAN(settings, {'T_u': T_u, 'B_a': B_a,\
             'T_d': T_d, 'B_b': B_b, 'B_c': B_c})
         state.load_checkpoint(args.opt_resume)
@@ -106,9 +108,9 @@ def main():
         #    Otherwise, this operation is not recorded and hence not differentiated
         state.sites= state.build_onsite_tensors()
 
-        # 1) build double-layer open on-site tensors
+        # 1) re-build precomputed double-layer on-site tensors
         #    Some objects, in this case open-double layer tensors, are pre-computed
-        state.build_sites_dl_open()
+        state.sync_precomputed()
 
         # possibly re-initialize the environment
         if opt_args.opt_ctm_reinit:
@@ -143,10 +145,190 @@ def main():
     ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
     opt_energy = energy_f(state,ctm_env)
     obs_values, obs_labels = model.eval_obs(state,ctm_env)
-    print(", ".join([f"{args.opt_max_iter}",f"{opt_energy}"]+[f"{v}" for v in obs_values]))  
+    print("\n")
+    print(", ".join(["epoch","energy"]+obs_labels))
+    print("FINAL "+", ".join([f"{opt_energy}"]+[f"{v}" for v in obs_values]))
 
 if __name__=='__main__':
     if len(unknown_args)>0:
         print("args not recognized: "+str(unknown_args))
         raise Exception("Unknown command line arguments")
     main()
+
+class TestOptim_TrimerState(unittest.TestCase):
+    tol= 1.0e-6
+    DIR_PATH = os.path.dirname(os.path.realpath(__file__))
+    OUT_PRFX = "RESULT_test_run-opt_u1xu1_trimerized"
+
+    def setUp(self):
+        args.instate=self.DIR_PATH+"/../../test-input/abelian/IPESS_TRIMER_1-3_1x1_abelian-U1xU1_T3T8_state.json"
+        args.symmetry="U1xU1"
+        args.theta=0
+        args.phi=0
+        args.bond_dim=4
+        args.chi=16
+        args.instate_noise=0.1
+        args.seed=212
+        args.out_prefix=self.OUT_PRFX
+        args.GLOBALARGS_dtype= "complex128"
+
+    def test_basic_opt_noisy_trimer(self):
+        from io import StringIO
+        from unittest.mock import patch 
+        from cmath import isclose
+
+        with patch('sys.stdout', new = StringIO()) as tmp_out: 
+            main()
+        tmp_out.seek(0)
+
+        # parse FINAL observables
+        final_obs=None
+        final_opt_line=None
+        OPT_OBS= OPT_OBS_DONE= False
+        l= tmp_out.readline()
+        while l:
+            print(l,end="")
+            if OPT_OBS and not OPT_OBS_DONE and l.rstrip()=="": OPT_OBS_DONE= True
+            if OPT_OBS and not OPT_OBS_DONE and len(l.split(','))>2:
+                final_opt_line= l
+            if "epoch, energy," in l and not OPT_OBS_DONE: 
+                OPT_OBS= True
+            if "FINAL" in l:
+                final_obs= l.rstrip()
+                break
+            l= tmp_out.readline()
+        assert final_obs
+        assert final_opt_line
+
+        # compare with the reference
+        ref_data="""
+        -0.6666666666666664, 0j, 0j, 0j, 0.0, 0.0, 0.3333333333333333, 0.3333333333333333, 
+        0.3333333333333333, -0.9999999999999999, -0.9999999999999999, -0.9999999999999999
+        """
+        # compare final observables from optimization and the observables from the 
+        # final state
+        final_opt_line_t= [complex(x) for x in final_opt_line.split(",")[1:]]
+        fobs_tokens= [complex(x) for x in final_obs[len("FINAL"):].split(",")]
+        for val0,val1 in zip(final_opt_line_t, fobs_tokens):
+            assert isclose(val0,val1, rel_tol=self.tol, abs_tol=self.tol)
+
+        # compare final observables from final state against expected reference 
+        # drop first token, corresponding to iteration step
+        ref_tokens= [complex(x) for x in ref_data.split(",")]
+        for val,ref_val in zip(fobs_tokens, ref_tokens):
+            assert isclose(val,ref_val, rel_tol=self.tol, abs_tol=self.tol)
+
+    def tearDown(self):
+        args.opt_resume=None
+        args.instate=None
+        for f in [self.OUT_PRFX+"_state.json",self.OUT_PRFX+"_checkpoint.p",self.OUT_PRFX+".log"]:
+            if os.path.isfile(f): os.remove(f)
+
+class TestCheckpoint_TrimerState(unittest.TestCase):
+    tol= 1.0e-6
+    DIR_PATH = os.path.dirname(os.path.realpath(__file__))
+    OUT_PRFX = "RESULT_test_run-opt-chck_u1xu1_trimerized"
+
+    def setUp(self):
+        args.instate=self.DIR_PATH+"/../../test-input/abelian/IPESS_TRIMER_1-3_1x1_abelian-U1xU1_T3T8_state.json"
+        args.symmetry="U1xU1"
+        args.theta=0
+        args.phi=0
+        args.bond_dim=4
+        args.chi=16
+        args.instate_noise=0.1
+        args.seed=300
+        args.out_prefix=self.OUT_PRFX
+        args.GLOBALARGS_dtype= "complex128"
+
+    def test_checkpoint_noisy_trimer(self):
+        from io import StringIO
+        from unittest.mock import patch
+        from cmath import isclose
+
+        # i) run optimization and store the optimization data
+        with patch('sys.stdout', new = StringIO()) as tmp_out: 
+            main()
+        tmp_out.seek(0)
+
+        # parse FINAL observables
+        obs_opt_lines=[]
+        final_obs=None
+        OPT_OBS= OPT_OBS_DONE= False
+        l= tmp_out.readline()
+        while l:
+            print(l,end="")
+            if OPT_OBS and not OPT_OBS_DONE and l.rstrip()=="": OPT_OBS_DONE= True
+            if OPT_OBS and not OPT_OBS_DONE and len(l.split(','))>2:
+                obs_opt_lines.append(l)
+            if "epoch, energy," in l and not OPT_OBS_DONE: 
+                OPT_OBS= True
+            if "FINAL" in l:
+                final_obs= l.rstrip()
+                break
+            l= tmp_out.readline()
+        assert final_obs
+        assert len(obs_opt_lines)>0
+
+        # ii) run optimization for 3 steps
+        args.opt_max_iter= 3 
+        main()
+        
+        # iii) run optimization from checkpoint
+        args.instate=None
+        args.opt_resume= self.OUT_PRFX+"_checkpoint.p"
+        args.opt_max_iter= 100
+        with patch('sys.stdout', new = StringIO()) as tmp_out: 
+            main()
+        tmp_out.seek(0)
+
+        obs_opt_lines_chk=[]
+        final_obs_chk=None
+        OPT_OBS= OPT_OBS_DONE= False
+        l= tmp_out.readline()
+        while l:
+            print(l,end="")
+            if OPT_OBS and not OPT_OBS_DONE and l.rstrip()=="": OPT_OBS_DONE= True
+            if OPT_OBS and not OPT_OBS_DONE and len(l.split(','))>2:
+                obs_opt_lines_chk.append(l)
+            if "checkpoint.loss" in l and not OPT_OBS_DONE: 
+                OPT_OBS= True
+            if "FINAL" in l:    
+                final_obs_chk= l.rstrip()
+                break
+            l= tmp_out.readline()
+        assert final_obs_chk
+        assert len(obs_opt_lines_chk)>0
+
+        # compare initial observables from checkpointed optimization (iii) and the observables 
+        # from original optimization (i) at one step after total number of steps done in (ii)
+        opt_line_iii= [complex(x) for x in obs_opt_lines_chk[0].split(",")[1:]]
+        opt_line_i= [complex(x) for x in obs_opt_lines[4].split(",")[1:]]
+        fobs_tokens= [complex(x) for x in final_obs[len("FINAL"):].split(",")]
+        for val3,val1 in zip(opt_line_iii, opt_line_i):
+            assert isclose(val3,val1, rel_tol=self.tol, abs_tol=self.tol)
+
+        # compare final observables from optimization (i) and the final observables 
+        # from the checkpointed optimization (iii)
+        fobs_tokens_1= [complex(x) for x in final_obs[len("FINAL"):].split(",")]
+        fobs_tokens_3= [complex(x) for x in final_obs_chk[len("FINAL"):].split(",")]
+        for val3,val1 in zip(fobs_tokens_3, fobs_tokens_1):
+            assert isclose(val3,val1, rel_tol=self.tol, abs_tol=self.tol)
+
+        # compare final observables from the checkpointed optimization (iii) with the reference 
+        ref_data="""
+        -0.6666666666666664, 0j, 0j, 0j, 0.0, 0.0, 0.3333333333333333, 0.3333333333333333, 
+        0.3333333333333333, -0.9999999999999999, -0.9999999999999999, -0.9999999999999999
+        """
+        # compare final observables from final state of checkpointed optimization 
+        # against expected reference. Drop first token, corresponding to iteration step
+        ref_tokens= [complex(x) for x in ref_data.split(",")]
+        fobs_tokens_3= [complex(x) for x in final_obs_chk[len("FINAL"):].split(",")]
+        for val,ref_val in zip(fobs_tokens_3, ref_tokens):
+            assert isclose(val,ref_val, rel_tol=self.tol, abs_tol=self.tol)
+
+    def tearDown(self):
+        args.opt_resume=None
+        args.instate=None
+        for f in [self.OUT_PRFX+"_state.json",self.OUT_PRFX+"_checkpoint.p",self.OUT_PRFX+".log"]:
+            if os.path.isfile(f): os.remove(f)

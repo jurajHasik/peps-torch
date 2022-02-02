@@ -6,6 +6,7 @@ from tn_interface import mm, contract, einsum
 from tn_interface import view, permute, contiguous
 from tn_interface import conj, transpose
 
+
 def get_edge(coord, direction, state, env, verbosity=0):
     r"""
     :param coord: tuple (x,y) specifying vertex on a square lattice
@@ -273,6 +274,92 @@ def apply_edge(coord, direction, state, env, vec, verbosity=0):
     if verbosity>0: print("S "+str(S.size()))
 
     return S
+
+def apply_TM_0sO(coord, direction, state, env, edge, verbosity=0):
+    r"""
+    :param coord: tuple (x,y) specifying vertex on a square lattice
+    :param direction: direction in which the transfer operator is applied
+    :param state: underlying wavefunction
+    :param env: environment corresponding to ``state``
+    :param edge: tensor of dimensions :math:`\chi^2`
+    :param verbosity: logging verbosity
+    :type coord: tuple(int,int)
+    :type direction: tuple(int,int)
+    :type state: IPEPS
+    :type env: ENV
+    :type edge: torch.tensor
+    :type verbosity: int
+    :return: ``edge`` with a single instance of the transfer matrix applied 
+             The resulting tensor has an identical index structure as the 
+             original ``edge`` 
+    :rtype: torch.tensor
+    
+    Applies a single instance of the "0-width channel transfer matrix" of site r=(x,y) to 
+    the ``edge`` tensor by contracting the following network, or its corresponding 
+    rotation depending on the ``direction``::
+
+        direction:  right=(1,0)                down=(0,1)
+
+                 -----T--                    edge
+                |     |                     |    |
+                 -----T--                   T----T
+                                            |    |
+
+    """
+    assert direction in [(0,-1),(-1,0),(0,1),(1,0)],"Invalid direction: "+str(direction)
+    # right is identical do down and left is identical to right
+    if direction==(1,0): direction=(-1,0) 
+    if direction==(0,1): direction=(0,-1)
+
+    c = state.vertexToSite(coord)
+    if direction == (0,-1): #up
+        T1 = env.T[(c,(-1,0))]
+        # Assume index structure of ``edge`` tensor to be as follows
+        # 
+        # 0
+        # T1(x,y)--2->1
+        # 1
+        # 0       1->2 
+        # --edge--- 
+        E = contract(T1,edge,([1],[0]))
+        if verbosity>0: print("E=edgeT "+str(E.size()))
+
+
+        # 0             0->1
+        # |             |
+        # T1(x,y)--1 1--T2(x-1,y)
+        # |             2
+        # |             2
+        # ---edge--------
+        T2 = env.T[(state.vertexToSite( (c[0]-1,c[1]) ),(1,0))]
+        E = contract(E,T2,([1,2],[1,2]))
+        if verbosity>0: print("E=ETT "+str(E.size()))
+    elif direction == (-1,0): #left
+        T1 = env.T[(c,(0,-1))]
+        # Assume index structure of ``edge`` tensor to be as follows
+        # 
+        #       0 -- 
+        #           | edge
+        #       2 -- 
+        #
+        #   0--T1(x,y)--2 0---- 
+        #      1               edge
+        #              2<-1---- 
+        #                
+        E = contract(T1,edge,([2],[0]))
+        if verbosity>0: print("E=edgeT "+str(E.size()))
+
+        #           0--T1(x,y)---------
+        #              1               |
+        #              0              edge
+        #              |               |
+        #           1--T2(x,y-1)--2 2--
+        #              (c+(0,-1))
+        T2 = env.T[( state.vertexToSite( (c[0],c[1]-1) ),(0,1))]
+        E = contract(E,T2,([1,2],[0,2]))
+        if verbosity>0: print("E=ETT "+str(E.size()))
+
+    return E
 
 def apply_TM_1sO(coord, direction, state, env, edge, op=None, verbosity=0):
     r"""

@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-import yamps.yast as yast
+import yast.yast as yast
 import groups.su3_abelian
 import examples.abelian.settings_U1xU1_torch as settings_U1xU1
 import config as cfg

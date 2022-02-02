@@ -1,4 +1,4 @@
-import yamps.yast as yast
+import yast.yast as yast
 import settings_full
 import settings_U1
 # import settings_U1_U1

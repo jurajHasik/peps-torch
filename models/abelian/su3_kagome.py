@@ -3,7 +3,7 @@ import itertools
 import numpy as np
 
 import torch
-import yamps.yast as yast
+import yast.yast as yast
 import config as cfg
 import groups.su3_abelian as su3
 
@@ -45,7 +45,8 @@ class KAGOME_SU3_U1xU1():
 
         # For now, only one-site
         self.obs_ops= self.get_obs_ops()
-        self.id2, self.id3, self.perm2, self.perm2_tri, self.perm3_l, self.perm3_r,\
+        self.id2, self.id3, self.perm2, self.perm2xI, \
+            self.perm2_tri, self.perm3_l, self.perm3_r,\
             self.h2_tri, self.h3_tri, self.h_tri = self.get_h()
 
     def get_obs_ops(self):
@@ -91,7 +92,7 @@ class KAGOME_SU3_U1xU1():
         h3_tri = (self.k + self.h * 1j) * perm3_l + (self.k - self.h * 1j) * perm3_r
         h_tri = (h2_tri + h3_tri)
 
-        return id2, id3, perm2, perm2_tri, perm3_l, perm3_r, h2_tri, h3_tri, h_tri
+        return id2, id3, perm2, perm2xI, perm2_tri, perm3_l, perm3_r, h2_tri, h3_tri, h_tri
 
     def eval_obs(self, state, env, force_cpu=False):
         chirality = 1j * (self.perm3_l - self.perm3_r)
@@ -101,23 +102,42 @@ class KAGOME_SU3_U1xU1():
             obs["chirality_dn"] = rdm_kagome.trace1x1_dn_kagome((0,0), state, env,\
                 chirality).to_number() / norm
             obs["chirality_dn"] = _cast_to_real(obs["chirality_dn"])
-            obs["avg_bonds_dn"] = rdm_kagome.trace1x1_dn_kagome((0,0), state, env,\
-                self.perm2_tri).to_number() / norm
-            obs["avg_bonds_dn"] = _cast_to_real(obs["avg_bonds_dn"]) / 3.0
+            # obs["avg_bonds_dn"] = rdm_kagome.trace1x1_dn_kagome((0,0), state, env,\
+            #     self.perm2_tri).to_number() / norm
+            # obs["avg_bonds_dn"] = _cast_to_real(obs["avg_bonds_dn"]) / 3.0
+            obs["P01_dn"] = rdm_kagome.trace1x1_dn_kagome((0,0), state, env,\
+                self.perm2xI).to_number() / norm
+            obs["P01_dn"] = _cast_to_real(obs["P01_dn"])
+            obs["P12_dn"] = rdm_kagome.trace1x1_dn_kagome((0,0), state, env,\
+                self.perm2xI.transpose(axes=(2,0,1,5,3,4))).to_number() / norm
+            obs["P12_dn"] = _cast_to_real(obs["P12_dn"])
+            obs["P20_dn"] = rdm_kagome.trace1x1_dn_kagome((0,0), state, env,\
+                self.perm2xI.transpose(axes=(0,2,1,3,5,4))).to_number() / norm
+            obs["P20_dn"] = _cast_to_real(obs["P20_dn"])
 
             rdm2x2_ring = rdm_kagome.rdm2x2_up_triangle_open((0,0), state, env, force_cpu=force_cpu)
             obs["chirality_up"] = yast.tensordot(rdm2x2_ring, chirality,\
                 ([0,1,2,3,4,5], [3,4,5,0,1,2])).to_number()
             obs["chirality_up"] = _cast_to_real(obs["chirality_up"])
-            obs["avg_bonds_up"] = yast.tensordot(rdm2x2_ring, self.perm2_tri,\
+            # obs["avg_bonds_up"] = yast.tensordot(rdm2x2_ring, self.perm2_tri,\
+            #     ([0,1,2,3,4,5], [3,4,5,0,1,2])).to_number()
+            # obs["avg_bonds_up"] = _cast_to_real(obs["avg_bonds_up"]) / 3.0
+            obs["P01_up"] = yast.tensordot(rdm2x2_ring, self.perm2xI,\
                 ([0,1,2,3,4,5], [3,4,5,0,1,2])).to_number()
-            obs["avg_bonds_up"] = _cast_to_real(obs["avg_bonds_up"]) / 3.0
+            obs["P01_up"] = _cast_to_real(obs["P01_up"])
+            obs["P12_up"] = yast.tensordot(rdm2x2_ring, self.perm2xI.transpose(axes=(2,0,1,5,3,4)),\
+                ([0,1,2,3,4,5], [3,4,5,0,1,2])).to_number()
+            obs["P12_up"] = _cast_to_real(obs["P12_up"])
+            obs["P20_up"] = yast.tensordot(rdm2x2_ring, self.perm2xI.transpose(axes=(0,2,1,3,5,4)),\
+                ([0,1,2,3,4,5], [3,4,5,0,1,2])).to_number()
+            obs["P20_up"] = _cast_to_real(obs["P20_up"])
 
             obs.update(self.eval_generators(state, env, force_cpu=force_cpu))
 
         # prepare list with labels and values
-        obs_labels = ["avg_bonds_dn", "avg_bonds_up", "chirality_dn", "chirality_up"]\
-            + ["m2_A", "m2_B", "m2_C"]
+        obs_labels = ["m2_A", "m2_B", "m2_C", "chirality_dn", "chirality_up"]\
+            + ["P01_dn", "P12_dn", "P20_dn", "P01_up", "P12_up", "P20_up" ]
+    
         obs_values = [obs[label] for label in obs_labels]
         return obs_values, obs_labels
 

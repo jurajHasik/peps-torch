@@ -1,5 +1,5 @@
 import config as cfg
-import yamps.yast as yast
+import yast.yast as yast
 from ctm.generic_abelian.ctm_components import *
 from tn_interface_abelian import mm
 from tn_interface_abelian import transpose

@@ -9,7 +9,7 @@ try:
 except ImportError as e:
     warnings.warn("torch not available", Warning)
 import config as cfg
-import yamps.yast as yast
+import yast.yast as yast
 from ipeps.tensor_io import *
 
 def _fused_open_dl_site(a, fusion_level="full"):
@@ -52,12 +52,18 @@ def _fused_open_dl_site(a, fusion_level="full"):
         raise RuntimeError("Unsupported fusion_level option "+fusion_level)
     return A
 
+def _fused_dl_site(a):
+    A= a.tensordot(a, axes=([0],[0]), conj=(0,1))
+    A= A.fuse_legs( axes=((0,4),(1,5),(2,6),(3,7)) )
+    return A
+
+
 class IPEPS_ABELIAN():
     
     _REF_S_DIRS=(-1,-1,-1,1,1)
 
     def __init__(self, settings, sites, vertexToSite=None, lX=None, lY=None, 
-        build_open_dl=True, peps_args=cfg.peps_args, global_args=cfg.global_args):
+        peps_args=cfg.peps_args, global_args=cfg.global_args):
         r"""
         :param settings: abelian-symmetric tensor engine configuration
         :param sites: map from elementary unit cell to on-site tensors
@@ -166,8 +172,12 @@ class IPEPS_ABELIAN():
         self.sym= settings.sym.SYM_ID
 
         self.sites= OrderedDict(sites)
+        # precomputation of (fused) double-layer tensors
+        self.build_dl= peps_args.build_dl
+        self.build_dl_open= peps_args.build_dl_open
+        self.sites_dl= None
         self.sites_dl_open= None
-        if build_open_dl: self.build_sites_dl_open()
+        self.sync_precomputed()
         
         # TODO we infer the size of the cluster from the keys of sites. Is it OK?
         # infer the size of the cluster
@@ -202,6 +212,21 @@ class IPEPS_ABELIAN():
             { coord: _fused_open_dl_site(site_t, fusion_level=fusion_level) for coord, site_t in self.sites.items() }
         )
 
+    def build_sites_dl(self):
+        """
+        Build complementary on-site double-layer iPEPS
+
+        :param fusion_level: see `_fused_dl_site()`
+        :type fusion_level: str
+        """
+        self.sites_dl= OrderedDict(
+            { coord: _fused_dl_site(site_t) for coord, site_t in self.sites.items() }
+        )
+
+    def sync_precomputed(self):
+        if self.build_dl: self.build_sites_dl()
+        if self.build_dl_open: self.build_sites_dl_open()
+
     def site(self, coord):
         """
         :param coord: tuple (x,y) specifying vertex on a square lattice
@@ -211,7 +236,12 @@ class IPEPS_ABELIAN():
         """
         return self.sites[self.vertexToSite(coord)]
 
+    def site_dl(self, coord):
+        assert not self.sites_dl is None, "sites_dl not initialized"
+        return self.sites_dl[self.vertexToSite(coord)]
+
     def site_dl_open(self, coord):
+        assert not self.sites_dl_open is None, "sites_dl_open not initialized"
         return self.sites_dl_open[self.vertexToSite(coord)]
 
     def to(self, device):
@@ -271,13 +301,13 @@ class IPEPS_ABELIAN():
         self.sites= {ind: yast.load_from_dict(config= self.engine, d=t_dict_repr) \
             for ind,t_dict_repr in checkpoint["parameters"].items()}
         for site_t in self.sites.values(): site_t.requires_grad_(False)
-        self.build_sites_dl_open()
+        self.sync_precomputed()
 
     def write_to_file(self, outputfile, tol=None, normalize=False):
         write_ipeps(self, outputfile, tol=tol, normalize=normalize)
 
     # TODO what about non-initialized blocks, which are however allowed by the symmetry ?
-    def add_noise(self, noise=0):
+    def add_noise(self, noise=0, peps_args=cfg.peps_args):
         r"""
         :param noise: magnitude of the noise
         :type noise: float
@@ -296,7 +326,7 @@ class IPEPS_ABELIAN():
             t_noise= yast.rand(config=t.config, s=t.s, n=t.n, t=ts, D=Ds, isdiag=t.isdiag)
             sites[ind]= t + noise * t_noise
         state= IPEPS_ABELIAN(self.engine, sites, self.vertexToSite, 
-            lX=self.lX, lY=self.lY)
+            lX=self.lX, lY=self.lY, peps_args=peps_args)
         return state
 
     def __str__(self):

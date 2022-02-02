@@ -1,5 +1,5 @@
 import numpy as np
-import yamps.yast as yast
+import yast.yast as yast
 from math import factorial, sqrt
 
 class SU3_DEFINING_U1xU1():
