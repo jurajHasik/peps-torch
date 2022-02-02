@@ -29,6 +29,7 @@ parser.add_argument('--layers_Ds', nargs="+", type=int)
 parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
+parser.add_argument("--logz", action='store_true')
 args, unknown_args= parser.parse_known_args()
 
 def main():
@@ -45,13 +46,8 @@ def main():
 
     # initialize an ipeps
     if args.instate!=None:
-        state = read_ipeps_thermal_lc(args.instate, vertexToSite=None)
-        assert len(state.coeffs)==1, "Not a 1-site ipeps"
-
-        # TODO extending from smaller bond-dim to higher bond-dim is 
-        # currently not possible
-
-        state.add_noise(args.instate_noise)
+        state = read_ipeps_c4v_thermal_ttn(args.instate)
+        # state.add_noise(args.instate_noise)
     elif args.opt_resume is not None:
         if args.bond_dim in [4]:
             elem_t= _build_elem_t()
@@ -140,6 +136,12 @@ def main():
             +str(args.ipeps_init_type)+" is not supported")
 
     print(state)
+    # initial normalization
+    norm0= state.site().norm()
+    # state.seed_site= state.seed_site/torch.sqrt(norm0)
+    state.metadata= {"origin": str(cfg.main_args)+str(cfg.global_args)
+        +str(cfg.peps_args)+str(cfg.ctm_args)+str(cfg.opt_args),
+        "sqrt(norm0)": torch.sqrt(norm0).item() }
 
     @torch.no_grad()
     def ctmrg_conv_f(state, env, history, ctm_args=cfg.ctm_args):
@@ -261,7 +263,6 @@ def main():
             auxD= A.size(5)
             A= torch.einsum('asuldr,asefgh->uelfdgrh',A,A).contiguous()
             A= A.view([auxD**2]*4)
-        print(A.norm())
 
         # C--T--C            / C--C
         # |  |  |   C--C    /  |  |   C--T--C
@@ -341,12 +342,14 @@ def main():
     S0= r2_0= 0
     e0= energy_f(state, ctm_env, force_cpu=True)
     z0= get_z_per_site(state.site(), ctm_env.get_C(), ctm_env.get_T())
-    loss0= -z0
+    loss0= -torch.log(z0) if args.logz else -z0 
     obs_values, obs_labels = eval_obs_f(state, ctm_env,force_cpu=True)
-    print("\n",end="")
+    print("\n\n",end="")
     print(", ".join(["epoch","loss","e0","z0","S0","r2_0"]+obs_labels+["norm(A)"]))
     print(", ".join([f"{-1}",f"{loss0}",f"{e0}",f"{z0}",f"{S0}",f"{r2_0}"]\
         +[f"{v}" for v in obs_values]+[f"{state.site().norm()}"]))
+    if args.logz:
+        state.seed_site= state.seed_site *0.6 #torch.pow(z0,-0.25)
 
     def loss_fn(state, ctm_env_in, opt_context):
         ctm_args= opt_context["ctm_args"]
@@ -370,7 +373,8 @@ def main():
         # r2_0 = approx_renyi2(state, ctm_env_out, args.l2d, args.bond_dim**2)
         # loss= torch.max(e0,e1) - 1./args.beta * r2_0
         # loss= torch.max(loss0,loss1)
-        loss= -get_z_per_site(state.site(), ctm_env_out.get_C(), ctm_env_out.get_T())
+        z= get_z_per_site(state.site(), ctm_env_out.get_C(), ctm_env_out.get_T())
+        loss= -torch.log(z) if args.logz else -z
 
         return loss, ctm_env_out, history, t_ctm, t_obs
 
@@ -410,15 +414,16 @@ def main():
     optimize_state(state, ctm_env, loss_fn, obs_fn=obs_fn)
 
     # compute final observables for the best variational state
-    # outputstatefile= args.out_prefix+"_state.json"
-    # state= read_ipeps_thermal_lc(outputstatefile)
+    outputstatefile= args.out_prefix+"_state.json"
+    state= read_ipeps_c4v_thermal_ttn(outputstatefile)
     state_fused= state.to_fused_ipeps_c4v()
     ctm_env = ENV_C4V(args.chi, state_fused)
     init_env(state_fused, ctm_env)
     ctm_env, *ctm_log = ctmrg_c4v.run_dl(state_fused, ctm_env, conv_check=ctmrg_conv_f)
     e0 = energy_f(state,ctm_env,force_cpu=True)
     z0= get_z_per_site(state.site(), ctm_env.get_C(), ctm_env.get_T())
-    loss0, S0, r2_0= -z0, 0, 0
+    obs_values, obs_labels = eval_obs_f(state, ctm_env,force_cpu=True)
+    loss0, S0, r2_0= -torch.log(z0) if args.logz else -z0, 0, 0
     print("\n",end="")
     print(", ".join(["epoch","loss","e0","z0","S0","r2_0"]+obs_labels))
     print(", ".join(["FINAL",f"{loss0}",f"{e0}",f"{z0}",f"{S0}",f"{r2_0}"]\
