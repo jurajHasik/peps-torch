@@ -122,6 +122,33 @@ def main():
             elif args.ansatz in ["IPESS"]:
                 state= IPESS_KAGOME_GENERIC({'T_u': T_u, 'B_a': B_a, 'T_d': T_d,\
                     'B_b': B_b, 'B_c': B_c})
+        elif args.ipeps_init_type=='RVB':
+            args.bond_dim==3
+            B_c=torch.zeros(2, 3, 3,\
+                dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
+            B_c[0,0,2]=1
+            B_c[0,2,0]=1
+            B_c[1,1,2]=1
+            B_c[1,2,1]=1
+            B_b=B_c.clone()
+            B_a=B_c.clone()
+
+            T_u=torch.zeros(3, 3, 3,\
+                dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
+            T_u[0,1,2]=1
+            T_u[1,0,2]=-1
+            T_u[2,0,1]=1
+            T_u[2,1,0]=-1
+            T_u[1,2,0]=1
+            T_u[0,2,1]=-1
+            T_u[2,2,2]=1
+            T_d=T_u.clone()
+            if args.ansatz in ["IPESS_PG", "A_2,B"]:
+                state = IPESS_KAGOME_PG(T_u, B_c, T_d=T_d, B_a=B_a, B_b=B_b,\
+                    SYM_UP_DOWN=args.sym_up_dn,SYM_BOND_S=args.sym_bond_S, pgs=ansatz_pgs)
+            elif args.ansatz in ["IPESS"]:
+                state= IPESS_KAGOME_GENERIC({'T_u': T_u, 'B_a': B_a, 'T_d': T_d,\
+                    'B_b': B_b, 'B_c': B_c})
     
     elif args.ansatz in ["IPEPS"]:    
         ansatz_pgs=None

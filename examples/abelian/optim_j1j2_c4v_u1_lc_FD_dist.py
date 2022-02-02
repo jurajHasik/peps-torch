@@ -3,9 +3,9 @@ import copy
 import torch
 import argparse
 import config as cfg
-from examples.abelian.settings_full_torch import settings_full_torch as settings_full
+import examples.abelian.settings_full_torch as settings_full
 import examples.abelian.settings_U1_torch as settings_U1
-import yamps.tensor as TA
+import yast.yast as yast
 from ipeps.ipeps_abelian_c4v_lc import *
 from models.abelian import j1j2
 from ctm.one_site_c4v_abelian.env_c4v_abelian import *
@@ -293,8 +293,8 @@ def worker_code(rank,size,gpu_id,pipe):
         # dist.recv( tensor=T_loc_cpu, src=0, tag=2000*size + rank )
         C_r1d, C_meta= pipe.recv()
         T_r1d, T_meta= pipe.recv()
-        C_loc_cpu= TA.decompress_from_1d(C_r1d,settings=settings,d=C_meta)
-        T_loc_cpu= TA.decompress_from_1d(T_r1d,settings=settings,d=T_meta)
+        C_loc_cpu= yast.decompress_from_1d(C_r1d,settings=settings,d=C_meta)
+        T_loc_cpu= yast.decompress_from_1d(T_r1d,settings=settings,d=T_meta)
         if gpu_id>=0:
             state.coeffs[(0,0)]= coeff_loc.to(cuda_dev)
             ctm_env.C[ctm_env.keyC]= C_loc_cpu.to(cuda_dev)

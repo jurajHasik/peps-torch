@@ -462,7 +462,7 @@ class TestOptim_RVB(unittest.TestCase):
         args.theta=0.2
         args.j1=1.0
         args.bond_dim=3
-        args.chi=18
+        args.chi=64
         args.out_prefix=self.OUT_PRFX
         args.GLOBALARGS_dtype= "complex128"
         args.ipeps_init_type="RVB"
@@ -497,8 +497,10 @@ class TestOptim_RVB(unittest.TestCase):
 
         # compare with the reference
         ref_data="""
-        -0.6666666666666664, 0j, 0j, 0j, 0.0, 0.0, 0.3333333333333333, 0.3333333333333333, 
-        0.3333333333333333, -0.9999999999999999, -0.9999999999999999, -0.9999999999999999
+        -0.3180424915434603, (-0.4770636301027198+0j), (-0.4770638445276611+0j), (0+0j), 
+        (0+0j), (0+0j), (0+0j), 0.0, 0.0, (0+0j), 0.0, 0.0, (0+0j), 0.0, 0.0, 
+        (-0.15902115598625072+0j), (-0.1590211415594349+0j), (-0.15902133255703074+0j), 
+        (-0.15902159490668272+0j), (-0.1590211322642514+0j), (-0.15902111735672694+0j)
         """
         # compare final observables from optimization and the observables from the 
         # final state
