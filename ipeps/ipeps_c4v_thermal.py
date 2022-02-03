@@ -476,6 +476,9 @@ class IPEPS_C4V_THERMAL_TTN(IPEPS_C4V_THERMAL):
     def __str__(self):
         super().__str__()
         print(f"norm(seed_site) {self.seed_site.norm()}")
+        print(f"isometries {len(self.isometries)}")
+        for iso in self.isometries:
+            print(f"{iso.size()}")
         return ""
 
     def build_onsite_tensors(self):
@@ -549,6 +552,10 @@ class IPEPS_C4V_THERMAL_TTN(IPEPS_C4V_THERMAL):
         self.isometries= [
             0.5*(iso+iso.permute(1,0,2)) for iso in self.isometries
         ]
+
+    def extend_layers(self, new_layers):
+        self.isometries.extend(new_layers)
+
 
     def write_to_file(self, outputfile, aux_seq=[0,1,2,3], tol=1.0e-14, normalize=False):
         write_ipeps_c4v_thermal_ttn(self, outputfile, aux_seq=aux_seq, tol=tol, normalize=normalize)

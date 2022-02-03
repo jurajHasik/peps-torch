@@ -48,6 +48,18 @@ def main():
     if args.instate!=None:
         state = read_ipeps_c4v_thermal_ttn(args.instate)
         # state.add_noise(args.instate_noise)
+        state.seed_site= model.ipepo_trotter_suzuki(args.beta/(2**args.layers))
+        if len(state.isometries)< args.layers:
+            assert len(args.layers_Ds)==args.layers,"Incompatible number of layers"
+            assert [ iso.size(2) for iso in state.isometries ] \
+                == args.layers_Ds[:len(state.isometries)],\
+                "Dimensions of existing layers do not match"
+            # add more isometry layers besides the ones included in instate
+            Ds_out= [state.seed_site.size(2)]+list(args.layers_Ds)
+            new_iso= [ torch.rand(Ds_out[i],Ds_out[i],Ds_out[i+1],\
+                dtype=model.dtype, device=model.device) \
+                for i in range(len(state.isometries),args.layers) ]
+            state.extend_layers(new_iso)
     elif args.opt_resume is not None:
         if args.bond_dim in [4]:
             elem_t= _build_elem_t()
@@ -59,15 +71,20 @@ def main():
         state.load_checkpoint(args.opt_resume)
     elif args.ipeps_init_type in ['RANDOM','SVD','ID','CONST']:
         assert args.layers>0,"number of layers must be larger than 0"
-        A= model.ipepo_trotter_suzuki(args.beta/args.layers)
+        # 1-layers: tower of 2 ipepo's & single non-equivalent isometry
+        # 2-layers: tower of 2**2 ipepo's & two non-equivalent isometries
+        # 3-layers: tower of 2**3 ipepo's & three non-equivalent isometries
+        # ...
+        A= model.ipepo_trotter_suzuki(args.beta/(2**args.layers))
         if args.ipeps_init_type=='RANDOM':
             if args.layers>1:
-                assert len(args.layers_Ds)==args.layers-1,\
+                assert len(args.layers_Ds)==args.layers,\
                     "reduced Ds of isometries must be provided"
-            redD_iso= [A.size(0)] + args.layers_Ds
-            isometries=[ torch.rand(redD_iso[i-1],redD_iso[i-1],redD_iso[i],\
+            # output dimensions of isometries, starting with aux bond dim of ipepo site
+            Ds_out= [A.size(2)] + args.layers_Ds
+            isometries=[ torch.rand(Ds_out[i],Ds_out[i],Ds_out[i+1],\
                 dtype=model.dtype, device=model.device) \
-                for i in range(1,args.layers) ]
+                for i in range(args.layers) ]
         if args.ipeps_init_type=='SVD':
             if args.layers>1:
                 assert len(args.layers_Ds)==args.layers-1,\
@@ -116,7 +133,7 @@ def main():
                 tmp_B_ud= torch.einsum('amu,bnd,spmxny->spauxbdy',init_iso,init_iso,B)
                 B= torch.einsum('skalxbry,kpauxbdy->spuldr',tmp_B_lr,tmp_B_ud).contiguous()
         elif args.ipeps_init_type=='ID':
-            redD_iso= [A.size(0)] + [ A.size(0)**(2**i) for i in range(1,args.layers) ]
+            redD_iso= [A.size(2)] + [ A.size(0)**(2**i) for i in range(1,args.layers) ]
             isometries=[]
             for i in range(1,args.layers):
                 isometries.append( 
@@ -139,7 +156,7 @@ def main():
     # initial normalization
     norm0= state.site().norm()
     # state.seed_site= state.seed_site/torch.sqrt(norm0)
-    state.metadata= {"origin": str(cfg.main_args)+str(cfg.global_args)
+    state.metadata= { "origin": str(cfg.main_args)+str(cfg.global_args)
         +str(cfg.peps_args)+str(cfg.ctm_args)+str(cfg.opt_args),
         "sqrt(norm0)": torch.sqrt(norm0).item() }
 
@@ -345,8 +362,8 @@ def main():
     loss0= -torch.log(z0) if args.logz else -z0 
     obs_values, obs_labels = eval_obs_f(state, ctm_env,force_cpu=True)
     print("\n\n",end="")
-    print(", ".join(["epoch","loss","e0","z0","S0","r2_0"]+obs_labels+["norm(A)"]))
-    print(", ".join([f"{-1}",f"{loss0}",f"{e0}",f"{z0}",f"{S0}",f"{r2_0}"]\
+    print(", ".join(["beta","epoch","loss","e0","z0","S0","r2_0"]+obs_labels+["norm(A)"]))
+    print(", ".join([f"{args.beta}",f"{-1}",f"{loss0}",f"{e0}",f"{z0}",f"{S0}",f"{r2_0}"]\
         +[f"{v}" for v in obs_values]+[f"{state.site().norm()}"]))
     if args.logz:
         state.seed_site= state.seed_site *0.6 #torch.pow(z0,-0.25)
@@ -399,7 +416,7 @@ def main():
         # r2_0 = approx_renyi2(state, ctm_env, args.l2d, args.bond_dim**2)
         S0=r2_0= 0
         obs_values, obs_labels = eval_obs_f(state,ctm_env,force_cpu=True)
-        print(", ".join([f"{epoch}",f"{loss}",f"{e0}", f"{z0}", f"{S0}", f"{r2_0}"]\
+        print(f"{args.beta}, "+", ".join([f"{epoch}",f"{loss}",f"{e0}", f"{z0}", f"{S0}", f"{r2_0}"]\
             +[f"{v}" for v in obs_values]+[f"{state.site().norm()}"]))
 
         if (not opt_context["line_search"]) and args.top_freq>0 and epoch%args.top_freq==0:
@@ -424,9 +441,9 @@ def main():
     z0= get_z_per_site(state.site(), ctm_env.get_C(), ctm_env.get_T())
     obs_values, obs_labels = eval_obs_f(state, ctm_env,force_cpu=True)
     loss0, S0, r2_0= -torch.log(z0) if args.logz else -z0, 0, 0
-    print("\n",end="")
-    print(", ".join(["epoch","loss","e0","z0","S0","r2_0"]+obs_labels))
-    print(", ".join(["FINAL",f"{loss0}",f"{e0}",f"{z0}",f"{S0}",f"{r2_0}"]\
+    print("\n\n",end="")
+    print(", ".join(["beta","epoch","loss","e0","z0","S0","r2_0"]+obs_labels))
+    print(", ".join([f"{args.beta}","FINAL",f"{loss0}",f"{e0}",f"{z0}",f"{S0}",f"{r2_0}"]\
         +[f"{v}" for v in obs_values]))
 
 if __name__=='__main__':
