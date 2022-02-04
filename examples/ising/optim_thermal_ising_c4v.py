@@ -154,6 +154,7 @@ def main():
 
     print(state)
     # initial normalization
+    print(f"norm(seed_site) {state.seed_site.abs().max().item()}")
     norm0= state.site().norm()
     # state.seed_site= state.seed_site/torch.sqrt(norm0)
     state.metadata= { "origin": str(cfg.main_args)+str(cfg.global_args)
@@ -270,13 +271,14 @@ def main():
     #     return l2, C_0, T_0
 
     def get_z_per_site(A, C, T):
+        A_sl_scale= A.abs().max()
         if len(A.size())==5:
-            # assume it single-layer tensor with physica+ancilla fused
+            # assume it is single-layer tensor with physica+ancilla fused
             auxD= A.size(4)
             A= torch.einsum('suldr,sefgh->uelfdgrh',A,A).contiguous()
             A= A.view([auxD**2]*4)
         elif len(A.size())==6:
-            # assume it single-layer tensor with physica+ancilla unfused
+            # assume it is single-layer tensor with physica+ancilla unfused
             auxD= A.size(5)
             A= torch.einsum('asuldr,asefgh->uelfdgrh',A,A).contiguous()
             A= A.view([auxD**2]*4)
@@ -300,7 +302,8 @@ def main():
         #   C--1->2
         CTC = torch.tensordot(CTC,C,([1],[0]))
         rdm = torch.tensordot(CTC,T,([2],[0]))
-        rdm = torch.tensordot(rdm,A,([1,3],[1,2]))
+        # rdm = torch.tensordot(rdm,A,([1,3],[1,2]))
+        rdm = torch.tensordot(rdm,A/(A_sl_scale**2),([1,3],[1,2]))
         rdm = torch.tensordot(T,rdm,([1,2],[0,2]))
         rdm = torch.tensordot(rdm,CTC,([0,1,2],[2,0,1]))
 
@@ -312,9 +315,13 @@ def main():
         #   C--2 0--C
         CTC= torch.tensordot(CTC,CTC,([0,1,2],[2,1,0]))
         
-        z_per_site= (rdm / CTC) * (C4 / CTC)
+        log.info(f"get_z_per_site rdm {rdm.item()} CTC {CTC.item()} C4 {C4.item()}")
 
-        return z_per_site
+        # z_per_site= (rdm/CTC)*(CTC/C4)
+        logz_per_site= 2*torch.log(A_sl_scale) + torch.log(rdm) + torch.log(C4)\
+            - 2*torch.log(CTC)
+        return logz_per_site
+        # return z_per_site
 
     # def approx_renyi2(state,env,D1,D2):
     #     # get intial renyi2 on-site tensor and env tensors
@@ -390,8 +397,10 @@ def main():
         # r2_0 = approx_renyi2(state, ctm_env_out, args.l2d, args.bond_dim**2)
         # loss= torch.max(e0,e1) - 1./args.beta * r2_0
         # loss= torch.max(loss0,loss1)
-        z= get_z_per_site(state.site(), ctm_env_out.get_C(), ctm_env_out.get_T())
-        loss= -torch.log(z) if args.logz else -z
+        # z= get_z_per_site(state.site(), ctm_env_out.get_C(), ctm_env_out.get_T())
+        logz= get_z_per_site(state.site(), ctm_env_out.get_C(), ctm_env_out.get_T())
+        # loss= -torch.log(z) if args.logz else -z
+        loss= -logz
 
         return loss, ctm_env_out, history, t_ctm, t_obs
 
