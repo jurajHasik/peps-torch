@@ -156,6 +156,10 @@ def init_env(state, env, C_and_T=None, ctm_args=cfg.ctm_args):
         env.T[env.keyT][:x,:x,:]= C_and_T[1]
         return
 
+    if len(state.site().size())==4 and \
+        ctm_args.ctm_env_init_type in ["PROD","CTMRG","CTMRG_OBC"]:
+        raise RuntimeError("Incompatible ENV_C4V initialization")
+
     if ctm_args.ctm_env_init_type=='PROD':
         init_prod(state, env, ctm_args.verbosity_initialization)
     elif ctm_args.ctm_env_init_type=='RANDOM':
@@ -164,6 +168,8 @@ def init_env(state, env, C_and_T=None, ctm_args=cfg.ctm_args):
         init_from_ipeps_pbc(state, env, ctm_args.verbosity_initialization)
     elif ctm_args.ctm_env_init_type=='CTMRG_OBC':
         init_from_ipeps_obc(state, env, ctm_args.verbosity_initialization)
+    elif ctm_args.ctm_env_init_type=='CTMRG_OBC_SL':
+        init_from_ipeps_obc_sl(state, env, ctm_args.verbosity_initialization)
     else:
         raise ValueError("Invalid environment initialization: "\
             +str(ctm_args.ctm_env_init_type))
@@ -293,6 +299,38 @@ def init_from_ipeps_obc(state, env, verbosity=0):
     env.T[env.keyT]= torch.zeros((env.chi,env.chi,dimsA[4]**2), dtype=env.dtype, device=env.device)
     env.T[env.keyT][:min(env.chi,dimsA[1]**2),:min(env.chi,dimsA[3]**2),:]=\
         a[:min(env.chi,dimsA[1]**2),:min(env.chi,dimsA[3]**2),:]
+
+def init_from_ipeps_obc_sl(state, env, verbosity=0):
+    if verbosity>0:
+        print("ENV: init_from_ipeps_obc")
+
+    assert len(state.site().size())==4, "on-site tensor is expected to have only aux indices"
+    # Left-upper corner
+    #
+    #     i      = C--1     
+    # j--A--3      0
+    #   /
+    #  2  
+    A= next(iter(state.sites.values()))
+    dimsA= A.size()
+    a= torch.einsum('ijef->ef',A).contiguous()
+    a= a/a.abs().max()
+    env.C[env.keyC]= torch.zeros(env.chi,env.chi, dtype=env.dtype, device=env.device)
+    env.C[env.keyC][:min(env.chi,dimsA[2]),:min(env.chi,dimsA[3])]=\
+        a[:min(env.chi,dimsA[2]),:min(env.chi,dimsA[3])]
+
+    # left transfer matrix
+    #
+    #     0      = 0     
+    # i--A--3      T--2
+    #   /          1
+    #  2
+    a= torch.einsum('eifg->efg',A).contiguous()
+    a= a/a.abs().max()
+    env.T[env.keyT]= torch.zeros((env.chi,env.chi,dimsA[3]), dtype=env.dtype, device=env.device)
+    env.T[env.keyT][:min(env.chi,dimsA[0]),:min(env.chi,dimsA[2]),:]=\
+        a[:min(env.chi,dimsA[0]),:min(env.chi,dimsA[2]),:]
+
 
 def print_env(env, verbosity=0):
     print("dtype "+str(env.dtype))

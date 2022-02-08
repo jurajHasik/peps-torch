@@ -332,7 +332,7 @@ class ISING_C4V():
         res= dict({"ss": Sz0szR+Sx0sxR, "szsz": Sz0szR, "sxsx": Sx0sxR})
         return res
 
-    def energy_1x1_nn_thermal(self,state,env_c4v,force_cpu=False):
+    def energy_1x1_nn_thermal(self,state,env_c4v,mode,force_cpu=False):
         r"""
         :param state: iPEPO density matrix
         :param env_c4v: CTM c4v symmetric environment
@@ -352,13 +352,13 @@ class ISING_C4V():
         """
         assert self.q==0, "Non-zero value of 4-site term coupling"
 
-        rdm2x1= rdm_c4v_thermal.rdm2x1_sl(state, env_c4v, force_cpu=force_cpu)
+        rdm2x1= rdm_c4v_thermal._rdm2x1(state, env_c4v, mode, force_cpu=force_cpu)
         eSx= torch.einsum('ijaj,ia',rdm2x1,self.sx)
         eSzSz= torch.einsum('ijab,ijab',rdm2x1,self.szsz)
         energy_per_site = -2*eSzSz - self.hx*eSx
         return energy_per_site
 
-    def eval_obs_thermal(self,state,env_c4v,force_cpu=False):
+    def eval_obs_thermal(self,state,env_c4v,mode,force_cpu=False): 
         r"""
         :param state: iPEPO density matrix
         :param env_c4v: CTM c4v symmetric environment
@@ -375,7 +375,7 @@ class ISING_C4V():
         """
         obs= dict()
         with torch.no_grad():
-            rdm1x1= rdm_c4v_thermal.rdm1x1_sl(state,env_c4v)
+            rdm1x1= rdm_c4v_thermal._rdm1x1(state,env_c4v,mode)
             for label,op in self.obs_ops.items():
                 obs[f"{label}"]= torch.trace(rdm1x1@op)
             obs["sx"]= 0.5*(obs["sp"] + obs["sm"])

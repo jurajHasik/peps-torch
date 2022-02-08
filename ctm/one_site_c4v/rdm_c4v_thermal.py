@@ -173,7 +173,63 @@ def rdm1x1_sl(state, env, sym_pos_def=False, verbosity=0):
     where the physical indices `s` and `s'` of on-site tensor :math:`a` 
     and its hermitian conjugate :math:`a^\dagger` are left uncontracted
     """
-    who= "rdm1x1_sl"
+    return _rdm1x1(state, env, "sl", sym_pos_def=sym_pos_def, verbosity=verbosity)
+
+def rdm1x1_dl(state, env, sym_pos_def=False, verbosity=0):
+    r"""
+    :param state: underlying 1-site C4v symmetric wavefunction
+    :param env: C4v symmetric environment corresponding to ``state``
+    :param verbosity: logging verbosity
+    :type state: IPEPS_C4V_THERMAL
+    :type env: ENV_C4V
+    :type verbosity: int
+    :return: 1-site reduced density matrix with indices :math:`s;s'`
+    :rtype: torch.tensor
+    
+    Evaluates 1-site operator :math:`Tr(\rho_{1x1}O)` by 
+    contracting the following tensor network::
+
+        C--T--C
+        |  |  |
+        T--A--T
+        |  |  |
+        C--T--C
+
+    where the physical and ancilla indices `s` and `s'` of on-site tensor :math:`A`
+    are left uncontracted. It is assumed they are compatible.
+    """
+    return _rdm1x1(state, env, "dl", sym_pos_def=sym_pos_def, verbosity=verbosity)
+
+def _rdm1x1(state, env, mode, sym_pos_def=False, verbosity=0):
+    r"""
+    :param state: underlying 1-site C4v symmetric wavefunction
+    :param env: C4v symmetric environment corresponding to ``state``
+    :param verbosity: logging verbosity
+    :type state: IPEPS_C4V_THERMAL
+    :type env: ENV_C4V
+    :type verbosity: int
+    :return: 1-site reduced density matrix with indices :math:`s;s'`
+    :rtype: torch.tensor
+    
+    Evaluates 1-site operator :math:`Tr(\rho_{1x1}O)` by 
+    contracting the following tensor network::
+
+        mode "sl"         mode "dl"
+
+        C--T-----C   or   C--T--C
+        |  |     |        |  |  |
+        T--a^+a--T        T--A--T
+        |  |     |        |  |  |
+        C--T-----C        C--T--C
+
+    where 
+    * mode `sl`: on-site tensor :math:`a` and :math:`a^\dagger` are contracted through ancilla
+      index. Physical indices `s` and `s'` of :math:`a` and its hermitian conjugate :math:`a^\dagger` 
+      are left uncontracted.
+    * mode `dl`: it is assumed on-site tensor has physical and compatible ancilla index,
+      which are left uncontracted.
+    """
+    who= "_rdm1x1"
     C = env.C[env.keyC]
     T = env.T[env.keyT]
     #   C--1->0
@@ -197,60 +253,76 @@ def rdm1x1_sl(state, env, sym_pos_def=False, verbosity=0):
     #      <------
     rdm = torch.tensordot(CTC,T,([2],[0]))
     
-    # 4i) untangle the fused D^2 indices
-    #
-    # C--0
-    # |
-    # T--1->1,2
-    # |    3->4,5
-    # C----T--2->3
-    a= next(iter(state.sites.values()))
-    rdm= rdm.view(rdm.size(0),a.size(3),a.size(3),rdm.size(2),a.size(4),\
-        a.size(4))
+    if mode=="sl":
+        # 4i) untangle the fused D^2 indices
+        #
+        # C--0
+        # |
+        # T--1->1,2
+        # |    3->4,5
+        # C----T--2->3
+        a= next(iter(state.sites.values()))
+        rdm= rdm.view(rdm.size(0),a.size(3),a.size(3),rdm.size(2),a.size(4),\
+            a.size(4))
 
-    #    /
-    # --a--
-    #  /|s'
-    #
-    #  s|/
-    # --a--
-    #  /
-    #
+        #    /
+        # --a--
+        #  /|s'
+        #
+        #  s|/
+        # --a--
+        #  /
+        #
 
-    # 4ii) first layer "bra"
-    # C--0    2->6
-    # |       |/1->5
-    # T--1 3--a--5->7
-    # |\2->1  4\0->4
-    # |       4 5->3
-    # |       |/
-    # C-------T--3->2
-    rdm= torch.tensordot(rdm,a,([1,4],[2,3]))
-    
-    # 4iii) second layer "ket"
-    # C--0         2->6
-    # |   6->3     |/1->5
-    # |  -|---1 3--a--5->7
-    # | / |       /4
-    # |/  |/-4 0-/ 3
-    # T---a-----------7->4
-    # |   |\-5->2  |
-    # |   | ------/
-    # |   |/
-    # C---T-----------2->1
-    rdm= torch.tensordot(rdm,a.conj(),([1,3,4],[3,4,0]))
+        # 4ii) first layer "bra"
+        # C--0    2->6
+        # |       |/1->5
+        # T--1 3--a--5->7
+        # |\2->1  4\0->4
+        # |       4 5->3
+        # |       |/
+        # C-------T--3->2
+        rdm= torch.tensordot(rdm,a,([1,4],[3,4]))
+        
+        # 4iii) second layer "ket"
+        # C--0         2->6
+        # |   6->3     |/1->5
+        # |  -|---1 3--a--5->7
+        # | / |       /4
+        # |/  |/-4 0-/ 3
+        # T---a-----------7->4
+        # |   |\-5->2  |
+        # |   | ------/
+        # |   |/
+        # C---T-----------2->1
+        rdm= torch.tensordot(rdm,a.conj(),([1,3,4],[3,4,0]))
 
-    # 4iv) fuse pairs of aux indices    
-    # C--0 (3 6)->2
-    # |     | |/5
-    # | ----|-a--7\
-    # |/    | |    >3
-    # T-----a----4/
-    # |4<-2/| |
-    # |     |/
-    # C-----T----1
-    rdm= rdm.permute(0,1,3,6,4,7,2,5).contiguous().view(rdm.size(0),rdm.size(1),\
-        a.size(2)**2,a.size(5)**2,a.size(1),a.size(1))
+        # 4iv) fuse pairs of aux indices    
+        # C--0 (3 6)->2
+        # |     | |/5
+        # | ----|-a--7\
+        # |/    | |    >3
+        # T-----a----4/
+        # |4<-2/| |
+        # |     |/
+        # C-----T----1
+        rdm= rdm.permute(0,1,3,6,4,7,2,5).contiguous().view(rdm.size(0),rdm.size(1),\
+            a.size(2)**2,a.size(5)**2,a.size(1),a.size(1))
+    elif mode=="dl":
+        a= next(iter(state.sites.values()))
+        assert len(a.size())==6,"mode "+mode+" expects rank-6 on-site tensor"
+        # 4ii) first layer "bra"
+        # C--0    2->4       C--0    4->2
+        # |       |/1->3     |       |/3->5
+        # T--1 3--a--5       T-------a--5->3
+        # |       4\0->2     |       |\2->4
+        # |       3          |       |
+        # |       |          |       |
+        # C-------T--2->1    C-------T--1
+        rdm= torch.tensordot(rdm,a,([1,3],[3,4]))
+        rdm= rdm.permute(0,1,4,5,2,3).contiguous()
+    else:
+        raise RuntimeError("Invalid mode "+mode)
 
     #      ------>
     # C--0 1--T--0
@@ -277,6 +349,14 @@ def rdm1x1_sl(state, env, sym_pos_def=False, verbosity=0):
     return rdm
 
 def rdm2x1_sl(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
+    return _rdm2x1(state, env, "sl", sym_pos_def=sym_pos_def, force_cpu=force_cpu,\
+        verbosity=verbosity)
+
+def rdm2x1_dl(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
+    return _rdm2x1(state, env, "dl", sym_pos_def=sym_pos_def, force_cpu=force_cpu,\
+        verbosity=verbosity)
+
+def _rdm2x1(state, env, mode, sym_pos_def=False, force_cpu=False, verbosity=0):
     r"""
     :param state: underlying 1-site C4v symmetric wavefunction
     :param env: C4v symmetric environment corresponding to ``state``
@@ -301,21 +381,27 @@ def rdm2x1_sl(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
 
     ::
 
-        C--T-----T-----C = C2x2--C2x2
-        |  |     |     |   |     |  
-        T--a^+a--a^+a--T   C2x1--C2x1
-        |  |     |     |
-        C--T-----T-----C 
+        mode "sl"                             mode "dl"
 
-    The physical indices `s` and `s'` of on-sites tensors :math:`a` (and :math:`a^\dagger`) 
-    are left uncontracted and given in the following order::
+        C--T-----T-----C = C2x2--C2x2    or   C--T--T--C
+        |  |     |     |   |     |            |  |  |  | 
+        T--a^+a--a^+a--T   C2x1--C2x1         T--A--A--T
+        |  |     |     |                      |  |  |  |
+        C--T-----T-----C                      C--T--T--C 
+
+    where 
+    * mode `sl`: The physical indices `s` and `s'` of on-site tensors :math:`a` 
+      (and :math:`a^\dagger`) are left uncontracted and given in the following order::
         
         s0 s1
 
+    * mode `dl`: The physical and compatible ancilla indices of on-site tensors :math:`A`
+      are left uncontracted.
+    
     The resulting reduced density matrix is identical to the one of vertical 1x2 subsystem
     due to the C4v symmetry. 
     """
-    who= "rdm2x1_sl"
+    who= "_rdm2x1"
     if force_cpu:
         # move to cpu
         C = env.C[env.keyC].cpu()
@@ -340,32 +426,47 @@ def rdm2x1_sl(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
         _log_cuda_mem(loc_device,who)
         log.info(f"{who} C2x1: {ten_size(C2x1)}")
 
-    # see _get_open_C2x2_LU_sl
-    C2x2= torch.tensordot(C2x1, T, ([0],[0]))
-    C2x2= C2x2.view(C2x2.size(0),a.size(2),a.size(2),C2x2.size(2),a.size(3),\
-        a.size(3))
-    C2x2= torch.tensordot(C2x2, a,([1,4],[2,3]))
-    C2x2= torch.tensordot(C2x2, a.conj(),([1,3,4],[2,3,0]))
-    if not is_cpu and verbosity>1: 
-        _log_cuda_mem(loc_device,who)
-        log.info(f"{who} C2x1,C2x2: {ten_size(C2x1)+ten_size(C2x2)}")
+    if mode=="sl":
+        # see _get_open_C2x2_LU_sl
+        C2x2= torch.tensordot(C2x1, T, ([0],[0]))
+        C2x2= C2x2.view(C2x2.size(0),a.size(2),a.size(2),C2x2.size(2),a.size(3),\
+            a.size(3))
+        C2x2= torch.tensordot(C2x2, a,([1,4],[2,3]))
+        C2x2= torch.tensordot(C2x2, a.conj(),([1,3,4],[2,3,0]))
+        if not is_cpu and verbosity>1: 
+            _log_cuda_mem(loc_device,who)
+            log.info(f"{who} C2x1,C2x2: {ten_size(C2x1)+ten_size(C2x2)}")
 
-    # 4iv) fuse (some) pairs of aux indices
-    #
-    # C------T----0->2
-    # | 4<-2\|\    
-    # T------a----4\
-    # | \    | |    ->->3
-    # |  ------a--7/
-    # |      | |\5
-    # 1->0  (3 6)->1
-    # 
-    # permute and reshape 01234567->1(36)0(47)25->012345
-    C2x2= C2x2.permute(1,3,6,0,4,7,2,5).contiguous().view(C2x2.size(1),a.size(4)**2,\
-        C2x2.size(0),a.size(5)**2,a.size(1),a.size(1))
-    if not is_cpu and verbosity>1: 
-        _log_cuda_mem(loc_device,who)
-        log.info(f"{who} C2x1,C2x2: {ten_size(C2x1)+ten_size(C2x2)}")
+        # 4iv) fuse (some) pairs of aux indices
+        #
+        # C------T----0->2
+        # | 4<-2\|\    
+        # T------a----4\
+        # | \    | |    ->->3
+        # |  ------a--7/
+        # |      | |\5
+        # 1->0  (3 6)->1
+        # 
+        # permute and reshape 01234567->1(36)0(47)25->012345
+        C2x2= C2x2.permute(1,3,6,0,4,7,2,5).contiguous().view(C2x2.size(1),a.size(4)**2,\
+            C2x2.size(0),a.size(5)**2,a.size(1),a.size(1))
+        if not is_cpu and verbosity>1: 
+            _log_cuda_mem(loc_device,who)
+            log.info(f"{who} C2x1,C2x2: {ten_size(C2x1)+ten_size(C2x2)}")
+    elif mode=="dl":
+        assert len(a.size())==6,"mode "+mode+" expects rank-6 on-site tensor"
+        # see _get_open_C2x2_LU_dl
+        C2x2 = torch.tensordot(C2x1, T, ([0],[0]))
+
+        # C-------T--0       C-----T--0->2
+        # |       1          |     |
+        # |       2          |     |/23->45
+        # T--3 3--a--5       T-----a--5-->3
+        # 2->1    4\01->23   1->0  4->1
+        C2x2 = torch.tensordot(C2x2, a, ([1,3],[2,3]))
+        C2x2= C2x2.permute(1,4,0,5,2,3).contiguous()
+    else:
+        raise RuntimeError("Invalid mode "+mode)
                   
     # 0       2          0  2
     # C--1 0--T--1->1 -> C--T--1

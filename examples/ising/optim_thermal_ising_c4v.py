@@ -9,7 +9,7 @@ from linalg.custom_eig import truncated_eig_sym
 from ctm.one_site_c4v.env_c4v import *
 from ctm.one_site_c4v import ctmrg_c4v
 from ctm.one_site_c4v.rdm_c4v_thermal import entropy, rdm1x1_sl, rdm2x1_sl, rdm2x2
-# from ctm.one_site_c4v import transferops_c4v
+from ctm.one_site_c4v import transferops_c4v
 from optim.ad_optim_lbfgs_mod import optimize_state
 from models import ising
 import json
@@ -30,6 +30,7 @@ parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of trans
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
 parser.add_argument("--logz", action='store_true')
+parser.add_argument("--mode", type=str, default="dl")
 args, unknown_args= parser.parse_known_args()
 
 def main():
@@ -51,12 +52,11 @@ def main():
         state.seed_site= model.ipepo_trotter_suzuki(args.beta/(2**args.layers))
         if len(state.isometries)< args.layers:
             assert len(args.layers_Ds)==args.layers,"Incompatible number of layers"
-            assert [ iso.size(2) for iso in state.isometries ] \
-                == args.layers_Ds[:len(state.isometries)],\
+            assert state.iso_Ds == args.layers_Ds[:len(state.isometries)],\
                 "Dimensions of existing layers do not match"
             # add more isometry layers besides the ones included in instate
             Ds_out= [state.seed_site.size(2)]+list(args.layers_Ds)
-            new_iso= [ torch.rand(Ds_out[i],Ds_out[i],Ds_out[i+1],\
+            new_iso= [ torch.rand([Ds_out[i]]*4,\
                 dtype=model.dtype, device=model.device) \
                 for i in range(len(state.isometries),args.layers) ]
             state.extend_layers(new_iso)
@@ -82,7 +82,7 @@ def main():
                     "reduced Ds of isometries must be provided"
             # output dimensions of isometries, starting with aux bond dim of ipepo site
             Ds_out= [A.size(2)] + args.layers_Ds
-            isometries=[ torch.rand(Ds_out[i],Ds_out[i],Ds_out[i+1],\
+            isometries=[ torch.rand([Ds_out[i]]*4,\
                 dtype=model.dtype, device=model.device) \
                 for i in range(args.layers) ]
         if args.ipeps_init_type=='SVD':
@@ -102,7 +102,6 @@ def main():
                 E= torch.einsum('spuldr,psufdh->lfrh',B,B).contiguous()\
                     .view([B.size(5)**2]*2)
                 U,S,Vh= torch.linalg.svd(E)
-                import pdb; pdb.set_trace()
                 init_iso= U[:,:redD_iso[i]].reshape(B.size(5),B.size(5),redD_iso[i]).contiguous()
                 isometries.append( init_iso )
                 #   
@@ -147,7 +146,7 @@ def main():
             for i in range(1,args.layers):
                 A= torch.einsum("sxuldr,xpefgh->spuelfdgrh",A,A0).contiguous()
                 A= A.view([model.phys_dim]*2 + [A0.size(5)**(i+1)]*4)
-        state = IPEPS_C4V_THERMAL_TTN(A,isometries=isometries)
+        state = IPEPS_C4V_THERMAL_TTN(A,iso_Ds=args.layers_Ds,isometries=isometries)
     else:
         raise ValueError("Missing trial state: --instate=None and --ipeps_init_type= "\
             +str(args.ipeps_init_type)+" is not supported")
@@ -162,7 +161,7 @@ def main():
         "sqrt(norm0)": torch.sqrt(norm0).item() }
 
     @torch.no_grad()
-    def ctmrg_conv_f(state, env, history, ctm_args=cfg.ctm_args):
+    def ctmrg_conv_rdm2x1(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
             history=dict({"log": []})
         # unfuse ancilla+physical
@@ -186,7 +185,7 @@ def main():
         return False, history
 
     @torch.no_grad()
-    def ctmrg_conv_f2(state, env, history, ctm_args=cfg.ctm_args):
+    def ctmrg_conv_Cspec(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
             history=dict({"log": []})
         U, specC, V= torch.svd(env.get_C(), compute_uv=False)
@@ -204,6 +203,8 @@ def main():
                 "final_multiplets": compute_multiplets(ctm_env)})
             return False, history
         return False, history
+
+    ctmrg_conv_f= ctmrg_conv_Cspec
 
     # def renyi2_site(a, D1, D2):
     #     # a rank-6 on-site tensor with indices [apuldr]
@@ -279,9 +280,13 @@ def main():
             A= A.view([auxD**2]*4)
         elif len(A.size())==6:
             # assume it is single-layer tensor with physica+ancilla unfused
-            auxD= A.size(5)
-            A= torch.einsum('asuldr,asefgh->uelfdgrh',A,A).contiguous()
-            A= A.view([auxD**2]*4)
+            if args.mode=="sl":
+                auxD= A.size(5)
+                A= torch.einsum('asuldr,asefgh->uelfdgrh',A,A).contiguous()
+                A= A.view([auxD**2]*4)
+                A_sl_scale= A_sl_scale**2
+            elif args.mode=="dl":
+                A= torch.einsum('ssuldr->uldr',A).contiguous()
 
         # C--T--C            / C--C
         # |  |  |   C--C    /  |  |   C--T--C
@@ -303,7 +308,8 @@ def main():
         CTC = torch.tensordot(CTC,C,([1],[0]))
         rdm = torch.tensordot(CTC,T,([2],[0]))
         # rdm = torch.tensordot(rdm,A,([1,3],[1,2]))
-        rdm = torch.tensordot(rdm,A/(A_sl_scale**2),([1,3],[1,2]))
+        # rdm = torch.tensordot(rdm,A/(A_sl_scale**2),([1,3],[1,2]))
+        rdm = torch.tensordot(rdm,A/A_sl_scale,([1,3],[1,2]))
         rdm = torch.tensordot(T,rdm,([1,2],[0,2]))
         rdm = torch.tensordot(rdm,CTC,([0,1,2],[2,0,1]))
 
@@ -318,7 +324,7 @@ def main():
         log.info(f"get_z_per_site rdm {rdm.item()} CTC {CTC.item()} C4 {C4.item()}")
 
         # z_per_site= (rdm/CTC)*(CTC/C4)
-        logz_per_site= 2*torch.log(A_sl_scale) + torch.log(rdm) + torch.log(C4)\
+        logz_per_site= torch.log(A_sl_scale) + torch.log(rdm) + torch.log(C4)\
             - 2*torch.log(CTC)
         return logz_per_site
         # return z_per_site
@@ -355,6 +361,7 @@ def main():
     # 0) fuse ancilla+physical index and create regular c4v ipeps with rank-5 on-site
     #    tensor
     state_fused= state.to_fused_ipeps_c4v()
+    # state_fused= state.to_nophys_ipeps_c4v()
     ctm_env = ENV_C4V(args.chi, state_fused)
     init_env(state_fused, ctm_env)
 
@@ -364,10 +371,10 @@ def main():
     # loss0 = e0 - 1./args.beta * S0
     # loss0 = e0 - 1./args.beta * r2_0
     S0= r2_0= 0
-    e0= energy_f(state, ctm_env, force_cpu=True)
+    e0= energy_f(state, ctm_env, args.mode, force_cpu=True)
     z0= get_z_per_site(state.site(), ctm_env.get_C(), ctm_env.get_T())
     loss0= -torch.log(z0) if args.logz else -z0 
-    obs_values, obs_labels = eval_obs_f(state, ctm_env,force_cpu=True)
+    obs_values, obs_labels = eval_obs_f(state, ctm_env, args.mode, force_cpu=True)
     print("\n\n",end="")
     print(", ".join(["beta","epoch","loss","e0","z0","S0","r2_0"]+obs_labels+["norm(A)"]))
     print(", ".join([f"{args.beta}",f"{-1}",f"{loss0}",f"{e0}",f"{z0}",f"{S0}",f"{r2_0}"]\
@@ -380,8 +387,11 @@ def main():
         opt_args= opt_context["opt_args"]
 
         # build on-site tensors
+        # new_iso= state.symmetrize_isometries()
+        # state= IPEPS_C4V_THERMAL_TTN(state.seed_site, new_iso)
         state.update_()
         state_fused= state.to_fused_ipeps_c4v()
+        # state_fused= s_state.to_nophys_ipeps_c4v()
 
         # possibly re-initialize the environment
         if opt_args.opt_ctm_reinit:
@@ -419,12 +429,12 @@ def main():
         else:
             epoch= len(opt_context["loss_history"]["loss"]) 
             loss= opt_context["loss_history"]["loss"][-1] 
-        e0 = energy_f(state, ctm_env, force_cpu=True)
+        e0 = energy_f(state, ctm_env, args.mode, force_cpu=True)
         z0= get_z_per_site(state.site(), ctm_env.get_C(), ctm_env.get_T())
         # S0 = approx_S( state, ctm_env )
         # r2_0 = approx_renyi2(state, ctm_env, args.l2d, args.bond_dim**2)
         S0=r2_0= 0
-        obs_values, obs_labels = eval_obs_f(state,ctm_env,force_cpu=True)
+        obs_values, obs_labels = eval_obs_f(state,ctm_env,args.mode,force_cpu=True)
         print(f"{args.beta}, "+", ".join([f"{epoch}",f"{loss}",f"{e0}", f"{z0}", f"{S0}", f"{r2_0}"]\
             +[f"{v}" for v in obs_values]+[f"{state.site().norm()}"]))
 
@@ -433,7 +443,8 @@ def main():
             for c,d in coord_dir_pairs:
                 # transfer operator spectrum
                 print(f"TOP spectrum(T)[{c},{d}] ",end="")
-                l= transferops_c4v.get_Top_spec_c4v(args.top_n, state, ctm_env)
+                state_fused= state.to_fused_ipeps_c4v()
+                l= transferops_c4v.get_Top_spec_c4v(args.top_n, state_fused, ctm_env)
                 print("TOP "+json.dumps(_to_json(l)))
 
     # optimize
@@ -446,9 +457,9 @@ def main():
     ctm_env = ENV_C4V(args.chi, state_fused)
     init_env(state_fused, ctm_env)
     ctm_env, *ctm_log = ctmrg_c4v.run_dl(state_fused, ctm_env, conv_check=ctmrg_conv_f)
-    e0 = energy_f(state,ctm_env,force_cpu=True)
+    e0 = energy_f(state,ctm_env,args.mode,force_cpu=True)
     z0= get_z_per_site(state.site(), ctm_env.get_C(), ctm_env.get_T())
-    obs_values, obs_labels = eval_obs_f(state, ctm_env,force_cpu=True)
+    obs_values, obs_labels = eval_obs_f(state, ctm_env, args.mode, force_cpu=True)
     loss0, S0, r2_0= -torch.log(z0) if args.logz else -z0, 0, 0
     print("\n\n",end="")
     print(", ".join(["beta","epoch","loss","e0","z0","S0","r2_0"]+obs_labels))

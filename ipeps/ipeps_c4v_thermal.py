@@ -77,6 +77,18 @@ class IPEPS_C4V_THERMAL(ipeps.IPEPS):
             site.size(4), site.size(5))
         return IPEPS_C4V(site=site)
 
+    def to_nophys_ipeps_c4v(self):
+        r"""
+        Transform ipepo into ipeps defined by single rank-4 tensor with the
+        physical and ancilla dimensions traced over. Ancilla and physical space
+        must be compatible.
+
+        Returns:
+            IPEPS_C4v: ipeps representation with only aux indices 
+        """
+        site= torch.einsum('iiuldr->uldr',self.site()).contiguous()
+        return IPEPS_C4V(site=site)
+
     def write_to_file(self, outputfile, symmetrize=True, **kwargs):
         # symmetrize before writing out
         tmp_state= to_ipeps_c4v_thermal(self) if symmetrize else self
@@ -424,7 +436,7 @@ def write_ipeps_c4v_thermal_lc(state, outputfile, aux_seq=[0,1,2,3], tol=1.0e-14
 
 
 class IPEPS_C4V_THERMAL_TTN(IPEPS_C4V_THERMAL):
-    def __init__(self, seed_site, isometries=[], metadata=None,\
+    def __init__(self, seed_site, iso_Ds=[], isometries=[], metadata=None,\
             peps_args=cfg.peps_args, global_args=cfg.global_args):
         r"""
         :param seed_site: seed on-site rank-6 tensor
@@ -462,13 +474,15 @@ class IPEPS_C4V_THERMAL_TTN(IPEPS_C4V_THERMAL):
                    \A/
                     |
 
-        where W0 is D x D x D_0, W1 is D_0 x D_0 x D_1, etc.
+        where W0 is D x D x D_0, W1 is D_0 x D_0 x D_1, etc. where W_i are obtained
+        from parent matrix M_i = (D_i x D_i) x (D_i x D_i)
 
         """
         self.metadata= metadata
         if seed_site is not None:
             assert isinstance(seed_site,torch.Tensor), "site is not a torch.Tensor"
             self.seed_site= seed_site
+        self.iso_Ds= iso_Ds
         self.isometries= isometries
         super().__init__(self.build_onsite_tensors(), peps_args=peps_args,\
             global_args=global_args)
@@ -487,11 +501,11 @@ class IPEPS_C4V_THERMAL_TTN(IPEPS_C4V_THERMAL):
         for i in range(len(self.isometries)):
             # create hermitian matrix
             M= self.isometries[i]
-            D_i, D_ip1= M.size(0), M.size(2)
-            MMdag= M.view(D_i*D_i,D_ip1)@(M.view(D_i*D_i,D_ip1).T.conj())
-            D,U= truncated_eig_sym(MMdag, M.size(2), keep_multiplets=True,\
+            D_i, D_ip1= M.size(0), self.iso_Ds[i]
+            MMdag= M.view([D_i*D_i]*2)@(M.view([D_i*D_i]*2).T.conj())
+            D,U= truncated_eig_sym(MMdag, D_ip1, keep_multiplets=True,\
                 verbosity=cfg.ctm_args.verbosity_projectors)
-            U= U.view(M.size())
+            U= U.view(D_i, D_i, D_ip1)
             #   
             #            |/
             #     /--tmp_A--\
@@ -549,9 +563,11 @@ class IPEPS_C4V_THERMAL_TTN(IPEPS_C4V_THERMAL):
     #         self.sites[(0,0)]= _tmp_rank5.view(dims)
 
     def symmetrize_isometries(self):
-        self.isometries= [
-            0.5*(iso+iso.permute(1,0,2)) for iso in self.isometries
+        # self.isometries= [
+        new_iso= [
+            0.5*(iso+iso.permute(1,0,1,0)) for iso in self.isometries
         ]
+        return new_iso
 
     def extend_layers(self, new_layers):
         self.isometries.extend(new_layers)
@@ -606,6 +622,7 @@ def read_ipeps_c4v_thermal_ttn(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], p
             asq = [x+1 for x in raw_state["aux_ind_seq"]]
 
         # read the list of considered elementary tensors
+        iso_Ds= raw_state["iso_Ds"]
         ten_list_key="isometries"
         isometries=dict()
         for i,symt in raw_state[ten_list_key].items():
@@ -620,19 +637,19 @@ def read_ipeps_c4v_thermal_ttn(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], p
             assert loc_dtype==dtype, "dtypes do not match - iPEPS "\
                 +str(dtype)+" vs isometry "+str(loc_dtype)
 
-            dims=[symt["D_in"]]+[symt["D_in"]]+[symt["D_out"]]
+            dims=[symt["D_in"]]*4
             
             t= torch.zeros(tuple(dims), dtype=dtype, device=global_args.device)
             if t.is_complex():
                 for elem in symt["entries"]:
                     tokens= elem.split(' ')
-                    inds=tuple([int(i) for i in tokens[0:3]])
-                    t[inds]= float(tokens[3]) + (0.+1.j)*float(tokens[4])
+                    inds=tuple([int(i) for i in tokens[0:4]])
+                    t[inds]= float(tokens[4]) + (0.+1.j)*float(tokens[5])
             else:
                 for elem in symt["entries"]:
                     tokens= elem.split(' ')
-                    inds=tuple([int(i) for i in tokens[0:3]])
-                    t[inds]= float(tokens[3])
+                    inds=tuple([int(i) for i in tokens[0:4]])
+                    t[inds]= float(tokens[4])
 
             isometries[i]= t
         assert set([int(k) for k in isometries.keys()])==set(range(len(isometries.keys())))
@@ -668,7 +685,7 @@ def read_ipeps_c4v_thermal_ttn(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], p
                     t[inds]= float(tokens[6])
             seed_site=t
 
-    state = IPEPS_C4V_THERMAL_TTN(seed_site, isometries, \
+    state = IPEPS_C4V_THERMAL_TTN(seed_site, iso_Ds, isometries, \
         peps_args=peps_args, global_args=global_args)
     return state
 
@@ -711,6 +728,8 @@ def write_ipeps_c4v_thermal_ttn(state, outputfile, aux_seq=[0,1,2,3], tol=1.0e-1
     if hasattr(state,"metadata") and type(state.metadata)==dict:
         json_state["metadata"]= state.metadata
 
+    json_state["iso_Ds"]= state.iso_Ds
+
     # write list of considered isometries
     for i,t in enumerate(state.isometries):
         json_tensor=dict()
@@ -718,15 +737,15 @@ def write_ipeps_c4v_thermal_ttn(state, outputfile, aux_seq=[0,1,2,3], tol=1.0e-1
 
         tdims = t.size()
         tlength = t.numel()
-        assert len(tdims)==3, "Unexpected dimensionality of isometry tensor rank"+str(len(tdims))
-        json_tensor["D_in"], json_tensor["D_out"]= tdims[0], tdims[2]
+        assert len(tdims)==4, "Unexpected dimensionality of isometry parent tensor rank"+str(len(tdims))
+        json_tensor["D_in"]= tdims[0]
         # get non-zero elements
         t_nonzero= t.nonzero()
         json_tensor["numEntries"]= len(t_nonzero)
         entries = []
         for elem in t_nonzero:
             ei=tuple(elem.tolist())
-            entries.append(f"{ei[0]} {ei[1]} {ei[2]} {t[ei]}")
+            entries.append(f"{ei[0]} {ei[1]} {ei[2]} {ei[3]} {t[ei]}")
         json_tensor["entries"]=entries
         json_state["isometries"][i]=json_tensor
 
