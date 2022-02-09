@@ -216,6 +216,84 @@ class SVDGESDD_COMPLEX(torch.autograd.Function):
 
         return u_term + sigma_term + v_term
 
+    #@staticmethod
+    def V2_backward(self, dU, dS, dV):
+        U, S, V = self.saved_tensors
+        m= U.size(0)
+        n= V.size(0)
+        k= S.size(0)
+        sigma= S
+        sigma_scale= sigma[0]
+        gsigma= dS
+
+        u= U
+        v= V
+        gu= dU
+        gv= dV
+
+        vh= v.conj().transpose(-2,-1)
+        sigma_term= u * gsigma.unsqueeze(-2) @ vh
+
+        uh= u.conj().transpose(-2,-1)
+        sigma_inv= safe_inverse(sigma.clone(), sigma_scale*1.0e-12)
+        F= sigma.unsqueeze(-2) - sigma.unsqueeze(-1)
+        F = safe_inverse(F, sigma_scale*1.0e-12)
+        F.diagonal().fill_(0)
+        G= sigma.unsqueeze(-2) + sigma.unsqueeze(-1)
+        G = safe_inverse(G, sigma_scale*1.0e-12)
+        G.diagonal().fill_(0)
+
+        guh= gu.conj().transpose(-2,-1)
+        u_term = u @ ( (F+G).mul( uh @ gu - guh @ u)/2 )
+        if m>k:
+            # projection operator onto subspace orthogonal to span(U) defined as I - UU^H
+            proj_on_ortho_u= -u@uh
+            proj_on_ortho_u.diagonal(0, -2, -1).add_(1)
+            u_term = u_term + proj_on_ortho_u @ (gu * sigma_inv.unsqueeze(-2))
+        u_term = u_term @ vh
+
+        # if (gv.defined()) {
+        #     auto gvh = gv.conj().transpose(-2, -1);
+        #     v_term = sigma.unsqueeze(-1) * at::matmul(F.mul(at::matmul(vh, gv) - at::matmul(gvh, v)), vh);
+        #     if (n > k) {
+        #         // projection operator onto subspace orthogonal to span(V) defined as I - VV^H
+        #         auto proj_on_v_ortho = -at::matmul(v, vh);
+        #         proj_on_v_ortho.diagonal(/*offset=*/0, /*dim1=*/-2, /*dim2=*/-1).add_(1);
+        #         v_term = v_term + sigma_inv.unsqueeze(-1) * at::matmul(gvh, proj_on_v_ortho);
+        #     }
+        #     v_term = at::matmul(u, v_term);
+        # } else {
+        #     v_term = at::zeros_like(self, LEGACY_CONTIGUOUS_MEMORY_FORMAT);
+        # }
+        # gv is always defined here
+        gvh = gv.conj().transpose(-2, -1);
+        v_term = 0.5 * ((F+G).mul(vh @ gv - gvh @ v) @ vh)
+        if n > k:
+            # projection operator onto subspace orthogonal to span(V) defined as I - VV^H
+            proj_on_v_ortho = -v @ vh
+            proj_on_v_ortho.diagonal(0, -2, -1).add_(1);
+            v_term = v_term + sigma_inv.unsqueeze(-1) * (gvh @ proj_on_v_ortho)
+        v_term = u @ v_term
+
+        # // for complex-valued input there is an additional term
+        # // https://giggleliu.github.io/2019/04/02/einsumbp.html
+        # // https://arxiv.org/abs/1909.02659
+        # if (self.is_complex() && gu.defined()) {
+        #     Tensor L = at::matmul(uh, gu).diagonal(0, -2, -1);
+        #     at::real(L).zero_();
+        #     at::imag(L).mul_(sigma_inv);
+        #     Tensor imag_term = at::matmul(u * L.unsqueeze(-2), vh);
+        #     return u_term + sigma_term + v_term + imag_term;
+        # }
+        if U.is_complex() or V.is_complex():
+            L= (uh @ gu).diagonal(0,-2,-1)
+            L.real.zero_()
+            L.imag.mul_(sigma_inv)
+            imag_term= (u * L.unsqueeze(-2)) @ vh
+            return u_term + sigma_term + v_term + imag_term
+
+        return u_term + sigma_term + v_term
+
 
 def test_SVDGESDD_random():
     

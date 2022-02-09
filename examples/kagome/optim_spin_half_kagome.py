@@ -149,7 +149,7 @@ def main():
             elif args.ansatz in ["IPESS"]:
                 state= IPESS_KAGOME_GENERIC({'T_u': T_u, 'B_a': B_a, 'T_d': T_d,\
                     'B_b': B_b, 'B_c': B_c})
-    
+            state.add_noise(args.instate_noise)
     elif args.ansatz in ["IPEPS"]:    
         ansatz_pgs=None
         if args.instate!=None:
