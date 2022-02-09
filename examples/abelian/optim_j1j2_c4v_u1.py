@@ -1,11 +1,13 @@
+import os
+import context
 import copy
 import torch
 import numpy as np
 import argparse
 import config as cfg
+import yast.yast as yast
 import examples.abelian.settings_full_torch as settings_full
 import examples.abelian.settings_U1_torch as settings_U1
-import yamps.yast as TA
 from ipeps.ipeps_abelian_c4v import *
 from models.abelian import j1j2
 from ctm.one_site_c4v_abelian.env_c4v_abelian import *
@@ -58,9 +60,10 @@ def main():
     if args.instate!=None:
         state= read_ipeps_c4v(args.instate, settings)
         state= state.add_noise(args.instate_noise)
-        state.sites[(0,0)]= state.sites[(0,0)]/state.sites[(0,0)].max_abs()
+        state.sites[(0,0)]= state.sites[(0,0)]/state.sites[(0,0)].norm(p="inf")
     elif args.opt_resume is not None:
-        state= IPEPS_ABELIAN_C4V(settings, None)
+        dummy_site= yast.Tensor(settings,s=IPEPS_ABELIAN_C4V._REF_S_DIRS)
+        state= IPEPS_ABELIAN_C4V(settings, dummy_site)
         state.load_checkpoint(args.opt_resume)
     else:
         raise ValueError("Missing trial state: --instate=None and --ipeps_init_type= "\
@@ -86,7 +89,6 @@ def main():
             not len(history['log']) >= ctm_args.ctm_max_iter
         return converged, history
 
-    state= state.symmetrize()
     ctm_env= ENV_C4V_ABELIAN(args.chi, state=state, init=True)
     print(ctm_env)
     
@@ -145,7 +147,7 @@ def main():
             loss= opt_context["loss_history"]["loss"][-1]
             obs_values, obs_labels = model.eval_obs(state_sym, ctm_env, force_cpu=args.force_cpu)
             print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]+\
-                [f"{state.site().max_abs()}"]))
+                [f"{state.site().norm(p='inf')}"]))
 
     #         if args.top_freq>0 and epoch%args.top_freq==0:
     #             coord_dir_pairs=[((0,0), (1,0))]
@@ -174,14 +176,103 @@ def main():
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"
     state= read_ipeps_c4v(outputstatefile, settings)
+    state= state.symmetrize()
     ctm_env= ENV_C4V_ABELIAN(args.chi, state=state, init=True)
     ctm_env, *ctm_log = ctmrg_c4v.run(state, ctm_env, conv_check=ctmrg_conv_f)
     opt_energy = energy_f(state,ctm_env,force_cpu=args.force_cpu)
     obs_values, obs_labels = model.eval_obs(state,ctm_env,force_cpu=args.force_cpu)
-    print(", ".join([f"{args.opt_max_iter}",f"{opt_energy}"]+[f"{v}" for v in obs_values]))
+    print("\n\n"+", ".join(["epoch","energy"]+obs_labels))
+    print("FINAL "+", ".join([f"{opt_energy}"]+[f"{v}" for v in obs_values]))
 
 if __name__=='__main__':
     if len(unknown_args)>0:
         print("args not recognized: "+str(unknown_args))
         raise Exception("Unknown command line arguments")
     main()
+
+
+class TestCheckpoint_j1j2_c4v_u1_state(unittest.TestCase):
+    tol= 1.0e-6
+    DIR_PATH = os.path.dirname(os.path.realpath(__file__))
+    OUT_PRFX = "RESULT_test_run-opt-chck_u1_vbs"
+
+    def setUp(self):
+        args.instate=self.DIR_PATH+"/../../test-input/abelian/"\
+            +"/c4v/BFGS100LS_U1B_D3-chi72-j20.0-run0-iRNDseed321_blocks_1site_state.json"
+        args.symmetry="U1"
+        args.j2=0.0
+        args.bond_dim=3
+        args.chi=27
+        args.instate_noise=0.5
+        args.seed=300
+        args.out_prefix=self.OUT_PRFX
+
+    def test_checkpoint_j1j2_c4v_u1(self):
+        from io import StringIO
+        from unittest.mock import patch
+        from cmath import isclose
+
+        # i) run optimization and store the optimization data
+        args.opt_max_iter= 10
+        with patch('sys.stdout', new = StringIO()) as tmp_out: 
+            main()
+        tmp_out.seek(0)
+
+        # parse FINAL observables
+        obs_opt_lines=[]
+        OPT_OBS= OPT_OBS_DONE= False
+        l= tmp_out.readline()
+        while l:
+            print(l,end="")
+            if OPT_OBS and not OPT_OBS_DONE and l.rstrip()=="": OPT_OBS_DONE= True
+            if OPT_OBS and not OPT_OBS_DONE and len(l.split(','))>2:
+                obs_opt_lines.append(l)
+            if "epoch, energy," in l and not OPT_OBS_DONE: 
+                OPT_OBS= True
+            l= tmp_out.readline()
+        assert len(obs_opt_lines)>0
+
+        # ii) run optimization for 3 steps
+        args.opt_max_iter= 3
+        main()
+        
+        # iii) run optimization from checkpoint
+        args.instate=None
+        args.opt_resume= self.OUT_PRFX+"_checkpoint.p"
+        args.opt_max_iter= 7
+        with patch('sys.stdout', new = StringIO()) as tmp_out: 
+            main()
+        tmp_out.seek(0)
+
+        obs_opt_lines_chk=[]
+        OPT_OBS= OPT_OBS_DONE= False
+        l= tmp_out.readline()
+        while l:
+            print(l,end="")
+            if OPT_OBS and not OPT_OBS_DONE and l.rstrip()=="": OPT_OBS_DONE= True
+            if OPT_OBS and not OPT_OBS_DONE and len(l.split(','))>2:
+                obs_opt_lines_chk.append(l)
+            if "checkpoint.loss" in l and not OPT_OBS_DONE: 
+                OPT_OBS= True
+            l= tmp_out.readline()
+        assert len(obs_opt_lines_chk)>0
+
+        # compare initial observables from checkpointed optimization (iii) and the observables 
+        # from original optimization (i) at one step after total number of steps done in (ii)
+        opt_line_iii= [float(x) for x in obs_opt_lines_chk[0].split(",")[1:]]
+        opt_line_i= [float(x) for x in obs_opt_lines[4].split(",")[1:]]
+        for val3,val1 in zip(opt_line_iii, opt_line_i):
+            assert isclose(val3,val1, rel_tol=self.tol, abs_tol=self.tol)
+
+        # compare final observables from optimization (i) and the final observables 
+        # from the checkpointed optimization (iii)
+        fobs_tokens_1= [float(x) for x in obs_opt_lines[-1].split(",")[1:]]
+        fobs_tokens_3= [float(x) for x in obs_opt_lines_chk[-1].split(",")[1:]]
+        for val3,val1 in zip(fobs_tokens_3, fobs_tokens_1):
+            assert isclose(val3,val1, rel_tol=self.tol, abs_tol=self.tol)
+
+    def tearDown(self):
+        args.opt_resume=None
+        args.instate=None
+        for f in [self.OUT_PRFX+"_state.json",self.OUT_PRFX+"_checkpoint.p",self.OUT_PRFX+".log"]:
+            if os.path.isfile(f): os.remove(f)

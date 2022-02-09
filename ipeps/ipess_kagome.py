@@ -458,7 +458,7 @@ class IPESS_KAGOME_PG(IPESS_KAGOME_GENERIC):
         return new_state
 
 def _to_PG_symmetric(pgs, elem_ts):
-    pg_elem_ts= OrderedDict({})
+    pg_elem_ts= OrderedDict(elem_ts)
     for t_id,pg in pgs.items():
         if pg is None: continue
         # bond-tensors        
@@ -488,8 +488,10 @@ def _to_PG_symmetric(pgs, elem_ts):
 
 def to_PG_symmetric(state, SYM_UP_DOWN=None, SYM_BOND_S=None, pgs=None):
     assert type(state)==IPESS_KAGOME_PG, "Expected IPESS_KAGOME_PG instance"
-    if SYM_UP_DOWN is None: SYM_UP_DOWN= state.SYM_UP_DOWN
-    if SYM_BOND_S is None: SYM_BOND_S= state.SYM_BOND_S
+    if SYM_UP_DOWN is None: 
+        SYM_UP_DOWN= state.SYM_UP_DOWN
+    if SYM_BOND_S is None: 
+        SYM_BOND_S= state.SYM_BOND_S
     if pgs is None: pgs= state.pgs
     
     symm_elem_ts= _to_PG_symmetric(pgs, state.elem_tensors)

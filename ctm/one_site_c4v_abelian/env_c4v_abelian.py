@@ -1,6 +1,6 @@
 import config as cfg
 import numpy as np
-import yamps.yast as yast
+import yast.yast as yast
 
 class ENV_C4V_ABELIAN():
     def __init__(self, chi=1, state=None, settings=None, init=False, 

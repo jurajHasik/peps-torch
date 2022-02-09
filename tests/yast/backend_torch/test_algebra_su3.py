@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-import yamps.yast as yast
+import yast.yast as yast
 import groups.su3_abelian
 import examples.abelian.settings_U1xU1_torch as settings_U1xU1
 import config as cfg
@@ -50,8 +50,6 @@ def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
     obs_values, obs_labels= model.eval_obs_2x2subsystem(state,env)
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{e_curr}"]+[f"{v}" for v in obs_values]))
-
-    import pdb; pdb.set_trace()
 
     if len(history) >= ctm_args.ctm_max_iter:
 #         log.info({"history_length": len(history), "history": history})

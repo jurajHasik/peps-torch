@@ -1,5 +1,5 @@
 import config as cfg
-import yamps.yast as yast
+import yast.yast as yast
 from ctm.generic_abelian.ctm_components import *
 from tn_interface_abelian import mm
 from tn_interface_abelian import transpose
@@ -222,7 +222,7 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, direction, \
                          _|_____|_
                         |____Rt___|
     """
-    assert R.get_ndim() == Rt.get_ndim() and R.get_ndim() == 2
+    assert R.ndim == Rt.ndim and R.ndim == 2
     verbosity = ctm_args.verbosity_projectors
 
     if ctm_args.projector_svd_method=='DEFAULT' or ctm_args.projector_svd_method=='GESDD':

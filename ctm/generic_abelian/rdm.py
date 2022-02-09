@@ -21,26 +21,40 @@ def _sym_pos_def_matrix(rdm, sym_pos_def=False, verbosity=0, who="unknown"):
     return rdm
 
 def _sym_pos_def_rdm(rdm, sym_pos_def=False, verbosity=0, who=None):
-    assert rdm.get_ndim()%2==0, "invalid rank of RDM"
-    nsites= rdm.get_ndim()//2
+    assert rdm.ndim%2==0, "invalid rank of RDM"
+    nsites= rdm.ndim//2
     rdm= rdm.fuse_legs(axes=(tuple(nsites+i for i in range(nsites)),\
         tuple(i for i in range(nsites))) )
     rdm= _sym_pos_def_matrix(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
     rdm= rdm.unfuse_legs(axes=(0,1), inplace=True)
     return rdm
 
-def _validate_open_dl(state,env):
-    assert state.sites_dl_open!=None,"state's member sites_open_dl is not initialized"
-    assert len(state.sites_dl_open)==len(state.sites),\
-        "Inconsistent state.sites and state.sites_open_dl"
+def _validate_precomputed(state,env):
+    if state.build_dl:
+        assert state.sites_dl!=None,"state's member sites_dl is not initialized"
+        assert len(state.sites_dl)==len(state.sites),\
+            "Inconsistent state.sites and state.sites_dl"
 
-    requires_grad_state= any([ t.requires_grad for t in state.sites.values() ])
-    requires_grad_env= any([ t.requires_grad for t in env.C.values()]) \
-        or any([ t.requires_grad for t in env.T.values()])
-    requires_grad_open_dl= any( [t.requires_grad for t in state.sites_dl_open.values()] )
-    
-    if requires_grad_state and not requires_grad_open_dl:
-        warnings.warn("state members sites and sites_open_dl have different requires_grad", Warning)
+        requires_grad_state= any([ t.requires_grad for t in state.sites.values() ])
+        requires_grad_env= any([ t.requires_grad for t in env.C.values()]) \
+            or any([ t.requires_grad for t in env.T.values()])
+        requires_grad_dl= any( [t.requires_grad for t in state.sites_dl.values()] )
+        
+        if requires_grad_state and not requires_grad_dl:
+            warnings.warn("state members sites and sites_dl have different requires_grad", Warning)
+
+    if state.build_dl_open:
+        assert state.sites_dl_open!=None,"state's member sites_dl_open is not initialized"
+        assert len(state.sites_dl_open)==len(state.sites),\
+            "Inconsistent state.sites and state.sites_dl_open"
+
+        requires_grad_state= any([ t.requires_grad for t in state.sites.values() ])
+        requires_grad_env= any([ t.requires_grad for t in env.C.values()]) \
+            or any([ t.requires_grad for t in env.T.values()])
+        requires_grad_dl= any( [t.requires_grad for t in state.sites_dl_open.values()] )
+        
+        if requires_grad_state and not requires_grad_dl:
+            warnings.warn("state members sites and sites_dl_open have different requires_grad", Warning)
 
     return True
 
@@ -52,6 +66,7 @@ def _validate_open_dl(state,env):
 
 # ----- COMPONENTS ------------------------------------------------------------
 def open_C2x2_LU(coord, state, env, fusion_level="full", verbosity=0):
+    assert fusion_level in ["full","basic"],"Unsupported fusion_level option "+fusion_level
     r= state.vertexToSite(coord)
     C = env.C[(state.vertexToSite(r),(-1,-1))]
     T1 = env.T[(state.vertexToSite(r),(0,-1))]
@@ -68,28 +83,56 @@ def open_C2x2_LU(coord, state, env, fusion_level="full", verbosity=0):
     # 1->0
     c2x2= contract(T2, c2x2, ([0],[0]))
     
-    # C----------T1--3->1
-    # |          2
-    # |          1
-    # T2----1 2--A--4
-    # |          |\0->2
-    # |          3
-    # 0 
-    #                
-    A= state.site_dl_open(r)
-    c2x2= contract(c2x2, A, ([1,2],[2,1]))
-
-    # C----T--1->3                   C----T--2
-    # |    |                     =>  |    |
-    # T---a*a--4,7->4,5->4->3        T---a*a--3
-    # |    |\2,5->6,7->5,6->4,5      |    |\4,5
-    # 0    3,6->1,2->2               0    1 
-    if fusion_level=="full":
-        c2x2= c2x2.fuse_legs( axes=((0,3),(1,4),2) )
-    elif fusion_level=="basic":
-        pass
+    if state.build_dl_open and not state.sites_dl_open is None:
+        # C----------T1--3->1
+        # |          2
+        # |          1
+        # T2----1 2--A--4
+        # |          |\0->2
+        # |          3
+        # 0 
+        #                
+        A= state.site_dl_open(r)
+        c2x2= contract(c2x2, A, ([1,2],[2,1]))
+        # C----T--2
+        # |    |
+        # T---a*a--3
+        # |    |\4
+        # 0    1
+        if fusion_level=="full":
+            c2x2= c2x2.fuse_legs( axes=((0,3),(1,4),2) )
+        elif fusion_level=="basic":
+            c2x2= c2x2.transpose( axes=(0,3,1,4,2) )
     else:
-        raise RuntimeError("Unsupported fusion_level option "+fusion_level)
+        a= state.site(r)
+        # C------T1--3->5
+        # |      2->3,4
+        # |
+        # T2--1->1,2
+        # 0
+        c2x2= c2x2.unfuse_legs(axes=(1,2))
+        # C--------T1--5->3
+        # |        |\
+        # |        3 4->2
+        # |        1
+        # T2--1 2--a--4->6
+        # |\--2    3\0->4
+        # 0   ->1  ->5
+        c2x2= contract(c2x2, a, ([1,3],[2,1]))
+        # C--------T1--3->1
+        # |        |\
+        # |   2<-4 | 2
+        # |       \| 1
+        # T2-------a-----6->4
+        # |\--1 2----a*--4->7
+        # 0        5 |\0->5
+        #        ->3 3->6
+        c2x2= contract(c2x2, a, ([1,2],[2,1]), conj=(0,1))
+        c2x2= c2x2.fuse_legs(axes=(0,(3,6),1,(4,7),(2,5)))
+        if fusion_level=="full":
+            c2x2= c2x2.fuse_legs(axes=((0,1),(2,3),4))
+        elif fusion_level=="basic":
+            pass
 
     return c2x2
 
@@ -132,6 +175,7 @@ def open_C2x2_LD(coord, state, env, fusion_level="full", verbosity=0):
         C--T-----/                                C--T-----2
  
     """
+    assert fusion_level in ["full","basic"],"Unsupported fusion_level option "+fusion_level
     r= state.vertexToSite(coord)
     # 0
     # |
@@ -150,33 +194,62 @@ def open_C2x2_LD(coord, state, env, fusion_level="full", verbosity=0):
     c2x2 = contract(c2x2,env.T[(r,(0,1))],([2],[1]))
     if verbosity>0: print("c2x2=TCT "+str(c2x2))
     
-    # 0            0->2
-    # |       3<-1/
-    # T-----1 2--A--4
-    # |          3
-    # |          2
-    # C----------T--3->1
-    # 
-    A= state.site_dl_open(r)
-    c2x2= contract(c2x2, A, ([1,2],[2,3]))
-    
-    # 0    3,6->1,2->1                 0    1  4,5
-    # |    |/--2,5->6,7->5,6->4,5  =>  |    | /
-    # T----A---4,7->4,5->4->3          T----A---3
-    # |    |                           |    |
-    # C----T--1->3                     C----T---2
-    if fusion_level=="full":
-        c2x2= c2x2.fuse_legs( axes=((0,3),(1,4),2) )
-    elif fusion_level=="basic":
-        pass
+    if state.build_dl_open and not state.sites_dl_open is None:
+        # 0            0->2
+        # |       3<-1/
+        # T-----1 2--A--4
+        # |          3
+        # |          2
+        # C----------T--3->1
+        # 
+        A= state.site_dl_open(r)
+        c2x2= contract(c2x2, A, ([1,2],[2,3]))
+        # 0    1  4
+        # |    | /
+        # T----A---3
+        # |    |
+        # C----T---2
+        if fusion_level=="full":
+            c2x2= c2x2.fuse_legs( axes=((0,3),(1,4),2) )
+        elif fusion_level=="basic":
+            c2x2= c2x2.transpose( axes=(0,3,1,4,2) )
     else:
-        raise RuntimeError("Unsupported fusion_level option "+fusion_level)
+        a= state.site(r)
+        # 0
+        # |
+        # T(-1,0)--1->1,2
+        # |             2->3,4
+        # C(-1,1)--2 1--T(0,1)--3->5
+        c2x2= c2x2.unfuse_legs(axes=(1,2))
+        # 0   ->1  ->5 0->4
+        # |/----2    1/
+        # T-----1 2--a--4->6
+        # |          3 4->2
+        # |          3/
+        # C----------T--5->3
+        c2x2= contract(c2x2, a, ([1,3],[2,3]))
+        # 0            1->6
+        # |       3<-5 | 0->5
+        # |          | |/ 
+        # |/----1 2----a*----4->7
+        # T----------a----6->4
+        # |     2<-4/| 3
+        # |          | 2 
+        # |          |/
+        # C----------T--3->1
+        c2x2= contract(c2x2, a, ([1,2],[2,3]), conj=(0,1))
+        c2x2= c2x2.fuse_legs(axes=(0,(3,6),1,(4,7),(2,5)))
+        if fusion_level=="full":
+            c2x2= c2x2.fuse_legs( axes=((0,1),(2,3),4) )
+        elif fusion_level=="basic":
+            pass
 
     if verbosity>0: print("c2x2=TCTa*a "+str(c2x2))
 
     return c2x2
 
 def open_C2x2_RU(coord, state, env, fusion_level="full", verbosity=0):
+    assert fusion_level in ["full","basic"],"Unsupported fusion_level option "+fusion_level
     r= state.vertexToSite(coord)
     C = env.C[(r,(1,-1))]
     T1 = env.T[(r,(1,0))]
@@ -195,31 +268,59 @@ def open_C2x2_RU(coord, state, env, fusion_level="full", verbosity=0):
     #          3<-2
     c2x2 =contract(T2, c2x2, ([2],[0]))
 
-    #     0--T2------C
-    #        1       |
-    # 2<-0--\1       | 
-    #  3<-2--a--4 2--T1
-    #     4<-3    1<-3
-    # 
-    A= state.site_dl_open(r)
-    c2x2= contract(c2x2,A,([1,2],[1,4]))
-
-    #          0--T2----C  =>              0--T2----C
-    #             |     |                     |     |
-    #  1,2<-3,6--a*a----T1       (+1)1<-1,2<-a*a----T1
-    #    6,7<-2,5/|     |     4,5<-5,6<-6,7<-/|     |
-    #      4,5<-4,7  3<-1         (-1)3<-4<-4,5  2<-3
-    #
-    if fusion_level=="full":
-        c2x2= c2x2.fuse_legs( axes=((0,3),(1,4),2) )
-    elif fusion_level=="basic":
-        pass
+    if state.build_dl_open and not state.sites_dl_open is None:
+        #     0--T2------C
+        #        1       |
+        # 2<-0--\1       | 
+        #  3<-2--a--4 2--T1
+        #     4<-3    1<-3
+        # 
+        A= state.site_dl_open(r)
+        c2x2= contract(c2x2,A,([1,2],[1,4]))
+        #  0--T2----C
+        #     |     |
+        # 1--a*a----T1
+        #    /|     |
+        #   4 3     2
+        if fusion_level=="full":
+            c2x2= c2x2.fuse_legs( axes=((0,3),(1,4),2) )
+        elif fusion_level=="basic":
+            c2x2= c2x2.transpose( axes=(0,3,1,4,2) )
     else:
-        raise RuntimeError("Unsupported fusion_level option "+fusion_level)
-
+        a= state.site(r)
+        #    0--T2--2 0--C
+        #  1,2<-1        |
+        #        3,4<-2--T1
+        #             5<-3
+        c2x2= c2x2.unfuse_legs(axes=(1,2))
+        #    0--T2-------C
+        #      /|        |
+        #  1<-2 1 0->4   |
+        #       1/       |
+        # 5<-2--a--4 3---T1
+        #    6<-3    4--/|
+        #          ->2   5->3
+        c2x2= contract(c2x2,a,([1,3],[1,4]))
+        #      0--T2-------C
+        #        /|        |
+        #       1 | 4->2   |
+        #       1 |/       |
+        # 3<-5----a--------T1
+        # 6<-2--a*|--4 2--/|
+        #  5<-0/| |        |
+        #    7<-3 |        |
+        #      4<-6     1<-3
+        c2x2= contract(c2x2,a,([1,2],[1,4]), conj=(0,1))
+        c2x2= c2x2.fuse_legs(axes=(0,(3,6),1,(4,7),(2,5)))
+        if fusion_level=="full":
+            c2x2= c2x2.fuse_legs( axes=((0,1),(2,3),4) )
+        elif fusion_level=="basic":
+            pass
+    
     return c2x2
 
 def open_C2x2_RD(coord, state, env, fusion_level="full", verbosity=0):
+    assert fusion_level in ["full","basic"],"Unsupported fusion_level option "+fusion_level
     r= state.vertexToSite(coord)
     C = env.C[(r,(1,1))]
     T1 = env.T[(r,(0,1))]
@@ -236,27 +337,55 @@ def open_C2x2_RD(coord, state, env, fusion_level="full", verbosity=0):
     # 3<-2--T1---C
     c2x2 = contract(T2, c2x2, ([2],[0]))
 
-    #    3<-1          0 
-    # 4<-2--A--4 1-----T2
-    #  2<-0/3          | 
-    #       2          |
-    # 1<-3--T1---------C
-    #                   
-    A= state.site_dl_open(r)
-    c2x2= contract(c2x2,A,([1,2],[4,3]))
-
-    #      1,2<-3,6    0  =>          (+1)1<-1,2   0
-    #  6,7<-2,5\  |    |        4,5<-5,6<-6,7\|    |
-    #   4,5<-4,7--A----T2     (+1)3<-4<-4,5---A----T2
-    #             |    |                      |    |
-    #       3<-1--T1---C                2<-3--T1---C
-    if fusion_level=="full":
-        c2x2= c2x2.fuse_legs( axes=((0,3),(1,4),2) )
-    elif fusion_level=="basic":
-        pass
+    if state.build_dl_open and not state.sites_dl_open is None:
+        #    3<-1          0 
+        # 4<-2--A--4 1-----T2
+        #  2<-0/3          | 
+        #       2          |
+        # 1<-3--T1---------C
+        #                   
+        A= state.site_dl_open(r)
+        c2x2= contract(c2x2,A,([1,2],[4,3]))
+        #       4 1    0
+        #        \|    |
+        #     3---A----T2
+        #         |    |
+        #      2--T1---C
+        if fusion_level=="full":
+            c2x2= c2x2.fuse_legs( axes=((0,3),(1,4),2) )
+        elif fusion_level=="basic":
+            c2x2= c2x2.transpose( axes=(0,3,1,4,2) )
     else:
-        raise RuntimeError("Unsupported fusion_level option "+fusion_level)
-
+        a= state.site(r)
+        #            0
+        #    1,2<-1--T2
+        #            |
+        #  3,4<-2    |
+        # 5<-3--T1---C
+        c2x2= c2x2.unfuse_legs(axes=(1,2))
+        #     5<-  1<-   0
+        #       1    2--\|
+        # 6<-2--a--4 1---T2
+        #       3\0->4   |
+        #  2<-4 3        |
+        #      \|        |
+        # 3<-5--T1-------C
+        c2x2= contract(c2x2,a,([1,3],[4,3]))
+        #     6<-1 5->3
+        #   5<-0\| |        0
+        #  7<-2--a*|--4 1--\|
+        #  4<-6----a--------T2
+        #        3 |\4->2   |
+        #        2 |        |
+        #         \|        |
+        #    1<-3--T1-------C
+        c2x2= contract(c2x2,a,([1,2],[4,3]),conj=(0,1))
+        c2x2= c2x2.fuse_legs(axes=(0,(3,6),1,(4,7),(2,5)))
+        if fusion_level=="full":
+            c2x2= c2x2.fuse_legs( axes=((0,1),(2,3),4) )
+        elif fusion_level=="basic":
+            pass
+    
     return c2x2
 
 # ----- 1-site RDM ------------------------------------------------------------
@@ -286,7 +415,7 @@ def rdm1x1(coord, state, env, sym_pos_def=False, verbosity=0):
     and it's hermitian conjugate :math:`A^\dagger` are left uncontracted
     """
     who= "rdm1x1"
-    assert _validate_open_dl(state,env),"Inconsistent requires_grad for state and/or env tensors"
+    assert _validate_precomputed(state,env),"Inconsistent requires_grad for state and/or env tensors"
     r= state.vertexToSite(coord)
     rdm= open_C2x2_LD(r, state, env, verbosity=verbosity)
 
@@ -377,7 +506,7 @@ def rdm2x1(coord, state, env, sym_pos_def=False, verbosity=0):
     at vertices ``coord``, ``coord+(1,0)`` are left uncontracted
     """
     who="rdm2x1"
-    assert _validate_open_dl(state,env),"Inconsistent requires_grad for state and/or env tensors"
+    assert _validate_precomputed(state,env),"Inconsistent requires_grad for state and/or env tensors"
     #----- building C2x2_LU ----------------------------------------------------
     C2x2_LU= open_C2x2_LU(coord, state, env, verbosity=verbosity)
 
@@ -488,7 +617,7 @@ def rdm1x2(coord, state, env, sym_pos_def=False, verbosity=0):
     at vertices ``coord``, ``coord+(0,1)`` are left uncontracted
     """
     who="rdm1x2"
-    assert _validate_open_dl(state,env),"Inconsistent requires_grad for state and/or env tensors"
+    assert _validate_precomputed(state,env),"Inconsistent requires_grad for state and/or env tensors"
     #----- building C2x2_LU ----------------------------------------------------
     C2x2_LU= open_C2x2_LU(coord, state, env, verbosity=verbosity)
     # C2x2_LU= _group_legs_C2x2_LU(C2x2_LU)
@@ -612,7 +741,7 @@ def rdm2x2(coord, state, env, sym_pos_def=False, verbosity=0):
 
     """
     who= "rdm2x2"
-    assert _validate_open_dl(state,env),"Inconsistent requires_grad for state and/or env tensors"
+    assert _validate_precomputed(state,env),"Inconsistent requires_grad for state and/or env tensors"
     #----- building C2x2_LU ----------------------------------------------------
     C2x2_LU= open_C2x2_LU(coord, state, env, verbosity=verbosity)
 

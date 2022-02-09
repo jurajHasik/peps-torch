@@ -3,7 +3,7 @@ from itertools import product
 import json
 import numpy as np
 try:
-    import yamps.yast as yast
+    import yast.yast as yast
 except ImportError as e:
     warnings.warn("yast not available", Warning)
 
@@ -260,7 +260,7 @@ def serialize_abelian_tensor_legacy(t, native=False):
     json_tensor["format"]= "abelian"
     json_tensor["nsym"]= t.config.sym.NSYM
     json_tensor["symmetry"]= t.config.sym.SYM_ID
-    json_tensor["rank"]= t.get_ndim(native=native)
+    json_tensor["rank"]= t.get_rank(native=native)
     json_tensor["signature"]= t.get_signature(native=native)
     json_tensor["n"]= t.get_tensor_charge()
     json_tensor["isdiag"]= t.isdiag

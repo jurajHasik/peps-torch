@@ -1,3 +1,4 @@
+import os
 import context
 import argparse
 import config as cfg
@@ -22,19 +23,23 @@ log = logging.getLogger(__name__)
 
 # parse command line args and build necessary configuration objects
 parser = cfg.get_args_parser()
-parser.add_argument("--theta", type=float, default=0, help="angle [<value> x pi] parametrizing the chiral Hamiltonian")
+parser.add_argument("--theta", type=float, default=None, help="angle [<value> x pi] parametrizing the chiral Hamiltonian")
 parser.add_argument("--j1", type=float, default=1., help="nearest-neighbor exchange coupling")
 parser.add_argument("--JD", type=float, default=0, help="two-spin DM interaction")
-parser.add_argument("--j1sq", type=float, default=0, help="nearest-neighbor biquadratic exchange coupling")
 parser.add_argument("--j2", type=float, default=0, help="next-nearest-neighbor exchange coupling")
-parser.add_argument("--j2sq", type=float, default=0, help="next-nearest-neighbor biquadratic exchange coupling")
 parser.add_argument("--jtrip", type=float, default=0, help="(SxS).S")
-parser.add_argument("--jperm", type=float, default=0, help="triangle permutation")
-parser.add_argument("--ansatz", type=str, default=None, help="choice of the tensor ansatz",choices=["IPEPS", "IPESS", "IPESS_PG", 'A_2,B'])
-parser.add_argument("--no_sym_up_dn", action='store_false', dest='sym_up_dn',help="same trivalent tensors for up and down triangles")
-parser.add_argument("--no_sym_bond_S", action='store_false', dest='sym_bond_S',help="same bond site tensors")
-parser.add_argument("--disp_corre_len", action='store_true', dest='disp_corre_len',help="display correlation length during optimization")
-parser.add_argument("--CTM_check", type=str, default='Partial_energy', help="method to check CTM convergence",choices=["Energy", "SingularValue", "Partial_energy"])
+parser.add_argument("--jperm", type=complex, default=0, help="triangle permutation")
+parser.add_argument("--ansatz", type=str, default=None, help="choice of the tensor ansatz",\
+    choices=["IPEPS", "IPESS", "IPESS_PG", 'A_2,B'])
+parser.add_argument("--no_sym_up_dn", action='store_false', dest='sym_up_dn',\
+    help="same trivalent tensors for up and down triangles")
+parser.add_argument("--no_sym_bond_S", action='store_false', dest='sym_bond_S',\
+    help="same bond site tensors")
+parser.add_argument("--disp_corre_len", action='store_true', dest='disp_corre_len',\
+    help="display correlation length during optimization")
+parser.add_argument("--CTM_check", type=str, default='Partial_energy', help="method to check CTM convergence",\
+    choices=["Energy", "SingularValue", "Partial_energy"])
+parser.add_argument("--force_cpu", action='store_true', dest='force_cpu', help="force RDM contractions on CPU")
 args, unknown_args = parser.parse_known_args()
 
 
@@ -44,8 +49,12 @@ def main():
     torch.set_num_threads(args.omp_cores)
     torch.manual_seed(args.seed)
 
-    model= spin_half_kagome.S_HALF_KAGOME(j1=args.j1, JD=args.JD, j1sq=args.j1sq,\
-        j2=args.j2, j2sq=args.j2sq, jtrip=args.jtrip, jperm=args.jperm)
+    if not args.theta is None:
+        args.j1= args.j1*math.cos(args.theta*math.pi)
+        args.jtrip= args.j1*math.sin(args.theta*math.pi)
+    print(f"j1={args.j1}; jD={args.JD}; j2={args.j2}; jtrip={args.jtrip}")
+    model= spin_half_kagome.S_HALF_KAGOME(j1=args.j1, JD=args.JD,\
+        j2=args.j2, jtrip=args.jtrip, jperm=args.jperm)
 
     # initialize the ipess/ipeps
     if args.ansatz in ["IPESS","IPESS_PG","A_2,B"]:
@@ -89,7 +98,7 @@ def main():
             B_b= torch.zeros(model.phys_dim, args.bond_dim, args.bond_dim,\
                 dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
             if args.ansatz in ["IPESS_PG", "A_2,B"]:
-                state= IPESS_KAGOME_PG(T_u, B_c, T_d, T_d=T_d, B_a=B_a, B_b=B_b,\
+                state= IPESS_KAGOME_PG(T_u, B_c, T_d=T_d, B_a=B_a, B_b=B_b,\
                     SYM_UP_DOWN=args.sym_up_dn,SYM_BOND_S=args.sym_bond_S, pgs=ansatz_pgs)
             elif args.ansatz in ["IPESS"]:
                 state= IPESS_KAGOME_GENERIC({'T_u': T_u, 'B_a': B_a, 'T_d': T_d,\
@@ -113,7 +122,34 @@ def main():
             elif args.ansatz in ["IPESS"]:
                 state= IPESS_KAGOME_GENERIC({'T_u': T_u, 'B_a': B_a, 'T_d': T_d,\
                     'B_b': B_b, 'B_c': B_c})
-    
+        elif args.ipeps_init_type=='RVB':
+            args.bond_dim==3
+            B_c=torch.zeros(2, 3, 3,\
+                dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
+            B_c[0,0,2]=1
+            B_c[0,2,0]=1
+            B_c[1,1,2]=1
+            B_c[1,2,1]=1
+            B_b=B_c.clone()
+            B_a=B_c.clone()
+
+            T_u=torch.zeros(3, 3, 3,\
+                dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
+            T_u[0,1,2]=1
+            T_u[1,0,2]=-1
+            T_u[2,0,1]=1
+            T_u[2,1,0]=-1
+            T_u[1,2,0]=1
+            T_u[0,2,1]=-1
+            T_u[2,2,2]=1
+            T_d=T_u.clone()
+            if args.ansatz in ["IPESS_PG", "A_2,B"]:
+                state = IPESS_KAGOME_PG(T_u, B_c, T_d=T_d, B_a=B_a, B_b=B_b,\
+                    SYM_UP_DOWN=args.sym_up_dn,SYM_BOND_S=args.sym_bond_S, pgs=ansatz_pgs)
+            elif args.ansatz in ["IPESS"]:
+                state= IPESS_KAGOME_GENERIC({'T_u': T_u, 'B_a': B_a, 'T_d': T_d,\
+                    'B_b': B_b, 'B_c': B_c})
+            state.add_noise(args.instate_noise)
     elif args.ansatz in ["IPEPS"]:    
         ansatz_pgs=None
         if args.instate!=None:
@@ -137,13 +173,16 @@ def main():
             +str(args.ansatz)+" is not supported")
 
 
-    def energy_f(state, env, force_cpu=False):
+    def energy_f(state, env, force_cpu=False, fail_on_check=False,\
+        warn_on_check=True):
         #print(env)
-        e_dn = model.energy_triangle_dn(state, env, force_cpu=force_cpu)
-        e_up = model.energy_triangle_up(state, env, force_cpu=force_cpu)
+        e_dn = model.energy_triangle_dn(state, env, force_cpu=force_cpu,\
+            fail_on_check=fail_on_check, warn_on_check=warn_on_check)
+        e_up = model.energy_triangle_up(state, env, force_cpu=force_cpu,\
+            fail_on_check=fail_on_check, warn_on_check=warn_on_check)
         # e_nnn = model.energy_nnn(state, env)
         return (e_up + e_dn)/3 #+ e_nnn) / 3
-    def energy_f_NoCheck(state, env, force_cpu=False):
+    def energy_f_complex(state, env, force_cpu=False):
         #print(env)
         e_dn = model.energy_triangle_dn_NoCheck(state, env, force_cpu=force_cpu)
         e_up = model.energy_triangle_up_NoCheck(state, env, force_cpu=force_cpu)
@@ -171,10 +210,11 @@ def main():
         return spectra
 
     if args.CTM_check=="Energy":
-        def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
+        @torch.no_grad()
+        def ctmrg_conv_f(state, env, history, ctm_args=cfg.ctm_args):
             if not history:
                 history = []
-            e_curr = energy_f_NoCheck(state, env, force_cpu=ctm_args.conv_check_cpu)
+            e_curr = energy_f_complex(state, env, force_cpu=ctm_args.conv_check_cpu)
             history.append(e_curr.item())
             if (len(history) > 1 and abs(history[-1] - history[-2]) < ctm_args.ctm_conv_tol) \
                     or len(history) >= ctm_args.ctm_max_iter:
@@ -182,7 +222,8 @@ def main():
                 return True, history
             return False, history
     elif args.CTM_check=="Partial_energy":
-        def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
+        @torch.no_grad()
+        def ctmrg_conv_f(state, env, history, ctm_args=cfg.ctm_args):
             if not history:
                 history = []
             if len(history)>8:
@@ -190,14 +231,14 @@ def main():
                 history.append(e_curr.item())
             else:
                 history.append(len(history)+1)
-            #print(history)
             if (len(history) > 1 and abs(history[-1] - history[-2]) < ctm_args.ctm_conv_tol*2) \
                     or len(history) >= ctm_args.ctm_max_iter:
                 log.info({"history_length": len(history), "history": history})
                 return True, history
             return False, history
     elif args.CTM_check=="SingularValue":
-        def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
+        @torch.no_grad()
+        def ctmrg_conv_f(state, env, history, ctm_args=cfg.ctm_args):
             if not history:
                 history_spec = []
                 history_ite=1
@@ -232,30 +273,28 @@ def main():
     init_env(state, ctm_env_init)
 
     ctm_env_init, history, t_ctm, t_conv_check = ctmrg.run(state, ctm_env_init, \
-            conv_check=ctmrg_conv_energy, ctm_args=cfg.ctm_args)
+            conv_check=ctmrg_conv_f, ctm_args=cfg.ctm_args)
     
     loss0 = energy_f(state, ctm_env_init, force_cpu=cfg.ctm_args.conv_check_cpu)
-    obs_values, obs_labels = model.eval_obs(state,ctm_env_init,force_cpu=False, disp_corre_len=args.disp_corre_len)
+    obs_values, obs_labels = model.eval_obs(state,ctm_env_init,force_cpu=args.force_cpu,\
+        disp_corre_len=args.disp_corre_len)
     print("\n\n",end="")
     print(", ".join(["epoch",f"loss"]+[label for label in obs_labels]))
     print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
 
     
-
     def loss_fn(state, ctm_env_in, opt_context):
         ctm_args = opt_context["ctm_args"]
         opt_args = opt_context["opt_args"]
 
         # build on-site tensors
-        # build on-site tensors
         if args.ansatz in ["IPESS", "IPESS_PG", "A_2,B"]:
             if args.ansatz in ["IPESS_PG", "A_2,B"]:
-                # explicit rebuild of on-site tensors
-                state_sym= to_PG_symmetric(state, state.pgs)
+                # symmetrization and implicit rebuild of on-site tensors
+                state_sym= to_PG_symmetric(state, pgs=state.pgs)
             else:
                 state_sym= state
-            # include normalization of new on-site tensor
-            state_sym.sites= state_sym.build_onsite_tensors()
+                state_sym.sites= state_sym.build_onsite_tensors()
         else:
             A= state.sites[(0,0)]
             A= A/A.abs().max()
@@ -266,24 +305,20 @@ def main():
             init_env(state_sym, ctm_env_in)
         # compute environment by CTMRG
         ctm_env_out, history, t_ctm, t_conv_check = ctmrg.run(state_sym, ctm_env_in, \
-            conv_check=ctmrg_conv_energy, ctm_args=ctm_args)
+            conv_check=ctmrg_conv_f, ctm_args=ctm_args)
         loss0 = energy_f(state_sym, ctm_env_out, force_cpu=cfg.ctm_args.conv_check_cpu)
-
-        # loc_ctm_args = copy.deepcopy(ctm_args)
-        # loc_ctm_args.ctm_max_iter = 1
-        # ctm_env_out, history1, t_ctm1, t_obs1 = ctmrg.run(state, ctm_env_out, ctm_args=loc_ctm_args)
-        # loss1 = energy_f(state, ctm_env_out, force_cpu=cfg.ctm_args.conv_check_cpu)
-        # loss = torch.max(loss0, loss1)
         
         loss= loss0
         return loss, ctm_env_out, history, t_ctm, t_conv_check
 
     @torch.no_grad()
     def obs_fn(state, ctm_env, opt_context):
-        if args.ansatz in ["A_2,B"]:
-            state_sym= to_PG_symmetric(state, state.pgs)
-        else:
-            state_sym= state
+        state_sym= state
+        if args.ansatz in ["IPESS_PG", "A_2,B"]:
+            # symmetrization and implicit rebuild of on-site tensors
+            state_sym= to_PG_symmetric(state, pgs=state.pgs)
+        elif args.ansatz in ["IPESS"]:
+            state_sym.sites= state_sym.build_onsite_tensors()
         if opt_context["line_search"]:
             epoch= len(opt_context["loss_history"]["loss_ls"])
             loss= opt_context["loss_history"]["loss_ls"][-1]
@@ -295,76 +330,194 @@ def main():
             print(", ".join([f"{epoch}",f"{loss}"]))
             log.info("Norm(sites): "+", ".join([f"{t.norm()}" for c,t in state.sites.items()]))
         else:
-            obs_values, obs_labels = model.eval_obs(state_sym,ctm_env,force_cpu=False, disp_corre_len=args.disp_corre_len)
+            obs_values, obs_labels = model.eval_obs(state_sym,ctm_env,force_cpu=args.force_cpu,\
+                disp_corre_len=args.disp_corre_len)
             print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]), end="")
             log.info("Norm(sites): "+", ".join([f"{t.norm()}" for c,t in state.sites.items()]))
-            print(" "+", ".join([f"{t.norm()}" for c,t in state.sites.items()]) )
+            print(", "+", ".join([f"{t.norm()}" for c,t in state.sites.items()]) )
 
-        # print time
-        #print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())) 
-
-
-        # 格式化成2016-03-20 11:45:39形式
-        #print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())) 
-
-        # #senniu
-        # chi=torch.Tensor.size(ctm_env.T[((0,0), (-1, 0))])[0]
-        # D=round((torch.Tensor.size(ctm_env.T[((0,0), (-1, 0))])[2])**0.5)
-        # if args.ansatz in ["IPESS"]:
-        #     filenm='IPESS_D_'+str(D)+'_chi_'+str(chi)
-        # elif args.ansatz in ["IPEPS"]:
-        #     filenm='IPEPS_D_'+str(D)+'_chi_'+str(chi)
-        # filenm=filenm+'.mat'
-        # #print(filenm)
-        # #print(type(state))
-        # #print(type(state.sites))
-        # #print(type(state.sites[(0,0)]))
-        # #print(D)
-        # #print(chi)
-        # #print(ctm_env)
-        # Cmm=ctm_env.C[((0,0),(-1,-1))].numpy()
-        # Cmp=ctm_env.C[((0,0),(-1,1))].numpy()
-        # Cpm=ctm_env.C[((0,0),(1,-1))].numpy()
-        # Cpp=ctm_env.C[((0,0),(1,1))].numpy()
-        # T0p=ctm_env.T[((0,0),(0,1))].numpy()
-        # Tp0=ctm_env.T[((0,0),(1,0))].numpy()
-        # T0m=ctm_env.T[((0,0),(0,-1))].numpy()
-        # Tm0=ctm_env.T[((0,0),(-1,0))].numpy()
-        # Atensor=state.sites[(0,0)].numpy()
-        # io.savemat(filenm,{'chi':chi,'D':D,'Atensor':Atensor,
-        #        'Cmm':Cmm,'Cmp':Cmp,'Cpm':Cpm,'Cpp':Cpp,'T0m':T0m,'T0p':T0p,'Tm0':Tm0,'Tp0':Tp0,
-        #        obs_labels[0]:obs_values[0].numpy(),
-        #        obs_labels[1]:obs_values[1].numpy(),
-        #        obs_labels[2]:obs_values[2],
-        #        obs_labels[3]:obs_values[3],
-        #        obs_labels[4]:obs_values[4],
-        #        obs_labels[5]:obs_values[5].numpy(),
-        #        obs_labels[6]:obs_values[6].numpy(),
-        #        obs_labels[7]:obs_values[7].numpy(),
-        #        obs_labels[8]:obs_values[8].numpy(),
-        #        obs_labels[9]:obs_values[9].numpy(),
-        #        obs_labels[10]:obs_values[10].numpy(),
-        #        obs_labels[11]:obs_values[11].numpy(),
-        #        obs_labels[12]:obs_values[12].numpy(),
-        #        obs_labels[13]:obs_values[13].numpy(),
-        #        obs_labels[14]:obs_values[14].numpy(),
-        #        obs_labels[15]:obs_values[15].numpy(),
-        #        obs_labels[16]:obs_values[16].numpy(),
-        #        obs_labels[17]:obs_values[17].numpy(),
-        #        obs_labels[18]:obs_values[18].numpy(),
-        #        obs_labels[19]:obs_values[19].numpy()})
-        
 
     def post_proc(state, ctm_env, opt_context):
         pass
     
-    print('optimization start')
-
     optimize_state(state, ctm_env_init, loss_fn, obs_fn=obs_fn,
         post_proc=post_proc)
+
+    # compute final observables for the best variational state
+    outputstatefile= args.out_prefix+"_state.json"
+    if args.ansatz=="IPESS":
+        state= read_ipess_kagome_generic(outputstatefile)
+    elif args.ansatz in ["IPESS_PG","A_2,B"]:
+        state= read_ipess_kagome_pg(outputstatefile)
+    ctm_env = ENV(args.chi, state)
+    init_env(state, ctm_env)
+    ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_f)
+    opt_energy = energy_f(state, ctm_env, force_cpu=args.force_cpu)
+    obs_values, obs_labels = model.eval_obs(state,ctm_env)
+    print("\n")
+    print(", ".join(["epoch","energy"]+obs_labels))
+    print("FINAL "+", ".join([f"{opt_energy}"]+[f"{v}" for v in obs_values]))
 
 if __name__ == '__main__':
     if len(unknown_args) > 0:
         print("args not recognized: " + str(unknown_args))
         raise Exception("Unknown command line arguments")
     main()
+
+
+class TestCheckpoint_IPESS_Ansatze(unittest.TestCase):
+    tol= 1.0e-6
+    DIR_PATH = os.path.dirname(os.path.realpath(__file__))
+    OUT_PRFX = "RESULT_test_run-opt-chck"
+    ANSATZE= [("IPESS",False,False), ("IPESS_PG",False,False),
+            ("IPESS_PG",True,True), ("A_2,B",True,True)]
+
+    def reset_couplings(self):
+        args.j1= 1.0
+        args.theta=0.2
+        args.JD=0.1
+
+    def setUp(self):
+        self.reset_couplings()
+        args.bond_dim=2
+        args.chi=16
+        args.seed=300
+        args.opt_max_iter= 10
+        args.instate_noise=0
+        args.GLOBALARGS_dtype= "complex128"
+
+    def test_checkpoint_ipess_ansatze(self):
+        from io import StringIO
+        from unittest.mock import patch
+        from cmath import isclose
+        import numpy as np
+        from ipeps.ipess_kagome import write_ipess_kagome_generic, write_ipess_kagome_pg 
+
+        for ansatz in self.ANSATZE:
+            with self.subTest(ansatz=ansatz):
+                self.reset_couplings()
+                args.opt_max_iter= 10
+                args.ansatz= ansatz[0]
+                args.sym_up_dn= ansatz[1]
+                args.sym_bond_S= ansatz[2]
+                args.opt_resume= None
+                args.out_prefix=self.OUT_PRFX+f"_{ansatz[0].replace(',','')}_"\
+                    +("T" if ansatz[1] else "F")+("T" if ansatz[2] else "F")
+                args.instate= args.out_prefix[len("RESULT_"):]+"_instate.json"
+
+                # create random state
+                ansatz_pgs= None
+                if args.ansatz=="A_2,B": ansatz_pgs= IPESS_KAGOME_PG.PG_A2_B
+                bd = args.bond_dim
+                phys_dim= 2
+                T_u= torch.rand(bd, bd, bd,dtype=torch.complex128, device='cpu')-1.0
+                T_d= torch.rand(bd, bd, bd,dtype=torch.complex128, device='cpu')-1.0
+                B_c= torch.rand(phys_dim, bd, bd,dtype=torch.complex128, device='cpu')-1.0
+                B_a= torch.rand(phys_dim, bd, bd,dtype=torch.complex128, device='cpu')-1.0
+                B_b= torch.rand(phys_dim, bd, bd,dtype=torch.complex128, device='cpu')-1.0
+                if args.ansatz in ["IPESS_PG", "A_2,B"]:
+                    state = IPESS_KAGOME_PG(T_u, B_c, T_d=T_d, B_a=B_a, B_b=B_b,\
+                        SYM_UP_DOWN=args.sym_up_dn,SYM_BOND_S=args.sym_bond_S, pgs=ansatz_pgs)
+                    write_ipess_kagome_pg(state, args.instate)
+                elif args.ansatz in ["IPESS"]:
+                    state= IPESS_KAGOME_GENERIC({'T_u': T_u, 'B_a': B_a, 'T_d': T_d,\
+                        'B_b': B_b, 'B_c': B_c})
+                    write_ipess_kagome_generic(state, args.instate)
+
+
+                # i) run optimization and store the optimization data
+                with patch('sys.stdout', new = StringIO()) as tmp_out: 
+                    main()
+                tmp_out.seek(0)
+
+                # parse FINAL observables
+                obs_opt_lines=[]
+                final_obs=None
+                OPT_OBS= OPT_OBS_DONE= False
+                l= tmp_out.readline()
+                while l:
+                    print(l,end="")
+                    if OPT_OBS and not OPT_OBS_DONE and l.rstrip()=="": 
+                        OPT_OBS_DONE= True
+                        OPT_OBS=False
+                    if OPT_OBS and not OPT_OBS_DONE and len(l.split(','))>2:
+                        obs_opt_lines.append(l)
+                    if "epoch, loss," in l and not OPT_OBS_DONE: 
+                        OPT_OBS= True
+                    if "FINAL" in l:
+                        final_obs= l.rstrip()
+                        break
+                    l= tmp_out.readline()
+                assert final_obs
+                assert len(obs_opt_lines)>0
+
+                # compare the line of observables with lowest energy from optimization (i) 
+                # and final observables evaluated from best state stored in *_state.json output file
+                # drop the last column, not separated by comma
+                best_e_line_index= np.argmin([ float(l.split(',')[1]) for l in obs_opt_lines ])
+                opt_line_last= [complex(x) for x in obs_opt_lines[best_e_line_index].split(",")[1:-1]]
+                fobs_tokens= [complex(x) for x in final_obs[len("FINAL"):].split(",")]
+                for val0,val1 in zip(opt_line_last, fobs_tokens):
+                    assert isclose(val0,val1, rel_tol=self.tol, abs_tol=self.tol)
+
+                # ii) run optimization for 3 steps
+                # reset j1 which is otherwise set by main() if args.theta is used
+                args.opt_max_iter= 3 
+                self.reset_couplings()
+                main()
+        
+                # iii) run optimization from checkpoint
+                args.instate=None
+                args.opt_resume= args.out_prefix+"_checkpoint.p"
+                args.opt_max_iter= 7
+                self.reset_couplings()
+                with patch('sys.stdout', new = StringIO()) as tmp_out: 
+                    main()
+                tmp_out.seek(0)
+
+                obs_opt_lines_chk=[]
+                final_obs_chk=None
+                OPT_OBS= OPT_OBS_DONE= False
+                l= tmp_out.readline()
+                while l:
+                    print(l,end="")
+                    if OPT_OBS and not OPT_OBS_DONE and l.rstrip()=="": 
+                        OPT_OBS_DONE= True
+                        OPT_OBS=False
+                    if OPT_OBS and not OPT_OBS_DONE and len(l.split(','))>2:
+                        obs_opt_lines_chk.append(l)
+                    if "checkpoint.loss" in l and not OPT_OBS_DONE: 
+                        OPT_OBS= True
+                    if "FINAL" in l:    
+                        final_obs_chk= l.rstrip()
+                        break
+                    l= tmp_out.readline()
+                assert final_obs_chk
+                assert len(obs_opt_lines_chk)>0
+
+                # compare initial observables from checkpointed optimization (iii) and the observables 
+                # from original optimization (i) at one step after total number of steps done in (ii)
+                opt_line_iii= [complex(x) for x in obs_opt_lines_chk[0].split(",")[1:]]
+                # drop (last) normalization column
+                opt_line_i= [complex(x) for x in obs_opt_lines[4].split(",")[1:-1]]
+                fobs_tokens= [complex(x) for x in final_obs[len("FINAL"):].split(",")]
+                for val3,val1 in zip(opt_line_iii, opt_line_i):
+                    assert isclose(val3,val1, rel_tol=self.tol, abs_tol=self.tol)
+
+                # compare final observables from optimization (i) and the final observables 
+                # from the checkpointed optimization (iii)
+                fobs_tokens_1= [complex(x) for x in final_obs[len("FINAL"):].split(",")]
+                fobs_tokens_3= [complex(x) for x in final_obs_chk[len("FINAL"):].split(",")]
+                for val3,val1 in zip(fobs_tokens_3, fobs_tokens_1):
+                    assert isclose(val3,val1, rel_tol=self.tol, abs_tol=self.tol)
+
+    def tearDown(self):
+        args.opt_resume=None
+        args.instate=None
+        for ansatz in self.ANSATZE:
+            out_prefix=self.OUT_PRFX+f"_{ansatz[0].replace(',','')}_"\
+                +("T" if ansatz[1] else "F")+("T" if ansatz[2] else "F")
+            instate= out_prefix[len("RESULT_"):]+"_instate.json"
+            for f in [out_prefix+"_checkpoint.p",out_prefix+"_state.json",\
+                out_prefix+".log",instate]:
+                if os.path.isfile(f): os.remove(f)

@@ -2,7 +2,7 @@ from math import sqrt
 import numpy as np
 import itertools
 import config as cfg
-import yamps.yast as yast
+import yast.yast as yast
 from tn_interface_abelian import contract, permute
 import groups.su2_abelian as su2
 from ctm.generic_abelian import rdm
@@ -576,7 +576,7 @@ class J1J2_C4V_BIPARTITE_NOSYM():
         # _ci= ([0,1,2,3],[0,1,2,3])
         rdm2x1= rdm_c4v.rdm2x1(state,env_c4v,force_cpu=force_cpu,\
             verbosity=cfg.ctm_args.verbosity_rdm).to_nonsymmetric()
-        if np.all(rdm2x1.s/self.SS_rot.s==-1):
+        if np.all(np.asarray(rdm2x1.s)/np.asarray(self.SS_rot.s)==-1):
             rdm2x1= rdm2x1.flip_signature(inplace=True)
         obs[f"SS2x1"]= contract(rdm2x1,self.SS_rot,_ci).to_number()
         
@@ -585,7 +585,7 @@ class J1J2_C4V_BIPARTITE_NOSYM():
         # _ci= ([0,1],[0,1])
         rdm1x1 = rdm_c4v.rdm1x1(state,env_c4v,force_cpu=force_cpu,\
             verbosity=cfg.ctm_args.verbosity_rdm).to_nonsymmetric()
-        if np.all(rdm1x1.s/self.obs_ops["sz"].s==-1):
+        if np.all(np.asarray(rdm1x1.s)/np.asarray(self.obs_ops["sz"].s)==-1):
             rdm1x1= rdm1x1.flip_signature()
         for label,op in self.obs_ops.items():
             obs[f"{label}"]= contract(rdm1x1, op, _ci).to_number()

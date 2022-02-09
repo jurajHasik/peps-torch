@@ -2,9 +2,8 @@ import copy
 import torch
 import argparse
 import config as cfg
-from examples.abelian.settings_full_torch import settings_full_torch as settings_full
+import examples.abelian.settings_full_torch as settings_full
 import examples.abelian.settings_U1_torch as settings_U1
-import yamps.tensor as TA
 from ipeps.ipeps_abelian_c4v_lc import *
 from models.abelian import j1j2
 from ctm.one_site_c4v_abelian.env_c4v_abelian import *
@@ -58,7 +57,7 @@ def main():
     if args.instate!=None:
         state= read_ipeps_c4v_lc(args.instate, settings)
         state= state.add_noise(args.instate_noise)
-        # state.sites[(0,0)]= state.sites[(0,0)]/state.sites[(0,0)].max_abs()
+        # state.sites[(0,0)]= state.sites[(0,0)]/state.sites[(0,0)].norm(p='inf')()
     elif args.opt_resume is not None:
         state= IPEPS_ABELIAN_C4V_LC(settings, None, dict(), None)
         state.load_checkpoint(args.opt_resume)
@@ -117,7 +116,7 @@ def main():
         # build on-site tensors from su2sym components
         # state.coeffs[(0,0)]= state.coeffs[(0,0)]/state.coeffs[(0,0)].abs().max()
         state.sites[(0,0)]= state.build_onsite_tensors()
-        state.sites[(0,0)]= state.sites[(0,0)]/state.sites[(0,0)].max_abs()
+        state.sites[(0,0)]= state.sites[(0,0)]/state.sites[(0,0)].norm(p='inf')()
 
         # possibly re-initialize the environment
         if opt_args.opt_ctm_reinit:

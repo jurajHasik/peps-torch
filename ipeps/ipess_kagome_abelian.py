@@ -1,9 +1,11 @@
+import warnings
 from collections import OrderedDict
 from itertools import chain
 import json
 import math
+import torch
 import config as cfg
-import yamps.yast as yast
+import yast.yast as yast
 import ipeps.ipeps_kagome_abelian as ipeps_kagome
 from ipeps.tensor_io import *
 
@@ -92,7 +94,7 @@ class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
         assert ipess_tensors['B_b'].get_signature()==(-1,1,1),"Unexpected signature"
         assert ipess_tensors['B_c'].get_signature()==(-1,1,1),"Unexpected signature"
         self.ipess_tensors= ipess_tensors
-        sites = self.build_onsite_tensors()
+        sites= self.build_onsite_tensors()
 
         super().__init__(settings, sites, lX=1, lY=1, peps_args=peps_args,
                          global_args=global_args)
@@ -101,14 +103,15 @@ class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
         return list(chain( *(self.ipess_tensors[ind].A.values() for ind in self.ipess_tensors)))
 
     def get_checkpoint(self):
-        return {ind: self.ipess_tensors[ind].export_to_dict() for ind in self.ipess_tensors}
+        return {ind: self.ipess_tensors[ind].save_to_dict() for ind in self.ipess_tensors}
 
     def load_checkpoint(self, checkpoint_file):
         checkpoint= torch.load(checkpoint_file, map_location=self.device)
-        self.ipess_tensors= {ind: yast.import_from_dict(config= self.engine, d=t_dict_repr) \
+        self.ipess_tensors= {ind: yast.load_from_dict(config= self.engine, d=t_dict_repr) \
             for ind,t_dict_repr in checkpoint["parameters"].items()}
         for t in self.ipess_tensors.values(): t.requires_grad_(False)
         self.sites = self.build_onsite_tensors()
+        self.sync_precomputed()
 
     def build_onsite_tensors(self):
         r"""
@@ -139,13 +142,12 @@ class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
             self.ipess_tensors['T_d'], self.ipess_tensors['B_b'], self.ipess_tensors['B_a']],\
             [[1,-3,-4], [-0,2,1], [2,3,4], [-1,3,-5], [-2,4,-6]])
         #    [[0,-4,-5], [-1,1,0], [1,2,3], [-2,2,-6], [-3,3,-7]]
-        print(A)
         A= A.fuse_legs(axes=((0,1,2),3,4,5,6))
         A= A/A.norm(p='inf')
         sites= {(0, 0): A}
         return sites
 
-    def add_noise(self, noise=0):
+    def add_noise(self, noise=0, peps_args=cfg.peps_args):
         r"""
         :param noise: magnitude of the noise
         :type noise: float
@@ -155,14 +157,86 @@ class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
 
         Create a new state by adding random uniform noise with magnitude ``noise`` to all 
         copies of ipess tensors. The noise is added to all allowed blocks making up 
-        the individual tensors.
+        the individual tensors. If noise is 0, returns ``self``.
         """
-        if noise==0: return
+        if noise==0: return self
+        ipess_tensors= {}
         for ind,t in self.ipess_tensors.items():
             ts, Ds= t.get_leg_charges_and_dims(native=True)
             t_noise= yast.rand(config= t.config, s=t.s, n=t.n, t=ts, D=Ds, isdiag=t.isdiag)
-            self.ipess_tensors[ind]= t + noise*t_noise
-        self.sites = self.build_onsite_tensors()
+            ipess_tensors[ind]= t + noise*t_noise
+        return IPESS_KAGOME_GENERIC_ABELIAN(self.engine, ipess_tensors,\
+                 peps_args=peps_args)
+
+    def generate_weights(self):
+        r"""
+        Generate set of identity tensors, weights W, for each non-equivalent link 
+        in the iPESS ansatz. 
+
+                2(d)            2(c)                    (-)a
+                 \             /          rot. pi          |
+            0(w)==B_a         B_b==0(v)   clockwise  (-)b--\                     
+                   \         /             =>               \
+                   1(l)     1(k)                            s0--s2--d(+)
+                 W_down_a  W_down_b                          |  /
+                    2(l)   1(k)                              | / 
+                      \   /                                  |/   <- DOWN_T
+                       T_d                                  s1
+                        |                                    |
+                        0(j)                                 c(+)
+                      W_down_c
+                        1(j)
+                        |                 
+                        B_c==0(u)        
+                        |
+                        2(i)
+                       W_up_c
+                        0(i)  
+                        |
+                       T_u
+                      /   \ 
+                    1(a)   2(b)
+                  W_up_b   W_up_a
+        """
+        weights=dict()
+        for w_id, ind1, ind2 in [ 
+                ('lambda_up_c', ('T_u',0), ('B_c',2)), 
+                ('lambda_up_a', ('T_u',2), ('B_a',2)),
+                ('lambda_up_b', ('T_u',1), ('B_b',2)),
+                ('lambda_dn_c', ('T_d',0), ('B_c',1)),
+                ('lambda_dn_a', ('T_d',2), ('B_a',1)),
+                ('lambda_up_b', ('T_u',1), ('B_b',1))
+            ]:
+            W= yast.match_legs( tensors=[self.ipess_tensors[ind1[0]], self.ipess_tensors[ind2[0]]],\
+                legs=[ ind1[1] , ind2[1] ], isdiag=True ).flip_signature()
+            weights[w_id]= W
+        return weights
+
+    def __str__(self):
+        print(f"lX x lY: {self.lX} x {self.lY}")
+        for t_id,t in self.ipess_tensors.items():
+            print(f"{t_id}")
+            print(f"{t}")
+        print("")    
+        for nid,coord,site in [(t[0], *t[1]) for t in enumerate(self.sites.items())]:
+            print(f"a{nid} {coord}: {site}")
+        
+        # show tiling of a square lattice
+        coord_list = list(self.sites.keys())
+        mx, my = 3*self.lX, 3*self.lY
+        label_spacing = 1+int(math.log10(len(self.sites.keys())))
+        for y in range(-my,my):
+            if y == -my:
+                print("y\\x ", end="")
+                for x in range(-mx,mx):
+                    print(str(x)+label_spacing*" "+" ", end="")
+                print("")
+            print(f"{y:+} ", end="")
+            for x in range(-mx,mx):
+                print(f"a{coord_list.index(self.vertexToSite((x,y)))} ", end="")
+            print("")
+        
+        return ""
 
     def write_to_file(self, outputfile, tol=None, normalize=False):
         write_ipess_kagome_generic(self, outputfile, tol=tol, normalize=normalize)
@@ -194,16 +268,18 @@ def read_ipess_kagome_generic(jsonfile, settings, peps_args=cfg.peps_args,\
             assert "format" in t.keys(), "\"format\" not specified"
             if t["format"]=="abelian":
                 X= read_json_abelian_tensor_legacy(t, settings)
-                ipess_tensors[key]= X.to(global_args.device)
+                # move all tensors to desired dtype and device
+                # TODO improve
+                if X.is_complex() and X.unique_dtype() in ["float64", "float32"]:
+                    warnings.warn("Downcasting complex tensor to real", RuntimeWarning)
+                ipess_tensors[key]= X.to(dtype=global_args.dtype, device=global_args.device)
             else:
                 raise Exception("Unsupported format "+t["format"])
 
     state = IPESS_KAGOME_GENERIC_ABELIAN(settings, ipess_tensors, peps_args=peps_args, \
             global_args=global_args)
 
-    # check dtypes of all on-site tensors for newly created state
-    assert (False not in [state.dtype==s.unique_dtype() for s in ipess_tensors.values()]),\
-        "incompatible dtype among state and ipess tensors"
+    
     
     return state
 

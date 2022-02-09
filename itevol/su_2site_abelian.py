@@ -1,4 +1,4 @@
-import yamps.yast as yast
+import yast.yast as yast
 from tn_interface_abelian import contract
 
 def run_seq_2s(state, gate_seq, su_opts={"weight_inv_cutoff": 1.0e-14, \
@@ -31,7 +31,7 @@ def apply_gate_2s(state,bond,gate,su_opts):
 		A= contract(w, A, ([_match_diag_signature],[dxy_w_to_ind[dxy_w]]))
 		#                                0  1  2  ....     N     1  2      0      N
 		# jk,ik * i0,i1,...,ik,...,iN -> jk,i0,i1,...,,...,iN -> i0,i1,...,jk,...,iN 
-		ind_l= list(range(1,A.get_ndim()))
+		ind_l= list(range(1,A.ndim))
 		ind_l.insert(dxy_w_to_ind[dxy_w], 0)
 		A= A.transpose(ind_l)
 		#print(f"{(xy_s1, dxy_w)} {([1],[dxy_w_to_ind[dxy_w]])} {ind_l}")
@@ -42,7 +42,7 @@ def apply_gate_2s(state,bond,gate,su_opts):
 		_match_diag_signature= 1 if -w.get_signature()[1]==B.get_signature()[dxy_w_to_ind[dxy_w]] else 0
 		B= contract(w,B, ([_match_diag_signature],[dxy_w_to_ind[dxy_w]]))
 
-		ind_l= list(range(1,B.get_ndim()))
+		ind_l= list(range(1,B.ndim))
 		ind_l.insert(dxy_w_to_ind[dxy_w], 0)
 		B= B.transpose(ind_l)
 		# print(f"{(xy_s2, dxy_w)} {([1],[dxy_w_to_ind[dxy_w]])} {ind_l}")
@@ -102,8 +102,8 @@ def apply_gate_2s(state,bond,gate,su_opts):
 	# reabsorb nA, nB back to xA, xB
 	#                           0
 	# (other)--xA--(ndim-1) 1--nA--2->1 -> 
-	A= contract(nA,xA, ([1],[xA.get_ndim()-1]))
-	l_ind= [0]+list(range(2,xA.get_ndim()+1))
+	A= contract(nA,xA, ([1],[xA.ndim-1]))
+	l_ind= [0]+list(range(2,xA.ndim+1))
 	l_ind.insert(dxy_w_to_ind[dxy_w_s1s2],1)
 	A= A.transpose(l_ind)
 	# print(f"{dxy_w_to_ind[dxy_w_s1s2]} {l_ind}")
@@ -112,7 +112,7 @@ def apply_gate_2s(state,bond,gate,su_opts):
 	# 0--nB--2 -> 1--nB--2 0--xB--(other) 
 	nB= nB.transpose((1,0,2))
 	B= contract(nB,xB,([2],[0]))
-	l_ind= [0]+list(range(2,xB.get_ndim()+1))
+	l_ind= [0]+list(range(2,xB.ndim+1))
 	l_ind.insert(dxy_w_to_ind[dxy_w_s2s1],1)
 	B= B.transpose(l_ind)
 	# print(f"{dxy_w_to_ind[dxy_w_s2s1]} {l_ind}")
@@ -124,7 +124,7 @@ def apply_gate_2s(state,bond,gate,su_opts):
 		A= contract(w,A, ([_match_diag_signature],[dxy_w_to_ind[dxy_w]]))
 		#                                0  1  2  ....     N     1  2      0      N
 		# jk,ik * i0,i1,...,ik,...,iN -> jk,i0,i1,...,,...,iN -> i0,i1,...,jk,...,iN 
-		ind_l= list(range(1,A.get_ndim()))
+		ind_l= list(range(1,A.ndim))
 		ind_l.insert(dxy_w_to_ind[dxy_w], 0)
 		A= A.transpose(ind_l)
 		# print(f"{(xy_s1, dxy_w)} {([1],[dxy_w_to_ind[dxy_w]])} {ind_l}")
@@ -133,7 +133,7 @@ def apply_gate_2s(state,bond,gate,su_opts):
 		w= state.weight((xy_s2, dxy_w)).reciprocal(cutoff=weight_inv_cutoff)
 		_match_diag_signature= 1 if -w.get_signature()[1]==B.get_signature()[dxy_w_to_ind[dxy_w]] else 0
 		B= contract(w,B, ([_match_diag_signature],[dxy_w_to_ind[dxy_w]]))
-		ind_l= list(range(1,B.get_ndim()))
+		ind_l= list(range(1,B.ndim))
 		ind_l.insert(dxy_w_to_ind[dxy_w], 0)
 		B= B.transpose(ind_l)
 		# print(f"{(xy_s2, dxy_w)} {([1],[dxy_w_to_ind[dxy_w]])} {ind_l}")

@@ -9,7 +9,9 @@ from ipeps.ipess_kagome import *
 from ipeps.ipeps_kagome import *
 from models import spin_half_kagome
 from ctm.generic.env import *
+from ctm.pess_kagome import rdm_kagome
 from ctm.generic import ctmrg
+from ctm.generic import transferops
 import json
 import unittest
 import logging
@@ -20,24 +22,29 @@ log = logging.getLogger(__name__)
 
 # parse command line args and build necessary configuration objects
 parser = cfg.get_args_parser()
-parser.add_argument("--theta", type=float, default=0, help="angle [<value> x pi] parametrizing the chiral Hamiltonian")
+parser.add_argument("--theta", type=float, default=None, help="angle [<value> x pi] parametrizing the chiral Hamiltonian")
 parser.add_argument("--j1", type=float, default=1., help="nearest-neighbor exchange coupling")
 parser.add_argument("--JD", type=float, default=0, help="two-spin DM interaction")
-parser.add_argument("--j1sq", type=float, default=0, help="nearest-neighbor biquadratic exchange coupling")
 parser.add_argument("--j2", type=float, default=0, help="next-nearest-neighbor exchange coupling")
-parser.add_argument("--j2sq", type=float, default=0, help="next-nearest-neighbor biquadratic exchange coupling")
 parser.add_argument("--jtrip", type=float, default=0, help="(SxS).S")
-parser.add_argument("--jperm", type=float, default=0, help="triangle permutation")
+parser.add_argument("--jperm", type=complex, default=0+0j, help="triangle permutation")
 parser.add_argument("--ansatz", type=str, default=None, help="choice of the tensor ansatz",\
      choices=["IPEPS", "IPESS", "IPESS_PG", 'A_2,B'])
-parser.add_argument("--no_sym_up_dn", action='store_false', dest='sym_up_dn',\
-    help="same trivalent tensors for up and down triangles")
-parser.add_argument("--no_sym_bond_S", action='store_false', dest='sym_bond_S',\
-    help="same bond site tensors")
-parser.add_argument("--large_chis", action='store_true', dest='large_chis',\
-    help="same trivalent tensors for up and down triangles")
 parser.add_argument("--CTM_check", type=str, default='Partial_energy', help="method to check CTM convergence",\
      choices=["Energy", "SingularValue", "Partial_energy"])
+parser.add_argument("--force_cpu", action='store_true', dest='force_cpu', help="force RDM contractions on CPU")
+parser.add_argument("--obs_freq", type=int, default=-1, help="frequency of computing observables"
+    + " during CTM convergence")
+parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues "+
+    "of transfer operator to compute")
+parser.add_argument("--EH_n", type=int, default=1, help="number of leading eigenvalues "+
+    "of EH to compute")
+parser.add_argument("--EH_T_ED_L", type=int, default=0, help="max. cylinder width "+
+    "of EH constructed as T-tensor MPO and diagionalized by ED")
+parser.add_argument("--EH_T_ARP_minL", type=int, default=1, help="min. cylinder width "+
+    "of EH constructed as T-tensor MPO and diagionalized by Arnoldi")
+parser.add_argument("--EH_T_ARP_maxL", type=int, default=0, help="max. cylinder width "+
+    "of EH constructed as T-tensor MPO and diagionalized by Arnoldi")
 args, unknown_args = parser.parse_known_args()
 
 
@@ -47,8 +54,12 @@ def main():
     torch.set_num_threads(args.omp_cores)
     torch.manual_seed(args.seed)
 
-    model= spin_half_kagome.S_HALF_KAGOME(j1=args.j1,JD=args.JD,j1sq=args.j1sq,j2=args.j2,\
-        j2sq=args.j2sq,jtrip=args.jtrip,jperm=args.jperm)
+    if not args.theta is None:
+        args.j1= args.j1*math.cos(args.theta*math.pi)
+        args.jtrip= args.j1*math.sin(args.theta*math.pi)
+    print(f"j1={args.j1}; jD={args.JD}; j2={args.j2}; jtrip={args.jtrip}")
+    model= spin_half_kagome.S_HALF_KAGOME(j1=args.j1,JD=args.JD,j2=args.j2,\
+        jtrip=args.jtrip,jperm=args.jperm)
 
     # initialize the ipess/ipeps
     if args.ansatz in ["IPESS","IPESS_PG","A_2,B"]:
@@ -140,25 +151,25 @@ def main():
             +str(args.ansatz)+" is not supported")
 
 
-
-    def energy_f(state, env, force_cpu=False):
+    def energy_f(state, env, force_cpu=False, fail_on_check=False,\
+        warn_on_check=True):
         #print(env)
-        e_dn = model.energy_triangle_dn(state, env, force_cpu=force_cpu)
-        e_up = model.energy_triangle_up(state, env, force_cpu=force_cpu)
+        e_dn = model.energy_triangle_dn(state, env, force_cpu=args.force_cpu,\
+            fail_on_check=fail_on_check, warn_on_check=warn_on_check)
+        e_up = model.energy_triangle_up(state, env, force_cpu=args.force_cpu,\
+            fail_on_check=fail_on_check, warn_on_check=warn_on_check)
         # e_nnn = model.energy_nnn(state, env)
         return (e_up + e_dn)/3 #+ e_nnn) / 3
     def energy_f_complex(state, env, force_cpu=False):
-        #print(env)
-        e_dn = model.energy_triangle_dn_NoCheck(state, env, force_cpu=force_cpu)
-        e_up = model.energy_triangle_up_NoCheck(state, env, force_cpu=force_cpu)
+        e_dn = model.energy_triangle_dn_NoCheck(state, env, force_cpu=args.force_cpu)
+        e_up = model.energy_triangle_up_NoCheck(state, env, force_cpu=args.force_cpu)
         # e_nnn = model.energy_nnn(state, env)
         return (e_up + e_dn)/3 #+ e_nnn) / 3
     def dn_energy_f(state, env, force_cpu=False):
-        #print(env)
-        e_dn = model.energy_triangle_dn(state, env, force_cpu=force_cpu)
+        e_dn = model.energy_triangle_dn_NoCheck(state, env, force_cpu=args.force_cpu)
         return e_dn
         
-    def print_corner_spectra(env):
+    def eval_corner_spectra(env):
         spectra = []
         for c_loc,c_ten in env.C.items():
             u,s,v= torch.svd(c_ten, compute_uv=False)
@@ -173,39 +184,56 @@ def main():
             spectra.append([label, s])
         return spectra
 
+    def report_conv_fn(state, ctm_env, conv_step, conv_crit, e_curr=None):
+        if args.obs_freq>0 and \
+            (conv_step%args.obs_freq==0 or (conv_step-1)%args.obs_freq==0):
+            if e_curr is None: 
+                e_curr = energy_f(state, env, force_cpu=args.force_cpu, warn_on_check=False)
+            obs_values, obs_labels = model.eval_obs(state, env, force_cpu=args.force_cpu)
+            print(", ".join([f"{conv_step}",f"{conv_crit}",f"{e_curr}"]+[f"{v}" for v in obs_values]))
+        else:
+            print(f"{conv_step}, {conv_crit}")
+
     if args.CTM_check=="Energy":
-        def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
-            if not history:
-                history = []
-            e_curr = energy_f(state, env, force_cpu=ctm_args.conv_check_cpu)
+        def ctmrg_conv_fn(state, env, history, ctm_args=cfg.ctm_args):
+            if not history: history = []
+            e_curr = energy_f(state, env, force_cpu=args.force_cpu)
             history.append(e_curr.item())
+
+            # log conv_crit and observables
+            report_conv_fn(state,env,len(history),\
+                float('inf') if len(history) < 2 else abs(history[-1] - history[-2]), e_curr=e_curr)
+
             if (len(history) > 1 and abs(history[-1] - history[-2]) < ctm_args.ctm_conv_tol) \
                     or len(history) >= ctm_args.ctm_max_iter:
                 log.info({"history_length": len(history), "history": history})
                 return True, history
             return False, history
     elif args.CTM_check=="Partial_energy":
-        def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
-            if not history:
-                history = []
+        def ctmrg_conv_fn(state, env, history, ctm_args=cfg.ctm_args):
+            if not history: history = []
             if len(history)>8:
-                e_curr = dn_energy_f(state, env, force_cpu=ctm_args.conv_check_cpu)
+                e_curr = dn_energy_f(state, env, force_cpu=args.force_cpu)
                 history.append(e_curr.item())
             else:
-                history.append(len(history)+1)
-            #print(history)
-            if (len(history) > 1 and abs(history[-1] - history[-2]) < ctm_args.ctm_conv_tol*2) \
+                history.append(float('inf'))
+
+            # log conv_crit and observables
+            report_conv_fn(state,env,len(history),\
+                float('inf') if len(history) < 10 else abs(history[-1] - history[-2]))
+
+            if (len(history) > 9 and abs(history[-1] - history[-2]) < ctm_args.ctm_conv_tol*2) \
                     or len(history) >= ctm_args.ctm_max_iter:
                 log.info({"history_length": len(history), "history": history})
                 return True, history
             return False, history
     elif args.CTM_check=="SingularValue":
-        def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
+        def ctmrg_conv_fn(state, env, history, ctm_args=cfg.ctm_args):
             if not history:
                 history_spec = []
                 history_ite=1
                 history=[history_ite, history_spec]
-            spect_new=print_corner_spectra(env)
+            spect_new=eval_corner_spectra(env)
             spec1_new=spect_new[0][1]
             spec1_new=spec1_new/spec1_new[0]
             spec2_new=spect_new[1][1]
@@ -223,6 +251,9 @@ def main():
                 #print(history[0])
                 #print(torch.max(spec_ers))
 
+            # log conv_crit and observables
+            report_conv_fn(state,env,history[0],torch.max(spec_ers))
+
             if (len(history[1])==4 and torch.max(spec_ers) < ctm_args.ctm_conv_tol*100) \
                     or (history[0] >= ctm_args.ctm_max_iter):
                 log.info({"history_length": history[0], "history": spec_ers})
@@ -231,118 +262,78 @@ def main():
             history[0]=history[0]+1
             return False, history
 
-
-    def obs_fn(state, ctm_env, opt_context):
-        if args.ansatz in ["IPESS_PG", "A_2,B"]:
-            state_sym= to_PG_symmetric(state, state.pgs)
-        else:
-            state_sym= state
-        obs_values, obs_labels = model.eval_obs(state_sym,ctm_env,force_cpu=False)
-        return obs_values, obs_labels
     
-    #senniu
-    chi_origin=args.chi
-    ctmargs=cfg.ctm_args
-    if args.large_chis:
-        chi_set=numpy.array([10,20,40,80,100,120,160])
-    else:
-        chi_set=numpy.array([10,20,40,80])
-    energies=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='complex128')
-    e_t_dns=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='complex128')
-    e_t_ups=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='complex128')
-    m_0=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='complex128')
-    m_1=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='complex128')
-    m_2=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='complex128')
-    sz_0=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='complex128')
-    sp_0=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='complex128')
-    sm_0=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='complex128')
-    sz_1=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='complex128')
-    sp_1=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='complex128')
-    sm_1=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='complex128')
-    sz_2=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='complex128')
-    sp_2=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='complex128')
-    sm_2=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='complex128')
-    SS_dn_01=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='complex128')
-    SS_up_01=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='complex128')
-    SS_dn_02=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='complex128')
-    SS_up_02=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='complex128')
-    SS_dn_12=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='complex128')
-    SS_up_12=numpy.array(torch.zeros(numpy.size(chi_set)), dtype='complex128')
-    CTMspectras= numpy.empty([4,numpy.size(chi_set)], dtype=object)
-    CTMspectra_name= numpy.empty(4, dtype=object)
-    for cchi in range(0, numpy.size(chi_set)):
-        args.chi=chi_set[cchi]
-        ctmargs.chi=chi_set[cchi]
-        ctm_env_init = ENV(args.chi, state)
-        init_env(state, ctm_env_init)
-        ctm_env, history, t_ctm, t_conv_check = ctmrg.run(state, ctm_env_init, \
-             conv_check=ctmrg_conv_energy, ctm_args=ctmargs)
-        spect=print_corner_spectra(ctm_env)
-        energies[cchi]=energy_f_complex(state, ctm_env, force_cpu=False).numpy()
-        obs_values, obs_labels=obs_fn(state, ctm_env, None)
-        e_t_dns[cchi]=obs_values[0]
-        e_t_ups[cchi]=obs_values[1]
-        m_0[cchi]=numpy.sqrt(obs_values[2])
-        m_1[cchi]=numpy.sqrt(obs_values[3])
-        m_2[cchi]=numpy.sqrt(obs_values[4])
-        sz_0[cchi]=obs_values[5]
-        sp_0[cchi]=obs_values[6]
-        sm_0[cchi]=obs_values[7]
-        sz_1[cchi]=obs_values[8]
-        sp_1[cchi]=obs_values[9]
-        sm_1[cchi]=obs_values[10]
-        sz_2[cchi]=obs_values[11]
-        sp_2[cchi]=obs_values[12]
-        sm_2[cchi]=obs_values[13]
-        SS_dn_01[cchi]=obs_values[14]
-        SS_dn_12[cchi]=obs_values[15]
-        SS_dn_02[cchi]=obs_values[16]
-        SS_up_01[cchi]=obs_values[17]
-        SS_up_12[cchi]=obs_values[18]
-        SS_up_02[cchi]=obs_values[19]
-        for n_corner in range(0,4):
-            CTMspectras[n_corner,cchi]=numpy.array([spect[n_corner][1].numpy()])
-            CTMspectra_name[n_corner]=spect[n_corner][0]
-    D=args.bond_dim
-    chi=chi_origin
-    if args.ansatz in ["IPESS","IPESS_PG","A_2,B"]:
-        filenm='ob_IPESS_D_'+str(D)+'_chi_'+str(chi)
-        # if abs(args.JD)>0:
-        #     filenm='ob_IPESS_J'+str(args.j1)+'_JD'+str(args.JD)+'_D'+str(D)+'_chi'+str(chi)
-    elif args.ansatz in ["IPEPS"]:
-        filenm='ob_IPEPS_D_'+str(D)+'_chi_'+str(chi)
-        # if abs(args.JD)>0:
-        #     filenm='ob_IPEPS_J'+str(args.j1)+'_JD'+str(args.JD)+'_D'+str(D)+'_chi'+str(chi)
-    filenm=filenm+'.mat'
-    io.savemat(filenm,{'chi_set':chi_set,'e_t_dns':e_t_dns,'e_t_ups':e_t_ups,'m_0':m_0,'m_1':m_1,'m_2':m_2,\
-        'sz_0':sz_0,'sp_0':sp_0,'sm_0':sm_0,'sz_1':sz_1,'sp_1':sp_1,'sm_1':sm_1,'sz_2':sz_2,'sp_2':sp_2,'sm_2':sm_2,\
-        'SS_dn_01':SS_dn_01,'SS_dn_12':SS_dn_12,'SS_dn_02':SS_dn_02,'SS_up_01':SS_up_01,'SS_up_12':SS_up_12,'SS_up_02':SS_up_02,\
-        'CTMspectras':CTMspectras,'CTMspectra_name':CTMspectra_name,'energies':energies})
+    # 3) initialize environment 
+    ctm_env_init = ENV(args.chi, state)
+    init_env(state, ctm_env_init)
 
+    # 4) (optional) compute observables as given by initial environment
+    e_curr0 = energy_f(state, ctm_env_init, force_cpu=args.force_cpu, warn_on_check=False)
+    obs_values0, obs_labels = model.eval_obs(state,ctm_env_init,force_cpu=args.force_cpu)
+    print(", ".join(["epoch","energy"]+obs_labels))
+    print(", ".join([f"{-1}",f"{e_curr0}"]+[f"{v}" for v in obs_values0]))
 
+    # 5) (main) execute CTM algorithm
+    ctm_env_init, *ctm_log = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_fn)
 
-    # io.savemat(filenm,{'chi':chi,'D':D,'Atensor':Atensor,
-    #        'Cmm':Cmm,'Cmp':Cmp,'Cpm':Cpm,'Cpp':Cpp,'T0m':T0m,'T0p':T0p,'Tm0':Tm0,'Tp0':Tp0,
-    #        obs_labels[0]:obs_values[0].numpy(),
-    #        obs_labels[1]:obs_values[1].numpy(),
-    #        obs_labels[2]:obs_values[2],
-    #        obs_labels[3]:obs_values[3],
-    #        obs_labels[4]:obs_values[4],
-    #        obs_labels[5]:obs_values[5].numpy(),
-    #        obs_labels[6]:obs_values[6].numpy(),
-    #        obs_labels[7]:obs_values[7].numpy(),
-    #        obs_labels[8]:obs_values[8].numpy(),
-    #        obs_labels[9]:obs_values[9].numpy(),
-    #        obs_labels[10]:obs_values[10].numpy(),
-    #        obs_labels[11]:obs_values[11].numpy(),
-    #        obs_labels[12]:obs_values[12].numpy(),
-    #        obs_labels[13]:obs_values[13].numpy(),
-    #        obs_labels[14]:obs_values[14].numpy(),
-    #        obs_labels[15]:obs_values[15].numpy(),
-    #        obs_labels[16]:obs_values[16].numpy(),
-    #        obs_labels[17]:obs_values[17].numpy(),
-    #        obs_labels[18]:obs_values[18].numpy(),
-    #        obs_labels[19]:obs_values[19].numpy()})
+    # 6) compute final observables
+    e_curr0 = energy_f(state, ctm_env_init, force_cpu=args.force_cpu)
+    obs_values0, obs_labels = model.eval_obs(state,ctm_env_init,force_cpu=args.force_cpu)
+    history, t_ctm, t_obs= ctm_log
+    print("\n")
+    print(", ".join(["epoch","energy"]+obs_labels))
+    print("FINAL "+", ".join([f"{e_curr0}"]+[f"{v}" for v in obs_values0]))
+    print(f"TIMINGS ctm: {t_ctm} conv_check: {t_obs}")
+
+    # 7) ----- additional observables ---------------------------------------------
+    # chirality
+    print("\n")
+    Pijk= model.P_triangle
+    Pijk_inv= model.P_triangle_inv
+    chi_R= Pijk + Pijk_inv
+    chi_I= 1.0j * (Pijk - Pijk_inv)
+
+    ev_chi_R_downT= rdm_kagome.rdm2x2_dn_triangle_with_operator((0,0), state, ctm_env_init,\
+        chi_R, force_cpu=force_cpu)
+    ev_chi_I_downT= rdm_kagome.rdm2x2_dn_triangle_with_operator((0,0), state, ctm_env_init,\
+        chi_I, force_cpu=force_cpu)
+    print(f"Re(Chi) downT {ev_chi_R_downT} Im(Chi) downT {ev_chi_I_downT}")
+
+    rho_upT= rdm_kagome.rdm2x2_up_triangle_open((0,0), state, ctm_env_init, force_cpu=force_cpu)
+    ev_chi_R_upT= torch.einsum('ijkmno,mnoijk',rho_upT, chi_R)
+    ev_chi_I_upT= torch.einsum('ijkmno,mnoijk',rho_upT, chi_I)
+    print(f"Re(Chi) upT {ev_chi_R_upT} Im(Chi) upT {ev_chi_I_upT}")
+
+    # transfer operator spectrum
+    site_dir_list=[((0,0), (1,0)), ((0,0), (0,1))]
+    for sdp in site_dir_list:
+        print(f"\n\nspectrum(T)[{sdp[0]},{sdp[1]}]")
+        l= transferops.get_Top_spec(args.top_n, *sdp, state, ctm_env_init)
+        for i in range(l.size()[0]):
+            print(f"{i} {l[i,0]} {l[i,1]}")
+
+        print(f"\n\nspectrum(T_w0)[{sdp[0]},{sdp[1]}]")
+        l= transferops.get_Top_w0_spec(args.top_n, *sdp, state, ctm_env_init)
+        for i in range(l.size()[0]):
+            print(f"{i} {l[i,0]} {l[i,1]}")
+
+    # entanglement spectrum
+    site_dir_list=[((0,0), (1,0)), ((0,0), (0,1))]
+    for sdp in site_dir_list:
+
+        for L in range(1,args.EH_T_ED_L+1):
+            S= transferops.get_full_EH_spec_Ttensor(L, *sdp, state, ctm_env_init)
+            print(f"\nEH_T_ED[{sdp[0]},{sdp[1]}] L={L}")
+            for i in range(min(S.size(0),args.EH_n)):
+                print(f"{i} {S.real[i]} {S.imag[i]}")
+
+        for L in range(args.EH_T_ARP_minL,args.EH_T_ARP_maxL+1):
+            S=transferops.get_EH_spec_Ttensor(args.EH_n, L, *sdp, state, ctm_env_init)
+            if S is None: continue
+
+            print(f"\nEH_T_ARP[{sdp[0]},{sdp[1]}] L={L}")
+            for i in range(args.EH_n):
+                print(f"{i} {S[i,0]} {S[i,1]}")
 
 if __name__ == '__main__':
     if len(unknown_args) > 0:

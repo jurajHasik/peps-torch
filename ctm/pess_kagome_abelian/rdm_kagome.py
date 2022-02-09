@@ -1,7 +1,7 @@
 import logging
 import torch
-import yamps.yast as yast
-from ipeps.ipeps_abelian import _fused_open_dl_site
+import yast.yast as yast
+from ipeps.ipeps_abelian import _fused_open_dl_site, _fused_dl_site
 from ctm.generic_abelian.rdm import _sym_pos_def_rdm
 from tn_interface_abelian import contract, permute, conj
 
@@ -61,38 +61,34 @@ def double_layer_a(state, coord, open_sites=[], force_cpu=False, verbosity=0):
     
     # special handling of all physical indices open (provided by IPEPS_ABELIAN
     # pre-computation
-    if not state.sites_dl_open is None and (open_sites==[] or open_sites==[0,1,2]):
-        if open_sites == [0, 1, 2]:
+    if open_sites==[0,1,2]: 
+        if not state.sites_dl_open is None:
             a= state.site_dl_open(coord).to('cpu') if force_cpu else state.site_dl_open(coord)
             # move physical index to last position
             a= permute(a,(1,2,3,4,0))
-        # special handling of no physical spaces open (most common case)
-        if open_sites == []:
-            a= state.site_dl_open(coord).to('cpu') if force_cpu else state.site_dl_open(coord)
-            # unfuse bra and ket parts of physical space and trace over it
-            a= a.unfuse_legs(axes=0)
-            a= a.trace(axes=(0,1))
-    else:
-        # no open double-layer present in state, recompute from scratch
-        A= state.site(coord).to('cpu') if force_cpu else state.site(coord)
-    
-        if open_sites == []:
-            a= contract(A,A,([0],[0]),conj=(0,1))
-            a= a.fuse_legs(axes=((0,4),(1,5),(2,6),(3,7)))
-        elif open_sites == [0,1,2]:
-            a= _fused_open_dl_site(A, fusion_level="full")
-        # partial contraction over physical space
         else:
-            A= A.unfuse_legs(axes=0)
-            contracted_sites= list(set([0,1,2]) - set(open_sites))
-            aux_indsK= list(range(len(open_sites),len(open_sites)+4))
-            aux_indsB= [i+4+len(open_sites) for i in aux_indsK]
-            p_indsK= tuple(range(len(open_sites)))
-            p_indsB= tuple(i+4+len(open_sites) for i in p_indsK)
-            a= contract(A,A,(contracted_sites,contracted_sites),conj=(0,1))
-            a= a.fuse_legs(axes=tuple(zip(aux_indsK,aux_indsB))+(p_indsB+p_indsK,))
+            A= state.site(coord).to('cpu') if force_cpu else state.site(coord)
+            a= _fused_open_dl_site(A, fusion_level="full")
+    elif open_sites==[]:
+        # special handling of no physical spaces open (most common case)
+        if not state.sites_dl is None:
+            a= state.site_dl(coord).to('cpu') if force_cpu else state.site_dl(coord)
+        else:
+            # no open double-layer present in state, recompute from scratch
+            A= state.site(coord).to('cpu') if force_cpu else state.site(coord)
+            a= _fused_dl_site(A)
+    else:
+        A= state.site(coord).to('cpu') if force_cpu else state.site(coord)
+        A= A.unfuse_legs(axes=0)
+        contracted_sites= list(set([0,1,2]) - set(open_sites))
+        aux_indsK= list(range(len(open_sites),len(open_sites)+4))
+        aux_indsB= [i+4+len(open_sites) for i in aux_indsK]
+        p_indsK= tuple(range(len(open_sites)))
+        p_indsB= tuple(i+4+len(open_sites) for i in p_indsK)
+        a= contract(A,A,(contracted_sites,contracted_sites),conj=(0,1))
+        a= a.fuse_legs(axes=tuple(zip(aux_indsK,aux_indsB))+(p_indsB+p_indsK,))
     
-    if verbosity>0: print(f"double_layer_a({coord},{open_sites}) {a}")
+    if verbosity>1: print(f"double_layer_a({coord},{open_sites}) {a}")
     return a
 
 def enlarged_corner(coord, state, env, corner, open_sites=[], force_cpu=False,
@@ -139,9 +135,9 @@ def enlarged_corner(coord, state, env, corner, open_sites=[], force_cpu=False,
         # 0(-)
         fuse_axes= ((1,2),(0,3)) if len(open_sites)==0 else ((1,2),(0,3),4)
         C2x2_LU = C2x2_LU.fuse_legs(axes=fuse_axes)
-        if verbosity > 0:
+        if verbosity > 1:
             print("C2X2 LU " + str(coord) + "->" + str(state.vertexToSite(coord))\
-                + " (-1,-1): " + str(C2x2_LU.show_propeties()))
+                + " (-1,-1): " + str(C2x2_LU.show_properties()))
         return C2x2_LU
 
     elif corner == 'RU':
@@ -181,9 +177,9 @@ def enlarged_corner(coord, state, env, corner, open_sites=[], force_cpu=False,
         #       1(-)
         fuse_axes= ((1,2),(0,3)) if len(open_sites)==0 else ((1,2),(0,3),4)
         C2x2_RU = C2x2_RU.fuse_legs(axes=fuse_axes)
-        if verbosity > 0:
+        if verbosity > 1:
             print("C2X2 RU " + str((coord[0] + vec[0], coord[1] + vec[1])) + "->"\
-                + str(shitf_coord) + " (1,-1): " + str(C2x2_RU.show_propeties()))
+                + str(shitf_coord) + " (1,-1): " + str(C2x2_RU.show_properties()))
         return C2x2_RU
 
     elif corner == 'RD':
@@ -221,9 +217,9 @@ def enlarged_corner(coord, state, env, corner, open_sites=[], force_cpu=False,
         # (+)1--C2x2
         fuse_axes= ((1,2),(0,3)) if len(open_sites)==0 else ((1,2),(0,3),4)
         C2x2_RD = C2x2_RD.fuse_legs(axes=fuse_axes)
-        if verbosity > 0:
+        if verbosity > 1:
             print("C2X2 RD " + str((coord[0] + vec[0], coord[1] + vec[1])) + "->"\
-                + str(shitf_coord) + " (1,1): " + str(C2x2_RD.show_propeties()))
+                + str(shitf_coord) + " (1,1): " + str(C2x2_RD.show_properties()))
         return C2x2_RD
 
     elif corner == 'LD':
@@ -264,9 +260,9 @@ def enlarged_corner(coord, state, env, corner, open_sites=[], force_cpu=False,
         #    C2x2--1(-)
         fuse_axes= ((0,2),(1,3)) if len(open_sites)==0 else ((0,2),(1,3),4)
         C2x2_LD = C2x2_LD.fuse_legs(axes=fuse_axes)
-        if verbosity > 0:
+        if verbosity > 1:
             print("C2X2 LD " + str((coord[0] + vec[0], coord[1] + vec[1])) + "->"\
-                + str(shitf_coord) + " (-1,1): " + str(C2x2_LD.show_propeties()))
+                + str(shitf_coord) + " (-1,1): " + str(C2x2_LD.show_properties()))
         return C2x2_LD
 
 # ----- main environment contraction functions - 1x1 subsytem -----
@@ -290,9 +286,9 @@ def trace1x1_dn_kagome(coord, state, env, op, verbosity=0):
     Compute 1-kagome-site trace :math:`Tr{\rho{1x1}_{ABC} O}` centered on vertex ``coord``.
     Inherited from the rdm1x1() method.
     """
-    assert op.get_ndim()==2 or op.get_ndim()==6,"Invalid operator"
+    assert op.ndim==2 or op.ndim==6,"Invalid operator"
     # TODO perform compatibility check ?
-    if op.get_ndim()==6: op= op.fuse_legs(axes=((0,1,2),(3,4,5)))
+    if op.ndim==6: op= op.fuse_legs(axes=((0,1,2),(3,4,5)))
 
     # C(-1,-1)--1->0
     # 0
@@ -881,9 +877,9 @@ def rdm2x2_up_triangle_open(coord, state, env, sym_pos_def=False, force_cpu=Fals
     # |/14          |/25
     # C2x2_LD------C2x2_RD
     rdm = permute(rdm, (0, 2, 4, 1, 3, 5))
-
     rdm = _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
 
+    
     rdm = rdm.to(env.device)
     return rdm
 
@@ -924,9 +920,9 @@ def rdm2x2_dn_triangle_with_operator(coord, state, env, op, force_cpu=False,\
         C      T             T        C
     """
     who = 'rdm2x2_dn_triangle'
-    assert op.get_ndim()==2 or op.get_ndim()==6,"Invalid operator"
+    assert op.ndim==2 or op.ndim==6,"Invalid operator"
     # TODO perform compatibility check ?
-    if op.get_ndim()==6: op= op.fuse_legs(axes=((0,1,2),(3,4,5)))
+    if op.ndim==6: op= op.fuse_legs(axes=((0,1,2),(3,4,5)))
 
     # ----- building C2x2_LU ----------------------------------------------------
     if force_cpu:
@@ -941,7 +937,8 @@ def rdm2x2_dn_triangle_with_operator(coord, state, env, op, force_cpu=False,\
         T2 = env.T[(state.vertexToSite(coord), (-1, 0))]
         a_1layer = state.site(coord)
 
-    a = double_layer_a(state,coord,force_cpu=force_cpu)
+    a = double_layer_a(state,coord,force_cpu=force_cpu,verbosity=verbosity)
+    #a = contract(a_1layer,a_1layer.conj(),([0],[0])).fuse_legs(axes=((0,4),(1,5),(2,6),(3,7)))
     a_op = contract(op,a_1layer,([0],[0]),conj=(0,1))
     a_op = contract(a_1layer,a_op,([0],[0]))
     a_op = a_op.fuse_legs(axes=((0,4),(1,5),(2,6),(3,7)))
@@ -1019,9 +1016,11 @@ def rdm2x2_dn_triangle_with_operator(coord, state, env, op, force_cpu=False,\
     rdm_op = contract(upper_half_op, lower_half, ([0, 1], [0, 1]))
     rdm_id = contract(upper_half, lower_half, ([0, 1], [0, 1]))
 
+
     exp_val_op = rdm_op/rdm_id.to_number()
     exp_val_op = exp_val_op.to(env.device)
     return exp_val_op
+
 
 def rdm2x2_kagome(coord, state, env, sites_to_keep_00=('A', 'B', 'C'),\
     sites_to_keep_10=('A', 'B', 'C'), sites_to_keep_01=('A', 'B', 'C'),\
