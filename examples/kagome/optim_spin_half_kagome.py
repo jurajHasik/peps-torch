@@ -30,7 +30,7 @@ parser.add_argument("--j2", type=float, default=0, help="next-nearest-neighbor e
 parser.add_argument("--jtrip", type=float, default=0, help="(SxS).S")
 parser.add_argument("--jperm", type=complex, default=0, help="triangle permutation")
 parser.add_argument("--ansatz", type=str, default=None, help="choice of the tensor ansatz",\
-    choices=["IPEPS", "IPESS", "IPESS_PG", 'A_2,B'])
+    choices=["IPEPS", "IPESS", "IPESS_PG", 'A_2,B', 'A_1,B'])
 parser.add_argument("--no_sym_up_dn", action='store_false', dest='sym_up_dn',\
     help="same trivalent tensors for up and down triangles")
 parser.add_argument("--no_sym_bond_S", action='store_false', dest='sym_bond_S',\
@@ -57,14 +57,15 @@ def main():
         j2=args.j2, jtrip=args.jtrip, jperm=args.jperm)
 
     # initialize the ipess/ipeps
-    if args.ansatz in ["IPESS","IPESS_PG","A_2,B"]:
+    if args.ansatz in ["IPESS","IPESS_PG","A_1,B","A_2,B"]:
         ansatz_pgs= None
         if args.ansatz=="A_2,B": ansatz_pgs= IPESS_KAGOME_PG.PG_A2_B
+        if args.ansatz=="A_1,B": ansatz_pgs= IPESS_KAGOME_PG.PG_A1_B
         
         if args.instate!=None:
             if args.ansatz=="IPESS":
                 state= read_ipess_kagome_generic(args.instate)
-            elif args.ansatz in ["IPESS_PG","A_2,B"]:
+            elif args.ansatz in ["IPESS_PG","A_1,B","A_2,B"]:
                 state= read_ipess_kagome_pg(args.instate)
 
             # possibly symmetrize by PG
@@ -97,7 +98,7 @@ def main():
                 dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
             B_b= torch.zeros(model.phys_dim, args.bond_dim, args.bond_dim,\
                 dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
-            if args.ansatz in ["IPESS_PG", "A_2,B"]:
+            if args.ansatz in ["IPESS_PG", "A_1,B", "A_2,B"]:
                 state= IPESS_KAGOME_PG(T_u, B_c, T_d=T_d, B_a=B_a, B_b=B_b,\
                     SYM_UP_DOWN=args.sym_up_dn,SYM_BOND_S=args.sym_bond_S, pgs=ansatz_pgs)
             elif args.ansatz in ["IPESS"]:
@@ -116,7 +117,7 @@ def main():
                 dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)-1.0
             B_b= torch.rand(model.phys_dim, args.bond_dim, args.bond_dim,\
                 dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)-1.0
-            if args.ansatz in ["IPESS_PG", "A_2,B"]:
+            if args.ansatz in ["IPESS_PG", "A_1,B", "A_2,B"]:
                 state = IPESS_KAGOME_PG(T_u, B_c, T_d=T_d, B_a=B_a, B_b=B_b,\
                     SYM_UP_DOWN=args.sym_up_dn,SYM_BOND_S=args.sym_bond_S, pgs=ansatz_pgs)
             elif args.ansatz in ["IPESS"]:
@@ -288,8 +289,8 @@ def main():
         opt_args = opt_context["opt_args"]
 
         # build on-site tensors
-        if args.ansatz in ["IPESS", "IPESS_PG", "A_2,B"]:
-            if args.ansatz in ["IPESS_PG", "A_2,B"]:
+        if args.ansatz in ["IPESS", "IPESS_PG", "A_1,B", "A_2,B"]:
+            if args.ansatz in ["IPESS_PG", "A_1,B", "A_2,B"]:
                 # symmetrization and implicit rebuild of on-site tensors
                 state_sym= to_PG_symmetric(state, pgs=state.pgs)
             else:
@@ -314,7 +315,7 @@ def main():
     @torch.no_grad()
     def obs_fn(state, ctm_env, opt_context):
         state_sym= state
-        if args.ansatz in ["IPESS_PG", "A_2,B"]:
+        if args.ansatz in ["IPESS_PG", "A_1,B", "A_2,B"]:
             # symmetrization and implicit rebuild of on-site tensors
             state_sym= to_PG_symmetric(state, pgs=state.pgs)
         elif args.ansatz in ["IPESS"]:
@@ -347,7 +348,7 @@ def main():
     outputstatefile= args.out_prefix+"_state.json"
     if args.ansatz=="IPESS":
         state= read_ipess_kagome_generic(outputstatefile)
-    elif args.ansatz in ["IPESS_PG","A_2,B"]:
+    elif args.ansatz in ["IPESS_PG", "A_1,B", "A_2,B"]:
         state= read_ipess_kagome_pg(outputstatefile)
     ctm_env = ENV(args.chi, state)
     init_env(state, ctm_env)

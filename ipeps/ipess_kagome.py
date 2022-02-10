@@ -265,6 +265,7 @@ def write_ipess_kagome_generic(state, outputfile, tol=1.0e-14, normalize=False):
 
 
 class IPESS_KAGOME_PG(IPESS_KAGOME_GENERIC):
+    PG_A1_B= {'T_u': 'A_1', 'T_d': 'A_1', 'B_a': 'B', 'B_b': 'B', 'B_c': 'B'}
     PG_A2_B= {'T_u': 'A_2', 'T_d': 'A_2', 'B_a': 'B', 'B_b': 'B', 'B_c': 'B'}
 
     def __init__(self, T_u, B_c, T_d=None,\
@@ -475,8 +476,15 @@ def _to_PG_symmetric(pgs, elem_ts):
                 raise RuntimeError("Unsupported point-group "+t_id+" "+pg)
         # trivalent tensor "up" and "down" 
         if t_id in ["T_u", "T_d"] and t_id in elem_ts.keys():    
+            # A_1 + iA_2
+            if pg=="A_1":
+                tmp_t= (1./3)*(elem_ts[t_id]\
+                    + elem_ts[t_id].permute(1,2,0)\
+                    + elem_ts[t_id].permute(2,0,1))
+                tmp_t= 0.5*(tmp_t + tmp_t.permute(0,2,1).conj())
+                pg_elem_ts[t_id]= tmp_t
             # A_2 + iA_1
-            if pg=="A_2":
+            elif pg=="A_2":
                 tmp_t= (1./3)*(elem_ts[t_id]\
                     + elem_ts[t_id].permute(1,2,0)\
                     + elem_ts[t_id].permute(2,0,1))
