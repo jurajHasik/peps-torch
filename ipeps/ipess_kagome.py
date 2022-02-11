@@ -330,17 +330,15 @@ class IPESS_KAGOME_PG(IPESS_KAGOME_GENERIC):
         
         # default setup
         self.elem_tensors= OrderedDict({'T_u': T_u,'B_c': B_c})
-        ipess_tensors= OrderedDict({'T_u': T_u, 'T_d': T_u,\
-            'B_c': B_c, 'B_a': B_c, 'B_b': B_c})
         if not SYM_UP_DOWN:
             assert isinstance(T_d,torch.Tensor),\
                 "rank-3 tensor for down triangle must be provided"
-            self.elem_tensors['T_d']=ipess_tensors['T_d'] = T_d
+            self.elem_tensors['T_d'] = T_d
         if not SYM_BOND_S:
             assert isinstance(B_a,torch.Tensor) and isinstance(B_b,torch.Tensor),\
                 "rank-3 tensor for bond 1 and bond 2 must be provided"
-            self.elem_tensors['B_a']=ipess_tensors['B_a']= B_a
-            self.elem_tensors['B_b']=ipess_tensors['B_b']= B_b
+            self.elem_tensors['B_a']= B_a
+            self.elem_tensors['B_b']= B_b
 
         # PGs
         if pgs==None: pgs=dict()
@@ -349,6 +347,14 @@ class IPESS_KAGOME_PG(IPESS_KAGOME_GENERIC):
         self.pgs= pgs
         if pg_symmetrize:
             self.elem_tensors= _to_PG_symmetric(self.pgs, self.elem_tensors)
+
+        ipess_tensors= OrderedDict({
+            'T_u': self.elem_tensors['T_u'], 
+            'T_d': self.elem_tensors['T_u'] if SYM_UP_DOWN else self.elem_tensors['T_d'],\
+            'B_c': self.elem_tensors['B_c'], 
+            'B_a': self.elem_tensors['B_c'] if SYM_BOND_S else self.elem_tensors['B_a'], 
+            'B_b': self.elem_tensors['B_c'] if SYM_BOND_S else self.elem_tensors['B_b']
+        })
         
         super().__init__(ipess_tensors, peps_args=peps_args,
                          global_args=global_args)
@@ -416,8 +422,10 @@ class IPESS_KAGOME_PG(IPESS_KAGOME_GENERIC):
             self.ipess_tensors['B_a']= self.elem_tensors['B_a']        
         self.sites = self.build_onsite_tensors()
 
-    def write_to_file(self, outputfile, aux_seq=None, tol=1.0e-14, normalize=False):
-        write_ipess_kagome_pg(self, outputfile, tol=tol, normalize=normalize)
+    def write_to_file(self, outputfile, aux_seq=None, tol=1.0e-14, normalize=False,\
+        pg_symmetrize=True):
+        write_ipess_kagome_pg(self, outputfile, tol=tol, normalize=normalize,\
+            pg_symmetrize=pg_symmetrize)
 
     def extend_bond_dim(self, new_d):
         r"""
@@ -611,7 +619,7 @@ def read_ipess_kagome_pg(jsonfile, peps_args=cfg.peps_args, global_args=cfg.glob
             pgs= pgs, peps_args=peps_args, global_args=global_args)
     return state
 
-def write_ipess_kagome_pg(state, outputfile, tol=1.0e-14, normalize=False):
+def write_ipess_kagome_pg(state, outputfile, tol=1.0e-14, normalize=False, pg_symmetrize=False):
     r"""
     :param state: wavefunction to write out in json format
     :param outputfile: target file
@@ -643,11 +651,12 @@ def write_ipess_kagome_pg(state, outputfile, tol=1.0e-14, normalize=False):
 
     TODO implement cutoff on elements with magnitude below tol
     """
-    json_state = dict({"elem_tensors": {}, "SYM_UP_DOWN": state.SYM_UP_DOWN, \
-        "SYM_BOND_S": state.SYM_UP_DOWN, "pgs": state.pgs})
+    sym_state= to_PG_symmetric(state) if pg_symmetrize else state
+    json_state = dict({"elem_tensors": {}, "SYM_UP_DOWN": sym_state.SYM_UP_DOWN, \
+        "SYM_BOND_S": sym_state.SYM_UP_DOWN, "pgs": sym_state.pgs})
 
     # write list of considered elementary tensors
-    for key, t in state.elem_tensors.items():
+    for key, t in sym_state.elem_tensors.items():
         tmp_t= t/t.abs().max() if normalize else t
         json_state["elem_tensors"][key]= serialize_bare_tensor_legacy(tmp_t)
 
