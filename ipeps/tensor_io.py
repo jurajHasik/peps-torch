@@ -6,6 +6,10 @@ try:
     import yast.yast as yast
 except ImportError as e:
     warnings.warn("yast not available", Warning)
+try:
+    import torch
+except ImportError as e:
+    warnings.warn("torch not available", Warning)
 
 class NumPy_Encoder(json.JSONEncoder):
     def default(self, obj):
@@ -278,4 +282,24 @@ def serialize_abelian_tensor_legacy(t, native=False):
         json_block["charges"]= k
         json_tensor["blocks"].append(json_block)
 
+    return json_tensor
+
+def serialize_basis_t(meta,t):
+    # assume sparse tensor
+    assert isinstance(t,torch.Tensor),"torch.tensor is expected"
+
+    json_tensor=dict()
+    json_tensor["dtype"]="complex128" if t.is_complex() else "float64"
+    json_tensor["meta"]=meta
+
+    tdims = t.size()
+    tlength = t.numel()
+    json_tensor["dims"]= list(tdims)
+    t_nonzero= t.nonzero()
+    json_tensor["numEntries"]= len(t_nonzero)
+    entries = []
+    for elem in t_nonzero:
+        ei=tuple(elem.tolist())
+        entries.append(" ".join(f"{ei[i]}" for i in range(len(ei)))+f" {t[ei]}")
+    json_tensor["entries"]=entries
     return json_tensor
