@@ -29,7 +29,7 @@ parser.add_argument("--j2", type=float, default=0, help="next-nearest-neighbor e
 parser.add_argument("--jtrip", type=float, default=0, help="(SxS).S")
 parser.add_argument("--jperm", type=complex, default=0+0j, help="triangle permutation")
 parser.add_argument("--ansatz", type=str, default=None, help="choice of the tensor ansatz",\
-     choices=["IPEPS", "IPESS", "IPESS_PG", 'A_2,B'])
+     choices=["IPEPS", "IPESS", "IPESS_PG", "A_2,B", "A_1,B"])
 parser.add_argument("--CTM_check", type=str, default='Partial_energy', help="method to check CTM convergence",\
      choices=["Energy", "SingularValue", "Partial_energy"])
 parser.add_argument("--force_cpu", action='store_true', dest='force_cpu', help="force RDM contractions on CPU")
@@ -62,14 +62,15 @@ def main():
         jtrip=args.jtrip,jperm=args.jperm)
 
     # initialize the ipess/ipeps
-    if args.ansatz in ["IPESS","IPESS_PG","A_2,B"]:
+    if args.ansatz in ["IPESS","IPESS_PG","A_2,B","A_1,B"]:
         ansatz_pgs= None
         if args.ansatz=="A_2,B": ansatz_pgs= IPESS_KAGOME_PG.PG_A2_B
+        if args.ansatz=="A_1,B": ansatz_pgs= IPESS_KAGOME_PG.PG_A1_B
         
         if args.instate!=None:
             if args.ansatz=="IPESS":
                 state= read_ipess_kagome_generic(args.instate)
-            elif args.ansatz in ["IPESS_PG","A_2,B"]:
+            elif args.ansatz in ["IPESS_PG","A_2,B","A_1,B"]:
                 state= read_ipess_kagome_pg(args.instate)
 
             # possibly symmetrize by PG
@@ -102,7 +103,7 @@ def main():
                 dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
             B_b= torch.zeros(model.phys_dim, args.bond_dim, args.bond_dim,\
                 dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
-            if args.ansatz in ["IPESS_PG", "A_2,B"]:
+            if args.ansatz in ["IPESS_PG", "A_2,B", "A_1,B"]:
                 state= IPESS_KAGOME_PG(T_u, B_c, T_d, T_d=T_d, B_a=B_a, B_b=B_b,\
                     SYM_UP_DOWN=args.sym_up_dn,SYM_BOND_S=args.sym_bond_S, pgs=ansatz_pgs)
             elif args.ansatz in ["IPESS"]:
@@ -121,7 +122,7 @@ def main():
                 dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)-1.0
             B_b= torch.rand(model.phys_dim, args.bond_dim, args.bond_dim,\
                 dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)-1.0
-            if args.ansatz in ["IPESS_PG", "A_2,B"]:
+            if args.ansatz in ["IPESS_PG", "A_2,B", "A_1,B"]:
                 state = IPESS_KAGOME_PG(T_u, B_c, T_d=T_d, B_a=B_a, B_b=B_b,\
                     SYM_UP_DOWN=args.sym_up_dn,SYM_BOND_S=args.sym_bond_S, pgs=ansatz_pgs)
             elif args.ansatz in ["IPESS"]:
@@ -294,12 +295,13 @@ def main():
     chi_I= 1.0j * (Pijk - Pijk_inv)
 
     ev_chi_R_downT= rdm_kagome.rdm2x2_dn_triangle_with_operator((0,0), state, ctm_env_init,\
-        chi_R, force_cpu=force_cpu)
+        chi_R, force_cpu=args.force_cpu)
     ev_chi_I_downT= rdm_kagome.rdm2x2_dn_triangle_with_operator((0,0), state, ctm_env_init,\
-        chi_I, force_cpu=force_cpu)
+        chi_I, force_cpu=args.force_cpu)
     print(f"Re(Chi) downT {ev_chi_R_downT} Im(Chi) downT {ev_chi_I_downT}")
 
-    rho_upT= rdm_kagome.rdm2x2_up_triangle_open((0,0), state, ctm_env_init, force_cpu=force_cpu)
+    rho_upT= rdm_kagome.rdm2x2_up_triangle_open((0,0), state, ctm_env_init,\
+        force_cpu=args.force_cpu)
     ev_chi_R_upT= torch.einsum('ijkmno,mnoijk',rho_upT, chi_R)
     ev_chi_I_upT= torch.einsum('ijkmno,mnoijk',rho_upT, chi_I)
     print(f"Re(Chi) upT {ev_chi_R_upT} Im(Chi) upT {ev_chi_I_upT}")
