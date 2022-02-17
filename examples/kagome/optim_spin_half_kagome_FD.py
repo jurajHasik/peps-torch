@@ -60,29 +60,11 @@ def main():
         if args.ansatz=="A_1,B": ansatz_pgs= IPESS_KAGOME_PG.PG_A1_B
         
         if args.instate!=None:
-            if args.ansatz=="IPESS":
-                state= read_ipess_kagome_generic(args.instate)
-            elif args.ansatz in ["IPESS_PG","A_1,B","A_2,B"]:
-                state= read_ipess_kagome_pg(args.instate)
+            state= read_ipess_kagome_pg_lc(args.instate)
 
-            # possibly symmetrize by PG
-            if ansatz_pgs!=None:
-                if type(state)==IPESS_KAGOME_GENERIC:
-                    state= to_PG_symmetric(state, SYM_UP_DOWN=args.sym_up_dn,\
-                        SYM_BOND_S=args.sym_bond_S, pgs=ansatz_pgs)
-                elif type(state)==IPESS_KAGOME_PG:
-                    if state.pgs==None or state.pgs==dict():
-                        state= to_PG_symmetric(state, SYM_UP_DOWN=args.sym_up_dn,\
-                            SYM_BOND_S=args.sym_bond_S, pgs=ansatz_pgs)
-                    elif state.pgs==ansatz_pgs:
-                        # nothing to do here
-                        pass
-                    elif state.pgs!=ansatz_pgs:
-                        raise RuntimeError("instate has incompatible PG symmetry with "+args.ansatz)
-
-            if args.bond_dim > state.get_aux_bond_dims():
-                # extend the auxiliary dimensions
-                state= state.extend_bond_dim(args.bond_dim)
+            # if args.bond_dim > state.get_aux_bond_dims():
+            #     # extend the auxiliary dimensions
+            #     state= state.extend_bond_dim(args.bond_dim)
             state.add_noise(args.instate_noise)
         elif args.opt_resume is not None:
             T_u= torch.zeros(args.bond_dim, args.bond_dim, args.bond_dim,\

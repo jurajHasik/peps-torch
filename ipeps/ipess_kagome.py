@@ -890,7 +890,7 @@ class IPESS_KAGOME_PG_LC(IPESS_KAGOME_PG):
                 else:
                     ts= torch.stack( [t for m,t in self.basis_t[k]] )
 
-            c= self.coeffs[k]
+            c= self.coeffs[k].clone()
             if ts.is_complex(): c= c*(1.0+0.j)
             elem_tensors[k]= torch.einsum('i,iabc->abc',c,ts)
         return elem_tensors
@@ -913,7 +913,7 @@ class IPESS_KAGOME_PG_LC(IPESS_KAGOME_PG):
 
     def add_noise(self, noise):
         for k in self.coeffs:
-            rand_t= torch.rand( self.coeffs[k].size(), dtype=self.dtype, device=self.device)
+            rand_t= torch.rand_like( self.coeffs[k] )
             self.coeffs[k]= self.coeffs[k] + noise * (rand_t-1.0)
         self.update_()
 
@@ -943,7 +943,8 @@ def write_ipess_kagome_pg_lc(state, outputfile, tol=1.0e-14, normalize=False):
 
     TODO implement cutoff on elements with magnitude below tol
     """
-    json_state=dict({"pgs": state.pgs , "basis_t": {}, "coeffs": {}})
+    json_state=dict({"pgs": state.pgs , "basis_t": {}, "coeffs": {}, \
+        "SYM_UP_DOWN": state.SYM_UP_DOWN, "SYM_BOND_S": state.SYM_UP_DOWN})
     for k in state.basis_t.keys():
         json_state["basis_t"][k]= []
         for m_t in state.basis_t[k]:
@@ -958,3 +959,43 @@ def write_ipess_kagome_pg_lc(state, outputfile, tol=1.0e-14, normalize=False):
 
     with open(outputfile,'w') as f:
         json.dump(json_state, f, indent=4, separators=(',', ': '))
+
+def read_ipess_kagome_pg_lc(jsonfile, peps_args=cfg.peps_args, global_args=cfg.global_args):
+    dtype = global_args.torch_dtype
+
+    with open(jsonfile) as j:
+        raw_state = json.load(j)
+
+        SYM_UP_DOWN= True
+        if "SYM_UP_DOWN" in raw_state.keys(): 
+            SYM_UP_DOWN= raw_state["SYM_UP_DOWN"]
+        SYM_BOND_S= True
+        if "SYM_BOND_S" in raw_state.keys(): 
+            SYM_BOND_S= raw_state["SYM_BOND_S"] 
+
+        pgs=None
+        if "pgs" in raw_state.keys():
+            # legacy
+            if not isinstance(raw_state["pgs"],dict):
+                pgs= tuple( raw_state["pgs"] )
+                if pgs==(None,None,None): pgs=None
+                elif pgs==("A_2","A_2","B"):
+                    pgs= {"T_u": "A_2", "T_d": "A_2", "B_c": "B", "B_a": "B", "B_b": "B"}
+            else:
+                pgs= raw_state["pgs"]
+
+        basis_t= dict()
+        for k in raw_state["basis_t"].keys():
+            basis_t[k]= []
+            for b_t in raw_state["basis_t"][k]:
+                basis_t[k].append( read_basis_t(b_t, device=global_args.device) )
+        coeffs= dict()
+        for k in raw_state["coeffs"].keys():
+            _, coeffs[k]= read_basis_t(raw_state["coeffs"][k], device=global_args.device)
+
+    pg_lc_tensors= { k: (coeffs[k],basis_t[k]) for k in coeffs.keys() }
+    state= IPESS_KAGOME_PG_LC( **pg_lc_tensors,\
+                SYM_UP_DOWN=SYM_UP_DOWN, SYM_BOND_S=SYM_BOND_S, pgs=pgs,\
+                peps_args=peps_args, global_args=global_args)
+
+    return state
