@@ -30,11 +30,16 @@ parser.add_argument("--jtrip", type=float, default=0, help="(SxS).S")
 parser.add_argument("--jperm", type=complex, default=0+0j, help="triangle permutation")
 parser.add_argument("--ansatz", type=str, default=None, help="choice of the tensor ansatz",\
      choices=["IPEPS", "IPESS", "IPESS_PG", "A_2,B", "A_1,B"])
+parser.add_argument("--no_sym_up_dn", action='store_false', dest='sym_up_dn',\
+    help="same trivalent tensors for up and down triangles")
+parser.add_argument("--no_sym_bond_S", action='store_false', dest='sym_bond_S',\
+    help="same bond site tensors")
 parser.add_argument("--CTM_check", type=str, default='Partial_energy', help="method to check CTM convergence",\
      choices=["Energy", "SingularValue", "Partial_energy"])
 parser.add_argument("--force_cpu", action='store_true', dest='force_cpu', help="force RDM contractions on CPU")
 parser.add_argument("--obs_freq", type=int, default=-1, help="frequency of computing observables"
     + " during CTM convergence")
+parser.add_argument("--corrf_r", type=int, default=1, help="maximal correlation function distance")
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues "+
     "of transfer operator to compute")
 parser.add_argument("--EH_n", type=int, default=1, help="number of leading eigenvalues "+
@@ -66,7 +71,10 @@ def main():
         ansatz_pgs= None
         if args.ansatz=="A_2,B": ansatz_pgs= IPESS_KAGOME_PG.PG_A2_B
         if args.ansatz=="A_1,B": ansatz_pgs= IPESS_KAGOME_PG.PG_A1_B
-        
+        if ansatz_pgs in ["A_1,B", "A_2,B"]: 
+            args.sym_bond_S= True
+            args.sym_up_dn= True
+
         if args.instate!=None:
             if args.ansatz=="IPESS":
                 state= read_ipess_kagome_generic(args.instate)
@@ -305,6 +313,18 @@ def main():
     ev_chi_R_upT= torch.einsum('ijkmno,mnoijk',rho_upT, chi_R)
     ev_chi_I_upT= torch.einsum('ijkmno,mnoijk',rho_upT, chi_I)
     print(f"Re(Chi) upT {ev_chi_R_upT} Im(Chi) upT {ev_chi_I_upT}")
+
+    # 7) ----- additional observables ---------------------------------------------    
+    for x in [0,1,2]:
+        corrSS= model.eval_corrf_SS((0,0), (1,0), state, ctm_env_init, args.corrf_r, site=x)
+        print(f"\n\nSS[(0,0),(1,0),site={x}] r "+" ".join([label for label in corrSS.keys()]))
+        for i in range(args.corrf_r):
+            print(f"{i} "+" ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
+
+        corrSS= model.eval_corrf_SS((0,0), (0,1), state, ctm_env_init, args.corrf_r, site=x)
+        print(f"\n\nSS[(0,0),(0,1),site={x}] r "+" ".join([label for label in corrSS.keys()]))
+        for i in range(args.corrf_r):
+            print(f"{i} "+" ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
 
     # transfer operator spectrum
     site_dir_list=[((0,0), (1,0)), ((0,0), (0,1))]

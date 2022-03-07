@@ -662,7 +662,7 @@ def read_ipess_kagome_pg(jsonfile, peps_args=cfg.peps_args, global_args=cfg.glob
         elem_t= OrderedDict()
         for key,t in raw_state["elem_tensors"].items():
             elem_t[key]= torch.from_numpy(read_bare_json_tensor_np_legacy(t))\
-                .to(global_args.device)
+                .to(dtype=global_args.torch_dtype, device=global_args.device)
 
         # legacy
         if "UP_T" in elem_t.keys() and "BOND_S" in elem_t.keys():

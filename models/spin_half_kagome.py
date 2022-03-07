@@ -96,55 +96,13 @@ class S_HALF_KAGOME():
         smId2= torch.einsum('ij,kl,ab->ikajlb',irrep.SM(),Id1,Id1).contiguous()
         self.obs_ops= {
             "sz_0": szId2, "sp_0": spId2, "sm_0": smId2,\
-            "sz_1": szId2.permute(1,2,0, 4,5,3).contiguous(),\
-            "sp_1": spId2.permute(1,2,0, 4,5,3).contiguous(),\
-            "sm_1": smId2.permute(1,2,0, 4,5,3).contiguous(),\
-            "sz_2": szId2.permute(2,0,1, 5,3,4).contiguous(),\
-            "sp_2": spId2.permute(2,0,1, 5,3,4).contiguous(),\
-            "sm_2": smId2.permute(2,0,1, 5,3,4).contiguous(),
-            }
-        self.SS01= self.SSnnId
-        self.SS12= self.SSnnId.permute(1,2,0, 4,5,3)
-        self.SS02= self.SSnnId.permute(2,0,1, 5,3,4)
-
-    #define operators for correlation functions
-    def sz_0_op(self):
-        op=self.obs_ops["sz_0"].reshape(self.phys_dim**3, self.phys_dim**3)
-        return op
-    def sz_1_op(self):
-        op=self.obs_ops["sz_1"].reshape(self.phys_dim**3, self.phys_dim**3)
-        return op
-    def sz_2_op(self):
-        op=self.obs_ops["sz_2"].reshape(self.phys_dim**3, self.phys_dim**3)
-        return op
-    def sp_0_op(self):
-        op=self.obs_ops["sp_0"].reshape(self.phys_dim**3, self.phys_dim**3)
-        return op
-    def sp_1_op(self):
-        op=self.obs_ops["sp_1"].reshape(self.phys_dim**3, self.phys_dim**3)
-        return op
-    def sp_2_op(self):
-        op=self.obs_ops["sp_2"].reshape(self.phys_dim**3, self.phys_dim**3)
-        return op
-    def sm_0_op(self):
-        op=self.obs_ops["sm_0"].reshape(self.phys_dim**3, self.phys_dim**3)
-        return op
-    def sm_1_op(self):
-        op=self.obs_ops["sm_1"].reshape(self.phys_dim**3, self.phys_dim**3)
-        return op
-    def sm_2_op(self):
-        op=self.obs_ops["sm_2"].reshape(self.phys_dim**3, self.phys_dim**3)
-        return op
-
-    def SS01_op(self):
-        op=self.SS01.reshape(self.phys_dim**3, self.phys_dim**3)
-        return op
-    def SS12_op(self):
-        op=self.SS12.reshape(self.phys_dim**3, self.phys_dim**3)
-        return op
-    def SS02_op(self):
-        op=self.SS02.reshape(self.phys_dim**3, self.phys_dim**3)
-        return op
+            "sz_1": szId2.permute(2,0,1, 5,3,4).contiguous(),\
+            "sp_1": spId2.permute(2,0,1, 5,3,4).contiguous(),\
+            "sm_1": smId2.permute(2,0,1, 5,3,4).contiguous(),\
+            "sz_2": szId2.permute(1,2,0, 4,5,3).contiguous(),\
+            "sp_2": spId2.permute(1,2,0, 4,5,3).contiguous(),\
+            "sm_2": smId2.permute(1,2,0, 4,5,3).contiguous(),
+        }
 
     # Energy terms
     def energy_triangle_dn(self, state, env, force_cpu=False, fail_on_check=False,\
@@ -173,12 +131,12 @@ class S_HALF_KAGOME():
             (0, 0), state, env, self.h_triangle, force_cpu=force_cpu)
         return e_dn
 
-    def energy_nnn(self, state, env, force_cpu=False):
-        if self.j2 == 0:
-            return 0.
-        else:
-            vNNN = self.P_bonds_nnn(state, env, force_cpu=force_cpu)
-            return(self.j2*(vNNN[0]+vNNN[1]+vNNN[2]+vNNN[3]+vNNN[4]+vNNN[5]))
+    # def energy_nnn(self, state, env, force_cpu=False):
+    #     if self.j2 == 0:
+    #         return 0.
+    #     else:
+    #         vNNN = self.P_bonds_nnn(state, env, force_cpu=force_cpu)
+    #         return(self.j2*(vNNN[0]+vNNN[1]+vNNN[2]+vNNN[3]+vNNN[4]+vNNN[5]))
 
     # Observables
 
@@ -192,41 +150,41 @@ class S_HALF_KAGOME():
         vP_up= torch.einsum('ijkmno,mnoijk', rdm_up, self.P_triangle)
         return vP_up
 
-    def P_bonds_nnn(self, state, env, force_cpu=False):
-        norm_wf = rdm_kagome.rdm2x2_dn_triangle_with_operator((0, 0), state, env, \
-            self.id_downT, force_cpu=force_cpu)
-        vNNN1_12, vNNN1_31 = rdm_kagome.rdm2x2_nnn_1((0, 0), state, env, operator=exchange_bond, force_cpu=force_cpu)
-        vNNN2_32, vNNN2_21 = rdm_kagome.rdm2x2_nnn_2((0, 0), state, env, operator=exchange_bond, force_cpu=force_cpu)
-        vNNN3_31, vNNN3_23 = rdm_kagome.rdm2x2_nnn_3((0, 0), state, env, operator=exchange_bond, force_cpu=force_cpu)
-        return _cast_to_real(vNNN1_12 / norm_wf), _cast_to_real(vNNN2_21 / norm_wf), \
-            _cast_to_real(vNNN1_31 / norm_wf), _cast_to_real(vNNN3_31 / norm_wf), \
-            _cast_to_real(vNNN2_32 / norm_wf), _cast_to_real(vNNN3_23 / norm_wf)
+    # def P_bonds_nnn(self, state, env, force_cpu=False):
+    #     norm_wf = rdm_kagome.rdm2x2_dn_triangle_with_operator((0, 0), state, env, \
+    #         self.id_downT, force_cpu=force_cpu)
+    #     vNNN1_12, vNNN1_31 = rdm_kagome.rdm2x2_nnn_1((0, 0), state, env, operator=exchange_bond, force_cpu=force_cpu)
+    #     vNNN2_32, vNNN2_21 = rdm_kagome.rdm2x2_nnn_2((0, 0), state, env, operator=exchange_bond, force_cpu=force_cpu)
+    #     vNNN3_31, vNNN3_23 = rdm_kagome.rdm2x2_nnn_3((0, 0), state, env, operator=exchange_bond, force_cpu=force_cpu)
+    #     return _cast_to_real(vNNN1_12 / norm_wf), _cast_to_real(vNNN2_21 / norm_wf), \
+    #         _cast_to_real(vNNN1_31 / norm_wf), _cast_to_real(vNNN3_31 / norm_wf), \
+    #         _cast_to_real(vNNN2_32 / norm_wf), _cast_to_real(vNNN3_23 / norm_wf)
 
-    def P_bonds_nn(self, state, env):
-        id_matrix = torch.eye(27, dtype=torch.complex128, device=cfg.global_args.device)
-        norm_wf = rdm.rdm1x1((0, 0), state, env, operator=id_matrix)
-        # bond 2--3
-        bond_op = torch.zeros((27, 27), dtype=torch.complex128, device=cfg.global_args.device)
-        for i in range(3):
-            for j in range(3):
-                for k in range(3):
-                    bond_op[fmap(i,j,k),fmap(i,k,j)] = 1.
-        vP_23 = rdm.rdm1x1((0,0), state, env, operator=bond_op) / norm_wf
-        # bond 1--3
-        bond_op = torch.zeros((27, 27), dtype=torch.complex128, device=cfg.global_args.device)
-        for i in range(3):
-            for j in range(3):
-                for k in range(3):
-                    bond_op[fmap(i,j,k),fmap(k,j,i)] = 1.
-        vP_13 = rdm.rdm1x1((0, 0), state, env, operator=bond_op) / norm_wf
-        # bond 1--2
-        bond_op = torch.zeros((27, 27), dtype=torch.complex128, device=cfg.global_args.device)
-        for i in range(3):
-            for j in range(3):
-                for k in range(3):
-                    bond_op[fmap(i,j,k),fmap(j,i,k)] = 1.
-        vP_12 = rdm.rdm1x1((0, 0), state, env, operator=bond_op) / norm_wf
-        return(torch.real(vP_23), torch.real(vP_13), torch.real(vP_12))
+    # def P_bonds_nn(self, state, env):
+    #     id_matrix = torch.eye(27, dtype=torch.complex128, device=cfg.global_args.device)
+    #     norm_wf = rdm.rdm1x1((0, 0), state, env, operator=id_matrix)
+    #     # bond 2--3
+    #     bond_op = torch.zeros((27, 27), dtype=torch.complex128, device=cfg.global_args.device)
+    #     for i in range(3):
+    #         for j in range(3):
+    #             for k in range(3):
+    #                 bond_op[fmap(i,j,k),fmap(i,k,j)] = 1.
+    #     vP_23 = rdm.rdm1x1((0,0), state, env, operator=bond_op) / norm_wf
+    #     # bond 1--3
+    #     bond_op = torch.zeros((27, 27), dtype=torch.complex128, device=cfg.global_args.device)
+    #     for i in range(3):
+    #         for j in range(3):
+    #             for k in range(3):
+    #                 bond_op[fmap(i,j,k),fmap(k,j,i)] = 1.
+    #     vP_13 = rdm.rdm1x1((0, 0), state, env, operator=bond_op) / norm_wf
+    #     # bond 1--2
+    #     bond_op = torch.zeros((27, 27), dtype=torch.complex128, device=cfg.global_args.device)
+    #     for i in range(3):
+    #         for j in range(3):
+    #             for k in range(3):
+    #                 bond_op[fmap(i,j,k),fmap(j,i,k)] = 1.
+    #     vP_12 = rdm.rdm1x1((0, 0), state, env, operator=bond_op) / norm_wf
+    #     return(torch.real(vP_23), torch.real(vP_13), torch.real(vP_12))
 
     def eval_obs(self, state, env, force_cpu=True, cast_real=False, disp_corre_len=False):
         r"""
@@ -260,20 +218,23 @@ class S_HALF_KAGOME():
                 #obs[f"m_{i}"]= sqrt(_cast_to_real(obs[f"sz_{i}"]*obs[f"sz_{i}"]+ obs[f"sp_{i}"]*obs[f"sm_{i}"]))
                 obs[f"m2_{i}"]= obs[f"sz_{i}"]*obs[f"sz_{i}"]+ obs[f"sp_{i}"]*obs[f"sm_{i}"]
  
-            # nn S.S pattern
+            # nn S.S pattern. In self.SSnnId, the identity is placed on s2 of three sites
+            # in the unitcell i.e. \vec{S}_0 \cdot \vec{S}_1 \otimes Id_2
             SS_dn_01= rdm_kagome.rdm2x2_dn_triangle_with_operator(\
                 (0, 0), state, env, self.SSnnId, force_cpu=force_cpu)
+            # move identity from site 2 to site 0
             SS_dn_12= rdm_kagome.rdm2x2_dn_triangle_with_operator(\
-                (0, 0), state, env, self.SSnnId.permute(1,2,0, 4,5,3).contiguous(),\
+                (0, 0), state, env, self.SSnnId.permute(2,1,0, 5,4,3).contiguous(),\
                 force_cpu=force_cpu)
+            # move identity from site 2 to site 1
             SS_dn_02= rdm_kagome.rdm2x2_dn_triangle_with_operator(\
-                (0, 0), state, env, self.SSnnId.permute(2,0,1, 5,3,4).contiguous(),\
+                (0, 0), state, env, self.SSnnId.permute(0,2,1, 3,5,4).contiguous(),\
                 force_cpu=force_cpu)
             rdm_up= rdm_kagome.rdm2x2_up_triangle_open(\
                 (0, 0), state, env, force_cpu=force_cpu)
             SS_up_01= torch.einsum('ijkmno,mnoijk', rdm_up, self.SSnnId )
-            SS_up_12= torch.einsum('ijkmno,mnoijk', rdm_up, self.SSnnId.permute(1,2,0, 4,5,3) )
-            SS_up_02= torch.einsum('ijkmno,mnoijk', rdm_up, self.SSnnId.permute(2,0,1, 5,3,4) )
+            SS_up_12= torch.einsum('ijkmno,mnoijk', rdm_up, self.SSnnId.permute(2,1,0, 5,4,3) )
+            SS_up_02= torch.einsum('ijkmno,mnoijk', rdm_up, self.SSnnId.permute(0,2,1, 3,5,4) )
 
             obs.update({"SS_dn_01": SS_dn_01, "SS_dn_12": SS_dn_12, "SS_dn_02": SS_dn_02,\
                 "SS_up_01": SS_up_01, "SS_up_12": SS_up_12, "SS_up_02": SS_up_02 })
@@ -306,3 +267,43 @@ class S_HALF_KAGOME():
                 return obs
             else:
                 return corr_len_obs
+
+    def eval_corrf_SS(self,coord,direction,state,env,dist,site=0):
+        r"""
+        :param site: selects one of the non-equivalent physical degrees of freedom
+                     within the unit cell 
+
+               a
+               |
+            b--\                     
+                \
+                s0--s2--d
+                 | / 
+                 |/   <- DOWN_T
+                s1
+                 |
+                 c
+        """
+        # function allowing for additional site-dependent conjugation of op
+        def conjugate_op(op):
+            # rot_op= ...
+            op_0= op
+            # op_rot= torch.einsum('ki,kl,lj->ij',rot_op,op_0,rot_op)
+            def _gen_op(r):
+                #return op_rot if r%2==0 else op_0
+                return op_0
+            return _gen_op
+
+        assert site in [0,1,2],"site has to be 0,1, or 2"
+        op_sz= self.obs_ops[f"sz_{site}"].view([self.phys_dim**3]*2)
+        op_sx= 0.5*(self.obs_ops[f"sp_{site}"] + self.obs_ops[f"sm_{site}"])\
+            .view([self.phys_dim**3]*2)
+        op_isy= -0.5*(self.obs_ops[f"sp_{site}"] - self.obs_ops[f"sm_{site}"])\
+            .view([self.phys_dim**3]*2)
+
+        Sz0szR= corrf.corrf_1sO1sO(coord,direction,state,env, op_sz, conjugate_op(op_sz), dist)
+        Sx0sxR= corrf.corrf_1sO1sO(coord,direction,state,env, op_sx, conjugate_op(op_sx), dist)
+        nSy0SyR= corrf.corrf_1sO1sO(coord,direction,state,env, op_isy, conjugate_op(op_isy), dist)
+
+        res= dict({"ss": Sz0szR+Sx0sxR-nSy0SyR, "szsz": Sz0szR, "sxsx": Sx0sxR, "sysy": -nSy0SyR})
+        return res  
