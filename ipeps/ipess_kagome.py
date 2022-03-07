@@ -737,7 +737,7 @@ def write_ipess_kagome_pg(state, outputfile, tol=1.0e-14, normalize=False, pg_sy
     """
     sym_state= to_PG_symmetric(state) if pg_symmetrize else state
     json_state = dict({"elem_tensors": {}, "SYM_UP_DOWN": sym_state.SYM_UP_DOWN, \
-        "SYM_BOND_S": sym_state.SYM_UP_DOWN, "pgs": sym_state.pgs})
+        "SYM_BOND_S": sym_state.SYM_BOND_S, "pgs": sym_state.pgs})
 
     # write list of considered elementary tensors
     for key, t in sym_state.elem_tensors.items():
@@ -944,7 +944,7 @@ def write_ipess_kagome_pg_lc(state, outputfile, tol=1.0e-14, normalize=False):
     TODO implement cutoff on elements with magnitude below tol
     """
     json_state=dict({"pgs": state.pgs , "basis_t": {}, "coeffs": {}, \
-        "SYM_UP_DOWN": state.SYM_UP_DOWN, "SYM_BOND_S": state.SYM_UP_DOWN})
+        "SYM_UP_DOWN": state.SYM_UP_DOWN, "SYM_BOND_S": state.SYM_BOND_S})
     for k in state.basis_t.keys():
         json_state["basis_t"][k]= []
         for m_t in state.basis_t[k]:

@@ -193,7 +193,7 @@ def main():
             spectra.append([label, s])
         return spectra
 
-    def report_conv_fn(state, ctm_env, conv_step, conv_crit, e_curr=None):
+    def report_conv_fn(state, env, conv_step, conv_crit, e_curr=None):
         if args.obs_freq>0 and \
             (conv_step%args.obs_freq==0 or (conv_step-1)%args.obs_freq==0):
             if e_curr is None: 
