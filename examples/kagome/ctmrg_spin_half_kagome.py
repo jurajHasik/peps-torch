@@ -1,3 +1,4 @@
+import warnings
 import context
 import argparse
 import config as cfg
@@ -79,7 +80,12 @@ def main():
             if args.ansatz=="IPESS":
                 state= read_ipess_kagome_generic(args.instate)
             elif args.ansatz in ["IPESS_PG","A_2,B","A_1,B"]:
-                state= read_ipess_kagome_pg(args.instate)
+                try: 
+                    state= read_ipess_kagome_pg(args.instate)
+                except Exception as e:
+                    print(e)
+                    warnings.warn(f"Attempting LC ansatz")
+                    state= read_ipess_kagome_pg_lc(args.instate)
 
             # possibly symmetrize by PG
             if ansatz_pgs!=None:
@@ -325,6 +331,14 @@ def main():
         print(f"\n\nSS[(0,0),(0,1),site={x}] r "+" ".join([label for label in corrSS.keys()]))
         for i in range(args.corrf_r):
             print(f"{i} "+" ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
+
+    # environment diagnostics
+    print("\n")
+    for c_loc,c_ten in ctm_env_init.C.items(): 
+        u,s,v= torch.svd(c_ten, compute_uv=False)
+        print(f"spectrum C[{c_loc}]")
+        for i in range(args.chi):
+            print(f"{i} {s[i]}")
 
     # transfer operator spectrum
     site_dir_list=[((0,0), (1,0)), ((0,0), (0,1))]
