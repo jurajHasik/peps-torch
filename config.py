@@ -232,6 +232,10 @@ class CTMARGS():
                                 singular value spectrum per block used in the construction of projectors.
                                 Default: ``0.0``
     :vartype projector_svd_reltol_block: float
+    :ivar projector_eps_multiplet: threshold for defining boundary of the multiplets
+    :vartype projector_eps_multiplet: float
+    :ivar projector_multiplet_abstol: absolute threshold for spectral values to be considered in multiplets 
+    :vartype projector_multiplet_abstol: float
     :ivar ctm_move_sequence: sequence of directional moves within single CTM iteration. The possible 
                              directions are encoded as tuples(int,int) 
                                 
@@ -300,6 +304,8 @@ class CTMARGS():
         self.projector_svd_method = 'DEFAULT'
         self.projector_svd_reltol = 1.0e-8
         self.projector_svd_reltol_block = 0.0
+        self.projector_eps_multiplet = 1.0e-8
+        self.projector_multiplet_abstol = 1.0e-14
         self.ad_decomp_reg= 1.0e-12
         self.ctm_move_sequence = [(0,-1), (-1,0), (0,1), (1,0)]
         self.ctm_force_dl = False

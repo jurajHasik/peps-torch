@@ -245,9 +245,9 @@ def main():
     elif args.CTM_check=="SingularValue":
         def ctmrg_conv_fn(state, env, history, ctm_args=cfg.ctm_args):
             if not history:
+                spec_ers= torch.full((4,), float('inf'))
                 history_spec = []
-                history_ite=1
-                history=[history_ite, history_spec]
+                history=[1, history_spec]
             spect_new=eval_corner_spectra(env)
             spec1_new=spect_new[0][1]
             spec1_new=spec1_new/spec1_new[0]
@@ -257,8 +257,8 @@ def main():
             spec3_new=spec3_new/spec3_new[0]
             spec4_new=spect_new[3][1]
             spec4_new=spec4_new/spec4_new[0]
-            if len(history[1])==4:
-                spec_ers=torch.zeros(4)
+            if history[0]>1:
+                spec_ers= torch.full((4,), float('inf'))
                 spec_ers[0]=torch.linalg.norm(spec1_new-history[1][0])
                 spec_ers[1]=torch.linalg.norm(spec2_new-history[1][1])
                 spec_ers[2]=torch.linalg.norm(spec3_new-history[1][2])
