@@ -7,6 +7,7 @@ import ipeps.ipeps as ipeps
 from groups.pg import make_c4v_symm
 from ipeps.ipeps_c4v import IPEPS_C4V
 from linalg.custom_eig import truncated_eig_sym
+from linalg.custom_svd import truncated_svd_gesdd
 
 class IPEPS_C4V_THERMAL(ipeps.IPEPS):
     def __init__(self, site=None, peps_args=cfg.peps_args, global_args=cfg.global_args):
@@ -501,10 +502,14 @@ class IPEPS_C4V_THERMAL_TTN(IPEPS_C4V_THERMAL):
         for i in range(len(self.isometries)):
             # create hermitian matrix
             M= self.isometries[i]
+            M= M/M.abs().max()
             D_i, D_ip1= M.size(0), self.iso_Ds[i]
-            MMdag= M.view([D_i*D_i]*2)@(M.view([D_i*D_i]*2).T.conj())
-            D,U= truncated_eig_sym(MMdag, D_ip1, keep_multiplets=True,\
-                verbosity=cfg.ctm_args.verbosity_projectors)
+            # MMdag= M.view([D_i*D_i]*2)@(M.view([D_i*D_i]*2).T.conj())
+            # D,U= truncated_eig_sym(MMdag, D_ip1, keep_multiplets=True,\
+                # verbosity=cfg.ctm_args.verbosity_projectors)
+            U,S,V= truncated_svd_gesdd(M.view([D_i*D_i]*2), D_ip1,\
+                keep_multiplets=True, verbosity=cfg.ctm_args.verbosity_projectors)
+            # U= U @ V.conj().transpose(1,0)[:,:D_ip1]
             U= U.view(D_i, D_i, D_ip1)
             #   
             #            |/
@@ -565,7 +570,7 @@ class IPEPS_C4V_THERMAL_TTN(IPEPS_C4V_THERMAL):
     def symmetrize_isometries(self):
         # self.isometries= [
         new_iso= [
-            0.5*(iso+iso.permute(1,0,1,0)) for iso in self.isometries
+            0.5*(iso+iso.permute(1,0,3,2)) for iso in self.isometries
         ]
         return new_iso
 

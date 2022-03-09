@@ -75,6 +75,7 @@ def main():
         # 2-layers: tower of 2**2 ipepo's & two non-equivalent isometries
         # 3-layers: tower of 2**3 ipepo's & three non-equivalent isometries
         # ...
+        from linalg.hosvd import hosvd
         A= model.ipepo_trotter_suzuki(args.beta/(2**args.layers))
         if args.ipeps_init_type=='RANDOM':
             if args.layers>1:
@@ -86,24 +87,26 @@ def main():
                 dtype=model.dtype, device=model.device) \
                 for i in range(args.layers) ]
         if args.ipeps_init_type=='SVD':
-            if args.layers>1:
-                assert len(args.layers_Ds)==args.layers-1,\
-                    "reduced Ds of isometries must be provided"
+            assert len(args.layers_Ds)==args.layers,\
+                "reduced Ds of isometries must be provided"
             redD_iso= [A.size(0)] + args.layers_Ds
             isometries=[]
             B= A.clone()
-            for i in range(1,args.layers):
+            for i in range(args.layers):
                 #
                 #   pbc
                 #  --A-- = --E--
                 #  --A--
                 #   pbc
                 # 
-                E= torch.einsum('spuldr,psufdh->lfrh',B,B).contiguous()\
-                    .view([B.size(5)**2]*2)
-                U,S,Vh= torch.linalg.svd(E)
-                init_iso= U[:,:redD_iso[i]].reshape(B.size(5),B.size(5),redD_iso[i]).contiguous()
-                isometries.append( init_iso )
+                E= torch.einsum('spuldr,psxyzw->uxlydzrw',B,B).contiguous()\
+                    .view([B.size(5)**2]+[B.size(5)**6])
+                U,S,Vh= torch.linalg.svd(E,full_matrices=False)
+
+                # init_iso= U[:,:redD_iso[i]].reshape(B.size(5),B.size(5),redD_iso[i]).contiguous()
+                parent_iso= U @ torch.diag(S) @ Vh[:,:S.size(0)]
+                isometries.append( parent_iso.view([redD_iso[i]]*4) )
+                init_iso= U[:,:redD_iso[i+1]].view([redD_iso[i]]*2+[redD_iso[i+1]])
                 #   
                 #            |/
                 #     /--tmp_A--\
