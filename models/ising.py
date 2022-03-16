@@ -156,7 +156,7 @@ class ISING():
         return obs_values, obs_labels
 
 class ISING_C4V():
-    def __init__(self, hx=0.0, q=0, global_args=cfg.global_args):
+    def __init__(self, hx=0.0, hz=0, q=0, global_args=cfg.global_args):
         r"""
         :param hx: transverse field
         :param q: plaquette interaction 
@@ -199,9 +199,10 @@ class ISING_C4V():
         self.device=global_args.device
         self.phys_dim=2
         self.hx=hx
+        self.hz=hz
         self.q=q
         
-        self.h2, self.hp, self.szszszsz, self.szsz, self.sx = self.get_h()
+        self.h2, self.hp, self.szszszsz, self.szsz, self.sx, self.sz= self.get_h()
         self.obs_ops = self.get_obs_ops()
 
     def get_h(self):
@@ -212,13 +213,15 @@ class ISING_C4V():
         SzSzIdId= torch.einsum('ijab,klcd->ijklabcd',SzSz,id2)
         SzSzSzSz= torch.einsum('ijab,klcd->ijklabcd',SzSz,SzSz)
         Sx = s2.SP()+s2.SM()
+        Sz = 2*s2.SZ()
         SxId= torch.einsum('ij,ab->iajb', Sx, s2.I())
+        SzId= torch.einsum('ij,ab->iajb', 2*s2.SZ(), s2.I())
         SxIdIdId= torch.einsum('ia,jb,kc,ld->ijklabcd',Sx,s2.I(),s2.I(),s2.I())
 
-        h2= -SzSz - 0.5*self.hx*SxId
+        h2= -SzSz - 0.5*self.hx*SxId - 0.5*self.hz*SzId
         hp= -SzSzIdId -SzSzIdId.permute(0,2,1,3,4,6,5,7) -self.q*SzSzSzSz -self.hx*SxIdIdId
 
-        return h2, hp, SzSzSzSz, SzSz, Sx
+        return h2, hp, SzSzSzSz, SzSz, Sx, Sz
 
     def get_obs_ops(self):
         obs_ops = dict()
@@ -354,8 +357,9 @@ class ISING_C4V():
 
         rdm2x1= rdm_c4v_thermal._rdm2x1(state, env_c4v, mode, force_cpu=force_cpu)
         eSx= torch.einsum('ijaj,ia',rdm2x1,self.sx)
+        eSz= torch.einsum('ijaj,ia',rdm2x1,self.sz)
         eSzSz= torch.einsum('ijab,ijab',rdm2x1,self.szsz)
-        energy_per_site = -2*eSzSz - self.hx*eSx
+        energy_per_site = -2*eSzSz - self.hx*eSx - self.hz*eSz
         return energy_per_site
 
     def eval_obs_thermal(self,state,env_c4v,mode,force_cpu=False): 

@@ -22,6 +22,7 @@ parser= cfg.get_args_parser()
 # additional model-dependent arguments
 parser.add_argument("--l2d", type=int, default=1)
 parser.add_argument("--hx", type=float, default=0., help="transverse field")
+parser.add_argument("--hz", type=float, default=0., help="longitudinal field")
 parser.add_argument("--q", type=float, default=0, help="next nearest-neighbour coupling")
 parser.add_argument("--beta", type=float, default=0., help="inverse temperature")
 parser.add_argument("--layers", type=int, default=1)
@@ -40,7 +41,7 @@ def main():
     torch.manual_seed(args.seed)
 
     # 0) initialize model
-    model = ising.ISING_C4V(hx=args.hx, q=args.q)
+    model = ising.ISING_C4V(hx=args.hx, hz=args.hz, q=args.q)
     assert args.q==0,"plaquette term is not supported"
     energy_f= model.energy_1x1_nn_thermal
     eval_obs_f= model.eval_obs_thermal
