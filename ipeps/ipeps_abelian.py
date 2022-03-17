@@ -276,7 +276,7 @@ class IPEPS_ABELIAN():
         return state_dense
 
     def get_parameters(self):
-        return list(chain( *(self.sites[ind].A.values() for ind in self.sites)))
+        return list(self.sites[ind]._data for ind in self.sites)
 
     def get_checkpoint(self):
         r"""
@@ -430,7 +430,7 @@ def read_ipeps(jsonfile, settings, vertexToSite=None, \
             peps_args=peps_args, global_args=global_args)
 
     # check dtypes of all on-site tensors for newly created state
-    assert (False not in [state.dtype==s.unique_dtype() for s in sites.values()]), \
+    assert (False not in [state.dtype==s.yast_dtype for s in sites.values()]), \
         "incompatible dtype among state and on-site tensors"
 
     # move to desired device and return

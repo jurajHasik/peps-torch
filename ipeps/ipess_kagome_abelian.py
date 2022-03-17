@@ -270,7 +270,7 @@ def read_ipess_kagome_generic(jsonfile, settings, peps_args=cfg.peps_args,\
                 X= read_json_abelian_tensor_legacy(t, settings)
                 # move all tensors to desired dtype and device
                 # TODO improve
-                if X.is_complex() and X.unique_dtype() in ["float64", "float32"]:
+                if X.is_complex() and X.yast_dtype in ["float64", "float32"]:
                     warnings.warn("Downcasting complex tensor to real", RuntimeWarning)
                 ipess_tensors[key]= X.to(dtype=global_args.dtype, device=global_args.device)
             else:

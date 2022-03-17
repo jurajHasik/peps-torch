@@ -26,7 +26,7 @@ def _sym_pos_def_rdm(rdm, sym_pos_def=False, verbosity=0, who=None):
     rdm= rdm.fuse_legs(axes=(tuple(nsites+i for i in range(nsites)),\
         tuple(i for i in range(nsites))) )
     rdm= _sym_pos_def_matrix(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
-    rdm= rdm.unfuse_legs(axes=(0,1), inplace=True)
+    rdm= rdm.unfuse_legs(axes=(0,1))
     return rdm
 
 def _validate_precomputed(state,env):

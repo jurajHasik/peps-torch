@@ -189,21 +189,9 @@ class SU3_DEFINING_U1xU1():
         The extra index is charged, such that the total tensors in U(1)xU(1)
         invariant.
         """
-        op_v= yast.Tensor(self.engine, s=[-1]+list(self._REF_S_DIRS), n=(0,0))
-        
-        # center
-        center= [self.TZ(), self.Y()]
-        for c in self.charges:
-            op_v.set_block(ts=((0,0),c,c), Ds=(len(center), 1,1), val='zeros')
-        for i,op in enumerate(center):
-            for c,block in op.A.items():
-                op_v.A[(*op.get_tensor_charge(), *c)][i,:,:]= block 
-
-        # lowering and raising operators
-        for op in [self.TP(), self.TM(), self.VP(), self.VM(),\
-            self.UP(), self.UM()]:
-            for c,block in op.A.items():
-                op_v.set_block(ts= (*op.get_tensor_charge(), *c), val=block[None,:,:])
+        op_v= yast.block({i: t.add_leg(axis=0,s=-1) for i,t in enumerate([\
+            self.TZ(), self.Y(), self.TP(), self.TM(), self.VP(), self.VM(),\
+            self.UP(), self.UM()])}, common_legs=[1,2])
         return op_v
 
     def C1(self):

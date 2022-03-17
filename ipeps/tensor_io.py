@@ -171,8 +171,9 @@ def read_json_abelian_tensor_legacy(json_obj, config, dtype=None, device=None):
         if symmetry:
             assert len(charges)==len(nsym*bare_b.shape), f"Number of charges {len(charges)}"\
                 +f" incompatible with bare tensor rank {len(bare_b.shape)}"
-        T.set_block(ts=tuple(charges), val=(1.+0.j)*bare_b if _UPCAST else bare_b,\
-            dtype=dtype)
+        # T.set_block(ts=tuple(charges), val=(1.+0.j)*bare_b if _UPCAST else bare_b,\
+        #     dtype=dtype)
+        T.set_block(ts=tuple(charges), Ds=bare_b.shape, val=(1.+0.j)*bare_b if _UPCAST else bare_b)
 
     return T
 
@@ -264,13 +265,16 @@ def serialize_abelian_tensor_legacy(t, native=False):
     json_tensor["signature"]= t.get_signature(native=native)
     json_tensor["n"]= t.get_tensor_charge()
     json_tensor["isdiag"]= t.isdiag
-    unique_dtype = t.unique_dtype()
+    unique_dtype = t.yast_dtype
     if unique_dtype:
         json_tensor["dtype"]= unique_dtype
 
+    # json_tensor["struct"]= t.struct
+    # json_tensor["data"]= serialize_bare_tensor_legacy(t._data)
+
     json_tensor["blocks"]= []
-    for k in t.A.keys():
-        json_block= serialize_bare_tensor_legacy(t.A[k])
+    for k,D,source in zip(t.struct.t,t.struct.D,t.struct.sl):
+        json_block= serialize_bare_tensor_legacy(t[k])
         json_block["charges"]= k
         json_tensor["blocks"].append(json_block)
 

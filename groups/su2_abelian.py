@@ -36,7 +36,7 @@ class SU2_NOSYM():
     def _cast(self, op_id, J, dtype, device):
         tmp_block= self.get_op(op_id, J, dtype)
         op= yast.Tensor(self.engine, s=self._REF_S_DIRS)
-        op.set_block(val=tmp_block)
+        op.set_block(Ds=tmp_block.shape, val=tmp_block)
         op= op.to(device)
         return op
 
@@ -84,7 +84,7 @@ class SU2_NOSYM():
         tmp_block[0,:,:]= self.get_op("sz", self.J, self.dtype)
         tmp_block[1,:,:]= self.get_op("sp", self.J, self.dtype)
         tmp_block[2,:,:]= self.get_op("sm", self.J, self.dtype)
-        op.set_block(val=tmp_block)
+        op.set_block(Ds=tmp_block.shape, val=tmp_block)
         return op
 
     # TODO: implement xyz for Sx and Sy terms
@@ -106,7 +106,7 @@ class SU2_NOSYM():
         S_vec_dag= S_vec.conj().transpose((0,2,1))
         g= yast.Tensor(self.engine, s=self._REF_S_DIRS)
         tmp_block= np.diag(np.asarray(xyz, dtype=self.dtype))
-        g.set_block(val=tmp_block)
+        g.set_block(Ds=tmp_block.shape, val=tmp_block)
         #
         # 1->0
         # S--0(-1) (+1)1--g--0->2(-1)
