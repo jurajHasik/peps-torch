@@ -276,7 +276,7 @@ class IPEPS_ABELIAN():
         return state_dense
 
     def get_parameters(self):
-        return list(self.sites[ind]._data for ind in self.sites)
+        return list(self.sites[ind].data for ind in self.sites)
 
     def get_checkpoint(self):
         r"""

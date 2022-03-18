@@ -100,7 +100,7 @@ class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
                          global_args=global_args)
 
     def get_parameters(self):
-        return list(chain( *(self.ipess_tensors[ind].A.values() for ind in self.ipess_tensors)))
+        return list(self.ipess_tensors[ind].data for ind in self.ipess_tensors)
 
     def get_checkpoint(self):
         return {ind: self.ipess_tensors[ind].save_to_dict() for ind in self.ipess_tensors}
