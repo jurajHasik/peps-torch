@@ -434,8 +434,10 @@ class ISING_C4V():
 
             |s'
             eX
+            |
+            eZ
             |p/        |/
-          --eZ-- =   --T(tau)_m--
+          --eZZ-- =   --T(tau)_m--
            /|p'       /|
             eX
             |s
@@ -460,6 +462,8 @@ class ISING_C4V():
         #   z--
         #   |
         #
-        eZ= torch.einsum('usa,lab,dbc,rcp->spuldr',z,z,z,z)
-        T= torch.einsum('sx,xyuldr,yp->spuldr',eX,eZ,eX).contiguous()
+        eZ= torch.exp( (tau/2)*self.hz*2*s2.SZ().diag() ).diag()
+        print(eZ)
+        eZZ= torch.einsum('usa,lab,dbc,rcp->spuldr',z,z,z,z)
+        T= torch.einsum('sw,wx,xyuldr,yp->spuldr',eX,eZ,eZZ,eX).contiguous()
         return T

@@ -76,7 +76,6 @@ def main():
         # 2-layers: tower of 2**2 ipepo's & two non-equivalent isometries
         # 3-layers: tower of 2**3 ipepo's & three non-equivalent isometries
         # ...
-        from linalg.hosvd import hosvd
         A= model.ipepo_trotter_suzuki(args.beta/(2**args.layers))
         if args.ipeps_init_type=='RANDOM':
             if args.layers>1:
