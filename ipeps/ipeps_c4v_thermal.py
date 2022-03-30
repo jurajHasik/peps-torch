@@ -544,7 +544,8 @@ class IPEPS_C4V_THERMAL_TTN(IPEPS_C4V_THERMAL):
         self.sites= {(0,0): self.build_onsite_tensors()}
 
     def get_parameters(self):
-        return self.isometries
+        # optimize only isometries, which perform truncation
+        return [iso for i,iso in enumerate(self.isometries) if iso.size(0)*iso.size(0) > self.iso_Ds[i]]
 
     # def add_noise(self,noise,symmetrize=False):
     #     r"""
