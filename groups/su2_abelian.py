@@ -245,7 +245,7 @@ class SU2_U1():
         op= yast.Tensor(self.engine, s=self._REF_S_DIRS, n=0)
         for j in range(-self.HW,self.HW+1,2):
             c= (j,j)
-            op.set_block(ts=c, val= (0.5*j)*unit_block)
+            op.set_block(ts=c, Ds=unit_block.shape, val= (0.5*j)*unit_block)
         op= op.to(self.device)
         return op
 
@@ -272,7 +272,7 @@ class SU2_U1():
         for j in range(-self.HW,self.HW,2):
             c= (j+2,j) #if j%2==1 else (j//2+1,j//2)
             c_p= sqrt(0.5 * self.HW * (0.5 * self.HW + 1) - 0.5*j * (0.5*j + 1))
-            op.set_block(ts=c, val= c_p*unit_block)
+            op.set_block(ts=c, Ds=unit_block.shape, val= c_p*unit_block)
         op= op.to(self.device) 
         return op
 
@@ -299,7 +299,7 @@ class SU2_U1():
         for j in range(-self.HW+2,self.HW+1,2):
             c= (j-2,j) #if j%2==1 else (j//2,j//2-1)
             c_p= sqrt(0.5 * self.HW * (0.5 * self.HW + 1) - 0.5*j * (0.5*j - 1))
-            op.set_block(ts=c, val= c_p*unit_block)
+            op.set_block(ts=c, Ds=unit_block.shape, val= c_p*unit_block)
         op= op.to(self.device) 
         return op
 
@@ -310,11 +310,14 @@ class SU2_U1():
         # 1(-1)
         # S--0(-1)
         # 2(+1)
-        op_v= yast.Tensor(self.engine, s=[-1]+list(self._REF_S_DIRS), n=0)
-        op_sz, op_sp, op_sm= self.SZ(), self.SP(), self.SM()
-        for op in [op_sz, op_sp, op_sm]:
-            for c in op.A:
-                op_v.set_block(ts=(op.get_tensor_charge()[0],*c), val=op.A[c][None,:,:])
+        # op_v= yast.Tensor(self.engine, s=[-1]+list(self._REF_S_DIRS), n=0)
+        # op_sz, op_sp, op_sm= self.SZ(), self.SP(), self.SM()
+        # for op in [op_sz, op_sp, op_sm]:
+        #     for c in op.A:
+        #         op_v.set_block(ts=(op.get_tensor_charge()[0],*c), val=op.A[c][None,:,:])
+        
+        op_v= yast.block({i: t.add_leg(axis=0,s=-1) for i,t in enumerate([\
+            self.SZ(), self.SP(), self.SM()])}, common_legs=[1,2])
         return op_v
 
     # TODO: implement xyz for Sx and Sy terms
@@ -328,9 +331,9 @@ class SU2_U1():
         """
         unit_block= np.ones((1,1), dtype=self.dtype)
         g= yast.Tensor(self.engine, s=self._REF_S_DIRS)
-        g.set_block(ts=(2,2), val=zpm[1]/2*unit_block)
-        g.set_block(ts=(0,0), val=zpm[0]*unit_block)
-        g.set_block(ts=(-2,-2), val=zpm[2]/2*unit_block)
+        g.set_block(ts=(2,2), Ds=unit_block.shape, val=zpm[1]/2*unit_block)
+        g.set_block(ts=(0,0), Ds=unit_block.shape, val=zpm[0]*unit_block)
+        g.set_block(ts=(-2,-2), Ds=unit_block.shape, val=zpm[2]/2*unit_block)
         g= g.to(self.device)
 
         S_vec= self.S_zpm()

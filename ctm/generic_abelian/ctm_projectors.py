@@ -9,7 +9,7 @@ import logging
 log = logging.getLogger(__name__)
 
 def ctm_get_projectors_4x4(direction, coord, state, env, ctm_args=cfg.ctm_args, \
-    global_args=cfg.global_args):
+    global_args=cfg.global_args, metadata=None):
     r"""
     :param direction: direction of the CTM move for which the projectors are to be computed
     :param coord: vertex (x,y) specifying (together with ``direction``) 4x4 tensor network 
@@ -79,7 +79,7 @@ def ctm_get_projectors_4x4(direction, coord, state, env, ctm_args=cfg.ctm_args, 
         raise ValueError("Invalid direction: "+str(direction))
 
     return ctm_get_projectors_from_matrices(R, Rt, env.chi, direction, \
-        ctm_args, global_args)
+        ctm_args, global_args, metadata=metadata)
 
 def ctm_get_projectors_4x2(direction, coord, state, env, ctm_args=cfg.ctm_args, \
     global_args=cfg.global_args):
@@ -156,7 +156,7 @@ def ctm_get_projectors_4x2(direction, coord, state, env, ctm_args=cfg.ctm_args, 
 #####################################################################
 
 def ctm_get_projectors_from_matrices(R, Rt, chi, direction, \
-    ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+    ctm_args=cfg.ctm_args, global_args=cfg.global_args, metadata=None):
     r"""
     :param R: tensor of shape (dim0, dim1)
     :param Rt: tensor of shape (dim0, dim1)
@@ -228,8 +228,8 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, direction, \
     if ctm_args.projector_svd_method=='DEFAULT' or ctm_args.projector_svd_method=='GESDD':
         def truncated_svd(M, chi, sU=1):
             return yast.linalg.svd(M, (0,1), sU=sU, keep_multiplets=True, D_total=chi,\
-                tol=ctm_args.projector_svd_reltol, tol_block=ctm_args.projector_svd_reltol_block,  \
-                )
+                tol=ctm_args.projector_svd_reltol, tol_block=ctm_args.projector_svd_reltol_block, \
+                metadata=metadata)
     # elif ctm_args.projector_svd_method == 'ARP':
     #     def truncated_svd(M, chi):
     #         return truncated_svd_arnoldi(M, chi, verbosity=ctm_args.verbosity_projectors)

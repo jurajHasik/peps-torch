@@ -60,7 +60,7 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
         t0_ctm= time.perf_counter()
         for direction in ctm_args.ctm_move_sequence:
             ctm_MOVE(direction, stateDL, env, ctm_args=ctm_args, global_args=global_args, \
-                verbosity=ctm_args.verbosity_ctm_move)
+                verbosity=ctm_args.verbosity_ctm_move, metadata={"ctm_i": i, "ctm_d": direction})
         t1_ctm= time.perf_counter()
 
         t0_obs= time.perf_counter()
@@ -82,7 +82,7 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
 # performs CTM move in one of the directions 
 # [Up=(0,-1), Left=(-1,0), Down=(0,1), Right=(1,0)]
 def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.global_args, \
-    verbosity=0):
+    verbosity=0, metadata=None):
     # select projector function
     if ctm_args.projector_method=='4X4':
         ctm_get_projectors=ctm_get_projectors_4x4
@@ -133,8 +133,9 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
         P = dict()
         Pt = dict()
         for coord,site in state_loc.sites.items():
+            if not (metadata is None): metadata["coord"]= coord 
             P[coord], Pt[coord] = ctm_get_projectors(direction, coord, state_loc, env_loc, \
-                ctm_args, global_args)
+                ctm_args, global_args, metadata=metadata)
             if verbosity>0:
                 print("P,Pt RIGHT "+str(coord)+" P: "+str(P[coord].size())+" Pt: "\
                     +str(Pt[coord].size()))

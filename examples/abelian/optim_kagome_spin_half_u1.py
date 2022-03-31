@@ -56,8 +56,8 @@ def main():
 
     # 0) initialize model
     if not args.theta is None:
-        args.j1= args.j1*math.cos(args.theta*math.pi)
         args.jtrip= args.j1*math.sin(args.theta*math.pi)
+        args.j1= args.j1*math.cos(args.theta*math.pi)
     model= kagome_spin_half_u1.KAGOME_U1(settings_U1, j1=args.j1, JD=args.JD, j1sq=args.j1sq,\
         j2=args.j2, j2sq=args.j2sq, jtrip=args.jtrip, jperm=args.jperm, h=args.h)
 
@@ -224,22 +224,22 @@ def main():
         elif args.ipeps_init_type=="RVB":
             unit_block= np.ones((1,1,1), dtype=cfg.global_args.dtype)
             B_c= yast.Tensor(settings_U1, s=(-1, 1, 1), n=0)
-            B_c.set_block(ts=(1,1,0), val= unit_block)
-            B_c.set_block(ts=(1,0,1), val= unit_block)
-            B_c.set_block(ts=(-1,-1,0), val= unit_block)
-            B_c.set_block(ts=(-1,0,-1), val= unit_block)
+            B_c.set_block(ts=(1,1,0), Ds= unit_block.shape, val= unit_block)
+            B_c.set_block(ts=(1,0,1), Ds= unit_block.shape, val= unit_block)
+            B_c.set_block(ts=(-1,-1,0), Ds= unit_block.shape, val= unit_block)
+            B_c.set_block(ts=(-1,0,-1), Ds= unit_block.shape, val= unit_block)
             B_b=B_c.copy()
             B_a=B_c.copy()
 
             unit_block= np.ones((1,1,1), dtype=cfg.global_args.dtype)
             T_u= yast.Tensor(settings_U1, s=(-1, -1, -1), n=0)
-            T_u.set_block(ts=(1,-1,0), val= unit_block)
-            T_u.set_block(ts=(-1,1,0), val= -1*unit_block)
-            T_u.set_block(ts=(0,1,-1), val= unit_block)
-            T_u.set_block(ts=(0,-1,1), val= -1*unit_block)
-            T_u.set_block(ts=(-1,0,1), val= unit_block)
-            T_u.set_block(ts=(1,0,-1), val= -1*unit_block)
-            T_u.set_block(ts=(0,0,0), val= unit_block)
+            T_u.set_block(ts=(1,-1,0), Ds= unit_block.shape, val= unit_block)
+            T_u.set_block(ts=(-1,1,0), Ds= unit_block.shape, val= -1*unit_block)
+            T_u.set_block(ts=(0,1,-1), Ds= unit_block.shape, val= unit_block)
+            T_u.set_block(ts=(0,-1,1), Ds= unit_block.shape, val= -1*unit_block)
+            T_u.set_block(ts=(-1,0,1), Ds= unit_block.shape, val= unit_block)
+            T_u.set_block(ts=(1,0,-1), Ds= unit_block.shape, val= -1*unit_block)
+            T_u.set_block(ts=(0,0,0), Ds= unit_block.shape, val= unit_block)
             T_d=T_u.copy()
             state= IPESS_KAGOME_GENERIC_ABELIAN(settings_U1, {'T_u': T_u, 'B_a': B_a,\
                 'T_d': T_d,'B_b': B_b, 'B_c': B_c})
