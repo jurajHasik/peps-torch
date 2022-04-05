@@ -39,7 +39,7 @@ parser.add_argument("--EH_T_ED_L", type=int, default=0, help="max. cylinder widt
     "of EH constructed as T-tensor MPO and diagionalized by ED")
 parser.add_argument("--EH_T_ARP_minL", type=int, default=0, help="min. cylinder width "+
     "of EH constructed as T-tensor MPO and diagionalized by Arnoldi")
-parser.add_argument("--EH_T_ARP_maxL", type=int, default=0, help="max. cylinder width "+
+parser.add_argument("--EH_T_ARP_maxL", type=int, default=-1, help="max. cylinder width "+
     "of EH constructed as T-tensor MPO and diagionalized by Arnoldi")
 args, unknown_args= parser.parse_known_args()
 

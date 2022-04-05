@@ -1,11 +1,11 @@
 import torch
-from linalg.svd_gesdd import SVDGESDD, SVDGESDD_COMPLEX
+from linalg.svd_gesdd import SVDGESDD
 from linalg.svd_symeig import SVDSYMEIG
 from linalg.svd_arnoldi import SVDSYMARNOLDI, SVDARNOLDI
 from linalg.svd_rsvd import RSVD
 
 def truncated_svd_gesdd(M, chi, abs_tol=1.0e-14, rel_tol=None, ad_decomp_reg=1.0e-12,\
-    keep_multiplets=False, eps_multiplet=1.0e-12, verbosity=0):
+    keep_multiplets=False, eps_multiplet=1.0e-12, verbosity=0, diagnostics=None):
     r"""
     :param M: matrix of dimensions :math:`N \times L`
     :param chi: desired maximal rank :math:`\chi`
@@ -30,11 +30,9 @@ def truncated_svd_gesdd(M, chi, abs_tol=1.0e-14, rel_tol=None, ad_decomp_reg=1.0
 
     .. math:: dim(U)=(N,\chi),\ dim(S)=(\chi,\chi),\ \textrm{and}\ dim(V)=(L,\chi)
     """
-    reg= torch.as_tensor(ad_decomp_reg, dtype=M.dtype, device=M.device)
-    if M.is_complex():
-        U, S, V = SVDGESDD_COMPLEX.apply(M)
-    else:
-        U, S, V = SVDGESDD.apply(M, reg)
+    reg= torch.as_tensor(ad_decomp_reg, dtype=M.real.dtype if M.is_complex() else M.dtype,\
+        device=M.device)
+    U, S, V = SVDGESDD.apply(M, reg, diagnostics)
 
     # estimate the chi_new 
     chi_new= chi

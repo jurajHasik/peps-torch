@@ -201,6 +201,9 @@ class CTMARGS():
     :ivar ctm_conv_tol: threshold for convergence of CTM algorithm. Default: ``'1.0e-10'``
     :vartype ctm_conv_tol: float
     :ivar conv_check_cpu: execute CTM convergence check on cpu (if applicable). Default: ``False`` 
+    :ivar ctm_absorb_normalization: normalization to use for new corner/T tensors. Either ``'fro'`` for usual
+                                    L2 norm or ``'inf'`` for L-\infty norm. Default: ``'fro'``.  
+    :vartype ctm_absorb_normalization: str
     :vartype conv_check_cpu: bool
     :ivar projector_method: method used to construct projectors which facilitate truncation
                             of environment bond dimension :math:`\chi` within CTM algorithm
@@ -295,6 +298,7 @@ class CTMARGS():
         self.ctm_max_iter= 50
         self.ctm_env_init_type= 'CTMRG'
         self.ctm_conv_tol= 1.0e-8
+        self.ctm_absorb_normalization= 'fro'
         self.fpcm_init_iter=1
         self.fpcm_freq= -1
         self.fpcm_isogauge_tol= 1.0e-14

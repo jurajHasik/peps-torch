@@ -3,7 +3,6 @@ import config as cfg
 from linalg.eig_sym import SYMEIG
 from linalg.eig_arnoldi import SYMARNOLDI, ARNOLDI
 from linalg.eig_lobpcg import SYMLOBPCG
-import pdb
 
 def truncated_eig_sym(M, chi, abs_tol=1.0e-14, rel_tol=None, ad_decomp_reg=1.0e-12, \
     keep_multiplets=False, eps_multiplet=1.0e-12, verbosity=0):
@@ -31,7 +30,8 @@ def truncated_eig_sym(M, chi, abs_tol=1.0e-14, rel_tol=None, ad_decomp_reg=1.0e-
 
     .. math:: dim(D)=(\chi),\ dim(U)=(N,\chi)
     """
-    reg= torch.as_tensor(ad_decomp_reg, dtype=M.dtype, device=M.device)
+    reg= torch.as_tensor(ad_decomp_reg, dtype=M.real.dtype if M.is_complex() else M.dtype,\
+        device=M.device)
     D, U= SYMEIG.apply(M,reg)
 
     # estimate the chi_new 

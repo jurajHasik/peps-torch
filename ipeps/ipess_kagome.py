@@ -863,6 +863,20 @@ class IPESS_KAGOME_PG_LC(IPESS_KAGOME_PG):
         self.basis_t= checkpoint["parameters"]["basis_t"]
         self.update_()
 
+    @staticmethod
+    def create_from_checkpoint(checkpoint_file, SYM_UP_DOWN=True, SYM_BOND_S=True,\
+            pgs=None, peps_args=cfg.peps_args, global_args=cfg.global_args):
+        checkpoint= torch.load(checkpoint_file, map_location=global_args.device)
+        coeffs= checkpoint["parameters"]["coeffs"]
+        basis_t= checkpoint["parameters"]["basis_t"]
+        c_b= { ind: (coeffs[ind], basis_t[ind]) for ind in coeffs.keys() }
+        return IPESS_KAGOME_PG_LC( c_b['T_u'], c_b['B_c'],\
+            T_d=c_b['T_d'] if 'T_d' in c_b else None,\
+            B_a=c_b['B_a'] if 'B_a' in c_b else None,\
+            B_b=c_b['B_b'] if 'B_b' in c_b else None,\
+            SYM_UP_DOWN=SYM_UP_DOWN, SYM_BOND_S=SYM_BOND_S, pgs=pgs,\
+            peps_args=peps_args, global_args=global_args)
+
     def build_elem_tensors(self):
         elem_tensors=dict()
         for k in self.coeffs:

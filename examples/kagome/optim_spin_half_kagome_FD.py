@@ -67,25 +67,11 @@ def main():
             #     state= state.extend_bond_dim(args.bond_dim)
             state.add_noise(args.instate_noise)
         elif args.opt_resume is not None:
-            T_u= torch.zeros(args.bond_dim, args.bond_dim, args.bond_dim,\
-                dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
-            T_d= torch.zeros(args.bond_dim, args.bond_dim,\
-                args.bond_dim, dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
-            B_c= torch.zeros(model.phys_dim, args.bond_dim, args.bond_dim,\
-                dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
-            B_a= torch.zeros(model.phys_dim, args.bond_dim, args.bond_dim,\
-                dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
-            B_b= torch.zeros(model.phys_dim, args.bond_dim, args.bond_dim,\
-                dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
-            if args.ansatz in ["IPESS_PG", "A_1,B", "A_2,B"]:
-                state= IPESS_KAGOME_PG(T_u, B_c, T_d=T_d, B_a=B_a, B_b=B_b,\
-                    SYM_UP_DOWN=args.sym_up_dn,SYM_BOND_S=args.sym_bond_S, pgs=ansatz_pgs)
-            elif args.ansatz in ["IPESS"]:
-                state= IPESS_KAGOME_GENERIC({'T_u': T_u, 'B_a': B_a, 'T_d': T_d,\
-                    'B_b': B_b, 'B_c': B_c})
-            state.load_checkpoint(args.opt_resume)
+            if args.ansatz in ["A_1,B", "A_2,B"]:
+                state= IPESS_KAGOME_PG_LC.create_from_checkpoint(args.opt_resume,\
+                    pgs=ansatz_pgs)
         elif args.ipeps_init_type=='RANDOM':
-            if args.bond_dim in [6]:
+            if args.bond_dim in [3,6]:
                 p= 2 # phys dim
                 D= args.bond_dim
                 path= os.path.dirname(__file__)+"/../../su2sym/ipess_kagome/"
@@ -276,7 +262,7 @@ def main():
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"
     if args.ansatz in ["A_1,B", "A_2,B"]:
-        state= read_ipess_kagome_pg(outputstatefile)
+        state= read_ipess_kagome_pg_lc(outputstatefile)
     ctm_env = ENV(args.chi, state)
     init_env(state, ctm_env)
     ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_f)
@@ -297,19 +283,18 @@ class TestCheckpoint_IPESS_Ansatze(unittest.TestCase):
     tol= 1.0e-6
     DIR_PATH = os.path.dirname(os.path.realpath(__file__))
     OUT_PRFX = "RESULT_test_run-opt-chck"
-    ANSATZE= [("IPESS",False,False), ("IPESS_PG",False,False),
-            ("IPESS_PG",True,True), ("A_2,B",True,True)]
+    ANSATZE= [("A_1,B",),("A_2,B",)]
 
     def reset_couplings(self):
         args.j1= 1.0
         args.theta=0.2
-        args.JD=0.1
+        args.JD=0.0
 
     def setUp(self):
         self.reset_couplings()
-        args.bond_dim=2
-        args.chi=16
-        args.seed=300
+        args.bond_dim=3
+        args.chi=27
+        args.seed=100
         args.opt_max_iter= 10
         args.instate_noise=0
         args.GLOBALARGS_dtype= "complex128"
@@ -319,39 +304,47 @@ class TestCheckpoint_IPESS_Ansatze(unittest.TestCase):
         from unittest.mock import patch
         from cmath import isclose
         import numpy as np
-        from ipeps.ipess_kagome import write_ipess_kagome_generic, write_ipess_kagome_pg 
+        from ipeps.ipess_kagome import write_ipess_kagome_pg_lc 
 
         for ansatz in self.ANSATZE:
             with self.subTest(ansatz=ansatz):
                 self.reset_couplings()
                 args.opt_max_iter= 10
                 args.ansatz= ansatz[0]
-                args.sym_up_dn= ansatz[1]
-                args.sym_bond_S= ansatz[2]
                 args.opt_resume= None
-                args.out_prefix=self.OUT_PRFX+f"_{ansatz[0].replace(',','')}_"\
-                    +("T" if ansatz[1] else "F")+("T" if ansatz[2] else "F")
+                args.out_prefix=self.OUT_PRFX+f"_{ansatz[0].replace(',','')}_"
                 args.instate= args.out_prefix[len("RESULT_"):]+"_instate.json"
 
                 # create random state
                 ansatz_pgs= None
+                if args.ansatz=="A_1,B": ansatz_pgs= IPESS_KAGOME_PG.PG_A1_B
                 if args.ansatz=="A_2,B": ansatz_pgs= IPESS_KAGOME_PG.PG_A2_B
-                bd = args.bond_dim
-                phys_dim= 2
-                T_u= torch.rand(bd, bd, bd,dtype=torch.complex128, device='cpu')-1.0
-                T_d= torch.rand(bd, bd, bd,dtype=torch.complex128, device='cpu')-1.0
-                B_c= torch.rand(phys_dim, bd, bd,dtype=torch.complex128, device='cpu')-1.0
-                B_a= torch.rand(phys_dim, bd, bd,dtype=torch.complex128, device='cpu')-1.0
-                B_b= torch.rand(phys_dim, bd, bd,dtype=torch.complex128, device='cpu')-1.0
-                if args.ansatz in ["IPESS_PG", "A_2,B"]:
-                    state = IPESS_KAGOME_PG(T_u, B_c, T_d=T_d, B_a=B_a, B_b=B_b,\
-                        SYM_UP_DOWN=args.sym_up_dn,SYM_BOND_S=args.sym_bond_S, pgs=ansatz_pgs)
-                    write_ipess_kagome_pg(state, args.instate)
-                elif args.ansatz in ["IPESS"]:
-                    state= IPESS_KAGOME_GENERIC({'T_u': T_u, 'B_a': B_a, 'T_d': T_d,\
-                        'B_b': B_b, 'B_c': B_c})
-                    write_ipess_kagome_generic(state, args.instate)
+                if args.bond_dim in [3,6]:
+                    p= 2 # phys dim
+                    D= args.bond_dim
+                    path= os.path.dirname(__file__)+"/../../su2sym/ipess_kagome/"
 
+                    tri_t_A1= tenSU2.import_sym_tensors_generic((D,D,D), "A_1",
+                        path+f"D{D}_trivalent.txt", dtype=torch.float64, device=cfg.global_args.device)
+                    tri_t_A2= tenSU2.import_sym_tensors_generic((D,D,D), "A_2",
+                        path+f"D{D}_trivalent.txt", dtype=torch.float64, device=cfg.global_args.device)
+                    bond_t_A= tenSU2.import_sym_tensors_generic((p,D,D), "A",
+                        path+f"D{D}_bond.txt", dtype=torch.float64, device=cfg.global_args.device)
+                    bond_t_B= tenSU2.import_sym_tensors_generic((p,D,D), "B",
+                        path+f"D{D}_bond.txt", dtype=torch.float64, device=cfg.global_args.device)
+                    tri_t= tri_t_A1+tri_t_A2
+                    bond_t= bond_t_A+bond_t_B
+                    if args.ansatz in ["A_1,B", "A_2,B"]:
+                        state= IPESS_KAGOME_PG_LC(
+                            T_u=(torch.rand( len(tri_t), dtype=torch.float64, device=cfg.global_args.device ),\
+                                tri_t),\
+                            B_c=(torch.rand( len(bond_t), dtype=torch.float64, device=cfg.global_args.device ),\
+                                bond_t),
+                        SYM_UP_DOWN=True,SYM_BOND_S=True, pgs=ansatz_pgs)
+                        write_ipess_kagome_pg_lc(state, args.instate)
+                else:
+                    raise RuntimeError("Bond dim "+str(args.bond_dim)+" is not supported")
+            
 
                 # i) run optimization and store the optimization data
                 with patch('sys.stdout', new = StringIO()) as tmp_out: 
@@ -443,8 +436,7 @@ class TestCheckpoint_IPESS_Ansatze(unittest.TestCase):
         args.opt_resume=None
         args.instate=None
         for ansatz in self.ANSATZE:
-            out_prefix=self.OUT_PRFX+f"_{ansatz[0].replace(',','')}_"\
-                +("T" if ansatz[1] else "F")+("T" if ansatz[2] else "F")
+            out_prefix=self.OUT_PRFX+f"_{ansatz[0].replace(',','')}_"
             instate= out_prefix[len("RESULT_"):]+"_instate.json"
             for f in [out_prefix+"_checkpoint.p",out_prefix+"_state.json",\
                 out_prefix+".log",instate]:

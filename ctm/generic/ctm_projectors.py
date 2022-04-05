@@ -12,7 +12,7 @@ log = logging.getLogger(__name__)
 
 
 def ctm_get_projectors_4x4(direction, coord, state, env, ctm_args=cfg.ctm_args, \
-    global_args=cfg.global_args):
+    global_args=cfg.global_args,diagnostics=None):
     r"""
     :param direction: direction of the CTM move for which the projectors are to be computed
     :param coord: vertex (x,y) specifying (together with ``direction``) 4x4 tensor network 
@@ -59,10 +59,11 @@ def ctm_get_projectors_4x4(direction, coord, state, env, ctm_args=cfg.ctm_args, 
     else:
         raise ValueError("Invalid direction: "+str(direction))
 
-    return ctm_get_projectors_from_matrices(R, Rt, env.chi, ctm_args, global_args)
+    return ctm_get_projectors_from_matrices(R, Rt, env.chi, ctm_args, global_args,\
+        diagnostics=diagnostics)
 
 def ctm_get_projectors_4x2(direction, coord, state, env, ctm_args=cfg.ctm_args, \
-    global_args=cfg.global_args):
+    global_args=cfg.global_args,diagnostics=None):
     r"""
     :param direction: direction of the CTM move for which the projectors are to be computed
     :param coord: vertex (x,y) specifying (together with ``direction``) 4x2 (vertical) or 
@@ -129,14 +130,15 @@ def ctm_get_projectors_4x2(direction, coord, state, env, ctm_args=cfg.ctm_args, 
     else:
         raise ValueError("Invalid direction: "+str(direction))
 
-    return ctm_get_projectors_from_matrices(R, Rt, env.chi, ctm_args, global_args)
+    return ctm_get_projectors_from_matrices(R, Rt, env.chi, ctm_args, global_args,\
+        diagnostics=diagnostics)
 
 #####################################################################
 # direction-independent function performing bi-diagonalization
 #####################################################################
 
 def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args, \
-    global_args=cfg.global_args):
+    global_args=cfg.global_args, diagnostics=None):
     r"""
     :param R: tensor of shape (dim0, dim1)
     :param Rt: tensor of shape (dim0, dim1)
@@ -207,10 +209,12 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args, \
     verbosity = ctm_args.verbosity_projectors
 
     if ctm_args.projector_svd_method=='DEFAULT' or ctm_args.projector_svd_method=='GESDD':
+        # returns U, S, V of M= USV^\dag
         def truncated_svd(M, chi):
             return truncated_svd_gesdd(M, chi, keep_multiplets=True, \
                 abs_tol=ctm_args.projector_multiplet_abstol,\
-                eps_multiplet=ctm_args.projector_eps_multiplet, verbosity=ctm_args.verbosity_projectors)
+                eps_multiplet=ctm_args.projector_eps_multiplet, verbosity=ctm_args.verbosity_projectors,\
+                diagnostics=diagnostics)
     elif ctm_args.projector_svd_method == 'ARP':
         def truncated_svd(M, chi):
             return truncated_svd_arnoldi(M, chi, keep_multiplets=True, \
