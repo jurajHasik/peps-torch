@@ -107,8 +107,14 @@ class S_HALF_KAGOME():
     # Energy terms
     def energy_triangle_dn(self, state, env, force_cpu=False, fail_on_check=False,\
         warn_on_check=True):
-        e_dn= rdm_kagome.rdm2x2_dn_triangle_with_operator(\
+        e_dn, norm_2x2_dn= rdm_kagome.rdm2x2_dn_triangle_with_operator(\
             (0, 0), state, env, self.h_triangle, force_cpu=force_cpu)
+        return _cast_to_real(e_dn, fail_on_check=fail_on_check, warn_on_check=warn_on_check)
+
+    def energy_triangle_dn_1x1(self, state, env, force_cpu=False, fail_on_check=False,\
+        warn_on_check=True):
+        rdm1x1_dn= rdm_kagome.rdm1x1_kagome((0, 0), state, env, force_cpu=force_cpu)
+        e_dn= torch.einsum('ijkmno,mnoijk', rdm1x1_dn, self.h_triangle )
         return _cast_to_real(e_dn, fail_on_check=fail_on_check, warn_on_check=warn_on_check)
 
     def energy_triangle_up(self, state, env, force_cpu=False, fail_on_check=False,\
@@ -127,7 +133,7 @@ class S_HALF_KAGOME():
         return e_up
 
     def energy_triangle_dn_NoCheck(self, state, env, force_cpu=False):
-        e_dn= rdm_kagome.rdm2x2_dn_triangle_with_operator(\
+        e_dn, norm_2x2_dn= rdm_kagome.rdm2x2_dn_triangle_with_operator(\
             (0, 0), state, env, self.h_triangle, force_cpu=force_cpu)
         return e_dn
 
@@ -141,7 +147,7 @@ class S_HALF_KAGOME():
     # Observables
 
     def P_dn(self, state, env, force_cpu=False):
-        vP_dn= rdm_kagome.rdm2x2_dn_triangle_with_operator((0, 0), state, env,\
+        vP_dn,norm_2x2_dn= rdm_kagome.rdm2x2_dn_triangle_with_operator((0, 0), state, env,\
             operator=self.P_triangle, force_cpu=force_cpu)
         return vP_dn
 
@@ -220,14 +226,14 @@ class S_HALF_KAGOME():
  
             # nn S.S pattern. In self.SSnnId, the identity is placed on s2 of three sites
             # in the unitcell i.e. \vec{S}_0 \cdot \vec{S}_1 \otimes Id_2
-            SS_dn_01= rdm_kagome.rdm2x2_dn_triangle_with_operator(\
+            SS_dn_01,norm_2x2_dn= rdm_kagome.rdm2x2_dn_triangle_with_operator(\
                 (0, 0), state, env, self.SSnnId, force_cpu=force_cpu)
             # move identity from site 2 to site 0
-            SS_dn_12= rdm_kagome.rdm2x2_dn_triangle_with_operator(\
+            SS_dn_12,_= rdm_kagome.rdm2x2_dn_triangle_with_operator(\
                 (0, 0), state, env, self.SSnnId.permute(2,1,0, 5,4,3).contiguous(),\
                 force_cpu=force_cpu)
             # move identity from site 2 to site 1
-            SS_dn_02= rdm_kagome.rdm2x2_dn_triangle_with_operator(\
+            SS_dn_02,_= rdm_kagome.rdm2x2_dn_triangle_with_operator(\
                 (0, 0), state, env, self.SSnnId.permute(0,2,1, 3,5,4).contiguous(),\
                 force_cpu=force_cpu)
             rdm_up= rdm_kagome.rdm2x2_up_triangle_open(\

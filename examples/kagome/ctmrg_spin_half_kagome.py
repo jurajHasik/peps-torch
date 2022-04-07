@@ -308,10 +308,20 @@ def main():
     chi_R= Pijk + Pijk_inv
     chi_I= 1.0j * (Pijk - Pijk_inv)
 
-    ev_chi_R_downT= rdm_kagome.rdm2x2_dn_triangle_with_operator((0,0), state, ctm_env_init,\
+    norm_1x1= rdm_kagome.trace1x1_dn_kagome((0,0), state, ctm_env_init,\
+        model.Id3_t.view([model.phys_dim]*6), force_cpu=args.force_cpu)
+    print(f"Norm 1x1_dn {norm_1x1}")
+    ev_chi_R_downT= rdm_kagome.trace1x1_dn_kagome((0,0), state, ctm_env_init,\
+        chi_R, force_cpu=args.force_cpu)/norm_1x1
+    ev_chi_I_downT= rdm_kagome.trace1x1_dn_kagome((0,0), state, ctm_env_init,\
+        chi_I, force_cpu=args.force_cpu)/norm_1x1
+    print(f"trace1x1_dn_kagome Re(Chi) downT {ev_chi_R_downT} Im(Chi) downT {ev_chi_I_downT}")
+
+    ev_chi_R_downT,norm_2x2_dn= rdm_kagome.rdm2x2_dn_triangle_with_operator((0,0), state, ctm_env_init,\
         chi_R, force_cpu=args.force_cpu)
-    ev_chi_I_downT= rdm_kagome.rdm2x2_dn_triangle_with_operator((0,0), state, ctm_env_init,\
+    ev_chi_I_downT,_= rdm_kagome.rdm2x2_dn_triangle_with_operator((0,0), state, ctm_env_init,\
         chi_I, force_cpu=args.force_cpu)
+    print(f"Norm 2x2_dn {norm_2x2_dn}")
     print(f"Re(Chi) downT {ev_chi_R_downT} Im(Chi) downT {ev_chi_I_downT}")
 
     rho_upT= rdm_kagome.rdm2x2_up_triangle_open((0,0), state, ctm_env_init,\

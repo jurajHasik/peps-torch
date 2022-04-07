@@ -87,7 +87,7 @@ class SVDGESDD(torch.autograd.Function):
             return U, S, V
 
     @staticmethod
-    def backward(self, gu, gsigma, gv):
+    def v1_10_Fonly_backward(self, gu, gsigma, gv):
         # Adopted from
         # https://github.com/pytorch/pytorch/blob/v1.10.2/torch/csrc/autograd/FunctionsManual.cpp
         # 
@@ -178,7 +178,7 @@ class SVDGESDD(torch.autograd.Function):
         return dA, None, None
 
     @staticmethod
-    def v1_10_backward(self, gu, gsigma, gv):
+    def backward(self, gu, gsigma, gv):
         # Adopted from
         # https://github.com/pytorch/pytorch/blob/v1.10.2/torch/csrc/autograd/FunctionsManual.cpp
         # 

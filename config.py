@@ -298,7 +298,7 @@ class CTMARGS():
         self.ctm_max_iter= 50
         self.ctm_env_init_type= 'CTMRG'
         self.ctm_conv_tol= 1.0e-8
-        self.ctm_absorb_normalization= 'fro'
+        self.ctm_absorb_normalization= 'inf'
         self.fpcm_init_iter=1
         self.fpcm_freq= -1
         self.fpcm_isogauge_tol= 1.0e-14

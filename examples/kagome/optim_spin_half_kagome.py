@@ -177,9 +177,10 @@ def main():
 
     def energy_f(state, env, force_cpu=False, fail_on_check=False,\
         warn_on_check=True):
-        #print(env)
         e_dn = model.energy_triangle_dn(state, env, force_cpu=force_cpu,\
             fail_on_check=fail_on_check, warn_on_check=warn_on_check)
+        # e_dn= model.energy_triangle_dn_1x1(state, env, force_cpu=force_cpu,\
+        #     fail_on_check=fail_on_check, warn_on_check=warn_on_check)
         e_up = model.energy_triangle_up(state, env, force_cpu=force_cpu,\
             fail_on_check=fail_on_check, warn_on_check=warn_on_check)
         # e_nnn = model.energy_nnn(state, env)
