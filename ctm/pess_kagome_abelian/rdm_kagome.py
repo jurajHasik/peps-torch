@@ -652,7 +652,8 @@ def rdm1x1_kagome(coord, state, env, sites_to_keep=('A', 'B', 'C'), force_cpu=Fa
     i_ket, i_bra= _expand_perm([len(sites_to_keep)])
     rdm= rdm.unfuse_legs(axes=0).unfuse_legs(axes=(0,1)) 
     rdm= permute(rdm,tuple(i_ket+i_bra))
-    assert rdm.s==tuple([state._REF_S_DIRS[0]]*3+[-state._REF_S_DIRS[0]]*3),\
+    assert rdm.s==tuple([state._REF_S_DIRS[0]]*len(sites_to_keep)\
+        +[-state._REF_S_DIRS[0]]*len(sites_to_keep)),\
         "Signature incompatible with |ket><bra| order"
     rdm= _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
     rdm= rdm.to(env.device)

@@ -35,11 +35,11 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
     # 0) Create double-layer (DL) tensors, preserving the same convention
     #    for order of indices 
     #
-    #     /               /(+1)
-    #  --a---   =  (+1)--A--(-1)
-    #   /|              /
-    #    |/           (-1)
-    #  --a*--
+    #     /                /(+1)
+    #  --a*---   =  (+1)--A--(-1)
+    #   /|               /
+    #    |/            (-1)
+    #  --a--
     #   /
     #
     sitesDL=dict()

@@ -228,7 +228,7 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, direction, \
 
     if ctm_args.projector_svd_method=='DEFAULT' or ctm_args.projector_svd_method=='GESDD':
         def truncated_svd(M, chi, sU=1):
-            return yast.linalg.svd_old(M, (0,1), sU=sU, keep_multiplets=True, D_total=chi,\
+            return yast.linalg.svd(M, (0,1), sU=sU, keep_multiplets=True, D_total=chi,\
                 tol=ctm_args.projector_svd_reltol, tol_block=ctm_args.projector_svd_reltol_block, \
                 diagonostics=diagnostics)
     # elif ctm_args.projector_svd_method == 'ARP':
