@@ -9,10 +9,17 @@ import groups.su3_abelian as su3
 
 import ctm.pess_kagome_abelian.rdm_kagome as rdm_kagome
 
-def _cast_to_real(t, check=True, imag_eps=1.0e-8):
-    if check and t.is_complex():
-        assert abs(t.imag) < imag_eps,"unexpected imaginary part "+str(t.imag)
-    return t.real if t.is_complex() else t
+
+def _cast_to_real(t, fail_on_check=False, warn_on_check=True, imag_eps=1.0e-10):
+    if t.is_complex():
+        if (abs(t.imag)/abs(t.real) > imag_eps) or (abs(t.imag)> imag_eps):
+            if warn_on_check:
+                warnings.warn(f"Unexpected imaginary part "+str(t.imag),RuntimeWarning)
+            if fail_on_check: 
+                raise RuntimeError("Unexpected imaginary part "+str(t.imag))
+        return t.real
+    return t
+
 
 class KAGOME_SU3_U1xU1():
     def __init__(self, settings, j=0.0, k=1.0, h=0.0, global_args=cfg.global_args):
@@ -174,7 +181,8 @@ class KAGOME_SU3_U1xU1():
         obs_values = [obs[label] for label in obs_labels]
         return obs_values, obs_labels
 
-    def energy_down_t_1x1subsystem(self, state, env, force_cpu=False):
+    def energy_down_t_1x1subsystem(self, state, env, force_cpu=False, fail_on_check=False,\
+            warn_on_check=True):
         r"""
         Evaluate the energy contribution from the down triangle on 1x1 subsystem
         embedded in the environment.
@@ -182,10 +190,11 @@ class KAGOME_SU3_U1xU1():
         norm = rdm_kagome.trace1x1_dn_kagome((0,0), state, env, self.id3).to_number()
         energy_dn = rdm_kagome.trace1x1_dn_kagome((0,0), state, env, \
             self.h_tri).to_number() / norm
-        energy_dn = _cast_to_real(energy_dn)
+        energy_dn = _cast_to_real(energy_dn, fail_on_check=fail_on_check, warn_on_check=warn_on_check)
         return energy_dn
 
-    def energy_triangles_2x2subsystem(self, state, env, force_cpu=False):
+    def energy_triangles_2x2subsystem(self, state, env, force_cpu=False, fail_on_check=False,\
+            warn_on_check=True):
         r"""
         Evaluate energy per site by computing contributions from down
         and up triangles, both defined on 2x2 subsystem embedded in the environment. 
@@ -194,22 +203,19 @@ class KAGOME_SU3_U1xU1():
         energy_dn= rdm_kagome.rdm2x2_dn_triangle_with_operator(\
             (0, 0), state, env, self.h_tri, force_cpu=force_cpu)
         energy_dn= energy_dn.to_number()
-        energy_dn = _cast_to_real(energy_dn)
+        energy_dn= _cast_to_real(energy_dn, fail_on_check=fail_on_check, warn_on_check=warn_on_check)
         # inter-cell (up)
-        # rdm2x2_up = rdm_kagome.rdm2x2_up_triangle_open(\
-        #     (0,0), state, env, force_cpu=force_cpu, sym_pos_def=False)
-        rdm2x2_up = rdm_kagome.rdm2x2_kagome(\
-            (0,0), state, env, sites_to_keep_00=(), sites_to_keep_10=('B'),\
-            sites_to_keep_01=('A'), sites_to_keep_11=('C'),
-            force_cpu=force_cpu, sym_pos_def=False)
+        rdm2x2_up = rdm_kagome.rdm2x2_up_triangle_open(\
+            (0,0), state, env, force_cpu=force_cpu, sym_pos_def=False)
         energy_up= yast.tensordot(rdm2x2_up, self.h_tri,([0,1,2,3,4,5],[3,4,5,0,1,2]))
         energy_up= energy_up.to_number()
-        energy_up = _cast_to_real(energy_up)
-        energy_per_site= (energy_dn + energy_up)/3
+        energy_up= _cast_to_real(energy_up, fail_on_check=fail_on_check, warn_on_check=warn_on_check)
         return energy_dn, energy_up
 
-    def energy_per_site_2x2subsystem(self,state,env,force_cpu=False):
-        e_down, e_up= self.energy_triangles_2x2subsystem(state, env, force_cpu=force_cpu)
+    def energy_per_site_2x2subsystem(self,state,env,force_cpu=False, fail_on_check=False,\
+            warn_on_check=True):
+        e_down, e_up= self.energy_triangles_2x2subsystem(state, env, force_cpu=force_cpu,\
+            fail_on_check=fail_on_check, warn_on_check=warn_on_check)
         e_per_site= (e_down+e_up)/3
         return e_per_site
 

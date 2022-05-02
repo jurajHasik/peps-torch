@@ -69,6 +69,13 @@ class ENV_ABELIAN():
             |       |       |       (-1)     (-1)      (-1)
             C--1 1--T--2 1--C        C(+1) (-1)T(+1) (-1)C
 
+        Note::
+
+            The structure of fused double-layer legs, which are carried by T-tensors, is obtained
+            by fusing on-site tensor (`ket`) with its conjugate (`bra`). The leg of `ket` always
+            preceeds `bra` when fusing.   
+
+
         """
         if state:
             self.engine= state.engine
@@ -315,14 +322,14 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
 
         # Left-upper corner
         #
-        #     i      = C--1(+1)  
-        # j--a--4      0(+1)
-        #   /\
-        #  3  m
-        #      \ i
-        #    j--a*--4
-        #      /
-        #     3
+        #       i          = C--(1,3)->1(+1)
+        #   j--a*--4->3      |
+        #      /\           (0,2)->0(+1)
+        #  2<-3  m
+        #         \ i
+        #       j--a--4->1
+        #         /
+        #        3->0
         vec = (-1,-1)
         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
         a= A.tensordot(A, ((0,1,2), (0,1,2)), conj=(0,1)) # mijef,mijab->efab; efab->eafb
@@ -332,14 +339,14 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
 
         # right-upper corner
         #
-        #     i      = (-1)0--C     
-        # 2--a--j         (+1)1
-        #   /\
-        #  3  m
-        #      \ i
-        #    2--a*--j
-        #      /
-        #     3
+        #        i      = (-1)0<-(0,2)--C     
+        # 2<-2--a*--j                   |
+        #      /\             (+1)1<-(1,3)
+        #  3<-3  m
+        #         \ i
+        #    0<-2--a--j
+        #         /
+        #     1<-3
         vec = (1,-1)
         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
         a= A.tensordot(A, ((0,1,4), (0,1,4)), conj=(0,1)) # miefj,miabj->efab; efab->eafb
@@ -349,14 +356,14 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
 
         # right-lower corner
         #
-        #     1      =    (-1)0     
-        # 2--a--j      (-1)1--C
-        #   /\
-        #  i  m
-        #      \ 1
-        #    2--a*--j
-        #      /
-        #     i
+        #        1->1      =     (-1)0<-(0,2)     
+        # 3<-2--a*--j                      |
+        #       /\           (-1)1<-(1,3)--C
+        #      i  m
+        #          \ 1->0
+        #     1<-2--a--j
+        #          /
+        #         i
         vec = (1,1)
         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
         a= A.tensordot(A, ((0,3,4), (0,3,4)), conj=(0,1)) # miefj,miabj->efab; efab->eafb
@@ -366,12 +373,12 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
 
         # left-lower corner
         #
-        #     1      = 0(-1)     
-        # i--a--4      C--1(+1)
-        #   /\
+        #     1->2       = (0,2)->2(-1) 
+        # i--a*--4->3       |
+        #   /\              C--(1,3)->1(+1)
         #  j  m
-        #      \ 1
-        #    i--a*--4
+        #      \ 1->0
+        #    i--a--4->1
         #      /
         #     j
         vec = (-1,1)
@@ -385,14 +392,14 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
     for coord,site in state.sites.items():
         # upper transfer matrix
         #
-        #     i      = (-1)0--T--2(+1)     
-        # 2--a--4         (+1)1
-        #   /\
-        #  3  m
-        #      \ i
-        #    2--a*--4
-        #      /
-        #     3
+        #        i          = (-1)0<-(0,3)--T--(2,5)->2(+1)     
+        # 3<-2--a*--4->5                    |
+        #      /\                 (+1)1<-(1,4)
+        #  4<-3  m
+        #         \ i
+        #    0<-2--a--4->2
+        #         /
+        #     1<-3
         vec = (0,-1)
         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
         a= A.tensordot(A, ((0,1), (0,1)), conj=(0,1)) # miefg,miabc->efgabc ; efgabc->eafbgc
@@ -402,14 +409,14 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
 
         # left transfer matrix
         #
-        #     1      = 0(-1)     
-        # i--a--4      T--2(+1)
-        #   /\         1(+1)
-        #  3  m
-        #      \ 1
-        #    i--a*--4
-        #      /
-        #     3
+        #       1->3       = (0,3)->0(-1)     
+        #   i--a*--4->5      T--(2,5)->2(+1)
+        #      /\            (1,4)->1(+1)
+        #  4<-3  m
+        #         \ 1->0
+        #       i--a--4->2
+        #         /
+        #     1<-3
         vec = (-1,0)
         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
         a= A.tensordot(A, ((0,2), (0,2)), conj=(0,1)) # meifg,maibc->efgabc ; efgabc->eafbgc
@@ -419,14 +426,14 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
 
         # lower transfer matrix
         #
-        #     1      =    (-1)0     
-        # 2--a--4      (-1)1--T--2(+1)
-        #   /\
-        #  i  m
-        #      \ 1
-        #    2--a*--4
-        #      /
-        #     i
+        #        1->3      =     (-1)0<-(0,3)     
+        # 4<-2--a*--4->5                   |
+        #      /\            (-1)1<-(1,4)--T--(2,5)->2(+1)
+        #     i  m
+        #         \ 1->0
+        #    1<-2--a--4->2
+        #         /
+        #        i
         vec = (0,1)
         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
         a= A.tensordot(A, ((0,3), (0,3)), conj=(0,1)) # mefig,mabic->efgabc; efgabc->eafbgc
@@ -436,14 +443,14 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
 
         # right transfer matrix
         #
-        #     1      =    (-1)0     
-        # 2--a--i      (-1)1--T
-        #   /\            (+1)2
-        #  3  m
-        #      \ 1
-        #    2--a*--i
-        #      /
-        #     3
+        #        1->3      =     (-1)0<-(0,3)     
+        # 4<-2--a*--i        (-1)1<-(1,4)--T
+        #      /\                (+1)2<-(2,5)
+        #  5<-3  m
+        #         \ 1->0
+        #    1<-2--a--i
+        #         /
+        #     2<-3
         vec = (1,0)
         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
         a= A.tensordot(A, ((0,4), (0,4)), conj=(0,1)) # mefig,mabic->efgabc; efgabc->eafbgc

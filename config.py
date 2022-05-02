@@ -201,6 +201,9 @@ class CTMARGS():
     :ivar ctm_conv_tol: threshold for convergence of CTM algorithm. Default: ``'1.0e-10'``
     :vartype ctm_conv_tol: float
     :ivar conv_check_cpu: execute CTM convergence check on cpu (if applicable). Default: ``False`` 
+    :ivar ctm_absorb_normalization: normalization to use for new corner/T tensors. Either ``'fro'`` for usual
+                                    L2 norm or ``'inf'`` for L-\infty norm. Default: ``'fro'``.  
+    :vartype ctm_absorb_normalization: str
     :vartype conv_check_cpu: bool
     :ivar projector_method: method used to construct projectors which facilitate truncation
                             of environment bond dimension :math:`\chi` within CTM algorithm
@@ -232,6 +235,10 @@ class CTMARGS():
                                 singular value spectrum per block used in the construction of projectors.
                                 Default: ``0.0``
     :vartype projector_svd_reltol_block: float
+    :ivar projector_eps_multiplet: threshold for defining boundary of the multiplets
+    :vartype projector_eps_multiplet: float
+    :ivar projector_multiplet_abstol: absolute threshold for spectral values to be considered in multiplets 
+    :vartype projector_multiplet_abstol: float
     :ivar ctm_move_sequence: sequence of directional moves within single CTM iteration. The possible 
                              directions are encoded as tuples(int,int) 
                                 
@@ -291,6 +298,7 @@ class CTMARGS():
         self.ctm_max_iter= 50
         self.ctm_env_init_type= 'CTMRG'
         self.ctm_conv_tol= 1.0e-8
+        self.ctm_absorb_normalization= 'inf'
         self.fpcm_init_iter=1
         self.fpcm_freq= -1
         self.fpcm_isogauge_tol= 1.0e-14
@@ -300,6 +308,8 @@ class CTMARGS():
         self.projector_svd_method = 'DEFAULT'
         self.projector_svd_reltol = 1.0e-8
         self.projector_svd_reltol_block = 0.0
+        self.projector_eps_multiplet = 1.0e-8
+        self.projector_multiplet_abstol = 1.0e-14
         self.ad_decomp_reg= 1.0e-12
         self.ctm_move_sequence = [(0,-1), (-1,0), (0,1), (1,0)]
         self.ctm_force_dl = False

@@ -8,10 +8,9 @@ import yast.yast as yast
 import examples.abelian.settings_U1_torch as settings_U1
 from ipeps.ipeps_kagome_abelian import *
 from ipeps.ipess_kagome_abelian import *
-from ctm.generic_abelian.env_abelian import *
-import ctm.generic_abelian.ctmrg as ctmrg
-import ctm.pess_kagome_abelian.rdm_kagome as rdm_kagome
-from models.abelian import kagome_spin_half_u1
+from ctm.generic.env import *
+from ctm.generic import ctmrg
+from models import spin_half_kagome
 from optim.ad_optim_lbfgs_mod import optimize_state
 import scipy.io as io
 import json
@@ -58,8 +57,8 @@ def main():
     if not args.theta is None:
         args.jtrip= args.j1*math.sin(args.theta*math.pi)
         args.j1= args.j1*math.cos(args.theta*math.pi)
-    model= kagome_spin_half_u1.KAGOME_U1(settings_U1, j1=args.j1, JD=args.JD, j1sq=args.j1sq,\
-        j2=args.j2, j2sq=args.j2sq, jtrip=args.jtrip, jperm=args.jperm, h=args.h)
+    model= spin_half_kagome.S_HALF_KAGOME(j1=args.j1, JD=args.JD,\
+        j2=args.j2, jtrip=args.jtrip, jperm=args.jperm)
 
     # 1) initialize the ipess/ipeps
     if args.ansatz in ["IPESS","IPESS_PG","A_2,B"]:
@@ -100,8 +99,8 @@ def main():
             B_a= yast.Tensor(config=settings_U1, s=(-1,1,1))
             B_b= yast.Tensor(config=settings_U1, s=(-1,1,1))
             if args.ansatz in ["IPESS"]:
-                state= IPESS_KAGOME_GENERIC_ABELIAN(settings_U1, {'T_u': T_u, 'B_a': B_a, 'T_d': T_d,\
-                    'B_b': B_b, 'B_c': B_c}, build_sites=False)
+                state= IPESS_KAGOME_GENERIC({'T_u': T_u, 'B_a': B_a, 'T_d': T_d,\
+                    'B_b': B_b, 'B_c': B_c})
             #
             # TODO allow PGs
             #
@@ -258,9 +257,9 @@ def main():
     def energy_f(state, env, force_cpu=False, fail_on_check=False,\
         warn_on_check=True):
         #print(env)
-        e_dn = model.energy_down_t_2x2subsystem(state, env, force_cpu=force_cpu,\
+        e_dn = model.energy_triangle_dn(state, env, force_cpu=force_cpu,\
             fail_on_check=fail_on_check, warn_on_check=warn_on_check)
-        e_up = model.energy_up_t_2x2subsystem(state, env, force_cpu=force_cpu,\
+        e_up = model.energy_triangle_up(state, env, force_cpu=force_cpu,\
             fail_on_check=fail_on_check, warn_on_check=warn_on_check)
         # e_nnn = model.energy_nnn(state, env)
         return (e_up + e_dn)/3 #+ e_nnn) / 3
@@ -356,16 +355,21 @@ def main():
             return False, history
 
     print(state)
+    # convert to dense
+    state_d= state.to_dense()
+    print(state_d)
 
     # 4) compute initial environment and observables
-    ctm_env_init= ENV_ABELIAN(args.chi, state=state, init=True)
-    ctm_env_init, history, t_ctm, t_conv_check = ctmrg.run(state, ctm_env_init, \
+    # ctm_env_init= ENV_ABELIAN(args.chi, state=state, init=True)
+    ctm_env_init = ENV(args.chi, state_d)
+    init_env(state_d, ctm_env_init)
+    ctm_env_init, history, t_ctm, t_conv_check = ctmrg.run(state_d, ctm_env_init, \
         conv_check=ctmrg_conv_f, ctm_args=cfg.ctm_args)
 
-    loss0 = energy_f(state, ctm_env_init, force_cpu=args.force_cpu)
-    obs_values, obs_labels = model.eval_obs(state,ctm_env_init,force_cpu=args.force_cpu,\
+    loss0 = energy_f(state_d, ctm_env_init, force_cpu=args.force_cpu)
+    obs_values, obs_labels = model.eval_obs(state_d,ctm_env_init,force_cpu=args.force_cpu,\
         disp_corre_len=args.disp_corre_len)
-    print(", ".join(["epoch",f"energy"]+[label for label in obs_labels]))
+    print(", ".join(["epoch",f"loss"]+[label for label in obs_labels]))
     print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
 
 
@@ -373,10 +377,12 @@ def main():
         ctm_args = opt_context["ctm_args"]
         opt_args = opt_context["opt_args"]
 
+        state_d= state.to_dense()
+
         # build on-site tensors
         if args.ansatz in ["IPESS", "IPESS_PG", "A_2,B"]:
             if args.ansatz in ["IPESS"]:
-                state_sym= state
+                state_sym= state_d
                 state_sym.sites= state_sym.build_onsite_tensors()
             #
             # TODO allow PGs
@@ -385,13 +391,13 @@ def main():
             #     # symmetrization and implicit rebuild of on-site tensors
             #     state_sym= to_PG_symmetric(state, state.pgs)
         else:
-            A= state.sites[(0,0)]
+            A= state_d.sites[(0,0)]
             A= A/A.abs().max()
             state_sym= IPEPS_KAGOME({(0,0): A}, lX=1, lY=1)
 
         # 1) re-build precomputed double-layer on-site tensors
         #    Some objects, in this case open-double layer tensors, are pre-computed
-        state_sym.sync_precomputed()
+        # state_sym.sync_precomputed()
 
         # possibly re-initialize the environment
         if opt_args.opt_ctm_reinit:
@@ -405,7 +411,8 @@ def main():
 
     @torch.no_grad()
     def obs_fn(state, ctm_env, opt_context):
-        state_sym= state
+        state_d= state.to_dense()
+        state_sym= state_d
         if args.ansatz in ["A_2,B"]:
             state_sym= to_PG_symmetric(state, state.pgs)
         elif args.ansatz in ["IPESS"]:
@@ -419,16 +426,17 @@ def main():
             loss= opt_context["loss_history"]["loss"][-1] 
         if opt_context["line_search"]:
             print(", ".join([f"{epoch}",f"{loss}"]))
-            log.info("Norm(sites): "+", ".join([f"{t.norm()}" for c,t in state.sites.items()]))
+            log.info("Norm(sites): "+", ".join([f"{t.norm()}" for c,t in state_sym.sites.items()]))
         else:
-            obs_values, obs_labels = model.eval_obs(state,ctm_env_init,force_cpu=args.force_cpu,\
+            obs_values, obs_labels = model.eval_obs(state_sym,ctm_env_init,force_cpu=args.force_cpu,\
                 disp_corre_len=args.disp_corre_len)
             print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]), end="")
-            log.info("Norm(sites): "+", ".join([f"{t.norm()}" for c,t in state.sites.items()]))
-            print(" "+", ".join([f"{t.norm()}" for c,t in state.sites.items()]) )
+            log.info("Norm(sites): "+", ".join([f"{t.norm()}" for c,t in state_sym.sites.items()]))
+            print(" "+", ".join([f"{t.norm()}" for c,t in state_sym.sites.items()]) )
         
     # 4) optimize
-    optimize_state(state, ctm_env_init, loss_fn, obs_fn=obs_fn)
+    with torch.autograd.detect_anomaly():
+        optimize_state(state, ctm_env_init, loss_fn, obs_fn=obs_fn)
     
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"
@@ -453,119 +461,39 @@ if __name__ == '__main__':
         raise Exception("Unknown command line arguments")    
     main()
 
-# class TestOptim_RVB(unittest.TestCase):
-#     tol= 1.0e-6
-#     DIR_PATH = os.path.dirname(os.path.realpath(__file__))
-#     OUT_PRFX = "RESULT_test_run-opt_u1_RVB"
-
-#     def setUp(self):
-#         args.theta=0.2
-#         args.j1=1.0
-#         args.bond_dim=3
-#         args.chi=64
-#         args.out_prefix=self.OUT_PRFX
-#         args.GLOBALARGS_dtype= "complex128"
-#         args.ipeps_init_type="RVB"
-#         args.instate_noise= 0.1
-#         args.seed= 100
-#         args.opt_max_iter= 10
-
-#     def test_basic_opt_rvb(self):
-#         from io import StringIO
-#         from unittest.mock import patch 
-#         from cmath import isclose
-
-#         with patch('sys.stdout', new = StringIO()) as tmp_out: 
-#             main()
-#         tmp_out.seek(0)
-
-#         # parse FINAL observables
-#         final_obs=None
-#         final_opt_line=None
-#         OPT_OBS= OPT_OBS_DONE= False
-#         l= tmp_out.readline()
-#         while l:
-#             print(l,end="")
-#             if OPT_OBS and not OPT_OBS_DONE and l.rstrip()=="": OPT_OBS_DONE= True
-#             if OPT_OBS and not OPT_OBS_DONE and len(l.split(','))>2:
-#                 final_opt_line= l.rstrip()
-#             if "epoch, energy," in l and not OPT_OBS_DONE: 
-#                 OPT_OBS= True
-#             if "FINAL" in l:
-#                 final_obs= l.rstrip()
-#                 break
-#             l= tmp_out.readline()
-#         assert final_obs
-#         assert final_opt_line
-
-#         # compare with the reference
-#         ref_data="""
-#         -0.3180407711847282, (-0.4771030273105023+2.395659971600811e-16j), (-0.4770192862436823+0j), 
-#         (2.2027853160689646e-06+5.098826440112844e-19j), (1.8151220691379348e-06+5.344259112418017e-19j), (1.8745247083438e-08+3.5006284274149174e-22j), 
-#         (-0.001484178330278732-1.717727019756202e-16j), 0j, 0j, 
-#         (0.0013472646618752882+1.9833738921717212e-16j), 0j, 0j, 
-#         (0.00013691328307888171+1.2784108118268017e-18j), 0j, 0j, 
-#         (-0.16545105705851107-4.8744230200782965e-16j), (-0.1610407631859544+8.705784359174593e-16j), (-0.1506051103610713-7.924161808310929e-17j), 
-#         (-0.16740173138248024+0j), (-0.152580468641496+0j), (-0.1570313126413648+0j)
-#         """
-#         # compare final observables from optimization and the observables from the 
-#         # final state
-#         final_opt_line_t= [complex(x) for x in final_opt_line.split(",")[1:7]]
-#         fobs_tokens= [complex(x) for x in final_obs[len("FINAL"):].split(",")[:6]]
-#         for val0,val1 in zip(final_opt_line_t, fobs_tokens):
-#             assert isclose(val0,val1, rel_tol=self.tol, abs_tol=self.tol)
-
-#         # compare final observables from final state against expected reference 
-#         # drop first token, corresponding to iteration step
-#         ref_tokens= [complex(x) for x in ref_data.split(",")[:6]]
-#         for val,ref_val in zip(fobs_tokens, ref_tokens):
-#             assert isclose(val,ref_val, rel_tol=self.tol, abs_tol=self.tol)
-
-#     def tearDown(self):
-#         args.opt_resume=None
-#         args.instate=None
-#         for f in [self.OUT_PRFX+"_state.json",self.OUT_PRFX+"_checkpoint.p",self.OUT_PRFX+".log"]:
-#             if os.path.isfile(f): os.remove(f)
-
-
-class TestCheckpoint_RVB(unittest.TestCase):
+class TestOptim_RVB(unittest.TestCase):
     tol= 1.0e-6
     DIR_PATH = os.path.dirname(os.path.realpath(__file__))
-    OUT_PRFX = "RESULT_test_run-opt-chck_u1_rvb"
+    OUT_PRFX = "RESULT_test_run-opt_u1_RVB"
 
     def setUp(self):
-        args.instate=None
         args.theta=0.2
-        args.j1= 1.0
+        args.j1=1.0
         args.bond_dim=3
-        args.chi=27
-        args.ipeps_init_type="RVB"
-        args.instate_noise=0.1
-        args.seed=100
+        args.chi=64
         args.out_prefix=self.OUT_PRFX
         args.GLOBALARGS_dtype= "complex128"
-        args.opt_max_iter= 10
+        args.ipeps_init_type="RVB"
 
-    def test_checkpoint_noisy_trimer(self):
+    def test_basic_opt_rvb(self):
         from io import StringIO
-        from unittest.mock import patch
+        from unittest.mock import patch 
         from cmath import isclose
 
-        # i) run optimization and store the optimization data
         with patch('sys.stdout', new = StringIO()) as tmp_out: 
             main()
         tmp_out.seek(0)
 
         # parse FINAL observables
-        obs_opt_lines=[]
         final_obs=None
+        final_opt_line=None
         OPT_OBS= OPT_OBS_DONE= False
         l= tmp_out.readline()
         while l:
             print(l,end="")
             if OPT_OBS and not OPT_OBS_DONE and l.rstrip()=="": OPT_OBS_DONE= True
             if OPT_OBS and not OPT_OBS_DONE and len(l.split(','))>2:
-                obs_opt_lines.append(l.rstrip())
+                final_opt_line= l
             if "epoch, energy," in l and not OPT_OBS_DONE: 
                 OPT_OBS= True
             if "FINAL" in l:
@@ -573,74 +501,30 @@ class TestCheckpoint_RVB(unittest.TestCase):
                 break
             l= tmp_out.readline()
         assert final_obs
-        assert len(obs_opt_lines)>0
+        assert final_opt_line
 
-        # ii) run optimization for 3 steps
-        args.opt_max_iter= 3
-        args.j1= 1.0
-        main()
-        
-        # iii) run optimization from checkpoint
-        args.instate=None
-        args.opt_resume= self.OUT_PRFX+"_checkpoint.p"
-        args.opt_max_iter= 7
-        args.j1= 1.0
-        with patch('sys.stdout', new = StringIO()) as tmp_out: 
-            main()
-        tmp_out.seek(0)
-
-        obs_opt_lines_chk=[]
-        final_obs_chk=None
-        OPT_OBS= OPT_OBS_DONE= False
-        l= tmp_out.readline()
-        while l:
-            print(l,end="")
-            if OPT_OBS and not OPT_OBS_DONE and l.rstrip()=="": OPT_OBS_DONE= True
-            if OPT_OBS and not OPT_OBS_DONE and len(l.split(','))>2:
-                obs_opt_lines_chk.append(l.rstrip())
-            if "checkpoint.loss" in l and not OPT_OBS_DONE: 
-                OPT_OBS= True
-            if "FINAL" in l:    
-                final_obs_chk= l.rstrip()
-                break
-            l= tmp_out.readline()
-        assert final_obs_chk
-        assert len(obs_opt_lines_chk)>0
-
-        # compare initial observables from checkpointed optimization (iii) and the observables 
-        # from original optimization (i) at one step after total number of steps done in (ii)
-        opt_line_iii= [complex(x) for x in obs_opt_lines_chk[0].split(",")[1:7]]
-        opt_line_i= [complex(x) for x in obs_opt_lines[4].split(",")[1:7]]
-        fobs_tokens= [complex(x) for x in final_obs[len("FINAL"):].split(",")[:6]]
-        for val3,val1 in zip(opt_line_iii, opt_line_i):
-            assert isclose(val3,val1, rel_tol=self.tol, abs_tol=self.tol)
-
-        # compare final observables from optimization (i) and the final observables 
-        # from the checkpointed optimization (iii)
-        fobs_tokens_1= [complex(x) for x in final_obs[len("FINAL"):].split(",")[:6]]
-        fobs_tokens_3= [complex(x) for x in final_obs_chk[len("FINAL"):].split(",")[:6]]
-        for val3,val1 in zip(fobs_tokens_3, fobs_tokens_1):
-            assert isclose(val3,val1, rel_tol=self.tol, abs_tol=self.tol)
-
-        # compare final observables from the checkpointed optimization (iii) with the reference 
+        # compare with the reference
         ref_data="""
-        -0.3180407711847281, (-0.47710302731050136-6.476760086184962e-16j), (-0.4770192862436829+0j), 
-        (2.202785316068753e-06+5.050307439390839e-19j), (1.8151220691379341e-06+5.681548168817215e-19j), (1.874524708341539e-08-2.2866950500479882e-20j), 
-        (-0.0014841783302786606-1.701381611751003e-16j), 0j, 0j, 
-        (0.001347264661875288+2.1085493925554838e-16j), 0j, 0j, 
-        (0.00013691328307879915-8.350888236066556e-17j), 0j, 0j, 
-        (-0.16545105705850982-4.0657356676678447e-16j), (-0.1610407631859552+2.1679343208401926e-16j), (-0.15060511036107044-3.932309688197049e-16j), 
-        (-0.1674017313824818+0j), (-0.15258046864149383+0j), (-0.15703131264136594+0j)
+        -0.3180424915434603, (-0.4770636301027198+0j), (-0.4770638445276611+0j), (0+0j), 
+        (0+0j), (0+0j), (0+0j), 0.0, 0.0, (0+0j), 0.0, 0.0, (0+0j), 0.0, 0.0, 
+        (-0.15902115598625072+0j), (-0.1590211415594349+0j), (-0.15902133255703074+0j), 
+        (-0.15902159490668272+0j), (-0.1590211322642514+0j), (-0.15902111735672694+0j)
         """
-        # compare final observables from final state of checkpointed optimization 
-        # against expected reference. Drop first token, corresponding to iteration step
-        ref_tokens= [complex(x) for x in ref_data.split(",")[:6]]
-        fobs_tokens_3= [complex(x) for x in final_obs_chk[len("FINAL"):].split(",")[:6]]
-        for val,ref_val in zip(fobs_tokens_3, ref_tokens):
+        # compare final observables from optimization and the observables from the 
+        # final state
+        final_opt_line_t= [complex(x) for x in final_opt_line.split(",")[1:]]
+        fobs_tokens= [complex(x) for x in final_obs[len("FINAL"):].split(",")]
+        for val0,val1 in zip(final_opt_line_t, fobs_tokens):
+            assert isclose(val0,val1, rel_tol=self.tol, abs_tol=self.tol)
+
+        # compare final observables from final state against expected reference 
+        # drop first token, corresponding to iteration step
+        ref_tokens= [complex(x) for x in ref_data.split(",")]
+        for val,ref_val in zip(fobs_tokens, ref_tokens):
             assert isclose(val,ref_val, rel_tol=self.tol, abs_tol=self.tol)
 
     def tearDown(self):
         args.opt_resume=None
         args.instate=None
-        for f in [self.OUT_PRFX+"_state.json",self.OUT_PRFX+"_checkpoint.p",self.OUT_PRFX+".log"]:
-            if os.path.isfile(f): os.remove(f)
+        # for f in [self.OUT_PRFX+"_state.json",self.OUT_PRFX+"_checkpoint.p",self.OUT_PRFX+".log"]:
+        #     if os.path.isfile(f): os.remove(f)

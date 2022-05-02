@@ -61,6 +61,13 @@ class ENV():
             0       0       0
             |       |       |
             C--1 1--T--2 1--C
+
+        Note::
+
+            The structure of fused double-layer legs, which are carried by T-tensors, is obtained
+            by fusing on-site tensor (`ket`) with its conjugate (`bra`). The leg of `ket` always
+            preceeds `bra` when fusing.
+
         """
         if state:
             self.dtype= state.dtype
@@ -262,14 +269,14 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
 
         # Left-upper corner
         #
-        #     i      = C--1     
-        # j--A--3      0
-        #   /\
-        #  2  m
-        #      \ i
-        #    j--A--3
-        #      /
-        #     2
+        #     i           = C--1     
+        # j--A*--3(b)          0
+        #     /\
+        # (a)2  m
+        #        \ i
+        #      j--A--3(f)
+        #        /
+        #       2(e)
         vec = (-1,-1)
         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
         dimsA = A.size()
@@ -338,14 +345,14 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
 
         # upper transfer matrix
         #
-        #     i      = 0--T--2     
-        # 1--A--3         1
-        #   /\
-        #  2  m
-        #      \ i
-        #    1--A--3
-        #      /
-        #     2
+        #        i         = 0--T--2     
+        # (e)1--A--3(g)         1
+        #      /\
+        #  (f)2  m
+        #         \ i
+        #    (a)1--A--3(c)
+        #         /
+        #     (b)2
         vec = (0,-1)
         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
         dimsA = A.size()

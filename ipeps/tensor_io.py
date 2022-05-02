@@ -6,6 +6,10 @@ try:
     import yast.yast as yast
 except ImportError as e:
     warnings.warn("yast not available", Warning)
+try:
+    import torch
+except ImportError as e:
+    warnings.warn("torch not available", Warning)
 
 class NumPy_Encoder(json.JSONEncoder):
     def default(self, obj):
@@ -279,3 +283,55 @@ def serialize_abelian_tensor_legacy(t, native=False):
         json_tensor["blocks"].append(json_block)
 
     return json_tensor
+
+
+def serialize_basis_t(meta,t):
+    # assume sparse tensor
+    assert isinstance(t,torch.Tensor),"torch.tensor is expected"
+
+    json_tensor=dict()
+    json_tensor["dtype"]="complex128" if t.is_complex() else "float64"
+    json_tensor["meta"]=meta
+
+    tdims = t.size()
+    tlength = t.numel()
+    json_tensor["dims"]= list(tdims)
+    t_nonzero= t.nonzero()
+    json_tensor["numEntries"]= len(t_nonzero)
+    entries = []
+    for elem in t_nonzero:
+        ei=tuple(elem.tolist())
+        if t.is_complex():
+            entries.append(" ".join(f"{ei[i]}" for i in range(len(ei)))\
+                +f" {t[ei].real} {t[ei].imag}")
+        else:
+            entries.append(" ".join(f"{ei[i]}" for i in range(len(ei)))+f" {t[ei]}")
+    json_tensor["entries"]=entries
+    return json_tensor
+
+def read_basis_t(json_obj, dtype=None, device=None):
+    t_dtype=None
+    if json_obj["dtype"]=="float64":
+        t_dtype= torch.float64
+    if json_obj["dtype"]=="complex128":
+        t_dtype= torch.complex128
+    if not dtype is None:
+        assert dtype==t_dtype,"Selected dtype does not match dtype of the tensor"
+
+    t= torch.zeros(tuple(json_obj["dims"]), dtype=t_dtype, device=device)
+    r= len(json_obj["dims"])
+    if t.is_complex():
+        for elem in json_obj["entries"]:
+            tokens= elem.split(' ')
+            inds=tuple([int(i) for i in tokens[0:r]])
+            t[inds]= float(tokens[r]) + (0.+1.j)*float(tokens[r+1])
+    else:
+        for elem in json_obj["entries"]:
+            tokens= elem.split(' ')
+            inds=tuple([int(i) for i in tokens[0:r]])
+            t[inds]= float(tokens[r])
+
+    meta= None
+    if "meta" in json_obj.keys():
+        meta= json_obj["meta"]
+    return meta, t

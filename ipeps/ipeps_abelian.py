@@ -28,6 +28,8 @@ def _fused_open_dl_site(a, fusion_level="full"):
                  3->8
 
     Such tensors serve as building blocks of reduced density matrices together with environment tensors.
+    The auxiliary indices of `ket` and `bra` layers are fused into double-layer auxiliary in that order.
+    If the physical indices are fused, the `ket` physical index precedes `bra`.
 
     Parameters
     ----------

@@ -5,12 +5,17 @@ import json
 import math
 import torch
 import config as cfg
+try:
+    import torch
+    from ipeps.ipess_kagome import IPESS_KAGOME_GENERIC
+except ImportError as e:
+    warnings.warn("torch not available", Warning)
 import yast.yast as yast
 import ipeps.ipeps_kagome_abelian as ipeps_kagome
 from ipeps.tensor_io import *
 
 class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
-    def __init__(self, settings, ipess_tensors,
+    def __init__(self, settings, ipess_tensors, build_sites=True,
                  peps_args=cfg.peps_args, global_args=cfg.global_args):
         r"""
         :param settings: yast symmetry module
@@ -94,7 +99,10 @@ class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
         assert ipess_tensors['B_b'].get_signature()==(-1,1,1),"Unexpected signature"
         assert ipess_tensors['B_c'].get_signature()==(-1,1,1),"Unexpected signature"
         self.ipess_tensors= ipess_tensors
-        sites= self.build_onsite_tensors()
+        if build_sites:
+            sites= self.build_onsite_tensors()
+        else:
+            sites= {}
 
         super().__init__(settings, sites, lX=1, lY=1, peps_args=peps_args,
                          global_args=global_args)
@@ -112,6 +120,21 @@ class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
         for t in self.ipess_tensors.values(): t.requires_grad_(False)
         self.sites = self.build_onsite_tensors()
         self.sync_precomputed()
+
+    def to_dense(self, peps_args=cfg.peps_args, global_args=cfg.global_args):
+        r"""
+        :return: returns equivalent dense state with all on-site tensors in their dense 
+                 representation on torch backend.
+        :rtype: IPESS_KAGOME_GENERIC
+
+        Create an IPESS_KAGOME_GENERIC state with all ipess tensors as dense possesing no explicit
+        block structure (symmetry). This operations preserves gradients on returned
+        dense state.
+        """
+        ipess_tensors_dense= {t_id: t.to_dense() for t_id,t in self.ipess_tensors.items()}
+        state_dense= IPESS_KAGOME_GENERIC(ipess_tensors_dense,peps_args=peps_args,\
+            global_args=global_args)
+        return state_dense
 
     def build_onsite_tensors(self):
         r"""

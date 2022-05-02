@@ -263,6 +263,90 @@ def write_ipess_kagome_generic(state, outputfile, tol=1.0e-14, normalize=False):
     with open(outputfile, 'w') as f:
         json.dump(json_state, f, indent=4, separators=(',', ': '))
 
+def read_ipess_kagome_generic_legacy(jsonfile, ansatz="IPESS", peps_args=cfg.peps_args,\
+    global_args=cfg.global_args):
+    r"""
+    :param jsonfile: input file describing iPEPS in json format
+    :param peps_args: ipeps configuration
+    :param global_args: global configuration
+    :type jsonfile: str or Path object
+    :type peps_args: PEPSARGS
+    :type global_args: GLOBALARGS
+    :return: wavefunction
+    :rtype: IPEPS_KAGOME
+
+    Legacy handling of iPESS ansatz. This functions reads input files
+    in convention below and maps them into convention of IPESS_KAGOME_GENERIC.
+
+    coord_kagome - ( 0, 0, x=0(B_a),1(B_b),2(B_c),3(T_d),4(T_u) )
+    
+    unrestricted (ansatz="IPESS")            pg_symmetric (ansatz="IPESS_PG")
+    
+    -- B_a^a_kl   B_b^b_mn --              -- B_a^a_kl   B_b^b_mn --
+         \\       /                               \\       /
+          T_d_lno                                   T_d_lno
+            |                                        |
+          B_c^c_op                                 B_c^c_po
+            |                                        |
+          T_u_pqr                                   T_u_qrp
+        /       \\                                 /       \\
+    
+    
+    where for IPESS_PG, T_d=T_u and B_a=B_b=B_c, where B_a is only symmetric part i.e.
+    B_a = 0.5*(B_a + B_a.permute(0,2,1)). NOTE: in the legacy input files, the B_a contains
+    also anti-symmetric part and hence it needs to be explicitly symmetrized.
+    """
+    dtype = global_args.torch_dtype
+
+    with open(jsonfile) as j:
+        raw_state = json.load(j)
+
+        # Loop over non-equivalent tensor,coeffs pairs in the unit cell
+        ipess_tensors= OrderedDict()
+        assert "kagome_sites" in raw_state.keys(),"Not a legacy generic iPESS kagome ansatz"
+        kagome_tensors= {}
+        for ts in raw_state["map"]:
+            coord_kagome = (ts["x"],ts["y"],ts["z"])
+            t = None
+            for s in raw_state["kagome_sites"]:
+                if s["siteId"] == ts["siteId"]:
+                    t = s
+            if t == None:
+                raise Exception("Tensor with siteId: "+ts["sideId"]+" NOT FOUND in \"sites\"")
+
+            if "format" in t.keys():
+                if t["format"] == "1D":
+                    X = torch.from_numpy(read_bare_json_tensor_np(t))
+            else:
+                # default
+                X = torch.from_numpy(read_bare_json_tensor_np_legacy(t))
+            kagome_tensors[coord_kagome] = X.to(device=global_args.device)
+        assert len(kagome_tensors)==5, "iPESS ansatz for more than single Kagome unit cell"
+        
+        # unrestricted IPESS
+        if ansatz=="IPESS":
+            ipess_tensors= {
+                'T_u': kagome_tensors[(0,0,4)].permute(0,2,1).contiguous(), 
+                'T_d': kagome_tensors[(0,0,3)].permute(2,1,0).contiguous(),\
+                'B_a': kagome_tensors[(0,0,0)].permute(0,2,1).contiguous(),\
+                'B_b': kagome_tensors[(0,0,1)].permute(0,2,1).contiguous(),\
+                'B_c': kagome_tensors[(0,0,2)]}
+            state = IPESS_KAGOME_GENERIC(ipess_tensors, peps_args=peps_args, \
+                global_args=global_args)
+        # pg_symmetric IPESS
+        elif ansatz=="IPESS_PG":
+            ipess_tensors= {
+                'T_u': kagome_tensors[(0,0,4)].permute(2,1,0).contiguous(), 
+                'T_d': kagome_tensors[(0,0,3)].permute(2,1,0).contiguous(),\
+                'B_a': 0.5*(kagome_tensors[(0,0,0)] + kagome_tensors[(0,0,0)].permute(0,2,1)).contiguous(),\
+                'B_b': 0.5*(kagome_tensors[(0,0,1)] + kagome_tensors[(0,0,1)].permute(0,2,1)).contiguous(),\
+                'B_c': 0.5*(kagome_tensors[(0,0,2)] + kagome_tensors[(0,0,2)].permute(0,2,1)).contiguous()}
+            state = IPESS_KAGOME_PG(ipess_tensors['T_u'], ipess_tensors['B_a'], ipess_tensors['T_d'],\
+                SYM_UP_DOWN=True, SYM_BOND_S=True,\
+                peps_args=peps_args, global_args=global_args)            
+        
+    return state
+
 
 class IPESS_KAGOME_PG(IPESS_KAGOME_GENERIC):
     PG_A1_B= {'T_u': 'A_1', 'T_d': 'A_1', 'B_a': 'B', 'B_b': 'B', 'B_c': 'B'}
@@ -578,7 +662,7 @@ def read_ipess_kagome_pg(jsonfile, peps_args=cfg.peps_args, global_args=cfg.glob
         elem_t= OrderedDict()
         for key,t in raw_state["elem_tensors"].items():
             elem_t[key]= torch.from_numpy(read_bare_json_tensor_np_legacy(t))\
-                .to(global_args.device)
+                .to(dtype=global_args.torch_dtype, device=global_args.device)
 
         # legacy
         if "UP_T" in elem_t.keys() and "BOND_S" in elem_t.keys():
@@ -653,7 +737,7 @@ def write_ipess_kagome_pg(state, outputfile, tol=1.0e-14, normalize=False, pg_sy
     """
     sym_state= to_PG_symmetric(state) if pg_symmetrize else state
     json_state = dict({"elem_tensors": {}, "SYM_UP_DOWN": sym_state.SYM_UP_DOWN, \
-        "SYM_BOND_S": sym_state.SYM_UP_DOWN, "pgs": sym_state.pgs})
+        "SYM_BOND_S": sym_state.SYM_BOND_S, "pgs": sym_state.pgs})
 
     # write list of considered elementary tensors
     for key, t in sym_state.elem_tensors.items():
@@ -664,86 +748,268 @@ def write_ipess_kagome_pg(state, outputfile, tol=1.0e-14, normalize=False, pg_sy
         json.dump(json_state, f, indent=4, separators=(',', ': '))
 
 
-def read_ipess_kagome_generic_legacy(jsonfile, ansatz="IPESS", peps_args=cfg.peps_args,\
-    global_args=cfg.global_args):
+class IPESS_KAGOME_PG_LC(IPESS_KAGOME_PG):
+
+    def __init__(self, T_u, B_c, T_d=None,\
+                B_a=None, B_b=None,\
+                SYM_UP_DOWN=True, SYM_BOND_S=True, pgs=None,\
+                peps_args=cfg.peps_args, global_args=cfg.global_args):
+        r"""
+        :param T_u: tuple of tensor with coefficients and list of basis tensors
+                    defining trivalent tensor as linear combination    
+        :param B_c: tuple of tensor with coefficients and list of basis tensors
+                    defining bond tensor as linear combination 
+        :param T_d: analogous to T_u
+        :param B_a: analogous to B_c
+        :param B_b: analogous to B_c
+        :param SYM_UP_DOWN: is up triangle equivalent to down triangle
+        :param SYM_BOND_S: are bond tensors equivalent to each other 
+        :param pgs: dictionary assigning point-group irreps to elementary tensors 
+        :param peps_args: ipeps configuration
+        :param global_args: global configuration
+        :type T_u: tuple(torch.tensor, list(tuple(dict,torch.tensor)))
+        :type B_c: tuple(torch.tensor, list(tuple(dict,torch.tensor)))
+        :type T_u: tuple(torch.tensor, list(tuple(dict,torch.tensor)))
+        :type B_a: tuple(torch.tensor, list(tuple(dict,torch.tensor)))
+        :type B_b: tuple(torch.tensor, list(tuple(dict,torch.tensor)))
+        :type SYM_UP_DOWN: bool
+        :type SYM_BOND_S: bool
+        :type peps_args: PEPSARGS
+        :type global_args: GLOBALARGS
+
+        iPESS ansatz for Kagome lattice with additional spatial symmetries. 
+        The iPESS tensors are taken to be formed by linear combination of supplied
+        basis tensors, i.e. T_u = \sum_i \lambda^{(T_u)}_i elem_t^{(T_u)}_i.
+
+               2(d)            2(c)                      a
+                  \             /          rot. pi       |
+             0(w)==B_a         B_b==0(v)  clockwise   b--\                     
+                    \         /             =>            \
+                    1(l)     1(k)                         s0--s2--d
+                     2(l)   1(k)                           | / 
+                       \   /                               |/   <- DOWN_T
+                        T_d                               s1
+                         |                                 |
+                         0(j)                              c
+                         1(j)                               
+                         |                 
+                         B_c==0(u)        
+                         |
+                         2(i)
+                         0(i)  
+                         |
+                        T_u
+                       /   \ 
+                     1(a)   2(b)
+
+        where ``B_c`` holds ``s0`` DoF and ``B_a`` and ``B_b`` hold ``s2`` and ``s1`` DoFs
+        respectively.
+
+        In case T_u==T_d, the choice of contraction guarantees the same (direction of) chirality on
+        up and down triangles. 
+
+        Argument ``pgs`` is assumed to be dictionary, with keys equivalent to names of elementary 
+        tensors, i.e. ``{'T_u': 'A2', 'B_a': 'A'}``.
+        """
+        self.SYM_UP_DOWN= SYM_UP_DOWN
+        self.SYM_BOND_S= SYM_BOND_S
+        
+        # default setup
+        self.coeffs= OrderedDict({'T_u': T_u[0],'B_c': B_c[0]})
+        self.basis_t= OrderedDict({'T_u': T_u[1],'B_c': B_c[1]})
+        # ipess_tensors= OrderedDict({'T_u': T_u[1], 'T_d': T_u[1],\
+        #     'B_c': B_c[1], 'B_a': B_c[1], 'B_b': B_c[1]})
+        if not SYM_UP_DOWN:
+            assert isinstance(T_d[0], torch.Tensor),\
+                "coefficients and basis tensors for T_d have to be provided"
+            self.coeffs['T_d']= T_d[0]  
+            self.basis_t['T_d']= T_d[1]
+        if not SYM_BOND_S:
+            assert isinstance(B_a[0],torch.Tensor) and isinstance(B_b[0],torch.Tensor),\
+                "coefficients and basis tensors for bond 1 and bond 2 must be provided"
+            self.coeffs['B_a']= B_a[0]
+            self.coeffs['B_b']= B_b[0]
+            self.basis_t['B_a']= B_a[1]
+            self.basis_t['B_b']= B_b[1]
+
+        # PGs
+        if pgs==None: pgs=dict()
+        assert isinstance(pgs,dict) and set(list(pgs.keys()))<=set(['T_u','T_d','B_a','B_b','B_c']),\
+            "Invalid point-group specification "+str(pgs)
+        self.pgs= pgs
+        
+        elem_tensors= self.build_elem_tensors()
+        super().__init__(**elem_tensors,\
+            SYM_UP_DOWN=SYM_UP_DOWN, SYM_BOND_S=SYM_BOND_S, pgs=pgs,\
+            pg_symmetrize=False, peps_args=peps_args, global_args=global_args)
+
+    def __str__(self):
+        for k in self.coeffs.keys():
+            print(f"{k}")
+            for m_t in self.basis_t[k]:
+                print(f"{m_t[0]}")
+        super().__str__()
+        return ""
+
+    def get_parameters(self):
+        return self.coeffs.values()
+
+    def get_checkpoint(self):
+        return dict(coeffs= self.coeffs, basis_t= self.basis_t)
+
+    def load_checkpoint(self, checkpoint_file):
+        checkpoint= torch.load(checkpoint_file, map_location=self.device)
+        self.coeffs= checkpoint["parameters"]["coeffs"]
+        self.basis_t= checkpoint["parameters"]["basis_t"]
+        self.update_()
+
+    @staticmethod
+    def create_from_checkpoint(checkpoint_file, SYM_UP_DOWN=True, SYM_BOND_S=True,\
+            pgs=None, peps_args=cfg.peps_args, global_args=cfg.global_args):
+        checkpoint= torch.load(checkpoint_file, map_location=global_args.device)
+        coeffs= checkpoint["parameters"]["coeffs"]
+        basis_t= checkpoint["parameters"]["basis_t"]
+        c_b= { ind: (coeffs[ind], basis_t[ind]) for ind in coeffs.keys() }
+        return IPESS_KAGOME_PG_LC( c_b['T_u'], c_b['B_c'],\
+            T_d=c_b['T_d'] if 'T_d' in c_b else None,\
+            B_a=c_b['B_a'] if 'B_a' in c_b else None,\
+            B_b=c_b['B_b'] if 'B_b' in c_b else None,\
+            SYM_UP_DOWN=SYM_UP_DOWN, SYM_BOND_S=SYM_BOND_S, pgs=pgs,\
+            peps_args=peps_args, global_args=global_args)
+
+    def build_elem_tensors(self):
+        elem_tensors=dict()
+        for k in self.coeffs:
+            if k in ['T_u', 'T_d']:
+                if k in self.pgs.keys() and  self.pgs[k]=="A_1":
+                    sym_t_A1= list(filter(lambda x: x[0]["meta"]["pg"]=="A_1", self.basis_t[k]))
+                    sym_t_A2= list(filter(lambda x: x[0]["meta"]["pg"]=="A_2", self.basis_t[k]))
+                    ts= torch.stack( [t for m,t in sym_t_A1] + [ 1.0j*t for m,t in sym_t_A2] )
+                elif k in self.pgs.keys() and  self.pgs[k]=="A_2":
+                    sym_t_A1= list(filter(lambda x: x[0]["meta"]["pg"]=="A_1", self.basis_t[k]))
+                    sym_t_A2= list(filter(lambda x: x[0]["meta"]["pg"]=="A_2", self.basis_t[k]))
+                    ts= torch.stack( [t for m,t in sym_t_A2] + [ 1.0j*t for m,t in sym_t_A1] )
+                else:
+                    ts= torch.stack( [t for m,t in self.basis_t[k]] )
+
+            elif k in ['B_a', 'B_b', 'B_c']:
+                if k in self.pgs.keys() and  self.pgs[k]=="A":
+                    sym_t_A= list(filter(lambda x: x[0]["meta"]["pg"]=="A", self.basis_t[k]))
+                    sym_t_B= list(filter(lambda x: x[0]["meta"]["pg"]=="B", self.basis_t[k]))
+                    ts= torch.stack( [t for m,t in sym_t_A] + [ 1.0j*t for m,t in sym_t_B] )
+                elif k in self.pgs.keys() and  self.pgs[k]=="B":
+                    sym_t_A= list(filter(lambda x: x[0]["meta"]["pg"]=="A", self.basis_t[k]))
+                    sym_t_B= list(filter(lambda x: x[0]["meta"]["pg"]=="B", self.basis_t[k]))
+                    ts= torch.stack( [t for m,t in sym_t_B] + [ 1.0j*t for m,t in sym_t_A] )
+                else:
+                    ts= torch.stack( [t for m,t in self.basis_t[k]] )
+
+            c= self.coeffs[k].clone()
+            if ts.is_complex(): c= c*(1.0+0.j)
+            elem_tensors[k]= torch.einsum('i,iabc->abc',c,ts)
+        return elem_tensors
+
+    def update_(self):
+        self.elem_tensors= self.build_elem_tensors()
+
+        # update parent generic kagome iPESS and invoke reconstruction of on-site tensor        
+        # default
+        self.ipess_tensors= {'T_u': self.elem_tensors['T_u'], 'T_d': self.elem_tensors['T_u'],\
+            'B_a': self.elem_tensors['B_c'], 'B_b': self.elem_tensors['B_c'],\
+            'B_c': self.elem_tensors['B_c']}
+        if not self.SYM_UP_DOWN:
+            self.ipess_tensors['T_d']= self.elem_tensors['T_d']
+        if not self.SYM_BOND_S:
+            self.ipess_tensors['B_b']= self.elem_tensors['B_b']
+            self.ipess_tensors['B_a']= self.elem_tensors['B_a']
+
+        self.sites = self.build_onsite_tensors()
+
+    def add_noise(self, noise):
+        for k in self.coeffs:
+            rand_t= torch.rand_like( self.coeffs[k] )
+            self.coeffs[k]= self.coeffs[k] + noise * (rand_t-1.0)
+        self.update_()
+
+    def extend_bond_dim(self, new_d):
+        r"""
+        :param new_d: new enlarged auxiliary bond dimension
+        :type state: IPESS_KAGOME_PG
+        :type new_d: int
+        :return: wavefunction with enlarged auxiliary bond dimensions
+        :rtype: IPESS_KAGOME_PG_LC
+        """
+        raise NotImplementedError("")
+
+    def write_to_file(self, outputfile, tol=1.0e-14, normalize=False):
+        write_ipess_kagome_pg_lc(self, outputfile, tol=tol, normalize=normalize)
+
+def write_ipess_kagome_pg_lc(state, outputfile, tol=1.0e-14, normalize=False):
     r"""
-    :param jsonfile: input file describing iPEPS in json format
-    :param peps_args: ipeps configuration
-    :param global_args: global configuration
-    :type jsonfile: str or Path object
-    :type peps_args: PEPSARGS
-    :type global_args: GLOBALARGS
-    :return: wavefunction
-    :rtype: IPEPS_KAGOME
+    :param state: wavefunction to write out in json format
+    :param outputfile: target file
+    :param tol: minimum magnitude of tensor elements which are written out
+    :param normalize: if True, on-site tensors are normalized before writing
+    :type state: IPESS_KAGOME_PG_LC
+    :type ouputfile: str or Path object
+    :type tol: float
+    :type normalize: bool
 
-    Legacy handling of iPESS ansatz. This functions reads input files
-    in convention below and maps them into convention of IPESS_KAGOME_GENERIC.
-
-    coord_kagome - ( 0, 0, x=0(B_a),1(B_b),2(B_c),3(T_d),4(T_u) )
-    
-    unrestricted (ansatz="IPESS")            pg_symmetric (ansatz="IPESS_PG")
-    
-    -- B_a^a_kl   B_b^b_mn --              -- B_a^a_kl   B_b^b_mn --
-         \\       /                               \\       /
-          T_d_lno                                   T_d_lno
-            |                                        |
-          B_c^c_op                                 B_c^c_po
-            |                                        |
-          T_u_pqr                                   T_u_qrp
-        /       \\                                 /       \\
-    
-    
-    where for IPESS_PG, T_d=T_u and B_a=B_b=B_c, where B_a is only symmetric part i.e.
-    B_a = 0.5*(B_a + B_a.permute(0,2,1)). NOTE: in the legacy input files, the B_a contains
-    also anti-symmetric part and hence it needs to be explicitly symmetrized.
+    TODO implement cutoff on elements with magnitude below tol
     """
+    json_state=dict({"pgs": state.pgs , "basis_t": {}, "coeffs": {}, \
+        "SYM_UP_DOWN": state.SYM_UP_DOWN, "SYM_BOND_S": state.SYM_BOND_S})
+    for k in state.basis_t.keys():
+        json_state["basis_t"][k]= []
+        for m_t in state.basis_t[k]:
+            json_state["basis_t"][k].append(
+                serialize_basis_t(*m_t)
+                )
+    for k in state.coeffs.keys():
+        tmp_t= state.coeffs[k]
+        if normalize:
+            tmp_t= tmp_t/tmp_t.abs().max()
+        json_state["coeffs"][k]= serialize_basis_t(None, tmp_t)
+
+    with open(outputfile,'w') as f:
+        json.dump(json_state, f, indent=4, separators=(',', ': '))
+
+def read_ipess_kagome_pg_lc(jsonfile, peps_args=cfg.peps_args, global_args=cfg.global_args):
     dtype = global_args.torch_dtype
 
     with open(jsonfile) as j:
         raw_state = json.load(j)
 
-        # Loop over non-equivalent tensor,coeffs pairs in the unit cell
-        ipess_tensors= OrderedDict()
-        assert "kagome_sites" in raw_state.keys(),"Not a legacy generic iPESS kagome ansatz"
-        kagome_tensors= {}
-        for ts in raw_state["map"]:
-            coord_kagome = (ts["x"],ts["y"],ts["z"])
-            t = None
-            for s in raw_state["kagome_sites"]:
-                if s["siteId"] == ts["siteId"]:
-                    t = s
-            if t == None:
-                raise Exception("Tensor with siteId: "+ts["sideId"]+" NOT FOUND in \"sites\"")
+        SYM_UP_DOWN= True
+        if "SYM_UP_DOWN" in raw_state.keys(): 
+            SYM_UP_DOWN= raw_state["SYM_UP_DOWN"]
+        SYM_BOND_S= True
+        if "SYM_BOND_S" in raw_state.keys(): 
+            SYM_BOND_S= raw_state["SYM_BOND_S"] 
 
-            if "format" in t.keys():
-                if t["format"] == "1D":
-                    X = torch.from_numpy(read_bare_json_tensor_np(t))
+        pgs=None
+        if "pgs" in raw_state.keys():
+            # legacy
+            if not isinstance(raw_state["pgs"],dict):
+                pgs= tuple( raw_state["pgs"] )
+                if pgs==(None,None,None): pgs=None
+                elif pgs==("A_2","A_2","B"):
+                    pgs= {"T_u": "A_2", "T_d": "A_2", "B_c": "B", "B_a": "B", "B_b": "B"}
             else:
-                # default
-                X = torch.from_numpy(read_bare_json_tensor_np_legacy(t))
-            kagome_tensors[coord_kagome] = X.to(device=global_args.device)
-        assert len(kagome_tensors)==5, "iPESS ansatz for more than single Kagome unit cell"
-        
-        # unrestricted IPESS
-        if ansatz=="IPESS":
-            ipess_tensors= {
-                'T_u': kagome_tensors[(0,0,4)].permute(0,2,1).contiguous(), 
-                'T_d': kagome_tensors[(0,0,3)].permute(2,1,0).contiguous(),\
-                'B_a': kagome_tensors[(0,0,0)].permute(0,2,1).contiguous(),\
-                'B_b': kagome_tensors[(0,0,1)].permute(0,2,1).contiguous(),\
-                'B_c': kagome_tensors[(0,0,2)]}
-            state = IPESS_KAGOME_GENERIC(ipess_tensors, peps_args=peps_args, \
-                global_args=global_args)
-        # pg_symmetric IPESS
-        elif ansatz=="IPESS_PG":
-            ipess_tensors= {
-                'T_u': kagome_tensors[(0,0,4)].permute(2,1,0).contiguous(), 
-                'T_d': kagome_tensors[(0,0,3)].permute(2,1,0).contiguous(),\
-                'B_a': 0.5*(kagome_tensors[(0,0,0)] + kagome_tensors[(0,0,0)].permute(0,2,1)).contiguous(),\
-                'B_b': 0.5*(kagome_tensors[(0,0,1)] + kagome_tensors[(0,0,1)].permute(0,2,1)).contiguous(),\
-                'B_c': 0.5*(kagome_tensors[(0,0,2)] + kagome_tensors[(0,0,2)].permute(0,2,1)).contiguous()}
-            state = IPESS_KAGOME_PG(ipess_tensors['T_u'], ipess_tensors['B_a'], ipess_tensors['T_d'],\
-                SYM_UP_DOWN=True, SYM_BOND_S=True,\
-                peps_args=peps_args, global_args=global_args)            
-        
+                pgs= raw_state["pgs"]
+
+        basis_t= dict()
+        for k in raw_state["basis_t"].keys():
+            basis_t[k]= []
+            for b_t in raw_state["basis_t"][k]:
+                basis_t[k].append( read_basis_t(b_t, device=global_args.device) )
+        coeffs= dict()
+        for k in raw_state["coeffs"].keys():
+            _, coeffs[k]= read_basis_t(raw_state["coeffs"][k], device=global_args.device)
+
+    pg_lc_tensors= { k: (coeffs[k],basis_t[k]) for k in coeffs.keys() }
+    state= IPESS_KAGOME_PG_LC( **pg_lc_tensors,\
+                SYM_UP_DOWN=SYM_UP_DOWN, SYM_BOND_S=SYM_BOND_S, pgs=pgs,\
+                peps_args=peps_args, global_args=global_args)
+
     return state

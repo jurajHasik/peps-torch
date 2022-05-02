@@ -1,3 +1,4 @@
+import warnings
 import context
 import argparse
 import config as cfg
@@ -29,12 +30,17 @@ parser.add_argument("--j2", type=float, default=0, help="next-nearest-neighbor e
 parser.add_argument("--jtrip", type=float, default=0, help="(SxS).S")
 parser.add_argument("--jperm", type=complex, default=0+0j, help="triangle permutation")
 parser.add_argument("--ansatz", type=str, default=None, help="choice of the tensor ansatz",\
-     choices=["IPEPS", "IPESS", "IPESS_PG", 'A_2,B'])
+     choices=["IPEPS", "IPESS", "IPESS_PG", "A_2,B", "A_1,B"])
+parser.add_argument("--no_sym_up_dn", action='store_false', dest='sym_up_dn',\
+    help="same trivalent tensors for up and down triangles")
+parser.add_argument("--no_sym_bond_S", action='store_false', dest='sym_bond_S',\
+    help="same bond site tensors")
 parser.add_argument("--CTM_check", type=str, default='Partial_energy', help="method to check CTM convergence",\
      choices=["Energy", "SingularValue", "Partial_energy"])
 parser.add_argument("--force_cpu", action='store_true', dest='force_cpu', help="force RDM contractions on CPU")
 parser.add_argument("--obs_freq", type=int, default=-1, help="frequency of computing observables"
     + " during CTM convergence")
+parser.add_argument("--corrf_r", type=int, default=1, help="maximal correlation function distance")
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues "+
     "of transfer operator to compute")
 parser.add_argument("--EH_n", type=int, default=1, help="number of leading eigenvalues "+
@@ -55,22 +61,31 @@ def main():
     torch.manual_seed(args.seed)
 
     if not args.theta is None:
-        args.j1= args.j1*math.cos(args.theta*math.pi)
         args.jtrip= args.j1*math.sin(args.theta*math.pi)
+        args.j1= args.j1*math.cos(args.theta*math.pi)
     print(f"j1={args.j1}; jD={args.JD}; j2={args.j2}; jtrip={args.jtrip}")
     model= spin_half_kagome.S_HALF_KAGOME(j1=args.j1,JD=args.JD,j2=args.j2,\
         jtrip=args.jtrip,jperm=args.jperm)
 
     # initialize the ipess/ipeps
-    if args.ansatz in ["IPESS","IPESS_PG","A_2,B"]:
+    if args.ansatz in ["IPESS","IPESS_PG","A_2,B","A_1,B"]:
         ansatz_pgs= None
         if args.ansatz=="A_2,B": ansatz_pgs= IPESS_KAGOME_PG.PG_A2_B
-        
+        if args.ansatz=="A_1,B": ansatz_pgs= IPESS_KAGOME_PG.PG_A1_B
+        if ansatz_pgs in ["A_1,B", "A_2,B"]: 
+            args.sym_bond_S= True
+            args.sym_up_dn= True
+
         if args.instate!=None:
             if args.ansatz=="IPESS":
                 state= read_ipess_kagome_generic(args.instate)
-            elif args.ansatz in ["IPESS_PG","A_2,B"]:
-                state= read_ipess_kagome_pg(args.instate)
+            elif args.ansatz in ["IPESS_PG","A_2,B","A_1,B"]:
+                try: 
+                    state= read_ipess_kagome_pg(args.instate)
+                except Exception as e:
+                    print(e)
+                    warnings.warn(f"Attempting LC ansatz")
+                    state= read_ipess_kagome_pg_lc(args.instate)
 
             # possibly symmetrize by PG
             if ansatz_pgs!=None:
@@ -102,7 +117,7 @@ def main():
                 dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
             B_b= torch.zeros(model.phys_dim, args.bond_dim, args.bond_dim,\
                 dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
-            if args.ansatz in ["IPESS_PG", "A_2,B"]:
+            if args.ansatz in ["IPESS_PG", "A_2,B", "A_1,B"]:
                 state= IPESS_KAGOME_PG(T_u, B_c, T_d, T_d=T_d, B_a=B_a, B_b=B_b,\
                     SYM_UP_DOWN=args.sym_up_dn,SYM_BOND_S=args.sym_bond_S, pgs=ansatz_pgs)
             elif args.ansatz in ["IPESS"]:
@@ -121,7 +136,7 @@ def main():
                 dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)-1.0
             B_b= torch.rand(model.phys_dim, args.bond_dim, args.bond_dim,\
                 dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)-1.0
-            if args.ansatz in ["IPESS_PG", "A_2,B"]:
+            if args.ansatz in ["IPESS_PG", "A_2,B", "A_1,B"]:
                 state = IPESS_KAGOME_PG(T_u, B_c, T_d=T_d, B_a=B_a, B_b=B_b,\
                     SYM_UP_DOWN=args.sym_up_dn,SYM_BOND_S=args.sym_bond_S, pgs=ansatz_pgs)
             elif args.ansatz in ["IPESS"]:
@@ -184,7 +199,7 @@ def main():
             spectra.append([label, s])
         return spectra
 
-    def report_conv_fn(state, ctm_env, conv_step, conv_crit, e_curr=None):
+    def report_conv_fn(state, env, conv_step, conv_crit, e_curr=None):
         if args.obs_freq>0 and \
             (conv_step%args.obs_freq==0 or (conv_step-1)%args.obs_freq==0):
             if e_curr is None: 
@@ -230,9 +245,9 @@ def main():
     elif args.CTM_check=="SingularValue":
         def ctmrg_conv_fn(state, env, history, ctm_args=cfg.ctm_args):
             if not history:
+                spec_ers= torch.full((4,), float('inf'))
                 history_spec = []
-                history_ite=1
-                history=[history_ite, history_spec]
+                history=[1, history_spec]
             spect_new=eval_corner_spectra(env)
             spec1_new=spect_new[0][1]
             spec1_new=spec1_new/spec1_new[0]
@@ -242,8 +257,8 @@ def main():
             spec3_new=spec3_new/spec3_new[0]
             spec4_new=spect_new[3][1]
             spec4_new=spec4_new/spec4_new[0]
-            if len(history[1])==4:
-                spec_ers=torch.zeros(4)
+            if history[0]>1:
+                spec_ers= torch.full((4,), float('inf'))
                 spec_ers[0]=torch.linalg.norm(spec1_new-history[1][0])
                 spec_ers[1]=torch.linalg.norm(spec2_new-history[1][1])
                 spec_ers[2]=torch.linalg.norm(spec3_new-history[1][2])
@@ -293,16 +308,47 @@ def main():
     chi_R= Pijk + Pijk_inv
     chi_I= 1.0j * (Pijk - Pijk_inv)
 
-    ev_chi_R_downT= rdm_kagome.rdm2x2_dn_triangle_with_operator((0,0), state, ctm_env_init,\
-        chi_R, force_cpu=force_cpu)
-    ev_chi_I_downT= rdm_kagome.rdm2x2_dn_triangle_with_operator((0,0), state, ctm_env_init,\
-        chi_I, force_cpu=force_cpu)
+    norm_1x1= rdm_kagome.trace1x1_dn_kagome((0,0), state, ctm_env_init,\
+        model.Id3_t.view([model.phys_dim]*6), force_cpu=args.force_cpu)
+    print(f"Norm 1x1_dn {norm_1x1}")
+    ev_chi_R_downT= rdm_kagome.trace1x1_dn_kagome((0,0), state, ctm_env_init,\
+        chi_R, force_cpu=args.force_cpu)/norm_1x1
+    ev_chi_I_downT= rdm_kagome.trace1x1_dn_kagome((0,0), state, ctm_env_init,\
+        chi_I, force_cpu=args.force_cpu)/norm_1x1
+    print(f"trace1x1_dn_kagome Re(Chi) downT {ev_chi_R_downT} Im(Chi) downT {ev_chi_I_downT}")
+
+    ev_chi_R_downT,norm_2x2_dn= rdm_kagome.rdm2x2_dn_triangle_with_operator((0,0), state, ctm_env_init,\
+        chi_R, force_cpu=args.force_cpu)
+    ev_chi_I_downT,_= rdm_kagome.rdm2x2_dn_triangle_with_operator((0,0), state, ctm_env_init,\
+        chi_I, force_cpu=args.force_cpu)
+    print(f"Norm 2x2_dn {norm_2x2_dn}")
     print(f"Re(Chi) downT {ev_chi_R_downT} Im(Chi) downT {ev_chi_I_downT}")
 
-    rho_upT= rdm_kagome.rdm2x2_up_triangle_open((0,0), state, ctm_env_init, force_cpu=force_cpu)
+    rho_upT= rdm_kagome.rdm2x2_up_triangle_open((0,0), state, ctm_env_init,\
+        force_cpu=args.force_cpu)
     ev_chi_R_upT= torch.einsum('ijkmno,mnoijk',rho_upT, chi_R)
     ev_chi_I_upT= torch.einsum('ijkmno,mnoijk',rho_upT, chi_I)
     print(f"Re(Chi) upT {ev_chi_R_upT} Im(Chi) upT {ev_chi_I_upT}")
+
+    # 7) ----- additional observables ---------------------------------------------    
+    for x in [0,1,2]:
+        corrSS= model.eval_corrf_SS((0,0), (1,0), state, ctm_env_init, args.corrf_r, site=x)
+        print(f"\n\nSS[(0,0),(1,0),site={x}] r "+" ".join([label for label in corrSS.keys()]))
+        for i in range(args.corrf_r):
+            print(f"{i} "+" ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
+
+        corrSS= model.eval_corrf_SS((0,0), (0,1), state, ctm_env_init, args.corrf_r, site=x)
+        print(f"\n\nSS[(0,0),(0,1),site={x}] r "+" ".join([label for label in corrSS.keys()]))
+        for i in range(args.corrf_r):
+            print(f"{i} "+" ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
+
+    # environment diagnostics
+    print("\n")
+    for c_loc,c_ten in ctm_env_init.C.items(): 
+        u,s,v= torch.svd(c_ten, compute_uv=False)
+        print(f"spectrum C[{c_loc}]")
+        for i in range(args.chi):
+            print(f"{i} {s[i]}")
 
     # transfer operator spectrum
     site_dir_list=[((0,0), (1,0)), ((0,0), (0,1))]

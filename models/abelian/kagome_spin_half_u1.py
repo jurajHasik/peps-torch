@@ -40,6 +40,7 @@ class KAGOME_U1():
         Id2= yast.tensordot(Id1,Id1,([],[])).transpose(axes=(0,2,1,3))
         self.Id3_t= yast.tensordot(Id2,Id1,([],[])).transpose(axes=(0,1,4,2,3,5))\
             .fuse_legs(axes=((0,1,2), (3,4,5)))
+        self.Id2_t= Id2.fuse_legs(axes=((0,1), (2,3)))
 
         SS= irrep.SS(zpm=(1., 1., 1.))
         SS_JD= self.j1*SS if abs(self.JD) else irrep.SS(zpm=(j1, j1+1j*JD, j1-1j*JD)) 
@@ -98,14 +99,25 @@ class KAGOME_U1():
         self.SS12= self.SSnnId.transpose(axes=(1,2,0, 4,5,3))
         self.SS02= self.SSnnId.transpose(axes=(2,0,1, 5,3,4))
 
+    def energy_down_t_1x1subsystem(self, state, env, force_cpu=False, fail_on_check=False,\
+            warn_on_check=True):
+        r"""
+        Evaluate the energy contribution from the down triangle on 1x1 subsystem
+        embedded in the environment.
+        """
+        norm = rdm_kagome.trace1x1_dn_kagome((0,0), state, env, self.id3).to_number()
+        norm = _cast_to_real(norm, fail_on_check=fail_on_check, warn_on_check=warn_on_check)
+        e_dn = rdm_kagome.trace1x1_dn_kagome((0,0), state, env, \
+            self.h_triangle).to_number() / norm
+        return _cast_to_real(e_dn, fail_on_check=fail_on_check, warn_on_check=warn_on_check)
 
-    def energy_triangle_dn(self, state, env, force_cpu=False, fail_on_check=False,\
+    def energy_down_t_2x2subsystem(self, state, env, force_cpu=False, fail_on_check=False,\
             warn_on_check=True):
         e_dn= rdm_kagome.rdm2x2_dn_triangle_with_operator((0, 0), state, env, \
             self.h_triangle.fuse_legs(axes=((0,1,2),(3,4,5))), force_cpu=force_cpu,).to_number()
         return _cast_to_real(e_dn, fail_on_check=fail_on_check, warn_on_check=warn_on_check)
 
-    def energy_triangle_up(self, state, env, force_cpu=False, fail_on_check=False,\
+    def energy_up_t_2x2subsystem(self, state, env, force_cpu=False, fail_on_check=False,\
             warn_on_check=True):
         rdm_up= rdm_kagome.rdm2x2_up_triangle_open((0, 0), state, env, force_cpu=force_cpu,\
             verbosity=1 if warn_on_check else 0)
