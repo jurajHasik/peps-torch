@@ -256,7 +256,7 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, direction, \
     S_sqrt= S.rsqrt()
     
     if verbosity>0: 
-        print(f"{S.data.max()} {S_sqrt.data.max()}")
+        print(f"{diagnostics} {S.data.max()} {S_sqrt.data.max()}")
 
     # 3) Construct projectors
     expr='ij,j->ij'

@@ -1,7 +1,7 @@
 import yast.yast as yast
 from tn_interface_abelian import contract, permute, conj
 
-def hosvd(A,itebd_tol,bond_dim,keep_multiplet):
+def hosvd(A,itebd_tol,bond_dim,keep_multiplet, eps_multiplet=1.0e-10):
     #A is n(1) x ... x n(d) tensor
     #U is d cell array with U(k) being the left singular vector of a's mode-k unfolding
     #S is n(1) x ... x n(d) tensor : A x1 U(1) x2 U(2) ... xd U(d)
@@ -9,12 +9,17 @@ def hosvd(A,itebd_tol,bond_dim,keep_multiplet):
     U_set = []
     lambda_set = []
 
+    def truncation_f(S):
+        return yast.linalg.truncation_mask_multiplets(S,keep_multiplets=keep_multiplet, D_total=bond_dim,\
+                tol=itebd_tol, eps_multiplet=eps_multiplet)
+    def truncated_svd(M, axes=(0,1), sU=1):
+        return yast.linalg.svd_with_truncation(M, axes, sU=sU, mask_f=truncation_f)
+
     #index 0
     #AA=torch.einsum('abc,dbc->ad', A, A.conj())
     #AA=yast.ncon([A,A.conj()],[[-1+1,0+1,1+1],[-2+1,0+1,1+1]])
     #u,lamb,_=torch.svd(AA)
-    u, lamb, V=yast.svd_old(A, axes=((0,1),(2,3,4,5)), sU=1, tol=itebd_tol, \
-        D_total=bond_dim, untruncated_S=False, keep_multiplets=keep_multiplet)
+    u, lamb, V=truncated_svd(A, axes=((0,1),(2,3,4,5)), sU=1)
     lamb=lamb/lamb.norm(p='inf')
     #print(lamb.to_dense())
     U_set.append(u)
@@ -26,8 +31,7 @@ def hosvd(A,itebd_tol,bond_dim,keep_multiplet):
     #AA=torch.einsum('bac,bdc->ad', A, A.conj())
     #AA=yast.ncon([A,A.conj()],[[0+1,-1+1,1+1],[0+1,-2+1,1+1]])
     #u,lamb,_=torch.svd(AA)
-    u, lamb, V=yast.svd_old(A.transpose(axes=(2,3,0,1,4,5)), axes=((0,1),(2,3,4,5)), sU=1,\
-        tol=itebd_tol, D_total=bond_dim, untruncated_S=False, keep_multiplets=keep_multiplet)
+    u, lamb, V=truncated_svd(A.transpose(axes=(2,3,0,1,4,5)), axes=((0,1),(2,3,4,5)), sU=1)
     lamb=lamb/lamb.norm(p='inf')
     U_set.append(u)
     lambda_set.append(lamb)
@@ -38,8 +42,7 @@ def hosvd(A,itebd_tol,bond_dim,keep_multiplet):
     #AA=torch.einsum('bca,bcd->ad', A, A.conj())
     #AA=yast.ncon([A,A.con()],[[0+1,1+1,-1+1],[0+1,1+1,-2+1]])
     #u,lamb,_=torch.svd(AA)
-    u, lamb, V=yast.svd_old(A.transpose(axes=(4,5,0,1,2,3)), axes=((0,1),(2,3,4,5)), sU=1,\
-        tol=itebd_tol, D_total=bond_dim, untruncated_S=False, keep_multiplets=keep_multiplet)
+    u, lamb, V=truncated_svd(A.transpose(axes=(4,5,0,1,2,3)), axes=((0,1),(2,3,4,5)), sU=1)
     lamb=lamb/lamb.norm(p='inf')
     U_set.append(u)
     lambda_set.append(lamb)

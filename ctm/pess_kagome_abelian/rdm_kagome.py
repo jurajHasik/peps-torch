@@ -101,6 +101,7 @@ def enlarged_corner(coord, state, env, corner, open_sites=[], force_cpu=False,
     assert corner in ['LU','RU','RD','LD'],"Invalid choice of corner: "+corner
     a = double_layer_a(state, coord, open_sites, force_cpu=force_cpu,\
             verbosity=verbosity)
+
     if corner == 'LU':
         if force_cpu:
             C = env.C[(state.vertexToSite(coord), (-1, -1))].to('cpu')
@@ -1072,7 +1073,6 @@ def rdm2x2_dn_triangle_with_operator(coord, state, env, op, force_cpu=False,\
         a_1layer = state.site(coord)
 
     a = double_layer_a(state,coord,force_cpu=force_cpu,verbosity=verbosity)
-    #a = contract(a_1layer,a_1layer.conj(),([0],[0])).fuse_legs(axes=((0,4),(1,5),(2,6),(3,7)))
     a_op = contract(op,a_1layer,([0],[0]),conj=(0,1))
     a_op = contract(a_1layer,a_op,([0],[0]))
     a_op = a_op.fuse_legs(axes=((0,4),(1,5),(2,6),(3,7)))
@@ -1115,8 +1115,8 @@ def rdm2x2_dn_triangle_with_operator(coord, state, env, op, force_cpu=False,\
 
     # ----- build upper part C2x2_LU--C2x2_RU -----------------------------------
     # C2x2_LU--1(-) (+)0--C2x2_RU
-    # |                |
-    # 0(-)          (-)1
+    # |                   |
+    # 0(-)             (-)1
     # TODO is it worthy(performance-wise) to instead overwrite one of C2x2_LU,C2x2_RU ?
     upper_half_op = contract(C2x2_LU_op, C2x2_RU, ([1], [0]))
     upper_half = contract(C2x2_LU, C2x2_RU, ([1], [0]))
@@ -1197,6 +1197,7 @@ def rdm2x2_kagome(coord, state, env, sites_to_keep_00=('A', 'B', 'C'),\
         s2 s3
     """
     who = "rdm2x2_kagome"
+    # TODO Is this necessary ?
     assert len(sites_to_keep_00)>0 or len(sites_to_keep_01)>0 \
         or len(sites_to_keep_10)>0 or len(sites_to_keep_11)>0,\
         "at least one DoF has to remain untraced" 
@@ -1269,8 +1270,14 @@ def rdm2x2_kagome(coord, state, env, sites_to_keep_00=('A', 'B', 'C'),\
     # unfuse physical indices and permute them to bra,ket order
     l00,l01,l10,l11= len(sites_to_keep_00), len(sites_to_keep_01),\
         len(sites_to_keep_10),len(sites_to_keep_11)
-    unfuse_axes= tuple([0]*l00 + [l00]*l01 + [l00+l01]*l10 + [l00+l01+l10]*l11)
+    unfuse_axes= tuple([0]*(l00>0) + [l00>0]*(l01>0) + [l00>0+l01>0]*(l10>0) + [l00>0+l01>0+l10>0]*(l11>0))
     rdm= rdm.unfuse_legs(axes=unfuse_axes)
+
+    # TODO Handle case, when a site is left completely open (no unfuse on physical index)
+    # if some sites are to be completely open
+    # if any([l00==3,l01==3,l10==3,l11==3]):
+    #     unfuse_l2= tuple((0,1))
+    #     rdm= rdm.unfuse_legs(axes=unfuse_l2)
 
     # permute into order of ket;bra order
     i_ket, i_bra= _expand_perm([l00,l10,l01,l11])

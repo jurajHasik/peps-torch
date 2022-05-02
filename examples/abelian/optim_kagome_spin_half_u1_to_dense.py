@@ -262,7 +262,7 @@ def main():
         e_up = model.energy_triangle_up(state, env, force_cpu=force_cpu,\
             fail_on_check=fail_on_check, warn_on_check=warn_on_check)
         # e_nnn = model.energy_nnn(state, env)
-        return (e_up + 0*e_dn)/3 #+ e_nnn) / 3
+        return (e_up + e_dn)/3 #+ e_nnn) / 3
     def energy_f_complex(state, env, force_cpu=False):
         e_dn = model.energy_triangle_dn_NoCheck(state, env, force_cpu=force_cpu)
         e_up = model.energy_triangle_up_NoCheck(state, env, force_cpu=force_cpu)

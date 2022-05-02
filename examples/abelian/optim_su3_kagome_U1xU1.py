@@ -50,7 +50,7 @@ def main():
     settings_full.default_dtype= settings.default_dtype= cfg.global_args.dtype
     settings.backend.set_num_threads(args.omp_cores)
     settings.backend.random_seed(args.seed)
-    
+
     # the model (in particular operators forming Hamiltonian) is defined in a dense form
     # with no symmetry structure
     model= su3_kagome.KAGOME_SU3_U1xU1(settings,j=param_j,k=param_k,h=param_h,global_args=cfg.global_args)
@@ -66,7 +66,7 @@ def main():
         B_a= yast.Tensor(config=settings, s=(-1,1,1))
         B_b= yast.Tensor(config=settings, s=(-1,1,1))
         state= IPESS_KAGOME_GENERIC_ABELIAN(settings, {'T_u': T_u, 'B_a': B_a,\
-            'T_d': T_d, 'B_b': B_b, 'B_c': B_c})
+            'T_d': T_d, 'B_b': B_b, 'B_c': B_c}, build_sites=False)
         state.load_checkpoint(args.opt_resume)
     else:
         raise ValueError("Missing trial state: --instate=None and --ipeps_init_type= "\
