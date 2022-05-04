@@ -60,6 +60,9 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
     The main parameters influencing the optimization process are given in :class:`config.OPTARGS`.
     Calls to functions ``loss_fn``, ``obs_fn``, and ``post_proc`` pass the current configuration
     as dictionary ``{"ctm_args":ctm_args, "opt_args":opt_args}``
+
+    The optimizer saves the best energy state into file ``main_args.out_prefix+"_state.json"``
+    and checkpoints the optimization at every step to ``main_args.out_prefix+"_state.json"``.
     """
     verbosity = opt_args.verbosity_opt_epoch
     checkpoint_file = main_args.out_prefix+"_checkpoint.p"

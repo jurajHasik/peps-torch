@@ -16,6 +16,36 @@ def _cast_to_real(t):
 class J1J2LAMBDA_C4V_BIPARTITE():
     def __init__(self, j1=1.0, j2=0, j3=0, hz_stag= 0.0, delta_zz=1.0, lmbd=0, \
         global_args=cfg.global_args):
+        r"""
+        :param j1: nearest-neighbour interaction
+        :param j2: next nearest-neighbour interaction
+        :param j3: next-to-next nearest-neighbour interaction
+        :param hz_stag: staggered magnetic field
+        :param delta_zz: easy-axis (nearest-neighbour) anisotropy
+        :param lmbd: chiral 4-site (plaquette) interaction
+        :type lmbd: float
+        :param global_args: global configuration
+        :type j1: float
+        :type j2: float
+        :type j3: float
+        :type hz_stag: float
+        :type detla_zz: float
+        :type global_args: GLOBALARGS
+        
+        Build Spin-1/2 :math:`J_1-J_2-J_3-lambda` Hamiltonian
+
+        .. math:: 
+
+            H = J_1\sum_{<i,j>} \mathbf{S}_i.\mathbf{S}_j + J_2\sum_{<<i,j>>} \mathbf{S}_i.\mathbf{S}_j
+              + J_3\sum_{<<<i,j>>>} \mathbf{S}_i.\mathbf{S}_j + i\lambda \sum_p P_p - P^{-1}_p
+        
+        on the square lattice. Where the first sum runs over the pairs of sites `i,j` 
+        which are nearest-neighbours (denoted as `<.,.>`), the second sum runs over 
+        pairs of sites `i,j` which are next nearest-neighbours (denoted as `<<.,.>>`), and 
+        the last sum runs over pairs of sites `i,j` which are next-to-next nearest-neighbours 
+        (denoted as `<<<.,.>>>`). Running over all plaquettes `p`, the chiral term P permutes
+        spins on the plaquette in clockwise order and its inverse P^{-1} in anti-clockwise order.
+        """
         
         self.dtype=global_args.torch_dtype
         assert torch.rand(1, dtype=self.dtype).is_complex(), "Invalid dtype: J1-J2-Lambda "\
@@ -103,32 +133,14 @@ class J1J2LAMBDA_C4V_BIPARTITE():
         r"""
         :param state: wavefunction
         :param env_c4v: CTM c4v symmetric environment
-        :type state: IPEPS
+        :type state: IPEPS_C4V
         :type env_c4v: ENV_C4V
+        :param force_cpu: perform computation on CPU
+        :type force_cpu: bool
         :return: energy per site
         :rtype: float
 
-        We assume 1x1 C4v iPEPS which tiles the lattice with a bipartite pattern composed 
-        of two tensors A, and B=RA, where R rotates approriately the physical Hilbert space 
-        of tensor A on every "odd" site::
-
-            1x1 C4v => rotation P => BIPARTITE
-
-            A A A A                  A B A B
-            A A A A                  B A B A
-            A A A A                  A B A B
-            A A A A                  B A B A
-
-        Due to C4v symmetry it is enough to construct a single reduced density matrix 
-        :py:func:`ctm.one_site_c4v.rdm_c4v.rdm2x2` of a 2x2 plaquette. Afterwards, 
-        the energy per site `e` is computed by evaluating a single plaquette term :math:`h_p`
-        containing two nearest-nighbour terms :math:`\bf{S}.\bf{S}` and two next-nearest 
-        neighbour :math:`\bf{S}.\bf{S}`, as:
-
-        .. math::
-
-            e = \langle \mathcal{h_p} \rangle = Tr(\rho_{2x2} \mathcal{h_p})
-        
+        Analogous to :meth:`models.j1j2.J1J2_C4V_BIPARTITE.energy_1x1`.
         """
         rdm2x2= rdm_c4v.rdm2x2(state,env_c4v,sym_pos_def=False,\
             force_cpu=force_cpu, verbosity=cfg.ctm_args.verbosity_rdm)
@@ -146,7 +158,7 @@ class J1J2LAMBDA_C4V_BIPARTITE():
         r"""
         :param state: wavefunction
         :param env_c4v: CTM c4v symmetric environment
-        :type state: IPEPS
+        :type state: IPEPS_C4V
         :type env_c4v: ENV_C4V
         :return:  expectation values of observables, labels of observables
         :rtype: list[float], list[str]
@@ -155,6 +167,8 @@ class J1J2LAMBDA_C4V_BIPARTITE():
 
             1. magnetization
             2. :math:`\langle S^z \rangle,\ \langle S^+ \rangle,\ \langle S^- \rangle`
+            3. :math:`\langle S.S \rangle_{NN}`, (optionally) :math:`\langle S.S \rangle_{NNNN}`
+            4. (optionally) :math:`\langle P - P^{-1} \rangle`
     
         where the on-site magnetization is defined as
         
@@ -210,6 +224,21 @@ class J1J2LAMBDA_C4V_BIPARTITE():
         return obs_values, obs_labels
 
     def eval_corrf_SS(self,state,env_c4v,dist,canonical=False):
+        r"""
+        :param state: wavefunction
+        :param env_c4v: CTM c4v symmetric environment
+        :type state: IPEPS_C4V
+        :type env_c4v: ENV_C4V
+        :param dist: maximal distance of correlator
+        :type dist: int
+        :param canonical: decompose correlations wrt. to vector of spontaneous magnetization
+                          into longitudinal and transverse parts
+        :type canonical: bool 
+        :return: dictionary with full and spin-resolved spin-spin correlation functions
+        :rtype: dict(str: torch.Tensor)
+        
+        Identical to :meth:`models.j1j2.J1J2_C4V_BIPARTITE.eval_corrf_SS`.
+        """
         Sop_zxy= torch.zeros((3,self.phys_dim,self.phys_dim),dtype=self.dtype,device=self.device)
         Sop_zxy[0,:,:]= self.obs_ops["sz"]
         Sop_zxy[1,:,:]= 0.5*(self.obs_ops["sp"] + self.obs_ops["sm"])
@@ -250,6 +279,18 @@ class J1J2LAMBDA_C4V_BIPARTITE():
         return res
 
     def eval_corrf_DD_H(self,state,env_c4v,dist,verbosity=0):
+        r"""
+        :param state: wavefunction
+        :param env_c4v: CTM c4v symmetric environment
+        :type state: IPEPS_C4V
+        :type env_c4v: ENV_C4V
+        :param dist: maximal distance of correlator
+        :type dist: int
+        :return: dictionary with horizontal dimer-dimer correlation function
+        :rtype: dict(str: torch.Tensor)
+        
+        Identical to :meth:`models.j1j2.J1J2_C4V_BIPARTITE.eval_corrf_DD_H`.
+        """
         # function generating properly rotated S.S operator on every bi-partite site
         rot_op= su2.get_rot_op(self.phys_dim, dtype=self.dtype, device=self.device)
         # (S.S)_s1s2,s1's2' with rotation applied on "first" spin s1,s1' 
@@ -265,6 +306,18 @@ class J1J2LAMBDA_C4V_BIPARTITE():
         return res
 
     def eval_corrf_DD_V(self,state,env_c4v,dist,verbosity=0):
+        r"""
+        :param state: wavefunction
+        :param env_c4v: CTM c4v symmetric environment
+        :type state: IPEPS_C4V
+        :type env_c4v: ENV_C4V
+        :param dist: maximal distance of correlator
+        :type dist: int
+        :return: dictionary with vertical dimer-dimer correlation function
+        :rtype: dict(str: torch.Tensor)
+        
+        Identical to :meth:`models.j1j2.J1J2_C4V_BIPARTITE.eval_corrf_DD_V`.
+        """
         # function generating properly rotated S.S operator on every bi-partite site
         rot_op= su2.get_rot_op(self.phys_dim, dtype=self.dtype, device=self.device)
         # (S.S)_s1s2,s1's2' with rotation applied on "first" spin s1,s1' 

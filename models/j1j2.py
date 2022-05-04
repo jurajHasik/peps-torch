@@ -27,24 +27,12 @@ class J1J2():
 
         Build Spin-1/2 :math:`J_1-J_2` Hamiltonian
 
-        .. math:: H = J_1\sum_{<i,j>} h2_{ij} + J_2\sum_{<<i,j>>} h2_{ij}
+        .. math:: H = J_1\sum_{<i,j>} \mathbf{S}_i.\mathbf{S}_j + J_2\sum_{<<i,j>>} 
+                  \mathbf{S}_i.\mathbf{S}_j
 
         on the square lattice. Where the first sum runs over the pairs of sites `i,j` 
         which are nearest-neighbours (denoted as `<.,.>`), and the second sum runs over 
-        pairs of sites `i,j` which are next nearest-neighbours (denoted as `<<.,.>>`)::
-
-            y\x
-               _:__:__:__:_
-            ..._|__|__|__|_...
-            ..._|__|__|__|_...
-            ..._|__|__|__|_...
-            ..._|__|__|__|_...
-            ..._|__|__|__|_...
-                :  :  :  :
-
-        where
-
-        * :math:`h2_{ij} = \mathbf{S_i}.\mathbf{S_j}` with indices of h2 corresponding to :math:`s_i s_j;s'_i s'_j`
+        pairs of sites `i,j` which are next nearest-neighbours (denoted as `<<.,.>>`)
         """
         self.dtype=global_args.torch_dtype
         self.device=global_args.device
@@ -105,10 +93,10 @@ class J1J2():
         :rtype: float
 
         We assume 1x1 iPEPS which tiles the lattice with a bipartite pattern composed 
-        of two tensors A, and B=RA, where R rotates approriately the physical Hilbert space 
+        of two tensors A, and B=RA, where R appropriately rotates the physical Hilbert space 
         of tensor A on every "odd" site::
 
-            1x1 C4v => rotation P => BIPARTITE
+            1x1 C4v => rotation R => BIPARTITE
 
             A A A A                  A B A B
             A A A A                  B A B A
@@ -152,7 +140,7 @@ class J1J2():
             |   |
             s2--s3
 
-        and without assuming any symmetry on the indices of individual tensors a following
+        and without assuming any symmetry on the indices of individual tensors following
         set of terms has to be evaluated in order to compute energy-per-site::
                 
                0           
@@ -425,37 +413,39 @@ class J1J2_C4V_BIPARTITE():
         r"""
         :param j1: nearest-neighbour interaction
         :param j2: next nearest-neighbour interaction
+        :param j3: next-to-next nearest-neighbour interaction
         :param hz_stag: staggered magnetic field
         :param delta_zz: easy-axis (nearest-neighbour) anisotropy
         :param global_args: global configuration
         :type j1: float
         :type j2: float
+        :type j3: float
         :type hz_stag: float
         :type detla_zz: float
         :type global_args: GLOBALARGS
-        Build Spin-1/2 :math:`J_1-J_2` Hamiltonian
+        
+        Build Spin-1/2 :math:`J_1-J_2-J_3` Hamiltonian
+
         .. math:: 
+
             H = J_1\sum_{<i,j>} \mathbf{S}_i.\mathbf{S}_j + J_2\sum_{<<i,j>>} \mathbf{S}_i.\mathbf{S}_j
-            = \sum_{p} h_p
+              + J_3\sum_{<<<i,j>>>} \mathbf{S}_i.\mathbf{S}_j
+        
         on the square lattice. Where the first sum runs over the pairs of sites `i,j` 
-        which are nearest-neighbours (denoted as `<.,.>`), and the second sum runs over 
-        pairs of sites `i,j` which are next nearest-neighbours (denoted as `<<.,.>>`)::
-            y\x
-               _:__:__:__:_
-            ..._|__|__|__|_...
-            ..._|__|__|__|_...
-            ..._|__|__|__|_...
-            ..._|__|__|__|_...
-            ..._|__|__|__|_...
-                :  :  :  :
-        where
-        * :math:`h_p = J_1(S^x_{r}.S^x_{r+\vec{x}} 
-          + S^y_{r}.S^y_{r+\vec{x}} + \delta_{zz} S^z_{r}.S^z_{r+\vec{x}} + (x<->y))
-          + J_2(\mathbf{S}_{r}.\mathbf{S}_{r+\vec{x}+\vec{y}} + \mathbf{S}_{r+\vec{x}}.\mathbf{S}_{r+\vec{y}})
-          + h_stag (S^z_{r} - S^z_{r+\vec{x}} - S^z_{r+\vec{y}} + S^z_{r+\vec{x}+\vec{y}})` 
-          with indices of spins ordered as follows :math:`s_r s_{r+\vec{x}} s_{r+\vec{y}} s_{r+\vec{x}+\vec{y}};
-          s'_r s'_{r+\vec{x}} s'_{r+\vec{y}} s'_{r+\vec{x}+\vec{y}}`
+        which are nearest-neighbours (denoted as `<.,.>`), the second sum runs over 
+        pairs of sites `i,j` which are next nearest-neighbours (denoted as `<<.,.>>`), and 
+        the last sum runs over pairs of sites `i,j` which are next-to-next nearest-neighbours 
+        (denoted as `<<<.,.>>>`).
+
+        
         """
+        # where
+        # * :math:`h_p = J_1(S^x_{r}.S^x_{r+\vec{x}} 
+        #   + S^y_{r}.S^y_{r+\vec{x}} + \delta_{zz} S^z_{r}.S^z_{r+\vec{x}} + (x<->y))
+        #   + J_2(\mathbf{S}_{r}.\mathbf{S}_{r+\vec{x}+\vec{y}} + \mathbf{S}_{r+\vec{x}}.\mathbf{S}_{r+\vec{y}})
+        #   + h_stag (S^z_{r} - S^z_{r+\vec{x}} - S^z_{r+\vec{y}} + S^z_{r+\vec{x}+\vec{y}})` 
+        #   with indices of spins ordered as follows :math:`s_r s_{r+\vec{x}} s_{r+\vec{y}} s_{r+\vec{x}+\vec{y}};
+        #   s'_r s'_{r+\vec{x}} s'_{r+\vec{y}} s'_{r+\vec{x}+\vec{y}}`
         self.dtype=global_args.torch_dtype
         self.device=global_args.device
         self.phys_dim=2
@@ -511,26 +501,34 @@ class J1J2_C4V_BIPARTITE():
         r"""
         :param state: wavefunction
         :param env_c4v: CTM c4v symmetric environment
-        :type state: IPEPS
+        :type state: IPEPS_C4V
         :type env_c4v: ENV_C4V
         :return: energy per site
         :rtype: float
+
         We assume 1x1 C4v iPEPS which tiles the lattice with a bipartite pattern composed 
-        of two tensors A, and B=RA, where R rotates approriately the physical Hilbert space 
+        of two tensors A, and B=RA, where R appropriately rotates the physical Hilbert space 
         of tensor A on every "odd" site::
-            1x1 C4v => rotation P => BIPARTITE
+
+            1x1 C4v => rotation R => BIPARTITE
             A A A A                  A B A B
             A A A A                  B A B A
             A A A A                  A B A B
             A A A A                  B A B A
-        Due to C4v symmetry it is enough to construct a single reduced density matrix 
-        :py:func:`ctm.one_site_c4v.rdm_c4v.rdm2x2` of a 2x2 plaquette. Afterwards, 
-        the energy per site `e` is computed by evaluating a single plaquette term :math:`h_p`
-        containing two nearest-nighbour terms :math:`\bf{S}.\bf{S}` and two next-nearest 
+
+        Due to C4v symmetry it is enough to construct just one or two different reduced
+        density matrices to evaluate energy per site. 
+
+        In the case of :math:`J_3=0`, it is sufficient to only consider :meth:`ctm.one_site_c4v.rdm_c4v.rdm2x2` 
+        of a 2x2 plaquette. Afterwards, the energy per site `e` is computed by evaluating a plaquette term 
+        :math:`h_p` containing two nearest-nighbour terms :math:`\bf{S}.\bf{S}` and two next-nearest 
         neighbour :math:`\bf{S}.\bf{S}`, as:
+        
         .. math::
             e = \langle \mathcal{h_p} \rangle = Tr(\rho_{2x2} \mathcal{h_p})
         
+        If :math:`J_3 \neq 0`, additional reduced density matrix :meth:`ctm.one_site_c4v.rdm_c4v.rdm3x1`
+        is constructed to evaluate next-to-next nearest neighbour interaction.
         """
         rdm2x2= rdm_c4v.rdm2x2(state,env_c4v,sym_pos_def=True,\
             verbosity=cfg.ctm_args.verbosity_rdm)
@@ -548,28 +546,20 @@ class J1J2_C4V_BIPARTITE():
         r"""
         :param state: wavefunction
         :param env_c4v: CTM c4v symmetric environment
-        :type state: IPEPS
+        :type state: IPEPS_C4V
         :type env_c4v: ENV_C4V
+        :param force_cpu: perform computation on CPU
+        :type force_cpu: bool
         :return: energy per site
         :rtype: float
-        We assume 1x1 C4v iPEPS which tiles the lattice with a bipartite pattern composed 
-        of two tensors A, and B=RA, where R rotates approriately the physical Hilbert space 
-        of tensor A on every "odd" site::
-            1x1 C4v => rotation P => BIPARTITE
-            A A A A                  A B A B
-            A A A A                  B A B A
-            A A A A                  A B A B
-            A A A A                  B A B A
-        Due to C4v symmetry it is enough to construct two reduced density matrices.
-        In particular, :py:func:`ctm.one_site_c4v.rdm_c4v.rdm2x1` of a NN-neighbour pair
-        and :py:func:`ctm.one_site_c4v.rdm_c4v.rdm2x1_diag` of NNN-neighbour pair. 
-        Afterwards, the energy per site `e` is computed by evaluating a term :math:`h2_rot`
-        containing :math:`\bf{S}.\bf{S}` for nearest- and :math:`h2` term for 
-        next-nearest- expectation value as:
-        .. math::
-            e = 2*\langle \mathcal{h2} \rangle_{NN} + 2*\langle \mathcal{h2} \rangle_{NNN}
-            = 2*Tr(\rho_{2x1} \mathcal{h2_rot}) + 2*Tr(\rho_{2x1_diag} \mathcal{h2})
-        
+
+        Analogous to :meth:`energy_1x1`. However, the evaluation of energy is realized
+        by individually constructing low-memory versions of reduced density matrices for
+        nearest (NN), next-nearest (NNN), and next-to-next nearest neighbours (NNNN). In particular:
+
+            * NN: :meth:`ctm.one_site_c4v.rdm_c4v.rdm2x2_NN_lowmem_sl`
+            * NNN: :meth:`ctm.one_site_c4v.rdm_c4v.rdm2x2_NNN_lowmem_sl`
+            * NNNN: :meth:`ctm.one_site_c4v.rdm_c4v.rdm3x1_sl`
         """
         rdm2x2_NN= rdm_c4v.rdm2x2_NN_lowmem_sl(state, env_c4v, sym_pos_def=True,\
             force_cpu=force_cpu, verbosity=cfg.ctm_args.verbosity_rdm)
@@ -593,28 +583,21 @@ class J1J2_C4V_BIPARTITE():
         r"""
         :param state: wavefunction
         :param env_c4v: CTM c4v symmetric environment
-        :type state: IPEPS
+        :type state: IPEPS_C4V
         :type env_c4v: ENV_C4V
+        :param force_cpu: perform computation on CPU
+        :type force_cpu: bool
         :return: energy per site
         :rtype: float
-        We assume 1x1 C4v iPEPS which tiles the lattice with a bipartite pattern composed 
-        of two tensors A, and B=RA, where R rotates approriately the physical Hilbert space 
-        of tensor A on every "odd" site::
-            1x1 C4v => rotation P => BIPARTITE
-            A A A A                  A B A B
-            A A A A                  B A B A
-            A A A A                  A B A B
-            A A A A                  B A B A
-        Due to C4v symmetry it is enough to construct two reduced density matrices.
-        In particular, :py:func:`ctm.one_site_c4v.rdm_c4v.rdm2x1` of a NN-neighbour pair
-        and :py:func:`ctm.one_site_c4v.rdm_c4v.rdm2x1_diag` of NNN-neighbour pair. 
-        Afterwards, the energy per site `e` is computed by evaluating a term :math:`h2_rot`
-        containing :math:`\bf{S}.\bf{S}` for nearest- and :math:`h2` term for 
-        next-nearest- expectation value as:
-        .. math::
-            e = 2*\langle \mathcal{h2} \rangle_{NN} + 2*\langle \mathcal{h2} \rangle_{NNN}
-            = 2*Tr(\rho_{2x1} \mathcal{h2_rot}) + 2*Tr(\rho_{2x1_diag} \mathcal{h2})
         
+        Analogous to :meth:`energy_1x1`. However, the evaluation of energy is realized
+        by individually constructing low-memory tiled versions of reduced density matrices for
+        nearest (NN), next-nearest (NNN), and next-to-next nearest neighbours (NNNN). 
+        In particular:
+
+            * NN: :meth:`ctm.one_site_c4v.rdm_c4v_specialized.rdm2x2_NN_tiled`
+            * NNN: :meth:`ctm.one_site_c4v.rdm_c4v_specialized.rdm2x2_NNN_tiled`
+            * NNNN: :meth:`ctm.one_site_c4v.rdm_c4v.rdm3x1_sl`
         """
         rdm2x2_NN= rdm2x2_NN_tiled(state, env_c4v, sym_pos_def=True,\
             force_cpu=force_cpu, verbosity=cfg.ctm_args.verbosity_rdm)
@@ -638,13 +621,16 @@ class J1J2_C4V_BIPARTITE():
         r"""
         :param state: wavefunction
         :param env_c4v: CTM c4v symmetric environment
-        :type state: IPEPS
+        :type state: IPEPS_C4V
         :type env_c4v: ENV_C4V
         :return:  expectation values of observables, labels of observables
         :rtype: list[float], list[str]
+        
         Computes the following observables in order
+
             1. magnetization
             2. :math:`\langle S^z \rangle,\ \langle S^+ \rangle,\ \langle S^- \rangle`
+            3. :math:`\langle S.S \rangle_{NN}`, (optionally) :math:`\langle S.S \rangle_{NNNN}`
     
         where the on-site magnetization is defined as
         
@@ -656,6 +642,7 @@ class J1J2_C4V_BIPARTITE():
             \rangle)^2 -1/4(\langle S^+\rangle-\langle S^-\rangle)^2} \\
               &=\sqrt{\langle S^z \rangle^2 + 1/2\langle S^+ \rangle \langle S^- \rangle)}
             \end{align*}
+            
         Usual spin components can be obtained through the following relations
         
         .. math::
@@ -713,6 +700,22 @@ class J1J2_C4V_BIPARTITE():
         return obs_values, obs_labels
 
     def eval_corrf_SS(self,state,env_c4v,dist,canonical=False):
+        r"""
+        :param state: wavefunction
+        :param env_c4v: CTM c4v symmetric environment
+        :type state: IPEPS_C4V
+        :type env_c4v: ENV_C4V
+        :param dist: maximal distance of correlator
+        :type dist: int
+        :param canonical: decompose correlations wrt. to vector of spontaneous magnetization
+                          into longitudinal and transverse parts
+        :type canonical: bool 
+        :return: dictionary with full and spin-resolved spin-spin correlation functions
+        :rtype: dict(str: torch.Tensor)
+        
+        Evaluate spin-spin correlation functions :math:`\langle\mathbf{S}(r).\mathbf{S}(0)\rangle` 
+        up to r = ``dist`` .
+        """
         Sop_zxy= torch.zeros((3,self.phys_dim,self.phys_dim),dtype=self.dtype,device=self.device)
         Sop_zxy[0,:,:]= self.obs_ops["sz"]
         Sop_zxy[1,:,:]= 0.5*(self.obs_ops["sp"] + self.obs_ops["sm"])
@@ -753,6 +756,23 @@ class J1J2_C4V_BIPARTITE():
         return res
 
     def eval_corrf_DD_H(self,state,env_c4v,dist,verbosity=0):
+        r"""
+        :param state: wavefunction
+        :param env_c4v: CTM c4v symmetric environment
+        :type state: IPEPS_C4V
+        :type env_c4v: ENV_C4V
+        :param dist: maximal distance of correlator
+        :type dist: int
+        :return: dictionary with horizontal dimer-dimer correlation function
+        :rtype: dict(str: torch.Tensor)
+        
+        Evaluate horizontal dimer-dimer correlation functions 
+
+        .. math::
+            \langle(\mathbf{S}(r+3).\mathbf{S}(r+2))(\mathbf{S}(1).\mathbf{S}(0))\rangle 
+
+        up to r = ``dist`` .
+        """
         # function generating properly rotated S.S operator on every bi-partite site
         rot_op= su2.get_rot_op(self.phys_dim, dtype=self.dtype, device=self.device)
         # (S.S)_s1s2,s1's2' with rotation applied on "first" spin s1,s1' 
@@ -768,6 +788,23 @@ class J1J2_C4V_BIPARTITE():
         return res
 
     def eval_corrf_DD_V(self,state,env_c4v,dist,verbosity=0):
+        r"""
+        :param state: wavefunction
+        :param env_c4v: CTM c4v symmetric environment
+        :type state: IPEPS_C4V
+        :type env_c4v: ENV_C4V
+        :param dist: maximal distance of correlator
+        :type dist: int
+        :return: dictionary with vertical dimer-dimer correlation function
+        :rtype: dict(str: torch.Tensor)
+        
+        Evaluate vertical dimer-dimer correlation functions 
+
+        .. math::
+            \langle(\mathbf{S}(r+1,1).\mathbf{S}(r+1,0))(\mathbf{S}(0,1).\mathbf{S}(0,0))\rangle 
+
+        up to r = ``dist`` .
+        """
         # function generating properly rotated S.S operator on every bi-partite site
         rot_op= su2.get_rot_op(self.phys_dim, dtype=self.dtype, device=self.device)
         # (S.S)_s1s2,s1's2' with rotation applied on "first" spin s1,s1' 

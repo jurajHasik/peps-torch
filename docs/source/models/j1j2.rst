@@ -1,10 +1,12 @@
-J1-J2 Heisenberg Model
-======================
+J1-J2-J3 and J1-J2-lambda Heisenberg Model
+==========================================
 
 .. automodule:: models.j1j2
 
-2x1 and 2x2 unit cell
-^^^^^^^^^^^^^^^^^^^^^
+from 2x1 to 4x2 unit cell
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Extended unit cell IPEPS support J1-J2 model
 
 .. autoclass:: J1J2
     :members:
@@ -12,5 +14,10 @@ J1-J2 Heisenberg Model
 1x1 C4v
 ^^^^^^^
 
+Single-site C4v symmetric IPEPS_C4V supports J1-J2-J3 model and J1-J2-lambda model.
+
 .. autoclass:: J1J2_C4V_BIPARTITE
+    :members:
+
+.. autoclass:: models.j1j2lambda.J1J2LAMBDA_C4V_BIPARTITE
     :members:
