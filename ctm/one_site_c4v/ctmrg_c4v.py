@@ -22,7 +22,7 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
     :param global_args: global configuration
     :type state: IPEPS_C4V
     :type env: ENV_C4V
-    :type conv_check: function(IPEPS,ENV_C4V,Object,CTMARGS)->bool
+    :type conv_check: function(IPEPS_C4V,ENV_C4V,Object,CTMARGS)->bool
     :type ctm_args: CTMARGS
     :type global_args: GLOBALARGS
 
@@ -32,7 +32,7 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
 
     To establish the convergence of CTM before the maximal number of iterations 
     is reached  a ``conv_check`` function is invoked. Its expected signature is 
-    ``conv_check(IPEPS,ENV_C4V,Object,CTMARGS)`` where ``Object`` is an arbitary argument. For 
+    ``conv_check(IPEPS_C4V,ENV_C4V,Object,CTMARGS)`` where ``Object`` is an arbitary argument. For 
     example it can be a list or dict used for storing CTM data from previous steps to   
     check convergence.
 
@@ -184,13 +184,11 @@ def ctm_MOVE_dl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
                           leading chi spectral values and projector on leading chi spectral values.
     :param ctm_args: CTM algorithm configuration
     :param global_args: global configuration
-    :param past_steps_data: dictionary used for recording diagnostic information during CTM 
     :type a: torch.Tensor
     :type env: ENV_C4V
     :type f_c2x2_decomp: function(torch.Tensor, int)->torch.Tensor, torch.Tensor
     :type ctm_args: CTMARGS
     :type global_args: GLOBALARGS
-    :type past_steps_data:
 
     Executes a single step of C4v symmetric CTM algorithm for 1-site C4v symmetric iPEPS.
     This variant of CTM step does explicitly build double-layer on-site tensor. 

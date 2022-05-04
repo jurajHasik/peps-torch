@@ -47,7 +47,7 @@ def rdm1x1(coord, state, env, operator=None, sym_pos_def=False, force_cpu=False,
     :type operator: torch.tensor
     :type verbosity: int
     :return: 1-site reduced density matrix with indices :math:`s;s'`. If an operator was provided,
-    returns the expectation value of this operator (not normalized by the norm of the wavefunction).
+             returns the expectation value of this operator (not normalized by the norm of the wavefunction).
     :rtype: torch.tensor
 
     Computes 1-site reduced density matrix :math:`\rho_{1x1}` centered on vertex ``coord`` by

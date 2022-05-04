@@ -9,6 +9,33 @@ from ctm.generic.env import ENV
 from ctm.generic import corrf
 
 def get_Top_w0_spec(n, coord, direction, state, env, verbosity=0):
+    r"""
+    :param n: number of leading eigenvalues of a transfer operator to compute
+    :type n: int
+    :param coord: reference site (x,y)
+    :type coord: tuple(int,int)
+    :param direction: direction of transfer operator. Choices are: (0,-1) for up, 
+                      (-1,0) for left, (0,1) for down, and (1,0) for right 
+    :type direction: tuple(int,int)
+    :param state: wavefunction
+    :type state: IPEPS
+    :param env: corresponding environment
+    :type env: ENV_C4V
+    :return: leading n-eigenvalues, returned as `n x 2` tensor with first and second column
+             encoding real and imaginary part respectively.
+    :rtype: torch.Tensor   
+
+    Compute the leading `n` eigenvalues of width-0 transfer operator of IPEPS::
+
+        --T(x,y)----...--T(x+lX,y)----            --\               /---
+          |              |             = \sum_i     v_i \lambda_i v_i 
+        --T(x,y+1)--...--T(x+lX,y+1)--            --/               \---
+
+    where `A` is a double-layer tensor. The transfer matrix is given by width-0 channel
+    of the same length lX as the unit cell of iPEPS, embedded in environment of T-tensors.
+
+    Other directions are obtained by analogous construction.
+    """
     chi= env.chi
     #             up        left       down     right
     dir_to_ind= {(0,-1): 1, (-1,0): 2, (0,1): 3, (1,0): 4}
@@ -39,7 +66,7 @@ def get_Top_w0_spec(n, coord, direction, state, env, verbosity=0):
         v= V.cpu().numpy()
         return v
 
-    _test_T= torch.zeros(1,dtype=env.dtype)
+    test_T= torch.zeros(1,dtype=env.dtype)
     T= LinearOperator((chi**2,chi**2), matvec=_mv, \
         dtype="complex128" if _test_T.is_complex() else "float64")
     vals= eigs(T, k=n, v0=None, return_eigenvectors=False)
@@ -58,6 +85,33 @@ def get_Top_w0_spec(n, coord, direction, state, env, verbosity=0):
     return L
 
 def get_Top_spec(n, coord, direction, state, env, verbosity=0):
+    r"""
+    :param n: number of leading eigenvalues of a transfer operator to compute
+    :type n: int
+    :param coord: reference site (x,y)
+    :type coord: tuple(int,int)
+    :param direction: direction of transfer operator. Choices are: (0,-1) for up, 
+                      (-1,0) for left, (0,1) for down, and (1,0) for right 
+    :type direction: tuple(int,int)
+    :param state: wavefunction
+    :type state: IPEPS
+    :param env: corresponding environment
+    :type env: ENV_C4V
+    :return: leading n-eigenvalues, returned as `n x 2` tensor with first and second column
+             encoding real and imaginary part respectively.
+    :rtype: torch.Tensor   
+
+    Compute the leading `n` eigenvalues of width-0 transfer operator of IPEPS::
+
+        --T---------...--T--------            --\               /---
+        --A(x,y)----...--A(x+lX,y)-- = \sum_i ---v_i \lambda_i v_i-- 
+        --T---------...--T--------            --/               \---
+
+    where `A` is a double-layer tensor. The transfer matrix is given by width-1 channel
+    of the same length lX as the unit cell of iPEPS, embedded in environment of T-tensors.
+
+    Other directions are obtained by analogous construction. 
+    """
     chi= env.chi
     #             up        left       down     right
     dir_to_ind= {(0,-1): 1, (-1,0): 2, (0,1): 3, (1,0): 4}
@@ -109,8 +163,24 @@ def get_Top_spec(n, coord, direction, state, env, verbosity=0):
 
 def get_EH_spec_Ttensor(n, L, coord, direction, state, env, verbosity=0):
     r"""
-    Compute leading part of spectrum of exp(EH), where EH is boundary
-    Hamiltonian. Exact exp(EH) is given by the leading eigenvector of 
+    :param n: number of leading eigenvalues of a transfer operator to compute
+    :type n: int
+    :param L: width of the cylinder
+    :type L: int
+    :param coord: reference site (x,y)
+    :type coord: tuple(int,int)
+    :param direction: direction of the transfer operator. Either
+    :type direction: tuple(int,int)
+    :param state: wavefunction
+    :type state: IPEPS_C4V
+    :param env_c4v: corresponding environment
+    :type env_c4v: ENV_C4V
+    :return: leading n-eigenvalues, returned as `n x 2` tensor with first and second column
+             encoding real and imaginary part respectively.
+    :rtype: torch.Tensor
+
+    Compute leading part of spectrum of :math:`exp(EH)`, where EH is boundary
+    Hamiltonian. Exact :math:`exp(EH)` is given by the leading eigenvector of 
     transfer matrix ::
           
          ...                PBC                                /
@@ -124,20 +194,20 @@ def get_EH_spec_Ttensor(n, L, coord, direction, state, env, verbosity=0):
 
         infinite exact TM; exact TM of L-leg cylinder  
 
-    The exp(EH) is then given by
+    The :math:`exp(EH)` is then given by
 
     .. math::
         
         exp(-H_{ent}) = \sqrt{\sigma_R}\sigma_L\sqrt{\sigma_R}
 
-    where :math:`\sigma_L,\sigma_R` are reshaped (D^2)^L left and right 
-    leading eigenvectors of TM into D^L x D^L operator. Given, that spectrum
-    of :math:`AB` is equivalent to :math:`BA`. It is enough to diagonalize
+    where :math:`\sigma_L,\sigma_R` are reshaped :math:`(D^2)^L` left and right 
+    leading eigenvectors of TM into :math:`D^L \times D^L` operator. Given that spectrum
+    of :math:`AB` is equivalent to :math:`BA`, it is enough to diagonalize
     product :math:`\sigma_R\sigma_L` or :math:`\sigma_R\sigma_L`. 
 
     We approximate the :math:`\sigma_L,\sigma_R` of L-leg cylinder as MPO formed 
     by T-tensors of the CTM environment. Then, the spectrum of this approximate 
-    exp(EH) is obtained through iterative solver using matrix-vector product
+    :math:`exp(EH)` is obtained through iterative solver using matrix-vector product::
 
            0                    1
            |                    |                    __
@@ -260,9 +330,22 @@ def get_EH_spec_Ttensor(n, L, coord, direction, state, env, verbosity=0):
 def get_full_EH_spec_Ttensor(L, coord, direction, state, env, \
         verbosity=0):
     r"""
-    Compute leading part of spectrum of exp(EH), where EH is boundary
-    Hamiltonian. Exact exp(EH) is given by the leading eigenvector of 
-    transfer matrix ::
+    :param L: width of the cylinder
+    :type L: int
+    :param coord: reference site (x,y)
+    :type coord: tuple(int,int)
+    :param direction: direction of the transfer operator. Either
+    :type direction: tuple(int,int)
+    :param state: wavefunction
+    :type state: IPEPS_C4V
+    :param env_c4v: corresponding environment
+    :type env_c4v: ENV_C4V
+    :return: leading n-eigenvalues, returned as rank-1 tensor 
+    :rtype: torch.Tensor
+
+    Compute the leading part of spectrum of :math:`exp(EH)`, where EH is boundary
+    Hamiltonian. Exact :math:`exp(EH)` is given by the leading eigenvector of 
+    transfer matrix::
           
          ...                PBC                                /
           |                  |                        |     --a*--
@@ -275,20 +358,20 @@ def get_full_EH_spec_Ttensor(L, coord, direction, state, env, \
 
         infinite exact TM; exact TM of L-leg cylinder  
 
-    The exp(EH) is then given by
+    The :math:`exp(EH)` is then given by
 
     .. math::
         
         exp(-H_{ent}) = \sqrt{\sigma_R}\sigma_L\sqrt{\sigma_R}
 
     where :math:`\sigma_L,\sigma_R` are reshaped (D^2)^L left and right 
-    leading eigenvectors of TM into D^L x D^L operator. Given, that spectrum
-    of :math:`AB` is equivalent to :math:`BA`. It is enough to diagonalize
+    leading eigenvectors of TM into :math:`D^L \times D^L` operator. Given that spectrum
+    of :math:`AB` is equivalent to :math:`BA`, it is enough to diagonalize
     product :math:`\sigma_R\sigma_L` or :math:`\sigma_R\sigma_L`. 
 
     We approximate the :math:`\sigma_L,\sigma_R` of L-leg cylinder as MPO formed 
     by T-tensors of the CTM environment. Then, the spectrum of this approximate 
-    exp(EH) is obtained through full diagonalization
+    exp(EH) is obtained through full diagonalization::
 
            0                    1
            |                    |

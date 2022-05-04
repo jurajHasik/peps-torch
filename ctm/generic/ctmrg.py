@@ -25,7 +25,12 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
     :type global_args: GLOBALARGS
 
     Executes directional CTM algorithm for generic iPEPS starting from the intial environment ``env``.
-    TODO add reference
+    
+    To establish the convergence of CTM before the maximal number of iterations 
+    is reached  a ``conv_check`` function is invoked. Its expected signature is 
+    ``conv_check(IPEPS,ENV,Object,CTMARGS)`` where ``Object`` is an arbitary argument. For 
+    example it can be a list or dict used for storing CTM data from previous steps to   
+    check convergence.
     """
 
     # 0) Create double-layer (DL) tensors, preserving the same convention
@@ -74,22 +79,22 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
     return env, history, t_ctm, t_obs
 
 def run_overlap(state1, state2, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
-    r"""
-    :param state: wavefunction
-    :param env: environment
-    :param conv_check: function which determines the convergence of CTM algorithm. If ``None``,
-                       the algorithm performs ``ctm_args.ctm_max_iter`` iterations.
-    :param ctm_args: CTM algorithm configuration
-    :param global_args: global configuration
-    :type state: IPEPS
-    :type env: ENV
-    :type conv_check: function(IPEPS,ENV,list[float],CTMARGS)->bool
-    :type ctm_args: CTMARGS
-    :type global_args: GLOBALARGS
+    # r"""
+    # :param state: wavefunction
+    # :param env: environment
+    # :param conv_check: function which determines the convergence of CTM algorithm. If ``None``,
+    #                    the algorithm performs ``ctm_args.ctm_max_iter`` iterations.
+    # :param ctm_args: CTM algorithm configuration
+    # :param global_args: global configuration
+    # :type state: IPEPS
+    # :type env: ENV
+    # :type conv_check: function(IPEPS,ENV,list[float],CTMARGS)->bool
+    # :type ctm_args: CTMARGS
+    # :type global_args: GLOBALARGS
 
-    Executes directional CTM algorithm for generic iPEPS starting from the intial environment ``env``.
-    TODO add reference
-    """
+    # Executes directional CTM algorithm for generic iPEPS starting from the intial environment ``env``.
+    # TODO add reference
+    # """
 
     # 0) Create double-layer (DL) tensors, preserving the same convention
     # for order of indices
@@ -137,10 +142,27 @@ def run_overlap(state1, state2, env, conv_check=None, ctm_args=cfg.ctm_args, glo
 
     return env, history, t_ctm, t_obs
 
-# performs CTM move in one of the directions 
-# [Up=(0,-1), Left=(-1,0), Down=(0,1), Right=(1,0)]
+# performs 
+# 
 def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.global_args, \
     verbosity=0, diagnostics=None):
+    r"""
+    :param direction: one of Up=(0,-1), Left=(-1,0), Down=(0,1), Right=(1,0)
+    :type direction: tuple(int,int)
+    :param state: wavefunction
+    :param env: environment
+    :param ctm_args: CTM algorithm configuration
+    :param global_args: global configuration
+    :type state: IPEPS
+    :type env: ENV
+    :type ctm_args: CTMARGS
+    :type global_args: GLOBALARGS
+
+    Executes a single directional CTM move in one of the directions. First, build  
+    projectors for each non-equivalent bond (to be truncated) in the unit cell of iPEPS.
+    Second, construct enlarged environment tensors and then truncate them 
+    to obtain updated environment tensors.
+    """
     # select projector function
     if ctm_args.projector_method=='4X4':
         ctm_get_projectors=ctm_get_projectors_4x4

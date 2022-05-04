@@ -294,7 +294,7 @@ def apply_TM_0sO(coord, direction, state, env, edge, verbosity=0):
              original ``edge`` 
     :rtype: torch.tensor
     
-    Applies a single instance of the "0-width channel transfer matrix" of site r=(x,y) to 
+    Applies a single instance of the "0-width channel" transfer matrix of site r=(x,y) to 
     the ``edge`` tensor by contracting the following network, or its corresponding 
     rotation depending on the ``direction``::
 
@@ -383,7 +383,7 @@ def apply_TM_1sO(coord, direction, state, env, edge, op=None, verbosity=0):
              original ``edge`` 
     :rtype: torch.tensor
     
-    Applies a single instance of the "transfer matrix" of site r=(x,y) to 
+    Applies a single instance of the transfer matrix of site r=(x,y) to 
     the ``edge`` tensor by contracting the following network, or its corresponding 
     rotation depending on the ``direction``::
 
