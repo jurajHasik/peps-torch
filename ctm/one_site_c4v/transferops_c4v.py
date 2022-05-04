@@ -8,6 +8,25 @@ from ctm.one_site_c4v.env_c4v import ENV_C4V
 from ctm.one_site_c4v import corrf_c4v
 
 def get_Top_spec_c4v(n, state, env_c4v, verbosity=0):
+    r"""
+    :param n: number of leading eigenvalues of a transfer operator to compute
+    :type n: int
+    :param state: wavefunction
+    :type state: IPEPS_C4V
+    :param env_c4v: corresponding environment
+    :type env_c4v: ENV_C4V
+    :return: leading n-eigenvalues, returned as `n x 2` tensor with first and second column
+             encoding real and imaginary part respectively.
+    :rtype: torch.Tensor   
+
+    Compute the leading `n` eigenvalues of width-1 transfer operator of 1-site C4v symmetric iPEPS::
+
+        --T--          --\               /---
+        --A-- = \sum_i ---v_i \lambda_i v_i-- 
+        --T--          --/               \---
+
+    where `A` is a double-layer tensor.
+    """
     chi= env_c4v.chi
     ad= state.get_aux_bond_dims()[0]
 
@@ -38,6 +57,26 @@ def get_Top_spec_c4v(n, state, env_c4v, verbosity=0):
     return L
 
 def get_Top2_spec_c4v(n, state, env_c4v, verbosity=0):
+    r"""
+    :param n: number of leading eigenvalues of a transfer operator to compute
+    :type n: int
+    :param state: wavefunction
+    :type state: IPEPS_C4V
+    :param env_c4v: corresponding environment
+    :type env_c4v: ENV_C4V
+    :return: leading n-eigenvalues, returned as `n x 2` tensor with first and second column
+             encoding real and imaginary part respectively.
+    :rtype: torch.Tensor   
+
+    Compute the leading `n` eigenvalues of width-2 transfer operator of 1-site C4v symmetric iPEPS::
+
+        --T--          --\               /---
+        --A--          --\               /---
+        --A-- = \sum_i ---v_i \lambda_i v_i-- 
+        --T--          --/               \---
+
+    where `A` is a double-layer tensor.
+    """
     chi= env_c4v.chi
     ad= state.get_aux_bond_dims()[0]
 
@@ -68,9 +107,21 @@ def get_Top2_spec_c4v(n, state, env_c4v, verbosity=0):
 
 def get_EH_spec_Ttensor(n, L, state, env_c4v, verbosity=0):
     r"""
-    Compute leading part of spectrum of exp(EH), where EH is boundary
-    Hamiltonian. Exact exp(EH) is given by the leading eigenvector of 
-    transfer matrix ::
+    :param n: number of leading eigenvalues of a transfer operator to compute
+    :type n: int
+    :param L: width of the cylinder
+    :type L: int
+    :param state: wavefunction
+    :type state: IPEPS_C4V
+    :param env_c4v: corresponding environment
+    :type env_c4v: ENV_C4V
+    :return: leading n-eigenvalues, returned as `n x 2` tensor with first and second column
+             encoding real and imaginary part respectively.
+    :rtype: torch.Tensor
+    
+    Compute the leading part of spectrum of :math:`exp(EH)`, where `EH` is boundary
+    Hamiltonian. Exact :math:`exp(EH)` is given by the leading eigenvector of 
+    a transfer matrix ::
           
          ...         PBC                          /
           |           |                  |     --a*--
@@ -83,12 +134,12 @@ def get_EH_spec_Ttensor(n, L, state, env_c4v, verbosity=0):
 
         infinite exact TM; exact TM of L-leg cylinder  
 
-    The exp(EH) is then given by reshaping (D^2)^L leading eigenvector of TM
-    into D^L x D^L operator.
+    The :math:`exp(EH)` is then given by reshaping the :math:`(D^2)^L` leading eigenvector 
+    of transfer matrix into :math:`D^L \times D^L` operator.
 
-    We approximate the exp(EH) of L-leg cylinder as MPO formed by T-tensors
-    of the CTM environment. Then, the spectrum of this approximate exp(EH)
-    is obtained through iterative solver using matrix-vector product
+    We approximate the :math:`exp(EH)` of L-leg cylinder as MPO formed by T-tensors
+    of the CTM environment. Then, the spectrum of this approximate :math:`exp(EH)`
+    is obtained through iterative solver using matrix-vector product::
 
            0
            |            __
