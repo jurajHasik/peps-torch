@@ -141,12 +141,31 @@ class IPEPS():
         return self.sites[self.vertexToSite(coord)]
 
     def get_parameters(self):
+        r"""
+        :return: variational parameters of iPEPS
+        :rtype: iterable
+        
+        This function is called by optimizer to access variational parameters of the state.
+        """
         return self.sites.values()
 
     def get_checkpoint(self):
+        r"""
+        :return: all data necessary to reconstruct the state. In this case member ``sites`` 
+        :rtype: dict[tuple(int,int): torch.tensor]
+        
+        This function is called by optimizer to create checkpoints during 
+        the optimization process.
+        """
         return self.sites
 
     def load_checkpoint(self,checkpoint_file):
+        r"""
+        :param checkpoint_file: path to checkpoint file 
+        :type checkpoint_file: str
+        
+        Initializes the state according to the supplied checkpoint file.
+        """
         checkpoint= torch.load(checkpoint_file,map_location=self.device)
         self.sites= checkpoint["parameters"]
         for site_t in self.sites.values(): site_t.requires_grad_(False)
@@ -154,6 +173,9 @@ class IPEPS():
             self.dtype= torch.complex128
 
     def write_to_file(self,outputfile,aux_seq=[0,1,2,3], tol=1.0e-14, normalize=False):
+        """
+        Writes state to file. See :meth:`write_ipeps`.
+        """
         write_ipeps(self,outputfile,aux_seq=aux_seq, tol=tol, normalize=normalize)
 
     def add_noise(self,noise):

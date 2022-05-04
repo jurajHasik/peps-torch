@@ -73,23 +73,38 @@ class IPEPS_LC_1SITE_PG(IPEPS_LC):
         r"""
         :param elem_tensors: elementary tensors
         :param coeffs: coefficients combining elementary tensors into regular iPEPS
-        :param vertexToSite: function mapping arbitrary vertex of a square lattice 
-                             into a vertex within elementary unit cell
-        :param lX: length of the elementary unit cell in X direction
-        :param lY: length of the elementary unit cell in Y direction
         :param peps_args: ipeps configuration
         :param global_args: global configuration
         :type elem_tensors: list(tuple(dict,torch.Tensor))
         :type coeffs: dict
-        :type vertexToSite: function(tuple(int,int))->tuple(int,int)
-        :type lX: int
-        :type lY: int
         :type peps_args: PEPSARGS
         :type global_args: GLOBALARGS
 
         Single-site iPEPS with on-site tensor built from a linear combination
         of elementary tensors. These elementary tensors are representatives 
         of some point group irrep.
+
+        Currently supported combinations are real :math:`A_1`, and complex :math:`A_1 + iA_2`. 
+        Where elementary tensors `e` are assumed to be real representatives of either  
+        :math:`A_1` or :math:`A_2` irreps of :math:`C_{4v}` point group. The on-site
+        tensor is then built as
+
+        .. math:: 
+
+            a = \sum_i \lambda_i e_{A_1;i} + i\sum_j \lambda_j e_{A_2;j}
+
+
+        where :math:`\vec{\lambda}` is a real vector. 
+
+        Each elementary tensor is described by dict::
+            
+            elem_tensors= [
+                ...,
+                ({"meta": {"pg": "A_1"}, ...}, torch.Tensor),
+                ...,
+            ]
+
+        where the value of "pg" (specified inside dict "meta") is either "A_1" or "A_2". 
         """
         self.pg_irreps= set([m["meta"]["pg"] for m,t in elem_tensors])
         super().__init__(elem_tensors, coeffs, peps_args=peps_args,\
@@ -131,6 +146,12 @@ class IPEPS_LC_1SITE_PG(IPEPS_LC):
         return ""
 
     def site(self,coord=(0,0)):
+        r"""
+        :param coord: vertex (x,y). Can be ignored, since the ansatz is single-site.
+        :type coord: tuple(int,int)
+        :return: on-site tensor
+        :rtype: torch.tensor 
+        """
         return super().site(coord)
 
     def get_parameters(self):
@@ -161,7 +182,12 @@ class IPEPS_LC_1SITE_PG(IPEPS_LC):
         self.sites= self.build_onsite_tensors()
 
     def build_onsite_tensors(self):
-        # check presence of "A_2" irrep
+        r"""
+        :return: sites
+        :rtype: dict[tuple(int,int): torch.tensor]
+
+        Builds ``sites`` by combining elementary tensors.
+        """
         if len(self.pg_irreps)==1 and self.pg_irreps==set(["A_1"]):
             ts= torch.stack([t for m,t in self.elem_tensors])
         elif len(self.pg_irreps)==2 and self.pg_irreps==set(["A_1","A_2"]):
@@ -179,6 +205,13 @@ class IPEPS_LC_1SITE_PG(IPEPS_LC):
         return sites
 
     def add_noise(self,noise):
+        r"""
+        :param noise: magnitude of noise
+        :type noise: float
+
+        Take IPEPS_LC_1SITE_PG and add random uniform noise with magnitude noise to 
+        vector of coefficients ``coeffs``.
+        """
         for coord in self.coeffs.keys():
             rand_t = torch.rand( self.coeffs[coord].size(), dtype=self.coeffs[coord].dtype,\
                 device=self.device)
@@ -190,6 +223,9 @@ class IPEPS_LC_1SITE_PG(IPEPS_LC):
         return [max(t[1].size()[1:]) for t in self.elem_tensors]
 
     def write_to_file(self, outputfile, aux_seq=[0,1,2,3], tol=1.0e-14, normalize=False):
+        r"""
+        Write state to file. See :meth:`write_ipeps_lc_1site_pg`
+        """
         write_ipeps_lc_1site_pg(self, outputfile, aux_seq=aux_seq, tol=tol, normalize=normalize)
 
     def clone(self, peps_args=cfg.peps_args, global_args=cfg.global_args, requires_grad=False):
@@ -222,20 +258,17 @@ class IPEPS_LC_1SITE_PG(IPEPS_LC):
 def read_ipeps_lc_1site_pg(jsonfile, aux_seq=[0,1,2,3],\
     peps_args=cfg.peps_args, global_args=cfg.global_args):
     r"""
-    :param jsonfile: input file describing iPEPS in json format
-    :param vertexToSite: function mapping arbitrary vertex of a square lattice 
-                         into a vertex within elementary unit cell
+    :param jsonfile: input file describing IPEPS_LC_1SITE_PG in json format
     :param aux_seq: array specifying order of auxiliary indices of on-site tensors stored
                     in `jsonfile`
     :param peps_args: ipeps configuration
     :param global_args: global configuration
     :type jsonfile: str or Path object
-    :type vertexToSite: function(tuple(int,int))->tuple(int,int)
     :type aux_seq: list[int]
     :type peps_args: PEPSARGS
     :type global_args: GLOBALARGS
     :return: wavefunction
-    :rtype: IPEPS
+    :rtype: IPEPS_LC_1SITE_PG
     
 
     A simple PBC ``vertexToSite`` function is used by default
@@ -263,20 +296,17 @@ def from_json_str(json_str, aux_seq=[0,1,2,3],\
     peps_args=cfg.peps_args, global_args=cfg.global_args):
 
     r"""
-    :param json_str: str describing iPEPS in json format
-    :param vertexToSite: function mapping arbitrary vertex of a square lattice 
-                         into a vertex within elementary unit cell
+    :param json_str: str describing IPEPS_LC_1SITE_PG in json format
     :param aux_seq: array specifying order of auxiliary indices of on-site tensors stored
                     in `jsonfile`
     :param peps_args: ipeps configuration
     :param global_args: global configuration
     :type jsonfile: str or Path object
-    :type vertexToSite: function(tuple(int,int))->tuple(int,int)
     :type aux_seq: list[int]
     :type peps_args: PEPSARGS
     :type global_args: GLOBALARGS
     :return: wavefunction
-    :rtype: IPEPS
+    :rtype: IPEPS_LC_1SITE_PG
     
 
     A simple PBC ``vertexToSite`` function is used by default
@@ -398,7 +428,7 @@ def write_ipeps_lc_1site_pg(state, outputfile, aux_seq=[0,1,2,3], tol=1.0e-14, n
                     will be stored in the `outputfile`
     :param tol: minimum magnitude of tensor elements which are written out
     :param normalize: if True, on-site tensors are normalized before writing
-    :type state: IPEPS
+    :type state: IPEPS_LC_1SITE_PG
     :type ouputfile: str or Path object
     :type aux_seq: list[int]
     :type tol: float
@@ -416,16 +446,14 @@ def write_ipeps_lc_1site_pg(state, outputfile, aux_seq=[0,1,2,3], tol=1.0e-14, n
          1
         0A2 <=> [left, up, right, down]: aux_seq=[1,0,3,2] 
          3
-    
-    TODO drop constrain for aux bond dimension to be identical on 
-    all bond indices
-    
-    TODO implement cutoff on elements with magnitude below tol
     """
+    # TODO drop constrain for aux bond dimension to be identical on 
+    # all bond indices
+    # TODO implement cutoff on elements with magnitude below tol
     asq = [x+1 for x in aux_seq]
     json_state=dict({"lX": state.lX, "lY": state.lY, "elem_tensors": [], "coeffs": []})
     
-    # write list of considered SU(2)-symmetric tensors
+    # write list of considered elementary tensors
     for meta,t in state.elem_tensors:
         json_tensor=dict()
         json_tensor["dtype"]="complex128" if t.is_complex() else "float64"

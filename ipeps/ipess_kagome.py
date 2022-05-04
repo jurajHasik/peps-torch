@@ -3,10 +3,10 @@ from collections import OrderedDict
 import json
 import math
 import config as cfg
-import ipeps.ipeps as ipeps
+from ipeps.ipeps_kagome import IPEPS_KAGOME
 from ipeps.tensor_io import *
 
-class IPESS_KAGOME_GENERIC(ipeps.IPEPS):
+class IPESS_KAGOME_GENERIC(IPEPS_KAGOME):
     def __init__(self, ipess_tensors,
                  peps_args=cfg.peps_args, global_args=cfg.global_args):
         r"""
@@ -18,11 +18,20 @@ class IPESS_KAGOME_GENERIC(ipeps.IPEPS):
         :type peps_args: PEPSARGS
         :type global_args: GLOBALARGS
 
-        iPESS ansatz for Kagome composes five tensors T_u, T_d, B_a, B_b, and B_c within 
-        elementary unit cell into regular iPEPS. The B_* tensors hold physical degrees of 
-        freedom, which reside on corners shared between different triangles, described by
-        tensors T_u or T_d for up and down triangles respectively. 
-        These tensors are passed in a dictionary with corresponding keys "T_u", "T_d",...
+        iPESS ansatz for Kagome lattice composes five tensors, specified
+        by dictionary::
+
+            ipess_tensors = {'T_u': torch.Tensor, 'T_d': ..., 'B_a': ..., 'B_b': ..., 'B_c': ...}
+
+        into a single rank-5 on-site tensor of parent IPEPS. These iPESS tensors can
+        be accessed through member ``ipess_tensors``. 
+
+        The ``'B_*'`` are rank-3 tensors, with index structure [p,i,j] where the first index `p` 
+        is for physical degree of freedom, while indices `i` and `j` are auxiliary with bond dimension D.
+        These bond tensors reside on corners shared between different triangles of Kagome lattice. 
+        Bond tensors are connected by rank-3 trivalent tensors ``'T_u'``, ``'T_d'`` on up and down triangles 
+        respectively. Trivalent tensors have only auxiliary indices of matching bond dimension D.
+    
         The on-site tensors of corresponding iPEPS is obtained by the following contraction::
                                                      
                  2(d)            2(c)                    a
@@ -31,7 +40,7 @@ class IPESS_KAGOME_GENERIC(ipeps.IPEPS):
                     \         /             =>            \
                     1(l)     1(k)                         s0--s2--d
                      2(l)   1(k)                           | / 
-                       \   /                               |/   <- DOWN_T
+                       \   /                               |/   <- down triangle
                         T_d                               s1
                          |                                 |
                          0(j)                              c
@@ -82,9 +91,23 @@ class IPESS_KAGOME_GENERIC(ipeps.IPEPS):
                          global_args=global_args)
 
     def get_parameters(self):
+        r"""
+        :return: variational parameters of IPESS_KAGOME_GENERIC
+        :rtype: iterable
+        
+        This function is called by optimizer to access variational parameters of the state.
+        In this case member ``ipess_tensors``.
+        """
         return self.ipess_tensors.values()
 
     def get_checkpoint(self):
+        r"""
+        :return: all data necessary to reconstruct the state. In this case member ``ipess_tensors`` 
+        :rtype: dict[str: torch.tensor]
+        
+        This function is called by optimizer to create checkpoints during 
+        the optimization process.
+        """
         return self.ipess_tensors
 
     def load_checkpoint(self, checkpoint_file):
@@ -95,7 +118,10 @@ class IPESS_KAGOME_GENERIC(ipeps.IPEPS):
 
     def build_onsite_tensors(self):
         r"""
-        Build on-site tensor of corresponding iPEPS
+        :return: elementary unit cell of underlying IPEPS
+        :rtype: dict[tuple(int,int): torch.Tensor]
+
+        Build rank-5 on-site tensor by contracting the iPESS tensors.
         """
         A= torch.einsum('iab,uji,jkl,vkc,wld->uvwabcd', self.ipess_tensors['T_u'],
             self.ipess_tensors['B_c'], self.ipess_tensors['T_d'], self.ipess_tensors['B_b'], \
@@ -110,6 +136,12 @@ class IPESS_KAGOME_GENERIC(ipeps.IPEPS):
         return sites
 
     def add_noise(self, noise):
+        r"""
+        :param noise: magnitude of noise
+        :type noise: float
+
+        Add uniform random noise to iPESS tensors.
+        """
         for k in self.ipess_tensors:
             rand_t= torch.rand( self.ipess_tensors[k].size(), dtype=self.dtype, device=self.device)
             self.ipess_tensors[k]= self.ipess_tensors[k] + noise * (rand_t-1.0)
@@ -129,6 +161,9 @@ class IPESS_KAGOME_GENERIC(ipeps.IPEPS):
         return list(aux_bond_dims)[0]
 
     def write_to_file(self, outputfile, aux_seq=None, tol=1.0e-14, normalize=False):
+        r"""
+        See :meth:`write_ipess_kagome_generic`.
+        """
         write_ipess_kagome_generic(self, outputfile, tol=tol, normalize=normalize)
 
     def extend_bond_dim(self, new_d, peps_args=cfg.peps_args, global_args=cfg.global_args):
@@ -160,36 +195,16 @@ class IPESS_KAGOME_GENERIC(ipeps.IPEPS):
 
 def read_ipess_kagome_generic(jsonfile, peps_args=cfg.peps_args, global_args=cfg.global_args):
     r"""
-    :param jsonfile: input file describing iPEPS in json format
-    :param vertexToSite: function mapping arbitrary vertex of a square lattice
-                         into a vertex within elementary unit cell
-    :param aux_seq: array specifying order of auxiliary indices of on-site tensors stored
-                    in `jsonfile`
+    :param jsonfile: input file describing iPEPS in JSON format`
     :param peps_args: ipeps configuration
     :param global_args: global configuration
     :type jsonfile: str or Path object
-    :type vertexToSite: function(tuple(int,int))->tuple(int,int)
-    :type aux_seq: list[int]
     :type peps_args: PEPSARGS
     :type global_args: GLOBALARGS
     :return: wavefunction
-    :rtype: IPEPS
+    :rtype: IPESS_KAGOME_GENERIC
 
-
-    A simple PBC ``vertexToSite`` function is used by default
-
-    Parameter ``aux_seq`` defines the expected order of auxiliary indices
-    in input file relative to the convention fixed in tn-torch::
-
-         0
-        1A3 <=> [up, left, down, right]: aux_seq=[0,1,2,3]
-         2
-
-        for alternative order, eg.
-
-         1
-        0A2 <=> [left, up, right, down]: aux_seq=[1,0,3,2]
-         3
+    Read state from file.
     """
     dtype = global_args.torch_dtype
 
@@ -224,34 +239,16 @@ def write_ipess_kagome_generic(state, outputfile, tol=1.0e-14, normalize=False):
     r"""
     :param state: wavefunction to write out in json format
     :param outputfile: target file
-    :param aux_seq: array specifying order in which the auxiliary indices of on-site tensors
-                    will be stored in the `outputfile`
     :param tol: minimum magnitude of tensor elements which are written out
     :param normalize: if True, on-site tensors are normalized before writing
-    :type state: IPEPS
+    :type state: IPESS_KAGOME_GENERIC
     :type ouputfile: str or Path object
-    :type aux_seq: list[int]
     :type tol: float
     :type normalize: bool
 
-    Parameter ``aux_seq`` defines the order of auxiliary indices relative to the convention
-    fixed in tn-torch in which the tensor elements are written out::
-
-         0
-        1A3 <=> [up, left, down, right]: aux_seq=[0,1,2,3]
-         2
-
-        for alternative order, eg.
-
-         1
-        0A2 <=> [left, up, right, down]: aux_seq=[1,0,3,2]
-         3
-
-    TODO drop constrain for aux bond dimension to be identical on
-    all bond indices
-
-    TODO implement cutoff on elements with magnitude below tol
+    Write state into file.
     """
+    #TODO implement cutoff on elements with magnitude below tol
     json_state = dict({"lX": state.lX, "lY": state.lY, \
         "ipess_tensors": {}})
 
@@ -377,37 +374,35 @@ class IPESS_KAGOME_PG(IPESS_KAGOME_GENERIC):
         :type peps_args: PEPSARGS
         :type global_args: GLOBALARGS
 
-        iPESS ansatz for Kagome lattice with additional spatial symmetries.
+        Single unit-cell iPESS ansatz (3 sites per unit cell) for Kagome lattice 
+        with additional spatial symmetries.
+        
+            * If ``SYM_UP_DOWN``, then `T_d` trivalent tensor is taken to be identical to `T_u`. 
+              The choice of the contraction guarantees the same (direction of) chirality on up 
+              and down triangles. 
+            * If ``SYM_BOND_S``, then `B_a` and `B_b` bond tensors are taken to be identical to `B_c`.
 
-               2(d)            2(c)                      a
-                  \             /          rot. pi       |
-             0(w)==B_a         B_b==0(v)  clockwise   b--\                     
-                    \         /             =>            \
-                    1(l)     1(k)                         s0--s2--d
-                     2(l)   1(k)                           | / 
-                       \   /                               |/   <- DOWN_T
-                        T_d                               s1
-                         |                                 |
-                         0(j)                              c
-                         1(j)                               
-                         |                 
-                         B_c==0(u)        
-                         |
-                         2(i)
-                         0(i)  
-                         |
-                        T_u
-                       /   \ 
-                     1(a)   2(b)
+        All non-equivalent tensors can be accessed through member ``elem_tensors``, which is 
+        a dictionary::
+        
+            if SYM_UP_DOWN and SYM_BOND_S
 
-        where ``B_c`` holds ``s0`` DoF and ``B_a`` and ``B_b`` hold ``s2`` and ``s1`` DoFs
-        respectively.
+                elem_tensors = {'T_u': torch.Tensor, 'B_c': torch.Tensor}
 
-        In case T_u==T_d, the choice of contraction guarantees the same (direction of) chirality on
-        up and down triangles. 
+            if SYM_UP_DOWN
 
-        Argument ``pgs`` is assumed to be dictionary, with keys equivalent to names of elementary 
-        tensors, i.e. ``{'T_u': 'A2', 'B_a': 'A'}``.
+                elem_tensors = {'T_u': torch.Tensor, 'B_c': torch.Tensor, 'B_a': ..., 'B_c': ...}
+
+            etc.
+
+        Argument ``pgs`` is assumed to be dictionary, with keys being the names of elementary 
+        ipess tensors. Predefined choices are::
+
+            IPESS_KAGOME_PG.PG_A1_B= {'T_u': 'A_1', 'T_d': 'A_1', 'B_a': 'B', 'B_b': 'B', 'B_c': 'B'}
+            IPESS_KAGOME_PG.PG_A2_B= {'T_u': 'A_2', 'T_d': 'A_2', 'B_a': 'B', 'B_b': 'B', 'B_c': 'B'}
+
+        If the elementary tensor is present in the ``pgs``, it is constrained to given irrep 
+        of the point group.
         """
         self.SYM_UP_DOWN= SYM_UP_DOWN
         self.SYM_BOND_S= SYM_BOND_S
@@ -451,9 +446,23 @@ class IPESS_KAGOME_PG(IPESS_KAGOME_GENERIC):
         return ""
 
     def get_parameters(self):
+        r"""
+        :return: variational parameters of IPESS_KAGOME_PG
+        :rtype: iterable
+        
+        This function is called by optimizer to access variational parameters of the state.
+        In this case member ``elem_tensors``.
+        """
         return self.elem_tensors.values()
 
     def get_checkpoint(self):
+        r"""
+        :return: all data necessary to reconstruct the state. In this case member ``elem_tensors`` 
+        :rtype: dict[str: torch.tensor]
+        
+        This function is called by optimizer to create checkpoints during 
+        the optimization process.
+        """
         return self.elem_tensors
 
     def load_checkpoint(self, checkpoint_file):
@@ -489,6 +498,12 @@ class IPESS_KAGOME_PG(IPESS_KAGOME_GENERIC):
         self.sites = self.build_onsite_tensors()
 
     def add_noise(self, noise):
+        r"""
+        :param noise: magnitude of noise
+        :type noise: float
+
+        Add uniform random noise to iPESS tensors, respecting the spatial symmetry constraints.
+        """
         for k in self.elem_tensors:
             rand_t= torch.rand( self.elem_tensors[k].size(), dtype=self.dtype, device=self.device)
             self.elem_tensors[k]= self.elem_tensors[k] + noise * (rand_t-1.0)
@@ -508,6 +523,9 @@ class IPESS_KAGOME_PG(IPESS_KAGOME_GENERIC):
 
     def write_to_file(self, outputfile, aux_seq=None, tol=1.0e-14, normalize=False,\
         pg_symmetrize=True):
+        r"""
+        See :meth:`write_ipess_kagome_pg`.
+        """
         write_ipess_kagome_pg(self, outputfile, tol=tol, normalize=normalize,\
             pg_symmetrize=pg_symmetrize)
 
@@ -519,7 +537,7 @@ class IPESS_KAGOME_PG(IPESS_KAGOME_GENERIC):
         :return: wavefunction with enlarged auxiliary bond dimensions
         :rtype: IPESS_KAGOME_PG
 
-        Take IPESS_KAGOME_PG and enlarge all auxiliary bond dimensions of T_u, [T_d,] B_a, 
+        Take IPESS_KAGOME_PG and enlarge all auxiliary bond dimensions of ipess tensors 
         to the new size ``new_d``
         """
         ad= self.get_aux_bond_dims()
@@ -587,6 +605,20 @@ def _to_PG_symmetric(pgs, elem_ts):
     return pg_elem_ts
 
 def to_PG_symmetric(state, SYM_UP_DOWN=None, SYM_BOND_S=None, pgs=None):
+    r"""
+    :param state: wavefunction
+    :type state: IPESS_KAGOME_PG
+    :param SYM_UP_DOWN: make trivalent tensors ``'T_u'`` and ``'T_d'`` identical
+    :type SYM_UP_DOWN: bool
+    :param SYM_BOND_S: make bond tensors ``'B_a'``, ``'B_b'``, and ``'B_c'`` identical
+    :type SYM_BOND_S: bool
+    :param pgs: point group irreps for individual ipess tensors 
+    :type pgs: dict[str: str]
+    :return: symmetrized state
+    :rtype: IPESS_KAGOME_PG
+
+    Symmetrize IPESS_KAGOME_PG wavefunction by imposing additional spatial symmetries.
+    """
     assert type(state)==IPESS_KAGOME_PG, "Expected IPESS_KAGOME_PG instance"
     if SYM_UP_DOWN is None: 
         SYM_UP_DOWN= state.SYM_UP_DOWN
@@ -607,36 +639,16 @@ def to_PG_symmetric(state, SYM_UP_DOWN=None, SYM_BOND_S=None, pgs=None):
 
 def read_ipess_kagome_pg(jsonfile, peps_args=cfg.peps_args, global_args=cfg.global_args):
     r"""
-    :param jsonfile: input file describing iPEPS in json format
-    :param vertexToSite: function mapping arbitrary vertex of a square lattice
-                         into a vertex within elementary unit cell
-    :param aux_seq: array specifying order of auxiliary indices of on-site tensors stored
-                    in `jsonfile`
+    :param jsonfile: input file describing IPESS_KAGOME_PG in json format
     :param peps_args: ipeps configuration
     :param global_args: global configuration
     :type jsonfile: str or Path object
-    :type vertexToSite: function(tuple(int,int))->tuple(int,int)
-    :type aux_seq: list[int]
     :type peps_args: PEPSARGS
     :type global_args: GLOBALARGS
     :return: wavefunction
-    :rtype: IPEPS
+    :rtype: IPESS_KAGOME_PG
 
-
-    A simple PBC ``vertexToSite`` function is used by default
-
-    Parameter ``aux_seq`` defines the expected order of auxiliary indices
-    in input file relative to the convention fixed in tn-torch::
-
-         0
-        1A3 <=> [up, left, down, right]: aux_seq=[0,1,2,3]
-         2
-
-        for alternative order, eg.
-
-         1
-        0A2 <=> [left, up, right, down]: aux_seq=[1,0,3,2]
-         3
+    Read IPESS_KAGOME_PG state from file.
     """
     dtype = global_args.torch_dtype
 
@@ -707,34 +719,19 @@ def write_ipess_kagome_pg(state, outputfile, tol=1.0e-14, normalize=False, pg_sy
     r"""
     :param state: wavefunction to write out in json format
     :param outputfile: target file
-    :param aux_seq: array specifying order in which the auxiliary indices of on-site tensors
-                    will be stored in the `outputfile`
     :param tol: minimum magnitude of tensor elements which are written out
     :param normalize: if True, on-site tensors are normalized before writing
-    :type state: IPEPS
+    :type state: IPESS_KAGOME_PG
     :type ouputfile: str or Path object
-    :type aux_seq: list[int]
     :type tol: float
     :type normalize: bool
+    :param pg_symmetrize: symmetrize state before writing out
+    :type pg_symmetrize: bool
 
-    Parameter ``aux_seq`` defines the order of auxiliary indices relative to the convention
-    fixed in tn-torch in which the tensor elements are written out::
-
-         0
-        1A3 <=> [up, left, down, right]: aux_seq=[0,1,2,3]
-         2
-
-        for alternative order, eg.
-
-         1
-        0A2 <=> [left, up, right, down]: aux_seq=[1,0,3,2]
-         3
-
-    TODO drop constrain for aux bond dimension to be identical on
-    all bond indices
-
-    TODO implement cutoff on elements with magnitude below tol
+    Write state to file.
     """
+    # TODO drop constrain for aux bond dimension to be identical on all bond indices
+    # TODO implement cutoff on elements with magnitude below tol
     sym_state= to_PG_symmetric(state) if pg_symmetrize else state
     json_state = dict({"elem_tensors": {}, "SYM_UP_DOWN": sym_state.SYM_UP_DOWN, \
         "SYM_BOND_S": sym_state.SYM_BOND_S, "pgs": sym_state.pgs})
@@ -755,16 +752,16 @@ class IPESS_KAGOME_PG_LC(IPESS_KAGOME_PG):
                 SYM_UP_DOWN=True, SYM_BOND_S=True, pgs=None,\
                 peps_args=cfg.peps_args, global_args=cfg.global_args):
         r"""
-        :param T_u: tuple of tensor with coefficients and list of basis tensors
+        :param T_u: tuple of vector with real coefficients and list of basis tensors
                     defining trivalent tensor as linear combination    
-        :param B_c: tuple of tensor with coefficients and list of basis tensors
+        :param B_c: tuple of vector with real coefficients and list of basis tensors
                     defining bond tensor as linear combination 
         :param T_d: analogous to T_u
         :param B_a: analogous to B_c
         :param B_b: analogous to B_c
         :param SYM_UP_DOWN: is up triangle equivalent to down triangle
         :param SYM_BOND_S: are bond tensors equivalent to each other 
-        :param pgs: dictionary assigning point-group irreps to elementary tensors 
+        :param pgs: dictionary assigning point-group irreps to basis tensors 
         :param peps_args: ipeps configuration
         :param global_args: global configuration
         :type T_u: tuple(torch.tensor, list(tuple(dict,torch.tensor)))
@@ -774,42 +771,36 @@ class IPESS_KAGOME_PG_LC(IPESS_KAGOME_PG):
         :type B_b: tuple(torch.tensor, list(tuple(dict,torch.tensor)))
         :type SYM_UP_DOWN: bool
         :type SYM_BOND_S: bool
+        :type pgs: dict[str : str]
         :type peps_args: PEPSARGS
         :type global_args: GLOBALARGS
 
-        iPESS ansatz for Kagome lattice with additional spatial symmetries. 
-        The iPESS tensors are taken to be formed by linear combination of supplied
-        basis tensors, i.e. T_u = \sum_i \lambda^{(T_u)}_i elem_t^{(T_u)}_i.
+        Single unit-cell iPESS ansatz (3 sites per unit cell) for Kagome lattice 
+        with elementary tensors built as linear combination of supplied basis tensors.
 
-               2(d)            2(c)                      a
-                  \             /          rot. pi       |
-             0(w)==B_a         B_b==0(v)  clockwise   b--\                     
-                    \         /             =>            \
-                    1(l)     1(k)                         s0--s2--d
-                     2(l)   1(k)                           | / 
-                       \   /                               |/   <- DOWN_T
-                        T_d                               s1
-                         |                                 |
-                         0(j)                              c
-                         1(j)                               
-                         |                 
-                         B_c==0(u)        
-                         |
-                         2(i)
-                         0(i)  
-                         |
-                        T_u
-                       /   \ 
-                     1(a)   2(b)
+        Each basis tensor is described by a dict::
+            
+            T_u= (torch.Tensor, [
+                ...,
+                ({"meta": {"pg": "A_1"}, ...}, torch.Tensor),
+                ...,
+            ])
 
-        where ``B_c`` holds ``s0`` DoF and ``B_a`` and ``B_b`` hold ``s2`` and ``s1`` DoFs
-        respectively.
+        where the value of "pg" (specified inside dict "meta") is either "A_1" or "A_2" for 
+        trivalent tensors ``'T_u'``, ``'T_d'`` and "A" or "B" for bond tensors ``'B_a'``,
+        ``'B_b'``, ``'B_c'``.
 
-        In case T_u==T_d, the choice of contraction guarantees the same (direction of) chirality on
-        up and down triangles. 
+        Coefficients and basis tensors can be accessed in member dictionaries ``coeffs`` 
+        and ``basis_t`` respectively.
+        
+        If ``SYM_UP_DOWN``, then `T_d` trivalent tensor is taken to be identical to `T_u`. 
+        The choice of the contraction guarantees the same (direction of) chirality on up 
+        and down triangles. 
 
-        Argument ``pgs`` is assumed to be dictionary, with keys equivalent to names of elementary 
-        tensors, i.e. ``{'T_u': 'A2', 'B_a': 'A'}``.
+        If ``SYM_BOND_S``, then `B_a` and `B_b` bond tensors are taken to be identical to `B_c`.
+
+        The ``pgs`` specifies point-group irreps for elementary tensors, see :class:`IPESS_KAGOME_PG`.
+        Only basis tensors of selected point-group irrep are used to construct ipess tensors. 
         """
         self.SYM_UP_DOWN= SYM_UP_DOWN
         self.SYM_BOND_S= SYM_BOND_S
@@ -852,9 +843,24 @@ class IPESS_KAGOME_PG_LC(IPESS_KAGOME_PG):
         return ""
 
     def get_parameters(self):
+        r"""
+        :return: variational parameters of IPESS_KAGOME_PG_LC
+        :rtype: iterable
+        
+        This function is called by optimizer to access variational parameters of the state.
+        In this case member ``coeffs``.
+        """
         return self.coeffs.values()
 
     def get_checkpoint(self):
+        r"""
+        :return: all data necessary to reconstruct the state. In this case dict containing 
+                 members ``coeffs`` and ``basis_t``
+        :rtype: dict[str: dict[str: torch.Tensor], str: dict[str: list(tuple(dict,torch.Tensor))]]
+        
+        This function is called by optimizer to create checkpoints during 
+        the optimization process.
+        """
         return dict(coeffs= self.coeffs, basis_t= self.basis_t)
 
     def load_checkpoint(self, checkpoint_file):
@@ -878,6 +884,13 @@ class IPESS_KAGOME_PG_LC(IPESS_KAGOME_PG):
             peps_args=peps_args, global_args=global_args)
 
     def build_elem_tensors(self):
+        r"""
+        :return: elementary tensors
+        :rtype: dict[str: torch.Tensor]
+
+        Construct elementary tensors ``'T_u'``, ``'B_c'`` and optionally ``'T_d'``, ``'B_a'``, ``'B_b'``
+        as linear combinations of basis tensors with real coefficients.
+        """
         elem_tensors=dict()
         for k in self.coeffs:
             if k in ['T_u', 'T_d']:
@@ -910,10 +923,12 @@ class IPESS_KAGOME_PG_LC(IPESS_KAGOME_PG):
         return elem_tensors
 
     def update_(self):
+        r"""
+        Update parent classes :class:`IPESS_KAGOME_PG`, :class:`IPESS_KAGOME_GENERIC`, 
+        and :class:`IPEPS_KAGOME`. First, invoking reconstruction of elementary tensors 
+        by :meth:`build_elem_tensors` and then construct rank-5 iPEPS by :meth:`build_onsite_tensors`.
+        """
         self.elem_tensors= self.build_elem_tensors()
-
-        # update parent generic kagome iPESS and invoke reconstruction of on-site tensor        
-        # default
         self.ipess_tensors= {'T_u': self.elem_tensors['T_u'], 'T_d': self.elem_tensors['T_u'],\
             'B_a': self.elem_tensors['B_c'], 'B_b': self.elem_tensors['B_c'],\
             'B_c': self.elem_tensors['B_c']}
@@ -926,22 +941,24 @@ class IPESS_KAGOME_PG_LC(IPESS_KAGOME_PG):
         self.sites = self.build_onsite_tensors()
 
     def add_noise(self, noise):
+        r"""
+        :param noise: magnitude of noise
+        :type noise: float
+
+        Add uniform random noise to coefficients of linear combinations.
+        """
         for k in self.coeffs:
             rand_t= torch.rand_like( self.coeffs[k] )
             self.coeffs[k]= self.coeffs[k] + noise * (rand_t-1.0)
         self.update_()
 
     def extend_bond_dim(self, new_d):
-        r"""
-        :param new_d: new enlarged auxiliary bond dimension
-        :type state: IPESS_KAGOME_PG
-        :type new_d: int
-        :return: wavefunction with enlarged auxiliary bond dimensions
-        :rtype: IPESS_KAGOME_PG_LC
-        """
         raise NotImplementedError("")
 
     def write_to_file(self, outputfile, tol=1.0e-14, normalize=False):
+        r"""
+        See :meth:`write_ipess_kagome_pg_lc`.
+        """
         write_ipess_kagome_pg_lc(self, outputfile, tol=tol, normalize=normalize)
 
 def write_ipess_kagome_pg_lc(state, outputfile, tol=1.0e-14, normalize=False):
@@ -955,8 +972,9 @@ def write_ipess_kagome_pg_lc(state, outputfile, tol=1.0e-14, normalize=False):
     :type tol: float
     :type normalize: bool
 
-    TODO implement cutoff on elements with magnitude below tol
+    Write state to file.
     """
+    #TODO implement cutoff on elements with magnitude below tol
     json_state=dict({"pgs": state.pgs , "basis_t": {}, "coeffs": {}, \
         "SYM_UP_DOWN": state.SYM_UP_DOWN, "SYM_BOND_S": state.SYM_BOND_S})
     for k in state.basis_t.keys():
@@ -975,8 +993,18 @@ def write_ipess_kagome_pg_lc(state, outputfile, tol=1.0e-14, normalize=False):
         json.dump(json_state, f, indent=4, separators=(',', ': '))
 
 def read_ipess_kagome_pg_lc(jsonfile, peps_args=cfg.peps_args, global_args=cfg.global_args):
-    dtype = global_args.torch_dtype
+    r"""
+    :param jsonfile: input file describing IPESS_KAGOME_PG_LC in json format
+    :param peps_args: ipeps configuration
+    :param global_args: global configuration
+    :type jsonfile: str or Path object
+    :type peps_args: PEPSARGS
+    :type global_args: GLOBALARGS
+    :return: wavefunction
+    :rtype: IPESS_KAGOME_PG_LC
 
+    Read IPESS_KAGOME_PG_LC state from file.
+    """
     with open(jsonfile) as j:
         raw_state = json.load(j)
 
