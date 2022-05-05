@@ -32,7 +32,7 @@ class J1J2LAMBDA_C4V_BIPARTITE():
         :type detla_zz: float
         :type global_args: GLOBALARGS
         
-        Build Spin-1/2 :math:`J_1-J_2-J_3-lambda` Hamiltonian
+        Build Spin-1/2 :math:`J_1-J_2-J_3-\lambda` Hamiltonian
 
         .. math:: 
 

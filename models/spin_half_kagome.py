@@ -26,10 +26,21 @@ class S_HALF_KAGOME():
     def __init__(self, j1=1., JD=0, j1sq=0, j2=0, j2sq=0, jtrip=0.,\
         jperm=0+0j, h=0, phys_dim=2, global_args=cfg.global_args):
         r"""
-        H = J_1 \sum_{<ij>} S_i.S_j
-            + J_2 \sum_{<<ij>>} S_i.S_j
-            - J_{trip} \sum_t (S_{t_1} \times S_{t_2}).S_{t_3}
-            + J_{perm} \sum_t P_t + J*_{perm} \sum_t P^{-1}_t
+        Build spin-1/2 Hamiltonian on Kagome lattice
+
+        .. math::
+
+            H &= J_1 \sum_{<ij>} S_i.S_j
+                + J_2 \sum_{<<ij>>} S_i.S_j
+                - J_{trip} \sum_t (S_{t_1} \times S_{t_2}).S_{t_3} \\
+                &+ J_{perm} \sum_t P_t + J^*_{perm} \sum_t P^{-1}_t
+
+        where the first sum runs over the pairs of sites `i,j` 
+        which are nearest-neighbours (denoted as `<.,.>`), the second sum runs over 
+        pairs of sites `i,j` which are next nearest-neighbours (denoted as `<<.,.>>`).
+        The :math:`J_{trip}` and :math:`J_{perm}` terms represent scalar chirality 
+        and triangle exchange respectively. The :math:`\sum_t` runs over all triangles.
+        The sites :math:`t_1,t_2,t_3` on the triangles are always ordered anti-clockwise.  
         """
         self.dtype = global_args.torch_dtype
         self.device = global_args.device
@@ -104,21 +115,69 @@ class S_HALF_KAGOME():
             "sm_2": smId2.permute(1,2,0, 4,5,3).contiguous(),
         }
 
+    # :param fail_on_check: raise Exception if the imaginary part of the expectation 
+    #                           value is larger than ``imag_eps``
+    #     :type fail_on_check: bool
+    #     :param warn_on_check: raise Warning if the imaginary part of the expectation 
+    #                           value is larger ``imag_eps``
+    #     :type warn_on_check: bool
+    #     :param imag_eps: tolerance for imaginary part in expectation value
+    #     :type imag_eps: float
+
     # Energy terms
     def energy_triangle_dn(self, state, env, force_cpu=False, fail_on_check=False,\
-        warn_on_check=True):
+        warn_on_check=True, imag_eps=1.0e-10):
+        r"""
+        :param state: wavefunction
+        :param env: CTM environment
+        :type state: IPEPS_KAGOME
+        :type env: ENV
+        :param force_cpu: perform computation on CPU
+        :type force_cpu: bool
+        :return: energy per site
+        :rtype: float
+        
+        Evaluate energy contribution from down triangle within 2x2 subsystem embedded in environment, 
+        see :meth:`ctm.pess_kagome.rdm2x2_dn_triangle_with_operator`.
+        """
         e_dn, norm_2x2_dn= rdm_kagome.rdm2x2_dn_triangle_with_operator(\
             (0, 0), state, env, self.h_triangle, force_cpu=force_cpu)
         return _cast_to_real(e_dn, fail_on_check=fail_on_check, warn_on_check=warn_on_check)
 
     def energy_triangle_dn_1x1(self, state, env, force_cpu=False, fail_on_check=False,\
         warn_on_check=True):
+        r"""
+        :param state: wavefunction
+        :param env: CTM environment
+        :type state: IPEPS_KAGOME
+        :type env: ENV
+        :param force_cpu: perform computation on CPU
+        :type force_cpu: bool
+        :return: energy per site
+        :rtype: float
+        
+        Evaluate energy contribution from down triangle within 1x1 subsystem embedded in environment, 
+        see :meth:`ctm.pess_kagome.rdm2x2_dn_triangle_with_operator`.
+        """
         rdm1x1_dn= rdm_kagome.rdm1x1_kagome((0, 0), state, env, force_cpu=force_cpu)
         e_dn= torch.einsum('ijkmno,mnoijk', rdm1x1_dn, self.h_triangle )
         return _cast_to_real(e_dn, fail_on_check=fail_on_check, warn_on_check=warn_on_check)
 
     def energy_triangle_up(self, state, env, force_cpu=False, fail_on_check=False,\
         warn_on_check=True):
+        r"""
+        :param state: wavefunction
+        :param env: CTM environment
+        :type state: IPEPS_KAGOME
+        :type env: ENV
+        :param force_cpu: perform computation on CPU
+        :type force_cpu: bool
+        :return: energy per site
+        :rtype: float
+        
+        Evaluate energy contribution from up triangle within 2x2 subsystem embedded in environment, 
+        see :meth:`ctm.pess_kagome.rdm2x2_up_triangle_open`.
+        """
         rdm_up= rdm_kagome.rdm2x2_up_triangle_open(\
             (0, 0), state, env, force_cpu=force_cpu)
         e_up= torch.einsum('ijkmno,mnoijk', rdm_up, self.h_triangle )
@@ -196,10 +255,26 @@ class S_HALF_KAGOME():
         r"""
         :param state: wavefunction
         :param env: CTM environment
-        :type state: IPEPS
+        :type state: IPEPS_KAGOME
         :type env: ENV
+        :param force_cpu: perform computation on CPU
+        :type force_cpu: bool
+        :param cast_real: if ``False`` keep imaginary part of energy contributions 
+                          from up and down triangles
+        :type cast_real: bool
+        :param disp_corre_len: compute correlation lengths from transfer matrices
+        :type disp_corre_len: bool
         :return:  expectation values of observables, labels of observables
         :rtype: list[float], list[str]
+
+        Evaluate observables for IPESS_KAGOME wavefunction. In particular
+
+            * energy contributions from up and down triangles
+            * vector of spontaneous magnetization :math:`\langle \vec{S} \rangle` 
+              for each site and its length :math:`m=|\langle \vec{S} \rangle|` 
+            * nearest-neighbour spin-spin correlations for all bonds in the unit cell
+            * (optionally) correlation lengths
+
         """
         obs= {"e_t_dn": 0, "e_t_up": 0, "m2_0": 0, "m2_1": 0, "m2_2": 0}
         with torch.no_grad():
@@ -276,8 +351,28 @@ class S_HALF_KAGOME():
 
     def eval_corrf_SS(self,coord,direction,state,env,dist,site=0):
         r"""
+        :param coord: reference site
+        :type coord: tuple(int,int)
+        :param direction: 
+        :type direction: tuple(int,int)
+        :param state: wavefunction
+        :param env: CTM environment
+        :type state: IPEPS_KAGOME
+        :type env: ENV
+        :param dist: maximal distance of correlator
+        :type dist: int
         :param site: selects one of the non-equivalent physical degrees of freedom
-                     within the unit cell 
+                     within the unit cell
+        :type site: int
+        :return: dictionary with full and spin-resolved spin-spin correlation functions
+        :rtype: dict(str: torch.Tensor)
+        
+        Evaluate spin-spin correlation functions :math:`\langle\mathbf{S}(r).\mathbf{S}(0)\rangle` 
+        up to r = ``dist`` in given direction. See :meth:`ctm.generic.corrf.corrf_1sO1sO`.
+        
+        The on-site tensor of the underlying IPEPS_KAGOME contains all three DoFs 
+        of the down triangle. Choosing ``site`` selects one of them to be used for
+        evaluating correlation function::
 
                a
                |
@@ -285,7 +380,7 @@ class S_HALF_KAGOME():
                 \
                 s0--s2--d
                  | / 
-                 |/   <- DOWN_T
+                 |/   <- down triangle
                 s1
                  |
                  c
