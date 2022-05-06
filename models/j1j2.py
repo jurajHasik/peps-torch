@@ -384,7 +384,23 @@ class J1J2():
         return obs_values, obs_labels
 
     def eval_corrf_SS(self,coord,direction,state,env,dist):
-   
+        r"""
+        :param coord: reference site
+        :type coord: tuple(int,int)
+        :param direction: 
+        :type direction: tuple(int,int)
+        :param state: wavefunction
+        :param env: CTM environment
+        :type state: IPEPS
+        :type env: ENV
+        :param dist: maximal distance of correlator
+        :type dist: int
+        :return: dictionary with full and spin-resolved spin-spin correlation functions
+        :rtype: dict(str: torch.Tensor)
+        
+        Evaluate spin-spin correlation functions :math:`\langle\mathbf{S}(r).\mathbf{S}(0)\rangle` 
+        up to r = ``dist`` in given direction. See :meth:`ctm.generic.corrf.corrf_1sO1sO`.
+        """
         # function allowing for additional site-dependent conjugation of op
         def conjugate_op(op):
             #rot_op= su2.get_rot_op(self.phys_dim, dtype=self.dtype, device=self.device)

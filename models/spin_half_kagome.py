@@ -138,7 +138,7 @@ class S_HALF_KAGOME():
         :rtype: float
         
         Evaluate energy contribution from down triangle within 2x2 subsystem embedded in environment, 
-        see :meth:`ctm.pess_kagome.rdm2x2_dn_triangle_with_operator`.
+        see :meth:`ctm.pess_kagome.rdm_kagome.rdm2x2_dn_triangle_with_operator`.
         """
         e_dn, norm_2x2_dn= rdm_kagome.rdm2x2_dn_triangle_with_operator(\
             (0, 0), state, env, self.h_triangle, force_cpu=force_cpu)
@@ -157,7 +157,7 @@ class S_HALF_KAGOME():
         :rtype: float
         
         Evaluate energy contribution from down triangle within 1x1 subsystem embedded in environment, 
-        see :meth:`ctm.pess_kagome.rdm2x2_dn_triangle_with_operator`.
+        see :meth:`ctm.pess_kagome.rdm_kagome.rdm1x1_kagome`.
         """
         rdm1x1_dn= rdm_kagome.rdm1x1_kagome((0, 0), state, env, force_cpu=force_cpu)
         e_dn= torch.einsum('ijkmno,mnoijk', rdm1x1_dn, self.h_triangle )
@@ -176,7 +176,7 @@ class S_HALF_KAGOME():
         :rtype: float
         
         Evaluate energy contribution from up triangle within 2x2 subsystem embedded in environment, 
-        see :meth:`ctm.pess_kagome.rdm2x2_up_triangle_open`.
+        see :meth:`ctm.pess_kagome.rdm_kagome.rdm2x2_up_triangle_open`.
         """
         rdm_up= rdm_kagome.rdm2x2_up_triangle_open(\
             (0, 0), state, env, force_cpu=force_cpu)

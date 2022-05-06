@@ -29,10 +29,18 @@ def _expand_perm(n_inds):
 
 def double_layer_a(state, coord, open_sites=[], force_cpu=False):
     r"""
-    :param open_sites: DoFs to contract
+    :param state: underlying wavefunction
+    :param coord: vertex (x,y) for which the reduced density matrix is constructed
+    :param open_sites: a list DoFs to leave open (uncontracted).  
+    :param force_cpu: perform on CPU
+    :type state: IPEPS_KAGOME
+    :type coord: tuple(int,int)
     :type open_sites: list(int)
+    :type force_cpu: bool
+    :return: result of (partial) contraction of double-layer tensor 
+    :rtype: torch.tensor
 
-    Build double-layer tensor of Kagome iPEPS with open, partially or fully contracted 
+    Build double-layer tensor of Kagome iPEPS with open, partially, or fully contracted 
     physical space of 3 DoFs on down triangle::
 
            u
@@ -49,7 +57,9 @@ def double_layer_a(state, coord, open_sites=[], force_cpu=False):
                                       /
 
     Default results in contraction over all 3 DoFs. Physical indices are aggregated into
-    a single index with structure |ket><bra| = s0,...,s2;s'0,...,s'2
+    a single index with structure :math:`|ket \rangle\langle bra| = s_0,...,s_2;s'_0,...,s'_2`.
+
+    The available choices for ``open_sites`` are: [], [0], [1], [2], [0,1], [0,2], [1,2], and [0,1,2].
     """
     if force_cpu:
         A= state.site(coord).cpu()
@@ -58,6 +68,7 @@ def double_layer_a(state, coord, open_sites=[], force_cpu=False):
     dimsA= A.size()
     dof1_pd= state.get_physical_dim()
     A_reshaped= A.view( [dof1_pd]*3 + list(dimsA[1:]) )
+    # TODO use set to ignore order ?
     if open_sites == [0, 1, 2]:
         contraction = 'mikefgh,njlabcd->eafbgchdmiknjl'
     if open_sites == [1, 2]:
@@ -81,8 +92,33 @@ def double_layer_a(state, coord, open_sites=[], force_cpu=False):
 def enlarged_corner(coord, state, env, corner, open_sites=[], force_cpu=False,
     verbosity=0):
     r"""
-    Builds enlarged corner relative to site at ``coord``. If some DoFs are left open,
-    their indices are aggregated into the last index of the resulting tensor.
+    :param coord: vertex (x,y) for which the enlarged corner is constructed
+    :param state: underlying wavefunction
+    :param env: environment corresponding to ``state``
+    :param corner: which corner to construct. The four options are: 'LU', 'RU', 'RD', and 'LD' 
+                   for "left up" corner, "right up" corner, "right down" corner, and "left down" corner.
+    :param open_sites: a list DoFs to leave open (uncontracted).
+    :param force_cpu: perform on CPU
+    :type coord: tuple(int,int)
+    :type state: IPEPS_KAGOME
+    :type env: ENV
+    :type corner: str
+    :type open_sites: list(int)
+    :type force_cpu: bool
+    :return: result of (partial) contraction of double-layer tensor 
+    :rtype: torch.tensor
+
+    Builds enlarged corner relative to site at ``coord`` from the environment:: 
+
+        C---T---                            |   |
+        |   |                            --a*a--T
+        T--a*a--                            |   |
+        |   |     for corner='LU', or    ---T---C  for corner='RD'
+
+    The resulting tensor is always reshaped into either rank-2 or rank-3 if some DoFs are left open
+    on the double-layer. In the latter case, these open physical indices are aggregated into 
+    the last index of the resulting tensor. The index-ordering convention for enlarged corners
+    follows convention for corner tensors of the environment ``env``. 
     """
     pleg= len(open_sites)>0
     dof1_pd= state.get_physical_dim()
@@ -263,28 +299,32 @@ def enlarged_corner(coord, state, env, corner, open_sites=[], force_cpu=False,
 # ----- main environment contraction functions - 1x1 subsytem -----
 def trace1x1_dn_kagome(coord, state, env, op, verbosity=0, force_cpu=False):
     r"""
-    :param coord: vertex (x,y) for which reduced density matrix is constructed
+    :param coord: vertex (x,y) for which the reduced density matrix is constructed
     :param state: underlying wavefunction
     :param env: environment corresponding to ``state``
-    :param verbosity: logging verbosity
-    :param op: operator to be contracted. It is expected that the op is either 
+    :param op: operator to be contracted. It is expected that the ``op`` is either 
         rank-6 tensor of shape [physical_dim]*6 or rank-2 tensor 
         of shape [physical_dim**3]*2 (fused bra and ket spaces)
+    :param verbosity: logging verbosity
+    :param force_cpu: perform on CPU
+    :type force_cpu: bool
     :type coord: tuple(int,int)
     :type state: IPEPS_KAGOME
     :type env: ENV
-    :type verbosity: int
     :type op: torch.tensor
-    :return: trace of the given on-site observable
+    :type verbosity: int
+    :return: expectation value of the given on-site observable ``op``
     :rtype: torch.tensor
 
-    y\x -1 0  1
-    -1  C1 T4 C4
-     0  T1 A  T3
-     1  C2 T2 C3 
+    ::
 
-    Compute 1-kagome-site trace :math:`Tr{\rho{1x1}_{ABC} O}` centered on vertex ``coord``.
-    Inherited from the rdm1x1() method.
+        y\x -1 0   1
+        -1  C1 T4  C4
+         0  T1 a*a T3
+         1  C2 T2  C3 
+
+    Evaluate operator ``op`` supported on the three sites of the down triangle
+    of Kagome lattice :math:`Tr{\rho_{1x1,ABC} op}` centered on vertex ``coord``.
     """
     assert len(op.size())==2 or len(op.size())==6,"Invalid operator"
     if len(op.size())==6 and len(set(op.size()))==1:
@@ -415,6 +455,10 @@ def rdm1x1_kagome(coord, state, env, sites_to_keep=('A', 'B', 'C'), force_cpu=Fa
     :param env: environment corresponding to ``state``
     :param verbosity: logging verbosity
     :param sites_to_keep: physical degrees of freedom to be kept. Default: "ABC" - keep all the DOF
+    :param force_cpu: perform on CPU
+    :type force_cpu: bool
+    :param sym_pos_def: make reduced density matrix positive-(semi)definite
+    :type sym_pos_def: bool
     :type coord: tuple(int,int)
     :type state: IPEPS_KAGOME
     :type env: ENV
@@ -422,15 +466,17 @@ def rdm1x1_kagome(coord, state, env, sites_to_keep=('A', 'B', 'C'), force_cpu=Fa
     :return: 1-site reduced density matrix with indices :math:`s;s'`
     :rtype: torch.tensor
 
-    Compute 1-kagome-site reduced density matrix :math:`\rho{1x1}_{sites_to_keep}` centered on vertex ``coord``.
-    Inherited from the rdm1x1() method.
+    Compute 1-kagome-site reduced density matrix :math:`\rho_{1x1,\textrm{sites_to_keep}}` centered 
+    on vertex ``coord``::
 
-    The physical indices are order as |ket><bra| from on-site tensor A (`ket`) and then A^\dag (`bra`). 
-    """
-    #    y\x -1 0 1
-    # -1  C1 T4 C4
-    #  0  T1 A  T3
-    #  1  C2 T2 C3 
+        y\x -1 0   1
+        -1  C1 T4  C4
+         0  T1 a*a T3
+         1  C2 T2  C3
+
+    The physical indices are order as :math:`|ket \rangle\langle bra|` from on-site tensor 
+    A (`ket`) and then A^\dag (`bra`). 
+    """ 
     who= "rdm1x1_kagome"
     assert len(sites_to_keep)>0,"No physical DoFs remain open"
     if force_cpu:
@@ -837,7 +883,7 @@ def rdm1x2_kagome(coord, state, env, sites_to_keep_00=('A', 'B', 'C'),\
     :param sites_to_keep_00: physical sites needed for the unit cell at coord + (0, 0)
     :param sites_to_keep_01: physical sites needed for the unit cell at coord + (0, 1)
     :type coord: tuple(int,int)
-    :type state: IPEPS
+    :type state: IPEPS_KAGOME
     :type env: ENV
     :type verbosity: int
     :return: 2-site reduced density matrix with indices :math:`s_0s_1;s'_0s'_1`
@@ -949,11 +995,19 @@ def rdm2x2_up_triangle_open(coord, state, env, sym_pos_def=False, force_cpu=Fals
     :param state: underlying wavefunction
     :param env: environment corresponding to ``state``
     :param verbosity: logging verbosity
+    :param force_cpu: perform on CPU
+    :type force_cpu: bool
+    :param sym_pos_def: make reduced density matrix positive-(semi)definite
+    :type sym_pos_def: bool
     :type coord: tuple(int,int)
     :type state: IPEPS_KAGOME
     :type env: ENV
     :type verbosity: int
+    :return: reduced density matrix as rank-6 tensor 
     :rtype: torch.tensor
+
+    Build reduced density matrix corresponding to the three sites s0, s1, and s2 
+    of the "up" triangle of Kagome lattice::
 
 
         C    T             T          C => C2x2_LU(coord)--------C2x2(coord+(1,0))
@@ -1060,10 +1114,20 @@ def rdm2x2_up_triangle_open(coord, state, env, sym_pos_def=False, force_cpu=Fals
 def rdm2x2_dn_triangle_with_operator(coord, state, env, op, force_cpu=False,\
     verbosity=0):
     r"""
+    :param coord: vertex (x,y) for which the reduced density matrix is constructed
+    :param state: underlying wavefunction
+    :param env: environment corresponding to ``state``
+    :param verbosity: logging verbosity
+    :type coord: tuple(int,int)
+    :type state: IPEPS_KAGOME
+    :type env: ENV
+    :type verbosity: int
     :param op: operator to be contracted. It is expected that the op is either 
         rank-6 tensor of shape [physical_dim]*6 or rank-2 tensor 
         of shape [physical_dim**3]*2 (fused bra and ket spaces)
     :type op: torch.tensor
+    :param force_cpu: perform on CPU
+    :type force_cpu: bool
     :return: normalized expectation value of the operator `op` and the norm 
              of the reduced density matrix
     :rtype: torch.tensor, torch.tensor
@@ -1222,10 +1286,13 @@ def rdm2x2_kagome(coord, state, env, sites_to_keep_00=('A', 'B', 'C'),\
 
     Computes 4-site reduced density matrix :math:`\rho_{2x2}` of 2x2 subsystem specified
     by the vertex ``coord`` of its upper left corner using strategy:
+    
         1. compute four individual corners
         2. construct upper and lower half of the network
         3. contract upper and lower half to obtain final reduced density matrix
+    
     ::
+
         C--T------------------T------------------C = C2x2_LU(coord)--------C2x2_RU(coord+(1,0))
         |  |                  |                  |   |                     |
         T--A^+A(coord)--------A^+A(coord+(1,0))--T   C2x2_LD(coord+(0,1))--C2x2_RD(coord+(1,1))
@@ -1237,8 +1304,10 @@ def rdm2x2_kagome(coord, state, env, sites_to_keep_00=('A', 'B', 'C'),\
     The physical indices `s` and `s'` of on-sites tensors :math:`A` (and :math:`A^\dagger`)
     at vertices ``coord``, ``coord+(1,0)``, ``coord+(0,1)``, and ``coord+(1,1)`` are
     left uncontracted and given in the same order::
+
         s0 s1
         s2 s3
+
     """
     who = "rdm2x2_kagome"
     # ----- building C2x2_LU ----------------------------------------------------
