@@ -165,6 +165,11 @@ class IPEPS():
         :type checkpoint_file: str
         
         Initializes the state according to the supplied checkpoint file.
+
+        .. note:: 
+
+            The `vertexToSite` mapping function is not a part of checkpoint and must 
+            be provided either when instantiating IPEPS_ABELIAN or afterwards.
         """
         checkpoint= torch.load(checkpoint_file,map_location=self.device)
         self.sites= checkpoint["parameters"]

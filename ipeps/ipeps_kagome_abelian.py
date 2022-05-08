@@ -14,7 +14,8 @@ class IPEPS_KAGOME_ABELIAN(ipeps_abelian.IPEPS_ABELIAN):
     def __init__(self, settings, sites=None, vertexToSite=None, lX=None, lY=None,\
             build_open_dl=True, peps_args=cfg.peps_args, global_args=cfg.global_args):
         r"""
-        :param settings: yast symmetry module
+        :param settings: YAST configuration
+        :type settings: NamedTuple or SimpleNamespace (TODO link to definition)
         :param sites: map from elementary unit cell to on-site tensors
         :param vertexToSite: function mapping arbitrary vertex of a square lattice
                              into a vertex within elementary unit cell
@@ -34,19 +35,19 @@ class IPEPS_KAGOME_ABELIAN(ipeps_abelian.IPEPS_ABELIAN):
         are transformed into standard iPEPS on square lattice by contraction over
         some of the bonds in the network. The physical space of on-site tensors 
         of resulting iPEPS is typically tensor product of 3 DoFs of the original
-        system::
-
-              Down-pointing triangle
-                          |  
-                          v
+        system::       
+                           
                /|   /|   /|          |  |  |
               /_|__/_|__/_|__  =>  --A--A--A-- 
                 | /  | /  | /        |  |  |
                 |/   |/   |/       --A--A--A--
                /|   /|   /|          |  |  |
-              /_|__/_|__/_|
+              /_|__/_|__/_|__
+                | /  | /  | /
+                |/   |/   |/ <- down triangle
 
-        where all 3 DoFs on the vertices of down-pointing triangles are fused
+
+        where all 3 DoFs on the vertices of down triangles are fused
         into single physical DoF of on-site tensor A. The state on the up-triangles
         is thus spanned by considering 3 sites A of resulting square-lattice iPEPS. 
         """
@@ -55,7 +56,23 @@ class IPEPS_KAGOME_ABELIAN(ipeps_abelian.IPEPS_ABELIAN):
 
 def read_ipeps_kagome(jsonfile, settings, vertexToSite=None, peps_args=cfg.peps_args,\
     global_args=cfg.global_args):
+    r"""
+    :param jsonfile: input file describing IPEPS_KAGOME_ABELIAN in json format
+    :param settings: YAST configuration
+    :param vertexToSite: function mapping arbitrary vertex of a square lattice 
+                         into a vertex within elementary unit cell
+    :param peps_args: ipeps configuration
+    :param global_args: global configuration
+    :type jsonfile: str or Path object
+    :type settings: NamedTuple or SimpleNamespace (TODO link to definition)
+    :type vertexToSite: function(tuple(int,int))->tuple(int,int)
+    :type peps_args: PEPSARGS
+    :type global_args: GLOBALARGS
+    :return: wavefunction
+    :rtype: IPEPS_KAGOME_ABELIAN
     
+    Read IPEPS_KAGOME_ABELIAN from file.
+    """
     tmp_ipeps= ipeps_abelian.read_ipeps(jsonfile, settings, vertexToSite=vertexToSite,\
         peps_args=peps_args, global_args=global_args)
 

@@ -26,3 +26,23 @@ by spatial symmetries or with on-site tensors possesing additional structure.
     ipeps/ipess_kagome_pg
     ipeps/ipess_kagome_pg_lc
 
+
+Abelian-symmetric iPEPS
+=======================
+
+These iPEPS posses explicit abelian-symmetric structure. In effect, the tensors which
+make up this family of ansatze are block-sparse. The implementation of abelian-symmetric tensors and their algebra is provided by YAST.
+
+.. toctree::
+    :glob:
+
+    ipeps/ipeps_abelian
+    ipeps/ipeps_kagome_abelian
+
+Specialized abelian-symmetric iPEPS
+
+.. toctree::
+    :glob:
+
+    ipeps/ipess_kagome_abelian
+

@@ -1,8 +1,8 @@
-Kagome generic iPESS
+Generic Kagome iPESS
 ====================
 
 Specialized sub-class of :class:`ipeps.ipeps_kagome.IPEPS_KAGOME`. 
-A single on-site tensors representing DoFs on down triangle is built from 
+A single on-site tensor representing DoFs on down triangle is built from 
 five different tensors: two rank-3 trivalent tensors with only auxiliary indices 
 and three rank-3 bond tensors, each associated to one of the physical DoFs on the vertices
 of the down triangle.

@@ -18,7 +18,8 @@ class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
     def __init__(self, settings, ipess_tensors, build_sites=True,
                  peps_args=cfg.peps_args, global_args=cfg.global_args):
         r"""
-        :param settings: yast symmetry module
+        :param settings: YAST configuration
+        :type settings: NamedTuple or SimpleNamespace (TODO link to definition)
         :param ipess_tensors: dictionary of five tensors, which make up Kagome iPESS
                               ansatz 
         :param peps_args: ipeps configuration
@@ -27,11 +28,20 @@ class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
         :type peps_args: PEPSARGS
         :type global_args: GLOBALARGS
 
-        iPESS ansatz for Kagome composes five tensors T_u, T_d, B_a, B_b, and B_c within 
-        elementary unit cell into regular iPEPS. The B_* tensors hold physical degrees of 
-        freedom, which reside on corners shared between different triangles, described by
-        tensors T_u or T_d for up and down triangles respectively. 
-        These tensors are passed in a dictionary with corresponding keys "T_u", "T_d",...
+        iPESS ansatz for Kagome lattice composes five tensors, specified
+        by dictionary::
+
+            ipess_tensors = {'T_u': yast.Tensor, 'T_d': ..., 'B_a': ..., 'B_b': ..., 'B_c': ...}
+
+        into a single rank-5 on-site tensor of parent IPEPS. These iPESS tensors can
+        be accessed through member ``ipess_tensors``. 
+
+        The ``'B_*'`` are rank-3 tensors, with index structure [p,i,j] where the first index `p` 
+        is for physical degree of freedom, while indices `i` and `j` are auxiliary.
+        These bond tensors reside on corners shared between different triangles of Kagome lattice. 
+        Bond tensors are connected by rank-3 trivalent tensors ``'T_u'``, ``'T_d'`` on up and down triangles 
+        respectively. Trivalent tensors have only auxiliary indices.
+    
         The on-site tensors of corresponding iPEPS is obtained by the following contraction::
                                                      
                  2(d)            2(c)                    (-)a
@@ -62,7 +72,7 @@ class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
                 |(-)    (-)/   \(-)
         
         This choice guarantees that the signature of on-site tensor of equivalent single-site 
-        iPEPS is compatible. 
+        IPEPS_KAGOME_ABELIAN is compatible. 
 
         By construction, the degrees of freedom on down triangle are all combined into 
         a single on-site tensor of iPEPS. Instead, DoFs on the upper triangle have 
@@ -108,12 +118,34 @@ class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
                          global_args=global_args)
 
     def get_parameters(self):
+        r"""
+        :return: variational parameters of IPESS_KAGOME_GENERIC_ABELIAN
+        :rtype: iterable
+        
+        This function is called by optimizer to access variational parameters of the state.
+        In this case member ``ipess_tensors``.
+        """
         return list(self.ipess_tensors[ind].data for ind in self.ipess_tensors)
 
     def get_checkpoint(self):
+        r"""
+        :return: serializable representation of IPESS_KAGOME_GENERIC_ABELIAN state
+        :rtype: dict
+
+        Return dict containing serialized ``ipess_tensors`` (block-sparse) tensors. 
+        The individual blocks are serialized into Numpy ndarrays. 
+        This function is called by optimizer to create checkpoints during 
+        the optimization process.
+        """
         return {ind: self.ipess_tensors[ind].save_to_dict() for ind in self.ipess_tensors}
 
     def load_checkpoint(self, checkpoint_file):
+        r"""
+        :param checkpoint_file: path to checkpoint file
+        :type checkpoint_file: str or file object 
+
+        Initializes IPESS_KAGOME_GENERIC_ABELIAN from checkpoint file. 
+        """
         checkpoint= torch.load(checkpoint_file, map_location=self.device)
         self.ipess_tensors= {ind: yast.load_from_dict(config= self.engine, d=t_dict_repr) \
             for ind,t_dict_repr in checkpoint["parameters"].items()}
@@ -124,12 +156,12 @@ class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
     def to_dense(self, peps_args=cfg.peps_args, global_args=cfg.global_args):
         r"""
         :return: returns equivalent dense state with all on-site tensors in their dense 
-                 representation on torch backend.
-        :rtype: IPESS_KAGOME_GENERIC
+                 representation on PyTorch backend.
+        :rtype: IPESS_KAGOME_GENERIC_ABELIAN
 
-        Create an IPESS_KAGOME_GENERIC state with all ipess tensors as dense possesing no explicit
-        block structure (symmetry). This operations preserves gradients on returned
-        dense state.
+        Create an IPESS_KAGOME_GENERIC state with all ``ipess_tensors`` as dense possesing 
+        no explicit block structure (symmetry). This operations preserves gradients 
+        on the returned dense state.
         """
         ipess_tensors_dense= {t_id: t.to_dense() for t_id,t in self.ipess_tensors.items()}
         state_dense= IPESS_KAGOME_GENERIC(ipess_tensors_dense,peps_args=peps_args,\
@@ -138,7 +170,11 @@ class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
 
     def build_onsite_tensors(self):
         r"""
-        Build on-site tensor of corresponding iPEPS::
+        :return: elementary unit cell of underlying IPEPS
+        :rtype: dict[tuple(int,int): yast.Tensor]
+
+        Build on-site tensor of corresponding IPEPS_KAGOME_ABELIAN be 
+        performing following contraction of ``ipess_tensors``::
 
                  2(-7)          2(-6)                    (-)(-4)
                   \             /          rot. pi             |
@@ -174,12 +210,12 @@ class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
         r"""
         :param noise: magnitude of the noise
         :type noise: float
-        :return: a copy of state with noisy ipess tensors. For default value of 
+        :return: a copy of state with noisy ``ipess_tensors``. For default value of 
                  ``noise`` being zero ``self`` is returned. 
         :rtype: IPESS_KAGOME_GENERIC_ABELIAN
 
         Create a new state by adding random uniform noise with magnitude ``noise`` to all 
-        copies of ipess tensors. The noise is added to all allowed blocks making up 
+        copies of ``ipess_tensors``. The noise is added to all allowed blocks making up 
         the individual tensors. If noise is 0, returns ``self``.
         """
         if noise==0: return self
@@ -193,8 +229,11 @@ class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
 
     def generate_weights(self):
         r"""
-        Generate set of identity tensors, weights W, for each non-equivalent link 
-        in the iPESS ansatz. 
+        :return: dictionary of weights on non-equivalent bonds of the iPESS ansatz
+        :rtype: dict( str: yast.Tensor )
+         
+        Generate a set of identity tensors, weights W, for each non-equivalent link 
+        in the iPESS ansatz::
 
                 2(d)            2(c)                    (-)a
                  \             /          rot. pi          |
@@ -269,7 +308,8 @@ def read_ipess_kagome_generic(jsonfile, settings, peps_args=cfg.peps_args,\
     global_args=cfg.global_args):
     r"""
     :param jsonfile: input file describing IPESS_KAGOME_GENERIC_ABELIAN in json format
-    :param settings: yast symmetry module
+    :param settings: YAST configuration
+    :type settings: NamedTuple or SimpleNamespace (TODO link to definition)
     :param peps_args: ipeps configuration
     :param global_args: global configuration
     :type jsonfile: str or Path object
@@ -277,6 +317,8 @@ def read_ipess_kagome_generic(jsonfile, settings, peps_args=cfg.peps_args,\
     :type global_args: GLOBALARGS
     :return: wavefunction
     :rtype: IPESS_KAGOME_GENERIC_ABELIAN
+
+    Read IPESS_KAGOME_GENERIC_ABELIAN from file.
     """
     with open(jsonfile) as j:
         raw_state = json.load(j)
@@ -301,15 +343,12 @@ def read_ipess_kagome_generic(jsonfile, settings, peps_args=cfg.peps_args,\
 
     state = IPESS_KAGOME_GENERIC_ABELIAN(settings, ipess_tensors, peps_args=peps_args, \
             global_args=global_args)
-
-    
-    
     return state
 
 def write_ipess_kagome_generic(state, outputfile, tol=None, normalize=False,\
     peps_args=cfg.peps_args, global_args=cfg.global_args):
     r"""
-    :param state: wavefunction to write out in json format
+    :param state: wavefunction to write out in JSON format
     :param outputfile: target file
     :param tol: minimum magnitude of tensor elements which are written out
     :param normalize: if True, ipess tensors are normalized before writing
@@ -317,6 +356,8 @@ def write_ipess_kagome_generic(state, outputfile, tol=None, normalize=False,\
     :type ouputfile: str or Path object
     :type tol: float
     :type normalize: bool
+
+    Write IPESS_KAGOME_GENERIC_ABELIAN to file.
     """
     json_state = dict({"lX": state.lX, "lY": state.lY, \
         "ipess_tensors": {}})
