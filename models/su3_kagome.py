@@ -3,6 +3,7 @@ import groups.su3 as su3
 import config as cfg
 from ctm.generic.env import ENV
 from ctm.generic import corrf
+from ctm.generic.rdm import _cast_to_real
 from ctm.pess_kagome import rdm_kagome
 from math import sqrt
 from tn_interface import einsum, mm
@@ -10,17 +11,6 @@ from tn_interface import view, permute, contiguous
 import numpy as np
 import itertools
 import warnings
-
-
-def _cast_to_real(t, fail_on_check=False, warn_on_check=True, imag_eps=1.0e-10, **kwargs):
-    if t.is_complex():
-        if (abs(t.imag)/abs(t.real) > imag_eps) or (abs(t.imag)> imag_eps):
-            if warn_on_check:
-                warnings.warn(f"Unexpected imaginary part "+str(t.imag),RuntimeWarning)
-            if fail_on_check: 
-                raise RuntimeError("Unexpected imaginary part "+str(t.imag))
-        return t.real
-    return t
 
 
 class KAGOME_SU3():
@@ -123,7 +113,7 @@ class KAGOME_SU3():
         energy_per_site = _cast_to_real(energy_per_site, **kwargs)
         return energy_per_site
 
-    def eval_obs(self, state, env, force_cpu=False):
+    def eval_obs(self, state, env, force_cpu=False, **kwargs):
         r"""
         :param state: wavefunction
         :param env: CTM environment
@@ -151,17 +141,17 @@ class KAGOME_SU3():
         with torch.no_grad():
             norm = rdm_kagome.trace1x1_dn_kagome((0,0), state, env, idp3)
             obs["chirality_dn"] = rdm_kagome.trace1x1_dn_kagome((0,0), state, env, chirality) / norm
-            obs["chirality_dn"] = _cast_to_real(obs["chirality_dn"])
+            # obs["chirality_dn"] = _cast_to_real(obs["chirality_dn"])
             obs["avg_bonds_dn"] = rdm_kagome.trace1x1_dn_kagome((0,0), state, env, self.perm2_tri) / norm
-            obs["avg_bonds_dn"] = _cast_to_real(obs["avg_bonds_dn"]) / 3.0
+            obs["avg_bonds_dn"] = _cast_to_real(obs["avg_bonds_dn"],**kwargs) / 3.0
 
             rdm2x2_ring = rdm_kagome.rdm2x2_up_triangle_open((0,0), state, env, force_cpu=force_cpu)
             obs["chirality_up"] = torch.einsum('ijlabc,ijlabc', rdm2x2_ring, chirality)
-            obs["chirality_up"] = _cast_to_real(obs["chirality_up"])
+            # obs["chirality_up"] = _cast_to_real(obs["chirality_up"])
             obs["avg_bonds_up"] = torch.einsum('ijlabc,ijlabc', rdm2x2_ring, self.perm2_tri)
-            obs["avg_bonds_up"] = _cast_to_real(obs["avg_bonds_up"]) / 3.0
+            obs["avg_bonds_up"] = _cast_to_real(obs["avg_bonds_up"],**kwargs) / 3.0
 
-            obs.update(self.eval_generators(state, env, force_cpu=force_cpu))
+            obs.update(self.eval_generators(state, env, force_cpu=force_cpu,**kwargs))
 
         # prepare list with labels and values
         obs_labels = ["avg_bonds_dn", "avg_bonds_up", "chirality_dn", "chirality_up"]\
@@ -169,7 +159,7 @@ class KAGOME_SU3():
         obs_values = [obs[label] for label in obs_labels]
         return obs_values, obs_labels
 
-    def eval_obs_2x2subsystem(self, state, env, force_cpu=False):
+    def eval_obs_2x2subsystem(self, state, env, force_cpu=False, **kwargs):
         r"""
         :param state: wavefunction
         :param env: CTM environment
@@ -195,23 +185,23 @@ class KAGOME_SU3():
         with torch.no_grad():
             obs["chirality_dn"],_ = rdm_kagome.rdm2x2_dn_triangle_with_operator((0,0), state, env, chirality,\
                 force_cpu=force_cpu)
-            obs["chirality_dn"] = _cast_to_real(obs["chirality_dn"])
+            # obs["chirality_dn"] = _cast_to_real(obs["chirality_dn"],**kwargs)
             obs["e_t_dn"],_ = rdm_kagome.rdm2x2_dn_triangle_with_operator((0,0), state, env, self.h_tri,\
                 force_cpu=force_cpu)
-            obs["e_t_dn"] = _cast_to_real(obs["e_t_dn"])
+            obs["e_t_dn"] = _cast_to_real(obs["e_t_dn"],**kwargs)
             obs["avg_bonds_dn"],_ = rdm_kagome.rdm2x2_dn_triangle_with_operator((0,0), state, env, self.perm2_tri,\
                 force_cpu=force_cpu)
-            obs["avg_bonds_dn"] = _cast_to_real(obs["avg_bonds_dn"])/3
+            obs["avg_bonds_dn"] = _cast_to_real(obs["avg_bonds_dn"],**kwargs)/3
 
             rdm2x2_ring = rdm_kagome.rdm2x2_up_triangle_open((0,0), state, env, force_cpu=force_cpu)
             obs["chirality_up"] = torch.einsum('ijlabc,abcijl', rdm2x2_ring, chirality)
-            obs["chirality_up"] = _cast_to_real(obs["chirality_up"])
+            # obs["chirality_up"] = _cast_to_real(obs["chirality_up"], **kwargs)
             obs["e_t_up"] = torch.einsum('ijlabc,abcijl', rdm2x2_ring, self.h_tri)
-            obs["e_t_up"] = _cast_to_real(obs["e_t_up"])
+            obs["e_t_up"] = _cast_to_real(obs["e_t_up"],**kwargs)
             obs["avg_bonds_up"] = torch.einsum('ijlabc,abcijl', rdm2x2_ring, self.perm2_tri)
-            obs["avg_bonds_up"] = _cast_to_real(obs["avg_bonds_up"])/3
+            obs["avg_bonds_up"] = _cast_to_real(obs["avg_bonds_up"],**kwargs)/3
 
-            obs.update(self.eval_generators(state, env, force_cpu=force_cpu))
+            obs.update(self.eval_generators(state, env, force_cpu=force_cpu, **kwargs))
 
         # prepare list with labels and values
         obs_labels = ["e_t_dn","e_t_up","avg_bonds_dn","avg_bonds_up","chirality_dn","chirality_up"]\
@@ -237,9 +227,9 @@ class KAGOME_SU3():
         pd = self.phys_dim
         idp3 = torch.eye(pd**3, dtype=self.dtype, device=self.device)
         norm = rdm_kagome.trace1x1_dn_kagome((0,0), state, env, idp3)
-        norm = _cast_to_real(norm, fail_on_check=fail_on_check, warn_on_check=warn_on_check)
+        norm = rdm_kagome._cast_to_real(norm, fail_on_check=fail_on_check, warn_on_check=warn_on_check)
         energy_dn = rdm_kagome.trace1x1_dn_kagome((0,0), state, env, self.h_tri) / norm
-        energy_dn = _cast_to_real(energy_dn, fail_on_check=fail_on_check, warn_on_check=warn_on_check)
+        energy_dn = rdm_kagome._cast_to_real(energy_dn, fail_on_check=fail_on_check, warn_on_check=warn_on_check)
         return energy_dn
 
     def energy_triangles_2x2subsystem(self, state, env, force_cpu=False):
@@ -292,7 +282,7 @@ class KAGOME_SU3():
         e_per_site= (e_down+e_up)/3
         return e_per_site
 
-    def eval_generators(self, state, env, force_cpu=False):
+    def eval_generators(self, state, env, force_cpu=False, **kwargs):
         pd = self.phys_dim
         idp2= torch.eye(pd**2, dtype=self.dtype, device=self.device)
         idp3= torch.eye(pd**3, dtype=self.dtype, device=self.device)
@@ -302,7 +292,8 @@ class KAGOME_SU3():
             "C": torch.zeros(8, dtype=self.dtype, device=self.device)}
         
         # vector of su(3) generators in Gell-Mann basis
-        norm= _cast_to_real(rdm_kagome.trace1x1_dn_kagome((0,0), state, env, idp3))
+        norm= _cast_to_real(rdm_kagome.trace1x1_dn_kagome((0,0), state, env, idp3),\
+            who="norm 1x1_dn_kagome",**kwargs)
         J= self.obs_ops["J"]
         with torch.no_grad():
             # for site_type in ['A', 'B', 'C']:
@@ -312,13 +303,13 @@ class KAGOME_SU3():
             
             for i in range(J.size(0)):
                 gens['A'][i]= _cast_to_real(rdm_kagome.trace1x1_dn_kagome((0,0), state, env,\
-                    torch.einsum('ab,ijkl->aijbkl',J[i,:,:],idp2))) / norm
+                    torch.einsum('ab,ijkl->aijbkl',J[i,:,:],idp2)),**kwargs) / norm
             for i in range(J.size(0)):
                 gens['B'][i]= _cast_to_real(rdm_kagome.trace1x1_dn_kagome((0,0), state, env,\
-                    torch.einsum('ab,ijkl->iajkbl',J[i,:,:],idp2))) / norm
+                    torch.einsum('ab,ijkl->iajkbl',J[i,:,:],idp2)),**kwargs) / norm
             for i in range(J.size(0)):
                 gens['C'][i]= _cast_to_real(rdm_kagome.trace1x1_dn_kagome((0,0), state, env,\
-                    torch.einsum('ab,ijkl->ijaklb',J[i,:,:],idp2))) / norm
+                    torch.einsum('ab,ijkl->ijaklb',J[i,:,:],idp2)),**kwargs) / norm
             for site_type in ['A', 'B', 'C']:
                 gens[f"m2_{site_type}"]= torch.dot(gens[site_type],gens[site_type])
         return gens

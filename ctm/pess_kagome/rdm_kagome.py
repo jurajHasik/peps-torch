@@ -1,6 +1,6 @@
 import torch
 from ctm.generic.env import ENV
-from ctm.generic.rdm import _sym_pos_def_rdm
+from ctm.generic.rdm import _sym_pos_def_rdm, _cast_to_real
 from tn_interface import contract, einsum
 from tn_interface import contiguous, view, permute
 from tn_interface import conj
@@ -1112,7 +1112,7 @@ def rdm2x2_up_triangle_open(coord, state, env, sym_pos_def=False, force_cpu=Fals
     return rdm
 
 def rdm2x2_dn_triangle_with_operator(coord, state, env, op, force_cpu=False,\
-    verbosity=0):
+    verbosity=0,**kwargs):
     r"""
     :param coord: vertex (x,y) for which the reduced density matrix is constructed
     :param state: underlying wavefunction
@@ -1258,6 +1258,7 @@ def rdm2x2_dn_triangle_with_operator(coord, state, env, op, force_cpu=False,\
     # C2x2_LD------C2x2_RD
     rdm_op = contract(upper_half_op, lower_half, ([0, 1], [0, 1]))
     rdm_id = contract(upper_half, lower_half, ([0, 1], [0, 1]))
+    rdm_id = _cast_to_real(rdm_id,who=who,**kwargs)
 
     rdm = rdm_op/rdm_id
     rdm_id = rdm_id.to(env.device)
@@ -1267,7 +1268,7 @@ def rdm2x2_dn_triangle_with_operator(coord, state, env, op, force_cpu=False,\
 def rdm2x2_kagome(coord, state, env, sites_to_keep_00=('A', 'B', 'C'),\
     sites_to_keep_10=('A', 'B', 'C'), sites_to_keep_01=('A', 'B', 'C'),\
     sites_to_keep_11=('A', 'B', 'C'), force_cpu=False, sym_pos_def=False,\
-    verbosity=0):
+    verbosity=0,**kwargs):
     r"""
     :param coord: vertex (x,y) specifies upper left site of 2x2 subsystem
     :param state: underlying wavefunction
@@ -1387,7 +1388,8 @@ def rdm2x2_kagome(coord, state, env, sites_to_keep_00=('A', 'B', 'C'),\
     rdm = contiguous(permute(rdm, tuple(perm_order)))
 
     # symmetrize and normalize
-    rdm = _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
+    rdm = _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who,\
+        **kwargs)
 
     rdm = rdm.to(env.device)
     return rdm
