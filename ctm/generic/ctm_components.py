@@ -486,9 +486,9 @@ def c2x2_LD(coord, state, env, verbosity=0):
 
         0  1
         T--A(coord)--3
-        |  |                    0<-(0,1)
-        |  |                          |
-        C--T---------2  =>  1<-(2,3)--C2x2
+        |  |                (0,1)->0(+)
+        |  |                 |
+        C--T---------2  =>   C2x2--(2,3)->1(-)
     """
     C = env.C[(state.vertexToSite(coord),(-1,1))]
     T1 = env.T[(state.vertexToSite(coord),(-1,0))]

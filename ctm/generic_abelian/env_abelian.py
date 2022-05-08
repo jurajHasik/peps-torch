@@ -13,12 +13,12 @@ class ENV_ABELIAN():
         r"""
         :param chi: environment bond dimension :math:`\chi`
         :param state: wavefunction
-        :param settings: abelian-symmetric tensor engine configuration
+        :param settings: YAST configuration
+        :type settings: NamedTuple or SimpleNamespace (TODO link to definition)
         :param ctm_args: CTM algorithm configuration
         :param global_args: global configuration
         :type chi: int
         :type state: IPEPS_ABELIAN
-        :type settings: NamedTuple or SimpleNamespace (TODO link to definition)
         :type ctm_args: CTMARGS
         :type global_args: GLOBALARGS
 
@@ -69,7 +69,7 @@ class ENV_ABELIAN():
             |       |       |       (-1)     (-1)      (-1)
             C--1 1--T--2 1--C        C(+1) (-1)T(+1) (-1)C
 
-        Note::
+        .. note::
 
             The structure of fused double-layer legs, which are carried by T-tensors, is obtained
             by fusing on-site tensor (`ket`) with its conjugate (`bra`). The leg of `ket` always
@@ -125,10 +125,10 @@ class ENV_ABELIAN():
 
     def to_dense(self, state, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
         r"""
-        :param state: state providing the relevant vertexToSite function
+        :param state: abelian-symmetric iPEPS
         :type state: IPEPS_ABELIAN
         :return: returns equivalent of the environment with all C,T tensors in their dense 
-                 representation on torch backend. 
+                 representation on PyTorch backend. 
         :rtype: ENV
 
         Create a copy of environment with all on-site tensors as dense possesing no explicit
@@ -267,6 +267,9 @@ class ENV_ABELIAN():
 
         Create a clone environment with all tensors (their blocks) attached to
         computational graph. 
+
+        .. note::
+            This operation preserves gradient tracking.
         """
         e= ENV_ABELIAN(self.chi, settings=self.engine)
         e.C= {cid: c.clone() for cid,c in self.C.items()}
@@ -279,8 +282,11 @@ class ENV_ABELIAN():
                  computational graph.
         :rtype: ENV_ABELIAN
 
-        Create a view of environment with all on-site tensors (their blocks) detached 
-        from computational graph. 
+        In case of using PyTorch backend, get a detached "view" of the environment. See 
+        `torch.Tensor.detach <https://pytorch.org/docs/stable/generated/torch.Tensor.detach.html>`_.
+
+        .. note::
+            This operation does not preserve gradient tracking. 
         """
         e= ENV_ABELIAN(self.chi, settings=self.engine)
         e.C= {cid: c.detach() for cid,c in self.C.items()}
@@ -298,7 +304,7 @@ def init_env(state, env, init_method=None, ctm_args=cfg.ctm_args):
     :param init_method: desired initialization method
     :param ctm_args: CTM algorithm configuration
     :type state: IPEPS_ABELIAN
-    :type env: ENV 
+    :type env: ENV_ABELIAN 
     :type init_method: str
     :type ctm_args: CTMARGS
 

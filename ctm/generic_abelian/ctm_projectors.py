@@ -20,14 +20,14 @@ def ctm_get_projectors_4x4(direction, coord, state, env, ctm_args=cfg.ctm_args, 
     :param global_args: global configuration
     :type direction: tuple(int,int) 
     :type coord: tuple(int,int)
-    :type state: IPEPS
-    :type env: ENV
+    :type state: IPEPS_ABELIAN
+    :type env: ENV_ABELIAN
     :type ctm_args: CTMARGS
     :type global_args: GLOBALARGS
     :return: pair of projectors, tensors of dimension :math:`\chi \times \chi \times D^2`. 
              The D might vary depending on the auxiliary bond dimension of related on-site
              tensor.
-    :rtype: torch.tensor, torch.tensor
+    :rtype: yast.Tensor, yast.Tensor
 
 
     Compute a pair of projectors from two halfs of 4x4 tensor network given 
@@ -93,14 +93,14 @@ def ctm_get_projectors_4x2(direction, coord, state, env, ctm_args=cfg.ctm_args, 
     :param global_args: global configuration
     :type direction: tuple(int,int) 
     :type coord: tuple(int,int)
-    :type state: IPEPS
-    :type env: ENV
+    :type state: IPEPS_ABELIAN
+    :type env: ENV_ABELIAN
     :type ctm_args: CTMARGS
     :type global_args: GLOBALARGS
     :return: pair of projectors, tensors of dimension :math:`\chi \times \chi \times D^2`. 
              The D might vary depending on the auxiliary bond dimension of related on-site
              tensor.
-    :rtype: torch.tensor, torch.tensor
+    :rtype: yast.Tensor, yast.Tensor
 
 
     Compute a pair of projectors from two enlarged corners making up 4x2 (2x4) tensor network 
@@ -159,23 +159,24 @@ def ctm_get_projectors_4x2(direction, coord, state, env, ctm_args=cfg.ctm_args, 
 def ctm_get_projectors_from_matrices(R, Rt, chi, direction, \
     ctm_args=cfg.ctm_args, global_args=cfg.global_args, diagnostics=None):
     r"""
-    :param R: tensor of shape (dim0, dim1)
-    :param Rt: tensor of shape (dim0, dim1)
+    :param R: rank-2 tensor
+    :param Rt: rank-2 tensor
     :param chi: environment bond dimension
     :param ctm_args: CTM algorithm configuration
     :param global_args: global configuration
-    :type R: torch.tensor 
-    :type Rt: torch.tensor
+    :type R: yast.Tensor 
+    :type Rt: yast.Tensor
     :type chi: int
     :type ctm_args: CTMARGS
     :type global_args: GLOBALARGS
     :return: pair of projectors, tensors of dimension :math:`\chi \times \chi \times D^2`. 
              The D might vary depending on the auxiliary bond dimension of related on-site
              tensor.
-    :rtype: torch.tensor, torch.tensor
+    :rtype: yast.Tensor, yast.Tensor
 
     Given the two tensors R and Rt (R tilde) compute the projectors P, Pt (P tilde)
-    (PRB 94, 075143 (2016) https://arxiv.org/pdf/1402.2859.pdf)
+    (PRB 94, 075143 (2016) https://arxiv.org/pdf/1402.2859.pdf). The R, Rt are expected
+    to have compatible virtual spaces on first index.
         
         1. Perform SVD over :math:`R\widetilde{R}` contracted through index which is going to
            be truncated::
