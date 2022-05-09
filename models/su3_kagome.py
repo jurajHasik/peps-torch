@@ -16,6 +16,15 @@ import warnings
 class KAGOME_SU3():
     def __init__(self, phys_dim=3, j=0.0, k=1.0, h=0.0, global_args=cfg.global_args):
         r"""
+        :param j: nearest-neighbour pairing 
+        :type j: int
+        :param k: real part of triangle exchange
+        :type k: float
+        :param h: imaginary part of triangle exchange
+        :type h: float
+        :param global_args: global configuration
+        :type global_args: GLOBALARGS
+
         The SU(3) Hamiltonian on Kagome lattice 
         
         .. math:: H = J \sum_{\langle ij \rangle} P_{ij} 
@@ -141,13 +150,13 @@ class KAGOME_SU3():
         with torch.no_grad():
             norm = rdm_kagome.trace1x1_dn_kagome((0,0), state, env, idp3)
             obs["chirality_dn"] = rdm_kagome.trace1x1_dn_kagome((0,0), state, env, chirality) / norm
-            # obs["chirality_dn"] = _cast_to_real(obs["chirality_dn"])
+            obs["chirality_dn"] = _cast_to_real(obs["chirality_dn"], **kwargs)
             obs["avg_bonds_dn"] = rdm_kagome.trace1x1_dn_kagome((0,0), state, env, self.perm2_tri) / norm
             obs["avg_bonds_dn"] = _cast_to_real(obs["avg_bonds_dn"],**kwargs) / 3.0
 
             rdm2x2_ring = rdm_kagome.rdm2x2_up_triangle_open((0,0), state, env, force_cpu=force_cpu)
             obs["chirality_up"] = torch.einsum('ijlabc,ijlabc', rdm2x2_ring, chirality)
-            # obs["chirality_up"] = _cast_to_real(obs["chirality_up"])
+            obs["chirality_up"] = _cast_to_real(obs["chirality_up"], **kwargs)
             obs["avg_bonds_up"] = torch.einsum('ijlabc,ijlabc', rdm2x2_ring, self.perm2_tri)
             obs["avg_bonds_up"] = _cast_to_real(obs["avg_bonds_up"],**kwargs) / 3.0
 
@@ -272,11 +281,11 @@ class KAGOME_SU3():
         :type env: ENV
         :param force_cpu: perform computation on CPU
         :type force_cpu: bool
-        :return: energy contributions from down and up triangle
-        :rtype: float, float
+        :return: energy per site
+        :rtype: float
         
         Evaluate energy per site from contributions from up and down triangle.
-        See :meth:`energy_per_site_2x2subsystem`.
+        See :meth:`energy_triangles_2x2subsystem`.
         """
         e_down, e_up= self.energy_triangles_2x2subsystem(state, env, force_cpu=force_cpu)
         e_per_site= (e_down+e_up)/3

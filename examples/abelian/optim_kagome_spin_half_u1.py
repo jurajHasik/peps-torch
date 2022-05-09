@@ -11,7 +11,7 @@ from ipeps.ipess_kagome_abelian import *
 from ctm.generic_abelian.env_abelian import *
 import ctm.generic_abelian.ctmrg as ctmrg
 import ctm.pess_kagome_abelian.rdm_kagome as rdm_kagome
-from models.abelian import kagome_spin_half_u1
+from models.abelian import kagome_u1
 from optim.ad_optim_lbfgs_mod import optimize_state
 import scipy.io as io
 import json
@@ -58,7 +58,7 @@ def main():
     if not args.theta is None:
         args.jtrip= args.j1*math.sin(args.theta*math.pi)
         args.j1= args.j1*math.cos(args.theta*math.pi)
-    model= kagome_spin_half_u1.KAGOME_U1(settings_U1, j1=args.j1, JD=args.JD, j1sq=args.j1sq,\
+    model= kagome_u1.KAGOME_U1(settings_U1, j1=args.j1, JD=args.JD, j1sq=args.j1sq,\
         j2=args.j2, j2sq=args.j2sq, jtrip=args.jtrip, jperm=args.jperm, h=args.h)
 
     # 1) initialize the ipess/ipeps
@@ -453,79 +453,79 @@ if __name__ == '__main__':
         raise Exception("Unknown command line arguments")    
     main()
 
-# class TestOptim_RVB(unittest.TestCase):
-#     tol= 1.0e-6
-#     DIR_PATH = os.path.dirname(os.path.realpath(__file__))
-#     OUT_PRFX = "RESULT_test_run-opt_u1_RVB"
+class TestOptim_RVB(unittest.TestCase):
+    tol= 1.0e-6
+    DIR_PATH = os.path.dirname(os.path.realpath(__file__))
+    OUT_PRFX = "RESULT_test_run-opt_u1_RVB"
 
-#     def setUp(self):
-#         args.theta=0.2
-#         args.j1=1.0
-#         args.bond_dim=3
-#         args.chi=64
-#         args.out_prefix=self.OUT_PRFX
-#         args.GLOBALARGS_dtype= "complex128"
-#         args.ipeps_init_type="RVB"
-#         args.instate_noise= 0.1
-#         args.seed= 100
-#         args.opt_max_iter= 10
+    def setUp(self):
+        args.theta=0.2
+        args.j1=1.0
+        args.bond_dim=3
+        args.chi=64
+        args.out_prefix=self.OUT_PRFX
+        args.GLOBALARGS_dtype= "complex128"
+        args.ipeps_init_type="RVB"
+        args.instate_noise= 0.1
+        args.seed= 100
+        args.opt_max_iter= 10
 
-#     def test_basic_opt_rvb(self):
-#         from io import StringIO
-#         from unittest.mock import patch 
-#         from cmath import isclose
+    def test_basic_opt_rvb(self):
+        from io import StringIO
+        from unittest.mock import patch 
+        from cmath import isclose
 
-#         with patch('sys.stdout', new = StringIO()) as tmp_out: 
-#             main()
-#         tmp_out.seek(0)
+        with patch('sys.stdout', new = StringIO()) as tmp_out: 
+            main()
+        tmp_out.seek(0)
 
-#         # parse FINAL observables
-#         final_obs=None
-#         final_opt_line=None
-#         OPT_OBS= OPT_OBS_DONE= False
-#         l= tmp_out.readline()
-#         while l:
-#             print(l,end="")
-#             if OPT_OBS and not OPT_OBS_DONE and l.rstrip()=="": OPT_OBS_DONE= True
-#             if OPT_OBS and not OPT_OBS_DONE and len(l.split(','))>2:
-#                 final_opt_line= l.rstrip()
-#             if "epoch, energy," in l and not OPT_OBS_DONE: 
-#                 OPT_OBS= True
-#             if "FINAL" in l:
-#                 final_obs= l.rstrip()
-#                 break
-#             l= tmp_out.readline()
-#         assert final_obs
-#         assert final_opt_line
+        # parse FINAL observables
+        final_obs=None
+        final_opt_line=None
+        OPT_OBS= OPT_OBS_DONE= False
+        l= tmp_out.readline()
+        while l:
+            print(l,end="")
+            if OPT_OBS and not OPT_OBS_DONE and l.rstrip()=="": OPT_OBS_DONE= True
+            if OPT_OBS and not OPT_OBS_DONE and len(l.split(','))>2:
+                final_opt_line= l.rstrip()
+            if "epoch, energy," in l and not OPT_OBS_DONE: 
+                OPT_OBS= True
+            if "FINAL" in l:
+                final_obs= l.rstrip()
+                break
+            l= tmp_out.readline()
+        assert final_obs
+        assert final_opt_line
 
-#         # compare with the reference
-#         ref_data="""
-#         -0.3180407711847282, (-0.4771030273105023+2.395659971600811e-16j), (-0.4770192862436823+0j), 
-#         (2.2027853160689646e-06+5.098826440112844e-19j), (1.8151220691379348e-06+5.344259112418017e-19j), (1.8745247083438e-08+3.5006284274149174e-22j), 
-#         (-0.001484178330278732-1.717727019756202e-16j), 0j, 0j, 
-#         (0.0013472646618752882+1.9833738921717212e-16j), 0j, 0j, 
-#         (0.00013691328307888171+1.2784108118268017e-18j), 0j, 0j, 
-#         (-0.16545105705851107-4.8744230200782965e-16j), (-0.1610407631859544+8.705784359174593e-16j), (-0.1506051103610713-7.924161808310929e-17j), 
-#         (-0.16740173138248024+0j), (-0.152580468641496+0j), (-0.1570313126413648+0j)
-#         """
-#         # compare final observables from optimization and the observables from the 
-#         # final state
-#         final_opt_line_t= [complex(x) for x in final_opt_line.split(",")[1:7]]
-#         fobs_tokens= [complex(x) for x in final_obs[len("FINAL"):].split(",")[:6]]
-#         for val0,val1 in zip(final_opt_line_t, fobs_tokens):
-#             assert isclose(val0,val1, rel_tol=self.tol, abs_tol=self.tol)
+        # compare with the reference
+        ref_data="""
+        -0.3180407711847282, (-0.4771030273105023+2.395659971600811e-16j), (-0.4770192862436823+0j), 
+        (2.2027853160689646e-06+5.098826440112844e-19j), (1.8151220691379348e-06+5.344259112418017e-19j), (1.8745247083438e-08+3.5006284274149174e-22j), 
+        (-0.001484178330278732-1.717727019756202e-16j), 0j, 0j, 
+        (0.0013472646618752882+1.9833738921717212e-16j), 0j, 0j, 
+        (0.00013691328307888171+1.2784108118268017e-18j), 0j, 0j, 
+        (-0.16545105705851107-4.8744230200782965e-16j), (-0.1610407631859544+8.705784359174593e-16j), (-0.1506051103610713-7.924161808310929e-17j), 
+        (-0.16740173138248024+0j), (-0.152580468641496+0j), (-0.1570313126413648+0j)
+        """
+        # compare final observables from optimization and the observables from the 
+        # final state
+        final_opt_line_t= [complex(x) for x in final_opt_line.split(",")[1:7]]
+        fobs_tokens= [complex(x) for x in final_obs[len("FINAL"):].split(",")[:6]]
+        for val0,val1 in zip(final_opt_line_t, fobs_tokens):
+            assert isclose(val0,val1, rel_tol=self.tol, abs_tol=self.tol)
 
-#         # compare final observables from final state against expected reference 
-#         # drop first token, corresponding to iteration step
-#         ref_tokens= [complex(x) for x in ref_data.split(",")[:6]]
-#         for val,ref_val in zip(fobs_tokens, ref_tokens):
-#             assert isclose(val,ref_val, rel_tol=self.tol, abs_tol=self.tol)
+        # compare final observables from final state against expected reference 
+        # drop first token, corresponding to iteration step
+        ref_tokens= [complex(x) for x in ref_data.split(",")[:6]]
+        for val,ref_val in zip(fobs_tokens, ref_tokens):
+            assert isclose(val,ref_val, rel_tol=self.tol, abs_tol=self.tol)
 
-#     def tearDown(self):
-#         args.opt_resume=None
-#         args.instate=None
-#         for f in [self.OUT_PRFX+"_state.json",self.OUT_PRFX+"_checkpoint.p",self.OUT_PRFX+".log"]:
-#             if os.path.isfile(f): os.remove(f)
+    def tearDown(self):
+        args.opt_resume=None
+        args.instate=None
+        for f in [self.OUT_PRFX+"_state.json",self.OUT_PRFX+"_checkpoint.p",self.OUT_PRFX+".log"]:
+            if os.path.isfile(f): os.remove(f)
 
 
 class TestCheckpoint_RVB(unittest.TestCase):

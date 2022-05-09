@@ -108,7 +108,7 @@ def enlarged_corner(coord, state, env, corner, open_sites=[], force_cpu=False,
     :return: result of (partial) contraction of double-layer tensor 
     :rtype: torch.tensor
 
-    Builds enlarged corner relative to site at ``coord`` from the environment:: 
+    Builds enlarged corner relative to the site at ``coord`` from the environment:: 
 
         C---T---                            |   |
         |   |                            --a*a--T
@@ -118,7 +118,19 @@ def enlarged_corner(coord, state, env, corner, open_sites=[], force_cpu=False,
     The resulting tensor is always reshaped into either rank-2 or rank-3 if some DoFs are left open
     on the double-layer. In the latter case, these open physical indices are aggregated into 
     the last index of the resulting tensor. The index-ordering convention for enlarged corners
-    follows convention for corner tensors of the environment ``env``. 
+    follows convention for corner tensors of the environment ``env``.
+
+    If ``open_sites=0`` returned tensor has rank-2, where env. indices and auxiliary indices
+    of double-layer tensor in the same direction were reshaped into a single index. 
+    If some DoFs remain open, then returned tensor is rank-3 with extra index carrying 
+    all physical DoFs reshaped in `:math:`|ket \rangle\langle bra|` order::
+
+        C---T---\                             C---T---\
+        |   |    --1                          |   |    --1   
+        T--a*a--/                             T--a*a--/
+         \ /                                   \ / \
+          |                                     |   2
+          0           for open_sites=[], or     0           for non-empty open_sites
     """
     pleg= len(open_sites)>0
     dof1_pd= state.get_physical_dim()
@@ -448,7 +460,7 @@ def trace1x1_dn_kagome(coord, state, env, op, verbosity=0, force_cpu=False):
     return trace
 
 def rdm1x1_kagome(coord, state, env, sites_to_keep=('A', 'B', 'C'), force_cpu=False, 
-    sym_pos_def=False, verbosity=0):
+    sym_pos_def=False, verbosity=0, **kwargs):
     r"""
     :param coord: vertex (x,y) for which reduced density matrix is constructed
     :param state: underlying wavefunction
@@ -474,7 +486,7 @@ def rdm1x1_kagome(coord, state, env, sites_to_keep=('A', 'B', 'C'), force_cpu=Fa
          0  T1 a*a T3
          1  C2 T2  C3
 
-    The physical indices are order as :math:`|ket \rangle\langle bra|` from on-site tensor 
+    The physical indices are ordered as :math:`|ket \rangle\langle bra|` from on-site tensor 
     A (`ket`) and then A^\dag (`bra`). 
     """ 
     who= "rdm1x1_kagome"
@@ -602,7 +614,8 @@ def rdm1x1_kagome(coord, state, env, sites_to_keep=('A', 'B', 'C'), force_cpu=Fa
 
     # reshape, symmetrize and normalize
     rdm= rdm.view([dof1_pd]*(2*len(sites_to_keep)))
-    rdm= _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
+    rdm= _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity,\
+        who=who, **kwargs)
     rdm= rdm.to(env.device)
 
     return rdm
@@ -1282,6 +1295,10 @@ def rdm2x2_kagome(coord, state, env, sites_to_keep_00=('A', 'B', 'C'),\
     :type state: IPEPS_KAGOME
     :type env: ENV
     :type verbosity: int
+    :param force_cpu: perform on CPU
+    :type force_cpu: bool
+    :param sym_pos_def: make reduced density matrix positive-(semi)definite
+    :type sym_pos_def: bool
     :return: 4-site reduced density matrix with indices :math:`s_0s_1s_2s_3;s'_0s'_1s'_2s'_3`
     :rtype: torch.tensor
 

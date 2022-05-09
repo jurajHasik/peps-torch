@@ -6,7 +6,7 @@ import yast.yast as yast
 import config as cfg
 import groups.su2_abelian as su2
 import ctm.pess_kagome_abelian.rdm_kagome as rdm_kagome
-from models.spin_half_kagome import _cast_to_real
+from ctm.generic_abelian.rdm import _cast_to_real
 from ctm.generic import transferops
 
 
@@ -162,7 +162,8 @@ class KAGOME_U1():
         see :meth:`ctm.pess_kagome_abelian.rdm_kagome.rdm2x2_dn_triangle_with_operator`.
         """
         e_dn,_ = rdm_kagome.rdm2x2_dn_triangle_with_operator((0, 0), state, env, \
-            self.h_triangle.fuse_legs(axes=((0,1,2),(3,4,5))), force_cpu=force_cpu, **kwargs).to_number()
+            self.h_triangle.fuse_legs(axes=((0,1,2),(3,4,5))), force_cpu=force_cpu, **kwargs)
+        e_dn= e_dn.to_number()
         return _cast_to_real(e_dn, **kwargs)
 
     def energy_up_t_2x2subsystem(self, state, env, force_cpu=False, **kwargs):
@@ -180,14 +181,15 @@ class KAGOME_U1():
         see :meth:`ctm.pess_kagome_abelian.rdm_kagome.rdm2x2_up_triangle_open`.
         """
         rdm_up= rdm_kagome.rdm2x2_up_triangle_open((0, 0), state, env, force_cpu=force_cpu,\
-            verbosity=1 if warn_on_check else 0,  **kwargs)
+            **kwargs)
         e_up=yast.tensordot(rdm_up.fuse_legs(axes=((0,1,2),(3,4,5))),\
             self.h_triangle.fuse_legs(axes=((0,1,2),(3,4,5))),([0,1],[1,0])).to_number()
         return _cast_to_real(e_up,  **kwargs)
 
     def energy_triangle_dn_NoCheck(self, state, env, force_cpu=False):
         e_dn,_ = rdm_kagome.rdm2x2_dn_triangle_with_operator((0, 0), state, env,\
-        self.h_triangle.fuse_legs(axes=((0,1,2),(3,4,5))), force_cpu=force_cpu).to_number()
+            self.h_triangle.fuse_legs(axes=((0,1,2),(3,4,5))), force_cpu=force_cpu)
+        e_dn= e_dn.to_number()
         return e_dn
 
     def energy_triangle_up_NoCheck(self, state, env, force_cpu=False):
@@ -268,15 +270,16 @@ class KAGOME_U1():
                 e_t_dn= self.energy_triangle_dn(state, env, force_cpu=force_cpu)
                 e_t_up= self.energy_triangle_up(state, env, force_cpu=force_cpu)
             else:
-                e_t_dn,_ = self.energy_triangle_dn_NoCheck(state, env, force_cpu=force_cpu)
-                e_t_up,_ = self.energy_triangle_up_NoCheck(state, env, force_cpu=force_cpu)
+                e_t_dn = self.energy_triangle_dn_NoCheck(state, env, force_cpu=force_cpu)
+                e_t_up = self.energy_triangle_up_NoCheck(state, env, force_cpu=force_cpu)
             obs["e_t_dn"]= e_t_dn
             obs["e_t_up"]= e_t_up
 
             for label in self.obs_ops.keys():
                 op= self.obs_ops[label]
                 obs_val,_ =rdm_kagome.rdm2x2_dn_triangle_with_operator((0, 0), state, env, op,\
-                    force_cpu=force_cpu).to_number()
+                    force_cpu=force_cpu)
+                obs_val= obs_val.to_number()
                 obs[f"{label}"]= obs_val
 
             for i in range(3):
@@ -285,11 +288,14 @@ class KAGOME_U1():
  
             # nn S.S pattern
             SS_dn_01,_= rdm_kagome.rdm2x2_dn_triangle_with_operator((0, 0), state, env,\
-                self.SS01, force_cpu=force_cpu).to_number()
+                self.SS01, force_cpu=force_cpu)
+            SS_dn_01= SS_dn_01.to_number()
             SS_dn_12,_= rdm_kagome.rdm2x2_dn_triangle_with_operator((0, 0), state, env,\
-                self.SS12, force_cpu=force_cpu).to_number()
+                self.SS12, force_cpu=force_cpu)
+            SS_dn_12= SS_dn_12.to_number()
             SS_dn_02,_= rdm_kagome.rdm2x2_dn_triangle_with_operator((0, 0), state, env,\
-                self.SS02, force_cpu=force_cpu).to_number()
+                self.SS02, force_cpu=force_cpu)
+            SS_dn_02= SS_dn_02.to_number()
             
             rdm_up= rdm_kagome.rdm2x2_up_triangle_open((0, 0), state, env, force_cpu=force_cpu)
             #bb=yast.tensordot(rdm_up.fuse_legs(axes=((0,1,2),(3,4,5))),self.Id3_t,([0,1],[1,0])).to_number()

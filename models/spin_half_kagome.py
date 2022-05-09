@@ -11,21 +11,24 @@ from math import sqrt
 from numpy import exp
 import itertools
 
-def _cast_to_real(t, fail_on_check=False, warn_on_check=True, imag_eps=1.0e-10):
-    if t.is_complex():
-        if (abs(t.imag)/abs(t.real) > imag_eps) or (abs(t.imag)> imag_eps):
-            if warn_on_check:
-                warnings.warn(f"Unexpected imaginary part "+str(t.imag),RuntimeWarning)
-            if fail_on_check: 
-                raise RuntimeError("Unexpected imaginary part "+str(t.imag))
-        return t.real
-    return t
+_cast_to_real= rdm._cast_to_real
 
 class S_HALF_KAGOME():
 
     def __init__(self, j1=1., JD=0, j1sq=0, j2=0, j2sq=0, jtrip=0.,\
         jperm=0+0j, h=0, phys_dim=2, global_args=cfg.global_args):
         r"""
+        :param j1: nearest-neighbour spin-spin interaction
+        :type j1: float
+        :param JD: Dzyaloshinskii-Moriya interaction
+        :type JD: float
+        :param jtrip: scalar chirality
+        :type jtrip: float
+        :param jperm: triangle exchange
+        :type jperm: complex
+        :param global_args: global configuration
+        :type global_args: GLOBALARGS
+
         Build spin-1/2 Hamiltonian on Kagome lattice
 
         .. math::
@@ -125,8 +128,7 @@ class S_HALF_KAGOME():
     #     :type imag_eps: float
 
     # Energy terms
-    def energy_triangle_dn(self, state, env, force_cpu=False, fail_on_check=False,\
-        warn_on_check=True, imag_eps=1.0e-10):
+    def energy_triangle_dn(self, state, env, force_cpu=False, **kwargs):
         r"""
         :param state: wavefunction
         :param env: CTM environment
@@ -142,10 +144,9 @@ class S_HALF_KAGOME():
         """
         e_dn, norm_2x2_dn= rdm_kagome.rdm2x2_dn_triangle_with_operator(\
             (0, 0), state, env, self.h_triangle, force_cpu=force_cpu)
-        return _cast_to_real(e_dn, fail_on_check=fail_on_check, warn_on_check=warn_on_check)
+        return _cast_to_real(e_dn, **kwargs)
 
-    def energy_triangle_dn_1x1(self, state, env, force_cpu=False, fail_on_check=False,\
-        warn_on_check=True):
+    def energy_triangle_dn_1x1(self, state, env, force_cpu=False, **kwargs):
         r"""
         :param state: wavefunction
         :param env: CTM environment
@@ -159,12 +160,11 @@ class S_HALF_KAGOME():
         Evaluate energy contribution from down triangle within 1x1 subsystem embedded in environment, 
         see :meth:`ctm.pess_kagome.rdm_kagome.rdm1x1_kagome`.
         """
-        rdm1x1_dn= rdm_kagome.rdm1x1_kagome((0, 0), state, env, force_cpu=force_cpu)
+        rdm1x1_dn= rdm_kagome.rdm1x1_kagome((0, 0), state, env, force_cpu=force_cpu, **kwargs)
         e_dn= torch.einsum('ijkmno,mnoijk', rdm1x1_dn, self.h_triangle )
-        return _cast_to_real(e_dn, fail_on_check=fail_on_check, warn_on_check=warn_on_check)
+        return _cast_to_real(e_dn, **kwargs)
 
-    def energy_triangle_up(self, state, env, force_cpu=False, fail_on_check=False,\
-        warn_on_check=True):
+    def energy_triangle_up(self, state, env, force_cpu=False, **kwargs):
         r"""
         :param state: wavefunction
         :param env: CTM environment
@@ -179,9 +179,9 @@ class S_HALF_KAGOME():
         see :meth:`ctm.pess_kagome.rdm_kagome.rdm2x2_up_triangle_open`.
         """
         rdm_up= rdm_kagome.rdm2x2_up_triangle_open(\
-            (0, 0), state, env, force_cpu=force_cpu)
+            (0, 0), state, env, force_cpu=force_cpu, **kwargs)
         e_up= torch.einsum('ijkmno,mnoijk', rdm_up, self.h_triangle )
-        return _cast_to_real(e_up, fail_on_check=fail_on_check, warn_on_check=warn_on_check)
+        return _cast_to_real(e_up, **kwargs)
 
     # These functions do not cast observable into Real, thus returning
     # complex numbers
@@ -251,7 +251,8 @@ class S_HALF_KAGOME():
     #     vP_12 = rdm.rdm1x1((0, 0), state, env, operator=bond_op) / norm_wf
     #     return(torch.real(vP_23), torch.real(vP_13), torch.real(vP_12))
 
-    def eval_obs(self, state, env, force_cpu=True, cast_real=False, disp_corre_len=False):
+    def eval_obs(self, state, env, force_cpu=True, cast_real=False, disp_corre_len=False,\
+        **kwargs):
         r"""
         :param state: wavefunction
         :param env: CTM environment
@@ -279,8 +280,8 @@ class S_HALF_KAGOME():
         obs= {"e_t_dn": 0, "e_t_up": 0, "m2_0": 0, "m2_1": 0, "m2_2": 0}
         with torch.no_grad():
             if cast_real:
-                e_t_dn= self.energy_triangle_dn(state, env, force_cpu=force_cpu)
-                e_t_up= self.energy_triangle_up(state, env, force_cpu=force_cpu)
+                e_t_dn= self.energy_triangle_dn(state, env, force_cpu=force_cpu, **kwargs)
+                e_t_up= self.energy_triangle_up(state, env, force_cpu=force_cpu, **kwargs)
             else:
                 e_t_dn= self.energy_triangle_dn_NoCheck(state, env, force_cpu=force_cpu)
                 e_t_up= self.energy_triangle_up_NoCheck(state, env, force_cpu=force_cpu)
@@ -288,10 +289,10 @@ class S_HALF_KAGOME():
             obs["e_t_up"]= e_t_up
 
             # compute on-site observables i.e. magnetizations
-            norm_wf_1x1 = rdm.rdm1x1((0, 0), state, env, operator=self.Id3_t)
+            norm_wf_1x1 = rdm_kagome.trace1x1_dn_kagome((0, 0), state, env, self.Id3_t)
             for label in self.obs_ops.keys():
                 op= self.obs_ops[label].view(self.phys_dim**3, self.phys_dim**3)
-                obs_val= rdm.rdm1x1((0, 0), state, env, operator=op) / norm_wf_1x1
+                obs_val= rdm_kagome.trace1x1_dn_kagome((0, 0), state, env, op) / norm_wf_1x1
                 obs[f"{label}"]= obs_val
 
             # compute magnitude of magnetization, m^2, on-site
@@ -302,17 +303,17 @@ class S_HALF_KAGOME():
             # nn S.S pattern. In self.SSnnId, the identity is placed on s2 of three sites
             # in the unitcell i.e. \vec{S}_0 \cdot \vec{S}_1 \otimes Id_2
             SS_dn_01,norm_2x2_dn= rdm_kagome.rdm2x2_dn_triangle_with_operator(\
-                (0, 0), state, env, self.SSnnId, force_cpu=force_cpu)
+                (0, 0), state, env, self.SSnnId, force_cpu=force_cpu, **kwargs)
             # move identity from site 2 to site 0
             SS_dn_12,_= rdm_kagome.rdm2x2_dn_triangle_with_operator(\
                 (0, 0), state, env, self.SSnnId.permute(2,1,0, 5,4,3).contiguous(),\
-                force_cpu=force_cpu)
+                force_cpu=force_cpu, **kwargs)
             # move identity from site 2 to site 1
             SS_dn_02,_= rdm_kagome.rdm2x2_dn_triangle_with_operator(\
                 (0, 0), state, env, self.SSnnId.permute(0,2,1, 3,5,4).contiguous(),\
-                force_cpu=force_cpu)
+                force_cpu=force_cpu, **kwargs)
             rdm_up= rdm_kagome.rdm2x2_up_triangle_open(\
-                (0, 0), state, env, force_cpu=force_cpu)
+                (0, 0), state, env, force_cpu=force_cpu, **kwargs)
             SS_up_01= torch.einsum('ijkmno,mnoijk', rdm_up, self.SSnnId )
             SS_up_12= torch.einsum('ijkmno,mnoijk', rdm_up, self.SSnnId.permute(2,1,0, 5,4,3) )
             SS_up_02= torch.einsum('ijkmno,mnoijk', rdm_up, self.SSnnId.permute(0,2,1, 3,5,4) )

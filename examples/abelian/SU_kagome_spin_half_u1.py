@@ -11,7 +11,7 @@ from ipeps.ipess_kagome_abelian import *
 from ctm.generic_abelian.env_abelian import *
 import ctm.generic_abelian.ctmrg as ctmrg
 import ctm.pess_kagome_abelian.rdm_kagome as rdm_kagome
-from models.abelian import kagome_spin_half_u1
+from models.abelian import kagome_u1
 from itevol.itebd_ipess_kagome_abelian import itebd 
 #from optim.ad_optim_lbfgs_mod import optimize_state
 import scipy.io as io
@@ -64,7 +64,7 @@ def main(args=args):
     if not args.theta is None:
         args.j1= args.j1*math.cos(args.theta*math.pi)
         args.jtrip= args.j1*math.sin(args.theta*math.pi)
-    model= kagome_spin_half_u1.KAGOME_U1(settings_U1, j1=args.j1, JD=args.JD, j1sq=args.j1sq,\
+    model= kagome_u1.KAGOME_U1(settings_U1, j1=args.j1, JD=args.JD, j1sq=args.j1sq,\
         j2=args.j2, j2sq=args.j2sq, jtrip=args.jtrip, jperm=args.jperm, h=args.h)
     # elementary term of the Hamiltonian
     H=model.h_triangle
