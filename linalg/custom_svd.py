@@ -95,6 +95,9 @@ def truncated_svd_symeig(M, chi, abs_tol=1.0e-14, rel_tol=None, keep_multiplets=
     Returned tensors have dimensions
 
     .. math:: dim(U)=(N,\chi),\ dim(S)=(\chi,\chi),\ \textrm{and}\ dim(V)=(N,\chi)
+
+    .. note::
+        This function does not support autograd.
     """
     U, S, V = SVDSYMEIG.apply(M)
 
@@ -161,6 +164,9 @@ def truncated_svd_symarnoldi(M, chi, abs_tol=1.0e-14, rel_tol=None, keep_multipl
     Returned tensors have dimensions 
 
     .. math:: dim(U)=(N,\chi),\ dim(S)=(\chi,\chi),\ \textrm{and}\ dim(V)=(N,\chi)
+
+    .. note::
+        This function does not support autograd.
     """
     U, S, V = SVDSYMARNOLDI.apply(M, chi+int(keep_multiplets))
 
@@ -223,6 +229,9 @@ def truncated_svd_arnoldi(M, chi, abs_tol=1.0e-14, rel_tol=None, keep_multiplets
     up to rank :math:`\chi`. Returned tensors have dimensions 
 
     .. math:: dim(U)=(N,\chi),\ dim(S)=(\chi,\chi),\ \textrm{and}\ dim(V)=(N,\chi)
+
+    .. note::
+        This function does not support autograd.
     """
     U, S, V = SVDARNOLDI.apply(M, chi+int(keep_multiplets))
 

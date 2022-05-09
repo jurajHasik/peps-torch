@@ -87,16 +87,16 @@ class SVDARNOLDI(torch.autograd.Function):
         r"""
         :param M: square matrix :math:`N \times N`
         :param k: desired rank (must be smaller than :math:`N`)
-        :type M: torch.tensor
+        :type M: torch.Tensor
         :type k: int
         :return: leading k left eigenvectors U, singular values S, and right 
                  eigenvectors V
-        :rtype: torch.tensor, torch.tensor, torch.tensor
+        :rtype: torch.Tensor, torch.Tensor, torch.Tensor
 
         **Note:** `depends on scipy`
 
         Return leading k-singular triples of a matrix M, by computing 
-        the symmetric decomposition of H=MM^T as :math:`H= UDU^T` 
+        the symmetric decomposition of :math:`H=MM^\dagger` as :math:`H= UDU^\dagger` 
         up to rank k. Partial eigendecomposition is done through Arnoldi method.
         """
         # input validation is provided by the scipy.sparse.linalg.eigsh / 
@@ -152,6 +152,9 @@ class SVDARNOLDI(torch.autograd.Function):
 
     @staticmethod
     def backward(self, dU, dS, dV):
+        r"""
+        The backward is not implemented.
+        """
         raise Exception("backward not implemented")
         U, S, V = self.saved_tensors
         dA= None

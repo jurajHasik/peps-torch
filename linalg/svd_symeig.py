@@ -12,10 +12,10 @@ class SVDSYMEIG(torch.autograd.Function):
     def forward(self, A):
         r"""
         :param A: square symmetric matrix
-        :type A: torch.tensor
+        :type A: torch.Tensor
         :return: left singular vectors U, singular values S, and right singular
                 vectors V
-        :rtype: torch.tensor, torch.tensor, torch.tensor
+        :rtype: torch.Tensor, torch.Tensor, torch.Tensor
 
         Computes SVD of a matrix M, where M is symmetric :math:`M=M^T`,     
         through symmetric decomposition :math:`M= UDU^T`.

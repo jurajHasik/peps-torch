@@ -93,6 +93,9 @@ def truncated_eig_symarnoldi(M, chi, abs_tol=1.0e-14, rel_tol=None, keep_multipl
     Returned tensors have dimensions 
 
     .. math:: dim(D)=(\chi),\ dim(U)=(N,\chi)
+
+    .. note::
+        This function does not support autograd.
     """
     D, U= SYMARNOLDI.apply(M, chi+int(keep_multiplets))
 
@@ -155,6 +158,9 @@ def truncated_eig_arnoldi(M, chi, v0=None, dtype=None, device=None,
     Returned tensors have dimensions 
 
     .. math:: dim(D)=(\chi),\ dim(U)=(N,\chi)
+
+    .. note::
+        This function does not support autograd.
     """
 
     D, U= ARNOLDI.apply(M, chi+int(keep_multiplets), v0, dtype, device)

@@ -1,19 +1,22 @@
-'''
-Implementation taken from https://arxiv.org/abs/1903.09650
-which follows derivation given in https://people.maths.ox.ac.uk/gilesm/files/NA-08-01.pdf
-'''
 import torch
 import numpy as np
-try:
-    import pkg_resources
-    USE_TORCHLINALG= pkg_resources.parse_version(torch.__version__) > pkg_resources.parse_version("1.8.1")
-except ModuleNotFoundError:
+
+def _torch_version_check(version):
+    # for version="X.Y.Z" checks if current version is higher or equal to X.Y
+    assert version.count('.')==2 and version.replace('.','').isdigit(),"Invalid version string"
     try:
-        from packaging import version
-        USE_TORCHLINALG= version.parse(torch.__version__) > version.parse("1.8.1")
+        import pkg_resources
+        return pkg_resources.parse_version(torch.__version__) >= pkg_resources.parse_version(version)
     except ModuleNotFoundError:
-        tokens= torch.__version__.split('.')
-        USE_TORCHLINALG= int(tokens[0]) > 1 or (int(tokens[0]) >= 1 and int(tokens[1]) > 8) 
+        try:
+            from packaging import version
+            return version.parse(torch.__version__) >= version.parse(version)
+        except ModuleNotFoundError:
+            tokens= torch.__version__.split('.')
+            tokens_v= version.split('.')
+            return int(tokens[0]) > int(tokens_v[0]) or \
+                (int(tokens[0])==int(tokens_v[0]) and int(tokens[1]) >= int(tokens_v[1])) 
+    return True 
 
 def safe_inverse(x, epsilon=1E-12):
     return x/(x**2 + epsilon)
@@ -69,9 +72,21 @@ class SVDGESDD_legacy(torch.autograd.Function):
         return dA, None, None
 
 class SVDGESDD(torch.autograd.Function):
-    if USE_TORCHLINALG:
+    if _torch_version_check("1.8.1"):
         @staticmethod
         def forward(self, A, cutoff, diagnostics):
+            r"""
+            :param A: rank-2 tensor
+            :type A: torch.Tensor
+            :param cutoff: cutoff for backward function
+            :type cutoff: torch.Tensor
+            :param diagnostics: optional dictionary for debugging purposes
+            :type diagnostics: dict
+            :return: U, S, V
+            :rtype: torch.Tensor, torch.Tensor, torch.Tensor
+
+            Computes SVD decompostion of matrix :math:`A = USV^\dagger`.
+            """
             # A = U @ diag(S) @ Vh
             U, S, Vh = torch.linalg.svd(A)
             V= Vh.transpose(-2,-1).conj()
@@ -81,6 +96,18 @@ class SVDGESDD(torch.autograd.Function):
     else:
         @staticmethod
         def forward(self, A, cutoff, diagnostics):
+            r"""
+            :param A: rank-2 tensor
+            :type A: torch.Tensor
+            :param cutoff: cutoff for backward function
+            :type cutoff: torch.Tensor
+            :param diagnostics: optional dictionary for debugging purposes
+            :type diagnostics: dict
+            :return: U, S, V
+            :rtype: torch.Tensor, torch.Tensor, torch.Tensor
+
+            Computes SVD decompostion of matrix :math:`A = USV^\dagger`.
+            """
             U, S, V = torch.svd(A)
             self.diagnostics= diagnostics
             self.save_for_backward(U, S, V, cutoff)
@@ -179,11 +206,39 @@ class SVDGESDD(torch.autograd.Function):
 
     @staticmethod
     def backward(self, gu, gsigma, gv):
-        # Adopted from
-        # https://github.com/pytorch/pytorch/blob/v1.10.2/torch/csrc/autograd/FunctionsManual.cpp
-        # 
-        # using S_i/(S^2_i-S^2_j) = (F_ij+G_ij)/2 and S_j/(S^2_i-S^2_j) = (F_ij-G_ij)/2,
-        # where F_ij=1/(S_i-S_j), G_ij=1/(S_i+S_j)
+        r"""
+        :param gu: gradient on U
+        :type gu: torch.Tensor
+        :param gsigma: gradient on S
+        :type gsigma: torch.Tensor
+        :param gv: gradient on V
+        :type gv: torch.Tensor
+        :return: gradient
+        :rtype: torch.Tensor
+
+        Computes backward gradient for SVD, adopted from 
+        https://github.com/pytorch/pytorch/blob/v1.10.2/torch/csrc/autograd/FunctionsManual.cpp
+        
+        For complex-valued input there is an additional term, see
+
+            * https://giggleliu.github.io/2019/04/02/einsumbp.html
+            * https://arxiv.org/abs/1909.02659
+
+        The backward is regularized following
+        
+            * https://github.com/wangleiphy/tensorgrad/blob/master/tensornets/adlib/svd.py
+            * https://arxiv.org/abs/1903.09650
+
+        using 
+
+        .. math:: 
+            S_i/(S^2_i-S^2_j) = (F_{ij}+G_{ij})/2\ \ \textrm{and}\ \ S_j/(S^2_i-S^2_j) = (F_{ij}-G_{ij})/2
+        
+        where 
+        
+        .. math:: 
+            F_{ij}=1/(S_i-S_j),\ G_{ij}=1/(S_i+S_j)
+        """
         # 
         # TORCH_CHECK(compute_uv,
         #    "svd_backward: Setting compute_uv to false in torch.svd doesn't compute singular matrices, ",

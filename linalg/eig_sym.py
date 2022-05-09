@@ -1,18 +1,5 @@
-'''
-Implementation taken from https://arxiv.org/abs/1903.09650
-which follows derivation given in https://people.maths.ox.ac.uk/gilesm/files/NA-08-01.pdf
-'''
 import torch
-try:
-    import pkg_resources
-    USE_TORCHLINALG= pkg_resources.parse_version(torch.__version__) > pkg_resources.parse_version("1.8.1")
-except ModuleNotFoundError:
-    try:
-        from packaging import version
-        USE_TORCHLINALG= version.parse(torch.__version__) > version.parse("1.8.1")
-    except ModuleNotFoundError:
-        tokens= torch.__version__.split('.')
-        USE_TORCHLINALG= int(tokens[0]) > 1 or (int(tokens[0]) >= 1 and int(tokens[1]) > 8)
+from .svd_gesdd import _torch_version_check
 
 def safe_inverse(x, epsilon=1E-12):
     return x/(x**2 + epsilon)
@@ -22,18 +9,18 @@ def safe_inverse_2(x, epsilon):
     return x.pow(-1)
 
 class SYMEIG(torch.autograd.Function):
-    if USE_TORCHLINALG:
+    if _torch_version_check("1.8.1"):
         @staticmethod
         def forward(self, A, ad_decomp_reg):
             r"""
             :param A: square symmetric matrix
-            :type A: torch.tensor
+            :type A: torch.Tensor
             :return: eigenvalues values D, eigenvectors vectors U
-            :rtype: torch.tensor, torch.tensor
+            :rtype: torch.Tensor, torch.Tensor
 
-            Computes symmetric decomposition :math:`M= UDU^\dag`.
+            Computes symmetric decomposition :math:`M= UDU^\dagger`.
             """
-            # input validation (A is square and symmetric) is provided by torch.symeig
+            # is input validation (A is square and symmetric) provided by torch.linalg.eigh ?
             
             D, U = torch.linalg.eigh(A)
             # torch.symeig returns eigenpairs ordered in the ascending order with 
@@ -54,14 +41,10 @@ class SYMEIG(torch.autograd.Function):
             :return: eigenvalues values D, eigenvectors vectors U
             :rtype: torch.tensor, torch.tensor
 
-            Computes symmetric decomposition :math:`M= UDU^\dag`.
+            Computes symmetric decomposition :math:`M= UDU^\dagger`.
             """
-            # input validation (A is square and symmetric) is provided by torch.symeig
             
             D, U = torch.symeig(A, eigenvectors=True)
-            # torch.symeig returns eigenpairs ordered in the ascending order with 
-            # respect to eigenvalues. Reorder the eigenpairs by abs value of the eigenvalues
-            # abs(D)
             absD,p= torch.sort(torch.abs(D),descending=True)
             D= D[p]
             U= U[:,p]
@@ -71,6 +54,17 @@ class SYMEIG(torch.autograd.Function):
 
     @staticmethod
     def backward(self, dD, dU):
+        r"""
+        :param dD: gradient on D
+        :type dD: torch.Tensor
+        :param dU: gradient on U
+        :type dU: torch.Tensor
+        :return: gradient
+        :rtype: torch.Tensor
+
+        Computes backward gradient for ED of symmetric matrix with regularization
+        of :math:`F_{ij}=1/(D_i - D_j)`
+        """
         D, U, ad_decomp_reg= self.saved_tensors
         Uh = U.t().conj()
         D_scale= D[0].abs() # D is ordered in descending fashion by abs val
