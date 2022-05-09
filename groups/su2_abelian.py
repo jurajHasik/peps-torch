@@ -193,15 +193,17 @@ class SU2_U1():
 
     def __init__(self, settings, J):
         r"""
+        :param settings: YAST configuration
+        :type settings: NamedTuple or SimpleNamespace (TODO link to definition)
         :param J: dimension of irrep
-        :param dtype: data type of matrix representation of operators
-        :param device: device on which the torch.tensor objects are stored
         :type J: int
-        :type dtype: torch.dtype
-        :type device: int
 
         Build a representation J of SU(2) group. The J corresponds to (physics) 
-        spin irrep notation as spin :math:`S = (J-1)/2`.
+        spin irrep notation as spin :math:`S = (J-1)/2`. This representation
+        uses explicit U(1) symmetry (subgroup) making all operators/tensors block-sparse.  
+
+        The signature convention :math:`O = \sum_{ij} O_{ij}|i\rangle\langle j|` is -1 for 
+        index `i` (:math:`|ket\rangle`) and +1 for index `j` (:math:`\langle bra|`).
 
         The raising and lowering operators are defined as:
 
@@ -227,7 +229,7 @@ class SU2_U1():
     def I(self):
         r"""
         :return: Identity operator of irrep
-        :rtype: torch.tensor
+        :rtype: yast.Tensor
         """
         op= yast.Tensor(self.engine, s=self._REF_S_DIRS, n=0)
         for j in range(-self.HW,self.HW+1,2):
@@ -239,7 +241,7 @@ class SU2_U1():
     def SZ(self):
         r"""
         :return: :math:`S^z` operator of irrep
-        :rtype: torch.tensor
+        :rtype: yast.Tensor
         """
         unit_block= np.ones((1,1), dtype=self.dtype)
         op= yast.Tensor(self.engine, s=self._REF_S_DIRS, n=0)
@@ -252,20 +254,20 @@ class SU2_U1():
     def SP(self):
         r"""
         :return: :math:`S^+` operator of irrep.
-        :rtype: torch.tensor
+        :rtype: yast.Tensor
 
-        The s^+ operator maps states with s^z = x to states with
-        s^z = x+1 . Therefore as a matrix it must act as follows
-        on vector of basis elements of spin S representation (in
-        this particular order) |S M>
+        The :math:`S^+` operator maps states with :math:`S^z = x` to states with
+        :math:`S^z = x+1` . Therefore as a matrix it must act as follows
+        on vector of basis elements of spin-S representation (in
+        this particular order) :math:`|S M\rangle` ::
         
-            |-S  >    C_+|-S+1>           0 1 0 0 ... 0
-        s^+ |-S+1>  = C_+|-S+2>  => S^+ = 0 0 1 0 ... 0 x C_+
-             ...         ...              ...
-            | S-1>    C_+| S  >           0    ...  0 1
-            | S  >     0                  0    ...  0 0
+                |-S  >    C_+|-S+1>           0 1 0 0 ... 0
+            S^+ |-S+1>  = C_+|-S+2>  => S^+ = 0 0 1 0 ... 0 x C_+
+                 ...         ...                   ...
+                | S-1>    C_+| S  >           0    ...  0 1
+                | S  >        0               0    ...  0 0  
         
-        where C_+ = sqrt(S(S+1)-M(M+1))
+        where :math:`C_+ = \sqrt{S(S+1)-M(M+1)}`.
         """
         unit_block= np.ones((1,1), dtype=self.dtype)
         op= yast.Tensor(self.engine, s=self._REF_S_DIRS, n=-2)
@@ -279,20 +281,20 @@ class SU2_U1():
     def SM(self):
         r"""
         :return: :math:`S^-` operator of irrep.
-        :rtype: torch.tensor
+        :rtype: yast.Tensor
 
-        The s^- operator maps states with s^z = x to states with
-        s^z = x-1 . Therefore as a matrix it must act as follows
+        The :math:`S^-` operator maps states with :math:`S^z = x` to states with
+        :math:`S^z = x-1` . Therefore as a matrix it must act as follows
         on vector of basis elements of spin S representation (in
-        this particular order) |S M>
+        this particular order) :math:`|S M\rangle` ::
         
-            |-S  >     0                  0 0 0 0 ... 0
-        s^- |-S+1>  = C_-|-S  >  => S^- = 1 0 0 0 ... 0 x C_-
-             ...         ...              ...
-            | S-1>    C_-| S-2>           0   ... 1 0 0
-            | S  >    C_-| S-1>           0   ... 0 1 0
+                |-S  >     0                  0 0 0 0 ... 0
+            S^- |-S+1>  = C_-|-S  >  => S^- = 1 0 0 0 ... 0 x C_-
+                 ...         ...              ...
+                | S-1>    C_-| S-2>           0   ... 1 0 0
+                | S  >    C_-| S-1>           0   ... 0 1 0
         
-        where C_- = sqrt(S(S+1)-M(M-1))
+        where :math:`C_- = \sqrt{S(S+1)-M(M-1)}`.
         """
         unit_block= np.ones((1,1), dtype=self.dtype)
         op= yast.Tensor(self.engine, s=self._REF_S_DIRS, n=2)
@@ -307,15 +309,24 @@ class SU2_U1():
         raise NotImplementedError("AFM rotation operator is not compatible with U(1) symmetry")    
     
     def S_zpm(self):
-        # 1(-1)
-        # S--0(-1)
-        # 2(+1)
+        r"""
+        :return: vector of su(2) generators as rank-3 tensor 
+        :rtype: yast.Tensor
+        
+        Returns vector with representation of su(2) generators, in order: :math:`S^z, S^+, S^-`.
+        The generators are indexed by first index of the resulting rank-3 tensors.
+        Signature convention is::    
+
+            1(-1)
+            S--0(-1)
+            2(+1)
+        """
         # op_v= yast.Tensor(self.engine, s=[-1]+list(self._REF_S_DIRS), n=0)
         # op_sz, op_sp, op_sm= self.SZ(), self.SP(), self.SM()
         # for op in [op_sz, op_sp, op_sm]:
         #     for c in op.A:
         #         op_v.set_block(ts=(op.get_tensor_charge()[0],*c), val=op.A[c][None,:,:])
-        
+
         op_v= yast.block({i: t.add_leg(axis=0,s=-1) for i,t in enumerate([\
             self.SZ(), self.SP(), self.SM()])}, common_legs=[1,2])
         return op_v

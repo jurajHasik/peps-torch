@@ -2,5 +2,6 @@ Groups
 ======
 
 .. toctree::
+    :glob:
 
-    su2
+    groups/*

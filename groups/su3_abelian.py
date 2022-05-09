@@ -7,20 +7,17 @@ class SU3_DEFINING_U1xU1():
 
     def __init__(self, settings, p=1, q=0):
         r"""
-        :param (p, q): labels of highest weight for su(3) representations. (1, 0) - defining representation
-        :param dtype: data type of matrix representation of operators
-        :param device: device on which the torch.tensor objects are stored
+        :param p: (p,q) labels of the highest weight state of su(3) representation. 
+                  For defining representation ``p=1, q=0``.
+        :type p: int
+        :param q:
+        :type q: int
+        :param settings: YAST configuration
+        :type settings: NamedTuple or SimpleNamespace (TODO link to definition)
 
-        Build the defining representation "3" of su(3) Lie algebra using the Cartan-Weyl basis, $\lambda_i$.
-
-        The U(1)xU(1) charges for states defining (1,0) irrep can be assigned
-        as (rescaled) eigenvalues of T^z and Y operators
-
-            ( 1,  1)
-            (-1,  1)
-            ( 0, -2)
-
-        The quadratic Casimir operator of su(3) can be expressed in terms of the C-W basis, defined as follow.
+        Build the defining representation :math:`\bf{3}` of su(3) Lie algebra using 
+        the Cartan-Weyl basis. In terms of the standard Gell-Mann matrices :math:`\lambda`,
+        the C-W basis is:
 
         .. math::
             \begin{align*}
@@ -31,6 +28,20 @@ class SU3_DEFINING_U1xU1():
             Y     &= \frac{1}{\sqrt{3}} \lambda_8 = \frac{2}{\sqrt{3}} F_8
             \end{align*}
 
+        The U(1)xU(1) charges for states spanning :math:`\mathbf{3}=(1,0)` irrep can be assigned
+        as (rescaled) eigenvalues of diagonal :math:`T^z` and Y operators::
+
+            ( 1,  1)
+            (-1,  1)
+            ( 0, -2)
+
+        The signature convention :math:`O = \sum_{ij} O_{ij}|i\rangle\langle j|` is -1 for 
+        index `i` (:math:`|ket\rangle`) and +1 for index `j` (:math:`\langle bra|`).
+
+
+        The quadratic Casimir operator of su(3) can be expressed in terms of the C-W basis, defined as follow.
+
+        .. math::
             \begin{align*}
             C_1 = \sum_{k}{F_k F_k} &= \frac{1}{2} (T^+ T^- + T^- T^+ + V^+ V^- + V^- V^+ + U^+ U^- + U^- U^+) \\
                                     &+ T^z T^z + \frac{3}{4} Y Y
@@ -42,7 +53,7 @@ class SU3_DEFINING_U1xU1():
         self.dtype= settings.default_dtype
         self.device= 'cpu' if not hasattr(settings, 'device') else settings.device
         
-        assert p==1 and q==0, "Only (1,0) irrep is implemented"
+        assert p==1 and q==0, "su(3) irrep ("+str(p)+","+str(q)+") not implemented."
         self.p = p
         self.q = q
         self.charges= [(1,1), (-1,1), (0,-2)] 
@@ -149,7 +160,13 @@ class SU3_DEFINING_U1xU1():
         return op
 
     def G(self):
-        # metric tensor on adjoint irrep
+        r"""
+        :return: metric tensor on adjoint irrep :math:`\mathbf{8}=(1,1)`.
+        :rtype: yast.Tensor
+
+        Returns rank-2 tensor G, such that the quadratic Casimir in terms of C-W basis :math:`\vec{T}`
+        can be computed as :math:`\vec{T}^T G \vec{T}`.
+        """
         unit_block= np.ones((1,1), dtype=self.dtype)
         
         # charges on 0-th index, indexing generators of su(3) defined in the space
@@ -186,8 +203,8 @@ class SU3_DEFINING_U1xU1():
              |
              2(+1)
             
-        The extra index is charged, such that the total tensors in U(1)xU(1)
-        invariant.
+        The first index, which runs over generators, is charged, such that the total tensor 
+        is U(1)xU(1)-invariant.
         """
         op_v= yast.block({i: t.add_leg(axis=0,s=-1) for i,t in enumerate([\
             self.TZ(), self.Y(), self.TP(), self.TM(), self.VP(), self.VM(),\
@@ -197,7 +214,7 @@ class SU3_DEFINING_U1xU1():
     def C1(self):
         r"""
         :return: The quadratic Casimir of su(3) as rank-4 for tensor
-        :rtype: torch.tensor
+        :rtype: yast.Tensor
         """
         # spin-spin interaction \sum_k{\vec{F}_{1,k}\vec{S}_{2,k}} between F-spins on sites 1 and 2
         

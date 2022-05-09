@@ -6,17 +6,21 @@ import numpy as np
 class SU3_DEFINING():
     def __init__(self, p=1, q=0, dtype=torch.complex128, device='cpu'):
         r"""
-        :param (p, q): labels of highest weight for su(3) representations. (1, 0) - defining representation
+        :param p: (p,q) labels of the highest weight state of su(3) representation. 
+                  For defining representation ``p=1, q=0``.
+        :type p: int
+        :param q:
+        :type q: int
         :param dtype: data type of matrix representation of operators
         :param device: device on which the torch.tensor objects are stored
         :type J: int
         :type dtype: torch.dtype
         :type device: int
 
-        Build the defining representation "3" of su(3) Lie algebra using the Cartan-Weyl basis, $\lambda_i$.
-
-        The quadratic Casimir operator of su(3) can be expressed in terms of the C-W basis, defined as follow.
-
+        Build the defining representation :math:`\bf{3}` of su(3) Lie algebra using 
+        the Cartan-Weyl (C-W) basis. In terms of the standard Gell-Mann matrices :math:`\lambda`,
+        the C-W basis is:
+    
         .. math::
             \begin{align*}
             T^\pm &= \frac{1}{2} (\lambda_1 \pm i\lambda_2) = (F_1 \pm iF_2)\\
@@ -26,11 +30,15 @@ class SU3_DEFINING():
             Y     &= \frac{1}{\sqrt{3}} \lambda_8 = \frac{2}{\sqrt{3}} F_8
             \end{align*}
 
+        The quadratic Casimir operator of su(3) can be expressed in terms of the C-W basis, defined as follow.
+
+        .. math::
             \begin{align*}
             C_1 = \sum_{k}{F_k F_k} &= \frac{1}{2} (T^+ T^- + T^- T^+ + V^+ V^- + V^- V^+ + U^+ U^- + U^- U^+) \\
                                     &+ T^z T^z + \frac{3}{4} Y Y
             \end{align*}
         """
+        assert p==1 and q==0, "su(3) irrep ("+str(p)+","+str(q)+") not implemented."
         self.p = p
         self.q = q
         self.dtype = dtype
@@ -102,8 +110,10 @@ class SU3_DEFINING():
     def Cartan_Weyl(self):
         r"""
         :return: vector of generators forming Cartan-Weyl basis ordered
-                 as [T^+, T^-, T^z, V^+, V^-, U^+, U^-, Y]
+                 as [T^+, T^-, T^z, V^+, V^-, U^+, U^-, Y].
         :rtype: torch.tensor
+
+        Returns a rank-3 tensor with first index running over generators.
         """
         J = torch.zeros(8, 3, 3, dtype=self.dtype, device=self.device)
         J[0, :, :] = self.TP()
@@ -121,6 +131,8 @@ class SU3_DEFINING():
         r"""
         :return: :math:`\vec{\lambda}` vector of Gell-Mann matrices
         :rtype: torch.tensor
+
+        Returns a rank-3 tensor with first index running over generators.
         """
         J = torch.zeros(8, 3, 3, dtype=self.dtype, device=self.device)
         J[0, :, :] = self.TP() + self.TM()
