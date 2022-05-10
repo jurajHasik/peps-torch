@@ -135,8 +135,7 @@ class COUPLEDLADDERS_NOSYM():
         #
         # (-1)0--|rho|--2(+1) (-1)0--|S.S|--2(+1)
         # (-1)1--|   |--3(+1) (-1)1--|   |--3(+1)
-        # _ci= ([0,1,2,3],[2,3,0,1])
-        _ci= ([0,1,2,3],[0,1,2,3])
+        _ci= ([0,1,2,3],[2,3,0,1])
         _tmp_t= yast.ones(config=state.engine, s=(-1, -1, 1, 1),
                   t=((-1, 1), (-1, 1), (-1, 1), (-1, 1)),
                   D=((1, 1), (1, 1), (1, 1), (1, 1)))
@@ -201,8 +200,7 @@ class COUPLEDLADDERS_NOSYM():
             \end{align*}
         """
         obs= dict({"avg_m": 0.})
-        # _ci= ([0,1],[1,0])
-        _ci= ([0,1],[0,1])
+        _ci= ([0,1],[1,0])
         _tmp_t= yast.ones(config=state.engine, s=(-1, 1),
                   t=((-1, 1), (-1, 1)),
                   D=((1, 1), (1, 1)))
@@ -215,8 +213,7 @@ class COUPLEDLADDERS_NOSYM():
             obs["avg_m"] += obs[f"m{coord}"]
         obs["avg_m"]= obs["avg_m"]/len(state.sites.keys())
     
-        # _ci= ([0,1,2,3],[2,3,0,1])
-        _ci= ([0,1,2,3],[0,1,2,3])
+        _ci= ([0,1,2,3],[2,3,0,1])
         _tmp_t= yast.ones(config=state.engine, s=(-1, -1, 1, 1),
                   t=((-1, 1), (-1, 1), (-1, 1), (-1, 1)),
                   D=((1, 1), (1, 1), (1, 1), (1, 1)))

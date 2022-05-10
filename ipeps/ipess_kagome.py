@@ -655,7 +655,8 @@ def read_ipess_kagome_pg(jsonfile, peps_args=cfg.peps_args, global_args=cfg.glob
     with open(jsonfile) as j:
         raw_state = json.load(j)
 
-        SYM_UP_DOWN= raw_state["SYM_UP_DOWN"]
+        SYM_UP_DOWN= True
+        if "SYM_UP_DOWN" in raw_state.keys(): SYM_UP_DOWN= raw_state["SYM_UP_DOWN"]
         SYM_BOND_S= True
         if "SYM_BOND_S" in raw_state.keys(): SYM_BOND_S= raw_state["SYM_BOND_S"] 
 

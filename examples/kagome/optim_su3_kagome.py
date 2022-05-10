@@ -1,3 +1,4 @@
+import os
 import context
 import torch
 import argparse
@@ -27,7 +28,7 @@ parser.add_argument("--phi", type=float, default=0.5, help="parametrization betw
 parser.add_argument("--theta", type=float, default=0., help="parametrization between "\
     +"normal and chiral terms in the units of pi")
 parser.add_argument("--ansatz", type=str, default=None, help="choice of the tensor ansatz",\
-     choices=["IPEPS", "IPESS", "IPESS_PG", "A_2,B"])
+     choices=["IPEPS", "IPESS", "IPESS_PG", "A_1,B", "A_2,B"])
 parser.add_argument("--no_sym_up_dn", action='store_false', dest='sym_up_dn',\
     help="same trivalent tensors for up and down triangles")
 parser.add_argument("--no_sym_bonds", action='store_false', dest='sym_bond_S',\
@@ -52,8 +53,9 @@ def main():
     model = su3_kagome.KAGOME_SU3(phys_dim=3, j=param_j, k=param_k, h=param_h)
     
     # 1) initialize the ipess/ipeps
-    if args.ansatz in ["IPESS","IPESS_PG","A_2,B"]:
+    if args.ansatz in ["IPESS","IPESS_PG","A_1,B","A_2,B"]:
         ansatz_pgs= None
+        if args.ansatz=="A_1,B": ansatz_pgs= IPESS_KAGOME_PG.PG_A1_B
         if args.ansatz=="A_2,B": ansatz_pgs= IPESS_KAGOME_PG.PG_A2_B
         
         if args.instate!=None:
@@ -62,7 +64,7 @@ def main():
                     state= read_ipess_kagome_generic(args.instate)
                 else:
                     state= read_ipess_kagome_generic_legacy(args.instate, ansatz=args.ansatz)
-            elif args.ansatz in ["IPESS_PG","A_2,B"]:
+            elif args.ansatz in ["IPESS_PG","A_1,B","A_2,B"]:
                 if not args.legacy_instate:
                     state= read_ipess_kagome_pg(args.instate)
                 else:
@@ -98,7 +100,7 @@ def main():
                 dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
             B_b= torch.zeros(3, args.bond_dim, args.bond_dim,\
                 dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
-            if args.ansatz in ["IPESS_PG", "A_2,B"]:
+            if args.ansatz in ["IPESS_PG", "A_1,B", "A_2,B"]:
                 state= IPESS_KAGOME_PG(T_u, B_c, T_d=T_d, B_a=B_a, B_b=B_b,\
                     SYM_UP_DOWN=args.sym_up_dn,SYM_BOND_S=args.sym_bond_S, pgs=ansatz_pgs)
             elif args.ansatz in ["IPESS"]:
@@ -117,7 +119,7 @@ def main():
                 dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)-1.0
             B_b= torch.rand(3, args.bond_dim, args.bond_dim,\
                 dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)-1.0
-            if args.ansatz in ["IPESS_PG", "A_2,B"]:
+            if args.ansatz in ["IPESS_PG", "A_1,B", "A_2,B"]:
                 state = IPESS_KAGOME_PG(T_u, B_c, T_d=T_d, B_a=B_a, B_b=B_b,\
                     SYM_UP_DOWN=args.sym_up_dn,SYM_BOND_S=args.sym_bond_S, pgs=ansatz_pgs,\
                     pg_symmetrize=True)
@@ -156,7 +158,7 @@ def main():
 
     print(state)
     # we want to use single triangle energy evaluation for CTM
-    # converge as its much cheaper than considering up triangles
+    # convergence as its much cheaper than considering up triangles
     # which require 2x2 subsystem
     energy_f_down_t_1x1subsystem= model.energy_down_t_1x1subsystem
     energy_f= model.energy_per_site_2x2subsystem
@@ -165,7 +167,8 @@ def main():
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
             history = []
-        e_curr = energy_f_down_t_1x1subsystem(state, env, force_cpu=args.force_cpu)
+        e_curr = energy_f_down_t_1x1subsystem(state, env, force_cpu=args.force_cpu,\
+            fail_on_check=False, warn_on_check=False)
         history.append(e_curr.item())
 
         if (len(history) > 1 and abs(history[-1] - history[-2]) < ctm_args.ctm_conv_tol) \
@@ -190,8 +193,8 @@ def main():
         opt_args = opt_context["opt_args"]
 
         # build on-site tensors
-        if args.ansatz in ["IPESS", "IPESS_PG", "A_2,B"]:
-            if args.ansatz in ["IPESS_PG", "A_2,B"]:
+        if args.ansatz in ["IPESS", "IPESS_PG", "A_1,B", "A_2,B"]:
+            if args.ansatz in ["IPESS_PG", "A_1,B", "A_2,B"]:
                 # explicit rebuild of on-site tensors
                 sym_state= to_PG_symmetric(state)
             else:
@@ -218,7 +221,7 @@ def main():
 
     @torch.no_grad()
     def obs_fn(state, ctm_env, opt_context):
-        if args.ansatz in ["IPESS_PG","A_2,B"]:
+        if args.ansatz in ["IPESS_PG","A_1,B","A_2,B"]:
             state_sym= to_PG_symmetric(state)
         else:
             state_sym= state
@@ -229,7 +232,8 @@ def main():
         else:
             epoch= len(opt_context["loss_history"]["loss"])
             loss= opt_context["loss_history"]["loss"][-1]
-        obs_values, obs_labels = model.eval_obs_2x2subsystem(state_sym, ctm_env,force_cpu=args.force_cpu)
+        obs_values, obs_labels = model.eval_obs_2x2subsystem(state_sym, ctm_env,\
+            force_cpu=args.force_cpu, warn_on_check=False)
         print(", ".join([f"{epoch}", f"{loss}"] + [f"{v}" for v in obs_values]))
         log.info("Norm(sites): " + ", ".join([f"{t.norm()}" for c, t in state.sites.items()]))
 
@@ -240,7 +244,7 @@ def main():
     outputstatefile= args.out_prefix+"_state.json"
     if args.ansatz in ["IPESS"]:
         state= read_ipess_kagome_generic(outputstatefile)
-    elif args.ansatz in ["IPESS_PG","A_2,B"]:
+    elif args.ansatz in ["IPESS_PG","A_1,B","A_2,B"]:
         state= read_ipess_kagome_pg(outputstatefile)
     elif args.ansatz in ["IPEPS"]:
         state= read_ipeps_kagome(outputstatefile)
@@ -263,6 +267,8 @@ if __name__ == '__main__':
 
 
 class TestOpt(unittest.TestCase):
+    DIR_PATH = os.path.dirname(os.path.realpath(__file__))
+
     def setUp(self):
         args.theta=0.0
         args.phi=0.5
@@ -272,7 +278,7 @@ class TestOpt(unittest.TestCase):
         args.GLOBALARGS_dtype= "complex128"
         args.OPTARGS_tolerance_grad= 1.0e-8
         args.OPTARGS_tolerance_change= 1.0e-8
-        args.OPTARGS_line_search= "backtracking"
+        # args.OPTARGS_line_search= "backtracking"
         try:
             import scipy.sparse.linalg
             self.SCIPY= True
@@ -280,13 +286,13 @@ class TestOpt(unittest.TestCase):
             print("Warning: Missing scipy. ARNOLDISVD is not available.")
             self.SCIPY= False
 
-    # test AKLT point
-    @unittest.skip("long runtime")
     def test_opt_AKLT_IPESS(self):
         from io import StringIO
         from unittest.mock import patch
         
+        args.instate= args.instate= self.DIR_PATH+"/../../test-input/AKLT_SU3_KAGOME_D3_IPESS_state.json"
         args.ansatz= "IPESS"
+        args.instate_noise= 0.1
         args.seed= 43
         args.opt_max_iter= 500
         args.out_prefix= f"TEST_IPESS_D{args.bond_dim}-chi{args.chi}_AKLT"
@@ -295,6 +301,7 @@ class TestOpt(unittest.TestCase):
         main()
 
         args.instate= args.out_prefix+"_state.json"
+        args.instate_noise= 0
         args.opt_max_iter= 1
         with patch('sys.stdout', new = StringIO()) as fake_out:
             main()
@@ -311,13 +318,46 @@ class TestOpt(unittest.TestCase):
         self.assertTrue(abs(final_f_vecs[1]) < 1.0e-4)
         self.assertTrue(abs(final_f_vecs[2]) < 1.0e-4)
 
-    @unittest.skip("long runtime")
+    def test_opt_AKLT_IPESS_PG(self):
+        from io import StringIO
+        from unittest.mock import patch
+        
+        args.instate= args.instate= self.DIR_PATH+"/../../test-input/AKLT_SU3_KAGOME_D3_IPESS_PG_state.json"
+        args.ansatz= "IPESS_PG"
+        args.instate_noise= 0.1
+        args.seed= 43
+        args.opt_max_iter= 500
+        args.out_prefix= f"TEST_IPESS_PG_D{args.bond_dim}-chi{args.chi}_AKLT"
+
+        # run the main simulation
+        main()
+
+        args.instate= args.out_prefix+"_state.json"
+        args.instate_noise= 0
+        args.opt_max_iter= 1
+        with patch('sys.stdout', new = StringIO()) as fake_out:
+            main()
+            output= fake_out.getvalue()
+
+        print(output)
+
+        # test final output against expected result
+        final_obs= [float(x) for x in output.splitlines()[-1].split(',')[:2]]
+        final_f_vecs= [complex(x) for x in output.splitlines()[-1].split(',')[-3:]]
+        final_e= final_obs[1]
+        self.assertTrue(abs(final_e + 2/3.) < 1.0e-3)
+        self.assertTrue(abs(final_f_vecs[0]) < 1.0e-4)
+        self.assertTrue(abs(final_f_vecs[1]) < 1.0e-4)
+        self.assertTrue(abs(final_f_vecs[2]) < 1.0e-4)
+
     def test_opt_AKLT_A2B(self):
         from io import StringIO
         from unittest.mock import patch
         
+        args.instate= args.instate= self.DIR_PATH+"/../../test-input/AKLT_SU3_KAGOME_D3_A2B_state.json"
         args.ansatz= "A_2,B"
-        args.seed= 61892471
+        args.instate_noise= 0.1
+        args.seed= 321431
         args.opt_max_iter= 500
         args.out_prefix= f"TEST_A2B_D{args.bond_dim}-chi{args.chi}_AKLT"
 
@@ -325,6 +365,7 @@ class TestOpt(unittest.TestCase):
         main()
 
         args.instate= args.out_prefix+"_state.json"
+        args.instate_noise= 0
         args.opt_max_iter= 1
         with patch('sys.stdout', new = StringIO()) as fake_out:
             main()

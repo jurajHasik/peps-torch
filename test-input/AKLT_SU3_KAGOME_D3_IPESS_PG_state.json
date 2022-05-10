@@ -34,5 +34,6 @@
 	 "2 1 0 0.4082482904638631 0.0"
 	]}
     },
-    "SYM_UP_DOWN": true
+    "SYM_UP_DOWN": false,
+    "SYM_BOND_S": true
 }
