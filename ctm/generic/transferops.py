@@ -66,7 +66,7 @@ def get_Top_w0_spec(n, coord, direction, state, env, verbosity=0):
         v= V.cpu().numpy()
         return v
 
-    test_T= torch.zeros(1,dtype=env.dtype)
+    _test_T= torch.zeros(1,dtype=env.dtype)
     T= LinearOperator((chi**2,chi**2), matvec=_mv, \
         dtype="complex128" if _test_T.is_complex() else "float64")
     vals= eigs(T, k=n, v0=None, return_eigenvectors=False)

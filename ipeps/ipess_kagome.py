@@ -219,17 +219,20 @@ def read_ipess_kagome_generic(jsonfile, peps_args=cfg.peps_args, global_args=cfg
                 ==set(list(raw_state["elem_tensors"].keys())),"missing elementary tensors"
             keymap={"UP_T": "T_u", "DOWN_T": "T_d", "BOND_S1": "B_c","BOND_S3": "B_a","BOND_S2": "B_b"}
             for key,t in raw_state["elem_tensors"].items():
-                ipess_tensors[keymap[key]]= torch.from_numpy(read_bare_json_tensor_np_legacy(t))\
-                    .to(global_args.device)
+                ipess_tensors[keymap[key]]= torch.from_numpy(read_bare_json_tensor_np_legacy(t))
+
         # default
         elif "ipess_tensors" in raw_state.keys(): 
             assert set(('T_u','T_d','B_a','B_b','B_c'))==set(list(raw_state["ipess_tensors"].keys())),\
                 "missing ipess tensors"
             for key,t in raw_state["ipess_tensors"].items():
-                ipess_tensors[key]= torch.from_numpy(read_bare_json_tensor_np_legacy(t))\
-                    .to(global_args.device)
+                ipess_tensors[key]= torch.from_numpy(read_bare_json_tensor_np_legacy(t))
         else:
             raise RuntimeError("Not a valid IPESS_KAGOME_GENERIC state.")
+
+        # convert to correct device and/or dtype
+        for key,t in ipess_tensors.items():
+             ipess_tensors[key]=  ipess_tensors[key].to(device=global_args.device,dtype=dtype)                  
 
         state = IPESS_KAGOME_GENERIC(ipess_tensors, peps_args=peps_args, \
             global_args=global_args)
@@ -317,7 +320,7 @@ def read_ipess_kagome_generic_legacy(jsonfile, ansatz="IPESS", peps_args=cfg.pep
             else:
                 # default
                 X = torch.from_numpy(read_bare_json_tensor_np_legacy(t))
-            kagome_tensors[coord_kagome] = X.to(device=global_args.device)
+            kagome_tensors[coord_kagome] = X.to(device=global_args.device,dtype=dtype)
         assert len(kagome_tensors)==5, "iPESS ansatz for more than single Kagome unit cell"
         
         # unrestricted IPESS

@@ -764,7 +764,7 @@ def _old_rdm1x1_kagome(coord, state, env, sites_to_keep=('A', 'B', 'C'), force_c
 
 def rdm2x1_kagome(coord, state, env, sites_to_keep_00=('A', 'B', 'C'),\
     sites_to_keep_10=('A', 'B', 'C'), force_cpu=False, sym_pos_def=False,\
-    verbosity=0):
+    verbosity=0, **kwargs):
     r"""
     :param coord: vertex (x,y) specifies position of 2x1 subsystem
     :param state: underlying wavefunction
@@ -881,13 +881,14 @@ def rdm2x1_kagome(coord, state, env, sites_to_keep_00=('A', 'B', 'C'),\
     rdm= rdm.permute(tuple(perm_order)).contiguous()
 
     # symmetrize and normalize
-    rdm = _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
+    rdm = _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity,\
+        who=who, **kwargs)
 
     return rdm
 
 def rdm1x2_kagome(coord, state, env, sites_to_keep_00=('A', 'B', 'C'),\
     sites_to_keep_01=('A', 'B', 'C'), sym_pos_def=False, force_cpu=False,\
-    verbosity=0):
+    verbosity=0, **kwargs):
     r"""
     :param coord: vertex (x,y) specifies position of 1x2 subsystem
     :param state: underlying wavefunction
@@ -995,14 +996,15 @@ def rdm1x2_kagome(coord, state, env, sites_to_keep_00=('A', 'B', 'C'),\
     rdm= rdm.permute(tuple(perm_order)).contiguous()
 
     # symmetrize and normalize
-    rdm = _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
+    rdm = _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity,\
+        who=who, **kwargs)
 
     return rdm
 
 
 # ----- 2x2 subsystem -----
 def rdm2x2_up_triangle_open(coord, state, env, sym_pos_def=False, force_cpu=False,\
-    verbosity=0):
+    verbosity=0, **kwargs):
     r"""
     :param coord: vertex (x,y) specifies upper left site of 2x2 subsystem
     :param state: underlying wavefunction
@@ -1119,7 +1121,8 @@ def rdm2x2_up_triangle_open(coord, state, env, sym_pos_def=False, force_cpu=Fals
     # C2x2_LD------C2x2_RD
     rdm = contiguous(permute(rdm, (0, 2, 4, 1, 3, 5)))
 
-    rdm = _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
+    rdm = _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity,\
+        who=who, **kwargs)
 
     rdm = rdm.to(env.device)
     return rdm

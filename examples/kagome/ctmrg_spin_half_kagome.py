@@ -1,3 +1,4 @@
+import os
 import warnings
 import context
 import argparse
@@ -388,5 +389,72 @@ if __name__ == '__main__':
     main()
 
 
+class TestCtmrg_IPESS_D3_RVB(unittest.TestCase):
+    tol= 1.0e-6
+    DIR_PATH = os.path.dirname(os.path.realpath(__file__))
+    OUT_PRFX = "RESULT_test_run-ctmrg_d3-rvb"
+    ANSATZE= [("IPESS","IPESS_KAGOME_D3_RVB.in"),\
+        ("IPESS_PG","IPESS_PG_KAGOME_D3_RVB.in")]
+
+    def setUp(self):
+        args.j1= 1.0
+        args.bond_dim=3
+        args.chi=18
+        args.GLOBALARGS_dtype= "complex128"
+
+    def test_ctmrg_ipess_ansatze_d3_rvb(self):
+        from io import StringIO
+        from unittest.mock import patch
+        from cmath import isclose
+        import numpy as np
+
+        for ansatz in self.ANSATZE:
+            with self.subTest(ansatz=ansatz):
+                args.ansatz= ansatz[0]
+                args.instate= self.DIR_PATH+"/../../test-input/"+ansatz[1]
+                # args.sym_up_dn= ansatz[1]
+                # args.sym_bond_S= ansatz[2]
+                # args.out_prefix=self.OUT_PRFX+f"_{ansatz[0].replace(',','')}_"\
+                #     +("T" if ansatz[1] else "F")+("T" if ansatz[2] else "F")
+                args.out_prefix=self.OUT_PRFX+f"_{ansatz[0].replace(',','')}"
+                
+                # i) run ctmrg and compute observables
+                with patch('sys.stdout', new = StringIO()) as tmp_out: 
+                    main()
+                tmp_out.seek(0)
+
+                # parse FINAL observables
+                final_obs=None
+                l= tmp_out.readline()
+                while l:
+                    print(l,end="")
+                    if "FINAL" in l:
+                        final_obs= l.rstrip()
+                        break
+                    l= tmp_out.readline()
+                assert final_obs
+
+                # compare with the reference
+                ref_data="""
+                -0.3931221584692804, (-0.5896832690555696+0j), (-0.5896832063522717+0j), (7.59716523160245e-32+0j), 
+                (-4.331814810151939e-31+0j), (8.592175414886632e-32+0j), (3.07218410812194e-16+0j), 
+                (-3.674157727896386e-17+0j), (5.011080358949883e-16+0j), (-3.953569086037768e-16+0j), 
+                (6.82165674627862e-16+0j), (-8.641428147458597e-16+0j), (-1.0617693286257969e-16+0j), 
+                (-9.980184244909592e-16+0j), (-7.479642784634561e-17+0j), (-0.19656089027856907+0j), 
+                (-0.19656149813919332+0j), (-0.1965608806378064+0j), (-0.19656141466722352+0j), 
+                (-0.19656089010487604+0j), (-0.19656090158017214+0j)
+                """
+                fobs_tokens= [complex(x) for x in final_obs[len("FINAL"):].split(",")]
+                ref_tokens= [complex(x) for x in ref_data.split(",")]
+                for val,ref_val in zip(fobs_tokens, ref_tokens):
+                    assert isclose(val,ref_val, rel_tol=self.tol, abs_tol=self.tol)
+
+    def tearDown(self):
+        args.instate=None
+        for ansatz in self.ANSATZE:
+            out_prefix=self.OUT_PRFX+f"_{ansatz[0].replace(',','')}"
+            for f in [out_prefix+"_checkpoint.p",out_prefix+"_state.json",\
+                out_prefix+".log"]:
+                if os.path.isfile(f): os.remove(f)
 
    

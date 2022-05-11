@@ -284,7 +284,6 @@ def main():
     print("\n\n",end="")
     print(", ".join(["epoch",f"loss"]+[label for label in obs_labels]))
     print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
-
     
     def loss_fn(state, ctm_env_in, opt_context):
         ctm_args = opt_context["ctm_args"]
@@ -338,7 +337,6 @@ def main():
             print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]), end="")
             log.info("Norm(sites): "+", ".join([f"{t.norm()}" for c,t in state.sites.items()]))
             print(", "+", ".join([f"{t.norm()}" for c,t in state.sites.items()]) )
-
 
     def post_proc(state, ctm_env, opt_context):
         pass
