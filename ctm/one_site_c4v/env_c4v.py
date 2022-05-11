@@ -2,6 +2,7 @@ import torch
 import config as cfg
 from ipeps.ipeps_c4v import IPEPS_C4V
 from linalg.custom_eig import truncated_eig_sym
+from linalg.svd_gesdd import _torch_version_check
 
 class ENV_C4V():
     def __init__(self, chi, state=None, bond_dim=None, ctm_args=cfg.ctm_args, 
@@ -333,7 +334,10 @@ def print_env(env, verbosity=0):
 
 def compute_multiplets(env, eps_multiplet_gap=1.0e-10):
     D= torch.zeros(env.chi+1, dtype=env.dtype, device=env.device)
-    D[:env.chi], U= torch.symeig(env.C[env.keyC])
+    if _torch_version_check("1.8.1"):
+        D[:env.chi]= torch.linalg.eigvalsh(env.C[env.keyC])
+    else:
+        D[:env.chi], U= torch.symeig(env.C[env.keyC])
     D, p= torch.sort(torch.abs(D),descending=True)
     m=[]
     l=0

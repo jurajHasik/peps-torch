@@ -1,4 +1,5 @@
 import torch
+from linalg.svd_gesdd import _torch_version_check
 from ctm.generic.env import ENV
 from tn_interface import contract, einsum
 from tn_interface import contiguous, view, permute
@@ -26,7 +27,10 @@ def _sym_pos_def_matrix(rdm, sym_pos_def=False, verbosity=0, who="unknown", **kw
         log.info(f"{who} norm(rdm_sym) {rdm.norm()} norm(rdm_asym) {rdm_asym.norm()}")
     if sym_pos_def:
         with torch.no_grad():
-            D, U = torch.symeig(rdm, eigenvectors=True)
+            if _torch_version_check("1.8.1"):
+                D, U=  torch.linalg.eigh(rdm)
+            else:
+                D, U= torch.symeig(rdm, eigenvectors=True)
             if D.min() < 0:
                 log.info(f"{who} max(diag(rdm)) {D.max()} min(diag(rdm)) {D.min()}")
                 D = torch.clamp(D, min=0)

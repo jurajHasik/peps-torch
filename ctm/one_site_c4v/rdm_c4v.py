@@ -1,6 +1,7 @@
 import torch
 from ipeps.ipeps_c4v import IPEPS_C4V
 from ctm.one_site_c4v.env_c4v import ENV_C4V
+from ctm.generic.rdm import _sym_pos_def_rdm
 import logging
 log = logging.getLogger(__name__)
 
@@ -8,34 +9,6 @@ log = logging.getLogger(__name__)
 def _log_cuda_mem(device, who="unknown",  uuid=""):
     log.info(f"{who} {uuid} GPU-MEM MAX_ALLOC {torch.cuda.max_memory_allocated(device)}"\
             + f" CURRENT_ALLOC {torch.cuda.memory_allocated(device)}")
-
-def _sym_pos_def_matrix(rdm, sym_pos_def=False, verbosity=0, who="unknown"):
-    rdm_asym= 0.5*(rdm-rdm.conj().t())
-    rdm= 0.5*(rdm+rdm.conj().t())
-    if verbosity>0: 
-        log.info(f"{who} norm(rdm_sym) {rdm.norm()} norm(rdm_asym) {rdm_asym.norm()}")
-    if sym_pos_def:
-        with torch.no_grad():
-            D, U= torch.symeig(rdm, eigenvectors=True)
-            if D.min() < 0:
-                log.info(f"{who} max(diag(rdm)) {D.max()} min(diag(rdm)) {D.min()}")
-                D= torch.clamp(D, min=0)
-                rdm_posdef= U@torch.diag((1.+0.j)*D)@U.conj().t() if rdm.is_complex() \
-                    else U@torch.diag(D)@U.t()
-                rdm.copy_(rdm_posdef)
-    rdm = rdm / rdm.diagonal().sum()
-    return rdm
-
-def _sym_pos_def_rdm(rdm, sym_pos_def=False, verbosity=0, who=None):
-    assert len(rdm.size())%2==0, "invalid rank of RDM"
-    nsites= len(rdm.size())//2
-
-    orig_shape= rdm.size()
-    rdm= rdm.reshape(torch.prod(torch.as_tensor(rdm.size())[:nsites]),-1)
-    
-    rdm= _sym_pos_def_matrix(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
-    rdm= rdm.reshape(orig_shape)
-    return rdm
 
 def _get_open_C2x2_LU_sl(C, T, a, verbosity=0):
     who= "_get_open_C2x2_LU_sl"
