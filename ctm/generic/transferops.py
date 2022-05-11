@@ -113,9 +113,13 @@ def get_Top_spec(n, coord, direction, state, env, verbosity=0):
     Other directions are obtained by analogous construction. 
     """
     chi= env.chi
+    # if we grow the TM in right direction
+    #
+    # (-1,0)--A(x,y)--(1,0)--A(x+1,y)--A(x+2,y)--...--A(x+lX-1,y)==A(x,y)--
+    #
     #             up        left       down     right
     dir_to_ind= {(0,-1): 1, (-1,0): 2, (0,1): 3, (1,0): 4}
-    ad= state.site(coord).size( dir_to_ind[direction] )
+    ad= state.site(coord).size( dir_to_ind[(-direction[0],-direction[1])] )
 
     # depending on the direction, get unit-cell length
     if direction==(1,0) or direction==(-1,0):

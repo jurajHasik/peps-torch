@@ -5,12 +5,11 @@ import argparse
 import config as cfg
 import examples.abelian.settings_full_torch as settings_full
 import examples.abelian.settings_U1_torch as settings_U1
-from ipeps.ipeps_abelian import *
-from ctm.generic_abelian.env_abelian import *
-import ctm.generic_abelian.ctmrg as ctmrg
-from models.abelian import coupledLadders
-from models import coupledLadders as coupledLadders_dense
-import ctm.generic.ctmrg as ctmrg_dense
+from ipeps.ipeps_abelian import read_ipeps
+from linalg.custom_svd import truncated_svd_gesdd
+from models import coupledLadders
+from ctm.generic.env import *
+from ctm.generic import ctmrg
 from ctm.generic import transferops
 import json
 import unittest
@@ -21,8 +20,6 @@ log = logging.getLogger(__name__)
 parser= cfg.get_args_parser()
 # additional model-dependent arguments
 parser.add_argument("--alpha", type=float, default=0., help="inter-ladder coupling")
-parser.add_argument("--bz_stag", type=float, default=0., help="staggered magnetic field")
-parser.add_argument("--symmetry", default=None, help="symmetry structure", choices=["NONE","U1"])
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
 args, unknown_args = parser.parse_known_args()
@@ -30,42 +27,37 @@ args, unknown_args = parser.parse_known_args()
 def main():
     cfg.configure(args)
     cfg.print_config()
-    # TODO(?) choose symmetry group
-    if not args.symmetry or args.symmetry=="NONE":
-        settings= settings_full
-    elif args.symmetry=="U1":
-        settings= settings_U1
+    settings= settings_U1
     # override default device specified in settings
     default_device= 'cpu' if not hasattr(settings, 'device') else settings.device
     if not cfg.global_args.device == default_device:
         settings.device = cfg.global_args.device
         settings_full.device = cfg.global_args.device
         print("Setting backend device: "+settings.device)
-    # override default dtype
-    settings_full.dtype= settings.dtype= cfg.global_args.dtype
-    settings.backend.set_num_threads(args.omp_cores)
-    settings.backend.random_seed(args.seed)
+    torch.set_num_threads(args.omp_cores)
+    torch.manual_seed(args.seed)
 
-    model= coupledLadders.COUPLEDLADDERS_NOSYM(settings_full,alpha=args.alpha)
+    model= coupledLadders.COUPLEDLADDERS(alpha=args.alpha)
 
     # initialize an ipeps
     # 1) define lattice-tiling function, that maps arbitrary vertex of square lattice
     # coord into one of coordinates within unit-cell of iPEPS ansatz
     if args.instate!=None:
-        state= read_ipeps(args.instate, settings)
-        state= state.add_noise(args.instate_noise)
+        state_ab= read_ipeps(args.instate, settings)
+        state_ab= state_ab.add_noise(args.instate_noise)
     else:
         raise ValueError("Missing trial state: --instate=None and --ipeps_init_type= "\
             +str(args.ipeps_init_type)+" is not supported")
 
-    if not state.dtype==model.dtype:
-        cfg.global_args.dtype= state.dtype
-        print(f"dtype of initial state {state.dtype} and model {model.dtype} do not match.")
+    if not state_ab.dtype==model.dtype:
+        cfg.global_args.dtype= state_ab.dtype
+        print(f"dtype of initial state {state_ab.dtype} and model {model.dtype} do not match.")
         print(f"Setting default dtype to {cfg.global_args.dtype} and reinitializing "\
         +" the model")
-        model= coupledLadders.COUPLEDLADDERS_NOSYM(settings_full,alpha=args.alpha,\
-            Bz_val=args.bz_stag)
+        model= coupledLadders.COUPLEDLADDERS(alpha=args.alpha)
 
+    print(state_ab)
+    state= state_ab.to_dense()
     print(state)
 
     # 2) define convergence criterion for ctmrg
@@ -73,22 +65,22 @@ def main():
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
             history=[]
-        e_curr = model.energy_2x1_1x2(state, env).item()
-        history.append(e_curr)
+        e_curr = model.energy_2x1_1x2(state, env)
+        history.append(e_curr.item())
         obs_values, obs_labels = model.eval_obs(state, env)
-        # obs_values, obs_labels= ["None"], [None]
         print(", ".join([f"{len(history)}",f"{e_curr}"]+[f"{v}" for v in obs_values]))
-
 
         if (len(history) > 1 and abs(history[-1]-history[-2]) < ctm_args.ctm_conv_tol)\
             or len(history) >= ctm_args.ctm_max_iter:
             return True, history
         return False, history
 
-    ctm_env= ENV_ABELIAN(args.chi, state=state, init=True)
+    ctm_env = ENV(args.chi, state)
+    init_env(state, ctm_env)
+    print(ctm_env)
 
     # 3) evaluate observables for initial environment
-    loss= model.energy_2x1_1x2(state, ctm_env).to_number()
+    loss= model.energy_2x1_1x2(state, ctm_env)
     obs_values, obs_labels= model.eval_obs(state,ctm_env)
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{loss}"]+[f"{v}" for v in obs_values]))
@@ -97,7 +89,7 @@ def main():
     ctm_env, *ctm_log = ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
 
     # 5) compute final observables and timings
-    loss= model.energy_2x1_1x2(state, ctm_env).to_number()
+    loss= model.energy_2x1_1x2(state, ctm_env)
     obs_values, obs_labels= model.eval_obs(state,ctm_env)
     history, t_ctm, t_obs= ctm_log
     print("\n")
@@ -107,36 +99,16 @@ def main():
 
     # environment diagnostics
     for c_loc,c_ten in ctm_env.C.items(): 
-        u,s,v= c_ten.svd(([0],[1]))
+        u,s,v= truncated_svd_gesdd(c_ten, c_ten.size(0))
         print(f"\n\nspectrum C[{c_loc}]")
-        for charges, sector in s.A.items():
-            print(charges)
-            sector_diag= sector.diag()
-            for i in range(len(sector_diag)):
-                print(f"{i} {sector_diag[i]}")
+        for i in range(args.chi):
+            print(f"{i} {s[i]}")
 
-    # convert to dense env and compute transfer operator spectrum
-    state_dense= state.to_dense()
-    ctm_env_dense= ctm_env.to_dense(state)
-
-    # CORRECTNESS check 
-    #
-    # for c_loc,c_ten in ctm_env_dense.C.items(): 
-    #     u,s,v= torch.svd(c_ten, compute_uv=False)
-    #     print(f"\n\nspectrum C[{c_loc}]")
-    #     for i in range(args.chi):
-    #         print(f"{i} {s[i]}")
-    #
-    # model_dense= coupledLadders_dense.COUPLEDLADDERS(alpha=args.alpha)
-    # loss= model_dense.energy_2x1_1x2(state_dense, ctm_env_dense)
-    # obs_values, obs_labels= model_dense.eval_obs(state_dense,ctm_env_dense)
-    # print(", ".join(["energy"]+obs_labels))
-    # print(", ".join([f"{loss}"]+[f"{v}" for v in obs_values]))
-
+    # transfer operator spectrum
     site_dir_list=[((0,0), (1,0)),((0,0), (0,1)), ((1,1), (1,0)), ((1,1), (0,1))]
     for sdp in site_dir_list:
         print(f"\n\nspectrum(T)[{sdp[0]},{sdp[1]}]")
-        l= transferops.get_Top_spec(args.top_n, *sdp, state_dense, ctm_env_dense)
+        l= transferops.get_Top_spec(args.top_n, *sdp, state, ctm_env)
         for i in range(l.size()[0]):
             print(f"{i} {l[i,0]} {l[i,1]}")
 

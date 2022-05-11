@@ -332,7 +332,7 @@ class SU2_U1():
         return op_v
 
     # TODO: implement xyz for Sx and Sy terms
-    def SS(self, zpm=(1.,0.5,0.5)):
+    def SS(self, zpm=(1.,1.,1.)):
         r"""
         :param zpm: coefficients of anisotropy of spin-spin interaction
                     zpm[0]*(S^z S^z) + zpm[1]*(S^p S^m)/2 + zpm[2]*(S^m S^p)/2

@@ -23,7 +23,6 @@ parser= cfg.get_args_parser()
 # additional model-dependent arguments
 parser.add_argument("--alpha", type=float, default=0., help="inter-ladder coupling")
 parser.add_argument("--bz_stag", type=float, default=0., help="staggered magnetic field")
-parser.add_argument("--symmetry", default=None, help="symmetry structure", choices=["NONE","U1"])
 parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
@@ -32,11 +31,7 @@ args, unknown_args = parser.parse_known_args()
 def main():
     cfg.configure(args)
     cfg.print_config()
-    # TODO(?) choose symmetry group
-    if not args.symmetry or args.symmetry=="NONE":
-        settings= settings_full
-    elif args.symmetry=="U1":
-        settings= settings_U1
+    settings= settings_U1
     # override default device specified in settings
     default_device= 'cpu' if not hasattr(settings, 'default_device') else settings.default_device
     if not cfg.global_args.device == default_device:
@@ -169,8 +164,7 @@ class TestCheckpoint_VBSstate(unittest.TestCase):
     OUT_PRFX = "RESULT_test_run-opt-chck_u1_vbs"
 
     def setUp(self):
-        args.instate=self.DIR_PATH+"/../../test-input/abelian/ABU1_BFGS100LS_D2-chi24-a0.1-run0-svd8_i2SUVBSn0_state.json"
-        args.symmetry="U1"
+        args.instate=self.DIR_PATH+"/../../../test-input/abelian/ABU1_BFGS100LS_D2-chi24-a0.1-run0-svd8_i2SUVBSn0_state.json"
         args.alpha=0.1
         args.bond_dim=2
         args.chi=16

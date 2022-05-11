@@ -1,10 +1,10 @@
+import os
 import context
 import argparse
 import numpy as np
 import torch
 import config as cfg
 import yast.yast as yast
-import examples.abelian.settings_full_torch as settings_full
 import examples.abelian.settings_U1_torch as settings_U1
 from ipeps.ipeps_abelian import *
 from ctm.generic_abelian.env_abelian import *
@@ -21,7 +21,6 @@ parser= cfg.get_args_parser()
 # additional model-dependent arguments
 parser.add_argument("--alpha", type=float, default=0., help="inter-ladder coupling")
 parser.add_argument("--bz_stag", type=float, default=0., help="staggered magnetic field")
-parser.add_argument("--symmetry", default="None", help="symmetry structure", choices=["None","U1"])
 parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
@@ -42,21 +41,14 @@ args, unknown_args = parser.parse_known_args()
 def main():
     cfg.configure(args)
     cfg.print_config()
-    # TODO(?) choose symmetry group and override default dtype
-    if not args.symmetry or args.symmetry=="None":
-        settings= settings_full
-        settings_full.dtype= settings.dtype= cfg.global_args.dtype
-        model= coupledLadders.COUPLEDLADDERS_NOSYM(settings,alpha=args.alpha,Bz_val=args.bz_stag)
-    elif args.symmetry=="U1":
-        settings= settings_U1
-        settings_full.dtype= settings.dtype= cfg.global_args.dtype
-        model= coupledLadders.COUPLEDLADDERS_U1(settings,alpha=args.alpha,Bz_val=args.bz_stag)
-        # model= coupledLadders.COUPLEDLADDERS_NOSYM(settings_full,alpha=args.alpha)
+    
+    settings= settings_U1
+    settings.dtype= cfg.global_args.dtype
+    model= coupledLadders.COUPLEDLADDERS_U1(settings,alpha=args.alpha,Bz_val=args.bz_stag)
     # override default device specified in settings
     default_device= 'cpu' if not hasattr(settings, 'device') else settings.device
     if not cfg.global_args.device == default_device:
         settings.device = cfg.global_args.device
-        settings_full.device = cfg.global_args.device
         print("Setting backend device: "+settings.device)
     settings.backend.set_num_threads(args.omp_cores)
     settings.backend.random_seed(args.seed)
@@ -69,7 +61,7 @@ def main():
         state= state.add_noise(args.instate_noise)
     # TODO checkpointing
     elif args.opt_resume is not None:
-        state= IPEPS_ABELIAN(settings_U1, dict(), lX=2, lY=2)
+        state= IPEPS_ABELIAN(settings, dict(), lX=2, lY=2)
         state.load_checkpoint(args.opt_resume)
     else:
         raise ValueError("Missing trial state: --instate=None and --ipeps_init_type= "\
@@ -80,7 +72,7 @@ def main():
         print(f"dtype of initial state {state.dtype} and model {model.dtype} do not match.")
         print(f"Setting default dtype to {cfg.global_args.dtype} and reinitializing "\
         +" the model")
-        model= coupledLadders.COUPLEDLADDERS_NOSYM(settings_full,alpha=args.alpha,Bz_val=args.bz_stag)
+        model= coupledLadders.COUPLEDLADDERS_U1(settings,alpha=args.alpha,Bz_val=args.bz_stag)
 
     print(state)
 
@@ -176,12 +168,12 @@ def main():
     gen_gate_seq= model.gen_gate_seq_2S_SS_hz_2ndOrder   # combined S.S + Sz.Id - Id.Sz gates
     # 5) enter simple update imaginary time evolution
     outputstatefile= args.out_prefix+"_state.json"
-    opt_context= {"loss_history": {"loss":[loss], "beta": 0, \
+    opt_context= {"loss_history": {"loss":[], "beta": 0, \
         "time_step": [args.SU_init_step]}}
     su_opts={"weight_inv_cutoff": 1.0e-14, "max_D_total": args.bond_dim, \
         "log_level": 0}
     gate_seq_SS= gen_gate_seq(args.SU_init_step)
-    for tstep in range(args.opt_max_iter):
+    for tstep in range(1,args.opt_max_iter+1):
         state_w= run_seq_2s(state_w, gate_seq_SS, su_opts)
         opt_context["loss_history"]["beta"] += opt_context["loss_history"]["time_step"][-1]
 
@@ -228,8 +220,71 @@ def main():
     opt_context["loss_history"]["loss"].append(loss)
     obs_fn(state, ctm_env, opt_context)
 
+
 if __name__=='__main__':
     if len(unknown_args)>0:
         print("args not recognized: "+str(unknown_args))
         raise Exception("Unknown command line arguments")
     main()
+
+
+class TestOptim_itebd_VBS(unittest.TestCase):
+    tol= 1.0e-6
+    DIR_PATH = os.path.dirname(os.path.realpath(__file__))
+    OUT_PRFX = "RESULT_test_run_itebd_u1_VBS"
+
+    def setUp(self):
+        args.instate=self.DIR_PATH+"/../../../test-input/abelian/VBS_2x2_ABCD.in"
+        args.alpha=0.2
+        args.bond_dim=4
+        args.chi=16
+        args.out_prefix=self.OUT_PRFX
+        args.SU_ctm_obs_freq=10
+        args.SU_policy="REGULAR"
+        args.SU_init_step=0.02
+        args.opt_max_iter=50
+
+    def test_run_itebd_u1_VBS(self):
+        from io import StringIO
+        from unittest.mock import patch 
+        from cmath import isclose
+
+        with patch('sys.stdout', new = StringIO()) as tmp_out: 
+            main()
+        tmp_out.seek(0)
+
+        # parse FINAL observables
+        final_opt_line=None
+        OPT_OBS= OPT_OBS_DONE= False
+        l= tmp_out.readline()
+        while l:
+            print(l,end="")
+            if OPT_OBS and not OPT_OBS_DONE and l.rstrip()=="": OPT_OBS_DONE= True
+            if OPT_OBS and not OPT_OBS_DONE and len(l.split(','))>2:
+                final_opt_line= l
+            if "epoch, beta, time_step, energy," in l and not OPT_OBS_DONE: 
+                OPT_OBS= True
+            l= tmp_out.readline()
+        assert final_opt_line
+
+        # compare with the reference
+        ref_data="""
+        1.0000000000000004, 0.02, -0.5789608354545952, 1.1032841307212493e-13, 1.1388112675092543e-13, 
+        1.1460277171693178e-13, 1.0583200982239305e-13, 1.0699774399824946e-13, -1.1388112675092543e-13, 
+        0.0, 0.0, 1.1460277171693178e-13, 0.0, 0.0, 1.0583200982239305e-13, 0.0, 0.0, -1.0699774399824946e-13, 
+        0.0, 0.0, -0.36681241001671006, -0.36660264122285424, -0.3668124100071194, -0.3666026410833886, 
+        -0.4129028698125542, -0.4129000509016071, -0.058016598304710114, -0.05803499556602708
+        """
+
+        # compare final observables from final state against expected reference 
+        # drop first token, corresponding to iteration step
+        final_opt_line_t= [complex(x) for x in final_opt_line.split(",")[1:]]
+        ref_tokens= [complex(x) for x in ref_data.split(",")]
+        for val,ref_val in zip(final_opt_line_t, ref_tokens):
+            assert isclose(val,ref_val, rel_tol=self.tol, abs_tol=self.tol)
+
+    def tearDown(self):
+        args.opt_resume=None
+        args.instate=None
+        for f in [self.OUT_PRFX+"_state.json",self.OUT_PRFX+"_checkpoint.p",self.OUT_PRFX+".log"]:
+            if os.path.isfile(f): os.remove(f)

@@ -347,8 +347,7 @@ class COUPLEDLADDERS_U1():
         #
         # (-1)0--|rho|--2(+1) (-1)0--|S.S|--2(+1)
         # (-1)1--|   |--3(+1) (-1)1--|   |--3(+1)
-        # _ci= ([0,1,2,3],[2,3,0,1])
-        _ci= ([0,1,2,3],[0,1,2,3])
+        _ci= ([0,1,2,3],[2,3,0,1])
         for coord,site in state.sites.items():
             rdm2x1= rdm.rdm2x1(coord,state,env)
             rdm1x2= rdm.rdm1x2(coord,state,env)
@@ -393,8 +392,7 @@ class COUPLEDLADDERS_U1():
         #
         # (-1)0--|rho|--2(+1) (-1)0--|S.S|--2(+1)
         # (-1)1--|   |--3(+1) (-1)1--|   |--3(+1)
-        # _ci= ([0,1,2,3],[2,3,0,1])
-        _ci= ([0,1,2,3],[0,1,2,3])
+        _ci= ([0,1,2,3],[2,3,0,1])
         for coord,site in state.sites.items():
             rdm2x1= rdm.rdm2x1(coord,state,env)
             rdm1x2= rdm.rdm1x2(coord,state,env)
@@ -455,8 +453,7 @@ class COUPLEDLADDERS_U1():
             \end{align*}
         """
         obs= dict({"avg_m": 0.})
-        # _ci= ([0,1],[1,0])
-        _ci= ([0,1],[0,1])
+        _ci= ([0,1],[1,0])
         for coord,site in state.sites.items():
             rdm1x1 = rdm.rdm1x1(coord,state,env)
             for label,op in self.obs_ops.items():
@@ -465,8 +462,7 @@ class COUPLEDLADDERS_U1():
             obs["avg_m"] += obs[f"m{coord}"]
         obs["avg_m"]= obs["avg_m"]/len(state.sites.keys())
     
-        # _ci= ([0,1,2,3],[2,3,0,1])
-        _ci= ([0,1,2,3],[0,1,2,3])
+        _ci= ([0,1,2,3],[2,3,0,1])
         for coord,site in state.sites.items():
             rdm2x1 = rdm.rdm2x1(coord,state,env)
             rdm1x2 = rdm.rdm1x2(coord,state,env)

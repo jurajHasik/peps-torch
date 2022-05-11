@@ -516,7 +516,7 @@ class IPEPS_ABELIAN_WEIGHTED(IPEPS_ABELIAN):
 
     # TODO validate weights
     def __init__(self, settings, sites, weights, vertexToSite=None, lX=None, lY=None, 
-        build_open_dl=False, peps_args=cfg.peps_args, global_args=cfg.global_args):
+        peps_args=cfg.peps_args, global_args=cfg.global_args):
         r"""
         :param settings: YAST configuration
         :param sites: map from elementary unit cell to on-site tensors
@@ -525,8 +525,6 @@ class IPEPS_ABELIAN_WEIGHTED(IPEPS_ABELIAN):
                              into a vertex within elementary unit cell
         :param lX: length of the elementary unit cell in X direction
         :param lY: length of the elementary unit cell in Y direction
-        :param build_open_dl: build complementary iPEPS with with open double-layer 
-                              on-site tensors
         :param peps_args: ipeps configuration
         :param global_args: global configuration
         :type settings: NamedTuple or SimpleNamespace (TODO link to definition)
@@ -535,7 +533,6 @@ class IPEPS_ABELIAN_WEIGHTED(IPEPS_ABELIAN):
         :type vertexToSite: function(tuple(int,int))->tuple(int,int)
         :type lX: int
         :type lY: int
-        :type build_open_dl: bool
         :type peps_args: PEPSARGS
         :type global_args: GLOBALARGS
 
@@ -552,9 +549,9 @@ class IPEPS_ABELIAN_WEIGHTED(IPEPS_ABELIAN):
         """
         self.weights= OrderedDict(weights)
         super().__init__(settings, sites, vertexToSite=vertexToSite, lX=lX, lY=lY, 
-            build_open_dl=build_open_dl, peps_args=peps_args, global_args=global_args)
+            peps_args=peps_args, global_args=global_args)
 
-    def absorb_weights(self, build_open_dl=True, peps_args=cfg.peps_args, 
+    def absorb_weights(self, peps_args=cfg.peps_args, 
         global_args=cfg.global_args):
         r"""
         :param build_open_dl: see IPEPS_ABELIAN
@@ -591,7 +588,7 @@ class IPEPS_ABELIAN_WEIGHTED(IPEPS_ABELIAN):
             a_sites[coord]= A
 
         return IPEPS_ABELIAN(self.engine, a_sites, vertexToSite=self.vertexToSite,\
-            build_open_dl= build_open_dl, lX=self.lX, lY=self.lY, peps_args=peps_args, 
+            lX=self.lX, lY=self.lY, peps_args=peps_args, 
             global_args=global_args)
 
     def weight(self, weight_id):
