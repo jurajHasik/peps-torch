@@ -23,7 +23,6 @@ parser= cfg.get_args_parser()
 # additional model-dependent arguments
 parser.add_argument("--phi", type=float, default=0.5, help="arctan(K/J): J -> 2-site coupling; K -> 3-site coupling")
 parser.add_argument("--theta", type=float, default=0., help="arctan(H/K): K -> 3-site coupling; K -> chiral coupling")
-parser.add_argument("--tiling", default="1SITE", help="tiling of the lattice")
 parser.add_argument("--symmetry", default=None, help="symmetry structure", choices=["NONE","U1xU1"])
 args, unknown_args = parser.parse_known_args()
 
@@ -161,7 +160,7 @@ class TestOptim_TrimerState(unittest.TestCase):
     OUT_PRFX = "RESULT_test_run-opt_u1xu1_trimerized"
 
     def setUp(self):
-        args.instate=self.DIR_PATH+"/../../test-input/abelian/IPESS_TRIMER_1-3_1x1_abelian-U1xU1_T3T8_state.json"
+        args.instate=self.DIR_PATH+"/../../../test-input/abelian/IPESS_TRIMER_1-3_1x1_abelian-U1xU1_T3T8_state.json"
         args.symmetry="U1xU1"
         args.theta=0
         args.phi=0
@@ -230,7 +229,7 @@ class TestCheckpoint_TrimerState(unittest.TestCase):
     OUT_PRFX = "RESULT_test_run-opt-chck_u1xu1_trimerized"
 
     def setUp(self):
-        args.instate=self.DIR_PATH+"/../../test-input/abelian/IPESS_TRIMER_1-3_1x1_abelian-U1xU1_T3T8_state.json"
+        args.instate=self.DIR_PATH+"/../../../test-input/abelian/IPESS_TRIMER_1-3_1x1_abelian-U1xU1_T3T8_state.json"
         args.symmetry="U1xU1"
         args.theta=0
         args.phi=0

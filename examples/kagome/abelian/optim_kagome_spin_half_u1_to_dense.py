@@ -435,8 +435,7 @@ def main():
             print(" "+", ".join([f"{t.norm()}" for c,t in state_sym.sites.items()]) )
         
     # 4) optimize
-    with torch.autograd.detect_anomaly():
-        optimize_state(state, ctm_env_init, loss_fn, obs_fn=obs_fn)
+    optimize_state(state, ctm_env_init, loss_fn, obs_fn=obs_fn)
     
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"
@@ -447,19 +446,23 @@ def main():
     #
     # elif args.ansatz in ["IPESS_PG","A_2,B"]:
     #     state= read_ipess_kagome_pg(outputstatefile)
-    ctm_env = ENV_ABELIAN(args.chi, state=state, init=True)
-    ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_f)
-    opt_energy = energy_f(state, ctm_env, force_cpu=args.force_cpu)
-    obs_values, obs_labels = model.eval_obs(state,ctm_env)
+    state_d= state.to_dense()
+    ctm_env = ENV(args.chi, state_d)
+    init_env(state_d, ctm_env)
+    ctm_env, *ctm_log= ctmrg.run(state_d, ctm_env, conv_check=ctmrg_conv_f)
+    opt_energy = energy_f(state_d, ctm_env, force_cpu=args.force_cpu)
+    obs_values, obs_labels = model.eval_obs(state_d,ctm_env)
     print("\n")
     print(", ".join(["epoch","energy"]+obs_labels))
     print("FINAL "+", ".join([f"{opt_energy}"]+[f"{v}" for v in obs_values]))
+
 
 if __name__ == '__main__':
     if len(unknown_args) > 0:
         print("args not recognized: " + str(unknown_args))
         raise Exception("Unknown command line arguments")    
     main()
+
 
 class TestOptim_RVB(unittest.TestCase):
     tol= 1.0e-6
@@ -470,7 +473,10 @@ class TestOptim_RVB(unittest.TestCase):
         args.theta=0.2
         args.j1=1.0
         args.bond_dim=3
-        args.chi=64
+        args.chi=27
+        args.opt_max_iter= 5
+        args.seed=1
+        args.instate_noise=0.02
         args.out_prefix=self.OUT_PRFX
         args.GLOBALARGS_dtype= "complex128"
         args.ipeps_init_type="RVB"
@@ -493,8 +499,8 @@ class TestOptim_RVB(unittest.TestCase):
             print(l,end="")
             if OPT_OBS and not OPT_OBS_DONE and l.rstrip()=="": OPT_OBS_DONE= True
             if OPT_OBS and not OPT_OBS_DONE and len(l.split(','))>2:
-                final_opt_line= l
-            if "epoch, energy," in l and not OPT_OBS_DONE: 
+                final_opt_line= l.rstrip()
+            if "epoch, loss," in l and not OPT_OBS_DONE: 
                 OPT_OBS= True
             if "FINAL" in l:
                 final_obs= l.rstrip()
@@ -505,26 +511,32 @@ class TestOptim_RVB(unittest.TestCase):
 
         # compare with the reference
         ref_data="""
-        -0.3180424915434603, (-0.4770636301027198+0j), (-0.4770638445276611+0j), (0+0j), 
-        (0+0j), (0+0j), (0+0j), 0.0, 0.0, (0+0j), 0.0, 0.0, (0+0j), 0.0, 0.0, 
-        (-0.15902115598625072+0j), (-0.1590211415594349+0j), (-0.15902133255703074+0j), 
-        (-0.15902159490668272+0j), (-0.1590211322642514+0j), (-0.15902111735672694+0j)
+        -0.31804132028886806, (-0.47713120438983814+7.549962928898673e-15j), (-0.476992756476766-4.119968255444917e-18j), 
+        (7.274848840199822e-06-3.5746728283180605e-19j), (7.3353653779646725e-06+7.360506398261333e-19j), 
+        (2.922029479032141e-05-2.715668256517051e-19j), (0.002697192770307644-6.626654326806431e-17j), 
+        (-1.5516039582596943e-17-2.1873315117327667e-17j), (6.715536599341479e-17+7.135828673148481e-17j), 
+        (0.0027083879666629507+1.358835308836964e-16j), (4.781780637048328e-17-1.7674029993691934e-16j), 
+        (1.04858281503992e-16-3.2675260491395483e-17j), (-0.005405579967988764+2.5119120173959286e-17j), 
+        (-6.30931345724943e-18+2.564004527408652e-16j), (3.281491030665942e-17-6.597152387257949e-19j), 
+        (-0.15907030200757202+1.803657163136761e-15j), (-0.16060958289227062+2.4285154034098587e-15j), 
+        (-0.1574458254332934+3.3408792468870173e-15j), (-0.1574280728668333+0j), (-0.16058888696847698+0j), 
+        (-0.15897179117210647+0j)
         """
         # compare final observables from optimization and the observables from the 
         # final state
-        final_opt_line_t= [complex(x) for x in final_opt_line.split(",")[1:]]
-        fobs_tokens= [complex(x) for x in final_obs[len("FINAL"):].split(",")]
+        final_opt_line_t= [complex(x) for x in final_opt_line.split(",")[1:7]]
+        fobs_tokens= [complex(x) for x in final_obs[len("FINAL"):].split(",")[:6]]
         for val0,val1 in zip(final_opt_line_t, fobs_tokens):
             assert isclose(val0,val1, rel_tol=self.tol, abs_tol=self.tol)
 
         # compare final observables from final state against expected reference 
         # drop first token, corresponding to iteration step
-        ref_tokens= [complex(x) for x in ref_data.split(",")]
+        ref_tokens= [complex(x) for x in ref_data.split(",")[:6]]
         for val,ref_val in zip(fobs_tokens, ref_tokens):
             assert isclose(val,ref_val, rel_tol=self.tol, abs_tol=self.tol)
 
     def tearDown(self):
         args.opt_resume=None
         args.instate=None
-        # for f in [self.OUT_PRFX+"_state.json",self.OUT_PRFX+"_checkpoint.p",self.OUT_PRFX+".log"]:
-        #     if os.path.isfile(f): os.remove(f)
+        for f in [self.OUT_PRFX+"_state.json",self.OUT_PRFX+"_checkpoint.p",self.OUT_PRFX+".log"]:
+            if os.path.isfile(f): os.remove(f)

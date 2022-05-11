@@ -129,7 +129,7 @@ class TestCtmrg_TrimerState(unittest.TestCase):
     OUT_PRFX = "RESULT_test_run_u1xu1_trimerized"
 
     def setUp(self):
-        args.instate=self.DIR_PATH+"/../../test-input/abelian/IPESS_TRIMER_1-3_1x1_abelian-U1xU1_T3T8_state.json"
+        args.instate=self.DIR_PATH+"/../../../test-input/abelian/IPESS_TRIMER_1-3_1x1_abelian-U1xU1_T3T8_state.json"
         args.symmetry="U1xU1"
         args.theta=0
         args.phi=0
@@ -178,7 +178,7 @@ class TestCtmrg_AKLTState(unittest.TestCase):
     OUT_PRFX = "RESULT_test_run_u1xu1_aklt"
 
     def setUp(self):
-        args.instate=self.DIR_PATH+"/../../test-input/abelian/IPESS_AKLT_b3_1x1_abelian-U1xU1_T3T8_state.json"
+        args.instate=self.DIR_PATH+"/../../../test-input/abelian/IPESS_AKLT_b3_1x1_abelian-U1xU1_T3T8_state.json"
         args.symmetry="U1xU1"
         args.theta=0
         args.phi=0.5

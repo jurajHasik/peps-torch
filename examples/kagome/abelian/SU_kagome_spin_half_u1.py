@@ -124,22 +124,22 @@ def main(args=args):
             args.ansatz= "IPESS"
             unit_block= np.ones((1,1,1), dtype=cfg.global_args.dtype)
             B_c= yast.Tensor(settings_U1, s=(-1, 1, 1), n=0)
-            B_c.set_block(ts=(1,1,0), val= unit_block)
-            B_c.set_block(ts=(1,0,1), val= unit_block)
-            B_c.set_block(ts=(-1,-1,0), val= unit_block)
-            B_c.set_block(ts=(-1,0,-1), val= unit_block)
+            B_c.set_block(ts=(1,1,0), Ds=unit_block.shape, val= unit_block)
+            B_c.set_block(ts=(1,0,1), Ds=unit_block.shape, val= unit_block)
+            B_c.set_block(ts=(-1,-1,0), Ds=unit_block.shape, val= unit_block)
+            B_c.set_block(ts=(-1,0,-1), Ds=unit_block.shape, val= unit_block)
             B_b=B_c
             B_a=B_c
 
             unit_block= np.ones((1,1,1), dtype=cfg.global_args.dtype)
             T_u= yast.Tensor(settings_U1, s=(-1, -1, -1), n=0)
-            T_u.set_block(ts=(1,-1,0), val= unit_block)
-            T_u.set_block(ts=(-1,1,0), val= -1*unit_block)
-            T_u.set_block(ts=(0,1,-1), val= unit_block)
-            T_u.set_block(ts=(0,-1,1), val= -1*unit_block)
-            T_u.set_block(ts=(-1,0,1), val= unit_block)
-            T_u.set_block(ts=(1,0,-1), val= -1*unit_block)
-            T_u.set_block(ts=(0,0,0), val= unit_block)
+            T_u.set_block(ts=(1,-1,0), Ds=unit_block.shape, val= unit_block)
+            T_u.set_block(ts=(-1,1,0), Ds=unit_block.shape, val= -1*unit_block)
+            T_u.set_block(ts=(0,1,-1), Ds=unit_block.shape, val= unit_block)
+            T_u.set_block(ts=(0,-1,1), Ds=unit_block.shape, val= -1*unit_block)
+            T_u.set_block(ts=(-1,0,1), Ds=unit_block.shape, val= unit_block)
+            T_u.set_block(ts=(1,0,-1), Ds=unit_block.shape, val= -1*unit_block)
+            T_u.set_block(ts=(0,0,0), Ds=unit_block.shape, val= unit_block)
             T_d=T_u
             state= IPESS_KAGOME_GENERIC_ABELIAN(settings_U1, {'T_u': T_u, 'B_a': B_a,\
                 'T_d': T_d,'B_b': B_b, 'B_c': B_c})
@@ -151,9 +151,9 @@ def main(args=args):
     def energy_f(state, env, force_cpu=False, fail_on_check=False,\
         warn_on_check=True):
         #print(env)
-        e_dn = model.energy_triangle_dn(state, env, force_cpu=force_cpu,\
+        e_dn = model.energy_down_t_2x2subsystem(state, env, force_cpu=force_cpu,\
             fail_on_check=fail_on_check, warn_on_check=warn_on_check)
-        e_up = model.energy_triangle_up(state, env, force_cpu=force_cpu,\
+        e_up = model.energy_up_t_2x2subsystem(state, env, force_cpu=force_cpu,\
             fail_on_check=fail_on_check, warn_on_check=warn_on_check)
         # e_nnn = model.energy_nnn(state, env)
         return (e_up + e_dn)/3 #+ e_nnn) / 3
@@ -373,11 +373,13 @@ def main(args=args):
     #     io.savemat(filenm,{'energies':energies,'m':m, 'itebd_list':itebd_list})
     # filenm='IPESS_J'+str(args.j1)+'_JD'+str(args.JD)+'_D'+str(args.bond_dim)+'.json'
 
+
 if __name__ == '__main__':
     if len(unknown_args) > 0:
         print("args not recognized: " + str(unknown_args))
         raise Exception("Unknown command line arguments")
     main()
+
 
 class TestSU_RVB_Ansatz(unittest.TestCase):
     tol= 1.0e-6
