@@ -1,5 +1,5 @@
 import torch
-from linalg.svd_gesdd import _torch_version_check
+from config import _torch_version_check
 from ctm.generic.env import ENV
 from tn_interface import contract, einsum
 from tn_interface import contiguous, view, permute

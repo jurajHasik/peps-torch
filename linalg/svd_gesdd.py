@@ -1,22 +1,6 @@
 import torch
 import numpy as np
-
-def _torch_version_check(version):
-    # for version="X.Y.Z" checks if current version is higher or equal to X.Y
-    assert version.count('.')==2 and version.replace('.','').isdigit(),"Invalid version string"
-    try:
-        import pkg_resources
-        return pkg_resources.parse_version(torch.__version__) >= pkg_resources.parse_version(version)
-    except ModuleNotFoundError:
-        try:
-            from packaging import version
-            return version.parse(torch.__version__) >= version.parse(version)
-        except ModuleNotFoundError:
-            tokens= torch.__version__.split('.')
-            tokens_v= version.split('.')
-            return int(tokens[0]) > int(tokens_v[0]) or \
-                (int(tokens[0])==int(tokens_v[0]) and int(tokens[1]) >= int(tokens_v[1])) 
-    return True 
+from config import _torch_version_check
 
 def safe_inverse(x, epsilon=1E-12):
     return x/(x**2 + epsilon)

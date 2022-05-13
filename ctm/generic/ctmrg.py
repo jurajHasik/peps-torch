@@ -2,6 +2,7 @@ import time
 import torch
 from torch.utils.checkpoint import checkpoint
 import config as cfg
+from config import _torch_version_check
 from ipeps.ipeps import IPEPS
 from ctm.generic.env import *
 from ctm.generic.ctm_components import *
@@ -182,9 +183,14 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
         if norm_type=='inf':
             _ord= float('inf')
 
-        scale_nC1= torch.linalg.vector_norm(nC1,ord=_ord)
-        scale_nC2= torch.linalg.vector_norm(nC2,ord=_ord)
-        scale_nT= torch.linalg.vector_norm(nT,ord=_ord)
+        if _torch_version_check("1.9.0"):
+            scale_nC1= torch.linalg.vector_norm(nC1,ord=_ord)
+            scale_nC2= torch.linalg.vector_norm(nC2,ord=_ord)
+            scale_nT= torch.linalg.vector_norm(nT,ord=_ord)
+        else:
+            scale_nC1= nC1.norm(p=_ord)
+            scale_nC2= nC2.norm(p=_ord)
+            scale_nT= nT.norm(p=_ord)
         if verbosity>0:
             print(f"nC1 {scale_nC1} nC2 {scale_nC2} nT {scale_nT}")
         nC1 = nC1/scale_nC1

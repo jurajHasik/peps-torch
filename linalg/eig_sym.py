@@ -1,5 +1,5 @@
 import torch
-from .svd_gesdd import _torch_version_check
+from config import _torch_version_check
 
 def safe_inverse(x, epsilon=1E-12):
     return x/(x**2 + epsilon)
