@@ -43,35 +43,35 @@ class SU2_NOSYM():
     def I(self):
         r"""
         :return: Identity operator of irrep
-        :rtype: torch.tensor
+        :rtype: yast.Tensor
         """
         return self._cast("I",self.J,self.dtype,self.device)
 
     def SZ(self):
         r"""
         :return: :math:`S^z` operator of irrep
-        :rtype: torch.tensor
+        :rtype: yast.Tensor
         """
         return self._cast("sz",self.J,self.dtype,self.device)
 
     def SP(self):
         r"""
         :return: :math:`S^+` operator of irrep.
-        :rtype: torch.tensor
+        :rtype: yast.Tensor
         """
         return self._cast("sp",self.J,self.dtype,self.device)
 
     def SM(self):
         r"""
         :return: :math:`S^-` operator of irrep.
-        :rtype: torch.tensor
+        :rtype: yast.Tensor
         """
         return self._cast("sm",self.J,self.dtype,self.device)
 
     def BP_rot(self):
         tmp_block= self.get_op("rot", self.J, self.dtype)
         op= yast.Tensor(self.engine, s=[1,1])
-        op.set_block(val=tmp_block)
+        op.set_block(Ds=tmp_block.shape, val=tmp_block)
         op= op.to(self.device)
         return op
 
@@ -88,13 +88,13 @@ class SU2_NOSYM():
         return op
 
     # TODO: implement xyz for Sx and Sy terms
-    def SS(self, xyz=(1.,0.5,0.5)):
+    def SS(self, zpm=(1.,1.,1.)):
         r"""
-        :param xyz: coefficients of anisotropy of spin-spin interaction
-                    xyz[0]*(S^z S^z) + xyz[1]*(S^x S^x) + xyz[2]*(S^y S^y)
-        :type xyz: tuple(float)
+        :param zpm: coefficients of anisotropy of spin-spin interaction
+                    zpm[0]*(S^z S^z) + zpm[1]*(S^p S^m)/2 + zpm[2]*(S^m S^p)/2
+        :type zpm: tuple(float)
         :return: spin-spin interaction as rank-4 for tensor 
-        :rtype: torch.tensor
+        :rtype: yast.Tensor
         """
         # expr_kron = 'ij,ab->iajb'
         # spin-spin interaction \vec{S}_1.\vec{S}_2 between spins on sites 1 and 2
@@ -105,7 +105,7 @@ class SU2_NOSYM():
         S_vec= self.S_zpm()
         S_vec_dag= S_vec.conj().transpose((0,2,1))
         g= yast.Tensor(self.engine, s=self._REF_S_DIRS)
-        tmp_block= np.diag(np.asarray(xyz, dtype=self.dtype))
+        tmp_block= np.diag(np.asarray([1.,0.5,0.5])*np.asarray(zpm, dtype=self.dtype))
         g.set_block(Ds=tmp_block.shape, val=tmp_block)
         #
         # 1->0

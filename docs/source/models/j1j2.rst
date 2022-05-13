@@ -1,23 +1,61 @@
 J1-J2-J3 and J1-J2-lambda Heisenberg Model
 ==========================================
 
-.. automodule:: models.j1j2
 
-from 2x1 to 4x2 unit cell
-^^^^^^^^^^^^^^^^^^^^^^^^^
+from 2x1 to 4x2 unit cell (PyTorch)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Extended unit cell IPEPS support J1-J2 model
+J1-J2 model defined on iPEPS with extended unit cell using dense PyTorch tensors.
 
-.. autoclass:: J1J2
+.. autoclass::  models.j1j2.J1J2
     :members:
 
-1x1 C4v
-^^^^^^^
+
+from 2x1 to 4x2 unit cell (dense YAST)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+J1-J2 model defined on :class:`ipeps.ipeps_abelian.IPEPS_ABELIAN` with extended unit cell
+
+This implementation of SU(2)-symmetric J1-J2 model 
+works with dense YAST tensors. In particular, the physical reduced density matrices, 
+Hamiltonian terms, observables, etc. are dense YAST tensors. As such, their indices have signature.
+
+.. note::
+    The underlying iPEPS wavefunction can make use of explicit internal symmetry and thus 
+    block-sparse tensors. After physical reduced density matrices are built from such
+    iPEPS and its environment, they are converted to dense form (keeping signature information).
+
+.. autoclass:: models.abelian.j1j2.J1J2_NOSYM
+    :members:
+
+
+1x1 C4v (PyTorch)
+^^^^^^^^^^^^^^^^^
 
 Single-site C4v symmetric IPEPS_C4V supports J1-J2-J3 model and J1-J2-lambda model.
+This implementation works with dense PyTorch tensors.
 
-.. autoclass:: J1J2_C4V_BIPARTITE
+.. autoclass:: models.j1j2.J1J2_C4V_BIPARTITE
     :members:
 
 .. autoclass:: models.j1j2lambda.J1J2LAMBDA_C4V_BIPARTITE
+    :members:
+
+
+1x1 C4v (dense YAST)
+^^^^^^^^^^^^^^^^^^^^
+
+Single-site C4v symmetric :class:`ipeps.ipeps_abelian_c4v.IPEPS_ABELIAN_C4V` 
+supports J1-J2 model.
+
+This implementation of SU(2)-symmetric J1-J2 model 
+works with dense YAST tensors. In particular, the physical reduced density matrices, 
+Hamiltonian terms, observables, etc. are dense YAST tensors. As such, their indices have signature.
+
+.. note::
+    The underlying iPEPS wavefunction can make use of explicit internal symmetry and thus 
+    block-sparse tensors. After physical reduced density matrices are built from such
+    iPEPS and its environment, they are converted to dense form (keeping signature information).
+    
+.. autoclass:: models.abelian.j1j2.J1J2_C4V_BIPARTITE_NOSYM
     :members:

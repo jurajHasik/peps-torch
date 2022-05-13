@@ -29,17 +29,13 @@ parser.add_argument("--top_n", type=int, default=2, help="number of leading eige
 parser.add_argument("--obs_freq", type=int, default=-1, help="frequency of computing observables"
     + " during CTM convergence")
 parser.add_argument("--force_cpu", action='store_true', help="evaluate energy on cpu")
-parser.add_argument("--symmetry", default=None, help="symmetry structure", choices=["NONE","U1"])
 args, unknown_args = parser.parse_known_args()
 
 def main():
     cfg.configure(args)
     cfg.print_config()
-    # TODO(?) choose symmetry group
-    if not args.symmetry or args.symmetry=="NONE":
-        settings= settings_full
-    elif args.symmetry=="U1":
-        settings= settings_U1
+
+    settings= settings_U1
     # override default device specified in settings
     default_device= 'cpu' if not hasattr(settings, 'device') else settings.device
     if not cfg.global_args.device == default_device:

@@ -19,7 +19,8 @@ class IPEPS_ABELIAN_C4V_LC(IPEPS_ABELIAN_C4V):
     def __init__(self, settings, elem_tensors, coeffs, abelian_sym_data, \
         peps_args=cfg.peps_args, global_args=cfg.global_args):
         r"""
-        :param settings: TODO
+        :param settings: YAST configuration
+        :type settings: NamedTuple or SimpleNamespace (TODO link to definition)
         :param elem_tensors: set of elementary tensors
         :param coeffs: coefficients of linear superposition forming on-site tensor
         :param abelian_sym_data: TODO

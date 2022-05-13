@@ -9,8 +9,6 @@ from ctm.generic_abelian import rdm
 from ctm.one_site_c4v_abelian import rdm_c4v
 from ctm.one_site_c4v_abelian import corrf_c4v
 
-def _cast_to_real(t):
-    return t.real if t.is_complex() else t
 
 class J1J2_NOSYM():
     def __init__(self, settings, j1=1.0, j2=0.0, global_args=cfg.global_args):
@@ -123,7 +121,7 @@ class J1J2_NOSYM():
 
     #     return energy_per_site
 
-    def energy_2x1_or_2Lx2site_2x2rdms(self,state,env):
+    def energy_2x1_or_2Lx2site_2x2rdms(self,state,env,**kwargs):
         r"""
 
         :param state: wavefunction
@@ -246,18 +244,17 @@ class J1J2_NOSYM():
 
         energy_nn=yast.zeros(self.engine)
         energy_nnn=yast.zeros(self.engine)
-        # _ci= ([0,1,2,3, 4,5,6,7],[4,5,6,7, 0,1,2,3])
-        _ci= ([0,1,2,3, 4,5,6,7],[0,1,2,3, 4,5,6,7])
+        _ci= ([0,1,2,3, 4,5,6,7],[4,5,6,7, 0,1,2,3])
         for coord in state.sites.keys():
             tmp_rdm= rdm.rdm2x2(coord,state,env).to_nonsymmetric()
             energy_nn += contract(tmp_rdm,self.h2x2_nn,_ci)
             energy_nnn += contract(tmp_rdm,self.h2x2_nnn,_ci)
         energy_per_site= 2.0*(self.j1*energy_nn/(4*N) + self.j2*energy_nnn/(2*N))
-        energy_per_site= _cast_to_real(energy_per_site)
+        energy_per_site= rdm._cast_to_real(energy_per_site,**kwargs)
 
         return energy_per_site
 
-    def eval_obs(self,state,env):
+    def eval_obs(self,state,env,**kwargs):
         r"""
         :param state: wavefunction
         :param env: CTM environment
@@ -296,8 +293,7 @@ class J1J2_NOSYM():
         # TODO optimize/unify ?
         # expect "list" of (observable label, value) pairs ?
         obs= dict({"avg_m": 0.})
-        #_ci= ([0,1],[1,0])
-        _ci= ([0,1],[0,1])
+        _ci= ([0,1],[1,0])
         for coord,site in state.sites.items():
             rdm1x1 = rdm.rdm1x1(coord,state,env).to_nonsymmetric()
             for label,op in self.obs_ops.items():
@@ -306,15 +302,14 @@ class J1J2_NOSYM():
             obs["avg_m"] += obs[f"m{coord}"]
         obs["avg_m"]= obs["avg_m"]/len(state.sites.keys())
 
-        # _ci= ([0,1,2,3],[2,3,0,1])
-        _ci= ([0,1,2,3],[0,1,2,3])
+        _ci= ([0,1,2,3],[2,3,0,1])
         for coord,site in state.sites.items():
             rdm2x1 = rdm.rdm2x1(coord,state,env).to_nonsymmetric()
             rdm1x2 = rdm.rdm1x2(coord,state,env).to_nonsymmetric()
             SS2x1= contract(rdm2x1,self.h2,_ci).to_number()
             SS1x2= contract(rdm1x2,self.h2,_ci).to_number()
-            obs[f"SS2x1{coord}"]= _cast_to_real(SS2x1)
-            obs[f"SS1x2{coord}"]= _cast_to_real(SS1x2)
+            obs[f"SS2x1{coord}"]= rdm._cast_to_real(SS2x1,**kwargs)
+            obs[f"SS1x2{coord}"]= rdm._cast_to_real(SS1x2,**kwargs)
         
         # prepare list with labels and values
         obs_labels=["avg_m"]+[f"m{coord}" for coord in state.sites.keys()]\
@@ -367,18 +362,9 @@ class J1J2_C4V_BIPARTITE_NOSYM():
 
         on the square lattice. Where the first sum runs over the pairs of sites `i,j` 
         which are nearest-neighbours (denoted as `<.,.>`), and the second sum runs over 
-        pairs of sites `i,j` which are next nearest-neighbours (denoted as `<<.,.>>`)::
+        pairs of sites `i,j` which are next nearest-neighbours (denoted as `<<.,.>>`).
 
-            y\x
-               _:__:__:__:_
-            ..._|__|__|__|_...
-            ..._|__|__|__|_...
-            ..._|__|__|__|_...
-            ..._|__|__|__|_...
-            ..._|__|__|__|_...
-                :  :  :  :
-
-        where
+        The plaquette term is defined as
 
         * :math:`h_p = J_1(\mathbf{S}_{r}.\mathbf{S}_{r+\vec{x}} + \mathbf{S}_{r}.\mathbf{S}_{r+\vec{y}})
           +J_2(\mathbf{S}_{r}.\mathbf{S}_{r+\vec{x}+\vec{y}} + \mathbf{S}_{r+\vec{x}}.\mathbf{S}_{r+\vec{y}})` 
@@ -453,7 +439,7 @@ class J1J2_C4V_BIPARTITE_NOSYM():
         obs_ops["sm"]= irrep.SM()
         return obs_ops
 
-    def energy_1x1(self,state,env_c4v,force_cpu=False):
+    def energy_1x1(self,state,env_c4v,force_cpu=False,**kwargs):
         r"""
         :param state: wavefunction
         :param env_c4v: CTM c4v symmetric environment
@@ -484,14 +470,15 @@ class J1J2_C4V_BIPARTITE_NOSYM():
             e = \langle \mathcal{h_p} \rangle = Tr(\rho_{2x2} \mathcal{h_p})
         
         """
-        # _ci= ([0,1,2,3,4,5,6,7], [0,1,2,3,4,5,6,7])
-        _ci= ([0,1,2,3,4,5,6,7], [4,5,6,7,0,1,2,3])
+        _ci= ([0,1,2,3,4,5,6,7], [0,1,2,3,4,5,6,7])
+        # _ci= ([0,1,2,3,4,5,6,7], [4,5,6,7,0,1,2,3])
         rdm2x2= rdm_c4v.rdm2x2(state, env_c4v, sym_pos_def=False,\
             verbosity=cfg.ctm_args.verbosity_rdm, force_cpu=force_cpu).to_nonsymmetric()
         energy_per_site= contract(rdm2x2,self.hp,_ci).to_number()
+        energy_per_site= rdm._cast_to_real(energy_per_site,**kwargs)
         return energy_per_site
 
-    def energy_1x1_lowmem(self,state,env_c4v,force_cpu=False):
+    def energy_1x1_lowmem(self,state,env_c4v,force_cpu=False,**kwargs):
         r"""
         :param state: wavefunction
         :param env_c4v: CTM c4v symmetric environment
@@ -524,8 +511,8 @@ class J1J2_C4V_BIPARTITE_NOSYM():
             = 2*Tr(\rho_{2x1} \mathcal{h2_rot}) + 2*Tr(\rho_{2x1_diag} \mathcal{h2})
         
         """
-        _ci= ([0,1,2,3],[2,3,0,1])
-        # _ci= ([0,1,2,3],[0,1,2,3])
+        # _ci= ([0,1,2,3],[2,3,0,1])
+        _ci= ([0,1,2,3],[0,1,2,3])
         rdm2x2_NN= rdm_c4v.rdm2x2_NN(state, env_c4v, sym_pos_def=False,\
             force_cpu=force_cpu, verbosity=cfg.ctm_args.verbosity_rdm).to_nonsymmetric()
         rdm2x2_NNN= rdm_c4v.rdm2x2_NNN(state, env_c4v, sym_pos_def=False,\
@@ -533,9 +520,10 @@ class J1J2_C4V_BIPARTITE_NOSYM():
         SS_nn= contract(rdm2x2_NN,self.SS_rot,_ci).to_number()
         SS_nnn= contract(rdm2x2_NNN,self.SS,_ci).to_number()
         energy_per_site= 2.0*self.j1*SS_nn + 2.0*self.j2*SS_nnn
+        energy_per_site= rdm._cast_to_real(energy_per_site,**kwargs)
         return energy_per_site
 
-    def eval_obs(self,state,env_c4v,force_cpu=False):
+    def eval_obs(self,state,env_c4v,force_cpu=False,**kwargs):
         r"""
         :param state: wavefunction
         :param env_c4v: CTM c4v symmetric environment
@@ -552,41 +540,26 @@ class J1J2_C4V_BIPARTITE_NOSYM():
         where the on-site magnetization is defined as
         
         .. math::
-            
-            \begin{align*}
-            m &= \sqrt{ \langle S^z \rangle^2+\langle S^x \rangle^2+\langle S^y \rangle^2 }
-            =\sqrt{\langle S^z \rangle^2+1/4(\langle S^+ \rangle+\langle S^- 
-            \rangle)^2 -1/4(\langle S^+\rangle-\langle S^-\rangle)^2} \\
-              &=\sqrt{\langle S^z \rangle^2 + 1/2\langle S^+ \rangle \langle S^- \rangle)}
-            \end{align*}
-
-        Usual spin components can be obtained through the following relations
-        
-        .. math::
-            
-            \begin{align*}
-            S^+ &=S^x+iS^y               & S^x &= 1/2(S^+ + S^-)\\
-            S^- &=S^x-iS^y\ \Rightarrow\ & S^y &=-i/2(S^+ - S^-)
-            \end{align*}
+            m = \sqrt{ \langle S^z \rangle^2+\langle S^x \rangle^2+\langle S^y \rangle^2 }
         """
         # TODO optimize/unify ?
         # expect "list" of (observable label, value) pairs ?
         obs= dict()
-        _ci= ([0,1,2,3],[2,3,0,1])
-        # _ci= ([0,1,2,3],[0,1,2,3])
+        # _ci= ([0,1,2,3],[2,3,0,1])
+        _ci= ([0,1,2,3],[0,1,2,3])
         rdm2x1= rdm_c4v.rdm2x1(state,env_c4v,force_cpu=force_cpu,\
             verbosity=cfg.ctm_args.verbosity_rdm).to_nonsymmetric()
-        if np.all(np.asarray(rdm2x1.s)/np.asarray(self.SS_rot.s)==-1):
-            rdm2x1= rdm2x1.flip_signature(inplace=True)
+        # if np.all(np.asarray(rdm2x1.s)/np.asarray(self.SS_rot.s)==-1):
+        #     rdm2x1= rdm2x1.flip_signature()
         obs[f"SS2x1"]= contract(rdm2x1,self.SS_rot,_ci).to_number()
         
         # TODO reduce rdm2x1 to 1x1
-        _ci= ([0,1],[1,0])
-        # _ci= ([0,1],[0,1])
+        # _ci= ([0,1],[1,0])
+        _ci= ([0,1],[0,1])
         rdm1x1 = rdm_c4v.rdm1x1(state,env_c4v,force_cpu=force_cpu,\
             verbosity=cfg.ctm_args.verbosity_rdm).to_nonsymmetric()
-        if np.all(np.asarray(rdm1x1.s)/np.asarray(self.obs_ops["sz"].s)==-1):
-            rdm1x1= rdm1x1.flip_signature()
+        # if np.all(np.asarray(rdm1x1.s)/np.asarray(self.obs_ops["sz"].s)==-1):
+        #     rdm1x1= rdm1x1.flip_signature()
         for label,op in self.obs_ops.items():
             obs[f"{label}"]= contract(rdm1x1, op, _ci).to_number()
         obs[f"m"]= sqrt(abs(obs[f"sz"]**2 + obs[f"sp"]*obs[f"sm"]))

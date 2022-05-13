@@ -393,6 +393,8 @@ def rdm2x1(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
     :param env: C4v symmetric environment corresponding to ``state``
     :param sym_pos_def: make final density matrix symmetric and non-negative (default: False)
     :type sym_pos_def: bool
+    :param force_cpu: perform on CPU
+    :type force_cpu: bool
     :param verbosity: logging verbosity
     :type state: IPEPS_C4V
     :type env: ENV_C4V
@@ -664,6 +666,8 @@ def rdm3x1(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
     :param env: C4v symmetric environment corresponding to ``state``
     :param sym_pos_def: make final density matrix symmetric and non-negative (default: False)
     :type sym_pos_def: bool
+    :param force_cpu: perform on CPU
+    :type force_cpu: bool
     :param verbosity: logging verbosity
     :type state: IPEPS_C4V
     :type env: ENV_C4V
@@ -1441,6 +1445,8 @@ def rdm2x2(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
     :param env: C4v symmetric environment corresponding to ``state``
     :param sym_pos_def: make final density matrix symmetric and non-negative (default: False)
     :type sym_pos_def: bool
+    :param force_cpu: perform on CPU
+    :type force_cpu: bool
     :param verbosity: logging verbosity
     :type state: IPEPS_C4V
     :type env: ENV_C4V

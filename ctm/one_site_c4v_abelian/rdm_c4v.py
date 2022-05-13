@@ -101,16 +101,18 @@ def closed_C2x2_LU(a,C,T, verbosity=0):
     return c2x2
 
 # ----- density matrices in physical space -------------------------------------
-def rdm1x1(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
+def rdm1x1(state, env, sym_pos_def=False, force_cpu=False, verbosity=0, **kwargs):
     r"""
     :param state: underlying wavefunction
     :param env: environment corresponding to ``state``
     :param verbosity: logging verbosity
+    :param force_cpu: perform on CPU
+    :type force_cpu: bool
     :type state: IPEPS_ABELIAN_C4V
     :type env: ENV_ABELIAN_C4V
     :type verbosity: int
     :return: 1-site reduced density matrix with indices :math:`s;s'`
-    :rtype: yamps.Tensor
+    :rtype: yast.Tensor
 
     Computes 1-site reduced density matrix :math:`\rho_{1x1}` centered on vertex ``coord`` by 
     contracting the following tensor network::
@@ -184,22 +186,25 @@ def rdm1x1(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
         print("rdm=CTCTaTCTC "+str(rdm))
 
     # symmetrize and normalize
-    rdm= _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
+    rdm= _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity,\
+        who=who, **kwargs)
 
     return rdm
 
-def rdm2x1(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
+def rdm2x1(state, env, sym_pos_def=False, force_cpu=False, verbosity=0, **kwargs):
     r"""
     :param state: underlying 1-site C4v symmetric wavefunction
     :param env: C4v symmetric environment corresponding to ``state``
     :param sym_pos_def: make final density matrix symmetric and non-negative (default: False)
     :type sym_pos_def: bool
+    :param force_cpu: perform on CPU
+    :type force_cpu: bool
     :param verbosity: logging verbosity
     :type state: IPEPS_ABELIAN_C4V
     :type env: ENV_ABELIAN_C4V
     :type verbosity: int
     :return: 2-site reduced density matrix with indices :math:`s_0s_1;s'_0s'_1`
-    :rtype: yamps.Tensor
+    :rtype: yast.Tensor
 
     Computes 2-site reduced density matrix :math:`\rho_{2x1}` of a horizontal 
     2x1 subsystem using following strategy:
@@ -210,6 +215,7 @@ def rdm2x1(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
            reduced density matrix
 
     ::
+
          ---->
         C--T-----T-----C = C2x2--C2x2
         |  |     |     |   |     |  
@@ -271,11 +277,11 @@ def rdm2x1(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
 
     # symmetrize
     rdm= _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity,\
-        who=who)
+        who=who, **kwargs)
 
     return rdm
 
-def rdm2x2_NN(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
+def rdm2x2_NN(state, env, sym_pos_def=False, force_cpu=False, verbosity=0, **kwargs):
     r"""
     :param state: underlying 1-site C4v symmetric wavefunction
     :param env: C4v symmetric environment corresponding to ``state``
@@ -288,7 +294,7 @@ def rdm2x2_NN(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
     :type force_cpu: bool
     :type verbosity: int
     :return: 2-site reduced density matrix with indices :math:`s_0s_1;s'_0s'_1`
-    :rtype: yamps.tensor
+    :rtype: yast.Tensor
 
     Computes 2-site reduced density matrix :math:`\rho_{2x1}` of 2 sites 
     that are nearest neighbours using strategy:
@@ -374,14 +380,14 @@ def rdm2x2_NN(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
     
     # normalize and symmetrize
     rdm= _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity,\
-        who=who)
+        who=who, **kwargs)
 
     if force_cpu:
         rdm= rdm.to(env.device)
 
     return rdm
 
-def rdm2x2_NNN(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
+def rdm2x2_NNN(state, env, sym_pos_def=False, force_cpu=False, verbosity=0, **kwargs):
     r"""
     :param state: underlying 1-site C4v symmetric wavefunction
     :param env: C4v symmetric environment corresponding to ``state``
@@ -394,7 +400,7 @@ def rdm2x2_NNN(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
     :type force_cpu: bool
     :type verbosity: int
     :return: 2-site reduced density matrix with indices :math:`s_0s_1;s'_0s'_1`
-    :rtype: torch.tensor
+    :rtype: yast.Tensor
 
     Computes 2-site reduced density matrix :math:`\rho_{2x1}^{diag}` of 2 sites 
     that are next-nearest neighbours (along diagonal) using strategy:
@@ -473,25 +479,27 @@ def rdm2x2_NNN(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
 
     # normalize and symmetrize
     rdm= _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity,\
-        who=who)
+        who=who, **kwargs)
 
     if force_cpu:
         rdm= rdm.to(env.device)
 
     return rdm
 
-def rdm2x2(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
+def rdm2x2(state, env, sym_pos_def=False, force_cpu=False, verbosity=0, **kwargs):
     r"""
     :param state: underlying 1-site C4v symmetric wavefunction
     :param env: C4v symmetric environment corresponding to ``state``
     :param sym_pos_def: make final density matrix symmetric and non-negative (default: False)
     :type sym_pos_def: bool
+    :param force_cpu: perform on CPU
+    :type force_cpu: bool
     :param verbosity: logging verbosity
     :type state: IPEPS_ABELIAN_C4V
     :type env: ENV_ABELIAN_C4V
     :type verbosity: int
     :return: 4-site reduced density matrix with indices :math:`s_0s_1s_2s_3;s'_0s'_1s'_2s'_3`
-    :rtype: torch.tensor
+    :rtype: yast.Tensor
 
     Computes 4-site reduced density matrix :math:`\rho_{2x2}` of 2x2 subsystem using strategy:
 
@@ -565,6 +573,6 @@ def rdm2x2(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
 
     # normalize and symmetrize
     rdm= _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity,\
-        who=who)
+        who=who, **kwargs)
 
     return rdm

@@ -345,6 +345,9 @@ class IPEPS_ABELIAN():
         self.sync_precomputed()
 
     def write_to_file(self, outputfile, tol=None, normalize=False):
+        """
+        Writes state to file. See :meth:`write_ipeps`.
+        """
         write_ipeps(self, outputfile, tol=tol, normalize=normalize)
 
     # TODO what about non-initialized blocks, which are however allowed by the symmetry ?
@@ -409,6 +412,7 @@ def read_ipeps(jsonfile, settings, vertexToSite=None, \
     :return: wavefunction
     :rtype: IPEPS_ABELIAN
     
+    Read state in JSON format from file.
 
     A simple PBC ``vertexToSite`` function is used by default
     """
@@ -488,6 +492,8 @@ def write_ipeps(state, outputfile, tol=None, normalize=False,\
     :type ouputfile: str or Path object
     :type tol: float
     :type normalize: bool
+
+    Write state to file.
     """
     json_state=dict({"lX": state.lX, "lY": state.lY, "sites": []})
     

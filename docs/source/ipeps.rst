@@ -44,5 +44,7 @@ Specialized abelian-symmetric iPEPS
 .. toctree::
     :glob:
 
+    ipeps/ipeps_abelian_c4v
     ipeps/ipess_kagome_abelian
+
 

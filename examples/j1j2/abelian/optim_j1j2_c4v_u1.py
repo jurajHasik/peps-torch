@@ -31,17 +31,12 @@ parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of trans
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
 parser.add_argument("--force_cpu", action='store_true', help="evaluate energy on cpu")
-parser.add_argument("--symmetry", default=None, help="symmetry structure", choices=["NONE","U1"])
 args, unknown_args = parser.parse_known_args()
 
 def main():
     cfg.configure(args)
     cfg.print_config()
-    # TODO(?) choose symmetry group
-    if not args.symmetry or args.symmetry=="NONE":
-        settings= settings_full
-    elif args.symmetry=="U1":
-        settings= settings_U1
+    settings= settings_U1
     # override defaults in settings
     default_device= 'cpu' if not hasattr(settings, 'device') else settings.device
     if not cfg.global_args.device == default_device:
@@ -62,8 +57,7 @@ def main():
         state= state.add_noise(args.instate_noise)
         state.sites[(0,0)]= state.sites[(0,0)]/state.sites[(0,0)].norm(p="inf")
     elif args.opt_resume is not None:
-        dummy_site= yast.Tensor(settings,s=IPEPS_ABELIAN_C4V._REF_S_DIRS)
-        state= IPEPS_ABELIAN_C4V(settings, dummy_site)
+        state= IPEPS_ABELIAN_C4V(settings)
         state.load_checkpoint(args.opt_resume)
     else:
         raise ValueError("Missing trial state: --instate=None and --ipeps_init_type= "\
@@ -197,7 +191,7 @@ class TestCheckpoint_j1j2_c4v_u1_state(unittest.TestCase):
     OUT_PRFX = "RESULT_test_run-opt-chck_u1_vbs"
 
     def setUp(self):
-        args.instate=self.DIR_PATH+"/../../test-input/abelian/"\
+        args.instate=self.DIR_PATH+"/../../../test-input/abelian/"\
             +"/c4v/BFGS100LS_U1B_D3-chi72-j20.0-run0-iRNDseed321_blocks_1site_state.json"
         args.symmetry="U1"
         args.j2=0.0

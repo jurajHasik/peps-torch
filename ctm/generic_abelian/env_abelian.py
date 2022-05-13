@@ -15,6 +15,10 @@ class ENV_ABELIAN():
         :param state: wavefunction
         :param settings: YAST configuration
         :type settings: NamedTuple or SimpleNamespace (TODO link to definition)
+        :param init: initialize environment tensors
+        :type init: bool
+        :param init_method: choice of environment initialization. See :meth:`init_env`.
+        :type init_method: str
         :param ctm_args: CTM algorithm configuration
         :param global_args: global configuration
         :type chi: int
@@ -132,8 +136,11 @@ class ENV_ABELIAN():
         :rtype: ENV
 
         Create a copy of environment with all on-site tensors as dense possesing no explicit
-        block structure (symmetry). This operations preserves gradients on the returned
-        dense environment.
+        block structure (symmetry). The virtual spaces of on-site tensors in ``state`` 
+        are added to corresponding spaces of environment's T tensors to guarantee consistency.
+
+        .. note::
+            This operations preserves gradients on the returned dense environment.
         """
         vts= state.vertexToSite
         dir_to_leg= {(0,-1): 1, (0,1): 0, (-1,0): 2, (1,0): 1}
@@ -261,12 +268,11 @@ class ENV_ABELIAN():
 
     def clone(self):
         r"""
-        :return: returns a clone of the environment with all C,T tensors attached to
-                 computational graph.
+        :return: returns a clone of the environment
         :rtype: ENV_ABELIAN
 
-        Create a clone environment with all tensors (their blocks) attached to
-        computational graph. 
+        Create a clone of environment with all tensors (their blocks) attached 
+        to the computational graph. 
 
         .. note::
             This operation preserves gradient tracking.

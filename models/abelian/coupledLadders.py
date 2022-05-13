@@ -1,14 +1,10 @@
 from math import sqrt
 import itertools
 import config as cfg
-import torch
 import yast.yast as yast
 from tn_interface_abelian import contract, permute  
 import groups.su2_abelian as su2
 from ctm.generic_abelian import rdm
-
-def _cast_to_real(t):
-    return t.real if t.is_complex() else t
 
 def _null_Bz(coord):
     return 0.0
@@ -88,7 +84,7 @@ class COUPLEDLADDERS_NOSYM():
         obs_ops["sm"]= irrep.SM()
         return obs_ops
 
-    def energy_2x1_1x2(self,state,env):
+    def energy_2x1_1x2(self,state,env,**kwargs):
         r"""
         :param state: wavefunction
         :param env: CTM environment
@@ -157,11 +153,11 @@ class COUPLEDLADDERS_NOSYM():
 
         # return energy-per-site
         energy_per_site=energy/len(state.sites.items())
-        energy_per_site=_cast_to_real(energy_per_site)
+        energy_per_site=rdm._cast_to_real(energy_per_site,**kwargs)
 
         return energy_per_site
 
-    def eval_obs(self,state,env):
+    def eval_obs(self,state,env,**kwargs):
         r"""
         :param state: wavefunction
         :param env: CTM environment
@@ -182,22 +178,7 @@ class COUPLEDLADDERS_NOSYM():
         where the on-site magnetization is defined as
         
         .. math::
-            
-            \begin{align*}
-            m &= \sqrt{ \langle S^z \rangle^2+\langle S^x \rangle^2+\langle S^y \rangle^2 }
-            =\sqrt{\langle S^z \rangle^2+1/4(\langle S^+ \rangle+\langle S^- 
-            \rangle)^2 -1/4(\langle S^+\rangle-\langle S^-\rangle)^2} \\
-              &=\sqrt{\langle S^z \rangle^2 + 1/2\langle S^+ \rangle \langle S^- \rangle)}
-            \end{align*}
-
-        Usual spin components can be obtained through the following relations
-        
-        .. math::
-            
-            \begin{align*}
-            S^+ &=S^x+iS^y               & S^x &= 1/2(S^+ + S^-)\\
-            S^- &=S^x-iS^y\ \Rightarrow\ & S^y &=-i/2(S^+ - S^-)
-            \end{align*}
+            m = \sqrt{ \langle S^z \rangle^2+\langle S^x \rangle^2+\langle S^y \rangle^2 }
         """
         obs= dict({"avg_m": 0.})
         _ci= ([0,1],[1,0])
@@ -223,8 +204,8 @@ class COUPLEDLADDERS_NOSYM():
             rdm1x2 = rdm.rdm1x2(coord,state,env).to_nonsymmetric(_lss_dense,reverse=True)
             SS2x1= contract(rdm2x1,self.h2,_ci).to_number()
             SS1x2= contract(rdm1x2,self.h2,_ci).to_number()
-            obs[f"SS2x1{coord}"]= _cast_to_real(SS2x1)
-            obs[f"SS1x2{coord}"]= _cast_to_real(SS1x2)
+            obs[f"SS2x1{coord}"]= rdm._cast_to_real(SS2x1,**kwargs)
+            obs[f"SS1x2{coord}"]= rdm._cast_to_real(SS1x2,**kwargs)
 
         # prepare list with labels and values
         obs_labels=["avg_m"]+[f"m{coord}" for coord in state.sites.keys()]\
@@ -300,7 +281,7 @@ class COUPLEDLADDERS_U1():
         obs_ops["sm"]= irrep.SM()
         return obs_ops
 
-    def energy_2x1_1x2(self,state,env):
+    def energy_2x1_1x2(self,state,env,**kwargs):
         r"""
         :param state: wavefunction
         :param env: CTM environment
@@ -365,11 +346,11 @@ class COUPLEDLADDERS_U1():
 
         # return energy-per-site
         energy_per_site=energy/len(state.sites.items())
-        energy_per_site=_cast_to_real(energy_per_site)
+        energy_per_site=rdm._cast_to_real(energy_per_site,**kwargs)
 
         return energy_per_site
 
-    def energy_2x1_1x2_H(self,state,env):
+    def energy_2x1_1x2_H(self,state,env,**kwargs):
         r"""
         :param state: wavefunction
         :param env: CTM environment
@@ -410,11 +391,11 @@ class COUPLEDLADDERS_U1():
 
         # return energy-per-site
         energy_per_site=energy/len(state.sites.items())
-        energy_per_site=_cast_to_real(energy_per_site)
+        energy_per_site=rdm._cast_to_real(energy_per_site,**kwargs)
 
         return energy_per_site
 
-    def eval_obs(self,state,env):
+    def eval_obs(self,state,env,**kwargs):
         r"""
         :param state: wavefunction
         :param env: CTM environment
@@ -435,22 +416,7 @@ class COUPLEDLADDERS_U1():
         where the on-site magnetization is defined as
         
         .. math::
-            
-            \begin{align*}
-            m &= \sqrt{ \langle S^z \rangle^2+\langle S^x \rangle^2+\langle S^y \rangle^2 }
-            =\sqrt{\langle S^z \rangle^2+1/4(\langle S^+ \rangle+\langle S^- 
-            \rangle)^2 -1/4(\langle S^+\rangle-\langle S^-\rangle)^2} \\
-              &=\sqrt{\langle S^z \rangle^2 + 1/2\langle S^+ \rangle \langle S^- \rangle)}
-            \end{align*}
-
-        Usual spin components can be obtained through the following relations
-        
-        .. math::
-            
-            \begin{align*}
-            S^+ &=S^x+iS^y               & S^x &= 1/2(S^+ + S^-)\\
-            S^- &=S^x-iS^y\ \Rightarrow\ & S^y &=-i/2(S^+ - S^-)
-            \end{align*}
+            m = \sqrt{ \langle S^z \rangle^2+\langle S^x \rangle^2+\langle S^y \rangle^2 }
         """
         obs= dict({"avg_m": 0.})
         _ci= ([0,1],[1,0])
@@ -468,8 +434,8 @@ class COUPLEDLADDERS_U1():
             rdm1x2 = rdm.rdm1x2(coord,state,env)
             SS2x1= contract(rdm2x1,self.h2,_ci).to_number()
             SS1x2= contract(rdm1x2,self.h2,_ci).to_number()
-            obs[f"SS2x1{coord}"]=_cast_to_real(SS2x1)
-            obs[f"SS1x2{coord}"]=_cast_to_real(SS1x2)
+            obs[f"SS2x1{coord}"]=rdm._cast_to_real(SS2x1,**kwargs)
+            obs[f"SS1x2{coord}"]=rdm._cast_to_real(SS1x2,**kwargs)
 
         # prepare list with labels and values
         obs_labels=["avg_m"]+[f"m{coord}" for coord in state.sites.keys()]\

@@ -338,22 +338,7 @@ class J1J2():
         where the on-site magnetization is defined as
         
         .. math::
-            
-            \begin{align*}
             m &= \sqrt{ \langle S^z \rangle^2+\langle S^x \rangle^2+\langle S^y \rangle^2 }
-            =\sqrt{\langle S^z \rangle^2+1/4(\langle S^+ \rangle+\langle S^- 
-            \rangle)^2 -1/4(\langle S^+\rangle-\langle S^-\rangle)^2} \\
-              &=\sqrt{\langle S^z \rangle^2 + 1/2\langle S^+ \rangle \langle S^- \rangle)}
-            \end{align*}
-
-        Usual spin components can be obtained through the following relations
-        
-        .. math::
-            
-            \begin{align*}
-            S^+ &=S^x+iS^y               & S^x &= 1/2(S^+ + S^-)\\
-            S^- &=S^x-iS^y\ \Rightarrow\ & S^y &=-i/2(S^+ - S^-)
-            \end{align*}
         """
         # TODO optimize/unify ?
         # expect "list" of (observable label, value) pairs ?
@@ -651,22 +636,7 @@ class J1J2_C4V_BIPARTITE():
         where the on-site magnetization is defined as
         
         .. math::
-            
-            \begin{align*}
-            m &= \sqrt{ \langle S^z \rangle^2+\langle S^x \rangle^2+\langle S^y \rangle^2 }
-            =\sqrt{\langle S^z \rangle^2+1/4(\langle S^+ \rangle+\langle S^- 
-            \rangle)^2 -1/4(\langle S^+\rangle-\langle S^-\rangle)^2} \\
-              &=\sqrt{\langle S^z \rangle^2 + 1/2\langle S^+ \rangle \langle S^- \rangle)}
-            \end{align*}
-            
-        Usual spin components can be obtained through the following relations
-        
-        .. math::
-            
-            \begin{align*}
-            S^+ &=S^x+iS^y               & S^x &= 1/2(S^+ + S^-)\\
-            S^- &=S^x-iS^y\ \Rightarrow\ & S^y &=-i/2(S^+ - S^-)
-            \end{align*}
+            m = \sqrt{ \langle S^z \rangle^2+\langle S^x \rangle^2+\langle S^y \rangle^2 }
         """
         # TODO optimize/unify ?
         # expect "list" of (observable label, value) pairs ?
