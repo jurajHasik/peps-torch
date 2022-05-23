@@ -22,14 +22,17 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
     :param global_args: global configuration
     :type state: IPEPS_C4V
     :type env: ENV_C4V
-    :type conv_check: function(IPEPS,ENV_C4V,Object,CTMARGS)->bool
+    :type conv_check: function(IPEPS_C4V,ENV_C4V,Object,CTMARGS)->bool
     :type ctm_args: CTMARGS
     :type global_args: GLOBALARGS
 
     Executes specialized CTM algorithm for 1-site C4v symmetric iPEPS starting from the intial 
-    environment ``env``. To establish the convergence of CTM before the maximal number of iterations 
+    environment ``env``. The is a single-layer version, which avoids explicitly building 
+    double-layer on-site tensor.
+
+    To establish the convergence of CTM before the maximal number of iterations 
     is reached  a ``conv_check`` function is invoked. Its expected signature is 
-    ``conv_check(IPEPS,ENV_C4V,Object,CTMARGS)`` where ``Object`` is an arbitary argument. For 
+    ``conv_check(IPEPS_C4V,ENV_C4V,Object,CTMARGS)`` where ``Object`` is an arbitary argument. For 
     example it can be a list or dict used for storing CTM data from previous steps to   
     check convergence.
 
@@ -100,6 +103,22 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
     return env, history, t_ctm, t_obs
 
 def run_dl(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+    r"""
+    :param state: wavefunction
+    :param env: initial C4v symmetric environment
+    :param conv_check: function which determines the convergence of CTM algorithm. If ``None``,
+                       the algorithm performs ``ctm_args.ctm_max_iter`` iterations. 
+    :param ctm_args: CTM algorithm configuration
+    :param global_args: global configuration
+    :type state: IPEPS_C4V
+    :type env: ENV_C4V
+    :type conv_check: function(IPEPS,ENV_C4V,Object,CTMARGS)->bool
+    :type ctm_args: CTMARGS
+    :type global_args: GLOBALARGS
+
+    A double-layer variant (explicitly building double-layer tensor) of CTM algorithm.
+    See :meth:`run`.
+    """
     if ctm_args.projector_svd_method=='DEFAULT' or ctm_args.projector_svd_method=='SYMEIG':
         def truncated_eig(M, chi):
             return truncated_eig_sym(M, chi, keep_multiplets=True,\
@@ -157,6 +176,24 @@ def _log_cuda_mem(device, who="unknown",  uuid=""):
 
 # performs CTM move
 def ctm_MOVE_dl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+    r"""
+    :param a: on-site C4v symmetric tensor
+    :param env: C4v symmetric environment
+    :param f_c2x2_decomp: function performing the truncated spectral decomposition (eigenvalue/svd) 
+                          of enlarged corner. The ``f_c2x2_decomp`` returns a tuple composed of
+                          leading chi spectral values and projector on leading chi spectral values.
+    :param ctm_args: CTM algorithm configuration
+    :param global_args: global configuration
+    :type a: torch.Tensor
+    :type env: ENV_C4V
+    :type f_c2x2_decomp: function(torch.Tensor, int)->torch.Tensor, torch.Tensor
+    :type ctm_args: CTMARGS
+    :type global_args: GLOBALARGS
+
+    Executes a single step of C4v symmetric CTM algorithm for 1-site C4v symmetric iPEPS.
+    This variant of CTM step does explicitly build double-layer on-site tensor. 
+    Hence, the leading cost in memory usage with bond dimension `D` is :math:`O(D^8)`.
+    """
     who= "ctm_MOVE_dl"
     log_gpu_mem= False
     if global_args.device=='cpu' and global_args.offload_to_gpu != 'None':

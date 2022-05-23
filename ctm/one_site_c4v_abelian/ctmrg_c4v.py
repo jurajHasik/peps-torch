@@ -13,6 +13,7 @@ except ImportError as e:
 import logging
 log = logging.getLogger(__name__)
 
+
 def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.global_args): 
     r"""
     :param state: wavefunction
@@ -27,22 +28,31 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
     :type ctm_args: CTMARGS
     :type global_args: GLOBALARGS
 
-    Executes specialized CTM algorithm for 1-site C4v symmetric iPEPS starting 
-    from the intial environment ``env``. To establish the convergence of CTM before 
+    Executes specialized CTM algorithm for abelian-symmetric 1-site C4v symmetric iPEPS starting 
+    from the intial environment ``env``. 
+
+    To establish the convergence of CTM before 
     the maximal number of iterations is reached  a ``conv_check`` function is invoked. 
     Its expected signature is ``conv_check(IPEPS_ABELIAN_C4V,ENV_ABELIAN_C4V,Object,CTMARGS)``
     where ``Object`` is an arbitary argument. For example it can be a list or dict used 
     for storing CTM data from previous steps to check convergence.
+
+    If :attr:`config.CTMARGS.ctm_force_dl`, then double-layer tensor is precomputed
+    and used in the CTMRG. Otherwise, `ket` and `bra` layer of on-site tensor are contracted
+    sequentially when building enlarged corner. 
     """
 
     if ctm_args.projector_svd_method=='DEFAULT' or ctm_args.projector_svd_method=='GESDD':
-        def truncated_decomp(M, chi, legs=(0,1), sU=1):
-            return yast.linalg.svd(M, legs, tol=ctm_args.projector_svd_reltol, D_total=chi, \
-                sU=sU, keep_multiplets=True)
-    elif ctm_args.projector_svd_method=='SYMARP':
-        def truncated_decomp(M, chi, legs=(0,1), sU=1):
-            return M.split_svd_eigsh_2C(axes=legs, tol=ctm_args.projector_svd_reltol, D_total=chi, \
-                sU=sU, keep_multiplets=True)
+        def truncation_f(S):
+            return yast.linalg.truncation_mask_multiplets(S,keep_multiplets=True, D_total=env.chi,\
+                tol=ctm_args.projector_svd_reltol, tol_block=ctm_args.projector_svd_reltol_block, \
+                eps_multiplet=ctm_args.projector_eps_multiplet)
+        def truncated_decomp(M, chi, legs=(0,1), sU=1, diagnostics=None):
+            return yast.linalg.svd_with_truncation(M, legs, sU=sU, mask_f=truncation_f, diagnostics=diagnostics)
+    # elif ctm_args.projector_svd_method=='SYMARP':
+    #     def truncated_decomp(M, chi, legs=(0,1), sU=1):
+    #         return M.split_svd_eigsh_2C(axes=legs, tol=ctm_args.projector_svd_reltol, D_total=chi, \
+    #             sU=sU, keep_multiplets=True)
     else:
         raise Exception(f"Projector eig/svd method \"{cfg.ctm_args.projector_svd_method}\" not implemented")
 
@@ -92,6 +102,24 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
 
 # performs CTM move
 def ctm_MOVE_dl(a_dl, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+    r"""
+    :param a_dl: double-layer on-site C4v symmetric tensor
+    :param env: C4v symmetric environment
+    :param f_c2x2_decomp: function performing the truncated spectral decomposition (eigenvalue/svd) 
+                          of enlarged corner. The ``f_c2x2_decomp`` returns a tuple composed of
+                          leading chi spectral values and projector on leading chi spectral values.
+    :param ctm_args: CTM algorithm configuration
+    :param global_args: global configuration
+    :type a_dl: yast.Tensor
+    :type env: ENV_C4V_ABELIAN
+    :type f_c2x2_decomp: function(yast.Tensor, int)->yast.Tensor, yast.Tensor, yast.Tensor
+    :type ctm_args: CTMARGS
+    :type global_args: GLOBALARGS
+
+    Executes a single step of C4v symmetric CTM algorithm for 1-site C4v symmetric iPEPS.
+    This variant of CTM step uses pre-built double-layer on-site tensor. 
+    """
+
     # 0) compress abelian symmetric tensor into 1D representation for the purposes of 
     #    checkpointing
     metadata_store= {}
@@ -141,8 +169,6 @@ def ctm_MOVE_dl(a_dl, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg
         # NOTE change signature <=> hermitian-conj since C2X2= UDU^\dag where U=U^\dag ?
         C2X2= contract(P.conj(), C2X2, ([0],[0]))
         C2X2= contract(C2X2, P.flip_signature(), ([1],[0]))
-
-        # import pdb; pdb.set_trace()
 
         #        2->1(+1->-1)
         #  ______P___
@@ -207,13 +233,11 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
                           leading chi spectral values and projector on leading chi spectral values.
     :param ctm_args: CTM algorithm configuration
     :param global_args: global configuration
-    :param past_steps_data: dictionary used for recording diagnostic information during CTM 
-    :type a: torch.Tensor
+    :type a: yast.Tensor
     :type env: ENV_ABELIAN_C4V
-    :type f_c2x2_decomp: function(torch.Tensor, int)->torch.Tensor, torch.Tensor
+    :type f_c2x2_decomp: function(yast.Tensor, int)->yast.Tensor, yast.Tensor, yast.Tensor
     :type ctm_args: CTMARGS
     :type global_args: GLOBALARGS
-    :type past_steps_data:
 
     Executes a single step of C4v symmetric CTM algorithm for 1-site C4v symmetric iPEPS.
     This variant of CTM step does not explicitly build double-layer on-site tensor.

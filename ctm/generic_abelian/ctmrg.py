@@ -22,24 +22,30 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
                        the algorithm performs ``ctm_args.ctm_max_iter`` iterations. 
     :param ctm_args: CTM algorithm configuration
     :param global_args: global configuration
-    :type state: IPEPS
-    :type env: ENV
-    :type conv_check: function(IPEPS,ENV,list[float],CTMARGS)->bool
+    :type state: IPEPS_ABELIAN
+    :type env: ENV_ABELIAN
+    :type conv_check: function(IPEPS_ABELIAN,ENV_ABELIAN,list[float],CTMARGS)->bool
     :type ctm_args: CTMARGS
     :type global_args: GLOBALARGS
 
     Executes directional CTM algorithm for generic iPEPS starting from the intial environment ``env``.
-    TODO add reference
+
+    To establish the convergence of CTM before the maximal number of iterations 
+    is reached  a ``conv_check`` function is invoked. Its expected signature is 
+    ``conv_check(IPEPS_ABELIAN,ENV_ABELIAN,Object,CTMARGS)`` where ``Object`` is an arbitary argument. For 
+    example it can be a list or dict used for storing CTM data from previous steps to   
+    check convergence.
     """
+    #TODO add reference
 
     # 0) Create double-layer (DL) tensors, preserving the same convention
     #    for order of indices 
     #
-    #     /               /(+1)
-    #  --a---   =  (+1)--A--(-1)
-    #   /|              /
-    #    |/           (-1)
-    #  --a*--
+    #     /                /(+1)
+    #  --a*---   =  (+1)--A--(-1)
+    #   /|               /
+    #    |/            (-1)
+    #  --a--
     #   /
     #
     sitesDL=dict()
@@ -59,8 +65,9 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
     for i in range(ctm_args.ctm_max_iter):
         t0_ctm= time.perf_counter()
         for direction in ctm_args.ctm_move_sequence:
+            diagnostics= {"ctm_i": i, "ctm_d": direction} if ctm_args.verbosity_projectors>0 else None
             ctm_MOVE(direction, stateDL, env, ctm_args=ctm_args, global_args=global_args, \
-                verbosity=ctm_args.verbosity_ctm_move)
+                verbosity=ctm_args.verbosity_ctm_move, diagnostics=diagnostics)
         t1_ctm= time.perf_counter()
 
         t0_obs= time.perf_counter()
@@ -82,7 +89,24 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
 # performs CTM move in one of the directions 
 # [Up=(0,-1), Left=(-1,0), Down=(0,1), Right=(1,0)]
 def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.global_args, \
-    verbosity=0):
+    verbosity=0, diagnostics=None):
+    r"""
+    :param direction: one of Up=(0,-1), Left=(-1,0), Down=(0,1), Right=(1,0)
+    :type direction: tuple(int,int)
+    :param state: wavefunction
+    :param env: environment
+    :param ctm_args: CTM algorithm configuration
+    :param global_args: global configuration
+    :type state: IPEPS_ABELIAN
+    :type env: ENV_ABELIAN
+    :type ctm_args: CTMARGS
+    :type global_args: GLOBALARGS
+
+    Executes a single directional CTM move in one of the directions. First, build  
+    projectors for each non-equivalent bond (to be truncated) in the unit cell of iPEPS.
+    Second, construct enlarged environment tensors and then truncate them 
+    to obtain updated environment tensors.
+    """
     # select projector function
     if ctm_args.projector_method=='4X4':
         ctm_get_projectors=ctm_get_projectors_4x4
@@ -102,6 +126,19 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
         + tuple(env.T[key].compress_to_1d() for key in env.T.keys())
     # 1) split into raw 1D tensors and metadata
     tensors, metadata_store["in"]= list(zip(*tmp))
+
+    def move_normalize_c(nC1, nC2, nT, norm_type=ctm_args.ctm_absorb_normalization,\
+        verbosity= ctm_args.verbosity_ctm_move):
+        assert nC1.size > 0 and nC2.size > 0 and nT.size > 0,"Ill-defined environment"
+        scale_nC1= nC1.norm(p=norm_type)
+        scale_nC2= nC2.norm(p=norm_type)
+        scale_nT= nT.norm(p=norm_type)
+        if verbosity>0:
+            print(f"nC1 {scale_nC1} nC2 {scale_nC2} nT {scale_nT}")
+        nC1 = nC1/scale_nC1
+        nC2 = nC2/scale_nC2
+        nT = nT/scale_nT
+        return nC1, nC2, nT
 
     # function wrapping up the core of the CTM MOVE segment of CTM algorithm
     def ctm_MOVE_c(*tensors):
@@ -133,11 +170,11 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
         P = dict()
         Pt = dict()
         for coord,site in state_loc.sites.items():
+            if not (diagnostics is None): diagnostics["coord"]= coord 
             P[coord], Pt[coord] = ctm_get_projectors(direction, coord, state_loc, env_loc, \
-                ctm_args, global_args)
+                ctm_args, global_args, diagnostics=diagnostics)
             if verbosity>0:
-                print("P,Pt RIGHT "+str(coord)+" P: "+str(P[coord].size())+" Pt: "\
-                    +str(Pt[coord].size()))
+                print(f"P,Pt {coord} {direction}") #P: {P[coord].size()} Pt: {Pt[coord].size()}")
             if verbosity>1:
                 print(P[coord])
                 print(Pt[coord])
@@ -158,6 +195,7 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
                 nC1[c], nC2[c], nT[c]= absorb_truncate_CTM_MOVE_RIGHT(c, state_loc, env_loc, P, Pt)
             else:
                 raise ValueError("Invalid direction: "+str(direction))
+            nC1[c], nC2[c], nT[c]= move_normalize_c(nC1[c], nC2[c], nT[c])
 
         # 2) Return raw new tensors
         tmp_loc= tuple(nC1[key].compress_to_1d() for key in nC1.keys()) \
@@ -300,9 +338,7 @@ def absorb_truncate_CTM_MOVE_UP_c(*tensors):
     #
     # C^new(coord+(0,1),(-1,-1))--      --T^new(coord+(0,1),(0,-1))--   --C^new(coord+(0,1),(1,-1))
     # |                                   |                               |
-    nC1 = nC1/nC1.norm(p='inf')
-    nC2 = nC2/nC2.norm(p='inf')
-    nT = nT/nT.norm(p='inf')
+    
     return nC1, nC2, nT
 
 
@@ -401,9 +437,6 @@ def absorb_truncate_CTM_MOVE_LEFT_c(*tensors):
     #  ________P2_______
     # |                 |                    |
     # C(coord,(-1,1))--T(coord,(0,1))--      C^new(coord+(1,0),(-1,1))
-    nC1 = nC1/nC1.norm(p='inf')
-    nC2 = nC2/nC2.norm(p='inf')
-    nT = nT/nT.norm(p='inf')
     return nC1, nC2, nT
 
 
@@ -496,9 +529,6 @@ def absorb_truncate_CTM_MOVE_DOWN_c(*tensors):
     #
     # |                                 |                              |
     # C^new(coord+(0,-1),(-1,1))--    --T^new(coord+(0,-1),(0,1))--  --C^new(coord+(0,-1),(1,1))
-    nC1 = nC1/nC1.norm(p='inf')
-    nC2 = nC2/nC2.norm(p='inf')
-    nT = nT/nT.norm(p='inf')
     return nC1, nC2, nT
 
 
@@ -594,7 +624,4 @@ def absorb_truncate_CTM_MOVE_RIGHT_c(*tensors):
     #    ______Pt1______
     #   |               |                    |
     # --T(coord,(0,1))--C(coord,(1,1))     --C^new(coord+(-1,0),(1,1))
-    nC1 = nC1/nC1.norm(p='inf')
-    nC2 = nC2/nC2.norm(p='inf')
-    nT = nT/nT.norm(p='inf')
     return nC1, nC2, nT

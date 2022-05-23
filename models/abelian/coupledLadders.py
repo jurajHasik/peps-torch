@@ -1,14 +1,10 @@
 from math import sqrt
 import itertools
 import config as cfg
-import torch
 import yast.yast as yast
 from tn_interface_abelian import contract, permute  
 import groups.su2_abelian as su2
 from ctm.generic_abelian import rdm
-
-def _cast_to_real(t):
-    return t.real if t.is_complex() else t
 
 def _null_Bz(coord):
     return 0.0
@@ -88,7 +84,7 @@ class COUPLEDLADDERS_NOSYM():
         obs_ops["sm"]= irrep.SM()
         return obs_ops
 
-    def energy_2x1_1x2(self,state,env):
+    def energy_2x1_1x2(self,state,env,**kwargs):
         r"""
         :param state: wavefunction
         :param env: CTM environment
@@ -135,8 +131,7 @@ class COUPLEDLADDERS_NOSYM():
         #
         # (-1)0--|rho|--2(+1) (-1)0--|S.S|--2(+1)
         # (-1)1--|   |--3(+1) (-1)1--|   |--3(+1)
-        # _ci= ([0,1,2,3],[2,3,0,1])
-        _ci= ([0,1,2,3],[0,1,2,3])
+        _ci= ([0,1,2,3],[2,3,0,1])
         _tmp_t= yast.ones(config=state.engine, s=(-1, -1, 1, 1),
                   t=((-1, 1), (-1, 1), (-1, 1), (-1, 1)),
                   D=((1, 1), (1, 1), (1, 1), (1, 1)))
@@ -158,11 +153,11 @@ class COUPLEDLADDERS_NOSYM():
 
         # return energy-per-site
         energy_per_site=energy/len(state.sites.items())
-        energy_per_site=_cast_to_real(energy_per_site)
+        energy_per_site=rdm._cast_to_real(energy_per_site,**kwargs)
 
         return energy_per_site
 
-    def eval_obs(self,state,env):
+    def eval_obs(self,state,env,**kwargs):
         r"""
         :param state: wavefunction
         :param env: CTM environment
@@ -183,26 +178,10 @@ class COUPLEDLADDERS_NOSYM():
         where the on-site magnetization is defined as
         
         .. math::
-            
-            \begin{align*}
-            m &= \sqrt{ \langle S^z \rangle^2+\langle S^x \rangle^2+\langle S^y \rangle^2 }
-            =\sqrt{\langle S^z \rangle^2+1/4(\langle S^+ \rangle+\langle S^- 
-            \rangle)^2 -1/4(\langle S^+\rangle-\langle S^-\rangle)^2} \\
-              &=\sqrt{\langle S^z \rangle^2 + 1/2\langle S^+ \rangle \langle S^- \rangle)}
-            \end{align*}
-
-        Usual spin components can be obtained through the following relations
-        
-        .. math::
-            
-            \begin{align*}
-            S^+ &=S^x+iS^y               & S^x &= 1/2(S^+ + S^-)\\
-            S^- &=S^x-iS^y\ \Rightarrow\ & S^y &=-i/2(S^+ - S^-)
-            \end{align*}
+            m = \sqrt{ \langle S^z \rangle^2+\langle S^x \rangle^2+\langle S^y \rangle^2 }
         """
         obs= dict({"avg_m": 0.})
-        # _ci= ([0,1],[1,0])
-        _ci= ([0,1],[0,1])
+        _ci= ([0,1],[1,0])
         _tmp_t= yast.ones(config=state.engine, s=(-1, 1),
                   t=((-1, 1), (-1, 1)),
                   D=((1, 1), (1, 1)))
@@ -215,8 +194,7 @@ class COUPLEDLADDERS_NOSYM():
             obs["avg_m"] += obs[f"m{coord}"]
         obs["avg_m"]= obs["avg_m"]/len(state.sites.keys())
     
-        # _ci= ([0,1,2,3],[2,3,0,1])
-        _ci= ([0,1,2,3],[0,1,2,3])
+        _ci= ([0,1,2,3],[2,3,0,1])
         _tmp_t= yast.ones(config=state.engine, s=(-1, -1, 1, 1),
                   t=((-1, 1), (-1, 1), (-1, 1), (-1, 1)),
                   D=((1, 1), (1, 1), (1, 1), (1, 1)))
@@ -226,8 +204,8 @@ class COUPLEDLADDERS_NOSYM():
             rdm1x2 = rdm.rdm1x2(coord,state,env).to_nonsymmetric(_lss_dense,reverse=True)
             SS2x1= contract(rdm2x1,self.h2,_ci).to_number()
             SS1x2= contract(rdm1x2,self.h2,_ci).to_number()
-            obs[f"SS2x1{coord}"]= _cast_to_real(SS2x1)
-            obs[f"SS1x2{coord}"]= _cast_to_real(SS1x2)
+            obs[f"SS2x1{coord}"]= rdm._cast_to_real(SS2x1,**kwargs)
+            obs[f"SS1x2{coord}"]= rdm._cast_to_real(SS1x2,**kwargs)
 
         # prepare list with labels and values
         obs_labels=["avg_m"]+[f"m{coord}" for coord in state.sites.keys()]\
@@ -240,7 +218,11 @@ class COUPLEDLADDERS_NOSYM():
 class COUPLEDLADDERS_U1():
     def __init__(self, settings, alpha=0.0, Bz_val=0.0, global_args=cfg.global_args):
         r"""
+        :param settings: YAST configuration
+        :type settings: NamedTuple or SimpleNamespace (TODO link to definition)
         :param alpha: nearest-neighbour interaction
+        :param Bz_val: transverse field
+        :type Bz_val: float
         :param global_args: global configuration
         :type alpha: float
         :type global_args: GLOBALARGS
@@ -248,9 +230,9 @@ class COUPLEDLADDERS_U1():
         Build Hamiltonian of spin-1/2 coupled ladders
 
         .. math:: H = \sum_{i=(x,y)} h2_{i,i+\vec{x}} + \sum_{i=(x,2y)} h2_{i,i+\vec{y}}
-                   + \alpha \sum_{i=(x,2y+1)} h2_{i,i+\vec{y}} + (-1)^{x+y} Bz h1_{i}
+                   + \alpha \sum_{i=(x,2y+1)} h2_{i,i+\vec{y}} + (-1)^{x+y} B_z h1_{i}
 
-        on the square lattice. The spin-1/2 ladders are coupled with strength :math:`\alpha`::
+        on a square lattice. The spin-1/2 ladders are coupled with strength :math:`\alpha`::
 
             y\x
                _:__:__:__:_
@@ -263,9 +245,8 @@ class COUPLEDLADDERS_U1():
 
         where
 
-        * :math:`h2_{ij} = \mathbf{S}_i.\mathbf{S}_j` with indices of h2 corresponding to :math:`s_i s_j;s'_i s'_j`
-
-        * :math:`h1_{i} = \mathbf{S}^z_i` with indices of h1 corresponding to :math:`s_i ;s'_i`
+            * :math:`h2_{ij} = \mathbf{S}_i.\mathbf{S}_j` with indices of h2 corresponding to :math:`s_i s_j;s'_i s'_j`
+            * :math:`h1_{i} = \mathbf{S}^z_i` with indices of h1 corresponding to :math:`s_i ;s'_i`
         """
         assert settings.sym.NSYM==1, "U(1) abelian symmetry is assumed"
         self.engine= settings
@@ -300,7 +281,7 @@ class COUPLEDLADDERS_U1():
         obs_ops["sm"]= irrep.SM()
         return obs_ops
 
-    def energy_2x1_1x2(self,state,env):
+    def energy_2x1_1x2(self,state,env,**kwargs):
         r"""
         :param state: wavefunction
         :param env: CTM environment
@@ -328,9 +309,9 @@ class COUPLEDLADDERS_U1():
                      |
                      s1
 
-        The primed indices represent "bra": :math:`\rho_{2x1} = \sum_{s_0 s_1;s'_0 s'_1}
-        | s_0 s_1 \rangle \langle s'_0 s'_1|` where the signature of primed indices is +1.
-        Without assuming any symmetry on the indices of individual tensors a following
+        The :math:`\rho_{2x1} = \sum_{s_0 s_1;s'_0 s'_1}
+        | s_0 s_1 \rangle \langle s'_0 s'_1|` where the signature of primed indices (:math:`|bra\rangle`)
+        is +1. Without assuming any symmetry on the indices of individual tensors a following
         set of terms has to be evaluated in order to compute energy-per-site::
 
                0       0       0
@@ -347,8 +328,7 @@ class COUPLEDLADDERS_U1():
         #
         # (-1)0--|rho|--2(+1) (-1)0--|S.S|--2(+1)
         # (-1)1--|   |--3(+1) (-1)1--|   |--3(+1)
-        # _ci= ([0,1,2,3],[2,3,0,1])
-        _ci= ([0,1,2,3],[0,1,2,3])
+        _ci= ([0,1,2,3],[2,3,0,1])
         for coord,site in state.sites.items():
             rdm2x1= rdm.rdm2x1(coord,state,env)
             rdm1x2= rdm.rdm1x2(coord,state,env)
@@ -366,13 +346,19 @@ class COUPLEDLADDERS_U1():
 
         # return energy-per-site
         energy_per_site=energy/len(state.sites.items())
-        energy_per_site=_cast_to_real(energy_per_site)
+        energy_per_site=rdm._cast_to_real(energy_per_site,**kwargs)
 
         return energy_per_site
 
-    def energy_2x1_1x2_H(self,state,env):
+    def energy_2x1_1x2_H(self,state,env,**kwargs):
         r"""
-        Ladders are weakly coupled horizontaly::
+        :param state: wavefunction
+        :param env: CTM environment
+        :type state: IPEPS_ABELIAN
+        :type env: ENV_ABELIAN
+
+        Analogous to :meth:`energy_2x1_1x2`, with ladders being weakly coupled 
+        in horizontal direction::
 
             y\x
                    _:_a_:__:_a_:__:
@@ -387,8 +373,7 @@ class COUPLEDLADDERS_U1():
         #
         # (-1)0--|rho|--2(+1) (-1)0--|S.S|--2(+1)
         # (-1)1--|   |--3(+1) (-1)1--|   |--3(+1)
-        # _ci= ([0,1,2,3],[2,3,0,1])
-        _ci= ([0,1,2,3],[0,1,2,3])
+        _ci= ([0,1,2,3],[2,3,0,1])
         for coord,site in state.sites.items():
             rdm2x1= rdm.rdm2x1(coord,state,env)
             rdm1x2= rdm.rdm1x2(coord,state,env)
@@ -406,11 +391,11 @@ class COUPLEDLADDERS_U1():
 
         # return energy-per-site
         energy_per_site=energy/len(state.sites.items())
-        energy_per_site=_cast_to_real(energy_per_site)
+        energy_per_site=rdm._cast_to_real(energy_per_site,**kwargs)
 
         return energy_per_site
 
-    def eval_obs(self,state,env):
+    def eval_obs(self,state,env,**kwargs):
         r"""
         :param state: wavefunction
         :param env: CTM environment
@@ -431,26 +416,10 @@ class COUPLEDLADDERS_U1():
         where the on-site magnetization is defined as
         
         .. math::
-            
-            \begin{align*}
-            m &= \sqrt{ \langle S^z \rangle^2+\langle S^x \rangle^2+\langle S^y \rangle^2 }
-            =\sqrt{\langle S^z \rangle^2+1/4(\langle S^+ \rangle+\langle S^- 
-            \rangle)^2 -1/4(\langle S^+\rangle-\langle S^-\rangle)^2} \\
-              &=\sqrt{\langle S^z \rangle^2 + 1/2\langle S^+ \rangle \langle S^- \rangle)}
-            \end{align*}
-
-        Usual spin components can be obtained through the following relations
-        
-        .. math::
-            
-            \begin{align*}
-            S^+ &=S^x+iS^y               & S^x &= 1/2(S^+ + S^-)\\
-            S^- &=S^x-iS^y\ \Rightarrow\ & S^y &=-i/2(S^+ - S^-)
-            \end{align*}
+            m = \sqrt{ \langle S^z \rangle^2+\langle S^x \rangle^2+\langle S^y \rangle^2 }
         """
         obs= dict({"avg_m": 0.})
-        # _ci= ([0,1],[1,0])
-        _ci= ([0,1],[0,1])
+        _ci= ([0,1],[1,0])
         for coord,site in state.sites.items():
             rdm1x1 = rdm.rdm1x1(coord,state,env)
             for label,op in self.obs_ops.items():
@@ -459,15 +428,14 @@ class COUPLEDLADDERS_U1():
             obs["avg_m"] += obs[f"m{coord}"]
         obs["avg_m"]= obs["avg_m"]/len(state.sites.keys())
     
-        # _ci= ([0,1,2,3],[2,3,0,1])
-        _ci= ([0,1,2,3],[0,1,2,3])
+        _ci= ([0,1,2,3],[2,3,0,1])
         for coord,site in state.sites.items():
             rdm2x1 = rdm.rdm2x1(coord,state,env)
             rdm1x2 = rdm.rdm1x2(coord,state,env)
             SS2x1= contract(rdm2x1,self.h2,_ci).to_number()
             SS1x2= contract(rdm1x2,self.h2,_ci).to_number()
-            obs[f"SS2x1{coord}"]=_cast_to_real(SS2x1)
-            obs[f"SS1x2{coord}"]=_cast_to_real(SS1x2)
+            obs[f"SS2x1{coord}"]=rdm._cast_to_real(SS2x1,**kwargs)
+            obs[f"SS1x2{coord}"]=rdm._cast_to_real(SS1x2,**kwargs)
 
         # prepare list with labels and values
         obs_labels=["avg_m"]+[f"m{coord}" for coord in state.sites.keys()]\
@@ -506,9 +474,9 @@ class COUPLEDLADDERS_U1():
         :param t: imaginary time step
         :type t: float
         :return: gate sequence
-        :rtype: list[tuple(tuple(tuple(int,int),tuple(int,int),tuple(int,int)), Tensor)]
+        :rtype: list[tuple(tuple(tuple(int,int),tuple(int,int),tuple(int,int)), yast.Tensor)]
         
-        Generate a 2-site gate sequence exp(-t S.S) for imaginary-time optimization.
+        Generate a 2-site gate sequence :math:`exp(-t \vec{S}.\vec{S})` for imaginary-time optimization.
         Each element of sequence has two parts: First, the placement of the gate encoded by (x,y) 
         coords of the two sites and the vector from 1st to 2nd site: (x_1,y_1), 
         (x_2-x_1, y_2-y_1), (x_2,y_2). Second, the 2-site gate Tensor.
@@ -521,8 +489,9 @@ class COUPLEDLADDERS_U1():
             g[6]--(0,1)--g[7]--(1,1)--[g[6]]
                    [g[0]]       [g[2]]
 
-        The g[0] and g[2] are the "weak" links, with alpha * S.S interaction, coupling the ladders. 
-        We also have the on-site gates.
+        The g[0] and g[2] are the "weak" links, with :math:`\alpha \vec{S}.\vec{S}` interaction, 
+        coupling the ladders. If ``self.Bz`` is non-zero, on-site gates with transverse field 
+        are added to the sequence.
         """
         gate_SS_1= self._gen_gate_SS(-t)
         gate_SS_alpha= self._gen_gate_SS(-t*self.alpha)
@@ -553,6 +522,15 @@ class COUPLEDLADDERS_U1():
         return gate_seq
 
     def gen_gate_seq_2S_2ndOrder(self,t):
+        r"""
+        :param t: imaginary time step
+        :type t: float
+        :return: gate sequence
+        :rtype: list[tuple(tuple(tuple(int,int),tuple(int,int),tuple(int,int)), yast.Tensor)]
+        
+        Second-order Trotter gate sequence. This sequence can be generated from the result of 
+        :meth:`gen_gate_seq_2S` by applying the gates in both direct and reverse order. 
+        """
         gate_SS_1= self._gen_gate_SS(-t)
         gate_SS_2= self._gen_gate_SS(-2*t)
         gate_SS_alpha= self._gen_gate_SS(-t*self.alpha)
@@ -587,6 +565,29 @@ class COUPLEDLADDERS_U1():
         return gate_seq
 
     def gen_gate_seq_2S_SS_hz(self,t):
+        r"""
+        :param t: imaginary time step
+        :type t: float
+        :return: gate sequence
+        :rtype: list[tuple(tuple(tuple(int,int),tuple(int,int),tuple(int,int)), yast.Tensor)]
+        
+        Generate a 2-site gate sequence :math:`exp(-t (\vec{S}_i.\vec{S}_j + \sum_{r=i,j}(-1)^{x_r+y_r} B_z S^z_r))` 
+        for imaginary-time optimization.
+        Each element of sequence has two parts: First, the placement of the gate encoded by (x,y) 
+        coords of the two sites and the vector from 1st to 2nd site: (x_1,y_1), 
+        (x_2-x_1, y_2-y_1), (x_2,y_2). Second, the 2-site gate Tensor.
+
+        The gate sequance generated::
+
+                    g[0]         g[2]
+            g[4]--(0,0)--g[5]--(1,0)--[g[4]]
+                    g[1]         g[3]
+            g[6]--(0,1)--g[7]--(1,1)--[g[6]]
+                   [g[0]]       [g[2]]
+
+        The g[0] and g[2] are the "weak" links, with :math:`\alpha \vec{S}.\vec{S}` interaction, 
+        coupling the ladders.
+        """
         # two spin gates
         # on-site term is applied 4 times on each site, hence its coupling is rescaled
         # accordingly
@@ -602,6 +603,15 @@ class COUPLEDLADDERS_U1():
         ]
 
     def gen_gate_seq_2S_SS_hz_2ndOrder(self,t):
+        r"""
+        :param t: imaginary time step
+        :type t: float
+        :return: gate sequence
+        :rtype: list[tuple(tuple(tuple(int,int),tuple(int,int),tuple(int,int)), yast.Tensor)]
+        
+        Second-order Trotter gate sequence. This sequence can be generated from the result of 
+        :meth:`gen_gate_seq_2S_SS_hz` by applying the gates in both direct and reverse order. 
+        """
         # two spin gates
         # on-site term is applied 4 times on each site, hence its coupling is rescaled
         # accordingly
@@ -627,20 +637,11 @@ class COUPLEDLADDERS_U1():
         :return: gate sequence
         :rtype: list[tuple(tuple(tuple(int,int),tuple(int,int),tuple(int,int)), Tensor)]
         
-        Generate a 2-site gate sequence exp(-t S.S) for imaginary-time optimization.
-        Each element of sequence has two parts: First, the placement of the gate encoded by (x,y) 
-        coords of the two sites and the vector from 1st to 2nd site: (x_1,y_1), 
-        (x_2-x_1, y_2-y_1), (x_2,y_2). Second, the 2-site gate Tensor.
+        Analogous to :meth:`gen_gate_seq_2S`, with ladders being weakly coupled 
+        in horizontal direction.
 
-        The gate sequance generated::
-
-                    g[0]         g[2]
-            g[4]--(0,0)--g[5]--(1,0)--[g[4]]
-                    g[1]         g[3]
-            g[6]--(0,1)--g[7]--(1,1)--[g[6]]
-                   [g[0]]       [g[2]]
-
-        The g[5] and g[7] are the "weak" links, with alpha * S.S interaction, coupling the ladders
+        The g[5] and g[7] are the "weak" links, with :math:`\alpha\vec{S}.\vec{S}` interaction
+        coupling the ladders.
         """
         gate_SS_1= self._gen_gate_SS(-t)
         gate_SS_alpha= self._gen_gate_SS(-t*self.alpha)
@@ -671,6 +672,15 @@ class COUPLEDLADDERS_U1():
         return gate_seq
 
     def gen_gate_seq_2S_2ndOrder_H(self,t):
+        r"""
+        :param t: imaginary time step
+        :type t: float
+        :return: gate sequence
+        :rtype: list[tuple(tuple(tuple(int,int),tuple(int,int),tuple(int,int)), yast.Tensor)]
+        
+        Second-order Trotter gate sequence. This sequence can be generated from the result of 
+        :meth:`gen_gate_seq_2S_H` by applying the gates in both direct and reverse order. 
+        """
         gate_SS_1= self._gen_gate_SS(-t)
         gate_SS_2= self._gen_gate_SS(-2*t)
         gate_SS_alpha= self._gen_gate_SS(-t*self.alpha)

@@ -7,7 +7,7 @@ indices
 
 .. math:: a_{suldr} = e^{i\theta} a_{s\textrm{p}(uldr)},
 
-where :math:`\textrm{p}` is an arbitrary permutation. This property in turn 
+where :math:`\textrm{p}` is a permutation associated to the symmetries of square lattice: rotations by :math:`\pi/2` and reflections. This property in turn 
 implies (:math:`A_1`) symmetry for the double-layer tensor 
 :math:`A_{(uu')(ll')(dd')(rr')}=a_{suldr}a_{su'l'd'r'}`.
 

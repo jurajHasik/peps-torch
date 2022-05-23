@@ -1,6 +1,7 @@
 import torch
 from ipeps.ipeps_c4v import IPEPS_C4V
 from ctm.one_site_c4v.env_c4v import ENV_C4V
+from ctm.generic.rdm import _sym_pos_def_rdm
 import logging
 log = logging.getLogger(__name__)
 
@@ -8,34 +9,6 @@ log = logging.getLogger(__name__)
 def _log_cuda_mem(device, who="unknown",  uuid=""):
     log.info(f"{who} {uuid} GPU-MEM MAX_ALLOC {torch.cuda.max_memory_allocated(device)}"\
             + f" CURRENT_ALLOC {torch.cuda.memory_allocated(device)}")
-
-def _sym_pos_def_matrix(rdm, sym_pos_def=False, verbosity=0, who="unknown"):
-    rdm_asym= 0.5*(rdm-rdm.conj().t())
-    rdm= 0.5*(rdm+rdm.conj().t())
-    if verbosity>0: 
-        log.info(f"{who} norm(rdm_sym) {rdm.norm()} norm(rdm_asym) {rdm_asym.norm()}")
-    if sym_pos_def:
-        with torch.no_grad():
-            D, U= torch.symeig(rdm, eigenvectors=True)
-            if D.min() < 0:
-                log.info(f"{who} max(diag(rdm)) {D.max()} min(diag(rdm)) {D.min()}")
-                D= torch.clamp(D, min=0)
-                rdm_posdef= U@torch.diag((1.+0.j)*D)@U.conj().t() if rdm.is_complex() \
-                    else U@torch.diag(D)@U.t()
-                rdm.copy_(rdm_posdef)
-    rdm = rdm / rdm.diagonal().sum()
-    return rdm
-
-def _sym_pos_def_rdm(rdm, sym_pos_def=False, verbosity=0, who=None):
-    assert len(rdm.size())%2==0, "invalid rank of RDM"
-    nsites= len(rdm.size())//2
-
-    orig_shape= rdm.size()
-    rdm= rdm.reshape(torch.prod(torch.as_tensor(rdm.size())[:nsites]),-1)
-    
-    rdm= _sym_pos_def_matrix(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
-    rdm= rdm.reshape(orig_shape)
-    return rdm
 
 def _get_open_C2x2_LU_sl(C, T, a, verbosity=0):
     who= "_get_open_C2x2_LU_sl"
@@ -307,7 +280,9 @@ def rdm1x1_sl(state, env, sym_pos_def=False, verbosity=0):
         C--T-----C
 
     where the physical indices `s` and `s'` of on-site tensor :math:`a` 
-    and its hermitian conjugate :math:`a^\dagger` are left uncontracted
+    and its hermitian conjugate :math:`a^\dagger` are left uncontracted.
+
+    This function avoids constructing double-layer on-site tensor explicitly.
     """
     who= "rdm1x1_sl"
     C = env.C[env.keyC]
@@ -418,6 +393,8 @@ def rdm2x1(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
     :param env: C4v symmetric environment corresponding to ``state``
     :param sym_pos_def: make final density matrix symmetric and non-negative (default: False)
     :type sym_pos_def: bool
+    :param force_cpu: perform on CPU
+    :type force_cpu: bool
     :param verbosity: logging verbosity
     :type state: IPEPS_C4V
     :type env: ENV_C4V
@@ -584,6 +561,8 @@ def rdm2x1_sl(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
 
     The resulting reduced density matrix is identical to the one of vertical 1x2 subsystem
     due to the C4v symmetry. 
+
+    This function avoids constructing double-layer on-site tensor explicitly.
     """
     who= "rdm2x1_sl"
     if force_cpu:
@@ -687,6 +666,8 @@ def rdm3x1(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
     :param env: C4v symmetric environment corresponding to ``state``
     :param sym_pos_def: make final density matrix symmetric and non-negative (default: False)
     :type sym_pos_def: bool
+    :param force_cpu: perform on CPU
+    :type force_cpu: bool
     :param verbosity: logging verbosity
     :type state: IPEPS_C4V
     :type env: ENV_C4V
@@ -694,13 +675,13 @@ def rdm3x1(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
     :return: 2-site reduced density matrix with indices :math:`s_0s_1;s'_0s'_1`
     :rtype: torch.tensor
 
-    Computes 2-site reduced density matrix :math:`\rho_{2x1}` of a horizontal 
+    Computes 2-site reduced density matrix :math:`\rho_{3x1}` of a horizontal 
     3x1 subsystem using following strategy:
     
         1. compute upper left 2x2 corner and lower left 2x1 corner
         2. construct left half of the network
         3. contract with extra T-a^+a-T column
-        3. contract result with right half (identical to the left of step 2) to obtain final 
+        4. contract result with right half (identical to the left of step 2) to obtain final 
            reduced density matrix
 
     ::
@@ -714,9 +695,9 @@ def rdm3x1(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
     The physical indices `s` and `s'` of on-sites tensors :math:`a` (and :math:`a^\dagger`) 
     are left uncontracted and given in the following order::
         
-        s0 s1
+        s0 c s1
 
-    The resulting reduced density matrix is identical to the one of vertical 1x2 subsystem
+    The resulting reduced density matrix is identical to the one of vertical 1x3 subsystem
     due to the C4v symmetry. 
     """
     who= "rdm3x1"
@@ -856,12 +837,13 @@ def rdm3x1_sl(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
     :return: 2-site reduced density matrix with indices :math:`s_0s_1;s'_0s'_1`
     :rtype: torch.tensor
 
-    Computes 2-site reduced density matrix :math:`\rho_{2x1}` of a horizontal 
+    Computes 2-site reduced density matrix :math:`\rho_{3x1}` of a horizontal 
     3x1 subsystem using following strategy:
     
         1. compute upper left 2x2 corner and lower left 2x1 corner
         2. construct left half of the network
-        3. contract left and right half (identical to the left) to obtain final 
+        3. contract with extra T-a^+a-T column
+        4. contract left and right half (identical to the left) to obtain final 
            reduced density matrix
 
     ::
@@ -875,10 +857,12 @@ def rdm3x1_sl(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
     The physical indices `s` and `s'` of on-sites tensors :math:`a` (and :math:`a^\dagger`) 
     are left uncontracted and given in the following order::
         
-        s0 s1
+        s0 c s1
 
-    The resulting reduced density matrix is identical to the one of vertical 1x2 subsystem
+    The resulting reduced density matrix is identical to the one of vertical 1x3 subsystem
     due to the C4v symmetry. 
+
+    This function avoids constructing double-layer on-site tensor explicitly.
     """
     who= "rdm3x1_sl"
     if force_cpu:
@@ -1208,6 +1192,7 @@ def rdm2x2_NN_lowmem_sl(state, env, sym_pos_def=False, force_cpu=False, verbosit
         s0 c
         s1 c
 
+    This function avoids constructing double-layer on-site tensor explicitly.
     """
     return _rdm2x2_NN_lowmem(state,env,_get_open_C2x2_LU_sl,sym_pos_def=sym_pos_def,\
         force_cpu=force_cpu,verbosity=verbosity)
@@ -1376,6 +1361,7 @@ def rdm2x2_NNN_lowmem_sl(state, env, sym_pos_def=False, force_cpu=False, verbosi
         s0 c
         c  s1
 
+    This function avoids constructing double-layer on-site tensor explicitly.
     """
     return _rdm2x2_NNN_lowmem(state,env,_get_open_C2x2_LU_sl,sym_pos_def=sym_pos_def, 
         force_cpu=force_cpu,verbosity=verbosity)
@@ -1459,6 +1445,8 @@ def rdm2x2(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
     :param env: C4v symmetric environment corresponding to ``state``
     :param sym_pos_def: make final density matrix symmetric and non-negative (default: False)
     :type sym_pos_def: bool
+    :param force_cpu: perform on CPU
+    :type force_cpu: bool
     :param verbosity: logging verbosity
     :type state: IPEPS_C4V
     :type env: ENV_C4V
@@ -1740,8 +1728,6 @@ def aux_rdm2x2(state, env, force_cpu=False, verbosity=0):
         2. construct upper half of the network
         3. contract upper and lower half (identical to upper) to obtain final reduced 
            auxilliary density matrix
-           
-    TODO try single torch.einsum ?
 
     :: 
 
@@ -1754,6 +1740,7 @@ def aux_rdm2x2(state, env, force_cpu=False, verbosity=0):
           C----T----T----C
 
     """
+    #TODO try single torch.einsum ?
     #----- building pC2x2_LU ----------------------------------------------------
     C = env.C[env.keyC]
     T = env.T[env.keyT]

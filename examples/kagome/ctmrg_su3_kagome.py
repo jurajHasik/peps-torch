@@ -1,3 +1,4 @@
+import os
 import context
 import torch
 import argparse
@@ -6,7 +7,7 @@ from ipeps.ipess_kagome import *
 from ipeps.ipeps_kagome import *
 from ctm.generic.env import *
 from ctm.generic import ctmrg
-# from ctm.generic import transferops
+from ctm.generic import transferops
 from models import su3_kagome
 import unittest
 import numpy as np
@@ -19,7 +20,7 @@ parser.add_argument("--phi", type=float, default=0.5, help="parametrization betw
 parser.add_argument("--theta", type=float, default=0., help="parametrization between "\
     +"normal and chiral terms in the units of pi")
 parser.add_argument("--ansatz", type=str, default=None, help="choice of the tensor ansatz",\
-     choices=["IPEPS", "IPESS", "IPESS_PG", "A_2,B"])
+     choices=["IPEPS", "IPESS", "IPESS_PG", "A_1,B", "A_2,B"])
 parser.add_argument("--no_sym_up_dn", action='store_false', dest='sym_up_dn',\
     help="same trivalent tensors for up and down triangles")
 parser.add_argument("--no_sym_bonds", action='store_false', dest='sym_bond_S',\
@@ -46,8 +47,9 @@ def main():
     model = su3_kagome.KAGOME_SU3(phys_dim=3, j=param_j, k=param_k, h=param_h)
 
     # initialize the ipess/ipeps
-    if args.ansatz in ["IPESS","IPESS_PG","A_2,B"]:
+    if args.ansatz in ["IPESS","IPESS_PG","A_1,B","A_2,B"]:
         ansatz_pgs= None
+        if args.ansatz=="A_1,B": ansatz_pgs= IPESS_KAGOME_PG.PG_A1_B
         if args.ansatz=="A_2,B": ansatz_pgs= IPESS_KAGOME_PG.PG_A2_B
         
         if args.instate!=None:
@@ -56,7 +58,7 @@ def main():
                     state= read_ipess_kagome_generic(args.instate)
                 else:
                     state= read_ipess_kagome_generic_legacy(args.instate, ansatz=args.ansatz)
-            elif args.ansatz in ["IPESS_PG","A_2,B"]:
+            elif args.ansatz in ["IPESS_PG","A_1,B", "A_2,B"]:
                 if not args.legacy_instate:
                     state= read_ipess_kagome_pg(args.instate)
                 else:
@@ -207,18 +209,6 @@ def main():
     print("\n")
     print(obs)
 
-    # if args.restrictions:
-    #     filename_obs = "./data/onsite_obs_restricted_theta_{}_phi_{}_bonddim_{}_chi_{}.json".format(int(args.theta*100), int(args.phi*100), args.bond_dim, args.chi)
-    # else:
-    #     filename_obs = "./data/onsite_obs_theta_{}_phi_{}_bonddim_{}_chi_{}.json".format(int(args.theta * 100), int(args.phi * 100), args.bond_dim, args.chi)
-    # filename_obs = "{}/obs_{}.pkl".format(args.output_path, args.input_prefix)
-    # with open(filename_obs, "wb") as fp:
-    #     pickle.dump(obs, fp)
-    #
-    # with open(filename_obs, "rb") as fp:
-    #     tmp = pickle.load(fp)
-    # print(tmp)
-
     # corrSS = model.eval_corrf_SS((0, 0), (1, 0), state, ctm_env_init, args.corrf_r)
     # print("\n\nSS[(0,0),(1,0)] r " + " ".join([label for label in corrSS.keys()]))
     # for i in range(args.corrf_r):
@@ -234,28 +224,22 @@ def main():
     # for i in range(args.corrf_r):
     #     print(f"{i} " + " ".join([f"{corrSSSS[label][i]}" for label in corrSSSS.keys()]))
     #
-    # # environment diagnostics
-    # print("\n")
-    # for c_loc, c_ten in ctm_env_init.C.items():
-    #     u, s, v = torch.svd(c_ten, compute_uv=False)
-    #     print(f"spectrum C[{c_loc}]")
-    #     for i in range(args.chi):
-    #         print(f"{i} {s[i]}")
-    #
+
+    # environment diagnostics
+    print("\n")
+    for c_loc, c_ten in ctm_env_init.C.items():
+        u, s, v = torch.svd(c_ten, compute_uv=False)
+        print(f"spectrum C[{c_loc}]")
+        for i in range(args.chi):
+            print(f"{i} {s[i]}")
+    
     # transfer operator spectrum
-    # site_dir_list = [((0, 0), (1, 0)), ((0, 0), (0, 1)), ((1, 1), (1, 0)), ((1, 1), (0, 1))]
-    # for sdp in site_dir_list:
-    #     print(f"\n\nspectrum(T)[{sdp[0]},{sdp[1]}]")
-    #     l = transferops.get_Top_spec(args.top_n, *sdp, state, ctm_env_init)
-    #     for i in range(l.size()[0]):
-    #         print(f"{i} {l[i, 0]} {l[i, 1]}")
-    #
-    # # environment diagnostics
-    # for c_loc,c_ten in ctm_env_init.C.items():
-    #     u,s,v= torch.svd(c_ten, compute_uv=False)
-    #     print(f"\n\nspectrum C[{c_loc}]")
-    #     for i in range(args.chi):
-    #         print(f"{i} {s[i]}")
+    site_dir_list = [((0, 0), (1, 0)), ((0, 0), (0, 1)), ((1, 1), (1, 0)), ((1, 1), (0, 1))]
+    for sdp in site_dir_list:
+        print(f"\n\nspectrum(T)[{sdp[0]},{sdp[1]}]")
+        l = transferops.get_Top_spec(args.top_n, *sdp, state, ctm_env_init)
+        for i in range(l.size()[0]):
+            print(f"{i} {l[i, 0]} {l[i, 1]}")
 
 
 if __name__ == '__main__':
@@ -265,3 +249,65 @@ if __name__ == '__main__':
     main()
 
 
+class TestCtmrg_IPESS_D3_AKLT(unittest.TestCase):
+    tol= 1.0e-6
+    DIR_PATH = os.path.dirname(os.path.realpath(__file__))
+    OUT_PRFX = "RESULT_test_run-ctmrg_d3-aklt"
+    ANSATZE= [("IPESS","AKLT_SU3_KAGOME_D3_IPESS_state.json"),\
+        ("IPESS_PG","AKLT_SU3_KAGOME_D3_IPESS_PG_state.json"),\
+        ("A_2,B","AKLT_SU3_KAGOME_D3_A2B_state.json")]
+
+    def setUp(self):
+        args.phi= 0.5
+        args.bond_dim=3
+        args.chi=18
+        args.GLOBALARGS_dtype= "complex128"
+
+    def test_ctmrg_ipess_ansatze_d3_aklt(self):
+        from io import StringIO
+        from unittest.mock import patch
+        from cmath import isclose
+        import numpy as np
+
+        for ansatz in self.ANSATZE:
+            with self.subTest(ansatz=ansatz):
+                args.ansatz= ansatz[0]
+                args.instate= self.DIR_PATH+"/../../test-input/"+ansatz[1]
+                # args.sym_up_dn= ansatz[1]
+                # args.sym_bond_S= ansatz[2]
+                # args.out_prefix=self.OUT_PRFX+f"_{ansatz[0].replace(',','')}_"\
+                #     +("T" if ansatz[1] else "F")+("T" if ansatz[2] else "F")
+                args.out_prefix=self.OUT_PRFX+f"_{ansatz[0].replace(',','')}"
+                
+                # i) run ctmrg and compute observables
+                with patch('sys.stdout', new = StringIO()) as tmp_out: 
+                    main()
+                tmp_out.seek(0)
+
+                # parse FINAL observables
+                final_obs=None
+                l= tmp_out.readline()
+                while l:
+                    print(l,end="")
+                    if "FINAL" in l:
+                        final_obs= l.rstrip()
+                        break
+                    l= tmp_out.readline()
+                assert final_obs
+
+                # compare with the reference
+                ref_data="""
+                -0.6666666666666666, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+                """
+                fobs_tokens= [complex(x) for x in final_obs[len("FINAL"):].split(",")]
+                ref_tokens= [complex(x) for x in ref_data.split(",")]
+                for val,ref_val in zip(fobs_tokens, ref_tokens):
+                    assert isclose(val,ref_val, rel_tol=self.tol, abs_tol=self.tol)
+
+    def tearDown(self):
+        args.instate=None
+        for ansatz in self.ANSATZE:
+            out_prefix=self.OUT_PRFX+f"_{ansatz[0].replace(',','')}"
+            for f in [out_prefix+"_checkpoint.p",out_prefix+"_state.json",\
+                out_prefix+".log"]:
+                if os.path.isfile(f): os.remove(f)

@@ -8,6 +8,12 @@ class ENV_C4V_ABELIAN():
         r"""
         :param chi: environment bond dimension :math:`\chi`
         :param state: wavefunction
+        :param settings: YAST configuration
+        :type settings: NamedTuple or SimpleNamespace (TODO link to definition)
+        :param init: initialize environment tensors
+        :type init: bool
+        :param init_method: choice of environment initialization. See :meth:`init_env`.
+        :type init_method: str
         :param ctm_args: CTM algorithm configuration
         :param global_args: global configuration
         :type chi: int
@@ -44,7 +50,7 @@ class ENV_C4V_ABELIAN():
             C--1 0--T--1 1--C
 
         All C's and T's in the above diagram are identical and they are symmetric under the exchange of
-        environment bond indices :math:`C_{ij}=C_{ji}` and :math:`T_{ija}=C_{jia}`.  
+        environment bond indices :math:`C_{ij}=C^*_{ji}` and :math:`T_{ija}=T^*_{jia}`.  
         """
         if state:
             assert len(state.sites)==1, "Not a 1-site ipeps"
@@ -98,17 +104,18 @@ class ENV_C4V_ABELIAN():
     def get_C(self):
         r"""
         :return: get corner tensor
-        :rtype: yamps.Tensor
+        :rtype: yast.Tensor
         """
         return self.C[self.keyC]
 
     def get_T(self):
         r"""
         :return: get half-row/-column tensor
-        :rtype: yamps.Tensor
+        :rtype: yast.Tensor
         """
         return self.T[self.keyT]
 
+    # TODO add virtual spaces from on-site tensor as in ENV_ABELIAN?
     def to_dense(self, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
         r"""
         :return: returns a copy of the environment with all C,T tensors in their dense 
@@ -133,10 +140,13 @@ class ENV_C4V_ABELIAN():
         r"""
         :return: returns a view of the environment with all C,T tensors detached from
                  computational graph.
-        :rtype: ENV_ABELIAN
+        :rtype: ENV_C4V_ABELIAN
 
-        Create a view of environment with all on-site tensors (their blocks) detached 
-        from computational graph. 
+        In case of using PyTorch backend, get a detached "view" of the environment. See 
+        `torch.Tensor.detach <https://pytorch.org/docs/stable/generated/torch.Tensor.detach.html>`_.
+
+        .. note::
+            This operation does not preserve gradient tracking. 
         """
         e= ENV_C4V_ABELIAN(self.chi, settings=self.engine)
         e.C= {cid: c.detach() for cid,c in self.C.items()}
@@ -145,12 +155,14 @@ class ENV_C4V_ABELIAN():
 
     def clone(self):
         r"""
-        :return: returns a clone of the environment. Cloned tensors C,T are part of the 
-                 computational graph.
-        :rtype: ENV_ABELIAN
+        :return: returns a clone of the environment
+        :rtype: ENV_C4V_ABELIAN
 
-        Create a clone of environment with all tensors (their blocks) part of  
-        the computational graph. 
+        Create a clone of environment with all tensors (their blocks) attached 
+        to the computational graph. 
+
+        .. note::
+            This operation preserves gradient tracking.
         """
         e= ENV_C4V_ABELIAN(self.chi, settings=self.engine)
         e.C= {cid: c.clone() for cid,c in self.C.items()}
@@ -158,8 +170,8 @@ class ENV_C4V_ABELIAN():
         return e        
 
     def detach_(self):
-        self.get_C().detach(inplace=True)
-        self.get_T().detach(inplace=True)
+        self.get_C().detach()
+        self.get_T().detach()
 
     def compute_multiplets(self, eps_multiplet_gap=1.0e-10):
         return compute_multiplets(self.get_C(), eps_multiplet_gap=eps_multiplet_gap)
@@ -168,6 +180,8 @@ def init_env(state, env, init_method=None, ctm_args=cfg.ctm_args):
     """
     :param state: wavefunction
     :param env: C4v symmetric CTM environment
+    :param init_method: choice of environment initialization
+    :type str:
     :param ctm_args: CTM algorithm configuration
     :type state: IPEPS_ABELIAN_C4V
     :type env: ENV_C4V_ABELIAN
@@ -176,11 +190,7 @@ def init_env(state, env, init_method=None, ctm_args=cfg.ctm_args):
     Initializes the environment `env` according to one of the supported options specified 
     inside :class:`CTMARGS.ctm_env_init_type <config.CTMARGS>`
     
- 
-    * CONST - C and T tensors have all their elements intialized to a value 1
-    * RANDOM - C and T tensors have elements with random numbers drawn from uniform
-      distribution [0,1)
-    * CTMRG - tensors C and T are built from the on-site tensor of `state` 
+        * ``'CTMRG'`` - tensors C and T are built from the on-site tensor of `state` 
     """
     if not init_method: init_method= ctm_args.ctm_env_init_type
     if init_method=='CONST':
@@ -203,6 +213,11 @@ def init_random(env, verbosity=0):
 
 def init_from_ipeps_pbc(state, env, verbosity=0):
     r"""
+    :param state: wavefunction
+    :param env: C4v symmetric CTM environment
+    :type state: IPEPS_ABELIAN_C4V
+    :type env: ENV_C4V_ABELIAN
+
     Technically, we decorate the lattice with a single C4v symmetric tensor and 
     in order to define consistent network - change signature on every sublattice
     B-site::

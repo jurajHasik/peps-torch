@@ -1,5 +1,6 @@
 import torch
 import config as cfg
+from config import _torch_version_check
 from ipeps.ipeps_c4v import IPEPS_C4V
 from linalg.custom_eig import truncated_eig_sym
 
@@ -9,7 +10,7 @@ class ENV_C4V():
         r"""
         :param chi: environment bond dimension :math:`\chi`
         :param state: wavefunction
-        :param bond_dim2: bond dimension
+        :param bond_dim: bond dimension
         :param ctm_args: CTM algorithm configuration
         :param global_args: global configuration
         :type chi: int
@@ -46,8 +47,8 @@ class ENV_C4V():
             |       |       |
             C--1 0--T--1 1--C
 
-        All C's and T's in the above diagram are identical and they are symmetric under the exchange of
-        environment bond indices :math:`C_{ij}=C_{ji}` and :math:`T_{ija}=C_{jia}`.  
+        All C's and T's in the above diagram are identical and they are (hermitian) symmetric under the exchange of
+        environment bond indices :math:`C_{ij}=C^*_{ji}` and :math:`T_{ija}=T^*_{jia}`.  
         """
         assert state or bond_dim, "either state or bond_dim must be supplied"
         if state:
@@ -89,6 +90,17 @@ class ENV_C4V():
         return self.T[self.keyT]
 
     def clone(self, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+        r"""
+        :param ctm_args: CTM algorithm configuration
+        :param global_args: global configuration
+        :type ctm_args: CTMARGS
+        :type global_args: GLOBALARGS
+
+        Create a clone of the environment.
+
+        .. note::
+            This operation preserves gradient tracking.
+        """
         new_env= ENV_C4V(self.chi, bond_dim=self.bond_dim, ctm_args=ctm_args, \
             global_args=global_args)
         new_env.C[new_env.keyC]= self.get_C().clone()
@@ -96,6 +108,18 @@ class ENV_C4V():
         return new_env
 
     def detach(self, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+        r"""
+        :param ctm_args: CTM algorithm configuration
+        :param global_args: global configuration
+        :type ctm_args: CTMARGS
+        :type global_args: GLOBALARGS
+        
+        Get a detached "view" of the environment. See 
+        `torch.Tensor.detach <https://pytorch.org/docs/stable/generated/torch.Tensor.detach.html>`_.
+
+        .. note::
+            This operation does not preserve gradient tracking.
+        """
         new_env= ENV_C4V(self.chi, bond_dim=self.bond_dim, ctm_args=ctm_args, \
             global_args=global_args)
         new_env.C[new_env.keyC]= self.get_C().detach()
@@ -107,6 +131,20 @@ class ENV_C4V():
         self.get_T().detach_()
 
     def extend(self, new_chi, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+        r"""
+        :param new_chi: new environment bond dimension
+        :type new_chi: int
+        :param ctm_args: CTM algorithm configuration
+        :param global_args: global configuration
+        :type ctm_args: CTMARGS
+        :type global_args: GLOBALARGS
+
+        Create a new environment with all environment tensors enlarged up to 
+        environment dimension ``new_chi``. The enlarged C, T tensors are padded with zeros.
+
+        .. note::
+            This operation preserves gradient tracking.
+        """
         new_env= ENV_C4V(new_chi, bond_dim=self.bond_dim, ctm_args=ctm_args, \
             global_args=global_args)
         x= min(self.chi, new_chi)
@@ -138,11 +176,11 @@ def init_env(state, env, C_and_T=None, ctm_args=cfg.ctm_args):
     inside :class:`CTMARGS.ctm_env_init_type <config.CTMARGS>`
     
  
-    * PROD - C and T tensors have just a single element intialized to a value 1
-             corresponding to product state environment
-    * RANDOM - C and T tensors have elements with random numbers drawn from uniform
-      distribution [0,1)
-    * CTMRG - tensors C and T are built from the on-site tensor of `state` 
+        * ``"PROD"`` - C and T tensors have just a single element intialized to a value 1
+          corresponding to product state environment
+        * ``"RANDOM"`` - C and T tensors have elements with random numbers drawn from uniform
+          distribution [0,1)
+        * ``"CTMRG"`` - tensors C and T are built from the on-site tensor of `state` 
     """
     if C_and_T:
         assert len(C_and_T)==2 and type(C_and_T[0])==torch.Tensor \
@@ -346,7 +384,10 @@ def print_env(env, verbosity=0):
 
 def compute_multiplets(env, eps_multiplet_gap=1.0e-10):
     D= torch.zeros(env.chi+1, dtype=env.dtype, device=env.device)
-    D[:env.chi], U= torch.symeig(env.C[env.keyC])
+    if _torch_version_check("1.8.1"):
+        D[:env.chi]= torch.linalg.eigvalsh(env.C[env.keyC])
+    else:
+        D[:env.chi], U= torch.symeig(env.C[env.keyC])
     D, p= torch.sort(torch.abs(D),descending=True)
     m=[]
     l=0

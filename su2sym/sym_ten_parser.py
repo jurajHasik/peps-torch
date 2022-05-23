@@ -160,6 +160,17 @@ def import_sym_tensors(p, D, pg, infile=None, dtype=torch.float64, device='cpu')
 
     return tensors
 
+def import_sym_tensors_generic(dims, pg, infile, dtype=torch.float64, device='cpu'):
+    tensors=[] 
+    tensors_coo= parse_symten_file(infile)
+    for tcoo in tensors_coo:
+        if pg==tcoo[0]["meta"]["pg"]:
+            t= torch.zeros(dims, dtype=dtype, device=device)
+            t= fill_from_sparse_coo(t, tcoo[1])
+            tensors.append((tcoo[0],t))
+
+    return tensors
+
 def import_sym_bonds(D, pg=None, infile=None, dtype=torch.float64, device='cpu'):
     dims=(1,D,D)
     tensors=[]

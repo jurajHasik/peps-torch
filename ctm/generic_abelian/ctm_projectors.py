@@ -9,7 +9,7 @@ import logging
 log = logging.getLogger(__name__)
 
 def ctm_get_projectors_4x4(direction, coord, state, env, ctm_args=cfg.ctm_args, \
-    global_args=cfg.global_args):
+    global_args=cfg.global_args, diagnostics=None):
     r"""
     :param direction: direction of the CTM move for which the projectors are to be computed
     :param coord: vertex (x,y) specifying (together with ``direction``) 4x4 tensor network 
@@ -20,14 +20,14 @@ def ctm_get_projectors_4x4(direction, coord, state, env, ctm_args=cfg.ctm_args, 
     :param global_args: global configuration
     :type direction: tuple(int,int) 
     :type coord: tuple(int,int)
-    :type state: IPEPS
-    :type env: ENV
+    :type state: IPEPS_ABELIAN
+    :type env: ENV_ABELIAN
     :type ctm_args: CTMARGS
     :type global_args: GLOBALARGS
     :return: pair of projectors, tensors of dimension :math:`\chi \times \chi \times D^2`. 
              The D might vary depending on the auxiliary bond dimension of related on-site
              tensor.
-    :rtype: torch.tensor, torch.tensor
+    :rtype: yast.Tensor, yast.Tensor
 
 
     Compute a pair of projectors from two halfs of 4x4 tensor network given 
@@ -79,10 +79,10 @@ def ctm_get_projectors_4x4(direction, coord, state, env, ctm_args=cfg.ctm_args, 
         raise ValueError("Invalid direction: "+str(direction))
 
     return ctm_get_projectors_from_matrices(R, Rt, env.chi, direction, \
-        ctm_args, global_args)
+        ctm_args, global_args, diagnostics=diagnostics)
 
 def ctm_get_projectors_4x2(direction, coord, state, env, ctm_args=cfg.ctm_args, \
-    global_args=cfg.global_args):
+    global_args=cfg.global_args, diagnostics=None):
     r"""
     :param direction: direction of the CTM move for which the projectors are to be computed
     :param coord: vertex (x,y) specifying (together with ``direction``) 4x2 (vertical) or 
@@ -93,14 +93,14 @@ def ctm_get_projectors_4x2(direction, coord, state, env, ctm_args=cfg.ctm_args, 
     :param global_args: global configuration
     :type direction: tuple(int,int) 
     :type coord: tuple(int,int)
-    :type state: IPEPS
-    :type env: ENV
+    :type state: IPEPS_ABELIAN
+    :type env: ENV_ABELIAN
     :type ctm_args: CTMARGS
     :type global_args: GLOBALARGS
     :return: pair of projectors, tensors of dimension :math:`\chi \times \chi \times D^2`. 
              The D might vary depending on the auxiliary bond dimension of related on-site
              tensor.
-    :rtype: torch.tensor, torch.tensor
+    :rtype: yast.Tensor, yast.Tensor
 
 
     Compute a pair of projectors from two enlarged corners making up 4x2 (2x4) tensor network 
@@ -149,32 +149,34 @@ def ctm_get_projectors_4x2(direction, coord, state, env, ctm_args=cfg.ctm_args, 
     else:
         raise ValueError("Invalid direction: "+str(direction))
 
-    return ctm_get_projectors_from_matrices(R, Rt, env.chi, ctm_args, global_args)
+    return ctm_get_projectors_from_matrices(R, Rt, env.chi, ctm_args, global_args,\
+        diagnostics=diagnostics)
 
 #####################################################################
 # direction-independent function performing bi-diagonalization
 #####################################################################
 
 def ctm_get_projectors_from_matrices(R, Rt, chi, direction, \
-    ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+    ctm_args=cfg.ctm_args, global_args=cfg.global_args, diagnostics=None):
     r"""
-    :param R: tensor of shape (dim0, dim1)
-    :param Rt: tensor of shape (dim0, dim1)
+    :param R: rank-2 tensor
+    :param Rt: rank-2 tensor
     :param chi: environment bond dimension
     :param ctm_args: CTM algorithm configuration
     :param global_args: global configuration
-    :type R: torch.tensor 
-    :type Rt: torch.tensor
+    :type R: yast.Tensor 
+    :type Rt: yast.Tensor
     :type chi: int
     :type ctm_args: CTMARGS
     :type global_args: GLOBALARGS
     :return: pair of projectors, tensors of dimension :math:`\chi \times \chi \times D^2`. 
              The D might vary depending on the auxiliary bond dimension of related on-site
              tensor.
-    :rtype: torch.tensor, torch.tensor
+    :rtype: yast.Tensor, yast.Tensor
 
     Given the two tensors R and Rt (R tilde) compute the projectors P, Pt (P tilde)
-    (PRB 94, 075143 (2016) https://arxiv.org/pdf/1402.2859.pdf)
+    (PRB 94, 075143 (2016) https://arxiv.org/pdf/1402.2859.pdf). The R, Rt are expected
+    to have compatible virtual spaces on first index.
         
         1. Perform SVD over :math:`R\widetilde{R}` contracted through index which is going to
            be truncated::
@@ -226,10 +228,12 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, direction, \
     verbosity = ctm_args.verbosity_projectors
 
     if ctm_args.projector_svd_method=='DEFAULT' or ctm_args.projector_svd_method=='GESDD':
+        def truncation_f(S):
+            return yast.linalg.truncation_mask_multiplets(S,keep_multiplets=True, D_total=chi,\
+                tol=ctm_args.projector_svd_reltol, tol_block=ctm_args.projector_svd_reltol_block, \
+                eps_multiplet=ctm_args.projector_eps_multiplet)
         def truncated_svd(M, chi, sU=1):
-            return yast.linalg.svd(M, (0,1), sU=sU, keep_multiplets=True, D_total=chi,\
-                tol=ctm_args.projector_svd_reltol, tol_block=ctm_args.projector_svd_reltol_block,  \
-                )
+            return yast.linalg.svd_with_truncation(M, (0,1), sU=sU, mask_f=truncation_f, diagnostics=diagnostics)
     # elif ctm_args.projector_svd_method == 'ARP':
     #     def truncated_svd(M, chi):
     #         return truncated_svd_arnoldi(M, chi, verbosity=ctm_args.verbosity_projectors)
@@ -253,7 +257,7 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, direction, \
     S_sqrt= S.rsqrt()
     
     if verbosity>0: 
-        print(S_sqrt.to_dense().A[()].diag())
+        print(f"{diagnostics} {S.data.max()} {S_sqrt.data.max()}")
 
     # 3) Construct projectors
     expr='ij,j->ij'

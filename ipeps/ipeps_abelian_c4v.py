@@ -18,44 +18,39 @@ class IPEPS_ABELIAN_C4V(IPEPS_ABELIAN):
     
     _REF_S_DIRS=(1,1,1,1,1)
 
-    def __init__(self, settings, site, peps_args=cfg.peps_args, global_args=cfg.global_args):
+    def __init__(self, settings, site=None, peps_args=cfg.peps_args, global_args=cfg.global_args):
         r"""
-        :param settings: TODO
+        :param settings: YAST configuration
+        :type settings: NamedTuple or SimpleNamespace (TODO link to definition)
         :param site: on-site tensor
         :param peps_args: ipeps configuration
         :param global_args: global configuration
         :type settings: TODO
-        :type site: yamps.Tensor
+        :type site: yast.Tensor
         :type peps_args: PEPSARGS
         :type global_args: GLOBALARGS
 
         The index-position convetion for on-site tensor is defined as follows::
 
-           (+1)u (+1)s 
-               |/ 
-        (+1)l--a--(+1)r  <=> a[s,u,l,d,r] with reference symmetry signature [1,1,1,1,1]
-               |
-           (+1)d
+               (+1)u (+1)s 
+                   |/ 
+            (+1)l--a--(+1)r  <=> a[s,u,l,d,r] with reference symmetry signature [1,1,1,1,1]
+                   |
+               (+1)d
         
         where s denotes physical index, and u,l,d,r label four principal directions
         up, left, down, right in anti-clockwise order starting from up.
+
+        .. note::
+            This signature convention leads to the `bra` interpretation of physical space.
+            The on-site tensor is to be understood as 
+            :math:`a=\sum_{suldr} a_{suldr} \langle s|\langle u|\langle l|\langle d|\langle r|` 
         """
-        # self.engine= settings
-        # self.backend= settings.backend
-        # assert global_args.dtype==settings.default_dtype, "global_args.dtype "+global_args.dtype\
-        #     +" settings.default_dtype "+settings.default_dtype
-        # self.dtype= settings.default_device
-        # self.device= global_args.device
-        # self.nsym = settings.sym.NSYM
-        # self.sym= settings.sym.SYM_ID
-
-        # self.lX=1
-        # self.lY=1
-
         def vertexToSite(coord): return (0,0)
-        # self.vertexToSite= vertexToSite
 
-        sites= OrderedDict({(0,0): site})
+        sites= dict()
+        if not (site is None):
+            sites= OrderedDict({(0,0): site})
         super().__init__(settings, sites, vertexToSite=vertexToSite, lX=1, lY=1,\
             peps_args=peps_args, global_args=global_args)
 
@@ -67,7 +62,7 @@ class IPEPS_ABELIAN_C4V(IPEPS_ABELIAN):
         :param device: device identifier
         :type device: str
         :return: returns a copy of the state on ``device``. If the state
-                 already resides on `device` returns ``self``.
+                 already resides onthe  `device` returns ``self``.
         :rtype: IPEPS_ABELIAN_C4V
 
         Move the entire state to ``device``.        
@@ -85,8 +80,10 @@ class IPEPS_ABELIAN_C4V(IPEPS_ABELIAN):
         :rtype: IPEPS_ABELIAN_C4V
 
         Create a copy of state with all on-site tensors as dense possesing no explicit
-        block structure (symmetry). This operations preserves gradients on returned
-        dense state.
+        block structure (symmetry). 
+
+        .. note::
+            This operations preserves gradients on returned dense state.
         """
         if self.nsym==0: return self
         site_dense= self.site().to_nonsymmetric()
@@ -95,10 +92,17 @@ class IPEPS_ABELIAN_C4V(IPEPS_ABELIAN):
         return state_dense
 
     def write_to_file(self, outputfile, tol=None, symmetrize=True, normalize=False):
+        """
+        Writes state to file. See :meth:`ipeps.ipeps_abelian.write_ipeps`.
+        """
         sym_state= self.symmetrize() if symmetrize else self
         write_ipeps(sym_state, outputfile, tol=tol, normalize=normalize)
 
     def symmetrize(self):
+        r"""
+        :return: symmetrize on-site tensor by projecting to :math:`A_1` irrep of C4v point group.
+        :rtype: IPEPS_ABELIAN_C4V
+        """
         site= make_c4v_symm_A1(self.site())
         state= IPEPS_ABELIAN_C4V(self.engine, site)
         return state
@@ -152,17 +156,17 @@ def read_ipeps_c4v(jsonfile, settings, \
     peps_args=cfg.peps_args, global_args=cfg.global_args):
     r"""
     :param jsonfile: input file describing IPEPS_ABELIAN_C4V in json format
-    :param vertexToSite: function mapping arbitrary vertex of a square lattice 
-                         into a vertex within elementary unit cell
+    :param settings: YAST configuration
+    :type settings: NamedTuple or SimpleNamespace (TODO link to definition)
     :param peps_args: ipeps configuration
     :param global_args: global configuration
     :type jsonfile: str or Path object
-    :type vertexToSite: function(tuple(int,int))->tuple(int,int)
     :type peps_args: PEPSARGS
     :type global_args: GLOBALARGS
     :return: wavefunction
     :rtype: IPEPS_ABELIAN_C4V
     
+    Read state in JSON format from file.
     """
     sites = OrderedDict()
     
@@ -215,7 +219,7 @@ def read_ipeps_c4v(jsonfile, settings, \
             peps_args=peps_args, global_args=global_args)
 
     # check dtypes of all on-site tensors for newly created state
-    assert (False not in [state.dtype==s.unique_dtype() for s in sites.values()]), \
+    assert (False not in [state.dtype==s.yast_dtype for s in sites.values()]), \
         "incompatible dtype among state and on-site tensors"
 
     # move to desired device and return

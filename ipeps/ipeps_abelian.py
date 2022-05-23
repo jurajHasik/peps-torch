@@ -28,6 +28,8 @@ def _fused_open_dl_site(a, fusion_level="full"):
                  3->8
 
     Such tensors serve as building blocks of reduced density matrices together with environment tensors.
+    The auxiliary indices of `ket` and `bra` layers are fused into double-layer auxiliary in that order.
+    If the physical indices are fused, the `ket` physical index precedes `bra`.
 
     Parameters
     ----------
@@ -65,18 +67,18 @@ class IPEPS_ABELIAN():
     def __init__(self, settings, sites, vertexToSite=None, lX=None, lY=None, 
         peps_args=cfg.peps_args, global_args=cfg.global_args):
         r"""
-        :param settings: abelian-symmetric tensor engine configuration
+        :param settings: YAST configuration
         :param sites: map from elementary unit cell to on-site tensors
         :param vertexToSite: function mapping arbitrary vertex of a square lattice 
                              into a vertex within elementary unit cell
         :param lX: length of the elementary unit cell in X direction
         :param lY: length of the elementary unit cell in Y direction
-        :param build_open_dl: build complementary iPEPS with with open double-layer 
-                              on-site tensors
+        :param build_open_dl: build complementary :class:`IPEPS_ABELIAN` with with 
+                              open double-layer on-site tensors
         :param peps_args: ipeps configuration
         :param global_args: global configuration
         :type settings: NamedTuple or SimpleNamespace (TODO link to definition)
-        :type sites: dict[tuple(int,int) : yamps.tensor.Tensor]
+        :type sites: dict[tuple(int,int) : yast.Tensor]
         :type vertexToSite: function(tuple(int,int))->tuple(int,int)
         :type lX: int
         :type lY: int
@@ -88,11 +90,11 @@ class IPEPS_ABELIAN():
         indexed by tuple of coordinates (x,y) within the elementary unit cell.
         The index-position convetion for on-site tensors is defined as follows::
 
-           (-1)u (-1)s 
-               |/ 
-        (-1)l--a--(+1)r  <=> a[s,u,l,d,r] with reference symmetry signature [-1,-1,-1,1,1]
-               |
-           (+1)d
+               (-1)u (-1)s 
+                   |/ 
+            (-1)l--a--(+1)r  <=> a[s,u,l,d,r] with reference symmetry signature [-1,-1,-1,1,1]
+                   |
+               (+1)d
         
         where s denotes physical index, and u,l,d,r label four principal directions
         up, left, down, right in anti-clockwise order starting from up.
@@ -113,7 +115,7 @@ class IPEPS_ABELIAN():
             sites={(0,0): a}
             def vertexToSite(coord):
                 return (0,0)
-            wfc= IPEPS(sites,vertexToSite)
+            wfc= IPEPS_ABELIAN(sites,vertexToSite)
         
             # resulting tiling:
             # y\x -2 -1 0 1 2
@@ -128,7 +130,7 @@ class IPEPS_ABELIAN():
                 x = (coord[0] + abs(coord[0]) * 2) % 2
                 y = abs(coord[1])
                 return ((x + y) % 2, 0)
-            wfc= IPEPS(sites,vertexToSite)
+            wfc= IPEPS_ABELIAN(sites,vertexToSite)
         
             # resulting tiling:
             # y\x -2 -1 0 1 2
@@ -140,7 +142,7 @@ class IPEPS_ABELIAN():
             # Example 3: iPEPS with 3x2 unit cell with PBC 
             
             sites={(0,0): a, (1,0): b, (2,0): c, (0,1): d, (1,1): e, (2,1): f}
-            wfc= IPEPS(sites,lX=3,lY=2)
+            wfc= IPEPS_ABELIAN(sites,lX=3,lY=2)
             
             # resulting tiling:
             # y\x -2 -1 0 1 2
@@ -159,9 +161,12 @@ class IPEPS_ABELIAN():
         are pre-computed and accessible through member `sites_dl_open` or `site_dl_open(coord)`
         convenience function. 
 
-        NOTE: in case of differentiation through reduced density matrix construction, the 
-        `sites_dl_open` computation must be a member of computation graph for correct gradients.
-        It can be explicitly recomputed by invoking `build_sites_dl_open()`.  
+        .. note::
+
+            in case of differentiation through reduced density matrix construction, the 
+            `sites_dl_open` computation must be a member of computation graph for correct gradients.
+            It can be explicitly recomputed by invoking `build_sites_dl_open()`.
+
         """
         self.engine= settings
         assert global_args.dtype==settings.default_dtype, "global_args.dtype "+global_args.dtype\
@@ -203,7 +208,7 @@ class IPEPS_ABELIAN():
 
     def build_sites_dl_open(self,fusion_level="full"):
         """
-        Build complementary open on-site double-layer iPEPS
+        If :py:attr:`config.PEPSARGS.build_dl`, build complementary open on-site double-layer iPEPS.
 
         :param fusion_level: see `_fused_open_dl_site()`
         :type fusion_level: str
@@ -214,16 +219,24 @@ class IPEPS_ABELIAN():
 
     def build_sites_dl(self):
         """
-        Build complementary on-site double-layer iPEPS
-
-        :param fusion_level: see `_fused_dl_site()`
-        :type fusion_level: str
+        If :py:attr:`config.PEPSARGS.build_dl_open`, build complementary on-site double-layer iPEPS.
         """
         self.sites_dl= OrderedDict(
             { coord: _fused_dl_site(site_t) for coord, site_t in self.sites.items() }
         )
 
     def sync_precomputed(self):
+        r"""
+        Force recomputation of double-layer and open double-layer on-site tensors
+        if corresponding options :py:attr:`config.PEPSARGS.build_dl` and 
+        :py:attr:`config.PEPSARGS.build_dl_open` are ``True``.
+
+        .. note::
+            In active autograd regions, it might be necessary to force recomputation
+            if the corresponding double-layer tensors are to be part of computational
+            graph and hence differentiated. 
+
+        """
         if self.build_dl: self.build_sites_dl()
         if self.build_dl_open: self.build_sites_dl_open()
 
@@ -232,15 +245,33 @@ class IPEPS_ABELIAN():
         :param coord: tuple (x,y) specifying vertex on a square lattice
         :type coord: tuple(int,int)
         :return: on-site tensor corresponding to the vertex (x,y)
-        :rtype: yamps.tensor.Tensor
+        :rtype: yast.Tensor
         """
         return self.sites[self.vertexToSite(coord)]
 
     def site_dl(self, coord):
+        """
+        :param coord: tuple (x,y) specifying vertex on a square lattice
+        :type coord: tuple(int,int)
+        :return: double-layer on-site tensor corresponding to the vertex (x,y)
+        :rtype: yast.Tensor
+
+        If :py:attr:`config.PEPSARGS.build_dl`, then precomputed double-layer on-site
+        tensor is returned. Otherwise, Exception is raised. 
+        """
         assert not self.sites_dl is None, "sites_dl not initialized"
         return self.sites_dl[self.vertexToSite(coord)]
 
     def site_dl_open(self, coord):
+        """
+        :param coord: tuple (x,y) specifying vertex on a square lattice
+        :type coord: tuple(int,int)
+        :return: open double-layer on-site tensor corresponding to the vertex (x,y)
+        :rtype: yast.Tensor
+
+        If :py:attr:`config.PEPSARGS.build_dl_open`, then precomputed open double-layer 
+        on-site tensor is returned. Otherwise, Exception is raised.
+        """
         assert not self.sites_dl_open is None, "sites_dl_open not initialized"
         return self.sites_dl_open[self.vertexToSite(coord)]
 
@@ -263,7 +294,7 @@ class IPEPS_ABELIAN():
     def to_dense(self, peps_args=cfg.peps_args, global_args=cfg.global_args):
         r"""
         :return: returns equivalent dense state with all on-site tensors in their dense 
-                 representation on torch backend.
+                 representation on PyTorch backend.
         :rtype: IPEPS
 
         Create an IPEPS state with all on-site tensors as dense possesing no explicit
@@ -276,15 +307,22 @@ class IPEPS_ABELIAN():
         return state_dense
 
     def get_parameters(self):
-        return list(chain( *(self.sites[ind].A.values() for ind in self.sites)))
+        r"""
+        :return: variational parameters of iPEPS
+        :rtype: iterable
+        
+        This function is called by optimizer to access variational parameters of the state.
+        """
+        return list(self.sites[ind].data for ind in self.sites)
 
     def get_checkpoint(self):
         r"""
-        :return: serializable (pickle-able) representation of IPEPS_ABELIAN state
+        :return: serializable representation of IPEPS_ABELIAN state
         :rtype: dict
 
         Return dict containing serialized on-site (block-sparse) tensors. The individual
-        blocks are serialized into Numpy ndarrays
+        blocks are serialized into Numpy ndarrays. This function is called by optimizer 
+        to create checkpoints during the optimization process.
         """
         return {ind: self.sites[ind].save_to_dict() for ind in self.sites}
 
@@ -293,9 +331,12 @@ class IPEPS_ABELIAN():
         :param checkpoint_file: path to checkpoint file
         :type checkpoint_file: str or file object 
 
-        Initializes IPEPS_ABELIAN from checkpoint file. The `vertexToSite` mapping
-        function IS NOT a part of checkpoint and must be provided either when instantiating 
-        IPEPS_ABELIAN or afterwards. 
+        Initializes IPEPS_ABELIAN from checkpoint file. 
+
+        .. note:: 
+
+            The `vertexToSite` mapping function is not a part of checkpoint and must 
+            be provided either when instantiating IPEPS_ABELIAN or afterwards. 
         """
         checkpoint= torch.load(checkpoint_file, map_location=self.device) 
         self.sites= {ind: yast.load_from_dict(config= self.engine, d=t_dict_repr) \
@@ -304,6 +345,9 @@ class IPEPS_ABELIAN():
         self.sync_precomputed()
 
     def write_to_file(self, outputfile, tol=None, normalize=False):
+        """
+        Writes state to file. See :meth:`write_ipeps`.
+        """
         write_ipeps(self, outputfile, tol=tol, normalize=normalize)
 
     # TODO what about non-initialized blocks, which are however allowed by the symmetry ?
@@ -355,7 +399,7 @@ def read_ipeps(jsonfile, settings, vertexToSite=None, \
     peps_args=cfg.peps_args, global_args=cfg.global_args):
     r"""
     :param jsonfile: input file describing IPEPS_ABELIAN in json format
-    :param settings: abelian-symmetric tensor engine configuration
+    :param settings: YAST configuration
     :param vertexToSite: function mapping arbitrary vertex of a square lattice 
                          into a vertex within elementary unit cell
     :param peps_args: ipeps configuration
@@ -368,6 +412,7 @@ def read_ipeps(jsonfile, settings, vertexToSite=None, \
     :return: wavefunction
     :rtype: IPEPS_ABELIAN
     
+    Read state in JSON format from file.
 
     A simple PBC ``vertexToSite`` function is used by default
     """
@@ -430,7 +475,7 @@ def read_ipeps(jsonfile, settings, vertexToSite=None, \
             peps_args=peps_args, global_args=global_args)
 
     # check dtypes of all on-site tensors for newly created state
-    assert (False not in [state.dtype==s.unique_dtype() for s in sites.values()]), \
+    assert (False not in [state.dtype==s.yast_dtype for s in sites.values()]), \
         "incompatible dtype among state and on-site tensors"
 
     # move to desired device and return
@@ -447,6 +492,8 @@ def write_ipeps(state, outputfile, tol=None, normalize=False,\
     :type ouputfile: str or Path object
     :type tol: float
     :type normalize: bool
+
+    Write state to file.
     """
     json_state=dict({"lX": state.lX, "lY": state.lY, "sites": []})
     
@@ -475,26 +522,23 @@ class IPEPS_ABELIAN_WEIGHTED(IPEPS_ABELIAN):
 
     # TODO validate weights
     def __init__(self, settings, sites, weights, vertexToSite=None, lX=None, lY=None, 
-        build_open_dl=False, peps_args=cfg.peps_args, global_args=cfg.global_args):
+        peps_args=cfg.peps_args, global_args=cfg.global_args):
         r"""
-        :param settings: abelian-symmetric tensor engine configuration
+        :param settings: YAST configuration
         :param sites: map from elementary unit cell to on-site tensors
         :param weights: map from edges within unit cell to weight tensors
         :param vertexToSite: function mapping arbitrary vertex of a square lattice 
                              into a vertex within elementary unit cell
         :param lX: length of the elementary unit cell in X direction
         :param lY: length of the elementary unit cell in Y direction
-        :param build_open_dl: build complementary iPEPS with with open double-layer 
-                              on-site tensors
         :param peps_args: ipeps configuration
         :param global_args: global configuration
         :type settings: NamedTuple or SimpleNamespace (TODO link to definition)
-        :type sites: dict[tuple(int,int) : yamps.tensor.Tensor]
-        :type weights: dict[tuple(tuple(int,int), tuple(int,int)) : yamps.tensor.Tensor]
+        :type sites: dict[tuple(int,int) : yast.Tensor]
+        :type weights: dict[tuple(tuple(int,int), tuple(int,int)) : yast.Tensor]
         :type vertexToSite: function(tuple(int,int))->tuple(int,int)
         :type lX: int
         :type lY: int
-        :type build_open_dl: bool
         :type peps_args: PEPSARGS
         :type global_args: GLOBALARGS
 
@@ -507,15 +551,15 @@ class IPEPS_ABELIAN_WEIGHTED(IPEPS_ABELIAN):
         `coord` specifies site within elementary unit cell and `(dxy)` is a directional vector specifying
         up, left, down, or right bond of that site as `(0,-1)`, `(-1,0)`, `(0,1)` or `(1,0)` respectively. 
         Thus the `weights` is not injective dictionary, instead keys (coord,dxy) and (coord+dxy,-dxy)
-        should index the identical tensor.
+        should index identical tensor.
         """
         self.weights= OrderedDict(weights)
         super().__init__(settings, sites, vertexToSite=vertexToSite, lX=lX, lY=lY, 
-            build_open_dl=build_open_dl, peps_args=peps_args, global_args=global_args)
+            peps_args=peps_args, global_args=global_args)
 
-    def absorb_weights(self, build_open_dl=True, peps_args=cfg.peps_args, 
+    def absorb_weights(self, peps_args=cfg.peps_args, 
         global_args=cfg.global_args):
-        r""":
+        r"""
         :param build_open_dl: see IPEPS_ABELIAN
         :type build_open_dl: bool
         :return: regular IPEPS_ABELIAN obtained by symmetricaly absorbing weights of 
@@ -523,7 +567,7 @@ class IPEPS_ABELIAN_WEIGHTED(IPEPS_ABELIAN):
         :rtype: IPEPS_ABELIAN
 
         Reduce weighted iPEPS to regular iPEPS by splitting its weights symmetrically 
-        as `W = \sqrt(W)\sqrt(W)` and absorbing them into on-site tensors
+        as `W = \sqrt(W)\sqrt(W)` and absorbing them into on-site tensors::
 
                     \sqrt(W)         
                       |/s             |/s
@@ -531,7 +575,8 @@ class IPEPS_ABELIAN_WEIGHTED(IPEPS_ABELIAN):
                       |               |
                     \sqrt(W)
 
-        NOTE: assumes weight tensor is diagonal and positive semi-definite
+        .. note:: 
+            assumes weight tensors are diagonal and positive semi-definite
         """
         dxy_w_to_ind= OrderedDict({(0,-1): 1, (-1,0): 2, (0,1): 3, (1,0): 4})
         full_dxy=set(dxy_w_to_ind.keys())
@@ -549,7 +594,7 @@ class IPEPS_ABELIAN_WEIGHTED(IPEPS_ABELIAN):
             a_sites[coord]= A
 
         return IPEPS_ABELIAN(self.engine, a_sites, vertexToSite=self.vertexToSite,\
-            build_open_dl= build_open_dl, lX=self.lX, lY=self.lY, peps_args=peps_args, 
+            lX=self.lX, lY=self.lY, peps_args=peps_args, 
             global_args=global_args)
 
     def weight(self, weight_id):
@@ -560,7 +605,7 @@ class IPEPS_ABELIAN_WEIGHTED(IPEPS_ABELIAN):
                           right respectively.
         :type weight_id: tuple(tuple(int,int), tuple(int,int))
         :return: diagonal weight tensor
-        :rtype: Tensor
+        :rtype: yast.Tensor
         """
         xy_site, dxy= weight_id
         assert dxy in [(0,-1), (-1,0), (0,1), (1,0)],"invalid direction"
@@ -576,7 +621,7 @@ def get_weighted_ipeps(state, weights, peps_args=cfg.peps_args, global_args=cfg.
     :type weights: dict[tuple(tuple(int,int), tuple(int,int)) : yamps.tensor.Tensor]
     :type peps_args: PEPSARGS
     :type global_args: GLOBALARGS
-    :return: regular iPEPS augmented with weights
+    :return: iPEPS wavefunction augmented with weights
     :rtype: IPEPS_ABELIAN_WEIGHTED
 
     Create IPEPS_ABELIAN_WEIGHTED from regular IPEPS_ABELIAN by mapping weight tensor to each

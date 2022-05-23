@@ -1,6 +1,6 @@
 import torch
 from ctm.generic.env import ENV
-from ctm.generic.rdm import _sym_pos_def_rdm
+from ctm.generic.rdm import _sym_pos_def_rdm, _cast_to_real
 from tn_interface import contract, einsum
 from tn_interface import contiguous, view, permute
 from tn_interface import conj
@@ -29,10 +29,18 @@ def _expand_perm(n_inds):
 
 def double_layer_a(state, coord, open_sites=[], force_cpu=False):
     r"""
-    :param open_sites: DoFs to contract
+    :param state: underlying wavefunction
+    :param coord: vertex (x,y) for which the reduced density matrix is constructed
+    :param open_sites: a list DoFs to leave open (uncontracted).  
+    :param force_cpu: perform on CPU
+    :type state: IPEPS_KAGOME
+    :type coord: tuple(int,int)
     :type open_sites: list(int)
+    :type force_cpu: bool
+    :return: result of (partial) contraction of double-layer tensor 
+    :rtype: torch.tensor
 
-    Build double-layer tensor of Kagome iPEPS with open, partially or fully contracted 
+    Build double-layer tensor of Kagome iPEPS with open, partially, or fully contracted 
     physical space of 3 DoFs on down triangle::
 
            u
@@ -40,16 +48,18 @@ def double_layer_a(state, coord, open_sites=[], force_cpu=False):
         l--\                         --A*--
             \                         /|\ \            /
             s0--s2--r          ->      | | \  ->   --a*a--
-             | /                       0 1 2         / \
-             |/   <- DOWN_T            ? ? ?           s's  
-            s1                         0 1 2
+             | /                    s' 0 1 2         / \
+             |/   <- DOWN_T            ? ? ?           |s><s'|  
+            s1                       s 0 1 2
              |                         | | /
              d                         |///
                                      --A--
                                       /
 
     Default results in contraction over all 3 DoFs. Physical indices are aggregated into
-    a single index with structure s'0,...,s'2;s0,...,s2.
+    a single index with structure :math:`|ket \rangle\langle bra| = s_0,...,s_2;s'_0,...,s'_2`.
+
+    The available choices for ``open_sites`` are: [], [0], [1], [2], [0,1], [0,2], [1,2], and [0,1,2].
     """
     if force_cpu:
         A= state.site(coord).cpu()
@@ -58,15 +68,15 @@ def double_layer_a(state, coord, open_sites=[], force_cpu=False):
     dimsA= A.size()
     dof1_pd= state.get_physical_dim()
     A_reshaped= A.view( [dof1_pd]*3 + list(dimsA[1:]) )
-    dimsa = tuple([x**2 for x in dimsA[1:]] + [-1]*len(open_sites))
+    # TODO use set to ignore order ?
     if open_sites == [0, 1, 2]:
-        contraction = 'mikefgh,njlabcd->eafbgchdmnijkl'
+        contraction = 'mikefgh,njlabcd->eafbgchdmiknjl'
     if open_sites == [1, 2]:
-        contraction = 'mikefgh,mjlabcd->eafbgchdijkl'
+        contraction = 'mikefgh,mjlabcd->eafbgchdikjl'
     if open_sites == [0, 2]:
-        contraction = 'mikefgh,nilabcd->eafbgchdmnkl'
+        contraction = 'mikefgh,nilabcd->eafbgchdmknl'
     if open_sites == [0, 1]:
-        contraction = 'mikefgh,njkabcd->eafbgchdmnij'
+        contraction = 'mikefgh,njkabcd->eafbgchdminj'
     if open_sites == [0]:
         contraction = 'mikefgh,nikabcd->eafbgchdmn'
     if open_sites == [1]:
@@ -76,15 +86,53 @@ def double_layer_a(state, coord, open_sites=[], force_cpu=False):
     if open_sites == []:
         contraction = 'mikefgh,mikabcd->eafbgchd'
     a = contiguous(einsum(contraction, A_reshaped, conj(A_reshaped)))
-    a = view(a, dimsa)
+    a = view(a, tuple([x**2 for x in dimsA[1:]] + [-1]*(len(open_sites)>0)) )
     return a
 
 def enlarged_corner(coord, state, env, corner, open_sites=[], force_cpu=False,
     verbosity=0):
     r"""
-    Builds enlarged corner relative to site at ``coord``. If some DoFs are left open,
-    their indices are aggregated into the last index of the resulting tensor.
+    :param coord: vertex (x,y) for which the enlarged corner is constructed
+    :param state: underlying wavefunction
+    :param env: environment corresponding to ``state``
+    :param corner: which corner to construct. The four options are: 'LU', 'RU', 'RD', and 'LD' 
+                   for "left up" corner, "right up" corner, "right down" corner, and "left down" corner.
+    :param open_sites: a list DoFs to leave open (uncontracted).
+    :param force_cpu: perform on CPU
+    :type coord: tuple(int,int)
+    :type state: IPEPS_KAGOME
+    :type env: ENV
+    :type corner: str
+    :type open_sites: list(int)
+    :type force_cpu: bool
+    :return: result of (partial) contraction of double-layer tensor 
+    :rtype: torch.tensor
+
+    Builds enlarged corner relative to the site at ``coord`` from the environment:: 
+
+        C---T---                            |   |
+        |   |                            --a*a--T
+        T--a*a--                            |   |
+        |   |     for corner='LU', or    ---T---C  for corner='RD'
+
+    The resulting tensor is always reshaped into either rank-2 or rank-3 if some DoFs are left open
+    on the double-layer. In the latter case, these open physical indices are aggregated into 
+    the last index of the resulting tensor. The index-ordering convention for enlarged corners
+    follows convention for corner tensors of the environment ``env``.
+
+    If ``open_sites=0`` returned tensor has rank-2, where env. indices and auxiliary indices
+    of double-layer tensor in the same direction were reshaped into a single index. 
+    If some DoFs remain open, then returned tensor is rank-3 with extra index carrying 
+    all physical DoFs reshaped in `:math:`|ket \rangle\langle bra|` order::
+
+        C---T---\                             C---T---\
+        |   |    --1                          |   |    --1   
+        T--a*a--/                             T--a*a--/
+         \ /                                   \ / \
+          |                                     |   2
+          0           for open_sites=[], or     0           for non-empty open_sites
     """
+    pleg= len(open_sites)>0
     dof1_pd= state.get_physical_dim()
     if corner == 'LU':
         if force_cpu:
@@ -120,9 +168,9 @@ def enlarged_corner(coord, state, env, corner, open_sites=[], force_cpu=False,
         # C2x2--1
         # |\...
         # 0
-        C2x2_LU = contiguous(permute(C2x2_LU, tuple([1, 2, 0, 3]+[4]*len(open_sites)) ))
+        C2x2_LU = contiguous(permute(C2x2_LU, tuple([1, 2, 0, 3]+[4]*pleg)))
         C2x2_LU = view(C2x2_LU, tuple([T2.size(1) * a.size(2), T1.size(2) * a.size(3)]\
-            +[-1]*len(open_sites)) )
+            +[-1]*pleg))
         if verbosity > 0:
             print("C2X2 LU " + str(coord) + "->" + str(state.vertexToSite(coord)) + " (-1,-1): " + str(C2x2_LU.size()))
         return C2x2_LU
@@ -163,9 +211,9 @@ def enlarged_corner(coord, state, env, corner, open_sites=[], force_cpu=False,
         # 0--C2x2
         # ../|
         #    1
-        C2x2_RU = contiguous(permute(C2x2_RU, tuple([1, 2, 0, 3]+[4]*len(open_sites))))
+        C2x2_RU = contiguous(permute(C2x2_RU, tuple([1, 2, 0, 3]+[4]*pleg)))
         C2x2_RU = view(C2x2_RU, tuple([T2.size(0) * a.size(1), T1.size(2) * a.size(2)]\
-            +[-1]*len(open_sites)))
+            +[-1]*pleg))
         if verbosity > 0:
             print(
                 "C2X2 RU " + str((coord[0] + vec[0], coord[1] + vec[1])) + "->" + str(shitf_coord) + " (1,-1): " + str(
@@ -206,9 +254,9 @@ def enlarged_corner(coord, state, env, corner, open_sites=[], force_cpu=False,
         #    0 ...
         #    |/
         # 1--C2x2
-        C2x2_RD = contiguous(permute(C2x2_RD, tuple([1, 2, 0, 3]+[4]*len(open_sites))))
+        C2x2_RD = contiguous(permute(C2x2_RD, tuple([1, 2, 0, 3]+[4]*pleg)))
         C2x2_RD = view(C2x2_RD, tuple([T2.size(0) * a.size(0), T1.size(1) * a.size(1)]\
-            +[-1]*len(open_sites)))
+            +[-1]*pleg))
         if verbosity > 0:
             print("C2X2 RD " + str((coord[0] + vec[0], coord[1] + vec[1])) + "->" + str(shitf_coord) + " (1,1): " + str(
                 C2x2_RD.size()))
@@ -251,9 +299,9 @@ def enlarged_corner(coord, state, env, corner, open_sites=[], force_cpu=False,
         # 0 ...
         # |/
         # C2x2--1
-        C2x2_LD = contiguous(permute(C2x2_LD, tuple([0, 2, 1, 3]+[4]*len(open_sites))))
+        C2x2_LD = contiguous(permute(C2x2_LD, tuple([0, 2, 1, 3]+[4]*pleg)))
         C2x2_LD = view(C2x2_LD, tuple([T1.size(0) * a.size(0), T2.size(2) * a.size(3)]\
-            +[-1]*len(open_sites)))
+            +[-1]*pleg))
         if verbosity > 0:
             print(
                 "C2X2 LD " + str((coord[0] + vec[0], coord[1] + vec[1])) + "->" + str(shitf_coord) + " (-1,1): " + str(
@@ -261,53 +309,83 @@ def enlarged_corner(coord, state, env, corner, open_sites=[], force_cpu=False,
         return C2x2_LD
 
 # ----- main environment contraction functions - 1x1 subsytem -----
-def trace1x1_dn_kagome(coord, state, env, op, verbosity=0):
+def trace1x1_dn_kagome(coord, state, env, op, verbosity=0, force_cpu=False):
     r"""
-    :param coord: vertex (x,y) for which reduced density matrix is constructed
+    :param coord: vertex (x,y) for which the reduced density matrix is constructed
     :param state: underlying wavefunction
     :param env: environment corresponding to ``state``
-    :param verbosity: logging verbosity
-    :param op: operator to be contracted. It is expected that the op is either 
+    :param op: operator to be contracted. It is expected that the ``op`` is either 
         rank-6 tensor of shape [physical_dim]*6 or rank-2 tensor 
         of shape [physical_dim**3]*2 (fused bra and ket spaces)
+    :param verbosity: logging verbosity
+    :param force_cpu: perform on CPU
+    :type force_cpu: bool
     :type coord: tuple(int,int)
     :type state: IPEPS_KAGOME
     :type env: ENV
-    :type verbosity: int
     :type op: torch.tensor
-    :return: trace of the given on-site observable
+    :type verbosity: int
+    :return: expectation value of the given on-site observable ``op``
     :rtype: torch.tensor
 
-    Compute 1-kagome-site trace :math:`Tr{\rho{1x1}_{ABC} O}` centered on vertex ``coord``.
-    Inherited from the rdm1x1() method.
+    ::
+
+        y\x -1 0   1
+        -1  C1 T4  C4
+         0  T1 a*a T3
+         1  C2 T2  C3 
+
+    Evaluate operator ``op`` supported on the three sites of the down triangle
+    of Kagome lattice :math:`Tr{\rho_{1x1,ABC} op}` centered on vertex ``coord``.
     """
     assert len(op.size())==2 or len(op.size())==6,"Invalid operator"
     if len(op.size())==6 and len(set(op.size()))==1:
         op= op.view([op.size(0)**3]*2)
+    if force_cpu:
+        # counter-clockwise
+        A= state.site(coord).cpu()
+        C1 = env.C[(state.vertexToSite(coord), (-1, -1))].cpu()
+        C2 = env.C[(state.vertexToSite(coord), (-1, 1))].cpu()
+        C3 = env.C[(state.vertexToSite(coord), (1, 1))].cpu()
+        C4 = env.C[(state.vertexToSite(coord), (1, -1))].cpu()
+        T1 = env.T[(state.vertexToSite(coord), (-1, 0))].cpu()
+        T2 = env.T[(state.vertexToSite(coord), (0, 1))].cpu()
+        T3 = env.T[(state.vertexToSite(coord), (1, 0))].cpu()
+        T4 = env.T[(state.vertexToSite(coord), (0,-1))].cpu()
+    else:
+        A= state.site(coord).cpu()
+        C1 = env.C[(state.vertexToSite(coord), (-1, -1))]
+        C2 = env.C[(state.vertexToSite(coord), (-1, 1))]
+        C3 = env.C[(state.vertexToSite(coord), (1, 1))]
+        C4 = env.C[(state.vertexToSite(coord), (1, -1))]
+        T1 = env.T[(state.vertexToSite(coord), (-1, 0))]
+        T2 = env.T[(state.vertexToSite(coord), (0, 1))]
+        T3 = env.T[(state.vertexToSite(coord), (1, 0))]
+        T4 = env.T[(state.vertexToSite(coord), (0,-1))]
 
-    # C(-1,-1)--1->0
+    # C1(-1,-1)--1->0
     # 0
     # 0
-    # T(-1,0)--2
+    # T1(-1,0)--2
     # 1
-    trace = contract(env.C[(coord,(-1,-1))],env.T[(coord,(-1,0))],([0],[0]))
+    trace = contract(C1,T1,([0],[0]))
     if verbosity>0:
         print("rdm=CT "+str(trace.size()))
-    # C(-1,-1)--0
+    # C1(-1,-1)--0
     # |
-    # T(-1,0)--2->1
+    # T1(-1,0)--2->1
     # 1
     # 0
-    # C(-1,1)--1->2
-    trace = contract(trace,env.C[(coord,(-1,1))],([1],[0]))
+    # C2(-1,1)--1->2
+    trace = contract(trace,C2,([1],[0]))
     if verbosity>0:
         print("trace=CTC "+str(trace.size()))
     # C(-1,-1)--0
     # |
     # T(-1,0)--1
     # |             0->2
-    # C(-1,1)--2 1--T(0,1)--2->3
-    trace = contract(trace,env.T[(coord,(0,1))],([2],[1]))
+    # C(-1,1)--2 1--T2(0,1)--2->3
+    trace = contract(trace,T2,([2],[1]))
     if verbosity>0:
         print("trace=CTCT "+str(trace.size()))
     # TODO - more efficent contraction with uncontracted-double-layer on-site tensor
@@ -322,64 +400,227 @@ def trace1x1_dn_kagome(coord, state, env, op, verbosity=0):
     # --A--
     #  /
     #
-    dimsA = state.site(coord).size()
-    a = torch.einsum('iabcd,ij,jefgh->aebfcgdh', state.site(coord), op, conj(state.site(coord)))
+    dimsA = A.size()
+    #   A=|ket>_i(x)|..>  op=|ket>_i(x)<bra|_j  A*=<bra|_j(x)<...|
+    a = torch.einsum('iabcd,ji,jefgh->aebfcgdh', A, op, conj(A))
     a = view(contiguous(a), (dimsA[1]**2, dimsA[2]**2, dimsA[3]**2, dimsA[4]**2))
 
-    # C(-1,-1)--0
+    # C1(-1,-1)--0
     # |
-    # |             0->2
-    # T(-1,0)--1 1--a_op--3
-    # |             2
-    # |             2
-    # C(-1,1)-------T(0,1)--3->1
+    # |              0->2
+    # T1(-1,0)--1 1--a_op--3
+    # |              2
+    # |              2
+    # C2(-1,1)-------T2(0,1)--3->1
     trace = contract(trace,a,([1,2],[1,2]))
     if verbosity>0:
         print("trace=CTCTa "+str(trace.size()))
-    # C(-1,-1)--0 0--T(0,-1)--2->0
-    # |              1
-    # |              2
-    # T(-1,0)--------a_op--3->2
-    # |              |
-    # |              |
-    # C(-1,1)--------T(0,1)--1
-    trace = contract(env.T[(coord,(0,-1))],trace,([0,1],[0,2]))
+    # C1(-1,-1)--0 0--T4(0,-1)--2->0
+    # |               1
+    # |               2
+    # T1(-1,0)--------a_op--3->2
+    # |               |
+    # |               |
+    # C2(-1,1)--------T2(0,1)--1
+    trace = contract(T4,trace,([0,1],[0,2]))
     if verbosity>0:
         print("trace=CTCTaT "+str(trace.size()))
-    # C(-1,-1)--T(0,-1)--0 0--C(1,-1)
-    # |         |             1->0
-    # |         |
-    # T(-1,0)---a_op--2
-    # |         |
-    # |         |
-    # C(-1,1)---T(0,1)--0->1
-    trace = contract(env.C[(coord,(1,-1))],trace,([0],[0]))
+    # C1(-1,-1)--T4(0,-1)--0 0--C4(1,-1)
+    # |          |             1->0
+    # |          |
+    # T1(-1,0)---a_op--2
+    # |          |
+    # |          |
+    # C2(-1,1)---T2(0,1)--0->1
+    trace = contract(C4,trace,([0],[0]))
     if verbosity>0:
         print("trace=CTCTaTC "+str(trace.size()))
-    # C(-1,-1)--T(0,-1)-----C(1,-1)
-    # |         |           0
-    # |         |           0
-    # T(-1,0)---a_op--2 1---T(1,0)
-    # |         |           2->0
-    # |         |
-    # C(-1,1)---T(0,1)--1
-    trace = contract(env.T[(coord,(1,0))],trace,([0,1],[0,2]))
+    # C1(-1,-1)--T4(0,-1)----C4(1,-1)
+    # |          |           0
+    # |          |           0
+    # T1(-1,0)---a_op--2 1---T3(1,0)
+    # |          |           2->0
+    # |          |
+    # C2(-1,1)---T2(0,1)--1
+    trace = contract(T3,trace,([0,1],[0,2]))
     if verbosity>0:
         print("trace=CTCTaTCT "+str(trace.size()))
-    # C(-1,-1)--T(0,-1)--------C(1,-1)
-    # |         |              |
-    # |         |              |
-    # T(-1,0)---a_op-----------T(1,0)
-    # |         |              0
-    # |         |              0
-    # C(-1,1)---T(0,1)--1 1----C(1,1)
+    # C1(-1,-1)--T(0,-1)--------C4(1,-1)
+    # |          |              |
+    # |          |              |
+    # T1(-1,0)---a_op-----------T3(1,0)
+    # |          |              0
+    # |          |              0
+    # C2(-1,1)---T2(0,1)--1 1---C3(1,1)
     trace = contract(trace,env.C[(coord,(1,1))],([0,1],[0,1]))
     if verbosity>0:
         print("trace=CTCTaTCTC "+str(trace.size()))
 
+    trace= trace.to(env.device)
     return trace
 
 def rdm1x1_kagome(coord, state, env, sites_to_keep=('A', 'B', 'C'), force_cpu=False, 
+    sym_pos_def=False, verbosity=0, **kwargs):
+    r"""
+    :param coord: vertex (x,y) for which reduced density matrix is constructed
+    :param state: underlying wavefunction
+    :param env: environment corresponding to ``state``
+    :param verbosity: logging verbosity
+    :param sites_to_keep: physical degrees of freedom to be kept. Default: "ABC" - keep all the DOF
+    :param force_cpu: perform on CPU
+    :type force_cpu: bool
+    :param sym_pos_def: make reduced density matrix positive-(semi)definite
+    :type sym_pos_def: bool
+    :type coord: tuple(int,int)
+    :type state: IPEPS_KAGOME
+    :type env: ENV
+    :type verbosity: int
+    :return: 1-site reduced density matrix with indices :math:`s;s'`
+    :rtype: torch.tensor
+
+    Compute 1-kagome-site reduced density matrix :math:`\rho_{1x1,\textrm{sites_to_keep}}` centered 
+    on vertex ``coord``::
+
+        y\x -1 0   1
+        -1  C1 T4  C4
+         0  T1 a*a T3
+         1  C2 T2  C3
+
+    The physical indices are ordered as :math:`|ket \rangle\langle bra|` from on-site tensor 
+    A (`ket`) and then A^\dag (`bra`). 
+    """ 
+    who= "rdm1x1_kagome"
+    assert len(sites_to_keep)>0,"No physical DoFs remain open"
+    if force_cpu:
+        # counter-clockwise
+        A= state.site(coord).cpu()
+        C1 = env.C[(state.vertexToSite(coord), (-1, -1))].cpu()
+        C2 = env.C[(state.vertexToSite(coord), (-1, 1))].cpu()
+        C3 = env.C[(state.vertexToSite(coord), (1, 1))].cpu()
+        C4 = env.C[(state.vertexToSite(coord), (1, -1))].cpu()
+        T1 = env.T[(state.vertexToSite(coord), (-1, 0))].cpu()
+        T2 = env.T[(state.vertexToSite(coord), (0, 1))].cpu()
+        T3 = env.T[(state.vertexToSite(coord), (1, 0))].cpu()
+        T4 = env.T[(state.vertexToSite(coord), (0,-1))].cpu()
+    else:
+        A= state.site(coord)
+        C1 = env.C[(state.vertexToSite(coord), (-1, -1))]
+        C2 = env.C[(state.vertexToSite(coord), (-1, 1))]
+        C3 = env.C[(state.vertexToSite(coord), (1, 1))]
+        C4 = env.C[(state.vertexToSite(coord), (1, -1))]
+        T1 = env.T[(state.vertexToSite(coord), (-1, 0))]
+        T2 = env.T[(state.vertexToSite(coord), (0, 1))]
+        T3 = env.T[(state.vertexToSite(coord), (1, 0))]
+        T4 = env.T[(state.vertexToSite(coord), (0,-1))]        
+    
+    # C1(-1,-1)--1 0--T4--2
+    # 0               1
+    C2x1 = contract(C1,T4,([1],[0]))
+
+    # 0->1
+    # T1--2
+    # 1
+    # 0
+    # C2--1->0
+    C2x2_LD = contract(C2, T1, ([0], [1]))
+
+    # 1->0
+    # T1--2->1
+    # |
+    # |        0->2
+    # C2--0 1--T2--2->3
+    C2x2_LD = contract(C2x2_LD, T2, ([0], [1]))
+
+    #    0/4,5,6
+    # 1--A--3
+    #    2
+    dimsA= A.size()
+    dof1_pd= state.get_physical_dim()
+    A_reshaped= A.permute(1,2,3,4,0)
+    A_reshaped= A.view( list(dimsA[1:]) + [dof1_pd]*3 )
+
+    # 0     
+    # T1--1->1,2 
+    # |     
+    # |        2->3,4
+    # C2-------T2--3->5
+    C2x2_LD= C2x2_LD.view([T1.size(0)]+[A_reshaped.size(1)]*2+[A_reshaped.size(2)]*2+[T2.size(2)])
+
+
+    # 0        0->4
+    # |/--2    |/4,5,6->6,7,8
+    # T1--1 1--A---3->5
+    # |        |
+    # |        2
+    # |        3  4->2
+    # |        | /
+    # C2-------T2--5->3
+    C2x2_LD = contract(C2x2_LD, A_reshaped, ([1,3], [1, 2]))
+
+    # 0     2<-4 x<-0/4,5,6   => 
+    # |  1 1--------A*--3->y
+    # | /      |    |             0  1<-2 2<-x |ket><bra|
+    # |/       |/6,7,8->4...      |      \  | /
+    # T1-------A--------5->3      T1------A*A-------3->4
+    # |        |    2             |        | -------y->5
+    # |        |  2               |        |
+    # |        | /                |        |
+    # C2-------T2-------3->1      C2-------T2-------1->3
+    #
+    # where position of x = 3+len(sites_to_keep)+1, and y = 3 + len(sites_to_keep) + 2 
+    stk= _abc_to_012_site(sites_to_keep)
+    to_contract= tuple(set([0,1,2])-set(stk))
+    C2x2_LD= contract(C2x2_LD, A_reshaped.conj(),\
+        ([1, 2]+[ 6+i for i in to_contract ], [1, 2]+[ 4+i for i in to_contract ]))
+    offset0, offset1= 4, 3+len(stk)+2+1
+    C2x2_LD= C2x2_LD.permute([0,2,3+len(stk)+1,1,3,3 + len(stk) + 2]\
+        +list(range(offset0,offset0+len(stk)))+list(range(offset1, offset1+len(stk))))\
+        .reshape([T1.size(0),A_reshaped.size(0)**2,T2.size(2),A_reshaped.size(3)**2,\
+            dof1_pd**(2*len(sites_to_keep))])
+
+    # C1-------T4--2->0
+    # 0        1
+    # 0        1 |ket><bra|
+    # |        |/
+    # T1------A*A-------3->2
+    # |        |
+    # C2-------T2-------2->1
+    C2x2_LD = contract(C2x1,C2x2_LD, ([0,1], [0,1]))
+
+    # 0--C4(1,-1)
+    #    1
+    #    0
+    # 1--T3(1,0)
+    #    2
+    C2x1 = contract(C4,T3,([1],[0]))
+    
+    # C1(-1,-1)--T4(0,-1)--0 0--C4(1,-1)
+    # |          |              |
+    # |          |              |
+    # T1(-1,0)--A*A--------2 1--T3(1,0)
+    # |          |\|ket><bra|   2->0
+    # |          |         
+    # C2(-1,1)---T2(0,1)--1
+    C2x2_LD = contract(C2x1,C2x2_LD,([0,1],[0,2]))
+
+    # C1(-1,-1)--T4(0,-1)-------C4(1,-1)
+    # |          |              |
+    # |          |              |
+    # T1(-1,0)--A*A-------------T3(1,0)
+    # |          |\|ket><bra|   0
+    # |          |              0
+    # C2(-1,1)---T2(0,1)--1 1----C3(1,1)
+    rdm = contract(C2x2_LD,C3,([0,1],[0,1]))
+
+    # reshape, symmetrize and normalize
+    rdm= rdm.view([dof1_pd]*(2*len(sites_to_keep)))
+    rdm= _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity,\
+        who=who, **kwargs)
+    rdm= rdm.to(env.device)
+
+    return rdm
+
+def _old_rdm1x1_kagome(coord, state, env, sites_to_keep=('A', 'B', 'C'), force_cpu=False, 
     sym_pos_def=False, verbosity=0):
     r"""
     :param coord: vertex (x,y) for which reduced density matrix is constructed
@@ -523,7 +764,7 @@ def rdm1x1_kagome(coord, state, env, sites_to_keep=('A', 'B', 'C'), force_cpu=Fa
 
 def rdm2x1_kagome(coord, state, env, sites_to_keep_00=('A', 'B', 'C'),\
     sites_to_keep_10=('A', 'B', 'C'), force_cpu=False, sym_pos_def=False,\
-    verbosity=0):
+    verbosity=0, **kwargs):
     r"""
     :param coord: vertex (x,y) specifies position of 2x1 subsystem
     :param state: underlying wavefunction
@@ -640,13 +881,14 @@ def rdm2x1_kagome(coord, state, env, sites_to_keep_00=('A', 'B', 'C'),\
     rdm= rdm.permute(tuple(perm_order)).contiguous()
 
     # symmetrize and normalize
-    rdm = _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
+    rdm = _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity,\
+        who=who, **kwargs)
 
     return rdm
 
 def rdm1x2_kagome(coord, state, env, sites_to_keep_00=('A', 'B', 'C'),\
     sites_to_keep_01=('A', 'B', 'C'), sym_pos_def=False, force_cpu=False,\
-    verbosity=0):
+    verbosity=0, **kwargs):
     r"""
     :param coord: vertex (x,y) specifies position of 1x2 subsystem
     :param state: underlying wavefunction
@@ -655,7 +897,7 @@ def rdm1x2_kagome(coord, state, env, sites_to_keep_00=('A', 'B', 'C'),\
     :param sites_to_keep_00: physical sites needed for the unit cell at coord + (0, 0)
     :param sites_to_keep_01: physical sites needed for the unit cell at coord + (0, 1)
     :type coord: tuple(int,int)
-    :type state: IPEPS
+    :type state: IPEPS_KAGOME
     :type env: ENV
     :type verbosity: int
     :return: 2-site reduced density matrix with indices :math:`s_0s_1;s'_0s'_1`
@@ -754,24 +996,33 @@ def rdm1x2_kagome(coord, state, env, sites_to_keep_00=('A', 'B', 'C'),\
     rdm= rdm.permute(tuple(perm_order)).contiguous()
 
     # symmetrize and normalize
-    rdm = _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
+    rdm = _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity,\
+        who=who, **kwargs)
 
     return rdm
 
 
 # ----- 2x2 subsystem -----
 def rdm2x2_up_triangle_open(coord, state, env, sym_pos_def=False, force_cpu=False,\
-    verbosity=0):
+    verbosity=0, **kwargs):
     r"""
     :param coord: vertex (x,y) specifies upper left site of 2x2 subsystem
     :param state: underlying wavefunction
     :param env: environment corresponding to ``state``
     :param verbosity: logging verbosity
+    :param force_cpu: perform on CPU
+    :type force_cpu: bool
+    :param sym_pos_def: make reduced density matrix positive-(semi)definite
+    :type sym_pos_def: bool
     :type coord: tuple(int,int)
     :type state: IPEPS_KAGOME
     :type env: ENV
     :type verbosity: int
+    :return: reduced density matrix as rank-6 tensor 
     :rtype: torch.tensor
+
+    Build reduced density matrix corresponding to the three sites s0, s1, and s2 
+    of the "up" triangle of Kagome lattice::
 
 
         C    T             T          C => C2x2_LU(coord)--------C2x2(coord+(1,0))
@@ -859,29 +1110,43 @@ def rdm2x2_up_triangle_open(coord, state, env, sym_pos_def=False, force_cpu=Fals
     # unfuse combined indices (s'0,s0)(s'1,s1)(s'2,s2)->s'0,s0,s'1,s1,s'2,s2
     dof1_pd= state.get_physical_dim()
     rdm = rdm.view([dof1_pd]*6)
-    # permute into order of s0,s1,s2;s0',s1',s2' where primed indices
-    # represent "ket"
+    # permute into order of |ket><bra| = s0,s1,s2;s0',s1',s2' where primed indices
+    # represent "bra"
     # 012345 -> 024135
     # C2x2_LU------C2x2_RU
-    # |             |\03
+    # |             |\0->0,1->0,3
     # 0             1
     # 0             1
-    # |/14          |/25
+    # |/1->2,3->1,4 |/2->4,5->2,5
     # C2x2_LD------C2x2_RD
     rdm = contiguous(permute(rdm, (0, 2, 4, 1, 3, 5)))
 
-    rdm = _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
+    rdm = _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity,\
+        who=who, **kwargs)
 
     rdm = rdm.to(env.device)
     return rdm
 
 def rdm2x2_dn_triangle_with_operator(coord, state, env, op, force_cpu=False,\
-    verbosity=0):
+    verbosity=0,**kwargs):
     r"""
+    :param coord: vertex (x,y) for which the reduced density matrix is constructed
+    :param state: underlying wavefunction
+    :param env: environment corresponding to ``state``
+    :param verbosity: logging verbosity
+    :type coord: tuple(int,int)
+    :type state: IPEPS_KAGOME
+    :type env: ENV
+    :type verbosity: int
     :param op: operator to be contracted. It is expected that the op is either 
         rank-6 tensor of shape [physical_dim]*6 or rank-2 tensor 
         of shape [physical_dim**3]*2 (fused bra and ket spaces)
     :type op: torch.tensor
+    :param force_cpu: perform on CPU
+    :type force_cpu: bool
+    :return: normalized expectation value of the operator `op` and the norm 
+             of the reduced density matrix
+    :rtype: torch.tensor, torch.tensor
 
     Returns a normalized expectation value of operator inserted into down triangle 
     of upper left corner of 2x2 subsystem::
@@ -910,7 +1175,7 @@ def rdm2x2_dn_triangle_with_operator(coord, state, env, op, force_cpu=False,\
                c             c
         C      T             T        C
     """
-    who = 'rdm2x2_dn_triangle'
+    who = 'rdm2x2_dn_triangle_with_operator'
     assert len(op.size())==2 or len(op.size())==6,"Invalid operator"
     if len(op.size())==6 and len(set(op.size()))==1:
         op= op.view([op.size(0)**3]*2)
@@ -1009,15 +1274,17 @@ def rdm2x2_dn_triangle_with_operator(coord, state, env, op, force_cpu=False,\
     # C2x2_LD------C2x2_RD
     rdm_op = contract(upper_half_op, lower_half, ([0, 1], [0, 1]))
     rdm_id = contract(upper_half, lower_half, ([0, 1], [0, 1]))
+    rdm_id = _cast_to_real(rdm_id,who=who,**kwargs)
 
     rdm = rdm_op/rdm_id
+    rdm_id = rdm_id.to(env.device)
     rdm = rdm.to(env.device)
-    return rdm
+    return rdm, rdm_id
 
 def rdm2x2_kagome(coord, state, env, sites_to_keep_00=('A', 'B', 'C'),\
     sites_to_keep_10=('A', 'B', 'C'), sites_to_keep_01=('A', 'B', 'C'),\
     sites_to_keep_11=('A', 'B', 'C'), force_cpu=False, sym_pos_def=False,\
-    verbosity=0):
+    verbosity=0,**kwargs):
     r"""
     :param coord: vertex (x,y) specifies upper left site of 2x2 subsystem
     :param state: underlying wavefunction
@@ -1031,15 +1298,22 @@ def rdm2x2_kagome(coord, state, env, sites_to_keep_00=('A', 'B', 'C'),\
     :type state: IPEPS_KAGOME
     :type env: ENV
     :type verbosity: int
+    :param force_cpu: perform on CPU
+    :type force_cpu: bool
+    :param sym_pos_def: make reduced density matrix positive-(semi)definite
+    :type sym_pos_def: bool
     :return: 4-site reduced density matrix with indices :math:`s_0s_1s_2s_3;s'_0s'_1s'_2s'_3`
     :rtype: torch.tensor
 
     Computes 4-site reduced density matrix :math:`\rho_{2x2}` of 2x2 subsystem specified
     by the vertex ``coord`` of its upper left corner using strategy:
+    
         1. compute four individual corners
         2. construct upper and lower half of the network
         3. contract upper and lower half to obtain final reduced density matrix
+    
     ::
+
         C--T------------------T------------------C = C2x2_LU(coord)--------C2x2_RU(coord+(1,0))
         |  |                  |                  |   |                     |
         T--A^+A(coord)--------A^+A(coord+(1,0))--T   C2x2_LD(coord+(0,1))--C2x2_RD(coord+(1,1))
@@ -1051,8 +1325,10 @@ def rdm2x2_kagome(coord, state, env, sites_to_keep_00=('A', 'B', 'C'),\
     The physical indices `s` and `s'` of on-sites tensors :math:`A` (and :math:`A^\dagger`)
     at vertices ``coord``, ``coord+(1,0)``, ``coord+(0,1)``, and ``coord+(1,1)`` are
     left uncontracted and given in the same order::
+
         s0 s1
         s2 s3
+
     """
     who = "rdm2x2_kagome"
     # ----- building C2x2_LU ----------------------------------------------------
@@ -1132,7 +1408,8 @@ def rdm2x2_kagome(coord, state, env, sites_to_keep_00=('A', 'B', 'C'),\
     rdm = contiguous(permute(rdm, tuple(perm_order)))
 
     # symmetrize and normalize
-    rdm = _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
+    rdm = _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who,\
+        **kwargs)
 
     rdm = rdm.to(env.device)
     return rdm

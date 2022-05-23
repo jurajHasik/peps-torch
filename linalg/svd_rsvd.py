@@ -8,24 +8,22 @@ class RSVD(torch.autograd.Function):
     @staticmethod
     def forward(self, M, k, p = 20, q = 2, s = 1, vnum = 1):
         r"""
-        :param M: input matrix
+        :param M: real matrix
         :param k: desired rank
         :param p: oversampling rank. Total rank sampled ``k+p``
         :param q: number of matrix-vector multiplications for power scheme
-        :param s: reorthogonalization 
-        :param vnum: ???
-        :type M: torch.tensor 
+        :param s: re-orthogonalization 
+        :type M: torch.Tensor 
         :type k: int
         :type p: int
         :type q: int
         :type s: int
-        :type vnum: int
-        :return: approximate leading k left eigenvectors U, singular values S, 
-                 and right eigenvectors V
-        :rtype: torch.tensor, torch.tensor, torch.tensor
+        :return: approximate leading k left singular vectors U, singular values S, 
+                 and right singular vectors V
+        :rtype: torch.Tensor, torch.Tensor, torch.Tensor
 
-        Performs approximate truncated SVD using randomized sampling. Based on 
-        the implementation in https://arxiv.org/abs/1502.05366
+        Performs approximate truncated SVD of real matrix M using randomized sampling 
+        as :math:`M=USV^T`. Based on the implementation in https://arxiv.org/abs/1502.05366
         """
 
         # get dims - torch.size() -> [rows, columns]
@@ -118,6 +116,19 @@ class RSVD(torch.autograd.Function):
     # TODO This is not a ``correct'' backward
     @staticmethod
     def backward(self, dU, dS, dV):
+        r"""
+        :param dU: gradient on U
+        :type dU: torch.Tensor
+        :param dS: gradient on S
+        :type dS: torch.Tensor
+        :param dV: gradient on V
+        :type dV: torch.Tensor
+        :return: gradient
+        :rtype: torch.Tensor
+
+        The backward is evaluated as in :meth:`linalg.svd_gesdd.SVDGESDD.backward` 
+        for real input matrix.
+        """
         U, S, V = self.saved_tensors
         Vt = V.t()
         Ut = U.t()

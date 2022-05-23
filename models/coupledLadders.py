@@ -37,7 +37,7 @@ class COUPLEDLADDERS():
         Build Hamiltonian of spin-1/2 coupled ladders
 
         .. math:: H = \sum_{i=(x,y)} h2_{i,i+\vec{x}} + \sum_{i=(x,2y)} h2_{i,i+\vec{y}}
-                   + \alpha \sum_{i=(x,2y+1)} h2_{i,i+\vec{y}} + (-1)^{x+y} Bz h1_{i}
+                   + \alpha \sum_{i=(x,2y+1)} h2_{i,i+\vec{y}} + (-1)^{x+y} B^z h1_{i}
 
         on the square lattice. The spin-1/2 ladders are coupled with strength :math:`\alpha`::
 
@@ -210,7 +210,23 @@ class COUPLEDLADDERS():
         return obs_values, obs_labels
 
     def eval_corrf_SS(self,coord,direction,state,env,dist):
-   
+        r"""
+        :param coord: reference site
+        :type coord: tuple(int,int)
+        :param direction: 
+        :type direction: tuple(int,int)
+        :param state: wavefunction
+        :param env: CTM environment
+        :type state: IPEPS
+        :type env: ENV
+        :param dist: maximal distance of correlator
+        :type dist: int
+        :return: dictionary with full and spin-resolved spin-spin correlation functions
+        :rtype: dict(str: torch.Tensor)
+        
+        Evaluate spin-spin correlation functions :math:`\langle\mathbf{S}(r).\mathbf{S}(0)\rangle` 
+        up to r = ``dist`` in given direction. See :meth:`ctm.generic.corrf.corrf_1sO1sO`.
+        """
         # function allowing for additional site-dependent conjugation of op
         def conjugate_op(op):
             #rot_op= su2.get_rot_op(self.phys_dim, dtype=self.dtype, device=self.device)
@@ -234,6 +250,28 @@ class COUPLEDLADDERS():
         return res
 
     def eval_corrf_DD_H(self,coord,direction,state,env,dist,verbosity=0):
+        r"""
+        :param coord: tuple (x,y) specifying vertex on a square lattice
+        :param direction: orientation of correlation function
+        :type coord: tuple(int,int)
+        :type direction: tuple(int,int)
+        :param state: wavefunction
+        :param env: CTM environment
+        :type state: IPEPS
+        :type env: ENV
+        :param dist: maximal distance of correlator
+        :type dist: int
+        :return: dictionary with horizontal dimer-dimer correlation function
+        :rtype: dict(str: torch.Tensor)
+        
+        Evaluate horizontal dimer-dimer correlation functions 
+
+        .. math::
+
+            \langle(\mathbf{S}(r+3).\mathbf{S}(r+2))(\mathbf{S}(1).\mathbf{S}(0))\rangle 
+
+        up to r = ``dist`` in given direction. See :meth:`ctm.generic.corrf.corrf_2sOH2sOH_E1`.
+        """
         # function generating properly S.S operator
         def _gen_op(r):
             return self.h2
@@ -246,9 +284,25 @@ class COUPLEDLADDERS():
 
     def eval_corrf_DD_V(self,coord,direction,state,env,dist,verbosity=0):
         r"""
-        Evaluates correlation functions of two vertical dimers
-        DD_v(r)= <(S(0).S(y))(S(r*x).S(y+r*x))>
-             or= <(S(0).S(x))(S(r*y).S(x+r*y))> 
+        :param coord: tuple (x,y) specifying vertex on a square lattice
+        :param direction: orientation of correlation function
+        :type coord: tuple(int,int)
+        :type direction: tuple(int,int)
+        :param state: wavefunction
+        :param env: CTM environment
+        :type state: IPEPS
+        :type env: ENV
+        :param dist: maximal distance of correlator
+        :type dist: int
+        :return: dictionary with vertical dimer-dimer correlation function
+        :rtype: dict(str: torch.Tensor)
+        
+        Evaluate vertical dimer-dimer correlation functions 
+
+        .. math::
+            \langle(\mathbf{S}(r+1,1).\mathbf{S}(r+1,0))(\mathbf{S}(0,1).\mathbf{S}(0,0))\rangle 
+
+        up to r = ``dist`` in given direction. See :meth:`ctm.generic.corrf.corrf_2sOV2sOV_E2`.
         """
         # function generating properly S.S operator
         def _gen_op(r):

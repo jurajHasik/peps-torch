@@ -1,28 +1,47 @@
 import torch
+from config import _torch_version_check
 from ctm.generic.env import ENV
 from tn_interface import contract, einsum
 from tn_interface import contiguous, view, permute
 from tn_interface import conj
+import logging
+
+log = logging.getLogger(__name__)
+
+def _cast_to_real(t, fail_on_check=False, warn_on_check=True, imag_eps=1.0e-10,\
+    who="unknown", **kwargs):
+    if t.is_complex():
+        if abs(t.imag)/abs(t.real) > imag_eps and abs(t.imag)>imag_eps:
+            if warn_on_check:
+                log.warning(f"Unexpected imaginary part "+who+" "+str(t))
+            if fail_on_check: 
+                raise RuntimeError("Unexpected imaginary part "+who+" "+str(t))
+        return t.real
+    return t
 
 
-def _sym_pos_def_matrix(rdm, sym_pos_def=False, verbosity=0, who="unknown"):
+def _sym_pos_def_matrix(rdm, sym_pos_def=False, verbosity=0, who="unknown", **kwargs):
     rdm_asym = 0.5 * (rdm - rdm.conj().t())
     rdm = 0.5 * (rdm + rdm.conj().t())
     if verbosity > 0:
         log.info(f"{who} norm(rdm_sym) {rdm.norm()} norm(rdm_asym) {rdm_asym.norm()}")
     if sym_pos_def:
         with torch.no_grad():
-            D, U = torch.symeig(rdm, eigenvectors=True)
+            if _torch_version_check("1.8.1"):
+                D, U=  torch.linalg.eigh(rdm)
+            else:
+                D, U= torch.symeig(rdm, eigenvectors=True)
             if D.min() < 0:
                 log.info(f"{who} max(diag(rdm)) {D.max()} min(diag(rdm)) {D.min()}")
                 D = torch.clamp(D, min=0)
                 rdm_posdef = U @ torch.diag(D) @ U.conj().t()
                 rdm.copy_(rdm_posdef)
-    rdm = rdm / rdm.diagonal().sum()
+    norm= _cast_to_real(rdm.diagonal().sum(),who=who,**kwargs)
+    rdm = rdm / norm
     return rdm
 
 
-def _sym_pos_def_rdm(rdm, sym_pos_def=False, verbosity=0, who=None):
+def _sym_pos_def_rdm(rdm, sym_pos_def=False, verbosity=0, who=None,  **kwargs):
     assert len(rdm.size()) % 2 == 0, "invalid rank of RDM"
     nsites = len(rdm.size()) // 2
 
@@ -47,7 +66,7 @@ def rdm1x1(coord, state, env, operator=None, sym_pos_def=False, force_cpu=False,
     :type operator: torch.tensor
     :type verbosity: int
     :return: 1-site reduced density matrix with indices :math:`s;s'`. If an operator was provided,
-    returns the expectation value of this operator (not normalized by the norm of the wavefunction).
+             returns the expectation value of this operator (not normalized by the norm of the wavefunction).
     :rtype: torch.tensor
 
     Computes 1-site reduced density matrix :math:`\rho_{1x1}` centered on vertex ``coord`` by

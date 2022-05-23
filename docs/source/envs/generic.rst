@@ -14,8 +14,9 @@ References:
 .. toctree::
 
     generic/env
-    generic/rdm
-    generic/corrf
     generic/ctmrg
     generic/ctm_projectors
     generic/ctm_components
+    generic/rdm
+    generic/corrf
+    generic/transfer_matrix

@@ -38,7 +38,7 @@ class ENV():
                        |(0,1)
             C(-1,1)    T         (1,1)C
 
-        These environment tensors of some ENV object ``e`` are accesed through its members ``C`` and ``T`` 
+        Environment tensors of some ENV object ``e`` are accesed through its members ``C`` and ``T`` 
         by providing a tuple of coordinates and directional vector to the environment tensor:: 
             
             coord=(0,0)                # tuple(x,y) identifying vertex on the square lattice
@@ -61,6 +61,13 @@ class ENV():
             0       0       0
             |       |       |
             C--1 1--T--2 1--C
+
+        .. note::
+
+            The structure of fused double-layer legs, which are carried by T-tensors, is obtained
+            by fusing on-site tensor (`ket`) with its conjugate (`bra`). The leg of `ket` always
+            preceeds `bra` when fusing.
+
         """
         if state:
             self.dtype= state.dtype
@@ -101,12 +108,35 @@ class ENV():
         return s
 
     def clone(self, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+        r"""
+        :param ctm_args: CTM algorithm configuration
+        :param global_args: global configuration
+        :type ctm_args: CTMARGS
+        :type global_args: GLOBALARGS
+
+        Create a clone of the environment.
+
+        .. note::
+            This operation preserves gradient tracking.
+        """
         new_env= ENV(self.chi, ctm_args=ctm_args, global_args=global_args)
         new_env.C= { k: c.clone() for k,c in self.C.items() }
         new_env.T= { k: t.clone() for k,t in self.T.items() }
         return new_env
 
     def detach(self, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+        r"""
+        :param ctm_args: CTM algorithm configuration
+        :param global_args: global configuration
+        :type ctm_args: CTMARGS
+        :type global_args: GLOBALARGS
+        
+        Get a detached "view" of the environment. See 
+        `torch.Tensor.detach <https://pytorch.org/docs/stable/generated/torch.Tensor.detach.html>`_.
+
+        .. note::
+            This operation does not preserve gradient tracking.
+        """
         new_env= ENV(self.chi, ctm_args=ctm_args, global_args=global_args)
         new_env.C= { k: c.detach() for k,c in self.C.items() }
         new_env.T= { k: t.detach() for k,t in self.T.items() }
@@ -117,6 +147,20 @@ class ENV():
         for t in self.T.values(): t.detach_()
 
     def extend(self, new_chi, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+        r"""
+        :param new_chi: new environment bond dimension
+        :type new_chi: int
+        :param ctm_args: CTM algorithm configuration
+        :param global_args: global configuration
+        :type ctm_args: CTMARGS
+        :type global_args: GLOBALARGS
+
+        Create a new environment with all environment tensors enlarged up to 
+        environment dimension ``new_chi``. The enlarged C, T tensors are padded with zeros.
+
+        .. note::
+            This operation preserves gradient tracking.
+        """
         new_env= ENV(new_chi, ctm_args=ctm_args, global_args=global_args)
         x= min(self.chi, new_chi)
         for k,old_C in self.C.items(): new_env.C[k]= old_C[:x,:x].clone().detach()
@@ -146,11 +190,10 @@ def init_env(state, env, ctm_args=cfg.ctm_args):
     Initializes the environment `env` according to one of the supported options specified 
     by :class:`CTMARGS.ctm_env_init_type <config.CTMARGS>` 
     
- 
-    * CONST - all C and T tensors have all their elements intialized to a value 1
-    * RANDOM - all C and T tensors have elements with random numbers drawn from uniform
-      distribution [0,1)
-    * CTMRG - tensors C and T are built from the on-site tensors of `state` 
+        * ``"CONST"`` - all C and T tensors have all their elements intialized to a value 1
+        * ``"RANDOM"`` - all C and T tensors have elements with random numbers drawn from uniform
+          distribution [0,1)
+        * ``"CTMRG"`` - tensors C and T are built from the on-site tensors of `state` 
     """
     if ctm_args.ctm_env_init_type=='PROD':
         init_prod(state, env, ctm_args.verbosity_initialization)
@@ -262,14 +305,14 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
 
         # Left-upper corner
         #
-        #     i      = C--1     
-        # j--A--3      0
-        #   /\
-        #  2  m
-        #      \ i
-        #    j--A--3
-        #      /
-        #     2
+        #     i           = C--1     
+        # j--A*--3(b)          0
+        #     /\
+        # (a)2  m
+        #        \ i
+        #      j--A--3(f)
+        #        /
+        #       2(e)
         vec = (-1,-1)
         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
         dimsA = A.size()
@@ -338,14 +381,14 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
 
         # upper transfer matrix
         #
-        #     i      = 0--T--2     
-        # 1--A--3         1
-        #   /\
-        #  2  m
-        #      \ i
-        #    1--A--3
-        #      /
-        #     2
+        #        i         = 0--T--2     
+        # (e)1--A--3(g)         1
+        #      /\
+        #  (f)2  m
+        #         \ i
+        #    (a)1--A--3(c)
+        #         /
+        #     (b)2
         vec = (0,-1)
         A = state.site((coord[0]+vec[0],coord[1]+vec[1]))
         dimsA = A.size()

@@ -9,16 +9,31 @@ from tn_interface_abelian import contract
 # functions building pair of 4x2 (or 2x4) halves of 4x4 TN
 #####################################################################
 def halves_of_4x4_CTM_MOVE_UP(coord, state, env, verbosity=0):
-    # C T T        C = C2x2_LU(coord+(-1,0))  C2x2(coord)
-    # T A B(coord) T   C2x2_LD(coord+(-1,-1)) C2x2(coord+(0,1))
-    # T C D        T
-    # C T T        C
+    r"""
+    :param coord: site for which to build two halfs of 2x2 subsystem embedded 
+                  in environment 
+    :type coord: tuple(int,int)
+    :param state: wavefunction
+    :type state: IPEPS_ABELIAN
+    :param env: environment
+    :type env: ENV_ABELIAN
+    :return: right and left half of the system as matrices
+    :rtype: yast.Tensor, yast.Tensor
 
-    # C2x2--1->0 0--C2x2(coord) =     _0 0_
-    # |0           1|                |     |
-    # |0           0|             half2    half1
-    # C2x2--1    1--C2x2             |_1 1_|
-    
+    Builds right and left half of 2x2 subsystem embedded into environment. 
+    The `coord` specifies the upper-right site of the 2x2 subsystem. 
+    Performs following contraction and then reshaping the resulting tensors into matrices::
+
+        C T T        C = C2x2_LU(coord+(-1,0))  C2x2(coord)
+        T A B(coord) T   C2x2_LD(coord+(-1,-1)) C2x2(coord+(0,1))
+        T C D        T
+        C T T        C
+
+        C2x2--1->0 0--C2x2(coord) =     _0 0_
+        |0           1|                |     |
+        |0           0|             half2    half1
+        C2x2--1    1--C2x2             |_1 1_|
+    """
     # RU, RD, LU, LD
     tensors= c2x2_RU_t(coord,state,env) + c2x2_RD_t((coord[0], coord[1]+1),state,env) \
         + c2x2_LU_t((coord[0]-1, coord[1]),state,env) + c2x2_LD_t((coord[0]-1, coord[1]-1),state,env)
@@ -55,16 +70,32 @@ def halves_of_4x4_CTM_MOVE_UP_c(*tensors):
     return R, Rt
 
 def halves_of_4x4_CTM_MOVE_LEFT(coord, state, env, verbosity=0):
-    # C T        T C = C2x2_LU(coord)       C2x2(coord+(1,0))
-    # T A(coord) B T   C2x2_LD(coord+(0,1)) C2x2(coord+(1,1))
-    # T C        D T
-    # C T        T C
+    r"""
+    :param coord: site for which to build two halfs of 2x2 subsystem embedded 
+                  in environment 
+    :type coord: tuple(int,int)
+    :param state: wavefunction
+    :type state: IPEPS_ABELIAN
+    :param env: environment
+    :type env: ENV_ABELIAN
+    :return: upper and lower half of the system as matrices
+    :rtype: yast.Tensor, yast.Tensor
 
-    # C2x2(coord)--1 0--C2x2 = half1
-    # |0               1|      |0  |1
-    # 
-    # |0            1<-0|      |0  |1
-    # C2x2--1 1---------C2x2   half2
+    Builds upper and lower half of 2x2 subsystem embedded into environment. 
+    The `coord` specifies the upper-left site of the 2x2 subsystem. 
+    Performs following contraction and then reshaping the resulting tensors into matrices::
+
+        C T        T C = C2x2_LU(coord)       C2x2(coord+(1,0))
+        T A(coord) B T   C2x2_LD(coord+(0,1)) C2x2(coord+(1,1))
+        T C        D T
+        C T        T C
+
+        C2x2(coord)--1 0--C2x2 = half1
+        |0               1|      |0  |1
+        
+        |0            1<-0|      |0  |1
+        C2x2--1 1---------C2x2   half2
+    """
     
     # LU, RU, LS, RD
     tensors= c2x2_LU_t(coord,state,env) + c2x2_RU_t((coord[0]+1, coord[1]),state,env) \
@@ -103,15 +134,31 @@ def halves_of_4x4_CTM_MOVE_LEFT_c(*tensors):
     return R, Rt
 
 def halves_of_4x4_CTM_MOVE_DOWN(coord, state, env, verbosity=0):
-    # C T T        C = C2x2_LU(coord+(0,-1)) C2x2(coord+(1,-1))
-    # T A        B T   C2x2_LD(coord)        C2x2(coord+(1,0))
-    # T C(coord) D T
-    # C T        T C
+    r"""
+    :param coord: site for which to build two halfs of 2x2 subsystem embedded 
+                  in environment 
+    :type coord: tuple(int,int)
+    :param state: wavefunction
+    :type state: IPEPS_ABELIAN
+    :param env: environment
+    :type env: ENV_ABELIAN
+    :return: left and right half of the system as matrices
+    :rtype: yast.Tensor, yast.Tensor
 
-    # C2x2---------1    1<-0--C2x2 =     _1 1_
-    # |0                      |1        |     |
-    # |0                      |0      half1    half2
-    # C2x2(coord)--1->0 0<-1--C2x2      |_0 0_|
+    Builds left and right half of 2x2 subsystem embedded into environment. 
+    The `coord` specifies the lower-left site of the 2x2 subsystem. 
+    Performs following contraction and then reshaping the resulting tensors into matrices::
+
+        C T T        C = C2x2_LU(coord+(0,-1)) C2x2(coord+(1,-1))
+        T A        B T   C2x2_LD(coord)        C2x2(coord+(1,0))
+        T C(coord) D T
+        C T        T C
+
+        C2x2---------1    1<-0--C2x2 =     _1 1_
+        |0                      |1        |     |
+        |0                      |0      half1    half2
+        C2x2(coord)--1->0 0<-1--C2x2      |_0 0_|
+    """
 
     # LD, LU, RD, RU
     tensors= c2x2_LD_t(coord,state,env) + c2x2_LU_t((coord[0], coord[1]-1),state,env) \
@@ -149,16 +196,32 @@ def halves_of_4x4_CTM_MOVE_DOWN_c(*tensors):
     return R, Rt
 
 def halves_of_4x4_CTM_MOVE_RIGHT(coord, state, env, verbosity=0):
-    # C T T        C = C2x2_LU(coord+(-1,-1)) C2x2(coord+(0,-1))
-    # T A B        T   C2x2_LD(coord+(-1,0))  C2x2(coord)
-    # T C D(coord) T
-    # C T T        C
+    r"""
+    :param coord: site for which to build two halfs of 2x2 subsystem embedded 
+                  in environment 
+    :type coord: tuple(int,int)
+    :param state: wavefunction
+    :type state: IPEPS_ABELIAN
+    :param env: environment
+    :type env: ENV_ABELIAN
+    :return: upper and lower half of the system as matrices
+    :rtype: yast.Tensor, yast.Tensor
 
-    # C2x2--1 0--C2x2        = half2
-    # |0->1      |1->0         |1  |0
-    # 
-    # |0->1      |0            |1  |0
-    # C2x2--1 1--C2x2(coord)   half1
+    Builds uoper and lower half of 2x2 subsystem embedded into environment. 
+    The `coord` specifies the lower-right site of the 2x2 subsystem. 
+    Performs following contraction and then reshaping the resulting tensors into matrices::
+
+        C T T        C = C2x2_LU(coord+(-1,-1)) C2x2(coord+(0,-1))
+        T A B        T   C2x2_LD(coord+(-1,0))  C2x2(coord)
+        T C D(coord) T
+        C T T        C
+
+        C2x2--1 0--C2x2        = half2
+        |0->1      |1->0         |1  |0
+        
+        |0->1      |0            |1  |0
+        C2x2--1 1--C2x2(coord)   half1
+    """
     
     # RD, LD, RU, LU
     tensors= c2x2_RD_t(coord,state,env) + c2x2_LD_t((coord[0]-1, coord[1]),state,env) \
@@ -200,6 +263,26 @@ def halves_of_4x4_CTM_MOVE_RIGHT_c(*tensors):
 # functions building 2x2 Corner
 #####################################################################
 def c2x2_LU(coord, state, env, verbosity=0):
+    r"""
+    :param coord: site for which to build enlarged upper-left corner 
+    :type coord: tuple(int,int)
+    :param state: wavefunction
+    :type state: IPEPS_ABELIAN
+    :param env: environment
+    :type env: ENV_ABELIAN
+    :return: enlarged upper-left corner
+    :rtype: yast.Tensor
+
+    Builds upper-left corner at site `coord` by performing following
+    contraction and then reshaping the resulting tensor into matrix::
+
+        C----T--2         => C2x2--(2,3)->1(-1)
+        |    |               |
+        |    |               (0,1)->0(-1)
+        T----A(coord)--3
+        |    |
+        0    1
+    """
     C = env.C[(state.vertexToSite(coord),(-1,-1))]
     T1 = env.T[(state.vertexToSite(coord),(0,-1))]
     T2 = env.T[(state.vertexToSite(coord),(-1,0))]
@@ -256,6 +339,25 @@ def c2x2_LU_c(*tensors):
         return C2x2
 
 def c2x2_RU(coord, state, env, verbosity=0):
+    r"""
+    :param coord: site for which to build enlarged upper-right corner 
+    :type coord: tuple(int,int)
+    :param state: wavefunction
+    :type state: IPEPS_ABELIAN
+    :param env: environment
+    :type env: ENV_ABELIAN
+    :return: enlarged upper-left corner
+    :rtype: yast.Tensor
+
+    Builds upper-right corner at site `coord` by performing following
+    contraction and then reshaping the resulting tensor into matrix::
+
+            0--T---------C  =>  (+)0<-(0,1)--C2x2
+               |         |                   |
+               |         |          (-)1<-(2,3)
+            1--A(coord)--T
+               3         2
+    """
     C = env.C[(state.vertexToSite(coord),(1,-1))]
     T1 = env.T[(state.vertexToSite(coord),(1,0))]
     T2 = env.T[(state.vertexToSite(coord),(0,-1))]
@@ -314,6 +416,25 @@ def c2x2_RU_c(*tensors):
         return C2x2
 
 def c2x2_RD(coord, state, env, verbosity=0):
+    r"""
+    :param coord: site for which to build enlarged lower-right corner 
+    :type coord: tuple(int,int)
+    :param state: wavefunction
+    :type state: IPEPS_ABELIAN
+    :param env: environment
+    :type env: ENV_ABELIAN
+    :return: enlarged upper-left corner
+    :rtype: yast.Tensor
+
+    Builds lower-right corner at site `coord` by performing following
+    contraction and then reshaping the resulting tensor into matrix::
+
+               1         0 
+            3--A(coord)--T  =>      (+)0<-(0,1)
+               |         |                   |
+               |         |      (+)1<-(2,3)--C2x2
+            2--T---------C
+    """
     C = env.C[(state.vertexToSite(coord),(1,1))]
     T1 = env.T[(state.vertexToSite(coord),(0,1))]
     T2 = env.T[(state.vertexToSite(coord),(1,0))]
@@ -370,6 +491,25 @@ def c2x2_RD_c(*tensors):
         return C2x2
 
 def c2x2_LD(coord, state, env, verbosity=0):
+    r"""
+    :param coord: site for which to build enlarged lower-right corner 
+    :type coord: tuple(int,int)
+    :param state: wavefunction
+    :type state: IPEPS_ABELIAN
+    :param env: environment
+    :type env: ENV_ABELIAN
+    :return: enlarged upper-left corner
+    :rtype: yast.Tensor
+
+    Builds lower-right corner at site `coord` by performing following
+    contraction and then reshaping the resulting tensor into matrix::
+
+        0  1
+        T--A(coord)--3
+        |  |                (0,1)->0(+)
+        |  |                 |
+        C--T---------2  =>   C2x2--(2,3)->1(-)
+    """
     C = env.C[(state.vertexToSite(coord),(-1,1))]
     T1 = env.T[(state.vertexToSite(coord),(-1,0))]
     T2 = env.T[(state.vertexToSite(coord),(0,1))]

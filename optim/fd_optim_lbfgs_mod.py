@@ -77,7 +77,10 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
     # load and/or modify optimizer state from checkpoint
     if main_args.opt_resume is not None:
         print(f"INFO: resuming from check point. resume = {main_args.opt_resume}")
-        checkpoint = torch.load(main_args.opt_resume)
+        if not str(global_args.device)==str(state.device):
+            warnings.warn(f"Device mismatch: state.device {state.device}"\
+                +f" global_args.device {global_args.device}",RuntimeWarning)
+        checkpoint = torch.load(main_args.opt_resume,map_location=state.device)
         epoch0 = checkpoint["epoch"]
         loss0 = checkpoint["loss"]
         cp_state_dict= checkpoint["optimizer_state_dict"]

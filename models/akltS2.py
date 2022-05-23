@@ -9,11 +9,24 @@ from ctm.one_site_c4v import corrf_c4v
 from math import sqrt
 import itertools
 
-def _cast_to_real(t):
-    return t.real if t.is_complex() else t
+_cast_to_real= rdm._cast_to_real
 
 class AKLTS2():
     def __init__(self, global_args=cfg.global_args):
+        r"""
+        :param global_args: global configuration
+        :type global_args: GLOBALARGS
+
+        Build AKLT S=2 Hamiltonian, equivalent to projector from product of two S=2 DOFs
+        to S=4 DOF
+        
+        .. math::
+            H = \sum_{<ij>} h_{ij},\ \ \ h_{ij}= \frac{1}{14} \vec{S}_i\cdot\vec{S}_j
+                + \frac{7}{10} (\vec{S}_i\cdot\vec{S}_j)^2 + \frac{7}{45} (\vec{S}_i\cdot\vec{S}_j)^3
+                + \frac{1}{90} (\vec{S}_i\cdot\vec{S}_j)^4
+
+        where `<ij>` denote nearest neighbours.
+        """
         self.dtype=global_args.torch_dtype
         self.device=global_args.device
         self.phys_dim= 5
@@ -21,10 +34,6 @@ class AKLTS2():
         self.h, self.SS = self.get_h()
         self.obs_ops = self.get_obs()
 
-    # build AKLT S=2 Hamiltonian <=> Projector from product of two S=2 DOFs
-    # to S=4 DOF H = \sum_{<i,j>} h_ij, where h_ij= ...
-    #
-    # indices of h correspond to s_i,s_j;s_i',s_j'
     def get_h(self):
         pd = self.phys_dim
         s5 = su2.SU2(pd, dtype=self.dtype, device=self.device)
@@ -45,7 +54,7 @@ class AKLTS2():
         obs_ops["sm"]= s5.SM()
         return obs_ops
  
-    def energy_2x1_1x2(self,state,env):
+    def energy_2x1_1x2(self,state,env,**kwargs):
         r"""
         :param state: wavefunction
         :param env: CTM environment
@@ -98,19 +107,40 @@ class AKLTS2():
         """
         energy=0.
         for coord,site in state.sites.items():
-            rdm2x1 = rdm.rdm2x1(coord,state,env)
-            rdm1x2 = rdm.rdm1x2(coord,state,env)
+            rdm2x1 = rdm.rdm2x1(coord,state,env,**kwargs)
+            rdm1x2 = rdm.rdm1x2(coord,state,env,**kwargs)
             energy += torch.einsum('ijab,ijab',rdm2x1,self.h)
             energy += torch.einsum('ijab,ijab',rdm1x2,self.h)
 
         # return energy-per-site
         energy_per_site=energy/len(state.sites.items())
-        energy_per_site= _cast_to_real(energy_per_site)
+        energy_per_site= _cast_to_real(energy_per_site,**kwargs)
 
         return energy_per_site
         
     # definition of other observables
     def eval_obs(self,state,env):
+        r"""
+        :param state: wavefunction
+        :param env: CTM environment
+        :type state: IPEPS
+        :type env: ENV
+        :return:  expectation values of observables, labels of observables
+        :rtype: list[float], list[str]
+
+        Computes the following observables in order
+
+            1. average magnetization over the unit cell,
+            2. magnetization for each site in the unit cell
+            3. :math:`\langle S^z \rangle,\ \langle S^+ \rangle,\ \langle S^- \rangle` 
+               for each site in the unit cell
+            4. nearest-neighbour spin-spin correlations on non-equivalent bonds
+
+        where the on-site magnetization is defined as
+        
+        .. math::
+            m = \sqrt{ \langle S^z \rangle^2+\langle S^x \rangle^2+\langle S^y \rangle^2 }
+        """
         obs= dict({"avg_m": 0.})
         with torch.no_grad():
             for coord,site in state.sites.items():
@@ -139,6 +169,20 @@ class AKLTS2():
 
 class AKLTS2_C4V_BIPARTITE():
     def __init__(self, global_args=cfg.global_args):
+        r"""
+        :param global_args: global configuration
+        :type global_args: GLOBALARGS
+
+        Build AKLT S=2 Hamiltonian, equivalent to projector from product of two S=2 DOFs
+        to S=4 DOF
+        
+        .. math::
+            H = \sum_{<ij>} h_{ij},\ \ \ h_{ij}= \frac{1}{14} \vec{S}_i\cdot\vec{S}_j
+                + \frac{7}{10} (\vec{S}_i\cdot\vec{S}_j)^2 + \frac{7}{45} (\vec{S}_i\cdot\vec{S}_j)^3
+                + \frac{1}{90} (\vec{S}_i\cdot\vec{S}_j)^4
+
+        where `<ij>` denote nearest neighbours.
+        """
         self.dtype=global_args.torch_dtype
         self.device=global_args.device
         self.phys_dim= 5
@@ -146,10 +190,6 @@ class AKLTS2_C4V_BIPARTITE():
         self.h2_rot, self.SS, self.SS_rot = self.get_h()
         self.obs_ops = self.get_obs()
 
-    # build AKLT S=2 Hamiltonian <=> Projector from product of two S=2 DOFs
-    # to S=4 DOF H = \sum_{<i,j>} h_ij, where h_ij= ...
-    #
-    # indices of h correspond to s_i,s_j;s_i',s_j'
     def get_h(self):
         pd = self.phys_dim
         s5 = su2.SU2(pd, dtype=self.dtype, device=self.device)
@@ -176,9 +216,34 @@ class AKLTS2_C4V_BIPARTITE():
         obs_ops["sm"]= s5.SM()
         return obs_ops
 
-    def energy_1x1(self,state,env_c4v):
-        rdm2x1 = rdm_c4v.rdm2x1(state, env_c4v)
+    def energy_1x1(self,state,env_c4v,**kwargs):
+        r"""
+        :param state: wavefunction
+        :param env_c4v: CTM c4v symmetric environment
+        :type state: IPEPS_C4V
+        :type env_c4v: ENV_C4V
+        :return: energy per site
+        :rtype: float
+
+        We assume 1x1 C4v iPEPS which tiles the lattice with a bipartite pattern composed 
+        of two tensors A, and B=RA, where R appropriately rotates the physical Hilbert space 
+        of tensor A on every "odd" site::
+
+            1x1 C4v => rotation R => BIPARTITE
+            A A A A                  A B A B
+            A A A A                  B A B A
+            A A A A                  A B A B
+            A A A A                  B A B A
+
+        Due to C4v symmetry it is enough to construct just a single nearest-neighbour
+        reduced density matrix 
+
+        .. math::
+            e= \langle \mathcal{h} \rangle = Tr(\rho_{2x1} \mathcal{h})
+        """
+        rdm2x1 = rdm_c4v.rdm2x1(state, env_c4v,**kwargs)
         energy = torch.einsum('ijab,ijab',rdm2x1,self.h2_rot)
+        energy = _cast_to_real(energy,**kwargs)
         return energy
         
     # definition of other observables
@@ -199,22 +264,7 @@ class AKLTS2_C4V_BIPARTITE():
         where the on-site magnetization is defined as
         
         .. math::
-            
-            \begin{align*}
-            m &= \sqrt{ \langle S^z \rangle^2+\langle S^x \rangle^2+\langle S^y \rangle^2 }
-            =\sqrt{\langle S^z \rangle^2+1/4(\langle S^+ \rangle+\langle S^- 
-            \rangle)^2 -1/4(\langle S^+\rangle-\langle S^-\rangle)^2} \\
-              &=\sqrt{\langle S^z \rangle^2 + 1/2\langle S^+ \rangle \langle S^- \rangle)}
-            \end{align*}
-
-        Usual spin components can be obtained through the following relations
-        
-        .. math::
-            
-            \begin{align*}
-            S^+ &=S^x+iS^y               & S^x &= 1/2(S^+ + S^-)\\
-            S^- &=S^x-iS^y\ \Rightarrow\ & S^y &=-i/2(S^+ - S^-)
-            \end{align*}
+            m = \sqrt{ \langle S^z \rangle^2+\langle S^x \rangle^2+\langle S^y \rangle^2 }
         """
         # TODO optimize/unify ?
         # expect "list" of (observable label, value) pairs ?
@@ -234,6 +284,19 @@ class AKLTS2_C4V_BIPARTITE():
         return obs_values, obs_labels
 
     def eval_corrf_SS(self,state,env_c4v,dist):
+        r"""
+        :param state: wavefunction
+        :param env_c4v: CTM c4v symmetric environment
+        :type state: IPEPS_C4V
+        :type env_c4v: ENV_C4V
+        :param dist: maximal distance of correlator
+        :type dist: int
+        :return: dictionary with full and spin-resolved spin-spin correlation functions
+        :rtype: dict(str: torch.Tensor)
+        
+        Evaluate spin-spin correlation functions :math:`\langle\mathbf{S}(r).\mathbf{S}(0)\rangle` 
+        up to r = ``dist`` .
+        """
    
         # function generating properly rotated operators on every bi-partite site
         def get_bilat_op(op):
@@ -256,6 +319,23 @@ class AKLTS2_C4V_BIPARTITE():
         return res
 
     def eval_corrf_DD_H(self,state,env_c4v,dist,verbosity=0):
+        r"""
+        :param state: wavefunction
+        :param env_c4v: CTM c4v symmetric environment
+        :type state: IPEPS_C4V
+        :type env_c4v: ENV_C4V
+        :param dist: maximal distance of correlator
+        :type dist: int
+        :return: dictionary with horizontal dimer-dimer correlation function
+        :rtype: dict(str: torch.Tensor)
+        
+        Evaluate horizontal dimer-dimer correlation functions 
+
+        .. math::
+            \langle(\mathbf{S}(r+3).\mathbf{S}(r+2))(\mathbf{S}(1).\mathbf{S}(0))\rangle 
+
+        up to r = ``dist`` .
+        """
         # function generating properly rotated S.S operator on every bi-partite site
         rot_op= su2.get_rot_op(self.phys_dim, dtype=self.dtype, device=self.device)
         # (S.S)_s1s2,s1's2' with rotation applied on "first" spin s1,s1' 

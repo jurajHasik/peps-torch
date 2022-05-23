@@ -6,9 +6,9 @@ name: CI
 on:
   # Triggers the workflow on push or pull request events but only for the master branch
   push:
-    branches: [ master, models, travis ]
+    branches: [ master, models, travis, integration-yast ]
   pull_request:
-    branches: [ master, models, travis ]
+    branches: [ master, models, travis, integration-yast ]
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -21,11 +21,13 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python_v: [3.6, 3.7, 3.8, 3.9]
-        pytorch_v: [1.8.2, 1.9.0]
+        python_v: [3.7, 3.8, 3.9]
+        pytorch_v: [1.11.0]
+      fail-fast: false  
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
+      - run: CI=false
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
 
@@ -43,40 +45,39 @@ jobs:
           if [[ "${{ matrix.python_v }}" == "3.9" ]]; then export P39C="-c=conda-forge"; fi
           if [[ "${{ matrix.pytorch_v }}" == "1.8.2" ]]
           then
-            $CONDA/bin/conda install pytorch cpuonly -c pytorch-lts ${P39C}
+            $CONDA/bin/conda install -c pytorch-lts -c anaconda pytorch cpuonly scipy pytest
           else
-            $CONDA/bin/conda install pytorch==${{ matrix.pytorch_v }} cpuonly -c pytorch ${P39C}
+            $CONDA/bin/conda install -c pytorch -c anaconda pytorch==${{ matrix.pytorch_v }} cpuonly scipy pytest
           fi
-          $CONDA/bin/conda install scipy
           
       # Run tests
-      - name: test basic
+      - name: test j1j2
         run: |
           $CONDA/bin/python -c "import sys; print(sys.path)"
-          $CONDA/bin/python -m unittest discover -s examples -p "ctmrg_*.py"
-          $CONDA/bin/python -m unittest discover -s examples -p "optim_*.py"
+          $CONDA/bin/python -m pytest examples/j1j2/ctmrg_*.py
+          $CONDA/bin/python -m pytest examples/j1j2/optim_*.py
 
       - name: test aklt S2
         run: |
-          $CONDA/bin/python -m unittest discover -s examples/akltS2 -p "ctmrg_*.py"
-          $CONDA/bin/python -m unittest discover -s examples/akltS2 -p "optim_*.py"
+          $CONDA/bin/python -m pytest examples/akltS2/ctmrg_*.py
+          $CONDA/bin/python -m pytest examples/akltS2/optim_*.py
 
       - name: test ising
         run: |
-          $CONDA/bin/python -m unittest discover -s examples/ising -p "ctmrg_*.py"
-          $CONDA/bin/python -m unittest discover -s examples/ising -p "optim_*.py"
+          $CONDA/bin/python -m pytest examples/ising/ctmrg_*.py
+          $CONDA/bin/python -m pytest examples/ising/optim_*.py
       
       - name: test jq 
         run: |
-          $CONDA/bin/python -m unittest discover -s examples/jq -p "ctmrg_*.py"
-          $CONDA/bin/python -m unittest discover -s examples/jq -p "optim_*.py"
+          $CONDA/bin/python -m pytest examples/jq/ctmrg_*.py
+          $CONDA/bin/python -m pytest examples/jq/optim_*.py
           
       - name: test ladders
         run: |
-          $CONDA/bin/python -m unittest discover -s examples/ladders -p "ctmrg_*.py"
-          $CONDA/bin/python -m unittest discover -s examples/ladders -p "optim_*.py"
+          $CONDA/bin/python -m pytest examples/ladders/ctmrg_*.py
+          $CONDA/bin/python -m pytest examples/ladders/optim_*.py
           
       - name: test kagome
         run: |
-          $CONDA/bin/python -m unittest discover -s examples/kagome -p "ctmrg_*.py"
-          $CONDA/bin/python -m unittest discover -s examples/kagome -p "optim_*.py"
+          $CONDA/bin/python -m pytest examples/kagome/ctmrg_*.py
+          $CONDA/bin/python -m pytest examples/kagome/optim_*.py

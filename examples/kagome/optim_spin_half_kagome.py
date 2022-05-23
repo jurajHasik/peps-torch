@@ -30,7 +30,7 @@ parser.add_argument("--j2", type=float, default=0, help="next-nearest-neighbor e
 parser.add_argument("--jtrip", type=float, default=0, help="(SxS).S")
 parser.add_argument("--jperm", type=complex, default=0, help="triangle permutation")
 parser.add_argument("--ansatz", type=str, default=None, help="choice of the tensor ansatz",\
-    choices=["IPEPS", "IPESS", "IPESS_PG", 'A_2,B'])
+    choices=["IPEPS", "IPESS", "IPESS_PG", 'A_2,B', 'A_1,B'])
 parser.add_argument("--no_sym_up_dn", action='store_false', dest='sym_up_dn',\
     help="same trivalent tensors for up and down triangles")
 parser.add_argument("--no_sym_bond_S", action='store_false', dest='sym_bond_S',\
@@ -50,21 +50,22 @@ def main():
     torch.manual_seed(args.seed)
 
     if not args.theta is None:
-        args.j1= args.j1*math.cos(args.theta*math.pi)
         args.jtrip= args.j1*math.sin(args.theta*math.pi)
+        args.j1= args.j1*math.cos(args.theta*math.pi)
     print(f"j1={args.j1}; jD={args.JD}; j2={args.j2}; jtrip={args.jtrip}")
     model= spin_half_kagome.S_HALF_KAGOME(j1=args.j1, JD=args.JD,\
         j2=args.j2, jtrip=args.jtrip, jperm=args.jperm)
 
     # initialize the ipess/ipeps
-    if args.ansatz in ["IPESS","IPESS_PG","A_2,B"]:
+    if args.ansatz in ["IPESS","IPESS_PG","A_1,B","A_2,B"]:
         ansatz_pgs= None
         if args.ansatz=="A_2,B": ansatz_pgs= IPESS_KAGOME_PG.PG_A2_B
+        if args.ansatz=="A_1,B": ansatz_pgs= IPESS_KAGOME_PG.PG_A1_B
         
         if args.instate!=None:
             if args.ansatz=="IPESS":
                 state= read_ipess_kagome_generic(args.instate)
-            elif args.ansatz in ["IPESS_PG","A_2,B"]:
+            elif args.ansatz in ["IPESS_PG","A_1,B","A_2,B"]:
                 state= read_ipess_kagome_pg(args.instate)
 
             # possibly symmetrize by PG
@@ -97,7 +98,7 @@ def main():
                 dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
             B_b= torch.zeros(model.phys_dim, args.bond_dim, args.bond_dim,\
                 dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
-            if args.ansatz in ["IPESS_PG", "A_2,B"]:
+            if args.ansatz in ["IPESS_PG", "A_1,B", "A_2,B"]:
                 state= IPESS_KAGOME_PG(T_u, B_c, T_d=T_d, B_a=B_a, B_b=B_b,\
                     SYM_UP_DOWN=args.sym_up_dn,SYM_BOND_S=args.sym_bond_S, pgs=ansatz_pgs)
             elif args.ansatz in ["IPESS"]:
@@ -116,9 +117,10 @@ def main():
                 dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)-1.0
             B_b= torch.rand(model.phys_dim, args.bond_dim, args.bond_dim,\
                 dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)-1.0
-            if args.ansatz in ["IPESS_PG", "A_2,B"]:
+            if args.ansatz in ["IPESS_PG", "A_1,B", "A_2,B"]:
                 state = IPESS_KAGOME_PG(T_u, B_c, T_d=T_d, B_a=B_a, B_b=B_b,\
-                    SYM_UP_DOWN=args.sym_up_dn,SYM_BOND_S=args.sym_bond_S, pgs=ansatz_pgs)
+                    SYM_UP_DOWN=args.sym_up_dn,SYM_BOND_S=args.sym_bond_S, pgs=ansatz_pgs,\
+                    pg_symmetrize=True)
             elif args.ansatz in ["IPESS"]:
                 state= IPESS_KAGOME_GENERIC({'T_u': T_u, 'B_a': B_a, 'T_d': T_d,\
                     'B_b': B_b, 'B_c': B_c})
@@ -149,7 +151,7 @@ def main():
             elif args.ansatz in ["IPESS"]:
                 state= IPESS_KAGOME_GENERIC({'T_u': T_u, 'B_a': B_a, 'T_d': T_d,\
                     'B_b': B_b, 'B_c': B_c})
-    
+            state.add_noise(args.instate_noise)
     elif args.ansatz in ["IPEPS"]:    
         ansatz_pgs=None
         if args.instate!=None:
@@ -175,9 +177,10 @@ def main():
 
     def energy_f(state, env, force_cpu=False, fail_on_check=False,\
         warn_on_check=True):
-        #print(env)
         e_dn = model.energy_triangle_dn(state, env, force_cpu=force_cpu,\
             fail_on_check=fail_on_check, warn_on_check=warn_on_check)
+        # e_dn= model.energy_triangle_dn_1x1(state, env, force_cpu=force_cpu,\
+        #     fail_on_check=fail_on_check, warn_on_check=warn_on_check)
         e_up = model.energy_triangle_up(state, env, force_cpu=force_cpu,\
             fail_on_check=fail_on_check, warn_on_check=warn_on_check)
         # e_nnn = model.energy_nnn(state, env)
@@ -281,15 +284,14 @@ def main():
     print("\n\n",end="")
     print(", ".join(["epoch",f"loss"]+[label for label in obs_labels]))
     print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
-
     
     def loss_fn(state, ctm_env_in, opt_context):
         ctm_args = opt_context["ctm_args"]
         opt_args = opt_context["opt_args"]
 
         # build on-site tensors
-        if args.ansatz in ["IPESS", "IPESS_PG", "A_2,B"]:
-            if args.ansatz in ["IPESS_PG", "A_2,B"]:
+        if args.ansatz in ["IPESS", "IPESS_PG", "A_1,B", "A_2,B"]:
+            if args.ansatz in ["IPESS_PG", "A_1,B", "A_2,B"]:
                 # symmetrization and implicit rebuild of on-site tensors
                 state_sym= to_PG_symmetric(state, pgs=state.pgs)
             else:
@@ -307,14 +309,14 @@ def main():
         ctm_env_out, history, t_ctm, t_conv_check = ctmrg.run(state_sym, ctm_env_in, \
             conv_check=ctmrg_conv_f, ctm_args=ctm_args)
         loss0 = energy_f(state_sym, ctm_env_out, force_cpu=cfg.ctm_args.conv_check_cpu)
-        
+
         loss= loss0
         return loss, ctm_env_out, history, t_ctm, t_conv_check
 
     @torch.no_grad()
     def obs_fn(state, ctm_env, opt_context):
         state_sym= state
-        if args.ansatz in ["IPESS_PG", "A_2,B"]:
+        if args.ansatz in ["IPESS_PG", "A_1,B", "A_2,B"]:
             # symmetrization and implicit rebuild of on-site tensors
             state_sym= to_PG_symmetric(state, pgs=state.pgs)
         elif args.ansatz in ["IPESS"]:
@@ -336,7 +338,6 @@ def main():
             log.info("Norm(sites): "+", ".join([f"{t.norm()}" for c,t in state.sites.items()]))
             print(", "+", ".join([f"{t.norm()}" for c,t in state.sites.items()]) )
 
-
     def post_proc(state, ctm_env, opt_context):
         pass
     
@@ -347,7 +348,7 @@ def main():
     outputstatefile= args.out_prefix+"_state.json"
     if args.ansatz=="IPESS":
         state= read_ipess_kagome_generic(outputstatefile)
-    elif args.ansatz in ["IPESS_PG","A_2,B"]:
+    elif args.ansatz in ["IPESS_PG", "A_1,B", "A_2,B"]:
         state= read_ipess_kagome_pg(outputstatefile)
     ctm_env = ENV(args.chi, state)
     init_env(state, ctm_env)

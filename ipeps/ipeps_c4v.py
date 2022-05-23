@@ -33,7 +33,13 @@ class IPEPS_C4V(ipeps.IPEPS):
             global_args=global_args)
 
     def site(self,coord=None):
-        return next(iter(self.sites.values()))
+        r"""
+        :param coord: vertex (x,y). Can be ignored, since the ansatz is single-site.
+        :type coord: tuple(int,int)
+        :return: on-site tensor
+        :rtype: torch.tensor 
+        """
+        return self.sites[(0,0)]
 
     def add_noise(self,noise,symmetrize=False):
         r"""
@@ -52,7 +58,12 @@ class IPEPS_C4V(ipeps.IPEPS):
                 self.sites[(0,0)]= make_c4v_symm(self.site())
 
     def write_to_file(self,outputfile,symmetrize=True,**kwargs):
-        # symmetrize before writing out
+        r"""
+        :param symmetrize: symmetrize state before writing out
+        :type symmetrize: bool
+        
+        Writes state into file. See :meth:`ipeps.ipeps.write_ipeps`.
+        """
         tmp_state= to_ipeps_c4v(self) if symmetrize else self
         ipeps.write_ipeps(tmp_state, outputfile,**kwargs)
 
@@ -60,6 +71,17 @@ def extend_bond_dim(state, new_d):
     return ipeps.extend_bond_dim(state, new_d)
 
 def to_ipeps_c4v(state, normalize=False):
+    r"""
+    :param state: single-site IPEPS
+    :type state: IPEPS
+    :param normalize: normalize tensor
+    :type normalize: bool
+    :return: symmetrized state
+    :rtype: IPEPS_C4V
+
+    Symmetrize single-site IPEPS by projecting its on-site tensor to :math:`A_1` point-group irrep
+    if the on-site tensor is real, or :math:`A_1 + iA_2` if it is complex.
+    """
     #TODO other classes of C4v-symmetric ansatz ?
     # we choose A1 irrep, in principle, other choices are possible (A2, B1, ...)
     assert len(state.sites.items())==1, "state has more than a single on-site tensor"

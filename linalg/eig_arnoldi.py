@@ -16,12 +16,12 @@ class SYMARNOLDI(torch.autograd.Function):
         :type M: torch.tensor
         :type k: int
         :return: eigenvalues D, leading k eigenvectors U
-        :rtype: torch.tensor, torch.tensor
+        :rtype: torch.Tensor, torch.Tensor
 
         **Note:** `depends on scipy`
 
         Return leading k-eigenpairs of a matrix M, where M is symmetric 
-        :math:`M=M^T`, by computing the symmetric decomposition :math:`M= UDU^T` 
+        :math:`M=M^\dagger`, by computing the symmetric decomposition :math:`M= UDU^\dagger` 
         up to rank k. Partial eigendecomposition is done through Arnoldi method.
         """
         # input validation (M is square and symmetric) is provided by 
@@ -53,6 +53,9 @@ class SYMARNOLDI(torch.autograd.Function):
 
     @staticmethod
     def backward(self, dD, dU):
+        r"""
+        The backward is not implemented.
+        """
         raise Exception("backward not implemented")
         D, U= self.saved_tensors
         dA= None
@@ -87,7 +90,7 @@ class ARNOLDI(torch.autograd.Function):
         :type k: int
         :type v0: torch.Tensor
         :return: leading k eigenvalues D and (left) eigenvectors U 
-        :rtype: torch.tensor, torch.tensor
+        :rtype: torch.Tensor, torch.Tensor
 
         **Note:** `depends on scipy`
 
@@ -142,6 +145,9 @@ class ARNOLDI(torch.autograd.Function):
 
     @staticmethod
     def backward(self, dD, dU):
+        r"""
+        The backward is not implemented.
+        """
         raise Exception("backward not implemented")
         D, U = self.saved_tensors
         dA= None

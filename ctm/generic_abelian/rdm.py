@@ -4,7 +4,18 @@ from tn_interface_abelian import contract, permute, conj
 
 log= logging.getLogger('peps.ctm.generic_abelian.rdm')
 
-def _sym_pos_def_matrix(rdm, sym_pos_def=False, verbosity=0, who="unknown"):
+def _cast_to_real(t, fail_on_check=False, warn_on_check=True, imag_eps=1.0e-10,\
+    who="unknown", **kwargs):
+    if t.is_complex():
+        if abs(t.imag)/abs(t.real) > imag_eps and abs(t.imag)>imag_eps:
+            if warn_on_check:
+                log.warning(f"Unexpected imaginary part "+who+" "+str(t))
+            if fail_on_check: 
+                raise RuntimeError("Unexpected imaginary part "+who+" "+str(t))
+        return t.real
+    return t
+
+def _sym_pos_def_matrix(rdm, sym_pos_def=False, verbosity=0, who="unknown", **kwargs):
     rdm_asym= 0.5*(rdm-rdm.transpose((1,0)).conj())
     rdm= 0.5*(rdm+rdm.transpose((1,0)).conj())
     if verbosity>0: 
@@ -17,16 +28,19 @@ def _sym_pos_def_matrix(rdm, sym_pos_def=False, verbosity=0, who="unknown"):
     #             D= torch.clamp(D, min=0)
     #             rdm_posdef= U@torch.diag(D)@U.t()
     #             rdm.copy_(rdm_posdef)
-    rdm = rdm / rdm.trace().to_number()
+    norm= _cast_to_real(rdm.trace().to_number(),who=who,**kwargs)
+    rdm = rdm / norm
     return rdm
 
-def _sym_pos_def_rdm(rdm, sym_pos_def=False, verbosity=0, who=None):
+def _sym_pos_def_rdm(rdm, sym_pos_def=False, verbosity=0, who=None, **kwargs):
     assert rdm.ndim%2==0, "invalid rank of RDM"
     nsites= rdm.ndim//2
-    rdm= rdm.fuse_legs(axes=(tuple(nsites+i for i in range(nsites)),\
-        tuple(i for i in range(nsites))) )
-    rdm= _sym_pos_def_matrix(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
-    rdm= rdm.unfuse_legs(axes=(0,1), inplace=True)
+    # print(f"{tuple(nsites+i for i in range(nsites))} {tuple(i for i in range(nsites))}")
+    rdm= rdm.fuse_legs(axes=(tuple(i for i in range(nsites)),\
+        tuple(nsites+i for i in range(nsites))))
+    rdm= _sym_pos_def_matrix(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity,\
+        who=who,**kwargs)
+    rdm= rdm.unfuse_legs(axes=(0,1))
     return rdm
 
 def _validate_precomputed(state,env):
@@ -149,7 +163,7 @@ def open_C2x2_LD(coord, state, env, fusion_level="full", verbosity=0):
     :type fusion_level: str
     :type verbosity: int
     :return: left-down enlarged corner with open physical indices
-    :rtype: torch.tensor
+    :rtype: yast.tensor
 
     Computes lower-down enlarged corner centered on vertex ``coord`` by contracting 
     the following tensor network::
@@ -163,7 +177,7 @@ def open_C2x2_LD(coord, state, env, fusion_level="full", verbosity=0):
     The physical indices `s` and `s'` of on-site tensor :math:`a` at vertex ``coord`` 
     and its hermitian conjugate :math:`a^\dagger` are left uncontracted
 
-    Depending on `fusion_level`, the resulting tensor is: 
+    Depending on `fusion_level`, the resulting tensor is::
 
         rank-3 : fusion_level= 'full'             rank-5 : fusion_level= 'basic'
 
@@ -481,11 +495,11 @@ def rdm2x1(coord, state, env, sym_pos_def=False, verbosity=0):
     :param env: environment corresponding to ``state``
     :param verbosity: logging verbosity
     :type coord: tuple(int,int) 
-    :type state: IPEPS
-    :type env: ENV
+    :type state: IPEPS_ABELIAN
+    :type env: ENV_ABELIAN
     :type verbosity: int
     :return: 2-site reduced density matrix with indices :math:`s_0s_1;s'_0s'_1`
-    :rtype: torch.tensor
+    :rtype: yast.tensor
 
     Computes 2-site reduced density matrix :math:`\rho_{2x1}` of a horizontal 
     2x1 subsystem using following strategy:
@@ -594,7 +608,7 @@ def rdm1x2(coord, state, env, sym_pos_def=False, verbosity=0):
     :type env: ENV_ABELIAN
     :type verbosity: int
     :return: 2-site reduced density matrix with indices :math:`s_0s_1;s'_0s'_1`
-    :rtype: torch.tensor
+    :rtype: yast.tensor
 
     Computes 2-site reduced density matrix :math:`\rho_{1x2}` of a vertical 
     1x2 subsystem using following strategy:
@@ -713,7 +727,7 @@ def rdm2x2(coord, state, env, sym_pos_def=False, verbosity=0):
     :type env: ENV_ABELIAN
     :type verbosity: int
     :return: 4-site reduced density matrix with indices :math:`s_0s_1s_2s_3;s'_0s'_1s'_2s'_3`
-    :rtype: torch.tensor
+    :rtype: yast.tensor
 
     Computes 4-site reduced density matrix :math:`\rho_{2x2}` of 2x2 subsystem specified
     by the vertex ``coord`` of its upper left corner using strategy:
