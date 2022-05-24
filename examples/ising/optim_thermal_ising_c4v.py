@@ -220,7 +220,7 @@ def main():
     #         a.size(3)**2,a.size(5)**2)
     #     D, P= truncated_eig_sym(tmp_M, D1, keep_multiplets=True,\
     #             verbosity=cfg.ctm_args.verbosity_projectors)
-    #     
+    #
     #     #
     #     # 1) build 1st layer
     #     #
@@ -438,7 +438,7 @@ def main():
         S0=r2_0= 0
         obs_values, obs_labels = eval_obs_f(state,ctm_env,args.mode,force_cpu=True)
         print(f"{args.beta}, "+", ".join([f"{epoch}",f"{loss}",f"{e0}", f"{z0}", f"{S0}", f"{r2_0}"]\
-            +[f"{v}" for v in obs_values]+[f"{state.site().norm()}"]))
+            +[f"{v}" for v in obs_values]+[f"{state.site().norm()}"]+[f"{iso.norm()}" for iso in state.isometries]))
 
         if (not opt_context["line_search"]) and args.top_freq>0 and epoch%args.top_freq==0:
             coord_dir_pairs=[((0,0), (1,0))]
