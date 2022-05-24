@@ -1,3 +1,6 @@
 [submodule "yast"]
 	path = yast
 	url = git@gitlab.com:marekrams/yast.git
+[submodule "geotorch_dev"]
+	path = geotorch_dev
+	url = git@github.com:jurajHasik/geotorch_dev.git

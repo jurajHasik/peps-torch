@@ -12,7 +12,7 @@ from linalg.custom_svd import truncated_svd_gesdd
 class IPEPS_C4V_THERMAL(ipeps.IPEPS):
     def __init__(self, site=None, peps_args=cfg.peps_args, global_args=cfg.global_args):
         r"""
-        :param site: on-site rank-6 tensor 
+        :param site: on-site rank-6 tensor
         :param peps_args: ipeps configuration
         :param global_args: global configuration
         :type site: torch.Tensor
@@ -22,14 +22,14 @@ class IPEPS_C4V_THERMAL(ipeps.IPEPS):
         Thermal iPEPO defined by single rank-6 tensor with C4v symmetry.
         The index-position convetion for on-site tensors is defined as follows::
 
-               u s 
-               |/ 
+               u s
+               |/
             l--A--r  <=> A[a,s,u,l,d,r]
               /|
              a d
-            
-        where a denotes ancilla index, s denotes physical index, and u,l,d,r label 
-        four principal directions up, left, down, right in anti-clockwise order 
+
+        where a denotes ancilla index, s denotes physical index, and u,l,d,r label
+        four principal directions up, left, down, right in anti-clockwise order
         starting from up
 
         """
@@ -71,7 +71,7 @@ class IPEPS_C4V_THERMAL(ipeps.IPEPS):
         physical and ancilla dimensions fused.
 
         Returns:
-            IPEPS_C4v: ipeps representaion of the ipepo 
+            IPEPS_C4v: ipeps representaion of the ipepo
         """
         site= self.site()
         site= site.view(site.size(0)*site.size(1), site.size(2), site.size(3),\
@@ -85,7 +85,7 @@ class IPEPS_C4V_THERMAL(ipeps.IPEPS):
         must be compatible.
 
         Returns:
-            IPEPS_C4v: ipeps representation with only aux indices 
+            IPEPS_C4v: ipeps representation with only aux indices
         """
         site= torch.einsum('iiuldr->uldr',self.site()).contiguous()
         return IPEPS_C4V(site=site)
@@ -130,14 +130,14 @@ class IPEPS_C4V_THERMAL_LC(IPEPS_C4V_THERMAL):
 
         The index-position convention for elementary tensors is defined as follows::
 
-               u s 
-               |/ 
+               u s
+               |/
             l--A--r  <=> A[a,s,u,l,d,r]
               /|
              a d
-            
-            where a denotes ancilla index, s denotes physical index, and u,l,d,r label 
-            four principal directions up, left, down, right in anti-clockwise order 
+
+            where a denotes ancilla index, s denotes physical index, and u,l,d,r label
+            four principal directions up, left, down, right in anti-clockwise order
             starting from up
 
         """
@@ -152,7 +152,7 @@ class IPEPS_C4V_THERMAL_LC(IPEPS_C4V_THERMAL):
         print(f"lX x lY: {self.lX} x {self.lY}")
         for nid,coord,site in [(t[0], *t[1]) for t in enumerate(self.coeffs.items())]:
             print(f"A{nid} {coord}: {site.size()}")
-        
+
         # show tiling of a square lattice
         coord_list = list(self.coeffs.keys())
         mx, my = 3*self.lX, 3*self.lY
@@ -167,7 +167,7 @@ class IPEPS_C4V_THERMAL_LC(IPEPS_C4V_THERMAL):
             for x in range(-mx,mx):
                 print(f"A{coord_list.index(self.vertexToSite((x,y)))} ", end="")
             print("")
-        
+
         # TODO for generic linear combination ?
         # print meta-information of considered symmetric tensors
         # for i,et in enumerate(self.elem_tensors):
@@ -177,7 +177,7 @@ class IPEPS_C4V_THERMAL_LC(IPEPS_C4V_THERMAL):
         for nid,coord,c in [(t[0], *t[1]) for t in enumerate(self.coeffs.items())]:
             tdims = c.size()
             tlength = tdims[0]
-            
+
             print(f"x: {coord[0]}, y: {coord[1]}")
             els=[f"{c[i]}" for i in range(tlength)]
             print(els)
@@ -222,7 +222,7 @@ def read_ipeps_c4v_thermal_lc(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], pe
     global_args=cfg.global_args):
     r"""
     :param jsonfile: input file describing iPEPS in json format
-    :param vertexToSite: function mapping arbitrary vertex of a square lattice 
+    :param vertexToSite: function mapping arbitrary vertex of a square lattice
                          into a vertex within elementary unit cell
     :param aux_seq: array specifying order of auxiliary indices of on-site tensors stored
                     in `jsonfile`
@@ -235,27 +235,27 @@ def read_ipeps_c4v_thermal_lc(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], pe
     :type global_args: GLOBALARGS
     :return: wavefunction
     :rtype: IPEPS
-    
+
 
     A simple PBC ``vertexToSite`` function is used by default
-    
+
     Parameter ``aux_seq`` defines the expected order of auxiliary indices
     in input file relative to the convention fixed in tn-torch::
-    
+
          0
         1A3 <=> [up, left, down, right]: aux_seq=[0,1,2,3]
          2
-        
+
         for alternative order, eg.
-        
+
          1
-        0A2 <=> [left, up, right, down]: aux_seq=[1,0,3,2] 
+        0A2 <=> [left, up, right, down]: aux_seq=[1,0,3,2]
          3
     """
     dtype= global_args.torch_dtype
     asq = [x+2 for x in aux_seq]
     sites = OrderedDict()
-    
+
     with open(jsonfile) as j:
         raw_state = json.load(j)
 
@@ -265,16 +265,16 @@ def read_ipeps_c4v_thermal_lc(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], pe
 
         # read the list of considered elementary tensors
         ten_list_key="elem_tensors"
-        if "sym_tensors" in raw_state.keys(): 
+        if "sym_tensors" in raw_state.keys():
             ten_list_key= "sym_tensors"
-        elif "su2_tensors" in raw_state.keys(): 
+        elif "su2_tensors" in raw_state.keys():
             ten_list_key= "su2_tensors"
         elem_tensors=[]
         for symt in raw_state[ten_list_key]:
-            loc_dtype= torch.float64 # assume float64 by default 
+            loc_dtype= torch.float64 # assume float64 by default
             if "dtype" in symt.keys():
                 if "complex128"==symt["dtype"]:
-                    loc_dtype= torch.complex128  
+                    loc_dtype= torch.complex128
                 elif "float64"==symt["dtype"]:
                     loc_dtype= torch.float64
                 else:
@@ -284,7 +284,7 @@ def read_ipeps_c4v_thermal_lc(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], pe
 
             meta=dict({"meta": symt["meta"]})
             dims=[symt["ancDim"]]+[symt["physDim"]]+[symt["auxDim"]]*4
-            
+
             t= torch.zeros(tuple(dims), dtype=dtype, device=global_args.device)
             if t.is_complex():
                 for elem in symt["entries"]:
@@ -304,19 +304,19 @@ def read_ipeps_c4v_thermal_lc(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], pe
         for ts in raw_state["map"]:
             coord = (ts["x"],ts["y"])
 
-            # find the corresponding tensor of coeffs (and its elements) 
+            # find the corresponding tensor of coeffs (and its elements)
             # identified by "siteId" in the "sites" list
             t = None
             for s in raw_state["coeffs"]:
                 if s["siteId"] == ts["siteId"]:
                     t = s
             if t == None:
-                raise Exception("Tensor with siteId: "+ts["sideId"]+" NOT FOUND in \"sites\"") 
+                raise Exception("Tensor with siteId: "+ts["sideId"]+" NOT FOUND in \"sites\"")
 
             loc_dtype= torch.float64
             if "dtype" in t.keys():
                 if "complex128"==t["dtype"]:
-                    loc_dtype= torch.complex128  
+                    loc_dtype= torch.complex128
                 elif "float64"==t["dtype"]:
                     loc_dtype= torch.float64
                 else:
@@ -329,12 +329,12 @@ def read_ipeps_c4v_thermal_lc(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], pe
             # 1) fill the tensor with elements from the list "entries"
             # which list the coefficients in the following
             # notation: Dimensions are indexed starting from 0
-            # 
+            #
             # index (integer) of coeff, (float) Re, Im
             if X.is_complex():
                 for entry in t["entries"]:
                     tokens = entry.split()
-                    X[int(tokens[0])]=float(tokens[1]) + (0.+1.j)*float(tokens[2]) 
+                    X[int(tokens[0])]=float(tokens[1]) + (0.+1.j)*float(tokens[2])
             else:
                 for entry in t["entries"]:
                     tokens = entry.split()
@@ -352,7 +352,7 @@ def write_ipeps_c4v_thermal_lc(state, outputfile, aux_seq=[0,1,2,3], tol=1.0e-14
     r"""
     :param state: wavefunction to write out in json format
     :param outputfile: target file
-    :param aux_seq: array specifying order in which the auxiliary indices of on-site tensors 
+    :param aux_seq: array specifying order in which the auxiliary indices of on-site tensors
                     will be stored in the `outputfile`
     :param tol: minimum magnitude of tensor elements which are written out
     :param normalize: if True, on-site tensors are normalized before writing
@@ -362,27 +362,27 @@ def write_ipeps_c4v_thermal_lc(state, outputfile, aux_seq=[0,1,2,3], tol=1.0e-14
     :type tol: float
     :type normalize: bool
 
-    Parameter ``aux_seq`` defines the order of auxiliary indices relative to the convention 
+    Parameter ``aux_seq`` defines the order of auxiliary indices relative to the convention
     fixed in tn-torch in which the tensor elements are written out::
-    
+
          0
         1A3 <=> [up, left, down, right]: aux_seq=[0,1,2,3]
          2
-        
+
         for alternative order, eg.
-        
+
          1
-        0A2 <=> [left, up, right, down]: aux_seq=[1,0,3,2] 
+        0A2 <=> [left, up, right, down]: aux_seq=[1,0,3,2]
          3
-    
-    TODO drop constrain for aux bond dimension to be identical on 
+
+    TODO drop constrain for aux bond dimension to be identical on
     all bond indices
-    
+
     TODO implement cutoff on elements with magnitude below tol
     """
     asq = [x+2 for x in aux_seq]
     json_state=dict({"lX": state.lX, "lY": state.lY, "elem_tensors": [], "coeffs": []})
-    
+
     # write list of considered elementary tensors
     for meta,t in state.elem_tensors:
         json_tensor=dict()
@@ -412,10 +412,10 @@ def write_ipeps_c4v_thermal_lc(state, outputfile, aux_seq=[0,1,2,3], tol=1.0e-14
             c= c/torch.max(torch.abs(c))
 
         json_tensor=dict()
-        
+
         tdims = c.size()
         tlength = tdims[0]
-        
+
         site_ids.append(f"A{nid}")
         site_map.append(dict({"siteId": site_ids[-1], "x": coord[0], "y": coord[1]} ))
         json_tensor["dtype"]="complex128" if c.is_complex() else "float64"
@@ -425,7 +425,7 @@ def write_ipeps_c4v_thermal_lc(state, outputfile, aux_seq=[0,1,2,3], tol=1.0e-14
         entries = []
         for i in range(len(c)):
             entries.append(f"{i} {c[i]}")
-            
+
         json_tensor["entries"]=entries
         json_state["coeffs"].append(json_tensor)
 
@@ -451,20 +451,20 @@ class IPEPS_C4V_THERMAL_TTN(IPEPS_C4V_THERMAL):
         Thermal iPEPO defined by single seed rank-6 tensor with C4v symmetry.
         The index-position convetion for on-site tensors is defined as follows::
 
-               u s 
-               |/ 
+               u s
+               |/
             l--A--r  <=> A[a,s,u,l,d,r]
               /|
              a d
-            
-        where a denotes ancilla index, s denotes physical index, and u,l,d,r label 
-        four principal directions up, left, down, right in anti-clockwise order 
+
+        where a denotes ancilla index, s denotes physical index, and u,l,d,r label
+        four principal directions up, left, down, right in anti-clockwise order
         starting from up.
 
         The on-site tensor is built from tower of seed tensors, with auxiliary indices
         reduced by TTN isometry. The height of the tower is 2**len(isometries)
 
-                    |   
+                    |
                    /A\
                  W0 | W0
                 /  \A/  \
@@ -510,7 +510,7 @@ class IPEPS_C4V_THERMAL_TTN(IPEPS_C4V_THERMAL):
                 keep_multiplets=True, verbosity=cfg.ctm_args.verbosity_projectors)
             # U= U @ V.conj().transpose(1,0)[:,:D_ip1]
             U= U.view(D_i, D_i, D_ip1)
-            #   
+            #
             #            |/
             #     /--tmp_A--\
             # l--U      /|   U--r   s^2 x (D_i)^4 x (D_i+1)^2
@@ -525,14 +525,14 @@ class IPEPS_C4V_THERMAL_TTN(IPEPS_C4V_THERMAL):
             tmp_A_lr= torch.einsum('mxl,nyr,spambn->spalxbry',U,U,A)
             #
             #             a   u
-            #              \ /  
+            #              \ /
             #               U
             #             |/
             #      x--tmp_A--y
-            #            /|  
+            #            /|
             #        b\ /
             #          U
-            #         / 
+            #         /
             #        d
             #
             tmp_A_ud= torch.einsum('amu,bnd,spmxny->spauxbdy',U,U,A)
@@ -584,7 +584,7 @@ def read_ipeps_c4v_thermal_ttn(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], p
     global_args=cfg.global_args):
     r"""
     :param jsonfile: input file describing IPEPS_C4V_THERMAL_TTN in json format
-    :param vertexToSite: function mapping arbitrary vertex of a square lattice 
+    :param vertexToSite: function mapping arbitrary vertex of a square lattice
                          into a vertex within elementary unit cell
     :param aux_seq: array specifying order of auxiliary indices of on-site tensors stored
                     in `jsonfile`
@@ -597,27 +597,27 @@ def read_ipeps_c4v_thermal_ttn(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], p
     :type global_args: GLOBALARGS
     :return: wavefunction
     :rtype: IPEPS
-    
+
 
     A simple PBC ``vertexToSite`` function is used by default
-    
+
     Parameter ``aux_seq`` defines the expected order of auxiliary indices
     in input file relative to the convention fixed in tn-torch::
-    
+
          0
         1A3 <=> [up, left, down, right]: aux_seq=[0,1,2,3]
          2
-        
+
         for alternative order, eg.
-        
+
          1
-        0A2 <=> [left, up, right, down]: aux_seq=[1,0,3,2] 
+        0A2 <=> [left, up, right, down]: aux_seq=[1,0,3,2]
          3
     """
     dtype= global_args.torch_dtype
     asq = [x+2 for x in aux_seq]
     sites = OrderedDict()
-    
+
     with open(jsonfile) as j:
         raw_state = json.load(j)
 
@@ -630,10 +630,10 @@ def read_ipeps_c4v_thermal_ttn(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], p
         ten_list_key="isometries"
         isometries=dict()
         for i,symt in raw_state[ten_list_key].items():
-            loc_dtype= torch.float64 # assume float64 by default 
+            loc_dtype= torch.float64 # assume float64 by default
             if "dtype" in symt.keys():
                 if "complex128"==symt["dtype"]:
-                    loc_dtype= torch.complex128  
+                    loc_dtype= torch.complex128
                 elif "float64"==symt["dtype"]:
                     loc_dtype= torch.float64
                 else:
@@ -641,19 +641,20 @@ def read_ipeps_c4v_thermal_ttn(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], p
             assert loc_dtype==dtype, "dtypes do not match - iPEPS "\
                 +str(dtype)+" vs isometry "+str(loc_dtype)
 
-            dims=[symt["D_in"]]*4
-            
+            # dims=[symt["D_in"]]*4
+            dims, rank= symt["shape"], len(symt["shape"])
+
             t= torch.zeros(tuple(dims), dtype=dtype, device=global_args.device)
             if t.is_complex():
                 for elem in symt["entries"]:
                     tokens= elem.split(' ')
-                    inds=tuple([int(i) for i in tokens[0:4]])
-                    t[inds]= float(tokens[4]) + (0.+1.j)*float(tokens[5])
+                    inds=tuple([int(i) for i in tokens[0:rank]])
+                    t[inds]= float(tokens[rank]) + (0.+1.j)*float(tokens[rank+1])
             else:
                 for elem in symt["entries"]:
                     tokens= elem.split(' ')
-                    inds=tuple([int(i) for i in tokens[0:4]])
-                    t[inds]= float(tokens[4])
+                    inds=tuple([int(i) for i in tokens[0:rank]])
+                    t[inds]= float(tokens[rank])
 
             isometries[i]= t
         assert set([int(k) for k in isometries.keys()])==set(range(len(isometries.keys())))
@@ -663,10 +664,10 @@ def read_ipeps_c4v_thermal_ttn(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], p
         seed_site=None
         if not raw_state["seed_site"] is None:
             symt= raw_state["seed_site"]
-            loc_dtype= torch.float64 # assume float64 by default 
+            loc_dtype= torch.float64 # assume float64 by default
             if "dtype" in symt.keys():
                 if "complex128"==symt["dtype"]:
-                    loc_dtype= torch.complex128  
+                    loc_dtype= torch.complex128
                 elif "float64"==symt["dtype"]:
                     loc_dtype= torch.float64
                 else:
@@ -675,7 +676,7 @@ def read_ipeps_c4v_thermal_ttn(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], p
                 +str(dtype)+" vs elementary tensor "+str(loc_dtype)
 
             dims=[symt["ancDim"]]+[symt["physDim"]]+[symt["auxDim"]]*4
-            
+
             t= torch.zeros(tuple(dims), dtype=dtype, device=global_args.device)
             if t.is_complex():
                 for elem in symt["entries"]:
@@ -697,7 +698,7 @@ def write_ipeps_c4v_thermal_ttn(state, outputfile, aux_seq=[0,1,2,3], tol=1.0e-1
     r"""
     :param state: wavefunction to write out in json format
     :param outputfile: target file
-    :param aux_seq: array specifying order in which the auxiliary indices of on-site tensors 
+    :param aux_seq: array specifying order in which the auxiliary indices of on-site tensors
                     will be stored in the `outputfile`
     :param tol: minimum magnitude of tensor elements which are written out
     :param normalize: if True, tensors are normalized before writing
@@ -707,28 +708,28 @@ def write_ipeps_c4v_thermal_ttn(state, outputfile, aux_seq=[0,1,2,3], tol=1.0e-1
     :type tol: float
     :type normalize: bool
 
-    Parameter ``aux_seq`` defines the order of auxiliary indices relative to the convention 
+    Parameter ``aux_seq`` defines the order of auxiliary indices relative to the convention
     fixed in tn-torch in which the tensor elements are written out::
-    
+
          0
         1A3 <=> [up, left, down, right]: aux_seq=[0,1,2,3]
          2
-        
+
         for alternative order, eg.
-        
+
          1
-        0A2 <=> [left, up, right, down]: aux_seq=[1,0,3,2] 
+        0A2 <=> [left, up, right, down]: aux_seq=[1,0,3,2]
          3
-    
-    TODO drop constrain for aux bond dimension to be identical on 
+
+    TODO drop constrain for aux bond dimension to be identical on
     all bond indices
-    
+
     TODO implement cutoff on elements with magnitude below tol
     """
     asq = [x+2 for x in aux_seq]
     json_state=dict({"lX": state.lX, "lY": state.lY, "isometries": {}, "seed_site": None,\
         "metadata": None})
-        
+
     if hasattr(state,"metadata") and type(state.metadata)==dict:
         json_state["metadata"]= state.metadata
 
@@ -793,20 +794,20 @@ class IPEPS_C4V_THERMAL_TTN_V2(IPEPS_C4V_THERMAL):
         Thermal iPEPO defined by single seed rank-6 tensor with C4v symmetry.
         The index-position convetion for on-site tensors is defined as follows::
 
-               u s 
-               |/ 
+               u s
+               |/
             l--A--r  <=> A[a,s,u,l,d,r]
               /|
              a d
-            
-        where a denotes ancilla index, s denotes physical index, and u,l,d,r label 
-        four principal directions up, left, down, right in anti-clockwise order 
+
+        where a denotes ancilla index, s denotes physical index, and u,l,d,r label
+        four principal directions up, left, down, right in anti-clockwise order
         starting from up.
 
         The on-site tensor is built from tower of seed tensors, with auxiliary indices
         reduced by TTN isometry. The height of the tower is 2**len(isometries)
 
-                    |   
+                    |
                    /A\
                  W0 | W0
                 /  \A/  \
@@ -823,9 +824,11 @@ class IPEPS_C4V_THERMAL_TTN_V2(IPEPS_C4V_THERMAL):
             assert isinstance(seed_site,torch.Tensor), "site is not a torch.Tensor"
             self.seed_site= seed_site
         self.iso_Ds= iso_Ds
-        self.isometries= isometries
+        # self.isometries= isometries
+        # here we initialize constraint spaces
         import geotorch
-        self.manifolds= [ geotorch.stiefel.Stiefel(torch.Size([W.size(0)*W.size(1),W.size(2)])) for W in self.isometries ]
+        self.manifolds= [ geotorch.stiefel.Stiefel(torch.Size([W.size(0)*W.size(1),W.size(2)])) for W in isometries ]
+        self.isometries= [ M.right_inverse(W.view(W.size(0)*W.size(1),W.size(2))).view(W.size()) for M,W in zip(self.manifolds,isometries) ]
         super().__init__(self.build_onsite_tensors(), peps_args=peps_args,\
             global_args=global_args)
 
@@ -842,9 +845,13 @@ class IPEPS_C4V_THERMAL_TTN_V2(IPEPS_C4V_THERMAL):
         A= A0.clone()
         for i in range(len(self.isometries)):
             D_i, D_ip1= self.isometries[i].size(0), self.iso_Ds[i]
+            # M= self.isometries[i]
+            # M= M/M.abs().max()
+            # U,S,V= truncated_svd_gesdd(M.view([D_i*D_i]*2), D_ip1,\
+                # keep_multiplets=True, verbosity=cfg.ctm_args.verbosity_projectors)
             U= self.manifolds[i].forward( self.isometries[i].view(D_i*D_i,D_ip1) )
             U= U.view(D_i, D_i, D_ip1)
-            #   
+            #
             #            |/
             #     /--tmp_A--\
             # l--U      /|   U--r   s^2 x (D_i)^4 x (D_i+1)^2
@@ -859,14 +866,14 @@ class IPEPS_C4V_THERMAL_TTN_V2(IPEPS_C4V_THERMAL):
             tmp_A_lr= torch.einsum('mxl,nyr,spambn->spalxbry',U,U,A)
             #
             #             a   u
-            #              \ /  
+            #              \ /
             #               U
             #             |/
             #      x--tmp_A--y
-            #            /|  
+            #            /|
             #        b\ /
             #          U
-            #         / 
+            #         /
             #        d
             #
             tmp_A_ud= torch.einsum('amu,bnd,spmxny->spauxbdy',U,U,A)
@@ -914,11 +921,125 @@ class IPEPS_C4V_THERMAL_TTN_V2(IPEPS_C4V_THERMAL):
     def write_to_file(self, outputfile, aux_seq=[0,1,2,3], tol=1.0e-14, normalize=False):
         write_ipeps_c4v_thermal_ttn_v2(self, outputfile, aux_seq=aux_seq, tol=tol, normalize=normalize)
 
+def read_ipeps_c4v_thermal_ttn_v2(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.peps_args,\
+    global_args=cfg.global_args):
+    r"""
+    :param jsonfile: input file describing IPEPS_C4V_THERMAL_TTN in json format
+    :param vertexToSite: function mapping arbitrary vertex of a square lattice
+                         into a vertex within elementary unit cell
+    :param aux_seq: array specifying order of auxiliary indices of on-site tensors stored
+                    in `jsonfile`
+    :param peps_args: ipeps configuration
+    :param global_args: global configuration
+    :type jsonfile: str or Path object
+    :type vertexToSite: function(tuple(int,int))->tuple(int,int)
+    :type aux_seq: list[int]
+    :type peps_args: PEPSARGS
+    :type global_args: GLOBALARGS
+    :return: wavefunction
+    :rtype: IPEPS
+
+
+    A simple PBC ``vertexToSite`` function is used by default
+
+    Parameter ``aux_seq`` defines the expected order of auxiliary indices
+    in input file relative to the convention fixed in tn-torch::
+
+         0
+        1A3 <=> [up, left, down, right]: aux_seq=[0,1,2,3]
+         2
+
+        for alternative order, eg.
+
+         1
+        0A2 <=> [left, up, right, down]: aux_seq=[1,0,3,2]
+         3
+    """
+    dtype= global_args.torch_dtype
+    asq = [x+2 for x in aux_seq]
+    sites = OrderedDict()
+
+    with open(jsonfile) as j:
+        raw_state = json.load(j)
+
+        # check for presence of "aux_seq" field in jsonfile
+        if "aux_ind_seq" in raw_state.keys():
+            asq = [x+1 for x in raw_state["aux_ind_seq"]]
+
+        # read the list of considered elementary tensors
+        iso_Ds= raw_state["iso_Ds"]
+        ten_list_key="isometries"
+        isometries=dict()
+        for i,symt in raw_state[ten_list_key].items():
+            loc_dtype= torch.float64 # assume float64 by default
+            if "dtype" in symt.keys():
+                if "complex128"==symt["dtype"]:
+                    loc_dtype= torch.complex128
+                elif "float64"==symt["dtype"]:
+                    loc_dtype= torch.float64
+                else:
+                    raise RuntimeError("Invalid dtype: "+symt["dtype"])
+            assert loc_dtype==dtype, "dtypes do not match - iPEPS "\
+                +str(dtype)+" vs isometry "+str(loc_dtype)
+
+            # dims=[symt["D_in"]]*4
+            dims, rank= symt["shape"], len(symt["shape"])
+
+            t= torch.zeros(tuple(dims), dtype=dtype, device=global_args.device)
+            if t.is_complex():
+                for elem in symt["entries"]:
+                    tokens= elem.split(' ')
+                    inds=tuple([int(i) for i in tokens[0:rank]])
+                    t[inds]= float(tokens[rank]) + (0.+1.j)*float(tokens[rank+1])
+            else:
+                for elem in symt["entries"]:
+                    tokens= elem.split(' ')
+                    inds=tuple([int(i) for i in tokens[0:rank]])
+                    t[inds]= float(tokens[rank])
+
+            isometries[i]= t
+        assert set([int(k) for k in isometries.keys()])==set(range(len(isometries.keys())))
+        isometries= [ isometries[str(i)] for i in range(len(isometries.keys())) ]
+
+        # Loop over non-equivalent tensor,coeffs pairs in the unit cell
+        seed_site=None
+        if not raw_state["seed_site"] is None:
+            symt= raw_state["seed_site"]
+            loc_dtype= torch.float64 # assume float64 by default
+            if "dtype" in symt.keys():
+                if "complex128"==symt["dtype"]:
+                    loc_dtype= torch.complex128
+                elif "float64"==symt["dtype"]:
+                    loc_dtype= torch.float64
+                else:
+                    raise RuntimeError("Invalid dtype: "+symt["dtype"])
+            assert loc_dtype==dtype, "dtypes do not match - iPEPS "\
+                +str(dtype)+" vs elementary tensor "+str(loc_dtype)
+
+            dims=[symt["ancDim"]]+[symt["physDim"]]+[symt["auxDim"]]*4
+
+            t= torch.zeros(tuple(dims), dtype=dtype, device=global_args.device)
+            if t.is_complex():
+                for elem in symt["entries"]:
+                    tokens= elem.split(' ')
+                    inds=tuple([int(i) for i in tokens[0:6]])
+                    t[inds]= float(tokens[6]) + (0.+1.j)*float(tokens[7])
+            else:
+                for elem in symt["entries"]:
+                    tokens= elem.split(' ')
+                    inds=tuple([int(i) for i in tokens[0:6]])
+                    t[inds]= float(tokens[6])
+            seed_site=t
+
+    state = IPEPS_C4V_THERMAL_TTN_V2(seed_site, iso_Ds, isometries, \
+        peps_args=peps_args, global_args=global_args)
+    return state
+
 def write_ipeps_c4v_thermal_ttn_v2(state, outputfile, aux_seq=[0,1,2,3], tol=1.0e-14, normalize=False):
     r"""
     :param state: wavefunction to write out in json format
     :param outputfile: target file
-    :param aux_seq: array specifying order in which the auxiliary indices of on-site tensors 
+    :param aux_seq: array specifying order in which the auxiliary indices of on-site tensors
                     will be stored in the `outputfile`
     :param tol: minimum magnitude of tensor elements which are written out
     :param normalize: if True, tensors are normalized before writing
@@ -928,28 +1049,28 @@ def write_ipeps_c4v_thermal_ttn_v2(state, outputfile, aux_seq=[0,1,2,3], tol=1.0
     :type tol: float
     :type normalize: bool
 
-    Parameter ``aux_seq`` defines the order of auxiliary indices relative to the convention 
+    Parameter ``aux_seq`` defines the order of auxiliary indices relative to the convention
     fixed in tn-torch in which the tensor elements are written out::
-    
+
          0
         1A3 <=> [up, left, down, right]: aux_seq=[0,1,2,3]
          2
-        
+
         for alternative order, eg.
-        
+
          1
-        0A2 <=> [left, up, right, down]: aux_seq=[1,0,3,2] 
+        0A2 <=> [left, up, right, down]: aux_seq=[1,0,3,2]
          3
-    
-    TODO drop constrain for aux bond dimension to be identical on 
+
+    TODO drop constrain for aux bond dimension to be identical on
     all bond indices
-    
+
     TODO implement cutoff on elements with magnitude below tol
     """
     asq = [x+2 for x in aux_seq]
     json_state=dict({"lX": state.lX, "lY": state.lY, "isometries": {}, "seed_site": None,\
         "metadata": None})
-        
+
     if hasattr(state,"metadata") and type(state.metadata)==dict:
         json_state["metadata"]= state.metadata
 
@@ -964,13 +1085,15 @@ def write_ipeps_c4v_thermal_ttn_v2(state, outputfile, aux_seq=[0,1,2,3], tol=1.0
         tlength = t.numel()
         assert len(tdims)==3, "Unexpected dimensionality of isometry parent tensor rank"+str(len(tdims))
         json_tensor["D_in"]= tdims[0]
-        # get non-zero elements
-        t_nonzero= t.nonzero()
+        json_tensor["shape"]= tdims
+        # generate isometries and then get non-zero elements
+        W= state.manifolds[i].forward(t.view(tdims[0]*tdims[1],tdims[2])).view(tdims)
+        t_nonzero= W.nonzero()
         json_tensor["numEntries"]= len(t_nonzero)
         entries = []
         for elem in t_nonzero:
             ei=tuple(elem.tolist())
-            entries.append(f"{ei[0]} {ei[1]} {ei[2]} {t[ei]}")
+            entries.append(f"{ei[0]} {ei[1]} {ei[2]} {W[ei]}")
         json_tensor["entries"]=entries
         json_state["isometries"][i]=json_tensor
 

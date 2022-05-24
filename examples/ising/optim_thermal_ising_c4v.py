@@ -48,7 +48,7 @@ def main():
 
     # initialize an ipeps
     if args.instate!=None:
-        state = read_ipeps_c4v_thermal_ttn(args.instate)
+        state = read_ipeps_c4v_thermal_ttn_v2(args.instate)
         # state.add_noise(args.instate_noise)
         state.seed_site= model.ipepo_trotter_suzuki(args.beta/(2**args.layers))
         if len(state.isometries)< args.layers:
@@ -98,17 +98,15 @@ def main():
                 #  --A-- = --E--
                 #  --A--
                 #   pbc
-                # 
+                #
                 E= torch.einsum('spuldr,psxyzw->uxlydzrw',B,B).contiguous()\
                     .view([B.size(5)**2]+[B.size(5)**6])
                 U,S,Vh= torch.linalg.svd(E,full_matrices=False)
-
-                # init_iso= U[:,:redD_iso[i]].reshape(B.size(5),B.size(5),redD_iso[i]).contiguous()
                 parent_iso= U @ torch.diag(S) @ Vh[:,:S.size(0)]
                 # isometries.append( parent_iso.view([redD_iso[i]]*4) )
                 init_iso= U[:,:redD_iso[i+1]].view([redD_iso[i]]*2+[redD_iso[i+1]]).contiguous()
                 isometries.append( init_iso )
-                #   
+                #
                 #            |/
                 #     /--tmp_A--\
                 # l--U      /|   U--r   s^2 x (D_i)^4 x (D_i+1)^2
@@ -123,14 +121,14 @@ def main():
                 tmp_B_lr= torch.einsum('mxl,nyr,spambn->spalxbry',init_iso,init_iso,B)
                 #
                 #             a   u
-                #              \ /  
+                #              \ /
                 #               U
                 #             |/
                 #      x--tmp_A--y
-                #            /|  
+                #            /|
                 #        b\ /
                 #          U
-                #         / 
+                #         /
                 #        d
                 #
                 tmp_B_ud= torch.einsum('amu,bnd,spmxny->spauxbdy',init_iso,init_iso,B)
@@ -139,7 +137,7 @@ def main():
             redD_iso= [A.size(2)] + [ A.size(0)**(2**i) for i in range(1,args.layers) ]
             isometries=[]
             for i in range(1,args.layers):
-                isometries.append( 
+                isometries.append(
                     torch.eye(redD_iso[i],dtype=model.dtype, device=model.device)\
                         .view(redD_iso[i-1],redD_iso[i-1],redD_iso[i])
                 )
@@ -156,7 +154,6 @@ def main():
             +str(args.ipeps_init_type)+" is not supported")
 
     print(state)
-    import pdb; pdb.set_trace()
     # initial normalization
     print(f"norm(seed_site) {state.seed_site.abs().max().item()}")
     norm0= state.site().norm()
@@ -215,15 +212,15 @@ def main():
     #     # a rank-6 on-site tensor with indices [apuldr]
     #     # 0) build projectors
     #     #
-    #     #    ||/p0       
+    #     #    ||/p0
     #     #  ==a*a== -> ==a*a== = P D P^H
-    #     # p1/||          
+    #     # p1/||
     #     #
     #     tmp_M= torch.einsum('apuldr,apufdh->lfrh',a,a.conj()).contiguous().view(\
     #         a.size(3)**2,a.size(5)**2)
     #     D, P= truncated_eig_sym(tmp_M, D1, keep_multiplets=True,\
     #             verbosity=cfg.ctm_args.verbosity_projectors)
-    #     # import pdb; pdb.set_trace()
+    #     
     #     #
     #     # 1) build 1st layer
     #     #
@@ -241,8 +238,8 @@ def main():
     #     #
     #     # 2) build 2nd layer
     #     #
-    #     #   p0 
-    #     #   |/        ||  
+    #     #   p0
+    #     #   |/        ||
     #     # --l1-- => ==l2==
     #     #  /|         ||
     #     #   p1
@@ -325,7 +322,7 @@ def main():
         #   |       | V
         #   C--2 0--C
         CTC= torch.tensordot(CTC,CTC,([0,1,2],[2,1,0]))
-        
+
         log.info(f"get_z_per_site rdm {rdm.item()} CTC {CTC.item()} C4 {C4.item()}")
 
         # z_per_site= (rdm/CTC)*(CTC/C4)
@@ -353,7 +350,7 @@ def main():
     #     #
 
     #     rho2_per_site= get_z_per_site( state_r2.site(), env_r2.get_C(), env_r2.get_T() )
-        
+
     #     # double-layer
     #     l1= torch.einsum('apuldr,apxywz->uxlydwrz',a,a.conj())\
     #         .contiguous().view(a.size(2)**2,a.size(3)**2,a.size(4)**2,a.size(5)**2)
@@ -378,7 +375,7 @@ def main():
     S0= r2_0= 0
     e0= energy_f(state, ctm_env, args.mode, force_cpu=True)
     z0= get_z_per_site(state.site(), ctm_env.get_C(), ctm_env.get_T())
-    loss0= -torch.log(z0) if args.logz else -z0 
+    loss0= -torch.log(z0) if args.logz else -z0
     obs_values, obs_labels = eval_obs_f(state, ctm_env, args.mode, force_cpu=True)
     print("\n\n",end="")
     print(", ".join(["beta","epoch","loss","e0","z0","S0","r2_0"]+obs_labels+["norm(A)"]))
@@ -432,8 +429,8 @@ def main():
             loss= opt_context["loss_history"]["loss_ls"][-1]
             print("LS",end=" ")
         else:
-            epoch= len(opt_context["loss_history"]["loss"]) 
-            loss= opt_context["loss_history"]["loss"][-1] 
+            epoch= len(opt_context["loss_history"]["loss"])
+            loss= opt_context["loss_history"]["loss"][-1]
         e0 = energy_f(state, ctm_env, args.mode, force_cpu=True)
         z0= get_z_per_site(state.site(), ctm_env.get_C(), ctm_env.get_T())
         # S0 = approx_S( state, ctm_env )
@@ -457,7 +454,7 @@ def main():
 
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"
-    state= read_ipeps_c4v_thermal_ttn(outputstatefile)
+    state= read_ipeps_c4v_thermal_ttn_v2(outputstatefile)
     state_fused= state.to_fused_ipeps_c4v()
     ctm_env = ENV_C4V(args.chi, state_fused)
     init_env(state_fused, ctm_env)
@@ -509,7 +506,7 @@ class TestOpt(unittest.TestCase):
         args.CTMARGS_projector_svd_method="SYMEIG"
         args.OPTARGS_line_search="backtracking"
         main()
-    
+
     @unittest.skipIf(not torch.cuda.is_available(), "CUDA not available")
     def test_opt_SYMEIG_LS_SYMARP_gpu(self):
         if not self.SCIPY: self.skipTest("test skipped: missing scipy")
