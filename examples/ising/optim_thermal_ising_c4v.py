@@ -105,8 +105,9 @@ def main():
 
                 # init_iso= U[:,:redD_iso[i]].reshape(B.size(5),B.size(5),redD_iso[i]).contiguous()
                 parent_iso= U @ torch.diag(S) @ Vh[:,:S.size(0)]
-                isometries.append( parent_iso.view([redD_iso[i]]*4) )
-                init_iso= U[:,:redD_iso[i+1]].view([redD_iso[i]]*2+[redD_iso[i+1]])
+                # isometries.append( parent_iso.view([redD_iso[i]]*4) )
+                init_iso= U[:,:redD_iso[i+1]].view([redD_iso[i]]*2+[redD_iso[i+1]]).contiguous()
+                isometries.append( init_iso )
                 #   
                 #            |/
                 #     /--tmp_A--\
@@ -149,12 +150,13 @@ def main():
             for i in range(1,args.layers):
                 A= torch.einsum("sxuldr,xpefgh->spuelfdgrh",A,A0).contiguous()
                 A= A.view([model.phys_dim]*2 + [A0.size(5)**(i+1)]*4)
-        state = IPEPS_C4V_THERMAL_TTN(A,iso_Ds=args.layers_Ds,isometries=isometries)
+        state = IPEPS_C4V_THERMAL_TTN_V2(A,iso_Ds=args.layers_Ds,isometries=isometries)
     else:
         raise ValueError("Missing trial state: --instate=None and --ipeps_init_type= "\
             +str(args.ipeps_init_type)+" is not supported")
 
     print(state)
+    import pdb; pdb.set_trace()
     # initial normalization
     print(f"norm(seed_site) {state.seed_site.abs().max().item()}")
     norm0= state.site().norm()
