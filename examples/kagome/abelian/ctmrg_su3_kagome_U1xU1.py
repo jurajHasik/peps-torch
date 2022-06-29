@@ -4,7 +4,6 @@ import torch
 import numpy as np
 import argparse
 import config as cfg
-import examples.abelian.settings_full_torch as settings_full
 import examples.abelian.settings_U1xU1_torch as settings_U1xU1
 from ipeps.ipess_kagome_abelian import read_ipess_kagome_generic
 from linalg.custom_svd import truncated_svd_gesdd
@@ -23,7 +22,6 @@ parser= cfg.get_args_parser()
 parser.add_argument("--phi", type=float, default=0.5, help="arctan(K/J): J -> 2-site coupling; K -> 3-site coupling")
 parser.add_argument("--theta", type=float, default=0., help="arctan(H/K): K -> 3-site coupling; K -> chiral coupling")
 parser.add_argument("--tiling", default="1SITE", help="tiling of the lattice")
-parser.add_argument("--symmetry", default=None, help="symmetry structure", choices=["NONE","U1xU1"])
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
 args, unknown_args = parser.parse_known_args()
@@ -34,19 +32,11 @@ def main():
     param_j = np.round(np.cos(np.pi*args.phi), decimals=15)
     param_k = np.round(np.sin(np.pi*args.phi) * np.cos(np.pi*args.theta), decimals=15)
     param_h = np.round(np.sin(np.pi*args.phi) * np.sin(np.pi*args.theta), decimals=15)
-    print("J = {}; K = {}; H = {}".format(param_j, param_k, param_h))\
-    # TODO(?) choose symmetry group
-    if not args.symmetry or args.symmetry=="NONE":
-        settings= settings_full
-    elif args.symmetry=="U1xU1":
-        settings= settings_U1xU1
+    print("J = {}; K = {}; H = {}".format(param_j, param_k, param_h))
+    settings= settings_U1xU1
     # override default device specified in settings
-    default_device= 'cpu' if not hasattr(settings, 'device') else settings.device
-    if not cfg.global_args.device == default_device:
-        settings.device = cfg.global_args.device
-        settings_full.device = cfg.global_args.device
-        print("Setting backend device: "+settings.device)
-    # override default dtype specified in settings
+    settings.default_device= cfg.global_args.device
+    # override default dtype
     settings.default_dtype= cfg.global_args.dtype
     torch.set_num_threads(args.omp_cores)
     torch.manual_seed(args.seed)
@@ -130,7 +120,6 @@ class TestCtmrg_TrimerState(unittest.TestCase):
 
     def setUp(self):
         args.instate=self.DIR_PATH+"/../../../test-input/abelian/IPESS_TRIMER_1-3_1x1_abelian-U1xU1_T3T8_state.json"
-        args.symmetry="U1xU1"
         args.theta=0
         args.phi=0
         args.bond_dim=4
@@ -179,7 +168,6 @@ class TestCtmrg_AKLTState(unittest.TestCase):
 
     def setUp(self):
         args.instate=self.DIR_PATH+"/../../../test-input/abelian/IPESS_AKLT_b3_1x1_abelian-U1xU1_T3T8_state.json"
-        args.symmetry="U1xU1"
         args.theta=0
         args.phi=0.5
         args.bond_dim=3

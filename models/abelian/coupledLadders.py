@@ -135,10 +135,10 @@ class COUPLEDLADDERS_NOSYM():
         _tmp_t= yast.ones(config=state.engine, s=(-1, -1, 1, 1),
                   t=((-1, 1), (-1, 1), (-1, 1), (-1, 1)),
                   D=((1, 1), (1, 1), (1, 1), (1, 1)))
-        _lss_dense= yast.leg_structures_for_dense(tensors=(_tmp_t,))
+        _lss_dense={i: l for i,l in enumerate(_tmp_t.get_legs())}
         for coord,site in state.sites.items():
-            rdm2x1= rdm.rdm2x1(coord,state,env).to_nonsymmetric(_lss_dense,reverse=True)
-            rdm1x2= rdm.rdm1x2(coord,state,env).to_nonsymmetric(_lss_dense,reverse=True)
+            rdm2x1= rdm.rdm2x1(coord,state,env).to_nonsymmetric(legs=_lss_dense,reverse=True)
+            rdm1x2= rdm.rdm1x2(coord,state,env).to_nonsymmetric(legs=_lss_dense,reverse=True)
             ss= contract(rdm2x1, self.h2, _ci)
             energy += ss
             if coord[1] % 2 == 0:
@@ -185,9 +185,9 @@ class COUPLEDLADDERS_NOSYM():
         _tmp_t= yast.ones(config=state.engine, s=(-1, 1),
                   t=((-1, 1), (-1, 1)),
                   D=((1, 1), (1, 1)))
-        _lss_dense= yast.leg_structures_for_dense(tensors=(_tmp_t,))
+        _lss_dense={i: l for i,l in enumerate(_tmp_t.get_legs())}
         for coord,site in state.sites.items():
-            rdm1x1 = rdm.rdm1x1(coord,state,env).to_nonsymmetric(_lss_dense,reverse=True)
+            rdm1x1 = rdm.rdm1x1(coord,state,env).to_nonsymmetric(legs=_lss_dense,reverse=True)
             for label,op in self.obs_ops.items():
                 obs[f"{label}{coord}"]= contract(rdm1x1, op, _ci).to_number()
             obs[f"m{coord}"]= sqrt(abs(obs[f"sz{coord}"]**2 + obs[f"sp{coord}"]*obs[f"sm{coord}"]))
@@ -198,10 +198,10 @@ class COUPLEDLADDERS_NOSYM():
         _tmp_t= yast.ones(config=state.engine, s=(-1, -1, 1, 1),
                   t=((-1, 1), (-1, 1), (-1, 1), (-1, 1)),
                   D=((1, 1), (1, 1), (1, 1), (1, 1)))
-        _lss_dense= yast.leg_structures_for_dense(tensors=(_tmp_t,))
+        _lss_dense={i: l for i,l in enumerate(_tmp_t.get_legs())}
         for coord,site in state.sites.items():
-            rdm2x1 = rdm.rdm2x1(coord,state,env).to_nonsymmetric(_lss_dense,reverse=True)
-            rdm1x2 = rdm.rdm1x2(coord,state,env).to_nonsymmetric(_lss_dense,reverse=True)
+            rdm2x1 = rdm.rdm2x1(coord,state,env).to_nonsymmetric(legs=_lss_dense,reverse=True)
+            rdm1x2 = rdm.rdm1x2(coord,state,env).to_nonsymmetric(legs=_lss_dense,reverse=True)
             SS2x1= contract(rdm2x1,self.h2,_ci).to_number()
             SS1x2= contract(rdm1x2,self.h2,_ci).to_number()
             obs[f"SS2x1{coord}"]= rdm._cast_to_real(SS2x1,**kwargs)

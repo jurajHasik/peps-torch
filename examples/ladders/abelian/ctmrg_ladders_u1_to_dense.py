@@ -29,11 +29,9 @@ def main():
     cfg.print_config()
     settings= settings_U1
     # override default device specified in settings
-    default_device= 'cpu' if not hasattr(settings, 'device') else settings.device
-    if not cfg.global_args.device == default_device:
-        settings.device = cfg.global_args.device
-        settings_full.device = cfg.global_args.device
-        print("Setting backend device: "+settings.device)
+    settings.default_device= settings_full.default_device= cfg.global_args.device
+    # override default dtype
+    settings.default_dtype= settings_full.default_dtype= cfg.global_args.dtype
     torch.set_num_threads(args.omp_cores)
     torch.manual_seed(args.seed)
 

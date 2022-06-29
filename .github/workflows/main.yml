@@ -49,6 +49,7 @@ jobs:
           else
             $CONDA/bin/conda install -c pytorch -c anaconda pytorch==${{ matrix.pytorch_v }} cpuonly scipy pytest
           fi
+          git submodule update --init --recursive
           
       # Run tests
       - name: test j1j2
@@ -56,6 +57,10 @@ jobs:
           $CONDA/bin/python -c "import sys; print(sys.path)"
           $CONDA/bin/python -m pytest examples/j1j2/ctmrg_*.py
           $CONDA/bin/python -m pytest examples/j1j2/optim_*.py
+      - name: test j1j2 abelian
+        run: |
+          $CONDA/bin/python -m pytest examples/j1j2/abelian/ctmrg_*.py
+          $CONDA/bin/python -m pytest examples/j1j2/abelian/optim_*.py
 
       - name: test aklt S2
         run: |
@@ -76,8 +81,16 @@ jobs:
         run: |
           $CONDA/bin/python -m pytest examples/ladders/ctmrg_*.py
           $CONDA/bin/python -m pytest examples/ladders/optim_*.py
+      - name: test ladders abelian
+        run: |
+          $CONDA/bin/python -m pytest examples/ladders/abelian/ctmrg_*.py
+          $CONDA/bin/python -m pytest examples/ladders/abelian/optim_*.py
           
       - name: test kagome
         run: |
           $CONDA/bin/python -m pytest examples/kagome/ctmrg_*.py
           $CONDA/bin/python -m pytest examples/kagome/optim_*.py
+      - name: test kagome abelian
+        run: |
+          $CONDA/bin/python -m pytest examples/kagome/abelian/ctmrg_*.py
+          $CONDA/bin/python -m pytest examples/kagome/abelian/optim_*.py

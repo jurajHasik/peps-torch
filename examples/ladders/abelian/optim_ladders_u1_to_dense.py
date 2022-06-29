@@ -22,7 +22,6 @@ parser= cfg.get_args_parser()
 # additional model-dependent arguments
 parser.add_argument("--alpha", type=float, default=0., help="inter-ladder coupling")
 parser.add_argument("--bz_stag", type=float, default=0., help="staggered magnetic field")
-parser.add_argument("--symmetry", default=None, help="symmetry structure", choices=["NONE","U1"])
 parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
@@ -31,19 +30,11 @@ args, unknown_args = parser.parse_known_args()
 def main():
     cfg.configure(args)
     cfg.print_config()
-    # TODO(?) choose symmetry group
-    if not args.symmetry or args.symmetry=="NONE":
-        settings= settings_full
-    elif args.symmetry=="U1":
-        settings= settings_U1
+    settings= settings_U1
     # override default device specified in settings
-    default_device= 'cpu' if not hasattr(settings, 'device') else settings.device
-    if not cfg.global_args.device == default_device:
-        settings.device = cfg.global_args.device
-        settings_full.device = cfg.global_args.device
-        print("Setting backend device: "+settings.device)
+    settings.default_device= settings_full.default_device= cfg.global_args.device
     # override default dtype
-    settings_full.dtype= settings.dtype= cfg.global_args.dtype
+    settings.default_dtype= settings_full.default_dtype= cfg.global_args.dtype
     settings.backend.set_num_threads(args.omp_cores)
     settings.backend.random_seed(args.seed)
 
@@ -57,7 +48,7 @@ def main():
         state= state.add_noise(args.instate_noise)
     # TODO checkpointing
     elif args.opt_resume is not None:
-        state= IPEPS_ABELIAN(settings_U1, dict(), lX=2, lY=2)
+        state= IPEPS_ABELIAN(settings, dict(), lX=2, lY=2)
         state.load_checkpoint(args.opt_resume)
     else:
         raise ValueError("Missing trial state: --instate=None and --ipeps_init_type= "\

@@ -30,13 +30,9 @@ def main():
     cfg.print_config()
     settings= settings_U1
     # override default device specified in settings
-    default_device= 'cpu' if not hasattr(settings, 'device') else settings.device
-    if not cfg.global_args.device == default_device:
-        settings.device = cfg.global_args.device
-        settings_full.device = cfg.global_args.device
-        print("Setting backend device: "+settings.device)
+    settings.default_device= settings_full.default_device= cfg.global_args.device
     # override default dtype
-    settings_full.dtype= settings.dtype= cfg.global_args.dtype
+    settings.default_dtype= settings_full.default_dtype= cfg.global_args.dtype
     settings.backend.set_num_threads(args.omp_cores)
     settings.backend.random_seed(args.seed)
     
@@ -181,7 +177,7 @@ if __name__=='__main__':
 class TestCheckpoint_NeelBipartiteState(unittest.TestCase):
     tol= 1.0e-6
     DIR_PATH = os.path.dirname(os.path.realpath(__file__))
-    OUT_PRFX = "RESULT_test_run-opt-chck_u1_vbs"
+    OUT_PRFX = "RESULT_test_run-opt-chck_u1_AB"
 
     def setUp(self):
         args.instate=self.DIR_PATH+"/../../../test-input/abelian/c4v/BFGS100LS_U1B_D3-chi72-j20.0-run0-iRNDseed321_blocks_2site_state.json"
@@ -189,6 +185,7 @@ class TestCheckpoint_NeelBipartiteState(unittest.TestCase):
         args.chi=24
         args.tiling= "BIPARTITE"
         args.out_prefix=self.OUT_PRFX
+        args.GLOBALARGS_device='cuda:0'
 
     def test_checkpoint_neel_bipartite(self):
         from io import StringIO

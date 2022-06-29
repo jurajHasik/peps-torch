@@ -120,6 +120,9 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
     dl_peps_args.build_dl= dl_peps_args.build_dl_open= False
 
     # 0) compress tensors into 1D representation
+    #
+    # keep inputs for autograd stored on cpu, move to gpu for the core 
+    # of the computation if desired
     metadata_store= {}
     tmp= tuple(state.sites[key].compress_to_1d() for key in state.sites.keys()) \
         + tuple(env.C[key].compress_to_1d() for key in env.C.keys()) \
@@ -142,20 +145,16 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
 
     # function wrapping up the core of the CTM MOVE segment of CTM algorithm
     def ctm_MOVE_c(*tensors):
-        #
-        # keep inputs for autograd stored on cpu, move to gpu for the core 
-        # of the computation if desired
-        _loc_engine= env.engine #if isinstance(env.engine,NamedTuple) else 
-        if global_args.offload_to_gpu != 'None' and global_args.device=='cpu':
-            tensors=  tuple(r1d.to(global_args.offload_to_gpu) for r1d in tensors)
-            _loc_engine= NamedTuple(
-                backend=_loc_engine.backend, sym=_loc_engine.sym,\
-                default_dtype=_loc_engine.dtype, default_device= global_args.offload_to_gpu,\
-                dtype=_loc_engine.dtype, device=global_args.offload_to_gpu,\
-                default_fusion= _loc_engine.default_fusion, force_fusion= _loc_engine.force_fusion)
-
         # 0) reconstruct the tensors from their 1D representation
-        tensors= tuple(decompress_from_1d(r1d, _loc_engine, meta) \
+        _loc_engine= env.engine
+        if global_args.offload_to_gpu != 'None' and global_args.device=='cpu':
+            tensors= tuple(r1d.to(global_args.offload_to_gpu) for r1d in tensors)
+            for meta in metadata_store["in"]: 
+                meta['config']= meta['config']._replace(default_device=global_args.offload_to_gpu)
+            # TODO we assume that configs of all tensors are identical
+            _loc_engine= metadata_store["in"][0]["config"]
+        
+        tensors= tuple(decompress_from_1d(r1d, meta) \
             for r1d,meta in zip(tensors,metadata_store["in"]))
 
         # 1) wrap raw tensors back into IPEPS and ENV classes 
@@ -206,6 +205,8 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
         # move back to (default) cpu if offload_to_gpu is specified
         if global_args.offload_to_gpu != 'None' and global_args.device=='cpu':
             tensors_loc= tuple(r1d.to(global_args.device) for r1d in tensors_loc)
+            for meta in metadata_store["out"]:
+                meta['config']= meta['config']._replace(default_device=global_args.device)
 
         return tensors_loc
 
@@ -214,8 +215,8 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
         new_tensors= checkpoint(ctm_MOVE_c,*tensors)
     else:
         new_tensors= ctm_MOVE_c(*tensors)
-        
-    new_tensors= tuple(decompress_from_1d(r1d, env.engine, meta) \
+    
+    new_tensors= tuple(decompress_from_1d(r1d, meta) \
             for r1d,meta in zip(new_tensors,metadata_store["out"]))
 
     # 3) warp the returned raw tensor in dictionary
@@ -338,7 +339,6 @@ def absorb_truncate_CTM_MOVE_UP_c(*tensors):
     #
     # C^new(coord+(0,1),(-1,-1))--      --T^new(coord+(0,1),(0,-1))--   --C^new(coord+(0,1),(1,-1))
     # |                                   |                               |
-    
     return nC1, nC2, nT
 
 

@@ -37,12 +37,10 @@ def main():
     cfg.configure(args)
     cfg.print_config()
     settings= settings_U1
-    # override defaults in settings
-    default_device= 'cpu' if not hasattr(settings, 'device') else settings.device
-    if not cfg.global_args.device == default_device:
-        settings.device = cfg.global_args.device
-        settings_full.device = cfg.global_args.device
-        print("Setting backend device: "+settings.device)
+    # override default device specified in settings
+    settings.default_device= settings_full.default_device= cfg.global_args.device
+    # override default dtype
+    settings.default_dtype= settings_full.default_dtype= cfg.global_args.dtype
     settings.backend.ad_decomp_reg= cfg.ctm_args.ad_decomp_reg
     settings.backend.set_num_threads(args.omp_cores)
     settings.backend.random_seed(args.seed)
@@ -188,7 +186,7 @@ if __name__=='__main__':
 class TestCheckpoint_j1j2_c4v_u1_state(unittest.TestCase):
     tol= 1.0e-6
     DIR_PATH = os.path.dirname(os.path.realpath(__file__))
-    OUT_PRFX = "RESULT_test_run-opt-chck_u1_vbs"
+    OUT_PRFX = "RESULT_test_run-opt-chck_u1b"
 
     def setUp(self):
         args.instate=self.DIR_PATH+"/../../../test-input/abelian/"\

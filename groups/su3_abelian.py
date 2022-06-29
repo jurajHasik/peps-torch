@@ -51,7 +51,7 @@ class SU3_DEFINING_U1xU1():
         self.engine= settings
         self.backend= settings.backend
         self.dtype= settings.default_dtype
-        self.device= 'cpu' if not hasattr(settings, 'device') else settings.device
+        self.device= settings.device if hasattr(settings, 'device') else settings.default_device
         
         assert p==1 and q==0, "su(3) irrep ("+str(p)+","+str(q)+") not implemented."
         self.p = p
@@ -179,6 +179,7 @@ class SU3_DEFINING_U1xU1():
         # (1, -3): 1,  UP n=(1,-3)
         # (1, 3): 1,   VM n=(1,3) 
         # (2, 0): 1    TM n=(2,0)
+        #
         G= yast.Tensor(self.engine, s=(1,1), n=(0,0))
         G.set_block(ts=(0,0,0,0), Ds=(2,2), val=np.asarray([[1.,0.],[0.,3./4]], self.dtype))
         G.set_block(ts=(-1,-3,1,3), Ds=(1,1), val=0.5*unit_block)
@@ -208,7 +209,7 @@ class SU3_DEFINING_U1xU1():
         """
         op_v= yast.block({i: t.add_leg(axis=0,s=-1) for i,t in enumerate([\
             self.TZ(), self.Y(), self.TP(), self.TM(), self.VP(), self.VM(),\
-            self.UP(), self.UM()])}, common_legs=[1,2])
+            self.UP(), self.UM()])}, common_legs=[1,2]).drop_leg_history(axis=0)
         return op_v
 
     def C1(self):
