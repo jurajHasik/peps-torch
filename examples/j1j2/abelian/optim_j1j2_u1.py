@@ -185,7 +185,6 @@ class TestCheckpoint_NeelBipartiteState(unittest.TestCase):
         args.chi=24
         args.tiling= "BIPARTITE"
         args.out_prefix=self.OUT_PRFX
-        args.GLOBALARGS_device='cuda:0'
 
     def test_checkpoint_neel_bipartite(self):
         from io import StringIO
