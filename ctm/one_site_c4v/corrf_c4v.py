@@ -107,35 +107,35 @@ def apply_edge(state, env, vec, verbosity=0):
     """
     C = env.C[env.keyC]
     T = env.T[env.keyT]
-	# Assume index structure of ``edge`` tensor to be as follows
-	# 
-	#      -- 0
-	# vec |-- 1
-	#      -- 2
-	#
-	#   ---0 0--C
-	#  |        1->2
-	# vec--1->0    
-	#  |
-	#   ---2->1
+    # Assume index structure of ``edge`` tensor to be as follows
+    # 
+    #      -- 0
+    # vec |-- 1
+    #      -- 2
+    #
+    #   ---0 0--C
+    #  |        1->2
+    # vec--1->0    
+    #  |
+    #   ---2->1
     S = torch.tensordot(vec,C,([0],[0]))
     if verbosity>0: print("S=vecC "+str(S.size()))
 
-	#   --------C 
-	#  |        2
-	#  |        1    |
-	# vec--0 2--T    |  
-	#  |        0->1 V
-	#   ---1->0
+    #   --------C 
+    #  |        2
+    #  |        1    |
+    # vec--0 2--T    |  
+    #  |        0->1 V
+    #   ---1->0
     S = torch.tensordot(S,T,([0,2],[2,1]))
     if verbosity>0: print("S=ST "+str(S.size()))
 
-	#   -------C
-	#  |       |
-	# edge-----T
-	#  |       1
-	#  |       0
-	#   --0 1--C
+    #   -------C
+    #  |       |
+    # edge-----T
+    #  |       1
+    #  |       0
+    #   --0 1--C
     S = torch.tensordot(S,C,([0,1],[1,0]))
     if verbosity>0: print("S=SC "+str(S.size()))
 
@@ -209,21 +209,21 @@ def apply_TM_1sO(state, env, edge, op=None, verbosity=0):
     """
     # TODO stronger verification
     if op is not None:
-    	assert(len(op.size())==2)
+        assert(len(op.size())==2)
 
     T = env.T[env.keyT]
-	# Assume index structure of ``edge`` tensor to be as follows
-	# 
-	#       -- 0
-	# edge |-- 1
-	#       -- 2
-	#    
+    # Assume index structure of ``edge`` tensor to be as follows
+    # 
+    #       -- 0
+    # edge |-- 1
+    #       -- 2
+    #    
     #        ---->  
-	#   --0 1--T--0->2
-	#  |       2->3
-	# edge--1->0
-	#  |
-	#   --2->1
+    #   --0 1--T--0->2
+    #  |       2->3
+    # edge--1->0
+    #  |
+    #   --2->1
     E = torch.tensordot(edge,T,([0],[1]))
     if verbosity>0: print("E=edgeT "+str(E.size()))
 
@@ -247,23 +247,23 @@ def apply_TM_1sO(state, env, edge, op=None, verbosity=0):
         .view(dims_a[1]**2, dims_a[2]**2, dims_a[3]**2, dims_a[4]**2)
 
     #          ---->
-	#   ---------T--2->1 
-	#  |         3
-	#  |         0
-	# edge--0 1--A--3   
-	#  |         2
-	#   ----1->0
+    #   ---------T--2->1 
+    #  |         3
+    #  |         0
+    # edge--0 1--A--3   
+    #  |         2
+    #   ----1->0
     E = torch.tensordot(E,A,([0,3],[1,0]))
     if verbosity>0: print("E=EA "+str(E.size()))
 
     #        ---->
-	#   -------T--1->0
-	#  |       |
-	#  |       |
-	# edge-----A--3->1
-	#  |       2
-	#  |       2
-	#   --0 0--T--1->2
+    #   -------T--1->0
+    #  |       |
+    #  |       |
+    # edge-----A--3->1
+    #  |       2
+    #  |       2
+    #   --0 0--T--1->2
     #        <----  
     E = torch.tensordot(E,T,([0,2],[0,2]))
     if verbosity>0: print("E=ET "+str(E.size()))
@@ -466,8 +466,8 @@ def apply_TM_2sO(state, env, edge, op=None, verbosity=0):
     ``op``::
 
          0  1        0           1          0            1->0
-		 |  |  SVD   |           |          |            |
- 	    | op |  =  |op_l|--(S--|op^~_r|) = |op_l|--2 2--|op_r| 
+         |  |  SVD   |           |          |            |
+        | op |  =  |op_l|--(S--|op^~_r|) = |op_l|--2 2--|op_r| 
          |  |        |           |          |            |
          2  3        2           3          2->1         3->1
     """
@@ -485,18 +485,18 @@ def apply_TM_2sO(state, env, edge, op=None, verbosity=0):
         op_r= op_r.permute(1,2,0).contiguous()
 
     T = env.T[env.keyT]
-	# Assume index structure of ``edge`` tensor to be as follows
-	# 
-	#       -- 0
-	# edge |-- 1
-	#       -- 2
-	#
+    # Assume index structure of ``edge`` tensor to be as follows
+    # 
+    #       -- 0
+    # edge |-- 1
+    #       -- 2
+    #
     #          ---->
-	#   ----0 1--T--0->2
-	#  |         2->3
-	# edge--1->0
-	#  |
-	#   ----2->1
+    #   ----0 1--T--0->2
+    #  |         2->3
+    # edge--1->0
+    #  |
+    #   ----2->1
     E = torch.tensordot(edge,T,([0],[1]))
     if verbosity>0: print("E=edgeT "+str(E.size()))
 
@@ -519,33 +519,33 @@ def apply_TM_2sO(state, env, edge, op=None, verbosity=0):
     A= torch.einsum('mefgh,mnl,nabcd->eafbgchdl',a,X,a.conj()).contiguous()\
         .view(dims_a[1]**2, dims_a[2]**2, dims_a[3]**2, dims_a[4]**2, -1)
 
-	#   ---------T--2->1 
-	#  |         3 4
-	#  |         0/
-	# edge--0 1--A--3   
-	#  |         2
-	#   ----1->0
+    #   ---------T--2->1 
+    #  |         3 4
+    #  |         0/
+    # edge--0 1--A--3   
+    #  |         2
+    #   ----1->0
     E = torch.tensordot(E,A,([0,3],[1,0]))
     if verbosity>0: print("E=EA "+str(E.size()))
 
     #        ----> 
-	#   -------T--1->0
-	#  |       | 4->2
-	#  |       |/
-	# edge-----A--3->1
-	#  |       2
-	#  |       2
-	#   --0 0--T--1->3
+    #   -------T--1->0
+    #  |       | 4->2
+    #  |       |/
+    # edge-----A--3->1
+    #  |       2
+    #  |       2
+    #   --0 0--T--1->3
     #        <----
     E = torch.tensordot(E,T,([0,2],[0,2]))
     if verbosity>0: print("E=ET "+str(E.size()))
                 
     #            ---->
     #   ----0 1----T--0->3
-	#  |----2->1   2->4
-	# edge--1->0
-	#  |
-	#   ----3->2
+    #  |----2->1   2->4
+    # edge--1->0
+    #  |
+    #   ----3->2
     E = torch.tensordot(E,T,([0],[1]))
     if verbosity>0: print("E=ET "+str(E.size()))
 
@@ -567,30 +567,30 @@ def apply_TM_2sO(state, env, edge, op=None, verbosity=0):
         .view(dims_a[1]**2, dims_a[2]**2, dims_a[3]**2, dims_a[4]**2, -1)
 
     #          ---->
-	#   ---------T--3->1
-	#  |         4
-	#  |----1 4-\0
-	# edge--0 1--A--3   
-	#  |         2
-	#   ----2->0
+    #   ---------T--3->1
+    #  |         4
+    #  |----1 4-\0
+    # edge--0 1--A--3   
+    #  |         2
+    #   ----2->0
     E = torch.tensordot(E,A,([0,1,4],[1,4,0]))
     if verbosity>0: print("E=EA "+str(E.size()))
 
     #        ----> 
-	#   -------T--1->0
-	#  |       |
-	#  |       |
-	# edge-----A--3->1
-	#  |       2
-	#  |       2
-	#   --0 0--T--1->2
+    #   -------T--1->0
+    #  |       |
+    #  |       |
+    # edge-----A--3->1
+    #  |       2
+    #  |       2
+    #   --0 0--T--1->2
     #        <----
     E = torch.tensordot(E,T,([0,2],[0,2]))
     if verbosity>0: print("E=ET "+str(E.size()))
 
     return E
 
-def corrf_1sO1sO(state, env, op1, get_op2, dist, verbosity=0):
+def corrf_1sO1sO(state, env, op1, get_op2, dist, rl_0=None, verbosity=0):
     r"""
     :param state: underlying 1-site C4v symmetric wavefunction
     :param env: C4v symmetric environment corresponding to ``state``
@@ -598,12 +598,16 @@ def corrf_1sO1sO(state, env, op1, get_op2, dist, verbosity=0):
     :param get_op2: function returning (position-dependent) second
                     one-site opreator :math:`\text{get_op2}(r)=O_2`
     :param dist: maximal distance of correlation function
+    :param rl_0: right and left edges of the two-point function network. These
+                 are expected to be rank-3 tensor compatible with transfer operator indices.
+                 Typically provided by leading eigenvectors of transfer matrix.
     :param verbosity: logging verbosity
     :type state: IPEPS_C4V
     :type env: ENV_C4V
     :type op1: torch.tensor
     :type get_op2: function(int)->torch.tensor
     :type dist: int
+    :type rl_0: tuple(torch.Tensor, torch.Tensor)
     :type verbosity: int
     :return: vector ``corrf`` of length ``dist`` holding the values of 
              correlation function :math:`\langle O_1(0) O_2(r) \rangle` for :math:`r \in [1,dist]`
@@ -620,7 +624,7 @@ def corrf_1sO1sO(state, env, op1, get_op2, dist, verbosity=0):
 
     for increasingly large distance ``r`` up to ``dist``.
     """
-    E0 = get_edge(state, env, verbosity=verbosity)
+    E0 = get_edge(state, env, verbosity=verbosity) if rl_0 is None else rl_0[0]
     # Apply transfer matrix with operator op1
     #
     #   -- 0     -- -----T--------- 0
@@ -632,26 +636,30 @@ def corrf_1sO1sO(state, env, op1, get_op2, dist, verbosity=0):
 
     corrf=torch.empty(dist+1,dtype=state.dtype,device=state.device)
     for r in range(dist+1):
-    	# close the end of the network by appending final transfer matrix 
-    	# with op2
-    	#
-    	#       C--T--- [ --T-- ]^r --T---
-    	# E12 = T--O1-- [ --A-- ]   --O2--
-    	#       C--T--- [ --T-- ]   --T---
-    	E12= apply_TM_1sO(state, env, E1, op=get_op2(r), verbosity=verbosity)
-    	# and corresponding normalization network
-    	E0 = apply_TM_1sO(state, env, E0, verbosity=verbosity)
-		# and to network with only a op1 operator
-    	E1 = apply_TM_1sO(state, env, E1, verbosity=verbosity)
+        # close the end of the network by appending final transfer matrix 
+        # with op2
+        #
+        #       C--T--- [ --T-- ]^r --T---
+        # E12 = T--O1-- [ --A-- ]   --O2--
+        #       C--T--- [ --T-- ]   --T---
+        E12= apply_TM_1sO(state, env, E1, op=get_op2(r), verbosity=verbosity)
+        # and corresponding normalization network
+        E0 = apply_TM_1sO(state, env, E0, verbosity=verbosity)
+        # and to network with only a op1 operator
+        E1 = apply_TM_1sO(state, env, E1, verbosity=verbosity)
 
-    	E12= apply_edge(state, env, E12, verbosity=verbosity)
-    	E00= apply_edge(state, env, E0, verbosity=verbosity)
-    	corrf[r]= E12/E00
+        if rl_0 is None:
+            E12= apply_edge(state, env, E12, verbosity=verbosity)
+            E00= apply_edge(state, env, E0, verbosity=verbosity)
+        else:
+            E12= torch.tensordot(E12,rl_0[1],([0,1,2],[0,1,2]))
+            E00= torch.tensordot(E0,rl_0[1],([0,1,2],[0,1,2]))
+        corrf[r]= E12/E00
 
-    	# normalize by largest element of E0
-    	max_elem_E0 = torch.max(torch.abs(E0))
-    	E0=E0/max_elem_E0
-    	E1=E1/max_elem_E0
+        # normalize by largest element of E0
+        max_elem_E0 = torch.max(torch.abs(E0))
+        E0=E0/max_elem_E0
+        E1=E1/max_elem_E0
 
     return corrf
 
@@ -702,29 +710,29 @@ def corrf_2sOH2sOH_E1(state, env, op1, get_op2, dist, verbosity=0):
 
     corrf=torch.empty(dist+1,dtype=state.dtype,device=state.device)
     for r in range(dist+1):
-    	# close the end of the network by appending final double transfer matrix 
-    	# with op2
-    	#
-    	#       C--T--T-- [ --T-- ]^r --T--T--
-    	# E12 = T--|O1|-- [ --A-- ]   --|O2|--
-    	#       C--T--T-- [ --T-- ]   --T--T--
-    	E12= apply_TM_2sO(state, env, E1, op=get_op2(r), verbosity=verbosity)
-    	# grow normalization network by single TM
-    	E0 = apply_TM_1sO(state, env, E0, verbosity=verbosity)
-		# grow network with only a op1 operator by single TM
-    	E1 = apply_TM_1sO(state, env, E1, verbosity=verbosity)
+        # close the end of the network by appending final double transfer matrix 
+        # with op2
+        #
+        #       C--T--T-- [ --T-- ]^r --T--T--
+        # E12 = T--|O1|-- [ --A-- ]   --|O2|--
+        #       C--T--T-- [ --T-- ]   --T--T--
+        E12= apply_TM_2sO(state, env, E1, op=get_op2(r), verbosity=verbosity)
+        # grow normalization network by single TM
+        E0 = apply_TM_1sO(state, env, E0, verbosity=verbosity)
+        # grow network with only a op1 operator by single TM
+        E1 = apply_TM_1sO(state, env, E1, verbosity=verbosity)
 
-    	E12= apply_edge(state, env, E12, verbosity=verbosity)
-    	# grow normalization network by additional TM to match the length
-    	# of the network with op2 applied
-    	E00= apply_TM_1sO(state, env, E0, verbosity=verbosity)
-    	E00= apply_edge(state, env, E00, verbosity=verbosity)
-    	corrf[r]= E12/E00
+        E12= apply_edge(state, env, E12, verbosity=verbosity)
+        # grow normalization network by additional TM to match the length
+        # of the network with op2 applied
+        E00= apply_TM_1sO(state, env, E0, verbosity=verbosity)
+        E00= apply_edge(state, env, E00, verbosity=verbosity)
+        corrf[r]= E12/E00
 
-    	# normalize by largest element of E0
-    	max_elem_E0 = torch.max(torch.abs(E0))
-    	E0=E0/max_elem_E0
-    	E1=E1/max_elem_E0
+        # normalize by largest element of E0
+        max_elem_E0 = torch.max(torch.abs(E0))
+        E0=E0/max_elem_E0
+        E1=E1/max_elem_E0
 
     return corrf
 
