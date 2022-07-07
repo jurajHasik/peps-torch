@@ -1,0 +1,926 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Reduced Density Matrices &mdash; peps-torch alpha documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Transfer Matrices" href="transfer_matrix.html" />
+    <link rel="prev" title="Corner Transfer Matrix Algorithm" href="ctmrg_c4v.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> peps-torch
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../ipeps.html">iPEPS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps.html">Generic iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_kagome.html">Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_c4v.html">1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_lc_1site_pg.html">1-site iPEPS from lin. combination</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipess_kagome.html">Generic Kagome iPESS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipess_kagome_pg.html">Kagome iPESS with point groups</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipess_kagome_pg_lc.html">Kagome iPESS from lin. combination</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../ipeps.html#abelian-symmetric-ipeps">Abelian-symmetric iPEPS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_abelian.html">Generic  abelian-symmetric iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_abelian.html#generic-abelian-symmetric-ipeps-with-weights">Generic abelian-symmetric iPEPS with weights</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_kagome_abelian.html">Abelian-symmetric Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_abelian_c4v.html">Abelian-symmetric 1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipess_kagome_abelian.html">Abelian-symmetric generic Kagome iPESS</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="reference internal" href="../../envs.html">Environments</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../generic.html">Generic iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../generic/env.html">Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generic/ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generic/ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generic/ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generic/rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generic/rdm.html#module-ctm.pess_kagome.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generic/corrf.html">Correlation functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generic/transfer_matrix.html">Transfer Matrices</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../generic_abelian.html">Abelian-symmetric generic iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../generic_abelian/env_abelian.html">Abelian-symmetric environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generic_abelian/ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generic_abelian/ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generic_abelian/ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generic_abelian/rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generic_abelian/rdm.html#module-ctm.pess_kagome_abelian.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+</ul>
+</li>
+<li class="toctree-l2 current"><a class="reference internal" href="../one_site_c4v.html">1-site C4v iPEPS</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="env_c4v.html">1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ctmrg_c4v.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="transfer_matrix.html">Transfer Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="corrf_c4v.html">Correlation functions</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../one_site_c4v_abelian.html">Abelian-symmetric 1-site C4v iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../one_site_c4v_abelian/env_c4v_abelian.html">Abelian-symmetric 1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../one_site_c4v_abelian/ctmrg_c4v_abelian.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../one_site_c4v_abelian/rdm_c4v_abelian.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../one_site_c4v_abelian/corrf_c4v_abelian.html">Correlation functions</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../optim.html">Optimization</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../optim/drivers.html">Optimization drivers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/drivers/ad_optim.html">ad_optim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/drivers/ad_optim_lbfgs_mod.html">ad_optim_lbfgs_mod</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/drivers/ad_optim_sgd_mod.html">ad_optim_sgd_mod</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../optim/optimizers.html">Custom optimizers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/optimizers/lbfgs_modified.html">Extended LBFGS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/optimizers/sgd_modified.html">SGD with linesearch</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../config.html">Configuration</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../config.html#main">Main</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../config.html#global">Global</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../config.html#corner-transfer-matrix-algorithm">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../config.html#optimization">Optimization</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../models.html">Models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../models/akltS2.html">Spin S=2 AKLT Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/akltS2.html#module-models.akltS2">2x1 and 2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/akltS2.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/coupledLadders.html">Coupled Ladders</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/coupledLadders.html#dense-pytorch">Dense (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/coupledLadders.html#dense-yast">Dense (YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/coupledLadders.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/ising.html">Transverse Field Ising Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/ising.html#x1-unit-cell">1x1 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/ising.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/j1j2.html">J1-J2-J3 and J1-J2-lambda Heisenberg Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/j1j2.html#from-2x1-to-4x2-unit-cell-pytorch">from 2x1 to 4x2 unit cell (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/j1j2.html#from-2x1-to-4x2-unit-cell-dense-yast">from 2x1 to 4x2 unit cell (dense YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/j1j2.html#x1-c4v-pytorch">1x1 C4v (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/j1j2.html#x1-c4v-dense-yast">1x1 C4v (dense YAST)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/jq.html">J-Q Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/jq.html#module-models.jq">2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/jq.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/spin_half_kagome.html">SU(2) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/spin_half_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/spin_half_kagome.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/su3_kagome.html">SU(3) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/su3_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/su3_kagome.html#with-explict-u-1-xu-1-symmetry">With explict U(1)xU(1) symmetry</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../groups.html">Groups</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/pg.html">Point group: square lattice</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/su2.html">SU(2)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/su2.html#module-groups.su2_abelian">SU(2) with explicit U(1) structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/su3.html">SU(3)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/su3.html#su-3-with-explicit-u-1-xu-1-structure">SU(3) with explicit U(1)xU(1) structure</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../linalg.html">Linear Algebra</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../linalg/custom_eig.html">Truncated eigendecomposition</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../linalg/custom_svd.html">Truncated SVD</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../linalg/spec_decomp.html">Spectral decompositions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.svd_gesdd">SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.svd_arnoldi">Partial SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.svd_rsvd">Randomized SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.eig_sym">Symmetric Eigendecomposition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.eig_arnoldi">Partial diagonalization</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">peps-torch</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../envs.html">Environments</a> &raquo;</li>
+        
+          <li><a href="../one_site_c4v.html">1-site C4v iPEPS</a> &raquo;</li>
+        
+      <li>Reduced Density Matrices</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            
+              <!-- User defined GitHub URL -->
+              <a href="https://github.com/jurajHasik/peps-torch" class="fa fa-github"> Edit on GitHub</a>
+            
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <section id="module-ctm.one_site_c4v.rdm_c4v">
+<span id="reduced-density-matrices"></span><h1>Reduced Density Matrices<a class="headerlink" href="#module-ctm.one_site_c4v.rdm_c4v" title="Permalink to this heading">¶</a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="ctm.one_site_c4v.rdm_c4v.rdm1x1">
+<span class="sig-prename descclassname"><span class="pre">ctm.one_site_c4v.rdm_c4v.</span></span><span class="sig-name descname"><span class="pre">rdm1x1</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sym_pos_def</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/ctm/one_site_c4v/rdm_c4v.html#rdm1x1"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ctm.one_site_c4v.rdm_c4v.rdm1x1" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="../../ipeps/ipeps_c4v.html#ipeps.ipeps_c4v.IPEPS_C4V" title="ipeps.ipeps_c4v.IPEPS_C4V"><em>IPEPS_C4V</em></a>) – underlying 1-site C4v symmetric wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="env_c4v.html#ctm.one_site_c4v.env_c4v.ENV_C4V" title="ctm.one_site_c4v.env_c4v.ENV_C4V"><em>ENV_C4V</em></a>) – C4v symmetric environment corresponding to <code class="docutils literal notranslate"><span class="pre">state</span></code></p></li>
+<li><p><strong>verbosity</strong> (<em>int</em>) – logging verbosity</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>1-site reduced density matrix with indices <span class="math notranslate nohighlight">\(s;s'\)</span></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.tensor</p>
+</dd>
+</dl>
+<p>Computes 1-site reduced density matrix <span class="math notranslate nohighlight">\(\rho_{1x1}\)</span> by
+contracting the following tensor network:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">C</span><span class="o">--</span><span class="n">T</span><span class="o">-----</span><span class="n">C</span>
+<span class="o">|</span>  <span class="o">|</span>     <span class="o">|</span>
+<span class="n">T</span><span class="o">--</span><span class="n">a</span><span class="o">^+</span><span class="n">a</span><span class="o">--</span><span class="n">T</span>
+<span class="o">|</span>  <span class="o">|</span>     <span class="o">|</span>
+<span class="n">C</span><span class="o">--</span><span class="n">T</span><span class="o">-----</span><span class="n">C</span>
+</pre></div>
+</div>
+<p>where the physical indices <cite>s</cite> and <cite>s’</cite> of on-site tensor <span class="math notranslate nohighlight">\(a\)</span>
+and its hermitian conjugate <span class="math notranslate nohighlight">\(a^\dagger\)</span> are left uncontracted</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ctm.one_site_c4v.rdm_c4v.rdm1x1_sl">
+<span class="sig-prename descclassname"><span class="pre">ctm.one_site_c4v.rdm_c4v.</span></span><span class="sig-name descname"><span class="pre">rdm1x1_sl</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sym_pos_def</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/ctm/one_site_c4v/rdm_c4v.html#rdm1x1_sl"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ctm.one_site_c4v.rdm_c4v.rdm1x1_sl" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="../../ipeps/ipeps_c4v.html#ipeps.ipeps_c4v.IPEPS_C4V" title="ipeps.ipeps_c4v.IPEPS_C4V"><em>IPEPS_C4V</em></a>) – underlying 1-site C4v symmetric wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="env_c4v.html#ctm.one_site_c4v.env_c4v.ENV_C4V" title="ctm.one_site_c4v.env_c4v.ENV_C4V"><em>ENV_C4V</em></a>) – C4v symmetric environment corresponding to <code class="docutils literal notranslate"><span class="pre">state</span></code></p></li>
+<li><p><strong>verbosity</strong> (<em>int</em>) – logging verbosity</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>1-site reduced density matrix with indices <span class="math notranslate nohighlight">\(s;s'\)</span></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.tensor</p>
+</dd>
+</dl>
+<p>Evaluates 1-site operator <span class="math notranslate nohighlight">\(Tr(\rho_{1x1}O)\)</span> by
+contracting the following tensor network:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">C</span><span class="o">--</span><span class="n">T</span><span class="o">-----</span><span class="n">C</span>
+<span class="o">|</span>  <span class="o">|</span>     <span class="o">|</span>
+<span class="n">T</span><span class="o">--</span><span class="n">a</span><span class="o">^+</span><span class="n">a</span><span class="o">--</span><span class="n">T</span>
+<span class="o">|</span>  <span class="o">|</span>     <span class="o">|</span>
+<span class="n">C</span><span class="o">--</span><span class="n">T</span><span class="o">-----</span><span class="n">C</span>
+</pre></div>
+</div>
+<p>where the physical indices <cite>s</cite> and <cite>s’</cite> of on-site tensor <span class="math notranslate nohighlight">\(a\)</span>
+and its hermitian conjugate <span class="math notranslate nohighlight">\(a^\dagger\)</span> are left uncontracted.</p>
+<p>This function avoids constructing double-layer on-site tensor explicitly.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ctm.one_site_c4v.rdm_c4v.rdm2x1">
+<span class="sig-prename descclassname"><span class="pre">ctm.one_site_c4v.rdm_c4v.</span></span><span class="sig-name descname"><span class="pre">rdm2x1</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sym_pos_def</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_cpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/ctm/one_site_c4v/rdm_c4v.html#rdm2x1"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ctm.one_site_c4v.rdm_c4v.rdm2x1" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="../../ipeps/ipeps_c4v.html#ipeps.ipeps_c4v.IPEPS_C4V" title="ipeps.ipeps_c4v.IPEPS_C4V"><em>IPEPS_C4V</em></a>) – underlying 1-site C4v symmetric wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="env_c4v.html#ctm.one_site_c4v.env_c4v.ENV_C4V" title="ctm.one_site_c4v.env_c4v.ENV_C4V"><em>ENV_C4V</em></a>) – C4v symmetric environment corresponding to <code class="docutils literal notranslate"><span class="pre">state</span></code></p></li>
+<li><p><strong>sym_pos_def</strong> (<em>bool</em>) – make final density matrix symmetric and non-negative (default: False)</p></li>
+<li><p><strong>force_cpu</strong> (<em>bool</em>) – perform on CPU</p></li>
+<li><p><strong>verbosity</strong> (<em>int</em>) – logging verbosity</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>2-site reduced density matrix with indices <span class="math notranslate nohighlight">\(s_0s_1;s'_0s'_1\)</span></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.tensor</p>
+</dd>
+</dl>
+<p>Computes 2-site reduced density matrix <span class="math notranslate nohighlight">\(\rho_{2x1}\)</span> of a horizontal
+2x1 subsystem using following strategy:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>compute upper left 2x2 corner and lower left 2x1 corner</p></li>
+<li><p>construct left half of the network</p></li>
+<li><p>contract left and right half (identical to the left) to obtain final
+reduced density matrix</p></li>
+</ol>
+</div></blockquote>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">C</span><span class="o">--</span><span class="n">T</span><span class="o">-----</span><span class="n">T</span><span class="o">-----</span><span class="n">C</span> <span class="o">=</span> <span class="n">C2x2</span><span class="o">--</span><span class="n">C2x2</span>
+<span class="o">|</span>  <span class="o">|</span>     <span class="o">|</span>     <span class="o">|</span>   <span class="o">|</span>     <span class="o">|</span>
+<span class="n">T</span><span class="o">--</span><span class="n">a</span><span class="o">^+</span><span class="n">a</span><span class="o">--</span><span class="n">a</span><span class="o">^+</span><span class="n">a</span><span class="o">--</span><span class="n">T</span>   <span class="n">C2x1</span><span class="o">--</span><span class="n">C2x1</span>
+<span class="o">|</span>  <span class="o">|</span>     <span class="o">|</span>     <span class="o">|</span>
+<span class="n">C</span><span class="o">--</span><span class="n">T</span><span class="o">-----</span><span class="n">T</span><span class="o">-----</span><span class="n">C</span>
+</pre></div>
+</div>
+<p>The physical indices <cite>s</cite> and <cite>s’</cite> of on-sites tensors <span class="math notranslate nohighlight">\(a\)</span> (and <span class="math notranslate nohighlight">\(a^\dagger\)</span>)
+are left uncontracted and given in the following order:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">s0</span> <span class="n">s1</span>
+</pre></div>
+</div>
+<p>The resulting reduced density matrix is identical to the one of vertical 1x2 subsystem
+due to the C4v symmetry.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ctm.one_site_c4v.rdm_c4v.rdm2x1_sl">
+<span class="sig-prename descclassname"><span class="pre">ctm.one_site_c4v.rdm_c4v.</span></span><span class="sig-name descname"><span class="pre">rdm2x1_sl</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sym_pos_def</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_cpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/ctm/one_site_c4v/rdm_c4v.html#rdm2x1_sl"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ctm.one_site_c4v.rdm_c4v.rdm2x1_sl" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="../../ipeps/ipeps_c4v.html#ipeps.ipeps_c4v.IPEPS_C4V" title="ipeps.ipeps_c4v.IPEPS_C4V"><em>IPEPS_C4V</em></a>) – underlying 1-site C4v symmetric wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="env_c4v.html#ctm.one_site_c4v.env_c4v.ENV_C4V" title="ctm.one_site_c4v.env_c4v.ENV_C4V"><em>ENV_C4V</em></a>) – C4v symmetric environment corresponding to <code class="docutils literal notranslate"><span class="pre">state</span></code></p></li>
+<li><p><strong>sym_pos_def</strong> (<em>bool</em>) – make final density matrix symmetric and non-negative (default: False)</p></li>
+<li><p><strong>force_cpu</strong> (<em>bool</em>) – compute on cpu</p></li>
+<li><p><strong>verbosity</strong> (<em>int</em>) – logging verbosity</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>2-site reduced density matrix with indices <span class="math notranslate nohighlight">\(s_0s_1;s'_0s'_1\)</span></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.tensor</p>
+</dd>
+</dl>
+<p>Computes 2-site reduced density matrix <span class="math notranslate nohighlight">\(\rho_{2x1}\)</span> of a horizontal
+2x1 subsystem using following strategy:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>compute upper left 2x2 corner and lower left 2x1 corner</p></li>
+<li><p>construct left half of the network</p></li>
+<li><p>contract left and right half (identical to the left) to obtain final
+reduced density matrix</p></li>
+</ol>
+</div></blockquote>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">C</span><span class="o">--</span><span class="n">T</span><span class="o">-----</span><span class="n">T</span><span class="o">-----</span><span class="n">C</span> <span class="o">=</span> <span class="n">C2x2</span><span class="o">--</span><span class="n">C2x2</span>
+<span class="o">|</span>  <span class="o">|</span>     <span class="o">|</span>     <span class="o">|</span>   <span class="o">|</span>     <span class="o">|</span>
+<span class="n">T</span><span class="o">--</span><span class="n">a</span><span class="o">^+</span><span class="n">a</span><span class="o">--</span><span class="n">a</span><span class="o">^+</span><span class="n">a</span><span class="o">--</span><span class="n">T</span>   <span class="n">C2x1</span><span class="o">--</span><span class="n">C2x1</span>
+<span class="o">|</span>  <span class="o">|</span>     <span class="o">|</span>     <span class="o">|</span>
+<span class="n">C</span><span class="o">--</span><span class="n">T</span><span class="o">-----</span><span class="n">T</span><span class="o">-----</span><span class="n">C</span>
+</pre></div>
+</div>
+<p>The physical indices <cite>s</cite> and <cite>s’</cite> of on-sites tensors <span class="math notranslate nohighlight">\(a\)</span> (and <span class="math notranslate nohighlight">\(a^\dagger\)</span>)
+are left uncontracted and given in the following order:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">s0</span> <span class="n">s1</span>
+</pre></div>
+</div>
+<p>The resulting reduced density matrix is identical to the one of vertical 1x2 subsystem
+due to the C4v symmetry.</p>
+<p>This function avoids constructing double-layer on-site tensor explicitly.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ctm.one_site_c4v.rdm_c4v.rdm3x1">
+<span class="sig-prename descclassname"><span class="pre">ctm.one_site_c4v.rdm_c4v.</span></span><span class="sig-name descname"><span class="pre">rdm3x1</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sym_pos_def</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_cpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/ctm/one_site_c4v/rdm_c4v.html#rdm3x1"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ctm.one_site_c4v.rdm_c4v.rdm3x1" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="../../ipeps/ipeps_c4v.html#ipeps.ipeps_c4v.IPEPS_C4V" title="ipeps.ipeps_c4v.IPEPS_C4V"><em>IPEPS_C4V</em></a>) – underlying 1-site C4v symmetric wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="env_c4v.html#ctm.one_site_c4v.env_c4v.ENV_C4V" title="ctm.one_site_c4v.env_c4v.ENV_C4V"><em>ENV_C4V</em></a>) – C4v symmetric environment corresponding to <code class="docutils literal notranslate"><span class="pre">state</span></code></p></li>
+<li><p><strong>sym_pos_def</strong> (<em>bool</em>) – make final density matrix symmetric and non-negative (default: False)</p></li>
+<li><p><strong>force_cpu</strong> (<em>bool</em>) – perform on CPU</p></li>
+<li><p><strong>verbosity</strong> (<em>int</em>) – logging verbosity</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>2-site reduced density matrix with indices <span class="math notranslate nohighlight">\(s_0s_1;s'_0s'_1\)</span></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.tensor</p>
+</dd>
+</dl>
+<p>Computes 2-site reduced density matrix <span class="math notranslate nohighlight">\(\rho_{3x1}\)</span> of a horizontal
+3x1 subsystem using following strategy:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>compute upper left 2x2 corner and lower left 2x1 corner</p></li>
+<li><p>construct left half of the network</p></li>
+<li><p>contract with extra T-a^+a-T column</p></li>
+<li><p>contract result with right half (identical to the left of step 2) to obtain final
+reduced density matrix</p></li>
+</ol>
+</div></blockquote>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">C</span><span class="o">--</span><span class="n">T</span><span class="o">-----</span><span class="n">T</span><span class="o">-----</span><span class="n">T</span><span class="o">------</span><span class="n">C</span> <span class="o">=</span> <span class="n">C2x2</span><span class="o">--</span><span class="n">T</span><span class="o">----</span><span class="n">C2x2</span>
+<span class="o">|</span>  <span class="o">|</span>     <span class="o">|</span>     <span class="o">|</span>      <span class="o">|</span>     <span class="o">|</span>   <span class="n">a</span><span class="o">^+</span><span class="n">a</span>  <span class="o">|</span>
+<span class="n">T</span><span class="o">--</span><span class="n">a</span><span class="o">^+</span><span class="n">a</span><span class="o">--</span><span class="n">a</span><span class="o">^+</span><span class="n">a</span><span class="o">--</span><span class="n">a</span><span class="o">^+</span><span class="n">a</span><span class="o">---</span><span class="n">T</span>   <span class="n">C2x1</span><span class="o">--</span><span class="n">T</span><span class="o">----</span><span class="n">C2x1</span>
+<span class="o">|</span>  <span class="o">|</span>     <span class="o">|</span>     <span class="o">|</span>      <span class="o">|</span>
+<span class="n">C</span><span class="o">--</span><span class="n">T</span><span class="o">-----</span><span class="n">T</span><span class="o">-----</span><span class="n">T</span><span class="o">------</span><span class="n">C</span>
+</pre></div>
+</div>
+<p>The physical indices <cite>s</cite> and <cite>s’</cite> of on-sites tensors <span class="math notranslate nohighlight">\(a\)</span> (and <span class="math notranslate nohighlight">\(a^\dagger\)</span>)
+are left uncontracted and given in the following order:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">s0</span> <span class="n">c</span> <span class="n">s1</span>
+</pre></div>
+</div>
+<p>The resulting reduced density matrix is identical to the one of vertical 1x3 subsystem
+due to the C4v symmetry.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ctm.one_site_c4v.rdm_c4v.rdm3x1_sl">
+<span class="sig-prename descclassname"><span class="pre">ctm.one_site_c4v.rdm_c4v.</span></span><span class="sig-name descname"><span class="pre">rdm3x1_sl</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sym_pos_def</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_cpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/ctm/one_site_c4v/rdm_c4v.html#rdm3x1_sl"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ctm.one_site_c4v.rdm_c4v.rdm3x1_sl" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="../../ipeps/ipeps_c4v.html#ipeps.ipeps_c4v.IPEPS_C4V" title="ipeps.ipeps_c4v.IPEPS_C4V"><em>IPEPS_C4V</em></a>) – underlying 1-site C4v symmetric wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="env_c4v.html#ctm.one_site_c4v.env_c4v.ENV_C4V" title="ctm.one_site_c4v.env_c4v.ENV_C4V"><em>ENV_C4V</em></a>) – C4v symmetric environment corresponding to <code class="docutils literal notranslate"><span class="pre">state</span></code></p></li>
+<li><p><strong>sym_pos_def</strong> (<em>bool</em>) – make final density matrix symmetric and non-negative (default: False)</p></li>
+<li><p><strong>force_cpu</strong> (<em>bool</em>) – compute on cpu</p></li>
+<li><p><strong>verbosity</strong> (<em>int</em>) – logging verbosity</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>2-site reduced density matrix with indices <span class="math notranslate nohighlight">\(s_0s_1;s'_0s'_1\)</span></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.tensor</p>
+</dd>
+</dl>
+<p>Computes 2-site reduced density matrix <span class="math notranslate nohighlight">\(\rho_{3x1}\)</span> of a horizontal
+3x1 subsystem using following strategy:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>compute upper left 2x2 corner and lower left 2x1 corner</p></li>
+<li><p>construct left half of the network</p></li>
+<li><p>contract with extra T-a^+a-T column</p></li>
+<li><p>contract left and right half (identical to the left) to obtain final
+reduced density matrix</p></li>
+</ol>
+</div></blockquote>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">C</span><span class="o">--</span><span class="n">T</span><span class="o">-----</span><span class="n">T</span><span class="o">-----</span><span class="n">T</span><span class="o">------</span><span class="n">C</span> <span class="o">=</span> <span class="n">C2x2</span><span class="o">--</span><span class="n">T</span><span class="o">----</span><span class="n">C2x2</span>
+<span class="o">|</span>  <span class="o">|</span>     <span class="o">|</span>     <span class="o">|</span>      <span class="o">|</span>     <span class="o">|</span>   <span class="n">a</span><span class="o">^+</span><span class="n">a</span>  <span class="o">|</span>
+<span class="n">T</span><span class="o">--</span><span class="n">a</span><span class="o">^+</span><span class="n">a</span><span class="o">--</span><span class="n">a</span><span class="o">^+</span><span class="n">a</span><span class="o">--</span><span class="n">a</span><span class="o">^+</span><span class="n">a</span><span class="o">---</span><span class="n">T</span>   <span class="n">C2x1</span><span class="o">--</span><span class="n">T</span><span class="o">----</span><span class="n">C2x1</span>
+<span class="o">|</span>  <span class="o">|</span>     <span class="o">|</span>     <span class="o">|</span>      <span class="o">|</span>
+<span class="n">C</span><span class="o">--</span><span class="n">T</span><span class="o">-----</span><span class="n">T</span><span class="o">-----</span><span class="n">T</span><span class="o">------</span><span class="n">C</span>
+</pre></div>
+</div>
+<p>The physical indices <cite>s</cite> and <cite>s’</cite> of on-sites tensors <span class="math notranslate nohighlight">\(a\)</span> (and <span class="math notranslate nohighlight">\(a^\dagger\)</span>)
+are left uncontracted and given in the following order:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">s0</span> <span class="n">c</span> <span class="n">s1</span>
+</pre></div>
+</div>
+<p>The resulting reduced density matrix is identical to the one of vertical 1x3 subsystem
+due to the C4v symmetry.</p>
+<p>This function avoids constructing double-layer on-site tensor explicitly.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ctm.one_site_c4v.rdm_c4v.rdm2x2_NN_lowmem">
+<span class="sig-prename descclassname"><span class="pre">ctm.one_site_c4v.rdm_c4v.</span></span><span class="sig-name descname"><span class="pre">rdm2x2_NN_lowmem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sym_pos_def</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_cpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/ctm/one_site_c4v/rdm_c4v.html#rdm2x2_NN_lowmem"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ctm.one_site_c4v.rdm_c4v.rdm2x2_NN_lowmem" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="../../ipeps/ipeps_c4v.html#ipeps.ipeps_c4v.IPEPS_C4V" title="ipeps.ipeps_c4v.IPEPS_C4V"><em>IPEPS_C4V</em></a>) – underlying 1-site C4v symmetric wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="env_c4v.html#ctm.one_site_c4v.env_c4v.ENV_C4V" title="ctm.one_site_c4v.env_c4v.ENV_C4V"><em>ENV_C4V</em></a>) – C4v symmetric environment corresponding to <code class="docutils literal notranslate"><span class="pre">state</span></code></p></li>
+<li><p><strong>sym_pos_def</strong> (<em>bool</em>) – make final density matrix symmetric and non-negative (default: False)</p></li>
+<li><p><strong>force_cpu</strong> (<em>bool</em>) – compute on cpu</p></li>
+<li><p><strong>verbosity</strong> (<em>int</em>) – logging verbosity</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>2-site reduced density matrix with indices <span class="math notranslate nohighlight">\(s_0s_1;s'_0s'_1\)</span></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.tensor</p>
+</dd>
+</dl>
+<p>Computes 2-site reduced density matrix <span class="math notranslate nohighlight">\(\rho_{2x1}\)</span> of 2 sites
+that are nearest neighbours using strategy:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>compute upper left corner using double-layer on-site tensor</p></li>
+<li><p>construct upper half of the network</p></li>
+<li><p>contract upper and lower half (identical to upper) to obtain final reduced
+density matrix</p></li>
+</ol>
+</div></blockquote>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">C</span><span class="o">--</span><span class="n">T</span><span class="o">-----</span><span class="n">T</span><span class="o">-----</span><span class="n">C</span> <span class="o">=</span> <span class="n">C2x2</span><span class="o">--</span><span class="n">C2x2c</span>
+<span class="o">|</span>  <span class="o">|</span>     <span class="o">|</span>     <span class="o">|</span>   <span class="o">|</span>     <span class="o">|</span>
+<span class="n">T</span><span class="o">--</span><span class="n">A</span><span class="o">^+</span><span class="n">A</span><span class="o">--</span><span class="n">A</span><span class="o">^+</span><span class="n">A</span><span class="o">--</span><span class="n">T</span>   <span class="n">C2x2</span><span class="o">--</span><span class="n">C2x2c</span>
+<span class="o">|</span>  <span class="o">|</span>     <span class="o">|</span>     <span class="o">|</span>
+<span class="n">T</span><span class="o">--</span><span class="n">A</span><span class="o">^+</span><span class="n">A</span><span class="o">--</span><span class="n">A</span><span class="o">^+</span><span class="n">A</span><span class="o">--</span><span class="n">T</span>
+<span class="o">|</span>  <span class="o">|</span>     <span class="o">|</span>     <span class="o">|</span>
+<span class="n">C</span><span class="o">--</span><span class="n">T</span><span class="o">-----</span><span class="n">T</span><span class="o">-----</span><span class="n">C</span>
+</pre></div>
+</div>
+<p>The physical indices <cite>s</cite> and <cite>s’</cite> of on-sites tensors <span class="math notranslate nohighlight">\(a\)</span> (and <span class="math notranslate nohighlight">\(a^\dagger\)</span>)
+inside C2x2 tensors are left uncontracted and given in the following order:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">s0</span> <span class="n">c</span>
+<span class="n">s1</span> <span class="n">c</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ctm.one_site_c4v.rdm_c4v.rdm2x2_NN_lowmem_sl">
+<span class="sig-prename descclassname"><span class="pre">ctm.one_site_c4v.rdm_c4v.</span></span><span class="sig-name descname"><span class="pre">rdm2x2_NN_lowmem_sl</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sym_pos_def</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_cpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/ctm/one_site_c4v/rdm_c4v.html#rdm2x2_NN_lowmem_sl"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ctm.one_site_c4v.rdm_c4v.rdm2x2_NN_lowmem_sl" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="../../ipeps/ipeps_c4v.html#ipeps.ipeps_c4v.IPEPS_C4V" title="ipeps.ipeps_c4v.IPEPS_C4V"><em>IPEPS_C4V</em></a>) – underlying 1-site C4v symmetric wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="env_c4v.html#ctm.one_site_c4v.env_c4v.ENV_C4V" title="ctm.one_site_c4v.env_c4v.ENV_C4V"><em>ENV_C4V</em></a>) – C4v symmetric environment corresponding to <code class="docutils literal notranslate"><span class="pre">state</span></code></p></li>
+<li><p><strong>sym_pos_def</strong> (<em>bool</em>) – make final density matrix symmetric and non-negative (default: False)</p></li>
+<li><p><strong>force_cpu</strong> (<em>bool</em>) – compute on cpu</p></li>
+<li><p><strong>verbosity</strong> (<em>int</em>) – logging verbosity</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>2-site reduced density matrix with indices <span class="math notranslate nohighlight">\(s_0s_1;s'_0s'_1\)</span></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.tensor</p>
+</dd>
+</dl>
+<p>Computes 2-site reduced density matrix <span class="math notranslate nohighlight">\(\rho_{2x1}\)</span> of 2 sites
+that are nearest neighbours using strategy:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>compute upper left corner using layer-by-layer contraction of on-site tensor</p></li>
+<li><p>construct upper half of the network</p></li>
+<li><p>contract upper and lower half (identical to upper) to obtain final reduced
+density matrix</p></li>
+</ol>
+</div></blockquote>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">C</span><span class="o">--</span><span class="n">T</span><span class="o">-----</span><span class="n">T</span><span class="o">-----</span><span class="n">C</span> <span class="o">=</span> <span class="n">C2x2</span><span class="o">--</span><span class="n">C2x2c</span>
+<span class="o">|</span>  <span class="o">|</span>     <span class="o">|</span>     <span class="o">|</span>   <span class="o">|</span>     <span class="o">|</span>
+<span class="n">T</span><span class="o">--</span><span class="n">a</span><span class="o">^+</span><span class="n">a</span><span class="o">--</span><span class="n">a</span><span class="o">^+</span><span class="n">a</span><span class="o">--</span><span class="n">T</span>   <span class="n">C2x2</span><span class="o">--</span><span class="n">C2x2c</span>
+<span class="o">|</span>  <span class="o">|</span>     <span class="o">|</span>     <span class="o">|</span>
+<span class="n">T</span><span class="o">--</span><span class="n">a</span><span class="o">^+</span><span class="n">a</span><span class="o">--</span><span class="n">a</span><span class="o">^+</span><span class="n">a</span><span class="o">--</span><span class="n">T</span>
+<span class="o">|</span>  <span class="o">|</span>     <span class="o">|</span>     <span class="o">|</span>
+<span class="n">C</span><span class="o">--</span><span class="n">T</span><span class="o">-----</span><span class="n">T</span><span class="o">-----</span><span class="n">C</span>
+</pre></div>
+</div>
+<p>The physical indices <cite>s</cite> and <cite>s’</cite> of on-sites tensors <span class="math notranslate nohighlight">\(a\)</span> (and <span class="math notranslate nohighlight">\(a^\dagger\)</span>)
+inside C2x2 tensors are left uncontracted and given in the following order:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">s0</span> <span class="n">c</span>
+<span class="n">s1</span> <span class="n">c</span>
+</pre></div>
+</div>
+<p>This function avoids constructing double-layer on-site tensor explicitly.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ctm.one_site_c4v.rdm_c4v.rdm2x2_NNN_lowmem">
+<span class="sig-prename descclassname"><span class="pre">ctm.one_site_c4v.rdm_c4v.</span></span><span class="sig-name descname"><span class="pre">rdm2x2_NNN_lowmem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sym_pos_def</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_cpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/ctm/one_site_c4v/rdm_c4v.html#rdm2x2_NNN_lowmem"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ctm.one_site_c4v.rdm_c4v.rdm2x2_NNN_lowmem" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="../../ipeps/ipeps_c4v.html#ipeps.ipeps_c4v.IPEPS_C4V" title="ipeps.ipeps_c4v.IPEPS_C4V"><em>IPEPS_C4V</em></a>) – underlying 1-site C4v symmetric wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="env_c4v.html#ctm.one_site_c4v.env_c4v.ENV_C4V" title="ctm.one_site_c4v.env_c4v.ENV_C4V"><em>ENV_C4V</em></a>) – C4v symmetric environment corresponding to <code class="docutils literal notranslate"><span class="pre">state</span></code></p></li>
+<li><p><strong>sym_pos_def</strong> (<em>bool</em>) – make final density matrix symmetric and non-negative (default: False)</p></li>
+<li><p><strong>force_cpu</strong> (<em>bool</em>) – compute on cpu</p></li>
+<li><p><strong>verbosity</strong> (<em>int</em>) – logging verbosity</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>2-site reduced density matrix with indices <span class="math notranslate nohighlight">\(s_0s_1;s'_0s'_1\)</span></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.tensor</p>
+</dd>
+</dl>
+<p>Computes 2-site reduced density matrix <span class="math notranslate nohighlight">\(\rho_{2x1}^{diag}\)</span> of 2 sites
+that are next-nearest neighbours (along diagonal) using strategy:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>compute upper left corner using double-layer on-site tensor</p></li>
+<li><p>construct upper half of the network</p></li>
+<li><p>contract upper and lower half (identical to upper) to obtain final reduced
+density matrix</p></li>
+</ol>
+</div></blockquote>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">C</span><span class="o">--</span><span class="n">T</span><span class="o">-----</span><span class="n">T</span><span class="o">-----</span><span class="n">C</span> <span class="o">=</span> <span class="n">C2x2</span><span class="o">---</span><span class="n">C2x2c</span>
+<span class="o">|</span>  <span class="o">|</span>     <span class="o">|</span>     <span class="o">|</span>   <span class="o">|</span>      <span class="o">|</span>
+<span class="n">T</span><span class="o">--</span><span class="n">a</span><span class="o">^+</span><span class="n">a</span><span class="o">--</span><span class="n">a</span><span class="o">^+</span><span class="n">a</span><span class="o">--</span><span class="n">T</span>   <span class="n">C2x2c</span><span class="o">--</span><span class="n">C2x2</span>
+<span class="o">|</span>  <span class="o">|</span>     <span class="o">|</span>     <span class="o">|</span>
+<span class="n">T</span><span class="o">--</span><span class="n">a</span><span class="o">^+</span><span class="n">a</span><span class="o">--</span><span class="n">a</span><span class="o">^+</span><span class="n">a</span><span class="o">--</span><span class="n">T</span>
+<span class="o">|</span>  <span class="o">|</span>     <span class="o">|</span>     <span class="o">|</span>
+<span class="n">C</span><span class="o">--</span><span class="n">T</span><span class="o">-----</span><span class="n">T</span><span class="o">-----</span><span class="n">C</span>
+</pre></div>
+</div>
+<p>The physical indices <cite>s</cite> and <cite>s’</cite> of on-sites tensors <span class="math notranslate nohighlight">\(A\)</span> (and <span class="math notranslate nohighlight">\(A^\dagger\)</span>)
+inside C2x2 tensors are left uncontracted and given in the following order:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">s0</span> <span class="n">c</span>
+<span class="n">c</span>  <span class="n">s1</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ctm.one_site_c4v.rdm_c4v.rdm2x2_NNN_lowmem_sl">
+<span class="sig-prename descclassname"><span class="pre">ctm.one_site_c4v.rdm_c4v.</span></span><span class="sig-name descname"><span class="pre">rdm2x2_NNN_lowmem_sl</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sym_pos_def</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_cpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/ctm/one_site_c4v/rdm_c4v.html#rdm2x2_NNN_lowmem_sl"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ctm.one_site_c4v.rdm_c4v.rdm2x2_NNN_lowmem_sl" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="../../ipeps/ipeps_c4v.html#ipeps.ipeps_c4v.IPEPS_C4V" title="ipeps.ipeps_c4v.IPEPS_C4V"><em>IPEPS_C4V</em></a>) – underlying 1-site C4v symmetric wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="env_c4v.html#ctm.one_site_c4v.env_c4v.ENV_C4V" title="ctm.one_site_c4v.env_c4v.ENV_C4V"><em>ENV_C4V</em></a>) – C4v symmetric environment corresponding to <code class="docutils literal notranslate"><span class="pre">state</span></code></p></li>
+<li><p><strong>sym_pos_def</strong> (<em>bool</em>) – make final density matrix symmetric and non-negative (default: False)</p></li>
+<li><p><strong>force_cpu</strong> (<em>bool</em>) – compute on cpu</p></li>
+<li><p><strong>verbosity</strong> (<em>int</em>) – logging verbosity</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>2-site reduced density matrix with indices <span class="math notranslate nohighlight">\(s_0s_1;s'_0s'_1\)</span></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.tensor</p>
+</dd>
+</dl>
+<p>Computes 2-site reduced density matrix <span class="math notranslate nohighlight">\(\rho_{2x2}^{diag}\)</span> of 2 sites
+that are next-nearest neighbours (along diagonal) using strategy:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>compute upper left corner using layer-by-layer contraction of on-site tensor</p></li>
+<li><p>construct upper half of the network</p></li>
+<li><p>contract upper and lower half (identical to upper) to obtain final reduced
+density matrix</p></li>
+</ol>
+</div></blockquote>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">C</span><span class="o">--</span><span class="n">T</span><span class="o">-----</span><span class="n">T</span><span class="o">-----</span><span class="n">C</span> <span class="o">=</span> <span class="n">C2x2</span><span class="o">---</span><span class="n">C2x2c</span>
+<span class="o">|</span>  <span class="o">|</span>     <span class="o">|</span>     <span class="o">|</span>   <span class="o">|</span>      <span class="o">|</span>
+<span class="n">T</span><span class="o">--</span><span class="n">a</span><span class="o">^+</span><span class="n">a</span><span class="o">--</span><span class="n">a</span><span class="o">^+</span><span class="n">a</span><span class="o">--</span><span class="n">T</span>   <span class="n">C2x2c</span><span class="o">--</span><span class="n">C2x2</span>
+<span class="o">|</span>  <span class="o">|</span>     <span class="o">|</span>     <span class="o">|</span>
+<span class="n">T</span><span class="o">--</span><span class="n">a</span><span class="o">^+</span><span class="n">a</span><span class="o">--</span><span class="n">a</span><span class="o">^+</span><span class="n">a</span><span class="o">--</span><span class="n">T</span>
+<span class="o">|</span>  <span class="o">|</span>     <span class="o">|</span>     <span class="o">|</span>
+<span class="n">C</span><span class="o">--</span><span class="n">T</span><span class="o">-----</span><span class="n">T</span><span class="o">-----</span><span class="n">C</span>
+</pre></div>
+</div>
+<p>The physical indices <cite>s</cite> and <cite>s’</cite> of on-sites tensors <span class="math notranslate nohighlight">\(a\)</span> (and <span class="math notranslate nohighlight">\(a^\dagger\)</span>)
+inside C2x2 tensors are left uncontracted and given in the following order:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">s0</span> <span class="n">c</span>
+<span class="n">c</span>  <span class="n">s1</span>
+</pre></div>
+</div>
+<p>This function avoids constructing double-layer on-site tensor explicitly.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ctm.one_site_c4v.rdm_c4v.rdm2x2">
+<span class="sig-prename descclassname"><span class="pre">ctm.one_site_c4v.rdm_c4v.</span></span><span class="sig-name descname"><span class="pre">rdm2x2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sym_pos_def</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_cpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/ctm/one_site_c4v/rdm_c4v.html#rdm2x2"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ctm.one_site_c4v.rdm_c4v.rdm2x2" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="../../ipeps/ipeps_c4v.html#ipeps.ipeps_c4v.IPEPS_C4V" title="ipeps.ipeps_c4v.IPEPS_C4V"><em>IPEPS_C4V</em></a>) – underlying 1-site C4v symmetric wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="env_c4v.html#ctm.one_site_c4v.env_c4v.ENV_C4V" title="ctm.one_site_c4v.env_c4v.ENV_C4V"><em>ENV_C4V</em></a>) – C4v symmetric environment corresponding to <code class="docutils literal notranslate"><span class="pre">state</span></code></p></li>
+<li><p><strong>sym_pos_def</strong> (<em>bool</em>) – make final density matrix symmetric and non-negative (default: False)</p></li>
+<li><p><strong>force_cpu</strong> (<em>bool</em>) – perform on CPU</p></li>
+<li><p><strong>verbosity</strong> (<em>int</em>) – logging verbosity</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>4-site reduced density matrix with indices <span class="math notranslate nohighlight">\(s_0s_1s_2s_3;s'_0s'_1s'_2s'_3\)</span></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.tensor</p>
+</dd>
+</dl>
+<p>Computes 4-site reduced density matrix <span class="math notranslate nohighlight">\(\rho_{2x2}\)</span> of 2x2 subsystem using strategy:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>compute upper left corner</p></li>
+<li><p>construct upper half of the network</p></li>
+<li><p>contract upper and lower half (identical to upper) to obtain final reduced
+density matrix</p></li>
+</ol>
+</div></blockquote>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">C</span><span class="o">--</span><span class="n">T</span><span class="o">-----</span><span class="n">T</span><span class="o">-----</span><span class="n">C</span> <span class="o">=</span> <span class="n">C2x2</span><span class="o">--</span><span class="n">C2x2</span>
+<span class="o">|</span>  <span class="o">|</span>     <span class="o">|</span>     <span class="o">|</span>   <span class="o">|</span>     <span class="o">|</span>
+<span class="n">T</span><span class="o">--</span><span class="n">a</span><span class="o">^+</span><span class="n">a</span><span class="o">--</span><span class="n">a</span><span class="o">^+</span><span class="n">a</span><span class="o">--</span><span class="n">T</span>   <span class="n">C2x2</span><span class="o">--</span><span class="n">C2x2</span>
+<span class="o">|</span>  <span class="o">|</span>     <span class="o">|</span>     <span class="o">|</span>
+<span class="n">T</span><span class="o">--</span><span class="n">a</span><span class="o">^+</span><span class="n">a</span><span class="o">--</span><span class="n">a</span><span class="o">^+</span><span class="n">a</span><span class="o">--</span><span class="n">T</span>
+<span class="o">|</span>  <span class="o">|</span>     <span class="o">|</span>     <span class="o">|</span>
+<span class="n">C</span><span class="o">--</span><span class="n">T</span><span class="o">-----</span><span class="n">T</span><span class="o">-----</span><span class="n">C</span>
+</pre></div>
+</div>
+<p>The physical indices <cite>s</cite> and <cite>s’</cite> of on-sites tensors <span class="math notranslate nohighlight">\(A\)</span> (and <span class="math notranslate nohighlight">\(A^\dagger\)</span>)
+are left uncontracted and given in the following order:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">s0</span> <span class="n">s1</span>
+<span class="n">s2</span> <span class="n">s3</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ctm.one_site_c4v.rdm_c4v.aux_rdm2x2_NN">
+<span class="sig-prename descclassname"><span class="pre">ctm.one_site_c4v.rdm_c4v.</span></span><span class="sig-name descname"><span class="pre">aux_rdm2x2_NN</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_cpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/ctm/one_site_c4v/rdm_c4v.html#aux_rdm2x2_NN"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ctm.one_site_c4v.rdm_c4v.aux_rdm2x2_NN" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="../../ipeps/ipeps_c4v.html#ipeps.ipeps_c4v.IPEPS_C4V" title="ipeps.ipeps_c4v.IPEPS_C4V"><em>IPEPS_C4V</em></a>) – underlying 1-site C4v symmetric wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="env_c4v.html#ctm.one_site_c4v.env_c4v.ENV_C4V" title="ctm.one_site_c4v.env_c4v.ENV_C4V"><em>ENV_C4V</em></a>) – C4v symmetric environment corresponding to <code class="docutils literal notranslate"><span class="pre">state</span></code></p></li>
+<li><p><strong>force_cpu</strong> (<em>bool</em>) – execute on cpu</p></li>
+<li><p><strong>verbosity</strong> (<em>int</em>) – logging verbosity</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>2-site auxilliary reduced density matrix</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.tensor</p>
+</dd>
+</dl>
+<p>Computes 2-site auxiliary reduced density matrix of nearest neighbours
+within 2x2 subsystem without the on-site tensors (leaving corresponding
+auxiliary indices open) using strategy:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>compute upper left corner</p></li>
+<li><p>construct upper half of the network</p></li>
+<li><p>contract upper and lower half (identical to upper) to obtain final reduced
+auxilliary density matrix</p></li>
+</ol>
+</div></blockquote>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">C</span><span class="o">----</span><span class="n">T</span><span class="o">----</span><span class="n">T</span><span class="o">----</span><span class="n">C</span>    <span class="o">=</span> <span class="n">aC2x2</span><span class="o">--</span><span class="n">aC2x2</span>
+<span class="o">|</span>    <span class="mi">0</span>    <span class="mi">5</span>    <span class="o">|</span>      <span class="o">|</span>       <span class="o">|</span>
+<span class="n">T</span><span class="o">--</span><span class="mi">1</span>        <span class="mi">4</span><span class="o">--</span><span class="n">T</span>      <span class="n">C2x2</span><span class="o">----</span><span class="n">C2x2</span>
+<span class="o">|</span>    <span class="mi">2</span>    <span class="mi">3</span>    <span class="o">|</span>
+<span class="n">C</span><span class="o">----</span><span class="n">T</span><span class="o">----</span><span class="n">T</span><span class="o">----</span><span class="n">C</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ctm.one_site_c4v.rdm_c4v.aux_rdm2x2">
+<span class="sig-prename descclassname"><span class="pre">ctm.one_site_c4v.rdm_c4v.</span></span><span class="sig-name descname"><span class="pre">aux_rdm2x2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_cpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/ctm/one_site_c4v/rdm_c4v.html#aux_rdm2x2"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ctm.one_site_c4v.rdm_c4v.aux_rdm2x2" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="../../ipeps/ipeps_c4v.html#ipeps.ipeps_c4v.IPEPS_C4V" title="ipeps.ipeps_c4v.IPEPS_C4V"><em>IPEPS_C4V</em></a>) – underlying 1-site C4v symmetric wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="env_c4v.html#ctm.one_site_c4v.env_c4v.ENV_C4V" title="ctm.one_site_c4v.env_c4v.ENV_C4V"><em>ENV_C4V</em></a>) – C4v symmetric environment corresponding to <code class="docutils literal notranslate"><span class="pre">state</span></code></p></li>
+<li><p><strong>force_cpu</strong> (<em>bool</em>) – execute on cpu</p></li>
+<li><p><strong>verbosity</strong> (<em>int</em>) – logging verbosity</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>4-site auxilliary reduced density matrix</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.tensor</p>
+</dd>
+</dl>
+<p>Computes 4-site auxiliary reduced density matrix <span class="math notranslate nohighlight">\(\rho_{2x2}\)</span> of 2x2 subsystem
+without the on-site tensors (leaving corresponding auxiliary indices open)
+using strategy:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>compute upper left corner</p></li>
+<li><p>construct upper half of the network</p></li>
+<li><p>contract upper and lower half (identical to upper) to obtain final reduced
+auxilliary density matrix</p></li>
+</ol>
+</div></blockquote>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">C</span><span class="o">----</span><span class="n">T</span><span class="o">----</span><span class="n">T</span><span class="o">----</span><span class="n">C</span>    <span class="o">=</span> <span class="n">C2x2</span><span class="o">--</span><span class="n">C2x2</span>
+<span class="o">|</span>    <span class="mi">0</span>    <span class="mi">7</span>    <span class="o">|</span>      <span class="o">|</span>     <span class="o">|</span>
+<span class="n">T</span><span class="o">--</span><span class="mi">1</span>        <span class="mi">6</span><span class="o">--</span><span class="n">T</span>      <span class="n">C2x2</span><span class="o">--</span><span class="n">C2x2</span>
+<span class="o">|</span>              <span class="o">|</span>
+<span class="n">T</span><span class="o">--</span><span class="mi">2</span>        <span class="mi">5</span><span class="o">--</span><span class="n">T</span>
+<span class="o">|</span>    <span class="mi">3</span>    <span class="mi">4</span>    <span class="o">|</span>
+<span class="n">C</span><span class="o">----</span><span class="n">T</span><span class="o">----</span><span class="n">T</span><span class="o">----</span><span class="n">C</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</section>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="transfer_matrix.html" class="btn btn-neutral float-right" title="Transfer Matrices" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="ctmrg_c4v.html" class="btn btn-neutral float-left" title="Corner Transfer Matrix Algorithm" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Juraj Hasik, Glen B. Mbeng
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

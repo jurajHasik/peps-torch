@@ -1,0 +1,577 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>optim.ad_optim_lbfgs_mod &mdash; peps-torch alpha documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> peps-torch
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../ipeps.html">iPEPS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps.html">Generic iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_kagome.html">Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_c4v.html">1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_lc_1site_pg.html">1-site iPEPS from lin. combination</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipess_kagome.html">Generic Kagome iPESS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipess_kagome_pg.html">Kagome iPESS with point groups</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipess_kagome_pg_lc.html">Kagome iPESS from lin. combination</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../ipeps.html#abelian-symmetric-ipeps">Abelian-symmetric iPEPS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_abelian.html">Generic  abelian-symmetric iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_abelian.html#generic-abelian-symmetric-ipeps-with-weights">Generic abelian-symmetric iPEPS with weights</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_kagome_abelian.html">Abelian-symmetric Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_abelian_c4v.html">Abelian-symmetric 1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipess_kagome_abelian.html">Abelian-symmetric generic Kagome iPESS</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../envs.html">Environments</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../envs/generic.html">Generic iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/env.html">Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/rdm.html#module-ctm.pess_kagome.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/corrf.html">Correlation functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/transfer_matrix.html">Transfer Matrices</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../envs/generic_abelian.html">Abelian-symmetric generic iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic_abelian/env_abelian.html">Abelian-symmetric environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic_abelian/ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic_abelian/ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic_abelian/ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic_abelian/rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic_abelian/rdm.html#module-ctm.pess_kagome_abelian.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../envs/one_site_c4v.html">1-site C4v iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v/env_c4v.html">1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v/ctmrg_c4v.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v/rdm_c4v.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v/transfer_matrix.html">Transfer Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v/corrf_c4v.html">Correlation functions</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../envs/one_site_c4v_abelian.html">Abelian-symmetric 1-site C4v iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v_abelian/env_c4v_abelian.html">Abelian-symmetric 1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v_abelian/ctmrg_c4v_abelian.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v_abelian/rdm_c4v_abelian.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v_abelian/corrf_c4v_abelian.html">Correlation functions</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../optim.html">Optimization</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../optim/drivers.html">Optimization drivers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/drivers/ad_optim.html">ad_optim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/drivers/ad_optim_lbfgs_mod.html">ad_optim_lbfgs_mod</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/drivers/ad_optim_sgd_mod.html">ad_optim_sgd_mod</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../optim/optimizers.html">Custom optimizers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/optimizers/lbfgs_modified.html">Extended LBFGS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/optimizers/sgd_modified.html">SGD with linesearch</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../config.html">Configuration</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../config.html#main">Main</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../config.html#global">Global</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../config.html#corner-transfer-matrix-algorithm">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../config.html#optimization">Optimization</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../models.html">Models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../models/akltS2.html">Spin S=2 AKLT Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/akltS2.html#module-models.akltS2">2x1 and 2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/akltS2.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/coupledLadders.html">Coupled Ladders</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/coupledLadders.html#dense-pytorch">Dense (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/coupledLadders.html#dense-yast">Dense (YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/coupledLadders.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/ising.html">Transverse Field Ising Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/ising.html#x1-unit-cell">1x1 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/ising.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/j1j2.html">J1-J2-J3 and J1-J2-lambda Heisenberg Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/j1j2.html#from-2x1-to-4x2-unit-cell-pytorch">from 2x1 to 4x2 unit cell (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/j1j2.html#from-2x1-to-4x2-unit-cell-dense-yast">from 2x1 to 4x2 unit cell (dense YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/j1j2.html#x1-c4v-pytorch">1x1 C4v (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/j1j2.html#x1-c4v-dense-yast">1x1 C4v (dense YAST)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/jq.html">J-Q Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/jq.html#module-models.jq">2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/jq.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/spin_half_kagome.html">SU(2) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/spin_half_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/spin_half_kagome.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/su3_kagome.html">SU(3) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/su3_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/su3_kagome.html#with-explict-u-1-xu-1-symmetry">With explict U(1)xU(1) symmetry</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../groups.html">Groups</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/pg.html">Point group: square lattice</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/su2.html">SU(2)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/su2.html#module-groups.su2_abelian">SU(2) with explicit U(1) structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/su3.html">SU(3)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/su3.html#su-3-with-explicit-u-1-xu-1-structure">SU(3) with explicit U(1)xU(1) structure</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../linalg.html">Linear Algebra</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../linalg/custom_eig.html">Truncated eigendecomposition</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../linalg/custom_svd.html">Truncated SVD</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../linalg/spec_decomp.html">Spectral decompositions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.svd_gesdd">SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.svd_arnoldi">Partial SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.svd_rsvd">Randomized SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.eig_sym">Symmetric Eigendecomposition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.eig_arnoldi">Partial diagonalization</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">peps-torch</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+      <li>optim.ad_optim_lbfgs_mod</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for optim.ad_optim_lbfgs_mod</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">copy</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">from</span> <span class="nn">optim</span> <span class="kn">import</span> <span class="n">lbfgs_modified</span>
+<span class="kn">import</span> <span class="nn">config</span> <span class="k">as</span> <span class="nn">cfg</span>
+
+<div class="viewcode-block" id="store_checkpoint"><a class="viewcode-back" href="../../optim/drivers/ad_optim_lbfgs_mod.html#optim.ad_optim_lbfgs_mod.store_checkpoint">[docs]</a><span class="k">def</span> <span class="nf">store_checkpoint</span><span class="p">(</span><span class="n">checkpoint_file</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">optimizer</span><span class="p">,</span> <span class="n">current_epoch</span><span class="p">,</span> <span class="n">current_loss</span><span class="p">,</span>\
+    <span class="n">verbosity</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    :param checkpoint_file: target file</span>
+<span class="sd">    :param state: ipeps wavefunction</span>
+<span class="sd">    :param optimizer: Optimizer</span>
+<span class="sd">    :param current_epoch: current epoch</span>
+<span class="sd">    :param current_loss: current value of a loss function</span>
+<span class="sd">    :param verbosity: verbosity</span>
+<span class="sd">    :type checkpoint_file: str or Path</span>
+<span class="sd">    :type state: IPEPS</span>
+<span class="sd">    :type optimizer: torch.optim.Optimizer</span>
+<span class="sd">    :type current_epoch: int</span>
+<span class="sd">    :type current_loss: float</span>
+<span class="sd">    :type verbosity: int</span>
+
+<span class="sd">    Store the current state of the optimization in ``checkpoint_file``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">save</span><span class="p">({</span>
+            <span class="s1">&#39;epoch&#39;</span><span class="p">:</span> <span class="n">current_epoch</span><span class="p">,</span>
+            <span class="s1">&#39;loss&#39;</span><span class="p">:</span> <span class="n">current_loss</span><span class="p">,</span>
+            <span class="s1">&#39;parameters&#39;</span><span class="p">:</span> <span class="n">state</span><span class="o">.</span><span class="n">get_checkpoint</span><span class="p">(),</span>
+            <span class="s1">&#39;optimizer_state_dict&#39;</span><span class="p">:</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">state_dict</span><span class="p">()},</span> <span class="n">checkpoint_file</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">checkpoint_file</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="optimize_state"><a class="viewcode-back" href="../../optim/drivers/ad_optim_lbfgs_mod.html#optim.ad_optim_lbfgs_mod.optimize_state">[docs]</a><span class="k">def</span> <span class="nf">optimize_state</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">ctm_env_init</span><span class="p">,</span> <span class="n">loss_fn</span><span class="p">,</span> <span class="n">obs_fn</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">post_proc</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">main_args</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">main_args</span><span class="p">,</span> <span class="n">opt_args</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">opt_args</span><span class="p">,</span><span class="n">ctm_args</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">ctm_args</span><span class="p">,</span> 
+    <span class="n">global_args</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">global_args</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    :param state: initial wavefunction</span>
+<span class="sd">    :param ctm_env_init: initial environment corresponding to ``state``</span>
+<span class="sd">    :param loss_fn: loss function</span>
+<span class="sd">    :param model: model with definition of observables</span>
+<span class="sd">    :param local_args: parsed command line arguments</span>
+<span class="sd">    :param opt_args: optimization configuration</span>
+<span class="sd">    :param ctm_args: CTM algorithm configuration</span>
+<span class="sd">    :param global_args: global configuration</span>
+<span class="sd">    :type state: IPEPS</span>
+<span class="sd">    :type ctm_env_init: ENV</span>
+<span class="sd">    :type loss_fn: function(IPEPS,ENV,CTMARGS,OPTARGS,GLOBALARGS)-&gt;torch.tensor</span>
+<span class="sd">    :type model: TODO Model base class</span>
+<span class="sd">    :type local_args: argparse.Namespace</span>
+<span class="sd">    :type opt_args: OPTARGS</span>
+<span class="sd">    :type ctm_args: CTMARGS</span>
+<span class="sd">    :type global_args: GLOBALARGS</span>
+
+<span class="sd">    Optimizes initial wavefunction ``state`` with respect to ``loss_fn`` using </span>
+<span class="sd">    :class:`optim.lbfgs_modified.LBFGS_MOD` optimizer.</span>
+<span class="sd">    The main parameters influencing the optimization process are given in :class:`config.OPTARGS`.</span>
+<span class="sd">    Calls to functions ``loss_fn``, ``obs_fn``, and ``post_proc`` pass the current configuration</span>
+<span class="sd">    as dictionary ``{&quot;ctm_args&quot;:ctm_args, &quot;opt_args&quot;:opt_args}``</span>
+
+<span class="sd">    The optimizer saves the best energy state into file ``main_args.out_prefix+&quot;_state.json&quot;``</span>
+<span class="sd">    and checkpoints the optimization at every step to ``main_args.out_prefix+&quot;_state.json&quot;``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">verbosity</span> <span class="o">=</span> <span class="n">opt_args</span><span class="o">.</span><span class="n">verbosity_opt_epoch</span>
+    <span class="n">checkpoint_file</span> <span class="o">=</span> <span class="n">main_args</span><span class="o">.</span><span class="n">out_prefix</span><span class="o">+</span><span class="s2">&quot;_checkpoint.p&quot;</span>
+    <span class="n">outputstatefile</span><span class="o">=</span> <span class="n">main_args</span><span class="o">.</span><span class="n">out_prefix</span><span class="o">+</span><span class="s2">&quot;_state.json&quot;</span>
+    
+    <span class="n">t_data</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">({</span><span class="s2">&quot;loss&quot;</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">&quot;min_loss&quot;</span><span class="p">:</span> <span class="mf">1.0e+16</span><span class="p">,</span> <span class="s2">&quot;loss_ls&quot;</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">&quot;min_loss_ls&quot;</span><span class="p">:</span> <span class="mf">1.0e+16</span><span class="p">})</span>
+    <span class="n">current_env</span><span class="o">=</span> <span class="p">[</span><span class="n">ctm_env_init</span><span class="p">]</span>
+    <span class="n">context</span><span class="o">=</span> <span class="nb">dict</span><span class="p">({</span><span class="s2">&quot;ctm_args&quot;</span><span class="p">:</span><span class="n">ctm_args</span><span class="p">,</span> <span class="s2">&quot;opt_args&quot;</span><span class="p">:</span><span class="n">opt_args</span><span class="p">,</span> <span class="s2">&quot;loss_history&quot;</span><span class="p">:</span> <span class="n">t_data</span><span class="p">})</span>
+    <span class="n">epoch</span><span class="o">=</span><span class="mi">0</span>
+
+    <span class="n">parameters</span><span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">get_parameters</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">A</span> <span class="ow">in</span> <span class="n">parameters</span><span class="p">:</span> <span class="n">A</span><span class="o">.</span><span class="n">requires_grad_</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">optimizer</span> <span class="o">=</span> <span class="n">lbfgs_modified</span><span class="o">.</span><span class="n">LBFGS_MOD</span><span class="p">(</span><span class="n">parameters</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="n">opt_args</span><span class="o">.</span><span class="n">max_iter_per_epoch</span><span class="p">,</span> <span class="n">lr</span><span class="o">=</span><span class="n">opt_args</span><span class="o">.</span><span class="n">lr</span><span class="p">,</span> \
+        <span class="n">tolerance_grad</span><span class="o">=</span><span class="n">opt_args</span><span class="o">.</span><span class="n">tolerance_grad</span><span class="p">,</span> <span class="n">tolerance_change</span><span class="o">=</span><span class="n">opt_args</span><span class="o">.</span><span class="n">tolerance_change</span><span class="p">,</span> \
+        <span class="n">history_size</span><span class="o">=</span><span class="n">opt_args</span><span class="o">.</span><span class="n">history_size</span><span class="p">,</span> <span class="n">line_search_fn</span><span class="o">=</span><span class="n">opt_args</span><span class="o">.</span><span class="n">line_search</span><span class="p">,</span> \
+        <span class="n">line_search_eps</span><span class="o">=</span><span class="n">opt_args</span><span class="o">.</span><span class="n">line_search_tol</span><span class="p">)</span>
+
+    <span class="c1"># load and/or modify optimizer state from checkpoint</span>
+    <span class="k">if</span> <span class="n">main_args</span><span class="o">.</span><span class="n">opt_resume</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;INFO: resuming from check point. resume = </span><span class="si">{</span><span class="n">main_args</span><span class="o">.</span><span class="n">opt_resume</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">str</span><span class="p">(</span><span class="n">global_args</span><span class="o">.</span><span class="n">device</span><span class="p">)</span><span class="o">==</span><span class="nb">str</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">device</span><span class="p">):</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Device mismatch: state.device </span><span class="si">{</span><span class="n">state</span><span class="o">.</span><span class="n">device</span><span class="si">}</span><span class="s2">&quot;</span>\
+                <span class="o">+</span><span class="sa">f</span><span class="s2">&quot; global_args.device </span><span class="si">{</span><span class="n">global_args</span><span class="o">.</span><span class="n">device</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span><span class="ne">RuntimeWarning</span><span class="p">)</span>
+        <span class="n">checkpoint</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">main_args</span><span class="o">.</span><span class="n">opt_resume</span><span class="p">,</span><span class="n">map_location</span><span class="o">=</span><span class="n">state</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">epoch0</span> <span class="o">=</span> <span class="n">checkpoint</span><span class="p">[</span><span class="s2">&quot;epoch&quot;</span><span class="p">]</span>
+        <span class="n">loss0</span> <span class="o">=</span> <span class="n">checkpoint</span><span class="p">[</span><span class="s2">&quot;loss&quot;</span><span class="p">]</span>
+        <span class="n">cp_state_dict</span><span class="o">=</span> <span class="n">checkpoint</span><span class="p">[</span><span class="s2">&quot;optimizer_state_dict&quot;</span><span class="p">]</span>
+        <span class="n">cp_opt_params</span><span class="o">=</span> <span class="n">cp_state_dict</span><span class="p">[</span><span class="s2">&quot;param_groups&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">cp_opt_history</span><span class="o">=</span> <span class="n">cp_state_dict</span><span class="p">[</span><span class="s2">&quot;state&quot;</span><span class="p">][</span><span class="n">cp_opt_params</span><span class="p">[</span><span class="s2">&quot;params&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]]</span>
+        <span class="k">if</span> <span class="n">main_args</span><span class="o">.</span><span class="n">opt_resume_override_params</span><span class="p">:</span>
+            <span class="n">cp_opt_params</span><span class="p">[</span><span class="s2">&quot;lr&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">opt_args</span><span class="o">.</span><span class="n">lr</span>
+            <span class="n">cp_opt_params</span><span class="p">[</span><span class="s2">&quot;max_iter&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">opt_args</span><span class="o">.</span><span class="n">max_iter_per_epoch</span>
+            <span class="n">cp_opt_params</span><span class="p">[</span><span class="s2">&quot;tolerance_grad&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">opt_args</span><span class="o">.</span><span class="n">tolerance_grad</span>
+            <span class="n">cp_opt_params</span><span class="p">[</span><span class="s2">&quot;tolerance_change&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">opt_args</span><span class="o">.</span><span class="n">tolerance_change</span>
+            <span class="n">cp_opt_params</span><span class="p">[</span><span class="s2">&quot;line_search_fn&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">opt_args</span><span class="o">.</span><span class="n">line_search</span>
+            <span class="n">cp_opt_params</span><span class="p">[</span><span class="s2">&quot;line_search_eps&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">opt_args</span><span class="o">.</span><span class="n">line_search_tol</span>
+            <span class="c1"># resize stored old_dirs, old_stps, ro, al to new history size</span>
+            <span class="n">cp_history_size</span><span class="o">=</span> <span class="n">cp_opt_params</span><span class="p">[</span><span class="s2">&quot;history_size&quot;</span><span class="p">]</span>
+            <span class="n">cp_opt_params</span><span class="p">[</span><span class="s2">&quot;history_size&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">opt_args</span><span class="o">.</span><span class="n">history_size</span>
+            <span class="k">if</span> <span class="n">opt_args</span><span class="o">.</span><span class="n">history_size</span> <span class="o">&lt;</span> <span class="n">cp_history_size</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">cp_opt_history</span><span class="p">[</span><span class="s2">&quot;old_dirs&quot;</span><span class="p">])</span> <span class="o">&gt;</span> <span class="n">opt_args</span><span class="o">.</span><span class="n">history_size</span><span class="p">:</span> 
+                    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">cp_opt_history</span><span class="p">[</span><span class="s2">&quot;old_dirs&quot;</span><span class="p">])</span><span class="o">==</span><span class="nb">len</span><span class="p">(</span><span class="n">cp_opt_history</span><span class="p">[</span><span class="s2">&quot;old_stps&quot;</span><span class="p">])</span>\
+                        <span class="o">==</span><span class="nb">len</span><span class="p">(</span><span class="n">cp_opt_history</span><span class="p">[</span><span class="s2">&quot;ro&quot;</span><span class="p">]),</span> <span class="s2">&quot;Inconsistent L-BFGS history&quot;</span>
+                    <span class="n">cp_opt_history</span><span class="p">[</span><span class="s2">&quot;old_dirs&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">cp_opt_history</span><span class="p">[</span><span class="s2">&quot;old_dirs&quot;</span><span class="p">][</span><span class="o">-</span><span class="n">opt_args</span><span class="o">.</span><span class="n">history_size</span><span class="p">:]</span>
+                    <span class="n">cp_opt_history</span><span class="p">[</span><span class="s2">&quot;old_stps&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">cp_opt_history</span><span class="p">[</span><span class="s2">&quot;old_stps&quot;</span><span class="p">][</span><span class="o">-</span><span class="n">opt_args</span><span class="o">.</span><span class="n">history_size</span><span class="p">:]</span>
+                    <span class="n">cp_opt_history</span><span class="p">[</span><span class="s2">&quot;ro&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">cp_opt_history</span><span class="p">[</span><span class="s2">&quot;ro&quot;</span><span class="p">][</span><span class="o">-</span><span class="n">opt_args</span><span class="o">.</span><span class="n">history_size</span><span class="p">:]</span>
+            <span class="n">cp_al_filtered</span><span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">filter</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span><span class="n">cp_opt_history</span><span class="p">[</span><span class="s2">&quot;al&quot;</span><span class="p">]))</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">cp_al_filtered</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">opt_args</span><span class="o">.</span><span class="n">history_size</span><span class="p">:</span>
+                <span class="n">cp_opt_history</span><span class="p">[</span><span class="s2">&quot;al&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">cp_al_filtered</span><span class="p">[</span><span class="o">-</span><span class="n">opt_args</span><span class="o">.</span><span class="n">history_size</span><span class="p">:]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">cp_opt_history</span><span class="p">[</span><span class="s2">&quot;al&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">cp_al_filtered</span> <span class="o">+</span> <span class="p">[</span><span class="kc">None</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">opt_args</span><span class="o">.</span><span class="n">history_size</span><span class="o">-</span><span class="nb">len</span><span class="p">(</span><span class="n">cp_al_filtered</span><span class="p">))]</span>
+        <span class="n">cp_state_dict</span><span class="p">[</span><span class="s2">&quot;param_groups&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">=</span> <span class="n">cp_opt_params</span>
+        <span class="n">cp_state_dict</span><span class="p">[</span><span class="s2">&quot;state&quot;</span><span class="p">][</span><span class="n">cp_opt_params</span><span class="p">[</span><span class="s2">&quot;params&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]]</span><span class="o">=</span> <span class="n">cp_opt_history</span>
+        <span class="n">optimizer</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">cp_state_dict</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;checkpoint.loss = </span><span class="si">{</span><span class="n">loss0</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1">#@profile</span>
+    <span class="k">def</span> <span class="nf">closure</span><span class="p">(</span><span class="n">linesearching</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="n">context</span><span class="p">[</span><span class="s2">&quot;line_search&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">linesearching</span>
+        
+        <span class="c1"># 0) evaluate loss</span>
+        <span class="n">optimizer</span><span class="o">.</span><span class="n">zero_grad</span><span class="p">()</span>
+        <span class="n">loss</span><span class="p">,</span> <span class="n">ctm_env</span><span class="p">,</span> <span class="n">history</span><span class="p">,</span> <span class="n">t_ctm</span><span class="p">,</span> <span class="n">t_check</span> <span class="o">=</span> <span class="n">loss_fn</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">current_env</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">context</span><span class="p">)</span>
+
+        <span class="c1"># 4) evaluate gradient</span>
+        <span class="n">t_grad0</span><span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="n">loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+        <span class="n">t_grad1</span><span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+
+        <span class="c1"># 6) detach current environment from autograd graph</span>
+        <span class="n">ctm_env</span><span class="o">.</span><span class="n">detach_</span><span class="p">()</span>
+        <span class="n">current_env</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">=</span> <span class="n">ctm_env</span>
+        <span class="c1"># current_env[0]= ctm_env.detach().clone()</span>
+
+        <span class="c1"># 1) record loss and store current state if the loss improves</span>
+        <span class="k">if</span> <span class="n">linesearching</span><span class="p">:</span>
+            <span class="n">t_data</span><span class="p">[</span><span class="s2">&quot;loss_ls&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">loss</span><span class="o">.</span><span class="n">item</span><span class="p">())</span>
+            <span class="k">if</span> <span class="n">t_data</span><span class="p">[</span><span class="s2">&quot;min_loss_ls&quot;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">t_data</span><span class="p">[</span><span class="s2">&quot;loss_ls&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
+                <span class="n">t_data</span><span class="p">[</span><span class="s2">&quot;min_loss_ls&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">t_data</span><span class="p">[</span><span class="s2">&quot;loss_ls&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>  
+            <span class="n">t_data</span><span class="p">[</span><span class="s2">&quot;loss&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">loss</span><span class="o">.</span><span class="n">item</span><span class="p">())</span>
+            <span class="k">if</span> <span class="n">t_data</span><span class="p">[</span><span class="s2">&quot;min_loss&quot;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">t_data</span><span class="p">[</span><span class="s2">&quot;loss&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
+                <span class="n">t_data</span><span class="p">[</span><span class="s2">&quot;min_loss&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">t_data</span><span class="p">[</span><span class="s2">&quot;loss&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">state</span><span class="o">.</span><span class="n">write_to_file</span><span class="p">(</span><span class="n">outputstatefile</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="c1"># 2) log CTM metrics for debugging</span>
+        <span class="k">if</span> <span class="n">opt_args</span><span class="o">.</span><span class="n">opt_logging</span><span class="p">:</span>
+            <span class="n">log_entry</span><span class="o">=</span><span class="nb">dict</span><span class="p">({</span><span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">epoch</span><span class="p">,</span> <span class="s2">&quot;loss&quot;</span><span class="p">:</span> <span class="n">t_data</span><span class="p">[</span><span class="s2">&quot;loss&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="s2">&quot;t_ctm&quot;</span><span class="p">:</span> <span class="n">t_ctm</span><span class="p">,</span> \
+                    <span class="s2">&quot;t_check&quot;</span><span class="p">:</span> <span class="n">t_check</span><span class="p">})</span>
+            <span class="k">if</span> <span class="n">linesearching</span><span class="p">:</span>
+                <span class="n">log_entry</span><span class="p">[</span><span class="s2">&quot;LS&quot;</span><span class="p">]</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">t_data</span><span class="p">[</span><span class="s2">&quot;loss_ls&quot;</span><span class="p">])</span>
+                <span class="n">log_entry</span><span class="p">[</span><span class="s2">&quot;loss&quot;</span><span class="p">]</span><span class="o">=</span><span class="n">t_data</span><span class="p">[</span><span class="s2">&quot;loss_ls&quot;</span><span class="p">]</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">log_entry</span><span class="p">))</span>
+
+        <span class="c1"># 3) compute desired observables</span>
+        <span class="k">if</span> <span class="n">obs_fn</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">obs_fn</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">current_env</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">context</span><span class="p">)</span>
+
+        <span class="c1"># 5) log grad metrics</span>
+        <span class="k">if</span> <span class="n">opt_args</span><span class="o">.</span><span class="n">opt_logging</span><span class="p">:</span>
+            <span class="n">log_entry</span><span class="o">=</span><span class="nb">dict</span><span class="p">({</span><span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">epoch</span><span class="p">})</span>
+            <span class="k">if</span> <span class="n">linesearching</span><span class="p">:</span> <span class="n">log_entry</span><span class="p">[</span><span class="s2">&quot;LS&quot;</span><span class="p">]</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">t_data</span><span class="p">[</span><span class="s2">&quot;loss_ls&quot;</span><span class="p">])</span>
+            <span class="k">else</span><span class="p">:</span> 
+                <span class="n">log_entry</span><span class="p">[</span><span class="s2">&quot;t_grad&quot;</span><span class="p">]</span><span class="o">=</span><span class="n">t_grad1</span><span class="o">-</span><span class="n">t_grad0</span>
+                <span class="c1"># log just l2 and l\infty norm of the full grad</span>
+                <span class="c1"># log_entry[&quot;grad_mag&quot;]= [p.grad.norm().item() for p in parameters]</span>
+                <span class="n">flat_grad</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">parameters</span><span class="p">))</span>
+                <span class="n">log_entry</span><span class="p">[</span><span class="s2">&quot;grad_mag&quot;</span><span class="p">]</span><span class="o">=</span> <span class="p">[</span><span class="n">flat_grad</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">(),</span> <span class="n">flat_grad</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">p</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="s1">&#39;inf&#39;</span><span class="p">))</span><span class="o">.</span><span class="n">item</span><span class="p">()]</span>
+                <span class="k">if</span> <span class="n">opt_args</span><span class="o">.</span><span class="n">opt_log_grad</span><span class="p">:</span> <span class="n">log_entry</span><span class="p">[</span><span class="s2">&quot;grad&quot;</span><span class="p">]</span><span class="o">=</span> <span class="p">[</span><span class="n">p</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">parameters</span><span class="p">]</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">log_entry</span><span class="p">))</span>        
+
+        <span class="k">return</span> <span class="n">loss</span>
+    
+    <span class="c1"># closure for derivative-free line search. This closure</span>
+    <span class="c1"># is to be called within torch.no_grad context</span>
+    <span class="nd">@torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">()</span>
+    <span class="k">def</span> <span class="nf">closure_linesearch</span><span class="p">(</span><span class="n">linesearching</span><span class="p">):</span>
+        <span class="n">context</span><span class="p">[</span><span class="s2">&quot;line_search&quot;</span><span class="p">]</span><span class="o">=</span><span class="n">linesearching</span>
+
+        <span class="c1"># 1) evaluate loss</span>
+        <span class="n">loc_opt_args</span><span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">opt_args</span><span class="p">)</span>
+        <span class="n">loc_opt_args</span><span class="o">.</span><span class="n">opt_ctm_reinit</span><span class="o">=</span> <span class="n">opt_args</span><span class="o">.</span><span class="n">line_search_ctm_reinit</span>
+        <span class="n">loc_ctm_args</span><span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">ctm_args</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">opt_args</span><span class="o">.</span><span class="n">line_search_svd_method</span> <span class="o">!=</span> <span class="s1">&#39;DEFAULT&#39;</span><span class="p">:</span>
+            <span class="n">loc_ctm_args</span><span class="o">.</span><span class="n">projector_svd_method</span><span class="o">=</span> <span class="n">opt_args</span><span class="o">.</span><span class="n">line_search_svd_method</span>
+        <span class="n">ls_context</span><span class="o">=</span> <span class="nb">dict</span><span class="p">({</span><span class="s2">&quot;ctm_args&quot;</span><span class="p">:</span><span class="n">loc_ctm_args</span><span class="p">,</span> <span class="s2">&quot;opt_args&quot;</span><span class="p">:</span><span class="n">loc_opt_args</span><span class="p">,</span> <span class="s2">&quot;loss_history&quot;</span><span class="p">:</span> <span class="n">t_data</span><span class="p">,</span>
+            <span class="s2">&quot;line_search&quot;</span><span class="p">:</span> <span class="n">linesearching</span><span class="p">})</span>
+        
+        <span class="n">loss</span><span class="p">,</span> <span class="n">ctm_env</span><span class="p">,</span> <span class="n">history</span><span class="p">,</span> <span class="n">t_ctm</span><span class="p">,</span> <span class="n">t_check</span> <span class="o">=</span> <span class="n">loss_fn</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">current_env</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>\
+            <span class="n">ls_context</span><span class="p">)</span>
+        <span class="n">current_env</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">=</span> <span class="n">ctm_env</span>
+
+        <span class="c1"># 2) store current state if the loss improves</span>
+        <span class="n">t_data</span><span class="p">[</span><span class="s2">&quot;loss_ls&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">loss</span><span class="o">.</span><span class="n">item</span><span class="p">())</span>
+        <span class="k">if</span> <span class="n">t_data</span><span class="p">[</span><span class="s2">&quot;min_loss_ls&quot;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">t_data</span><span class="p">[</span><span class="s2">&quot;loss_ls&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
+            <span class="n">t_data</span><span class="p">[</span><span class="s2">&quot;min_loss_ls&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">t_data</span><span class="p">[</span><span class="s2">&quot;loss_ls&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="c1"># 3) log metrics for debugging</span>
+        <span class="k">if</span> <span class="n">opt_args</span><span class="o">.</span><span class="n">opt_logging</span><span class="p">:</span>
+            <span class="n">log_entry</span><span class="o">=</span><span class="nb">dict</span><span class="p">({</span><span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">epoch</span><span class="p">,</span> <span class="s2">&quot;LS&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">t_data</span><span class="p">[</span><span class="s2">&quot;loss_ls&quot;</span><span class="p">]),</span> \
+                <span class="s2">&quot;loss&quot;</span><span class="p">:</span> <span class="n">t_data</span><span class="p">[</span><span class="s2">&quot;loss_ls&quot;</span><span class="p">],</span> <span class="s2">&quot;t_ctm&quot;</span><span class="p">:</span> <span class="n">t_ctm</span><span class="p">,</span> <span class="s2">&quot;t_check&quot;</span><span class="p">:</span> <span class="n">t_check</span><span class="p">})</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">log_entry</span><span class="p">))</span>
+
+        <span class="c1"># 4) compute desired observables</span>
+        <span class="k">if</span> <span class="n">obs_fn</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">obs_fn</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">current_env</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">context</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">loss</span>
+
+    <span class="k">for</span> <span class="n">epoch</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">main_args</span><span class="o">.</span><span class="n">opt_max_iter</span><span class="p">):</span>
+        <span class="c1"># checkpoint the optimizer</span>
+        <span class="c1"># checkpointing before step, guarantees the correspondence between the wavefunction</span>
+        <span class="c1"># and the last computed value of loss t_data[&quot;loss&quot;][-1]</span>
+        <span class="k">if</span> <span class="n">epoch</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span>
+            <span class="n">store_checkpoint</span><span class="p">(</span><span class="n">checkpoint_file</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">optimizer</span><span class="p">,</span> <span class="n">epoch</span><span class="p">,</span> <span class="n">t_data</span><span class="p">[</span><span class="s2">&quot;loss&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+
+        <span class="c1"># After execution closure ``current_env`` **IS NOT** corresponding to ``state``, since</span>
+        <span class="c1"># the ``state`` on-site tensors have been modified by gradient. </span>
+        <span class="n">optimizer</span><span class="o">.</span><span class="n">step_2c</span><span class="p">(</span><span class="n">closure</span><span class="p">,</span> <span class="n">closure_linesearch</span><span class="p">)</span>
+        
+        <span class="c1"># reset line search history</span>
+        <span class="n">t_data</span><span class="p">[</span><span class="s2">&quot;loss_ls&quot;</span><span class="p">]</span><span class="o">=</span><span class="p">[]</span>
+        <span class="n">t_data</span><span class="p">[</span><span class="s2">&quot;min_loss_ls&quot;</span><span class="p">]</span><span class="o">=</span><span class="mf">1.0e+16</span>
+
+        <span class="c1"># if post_proc is not None:</span>
+        <span class="c1">#     post_proc(state, current_env[0], context)</span>
+
+        <span class="c1"># terminate condition</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">t_data</span><span class="p">[</span><span class="s2">&quot;loss&quot;</span><span class="p">])</span><span class="o">&gt;</span><span class="mi">1</span> <span class="ow">and</span> \
+            <span class="nb">abs</span><span class="p">(</span><span class="n">t_data</span><span class="p">[</span><span class="s2">&quot;loss&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">t_data</span><span class="p">[</span><span class="s2">&quot;loss&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">2</span><span class="p">])</span><span class="o">&lt;</span><span class="n">opt_args</span><span class="o">.</span><span class="n">tolerance_change</span><span class="p">:</span>
+            <span class="k">break</span>
+
+
+    <span class="c1"># optimization is over, store the last checkpoint if at least a single step was made</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">t_data</span><span class="p">[</span><span class="s2">&quot;loss&quot;</span><span class="p">])</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span>
+        <span class="n">store_checkpoint</span><span class="p">(</span><span class="n">checkpoint_file</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">optimizer</span><span class="p">,</span> \
+            <span class="n">main_args</span><span class="o">.</span><span class="n">opt_max_iter</span><span class="p">,</span> <span class="n">t_data</span><span class="p">[</span><span class="s2">&quot;loss&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Juraj Hasik, Glen B. Mbeng
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

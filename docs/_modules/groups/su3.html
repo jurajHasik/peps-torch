@@ -1,0 +1,581 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>groups.su3 &mdash; peps-torch alpha documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> peps-torch
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../ipeps.html">iPEPS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps.html">Generic iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_kagome.html">Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_c4v.html">1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_lc_1site_pg.html">1-site iPEPS from lin. combination</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipess_kagome.html">Generic Kagome iPESS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipess_kagome_pg.html">Kagome iPESS with point groups</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipess_kagome_pg_lc.html">Kagome iPESS from lin. combination</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../ipeps.html#abelian-symmetric-ipeps">Abelian-symmetric iPEPS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_abelian.html">Generic  abelian-symmetric iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_abelian.html#generic-abelian-symmetric-ipeps-with-weights">Generic abelian-symmetric iPEPS with weights</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_kagome_abelian.html">Abelian-symmetric Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_abelian_c4v.html">Abelian-symmetric 1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipess_kagome_abelian.html">Abelian-symmetric generic Kagome iPESS</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../envs.html">Environments</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../envs/generic.html">Generic iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/env.html">Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/rdm.html#module-ctm.pess_kagome.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/corrf.html">Correlation functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/transfer_matrix.html">Transfer Matrices</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../envs/generic_abelian.html">Abelian-symmetric generic iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic_abelian/env_abelian.html">Abelian-symmetric environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic_abelian/ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic_abelian/ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic_abelian/ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic_abelian/rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic_abelian/rdm.html#module-ctm.pess_kagome_abelian.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../envs/one_site_c4v.html">1-site C4v iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v/env_c4v.html">1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v/ctmrg_c4v.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v/rdm_c4v.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v/transfer_matrix.html">Transfer Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v/corrf_c4v.html">Correlation functions</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../envs/one_site_c4v_abelian.html">Abelian-symmetric 1-site C4v iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v_abelian/env_c4v_abelian.html">Abelian-symmetric 1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v_abelian/ctmrg_c4v_abelian.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v_abelian/rdm_c4v_abelian.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v_abelian/corrf_c4v_abelian.html">Correlation functions</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../optim.html">Optimization</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../optim/drivers.html">Optimization drivers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/drivers/ad_optim.html">ad_optim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/drivers/ad_optim_lbfgs_mod.html">ad_optim_lbfgs_mod</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/drivers/ad_optim_sgd_mod.html">ad_optim_sgd_mod</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../optim/optimizers.html">Custom optimizers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/optimizers/lbfgs_modified.html">Extended LBFGS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/optimizers/sgd_modified.html">SGD with linesearch</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../config.html">Configuration</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../config.html#main">Main</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../config.html#global">Global</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../config.html#corner-transfer-matrix-algorithm">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../config.html#optimization">Optimization</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../models.html">Models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../models/akltS2.html">Spin S=2 AKLT Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/akltS2.html#module-models.akltS2">2x1 and 2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/akltS2.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/coupledLadders.html">Coupled Ladders</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/coupledLadders.html#dense-pytorch">Dense (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/coupledLadders.html#dense-yast">Dense (YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/coupledLadders.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/ising.html">Transverse Field Ising Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/ising.html#x1-unit-cell">1x1 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/ising.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/j1j2.html">J1-J2-J3 and J1-J2-lambda Heisenberg Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/j1j2.html#from-2x1-to-4x2-unit-cell-pytorch">from 2x1 to 4x2 unit cell (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/j1j2.html#from-2x1-to-4x2-unit-cell-dense-yast">from 2x1 to 4x2 unit cell (dense YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/j1j2.html#x1-c4v-pytorch">1x1 C4v (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/j1j2.html#x1-c4v-dense-yast">1x1 C4v (dense YAST)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/jq.html">J-Q Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/jq.html#module-models.jq">2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/jq.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/spin_half_kagome.html">SU(2) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/spin_half_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/spin_half_kagome.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/su3_kagome.html">SU(3) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/su3_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/su3_kagome.html#with-explict-u-1-xu-1-symmetry">With explict U(1)xU(1) symmetry</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../groups.html">Groups</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/pg.html">Point group: square lattice</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/su2.html">SU(2)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/su2.html#module-groups.su2_abelian">SU(2) with explicit U(1) structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/su3.html">SU(3)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/su3.html#su-3-with-explicit-u-1-xu-1-structure">SU(3) with explicit U(1)xU(1) structure</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../linalg.html">Linear Algebra</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../linalg/custom_eig.html">Truncated eigendecomposition</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../linalg/custom_svd.html">Truncated SVD</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../linalg/spec_decomp.html">Spectral decompositions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.svd_gesdd">SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.svd_arnoldi">Partial SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.svd_rsvd">Randomized SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.eig_sym">Symmetric Eigendecomposition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.eig_arnoldi">Partial diagonalization</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">peps-torch</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+      <li>groups.su3</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for groups.su3</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">from</span> <span class="nn">math</span> <span class="kn">import</span> <span class="n">factorial</span><span class="p">,</span> <span class="n">sqrt</span>
+<span class="kn">from</span> <span class="nn">tn_interface</span> <span class="kn">import</span> <span class="n">einsum</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<div class="viewcode-block" id="SU3_DEFINING"><a class="viewcode-back" href="../../groups/su3.html#groups.su3.SU3_DEFINING">[docs]</a><span class="k">class</span> <span class="nc">SU3_DEFINING</span><span class="p">():</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">q</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">complex128</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;cpu&#39;</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param p: (p,q) labels of the highest weight state of su(3) representation. </span>
+<span class="sd">                  For defining representation ``p=1, q=0``.</span>
+<span class="sd">        :type p: int</span>
+<span class="sd">        :param q:</span>
+<span class="sd">        :type q: int</span>
+<span class="sd">        :param dtype: data type of matrix representation of operators</span>
+<span class="sd">        :param device: device on which the torch.tensor objects are stored</span>
+<span class="sd">        :type J: int</span>
+<span class="sd">        :type dtype: torch.dtype</span>
+<span class="sd">        :type device: int</span>
+
+<span class="sd">        Build the defining representation :math:`\bf{3}` of su(3) Lie algebra using </span>
+<span class="sd">        the Cartan-Weyl (C-W) basis. In terms of the standard Gell-Mann matrices :math:`\lambda`,</span>
+<span class="sd">        the C-W basis is:</span>
+<span class="sd">    </span>
+<span class="sd">        .. math::</span>
+<span class="sd">            \begin{align*}</span>
+<span class="sd">            T^\pm &amp;= \frac{1}{2} (\lambda_1 \pm i\lambda_2) = (F_1 \pm iF_2)\\</span>
+<span class="sd">            T^z   &amp;= \frac{1}{2} \lambda_3 = F_3\\</span>
+<span class="sd">            V^\pm &amp;= \frac{1}{2} (\lambda_4 \pm i\lambda_5) = (F_4 \pm iF_5)\\</span>
+<span class="sd">            U^\pm &amp;= \frac{1}{2} (\lambda_6 \pm i\lambda_7) = (F_6 \pm iF_7)\\</span>
+<span class="sd">            Y     &amp;= \frac{1}{\sqrt{3}} \lambda_8 = \frac{2}{\sqrt{3}} F_8</span>
+<span class="sd">            \end{align*}</span>
+
+<span class="sd">        The quadratic Casimir operator of su(3) can be expressed in terms of the C-W basis, defined as follow.</span>
+
+<span class="sd">        .. math::</span>
+<span class="sd">            \begin{align*}</span>
+<span class="sd">            C_1 = \sum_{k}{F_k F_k} &amp;= \frac{1}{2} (T^+ T^- + T^- T^+ + V^+ V^- + V^- V^+ + U^+ U^- + U^- U^+) \\</span>
+<span class="sd">                                    &amp;+ T^z T^z + \frac{3}{4} Y Y</span>
+<span class="sd">            \end{align*}</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="n">p</span><span class="o">==</span><span class="mi">1</span> <span class="ow">and</span> <span class="n">q</span><span class="o">==</span><span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;su(3) irrep (&quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">p</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;,&quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">q</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;) not implemented.&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">p</span> <span class="o">=</span> <span class="n">p</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">q</span> <span class="o">=</span> <span class="n">q</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span> <span class="o">=</span> <span class="n">dtype</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="n">device</span>
+
+<div class="viewcode-block" id="SU3_DEFINING.I"><a class="viewcode-back" href="../../groups/su3.html#groups.su3.SU3_DEFINING.I">[docs]</a>    <span class="k">def</span> <span class="nf">I</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :return: Identity operator of irrep</span>
+<span class="sd">        :rtype: torch.tensor</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">get_op</span><span class="p">(</span><span class="s2">&quot;I&quot;</span><span class="p">,</span> <span class="n">pq</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">q</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SU3_DEFINING.TZ"><a class="viewcode-back" href="../../groups/su3.html#groups.su3.SU3_DEFINING.TZ">[docs]</a>    <span class="k">def</span> <span class="nf">TZ</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :return: :math:`T^z` operator of irrep</span>
+<span class="sd">        :rtype: torch.tensor</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">get_op</span><span class="p">(</span><span class="s2">&quot;tz&quot;</span><span class="p">,</span> <span class="n">pq</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">q</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SU3_DEFINING.Y"><a class="viewcode-back" href="../../groups/su3.html#groups.su3.SU3_DEFINING.Y">[docs]</a>    <span class="k">def</span> <span class="nf">Y</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :return: :math:`Y` operator of irrep</span>
+<span class="sd">        :rtype: torch.tensor</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">get_op</span><span class="p">(</span><span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="n">pq</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">q</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SU3_DEFINING.TP"><a class="viewcode-back" href="../../groups/su3.html#groups.su3.SU3_DEFINING.TP">[docs]</a>    <span class="k">def</span> <span class="nf">TP</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :return: :math:`T^+` operator of irrep</span>
+<span class="sd">        :rtype: torch.tensor</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">get_op</span><span class="p">(</span><span class="s2">&quot;tp&quot;</span><span class="p">,</span> <span class="n">pq</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">q</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SU3_DEFINING.TM"><a class="viewcode-back" href="../../groups/su3.html#groups.su3.SU3_DEFINING.TM">[docs]</a>    <span class="k">def</span> <span class="nf">TM</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :return: :math:`T^-` operator of irrep</span>
+<span class="sd">        :rtype: torch.tensor</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">get_op</span><span class="p">(</span><span class="s2">&quot;tm&quot;</span><span class="p">,</span> <span class="n">pq</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">q</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SU3_DEFINING.VP"><a class="viewcode-back" href="../../groups/su3.html#groups.su3.SU3_DEFINING.VP">[docs]</a>    <span class="k">def</span> <span class="nf">VP</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :return: :math:`V^+` operator of irrep</span>
+<span class="sd">        :rtype: torch.tensor</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">get_op</span><span class="p">(</span><span class="s2">&quot;vp&quot;</span><span class="p">,</span> <span class="n">pq</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">q</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SU3_DEFINING.VM"><a class="viewcode-back" href="../../groups/su3.html#groups.su3.SU3_DEFINING.VM">[docs]</a>    <span class="k">def</span> <span class="nf">VM</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :return: :math:`V^-` operator of irrep</span>
+<span class="sd">        :rtype: torch.tensor</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">get_op</span><span class="p">(</span><span class="s2">&quot;vm&quot;</span><span class="p">,</span> <span class="n">pq</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">q</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SU3_DEFINING.UP"><a class="viewcode-back" href="../../groups/su3.html#groups.su3.SU3_DEFINING.UP">[docs]</a>    <span class="k">def</span> <span class="nf">UP</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :return: :math:`U^+` operator of irrep</span>
+<span class="sd">        :rtype: torch.tensor</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">get_op</span><span class="p">(</span><span class="s2">&quot;up&quot;</span><span class="p">,</span> <span class="n">pq</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">q</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SU3_DEFINING.UM"><a class="viewcode-back" href="../../groups/su3.html#groups.su3.SU3_DEFINING.UM">[docs]</a>    <span class="k">def</span> <span class="nf">UM</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :return: :math:`U^-` operator of irrep</span>
+<span class="sd">        :rtype: torch.tensor</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">get_op</span><span class="p">(</span><span class="s2">&quot;um&quot;</span><span class="p">,</span> <span class="n">pq</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">q</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SU3_DEFINING.Cartan_Weyl"><a class="viewcode-back" href="../../groups/su3.html#groups.su3.SU3_DEFINING.Cartan_Weyl">[docs]</a>    <span class="k">def</span> <span class="nf">Cartan_Weyl</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :return: vector of generators forming Cartan-Weyl basis ordered</span>
+<span class="sd">                 as [T^+, T^-, T^z, V^+, V^-, U^+, U^-, Y].</span>
+<span class="sd">        :rtype: torch.tensor</span>
+
+<span class="sd">        Returns a rank-3 tensor with first index running over generators.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">J</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">J</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">TP</span><span class="p">()</span>
+        <span class="n">J</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">TM</span><span class="p">()</span>
+        <span class="n">J</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">TZ</span><span class="p">()</span>
+        <span class="n">J</span><span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">VP</span><span class="p">()</span>
+        <span class="n">J</span><span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">VM</span><span class="p">()</span>        
+        <span class="n">J</span><span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">UP</span><span class="p">()</span>
+        <span class="n">J</span><span class="p">[</span><span class="mi">6</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">UM</span><span class="p">()</span>
+        <span class="n">J</span><span class="p">[</span><span class="mi">7</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Y</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">J</span></div>
+
+<div class="viewcode-block" id="SU3_DEFINING.J_Gell_Mann"><a class="viewcode-back" href="../../groups/su3.html#groups.su3.SU3_DEFINING.J_Gell_Mann">[docs]</a>    <span class="k">def</span> <span class="nf">J_Gell_Mann</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :return: :math:`\vec{\lambda}` vector of Gell-Mann matrices</span>
+<span class="sd">        :rtype: torch.tensor</span>
+
+<span class="sd">        Returns a rank-3 tensor with first index running over generators.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">J</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">J</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">TP</span><span class="p">()</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">TM</span><span class="p">()</span>
+        <span class="n">J</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">TP</span><span class="p">()</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">TM</span><span class="p">())</span>
+        <span class="n">J</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">TZ</span><span class="p">()</span>
+        <span class="n">J</span><span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">VP</span><span class="p">()</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">VM</span><span class="p">()</span>
+        <span class="n">J</span><span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">VP</span><span class="p">()</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">VM</span><span class="p">())</span>
+        <span class="n">J</span><span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">UP</span><span class="p">()</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">UM</span><span class="p">()</span>
+        <span class="n">J</span><span class="p">[</span><span class="mi">6</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">UP</span><span class="p">()</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">UM</span><span class="p">())</span>
+        <span class="n">J</span><span class="p">[</span><span class="mi">7</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">Y</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">J</span></div>
+
+<div class="viewcode-block" id="SU3_DEFINING.C1"><a class="viewcode-back" href="../../groups/su3.html#groups.su3.SU3_DEFINING.C1">[docs]</a>    <span class="k">def</span> <span class="nf">C1</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :return: The quadratic Casimir of su(3) as rank-4 for tensor</span>
+<span class="sd">        :rtype: torch.tensor</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">expr_kron</span> <span class="o">=</span> <span class="s1">&#39;ij,ab-&gt;iajb&#39;</span>
+        <span class="c1"># spin-spin interaction \sum_k{\vec{F}_{1,k}\vec{S}_{2,k}} between F-spins on sites 1 and 2</span>
+        <span class="n">C1</span> <span class="o">=</span> <span class="n">einsum</span><span class="p">(</span><span class="n">expr_kron</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">TZ</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">TZ</span><span class="p">())</span> <span class="o">+</span> <span class="mf">0.75</span> <span class="o">*</span> <span class="n">einsum</span><span class="p">(</span><span class="n">expr_kron</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Y</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">Y</span><span class="p">())</span>\
+            <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">einsum</span><span class="p">(</span><span class="n">expr_kron</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">TP</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">TM</span><span class="p">())</span> <span class="o">+</span> <span class="n">einsum</span><span class="p">(</span><span class="n">expr_kron</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">TM</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">TP</span><span class="p">())</span>
+                     <span class="o">+</span> <span class="n">einsum</span><span class="p">(</span><span class="n">expr_kron</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">VP</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">VM</span><span class="p">())</span> <span class="o">+</span> <span class="n">einsum</span><span class="p">(</span><span class="n">expr_kron</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">VM</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">VP</span><span class="p">())</span>
+                     <span class="o">+</span> <span class="n">einsum</span><span class="p">(</span><span class="n">expr_kron</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">UP</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">UM</span><span class="p">())</span> <span class="o">+</span> <span class="n">einsum</span><span class="p">(</span><span class="n">expr_kron</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">UM</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">UP</span><span class="p">()))</span>
+        <span class="k">return</span> <span class="n">C1</span></div>
+
+<div class="viewcode-block" id="SU3_DEFINING.C2"><a class="viewcode-back" href="../../groups/su3.html#groups.su3.SU3_DEFINING.C2">[docs]</a>    <span class="k">def</span> <span class="nf">C2</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :return: The cubic Casimir of su(3) as rank-6 for tensor</span>
+<span class="sd">        :rtype: torch.tensor</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">expr_kron</span> <span class="o">=</span> <span class="s1">&#39;ia,jb,kc-&gt;ijkabc&#39;</span>
+        <span class="n">Fs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="n">Fs</span><span class="p">[</span><span class="s2">&quot;f1&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">TP</span><span class="p">()</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">TM</span><span class="p">())</span>
+        <span class="n">Fs</span><span class="p">[</span><span class="s2">&quot;f2&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span> <span class="mf">0.5</span><span class="n">j</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">TP</span><span class="p">()</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">TM</span><span class="p">())</span>
+        <span class="n">Fs</span><span class="p">[</span><span class="s2">&quot;f3&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">TZ</span><span class="p">()</span>
+        <span class="n">Fs</span><span class="p">[</span><span class="s2">&quot;f4&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">VP</span><span class="p">()</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">VM</span><span class="p">())</span>
+        <span class="n">Fs</span><span class="p">[</span><span class="s2">&quot;f5&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span> <span class="mf">0.5</span><span class="n">j</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">VP</span><span class="p">()</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">VM</span><span class="p">())</span>
+        <span class="n">Fs</span><span class="p">[</span><span class="s2">&quot;f6&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">UP</span><span class="p">()</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">UM</span><span class="p">())</span>
+        <span class="n">Fs</span><span class="p">[</span><span class="s2">&quot;f7&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span> <span class="mf">0.5</span><span class="n">j</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">UP</span><span class="p">()</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">UM</span><span class="p">())</span>
+        <span class="n">Fs</span><span class="p">[</span><span class="s2">&quot;f8&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">3.0</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">Y</span><span class="p">()</span>
+        <span class="n">C2</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">complex128</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;cpu&#39;</span><span class="p">)</span>
+        <span class="c1"># C2 = None</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">8</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">8</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">8</span><span class="p">):</span>
+                    <span class="n">d</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">trace</span><span class="p">((</span><span class="n">Fs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;f</span><span class="si">{</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span><span class="nd">@Fs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;f</span><span class="si">{</span><span class="n">j</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span><span class="o">+</span><span class="n">Fs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;f</span><span class="si">{</span><span class="n">j</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span><span class="nd">@Fs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;f</span><span class="si">{</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">])</span><span class="nd">@Fs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;f</span><span class="si">{</span><span class="n">k</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">])</span>
+                    <span class="n">C2</span> <span class="o">+=</span> <span class="n">d</span> <span class="o">*</span> <span class="n">einsum</span><span class="p">(</span><span class="n">expr_kron</span><span class="p">,</span> <span class="n">Fs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;f</span><span class="si">{</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">],</span> <span class="n">Fs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;f</span><span class="si">{</span><span class="n">j</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">],</span> <span class="n">Fs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;f</span><span class="si">{</span><span class="n">k</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">])</span>
+
+        <span class="k">return</span> <span class="n">C2</span></div></div>
+
+
+<span class="k">def</span> <span class="nf">get_op</span><span class="p">(</span><span class="n">op</span><span class="p">,</span> <span class="n">pq</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">complex128</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;cpu&#39;</span><span class="p">,</span> <span class="n">dbg</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="k">assert</span> <span class="n">pq</span><span class="o">==</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">),</span><span class="s2">&quot;Unsupported irrep&quot;</span>
+    <span class="k">if</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;I&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">dbg</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;&gt;&gt;&gt;&gt;&gt; Constructing 1sO: Id &lt;&lt;&lt;&lt;&lt;&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;tz&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">dbg</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;&gt;&gt;&gt;&gt;&gt; Constructing 1sO: T^z &lt;&lt;&lt;&lt;&lt;&quot;</span><span class="p">)</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">res</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.5</span>
+        <span class="n">res</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.5</span>
+        <span class="k">return</span> <span class="n">res</span>
+    <span class="k">elif</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;y&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">dbg</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;&gt;&gt;&gt;&gt;&gt; Constructing 1sO: Y &lt;&lt;&lt;&lt;&lt;&quot;</span><span class="p">)</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">res</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="mf">3.0</span>
+        <span class="n">res</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="mf">3.0</span>
+        <span class="n">res</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span> <span class="mf">2.0</span> <span class="o">/</span> <span class="mf">3.0</span>
+        <span class="k">return</span> <span class="n">res</span>
+    <span class="k">elif</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;tp&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">dbg</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;&gt;&gt;&gt;&gt;&gt; Constructing 1sO: T^+ &lt;&lt;&lt;&lt;&lt;&quot;</span><span class="p">)</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">res</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>
+        <span class="k">return</span> <span class="n">res</span>
+    <span class="k">elif</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;tm&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">dbg</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;&gt;&gt;&gt;&gt;&gt; Constructing 1sO: T^- &lt;&lt;&lt;&lt;&lt;&quot;</span><span class="p">)</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">res</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>
+        <span class="k">return</span> <span class="n">res</span>
+    <span class="k">elif</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;vp&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">dbg</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;&gt;&gt;&gt;&gt;&gt; Constructing 1sO: V^+ &lt;&lt;&lt;&lt;&lt;&quot;</span><span class="p">)</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">res</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>
+        <span class="k">return</span> <span class="n">res</span>
+    <span class="k">elif</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;vm&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">dbg</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;&gt;&gt;&gt;&gt;&gt; Constructing 1sO: V^- &lt;&lt;&lt;&lt;&lt;&quot;</span><span class="p">)</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">res</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>
+        <span class="k">return</span> <span class="n">res</span>
+    <span class="k">elif</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;up&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">dbg</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;&gt;&gt;&gt;&gt;&gt; Constructing 1sO: U^+ &lt;&lt;&lt;&lt;&lt;&quot;</span><span class="p">)</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">res</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>
+        <span class="k">return</span> <span class="n">res</span>
+    <span class="k">elif</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;um&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">dbg</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;&gt;&gt;&gt;&gt;&gt; Constructing 1sO: U^- &lt;&lt;&lt;&lt;&lt;&quot;</span><span class="p">)</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">res</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>
+        <span class="k">return</span> <span class="n">res</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Unsupported operator requested: &quot;</span> <span class="o">+</span> <span class="n">op</span><span class="p">)</span>
+
+<span class="c1">#TODO: CG series of su(3), i.e., the expansion of the tensor product of two irrep into direct sum of irreps</span>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Juraj Hasik, Glen B. Mbeng
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

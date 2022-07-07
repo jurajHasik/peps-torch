@@ -1,0 +1,1162 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>ctm.generic.rdm &mdash; peps-torch alpha documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> peps-torch
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../ipeps.html">iPEPS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps.html">Generic iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_kagome.html">Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_c4v.html">1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_lc_1site_pg.html">1-site iPEPS from lin. combination</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipess_kagome.html">Generic Kagome iPESS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipess_kagome_pg.html">Kagome iPESS with point groups</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipess_kagome_pg_lc.html">Kagome iPESS from lin. combination</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../ipeps.html#abelian-symmetric-ipeps">Abelian-symmetric iPEPS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_abelian.html">Generic  abelian-symmetric iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_abelian.html#generic-abelian-symmetric-ipeps-with-weights">Generic abelian-symmetric iPEPS with weights</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_kagome_abelian.html">Abelian-symmetric Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_abelian_c4v.html">Abelian-symmetric 1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipess_kagome_abelian.html">Abelian-symmetric generic Kagome iPESS</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../envs.html">Environments</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../envs/generic.html">Generic iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/env.html">Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/rdm.html#module-ctm.pess_kagome.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/corrf.html">Correlation functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/transfer_matrix.html">Transfer Matrices</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../envs/generic_abelian.html">Abelian-symmetric generic iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic_abelian/env_abelian.html">Abelian-symmetric environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic_abelian/ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic_abelian/ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic_abelian/ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic_abelian/rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic_abelian/rdm.html#module-ctm.pess_kagome_abelian.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../envs/one_site_c4v.html">1-site C4v iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v/env_c4v.html">1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v/ctmrg_c4v.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v/rdm_c4v.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v/transfer_matrix.html">Transfer Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v/corrf_c4v.html">Correlation functions</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../envs/one_site_c4v_abelian.html">Abelian-symmetric 1-site C4v iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v_abelian/env_c4v_abelian.html">Abelian-symmetric 1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v_abelian/ctmrg_c4v_abelian.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v_abelian/rdm_c4v_abelian.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v_abelian/corrf_c4v_abelian.html">Correlation functions</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../optim.html">Optimization</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../optim/drivers.html">Optimization drivers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../optim/drivers/ad_optim.html">ad_optim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../optim/drivers/ad_optim_lbfgs_mod.html">ad_optim_lbfgs_mod</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../optim/drivers/ad_optim_sgd_mod.html">ad_optim_sgd_mod</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../optim/optimizers.html">Custom optimizers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../optim/optimizers/lbfgs_modified.html">Extended LBFGS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../optim/optimizers/sgd_modified.html">SGD with linesearch</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../config.html">Configuration</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../config.html#main">Main</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../config.html#global">Global</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../config.html#corner-transfer-matrix-algorithm">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../config.html#optimization">Optimization</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../models.html">Models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/akltS2.html">Spin S=2 AKLT Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/akltS2.html#module-models.akltS2">2x1 and 2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/akltS2.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/coupledLadders.html">Coupled Ladders</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/coupledLadders.html#dense-pytorch">Dense (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/coupledLadders.html#dense-yast">Dense (YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/coupledLadders.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/ising.html">Transverse Field Ising Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/ising.html#x1-unit-cell">1x1 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/ising.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/j1j2.html">J1-J2-J3 and J1-J2-lambda Heisenberg Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/j1j2.html#from-2x1-to-4x2-unit-cell-pytorch">from 2x1 to 4x2 unit cell (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/j1j2.html#from-2x1-to-4x2-unit-cell-dense-yast">from 2x1 to 4x2 unit cell (dense YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/j1j2.html#x1-c4v-pytorch">1x1 C4v (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/j1j2.html#x1-c4v-dense-yast">1x1 C4v (dense YAST)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/jq.html">J-Q Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/jq.html#module-models.jq">2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/jq.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/spin_half_kagome.html">SU(2) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/spin_half_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/spin_half_kagome.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/su3_kagome.html">SU(3) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/su3_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/su3_kagome.html#with-explict-u-1-xu-1-symmetry">With explict U(1)xU(1) symmetry</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../groups.html">Groups</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../groups/pg.html">Point group: square lattice</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../groups/su2.html">SU(2)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../groups/su2.html#module-groups.su2_abelian">SU(2) with explicit U(1) structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../groups/su3.html">SU(3)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../groups/su3.html#su-3-with-explicit-u-1-xu-1-structure">SU(3) with explicit U(1)xU(1) structure</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../linalg.html">Linear Algebra</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../linalg/custom_eig.html">Truncated eigendecomposition</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../linalg/custom_svd.html">Truncated SVD</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../linalg/spec_decomp.html">Spectral decompositions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../linalg/spec_decomp.html#module-linalg.svd_gesdd">SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../linalg/spec_decomp.html#module-linalg.svd_arnoldi">Partial SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../linalg/spec_decomp.html#module-linalg.svd_rsvd">Randomized SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../linalg/spec_decomp.html#module-linalg.eig_sym">Symmetric Eigendecomposition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../linalg/spec_decomp.html#module-linalg.eig_arnoldi">Partial diagonalization</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">peps-torch</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>ctm.generic.rdm</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for ctm.generic.rdm</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">from</span> <span class="nn">config</span> <span class="kn">import</span> <span class="n">_torch_version_check</span>
+<span class="kn">from</span> <span class="nn">ctm.generic.env</span> <span class="kn">import</span> <span class="n">ENV</span>
+<span class="kn">from</span> <span class="nn">tn_interface</span> <span class="kn">import</span> <span class="n">contract</span><span class="p">,</span> <span class="n">einsum</span>
+<span class="kn">from</span> <span class="nn">tn_interface</span> <span class="kn">import</span> <span class="n">contiguous</span><span class="p">,</span> <span class="n">view</span><span class="p">,</span> <span class="n">permute</span>
+<span class="kn">from</span> <span class="nn">tn_interface</span> <span class="kn">import</span> <span class="n">conj</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">_cast_to_real</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">fail_on_check</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">warn_on_check</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">imag_eps</span><span class="o">=</span><span class="mf">1.0e-10</span><span class="p">,</span>\
+    <span class="n">who</span><span class="o">=</span><span class="s2">&quot;unknown&quot;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">t</span><span class="o">.</span><span class="n">is_complex</span><span class="p">():</span>
+        <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">imag</span><span class="p">)</span><span class="o">/</span><span class="nb">abs</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">real</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">imag_eps</span> <span class="ow">and</span> <span class="nb">abs</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">imag</span><span class="p">)</span><span class="o">&gt;</span><span class="n">imag_eps</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">warn_on_check</span><span class="p">:</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unexpected imaginary part &quot;</span><span class="o">+</span><span class="n">who</span><span class="o">+</span><span class="s2">&quot; &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">fail_on_check</span><span class="p">:</span> 
+                <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;Unexpected imaginary part &quot;</span><span class="o">+</span><span class="n">who</span><span class="o">+</span><span class="s2">&quot; &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">t</span><span class="o">.</span><span class="n">real</span>
+    <span class="k">return</span> <span class="n">t</span>
+
+
+<span class="k">def</span> <span class="nf">_sym_pos_def_matrix</span><span class="p">(</span><span class="n">rdm</span><span class="p">,</span> <span class="n">sym_pos_def</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">who</span><span class="o">=</span><span class="s2">&quot;unknown&quot;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="n">rdm_asym</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">rdm</span> <span class="o">-</span> <span class="n">rdm</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">t</span><span class="p">())</span>
+    <span class="n">rdm</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">rdm</span> <span class="o">+</span> <span class="n">rdm</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">t</span><span class="p">())</span>
+    <span class="k">if</span> <span class="n">verbosity</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">who</span><span class="si">}</span><span class="s2"> norm(rdm_sym) </span><span class="si">{</span><span class="n">rdm</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span><span class="si">}</span><span class="s2"> norm(rdm_asym) </span><span class="si">{</span><span class="n">rdm_asym</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">sym_pos_def</span><span class="p">:</span>
+        <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">_torch_version_check</span><span class="p">(</span><span class="s2">&quot;1.8.1&quot;</span><span class="p">):</span>
+                <span class="n">D</span><span class="p">,</span> <span class="n">U</span><span class="o">=</span>  <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">eigh</span><span class="p">(</span><span class="n">rdm</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">D</span><span class="p">,</span> <span class="n">U</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">symeig</span><span class="p">(</span><span class="n">rdm</span><span class="p">,</span> <span class="n">eigenvectors</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">D</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">who</span><span class="si">}</span><span class="s2"> max(diag(rdm)) </span><span class="si">{</span><span class="n">D</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="si">}</span><span class="s2"> min(diag(rdm)) </span><span class="si">{</span><span class="n">D</span><span class="o">.</span><span class="n">min</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">D</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">clamp</span><span class="p">(</span><span class="n">D</span><span class="p">,</span> <span class="nb">min</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+                <span class="n">rdm_posdef</span> <span class="o">=</span> <span class="n">U</span> <span class="o">@</span> <span class="n">torch</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">D</span><span class="p">)</span> <span class="o">@</span> <span class="n">U</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">t</span><span class="p">()</span>
+                <span class="n">rdm</span><span class="o">.</span><span class="n">copy_</span><span class="p">(</span><span class="n">rdm_posdef</span><span class="p">)</span>
+    <span class="n">norm</span><span class="o">=</span> <span class="n">_cast_to_real</span><span class="p">(</span><span class="n">rdm</span><span class="o">.</span><span class="n">diagonal</span><span class="p">()</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span><span class="n">who</span><span class="o">=</span><span class="n">who</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="n">rdm</span> <span class="o">=</span> <span class="n">rdm</span> <span class="o">/</span> <span class="n">norm</span>
+    <span class="k">return</span> <span class="n">rdm</span>
+
+
+<span class="k">def</span> <span class="nf">_sym_pos_def_rdm</span><span class="p">(</span><span class="n">rdm</span><span class="p">,</span> <span class="n">sym_pos_def</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">who</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>  <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">rdm</span><span class="o">.</span><span class="n">size</span><span class="p">())</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;invalid rank of RDM&quot;</span>
+    <span class="n">nsites</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">rdm</span><span class="o">.</span><span class="n">size</span><span class="p">())</span> <span class="o">//</span> <span class="mi">2</span>
+
+    <span class="n">orig_shape</span> <span class="o">=</span> <span class="n">rdm</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+    <span class="n">rdm</span> <span class="o">=</span> <span class="n">rdm</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">as_tensor</span><span class="p">(</span><span class="n">rdm</span><span class="o">.</span><span class="n">size</span><span class="p">())[:</span><span class="n">nsites</span><span class="p">]),</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">rdm</span> <span class="o">=</span> <span class="n">_sym_pos_def_matrix</span><span class="p">(</span><span class="n">rdm</span><span class="p">,</span> <span class="n">sym_pos_def</span><span class="o">=</span><span class="n">sym_pos_def</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="n">verbosity</span><span class="p">,</span> <span class="n">who</span><span class="o">=</span><span class="n">who</span><span class="p">)</span>
+    <span class="n">rdm</span> <span class="o">=</span> <span class="n">rdm</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">orig_shape</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">rdm</span>
+
+
+<div class="viewcode-block" id="rdm1x1"><a class="viewcode-back" href="../../../envs/generic/rdm.html#ctm.generic.rdm.rdm1x1">[docs]</a><span class="k">def</span> <span class="nf">rdm1x1</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">operator</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">sym_pos_def</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">force_cpu</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    :param coord: vertex (x,y) for which reduced density matrix is constructed</span>
+<span class="sd">    :param state: underlying wavefunction</span>
+<span class="sd">    :param env: environment corresponding to ``state``</span>
+<span class="sd">    :param state: 1-site operator to contract with the two physical indices of the rdm</span>
+<span class="sd">    :param verbosity: logging verbosity</span>
+<span class="sd">    :type coord: tuple(int,int)</span>
+<span class="sd">    :type state: IPEPS</span>
+<span class="sd">    :type env: ENV</span>
+<span class="sd">    :type operator: torch.tensor</span>
+<span class="sd">    :type verbosity: int</span>
+<span class="sd">    :return: 1-site reduced density matrix with indices :math:`s;s&#39;`. If an operator was provided,</span>
+<span class="sd">             returns the expectation value of this operator (not normalized by the norm of the wavefunction).</span>
+<span class="sd">    :rtype: torch.tensor</span>
+
+<span class="sd">    Computes 1-site reduced density matrix :math:`\rho_{1x1}` centered on vertex ``coord`` by</span>
+<span class="sd">    contracting the following tensor network::</span>
+
+<span class="sd">        C--T-----C</span>
+<span class="sd">        |  |     |</span>
+<span class="sd">        T--A^+A--T</span>
+<span class="sd">        |  |     |</span>
+<span class="sd">        C--T-----C</span>
+
+<span class="sd">    If no operator was provided, the physical indices `s` and `s&#39;` of on-site tensor :math:`A`</span>
+<span class="sd">    at vertex ``coord`` and it&#39;s hermitian conjugate :math:`A^\dagger` are left uncontracted.</span>
+<span class="sd">    Else, they are contracted with the operator.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">who</span> <span class="o">=</span> <span class="s2">&quot;rdm1x1&quot;</span>
+    <span class="c1"># C(-1,-1)--1-&gt;0</span>
+    <span class="c1"># 0</span>
+    <span class="c1"># 0</span>
+    <span class="c1"># T(-1,0)--2</span>
+    <span class="c1"># 1</span>
+    <span class="k">if</span> <span class="n">force_cpu</span><span class="p">:</span>
+        <span class="n">C</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">coord</span><span class="p">,</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))]</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span>
+        <span class="n">T</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">coord</span><span class="p">,</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">))]</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">C</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">coord</span><span class="p">,</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))]</span>
+        <span class="n">T</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">coord</span><span class="p">,</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">))]</span>
+    <span class="n">rdm</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C</span><span class="p">,</span> <span class="n">T</span><span class="p">,</span> <span class="p">([</span><span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+    <span class="k">if</span> <span class="n">verbosity</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;rdm=CT &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">rdm</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+
+    <span class="c1"># C(-1,-1)--0</span>
+    <span class="c1"># |</span>
+    <span class="c1"># T(-1,0)--2-&gt;1</span>
+    <span class="c1"># 1</span>
+    <span class="c1"># 0</span>
+    <span class="c1"># C(-1,1)--1-&gt;2</span>
+    <span class="k">if</span> <span class="n">force_cpu</span><span class="p">:</span>
+        <span class="n">C</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">coord</span><span class="p">,</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))]</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">C</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">coord</span><span class="p">,</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))]</span>
+    <span class="n">rdm</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">rdm</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="p">([</span><span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+    <span class="k">if</span> <span class="n">verbosity</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;rdm=CTC &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">rdm</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+
+    <span class="c1"># C(-1,-1)--0</span>
+    <span class="c1"># |</span>
+    <span class="c1"># T(-1,0)--1</span>
+    <span class="c1"># |             0-&gt;2</span>
+    <span class="c1"># C(-1,1)--2 1--T(0,1)--2-&gt;3</span>
+    <span class="k">if</span> <span class="n">force_cpu</span><span class="p">:</span>
+        <span class="n">T</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">coord</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">))]</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">T</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">coord</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">))]</span>
+    <span class="n">rdm</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">rdm</span><span class="p">,</span> <span class="n">T</span><span class="p">,</span> <span class="p">([</span><span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+    <span class="k">if</span> <span class="n">verbosity</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;rdm=CTCT &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">rdm</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+
+    <span class="c1"># TODO - more efficent contraction with uncontracted-double-layer on-site tensor</span>
+    <span class="c1">#       Possibly reshape indices 1,2 of rdm, which are to be contracted with</span>
+    <span class="c1">#       on-site tensor and contract bra,ket in two steps instead of creating</span>
+    <span class="c1">#       double layer tensor</span>
+    <span class="c1">#    /</span>
+    <span class="c1"># --A--</span>
+    <span class="c1">#  /|s</span>
+    <span class="c1">#</span>
+    <span class="c1"># s&#39;|/</span>
+    <span class="c1"># --A--</span>
+    <span class="c1">#  /</span>
+    <span class="c1">#</span>
+    <span class="k">if</span> <span class="n">force_cpu</span><span class="p">:</span>
+        <span class="n">a_1layer</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">a_1layer</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span>
+    <span class="n">dimsA</span> <span class="o">=</span> <span class="n">a_1layer</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">operator</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">a</span> <span class="o">=</span> <span class="n">contiguous</span><span class="p">(</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;mefgh,nabcd-&gt;eafbgchdmn&#39;</span><span class="p">,</span> <span class="n">a_1layer</span><span class="p">,</span> <span class="n">conj</span><span class="p">(</span><span class="n">a_1layer</span><span class="p">)))</span>
+        <span class="n">a</span> <span class="o">=</span> <span class="n">view</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="p">(</span><span class="n">dimsA</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">a</span> <span class="o">=</span> <span class="n">contiguous</span><span class="p">(</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;mefgh,nm,nabcd-&gt;eafbgchd&#39;</span><span class="p">,</span> <span class="n">a_1layer</span><span class="p">,</span> <span class="n">operator</span><span class="p">,</span> <span class="n">conj</span><span class="p">(</span><span class="n">a_1layer</span><span class="p">)))</span>
+        <span class="n">a</span> <span class="o">=</span> <span class="n">view</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="p">(</span><span class="n">dimsA</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))</span>
+
+    <span class="c1"># C(-1,-1)--0</span>
+    <span class="c1"># |</span>
+    <span class="c1"># |             0-&gt;2</span>
+    <span class="c1"># T(-1,0)--1 1--a--3</span>
+    <span class="c1"># |             2[\45(s,s&#39;)]</span>
+    <span class="c1"># |             2</span>
+    <span class="c1"># C(-1,1)-------T(0,1)--3-&gt;1</span>
+    <span class="n">rdm</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">rdm</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]))</span>
+    <span class="k">if</span> <span class="n">verbosity</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;rdm=CTCTa &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">rdm</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+
+    <span class="c1"># C(-1,-1)--0 0--T(0,-1)--2-&gt;0</span>
+    <span class="c1"># |              1</span>
+    <span class="c1"># |              2</span>
+    <span class="c1"># T(-1,0)--------a--3-&gt;2</span>
+    <span class="c1"># |              |[\45-&gt;34(s,s&#39;)]</span>
+    <span class="c1"># |              |</span>
+    <span class="c1"># C(-1,1)--------T(0,1)--1</span>
+    <span class="k">if</span> <span class="n">force_cpu</span><span class="p">:</span>
+        <span class="n">T</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">coord</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))]</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">T</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">coord</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))]</span>
+    <span class="n">rdm</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">T</span><span class="p">,</span> <span class="n">rdm</span><span class="p">,</span> <span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">]))</span>
+    <span class="k">if</span> <span class="n">verbosity</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;rdm=CTCTaT &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">rdm</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+
+    <span class="c1"># C(-1,-1)--T(0,-1)--0 0--C(1,-1)</span>
+    <span class="c1"># |         |             1-&gt;0</span>
+    <span class="c1"># |         |</span>
+    <span class="c1"># T(-1,0)---a--2</span>
+    <span class="c1"># |         |[\34(s,s&#39;)]</span>
+    <span class="c1"># |         |</span>
+    <span class="c1"># C(-1,1)---T(0,1)--0-&gt;1</span>
+    <span class="k">if</span> <span class="n">force_cpu</span><span class="p">:</span>
+        <span class="n">C</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">coord</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))]</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">C</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">coord</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))]</span>
+    <span class="n">rdm</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C</span><span class="p">,</span> <span class="n">rdm</span><span class="p">,</span> <span class="p">([</span><span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+    <span class="k">if</span> <span class="n">verbosity</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;rdm=CTCTaTC &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">rdm</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+
+    <span class="c1"># C(-1,-1)--T(0,-1)-----C(1,-1)</span>
+    <span class="c1"># |         |               0</span>
+    <span class="c1"># |         |               0</span>
+    <span class="c1"># T(-1,0)---a--2 1------T(1,0)</span>
+    <span class="c1"># |         |\34-&gt;23(s,s&#39;)  2-&gt;0</span>
+    <span class="c1"># |         |</span>
+    <span class="c1"># C(-1,1)---T(0,1)--1</span>
+    <span class="k">if</span> <span class="n">force_cpu</span><span class="p">:</span>
+        <span class="n">T</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">coord</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">))]</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">T</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">coord</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">))]</span>
+    <span class="n">rdm</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">T</span><span class="p">,</span> <span class="n">rdm</span><span class="p">,</span> <span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">]))</span>
+
+    <span class="k">if</span> <span class="n">verbosity</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;rdm=CTCTaTCT &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">rdm</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+    <span class="c1"># C(-1,-1)--T(0,-1)--------C(1,-1)</span>
+    <span class="c1"># |         |                |</span>
+    <span class="c1"># |         |                |</span>
+    <span class="c1"># T(-1,0)---a--------------T(1,0)</span>
+    <span class="c1"># |         |\23-&gt;12(s,s&#39;)   0</span>
+    <span class="c1"># |         |                0</span>
+    <span class="c1"># C(-1,1)---T(0,1)--1 1----C(1,1)</span>
+    <span class="k">if</span> <span class="n">force_cpu</span><span class="p">:</span>
+        <span class="n">C</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">coord</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))]</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">C</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">coord</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))]</span>
+    <span class="n">rdm</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">rdm</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]))</span>
+    <span class="k">if</span> <span class="n">verbosity</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;rdm=CTCTaTCTC &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">rdm</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+
+    <span class="c1"># symmetrize and normalize</span>
+    <span class="k">if</span> <span class="n">operator</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">rdm</span> <span class="o">=</span> <span class="n">_sym_pos_def_rdm</span><span class="p">(</span><span class="n">rdm</span><span class="p">,</span> <span class="n">sym_pos_def</span><span class="o">=</span><span class="n">sym_pos_def</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="n">verbosity</span><span class="p">,</span> <span class="n">who</span><span class="o">=</span><span class="n">who</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">rdm</span></div>
+
+
+<div class="viewcode-block" id="rdm2x1"><a class="viewcode-back" href="../../../envs/generic/rdm.html#ctm.generic.rdm.rdm2x1">[docs]</a><span class="k">def</span> <span class="nf">rdm2x1</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">sym_pos_def</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    :param coord: vertex (x,y) specifies position of 2x1 subsystem</span>
+<span class="sd">    :param state: underlying wavefunction</span>
+<span class="sd">    :param env: environment corresponding to ``state``</span>
+<span class="sd">    :param verbosity: logging verbosity</span>
+<span class="sd">    :type coord: tuple(int,int)</span>
+<span class="sd">    :type state: IPEPS</span>
+<span class="sd">    :type env: ENV</span>
+<span class="sd">    :type verbosity: int</span>
+<span class="sd">    :return: 2-site reduced density matrix with indices :math:`s_0s_1;s&#39;_0s&#39;_1`</span>
+<span class="sd">    :rtype: torch.tensor</span>
+
+<span class="sd">    Computes 2-site reduced density matrix :math:`\rho_{2x1}` of a horizontal</span>
+<span class="sd">    2x1 subsystem using following strategy:</span>
+
+<span class="sd">        1. compute four individual corners</span>
+<span class="sd">        2. construct right and left half of the network</span>
+<span class="sd">        3. contract right and left halt to obtain final reduced density matrix</span>
+
+<span class="sd">    ::</span>
+
+<span class="sd">        C--T------------T------------------C = C2x2_LU(coord)--C2x2(coord+(1,0))</span>
+<span class="sd">        |  |            |                  |   |               |</span>
+<span class="sd">        T--A^+A(coord)--A^+A(coord+(1,0))--T   C2x1_LD(coord)--C2x1(coord+(1,0))</span>
+<span class="sd">        |  |            |                  |</span>
+<span class="sd">        C--T------------T------------------C</span>
+
+<span class="sd">    The physical indices `s` and `s&#39;` of on-sites tensors :math:`A` (and :math:`A^\dagger`)</span>
+<span class="sd">    at vertices ``coord``, ``coord+(1,0)`` are left uncontracted</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">who</span> <span class="o">=</span> <span class="s2">&quot;rdm2x1&quot;</span>
+    <span class="c1"># ----- building C2x2_LU ----------------------------------------------------</span>
+    <span class="n">C</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">),</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))]</span>
+    <span class="n">T1</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">),</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))]</span>
+    <span class="n">T2</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">),</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">))]</span>
+    <span class="n">dimsA</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;mefgh,nabcd-&gt;eafbgchdmn&#39;</span><span class="p">,</span> <span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">coord</span><span class="p">),</span> <span class="n">conj</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">coord</span><span class="p">)))</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">view</span><span class="p">(</span><span class="n">contiguous</span><span class="p">(</span><span class="n">a</span><span class="p">),</span> \
+             <span class="p">(</span><span class="n">dimsA</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+
+    <span class="c1"># C--10--T1--2</span>
+    <span class="c1"># 0      1</span>
+    <span class="n">C2x2_LU</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C</span><span class="p">,</span> <span class="n">T1</span><span class="p">,</span> <span class="p">([</span><span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+
+    <span class="c1"># C------T1--2-&gt;1</span>
+    <span class="c1"># 0   1-&gt;0</span>
+    <span class="c1"># 0</span>
+    <span class="c1"># T2--2-&gt;3</span>
+    <span class="c1"># 1-&gt;2</span>
+    <span class="n">C2x2_LU</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C2x2_LU</span><span class="p">,</span> <span class="n">T2</span><span class="p">,</span> <span class="p">([</span><span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+
+    <span class="c1"># C-------T1--1-&gt;0</span>
+    <span class="c1"># |       0</span>
+    <span class="c1"># |       0</span>
+    <span class="c1"># T2--3 1 a--3</span>
+    <span class="c1"># 2-&gt;1    2\45</span>
+    <span class="n">C2x2_LU</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C2x2_LU</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]))</span>
+
+    <span class="c1"># permute 012345-&gt;120345</span>
+    <span class="c1"># reshape (12)(03)45-&gt;0123</span>
+    <span class="c1"># C2x2--1</span>
+    <span class="c1"># |\23</span>
+    <span class="c1"># 0</span>
+    <span class="n">C2x2_LU</span> <span class="o">=</span> <span class="n">permute</span><span class="p">(</span><span class="n">C2x2_LU</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+    <span class="n">C2x2_LU</span> <span class="o">=</span> <span class="n">view</span><span class="p">(</span><span class="n">contiguous</span><span class="p">(</span><span class="n">C2x2_LU</span><span class="p">),</span> \
+                   <span class="p">(</span><span class="n">T2</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">a</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="n">T1</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">a</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">3</span><span class="p">),</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+    <span class="k">if</span> <span class="n">verbosity</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;C2X2 LU &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;-&gt;&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">))</span> <span class="o">+</span> <span class="s2">&quot; (-1,-1): &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">C2x2_LU</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+
+    <span class="c1"># ----- building C2x1_LD ----------------------------------------------------</span>
+    <span class="n">C</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">),</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))]</span>
+    <span class="n">T2</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">),</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">))]</span>
+
+    <span class="c1"># 0    0-&gt;1</span>
+    <span class="c1"># C--1 1--T2--2</span>
+    <span class="n">C2x1_LD</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C</span><span class="p">,</span> <span class="n">T2</span><span class="p">,</span> <span class="p">([</span><span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+
+    <span class="c1"># reshape (01)2-&gt;(0)1</span>
+    <span class="c1"># 0</span>
+    <span class="c1"># |</span>
+    <span class="c1"># C2x1--1</span>
+    <span class="n">C2x1_LD</span> <span class="o">=</span> <span class="n">view</span><span class="p">(</span><span class="n">contiguous</span><span class="p">(</span><span class="n">C2x1_LD</span><span class="p">),</span> <span class="p">(</span><span class="n">C</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">*</span> <span class="n">T2</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">T2</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">2</span><span class="p">)))</span>
+    <span class="k">if</span> <span class="n">verbosity</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;C2X1 LD &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;-&gt;&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">))</span> <span class="o">+</span> <span class="s2">&quot; (-1,1): &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">C2x1_LD</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+
+    <span class="c1"># ----- build left part C2x2_LU--C2x1_LD ------------------------------------</span>
+    <span class="c1"># C2x2_LU--1</span>
+    <span class="c1"># |\23</span>
+    <span class="c1"># 0</span>
+    <span class="c1"># 0</span>
+    <span class="c1"># C2x1_LD--1-&gt;0</span>
+    <span class="c1"># TODO is it worthy(performance-wise) to instead overwrite one of C2x2_LU,C2x2_RU ?</span>
+    <span class="n">left_half</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C2x1_LD</span><span class="p">,</span> <span class="n">C2x2_LU</span><span class="p">,</span> <span class="p">([</span><span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+
+    <span class="c1"># ----- building C2x2_RU ----------------------------------------------------</span>
+    <span class="n">vec</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">shitf_coord</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">((</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">vec</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">vec</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+    <span class="n">C</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">shitf_coord</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))]</span>
+    <span class="n">T1</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">shitf_coord</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">))]</span>
+    <span class="n">T2</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">shitf_coord</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))]</span>
+    <span class="n">dimsA</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">shitf_coord</span><span class="p">)</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;mefgh,nabcd-&gt;eafbgchdmn&#39;</span><span class="p">,</span> <span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">shitf_coord</span><span class="p">),</span> <span class="n">conj</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">shitf_coord</span><span class="p">)))</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">view</span><span class="p">(</span><span class="n">contiguous</span><span class="p">(</span><span class="n">a</span><span class="p">),</span> \
+             <span class="p">(</span><span class="n">dimsA</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+
+    <span class="c1"># 0--C</span>
+    <span class="c1">#    1</span>
+    <span class="c1">#    0</span>
+    <span class="c1"># 1--T1</span>
+    <span class="c1">#    2</span>
+    <span class="n">C2x2_RU</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C</span><span class="p">,</span> <span class="n">T1</span><span class="p">,</span> <span class="p">([</span><span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+
+    <span class="c1"># 2&lt;-0--T2--2 0--C</span>
+    <span class="c1">#    3&lt;-1        |</span>
+    <span class="c1">#          0&lt;-1--T1</span>
+    <span class="c1">#             1&lt;-2</span>
+    <span class="n">C2x2_RU</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C2x2_RU</span><span class="p">,</span> <span class="n">T2</span><span class="p">,</span> <span class="p">([</span><span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">2</span><span class="p">]))</span>
+
+    <span class="c1"># 1&lt;-2--T2------C</span>
+    <span class="c1">#       3       |</span>
+    <span class="c1">#    45\0       |</span>
+    <span class="c1"># 2&lt;-1--a--3 0--T1</span>
+    <span class="c1">#    3&lt;-2    0&lt;-1</span>
+    <span class="n">C2x2_RU</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C2x2_RU</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">]))</span>
+
+    <span class="c1"># permute 012334-&gt;120345</span>
+    <span class="c1"># reshape (12)(03)45-&gt;0123</span>
+    <span class="c1"># 0--C2x2</span>
+    <span class="c1"># 23/|</span>
+    <span class="c1">#    1</span>
+    <span class="n">C2x2_RU</span> <span class="o">=</span> <span class="n">permute</span><span class="p">(</span><span class="n">C2x2_RU</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+    <span class="n">C2x2_RU</span> <span class="o">=</span> <span class="n">view</span><span class="p">(</span><span class="n">contiguous</span><span class="p">(</span><span class="n">C2x2_RU</span><span class="p">),</span> \
+                   <span class="p">(</span><span class="n">T2</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">*</span> <span class="n">a</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">T1</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">a</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+    <span class="k">if</span> <span class="n">verbosity</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;C2X2 RU &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">((</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">vec</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">vec</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span> <span class="o">+</span> <span class="s2">&quot;-&gt;&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">shitf_coord</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot; (1,-1): &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span>
+            <span class="n">C2x2_RU</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+
+    <span class="c1"># ----- building C2x1_RD ----------------------------------------------------</span>
+    <span class="n">C</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">shitf_coord</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))]</span>
+    <span class="n">T1</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">shitf_coord</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">))]</span>
+
+    <span class="c1">#    1&lt;-0        0</span>
+    <span class="c1"># 2&lt;-1--T1--2 1--C</span>
+    <span class="n">C2x1_RD</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C</span><span class="p">,</span> <span class="n">T1</span><span class="p">,</span> <span class="p">([</span><span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">2</span><span class="p">]))</span>
+
+    <span class="c1"># reshape (01)2-&gt;(0)1</span>
+    <span class="n">C2x1_RD</span> <span class="o">=</span> <span class="n">view</span><span class="p">(</span><span class="n">contiguous</span><span class="p">(</span><span class="n">C2x1_RD</span><span class="p">),</span> <span class="p">(</span><span class="n">C</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">*</span> <span class="n">T1</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">T1</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">)))</span>
+
+    <span class="c1">#    0</span>
+    <span class="c1">#    |</span>
+    <span class="c1"># 1--C2x1</span>
+    <span class="k">if</span> <span class="n">verbosity</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;C2X1 RD &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">((</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">vec</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">vec</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span> <span class="o">+</span> <span class="s2">&quot;-&gt;&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">shitf_coord</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot; (1,1): &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span>
+            <span class="n">C2x1_RD</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+
+    <span class="c1"># ----- build right part C2x2_RU--C2x1_RD -----------------------------------</span>
+    <span class="c1"># 1&lt;-0--C2x2_RU</span>
+    <span class="c1">#       |\23</span>
+    <span class="c1">#       1</span>
+    <span class="c1">#       0</span>
+    <span class="c1"># 0&lt;-1--C2x1_RD</span>
+    <span class="n">right_half</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C2x1_RD</span><span class="p">,</span> <span class="n">C2x2_RU</span><span class="p">,</span> <span class="p">([</span><span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+
+    <span class="c1"># construct reduced density matrix by contracting left and right halfs</span>
+    <span class="c1"># C2x2_LU--1 1----C2x2_RU</span>
+    <span class="c1"># |\23-&gt;01        |\23</span>
+    <span class="c1"># |               |</span>
+    <span class="c1"># C2x1_LD--0 0----C2x1_RD</span>
+    <span class="n">rdm</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">left_half</span><span class="p">,</span> <span class="n">right_half</span><span class="p">,</span> <span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]))</span>
+
+    <span class="c1"># permute into order of s0,s1;s0&#39;,s1&#39; where primed indices</span>
+    <span class="c1"># represent &quot;ket&quot;</span>
+    <span class="c1"># 0123-&gt;0213</span>
+    <span class="c1"># symmetrize and normalize</span>
+    <span class="n">rdm</span> <span class="o">=</span> <span class="n">contiguous</span><span class="p">(</span><span class="n">permute</span><span class="p">(</span><span class="n">rdm</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)))</span>
+    <span class="n">rdm</span> <span class="o">=</span> <span class="n">_sym_pos_def_rdm</span><span class="p">(</span><span class="n">rdm</span><span class="p">,</span> <span class="n">sym_pos_def</span><span class="o">=</span><span class="n">sym_pos_def</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="n">verbosity</span><span class="p">,</span> <span class="n">who</span><span class="o">=</span><span class="n">who</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">rdm</span></div>
+
+
+<div class="viewcode-block" id="rdm1x2"><a class="viewcode-back" href="../../../envs/generic/rdm.html#ctm.generic.rdm.rdm1x2">[docs]</a><span class="k">def</span> <span class="nf">rdm1x2</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">sym_pos_def</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    :param coord: vertex (x,y) specifies position of 1x2 subsystem</span>
+<span class="sd">    :param state: underlying wavefunction</span>
+<span class="sd">    :param env: environment corresponding to ``state``</span>
+<span class="sd">    :param verbosity: logging verbosity</span>
+<span class="sd">    :type coord: tuple(int,int)</span>
+<span class="sd">    :type state: IPEPS</span>
+<span class="sd">    :type env: ENV</span>
+<span class="sd">    :type verbosity: int</span>
+<span class="sd">    :return: 2-site reduced density matrix with indices :math:`s_0s_1;s&#39;_0s&#39;_1`</span>
+<span class="sd">    :rtype: torch.tensor</span>
+
+<span class="sd">    Computes 2-site reduced density matrix :math:`\rho_{1x2}` of a vertical</span>
+<span class="sd">    1x2 subsystem using following strategy:</span>
+
+<span class="sd">        1. compute four individual corners</span>
+<span class="sd">        2. construct upper and lower half of the network</span>
+<span class="sd">        3. contract upper and lower halt to obtain final reduced density matrix</span>
+
+<span class="sd">    ::</span>
+
+<span class="sd">        C--T------------------C = C2x2_LU(coord)--------C1x2(coord)</span>
+<span class="sd">        |  |                  |   |                     |</span>
+<span class="sd">        T--A^+A(coord)--------T   C2x2_LD(coord+(0,1))--C1x2(coord+0,1))</span>
+<span class="sd">        |  |                  |</span>
+<span class="sd">        T--A^+A(coord+(0,1))--T</span>
+<span class="sd">        |  |                  |</span>
+<span class="sd">        C--T------------------C</span>
+
+<span class="sd">    The physical indices `s` and `s&#39;` of on-sites tensors :math:`A` (and :math:`A^\dagger`)</span>
+<span class="sd">    at vertices ``coord``, ``coord+(0,1)`` are left uncontracted</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">who</span> <span class="o">=</span> <span class="s2">&quot;rdm1x2&quot;</span>
+    <span class="c1"># ----- building C2x2_LU ----------------------------------------------------</span>
+    <span class="n">C</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">),</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))]</span>
+    <span class="n">T1</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">),</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))]</span>
+    <span class="n">T2</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">),</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">))]</span>
+    <span class="n">dimsA</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;mefgh,nabcd-&gt;eafbgchdmn&#39;</span><span class="p">,</span> <span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">coord</span><span class="p">),</span> <span class="n">conj</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">coord</span><span class="p">)))</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">view</span><span class="p">(</span><span class="n">contiguous</span><span class="p">(</span><span class="n">a</span><span class="p">),</span> \
+             <span class="p">(</span><span class="n">dimsA</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+
+    <span class="c1"># C--10--T1--2</span>
+    <span class="c1"># 0   1</span>
+    <span class="n">C2x2_LU</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C</span><span class="p">,</span> <span class="n">T1</span><span class="p">,</span> <span class="p">([</span><span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+
+    <span class="c1"># C------T1--2-&gt;1</span>
+    <span class="c1"># 0      1-&gt;0</span>
+    <span class="c1"># 0</span>
+    <span class="c1"># T2--2-&gt;3</span>
+    <span class="c1"># 1-&gt;2</span>
+    <span class="n">C2x2_LU</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C2x2_LU</span><span class="p">,</span> <span class="n">T2</span><span class="p">,</span> <span class="p">([</span><span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+
+    <span class="c1"># C-------T1--1-&gt;0</span>
+    <span class="c1"># |       0</span>
+    <span class="c1"># |       0</span>
+    <span class="c1"># T2--3 1 a--3</span>
+    <span class="c1"># 2-&gt;1    2\45</span>
+    <span class="n">C2x2_LU</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C2x2_LU</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]))</span>
+
+    <span class="c1"># permute 012345-&gt;120345</span>
+    <span class="c1"># reshape (12)(03)45-&gt;0123</span>
+    <span class="c1"># C2x2--1</span>
+    <span class="c1"># |\23</span>
+    <span class="c1"># 0</span>
+    <span class="n">C2x2_LU</span> <span class="o">=</span> <span class="n">permute</span><span class="p">(</span><span class="n">C2x2_LU</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+    <span class="n">C2x2_LU</span> <span class="o">=</span> <span class="n">view</span><span class="p">(</span><span class="n">contiguous</span><span class="p">(</span><span class="n">C2x2_LU</span><span class="p">),</span> \
+                   <span class="p">(</span><span class="n">T2</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">a</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="n">T1</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">a</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">3</span><span class="p">),</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+    <span class="k">if</span> <span class="n">verbosity</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;C2X2 LU &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;-&gt;&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">))</span> <span class="o">+</span> <span class="s2">&quot; (-1,-1): &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">C2x2_LU</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+
+    <span class="c1"># ----- building C1x2_RU ----------------------------------------------------</span>
+    <span class="n">C</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))]</span>
+    <span class="n">T1</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">))]</span>
+
+    <span class="c1"># 0--C</span>
+    <span class="c1">#    1</span>
+    <span class="c1">#    0</span>
+    <span class="c1"># 1--T1</span>
+    <span class="c1">#    2</span>
+    <span class="n">C1x2_RU</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C</span><span class="p">,</span> <span class="n">T1</span><span class="p">,</span> <span class="p">([</span><span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+
+    <span class="c1"># reshape (01)2-&gt;(0)1</span>
+    <span class="c1"># 0--C1x2</span>
+    <span class="c1"># 23/|</span>
+    <span class="c1">#    1</span>
+    <span class="n">C1x2_RU</span> <span class="o">=</span> <span class="n">view</span><span class="p">(</span><span class="n">contiguous</span><span class="p">(</span><span class="n">C1x2_RU</span><span class="p">),</span> <span class="p">(</span><span class="n">C</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">*</span> <span class="n">T1</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">T1</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">2</span><span class="p">)))</span>
+    <span class="k">if</span> <span class="n">verbosity</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;C1X2 RU &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;-&gt;&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">))</span> <span class="o">+</span> <span class="s2">&quot; (1,-1): &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">C1x2_RU</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+
+    <span class="c1"># ----- build upper part C2x2_LU--C1x2_RU -----------------------------------</span>
+    <span class="c1"># C2x2_LU--1 0--C1x2_RU</span>
+    <span class="c1"># |\23          |</span>
+    <span class="c1"># 0-&gt;1          1-&gt;0</span>
+    <span class="n">upper_half</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C1x2_RU</span><span class="p">,</span> <span class="n">C2x2_LU</span><span class="p">,</span> <span class="p">([</span><span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+
+    <span class="c1"># ----- building C2x2_LD ----------------------------------------------------</span>
+    <span class="n">vec</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">shitf_coord</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">((</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">vec</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">vec</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+    <span class="n">C</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">shitf_coord</span><span class="p">,</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))]</span>
+    <span class="n">T1</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">shitf_coord</span><span class="p">,</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">))]</span>
+    <span class="n">T2</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">shitf_coord</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">))]</span>
+    <span class="n">dimsA</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">shitf_coord</span><span class="p">)</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;mefgh,nabcd-&gt;eafbgchdmn&#39;</span><span class="p">,</span> <span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">shitf_coord</span><span class="p">),</span> <span class="n">conj</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">shitf_coord</span><span class="p">)))</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">view</span><span class="p">(</span><span class="n">contiguous</span><span class="p">(</span><span class="n">a</span><span class="p">),</span> \
+             <span class="p">(</span><span class="n">dimsA</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+
+    <span class="c1"># 0-&gt;1</span>
+    <span class="c1"># T1--2</span>
+    <span class="c1"># 1</span>
+    <span class="c1"># 0</span>
+    <span class="c1"># C--1-&gt;0</span>
+    <span class="n">C2x2_LD</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C</span><span class="p">,</span> <span class="n">T1</span><span class="p">,</span> <span class="p">([</span><span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+
+    <span class="c1"># 1-&gt;0</span>
+    <span class="c1"># T1--2-&gt;1</span>
+    <span class="c1"># |</span>
+    <span class="c1"># |       0-&gt;2</span>
+    <span class="c1"># C--0 1--T2--2-&gt;3</span>
+    <span class="n">C2x2_LD</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C2x2_LD</span><span class="p">,</span> <span class="n">T2</span><span class="p">,</span> <span class="p">([</span><span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+
+    <span class="c1"># 0        0-&gt;2</span>
+    <span class="c1"># T1--1 1--a--3</span>
+    <span class="c1"># |        2\45</span>
+    <span class="c1"># |        2</span>
+    <span class="c1"># C--------T2--3-&gt;1</span>
+    <span class="n">C2x2_LD</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C2x2_LD</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]))</span>
+
+    <span class="c1"># permute 012345-&gt;021345</span>
+    <span class="c1"># reshape (02)(13)45-&gt;0123</span>
+    <span class="c1"># 0</span>
+    <span class="c1"># |/23</span>
+    <span class="c1"># C2x2--1</span>
+    <span class="n">C2x2_LD</span> <span class="o">=</span> <span class="n">permute</span><span class="p">(</span><span class="n">C2x2_LD</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+    <span class="n">C2x2_LD</span> <span class="o">=</span> <span class="n">view</span><span class="p">(</span><span class="n">contiguous</span><span class="p">(</span><span class="n">C2x2_LD</span><span class="p">),</span> \
+                   <span class="p">(</span><span class="n">T1</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">*</span> <span class="n">a</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">T2</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">a</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">3</span><span class="p">),</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+    <span class="k">if</span> <span class="n">verbosity</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;C2X2 LD &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">((</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">vec</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">vec</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span> <span class="o">+</span> <span class="s2">&quot;-&gt;&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">shitf_coord</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot; (-1,1): &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span>
+            <span class="n">C2x2_LD</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+
+    <span class="c1"># ----- building C2x2_RD ----------------------------------------------------</span>
+    <span class="n">C</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">shitf_coord</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))]</span>
+    <span class="n">T2</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">shitf_coord</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">))]</span>
+
+    <span class="c1">#       0</span>
+    <span class="c1">#    1--T2</span>
+    <span class="c1">#       2</span>
+    <span class="c1">#       0</span>
+    <span class="c1"># 2&lt;-1--C</span>
+    <span class="n">C1x2_RD</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">T2</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="p">([</span><span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+
+    <span class="c1"># permute 012-&gt;021</span>
+    <span class="c1"># reshape 0(12)-&gt;0(1)</span>
+    <span class="n">C1x2_RD</span> <span class="o">=</span> <span class="n">view</span><span class="p">(</span><span class="n">contiguous</span><span class="p">(</span><span class="n">permute</span><span class="p">(</span><span class="n">C1x2_RD</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">))),</span> \
+                   <span class="p">(</span><span class="n">T2</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="mi">0</span><span class="p">],</span> <span class="n">C</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">T2</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="mi">1</span><span class="p">]))</span>
+
+    <span class="c1">#    0</span>
+    <span class="c1">#    |</span>
+    <span class="c1"># 1--C1x2</span>
+    <span class="k">if</span> <span class="n">verbosity</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;C1X2 RD &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">((</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">vec</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">vec</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span> <span class="o">+</span> <span class="s2">&quot;-&gt;&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">shitf_coord</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot; (1,1): &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span>
+            <span class="n">C1x2_RD</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+
+    <span class="c1"># ----- build lower part C2x2_LD--C1x2_RD -----------------------------------</span>
+    <span class="c1"># 0-&gt;1          0</span>
+    <span class="c1"># |/23          |</span>
+    <span class="c1"># C2x2_LD--1 1--C1x2_RD</span>
+    <span class="n">lower_half</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C1x2_RD</span><span class="p">,</span> <span class="n">C2x2_LD</span><span class="p">,</span> <span class="p">([</span><span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+
+    <span class="c1"># construct reduced density matrix by contracting lower and upper halfs</span>
+    <span class="c1"># C2x2_LU------C1x2_RU</span>
+    <span class="c1"># |\23-&gt;01     |</span>
+    <span class="c1"># 1            0</span>
+    <span class="c1"># 1            0</span>
+    <span class="c1"># |/23         |</span>
+    <span class="c1"># C2x2_LD------C1x2_RD</span>
+    <span class="n">rdm</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">upper_half</span><span class="p">,</span> <span class="n">lower_half</span><span class="p">,</span> <span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]))</span>
+
+    <span class="c1"># permute into order of s0,s1;s0&#39;,s1&#39; where primed indices</span>
+    <span class="c1"># represent &quot;ket&quot;</span>
+    <span class="c1"># 0123-&gt;0213</span>
+    <span class="c1"># symmetrize and normalize</span>
+    <span class="n">rdm</span> <span class="o">=</span> <span class="n">contiguous</span><span class="p">(</span><span class="n">permute</span><span class="p">(</span><span class="n">rdm</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)))</span>
+    <span class="n">rdm</span> <span class="o">=</span> <span class="n">_sym_pos_def_rdm</span><span class="p">(</span><span class="n">rdm</span><span class="p">,</span> <span class="n">sym_pos_def</span><span class="o">=</span><span class="n">sym_pos_def</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="n">verbosity</span><span class="p">,</span> <span class="n">who</span><span class="o">=</span><span class="n">who</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">rdm</span></div>
+
+
+<div class="viewcode-block" id="rdm2x2"><a class="viewcode-back" href="../../../envs/generic/rdm.html#ctm.generic.rdm.rdm2x2">[docs]</a><span class="k">def</span> <span class="nf">rdm2x2</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">sym_pos_def</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    :param coord: vertex (x,y) specifies upper left site of 2x2 subsystem</span>
+<span class="sd">    :param state: underlying wavefunction</span>
+<span class="sd">    :param env: environment corresponding to ``state``</span>
+<span class="sd">    :param verbosity: logging verbosity</span>
+<span class="sd">    :type coord: tuple(int,int)</span>
+<span class="sd">    :type state: IPEPS</span>
+<span class="sd">    :type env: ENV</span>
+<span class="sd">    :type verbosity: int</span>
+<span class="sd">    :return: 4-site reduced density matrix with indices :math:`s_0s_1s_2s_3;s&#39;_0s&#39;_1s&#39;_2s&#39;_3`</span>
+<span class="sd">    :rtype: torch.tensor</span>
+
+<span class="sd">    Computes 4-site reduced density matrix :math:`\rho_{2x2}` of 2x2 subsystem specified</span>
+<span class="sd">    by the vertex ``coord`` of its upper left corner using strategy:</span>
+
+<span class="sd">        1. compute four individual corners</span>
+<span class="sd">        2. construct upper and lower half of the network</span>
+<span class="sd">        3. contract upper and lower half to obtain final reduced density matrix</span>
+
+<span class="sd">    ::</span>
+
+<span class="sd">        C--T------------------T------------------C = C2x2_LU(coord)--------C2x2(coord+(1,0))</span>
+<span class="sd">        |  |                  |                  |   |                     |</span>
+<span class="sd">        T--A^+A(coord)--------A^+A(coord+(1,0))--T   C2x2_LD(coord+(0,1))--C2x2(coord+(1,1))</span>
+<span class="sd">        |  |                  |                  | </span>
+<span class="sd">        T--A^+A(coord+(0,1))--A^+A(coord+(1,1))--T</span>
+<span class="sd">        |  |                  |                  |</span>
+<span class="sd">        C--T------------------T------------------C</span>
+
+<span class="sd">    The physical indices `s` and `s&#39;` of on-sites tensors :math:`A` (and :math:`A^\dagger`)</span>
+<span class="sd">    at vertices ``coord``, ``coord+(1,0)``, ``coord+(0,1)``, and ``coord+(1,1)`` are</span>
+<span class="sd">    left uncontracted and given in the same order::</span>
+
+<span class="sd">        s0 s1</span>
+<span class="sd">        s2 s3</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">who</span> <span class="o">=</span> <span class="s2">&quot;rdm2x2&quot;</span>
+    <span class="c1"># ----- building C2x2_LU ----------------------------------------------------</span>
+    <span class="n">C</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">),</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))]</span>
+    <span class="n">T1</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">),</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))]</span>
+    <span class="n">T2</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">),</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">))]</span>
+    <span class="n">dimsA</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">contiguous</span><span class="p">(</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;mefgh,nabcd-&gt;eafbgchdmn&#39;</span><span class="p">,</span> <span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">coord</span><span class="p">),</span> <span class="n">conj</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">coord</span><span class="p">))))</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">view</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="p">(</span><span class="n">dimsA</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+
+    <span class="c1"># C--10--T1--2</span>
+    <span class="c1"># 0   1</span>
+    <span class="n">C2x2_LU</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C</span><span class="p">,</span> <span class="n">T1</span><span class="p">,</span> <span class="p">([</span><span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+
+    <span class="c1"># C------T1--2-&gt;1</span>
+    <span class="c1"># 0      1-&gt;0</span>
+    <span class="c1"># 0</span>
+    <span class="c1"># T2--2-&gt;3</span>
+    <span class="c1"># 1-&gt;2</span>
+    <span class="n">C2x2_LU</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C2x2_LU</span><span class="p">,</span> <span class="n">T2</span><span class="p">,</span> <span class="p">([</span><span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+
+    <span class="c1"># C-------T1--1-&gt;0</span>
+    <span class="c1"># |       0</span>
+    <span class="c1"># |       0</span>
+    <span class="c1"># T2--3 1 a--3</span>
+    <span class="c1"># 2-&gt;1    2\45</span>
+    <span class="n">C2x2_LU</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C2x2_LU</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]))</span>
+
+    <span class="c1"># permute 012345-&gt;120345</span>
+    <span class="c1"># reshape (12)(03)45-&gt;0123</span>
+    <span class="c1"># C2x2--1</span>
+    <span class="c1"># |\23</span>
+    <span class="c1"># 0</span>
+    <span class="n">C2x2_LU</span> <span class="o">=</span> <span class="n">contiguous</span><span class="p">(</span><span class="n">permute</span><span class="p">(</span><span class="n">C2x2_LU</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">)))</span>
+    <span class="n">C2x2_LU</span> <span class="o">=</span> <span class="n">view</span><span class="p">(</span><span class="n">C2x2_LU</span><span class="p">,</span> <span class="p">(</span><span class="n">T2</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">a</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="n">T1</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">a</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">3</span><span class="p">),</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+    <span class="k">if</span> <span class="n">verbosity</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;C2X2 LU &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;-&gt;&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">))</span> <span class="o">+</span> <span class="s2">&quot; (-1,-1): &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">C2x2_LU</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+
+    <span class="c1"># ----- building C2x2_RU ----------------------------------------------------</span>
+    <span class="n">vec</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">shitf_coord</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">((</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">vec</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">vec</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+    <span class="n">C</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">shitf_coord</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))]</span>
+    <span class="n">T1</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">shitf_coord</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">))]</span>
+    <span class="n">T2</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">shitf_coord</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))]</span>
+    <span class="n">dimsA</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">shitf_coord</span><span class="p">)</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">contiguous</span><span class="p">(</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;mefgh,nabcd-&gt;eafbgchdmn&#39;</span><span class="p">,</span> <span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">shitf_coord</span><span class="p">),</span> <span class="n">conj</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">shitf_coord</span><span class="p">))))</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">view</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="p">(</span><span class="n">dimsA</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+
+    <span class="c1"># 0--C</span>
+    <span class="c1">#    1</span>
+    <span class="c1">#    0</span>
+    <span class="c1"># 1--T1</span>
+    <span class="c1">#     2</span>
+    <span class="n">C2x2_RU</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C</span><span class="p">,</span> <span class="n">T1</span><span class="p">,</span> <span class="p">([</span><span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+
+    <span class="c1"># 2&lt;-0--T2--2 0--C</span>
+    <span class="c1">#    3&lt;-1        |</span>
+    <span class="c1">#          0&lt;-1--T1</span>
+    <span class="c1">#             1&lt;-2</span>
+    <span class="n">C2x2_RU</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C2x2_RU</span><span class="p">,</span> <span class="n">T2</span><span class="p">,</span> <span class="p">([</span><span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">2</span><span class="p">]))</span>
+
+    <span class="c1"># 1&lt;-2--T2------C</span>
+    <span class="c1">#       3       |</span>
+    <span class="c1">#    45\0       |</span>
+    <span class="c1"># 2&lt;-1--a--3 0--T1</span>
+    <span class="c1">#    3&lt;-2    0&lt;-1</span>
+    <span class="n">C2x2_RU</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C2x2_RU</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">]))</span>
+
+    <span class="c1"># permute 012334-&gt;120345</span>
+    <span class="c1"># reshape (12)(03)45-&gt;0123</span>
+    <span class="c1"># 0--C2x2</span>
+    <span class="c1"># 23/|</span>
+    <span class="c1">#    1</span>
+    <span class="n">C2x2_RU</span> <span class="o">=</span> <span class="n">contiguous</span><span class="p">(</span><span class="n">permute</span><span class="p">(</span><span class="n">C2x2_RU</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">)))</span>
+    <span class="n">C2x2_RU</span> <span class="o">=</span> <span class="n">view</span><span class="p">(</span><span class="n">C2x2_RU</span><span class="p">,</span> <span class="p">(</span><span class="n">T2</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">*</span> <span class="n">a</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">T1</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">a</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+    <span class="k">if</span> <span class="n">verbosity</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;C2X2 RU &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">((</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">vec</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">vec</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span> <span class="o">+</span> <span class="s2">&quot;-&gt;&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">shitf_coord</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot; (1,-1): &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span>
+            <span class="n">C2x2_RU</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+
+    <span class="c1"># ----- build upper part C2x2_LU--C2x2_RU -----------------------------------</span>
+    <span class="c1"># C2x2_LU--1 0--C2x2_RU           C2x2_LU------C2x2_RU</span>
+    <span class="c1"># |\23-&gt;12   |\23-&gt;45   &amp; permute |\12-&gt;23     |\45</span>
+    <span class="c1"># 0          1-&gt;3                 0            3-&gt;1</span>
+    <span class="c1"># TODO is it worthy(performance-wise) to instead overwrite one of C2x2_LU,C2x2_RU ?</span>
+    <span class="n">upper_half</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C2x2_LU</span><span class="p">,</span> <span class="n">C2x2_RU</span><span class="p">,</span> <span class="p">([</span><span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+    <span class="n">upper_half</span> <span class="o">=</span> <span class="n">permute</span><span class="p">(</span><span class="n">upper_half</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+
+    <span class="c1"># ----- building C2x2_RD ----------------------------------------------------</span>
+    <span class="n">vec</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">shitf_coord</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">((</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">vec</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">vec</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+    <span class="n">C</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">shitf_coord</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))]</span>
+    <span class="n">T1</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">shitf_coord</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">))]</span>
+    <span class="n">T2</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">shitf_coord</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">))]</span>
+    <span class="n">dimsA</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">shitf_coord</span><span class="p">)</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">contiguous</span><span class="p">(</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;mefgh,nabcd-&gt;eafbgchdmn&#39;</span><span class="p">,</span> <span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">shitf_coord</span><span class="p">),</span> <span class="n">conj</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">shitf_coord</span><span class="p">))))</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">view</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="p">(</span><span class="n">dimsA</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+
+    <span class="c1">#   1&lt;-0        0</span>
+    <span class="c1"># 2&lt;-1--T1--2 1--C</span>
+    <span class="n">C2x2_RD</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C</span><span class="p">,</span> <span class="n">T1</span><span class="p">,</span> <span class="p">([</span><span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">2</span><span class="p">]))</span>
+
+    <span class="c1">#         2&lt;-0</span>
+    <span class="c1">#      3&lt;-1--T2</span>
+    <span class="c1">#            2</span>
+    <span class="c1">#    0&lt;-1    0</span>
+    <span class="c1"># 1&lt;-2--T1---C</span>
+    <span class="n">C2x2_RD</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C2x2_RD</span><span class="p">,</span> <span class="n">T2</span><span class="p">,</span> <span class="p">([</span><span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">2</span><span class="p">]))</span>
+
+    <span class="c1">#    2&lt;-0    1&lt;-2</span>
+    <span class="c1"># 3&lt;-1--a--3 3--T2</span>
+    <span class="c1">#       2\45    |</span>
+    <span class="c1">#       0       |</span>
+    <span class="c1"># 0&lt;-1--T1------C</span>
+    <span class="n">C2x2_RD</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C2x2_RD</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]))</span>
+
+    <span class="c1"># permute 012345-&gt;120345</span>
+    <span class="c1"># reshape (12)(03)45-&gt;0123</span>
+    <span class="n">C2x2_RD</span> <span class="o">=</span> <span class="n">contiguous</span><span class="p">(</span><span class="n">permute</span><span class="p">(</span><span class="n">C2x2_RD</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">)))</span>
+    <span class="n">C2x2_RD</span> <span class="o">=</span> <span class="n">view</span><span class="p">(</span><span class="n">C2x2_RD</span><span class="p">,</span> <span class="p">(</span><span class="n">T2</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">*</span> <span class="n">a</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">T1</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">a</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+
+    <span class="c1">#    0</span>
+    <span class="c1">#    |/23</span>
+    <span class="c1"># 1--C2x2</span>
+    <span class="k">if</span> <span class="n">verbosity</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;C2X2 RD &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">((</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">vec</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">vec</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span> <span class="o">+</span> <span class="s2">&quot;-&gt;&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">shitf_coord</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot; (1,1): &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span>
+            <span class="n">C2x2_RD</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+
+    <span class="c1"># ----- building C2x2_LD ----------------------------------------------------</span>
+    <span class="n">vec</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">shitf_coord</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">((</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">vec</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">vec</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+    <span class="n">C</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">shitf_coord</span><span class="p">,</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))]</span>
+    <span class="n">T1</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">shitf_coord</span><span class="p">,</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">))]</span>
+    <span class="n">T2</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">shitf_coord</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">))]</span>
+    <span class="n">dimsA</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">shitf_coord</span><span class="p">)</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">contiguous</span><span class="p">(</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;mefgh,nabcd-&gt;eafbgchdmn&#39;</span><span class="p">,</span> <span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">shitf_coord</span><span class="p">),</span> <span class="n">conj</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">shitf_coord</span><span class="p">))))</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">view</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="p">(</span><span class="n">dimsA</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+
+    <span class="c1"># 0-&gt;1</span>
+    <span class="c1"># T1--2</span>
+    <span class="c1"># 1</span>
+    <span class="c1"># 0</span>
+    <span class="c1"># C--1-&gt;0</span>
+    <span class="n">C2x2_LD</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C</span><span class="p">,</span> <span class="n">T1</span><span class="p">,</span> <span class="p">([</span><span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+
+    <span class="c1"># 1-&gt;0</span>
+    <span class="c1"># T1--2-&gt;1</span>
+    <span class="c1"># |</span>
+    <span class="c1"># |       0-&gt;2</span>
+    <span class="c1"># C--0 1--T2--2-&gt;3</span>
+    <span class="n">C2x2_LD</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C2x2_LD</span><span class="p">,</span> <span class="n">T2</span><span class="p">,</span> <span class="p">([</span><span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+
+    <span class="c1"># 0        0-&gt;2</span>
+    <span class="c1"># T1--1 1--a--3</span>
+    <span class="c1"># |        2\45</span>
+    <span class="c1"># |        2</span>
+    <span class="c1"># C--------T2--3-&gt;1</span>
+    <span class="n">C2x2_LD</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C2x2_LD</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]))</span>
+
+    <span class="c1"># permute 012345-&gt;021345</span>
+    <span class="c1"># reshape (02)(13)45-&gt;0123</span>
+    <span class="c1"># 0</span>
+    <span class="c1"># |/23</span>
+    <span class="c1"># C2x2--1</span>
+    <span class="n">C2x2_LD</span> <span class="o">=</span> <span class="n">contiguous</span><span class="p">(</span><span class="n">permute</span><span class="p">(</span><span class="n">C2x2_LD</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">)))</span>
+    <span class="n">C2x2_LD</span> <span class="o">=</span> <span class="n">view</span><span class="p">(</span><span class="n">C2x2_LD</span><span class="p">,</span> <span class="p">(</span><span class="n">T1</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">*</span> <span class="n">a</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">T2</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">a</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">3</span><span class="p">),</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+    <span class="k">if</span> <span class="n">verbosity</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;C2X2 LD &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">((</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">vec</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">vec</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span> <span class="o">+</span> <span class="s2">&quot;-&gt;&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">shitf_coord</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot; (-1,1): &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span>
+            <span class="n">C2x2_LD</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+
+    <span class="c1"># ----- build lower part C2x2_LD--C2x2_RD -----------------------------------</span>
+    <span class="c1"># 0             0-&gt;3                 0            3-&gt;1</span>
+    <span class="c1"># |/23-&gt;12      |/23-&gt;45   &amp; permute |/12-&gt;23     |/45</span>
+    <span class="c1"># C2x2_LD--1 1--C2x2_RD              C2x2_LD------C2x2_RD</span>
+    <span class="c1"># TODO is it worthy(performance-wise) to instead overwrite one of C2x2_LD,C2x2_RD ?</span>
+    <span class="n">lower_half</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C2x2_LD</span><span class="p">,</span> <span class="n">C2x2_RD</span><span class="p">,</span> <span class="p">([</span><span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+    <span class="n">lower_half</span> <span class="o">=</span> <span class="n">permute</span><span class="p">(</span><span class="n">lower_half</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+
+    <span class="c1"># construct reduced density matrix by contracting lower and upper halfs</span>
+    <span class="c1"># C2x2_LU------C2x2_RU</span>
+    <span class="c1"># |\23-&gt;01     |\45-&gt;23</span>
+    <span class="c1"># 0            1</span>
+    <span class="c1"># 0            1</span>
+    <span class="c1"># |/23-&gt;45     |/45-&gt;67</span>
+    <span class="c1"># C2x2_LD------C2x2_RD</span>
+    <span class="n">rdm</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">upper_half</span><span class="p">,</span> <span class="n">lower_half</span><span class="p">,</span> <span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]))</span>
+
+    <span class="c1"># permute into order of s0,s1,s2,s3;s0&#39;,s1&#39;,s2&#39;,s3&#39; where primed indices</span>
+    <span class="c1"># represent &quot;ket&quot;</span>
+    <span class="c1"># 01234567-&gt;02461357</span>
+    <span class="c1"># symmetrize and normalize</span>
+    <span class="n">rdm</span> <span class="o">=</span> <span class="n">contiguous</span><span class="p">(</span><span class="n">permute</span><span class="p">(</span><span class="n">rdm</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">7</span><span class="p">)))</span>
+    <span class="n">rdm</span> <span class="o">=</span> <span class="n">_sym_pos_def_rdm</span><span class="p">(</span><span class="n">rdm</span><span class="p">,</span> <span class="n">sym_pos_def</span><span class="o">=</span><span class="n">sym_pos_def</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="n">verbosity</span><span class="p">,</span> <span class="n">who</span><span class="o">=</span><span class="n">who</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">rdm</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Juraj Hasik, Glen B. Mbeng
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

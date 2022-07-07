@@ -1,0 +1,898 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Reduced Density Matrices &mdash; peps-torch alpha documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Correlation functions" href="corrf.html" />
+    <link rel="prev" title="Components" href="ctm_components.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> peps-torch
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../ipeps.html">iPEPS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps.html">Generic iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_kagome.html">Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_c4v.html">1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_lc_1site_pg.html">1-site iPEPS from lin. combination</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipess_kagome.html">Generic Kagome iPESS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipess_kagome_pg.html">Kagome iPESS with point groups</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipess_kagome_pg_lc.html">Kagome iPESS from lin. combination</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../ipeps.html#abelian-symmetric-ipeps">Abelian-symmetric iPEPS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_abelian.html">Generic  abelian-symmetric iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_abelian.html#generic-abelian-symmetric-ipeps-with-weights">Generic abelian-symmetric iPEPS with weights</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_kagome_abelian.html">Abelian-symmetric Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_abelian_c4v.html">Abelian-symmetric 1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipess_kagome_abelian.html">Abelian-symmetric generic Kagome iPESS</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="reference internal" href="../../envs.html">Environments</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../generic.html">Generic iPEPS</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="env.html">Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ctm_components.html">Components</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-ctm.pess_kagome.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="corrf.html">Correlation functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="transfer_matrix.html">Transfer Matrices</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../generic_abelian.html">Abelian-symmetric generic iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../generic_abelian/env_abelian.html">Abelian-symmetric environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generic_abelian/ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generic_abelian/ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generic_abelian/ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generic_abelian/rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generic_abelian/rdm.html#module-ctm.pess_kagome_abelian.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../one_site_c4v.html">1-site C4v iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../one_site_c4v/env_c4v.html">1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../one_site_c4v/ctmrg_c4v.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../one_site_c4v/rdm_c4v.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../one_site_c4v/transfer_matrix.html">Transfer Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../one_site_c4v/corrf_c4v.html">Correlation functions</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../one_site_c4v_abelian.html">Abelian-symmetric 1-site C4v iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../one_site_c4v_abelian/env_c4v_abelian.html">Abelian-symmetric 1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../one_site_c4v_abelian/ctmrg_c4v_abelian.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../one_site_c4v_abelian/rdm_c4v_abelian.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../one_site_c4v_abelian/corrf_c4v_abelian.html">Correlation functions</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../optim.html">Optimization</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../optim/drivers.html">Optimization drivers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/drivers/ad_optim.html">ad_optim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/drivers/ad_optim_lbfgs_mod.html">ad_optim_lbfgs_mod</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/drivers/ad_optim_sgd_mod.html">ad_optim_sgd_mod</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../optim/optimizers.html">Custom optimizers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/optimizers/lbfgs_modified.html">Extended LBFGS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/optimizers/sgd_modified.html">SGD with linesearch</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../config.html">Configuration</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../config.html#main">Main</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../config.html#global">Global</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../config.html#corner-transfer-matrix-algorithm">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../config.html#optimization">Optimization</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../models.html">Models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../models/akltS2.html">Spin S=2 AKLT Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/akltS2.html#module-models.akltS2">2x1 and 2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/akltS2.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/coupledLadders.html">Coupled Ladders</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/coupledLadders.html#dense-pytorch">Dense (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/coupledLadders.html#dense-yast">Dense (YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/coupledLadders.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/ising.html">Transverse Field Ising Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/ising.html#x1-unit-cell">1x1 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/ising.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/j1j2.html">J1-J2-J3 and J1-J2-lambda Heisenberg Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/j1j2.html#from-2x1-to-4x2-unit-cell-pytorch">from 2x1 to 4x2 unit cell (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/j1j2.html#from-2x1-to-4x2-unit-cell-dense-yast">from 2x1 to 4x2 unit cell (dense YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/j1j2.html#x1-c4v-pytorch">1x1 C4v (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/j1j2.html#x1-c4v-dense-yast">1x1 C4v (dense YAST)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/jq.html">J-Q Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/jq.html#module-models.jq">2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/jq.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/spin_half_kagome.html">SU(2) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/spin_half_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/spin_half_kagome.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/su3_kagome.html">SU(3) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/su3_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/su3_kagome.html#with-explict-u-1-xu-1-symmetry">With explict U(1)xU(1) symmetry</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../groups.html">Groups</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/pg.html">Point group: square lattice</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/su2.html">SU(2)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/su2.html#module-groups.su2_abelian">SU(2) with explicit U(1) structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/su3.html">SU(3)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/su3.html#su-3-with-explicit-u-1-xu-1-structure">SU(3) with explicit U(1)xU(1) structure</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../linalg.html">Linear Algebra</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../linalg/custom_eig.html">Truncated eigendecomposition</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../linalg/custom_svd.html">Truncated SVD</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../linalg/spec_decomp.html">Spectral decompositions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.svd_gesdd">SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.svd_arnoldi">Partial SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.svd_rsvd">Randomized SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.eig_sym">Symmetric Eigendecomposition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.eig_arnoldi">Partial diagonalization</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">peps-torch</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../envs.html">Environments</a> &raquo;</li>
+        
+          <li><a href="../generic.html">Generic iPEPS</a> &raquo;</li>
+        
+      <li>Reduced Density Matrices</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            
+              <!-- User defined GitHub URL -->
+              <a href="https://github.com/jurajHasik/peps-torch" class="fa fa-github"> Edit on GitHub</a>
+            
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <section id="module-ctm.generic.rdm">
+<span id="reduced-density-matrices"></span><h1>Reduced Density Matrices<a class="headerlink" href="#module-ctm.generic.rdm" title="Permalink to this heading">¶</a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="ctm.generic.rdm.rdm1x1">
+<span class="sig-prename descclassname"><span class="pre">ctm.generic.rdm.</span></span><span class="sig-name descname"><span class="pre">rdm1x1</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coord</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">operator</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sym_pos_def</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_cpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/ctm/generic/rdm.html#rdm1x1"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ctm.generic.rdm.rdm1x1" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>coord</strong> (<em>tuple</em><em>(</em><em>int</em><em>,</em><em>int</em><em>)</em>) – vertex (x,y) for which reduced density matrix is constructed</p></li>
+<li><p><strong>state</strong> (<a class="reference internal" href="../../ipeps/ipeps.html#ipeps.ipeps.IPEPS" title="ipeps.ipeps.IPEPS"><em>IPEPS</em></a>) – underlying wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="env.html#ctm.generic.env.ENV" title="ctm.generic.env.ENV"><em>ENV</em></a>) – environment corresponding to <code class="docutils literal notranslate"><span class="pre">state</span></code></p></li>
+<li><p><strong>state</strong> – 1-site operator to contract with the two physical indices of the rdm</p></li>
+<li><p><strong>verbosity</strong> (<em>int</em>) – logging verbosity</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>1-site reduced density matrix with indices <span class="math notranslate nohighlight">\(s;s'\)</span>. If an operator was provided,
+returns the expectation value of this operator (not normalized by the norm of the wavefunction).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.tensor</p>
+</dd>
+</dl>
+<p>Computes 1-site reduced density matrix <span class="math notranslate nohighlight">\(\rho_{1x1}\)</span> centered on vertex <code class="docutils literal notranslate"><span class="pre">coord</span></code> by
+contracting the following tensor network:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">C</span><span class="o">--</span><span class="n">T</span><span class="o">-----</span><span class="n">C</span>
+<span class="o">|</span>  <span class="o">|</span>     <span class="o">|</span>
+<span class="n">T</span><span class="o">--</span><span class="n">A</span><span class="o">^+</span><span class="n">A</span><span class="o">--</span><span class="n">T</span>
+<span class="o">|</span>  <span class="o">|</span>     <span class="o">|</span>
+<span class="n">C</span><span class="o">--</span><span class="n">T</span><span class="o">-----</span><span class="n">C</span>
+</pre></div>
+</div>
+<p>If no operator was provided, the physical indices <cite>s</cite> and <cite>s’</cite> of on-site tensor <span class="math notranslate nohighlight">\(A\)</span>
+at vertex <code class="docutils literal notranslate"><span class="pre">coord</span></code> and it’s hermitian conjugate <span class="math notranslate nohighlight">\(A^\dagger\)</span> are left uncontracted.
+Else, they are contracted with the operator.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ctm.generic.rdm.rdm1x2">
+<span class="sig-prename descclassname"><span class="pre">ctm.generic.rdm.</span></span><span class="sig-name descname"><span class="pre">rdm1x2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coord</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sym_pos_def</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/ctm/generic/rdm.html#rdm1x2"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ctm.generic.rdm.rdm1x2" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>coord</strong> (<em>tuple</em><em>(</em><em>int</em><em>,</em><em>int</em><em>)</em>) – vertex (x,y) specifies position of 1x2 subsystem</p></li>
+<li><p><strong>state</strong> (<a class="reference internal" href="../../ipeps/ipeps.html#ipeps.ipeps.IPEPS" title="ipeps.ipeps.IPEPS"><em>IPEPS</em></a>) – underlying wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="env.html#ctm.generic.env.ENV" title="ctm.generic.env.ENV"><em>ENV</em></a>) – environment corresponding to <code class="docutils literal notranslate"><span class="pre">state</span></code></p></li>
+<li><p><strong>verbosity</strong> (<em>int</em>) – logging verbosity</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>2-site reduced density matrix with indices <span class="math notranslate nohighlight">\(s_0s_1;s'_0s'_1\)</span></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.tensor</p>
+</dd>
+</dl>
+<p>Computes 2-site reduced density matrix <span class="math notranslate nohighlight">\(\rho_{1x2}\)</span> of a vertical
+1x2 subsystem using following strategy:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>compute four individual corners</p></li>
+<li><p>construct upper and lower half of the network</p></li>
+<li><p>contract upper and lower halt to obtain final reduced density matrix</p></li>
+</ol>
+</div></blockquote>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">C</span><span class="o">--</span><span class="n">T</span><span class="o">------------------</span><span class="n">C</span> <span class="o">=</span> <span class="n">C2x2_LU</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span><span class="o">--------</span><span class="n">C1x2</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span>
+<span class="o">|</span>  <span class="o">|</span>                  <span class="o">|</span>   <span class="o">|</span>                     <span class="o">|</span>
+<span class="n">T</span><span class="o">--</span><span class="n">A</span><span class="o">^+</span><span class="n">A</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span><span class="o">--------</span><span class="n">T</span>   <span class="n">C2x2_LD</span><span class="p">(</span><span class="n">coord</span><span class="o">+</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span><span class="o">--</span><span class="n">C1x2</span><span class="p">(</span><span class="n">coord</span><span class="o">+</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>
+<span class="o">|</span>  <span class="o">|</span>                  <span class="o">|</span>
+<span class="n">T</span><span class="o">--</span><span class="n">A</span><span class="o">^+</span><span class="n">A</span><span class="p">(</span><span class="n">coord</span><span class="o">+</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span><span class="o">--</span><span class="n">T</span>
+<span class="o">|</span>  <span class="o">|</span>                  <span class="o">|</span>
+<span class="n">C</span><span class="o">--</span><span class="n">T</span><span class="o">------------------</span><span class="n">C</span>
+</pre></div>
+</div>
+<p>The physical indices <cite>s</cite> and <cite>s’</cite> of on-sites tensors <span class="math notranslate nohighlight">\(A\)</span> (and <span class="math notranslate nohighlight">\(A^\dagger\)</span>)
+at vertices <code class="docutils literal notranslate"><span class="pre">coord</span></code>, <code class="docutils literal notranslate"><span class="pre">coord+(0,1)</span></code> are left uncontracted</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ctm.generic.rdm.rdm2x1">
+<span class="sig-prename descclassname"><span class="pre">ctm.generic.rdm.</span></span><span class="sig-name descname"><span class="pre">rdm2x1</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coord</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sym_pos_def</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/ctm/generic/rdm.html#rdm2x1"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ctm.generic.rdm.rdm2x1" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>coord</strong> (<em>tuple</em><em>(</em><em>int</em><em>,</em><em>int</em><em>)</em>) – vertex (x,y) specifies position of 2x1 subsystem</p></li>
+<li><p><strong>state</strong> (<a class="reference internal" href="../../ipeps/ipeps.html#ipeps.ipeps.IPEPS" title="ipeps.ipeps.IPEPS"><em>IPEPS</em></a>) – underlying wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="env.html#ctm.generic.env.ENV" title="ctm.generic.env.ENV"><em>ENV</em></a>) – environment corresponding to <code class="docutils literal notranslate"><span class="pre">state</span></code></p></li>
+<li><p><strong>verbosity</strong> (<em>int</em>) – logging verbosity</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>2-site reduced density matrix with indices <span class="math notranslate nohighlight">\(s_0s_1;s'_0s'_1\)</span></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.tensor</p>
+</dd>
+</dl>
+<p>Computes 2-site reduced density matrix <span class="math notranslate nohighlight">\(\rho_{2x1}\)</span> of a horizontal
+2x1 subsystem using following strategy:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>compute four individual corners</p></li>
+<li><p>construct right and left half of the network</p></li>
+<li><p>contract right and left halt to obtain final reduced density matrix</p></li>
+</ol>
+</div></blockquote>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">C</span><span class="o">--</span><span class="n">T</span><span class="o">------------</span><span class="n">T</span><span class="o">------------------</span><span class="n">C</span> <span class="o">=</span> <span class="n">C2x2_LU</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span><span class="o">--</span><span class="n">C2x2</span><span class="p">(</span><span class="n">coord</span><span class="o">+</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">))</span>
+<span class="o">|</span>  <span class="o">|</span>            <span class="o">|</span>                  <span class="o">|</span>   <span class="o">|</span>               <span class="o">|</span>
+<span class="n">T</span><span class="o">--</span><span class="n">A</span><span class="o">^+</span><span class="n">A</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span><span class="o">--</span><span class="n">A</span><span class="o">^+</span><span class="n">A</span><span class="p">(</span><span class="n">coord</span><span class="o">+</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">))</span><span class="o">--</span><span class="n">T</span>   <span class="n">C2x1_LD</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span><span class="o">--</span><span class="n">C2x1</span><span class="p">(</span><span class="n">coord</span><span class="o">+</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">))</span>
+<span class="o">|</span>  <span class="o">|</span>            <span class="o">|</span>                  <span class="o">|</span>
+<span class="n">C</span><span class="o">--</span><span class="n">T</span><span class="o">------------</span><span class="n">T</span><span class="o">------------------</span><span class="n">C</span>
+</pre></div>
+</div>
+<p>The physical indices <cite>s</cite> and <cite>s’</cite> of on-sites tensors <span class="math notranslate nohighlight">\(A\)</span> (and <span class="math notranslate nohighlight">\(A^\dagger\)</span>)
+at vertices <code class="docutils literal notranslate"><span class="pre">coord</span></code>, <code class="docutils literal notranslate"><span class="pre">coord+(1,0)</span></code> are left uncontracted</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ctm.generic.rdm.rdm2x2">
+<span class="sig-prename descclassname"><span class="pre">ctm.generic.rdm.</span></span><span class="sig-name descname"><span class="pre">rdm2x2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coord</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sym_pos_def</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/ctm/generic/rdm.html#rdm2x2"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ctm.generic.rdm.rdm2x2" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>coord</strong> (<em>tuple</em><em>(</em><em>int</em><em>,</em><em>int</em><em>)</em>) – vertex (x,y) specifies upper left site of 2x2 subsystem</p></li>
+<li><p><strong>state</strong> (<a class="reference internal" href="../../ipeps/ipeps.html#ipeps.ipeps.IPEPS" title="ipeps.ipeps.IPEPS"><em>IPEPS</em></a>) – underlying wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="env.html#ctm.generic.env.ENV" title="ctm.generic.env.ENV"><em>ENV</em></a>) – environment corresponding to <code class="docutils literal notranslate"><span class="pre">state</span></code></p></li>
+<li><p><strong>verbosity</strong> (<em>int</em>) – logging verbosity</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>4-site reduced density matrix with indices <span class="math notranslate nohighlight">\(s_0s_1s_2s_3;s'_0s'_1s'_2s'_3\)</span></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.tensor</p>
+</dd>
+</dl>
+<p>Computes 4-site reduced density matrix <span class="math notranslate nohighlight">\(\rho_{2x2}\)</span> of 2x2 subsystem specified
+by the vertex <code class="docutils literal notranslate"><span class="pre">coord</span></code> of its upper left corner using strategy:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>compute four individual corners</p></li>
+<li><p>construct upper and lower half of the network</p></li>
+<li><p>contract upper and lower half to obtain final reduced density matrix</p></li>
+</ol>
+</div></blockquote>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">C</span><span class="o">--</span><span class="n">T</span><span class="o">------------------</span><span class="n">T</span><span class="o">------------------</span><span class="n">C</span> <span class="o">=</span> <span class="n">C2x2_LU</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span><span class="o">--------</span><span class="n">C2x2</span><span class="p">(</span><span class="n">coord</span><span class="o">+</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">))</span>
+<span class="o">|</span>  <span class="o">|</span>                  <span class="o">|</span>                  <span class="o">|</span>   <span class="o">|</span>                     <span class="o">|</span>
+<span class="n">T</span><span class="o">--</span><span class="n">A</span><span class="o">^+</span><span class="n">A</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span><span class="o">--------</span><span class="n">A</span><span class="o">^+</span><span class="n">A</span><span class="p">(</span><span class="n">coord</span><span class="o">+</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">))</span><span class="o">--</span><span class="n">T</span>   <span class="n">C2x2_LD</span><span class="p">(</span><span class="n">coord</span><span class="o">+</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span><span class="o">--</span><span class="n">C2x2</span><span class="p">(</span><span class="n">coord</span><span class="o">+</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>
+<span class="o">|</span>  <span class="o">|</span>                  <span class="o">|</span>                  <span class="o">|</span>
+<span class="n">T</span><span class="o">--</span><span class="n">A</span><span class="o">^+</span><span class="n">A</span><span class="p">(</span><span class="n">coord</span><span class="o">+</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span><span class="o">--</span><span class="n">A</span><span class="o">^+</span><span class="n">A</span><span class="p">(</span><span class="n">coord</span><span class="o">+</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span><span class="o">--</span><span class="n">T</span>
+<span class="o">|</span>  <span class="o">|</span>                  <span class="o">|</span>                  <span class="o">|</span>
+<span class="n">C</span><span class="o">--</span><span class="n">T</span><span class="o">------------------</span><span class="n">T</span><span class="o">------------------</span><span class="n">C</span>
+</pre></div>
+</div>
+<p>The physical indices <cite>s</cite> and <cite>s’</cite> of on-sites tensors <span class="math notranslate nohighlight">\(A\)</span> (and <span class="math notranslate nohighlight">\(A^\dagger\)</span>)
+at vertices <code class="docutils literal notranslate"><span class="pre">coord</span></code>, <code class="docutils literal notranslate"><span class="pre">coord+(1,0)</span></code>, <code class="docutils literal notranslate"><span class="pre">coord+(0,1)</span></code>, and <code class="docutils literal notranslate"><span class="pre">coord+(1,1)</span></code> are
+left uncontracted and given in the same order:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">s0</span> <span class="n">s1</span>
+<span class="n">s2</span> <span class="n">s3</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</section>
+<section id="module-ctm.pess_kagome.rdm_kagome">
+<span id="specific-rdms-for-kagome-ipeps"></span><h1>Specific RDMs for Kagome iPEPS<a class="headerlink" href="#module-ctm.pess_kagome.rdm_kagome" title="Permalink to this heading">¶</a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="ctm.pess_kagome.rdm_kagome.double_layer_a">
+<span class="sig-prename descclassname"><span class="pre">ctm.pess_kagome.rdm_kagome.</span></span><span class="sig-name descname"><span class="pre">double_layer_a</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coord</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">open_sites</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_cpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/ctm/pess_kagome/rdm_kagome.html#double_layer_a"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ctm.pess_kagome.rdm_kagome.double_layer_a" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="../../ipeps/ipeps_kagome.html#ipeps.ipeps_kagome.IPEPS_KAGOME" title="ipeps.ipeps_kagome.IPEPS_KAGOME"><em>IPEPS_KAGOME</em></a>) – underlying wavefunction</p></li>
+<li><p><strong>coord</strong> (<em>tuple</em><em>(</em><em>int</em><em>,</em><em>int</em><em>)</em>) – vertex (x,y) for which the reduced density matrix is constructed</p></li>
+<li><p><strong>open_sites</strong> (<em>list</em><em>(</em><em>int</em><em>)</em>) – a list DoFs to leave open (uncontracted).</p></li>
+<li><p><strong>force_cpu</strong> (<em>bool</em>) – perform on CPU</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>result of (partial) contraction of double-layer tensor</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.tensor</p>
+</dd>
+</dl>
+<p>Build double-layer tensor of Kagome iPEPS with open, partially, or fully contracted
+physical space of 3 DoFs on down triangle:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>   <span class="n">u</span>
+   <span class="o">|</span>                            <span class="o">/</span>
+<span class="n">l</span><span class="o">--</span>\                         <span class="o">--</span><span class="n">A</span><span class="o">*--</span>
+    \                         <span class="o">/|</span>\ \            <span class="o">/</span>
+    <span class="n">s0</span><span class="o">--</span><span class="n">s2</span><span class="o">--</span><span class="n">r</span>          <span class="o">-&gt;</span>      <span class="o">|</span> <span class="o">|</span> \  <span class="o">-&gt;</span>   <span class="o">--</span><span class="n">a</span><span class="o">*</span><span class="n">a</span><span class="o">--</span>
+     <span class="o">|</span> <span class="o">/</span>                    <span class="n">s</span><span class="s1">&#39; 0 1 2         / </span><span class="se">\</span>
+<span class="s1">     |/   &lt;- DOWN_T            ? ? ?           |s&gt;&lt;s&#39;</span><span class="o">|</span>
+    <span class="n">s1</span>                       <span class="n">s</span> <span class="mi">0</span> <span class="mi">1</span> <span class="mi">2</span>
+     <span class="o">|</span>                         <span class="o">|</span> <span class="o">|</span> <span class="o">/</span>
+     <span class="n">d</span>                         <span class="o">|///</span>
+                             <span class="o">--</span><span class="n">A</span><span class="o">--</span>
+                              <span class="o">/</span>
+</pre></div>
+</div>
+<p>Default results in contraction over all 3 DoFs. Physical indices are aggregated into
+a single index with structure <span class="math notranslate nohighlight">\(|ket \rangle\langle bra| = s_0,...,s_2;s'_0,...,s'_2\)</span>.</p>
+<p>The available choices for <code class="docutils literal notranslate"><span class="pre">open_sites</span></code> are: [], [0], [1], [2], [0,1], [0,2], [1,2], and [0,1,2].</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ctm.pess_kagome.rdm_kagome.enlarged_corner">
+<span class="sig-prename descclassname"><span class="pre">ctm.pess_kagome.rdm_kagome.</span></span><span class="sig-name descname"><span class="pre">enlarged_corner</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coord</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">corner</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">open_sites</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_cpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/ctm/pess_kagome/rdm_kagome.html#enlarged_corner"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ctm.pess_kagome.rdm_kagome.enlarged_corner" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>coord</strong> (<em>tuple</em><em>(</em><em>int</em><em>,</em><em>int</em><em>)</em>) – vertex (x,y) for which the enlarged corner is constructed</p></li>
+<li><p><strong>state</strong> (<a class="reference internal" href="../../ipeps/ipeps_kagome.html#ipeps.ipeps_kagome.IPEPS_KAGOME" title="ipeps.ipeps_kagome.IPEPS_KAGOME"><em>IPEPS_KAGOME</em></a>) – underlying wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="env.html#ctm.generic.env.ENV" title="ctm.generic.env.ENV"><em>ENV</em></a>) – environment corresponding to <code class="docutils literal notranslate"><span class="pre">state</span></code></p></li>
+<li><p><strong>corner</strong> (<em>str</em>) – which corner to construct. The four options are: ‘LU’, ‘RU’, ‘RD’, and ‘LD’
+for “left up” corner, “right up” corner, “right down” corner, and “left down” corner.</p></li>
+<li><p><strong>open_sites</strong> (<em>list</em><em>(</em><em>int</em><em>)</em>) – a list DoFs to leave open (uncontracted).</p></li>
+<li><p><strong>force_cpu</strong> (<em>bool</em>) – perform on CPU</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>result of (partial) contraction of double-layer tensor</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.tensor</p>
+</dd>
+</dl>
+<p>Builds enlarged corner relative to the site at <code class="docutils literal notranslate"><span class="pre">coord</span></code> from the environment:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">C</span><span class="o">---</span><span class="n">T</span><span class="o">---</span>                            <span class="o">|</span>   <span class="o">|</span>
+<span class="o">|</span>   <span class="o">|</span>                            <span class="o">--</span><span class="n">a</span><span class="o">*</span><span class="n">a</span><span class="o">--</span><span class="n">T</span>
+<span class="n">T</span><span class="o">--</span><span class="n">a</span><span class="o">*</span><span class="n">a</span><span class="o">--</span>                            <span class="o">|</span>   <span class="o">|</span>
+<span class="o">|</span>   <span class="o">|</span>     <span class="k">for</span> <span class="n">corner</span><span class="o">=</span><span class="s1">&#39;LU&#39;</span><span class="p">,</span> <span class="ow">or</span>    <span class="o">---</span><span class="n">T</span><span class="o">---</span><span class="n">C</span>  <span class="k">for</span> <span class="n">corner</span><span class="o">=</span><span class="s1">&#39;RD&#39;</span>
+</pre></div>
+</div>
+<p>The resulting tensor is always reshaped into either rank-2 or rank-3 if some DoFs are left open
+on the double-layer. In the latter case, these open physical indices are aggregated into
+the last index of the resulting tensor. The index-ordering convention for enlarged corners
+follows convention for corner tensors of the environment <code class="docutils literal notranslate"><span class="pre">env</span></code>.</p>
+<p>If <code class="docutils literal notranslate"><span class="pre">open_sites=0</span></code> returned tensor has rank-2, where env. indices and auxiliary indices
+of double-layer tensor in the same direction were reshaped into a single index.
+If some DoFs remain open, then returned tensor is rank-3 with extra index carrying
+all physical DoFs reshaped in <cite>:math:`|ket ranglelangle bra|</cite> order:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">C</span><span class="o">---</span><span class="n">T</span><span class="o">---</span>\                             <span class="n">C</span><span class="o">---</span><span class="n">T</span><span class="o">---</span>\
+<span class="o">|</span>   <span class="o">|</span>    <span class="o">--</span><span class="mi">1</span>                          <span class="o">|</span>   <span class="o">|</span>    <span class="o">--</span><span class="mi">1</span>
+<span class="n">T</span><span class="o">--</span><span class="n">a</span><span class="o">*</span><span class="n">a</span><span class="o">--/</span>                             <span class="n">T</span><span class="o">--</span><span class="n">a</span><span class="o">*</span><span class="n">a</span><span class="o">--/</span>
+ \ <span class="o">/</span>                                   \ <span class="o">/</span> \
+  <span class="o">|</span>                                     <span class="o">|</span>   <span class="mi">2</span>
+  <span class="mi">0</span>           <span class="k">for</span> <span class="n">open_sites</span><span class="o">=</span><span class="p">[],</span> <span class="ow">or</span>     <span class="mi">0</span>           <span class="k">for</span> <span class="n">non</span><span class="o">-</span><span class="n">empty</span> <span class="n">open_sites</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ctm.pess_kagome.rdm_kagome.rdm1x1_kagome">
+<span class="sig-prename descclassname"><span class="pre">ctm.pess_kagome.rdm_kagome.</span></span><span class="sig-name descname"><span class="pre">rdm1x1_kagome</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coord</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sites_to_keep</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">('A',</span> <span class="pre">'B',</span> <span class="pre">'C')</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_cpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sym_pos_def</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/ctm/pess_kagome/rdm_kagome.html#rdm1x1_kagome"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ctm.pess_kagome.rdm_kagome.rdm1x1_kagome" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>coord</strong> (<em>tuple</em><em>(</em><em>int</em><em>,</em><em>int</em><em>)</em>) – vertex (x,y) for which reduced density matrix is constructed</p></li>
+<li><p><strong>state</strong> (<a class="reference internal" href="../../ipeps/ipeps_kagome.html#ipeps.ipeps_kagome.IPEPS_KAGOME" title="ipeps.ipeps_kagome.IPEPS_KAGOME"><em>IPEPS_KAGOME</em></a>) – underlying wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="env.html#ctm.generic.env.ENV" title="ctm.generic.env.ENV"><em>ENV</em></a>) – environment corresponding to <code class="docutils literal notranslate"><span class="pre">state</span></code></p></li>
+<li><p><strong>verbosity</strong> (<em>int</em>) – logging verbosity</p></li>
+<li><p><strong>sites_to_keep</strong> – physical degrees of freedom to be kept. Default: “ABC” - keep all the DOF</p></li>
+<li><p><strong>force_cpu</strong> (<em>bool</em>) – perform on CPU</p></li>
+<li><p><strong>sym_pos_def</strong> (<em>bool</em>) – make reduced density matrix positive-(semi)definite</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>1-site reduced density matrix with indices <span class="math notranslate nohighlight">\(s;s'\)</span></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.tensor</p>
+</dd>
+</dl>
+<p>Compute 1-kagome-site reduced density matrix <span class="math notranslate nohighlight">\(\rho_{1x1,\textrm{sites_to_keep}}\)</span> centered
+on vertex <code class="docutils literal notranslate"><span class="pre">coord</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">y</span>\<span class="n">x</span> <span class="o">-</span><span class="mi">1</span> <span class="mi">0</span>   <span class="mi">1</span>
+<span class="o">-</span><span class="mi">1</span>  <span class="n">C1</span> <span class="n">T4</span>  <span class="n">C4</span>
+ <span class="mi">0</span>  <span class="n">T1</span> <span class="n">a</span><span class="o">*</span><span class="n">a</span> <span class="n">T3</span>
+ <span class="mi">1</span>  <span class="n">C2</span> <span class="n">T2</span>  <span class="n">C3</span>
+</pre></div>
+</div>
+<p>The physical indices are ordered as <span class="math notranslate nohighlight">\(|ket \rangle\langle bra|\)</span> from on-site tensor
+A (<cite>ket</cite>) and then A^dag (<cite>bra</cite>).</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ctm.pess_kagome.rdm_kagome.rdm1x2_kagome">
+<span class="sig-prename descclassname"><span class="pre">ctm.pess_kagome.rdm_kagome.</span></span><span class="sig-name descname"><span class="pre">rdm1x2_kagome</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coord</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sites_to_keep_00</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">('A',</span> <span class="pre">'B',</span> <span class="pre">'C')</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sites_to_keep_01</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">('A',</span> <span class="pre">'B',</span> <span class="pre">'C')</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sym_pos_def</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_cpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/ctm/pess_kagome/rdm_kagome.html#rdm1x2_kagome"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ctm.pess_kagome.rdm_kagome.rdm1x2_kagome" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>coord</strong> (<em>tuple</em><em>(</em><em>int</em><em>,</em><em>int</em><em>)</em>) – vertex (x,y) specifies position of 1x2 subsystem</p></li>
+<li><p><strong>state</strong> (<a class="reference internal" href="../../ipeps/ipeps_kagome.html#ipeps.ipeps_kagome.IPEPS_KAGOME" title="ipeps.ipeps_kagome.IPEPS_KAGOME"><em>IPEPS_KAGOME</em></a>) – underlying wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="env.html#ctm.generic.env.ENV" title="ctm.generic.env.ENV"><em>ENV</em></a>) – environment corresponding to <code class="docutils literal notranslate"><span class="pre">state</span></code></p></li>
+<li><p><strong>verbosity</strong> (<em>int</em>) – logging verbosity</p></li>
+<li><p><strong>sites_to_keep_00</strong> – physical sites needed for the unit cell at coord + (0, 0)</p></li>
+<li><p><strong>sites_to_keep_01</strong> – physical sites needed for the unit cell at coord + (0, 1)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>2-site reduced density matrix with indices <span class="math notranslate nohighlight">\(s_0s_1;s'_0s'_1\)</span></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.tensor</p>
+</dd>
+</dl>
+<p>Computes 2-site reduced density matrix <span class="math notranslate nohighlight">\(\rho_{1x2}\)</span> of a vertical
+1x2 subsystem using following strategy:</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ctm.pess_kagome.rdm_kagome.rdm2x1_kagome">
+<span class="sig-prename descclassname"><span class="pre">ctm.pess_kagome.rdm_kagome.</span></span><span class="sig-name descname"><span class="pre">rdm2x1_kagome</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coord</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sites_to_keep_00</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">('A',</span> <span class="pre">'B',</span> <span class="pre">'C')</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sites_to_keep_10</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">('A',</span> <span class="pre">'B',</span> <span class="pre">'C')</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_cpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sym_pos_def</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/ctm/pess_kagome/rdm_kagome.html#rdm2x1_kagome"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ctm.pess_kagome.rdm_kagome.rdm2x1_kagome" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>coord</strong> (<em>tuple</em><em>(</em><em>int</em><em>,</em><em>int</em><em>)</em>) – vertex (x,y) specifies position of 2x1 subsystem</p></li>
+<li><p><strong>state</strong> (<a class="reference internal" href="../../ipeps/ipeps_kagome.html#ipeps.ipeps_kagome.IPEPS_KAGOME" title="ipeps.ipeps_kagome.IPEPS_KAGOME"><em>IPEPS_KAGOME</em></a>) – underlying wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="env.html#ctm.generic.env.ENV" title="ctm.generic.env.ENV"><em>ENV</em></a>) – environment corresponding to <code class="docutils literal notranslate"><span class="pre">state</span></code></p></li>
+<li><p><strong>verbosity</strong> (<em>int</em>) – logging verbosity</p></li>
+<li><p><strong>sites_to_keep_00</strong> – physical sites needed for the unit cell at coord + (0, 0)</p></li>
+<li><p><strong>sites_to_keep_10</strong> – physical sites needed for the unit cell at coord + (1, 0)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>2-site reduced density matrix with indices <span class="math notranslate nohighlight">\(s_0s_1;s'_0s'_1\)</span></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.tensor</p>
+</dd>
+</dl>
+<p>Computes 2-site reduced density matrix <span class="math notranslate nohighlight">\(\rho_{2x1}\)</span> of a horizontal
+2x1 subsystem using following strategy:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>compute four individual corners</p></li>
+<li><p>construct right and left half of the network</p></li>
+<li><p>contract right and left halt to obtain final reduced density matrix</p></li>
+</ol>
+</div></blockquote>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">C</span><span class="o">--</span><span class="n">T</span><span class="o">------------</span><span class="n">T</span><span class="o">------------------</span><span class="n">C</span> <span class="o">=</span> <span class="n">C2x2_LU</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span><span class="o">--</span><span class="n">C2x2</span><span class="p">(</span><span class="n">coord</span><span class="o">+</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">))</span>
+<span class="o">|</span>  <span class="o">|</span>            <span class="o">|</span>                  <span class="o">|</span>   <span class="o">|</span>               <span class="o">|</span>
+<span class="n">T</span><span class="o">--</span><span class="n">A</span><span class="o">^+</span><span class="n">A</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span><span class="o">--</span><span class="n">A</span><span class="o">^+</span><span class="n">A</span><span class="p">(</span><span class="n">coord</span><span class="o">+</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">))</span><span class="o">--</span><span class="n">T</span>   <span class="n">C2x1_LD</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span><span class="o">--</span><span class="n">C2x1</span><span class="p">(</span><span class="n">coord</span><span class="o">+</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">))</span>
+<span class="o">|</span>  <span class="o">|</span>            <span class="o">|</span>                  <span class="o">|</span>
+<span class="n">C</span><span class="o">--</span><span class="n">T</span><span class="o">------------</span><span class="n">T</span><span class="o">------------------</span><span class="n">C</span>
+</pre></div>
+</div>
+<p>The physical indices <cite>s</cite> and <cite>s’</cite> of on-sites tensors <span class="math notranslate nohighlight">\(A\)</span> (and <span class="math notranslate nohighlight">\(A^\dagger\)</span>)
+at vertices <code class="docutils literal notranslate"><span class="pre">coord</span></code>, <code class="docutils literal notranslate"><span class="pre">coord+(1,0)</span></code> are left uncontracted</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ctm.pess_kagome.rdm_kagome.rdm2x2_dn_triangle_with_operator">
+<span class="sig-prename descclassname"><span class="pre">ctm.pess_kagome.rdm_kagome.</span></span><span class="sig-name descname"><span class="pre">rdm2x2_dn_triangle_with_operator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coord</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">op</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_cpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/ctm/pess_kagome/rdm_kagome.html#rdm2x2_dn_triangle_with_operator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ctm.pess_kagome.rdm_kagome.rdm2x2_dn_triangle_with_operator" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>coord</strong> (<em>tuple</em><em>(</em><em>int</em><em>,</em><em>int</em><em>)</em>) – vertex (x,y) for which the reduced density matrix is constructed</p></li>
+<li><p><strong>state</strong> (<a class="reference internal" href="../../ipeps/ipeps_kagome.html#ipeps.ipeps_kagome.IPEPS_KAGOME" title="ipeps.ipeps_kagome.IPEPS_KAGOME"><em>IPEPS_KAGOME</em></a>) – underlying wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="env.html#ctm.generic.env.ENV" title="ctm.generic.env.ENV"><em>ENV</em></a>) – environment corresponding to <code class="docutils literal notranslate"><span class="pre">state</span></code></p></li>
+<li><p><strong>verbosity</strong> (<em>int</em>) – logging verbosity</p></li>
+<li><p><strong>op</strong> (<em>torch.tensor</em>) – operator to be contracted. It is expected that the op is either
+rank-6 tensor of shape [physical_dim]*6 or rank-2 tensor
+of shape [physical_dim**3]*2 (fused bra and ket spaces)</p></li>
+<li><p><strong>force_cpu</strong> (<em>bool</em>) – perform on CPU</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>normalized expectation value of the operator <cite>op</cite> and the norm
+of the reduced density matrix</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.tensor, torch.tensor</p>
+</dd>
+</dl>
+<p>Returns a normalized expectation value of operator inserted into down triangle
+of upper left corner of 2x2 subsystem:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">C</span>    <span class="n">T</span>             <span class="n">T</span>          <span class="n">C</span>
+     <span class="n">a</span>             <span class="n">a</span>
+     <span class="o">|</span>             <span class="o">|</span>
+<span class="n">T</span> <span class="n">b</span><span class="o">--</span>\          <span class="n">b</span><span class="o">--</span>\
+      \        <span class="o">/</span>    \
+      <span class="n">s0</span><span class="o">--</span><span class="n">s2</span><span class="o">--</span><span class="n">d</span>     <span class="n">XX</span><span class="o">--</span><span class="n">XX</span><span class="o">--</span><span class="n">d</span> <span class="n">T</span>
+       <span class="o">|</span> <span class="o">/</span>           <span class="o">|</span> <span class="o">/</span>
+       <span class="o">|/</span>            <span class="o">|/</span>
+      <span class="n">s1</span>            <span class="n">XX</span>
+       <span class="o">|</span>             <span class="o">|</span>
+       <span class="n">c</span>             <span class="n">c</span>
+      <span class="o">/</span>             <span class="o">/</span>
+     <span class="n">a</span>             <span class="n">a</span>
+     <span class="o">|</span>             <span class="o">|</span>
+<span class="n">T</span> <span class="n">b</span><span class="o">--</span>\          <span class="n">b</span><span class="o">--</span>\
+      \        <span class="o">/</span>    \
+      <span class="n">XX</span><span class="o">--</span><span class="n">XX</span><span class="o">--</span><span class="n">d</span>     <span class="n">XX</span><span class="o">--</span><span class="n">XX</span><span class="o">--</span><span class="n">d</span> <span class="n">T</span>
+       <span class="o">|</span> <span class="o">/</span>           <span class="o">|</span> <span class="o">/</span>
+       <span class="o">|/</span>            <span class="o">|/</span>
+      <span class="n">XX</span>            <span class="n">XX</span>
+       <span class="o">|</span>             <span class="o">|</span>
+       <span class="n">c</span>             <span class="n">c</span>
+<span class="n">C</span>      <span class="n">T</span>             <span class="n">T</span>        <span class="n">C</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ctm.pess_kagome.rdm_kagome.rdm2x2_kagome">
+<span class="sig-prename descclassname"><span class="pre">ctm.pess_kagome.rdm_kagome.</span></span><span class="sig-name descname"><span class="pre">rdm2x2_kagome</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coord</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sites_to_keep_00</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">('A',</span> <span class="pre">'B',</span> <span class="pre">'C')</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sites_to_keep_10</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">('A',</span> <span class="pre">'B',</span> <span class="pre">'C')</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sites_to_keep_01</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">('A',</span> <span class="pre">'B',</span> <span class="pre">'C')</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sites_to_keep_11</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">('A',</span> <span class="pre">'B',</span> <span class="pre">'C')</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_cpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sym_pos_def</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/ctm/pess_kagome/rdm_kagome.html#rdm2x2_kagome"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ctm.pess_kagome.rdm_kagome.rdm2x2_kagome" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>coord</strong> (<em>tuple</em><em>(</em><em>int</em><em>,</em><em>int</em><em>)</em>) – vertex (x,y) specifies upper left site of 2x2 subsystem</p></li>
+<li><p><strong>state</strong> (<a class="reference internal" href="../../ipeps/ipeps_kagome.html#ipeps.ipeps_kagome.IPEPS_KAGOME" title="ipeps.ipeps_kagome.IPEPS_KAGOME"><em>IPEPS_KAGOME</em></a>) – underlying wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="env.html#ctm.generic.env.ENV" title="ctm.generic.env.ENV"><em>ENV</em></a>) – environment corresponding to <code class="docutils literal notranslate"><span class="pre">state</span></code></p></li>
+<li><p><strong>verbosity</strong> (<em>int</em>) – logging verbosity</p></li>
+<li><p><strong>sites_to_keep_00</strong> – physical sites needed for the unit cell at coord + (0, 0)</p></li>
+<li><p><strong>sites_to_keep_10</strong> – physical sites needed for the unit cell at coord + (1, 0)</p></li>
+<li><p><strong>sites_to_keep_01</strong> – physical sites needed for the unit cell at coord + (0, 1)</p></li>
+<li><p><strong>sites_to_keep_11</strong> – physical sites needed for the unit cell at coord + (1, 1)</p></li>
+<li><p><strong>force_cpu</strong> (<em>bool</em>) – perform on CPU</p></li>
+<li><p><strong>sym_pos_def</strong> (<em>bool</em>) – make reduced density matrix positive-(semi)definite</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>4-site reduced density matrix with indices <span class="math notranslate nohighlight">\(s_0s_1s_2s_3;s'_0s'_1s'_2s'_3\)</span></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.tensor</p>
+</dd>
+</dl>
+<p>Computes 4-site reduced density matrix <span class="math notranslate nohighlight">\(\rho_{2x2}\)</span> of 2x2 subsystem specified
+by the vertex <code class="docutils literal notranslate"><span class="pre">coord</span></code> of its upper left corner using strategy:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>compute four individual corners</p></li>
+<li><p>construct upper and lower half of the network</p></li>
+<li><p>contract upper and lower half to obtain final reduced density matrix</p></li>
+</ol>
+</div></blockquote>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">C</span><span class="o">--</span><span class="n">T</span><span class="o">------------------</span><span class="n">T</span><span class="o">------------------</span><span class="n">C</span> <span class="o">=</span> <span class="n">C2x2_LU</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span><span class="o">--------</span><span class="n">C2x2_RU</span><span class="p">(</span><span class="n">coord</span><span class="o">+</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">))</span>
+<span class="o">|</span>  <span class="o">|</span>                  <span class="o">|</span>                  <span class="o">|</span>   <span class="o">|</span>                     <span class="o">|</span>
+<span class="n">T</span><span class="o">--</span><span class="n">A</span><span class="o">^+</span><span class="n">A</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span><span class="o">--------</span><span class="n">A</span><span class="o">^+</span><span class="n">A</span><span class="p">(</span><span class="n">coord</span><span class="o">+</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">))</span><span class="o">--</span><span class="n">T</span>   <span class="n">C2x2_LD</span><span class="p">(</span><span class="n">coord</span><span class="o">+</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span><span class="o">--</span><span class="n">C2x2_RD</span><span class="p">(</span><span class="n">coord</span><span class="o">+</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>
+<span class="o">|</span>  <span class="o">|</span>                  <span class="o">|</span>                  <span class="o">|</span>
+<span class="n">T</span><span class="o">--</span><span class="n">A</span><span class="o">^+</span><span class="n">A</span><span class="p">(</span><span class="n">coord</span><span class="o">+</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span><span class="o">--</span><span class="n">A</span><span class="o">^+</span><span class="n">A</span><span class="p">(</span><span class="n">coord</span><span class="o">+</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span><span class="o">--</span><span class="n">T</span>
+<span class="o">|</span>  <span class="o">|</span>                  <span class="o">|</span>                  <span class="o">|</span>
+<span class="n">C</span><span class="o">--</span><span class="n">T</span><span class="o">------------------</span><span class="n">T</span><span class="o">------------------</span><span class="n">C</span>
+</pre></div>
+</div>
+<p>The physical indices <cite>s</cite> and <cite>s’</cite> of on-sites tensors <span class="math notranslate nohighlight">\(A\)</span> (and <span class="math notranslate nohighlight">\(A^\dagger\)</span>)
+at vertices <code class="docutils literal notranslate"><span class="pre">coord</span></code>, <code class="docutils literal notranslate"><span class="pre">coord+(1,0)</span></code>, <code class="docutils literal notranslate"><span class="pre">coord+(0,1)</span></code>, and <code class="docutils literal notranslate"><span class="pre">coord+(1,1)</span></code> are
+left uncontracted and given in the same order:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">s0</span> <span class="n">s1</span>
+<span class="n">s2</span> <span class="n">s3</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ctm.pess_kagome.rdm_kagome.rdm2x2_up_triangle_open">
+<span class="sig-prename descclassname"><span class="pre">ctm.pess_kagome.rdm_kagome.</span></span><span class="sig-name descname"><span class="pre">rdm2x2_up_triangle_open</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coord</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sym_pos_def</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_cpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/ctm/pess_kagome/rdm_kagome.html#rdm2x2_up_triangle_open"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ctm.pess_kagome.rdm_kagome.rdm2x2_up_triangle_open" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>coord</strong> (<em>tuple</em><em>(</em><em>int</em><em>,</em><em>int</em><em>)</em>) – vertex (x,y) specifies upper left site of 2x2 subsystem</p></li>
+<li><p><strong>state</strong> (<a class="reference internal" href="../../ipeps/ipeps_kagome.html#ipeps.ipeps_kagome.IPEPS_KAGOME" title="ipeps.ipeps_kagome.IPEPS_KAGOME"><em>IPEPS_KAGOME</em></a>) – underlying wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="env.html#ctm.generic.env.ENV" title="ctm.generic.env.ENV"><em>ENV</em></a>) – environment corresponding to <code class="docutils literal notranslate"><span class="pre">state</span></code></p></li>
+<li><p><strong>verbosity</strong> (<em>int</em>) – logging verbosity</p></li>
+<li><p><strong>force_cpu</strong> (<em>bool</em>) – perform on CPU</p></li>
+<li><p><strong>sym_pos_def</strong> (<em>bool</em>) – make reduced density matrix positive-(semi)definite</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>reduced density matrix as rank-6 tensor</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.tensor</p>
+</dd>
+</dl>
+<p>Build reduced density matrix corresponding to the three sites s0, s1, and s2
+of the “up” triangle of Kagome lattice:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">C</span>    <span class="n">T</span>             <span class="n">T</span>          <span class="n">C</span> <span class="o">=&gt;</span> <span class="n">C2x2_LU</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span><span class="o">--------</span><span class="n">C2x2</span><span class="p">(</span><span class="n">coord</span><span class="o">+</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">))</span>
+     <span class="n">a</span>             <span class="n">a</span>               <span class="o">|</span>                  <span class="n">s1</span><span class="o">/|</span>
+     <span class="o">|</span>             <span class="o">|</span>               <span class="o">|/</span><span class="n">s2</span>               <span class="n">s0</span>\<span class="o">|</span>
+<span class="n">T</span> <span class="n">b</span><span class="o">--</span>\          <span class="n">b</span><span class="o">--</span>\               <span class="n">C2x2_LD</span><span class="p">(</span><span class="n">coord</span><span class="o">+</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span><span class="o">--</span><span class="n">C2x2</span><span class="p">(</span><span class="n">coord</span><span class="o">+</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>
+      \        <span class="o">/</span>    \
+      <span class="n">XX</span><span class="o">--</span><span class="n">XX</span><span class="o">--</span><span class="n">d</span>     <span class="n">XX</span><span class="o">--</span><span class="n">XX</span><span class="o">--</span><span class="n">d</span> <span class="n">T</span>
+       <span class="o">|</span> <span class="o">/</span>           <span class="o">|</span> <span class="o">/</span>
+       <span class="o">|/</span>            <span class="o">|/</span>
+      <span class="n">XX</span>            <span class="n">s1</span>
+       <span class="o">|</span>             <span class="o">|</span>
+       <span class="n">c</span>             <span class="n">c</span>
+      <span class="o">/</span>             <span class="o">/</span>
+     <span class="n">a</span>             <span class="n">a</span>
+     <span class="o">|</span>             <span class="o">|</span>
+<span class="n">T</span> <span class="n">b</span><span class="o">--</span>\          <span class="n">b</span><span class="o">--</span>\
+      \        <span class="o">/</span>    \
+      <span class="n">XX</span><span class="o">--</span><span class="n">s2</span><span class="o">--</span><span class="n">d</span>     <span class="n">s0</span><span class="o">--</span><span class="n">XX</span><span class="o">--</span><span class="n">d</span> <span class="n">T</span>
+       <span class="o">|</span> <span class="o">/</span>           <span class="o">|</span> <span class="o">/</span>
+       <span class="o">|/</span>            <span class="o">|/</span>
+      <span class="n">XX</span>            <span class="n">XX</span>
+       <span class="o">|</span>             <span class="o">|</span>
+       <span class="n">c</span>             <span class="n">c</span>
+<span class="n">C</span>      <span class="n">T</span>             <span class="n">T</span>        <span class="n">C</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ctm.pess_kagome.rdm_kagome.trace1x1_dn_kagome">
+<span class="sig-prename descclassname"><span class="pre">ctm.pess_kagome.rdm_kagome.</span></span><span class="sig-name descname"><span class="pre">trace1x1_dn_kagome</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coord</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">op</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_cpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/ctm/pess_kagome/rdm_kagome.html#trace1x1_dn_kagome"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ctm.pess_kagome.rdm_kagome.trace1x1_dn_kagome" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>coord</strong> (<em>tuple</em><em>(</em><em>int</em><em>,</em><em>int</em><em>)</em>) – vertex (x,y) for which the reduced density matrix is constructed</p></li>
+<li><p><strong>state</strong> (<a class="reference internal" href="../../ipeps/ipeps_kagome.html#ipeps.ipeps_kagome.IPEPS_KAGOME" title="ipeps.ipeps_kagome.IPEPS_KAGOME"><em>IPEPS_KAGOME</em></a>) – underlying wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="env.html#ctm.generic.env.ENV" title="ctm.generic.env.ENV"><em>ENV</em></a>) – environment corresponding to <code class="docutils literal notranslate"><span class="pre">state</span></code></p></li>
+<li><p><strong>op</strong> (<em>torch.tensor</em>) – operator to be contracted. It is expected that the <code class="docutils literal notranslate"><span class="pre">op</span></code> is either
+rank-6 tensor of shape [physical_dim]*6 or rank-2 tensor
+of shape [physical_dim**3]*2 (fused bra and ket spaces)</p></li>
+<li><p><strong>verbosity</strong> (<em>int</em>) – logging verbosity</p></li>
+<li><p><strong>force_cpu</strong> (<em>bool</em>) – perform on CPU</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>expectation value of the given on-site observable <code class="docutils literal notranslate"><span class="pre">op</span></code></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.tensor</p>
+</dd>
+</dl>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">y</span>\<span class="n">x</span> <span class="o">-</span><span class="mi">1</span> <span class="mi">0</span>   <span class="mi">1</span>
+<span class="o">-</span><span class="mi">1</span>  <span class="n">C1</span> <span class="n">T4</span>  <span class="n">C4</span>
+ <span class="mi">0</span>  <span class="n">T1</span> <span class="n">a</span><span class="o">*</span><span class="n">a</span> <span class="n">T3</span>
+ <span class="mi">1</span>  <span class="n">C2</span> <span class="n">T2</span>  <span class="n">C3</span>
+</pre></div>
+</div>
+<p>Evaluate operator <code class="docutils literal notranslate"><span class="pre">op</span></code> supported on the three sites of the down triangle
+of Kagome lattice <span class="math notranslate nohighlight">\(Tr{\rho_{1x1,ABC} op}\)</span> centered on vertex <code class="docutils literal notranslate"><span class="pre">coord</span></code>.</p>
+</dd></dl>
+
+</section>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="corrf.html" class="btn btn-neutral float-right" title="Correlation functions" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="ctm_components.html" class="btn btn-neutral float-left" title="Components" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Juraj Hasik, Glen B. Mbeng
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

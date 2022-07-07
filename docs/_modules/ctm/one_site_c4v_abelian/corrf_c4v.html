@@ -1,0 +1,656 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>ctm.one_site_c4v_abelian.corrf_c4v &mdash; peps-torch alpha documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> peps-torch
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../ipeps.html">iPEPS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps.html">Generic iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_kagome.html">Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_c4v.html">1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_lc_1site_pg.html">1-site iPEPS from lin. combination</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipess_kagome.html">Generic Kagome iPESS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipess_kagome_pg.html">Kagome iPESS with point groups</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipess_kagome_pg_lc.html">Kagome iPESS from lin. combination</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../ipeps.html#abelian-symmetric-ipeps">Abelian-symmetric iPEPS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_abelian.html">Generic  abelian-symmetric iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_abelian.html#generic-abelian-symmetric-ipeps-with-weights">Generic abelian-symmetric iPEPS with weights</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_kagome_abelian.html">Abelian-symmetric Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_abelian_c4v.html">Abelian-symmetric 1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipess_kagome_abelian.html">Abelian-symmetric generic Kagome iPESS</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../envs.html">Environments</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../envs/generic.html">Generic iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/env.html">Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/rdm.html#module-ctm.pess_kagome.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/corrf.html">Correlation functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/transfer_matrix.html">Transfer Matrices</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../envs/generic_abelian.html">Abelian-symmetric generic iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic_abelian/env_abelian.html">Abelian-symmetric environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic_abelian/ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic_abelian/ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic_abelian/ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic_abelian/rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic_abelian/rdm.html#module-ctm.pess_kagome_abelian.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../envs/one_site_c4v.html">1-site C4v iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v/env_c4v.html">1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v/ctmrg_c4v.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v/rdm_c4v.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v/transfer_matrix.html">Transfer Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v/corrf_c4v.html">Correlation functions</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../envs/one_site_c4v_abelian.html">Abelian-symmetric 1-site C4v iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v_abelian/env_c4v_abelian.html">Abelian-symmetric 1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v_abelian/ctmrg_c4v_abelian.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v_abelian/rdm_c4v_abelian.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v_abelian/corrf_c4v_abelian.html">Correlation functions</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../optim.html">Optimization</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../optim/drivers.html">Optimization drivers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../optim/drivers/ad_optim.html">ad_optim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../optim/drivers/ad_optim_lbfgs_mod.html">ad_optim_lbfgs_mod</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../optim/drivers/ad_optim_sgd_mod.html">ad_optim_sgd_mod</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../optim/optimizers.html">Custom optimizers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../optim/optimizers/lbfgs_modified.html">Extended LBFGS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../optim/optimizers/sgd_modified.html">SGD with linesearch</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../config.html">Configuration</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../config.html#main">Main</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../config.html#global">Global</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../config.html#corner-transfer-matrix-algorithm">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../config.html#optimization">Optimization</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../models.html">Models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/akltS2.html">Spin S=2 AKLT Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/akltS2.html#module-models.akltS2">2x1 and 2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/akltS2.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/coupledLadders.html">Coupled Ladders</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/coupledLadders.html#dense-pytorch">Dense (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/coupledLadders.html#dense-yast">Dense (YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/coupledLadders.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/ising.html">Transverse Field Ising Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/ising.html#x1-unit-cell">1x1 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/ising.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/j1j2.html">J1-J2-J3 and J1-J2-lambda Heisenberg Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/j1j2.html#from-2x1-to-4x2-unit-cell-pytorch">from 2x1 to 4x2 unit cell (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/j1j2.html#from-2x1-to-4x2-unit-cell-dense-yast">from 2x1 to 4x2 unit cell (dense YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/j1j2.html#x1-c4v-pytorch">1x1 C4v (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/j1j2.html#x1-c4v-dense-yast">1x1 C4v (dense YAST)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/jq.html">J-Q Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/jq.html#module-models.jq">2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/jq.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/spin_half_kagome.html">SU(2) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/spin_half_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/spin_half_kagome.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/su3_kagome.html">SU(3) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/su3_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/su3_kagome.html#with-explict-u-1-xu-1-symmetry">With explict U(1)xU(1) symmetry</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../groups.html">Groups</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../groups/pg.html">Point group: square lattice</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../groups/su2.html">SU(2)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../groups/su2.html#module-groups.su2_abelian">SU(2) with explicit U(1) structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../groups/su3.html">SU(3)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../groups/su3.html#su-3-with-explicit-u-1-xu-1-structure">SU(3) with explicit U(1)xU(1) structure</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../linalg.html">Linear Algebra</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../linalg/custom_eig.html">Truncated eigendecomposition</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../linalg/custom_svd.html">Truncated SVD</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../linalg/spec_decomp.html">Spectral decompositions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../linalg/spec_decomp.html#module-linalg.svd_gesdd">SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../linalg/spec_decomp.html#module-linalg.svd_arnoldi">Partial SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../linalg/spec_decomp.html#module-linalg.svd_rsvd">Randomized SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../linalg/spec_decomp.html#module-linalg.eig_sym">Symmetric Eigendecomposition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../linalg/spec_decomp.html#module-linalg.eig_arnoldi">Partial diagonalization</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">peps-torch</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>ctm.one_site_c4v_abelian.corrf_c4v</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for ctm.one_site_c4v_abelian.corrf_c4v</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">tn_interface_abelian</span> <span class="kn">import</span> <span class="n">contract</span><span class="p">,</span> <span class="n">permute</span>
+
+<div class="viewcode-block" id="get_edge"><a class="viewcode-back" href="../../../envs/one_site_c4v_abelian/corrf_c4v_abelian.html#ctm.one_site_c4v_abelian.corrf_c4v.get_edge">[docs]</a><span class="k">def</span> <span class="nf">get_edge</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    :param state: underlying 1-site C4v symmetric wavefunction</span>
+<span class="sd">    :param env: C4v symmetric environment corresponding to ``state``</span>
+<span class="sd">    :param verbosity: logging verbosity</span>
+<span class="sd">    :type state: IPEPS_C4V_ABELIAN</span>
+<span class="sd">    :type env: ENV_C4V_ABELIAN</span>
+<span class="sd">    :type verbosity: int</span>
+<span class="sd">    :return: edge of the width-1 channel</span>
+<span class="sd">    :rtype: Tensor</span>
+<span class="sd">    </span>
+<span class="sd">    Build initial edge by contracting the following network::</span>
+
+<span class="sd">            C--0(-)</span>
+<span class="sd">            |</span>
+<span class="sd">        E = T--1(-) 1,2</span>
+<span class="sd">            |     </span>
+<span class="sd">            C--2(-) 3</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">C</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[</span><span class="n">env</span><span class="o">.</span><span class="n">keyC</span><span class="p">]</span>
+    <span class="n">T</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="n">env</span><span class="o">.</span><span class="n">keyT</span><span class="p">]</span>
+
+    <span class="c1"># C--1-&gt;0</span>
+    <span class="c1"># 0</span>
+    <span class="c1"># 0</span>
+    <span class="c1"># T--2,3</span>
+    <span class="c1"># 1</span>
+    <span class="n">E</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C</span><span class="p">,</span><span class="n">T</span><span class="p">,([</span><span class="mi">0</span><span class="p">],[</span><span class="mi">0</span><span class="p">]))</span>
+    <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;E=CT </span><span class="se">\n</span><span class="si">{</span><span class="n">E</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    
+    <span class="c1"># C--0</span>
+    <span class="c1"># |</span>
+    <span class="c1"># T--2,3-&gt;1,2</span>
+    <span class="c1"># 1</span>
+    <span class="c1"># 0</span>
+    <span class="c1"># C--1-&gt;3</span>
+    <span class="n">E</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">E</span><span class="p">,</span><span class="n">C</span><span class="p">,([</span><span class="mi">1</span><span class="p">],[</span><span class="mi">0</span><span class="p">]))</span>
+    <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;E=CT </span><span class="se">\n</span><span class="si">{</span><span class="n">E</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">E</span></div>
+
+<div class="viewcode-block" id="apply_edge"><a class="viewcode-back" href="../../../envs/one_site_c4v_abelian/corrf_c4v_abelian.html#ctm.one_site_c4v_abelian.corrf_c4v.apply_edge">[docs]</a><span class="k">def</span> <span class="nf">apply_edge</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">vec</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    :param state: underlying 1-site C4v symmetric wavefunction</span>
+<span class="sd">    :param env: C4v symmetric environment corresponding to ``state``</span>
+<span class="sd">    :param vec: tensor of dimensions :math:`\chi \times D^2 \times \chi`</span>
+<span class="sd">    :param verbosity: logging verbosity</span>
+<span class="sd">    :type state: IPEPS_ABELIAN_C4V</span>
+<span class="sd">    :type env: ENV_ABELIAN_C4V</span>
+<span class="sd">    :type vec: torch.Tensor</span>
+<span class="sd">    :type verbosity: int</span>
+<span class="sd">    :return: scalar resulting from the contraction of ``vec`` with an edge</span>
+<span class="sd">             built from environment</span>
+<span class="sd">    :rtype: torch.tensor</span>
+<span class="sd">    </span>
+<span class="sd">    Contracts ``vec`` tensor with the corresponding edge by contracting </span>
+<span class="sd">    the following network::</span>
+
+<span class="sd">                   ---C</span>
+<span class="sd">                  |   |     </span>
+<span class="sd">        scalar = vec--T</span>
+<span class="sd">                  |   |</span>
+<span class="sd">                   ---C</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">C</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[</span><span class="n">env</span><span class="o">.</span><span class="n">keyC</span><span class="p">]</span>
+    <span class="n">T</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="n">env</span><span class="o">.</span><span class="n">keyT</span><span class="p">]</span>
+    
+    <span class="k">if</span> <span class="n">vec</span><span class="o">.</span><span class="n">s</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="n">C</span><span class="o">.</span><span class="n">s</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">==</span><span class="mi">1</span><span class="p">:</span>
+        <span class="c1"># flip_signature</span>
+        <span class="n">C</span><span class="o">=</span> <span class="n">C</span><span class="o">.</span><span class="n">flip_signature</span><span class="p">()</span>
+        <span class="n">T</span><span class="o">=</span> <span class="n">T</span><span class="o">.</span><span class="n">flip_signature</span><span class="p">()</span>
+
+    <span class="c1"># Assume index structure of ``edge`` tensor to be as follows</span>
+    <span class="c1"># </span>
+    <span class="c1">#      -- 0</span>
+    <span class="c1"># vec |-- 1,2</span>
+    <span class="c1">#      -- 3</span>
+    <span class="c1">#</span>
+    <span class="c1">#   ---0 0------C</span>
+    <span class="c1">#  |            1-&gt;3</span>
+    <span class="c1"># vec--1,2-&gt;0,1</span>
+    <span class="c1">#  |</span>
+    <span class="c1">#   ---3-&gt;2</span>
+    <span class="n">S</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">vec</span><span class="p">,</span><span class="n">C</span><span class="p">,([</span><span class="mi">0</span><span class="p">],[</span><span class="mi">0</span><span class="p">]))</span>
+    <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;S=vecC &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">S</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+
+    <span class="c1">#   ------------C </span>
+    <span class="c1">#  |            3</span>
+    <span class="c1">#  |            0</span>
+    <span class="c1"># vec--0,1 2,3--T   </span>
+    <span class="c1">#  |            1</span>
+    <span class="c1">#   ---2-&gt;0</span>
+    <span class="n">S</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">S</span><span class="p">,</span><span class="n">T</span><span class="p">,([</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">],[</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">0</span><span class="p">]))</span>
+    <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;S=ST &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">S</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+
+    <span class="c1">#   -------C</span>
+    <span class="c1">#  |       |</span>
+    <span class="c1"># edge-----T</span>
+    <span class="c1">#  |       1</span>
+    <span class="c1">#  |       1</span>
+    <span class="c1">#   --0 0--C</span>
+    <span class="n">S</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">S</span><span class="p">,</span><span class="n">C</span><span class="p">,([</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">],[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]))</span>
+    <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;S=SC &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">S</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+
+    <span class="k">return</span> <span class="n">S</span></div>
+
+<div class="viewcode-block" id="apply_TM_1sO"><a class="viewcode-back" href="../../../envs/one_site_c4v_abelian/corrf_c4v_abelian.html#ctm.one_site_c4v_abelian.corrf_c4v.apply_TM_1sO">[docs]</a><span class="k">def</span> <span class="nf">apply_TM_1sO</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">edge</span><span class="p">,</span> <span class="n">op</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    :param state: underlying 1-site C4v symmetric wavefunction</span>
+<span class="sd">    :param env: C4v symmetric environment corresponding to ``state``</span>
+<span class="sd">    :param edge: tensor corresponding to the edge of width-1 channel</span>
+<span class="sd">    :param op: operator to be inserted into transfer matrix</span>
+<span class="sd">    :param verbosity: logging verbosity</span>
+<span class="sd">    :type state: IPEPS_C4V_ABELIAN</span>
+<span class="sd">    :type env: ENV_C4V_ABELIAN</span>
+<span class="sd">    :type edge: yast.Tensor</span>
+<span class="sd">    :type op: yast.Tensor</span>
+<span class="sd">    :type verbosity: int</span>
+<span class="sd">    :return: ``edge`` with a single instance of the transfer matrix applied.</span>
+<span class="sd">             The resulting tensor has an identical index structure as the </span>
+<span class="sd">             original ``edge`` </span>
+<span class="sd">    :rtype: tensor</span>
+<span class="sd">    </span>
+<span class="sd">    Applies a single instance of the &quot;transfer matrix&quot; to the ``edge`` tensor  </span>
+<span class="sd">    by contracting the following network::</span>
+
+<span class="sd">         -----T----------</span>
+<span class="sd">        |     |      </span>
+<span class="sd">       edge--(a^+ op a)--</span>
+<span class="sd">        |     |     </span>
+<span class="sd">         -----T----------</span>
+
+<span class="sd">    where the physical indices `s` and `s&#39;` of the on-site tensor :math:`a` </span>
+<span class="sd">    and it&#39;s hermitian conjugate :math:`a^\dagger` are contracted with </span>
+<span class="sd">    identity :math:`\delta_{s,s&#39;}` or ``op`` (if supplied).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># TODO stronger verification</span>
+    <span class="k">if</span> <span class="n">op</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">assert</span> <span class="n">op</span><span class="o">.</span><span class="n">ndim</span><span class="o">==</span><span class="mi">2</span><span class="p">,</span><span class="s2">&quot;1-site operator is expected to have two indices&quot;</span>
+
+    <span class="n">T</span><span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="n">env</span><span class="o">.</span><span class="n">keyT</span><span class="p">]</span>
+    <span class="n">a</span><span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">()</span>
+
+    <span class="n">_FLIP_SIGNATURE</span><span class="o">=</span> <span class="kc">False</span>
+    <span class="k">if</span> <span class="n">edge</span><span class="o">.</span><span class="n">s</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="n">T</span><span class="o">.</span><span class="n">s</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">==</span><span class="mi">1</span><span class="p">:</span>
+        <span class="c1"># flip_signature</span>
+        <span class="n">_FLIP_SIGNATURE</span><span class="o">=</span> <span class="kc">True</span>
+        <span class="n">T</span><span class="o">=</span> <span class="n">T</span><span class="o">.</span><span class="n">flip_signature</span><span class="p">()</span>
+        <span class="n">a</span><span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">flip_signature</span><span class="p">()</span>
+
+    <span class="c1"># Assume index structure of ``edge`` tensor to be as follows</span>
+    <span class="c1"># </span>
+    <span class="c1">#       -- 0(+)</span>
+    <span class="c1"># edge |-- 1(-) 1,2</span>
+    <span class="c1">#       -- 2(+) 3</span>
+    <span class="c1">#</span>
+    <span class="c1">#   ----0 0--T--1-&gt;2</span>
+    <span class="c1">#  |         2-&gt;3</span>
+    <span class="c1"># edge--1-&gt;0</span>
+    <span class="c1">#  |</span>
+    <span class="c1">#   ----2-&gt;1</span>
+
+    <span class="c1">#      ----0 0--T--1-&gt;3</span>
+    <span class="c1">#     |         2-&gt;4</span>
+    <span class="c1"># 3--edge--1-&gt;0</span>
+    <span class="c1"># -&gt;2 |</span>
+    <span class="c1">#      ----2-&gt;1</span>
+
+    <span class="c1">#      ----0 0--T--1-&gt;4</span>
+    <span class="c1">#     |         2,3-&gt;5,6</span>
+    <span class="c1"># 4--edge--1,2-&gt;0,1</span>
+    <span class="c1"># -&gt;3 |</span>
+    <span class="c1">#      ----3-&gt;2</span>
+    <span class="n">E</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">edge</span><span class="p">,</span><span class="n">T</span><span class="p">,([</span><span class="mi">0</span><span class="p">],[</span><span class="mi">0</span><span class="p">]))</span>
+    <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;E=CT </span><span class="se">\n</span><span class="si">{</span><span class="n">E</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># TODO - more efficent contraction with uncontracted-double-layer on-site tensor</span>
+    <span class="c1">#        Possibly reshape indices 1,2 of E, which are to be contracted with </span>
+    <span class="c1">#        on-site tensor and contract bra,ket in two steps instead of creating </span>
+    <span class="c1">#        double layer tensor</span>
+    <span class="c1">#    /         /</span>
+    <span class="c1"># --a-- &lt;=  --a--</span>
+    <span class="c1">#  /|s       /|0(+)</span>
+    <span class="c1">#   op        |0(-)</span>
+    <span class="c1"># s&#39;|/        op</span>
+    <span class="c1"># --a--       |1(+)-&gt;0(+) </span>
+    <span class="c1">#  /</span>
+    <span class="c1">#</span>
+    <span class="c1"># where X is Id or op</span>
+    <span class="c1"># if _FLIP_SIGNATURE:</span>
+    <span class="c1">#     a_dl= contract(op,a, ([1],[0])) if op else a</span>
+    <span class="c1"># else:</span>
+    <span class="n">a_dl</span><span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">op</span><span class="p">,</span><span class="n">a</span><span class="p">,</span> <span class="p">([</span><span class="mi">0</span><span class="p">],[</span><span class="mi">0</span><span class="p">]))</span> <span class="k">if</span> <span class="n">op</span> <span class="k">else</span> <span class="n">a</span>
+    <span class="n">a_dl</span><span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">a_dl</span><span class="p">,</span><span class="n">a</span><span class="p">,</span> <span class="p">([</span><span class="mi">0</span><span class="p">],[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">conj</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span> <span class="c1"># mefgh,mabcd-&gt;efghabcd</span>
+    <span class="n">a_dl</span><span class="o">=</span> <span class="n">a_dl</span><span class="o">.</span><span class="n">transpose</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">6</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">7</span><span class="p">))</span> <span class="c1"># efghabcd-&gt;eafbgchd</span>
+
+    <span class="c1">#   ---------T--2-&gt;1 </span>
+    <span class="c1">#  |         3</span>
+    <span class="c1">#  |         0</span>
+    <span class="c1"># edge--0 1--A--3   </span>
+    <span class="c1">#  |         2</span>
+    <span class="c1">#   ----1-&gt;0</span>
+    <span class="c1"># E = contract(E,a_dl,([0,3],[1,0]))</span>
+
+    <span class="c1">#      ---------T--3-&gt;2 </span>
+    <span class="c1">#     |         4</span>
+    <span class="c1">#     |         0</span>
+    <span class="c1"># 2--edge--0 1--A--3-&gt;4   </span>
+    <span class="c1"># -&gt;1 |         2-&gt;3</span>
+    <span class="c1">#      ----1-&gt;0</span>
+    <span class="c1"># E = contract(E,a_dl,([0,4],[1,0]))</span>
+
+    <span class="c1">#      -------------T--4-&gt;2 </span>
+    <span class="c1">#     |             5,6</span>
+    <span class="c1">#     |             0,1</span>
+    <span class="c1"># 3--edge--0,1 2,3--A--6,7-&gt;5,6</span>
+    <span class="c1"># -&gt;1 |             4,5-&gt;3,4</span>
+    <span class="c1">#      ----2-&gt;0</span>
+    <span class="n">E</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">E</span><span class="p">,</span><span class="n">a_dl</span><span class="p">,([</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">],[</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]))</span>
+    <span class="c1"># E = contract(E,a_dl,([0,1,5,6],[2,3,0,1]))</span>
+    <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;E=CT </span><span class="se">\n</span><span class="si">{</span><span class="n">E</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1">#   -------T--1-&gt;0</span>
+    <span class="c1">#  |       |</span>
+    <span class="c1">#  |       |</span>
+    <span class="c1"># edge-----A--3-&gt;1</span>
+    <span class="c1">#  |       2</span>
+    <span class="c1">#  |       2</span>
+    <span class="c1">#   --0 0--T--1-&gt;2</span>
+    <span class="c1"># E = contract(E,T,([0,2],[0,2]))</span>
+
+    <span class="c1">#      -------T--2-&gt;1</span>
+    <span class="c1">#     |       |</span>
+    <span class="c1">#     |       |</span>
+    <span class="c1"># 1--edge-----A--4-&gt;2</span>
+    <span class="c1"># -&gt;0 |       3</span>
+    <span class="c1">#     |       2</span>
+    <span class="c1">#      --0 0--T--1-&gt;3</span>
+    <span class="c1"># E = contract(E,T,([0,3],[0,2]))</span>
+    <span class="c1"># E = E.transpose((1,2,3,0))</span>
+
+    <span class="c1">#      -------T--2-&gt;1</span>
+    <span class="c1">#     |       |</span>
+    <span class="c1">#     |       |</span>
+    <span class="c1"># 1--edge-----A--5,6-&gt;2,3</span>
+    <span class="c1"># -&gt;0 |       3,4</span>
+    <span class="c1">#     |       2,3</span>
+    <span class="c1">#      --0 0--T--1-&gt;4</span>
+    <span class="n">E</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">E</span><span class="p">,</span><span class="n">T</span><span class="p">,([</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],[</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">]))</span>
+    <span class="c1"># E = contract(E,T,([0,3,4],[0,2,3]))</span>
+    <span class="c1"># E = E.transpose((1,2,3,4,0))</span>
+    <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;E=CT </span><span class="se">\n</span><span class="si">{</span><span class="n">E</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">E</span></div>
+
+<div class="viewcode-block" id="corrf_1sO1sO"><a class="viewcode-back" href="../../../envs/one_site_c4v_abelian/corrf_c4v_abelian.html#ctm.one_site_c4v_abelian.corrf_c4v.corrf_1sO1sO">[docs]</a><span class="k">def</span> <span class="nf">corrf_1sO1sO</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">op1</span><span class="p">,</span> <span class="n">get_op2</span><span class="p">,</span> <span class="n">dist</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    :param state: underlying 1-site C4v symmetric wavefunction</span>
+<span class="sd">    :param env: C4v symmetric environment corresponding to ``state``</span>
+<span class="sd">    :param op1: first one-site operator :math:`O_1`</span>
+<span class="sd">    :param get_op2: function returning (position-dependent) second</span>
+<span class="sd">                    one-site opreator :math:`\text{get_op2}(r)=O_2`</span>
+<span class="sd">    :param dist: maximal distance of correlation function</span>
+<span class="sd">    :param verbosity: logging verbosity</span>
+<span class="sd">    :type state: IPEPS_ABELIAN_C4V</span>
+<span class="sd">    :type env: ENV_ABELIAN_C4V</span>
+<span class="sd">    :type op1: yast.Tensor</span>
+<span class="sd">    :type get_op2: function(int)-&gt;yast.Tensor</span>
+<span class="sd">    :type dist: int</span>
+<span class="sd">    :type verbosity: int</span>
+<span class="sd">    :return: vector ``corrf`` of length ``dist`` holding the values of </span>
+<span class="sd">             correlation function :math:`\langle O_1(0) O_2(r) \rangle` for :math:`r \in [1,dist]`</span>
+<span class="sd">    :rtype: torch.tensor</span>
+<span class="sd">    </span>
+<span class="sd">    Computes the two-point correlation function :math:`\langle O_1(0) O_2(r) \rangle`</span>
+<span class="sd">    by contracting the following network::</span>
+
+<span class="sd">        C-----T---------- ... -----T---- ... --------T-------------C</span>
+<span class="sd">        |     |                    |                 |             |</span>
+<span class="sd">        T--(a^+ op_1 a)-- ... --(a^+a)-- ... --(a^+ gen_op2(r) a)--T</span>
+<span class="sd">        |     |                    |                 |             | </span>
+<span class="sd">        C-----T---------- ... -----T---- ... --------T-------------C</span>
+
+<span class="sd">    for increasingly large distance ``r`` up to ``dist``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">E0</span> <span class="o">=</span> <span class="n">get_edge</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="n">verbosity</span><span class="p">)</span>
+    <span class="c1"># Apply transfer matrix with operator op1</span>
+    <span class="c1">#</span>
+    <span class="c1">#   -- 0     -- -----T--------- 0</span>
+    <span class="c1"># E1-- 1 = E0-- --(A^+ op1 A)-- 1</span>
+    <span class="c1">#   -- 2     -- -----T--------- 2</span>
+    <span class="n">E1</span> <span class="o">=</span> <span class="n">apply_TM_1sO</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">E0</span><span class="p">,</span> <span class="n">op</span><span class="o">=</span><span class="n">op1</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="n">verbosity</span><span class="p">)</span>
+    <span class="c1"># used for normalization</span>
+    <span class="n">E0</span> <span class="o">=</span> <span class="n">apply_TM_1sO</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">E0</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="n">verbosity</span><span class="p">)</span>
+
+    <span class="n">corrf</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">dist</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;float64&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">dist</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+        <span class="c1"># close the end of the network by appending final transfer matrix </span>
+        <span class="c1"># with op2</span>
+        <span class="c1">#</span>
+        <span class="c1">#       C--T--- [ --T-- ]^r --T---</span>
+        <span class="c1"># E12 = T--O1-- [ --A-- ]   --O2--</span>
+        <span class="c1">#       C--T--- [ --T-- ]   --T---</span>
+        <span class="n">E12</span><span class="o">=</span> <span class="n">apply_TM_1sO</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">E1</span><span class="p">,</span> <span class="n">op</span><span class="o">=</span><span class="n">get_op2</span><span class="p">(</span><span class="n">r</span><span class="p">),</span> <span class="n">verbosity</span><span class="o">=</span><span class="n">verbosity</span><span class="p">)</span>
+        <span class="c1"># and corresponding normalization network</span>
+        <span class="n">E0</span> <span class="o">=</span> <span class="n">apply_TM_1sO</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">E0</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="n">verbosity</span><span class="p">)</span>
+        <span class="c1"># and to network with only a op1 operator</span>
+        <span class="n">E1</span> <span class="o">=</span> <span class="n">apply_TM_1sO</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">E1</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="n">verbosity</span><span class="p">)</span>
+
+        <span class="n">E12</span><span class="o">=</span> <span class="n">apply_edge</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">E12</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="n">verbosity</span><span class="p">)</span>
+        <span class="n">E00</span><span class="o">=</span> <span class="n">apply_edge</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">E0</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="n">verbosity</span><span class="p">)</span>
+        <span class="n">corrf</span><span class="p">[</span><span class="n">r</span><span class="p">]</span><span class="o">=</span> <span class="n">E12</span><span class="o">.</span><span class="n">to_number</span><span class="p">()</span><span class="o">/</span><span class="n">E00</span><span class="o">.</span><span class="n">to_number</span><span class="p">()</span>
+
+        <span class="kn">import</span> <span class="nn">pdb</span><span class="p">;</span> <span class="n">pdb</span><span class="o">.</span><span class="n">set_trace</span><span class="p">()</span>
+
+        <span class="c1"># normalize by largest element of E0</span>
+        <span class="n">max_elem_E0</span> <span class="o">=</span> <span class="n">E0</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">p</span><span class="o">=</span><span class="s1">&#39;inf&#39;</span><span class="p">)</span>
+        <span class="n">E0</span><span class="o">=</span><span class="n">E0</span><span class="o">/</span><span class="n">max_elem_E0</span>
+        <span class="n">E1</span><span class="o">=</span><span class="n">E1</span><span class="o">/</span><span class="n">max_elem_E0</span>
+
+    <span class="k">return</span> <span class="n">corrf</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Juraj Hasik, Glen B. Mbeng
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

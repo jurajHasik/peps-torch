@@ -1,0 +1,580 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Configuration &mdash; peps-torch alpha documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Models" href="models.html" />
+    <link rel="prev" title="SGD with linesearch" href="optim/optimizers/sgd_modified.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> peps-torch
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="ipeps.html">iPEPS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="ipeps/ipeps.html">Generic iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ipeps/ipeps_kagome.html">Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ipeps/ipeps_c4v.html">1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ipeps/ipeps_lc_1site_pg.html">1-site iPEPS from lin. combination</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ipeps/ipess_kagome.html">Generic Kagome iPESS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ipeps/ipess_kagome_pg.html">Kagome iPESS with point groups</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ipeps/ipess_kagome_pg_lc.html">Kagome iPESS from lin. combination</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="ipeps.html#abelian-symmetric-ipeps">Abelian-symmetric iPEPS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="ipeps/ipeps_abelian.html">Generic  abelian-symmetric iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ipeps/ipeps_abelian.html#generic-abelian-symmetric-ipeps-with-weights">Generic abelian-symmetric iPEPS with weights</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ipeps/ipeps_kagome_abelian.html">Abelian-symmetric Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ipeps/ipeps_abelian_c4v.html">Abelian-symmetric 1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ipeps/ipess_kagome_abelian.html">Abelian-symmetric generic Kagome iPESS</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="envs.html">Environments</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="envs/generic.html">Generic iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="envs/generic/env.html">Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="envs/generic/ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="envs/generic/ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="envs/generic/ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="envs/generic/rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="envs/generic/rdm.html#module-ctm.pess_kagome.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="envs/generic/corrf.html">Correlation functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="envs/generic/transfer_matrix.html">Transfer Matrices</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="envs/generic_abelian.html">Abelian-symmetric generic iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="envs/generic_abelian/env_abelian.html">Abelian-symmetric environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="envs/generic_abelian/ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="envs/generic_abelian/ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="envs/generic_abelian/ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="envs/generic_abelian/rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="envs/generic_abelian/rdm.html#module-ctm.pess_kagome_abelian.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="envs/one_site_c4v.html">1-site C4v iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="envs/one_site_c4v/env_c4v.html">1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="envs/one_site_c4v/ctmrg_c4v.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="envs/one_site_c4v/rdm_c4v.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="envs/one_site_c4v/transfer_matrix.html">Transfer Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="envs/one_site_c4v/corrf_c4v.html">Correlation functions</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="envs/one_site_c4v_abelian.html">Abelian-symmetric 1-site C4v iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="envs/one_site_c4v_abelian/env_c4v_abelian.html">Abelian-symmetric 1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="envs/one_site_c4v_abelian/ctmrg_c4v_abelian.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="envs/one_site_c4v_abelian/rdm_c4v_abelian.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="envs/one_site_c4v_abelian/corrf_c4v_abelian.html">Correlation functions</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="optim.html">Optimization</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="optim/drivers.html">Optimization drivers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="optim/drivers/ad_optim.html">ad_optim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="optim/drivers/ad_optim_lbfgs_mod.html">ad_optim_lbfgs_mod</a></li>
+<li class="toctree-l3"><a class="reference internal" href="optim/drivers/ad_optim_sgd_mod.html">ad_optim_sgd_mod</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="optim/optimizers.html">Custom optimizers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="optim/optimizers/lbfgs_modified.html">Extended LBFGS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="optim/optimizers/sgd_modified.html">SGD with linesearch</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Configuration</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#main">Main</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#global">Global</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#corner-transfer-matrix-algorithm">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#optimization">Optimization</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">Models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="models/akltS2.html">Spin S=2 AKLT Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="models/akltS2.html#module-models.akltS2">2x1 and 2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="models/akltS2.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="models/coupledLadders.html">Coupled Ladders</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="models/coupledLadders.html#dense-pytorch">Dense (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="models/coupledLadders.html#dense-yast">Dense (YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="models/coupledLadders.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="models/ising.html">Transverse Field Ising Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="models/ising.html#x1-unit-cell">1x1 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="models/ising.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="models/j1j2.html">J1-J2-J3 and J1-J2-lambda Heisenberg Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="models/j1j2.html#from-2x1-to-4x2-unit-cell-pytorch">from 2x1 to 4x2 unit cell (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="models/j1j2.html#from-2x1-to-4x2-unit-cell-dense-yast">from 2x1 to 4x2 unit cell (dense YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="models/j1j2.html#x1-c4v-pytorch">1x1 C4v (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="models/j1j2.html#x1-c4v-dense-yast">1x1 C4v (dense YAST)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="models/jq.html">J-Q Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="models/jq.html#module-models.jq">2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="models/jq.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="models/spin_half_kagome.html">SU(2) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="models/spin_half_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="models/spin_half_kagome.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="models/su3_kagome.html">SU(3) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="models/su3_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="models/su3_kagome.html#with-explict-u-1-xu-1-symmetry">With explict U(1)xU(1) symmetry</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="groups.html">Groups</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="groups/pg.html">Point group: square lattice</a></li>
+<li class="toctree-l2"><a class="reference internal" href="groups/su2.html">SU(2)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="groups/su2.html#module-groups.su2_abelian">SU(2) with explicit U(1) structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="groups/su3.html">SU(3)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="groups/su3.html#su-3-with-explicit-u-1-xu-1-structure">SU(3) with explicit U(1)xU(1) structure</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="linalg.html">Linear Algebra</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="linalg/custom_eig.html">Truncated eigendecomposition</a></li>
+<li class="toctree-l2"><a class="reference internal" href="linalg/custom_svd.html">Truncated SVD</a></li>
+<li class="toctree-l2"><a class="reference internal" href="linalg/spec_decomp.html">Spectral decompositions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="linalg/spec_decomp.html#module-linalg.svd_gesdd">SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="linalg/spec_decomp.html#module-linalg.svd_arnoldi">Partial SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="linalg/spec_decomp.html#module-linalg.svd_rsvd">Randomized SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="linalg/spec_decomp.html#module-linalg.eig_sym">Symmetric Eigendecomposition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="linalg/spec_decomp.html#module-linalg.eig_arnoldi">Partial diagonalization</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">peps-torch</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Configuration</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            
+              <!-- User defined GitHub URL -->
+              <a href="https://github.com/jurajHasik/peps-torch" class="fa fa-github"> Edit on GitHub</a>
+            
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <section id="configuration">
+<h1>Configuration<a class="headerlink" href="#configuration" title="Permalink to this heading">¶</a></h1>
+<section id="main">
+<h2>Main<a class="headerlink" href="#main" title="Permalink to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="config.MAINARGS">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">config.</span></span><span class="sig-name descname"><span class="pre">MAINARGS</span></span><a class="reference internal" href="_modules/config.html#MAINARGS"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#config.MAINARGS" title="Permalink to this definition">¶</a></dt>
+<dd><p>Main simulation options. The default settings can be modified through
+command line arguments as follows <code class="docutils literal notranslate"><span class="pre">--&lt;option-name&gt;</span> <span class="pre">desired-value</span></code></p>
+<dl class="field-list simple">
+<dt class="field-odd">Variables<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>omp_cores</strong> (<em>int:</em>) – number of OpenMP cores. Default: <code class="docutils literal notranslate"><span class="pre">1</span></code></p></li>
+<li><p><strong>instate</strong> (<em>str</em><em> or </em><em>Path</em>) – input state file. Default: <code class="docutils literal notranslate"><span class="pre">None</span></code></p></li>
+<li><p><strong>instate_noise</strong> (<em>float</em>) – magnitude of noise applied to the input state, if any. Default: <code class="docutils literal notranslate"><span class="pre">0.0</span></code></p></li>
+<li><p><strong>ipeps_init_type</strong> (<em>str</em>) – initialization of the trial iPEPS state, if no <code class="docutils literal notranslate"><span class="pre">instate</span></code> is provided. Default: <code class="docutils literal notranslate"><span class="pre">RANDOM</span></code></p></li>
+<li><p><strong>out_prefix</strong> (<em>str</em>) – output file prefix. Default: <code class="docutils literal notranslate"><span class="pre">output</span></code></p></li>
+<li><p><strong>bond_dim</strong> (<em>int</em>) – iPEPS auxiliary bond dimension. Default: <code class="docutils literal notranslate"><span class="pre">1</span></code></p></li>
+<li><p><strong>chi</strong> (<em>int</em>) – environment bond dimension. Default: <code class="docutils literal notranslate"><span class="pre">20</span></code></p></li>
+<li><p><strong>opt_max_iter</strong> (<em>int</em>) – maximal number of optimization steps. Default: <code class="docutils literal notranslate"><span class="pre">100</span></code></p></li>
+<li><p><strong>opt_resume</strong> (<em>str</em><em> or </em><em>Path</em>) – resume from checkpoint file. Default: <code class="docutils literal notranslate"><span class="pre">None</span></code></p></li>
+<li><p><strong>opt_resume_override_params</strong> (<em>bool</em>) – override optimizer parameters stored in checkpoint. Default: <code class="docutils literal notranslate"><span class="pre">False</span></code></p></li>
+<li><p><strong>seed</strong> (<em>int</em>) – PRNG seed. Default: <code class="docutils literal notranslate"><span class="pre">0</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="global">
+<h2>Global<a class="headerlink" href="#global" title="Permalink to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="config.GLOBALARGS">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">config.</span></span><span class="sig-name descname"><span class="pre">GLOBALARGS</span></span><a class="reference internal" href="_modules/config.html#GLOBALARGS"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#config.GLOBALARGS" title="Permalink to this definition">¶</a></dt>
+<dd><p>Holds global configuration options. The default settings can be modified through
+command line arguments as follows <code class="docutils literal notranslate"><span class="pre">--GLOBALARGS_&lt;variable-name&gt;</span> <span class="pre">desired-value</span></code></p>
+<dl class="field-list simple">
+<dt class="field-odd">Variables<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dtype</strong> (<em>torch.dtype</em>) – data type of all torch.tensor. Default: <code class="docutils literal notranslate"><span class="pre">float64</span></code></p></li>
+<li><p><strong>device</strong> (<em>str</em>) – device on which all the torch.tensors are stored. Default: <code class="docutils literal notranslate"><span class="pre">'cpu'</span></code></p></li>
+<li><p><strong>offload_to_gpu</strong> (<em>str</em>) – gpu used for optional acceleration. It might be desirable to store the model
+and all the intermediates of CTM on CPU and compute only the core parts of the expensive
+CTM step on GPU. Default: <code class="docutils literal notranslate"><span class="pre">'None'</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="corner-transfer-matrix-algorithm">
+<h2>Corner Transfer Matrix Algorithm<a class="headerlink" href="#corner-transfer-matrix-algorithm" title="Permalink to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="config.CTMARGS">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">config.</span></span><span class="sig-name descname"><span class="pre">CTMARGS</span></span><a class="reference internal" href="_modules/config.html#CTMARGS"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#config.CTMARGS" title="Permalink to this definition">¶</a></dt>
+<dd><p>Holds configuration of the CTM algorithm. The default settings can be modified through
+command line arguments as follows <code class="docutils literal notranslate"><span class="pre">--CTMARGS_&lt;variable-name&gt;</span> <span class="pre">desired-value</span></code></p>
+<dl class="field-list simple">
+<dt class="field-odd">Variables<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ctm_max_iter</strong> (<em>int</em>) – maximum iterations of directional CTM algorithm. Default: <code class="docutils literal notranslate"><span class="pre">50</span></code></p></li>
+<li><p><strong>ctm_env_init_type</strong> (<em>str</em>) – default initialization method for ENV objects. Default: <code class="docutils literal notranslate"><span class="pre">'CTMRG'</span></code></p></li>
+<li><p><strong>ctm_conv_tol</strong> (<em>float</em>) – threshold for convergence of CTM algorithm. Default: <code class="docutils literal notranslate"><span class="pre">'1.0e-10'</span></code></p></li>
+<li><p><strong>conv_check_cpu</strong> (<em>bool</em>) – execute CTM convergence check on cpu (if applicable). Default: <code class="docutils literal notranslate"><span class="pre">False</span></code></p></li>
+<li><p><strong>ctm_absorb_normalization</strong> (<em>str</em>) – normalization to use for new corner/T tensors. Either <code class="docutils literal notranslate"><span class="pre">'fro'</span></code> for usual
+L2 norm or <code class="docutils literal notranslate"><span class="pre">'inf'</span></code> for L-infty norm. Default: <code class="docutils literal notranslate"><span class="pre">'fro'</span></code>.</p></li>
+<li><p><strong>projector_method</strong> (<em>str</em>) – <p>method used to construct projectors which facilitate truncation
+of environment bond dimension <span class="math notranslate nohighlight">\(\chi\)</span> within CTM algorithm</p>
+<blockquote>
+<div><ul>
+<li><p>4X4: Projectors are built from two halfs of 4x4 tensor
+network</p></li>
+<li><p>4X2: Projectors are built from two enlarged corners (2x2)
+making up a 4x2 (or 2x4) tensor network</p></li>
+</ul>
+</div></blockquote>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">'4X4'</span></code></p>
+</p></li>
+<li><p><strong>projector_svd_method</strong> (<em>str</em>) – <p>singular/eigen value decomposition algorithm used in the construction
+of the projectors:</p>
+<blockquote>
+<div><ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">'GESDD'</span></code>: pytorch wrapper of LAPACK’s gesdd</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">'RSVD'</span></code>: randomized SVD</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">'SYMEIG'</span></code>: pytorch wrapper of LAPACK’s dsyev for symmetric matrices</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">'SYMARP'</span></code>: scipy wrapper of ARPACK’s dsaupd for symmetric matrices</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">'ARP'</span></code>: scipy wrapper of ARPACK’s svds for general matrices</p></li>
+</ul>
+</div></blockquote>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">'SYMEIG'</span></code> for c4v-symmetric CTM, otherwise <code class="docutils literal notranslate"><span class="pre">'GESDD'</span></code></p>
+</p></li>
+<li><p><strong>projector_svd_reltol</strong> (<em>float</em>) – relative threshold on the magnitude of the smallest elements of
+singular value spectrum used in the construction of projectors.
+Default: <code class="docutils literal notranslate"><span class="pre">1.0e-8</span></code></p></li>
+<li><p><strong>projector_svd_reltol_block</strong> (<em>float</em>) – (relevant only for decompositions of blocks-sparse tensors)
+relative threshold on the magnitude of the smallest elements of
+singular value spectrum per block used in the construction of projectors.
+Default: <code class="docutils literal notranslate"><span class="pre">0.0</span></code></p></li>
+<li><p><strong>projector_eps_multiplet</strong> (<em>float</em>) – threshold for defining boundary of the multiplets</p></li>
+<li><p><strong>projector_multiplet_abstol</strong> (<em>float</em>) – absolute threshold for spectral values to be considered in multiplets</p></li>
+<li><p><strong>ctm_move_sequence</strong> (<em>list</em><em>[</em><em>tuple</em><em>(</em><em>int</em><em>,</em><em>int</em><em>)</em><em>]</em>) – <p>sequence of directional moves within single CTM iteration. The possible
+directions are encoded as tuples(int,int)</p>
+<blockquote>
+<div><ul>
+<li><p>up = (0,-1)</p></li>
+<li><p>left = (-1,0)</p></li>
+<li><p>down = (0,1)</p></li>
+<li><p>right = (1,0)</p></li>
+</ul>
+</div></blockquote>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">[(0,-1),</span> <span class="pre">(-1,0),</span> <span class="pre">(0,1),</span> <span class="pre">(1,0)]</span></code></p>
+</p></li>
+<li><p><strong>ctm_force_dl</strong> (<em>bool</em>) – precompute and use on-site double-layer tensors in CTMRG</p></li>
+<li><p><strong>fwd_checkpoint_c2x2</strong> (<em>bool</em>) – recompute forward pass of enlarged corner functions (c2x2_*) during
+backward pass within optimization to save memory. Default: <code class="docutils literal notranslate"><span class="pre">False</span></code></p></li>
+<li><p><strong>fwd_checkpoint_halves</strong> (<em>bool</em>) – recompute forward pass of halves functions (halves_of_4x4_*) during
+backward pass within optimization to save memory. Default: <code class="docutils literal notranslate"><span class="pre">False</span></code></p></li>
+<li><p><strong>fwd_checkpoint_projectors</strong> (<em>bool</em>) – recompute forward pass of projector construction (except SVD) during
+backward pass within optimization to save memory. Default: <code class="docutils literal notranslate"><span class="pre">False</span></code></p></li>
+<li><p><strong>fwd_checkpoint_absorb</strong> (<em>bool</em>) – recompute forward pass of absorp and truncate functions (absorb_truncate_*)
+during backward pass within optimization to save memory. Default: <code class="docutils literal notranslate"><span class="pre">False</span></code></p></li>
+<li><p><strong>fwd_checkpoint_move</strong> (<em>bool</em>) – recompute forward pass of whole <code class="docutils literal notranslate"><span class="pre">ctm_MOVE</span></code> during backward pass. Default: <code class="docutils literal notranslate"><span class="pre">False</span></code></p></li>
+</ul>
+</dd>
+</dl>
+<p>FPCM related options</p>
+<dl class="field-list simple">
+<dt class="field-odd">Variables<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fpcm_init_iter</strong> (<em>int</em>) – minimal number of CTM steps before FPCM acceleration step is attempted.
+Default: <code class="docutils literal notranslate"><span class="pre">1</span></code></p></li>
+<li><p><strong>fpcm_freq</strong> (<em>int</em>) – frequency of FPCM steps per CTM steps. Default: <code class="docutils literal notranslate"><span class="pre">-1</span></code></p></li>
+<li><p><strong>fpcm_isogauge_tol</strong> (<em>float</em>) – tolerance on gauging the uniform MPS built from half-row/-column tensor T.
+Default: <code class="docutils literal notranslate"><span class="pre">1.0e-14</span></code>.</p></li>
+<li><p><strong>fpcm_fpt_tol</strong> (<em>float</em>) – tolerance on convergence within FPCM step. Default: <code class="docutils literal notranslate"><span class="pre">1.0e-8</span></code></p></li>
+</ul>
+</dd>
+</dl>
+<p>Logging and Debugging options</p>
+<dl class="field-list simple">
+<dt class="field-odd">Variables<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ctm_logging</strong> – log debug statements into log file. Default: <code class="docutils literal notranslate"><span class="pre">False</span></code></p></li>
+<li><p><strong>verbosity_initialization</strong> (<em>int</em>) – verbosity of initialization method for ENV objects. Default: <code class="docutils literal notranslate"><span class="pre">0</span></code></p></li>
+<li><p><strong>verbosity_ctm_convergence</strong> (<em>int</em>) – verbosity of evaluation of CTM convergence criterion. Default: <code class="docutils literal notranslate"><span class="pre">0</span></code></p></li>
+<li><p><strong>verbosity_projectors</strong> (<em>int</em>) – verbosity of projector construction. Default: <code class="docutils literal notranslate"><span class="pre">0</span></code></p></li>
+<li><p><strong>verbosity_ctm_move</strong> (<em>int</em>) – verbosity of directional CTM moves. Default: <code class="docutils literal notranslate"><span class="pre">0</span></code></p></li>
+<li><p><strong>verbosity_rdm</strong> (<em>int</em>) – verbosity of reduced density matrix routines. Default: <code class="docutils literal notranslate"><span class="pre">0</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="optimization">
+<h2>Optimization<a class="headerlink" href="#optimization" title="Permalink to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="config.OPTARGS">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">config.</span></span><span class="sig-name descname"><span class="pre">OPTARGS</span></span><a class="reference internal" href="_modules/config.html#OPTARGS"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#config.OPTARGS" title="Permalink to this definition">¶</a></dt>
+<dd><p>Holds configuration of the optimization. The default settings can be modified through
+command line arguments as follows <code class="docutils literal notranslate"><span class="pre">--OPTARGS_&lt;variable-name&gt;</span> <span class="pre">desired-value</span></code></p>
+<p>General options</p>
+<dl class="field-list simple">
+<dt class="field-odd">Variables<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>opt_ctm_reinit</strong> (<em>bool</em>) – reinitialize environment from scratch within every loss
+function evaluation. Default: <code class="docutils literal notranslate"><span class="pre">True</span></code></p></li>
+<li><p><strong>lr</strong> (<em>float</em>) – initial learning rate. Default: <code class="docutils literal notranslate"><span class="pre">1.0</span></code></p></li>
+<li><p><strong>line_search</strong> (<em>str</em>) – line search algorithm to use. L-BFGS supports <code class="docutils literal notranslate"><span class="pre">'strong_wolfe'</span></code>
+and <code class="docutils literal notranslate"><span class="pre">'backtracking'</span></code>. SGD supports just <code class="docutils literal notranslate"><span class="pre">'backtracking'</span></code>. Default: <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
+<li><p><strong>line_search_ctm_reinit</strong> (<em>bool</em>) – recompute environment from scratch at each step within
+line search algorithm. Default: <code class="docutils literal notranslate"><span class="pre">True</span></code>.</p></li>
+<li><p><strong>line_search_svd_method</strong> (<em>str</em>) – eigen decompostion method to use within line search
+environment computation. See options in <a class="reference internal" href="#config.CTMARGS" title="config.CTMARGS"><code class="xref py py-class docutils literal notranslate"><span class="pre">config.CTMARGS</span></code></a>. Default: <code class="docutils literal notranslate"><span class="pre">'DEFAULT'</span></code> which
+depends on the particular CTM algorithm.</p></li>
+</ul>
+</dd>
+</dl>
+<p>L-BFGS related options</p>
+<dl class="field-list simple">
+<dt class="field-odd">Variables<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>tolerance_grad</strong> (<em>float</em>) – stopping criterion wrt. norm of the gradient (which norm ? See
+<code class="docutils literal notranslate"><span class="pre">torch.optim.LBFGS</span></code>). Default: <code class="docutils literal notranslate"><span class="pre">1.0e-5</span></code></p></li>
+<li><p><strong>tolerance_change</strong> (<em>float</em>) – stopping criterion wrt. change of the loss function.
+Default: <code class="docutils literal notranslate"><span class="pre">1.0e-9</span></code></p></li>
+<li><p><strong>max_iter_per_epoch</strong> (<em>int</em>) – maximum number of optimizer iterations per epoch. Default: <code class="docutils literal notranslate"><span class="pre">1</span></code></p></li>
+<li><p><strong>history_size</strong> (<em>int</em>) – number past of directions used to approximate inverse Hessian.
+Default: <code class="docutils literal notranslate"><span class="pre">100</span></code>.</p></li>
+</ul>
+</dd>
+</dl>
+<p>SGD related options</p>
+<dl class="field-list simple">
+<dt class="field-odd">Variables<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>momentum</strong> (<em>float</em>) – momentum used in the SGD step</p></li>
+<li><p><strong>dampening</strong> (<em>float</em>) – dampening used in the SGD step</p></li>
+</ul>
+</dd>
+</dl>
+<p>Gradients through finite differences</p>
+<dl class="field-list simple">
+<dt class="field-odd">Variables<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fd_eps</strong> (<em>float</em>) – magnitude of displacement when computing the forward difference
+<span class="math notranslate nohighlight">\(E(x_0 + \textrm{fd_eps})-E(x_0)/\textrm{fd_eps}\)</span>. Default: <code class="docutils literal notranslate"><span class="pre">1.0e-4</span></code></p></li>
+<li><p><strong>fd_ctm_reinit</strong> – recompute environment from scratch after applying the displacement.
+Default: <code class="docutils literal notranslate"><span class="pre">True</span></code></p></li>
+</ul>
+</dd>
+</dl>
+<p>Logging</p>
+<dl class="field-list simple">
+<dt class="field-odd">Variables<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>opt_logging</strong> (<em>bool</em>) – turns on recording of additional data from optimization, such as
+CTM convergence, timings, gradients, etc. The information
+is logged in file <code class="docutils literal notranslate"><span class="pre">{out_prefix}_log.json</span></code>. Default: <code class="docutils literal notranslate"><span class="pre">True</span></code></p></li>
+<li><p><strong>opt_log_grad</strong> (<em>bool</em>) – log values of gradient. Default: <code class="docutils literal notranslate"><span class="pre">False</span></code></p></li>
+<li><p><strong>verbosity_opt_epoch</strong> (<em>int</em>) – verbosity within optimization epoch. Default: <code class="docutils literal notranslate"><span class="pre">1</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="models.html" class="btn btn-neutral float-right" title="Models" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="optim/optimizers/sgd_modified.html" class="btn btn-neutral float-left" title="SGD with linesearch" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Juraj Hasik, Glen B. Mbeng
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

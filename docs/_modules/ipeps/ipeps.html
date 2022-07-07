@@ -1,0 +1,737 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>ipeps.ipeps &mdash; peps-torch alpha documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> peps-torch
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../ipeps.html">iPEPS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps.html">Generic iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_kagome.html">Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_c4v.html">1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_lc_1site_pg.html">1-site iPEPS from lin. combination</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipess_kagome.html">Generic Kagome iPESS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipess_kagome_pg.html">Kagome iPESS with point groups</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipess_kagome_pg_lc.html">Kagome iPESS from lin. combination</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../ipeps.html#abelian-symmetric-ipeps">Abelian-symmetric iPEPS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_abelian.html">Generic  abelian-symmetric iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_abelian.html#generic-abelian-symmetric-ipeps-with-weights">Generic abelian-symmetric iPEPS with weights</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_kagome_abelian.html">Abelian-symmetric Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_abelian_c4v.html">Abelian-symmetric 1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipess_kagome_abelian.html">Abelian-symmetric generic Kagome iPESS</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../envs.html">Environments</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../envs/generic.html">Generic iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/env.html">Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/rdm.html#module-ctm.pess_kagome.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/corrf.html">Correlation functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/transfer_matrix.html">Transfer Matrices</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../envs/generic_abelian.html">Abelian-symmetric generic iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic_abelian/env_abelian.html">Abelian-symmetric environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic_abelian/ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic_abelian/ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic_abelian/ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic_abelian/rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic_abelian/rdm.html#module-ctm.pess_kagome_abelian.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../envs/one_site_c4v.html">1-site C4v iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v/env_c4v.html">1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v/ctmrg_c4v.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v/rdm_c4v.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v/transfer_matrix.html">Transfer Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v/corrf_c4v.html">Correlation functions</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../envs/one_site_c4v_abelian.html">Abelian-symmetric 1-site C4v iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v_abelian/env_c4v_abelian.html">Abelian-symmetric 1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v_abelian/ctmrg_c4v_abelian.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v_abelian/rdm_c4v_abelian.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v_abelian/corrf_c4v_abelian.html">Correlation functions</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../optim.html">Optimization</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../optim/drivers.html">Optimization drivers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/drivers/ad_optim.html">ad_optim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/drivers/ad_optim_lbfgs_mod.html">ad_optim_lbfgs_mod</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/drivers/ad_optim_sgd_mod.html">ad_optim_sgd_mod</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../optim/optimizers.html">Custom optimizers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/optimizers/lbfgs_modified.html">Extended LBFGS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/optimizers/sgd_modified.html">SGD with linesearch</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../config.html">Configuration</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../config.html#main">Main</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../config.html#global">Global</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../config.html#corner-transfer-matrix-algorithm">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../config.html#optimization">Optimization</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../models.html">Models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../models/akltS2.html">Spin S=2 AKLT Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/akltS2.html#module-models.akltS2">2x1 and 2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/akltS2.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/coupledLadders.html">Coupled Ladders</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/coupledLadders.html#dense-pytorch">Dense (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/coupledLadders.html#dense-yast">Dense (YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/coupledLadders.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/ising.html">Transverse Field Ising Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/ising.html#x1-unit-cell">1x1 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/ising.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/j1j2.html">J1-J2-J3 and J1-J2-lambda Heisenberg Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/j1j2.html#from-2x1-to-4x2-unit-cell-pytorch">from 2x1 to 4x2 unit cell (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/j1j2.html#from-2x1-to-4x2-unit-cell-dense-yast">from 2x1 to 4x2 unit cell (dense YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/j1j2.html#x1-c4v-pytorch">1x1 C4v (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/j1j2.html#x1-c4v-dense-yast">1x1 C4v (dense YAST)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/jq.html">J-Q Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/jq.html#module-models.jq">2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/jq.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/spin_half_kagome.html">SU(2) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/spin_half_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/spin_half_kagome.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/su3_kagome.html">SU(3) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/su3_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/su3_kagome.html#with-explict-u-1-xu-1-symmetry">With explict U(1)xU(1) symmetry</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../groups.html">Groups</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/pg.html">Point group: square lattice</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/su2.html">SU(2)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/su2.html#module-groups.su2_abelian">SU(2) with explicit U(1) structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/su3.html">SU(3)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/su3.html#su-3-with-explicit-u-1-xu-1-structure">SU(3) with explicit U(1)xU(1) structure</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../linalg.html">Linear Algebra</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../linalg/custom_eig.html">Truncated eigendecomposition</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../linalg/custom_svd.html">Truncated SVD</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../linalg/spec_decomp.html">Spectral decompositions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.svd_gesdd">SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.svd_arnoldi">Partial SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.svd_rsvd">Randomized SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.eig_sym">Symmetric Eigendecomposition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.eig_arnoldi">Partial diagonalization</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">peps-torch</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+      <li>ipeps.ipeps</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for ipeps.ipeps</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">OrderedDict</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">itertools</span>
+<span class="kn">import</span> <span class="nn">math</span>
+<span class="kn">import</span> <span class="nn">config</span> <span class="k">as</span> <span class="nn">cfg</span>
+<span class="kn">from</span> <span class="nn">ipeps.tensor_io</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="c1"># TODO drop constrain for aux bond dimension to be identical on </span>
+<span class="c1"># all bond indices</span>
+
+<div class="viewcode-block" id="IPEPS"><a class="viewcode-back" href="../../ipeps/ipeps.html#ipeps.ipeps.IPEPS">[docs]</a><span class="k">class</span> <span class="nc">IPEPS</span><span class="p">():</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sites</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">vertexToSite</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">lX</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">lY</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">peps_args</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">peps_args</span><span class="p">,</span>\
+        <span class="n">global_args</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">global_args</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param sites: map from elementary unit cell to on-site tensors</span>
+<span class="sd">        :param vertexToSite: function mapping arbitrary vertex of a square lattice </span>
+<span class="sd">                             into a vertex within elementary unit cell</span>
+<span class="sd">        :param lX: length of the elementary unit cell in X direction</span>
+<span class="sd">        :param lY: length of the elementary unit cell in Y direction</span>
+<span class="sd">        :param peps_args: ipeps configuration</span>
+<span class="sd">        :param global_args: global configuration</span>
+<span class="sd">        :type sites: dict[tuple(int,int) : torch.tensor]</span>
+<span class="sd">        :type vertexToSite: function(tuple(int,int))-&gt;tuple(int,int)</span>
+<span class="sd">        :type lX: int</span>
+<span class="sd">        :type lY: int</span>
+<span class="sd">        :type peps_args: PEPSARGS</span>
+<span class="sd">        :type global_args: GLOBALARGS</span>
+
+<span class="sd">        Member ``sites`` is a dictionary of non-equivalent on-site tensors</span>
+<span class="sd">        indexed by tuple of coordinates (x,y) within the elementary unit cell.</span>
+<span class="sd">        The index-position convetion for on-site tensors is defined as follows::</span>
+
+<span class="sd">               u s </span>
+<span class="sd">               |/ </span>
+<span class="sd">            l--a--r  &lt;=&gt; a[s,u,l,d,r]</span>
+<span class="sd">               |</span>
+<span class="sd">               d</span>
+<span class="sd">        </span>
+<span class="sd">        where s denotes physical index, and u,l,d,r label four principal directions</span>
+<span class="sd">        up, left, down, right in anti-clockwise order starting from up.</span>
+<span class="sd">        Member ``vertexToSite`` is a mapping function from any vertex (x,y) on a square lattice</span>
+<span class="sd">        passed in as tuple(int,int) to a corresponding vertex within elementary unit cell.</span>
+<span class="sd">        </span>
+<span class="sd">        On-site tensor of an IPEPS object ``wfc`` at vertex (x,y) is conveniently accessed </span>
+<span class="sd">        through the member function ``site``, which internally uses ``vertexToSite`` mapping::</span>
+<span class="sd">            </span>
+<span class="sd">            coord= (0,0)</span>
+<span class="sd">            a_00= wfc.site(coord)</span>
+
+<span class="sd">        By combining the appropriate ``vertexToSite`` mapping function with elementary unit </span>
+<span class="sd">        cell specified through ``sites``, various tilings of a square lattice can be achieved:: </span>
+<span class="sd">            </span>
+<span class="sd">            # Example 1: 1-site translational iPEPS</span>
+<span class="sd">            </span>
+<span class="sd">            sites={(0,0): a}</span>
+<span class="sd">            def vertexToSite(coord):</span>
+<span class="sd">                return (0,0)</span>
+<span class="sd">            wfc= IPEPS(sites,vertexToSite)</span>
+<span class="sd">        </span>
+<span class="sd">            # resulting tiling:</span>
+<span class="sd">            # y\x -2 -1 0 1 2</span>
+<span class="sd">            # -2   a  a a a a</span>
+<span class="sd">            # -1   a  a a a a</span>
+<span class="sd">            #  0   a  a a a a</span>
+<span class="sd">            #  1   a  a a a a</span>
+<span class="sd">            # Example 2: 2-site bipartite iPEPS</span>
+<span class="sd">            </span>
+<span class="sd">            sites={(0,0): a, (1,0): b}</span>
+<span class="sd">            def vertexToSite(coord):</span>
+<span class="sd">                x = (coord[0] + abs(coord[0]) * 2) % 2</span>
+<span class="sd">                y = abs(coord[1])</span>
+<span class="sd">                return ((x + y) % 2, 0)</span>
+<span class="sd">            wfc= IPEPS(sites,vertexToSite)</span>
+<span class="sd">        </span>
+<span class="sd">            # resulting tiling:</span>
+<span class="sd">            # y\x -2 -1 0 1 2</span>
+<span class="sd">            # -2   A  b a b a</span>
+<span class="sd">            # -1   B  a b a b</span>
+<span class="sd">            #  0   A  b a b a</span>
+<span class="sd">            #  1   B  a b a b</span>
+<span class="sd">        </span>
+<span class="sd">            # Example 3: iPEPS with 3x2 unit cell with PBC </span>
+<span class="sd">            </span>
+<span class="sd">            sites={(0,0): a, (1,0): b, (2,0): c, (0,1): d, (1,1): e, (2,1): f}</span>
+<span class="sd">            wfc= IPEPS(sites,lX=3,lY=2)</span>
+<span class="sd">            </span>
+<span class="sd">            # resulting tiling:</span>
+<span class="sd">            # y\x -2 -1 0 1 2</span>
+<span class="sd">            # -2   b  c a b c</span>
+<span class="sd">            # -1   e  f d e f</span>
+<span class="sd">            #  0   b  c a b c</span>
+<span class="sd">            #  1   e  f d e f</span>
+
+<span class="sd">        where in the last example a default setting for ``vertexToSite`` is used, which</span>
+<span class="sd">        maps square lattice into elementary unit cell of size ``lX`` x ``lY`` assuming </span>
+<span class="sd">        periodic boundary conditions (PBC) along both X and Y directions.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">sites</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="o">=</span> <span class="n">global_args</span><span class="o">.</span><span class="n">torch_dtype</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="o">=</span> <span class="n">global_args</span><span class="o">.</span><span class="n">device</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span> <span class="nb">tuple</span><span class="p">(</span> <span class="n">site</span><span class="o">.</span><span class="n">dtype</span> <span class="k">for</span> <span class="n">site</span> <span class="ow">in</span> <span class="n">sites</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="p">)</span> <span class="p">))</span><span class="o">==</span><span class="mi">1</span><span class="p">,</span><span class="s2">&quot;Mixed dtypes in sites&quot;</span>
+            <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span> <span class="nb">tuple</span><span class="p">(</span> <span class="n">site</span><span class="o">.</span><span class="n">device</span> <span class="k">for</span> <span class="n">site</span> <span class="ow">in</span> <span class="n">sites</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="p">)</span> <span class="p">))</span><span class="o">==</span><span class="mi">1</span><span class="p">,</span><span class="s2">&quot;Mixed devices in sites&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">sites</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span><span class="o">.</span><span class="n">dtype</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">sites</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span><span class="o">.</span><span class="n">device</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sites</span><span class="o">=</span> <span class="n">OrderedDict</span><span class="p">(</span><span class="n">sites</span><span class="p">)</span>
+
+        <span class="c1"># TODO we infer the size of the cluster from the keys of sites. Is it OK?</span>
+        <span class="c1"># infer the size of the cluster</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">lX</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">lY</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="n">sites</span><span class="p">:</span>
+            <span class="n">min_x</span> <span class="o">=</span> <span class="nb">min</span><span class="p">([</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">coord</span> <span class="ow">in</span> <span class="n">sites</span><span class="o">.</span><span class="n">keys</span><span class="p">()])</span>
+            <span class="n">max_x</span> <span class="o">=</span> <span class="nb">max</span><span class="p">([</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">coord</span> <span class="ow">in</span> <span class="n">sites</span><span class="o">.</span><span class="n">keys</span><span class="p">()])</span>
+            <span class="n">min_y</span> <span class="o">=</span> <span class="nb">min</span><span class="p">([</span><span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">coord</span> <span class="ow">in</span> <span class="n">sites</span><span class="o">.</span><span class="n">keys</span><span class="p">()])</span>
+            <span class="n">max_y</span> <span class="o">=</span> <span class="nb">max</span><span class="p">([</span><span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">coord</span> <span class="ow">in</span> <span class="n">sites</span><span class="o">.</span><span class="n">keys</span><span class="p">()])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">lX</span> <span class="o">=</span> <span class="n">max_x</span><span class="o">-</span><span class="n">min_x</span> <span class="o">+</span> <span class="mi">1</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">lY</span> <span class="o">=</span> <span class="n">max_y</span><span class="o">-</span><span class="n">min_y</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="k">elif</span> <span class="n">lX</span> <span class="ow">and</span> <span class="n">lY</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">lX</span> <span class="o">=</span> <span class="n">lX</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">lY</span> <span class="o">=</span> <span class="n">lY</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;lX and lY has to set either directly or implicitly by sites&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">vertexToSite</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">vertexToSite</span> <span class="o">=</span> <span class="n">vertexToSite</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">def</span> <span class="nf">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">):</span>
+                <span class="n">x</span> <span class="o">=</span> <span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">y</span> <span class="o">=</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                <span class="k">return</span> <span class="p">(</span> <span class="p">(</span><span class="n">x</span> <span class="o">+</span> <span class="nb">abs</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">lX</span><span class="p">)</span><span class="o">%</span><span class="bp">self</span><span class="o">.</span><span class="n">lX</span><span class="p">,</span> <span class="p">(</span><span class="n">y</span> <span class="o">+</span> <span class="nb">abs</span><span class="p">(</span><span class="n">y</span><span class="p">)</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">lY</span><span class="p">)</span><span class="o">%</span><span class="bp">self</span><span class="o">.</span><span class="n">lY</span> <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">vertexToSite</span> <span class="o">=</span> <span class="n">vertexToSite</span>
+
+<div class="viewcode-block" id="IPEPS.site"><a class="viewcode-back" href="../../ipeps/ipeps.html#ipeps.ipeps.IPEPS.site">[docs]</a>    <span class="k">def</span> <span class="nf">site</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">coord</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param coord: tuple (x,y) specifying vertex on a square lattice</span>
+<span class="sd">        :type coord: tuple(int,int)</span>
+<span class="sd">        :return: on-site tensor corresponding to the vertex (x,y)</span>
+<span class="sd">        :rtype: torch.tensor</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">sites</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">)]</span></div>
+
+<div class="viewcode-block" id="IPEPS.get_parameters"><a class="viewcode-back" href="../../ipeps/ipeps.html#ipeps.ipeps.IPEPS.get_parameters">[docs]</a>    <span class="k">def</span> <span class="nf">get_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :return: variational parameters of iPEPS</span>
+<span class="sd">        :rtype: iterable</span>
+<span class="sd">        </span>
+<span class="sd">        This function is called by optimizer to access variational parameters of the state.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">values</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="IPEPS.get_checkpoint"><a class="viewcode-back" href="../../ipeps/ipeps.html#ipeps.ipeps.IPEPS.get_checkpoint">[docs]</a>    <span class="k">def</span> <span class="nf">get_checkpoint</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :return: all data necessary to reconstruct the state. In this case member ``sites`` </span>
+<span class="sd">        :rtype: dict[tuple(int,int): torch.tensor]</span>
+<span class="sd">        </span>
+<span class="sd">        This function is called by optimizer to create checkpoints during </span>
+<span class="sd">        the optimization process.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">sites</span></div>
+
+<div class="viewcode-block" id="IPEPS.load_checkpoint"><a class="viewcode-back" href="../../ipeps/ipeps.html#ipeps.ipeps.IPEPS.load_checkpoint">[docs]</a>    <span class="k">def</span> <span class="nf">load_checkpoint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">checkpoint_file</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param checkpoint_file: path to checkpoint file </span>
+<span class="sd">        :type checkpoint_file: str</span>
+<span class="sd">        </span>
+<span class="sd">        Initializes the state according to the supplied checkpoint file.</span>
+
+<span class="sd">        .. note:: </span>
+
+<span class="sd">            The `vertexToSite` mapping function is not a part of checkpoint and must </span>
+<span class="sd">            be provided either when instantiating IPEPS_ABELIAN or afterwards.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">checkpoint</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">checkpoint_file</span><span class="p">,</span><span class="n">map_location</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sites</span><span class="o">=</span> <span class="n">checkpoint</span><span class="p">[</span><span class="s2">&quot;parameters&quot;</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">site_t</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">values</span><span class="p">():</span> <span class="n">site_t</span><span class="o">.</span><span class="n">requires_grad_</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+        <span class="k">if</span> <span class="kc">True</span> <span class="ow">in</span> <span class="p">[</span><span class="n">s</span><span class="o">.</span><span class="n">is_complex</span><span class="p">()</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">values</span><span class="p">()]:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">complex128</span></div>
+
+<div class="viewcode-block" id="IPEPS.write_to_file"><a class="viewcode-back" href="../../ipeps/ipeps.html#ipeps.ipeps.IPEPS.write_to_file">[docs]</a>    <span class="k">def</span> <span class="nf">write_to_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">outputfile</span><span class="p">,</span><span class="n">aux_seq</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1.0e-14</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Writes state to file. See :meth:`write_ipeps`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">write_ipeps</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">outputfile</span><span class="p">,</span><span class="n">aux_seq</span><span class="o">=</span><span class="n">aux_seq</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="n">tol</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="n">normalize</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="IPEPS.add_noise"><a class="viewcode-back" href="../../ipeps/ipeps.html#ipeps.ipeps.IPEPS.add_noise">[docs]</a>    <span class="k">def</span> <span class="nf">add_noise</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">noise</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param noise: magnitude of the noise</span>
+<span class="sd">        :type noise: float</span>
+
+<span class="sd">        Take IPEPS and add random uniform noise with magnitude ``noise`` to all on-site tensors</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">coord</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">rand_t</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">sites</span><span class="p">[</span><span class="n">coord</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">(),</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sites</span><span class="p">[</span><span class="n">coord</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sites</span><span class="p">[</span><span class="n">coord</span><span class="p">]</span> <span class="o">+</span> <span class="n">noise</span> <span class="o">*</span> <span class="n">rand_t</span></div>
+
+    <span class="k">def</span> <span class="nf">get_aux_bond_dims</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">d</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">sites</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="mi">1</span><span class="p">:]]</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;lX x lY: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">lX</span><span class="si">}</span><span class="s2"> x </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">lY</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">nid</span><span class="p">,</span><span class="n">coord</span><span class="p">,</span><span class="n">site</span> <span class="ow">in</span> <span class="p">[(</span><span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="o">*</span><span class="n">t</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">items</span><span class="p">())]:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;a</span><span class="si">{</span><span class="n">nid</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">coord</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">site</span><span class="o">.</span><span class="n">size</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        
+        <span class="c1"># show tiling of a square lattice</span>
+        <span class="n">coord_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        <span class="n">mx</span><span class="p">,</span> <span class="n">my</span> <span class="o">=</span> <span class="mi">3</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">lX</span><span class="p">,</span> <span class="mi">3</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">lY</span>
+        <span class="n">label_spacing</span> <span class="o">=</span> <span class="mi">1</span><span class="o">+</span><span class="nb">int</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">keys</span><span class="p">())))</span>
+        <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="n">my</span><span class="p">,</span><span class="n">my</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">y</span> <span class="o">==</span> <span class="o">-</span><span class="n">my</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;y</span><span class="se">\\</span><span class="s2">x &quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="n">mx</span><span class="p">,</span><span class="n">mx</span><span class="p">):</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">+</span><span class="n">label_spacing</span><span class="o">*</span><span class="s2">&quot; &quot;</span><span class="o">+</span><span class="s2">&quot; &quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">y</span><span class="si">:</span><span class="s2">+</span><span class="si">}</span><span class="s2"> &quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="n">mx</span><span class="p">,</span><span class="n">mx</span><span class="p">):</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;a</span><span class="si">{</span><span class="n">coord_list</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">((</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">)))</span><span class="si">}</span><span class="s2"> &quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="s2">&quot;&quot;</span></div>
+
+<div class="viewcode-block" id="read_ipeps"><a class="viewcode-back" href="../../ipeps/ipeps.html#ipeps.ipeps.read_ipeps">[docs]</a><span class="k">def</span> <span class="nf">read_ipeps</span><span class="p">(</span><span class="n">jsonfile</span><span class="p">,</span> <span class="n">vertexToSite</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">aux_seq</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],</span> <span class="n">peps_args</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">peps_args</span><span class="p">,</span>\
+    <span class="n">global_args</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">global_args</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    :param jsonfile: input file describing iPEPS in json format</span>
+<span class="sd">    :param vertexToSite: function mapping arbitrary vertex of a square lattice </span>
+<span class="sd">                         into a vertex within elementary unit cell</span>
+<span class="sd">    :param aux_seq: array specifying order of auxiliary indices of on-site tensors stored</span>
+<span class="sd">                    in `jsonfile`</span>
+<span class="sd">    :param peps_args: ipeps configuration</span>
+<span class="sd">    :param global_args: global configuration</span>
+<span class="sd">    :type jsonfile: str or Path object</span>
+<span class="sd">    :type vertexToSite: function(tuple(int,int))-&gt;tuple(int,int)</span>
+<span class="sd">    :type aux_seq: list[int]</span>
+<span class="sd">    :type peps_args: PEPSARGS</span>
+<span class="sd">    :type global_args: GLOBALARGS</span>
+<span class="sd">    :return: wavefunction</span>
+<span class="sd">    :rtype: IPEPS</span>
+<span class="sd">    </span>
+
+<span class="sd">    A simple PBC ``vertexToSite`` function is used by default</span>
+<span class="sd">    </span>
+<span class="sd">    Parameter ``aux_seq`` defines the expected order of auxiliary indices</span>
+<span class="sd">    in input file relative to the convention fixed in tn-torch::</span>
+<span class="sd">    </span>
+<span class="sd">         0</span>
+<span class="sd">        1A3 &lt;=&gt; [up, left, down, right]: aux_seq=[0,1,2,3]</span>
+<span class="sd">         2</span>
+<span class="sd">        </span>
+<span class="sd">        for alternative order, eg.</span>
+<span class="sd">        </span>
+<span class="sd">         1</span>
+<span class="sd">        0A2 &lt;=&gt; [left, up, right, down]: aux_seq=[1,0,3,2] </span>
+<span class="sd">         3</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">WARN_REAL_TO_COMPLEX</span><span class="o">=</span><span class="kc">False</span>
+    <span class="n">asq</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="o">+</span><span class="mi">1</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">aux_seq</span><span class="p">]</span>
+    <span class="n">sites</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">()</span>
+
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">jsonfile</span><span class="p">)</span> <span class="k">as</span> <span class="n">j</span><span class="p">:</span>
+        <span class="n">raw_state</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">j</span><span class="p">)</span>
+
+        <span class="c1"># check for presence of &quot;aux_seq&quot; field in jsonfile</span>
+        <span class="k">if</span> <span class="s2">&quot;aux_ind_seq&quot;</span> <span class="ow">in</span> <span class="n">raw_state</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">asq</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="o">+</span><span class="mi">1</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">raw_state</span><span class="p">[</span><span class="s2">&quot;aux_ind_seq&quot;</span><span class="p">]]</span>
+
+        <span class="c1"># Loop over non-equivalent tensor,site pairs in the unit cell</span>
+        <span class="k">for</span> <span class="n">ts</span> <span class="ow">in</span> <span class="n">raw_state</span><span class="p">[</span><span class="s2">&quot;map&quot;</span><span class="p">]:</span>
+            <span class="n">coord</span> <span class="o">=</span> <span class="p">(</span><span class="n">ts</span><span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">],</span><span class="n">ts</span><span class="p">[</span><span class="s2">&quot;y&quot;</span><span class="p">])</span>
+
+            <span class="c1"># find the corresponding tensor (and its elements) </span>
+            <span class="c1"># identified by &quot;siteId&quot; in the &quot;sites&quot; list</span>
+            <span class="n">t</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">raw_state</span><span class="p">[</span><span class="s2">&quot;sites&quot;</span><span class="p">]:</span>
+                <span class="k">if</span> <span class="n">s</span><span class="p">[</span><span class="s2">&quot;siteId&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">ts</span><span class="p">[</span><span class="s2">&quot;siteId&quot;</span><span class="p">]:</span>
+                    <span class="n">t</span> <span class="o">=</span> <span class="n">s</span>
+            <span class="k">if</span> <span class="n">t</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Tensor with siteId: &quot;</span><span class="o">+</span><span class="n">ts</span><span class="p">[</span><span class="s2">&quot;sideId&quot;</span><span class="p">]</span><span class="o">+</span><span class="s2">&quot; NOT FOUND in </span><span class="se">\&quot;</span><span class="s2">sites</span><span class="se">\&quot;</span><span class="s2">&quot;</span><span class="p">)</span> 
+
+            <span class="c1"># depending on the &quot;format&quot;, read the bare tensor</span>
+            <span class="k">if</span> <span class="s2">&quot;format&quot;</span> <span class="ow">in</span> <span class="n">t</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">t</span><span class="p">[</span><span class="s2">&quot;format&quot;</span><span class="p">]</span><span class="o">==</span><span class="s2">&quot;1D&quot;</span><span class="p">:</span>
+                    <span class="n">X</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">read_bare_json_tensor_np</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># default</span>
+                <span class="n">X</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">read_bare_json_tensor_np_legacy</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
+
+            <span class="n">sites</span><span class="p">[</span><span class="n">coord</span><span class="p">]</span><span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">permute</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="o">*</span><span class="n">asq</span><span class="p">))</span> 
+
+            <span class="c1"># allow promotion of real to complex dtype</span>
+            <span class="n">_typeT</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="n">dtype</span><span class="o">=</span><span class="n">global_args</span><span class="o">.</span><span class="n">torch_dtype</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">_typeT</span><span class="o">.</span><span class="n">is_complex</span><span class="p">()</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">sites</span><span class="p">[</span><span class="n">coord</span><span class="p">]</span><span class="o">.</span><span class="n">is_complex</span><span class="p">():</span>
+                <span class="n">sites</span><span class="p">[</span><span class="n">coord</span><span class="p">]</span><span class="o">=</span> <span class="n">sites</span><span class="p">[</span><span class="n">coord</span><span class="p">]</span> <span class="o">+</span> <span class="mf">0.</span><span class="n">j</span> 
+                <span class="n">WARN_REAL_TO_COMPLEX</span><span class="o">=</span> <span class="kc">True</span>
+
+            <span class="c1"># move to selected device</span>
+            <span class="n">sites</span><span class="p">[</span><span class="n">coord</span><span class="p">]</span><span class="o">=</span> <span class="n">sites</span><span class="p">[</span><span class="n">coord</span><span class="p">]</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">global_args</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">WARN_REAL_TO_COMPLEX</span><span class="p">:</span> <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Some of the tensors were promoted from float to&quot;</span>\
+            <span class="o">+</span><span class="s2">&quot; complex dtype&quot;</span><span class="p">,</span> <span class="ne">Warning</span><span class="p">)</span>
+
+        <span class="c1"># Unless given, construct a function mapping from</span>
+        <span class="c1"># any site of square-lattice back to unit-cell</span>
+        <span class="c1"># check for legacy keys</span>
+        <span class="n">lX</span> <span class="o">=</span> <span class="n">raw_state</span><span class="p">[</span><span class="s2">&quot;sizeM&quot;</span><span class="p">]</span> <span class="k">if</span> <span class="s2">&quot;sizeM&quot;</span> <span class="ow">in</span> <span class="n">raw_state</span> <span class="k">else</span> <span class="n">raw_state</span><span class="p">[</span><span class="s2">&quot;lX&quot;</span><span class="p">]</span>
+        <span class="n">lY</span> <span class="o">=</span> <span class="n">raw_state</span><span class="p">[</span><span class="s2">&quot;sizeN&quot;</span><span class="p">]</span> <span class="k">if</span> <span class="s2">&quot;sizeN&quot;</span> <span class="ow">in</span> <span class="n">raw_state</span> <span class="k">else</span> <span class="n">raw_state</span><span class="p">[</span><span class="s2">&quot;lY&quot;</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">vertexToSite</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">def</span> <span class="nf">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">):</span>
+                <span class="n">x</span> <span class="o">=</span> <span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">y</span> <span class="o">=</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                <span class="k">return</span> <span class="p">(</span> <span class="p">(</span><span class="n">x</span> <span class="o">+</span> <span class="nb">abs</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">*</span><span class="n">lX</span><span class="p">)</span><span class="o">%</span><span class="n">lX</span><span class="p">,</span> <span class="p">(</span><span class="n">y</span> <span class="o">+</span> <span class="nb">abs</span><span class="p">(</span><span class="n">y</span><span class="p">)</span><span class="o">*</span><span class="n">lY</span><span class="p">)</span><span class="o">%</span><span class="n">lY</span> <span class="p">)</span>
+
+            <span class="n">state</span> <span class="o">=</span> <span class="n">IPEPS</span><span class="p">(</span><span class="n">sites</span><span class="p">,</span> <span class="n">vertexToSite</span><span class="p">,</span> <span class="n">lX</span><span class="o">=</span><span class="n">lX</span><span class="p">,</span> <span class="n">lY</span><span class="o">=</span><span class="n">lY</span><span class="p">,</span> <span class="n">peps_args</span><span class="o">=</span><span class="n">peps_args</span><span class="p">,</span> <span class="n">global_args</span><span class="o">=</span><span class="n">global_args</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">state</span> <span class="o">=</span> <span class="n">IPEPS</span><span class="p">(</span><span class="n">sites</span><span class="p">,</span> <span class="n">vertexToSite</span><span class="p">,</span> <span class="n">lX</span><span class="o">=</span><span class="n">lX</span><span class="p">,</span> <span class="n">lY</span><span class="o">=</span><span class="n">lY</span><span class="p">,</span> <span class="n">peps_args</span><span class="o">=</span><span class="n">peps_args</span><span class="p">,</span> <span class="n">global_args</span><span class="o">=</span><span class="n">global_args</span><span class="p">)</span>
+
+        <span class="c1"># set the correct dtype for newly created state (might be different</span>
+        <span class="c1"># default in cfg.global_args)</span>
+        <span class="c1"># if True in [s.is_complex() for s in sites.values()]:</span>
+        <span class="c1">#     state.dtype= torch.complex128</span>
+    <span class="k">return</span> <span class="n">state</span></div>
+
+<div class="viewcode-block" id="extend_bond_dim"><a class="viewcode-back" href="../../ipeps/ipeps.html#ipeps.ipeps.extend_bond_dim">[docs]</a><span class="k">def</span> <span class="nf">extend_bond_dim</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">new_d</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    :param state: wavefunction to modify</span>
+<span class="sd">    :param new_d: new enlarged auxiliary bond dimension</span>
+<span class="sd">    :type state: IPEPS</span>
+<span class="sd">    :type new_d: int</span>
+<span class="sd">    :return: wavefunction with enlarged auxiliary bond dimensions</span>
+<span class="sd">    :rtype: IPEPS</span>
+
+<span class="sd">    Take IPEPS and enlarge all auxiliary bond dimensions of all on-site tensors up to </span>
+<span class="sd">    size ``new_d``</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">new_state</span> <span class="o">=</span> <span class="n">state</span>
+    <span class="k">for</span> <span class="n">coord</span><span class="p">,</span><span class="n">site</span> <span class="ow">in</span> <span class="n">new_state</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">dims</span> <span class="o">=</span> <span class="n">site</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+        <span class="n">size_check</span> <span class="o">=</span> <span class="p">[</span><span class="n">new_d</span> <span class="o">&gt;=</span> <span class="n">d</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">dims</span><span class="p">[</span><span class="mi">1</span><span class="p">:]]</span>
+        <span class="k">if</span> <span class="kc">False</span> <span class="ow">in</span> <span class="n">size_check</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Desired dimension is smaller than following aux dimensions: &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">size_check</span><span class="p">))</span>
+
+        <span class="n">new_site</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">dims</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">new_d</span><span class="p">,</span><span class="n">new_d</span><span class="p">,</span><span class="n">new_d</span><span class="p">,</span><span class="n">new_d</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">state</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">state</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">new_site</span><span class="p">[:,:</span><span class="n">dims</span><span class="p">[</span><span class="mi">1</span><span class="p">],:</span><span class="n">dims</span><span class="p">[</span><span class="mi">2</span><span class="p">],:</span><span class="n">dims</span><span class="p">[</span><span class="mi">3</span><span class="p">],:</span><span class="n">dims</span><span class="p">[</span><span class="mi">4</span><span class="p">]]</span> <span class="o">=</span> <span class="n">site</span>
+        <span class="n">new_state</span><span class="o">.</span><span class="n">sites</span><span class="p">[</span><span class="n">coord</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_site</span>
+    <span class="k">return</span> <span class="n">new_state</span></div>
+
+<div class="viewcode-block" id="write_ipeps"><a class="viewcode-back" href="../../ipeps/ipeps.html#ipeps.ipeps.write_ipeps">[docs]</a><span class="k">def</span> <span class="nf">write_ipeps</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">outputfile</span><span class="p">,</span> <span class="n">aux_seq</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1.0e-14</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>\
+    <span class="n">peps_args</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">peps_args</span><span class="p">,</span> <span class="n">global_args</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">global_args</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    :param state: wavefunction to write out in json format</span>
+<span class="sd">    :param outputfile: target file</span>
+<span class="sd">    :param aux_seq: array specifying order in which the auxiliary indices of on-site tensors </span>
+<span class="sd">                    will be stored in the `outputfile`</span>
+<span class="sd">    :param tol: minimum magnitude of tensor elements which are written out</span>
+<span class="sd">    :param normalize: if True, on-site tensors are normalized before writing</span>
+<span class="sd">    :type state: IPEPS</span>
+<span class="sd">    :type ouputfile: str or Path object</span>
+<span class="sd">    :type aux_seq: list[int]</span>
+<span class="sd">    :type tol: float</span>
+<span class="sd">    :type normalize: bool</span>
+
+<span class="sd">    Parameter ``aux_seq`` defines the order of auxiliary indices relative to the convention </span>
+<span class="sd">    fixed in tn-torch in which the tensor elements are written out::</span>
+<span class="sd">    </span>
+<span class="sd">         0</span>
+<span class="sd">        1A3 &lt;=&gt; [up, left, down, right]: aux_seq=[0,1,2,3]</span>
+<span class="sd">         2</span>
+<span class="sd">        </span>
+<span class="sd">        for alternative order, eg.</span>
+<span class="sd">        </span>
+<span class="sd">         1</span>
+<span class="sd">        0A2 &lt;=&gt; [left, up, right, down]: aux_seq=[1,0,3,2] </span>
+<span class="sd">         3</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">asq</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="o">+</span><span class="mi">1</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">aux_seq</span><span class="p">]</span>
+    <span class="n">json_state</span><span class="o">=</span><span class="nb">dict</span><span class="p">({</span><span class="s2">&quot;lX&quot;</span><span class="p">:</span> <span class="n">state</span><span class="o">.</span><span class="n">lX</span><span class="p">,</span> <span class="s2">&quot;lY&quot;</span><span class="p">:</span> <span class="n">state</span><span class="o">.</span><span class="n">lY</span><span class="p">,</span> <span class="s2">&quot;sites&quot;</span><span class="p">:</span> <span class="p">[]})</span>
+    
+    <span class="n">site_ids</span><span class="o">=</span><span class="p">[]</span>
+    <span class="n">site_map</span><span class="o">=</span><span class="p">[]</span>
+    <span class="k">for</span> <span class="n">nid</span><span class="p">,</span><span class="n">coord</span><span class="p">,</span><span class="n">site</span> <span class="ow">in</span> <span class="p">[(</span><span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="o">*</span><span class="n">t</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">items</span><span class="p">())]:</span>
+        <span class="k">if</span> <span class="n">normalize</span><span class="p">:</span>
+            <span class="n">site</span><span class="o">=</span> <span class="n">site</span><span class="o">/</span><span class="n">site</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+        
+        <span class="n">site_ids</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;A</span><span class="si">{</span><span class="n">nid</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">site_map</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">dict</span><span class="p">({</span><span class="s2">&quot;siteId&quot;</span><span class="p">:</span> <span class="n">site_ids</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="s2">&quot;x&quot;</span><span class="p">:</span> <span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]}</span> <span class="p">))</span>
+        
+        <span class="k">if</span> <span class="n">global_args</span><span class="o">.</span><span class="n">tensor_io_format</span><span class="o">==</span><span class="s2">&quot;legacy&quot;</span><span class="p">:</span>
+            <span class="n">json_tensor</span><span class="o">=</span> <span class="n">serialize_bare_tensor_legacy</span><span class="p">(</span><span class="n">site</span><span class="p">)</span>
+            <span class="c1"># json_tensor[&quot;physDim&quot;]= site.size(0)</span>
+            <span class="c1"># assuming all auxBondDim are identical</span>
+            <span class="c1"># json_tensor[&quot;auxDim&quot;]= site.size(1)</span>
+        <span class="k">elif</span> <span class="n">global_args</span><span class="o">.</span><span class="n">tensor_io_format</span><span class="o">==</span><span class="s2">&quot;1D&quot;</span><span class="p">:</span>
+            <span class="n">json_tensor</span><span class="o">=</span> <span class="n">serialize_bare_tensor_np</span><span class="p">(</span><span class="n">site</span><span class="p">)</span>
+
+        <span class="n">json_tensor</span><span class="p">[</span><span class="s2">&quot;siteId&quot;</span><span class="p">]</span><span class="o">=</span><span class="n">site_ids</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">json_state</span><span class="p">[</span><span class="s2">&quot;sites&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">json_tensor</span><span class="p">)</span>
+
+    <span class="n">json_state</span><span class="p">[</span><span class="s2">&quot;siteIds&quot;</span><span class="p">]</span><span class="o">=</span><span class="n">site_ids</span>
+    <span class="n">json_state</span><span class="p">[</span><span class="s2">&quot;map&quot;</span><span class="p">]</span><span class="o">=</span><span class="n">site_map</span>
+
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">outputfile</span><span class="p">,</span><span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">json_state</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">separators</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">,</span> <span class="s1">&#39;: &#39;</span><span class="p">))</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Juraj Hasik, Glen B. Mbeng
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

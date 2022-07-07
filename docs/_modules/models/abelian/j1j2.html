@@ -1,0 +1,932 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>models.abelian.j1j2 &mdash; peps-torch alpha documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> peps-torch
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../ipeps.html">iPEPS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps.html">Generic iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_kagome.html">Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_c4v.html">1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_lc_1site_pg.html">1-site iPEPS from lin. combination</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipess_kagome.html">Generic Kagome iPESS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipess_kagome_pg.html">Kagome iPESS with point groups</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipess_kagome_pg_lc.html">Kagome iPESS from lin. combination</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../ipeps.html#abelian-symmetric-ipeps">Abelian-symmetric iPEPS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_abelian.html">Generic  abelian-symmetric iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_abelian.html#generic-abelian-symmetric-ipeps-with-weights">Generic abelian-symmetric iPEPS with weights</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_kagome_abelian.html">Abelian-symmetric Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_abelian_c4v.html">Abelian-symmetric 1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipess_kagome_abelian.html">Abelian-symmetric generic Kagome iPESS</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../envs.html">Environments</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../envs/generic.html">Generic iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/env.html">Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/rdm.html#module-ctm.pess_kagome.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/corrf.html">Correlation functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/transfer_matrix.html">Transfer Matrices</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../envs/generic_abelian.html">Abelian-symmetric generic iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic_abelian/env_abelian.html">Abelian-symmetric environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic_abelian/ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic_abelian/ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic_abelian/ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic_abelian/rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic_abelian/rdm.html#module-ctm.pess_kagome_abelian.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../envs/one_site_c4v.html">1-site C4v iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v/env_c4v.html">1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v/ctmrg_c4v.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v/rdm_c4v.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v/transfer_matrix.html">Transfer Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v/corrf_c4v.html">Correlation functions</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../envs/one_site_c4v_abelian.html">Abelian-symmetric 1-site C4v iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v_abelian/env_c4v_abelian.html">Abelian-symmetric 1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v_abelian/ctmrg_c4v_abelian.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v_abelian/rdm_c4v_abelian.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v_abelian/corrf_c4v_abelian.html">Correlation functions</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../optim.html">Optimization</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../optim/drivers.html">Optimization drivers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../optim/drivers/ad_optim.html">ad_optim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../optim/drivers/ad_optim_lbfgs_mod.html">ad_optim_lbfgs_mod</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../optim/drivers/ad_optim_sgd_mod.html">ad_optim_sgd_mod</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../optim/optimizers.html">Custom optimizers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../optim/optimizers/lbfgs_modified.html">Extended LBFGS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../optim/optimizers/sgd_modified.html">SGD with linesearch</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../config.html">Configuration</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../config.html#main">Main</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../config.html#global">Global</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../config.html#corner-transfer-matrix-algorithm">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../config.html#optimization">Optimization</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../models.html">Models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/akltS2.html">Spin S=2 AKLT Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/akltS2.html#module-models.akltS2">2x1 and 2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/akltS2.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/coupledLadders.html">Coupled Ladders</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/coupledLadders.html#dense-pytorch">Dense (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/coupledLadders.html#dense-yast">Dense (YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/coupledLadders.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/ising.html">Transverse Field Ising Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/ising.html#x1-unit-cell">1x1 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/ising.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/j1j2.html">J1-J2-J3 and J1-J2-lambda Heisenberg Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/j1j2.html#from-2x1-to-4x2-unit-cell-pytorch">from 2x1 to 4x2 unit cell (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/j1j2.html#from-2x1-to-4x2-unit-cell-dense-yast">from 2x1 to 4x2 unit cell (dense YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/j1j2.html#x1-c4v-pytorch">1x1 C4v (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/j1j2.html#x1-c4v-dense-yast">1x1 C4v (dense YAST)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/jq.html">J-Q Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/jq.html#module-models.jq">2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/jq.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/spin_half_kagome.html">SU(2) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/spin_half_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/spin_half_kagome.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/su3_kagome.html">SU(3) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/su3_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/su3_kagome.html#with-explict-u-1-xu-1-symmetry">With explict U(1)xU(1) symmetry</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../groups.html">Groups</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../groups/pg.html">Point group: square lattice</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../groups/su2.html">SU(2)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../groups/su2.html#module-groups.su2_abelian">SU(2) with explicit U(1) structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../groups/su3.html">SU(3)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../groups/su3.html#su-3-with-explicit-u-1-xu-1-structure">SU(3) with explicit U(1)xU(1) structure</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../linalg.html">Linear Algebra</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../linalg/custom_eig.html">Truncated eigendecomposition</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../linalg/custom_svd.html">Truncated SVD</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../linalg/spec_decomp.html">Spectral decompositions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../linalg/spec_decomp.html#module-linalg.svd_gesdd">SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../linalg/spec_decomp.html#module-linalg.svd_arnoldi">Partial SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../linalg/spec_decomp.html#module-linalg.svd_rsvd">Randomized SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../linalg/spec_decomp.html#module-linalg.eig_sym">Symmetric Eigendecomposition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../linalg/spec_decomp.html#module-linalg.eig_arnoldi">Partial diagonalization</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">peps-torch</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>models.abelian.j1j2</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for models.abelian.j1j2</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">math</span> <span class="kn">import</span> <span class="n">sqrt</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">itertools</span>
+<span class="kn">import</span> <span class="nn">config</span> <span class="k">as</span> <span class="nn">cfg</span>
+<span class="kn">import</span> <span class="nn">yast.yast</span> <span class="k">as</span> <span class="nn">yast</span>
+<span class="kn">from</span> <span class="nn">tn_interface_abelian</span> <span class="kn">import</span> <span class="n">contract</span><span class="p">,</span> <span class="n">permute</span>
+<span class="kn">import</span> <span class="nn">groups.su2_abelian</span> <span class="k">as</span> <span class="nn">su2</span>
+<span class="kn">from</span> <span class="nn">ctm.generic_abelian</span> <span class="kn">import</span> <span class="n">rdm</span>
+<span class="kn">from</span> <span class="nn">ctm.one_site_c4v_abelian</span> <span class="kn">import</span> <span class="n">rdm_c4v</span>
+<span class="kn">from</span> <span class="nn">ctm.one_site_c4v_abelian</span> <span class="kn">import</span> <span class="n">corrf_c4v</span>
+
+
+<div class="viewcode-block" id="J1J2_NOSYM"><a class="viewcode-back" href="../../../models/j1j2.html#models.abelian.j1j2.J1J2_NOSYM">[docs]</a><span class="k">class</span> <span class="nc">J1J2_NOSYM</span><span class="p">():</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">settings</span><span class="p">,</span> <span class="n">j1</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">j2</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">global_args</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">global_args</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param j1: nearest-neighbour interaction</span>
+<span class="sd">        :param j2: next nearest-neighbour interaction</span>
+<span class="sd">        :param global_args: global configuration</span>
+<span class="sd">        :type j1: float</span>
+<span class="sd">        :type j2: float</span>
+<span class="sd">        :type global_args: GLOBALARGS</span>
+
+<span class="sd">        Build Spin-1/2 :math:`J_1-J_2` Hamiltonian</span>
+
+<span class="sd">        .. math:: H = J_1\sum_{&lt;i,j&gt;} h2_{ij} + J_2\sum_{&lt;&lt;i,j&gt;&gt;} h2_{ij}</span>
+
+<span class="sd">        on the square lattice. Where the first sum runs over the pairs of sites `i,j` </span>
+<span class="sd">        which are nearest-neighbours (denoted as `&lt;.,.&gt;`), and the second sum runs over </span>
+<span class="sd">        pairs of sites `i,j` which are next nearest-neighbours (denoted as `&lt;&lt;.,.&gt;&gt;`)::</span>
+
+<span class="sd">            y\x</span>
+<span class="sd">               _:__:__:__:_</span>
+<span class="sd">            ..._|__|__|__|_...</span>
+<span class="sd">            ..._|__|__|__|_...</span>
+<span class="sd">            ..._|__|__|__|_...</span>
+<span class="sd">            ..._|__|__|__|_...</span>
+<span class="sd">            ..._|__|__|__|_...</span>
+<span class="sd">                :  :  :  :</span>
+
+<span class="sd">        where</span>
+
+<span class="sd">        * :math:`h2_{ij} = \mathbf{S_i}.\mathbf{S_j}` with indices of h2 corresponding to :math:`s_i s_j;s&#39;_i s&#39;_j`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="n">settings</span><span class="o">.</span><span class="n">sym</span><span class="o">.</span><span class="n">NSYM</span><span class="o">==</span><span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;No abelian symmetry is assumed&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">engine</span><span class="o">=</span> <span class="n">settings</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="o">=</span><span class="n">settings</span><span class="o">.</span><span class="n">default_dtype</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="o">=</span><span class="s1">&#39;cpu&#39;</span> <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">settings</span><span class="p">,</span> <span class="s1">&#39;device&#39;</span><span class="p">)</span> <span class="k">else</span> <span class="n">settings</span><span class="o">.</span><span class="n">device</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">phys_dim</span><span class="o">=</span><span class="mi">2</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">j1</span><span class="o">=</span><span class="n">j1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">j2</span><span class="o">=</span><span class="n">j2</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">h2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">h2x2_nn</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">h2x2_nnn</span><span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_h</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">obs_ops</span><span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_obs_ops</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">get_h</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">irrep</span> <span class="o">=</span> <span class="n">su2</span><span class="o">.</span><span class="n">SU2_NOSYM</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">engine</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">phys_dim</span><span class="p">)</span>
+        <span class="n">I1</span><span class="o">=</span> <span class="n">irrep</span><span class="o">.</span><span class="n">I</span><span class="p">()</span>
+        <span class="n">SS</span><span class="o">=</span> <span class="n">irrep</span><span class="o">.</span><span class="n">SS</span><span class="p">()</span>
+        
+        <span class="c1"># 0        0-&gt;2                 0     1 </span>
+        <span class="c1"># I1--(x)--I1   =&gt; transpose =&gt; I1----I1 </span>
+        <span class="c1"># 1        1-&gt;3                 2     3</span>
+        <span class="n">I2</span><span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">I1</span><span class="p">,</span><span class="n">I1</span><span class="p">,([],[]))</span> 
+        <span class="n">I2</span><span class="o">=</span> <span class="n">permute</span><span class="p">(</span><span class="n">I2</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">))</span>
+        
+        <span class="c1"># 0 1      0 1-&gt;4 5                  0 1   2 3 </span>
+        <span class="c1"># SS--(x)--I2        =&gt; transpose =&gt; SS----I2 </span>
+        <span class="c1"># 2 3      2 3-&gt;6 7                  4 5   6 7</span>
+        <span class="n">h2x2_SS</span><span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">SS</span><span class="p">,</span><span class="n">I2</span><span class="p">,([],[]))</span>
+        <span class="n">h2x2_SS</span><span class="o">=</span> <span class="n">permute</span><span class="p">(</span><span class="n">h2x2_SS</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">6</span><span class="p">,</span><span class="mi">7</span><span class="p">))</span>
+
+        <span class="n">h2x2_nn</span><span class="o">=</span> <span class="n">h2x2_SS</span> <span class="o">+</span> <span class="n">permute</span><span class="p">(</span><span class="n">h2x2_SS</span><span class="p">,</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">6</span><span class="p">,</span><span class="mi">7</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">))</span> <span class="o">+</span> <span class="n">permute</span><span class="p">(</span><span class="n">h2x2_SS</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">6</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">7</span><span class="p">))</span>\
+            <span class="o">+</span> <span class="n">permute</span><span class="p">(</span><span class="n">h2x2_SS</span><span class="p">,</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">6</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">7</span><span class="p">,</span><span class="mi">5</span><span class="p">))</span>
+        <span class="n">h2x2_nnn</span><span class="o">=</span> <span class="n">permute</span><span class="p">(</span><span class="n">h2x2_SS</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">7</span><span class="p">,</span><span class="mi">6</span><span class="p">,</span><span class="mi">5</span><span class="p">))</span> <span class="o">+</span> <span class="n">permute</span><span class="p">(</span><span class="n">h2x2_SS</span><span class="p">,</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">6</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">7</span><span class="p">))</span>
+        
+        <span class="k">return</span> <span class="n">SS</span><span class="p">,</span> <span class="n">h2x2_nn</span><span class="p">,</span> <span class="n">h2x2_nnn</span>
+
+    <span class="k">def</span> <span class="nf">get_obs_ops</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">obs_ops</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="n">irrep</span> <span class="o">=</span> <span class="n">su2</span><span class="o">.</span><span class="n">SU2_NOSYM</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">engine</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">phys_dim</span><span class="p">)</span>
+        <span class="n">obs_ops</span><span class="p">[</span><span class="s2">&quot;sz&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">irrep</span><span class="o">.</span><span class="n">SZ</span><span class="p">()</span>
+        <span class="n">obs_ops</span><span class="p">[</span><span class="s2">&quot;sp&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">irrep</span><span class="o">.</span><span class="n">SP</span><span class="p">()</span>
+        <span class="n">obs_ops</span><span class="p">[</span><span class="s2">&quot;sm&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">irrep</span><span class="o">.</span><span class="n">SM</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">obs_ops</span>
+
+    <span class="c1"># def energy_2x2_1site_BP(self,state,env):</span>
+    <span class="c1">#     r&quot;&quot;&quot;</span>
+    <span class="c1">#     :param state: wavefunction</span>
+    <span class="c1">#     :param env: CTM environment</span>
+    <span class="c1">#     :type state: IPEPS_ABELIAN</span>
+    <span class="c1">#     :type env: ENV_ABELIAN</span>
+    <span class="c1">#     :return: energy per site</span>
+    <span class="c1">#     :rtype: float</span>
+
+    <span class="c1">#     We assume 1x1 iPEPS which tiles the lattice with a bipartite pattern composed </span>
+    <span class="c1">#     of two tensors A, and B=RA, where R rotates approriately the physical Hilbert space </span>
+    <span class="c1">#     of tensor A on every &quot;odd&quot; site::</span>
+
+    <span class="c1">#         1x1 C4v =&gt; rotation P =&gt; BIPARTITE</span>
+
+    <span class="c1">#         A A A A                  A B A B</span>
+    <span class="c1">#         A A A A                  B A B A</span>
+    <span class="c1">#         A A A A                  A B A B</span>
+    <span class="c1">#         A A A A                  B A B A</span>
+
+    <span class="c1">#     A single reduced density matrix :py:func:`ctm.rdm.rdm2x2` of a 2x2 plaquette</span>
+    <span class="c1">#     is used to evaluate the energy.</span>
+    <span class="c1">#     &quot;&quot;&quot;</span>
+    <span class="c1">#     if not (hasattr(self, &#39;h2x2_nn_rot&#39;) or hasattr(self, &#39;h2x2_nn_nrot&#39;)):</span>
+    <span class="c1">#         irrep = su2.SU2_NOSYM(self.engine, self.phys_dim)</span>
+    <span class="c1">#         rot_op= irrep.BP_rot()</span>
+    <span class="c1">#         self.h2x2_nn_rot= torch.einsum(&#39;irtlaxyd,jr,kt,xb,yc-&gt;ijklabcd&#39;,\</span>
+    <span class="c1">#             self.h2x2_nn,rot_op,rot_op,rot_op,rot_op)</span>
+    <span class="c1">#         self.h2x2_nnn_rot= torch.einsum(&#39;irtlaxyd,jr,kt,xb,yc-&gt;ijklabcd&#39;,\</span>
+    <span class="c1">#             self.h2x2_nnn,rot_op,rot_op,rot_op,rot_op)</span>
+
+    <span class="c1">#     tmp_rdm= rdm.rdm2x2((0,0),state,env)</span>
+    <span class="c1">#     energy_nn= torch.einsum(&#39;ijklabcd,ijklabcd&#39;,tmp_rdm,self.h2x2_nn_rot)</span>
+    <span class="c1">#     energy_nnn= torch.einsum(&#39;ijklabcd,ijklabcd&#39;,tmp_rdm,self.h2x2_nnn_rot)</span>
+    <span class="c1">#     energy_per_site = 2.0*(self.j1*energy_nn/4.0 + self.j2*energy_nnn/2.0)</span>
+
+    <span class="c1">#     return energy_per_site</span>
+
+<div class="viewcode-block" id="J1J2_NOSYM.energy_2x1_or_2Lx2site_2x2rdms"><a class="viewcode-back" href="../../../models/j1j2.html#models.abelian.j1j2.J1J2_NOSYM.energy_2x1_or_2Lx2site_2x2rdms">[docs]</a>    <span class="k">def</span> <span class="nf">energy_2x1_or_2Lx2site_2x2rdms</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        :param state: wavefunction</span>
+<span class="sd">        :param env: CTM environment</span>
+<span class="sd">        :type state: IPEPS_ABELIAN</span>
+<span class="sd">        :type env: ENV_ABELIAN</span>
+<span class="sd">        :return: energy per site</span>
+<span class="sd">        :rtype: float</span>
+
+<span class="sd">        Covered cases:</span>
+<span class="sd">    </span>
+<span class="sd">        1) Assume iPEPS with 2x1 unit cell containing two tensors A, B. We can</span>
+<span class="sd">        tile the square lattice in two ways::</span>
+
+<span class="sd">            BIPARTITE           STRIPE   </span>
+
+<span class="sd">            A B A B             A B A B</span>
+<span class="sd">            B A B A             A B A B</span>
+<span class="sd">            A B A B             A B A B</span>
+<span class="sd">            B A B A             A B A B</span>
+
+<span class="sd">        Taking reduced density matrix :math:`\rho_{2x2}` of 2x2 cluster with indexing </span>
+<span class="sd">        of sites as follows :math:`\rho_{2x2}(s_0,s_1,s_2,s_3;s&#39;_0,s&#39;_1,s&#39;_2,s&#39;_3)`::</span>
+<span class="sd">        </span>
+<span class="sd">            s0--s1</span>
+<span class="sd">            |   |</span>
+<span class="sd">            s2--s3</span>
+
+<span class="sd">        and without assuming any symmetry on the indices of individual tensors a following</span>
+<span class="sd">        set of terms has to be evaluated in order to compute energy-per-site::</span>
+<span class="sd">                </span>
+<span class="sd">               0           </span>
+<span class="sd">            1--A--3</span>
+<span class="sd">               2</span>
+<span class="sd">            </span>
+<span class="sd">            Ex.1 unit cell A B, with BIPARTITE tiling</span>
+
+<span class="sd">                A3--1B, B3--1A, A, B, A3  , B3  ,   1A,   1B</span>
+<span class="sd">                                2  0   \     \      /     / </span>
+<span class="sd">                                0  2    \     \    /     /  </span>
+<span class="sd">                                B  A    1A    1B  A3    B3  </span>
+<span class="sd">            </span>
+<span class="sd">            Ex.2 unit cell A B, with STRIPE tiling</span>
+
+<span class="sd">                A3--1A, B3--1B, A, B, A3  , B3  ,   1A,   1B</span>
+<span class="sd">                                2  0   \     \      /     / </span>
+<span class="sd">                                0  2    \     \    /     /  </span>
+<span class="sd">                                A  B    1B    1A  B3    A3</span>
+
+<span class="sd">        All the above terms can be captured by evaluating correlations over two </span>
+<span class="sd">        reduced density matrices if 2x2 cluster::</span>
+<span class="sd">        </span>
+<span class="sd">            A3--1B   B3  1A</span>
+<span class="sd">            2 \/ 2   2 \/ 2</span>
+<span class="sd">            0 /\ 0   0 /\ 0</span>
+<span class="sd">            B3--1A &amp; A3  1B</span>
+
+<span class="sd">            A3--1B   B3--1A</span>
+<span class="sd">            2 \/ 2   2 \/ 2</span>
+<span class="sd">            0 /\ 0   0 /\ 0</span>
+<span class="sd">            A3--1B &amp; B3--1A</span>
+
+<span class="sd">        2) We assume iPEPS with 2Lx2 unit cell. Simplest example would be a 2x2 unit cell </span>
+<span class="sd">        containing four tensors A, B, C, and D with simple PBC tiling::</span>
+
+<span class="sd">            A B A B</span>
+<span class="sd">            C D C D</span>
+<span class="sd">            A B A B</span>
+<span class="sd">            C D C D</span>
+<span class="sd">    </span>
+<span class="sd">        Taking the reduced density matrix :math:`\rho_{2x2}` of 2x2 cluster given by </span>
+<span class="sd">        :py:func:`ctm.generic.rdm.rdm2x2` with indexing of sites as follows </span>
+<span class="sd">        :math:`\rho_{2x2}(s_0,s_1,s_2,s_3;s&#39;_0,s&#39;_1,s&#39;_2,s&#39;_3)`::</span>
+<span class="sd">        </span>
+<span class="sd">            s0--s1</span>
+<span class="sd">            |   |</span>
+<span class="sd">            s2--s3</span>
+
+<span class="sd">        and without assuming any symmetry on the indices of the individual tensors a set</span>
+<span class="sd">        of four :math:`\rho_{2x2}`&#39;s are needed over which :math:`h2` operators </span>
+<span class="sd">        for the nearest and next-neaerest neighbour pairs are evaluated::  </span>
+
+<span class="sd">            A3--1B   B3--1A   C3--1D   D3--1C</span>
+<span class="sd">            2    2   2    2   2    2   2    2</span>
+<span class="sd">            0    0   0    0   0    0   0    0</span>
+<span class="sd">            C3--1D &amp; D3--1C &amp; A3--1B &amp; B3--1A</span>
+
+<span class="sd">        A more complex example 4x2 unit cell containing eight tensors A, B, C, D, </span>
+<span class="sd">        E, F, G, H with PBC tiling + SHIFT::</span>
+
+<span class="sd">            A B E F</span>
+<span class="sd">            C D G H</span>
+<span class="sd">          A B E F</span>
+<span class="sd">          C D G H</span>
+<span class="sd">    </span>
+<span class="sd">        Taking the reduced density matrix :math:`\rho_{2x2}` of 2x2 cluster given by </span>
+<span class="sd">        :py:func:`ctm.generic.rdm.rdm2x2` with indexing of sites as follows </span>
+<span class="sd">        :math:`\rho_{2x2}(s_0,s_1,s_2,s_3;s&#39;_0,s&#39;_1,s&#39;_2,s&#39;_3)`::</span>
+<span class="sd">        </span>
+<span class="sd">            s0--s1</span>
+<span class="sd">            |   |</span>
+<span class="sd">            s2--s3</span>
+
+<span class="sd">        and without assuming any symmetry on the indices of the individual tensors a set</span>
+<span class="sd">        of eight :math:`\rho_{2x2}`&#39;s are needed over which :math:`h2` operators </span>
+<span class="sd">        for the nearest and next-neaerest neighbour pairs are evaluated::  </span>
+
+<span class="sd">            A3--1B   B3--1E   E3--1F   F3--1A</span>
+<span class="sd">            2    2   2    2   2    2   2    2</span>
+<span class="sd">            0    0   0    0   0    0   0    0</span>
+<span class="sd">            C3--1D &amp; D3--1G &amp; G3--1H &amp; H3--1C </span>
+
+<span class="sd">            C3--1D   D3--1G   G3--1H   H3--1C</span>
+<span class="sd">            2    2   2    2   2    2   2    2</span>
+<span class="sd">            0    0   0    0   0    0   0    0</span>
+<span class="sd">            B3--1E &amp; E3--1F &amp; F3--1A &amp; A3--1B </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">N</span><span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">lX</span><span class="o">*</span><span class="n">state</span><span class="o">.</span><span class="n">lY</span>
+        <span class="k">assert</span> <span class="n">N</span><span class="o">==</span><span class="nb">len</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="p">),</span> <span class="s2">&quot;size of the unit cell does not match number of sites&quot;</span>
+
+        <span class="n">energy_nn</span><span class="o">=</span><span class="n">yast</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">engine</span><span class="p">)</span>
+        <span class="n">energy_nnn</span><span class="o">=</span><span class="n">yast</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">engine</span><span class="p">)</span>
+        <span class="n">_ci</span><span class="o">=</span> <span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">,</span><span class="mi">7</span><span class="p">],[</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">,</span><span class="mi">7</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">coord</span> <span class="ow">in</span> <span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">tmp_rdm</span><span class="o">=</span> <span class="n">rdm</span><span class="o">.</span><span class="n">rdm2x2</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span><span class="o">.</span><span class="n">to_nonsymmetric</span><span class="p">()</span>
+            <span class="n">energy_nn</span> <span class="o">+=</span> <span class="n">contract</span><span class="p">(</span><span class="n">tmp_rdm</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">h2x2_nn</span><span class="p">,</span><span class="n">_ci</span><span class="p">)</span>
+            <span class="n">energy_nnn</span> <span class="o">+=</span> <span class="n">contract</span><span class="p">(</span><span class="n">tmp_rdm</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">h2x2_nnn</span><span class="p">,</span><span class="n">_ci</span><span class="p">)</span>
+        <span class="n">energy_per_site</span><span class="o">=</span> <span class="mf">2.0</span><span class="o">*</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">j1</span><span class="o">*</span><span class="n">energy_nn</span><span class="o">/</span><span class="p">(</span><span class="mi">4</span><span class="o">*</span><span class="n">N</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">j2</span><span class="o">*</span><span class="n">energy_nnn</span><span class="o">/</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">N</span><span class="p">))</span>
+        <span class="n">energy_per_site</span><span class="o">=</span> <span class="n">rdm</span><span class="o">.</span><span class="n">_cast_to_real</span><span class="p">(</span><span class="n">energy_per_site</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">energy_per_site</span></div>
+
+<div class="viewcode-block" id="J1J2_NOSYM.eval_obs"><a class="viewcode-back" href="../../../models/j1j2.html#models.abelian.j1j2.J1J2_NOSYM.eval_obs">[docs]</a>    <span class="k">def</span> <span class="nf">eval_obs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param state: wavefunction</span>
+<span class="sd">        :param env: CTM environment</span>
+<span class="sd">        :type state: IPEPS_ABELIAN</span>
+<span class="sd">        :type env: ENV_ABELIAN</span>
+<span class="sd">        :return:  expectation values of observables, labels of observables</span>
+<span class="sd">        :rtype: list[float], list[str]</span>
+
+<span class="sd">        Computes the following observables in order</span>
+
+<span class="sd">            1. average magnetization over the unit cell,</span>
+<span class="sd">            2. magnetization for each site in the unit cell</span>
+<span class="sd">            3. :math:`\langle S^z \rangle,\ \langle S^+ \rangle,\ \langle S^- \rangle` </span>
+<span class="sd">               for each site in the unit cell</span>
+
+<span class="sd">        where the on-site magnetization is defined as</span>
+<span class="sd">        </span>
+<span class="sd">        .. math::</span>
+<span class="sd">            </span>
+<span class="sd">            \begin{align*}</span>
+<span class="sd">            m &amp;= \sqrt{ \langle S^z \rangle^2+\langle S^x \rangle^2+\langle S^y \rangle^2 }</span>
+<span class="sd">            =\sqrt{\langle S^z \rangle^2+1/4(\langle S^+ \rangle+\langle S^- </span>
+<span class="sd">            \rangle)^2 -1/4(\langle S^+\rangle-\langle S^-\rangle)^2} \\</span>
+<span class="sd">              &amp;=\sqrt{\langle S^z \rangle^2 + 1/2\langle S^+ \rangle \langle S^- \rangle)}</span>
+<span class="sd">            \end{align*}</span>
+
+<span class="sd">        Usual spin components can be obtained through the following relations</span>
+<span class="sd">        </span>
+<span class="sd">        .. math::</span>
+<span class="sd">            </span>
+<span class="sd">            \begin{align*}</span>
+<span class="sd">            S^+ &amp;=S^x+iS^y               &amp; S^x &amp;= 1/2(S^+ + S^-)\\</span>
+<span class="sd">            S^- &amp;=S^x-iS^y\ \Rightarrow\ &amp; S^y &amp;=-i/2(S^+ - S^-)</span>
+<span class="sd">            \end{align*}</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># TODO optimize/unify ?</span>
+        <span class="c1"># expect &quot;list&quot; of (observable label, value) pairs ?</span>
+        <span class="n">obs</span><span class="o">=</span> <span class="nb">dict</span><span class="p">({</span><span class="s2">&quot;avg_m&quot;</span><span class="p">:</span> <span class="mf">0.</span><span class="p">})</span>
+        <span class="n">_ci</span><span class="o">=</span> <span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">],[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">coord</span><span class="p">,</span><span class="n">site</span> <span class="ow">in</span> <span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">rdm1x1</span> <span class="o">=</span> <span class="n">rdm</span><span class="o">.</span><span class="n">rdm1x1</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span><span class="o">.</span><span class="n">to_nonsymmetric</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">label</span><span class="p">,</span><span class="n">op</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">obs_ops</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">label</span><span class="si">}{</span><span class="n">coord</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">rdm1x1</span><span class="p">,</span> <span class="n">op</span><span class="p">,</span> <span class="n">_ci</span><span class="p">)</span><span class="o">.</span><span class="n">to_number</span><span class="p">()</span>
+            <span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;m</span><span class="si">{</span><span class="n">coord</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">sqrt</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;sz</span><span class="si">{</span><span class="n">coord</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;sp</span><span class="si">{</span><span class="n">coord</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span><span class="o">*</span><span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;sm</span><span class="si">{</span><span class="n">coord</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]))</span>
+            <span class="n">obs</span><span class="p">[</span><span class="s2">&quot;avg_m&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;m</span><span class="si">{</span><span class="n">coord</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span>
+        <span class="n">obs</span><span class="p">[</span><span class="s2">&quot;avg_m&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">obs</span><span class="p">[</span><span class="s2">&quot;avg_m&quot;</span><span class="p">]</span><span class="o">/</span><span class="nb">len</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+
+        <span class="n">_ci</span><span class="o">=</span> <span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],[</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">coord</span><span class="p">,</span><span class="n">site</span> <span class="ow">in</span> <span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">rdm2x1</span> <span class="o">=</span> <span class="n">rdm</span><span class="o">.</span><span class="n">rdm2x1</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span><span class="o">.</span><span class="n">to_nonsymmetric</span><span class="p">()</span>
+            <span class="n">rdm1x2</span> <span class="o">=</span> <span class="n">rdm</span><span class="o">.</span><span class="n">rdm1x2</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span><span class="o">.</span><span class="n">to_nonsymmetric</span><span class="p">()</span>
+            <span class="n">SS2x1</span><span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">rdm2x1</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">h2</span><span class="p">,</span><span class="n">_ci</span><span class="p">)</span><span class="o">.</span><span class="n">to_number</span><span class="p">()</span>
+            <span class="n">SS1x2</span><span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">rdm1x2</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">h2</span><span class="p">,</span><span class="n">_ci</span><span class="p">)</span><span class="o">.</span><span class="n">to_number</span><span class="p">()</span>
+            <span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;SS2x1</span><span class="si">{</span><span class="n">coord</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">rdm</span><span class="o">.</span><span class="n">_cast_to_real</span><span class="p">(</span><span class="n">SS2x1</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;SS1x2</span><span class="si">{</span><span class="n">coord</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">rdm</span><span class="o">.</span><span class="n">_cast_to_real</span><span class="p">(</span><span class="n">SS1x2</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        
+        <span class="c1"># prepare list with labels and values</span>
+        <span class="n">obs_labels</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;avg_m&quot;</span><span class="p">]</span><span class="o">+</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;m</span><span class="si">{</span><span class="n">coord</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">coord</span> <span class="ow">in</span> <span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">keys</span><span class="p">()]</span>\
+            <span class="o">+</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">lc</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}{</span><span class="n">lc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">lc</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">itertools</span><span class="o">.</span><span class="n">product</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">obs_ops</span><span class="o">.</span><span class="n">keys</span><span class="p">()))]</span>
+        <span class="n">obs_labels</span> <span class="o">+=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;SS2x1</span><span class="si">{</span><span class="n">coord</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">coord</span> <span class="ow">in</span> <span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">keys</span><span class="p">()]</span>
+        <span class="n">obs_labels</span> <span class="o">+=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;SS1x2</span><span class="si">{</span><span class="n">coord</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">coord</span> <span class="ow">in</span> <span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">keys</span><span class="p">()]</span>
+        <span class="n">obs_values</span><span class="o">=</span><span class="p">[</span><span class="n">obs</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">obs_labels</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">obs_values</span><span class="p">,</span> <span class="n">obs_labels</span></div></div>
+
+    <span class="c1"># def eval_corrf_SS(self,coord,direction,state,env,dist):</span>
+   
+    <span class="c1">#     # function allowing for additional site-dependent conjugation of op</span>
+    <span class="c1">#     def conjugate_op(op):</span>
+    <span class="c1">#         #rot_op= su2.get_rot_op(self.phys_dim, dtype=self.dtype, device=self.device)</span>
+    <span class="c1">#         rot_op= torch.eye(self.phys_dim, dtype=self.dtype, device=self.device)</span>
+    <span class="c1">#         op_0= op</span>
+    <span class="c1">#         op_rot= einsum(&#39;ki,kj-&gt;ij&#39;,rot_op, mm(op_0,rot_op))</span>
+    <span class="c1">#         def _gen_op(r):</span>
+    <span class="c1">#             #return op_rot if r%2==0 else op_0</span>
+    <span class="c1">#             return op_0</span>
+    <span class="c1">#         return _gen_op</span>
+
+    <span class="c1">#     op_sx= 0.5*(self.obs_ops[&quot;sp&quot;] + self.obs_ops[&quot;sm&quot;])</span>
+    <span class="c1">#     op_isy= -0.5*(self.obs_ops[&quot;sp&quot;] - self.obs_ops[&quot;sm&quot;]) </span>
+
+    <span class="c1">#     Sz0szR= corrf.corrf_1sO1sO(coord,direction,state,env, self.obs_ops[&quot;sz&quot;], \</span>
+    <span class="c1">#         conjugate_op(self.obs_ops[&quot;sz&quot;]), dist)</span>
+    <span class="c1">#     Sx0sxR= corrf.corrf_1sO1sO(coord,direction,state,env, op_sx, conjugate_op(op_sx), dist)</span>
+    <span class="c1">#     nSy0SyR= corrf.corrf_1sO1sO(coord,direction,state,env, op_isy, conjugate_op(op_isy), dist)</span>
+
+    <span class="c1">#     res= dict({&quot;ss&quot;: Sz0szR+Sx0sxR-nSy0SyR, &quot;szsz&quot;: Sz0szR, &quot;sxsx&quot;: Sx0sxR, &quot;sysy&quot;: -nSy0SyR})</span>
+    <span class="c1">#     return res</span>
+
+<div class="viewcode-block" id="J1J2_C4V_BIPARTITE_NOSYM"><a class="viewcode-back" href="../../../models/j1j2.html#models.abelian.j1j2.J1J2_C4V_BIPARTITE_NOSYM">[docs]</a><span class="k">class</span> <span class="nc">J1J2_C4V_BIPARTITE_NOSYM</span><span class="p">():</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">settings</span><span class="p">,</span> <span class="n">j1</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">j2</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">global_args</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">global_args</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param j1: nearest-neighbour interaction</span>
+<span class="sd">        :param j2: next nearest-neighbour interaction</span>
+<span class="sd">        :param global_args: global configuration</span>
+<span class="sd">        :type j1: float</span>
+<span class="sd">        :type j2: float</span>
+<span class="sd">        :type global_args: GLOBALARGS</span>
+
+<span class="sd">        Build Spin-1/2 :math:`J_1-J_2` Hamiltonian</span>
+
+<span class="sd">        .. math:: </span>
+
+<span class="sd">            H = J_1\sum_{&lt;i,j&gt;} \mathbf{S}_i.\mathbf{S}_j + J_2\sum_{&lt;&lt;i,j&gt;&gt;} \mathbf{S}_i.\mathbf{S}_j</span>
+<span class="sd">            = \sum_{p} h_p</span>
+
+<span class="sd">        on the square lattice. Where the first sum runs over the pairs of sites `i,j` </span>
+<span class="sd">        which are nearest-neighbours (denoted as `&lt;.,.&gt;`), and the second sum runs over </span>
+<span class="sd">        pairs of sites `i,j` which are next nearest-neighbours (denoted as `&lt;&lt;.,.&gt;&gt;`).</span>
+
+<span class="sd">        The plaquette term is defined as</span>
+
+<span class="sd">        * :math:`h_p = J_1(\mathbf{S}_{r}.\mathbf{S}_{r+\vec{x}} + \mathbf{S}_{r}.\mathbf{S}_{r+\vec{y}})</span>
+<span class="sd">          +J_2(\mathbf{S}_{r}.\mathbf{S}_{r+\vec{x}+\vec{y}} + \mathbf{S}_{r+\vec{x}}.\mathbf{S}_{r+\vec{y}})` </span>
+<span class="sd">          with indices of spins ordered as follows :math:`s_r s_{r+\vec{x}} s_{r+\vec{y}} s_{r+\vec{x}+\vec{y}};</span>
+<span class="sd">          s&#39;_r s&#39;_{r+\vec{x}} s&#39;_{r+\vec{y}} s&#39;_{r+\vec{x}+\vec{y}}`</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="n">settings</span><span class="o">.</span><span class="n">sym</span><span class="o">.</span><span class="n">NSYM</span><span class="o">==</span><span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;No abelian symmetry is assumed&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">engine</span><span class="o">=</span> <span class="n">settings</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="o">=</span><span class="n">settings</span><span class="o">.</span><span class="n">default_dtype</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="o">=</span><span class="s1">&#39;cpu&#39;</span> <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">settings</span><span class="p">,</span> <span class="s1">&#39;device&#39;</span><span class="p">)</span> <span class="k">else</span> <span class="n">settings</span><span class="o">.</span><span class="n">device</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">phys_dim</span><span class="o">=</span><span class="mi">2</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">j1</span><span class="o">=</span><span class="n">j1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">j2</span><span class="o">=</span><span class="n">j2</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">SS</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">SS_rot</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">hp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_h</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">obs_ops</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_obs_ops</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">get_h</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">irrep</span> <span class="o">=</span> <span class="n">su2</span><span class="o">.</span><span class="n">SU2_NOSYM</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">engine</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">phys_dim</span><span class="p">)</span>
+        <span class="n">I1</span><span class="o">=</span> <span class="n">irrep</span><span class="o">.</span><span class="n">I</span><span class="p">()</span>
+        <span class="n">SS</span><span class="o">=</span> <span class="n">irrep</span><span class="o">.</span><span class="n">SS</span><span class="p">()</span>
+        <span class="n">rot_op</span><span class="o">=</span> <span class="n">irrep</span><span class="o">.</span><span class="n">BP_rot</span><span class="p">()</span>
+        
+        <span class="c1">#      1                    0       1</span>
+        <span class="c1">#      R                    --SS_nn--</span>
+        <span class="c1">#      0                    2       3</span>
+        <span class="c1"># 0-&gt;1 1    1-&gt;0    0-&gt;1            0</span>
+        <span class="c1"># --SS-- =&gt; --SS_nn--    =&gt;         R</span>
+        <span class="c1"># 2    3    2       3               1-&gt;3  </span>
+        <span class="n">SS_nn</span><span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">rot_op</span><span class="p">,</span><span class="n">SS</span><span class="p">,([</span><span class="mi">0</span><span class="p">],[</span><span class="mi">1</span><span class="p">]))</span>
+        <span class="n">SS_nn</span><span class="o">=</span> <span class="n">permute</span><span class="p">(</span><span class="n">SS_nn</span><span class="p">,(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">))</span>
+        <span class="n">SS_nn</span><span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">SS_nn</span><span class="p">,</span><span class="n">rot_op</span><span class="o">.</span><span class="n">conj</span><span class="p">(),([</span><span class="mi">3</span><span class="p">],[</span><span class="mi">0</span><span class="p">]))</span>
+
+        <span class="c1"># 0        0-&gt;2                 0     1 </span>
+        <span class="c1"># I1--(x)--I1   =&gt; transpose =&gt; I1----I1 </span>
+        <span class="c1"># 1        1-&gt;3                 2     3</span>
+        <span class="n">I2</span><span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">I1</span><span class="p">,</span><span class="n">I1</span><span class="p">,([],[]))</span>
+        <span class="n">I2</span><span class="o">=</span> <span class="n">permute</span><span class="p">(</span><span class="n">I2</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">))</span>
+        <span class="n">I2_nn</span><span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">rot_op</span><span class="p">,</span><span class="n">I2</span><span class="p">,([</span><span class="mi">0</span><span class="p">],[</span><span class="mi">1</span><span class="p">]))</span>
+        <span class="n">I2_nn</span><span class="o">=</span> <span class="n">permute</span><span class="p">(</span><span class="n">I2_nn</span><span class="p">,(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">))</span>
+        <span class="n">I2_nn</span><span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">I2_nn</span><span class="p">,</span><span class="n">rot_op</span><span class="o">.</span><span class="n">conj</span><span class="p">(),([</span><span class="mi">3</span><span class="p">],[</span><span class="mi">0</span><span class="p">]))</span>
+
+        <span class="c1"># 0   1       0 1-&gt;4 5                  0 1      2 3 </span>
+        <span class="c1"># SS_nn--(x)--I2_nn     =&gt; transpose =&gt; SS_nn----I2_nn</span>
+        <span class="c1"># 2   3       2 3-&gt;6 7                  4 5      6 7</span>
+        <span class="n">h2x2_SSnn</span><span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">SS_nn</span><span class="p">,</span><span class="n">I2_nn</span><span class="p">,([],[]))</span>
+        <span class="n">h2x2_SSnn</span><span class="o">=</span> <span class="n">permute</span><span class="p">(</span><span class="n">h2x2_SSnn</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">7</span><span class="p">,</span><span class="mi">6</span><span class="p">))</span>
+        
+        <span class="n">h2x2_SSnnn</span><span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">SS</span><span class="p">,</span><span class="n">I2</span><span class="o">.</span><span class="n">flip_signature</span><span class="p">(),([],[]))</span>
+        <span class="n">h2x2_SSnnn</span><span class="o">=</span> <span class="n">permute</span><span class="p">(</span><span class="n">h2x2_SSnnn</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">6</span><span class="p">,</span><span class="mi">7</span><span class="p">))</span>
+
+        <span class="c1"># all nearest-neighbour S.S terms on 2x2 plaquette</span>
+        <span class="c1">#        S  SR        x  xR                                S  xR     x  SR</span>
+        <span class="c1">#        xR x         SR S                                 SR x      xR S </span>
+        <span class="n">h2x2_nn</span><span class="o">=</span> <span class="n">h2x2_SSnn</span> <span class="o">+</span> <span class="n">permute</span><span class="p">(</span><span class="n">h2x2_SSnn</span><span class="p">,</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">7</span><span class="p">,</span><span class="mi">6</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">4</span><span class="p">))</span> <span class="o">+</span> \
+            <span class="n">permute</span><span class="p">(</span><span class="n">h2x2_SSnn</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">6</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">7</span><span class="p">))</span> <span class="o">+</span> <span class="n">permute</span><span class="p">(</span><span class="n">h2x2_SSnn</span><span class="p">,</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">7</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">,</span><span class="mi">4</span><span class="p">))</span>
+        <span class="c1"># all next nearest-neighbour S.S terms on 2x2 plaquette</span>
+        <span class="c1">#                 S  xR                                    x  SR</span>
+        <span class="c1">#                 xR S                                     SR x    </span>
+        <span class="n">h2x2_nnn</span><span class="o">=</span> <span class="n">permute</span><span class="p">(</span><span class="n">h2x2_SSnnn</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">7</span><span class="p">,</span><span class="mi">6</span><span class="p">,</span><span class="mi">5</span><span class="p">))</span> <span class="o">+</span> \
+            <span class="n">permute</span><span class="p">(</span><span class="n">h2x2_SSnnn</span><span class="o">.</span><span class="n">flip_signature</span><span class="p">(),</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">6</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">7</span><span class="p">))</span>
+        <span class="n">h2x2</span><span class="o">=</span> <span class="mf">0.5</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">j1</span><span class="o">*</span><span class="n">h2x2_nn</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">j2</span><span class="o">*</span><span class="n">h2x2_nnn</span>
+
+        <span class="k">return</span> <span class="n">SS</span><span class="p">,</span> <span class="n">SS_nn</span><span class="p">,</span> <span class="n">h2x2</span>
+
+    <span class="k">def</span> <span class="nf">get_obs_ops</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">obs_ops</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="n">irrep</span> <span class="o">=</span> <span class="n">su2</span><span class="o">.</span><span class="n">SU2_NOSYM</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">engine</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">phys_dim</span><span class="p">)</span>
+        <span class="n">obs_ops</span><span class="p">[</span><span class="s2">&quot;sz&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">irrep</span><span class="o">.</span><span class="n">SZ</span><span class="p">()</span>
+        <span class="n">obs_ops</span><span class="p">[</span><span class="s2">&quot;sp&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">irrep</span><span class="o">.</span><span class="n">SP</span><span class="p">()</span>
+        <span class="n">obs_ops</span><span class="p">[</span><span class="s2">&quot;sm&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">irrep</span><span class="o">.</span><span class="n">SM</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">obs_ops</span>
+
+<div class="viewcode-block" id="J1J2_C4V_BIPARTITE_NOSYM.energy_1x1"><a class="viewcode-back" href="../../../models/j1j2.html#models.abelian.j1j2.J1J2_C4V_BIPARTITE_NOSYM.energy_1x1">[docs]</a>    <span class="k">def</span> <span class="nf">energy_1x1</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env_c4v</span><span class="p">,</span><span class="n">force_cpu</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param state: wavefunction</span>
+<span class="sd">        :param env_c4v: CTM c4v symmetric environment</span>
+<span class="sd">        :type state: IPEPS_ABELIAN_C4V</span>
+<span class="sd">        :type env_c4v: ENV_ABELIAN_C4V</span>
+<span class="sd">        :return: energy per site</span>
+<span class="sd">        :rtype: float</span>
+
+<span class="sd">        We assume 1x1 C4v iPEPS which tiles the lattice with a bipartite pattern composed </span>
+<span class="sd">        of two tensors A, and B=RA, where R rotates approriately the physical Hilbert space </span>
+<span class="sd">        of tensor A on every &quot;odd&quot; site::</span>
+
+<span class="sd">            1x1 C4v =&gt; rotation P =&gt; BIPARTITE</span>
+
+<span class="sd">            A A A A                  A B A B</span>
+<span class="sd">            A A A A                  B A B A</span>
+<span class="sd">            A A A A                  A B A B</span>
+<span class="sd">            A A A A                  B A B A</span>
+
+<span class="sd">        Due to C4v symmetry it is enough to construct a single reduced density matrix </span>
+<span class="sd">        :py:func:`ctm.one_site_c4v.rdm_c4v.rdm2x2` of a 2x2 plaquette. Afterwards, </span>
+<span class="sd">        the energy per site `e` is computed by evaluating a single plaquette term :math:`h_p`</span>
+<span class="sd">        containing two nearest-nighbour terms :math:`\bf{S}.\bf{S}` and two next-nearest </span>
+<span class="sd">        neighbour :math:`\bf{S}.\bf{S}`, as:</span>
+
+<span class="sd">        .. math::</span>
+
+<span class="sd">            e = \langle \mathcal{h_p} \rangle = Tr(\rho_{2x2} \mathcal{h_p})</span>
+<span class="sd">        </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">_ci</span><span class="o">=</span> <span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">,</span><span class="mi">7</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">,</span><span class="mi">7</span><span class="p">])</span>
+        <span class="c1"># _ci= ([0,1,2,3,4,5,6,7], [4,5,6,7,0,1,2,3])</span>
+        <span class="n">rdm2x2</span><span class="o">=</span> <span class="n">rdm_c4v</span><span class="o">.</span><span class="n">rdm2x2</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">env_c4v</span><span class="p">,</span> <span class="n">sym_pos_def</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>\
+            <span class="n">verbosity</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">ctm_args</span><span class="o">.</span><span class="n">verbosity_rdm</span><span class="p">,</span> <span class="n">force_cpu</span><span class="o">=</span><span class="n">force_cpu</span><span class="p">)</span><span class="o">.</span><span class="n">to_nonsymmetric</span><span class="p">()</span>
+        <span class="n">energy_per_site</span><span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">rdm2x2</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">hp</span><span class="p">,</span><span class="n">_ci</span><span class="p">)</span><span class="o">.</span><span class="n">to_number</span><span class="p">()</span>
+        <span class="n">energy_per_site</span><span class="o">=</span> <span class="n">rdm</span><span class="o">.</span><span class="n">_cast_to_real</span><span class="p">(</span><span class="n">energy_per_site</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">energy_per_site</span></div>
+
+<div class="viewcode-block" id="J1J2_C4V_BIPARTITE_NOSYM.energy_1x1_lowmem"><a class="viewcode-back" href="../../../models/j1j2.html#models.abelian.j1j2.J1J2_C4V_BIPARTITE_NOSYM.energy_1x1_lowmem">[docs]</a>    <span class="k">def</span> <span class="nf">energy_1x1_lowmem</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env_c4v</span><span class="p">,</span><span class="n">force_cpu</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param state: wavefunction</span>
+<span class="sd">        :param env_c4v: CTM c4v symmetric environment</span>
+<span class="sd">        :type state: IPEPS_ABELIAN_C4V</span>
+<span class="sd">        :type env_c4v: ENV_ABELIAN_C4V</span>
+<span class="sd">        :return: energy per site</span>
+<span class="sd">        :rtype: float</span>
+
+<span class="sd">        We assume 1x1 C4v iPEPS which tiles the lattice with a bipartite pattern composed </span>
+<span class="sd">        of two tensors A, and B=RA, where R rotates approriately the physical Hilbert space </span>
+<span class="sd">        of tensor A on every &quot;odd&quot; site::</span>
+
+<span class="sd">            1x1 C4v =&gt; rotation P =&gt; BIPARTITE</span>
+
+<span class="sd">            A A A A                  A B A B</span>
+<span class="sd">            A A A A                  B A B A</span>
+<span class="sd">            A A A A                  A B A B</span>
+<span class="sd">            A A A A                  B A B A</span>
+
+<span class="sd">        Due to C4v symmetry it is enough to construct two reduced density matrices.</span>
+<span class="sd">        In particular, :py:func:`ctm.one_site_c4v.rdm_c4v.rdm2x1` of a NN-neighbour pair</span>
+<span class="sd">        and :py:func:`ctm.one_site_c4v.rdm_c4v.rdm2x1_diag` of NNN-neighbour pair. </span>
+<span class="sd">        Afterwards, the energy per site `e` is computed by evaluating a term :math:`h2_rot`</span>
+<span class="sd">        containing :math:`\bf{S}.\bf{S}` for nearest- and :math:`h2` term for </span>
+<span class="sd">        next-nearest- expectation value as:</span>
+
+<span class="sd">        .. math::</span>
+
+<span class="sd">            e = 2*\langle \mathcal{h2} \rangle_{NN} + 2*\langle \mathcal{h2} \rangle_{NNN}</span>
+<span class="sd">            = 2*Tr(\rho_{2x1} \mathcal{h2_rot}) + 2*Tr(\rho_{2x1_diag} \mathcal{h2})</span>
+<span class="sd">        </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># _ci= ([0,1,2,3],[2,3,0,1])</span>
+        <span class="n">_ci</span><span class="o">=</span> <span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">])</span>
+        <span class="n">rdm2x2_NN</span><span class="o">=</span> <span class="n">rdm_c4v</span><span class="o">.</span><span class="n">rdm2x2_NN</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">env_c4v</span><span class="p">,</span> <span class="n">sym_pos_def</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>\
+            <span class="n">force_cpu</span><span class="o">=</span><span class="n">force_cpu</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">ctm_args</span><span class="o">.</span><span class="n">verbosity_rdm</span><span class="p">)</span><span class="o">.</span><span class="n">to_nonsymmetric</span><span class="p">()</span>
+        <span class="n">rdm2x2_NNN</span><span class="o">=</span> <span class="n">rdm_c4v</span><span class="o">.</span><span class="n">rdm2x2_NNN</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">env_c4v</span><span class="p">,</span> <span class="n">sym_pos_def</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>\
+            <span class="n">force_cpu</span><span class="o">=</span><span class="n">force_cpu</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">ctm_args</span><span class="o">.</span><span class="n">verbosity_rdm</span><span class="p">)</span><span class="o">.</span><span class="n">to_nonsymmetric</span><span class="p">()</span>
+        <span class="n">SS_nn</span><span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">rdm2x2_NN</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">SS_rot</span><span class="p">,</span><span class="n">_ci</span><span class="p">)</span><span class="o">.</span><span class="n">to_number</span><span class="p">()</span>
+        <span class="n">SS_nnn</span><span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">rdm2x2_NNN</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">SS</span><span class="p">,</span><span class="n">_ci</span><span class="p">)</span><span class="o">.</span><span class="n">to_number</span><span class="p">()</span>
+        <span class="n">energy_per_site</span><span class="o">=</span> <span class="mf">2.0</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">j1</span><span class="o">*</span><span class="n">SS_nn</span> <span class="o">+</span> <span class="mf">2.0</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">j2</span><span class="o">*</span><span class="n">SS_nnn</span>
+        <span class="n">energy_per_site</span><span class="o">=</span> <span class="n">rdm</span><span class="o">.</span><span class="n">_cast_to_real</span><span class="p">(</span><span class="n">energy_per_site</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">energy_per_site</span></div>
+
+<div class="viewcode-block" id="J1J2_C4V_BIPARTITE_NOSYM.eval_obs"><a class="viewcode-back" href="../../../models/j1j2.html#models.abelian.j1j2.J1J2_C4V_BIPARTITE_NOSYM.eval_obs">[docs]</a>    <span class="k">def</span> <span class="nf">eval_obs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env_c4v</span><span class="p">,</span><span class="n">force_cpu</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param state: wavefunction</span>
+<span class="sd">        :param env_c4v: CTM c4v symmetric environment</span>
+<span class="sd">        :type state: IPEPS_ABELIAN_C4V</span>
+<span class="sd">        :type env_c4v: ENV_ABELIAN_C4V</span>
+<span class="sd">        :return:  expectation values of observables, labels of observables</span>
+<span class="sd">        :rtype: list[float], list[str]</span>
+
+<span class="sd">        Computes the following observables in order</span>
+
+<span class="sd">            1. magnetization</span>
+<span class="sd">            2. :math:`\langle S^z \rangle,\ \langle S^+ \rangle,\ \langle S^- \rangle`</span>
+<span class="sd">    </span>
+<span class="sd">        where the on-site magnetization is defined as</span>
+<span class="sd">        </span>
+<span class="sd">        .. math::</span>
+<span class="sd">            m = \sqrt{ \langle S^z \rangle^2+\langle S^x \rangle^2+\langle S^y \rangle^2 }</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># TODO optimize/unify ?</span>
+        <span class="c1"># expect &quot;list&quot; of (observable label, value) pairs ?</span>
+        <span class="n">obs</span><span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="c1"># _ci= ([0,1,2,3],[2,3,0,1])</span>
+        <span class="n">_ci</span><span class="o">=</span> <span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">])</span>
+        <span class="n">rdm2x1</span><span class="o">=</span> <span class="n">rdm_c4v</span><span class="o">.</span><span class="n">rdm2x1</span><span class="p">(</span><span class="n">state</span><span class="p">,</span><span class="n">env_c4v</span><span class="p">,</span><span class="n">force_cpu</span><span class="o">=</span><span class="n">force_cpu</span><span class="p">,</span>\
+            <span class="n">verbosity</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">ctm_args</span><span class="o">.</span><span class="n">verbosity_rdm</span><span class="p">)</span><span class="o">.</span><span class="n">to_nonsymmetric</span><span class="p">()</span>
+        <span class="c1"># if np.all(np.asarray(rdm2x1.s)/np.asarray(self.SS_rot.s)==-1):</span>
+        <span class="c1">#     rdm2x1= rdm2x1.flip_signature()</span>
+        <span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;SS2x1&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">rdm2x1</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">SS_rot</span><span class="p">,</span><span class="n">_ci</span><span class="p">)</span><span class="o">.</span><span class="n">to_number</span><span class="p">()</span>
+        
+        <span class="c1"># TODO reduce rdm2x1 to 1x1</span>
+        <span class="c1"># _ci= ([0,1],[1,0])</span>
+        <span class="n">_ci</span><span class="o">=</span> <span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">],[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">rdm1x1</span> <span class="o">=</span> <span class="n">rdm_c4v</span><span class="o">.</span><span class="n">rdm1x1</span><span class="p">(</span><span class="n">state</span><span class="p">,</span><span class="n">env_c4v</span><span class="p">,</span><span class="n">force_cpu</span><span class="o">=</span><span class="n">force_cpu</span><span class="p">,</span>\
+            <span class="n">verbosity</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">ctm_args</span><span class="o">.</span><span class="n">verbosity_rdm</span><span class="p">)</span><span class="o">.</span><span class="n">to_nonsymmetric</span><span class="p">()</span>
+        <span class="c1"># if np.all(np.asarray(rdm1x1.s)/np.asarray(self.obs_ops[&quot;sz&quot;].s)==-1):</span>
+        <span class="c1">#     rdm1x1= rdm1x1.flip_signature()</span>
+        <span class="k">for</span> <span class="n">label</span><span class="p">,</span><span class="n">op</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">obs_ops</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">rdm1x1</span><span class="p">,</span> <span class="n">op</span><span class="p">,</span> <span class="n">_ci</span><span class="p">)</span><span class="o">.</span><span class="n">to_number</span><span class="p">()</span>
+        <span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;m&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">sqrt</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;sz&quot;</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;sp&quot;</span><span class="p">]</span><span class="o">*</span><span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;sm&quot;</span><span class="p">]))</span>
+        
+        <span class="c1"># prepare list with labels and values</span>
+        <span class="n">obs_labels</span><span class="o">=</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;m&quot;</span><span class="p">]</span><span class="o">+</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">lc</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">lc</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">obs_ops</span><span class="o">.</span><span class="n">keys</span><span class="p">()]</span><span class="o">+</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;SS2x1&quot;</span><span class="p">]</span>
+        <span class="n">obs_values</span><span class="o">=</span><span class="p">[</span><span class="n">obs</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">obs_labels</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">obs_values</span><span class="p">,</span> <span class="n">obs_labels</span></div>
+
+    <span class="k">def</span> <span class="nf">eval_corrf_SS</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env_c4v</span><span class="p">,</span><span class="n">dist</span><span class="p">):</span>
+        <span class="kn">import</span> <span class="nn">examples.abelian.settings_U1_torch</span> <span class="k">as</span> <span class="nn">settings_U1</span>
+        <span class="n">irrep</span> <span class="o">=</span> <span class="n">su2</span><span class="o">.</span><span class="n">SU2_U1</span><span class="p">(</span><span class="n">settings_U1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">phys_dim</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        
+        <span class="c1"># manually define the rotated operators, since rotation operator</span>
+        <span class="c1"># cannot be expressed as U(1)-symmetric tensors</span>
+        <span class="k">def</span> <span class="nf">get_bilat_op_SZ</span><span class="p">():</span>
+            <span class="k">def</span> <span class="nf">_gen_op</span><span class="p">(</span><span class="n">r</span><span class="p">):</span>
+                <span class="k">return</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">irrep</span><span class="o">.</span><span class="n">SZ</span><span class="p">()</span><span class="o">.</span><span class="n">flip_signature</span><span class="p">()</span> <span class="k">if</span> <span class="n">r</span><span class="o">%</span><span class="mi">2</span><span class="o">==</span><span class="mi">0</span> <span class="k">else</span> <span class="n">irrep</span><span class="o">.</span><span class="n">SZ</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">_gen_op</span>
+
+        <span class="k">def</span> <span class="nf">get_bilat_op_SP</span><span class="p">():</span>
+            <span class="k">def</span> <span class="nf">_gen_op</span><span class="p">(</span><span class="n">r</span><span class="p">):</span>
+                <span class="k">return</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">irrep</span><span class="o">.</span><span class="n">SM</span><span class="p">()</span><span class="o">.</span><span class="n">flip_signature</span><span class="p">()</span> <span class="k">if</span> <span class="n">r</span><span class="o">%</span><span class="mi">2</span><span class="o">==</span><span class="mi">0</span> <span class="k">else</span> <span class="n">irrep</span><span class="o">.</span><span class="n">SP</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">_gen_op</span>
+
+        <span class="k">def</span> <span class="nf">get_bilat_op_SM</span><span class="p">():</span>
+            <span class="k">def</span> <span class="nf">_gen_op</span><span class="p">(</span><span class="n">r</span><span class="p">):</span>
+                <span class="k">return</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">irrep</span><span class="o">.</span><span class="n">SP</span><span class="p">()</span><span class="o">.</span><span class="n">flip_signature</span><span class="p">()</span> <span class="k">if</span> <span class="n">r</span><span class="o">%</span><span class="mi">2</span><span class="o">==</span><span class="mi">0</span> <span class="k">else</span> <span class="n">irrep</span><span class="o">.</span><span class="n">SM</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">_gen_op</span>
+
+        <span class="n">Sz0szR</span><span class="o">=</span> <span class="n">corrf_c4v</span><span class="o">.</span><span class="n">corrf_1sO1sO</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">env_c4v</span><span class="p">,</span> <span class="n">irrep</span><span class="o">.</span><span class="n">SZ</span><span class="p">(),</span> \
+            <span class="n">get_bilat_op_SZ</span><span class="p">(),</span> <span class="n">dist</span><span class="p">)</span>
+        <span class="n">Sp0smR</span><span class="o">=</span> <span class="n">corrf_c4v</span><span class="o">.</span><span class="n">corrf_1sO1sO</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">env_c4v</span><span class="p">,</span> <span class="n">irrep</span><span class="o">.</span><span class="n">SP</span><span class="p">(),</span> <span class="n">get_bilat_op_SM</span><span class="p">(),</span> <span class="n">dist</span><span class="p">)</span>
+        <span class="n">Sm0SpR</span><span class="o">=</span> <span class="n">corrf_c4v</span><span class="o">.</span><span class="n">corrf_1sO1sO</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">env_c4v</span><span class="p">,</span> <span class="n">irrep</span><span class="o">.</span><span class="n">SM</span><span class="p">(),</span> <span class="n">get_bilat_op_SP</span><span class="p">(),</span> <span class="n">dist</span><span class="p">)</span>
+
+        <span class="n">res</span><span class="o">=</span> <span class="nb">dict</span><span class="p">({</span><span class="s2">&quot;ss&quot;</span><span class="p">:</span> <span class="n">Sz0szR</span><span class="o">+</span><span class="mf">0.5</span><span class="o">*</span><span class="p">(</span><span class="n">Sp0smR</span><span class="o">+</span><span class="n">Sm0SpR</span><span class="p">),</span> <span class="s2">&quot;szsz&quot;</span><span class="p">:</span> <span class="n">Sz0szR</span><span class="p">,</span> <span class="s2">&quot;spsm&quot;</span><span class="p">:</span> <span class="n">Sp0smR</span><span class="p">,</span> <span class="s2">&quot;smsp&quot;</span><span class="p">:</span> <span class="n">Sm0SpR</span><span class="p">})</span>
+        <span class="k">return</span> <span class="n">res</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Juraj Hasik, Glen B. Mbeng
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

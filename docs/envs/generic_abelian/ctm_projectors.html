@@ -1,0 +1,523 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Projectors &mdash; peps-torch alpha documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Components" href="ctm_components.html" />
+    <link rel="prev" title="Corner Transfer Matrix Algorithm" href="ctmrg.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> peps-torch
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../ipeps.html">iPEPS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps.html">Generic iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_kagome.html">Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_c4v.html">1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_lc_1site_pg.html">1-site iPEPS from lin. combination</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipess_kagome.html">Generic Kagome iPESS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipess_kagome_pg.html">Kagome iPESS with point groups</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipess_kagome_pg_lc.html">Kagome iPESS from lin. combination</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../ipeps.html#abelian-symmetric-ipeps">Abelian-symmetric iPEPS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_abelian.html">Generic  abelian-symmetric iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_abelian.html#generic-abelian-symmetric-ipeps-with-weights">Generic abelian-symmetric iPEPS with weights</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_kagome_abelian.html">Abelian-symmetric Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_abelian_c4v.html">Abelian-symmetric 1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipess_kagome_abelian.html">Abelian-symmetric generic Kagome iPESS</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="reference internal" href="../../envs.html">Environments</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../generic.html">Generic iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../generic/env.html">Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generic/ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generic/ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generic/ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generic/rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generic/rdm.html#module-ctm.pess_kagome.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generic/corrf.html">Correlation functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generic/transfer_matrix.html">Transfer Matrices</a></li>
+</ul>
+</li>
+<li class="toctree-l2 current"><a class="reference internal" href="../generic_abelian.html">Abelian-symmetric generic iPEPS</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="env_abelian.html">Abelian-symmetric environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="rdm.html#module-ctm.pess_kagome_abelian.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../one_site_c4v.html">1-site C4v iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../one_site_c4v/env_c4v.html">1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../one_site_c4v/ctmrg_c4v.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../one_site_c4v/rdm_c4v.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../one_site_c4v/transfer_matrix.html">Transfer Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../one_site_c4v/corrf_c4v.html">Correlation functions</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../one_site_c4v_abelian.html">Abelian-symmetric 1-site C4v iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../one_site_c4v_abelian/env_c4v_abelian.html">Abelian-symmetric 1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../one_site_c4v_abelian/ctmrg_c4v_abelian.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../one_site_c4v_abelian/rdm_c4v_abelian.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../one_site_c4v_abelian/corrf_c4v_abelian.html">Correlation functions</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../optim.html">Optimization</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../optim/drivers.html">Optimization drivers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/drivers/ad_optim.html">ad_optim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/drivers/ad_optim_lbfgs_mod.html">ad_optim_lbfgs_mod</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/drivers/ad_optim_sgd_mod.html">ad_optim_sgd_mod</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../optim/optimizers.html">Custom optimizers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/optimizers/lbfgs_modified.html">Extended LBFGS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/optimizers/sgd_modified.html">SGD with linesearch</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../config.html">Configuration</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../config.html#main">Main</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../config.html#global">Global</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../config.html#corner-transfer-matrix-algorithm">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../config.html#optimization">Optimization</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../models.html">Models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../models/akltS2.html">Spin S=2 AKLT Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/akltS2.html#module-models.akltS2">2x1 and 2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/akltS2.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/coupledLadders.html">Coupled Ladders</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/coupledLadders.html#dense-pytorch">Dense (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/coupledLadders.html#dense-yast">Dense (YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/coupledLadders.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/ising.html">Transverse Field Ising Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/ising.html#x1-unit-cell">1x1 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/ising.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/j1j2.html">J1-J2-J3 and J1-J2-lambda Heisenberg Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/j1j2.html#from-2x1-to-4x2-unit-cell-pytorch">from 2x1 to 4x2 unit cell (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/j1j2.html#from-2x1-to-4x2-unit-cell-dense-yast">from 2x1 to 4x2 unit cell (dense YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/j1j2.html#x1-c4v-pytorch">1x1 C4v (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/j1j2.html#x1-c4v-dense-yast">1x1 C4v (dense YAST)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/jq.html">J-Q Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/jq.html#module-models.jq">2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/jq.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/spin_half_kagome.html">SU(2) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/spin_half_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/spin_half_kagome.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/su3_kagome.html">SU(3) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/su3_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/su3_kagome.html#with-explict-u-1-xu-1-symmetry">With explict U(1)xU(1) symmetry</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../groups.html">Groups</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/pg.html">Point group: square lattice</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/su2.html">SU(2)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/su2.html#module-groups.su2_abelian">SU(2) with explicit U(1) structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/su3.html">SU(3)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/su3.html#su-3-with-explicit-u-1-xu-1-structure">SU(3) with explicit U(1)xU(1) structure</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../linalg.html">Linear Algebra</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../linalg/custom_eig.html">Truncated eigendecomposition</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../linalg/custom_svd.html">Truncated SVD</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../linalg/spec_decomp.html">Spectral decompositions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.svd_gesdd">SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.svd_arnoldi">Partial SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.svd_rsvd">Randomized SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.eig_sym">Symmetric Eigendecomposition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.eig_arnoldi">Partial diagonalization</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">peps-torch</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../envs.html">Environments</a> &raquo;</li>
+        
+          <li><a href="../generic_abelian.html">Abelian-symmetric generic iPEPS</a> &raquo;</li>
+        
+      <li>Projectors</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            
+              <!-- User defined GitHub URL -->
+              <a href="https://github.com/jurajHasik/peps-torch" class="fa fa-github"> Edit on GitHub</a>
+            
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <section id="module-ctm.generic_abelian.ctm_projectors">
+<span id="projectors"></span><h1>Projectors<a class="headerlink" href="#module-ctm.generic_abelian.ctm_projectors" title="Permalink to this heading">¶</a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="ctm.generic_abelian.ctm_projectors.ctm_get_projectors_4x2">
+<span class="sig-prename descclassname"><span class="pre">ctm.generic_abelian.ctm_projectors.</span></span><span class="sig-name descname"><span class="pre">ctm_get_projectors_4x2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">direction</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coord</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ctm_args=&lt;config.CTMARGS</span> <span class="pre">object&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">global_args=&lt;config.GLOBALARGS</span> <span class="pre">object&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">diagnostics=None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/ctm/generic_abelian/ctm_projectors.html#ctm_get_projectors_4x2"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ctm.generic_abelian.ctm_projectors.ctm_get_projectors_4x2" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>direction</strong> (<em>tuple</em><em>(</em><em>int</em><em>,</em><em>int</em><em>)</em>) – direction of the CTM move for which the projectors are to be computed</p></li>
+<li><p><strong>coord</strong> (<em>tuple</em><em>(</em><em>int</em><em>,</em><em>int</em><em>)</em>) – vertex (x,y) specifying (together with <code class="docutils literal notranslate"><span class="pre">direction</span></code>) 4x2 (vertical) or
+2x4 (horizontal) tensor network used to build projectors</p></li>
+<li><p><strong>state</strong> (<a class="reference internal" href="../../ipeps/ipeps_abelian.html#ipeps.ipeps_abelian.IPEPS_ABELIAN" title="ipeps.ipeps_abelian.IPEPS_ABELIAN"><em>IPEPS_ABELIAN</em></a>) – wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="env_abelian.html#ctm.generic_abelian.env_abelian.ENV_ABELIAN" title="ctm.generic_abelian.env_abelian.ENV_ABELIAN"><em>ENV_ABELIAN</em></a>) – environment corresponding to <code class="docutils literal notranslate"><span class="pre">state</span></code></p></li>
+<li><p><strong>ctm_args</strong> (<a class="reference internal" href="../../config.html#config.CTMARGS" title="config.CTMARGS"><em>CTMARGS</em></a>) – CTM algorithm configuration</p></li>
+<li><p><strong>global_args</strong> (<a class="reference internal" href="../../config.html#config.GLOBALARGS" title="config.GLOBALARGS"><em>GLOBALARGS</em></a>) – global configuration</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>pair of projectors, tensors of dimension <span class="math notranslate nohighlight">\(\chi \times \chi \times D^2\)</span>.
+The D might vary depending on the auxiliary bond dimension of related on-site
+tensor.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>yast.Tensor, yast.Tensor</p>
+</dd>
+</dl>
+<p>Compute a pair of projectors from two enlarged corners making up 4x2 (2x4) tensor network
+given by <code class="docutils literal notranslate"><span class="pre">direction</span></code> and <code class="docutils literal notranslate"><span class="pre">coord</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Case</span> <span class="n">of</span> <span class="n">LEFT</span> <span class="n">move</span> <span class="o">&lt;=&gt;</span> <span class="n">direction</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+                        <span class="n">____</span>
+<span class="n">C</span><span class="o">--</span><span class="n">T</span><span class="o">---------------</span>\ <span class="o">=</span> <span class="o">|</span><span class="n">_R__</span><span class="o">|=</span>\\
+<span class="n">T</span><span class="o">--</span><span class="n">A</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span><span class="o">--------</span>\\   <span class="o">|</span><span class="n">__</span><span class="o">|</span>  <span class="o">||</span>
+<span class="o">|</span>  <span class="o">|</span>               <span class="o">||</span>  <span class="o">|</span><span class="n">_Rt_</span><span class="o">|=//</span>
+<span class="n">T</span><span class="o">--</span><span class="n">A</span><span class="p">(</span><span class="n">coord</span><span class="o">+</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span><span class="o">--//</span>
+<span class="n">C</span><span class="o">--</span><span class="n">T</span><span class="o">---------------/</span>
+
+<span class="n">Case</span> <span class="n">of</span> <span class="n">UP</span> <span class="n">move</span> <span class="o">&lt;=&gt;</span> <span class="n">direction</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+                                   <span class="n">____</span>    <span class="n">___</span>
+<span class="n">C</span><span class="o">--</span><span class="n">T</span><span class="o">---------</span><span class="n">T</span><span class="o">----------------</span><span class="n">C</span> <span class="o">=</span> <span class="o">|</span><span class="n">_Rt_</span><span class="o">|==|</span><span class="n">_R_</span><span class="o">|</span>
+<span class="n">T</span><span class="o">--</span><span class="n">A</span><span class="p">(</span><span class="n">coord</span><span class="o">+</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">))</span><span class="o">--</span><span class="n">A</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span><span class="o">--</span><span class="n">T</span>    <span class="o">|</span>  <span class="o">|</span>    <span class="o">|</span> <span class="o">|</span>
+<span class="o">|</span>  <span class="o">|</span>         <span class="o">|</span>                <span class="o">|</span>     \<span class="n">_</span>\<span class="o">===/</span><span class="n">_</span><span class="o">/</span>
+\<span class="n">__</span>\<span class="o">========/</span><span class="n">________________</span><span class="o">/</span>
+</pre></div>
+</div>
+<p>This function constructs two enlarged corners of a 4x2 (2x4) network and then calls
+<a class="reference internal" href="#ctm.generic_abelian.ctm_projectors.ctm_get_projectors_from_matrices" title="ctm.generic_abelian.ctm_projectors.ctm_get_projectors_from_matrices"><code class="xref py py-func docutils literal notranslate"><span class="pre">ctm_get_projectors_from_matrices()</span></code></a> for projector construction</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ctm.generic_abelian.ctm_projectors.ctm_get_projectors_4x4">
+<span class="sig-prename descclassname"><span class="pre">ctm.generic_abelian.ctm_projectors.</span></span><span class="sig-name descname"><span class="pre">ctm_get_projectors_4x4</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">direction</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coord</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ctm_args=&lt;config.CTMARGS</span> <span class="pre">object&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">global_args=&lt;config.GLOBALARGS</span> <span class="pre">object&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">diagnostics=None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/ctm/generic_abelian/ctm_projectors.html#ctm_get_projectors_4x4"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ctm.generic_abelian.ctm_projectors.ctm_get_projectors_4x4" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>direction</strong> (<em>tuple</em><em>(</em><em>int</em><em>,</em><em>int</em><em>)</em>) – direction of the CTM move for which the projectors are to be computed</p></li>
+<li><p><strong>coord</strong> (<em>tuple</em><em>(</em><em>int</em><em>,</em><em>int</em><em>)</em>) – vertex (x,y) specifying (together with <code class="docutils literal notranslate"><span class="pre">direction</span></code>) 4x4 tensor network
+used to build projectors</p></li>
+<li><p><strong>state</strong> (<a class="reference internal" href="../../ipeps/ipeps_abelian.html#ipeps.ipeps_abelian.IPEPS_ABELIAN" title="ipeps.ipeps_abelian.IPEPS_ABELIAN"><em>IPEPS_ABELIAN</em></a>) – wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="env_abelian.html#ctm.generic_abelian.env_abelian.ENV_ABELIAN" title="ctm.generic_abelian.env_abelian.ENV_ABELIAN"><em>ENV_ABELIAN</em></a>) – environment corresponding to <code class="docutils literal notranslate"><span class="pre">state</span></code></p></li>
+<li><p><strong>ctm_args</strong> (<a class="reference internal" href="../../config.html#config.CTMARGS" title="config.CTMARGS"><em>CTMARGS</em></a>) – CTM algorithm configuration</p></li>
+<li><p><strong>global_args</strong> (<a class="reference internal" href="../../config.html#config.GLOBALARGS" title="config.GLOBALARGS"><em>GLOBALARGS</em></a>) – global configuration</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>pair of projectors, tensors of dimension <span class="math notranslate nohighlight">\(\chi \times \chi \times D^2\)</span>.
+The D might vary depending on the auxiliary bond dimension of related on-site
+tensor.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>yast.Tensor, yast.Tensor</p>
+</dd>
+</dl>
+<p>Compute a pair of projectors from two halfs of 4x4 tensor network given
+by <code class="docutils literal notranslate"><span class="pre">direction</span></code> and <code class="docutils literal notranslate"><span class="pre">coord</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Case</span> <span class="n">of</span> <span class="n">LEFT</span> <span class="n">move</span> <span class="o">&lt;=&gt;</span> <span class="n">direction</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+                                        <span class="n">_____________</span>
+<span class="n">C</span><span class="o">--</span><span class="n">T</span><span class="o">---------------</span><span class="n">T</span><span class="o">---------------</span><span class="n">C</span> <span class="o">=</span> <span class="o">|</span><span class="n">_____R_______</span><span class="o">|</span>
+<span class="n">T</span><span class="o">--</span><span class="n">A</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span><span class="o">--------</span><span class="n">A</span><span class="p">(</span><span class="n">coord</span><span class="o">+</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">))</span><span class="o">--</span><span class="n">T</span>    <span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">_____</span><span class="o">|</span><span class="n">__</span><span class="o">|</span>
+<span class="o">|</span>  <span class="o">|</span>               <span class="o">|</span>               <span class="o">|</span>   <span class="o">|</span><span class="n">_____Rt______</span><span class="o">|</span>
+<span class="n">T</span><span class="o">--</span><span class="n">A</span><span class="p">(</span><span class="n">coord</span><span class="o">+</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span><span class="o">--</span><span class="n">A</span><span class="p">(</span><span class="n">coord</span><span class="o">+</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span><span class="o">--</span><span class="n">T</span>
+<span class="n">C</span><span class="o">--</span><span class="n">T</span><span class="o">---------------</span><span class="n">T</span><span class="o">---------------</span><span class="n">C</span>
+</pre></div>
+</div>
+<p>This function constructs two halfs of a 4x4 network and then calls
+<a class="reference internal" href="#ctm.generic_abelian.ctm_projectors.ctm_get_projectors_from_matrices" title="ctm.generic_abelian.ctm_projectors.ctm_get_projectors_from_matrices"><code class="xref py py-func docutils literal notranslate"><span class="pre">ctm_get_projectors_from_matrices()</span></code></a> for projector construction</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ctm.generic_abelian.ctm_projectors.ctm_get_projectors_from_matrices">
+<span class="sig-prename descclassname"><span class="pre">ctm.generic_abelian.ctm_projectors.</span></span><span class="sig-name descname"><span class="pre">ctm_get_projectors_from_matrices</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">R</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Rt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chi</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">direction</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ctm_args=&lt;config.CTMARGS</span> <span class="pre">object&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">global_args=&lt;config.GLOBALARGS</span> <span class="pre">object&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">diagnostics=None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/ctm/generic_abelian/ctm_projectors.html#ctm_get_projectors_from_matrices"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ctm.generic_abelian.ctm_projectors.ctm_get_projectors_from_matrices" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>R</strong> (<em>yast.Tensor</em>) – rank-2 tensor</p></li>
+<li><p><strong>Rt</strong> (<em>yast.Tensor</em>) – rank-2 tensor</p></li>
+<li><p><strong>chi</strong> (<em>int</em>) – environment bond dimension</p></li>
+<li><p><strong>ctm_args</strong> (<a class="reference internal" href="../../config.html#config.CTMARGS" title="config.CTMARGS"><em>CTMARGS</em></a>) – CTM algorithm configuration</p></li>
+<li><p><strong>global_args</strong> (<a class="reference internal" href="../../config.html#config.GLOBALARGS" title="config.GLOBALARGS"><em>GLOBALARGS</em></a>) – global configuration</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>pair of projectors, tensors of dimension <span class="math notranslate nohighlight">\(\chi \times \chi \times D^2\)</span>.
+The D might vary depending on the auxiliary bond dimension of related on-site
+tensor.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>yast.Tensor, yast.Tensor</p>
+</dd>
+</dl>
+<p>Given the two tensors R and Rt (R tilde) compute the projectors P, Pt (P tilde)
+(PRB 94, 075143 (2016) <a class="reference external" href="https://arxiv.org/pdf/1402.2859.pdf">https://arxiv.org/pdf/1402.2859.pdf</a>). The R, Rt are expected
+to have compatible virtual spaces on first index.</p>
+<blockquote>
+<div><ol class="arabic">
+<li><p>Perform SVD over <span class="math notranslate nohighlight">\(R\widetilde{R}\)</span> contracted through index which is going to
+be truncated:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>       <span class="n">_______</span>          <span class="n">______</span>
+<span class="n">dim1</span><span class="o">--|</span><span class="n">___R___</span><span class="o">|--</span><span class="n">dim0</span><span class="o">--|</span><span class="n">__Rt__</span><span class="o">|--</span><span class="n">dim1</span>  <span class="o">==</span><span class="n">SVD</span><span class="o">==&gt;</span> <span class="n">dim1</span><span class="p">(</span><span class="n">R</span><span class="p">)</span><span class="o">--</span><span class="n">U</span><span class="o">--</span><span class="n">S</span><span class="o">--</span><span class="n">V</span><span class="o">^+--</span><span class="n">dim1</span><span class="p">(</span><span class="n">Rt</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Hence, for the inverse <span class="math notranslate nohighlight">\((R\widetilde{R})^{-1}\)</span>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>       <span class="n">________</span>          <span class="n">________</span>
+<span class="n">dim1</span><span class="o">--|</span><span class="n">__Rt</span><span class="o">^-</span><span class="mi">1</span><span class="n">_</span><span class="o">|--</span><span class="n">dim0</span><span class="o">--|</span><span class="n">__R</span><span class="o">^-</span><span class="mi">1</span><span class="n">__</span><span class="o">|--</span><span class="n">dim1</span> <span class="o">=</span> <span class="n">dim1</span><span class="p">(</span><span class="n">Rt</span><span class="p">)</span><span class="o">--</span><span class="n">V</span><span class="o">--</span><span class="n">S</span><span class="o">^-</span><span class="mi">1</span><span class="o">--</span><span class="n">U</span><span class="o">^+--</span><span class="n">dim1</span><span class="p">(</span><span class="n">R</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+<li><p>Approximate an identity <span class="math notranslate nohighlight">\(RR^{-1}\widetilde{R}^{-1}\widetilde{R}\)</span> by truncating
+the result of <span class="math notranslate nohighlight">\(SVD(R\widetilde{R}^{-1})\)</span>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>           <span class="n">____</span>          <span class="n">______</span>          <span class="n">_______</span>          <span class="n">____</span>
+<span class="n">I</span> <span class="o">=</span> <span class="n">dim0</span><span class="o">--|</span><span class="n">_R__</span><span class="o">|--</span><span class="n">dim1</span><span class="o">--|</span><span class="n">_R</span><span class="o">^-</span><span class="mi">1</span><span class="n">_</span><span class="o">|--</span><span class="n">dim0</span><span class="o">--|</span><span class="n">_Rt</span><span class="o">^-</span><span class="mi">1</span><span class="n">_</span><span class="o">|--</span><span class="n">dim1</span><span class="o">--|</span><span class="n">_Rt_</span><span class="o">|--</span><span class="n">dim0</span>
+           <span class="n">____</span>          <span class="n">_____</span>                            <span class="n">____</span>          <span class="n">____</span>
+<span class="n">I</span> <span class="o">~</span> <span class="n">dim0</span><span class="o">--|</span><span class="n">_R__</span><span class="o">|--</span><span class="n">dim1</span><span class="o">--|</span><span class="n">_U</span><span class="o">^+</span><span class="n">_</span><span class="o">|--</span><span class="n">St</span><span class="o">^-</span><span class="mi">1</span><span class="o">/</span><span class="mi">2</span><span class="o">--</span>\<span class="n">chi</span><span class="o">--</span><span class="n">St</span><span class="o">^-</span><span class="mi">1</span><span class="o">/</span><span class="mi">2</span><span class="o">--|</span><span class="n">_V__</span><span class="o">|--</span><span class="n">dim1</span><span class="o">--|</span><span class="n">_Rt_</span><span class="o">|--</span><span class="n">dim0</span>
+</pre></div>
+</div>
+<p>where <span class="math notranslate nohighlight">\(\widetilde{S}\)</span> has been truncated to the leading <span class="math notranslate nohighlight">\(\chi\)</span> singular values</p>
+</li>
+<li><p>Finally construct the projectors <span class="math notranslate nohighlight">\(P, \widetilde{P}\)</span>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>           <span class="n">____</span>          <span class="n">_____</span>
+<span class="n">P</span> <span class="o">=</span> <span class="n">dim0</span><span class="o">--|</span><span class="n">_R__</span><span class="o">|--</span><span class="n">dim1</span><span class="o">--|</span><span class="n">_U</span><span class="o">^+</span><span class="n">_</span><span class="o">|--</span><span class="n">St</span><span class="o">^-</span><span class="mi">1</span><span class="o">/</span><span class="mi">2</span><span class="o">--</span>\<span class="n">chi</span>
+                     <span class="n">____</span>          <span class="n">____</span>
+<span class="n">Pt</span> <span class="o">=</span> \<span class="n">chi</span><span class="o">--</span><span class="n">St</span><span class="o">^-</span><span class="mi">1</span><span class="o">/</span><span class="mi">2</span><span class="o">--|</span><span class="n">_V__</span><span class="o">|--</span><span class="n">dim1</span><span class="o">--|</span><span class="n">_Rt_</span><span class="o">|--</span><span class="n">dim0</span>
+</pre></div>
+</div>
+</li>
+</ol>
+<p>The projectors <span class="math notranslate nohighlight">\(P, \widetilde{P}\)</span> approximate contraction of the original
+matrices <span class="math notranslate nohighlight">\(R, \widetilde{R}\)</span>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span> <span class="n">_______</span>     <span class="n">_________</span>
+<span class="o">|</span><span class="n">___R___</span><span class="o">|</span> <span class="o">~</span> <span class="o">|</span><span class="n">___R_____</span><span class="o">|</span>
+ <span class="n">_</span><span class="o">|</span><span class="n">___</span><span class="o">|</span><span class="n">_</span>      <span class="o">|</span>     <span class="o">|</span>
+<span class="o">|</span><span class="n">___Rt__</span><span class="o">|</span>    <span class="n">dim0</span>  <span class="n">dim1</span>
+            <span class="n">__</span><span class="o">|</span><span class="n">___</span>  <span class="o">|</span>
+            \<span class="n">_P__</span><span class="o">/</span>  <span class="o">|</span>
+              <span class="o">|</span>     <span class="o">|</span>
+             <span class="n">chi</span>    <span class="o">|</span>
+             <span class="n">_</span><span class="o">|</span><span class="n">__</span>   <span class="o">|</span>
+            <span class="o">/</span><span class="n">_Pt_</span>\  <span class="o">|</span>
+              <span class="o">|</span>     <span class="o">|</span>
+             <span class="n">dim0</span>  <span class="n">dim1</span>
+             <span class="n">_</span><span class="o">|</span><span class="n">_____</span><span class="o">|</span><span class="n">_</span>
+            <span class="o">|</span><span class="n">____Rt___</span><span class="o">|</span>
+</pre></div>
+</div>
+</div></blockquote>
+</dd></dl>
+
+</section>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="ctm_components.html" class="btn btn-neutral float-right" title="Components" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="ctmrg.html" class="btn btn-neutral float-left" title="Corner Transfer Matrix Algorithm" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Juraj Hasik, Glen B. Mbeng
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

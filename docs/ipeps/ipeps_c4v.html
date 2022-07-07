@@ -1,0 +1,484 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>1-site C4v iPEPS &mdash; peps-torch alpha documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="1-site iPEPS from lin. combination" href="ipeps_lc_1site_pg.html" />
+    <link rel="prev" title="Kagome iPEPS" href="ipeps_kagome.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> peps-torch
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../ipeps.html">iPEPS</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="ipeps.html">Generic iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ipeps_kagome.html">Kagome iPEPS</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ipeps_lc_1site_pg.html">1-site iPEPS from lin. combination</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ipess_kagome.html">Generic Kagome iPESS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ipess_kagome_pg.html">Kagome iPESS with point groups</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ipess_kagome_pg_lc.html">Kagome iPESS from lin. combination</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../ipeps.html#abelian-symmetric-ipeps">Abelian-symmetric iPEPS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="ipeps_abelian.html">Generic  abelian-symmetric iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ipeps_abelian.html#generic-abelian-symmetric-ipeps-with-weights">Generic abelian-symmetric iPEPS with weights</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ipeps_kagome_abelian.html">Abelian-symmetric Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ipeps_abelian_c4v.html">Abelian-symmetric 1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ipess_kagome_abelian.html">Abelian-symmetric generic Kagome iPESS</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../envs.html">Environments</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../envs/generic.html">Generic iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic/env.html">Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic/ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic/ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic/ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic/rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic/rdm.html#module-ctm.pess_kagome.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic/corrf.html">Correlation functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic/transfer_matrix.html">Transfer Matrices</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../envs/generic_abelian.html">Abelian-symmetric generic iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic_abelian/env_abelian.html">Abelian-symmetric environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic_abelian/ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic_abelian/ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic_abelian/ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic_abelian/rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic_abelian/rdm.html#module-ctm.pess_kagome_abelian.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../envs/one_site_c4v.html">1-site C4v iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../envs/one_site_c4v/env_c4v.html">1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/one_site_c4v/ctmrg_c4v.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/one_site_c4v/rdm_c4v.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/one_site_c4v/transfer_matrix.html">Transfer Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/one_site_c4v/corrf_c4v.html">Correlation functions</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../envs/one_site_c4v_abelian.html">Abelian-symmetric 1-site C4v iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../envs/one_site_c4v_abelian/env_c4v_abelian.html">Abelian-symmetric 1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/one_site_c4v_abelian/ctmrg_c4v_abelian.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/one_site_c4v_abelian/rdm_c4v_abelian.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/one_site_c4v_abelian/corrf_c4v_abelian.html">Correlation functions</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../optim.html">Optimization</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../optim/drivers.html">Optimization drivers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../optim/drivers/ad_optim.html">ad_optim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../optim/drivers/ad_optim_lbfgs_mod.html">ad_optim_lbfgs_mod</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../optim/drivers/ad_optim_sgd_mod.html">ad_optim_sgd_mod</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../optim/optimizers.html">Custom optimizers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../optim/optimizers/lbfgs_modified.html">Extended LBFGS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../optim/optimizers/sgd_modified.html">SGD with linesearch</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../config.html">Configuration</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../config.html#main">Main</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../config.html#global">Global</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../config.html#corner-transfer-matrix-algorithm">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../config.html#optimization">Optimization</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../models.html">Models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../models/akltS2.html">Spin S=2 AKLT Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../models/akltS2.html#module-models.akltS2">2x1 and 2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/akltS2.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../models/coupledLadders.html">Coupled Ladders</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../models/coupledLadders.html#dense-pytorch">Dense (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/coupledLadders.html#dense-yast">Dense (YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/coupledLadders.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../models/ising.html">Transverse Field Ising Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../models/ising.html#x1-unit-cell">1x1 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/ising.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../models/j1j2.html">J1-J2-J3 and J1-J2-lambda Heisenberg Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../models/j1j2.html#from-2x1-to-4x2-unit-cell-pytorch">from 2x1 to 4x2 unit cell (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/j1j2.html#from-2x1-to-4x2-unit-cell-dense-yast">from 2x1 to 4x2 unit cell (dense YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/j1j2.html#x1-c4v-pytorch">1x1 C4v (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/j1j2.html#x1-c4v-dense-yast">1x1 C4v (dense YAST)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../models/jq.html">J-Q Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../models/jq.html#module-models.jq">2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/jq.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../models/spin_half_kagome.html">SU(2) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../models/spin_half_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/spin_half_kagome.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../models/su3_kagome.html">SU(3) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../models/su3_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/su3_kagome.html#with-explict-u-1-xu-1-symmetry">With explict U(1)xU(1) symmetry</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../groups.html">Groups</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../groups/pg.html">Point group: square lattice</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../groups/su2.html">SU(2)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../groups/su2.html#module-groups.su2_abelian">SU(2) with explicit U(1) structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../groups/su3.html">SU(3)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../groups/su3.html#su-3-with-explicit-u-1-xu-1-structure">SU(3) with explicit U(1)xU(1) structure</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../linalg.html">Linear Algebra</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../linalg/custom_eig.html">Truncated eigendecomposition</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../linalg/custom_svd.html">Truncated SVD</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../linalg/spec_decomp.html">Spectral decompositions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../linalg/spec_decomp.html#module-linalg.svd_gesdd">SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../linalg/spec_decomp.html#module-linalg.svd_arnoldi">Partial SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../linalg/spec_decomp.html#module-linalg.svd_rsvd">Randomized SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../linalg/spec_decomp.html#module-linalg.eig_sym">Symmetric Eigendecomposition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../linalg/spec_decomp.html#module-linalg.eig_arnoldi">Partial diagonalization</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">peps-torch</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../ipeps.html">iPEPS</a> &raquo;</li>
+        
+      <li>1-site C4v iPEPS</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            
+              <!-- User defined GitHub URL -->
+              <a href="https://github.com/jurajHasik/peps-torch" class="fa fa-github"> Edit on GitHub</a>
+            
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <section id="site-c4v-ipeps">
+<h1>1-site C4v iPEPS<a class="headerlink" href="#site-c4v-ipeps" title="Permalink to this heading">¶</a></h1>
+<p>Specialized class for iPEPS with single on-site tensor possesing
+a (C4v) symmetry with respect to the permutation of its auxilliary
+indices</p>
+<div class="math notranslate nohighlight">
+\[a_{suldr} = e^{i\theta} a_{s\textrm{p}(uldr)},\]</div>
+<p>where <span class="math notranslate nohighlight">\(\textrm{p}\)</span> is a permutation associated to the symmetries of square lattice: rotations by <span class="math notranslate nohighlight">\(\pi/2\)</span> and reflections. This property in turn
+implies (<span class="math notranslate nohighlight">\(A_1\)</span>) symmetry for the double-layer tensor
+<span class="math notranslate nohighlight">\(A_{(uu')(ll')(dd')(rr')}=a_{suldr}a_{su'l'd'r'}\)</span>.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="ipeps.ipeps_c4v.IPEPS_C4V">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ipeps.ipeps_c4v.</span></span><span class="sig-name descname"><span class="pre">IPEPS_C4V</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">site=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">peps_args=&lt;config.PEPSARGS</span> <span class="pre">object&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">global_args=&lt;config.GLOBALARGS</span> <span class="pre">object&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ipeps/ipeps_c4v.html#IPEPS_C4V"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ipeps.ipeps_c4v.IPEPS_C4V" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="ipeps.html#ipeps.ipeps.IPEPS" title="ipeps.ipeps.IPEPS"><code class="xref py py-class docutils literal notranslate"><span class="pre">IPEPS</span></code></a></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>site</strong> (<em>torch.tensor</em>) – on-site tensor</p></li>
+<li><p><strong>peps_args</strong> (<em>PEPSARGS</em>) – ipeps configuration</p></li>
+<li><p><strong>global_args</strong> (<a class="reference internal" href="../config.html#config.GLOBALARGS" title="config.GLOBALARGS"><em>GLOBALARGS</em></a>) – global configuration</p></li>
+</ul>
+</dd>
+</dl>
+<p>The index-position convetion for on-site tensor is defined as follows:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>   <span class="n">u</span> <span class="n">s</span>
+   <span class="o">|/</span>
+<span class="n">l</span><span class="o">--</span><span class="n">A</span><span class="o">--</span><span class="n">r</span>  <span class="o">&lt;=&gt;</span> <span class="n">a</span><span class="p">[</span><span class="n">s</span><span class="p">,</span><span class="n">u</span><span class="p">,</span><span class="n">l</span><span class="p">,</span><span class="n">d</span><span class="p">,</span><span class="n">r</span><span class="p">]</span>
+   <span class="o">|</span>
+   <span class="n">d</span>
+</pre></div>
+</div>
+<p>where s denotes physical index, and u,l,d,r label four principal directions
+up, left, down, right in anti-clockwise order starting from up.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="ipeps.ipeps_c4v.IPEPS_C4V.add_noise">
+<span class="sig-name descname"><span class="pre">add_noise</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">noise</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">symmetrize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ipeps/ipeps_c4v.html#IPEPS_C4V.add_noise"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ipeps.ipeps_c4v.IPEPS_C4V.add_noise" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>noise</strong> (<em>float</em>) – magnitude of the noise</p>
+</dd>
+</dl>
+<p>Take IPEPS and add random uniform noise with magnitude <code class="docutils literal notranslate"><span class="pre">noise</span></code> to on-site tensor</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ipeps.ipeps_c4v.IPEPS_C4V.site">
+<span class="sig-name descname"><span class="pre">site</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coord</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ipeps/ipeps_c4v.html#IPEPS_C4V.site"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ipeps.ipeps_c4v.IPEPS_C4V.site" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>coord</strong> (<em>tuple</em><em>(</em><em>int</em><em>,</em><em>int</em><em>)</em>) – vertex (x,y). Can be ignored, since the ansatz is single-site.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>on-site tensor</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.tensor</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ipeps.ipeps_c4v.IPEPS_C4V.write_to_file">
+<span class="sig-name descname"><span class="pre">write_to_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">outputfile</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">symmetrize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ipeps/ipeps_c4v.html#IPEPS_C4V.write_to_file"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ipeps.ipeps_c4v.IPEPS_C4V.write_to_file" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>symmetrize</strong> (<em>bool</em>) – symmetrize state before writing out</p>
+</dd>
+</dl>
+<p>Writes state into file. See <a class="reference internal" href="ipeps.html#ipeps.ipeps.write_ipeps" title="ipeps.ipeps.write_ipeps"><code class="xref py py-meth docutils literal notranslate"><span class="pre">ipeps.ipeps.write_ipeps()</span></code></a>.</p>
+</dd></dl>
+
+</dd></dl>
+
+<span class="target" id="module-ipeps.ipeps_c4v"></span><dl class="py function">
+<dt class="sig sig-object py" id="ipeps.ipeps_c4v.read_ipeps_c4v">
+<span class="sig-prename descclassname"><span class="pre">ipeps.ipeps_c4v.</span></span><span class="sig-name descname"><span class="pre">read_ipeps_c4v</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">jsonfile,</span> <span class="pre">aux_seq=[0,</span> <span class="pre">1,</span> <span class="pre">2,</span> <span class="pre">3],</span> <span class="pre">peps_args=&lt;config.PEPSARGS</span> <span class="pre">object&gt;,</span> <span class="pre">global_args=&lt;config.GLOBALARGS</span> <span class="pre">object&gt;</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ipeps/ipeps_c4v.html#read_ipeps_c4v"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ipeps.ipeps_c4v.read_ipeps_c4v" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>jsonfile</strong> (<em>str</em><em> or </em><em>Path object</em>) – input file describing IPEPS_C4V in json format</p></li>
+<li><p><strong>aux_seq</strong> (<em>list</em><em>[</em><em>int</em><em>]</em>) – array specifying order of auxiliary indices of on-site tensors stored
+in <cite>jsonfile</cite></p></li>
+<li><p><strong>peps_args</strong> (<em>PEPSARGS</em>) – ipeps configuration</p></li>
+<li><p><strong>global_args</strong> (<a class="reference internal" href="../config.html#config.GLOBALARGS" title="config.GLOBALARGS"><em>GLOBALARGS</em></a>) – global configuration</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>wavefunction</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#ipeps.ipeps_c4v.IPEPS_C4V" title="ipeps.ipeps_c4v.IPEPS_C4V">IPEPS_C4V</a></p>
+</dd>
+</dl>
+<p>Parameter <code class="docutils literal notranslate"><span class="pre">aux_seq</span></code> defines the expected order of auxiliary indices
+in input file relative to the convention fixed in tn-torch:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span> <span class="mi">0</span>
+<span class="mi">1</span><span class="n">A3</span> <span class="o">&lt;=&gt;</span> <span class="p">[</span><span class="n">up</span><span class="p">,</span> <span class="n">left</span><span class="p">,</span> <span class="n">down</span><span class="p">,</span> <span class="n">right</span><span class="p">]:</span> <span class="n">aux_seq</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">]</span>
+ <span class="mi">2</span>
+
+<span class="k">for</span> <span class="n">alternative</span> <span class="n">order</span><span class="p">,</span> <span class="n">eg</span><span class="o">.</span>
+
+ <span class="mi">1</span>
+<span class="mi">0</span><span class="n">A2</span> <span class="o">&lt;=&gt;</span> <span class="p">[</span><span class="n">left</span><span class="p">,</span> <span class="n">up</span><span class="p">,</span> <span class="n">right</span><span class="p">,</span> <span class="n">down</span><span class="p">]:</span> <span class="n">aux_seq</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">2</span><span class="p">]</span>
+ <span class="mi">3</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ipeps.ipeps_c4v.to_ipeps_c4v">
+<span class="sig-prename descclassname"><span class="pre">ipeps.ipeps_c4v.</span></span><span class="sig-name descname"><span class="pre">to_ipeps_c4v</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normalize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ipeps/ipeps_c4v.html#to_ipeps_c4v"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ipeps.ipeps_c4v.to_ipeps_c4v" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="ipeps.html#ipeps.ipeps.IPEPS" title="ipeps.ipeps.IPEPS"><em>IPEPS</em></a>) – single-site IPEPS</p></li>
+<li><p><strong>normalize</strong> (<em>bool</em>) – normalize tensor</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>symmetrized state</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#ipeps.ipeps_c4v.IPEPS_C4V" title="ipeps.ipeps_c4v.IPEPS_C4V">IPEPS_C4V</a></p>
+</dd>
+</dl>
+<p>Symmetrize single-site IPEPS by projecting its on-site tensor to <span class="math notranslate nohighlight">\(A_1\)</span> point-group irrep
+if the on-site tensor is real, or <span class="math notranslate nohighlight">\(A_1 + iA_2\)</span> if it is complex.</p>
+</dd></dl>
+
+</section>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="ipeps_lc_1site_pg.html" class="btn btn-neutral float-right" title="1-site iPEPS from lin. combination" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="ipeps_kagome.html" class="btn btn-neutral float-left" title="Kagome iPEPS" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Juraj Hasik, Glen B. Mbeng
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

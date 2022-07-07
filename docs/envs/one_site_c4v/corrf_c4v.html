@@ -1,0 +1,722 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Correlation functions &mdash; peps-torch alpha documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Abelian-symmetric 1-site C4v iPEPS" href="../one_site_c4v_abelian.html" />
+    <link rel="prev" title="Transfer Matrices" href="transfer_matrix.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> peps-torch
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../ipeps.html">iPEPS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps.html">Generic iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_kagome.html">Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_c4v.html">1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_lc_1site_pg.html">1-site iPEPS from lin. combination</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipess_kagome.html">Generic Kagome iPESS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipess_kagome_pg.html">Kagome iPESS with point groups</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipess_kagome_pg_lc.html">Kagome iPESS from lin. combination</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../ipeps.html#abelian-symmetric-ipeps">Abelian-symmetric iPEPS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_abelian.html">Generic  abelian-symmetric iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_abelian.html#generic-abelian-symmetric-ipeps-with-weights">Generic abelian-symmetric iPEPS with weights</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_kagome_abelian.html">Abelian-symmetric Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_abelian_c4v.html">Abelian-symmetric 1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipess_kagome_abelian.html">Abelian-symmetric generic Kagome iPESS</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="reference internal" href="../../envs.html">Environments</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../generic.html">Generic iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../generic/env.html">Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generic/ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generic/ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generic/ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generic/rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generic/rdm.html#module-ctm.pess_kagome.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generic/corrf.html">Correlation functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generic/transfer_matrix.html">Transfer Matrices</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../generic_abelian.html">Abelian-symmetric generic iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../generic_abelian/env_abelian.html">Abelian-symmetric environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generic_abelian/ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generic_abelian/ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generic_abelian/ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generic_abelian/rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../generic_abelian/rdm.html#module-ctm.pess_kagome_abelian.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+</ul>
+</li>
+<li class="toctree-l2 current"><a class="reference internal" href="../one_site_c4v.html">1-site C4v iPEPS</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="env_c4v.html">1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ctmrg_c4v.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="rdm_c4v.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="transfer_matrix.html">Transfer Matrices</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Correlation functions</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../one_site_c4v_abelian.html">Abelian-symmetric 1-site C4v iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../one_site_c4v_abelian/env_c4v_abelian.html">Abelian-symmetric 1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../one_site_c4v_abelian/ctmrg_c4v_abelian.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../one_site_c4v_abelian/rdm_c4v_abelian.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../one_site_c4v_abelian/corrf_c4v_abelian.html">Correlation functions</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../optim.html">Optimization</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../optim/drivers.html">Optimization drivers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/drivers/ad_optim.html">ad_optim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/drivers/ad_optim_lbfgs_mod.html">ad_optim_lbfgs_mod</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/drivers/ad_optim_sgd_mod.html">ad_optim_sgd_mod</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../optim/optimizers.html">Custom optimizers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/optimizers/lbfgs_modified.html">Extended LBFGS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/optimizers/sgd_modified.html">SGD with linesearch</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../config.html">Configuration</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../config.html#main">Main</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../config.html#global">Global</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../config.html#corner-transfer-matrix-algorithm">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../config.html#optimization">Optimization</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../models.html">Models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../models/akltS2.html">Spin S=2 AKLT Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/akltS2.html#module-models.akltS2">2x1 and 2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/akltS2.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/coupledLadders.html">Coupled Ladders</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/coupledLadders.html#dense-pytorch">Dense (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/coupledLadders.html#dense-yast">Dense (YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/coupledLadders.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/ising.html">Transverse Field Ising Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/ising.html#x1-unit-cell">1x1 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/ising.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/j1j2.html">J1-J2-J3 and J1-J2-lambda Heisenberg Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/j1j2.html#from-2x1-to-4x2-unit-cell-pytorch">from 2x1 to 4x2 unit cell (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/j1j2.html#from-2x1-to-4x2-unit-cell-dense-yast">from 2x1 to 4x2 unit cell (dense YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/j1j2.html#x1-c4v-pytorch">1x1 C4v (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/j1j2.html#x1-c4v-dense-yast">1x1 C4v (dense YAST)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/jq.html">J-Q Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/jq.html#module-models.jq">2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/jq.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/spin_half_kagome.html">SU(2) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/spin_half_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/spin_half_kagome.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/su3_kagome.html">SU(3) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/su3_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/su3_kagome.html#with-explict-u-1-xu-1-symmetry">With explict U(1)xU(1) symmetry</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../groups.html">Groups</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/pg.html">Point group: square lattice</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/su2.html">SU(2)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/su2.html#module-groups.su2_abelian">SU(2) with explicit U(1) structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/su3.html">SU(3)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/su3.html#su-3-with-explicit-u-1-xu-1-structure">SU(3) with explicit U(1)xU(1) structure</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../linalg.html">Linear Algebra</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../linalg/custom_eig.html">Truncated eigendecomposition</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../linalg/custom_svd.html">Truncated SVD</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../linalg/spec_decomp.html">Spectral decompositions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.svd_gesdd">SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.svd_arnoldi">Partial SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.svd_rsvd">Randomized SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.eig_sym">Symmetric Eigendecomposition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.eig_arnoldi">Partial diagonalization</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">peps-torch</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../envs.html">Environments</a> &raquo;</li>
+        
+          <li><a href="../one_site_c4v.html">1-site C4v iPEPS</a> &raquo;</li>
+        
+      <li>Correlation functions</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            
+              <!-- User defined GitHub URL -->
+              <a href="https://github.com/jurajHasik/peps-torch" class="fa fa-github"> Edit on GitHub</a>
+            
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <section id="module-ctm.one_site_c4v.corrf_c4v">
+<span id="correlation-functions"></span><h1>Correlation functions<a class="headerlink" href="#module-ctm.one_site_c4v.corrf_c4v" title="Permalink to this heading">¶</a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="ctm.one_site_c4v.corrf_c4v.apply_TM_1sO">
+<span class="sig-prename descclassname"><span class="pre">ctm.one_site_c4v.corrf_c4v.</span></span><span class="sig-name descname"><span class="pre">apply_TM_1sO</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">edge</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">op</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/ctm/one_site_c4v/corrf_c4v.html#apply_TM_1sO"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ctm.one_site_c4v.corrf_c4v.apply_TM_1sO" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="../../ipeps/ipeps_c4v.html#ipeps.ipeps_c4v.IPEPS_C4V" title="ipeps.ipeps_c4v.IPEPS_C4V"><em>IPEPS_C4V</em></a>) – underlying 1-site C4v symmetric wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="env_c4v.html#ctm.one_site_c4v.env_c4v.ENV_C4V" title="ctm.one_site_c4v.env_c4v.ENV_C4V"><em>ENV_C4V</em></a>) – C4v symmetric environment corresponding to <code class="docutils literal notranslate"><span class="pre">state</span></code></p></li>
+<li><p><strong>edge</strong> (<em>torch.tensor</em>) – tensor of dimensions <span class="math notranslate nohighlight">\(\chi \times D^2 \times \chi\)</span></p></li>
+<li><p><strong>op</strong> (<em>torch.tensor</em>) – operator to be inserted into transfer matrix</p></li>
+<li><p><strong>verbosity</strong> (<em>int</em>) – logging verbosity</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">edge</span></code> with a single instance of the transfer matrix applied.
+The resulting tensor has an identical index structure as the
+original <code class="docutils literal notranslate"><span class="pre">edge</span></code></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.tensor</p>
+</dd>
+</dl>
+<p>Applies a single instance of the “transfer matrix” to the <code class="docutils literal notranslate"><span class="pre">edge</span></code> tensor
+by contracting the following network:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>      <span class="o">--&gt;</span>
+  <span class="o">-----</span><span class="n">T</span><span class="o">----------</span>
+ <span class="o">|</span>     <span class="o">|</span>
+<span class="n">edge</span><span class="o">--</span><span class="p">(</span><span class="n">a</span><span class="o">^+</span> <span class="n">op</span> <span class="n">a</span><span class="p">)</span><span class="o">--</span>
+ <span class="o">|</span>     <span class="o">|</span>
+  <span class="o">-----</span><span class="n">T</span><span class="o">----------</span>
+      <span class="o">&lt;--</span>
+</pre></div>
+</div>
+<p>where the physical indices <cite>s</cite> and <cite>s’</cite> of the on-site tensor <span class="math notranslate nohighlight">\(a\)</span>
+and it’s hermitian conjugate <span class="math notranslate nohighlight">\(a^\dagger\)</span> are contracted with
+identity <span class="math notranslate nohighlight">\(\delta_{s,s'}\)</span> or <code class="docutils literal notranslate"><span class="pre">op</span></code> (if supplied).</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ctm.one_site_c4v.corrf_c4v.apply_TM_1sO_2">
+<span class="sig-prename descclassname"><span class="pre">ctm.one_site_c4v.corrf_c4v.</span></span><span class="sig-name descname"><span class="pre">apply_TM_1sO_2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">edge</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">op</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/ctm/one_site_c4v/corrf_c4v.html#apply_TM_1sO_2"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ctm.one_site_c4v.corrf_c4v.apply_TM_1sO_2" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="../../ipeps/ipeps_c4v.html#ipeps.ipeps_c4v.IPEPS_C4V" title="ipeps.ipeps_c4v.IPEPS_C4V"><em>IPEPS_C4V</em></a>) – underlying 1-site C4v symmetric wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="env_c4v.html#ctm.one_site_c4v.env_c4v.ENV_C4V" title="ctm.one_site_c4v.env_c4v.ENV_C4V"><em>ENV_C4V</em></a>) – C4v symmetric environment corresponding to <code class="docutils literal notranslate"><span class="pre">state</span></code></p></li>
+<li><p><strong>edge</strong> (<em>torch.tensor</em>) – tensor of dimensions <span class="math notranslate nohighlight">\(\chi \times (D^2)^2 \times \chi\)</span></p></li>
+<li><p><strong>op</strong> (<em>torch.tensor</em>) – two-site operator to be inserted within the two-site transfer matrix</p></li>
+<li><p><strong>verbosity</strong> (<em>int</em>) – logging verbosity</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">edge</span></code> with a single instance of the transfer matrix applied
+The resulting tensor has an identical index structure as the
+original <code class="docutils literal notranslate"><span class="pre">edge</span></code></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.tensor</p>
+</dd>
+</dl>
+<p>Applies a single instance of the two-site “transfer matrix” to
+the <code class="docutils literal notranslate"><span class="pre">edge</span></code> tensor by contracting the following network, or its corresponding
+rotation depending on the <code class="docutils literal notranslate"><span class="pre">direction</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>  <span class="o">-----</span><span class="n">T</span><span class="o">----------</span>
+ <span class="o">|</span>     <span class="o">|</span>
+<span class="n">edge</span><span class="o">--</span><span class="p">(</span><span class="n">a</span><span class="o">^+</span> <span class="n">o1</span> <span class="n">a</span><span class="p">)</span><span class="o">--</span>
+ <span class="o">|</span>     <span class="o">|</span>   <span class="o">|</span>
+ <span class="o">|----</span><span class="p">(</span><span class="n">a</span><span class="o">^+</span> <span class="n">o2</span> <span class="n">a</span><span class="p">)</span><span class="o">--</span>
+ <span class="o">|</span>     <span class="o">|</span>
+  <span class="o">-----</span><span class="n">T</span><span class="o">----------</span>
+</pre></div>
+</div>
+<p>The two-site operator is first decomposed into a simple MPO o1–o2
+(TODO case where op comes with an extra MPO index):</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span> <span class="n">s1</span><span class="s1">&#39;  s2&#39;</span>    <span class="n">s1</span><span class="s1">&#39;      s2&#39;</span>
+<span class="o">|</span>  <span class="n">op</span>   <span class="o">|</span> <span class="o">=</span> <span class="o">|</span><span class="n">o1</span><span class="o">|-----|</span><span class="n">o2</span><span class="o">|</span>
+ <span class="n">s1</span>   <span class="n">s2</span>     <span class="n">s1</span>       <span class="n">s2</span>
+</pre></div>
+</div>
+<p>where the physical indices <cite>s</cite> and <cite>s’</cite> of the on-site tensor <span class="math notranslate nohighlight">\(a\)</span>
+and it’s hermitian conjugate <span class="math notranslate nohighlight">\(a^\dagger\)</span> are contracted with
+identity <span class="math notranslate nohighlight">\(\delta_{s,s'}\)</span> or <code class="docutils literal notranslate"><span class="pre">o1</span></code>, <code class="docutils literal notranslate"><span class="pre">o2</span></code>.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ctm.one_site_c4v.corrf_c4v.apply_TM_2sO">
+<span class="sig-prename descclassname"><span class="pre">ctm.one_site_c4v.corrf_c4v.</span></span><span class="sig-name descname"><span class="pre">apply_TM_2sO</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">edge</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">op</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/ctm/one_site_c4v/corrf_c4v.html#apply_TM_2sO"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ctm.one_site_c4v.corrf_c4v.apply_TM_2sO" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="../../ipeps/ipeps_c4v.html#ipeps.ipeps_c4v.IPEPS_C4V" title="ipeps.ipeps_c4v.IPEPS_C4V"><em>IPEPS_C4V</em></a>) – underlying 1-site C4v symmetric wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="env_c4v.html#ctm.one_site_c4v.env_c4v.ENV_C4V" title="ctm.one_site_c4v.env_c4v.ENV_C4V"><em>ENV_C4V</em></a>) – C4v symmetric environment corresponding to <code class="docutils literal notranslate"><span class="pre">state</span></code></p></li>
+<li><p><strong>edge</strong> (<em>torch.tensor</em>) – tensor of dimensions <span class="math notranslate nohighlight">\(\chi \times D^2 \times \chi\)</span></p></li>
+<li><p><strong>op</strong> (<em>torch.tensor</em>) – two-site operator to be inserted into the two consecutive
+transfer matrices</p></li>
+<li><p><strong>verbosity</strong> (<em>int</em>) – logging verbosity</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">edge</span></code> with two transfer matrices (and operator <code class="docutils literal notranslate"><span class="pre">op</span></code>, if any) applied.
+The resulting tensor has an identical index structure as the
+original <code class="docutils literal notranslate"><span class="pre">edge</span></code></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.tensor</p>
+</dd>
+</dl>
+<p>Applies two transfer matrices to the <code class="docutils literal notranslate"><span class="pre">edge</span></code> tensor, including the two-site operator
+<code class="docutils literal notranslate"><span class="pre">op</span></code> by contracting the following network:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>  <span class="o">-----</span><span class="n">T</span><span class="o">-------------</span><span class="n">T</span><span class="o">------------</span>
+ <span class="o">|</span>     <span class="o">|</span>             <span class="o">|</span>
+<span class="n">edge</span><span class="o">--</span><span class="p">(</span><span class="n">a</span><span class="o">^+</span> <span class="n">op_l</span> <span class="n">a</span><span class="p">)</span><span class="o">==</span><span class="p">(</span><span class="n">a</span><span class="o">^+</span> <span class="n">op_r</span> <span class="n">a</span><span class="p">)</span><span class="o">--</span>
+ <span class="o">|</span>     <span class="o">|</span>             <span class="o">|</span>
+  <span class="o">-----</span><span class="n">T</span><span class="o">-------------</span><span class="n">T</span><span class="o">------------</span>
+</pre></div>
+</div>
+<p>where the physical indices <cite>s</cite> and <cite>s’</cite> of the on-site tensor <span class="math notranslate nohighlight">\(a\)</span>
+and it’s hermitian conjugate <span class="math notranslate nohighlight">\(a^\dagger\)</span> are contracted with
+identity <span class="math notranslate nohighlight">\(\delta_{s,s'}\)</span> or <code class="docutils literal notranslate"><span class="pre">op_l</span></code> and <code class="docutils literal notranslate"><span class="pre">op_r</span></code> if <code class="docutils literal notranslate"><span class="pre">op</span></code> is supplied.
+The <code class="docutils literal notranslate"><span class="pre">op_l</span></code> and <code class="docutils literal notranslate"><span class="pre">op_r</span></code> are given by the SVD decomposition of two-site operator
+<code class="docutils literal notranslate"><span class="pre">op</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span> <span class="mi">0</span>  <span class="mi">1</span>        <span class="mi">0</span>           <span class="mi">1</span>          <span class="mi">0</span>            <span class="mi">1</span><span class="o">-&gt;</span><span class="mi">0</span>
+ <span class="o">|</span>  <span class="o">|</span>  <span class="n">SVD</span>   <span class="o">|</span>           <span class="o">|</span>          <span class="o">|</span>            <span class="o">|</span>
+<span class="o">|</span> <span class="n">op</span> <span class="o">|</span>  <span class="o">=</span>  <span class="o">|</span><span class="n">op_l</span><span class="o">|--</span><span class="p">(</span><span class="n">S</span><span class="o">--|</span><span class="n">op</span><span class="o">^~</span><span class="n">_r</span><span class="o">|</span><span class="p">)</span> <span class="o">=</span> <span class="o">|</span><span class="n">op_l</span><span class="o">|--</span><span class="mi">2</span> <span class="mi">2</span><span class="o">--|</span><span class="n">op_r</span><span class="o">|</span>
+ <span class="o">|</span>  <span class="o">|</span>        <span class="o">|</span>           <span class="o">|</span>          <span class="o">|</span>            <span class="o">|</span>
+ <span class="mi">2</span>  <span class="mi">3</span>        <span class="mi">2</span>           <span class="mi">3</span>          <span class="mi">2</span><span class="o">-&gt;</span><span class="mi">1</span>         <span class="mi">3</span><span class="o">-&gt;</span><span class="mi">1</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ctm.one_site_c4v.corrf_c4v.apply_edge">
+<span class="sig-prename descclassname"><span class="pre">ctm.one_site_c4v.corrf_c4v.</span></span><span class="sig-name descname"><span class="pre">apply_edge</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vec</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/ctm/one_site_c4v/corrf_c4v.html#apply_edge"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ctm.one_site_c4v.corrf_c4v.apply_edge" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="../../ipeps/ipeps_c4v.html#ipeps.ipeps_c4v.IPEPS_C4V" title="ipeps.ipeps_c4v.IPEPS_C4V"><em>IPEPS_C4V</em></a>) – underlying 1-site C4v symmetric wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="env_c4v.html#ctm.one_site_c4v.env_c4v.ENV_C4V" title="ctm.one_site_c4v.env_c4v.ENV_C4V"><em>ENV_C4V</em></a>) – C4v symmetric environment corresponding to <code class="docutils literal notranslate"><span class="pre">state</span></code></p></li>
+<li><p><strong>vec</strong> (<em>torch.tensor</em>) – tensor of dimensions <span class="math notranslate nohighlight">\(\chi \times D^2 \times \chi\)</span></p></li>
+<li><p><strong>verbosity</strong> (<em>int</em>) – logging verbosity</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>scalar resulting from the contraction of <code class="docutils literal notranslate"><span class="pre">vec</span></code> with an edge
+built from environment</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.tensor</p>
+</dd>
+</dl>
+<p>Contracts <code class="docutils literal notranslate"><span class="pre">vec</span></code> tensor with the corresponding edge by contracting
+the following network:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>           <span class="o">---</span><span class="n">C</span>
+          <span class="o">|</span>   <span class="o">|</span>
+<span class="n">scalar</span> <span class="o">=</span> <span class="n">vec</span><span class="o">--</span><span class="n">T</span>
+          <span class="o">|</span>   <span class="o">|</span>
+           <span class="o">---</span><span class="n">C</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ctm.one_site_c4v.corrf_c4v.apply_edge_L">
+<span class="sig-prename descclassname"><span class="pre">ctm.one_site_c4v.corrf_c4v.</span></span><span class="sig-name descname"><span class="pre">apply_edge_L</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vec</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/ctm/one_site_c4v/corrf_c4v.html#apply_edge_L"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ctm.one_site_c4v.corrf_c4v.apply_edge_L" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="../../ipeps/ipeps_c4v.html#ipeps.ipeps_c4v.IPEPS_C4V" title="ipeps.ipeps_c4v.IPEPS_C4V"><em>IPEPS_C4V</em></a>) – underlying 1-site C4v symmetric wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="env_c4v.html#ctm.one_site_c4v.env_c4v.ENV_C4V" title="ctm.one_site_c4v.env_c4v.ENV_C4V"><em>ENV_C4V</em></a>) – C4v symmetric environment corresponding to <code class="docutils literal notranslate"><span class="pre">state</span></code></p></li>
+<li><p><strong>vec</strong> (<em>torch.tensor</em>) – tensor of dimensions <span class="math notranslate nohighlight">\(\chi \times (D^2)^l \times \chi\)</span></p></li>
+<li><p><strong>verbosity</strong> (<em>int</em>) – logging verbosity</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>scalar resulting from the contraction of <code class="docutils literal notranslate"><span class="pre">vec</span></code> with an edge
+built from environment</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.tensor</p>
+</dd>
+</dl>
+<p>Contracts <code class="docutils literal notranslate"><span class="pre">vec</span></code> tensor with the corresponding edge by contracting
+the following network:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>             <span class="o">---</span><span class="mi">0</span>   <span class="n">l</span><span class="o">+</span><span class="mi">1</span><span class="o">----</span><span class="n">C</span>
+         <span class="n">A</span>  <span class="o">|</span>              <span class="o">|</span> <span class="o">|</span>
+<span class="n">scalar</span> <span class="o">=</span> <span class="o">|</span> <span class="n">vec</span><span class="o">--</span><span class="mi">1</span>     <span class="n">l</span><span class="o">----</span><span class="n">T</span> <span class="o">|</span>
+         <span class="o">|</span>  <span class="o">|</span>    <span class="o">...</span>       <span class="o">|</span> <span class="n">V</span>
+            <span class="o">|---</span><span class="n">l</span>     <span class="mi">1</span><span class="o">----</span><span class="n">T</span>
+             <span class="o">---</span><span class="n">l</span><span class="o">+</span><span class="mi">1</span>     <span class="mi">0</span><span class="o">--</span><span class="n">C</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ctm.one_site_c4v.corrf_c4v.corrf_1sO1sO">
+<span class="sig-prename descclassname"><span class="pre">ctm.one_site_c4v.corrf_c4v.</span></span><span class="sig-name descname"><span class="pre">corrf_1sO1sO</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">op1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">get_op2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dist</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rl_0</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/ctm/one_site_c4v/corrf_c4v.html#corrf_1sO1sO"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ctm.one_site_c4v.corrf_c4v.corrf_1sO1sO" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="../../ipeps/ipeps_c4v.html#ipeps.ipeps_c4v.IPEPS_C4V" title="ipeps.ipeps_c4v.IPEPS_C4V"><em>IPEPS_C4V</em></a>) – underlying 1-site C4v symmetric wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="env_c4v.html#ctm.one_site_c4v.env_c4v.ENV_C4V" title="ctm.one_site_c4v.env_c4v.ENV_C4V"><em>ENV_C4V</em></a>) – C4v symmetric environment corresponding to <code class="docutils literal notranslate"><span class="pre">state</span></code></p></li>
+<li><p><strong>op1</strong> (<em>torch.tensor</em>) – first one-site operator <span class="math notranslate nohighlight">\(O_1\)</span></p></li>
+<li><p><strong>get_op2</strong> (<em>function</em><em>(</em><em>int</em><em>)</em><em>-&gt;torch.tensor</em>) – function returning (position-dependent) second
+one-site opreator <span class="math notranslate nohighlight">\(\text{get_op2}(r)=O_2\)</span></p></li>
+<li><p><strong>dist</strong> (<em>int</em>) – maximal distance of correlation function</p></li>
+<li><p><strong>rl_0</strong> (<em>tuple</em><em>(</em><em>torch.Tensor</em><em>, </em><em>torch.Tensor</em><em>)</em>) – right and left edges of the two-point function network. These
+are expected to be rank-3 tensor compatible with transfer operator indices.
+Typically provided by leading eigenvectors of transfer matrix.</p></li>
+<li><p><strong>verbosity</strong> (<em>int</em>) – logging verbosity</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>vector <code class="docutils literal notranslate"><span class="pre">corrf</span></code> of length <code class="docutils literal notranslate"><span class="pre">dist</span></code> holding the values of
+correlation function <span class="math notranslate nohighlight">\(\langle O_1(0) O_2(r) \rangle\)</span> for <span class="math notranslate nohighlight">\(r \in [1,dist]\)</span></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.tensor</p>
+</dd>
+</dl>
+<p>Computes the two-point correlation function <span class="math notranslate nohighlight">\(\langle O_1(0) O_2(r) \rangle\)</span>
+by contracting the following network:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">C</span><span class="o">-----</span><span class="n">T</span><span class="o">----------</span> <span class="o">...</span> <span class="o">-----</span><span class="n">T</span><span class="o">----</span> <span class="o">...</span> <span class="o">--------</span><span class="n">T</span><span class="o">-------------</span><span class="n">C</span>
+<span class="o">|</span>     <span class="o">|</span>                    <span class="o">|</span>                 <span class="o">|</span>             <span class="o">|</span>
+<span class="n">T</span><span class="o">--</span><span class="p">(</span><span class="n">a</span><span class="o">^+</span> <span class="n">op_1</span> <span class="n">a</span><span class="p">)</span><span class="o">--</span> <span class="o">...</span> <span class="o">--</span><span class="p">(</span><span class="n">a</span><span class="o">^+</span><span class="n">a</span><span class="p">)</span><span class="o">--</span> <span class="o">...</span> <span class="o">--</span><span class="p">(</span><span class="n">a</span><span class="o">^+</span> <span class="n">gen_op2</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="n">a</span><span class="p">)</span><span class="o">--</span><span class="n">T</span>
+<span class="o">|</span>     <span class="o">|</span>                    <span class="o">|</span>                 <span class="o">|</span>             <span class="o">|</span>
+<span class="n">C</span><span class="o">-----</span><span class="n">T</span><span class="o">----------</span> <span class="o">...</span> <span class="o">-----</span><span class="n">T</span><span class="o">----</span> <span class="o">...</span> <span class="o">--------</span><span class="n">T</span><span class="o">-------------</span><span class="n">C</span>
+</pre></div>
+</div>
+<p>for increasingly large distance <code class="docutils literal notranslate"><span class="pre">r</span></code> up to <code class="docutils literal notranslate"><span class="pre">dist</span></code>.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ctm.one_site_c4v.corrf_c4v.corrf_2sOH2sOH_E1">
+<span class="sig-prename descclassname"><span class="pre">ctm.one_site_c4v.corrf_c4v.</span></span><span class="sig-name descname"><span class="pre">corrf_2sOH2sOH_E1</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">op1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">get_op2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dist</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/ctm/one_site_c4v/corrf_c4v.html#corrf_2sOH2sOH_E1"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ctm.one_site_c4v.corrf_c4v.corrf_2sOH2sOH_E1" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="../../ipeps/ipeps_c4v.html#ipeps.ipeps_c4v.IPEPS_C4V" title="ipeps.ipeps_c4v.IPEPS_C4V"><em>IPEPS_C4V</em></a>) – underlying 1-site C4v symmetric wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="env_c4v.html#ctm.one_site_c4v.env_c4v.ENV_C4V" title="ctm.one_site_c4v.env_c4v.ENV_C4V"><em>ENV_C4V</em></a>) – C4v symmetric environment corresponding to <code class="docutils literal notranslate"><span class="pre">state</span></code></p></li>
+<li><p><strong>op1</strong> (<em>torch.tensor</em>) – first two-site operator <span class="math notranslate nohighlight">\(O_1\)</span></p></li>
+<li><p><strong>get_op2</strong> (<em>function</em><em>(</em><em>int</em><em>)</em><em>-&gt;torch.tensor</em>) – function returning (position-dependent) second
+two-site operator <span class="math notranslate nohighlight">\(\text{get_op2}(r)=O_2\)</span></p></li>
+<li><p><strong>dist</strong> (<em>int</em>) – maximal distance of correlation function</p></li>
+<li><p><strong>verbosity</strong> (<em>int</em>) – logging verbosity</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>vector <code class="docutils literal notranslate"><span class="pre">corrf</span></code> of length <code class="docutils literal notranslate"><span class="pre">dist</span></code> holding the values of
+correlation function <span class="math notranslate nohighlight">\(\langle O_1(0) O_2(r) \rangle\)</span> for <span class="math notranslate nohighlight">\(r \in [2,dist+1]\)</span></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.tensor</p>
+</dd>
+</dl>
+<p>Computes the correlation function <span class="math notranslate nohighlight">\(\langle O_1(0) O_2(r) \rangle\)</span>
+of two horizontaly-oriented two-site operators by contracting
+the following network:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">C</span><span class="o">-----</span><span class="n">T</span><span class="o">----</span><span class="n">T</span><span class="o">-------</span> <span class="o">...</span> <span class="o">-----</span><span class="n">T</span><span class="o">----</span> <span class="o">...</span> <span class="o">----------</span><span class="n">T</span><span class="o">----</span><span class="n">T</span><span class="o">--------</span><span class="n">C</span>
+<span class="o">|</span>     <span class="o">|</span>    <span class="o">|</span>                 <span class="o">|</span>                   <span class="o">|</span>    <span class="o">|</span>        <span class="o">|</span>
+<span class="o">|</span>   <span class="o">/-</span><span class="n">a</span><span class="o">^+--</span><span class="n">a</span><span class="o">^+-</span>\             <span class="o">|</span>                <span class="o">/--</span><span class="n">a</span><span class="o">^+--</span><span class="n">a</span><span class="o">^+---</span>\  <span class="o">|</span>
+<span class="n">T</span><span class="o">--&lt;</span> <span class="p">(</span> <span class="n">op</span> <span class="mi">1</span> <span class="p">)</span>   <span class="o">&gt;--</span> <span class="o">...</span> <span class="o">--</span><span class="p">(</span><span class="n">a</span><span class="o">^+</span><span class="n">a</span><span class="p">)</span><span class="o">--</span> <span class="o">...</span> <span class="o">------&lt;</span> <span class="p">(</span><span class="n">gen_op2</span><span class="p">(</span><span class="n">r</span><span class="p">))</span> <span class="o">&gt;--</span><span class="n">T</span>
+<span class="o">|</span>   \<span class="o">-</span><span class="n">a</span><span class="o">----</span><span class="n">a</span><span class="o">---/</span>             <span class="o">|</span>                \<span class="o">--</span><span class="n">a</span><span class="o">----</span><span class="n">a</span><span class="o">-----/</span>  <span class="o">|</span>
+<span class="o">|</span>     <span class="o">|</span>    <span class="o">|</span>                 <span class="o">|</span>                   <span class="o">|</span>    <span class="o">|</span>        <span class="o">|</span>
+<span class="n">C</span><span class="o">-----</span><span class="n">T</span><span class="o">----</span><span class="n">T</span><span class="o">-------</span> <span class="o">...</span> <span class="o">-----</span><span class="n">T</span><span class="o">----</span> <span class="o">...</span> <span class="o">----------</span><span class="n">T</span><span class="o">----</span><span class="n">T</span><span class="o">--------</span><span class="n">C</span>
+</pre></div>
+</div>
+<p>for increasingly large distance <code class="docutils literal notranslate"><span class="pre">r</span></code> up to <code class="docutils literal notranslate"><span class="pre">dist+1</span></code>.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ctm.one_site_c4v.corrf_c4v.corrf_2sOV2sOV_E2">
+<span class="sig-prename descclassname"><span class="pre">ctm.one_site_c4v.corrf_c4v.</span></span><span class="sig-name descname"><span class="pre">corrf_2sOV2sOV_E2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">op1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">get_op2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dist</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/ctm/one_site_c4v/corrf_c4v.html#corrf_2sOV2sOV_E2"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ctm.one_site_c4v.corrf_c4v.corrf_2sOV2sOV_E2" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="../../ipeps/ipeps_c4v.html#ipeps.ipeps_c4v.IPEPS_C4V" title="ipeps.ipeps_c4v.IPEPS_C4V"><em>IPEPS_C4V</em></a>) – underlying wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="env_c4v.html#ctm.one_site_c4v.env_c4v.ENV_C4V" title="ctm.one_site_c4v.env_c4v.ENV_C4V"><em>ENV_C4V</em></a>) – environment corresponding to <code class="docutils literal notranslate"><span class="pre">state</span></code></p></li>
+<li><p><strong>op1</strong> (<em>torch.tensor</em>) – first two-site operator <span class="math notranslate nohighlight">\(O_1\)</span></p></li>
+<li><p><strong>get_op2</strong> (<em>function</em><em>(</em><em>int</em><em>)</em><em>-&gt;torch.tensor</em>) – function returning (position-dependent) second
+two-site operator <span class="math notranslate nohighlight">\(\text{get_op2}(r)=O_2\)</span></p></li>
+<li><p><strong>dist</strong> (<em>int</em>) – maximal distance of correlation function</p></li>
+<li><p><strong>verbosity</strong> (<em>int</em>) – logging verbosity</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>vector <code class="docutils literal notranslate"><span class="pre">corrf</span></code> of length <code class="docutils literal notranslate"><span class="pre">dist</span></code> holding the values of
+correlation function <span class="math notranslate nohighlight">\(\langle O_1(0) O_2(r) \rangle\)</span>
+for <span class="math notranslate nohighlight">\(r \in [1,dist]\)</span></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.tensor</p>
+</dd>
+</dl>
+<p>Computes the four-point correlation function <span class="math notranslate nohighlight">\(\langle O_1(0) O_2(r) \rangle\)</span>,
+where both O_1 and O_2 are two-site operators by contracting the following network:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">C</span><span class="o">-----</span><span class="n">T</span><span class="o">------</span> <span class="o">...</span> <span class="o">----</span><span class="n">T</span><span class="o">-----</span> <span class="o">...</span> <span class="o">-----</span><span class="n">T</span><span class="o">---------</span><span class="n">C</span>
+<span class="o">|</span>     <span class="o">|</span>               <span class="o">|</span>               <span class="o">|</span>         <span class="o">|</span>
+<span class="n">T</span><span class="o">--</span><span class="p">(</span><span class="n">a</span><span class="o">^+--</span><span class="n">a</span><span class="p">)</span><span class="o">--</span> <span class="o">...</span> <span class="o">--</span><span class="p">(</span><span class="n">a</span><span class="o">^+</span><span class="n">a</span><span class="p">)</span><span class="o">--</span> <span class="o">...</span> <span class="o">--</span><span class="p">(</span><span class="n">a</span><span class="o">^+--</span><span class="n">a</span><span class="p">)</span><span class="o">-----</span><span class="n">T</span>
+<span class="o">|</span>    <span class="n">op1</span>              <span class="o">|</span>           <span class="p">(</span><span class="n">gen_op2</span><span class="p">(</span><span class="n">r</span><span class="p">))</span>  <span class="o">|</span>
+<span class="n">T</span><span class="o">--</span><span class="p">(</span><span class="n">a</span><span class="o">^+--</span><span class="n">a</span><span class="p">)</span><span class="o">--</span> <span class="o">...</span> <span class="o">--</span><span class="p">(</span><span class="n">a</span><span class="o">^+</span><span class="n">a</span><span class="p">)</span><span class="o">--</span> <span class="o">...</span> <span class="o">--</span><span class="p">(</span><span class="n">a</span><span class="o">^+--</span><span class="n">a</span><span class="p">)</span><span class="o">-----</span><span class="n">T</span>
+<span class="o">|</span>     <span class="o">|</span>               <span class="o">|</span>               <span class="o">|</span>         <span class="o">|</span>
+<span class="n">C</span><span class="o">-----</span><span class="n">T</span><span class="o">------</span> <span class="o">...</span> <span class="o">----</span><span class="n">T</span><span class="o">-----</span> <span class="o">...</span> <span class="o">-----</span><span class="n">T</span><span class="o">---------</span><span class="n">C</span>
+</pre></div>
+</div>
+<p>for increasingly large distance <code class="docutils literal notranslate"><span class="pre">r</span></code> up to <code class="docutils literal notranslate"><span class="pre">dist</span></code>.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ctm.one_site_c4v.corrf_c4v.get_edge">
+<span class="sig-prename descclassname"><span class="pre">ctm.one_site_c4v.corrf_c4v.</span></span><span class="sig-name descname"><span class="pre">get_edge</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/ctm/one_site_c4v/corrf_c4v.html#get_edge"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ctm.one_site_c4v.corrf_c4v.get_edge" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="../../ipeps/ipeps_c4v.html#ipeps.ipeps_c4v.IPEPS_C4V" title="ipeps.ipeps_c4v.IPEPS_C4V"><em>IPEPS_C4V</em></a>) – underlying 1-site C4v symmetric wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="env_c4v.html#ctm.one_site_c4v.env_c4v.ENV_C4V" title="ctm.one_site_c4v.env_c4v.ENV_C4V"><em>ENV_C4V</em></a>) – C4v symmetric environment corresponding to <code class="docutils literal notranslate"><span class="pre">state</span></code></p></li>
+<li><p><strong>verbosity</strong> (<em>int</em>) – logging verbosity</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>tensor with indices <span class="math notranslate nohighlight">\(\chi \times D^2 \times \chi\)</span></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.tensor</p>
+</dd>
+</dl>
+<p>Build initial edge by contracting the following network:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>    <span class="n">C</span><span class="o">--</span>
+    <span class="o">|</span>
+<span class="n">E</span> <span class="o">=</span> <span class="n">T</span><span class="o">--</span>
+    <span class="o">|</span>
+    <span class="n">C</span><span class="o">--</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ctm.one_site_c4v.corrf_c4v.get_edge_L">
+<span class="sig-prename descclassname"><span class="pre">ctm.one_site_c4v.corrf_c4v.</span></span><span class="sig-name descname"><span class="pre">get_edge_L</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">l</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/ctm/one_site_c4v/corrf_c4v.html#get_edge_L"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ctm.one_site_c4v.corrf_c4v.get_edge_L" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="../../ipeps/ipeps_c4v.html#ipeps.ipeps_c4v.IPEPS_C4V" title="ipeps.ipeps_c4v.IPEPS_C4V"><em>IPEPS_C4V</em></a>) – underlying 1-site C4v symmetric wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="env_c4v.html#ctm.one_site_c4v.env_c4v.ENV_C4V" title="ctm.one_site_c4v.env_c4v.ENV_C4V"><em>ENV_C4V</em></a>) – C4v symmetric environment corresponding to <code class="docutils literal notranslate"><span class="pre">state</span></code></p></li>
+<li><p><strong>l</strong> (<em>int</em>) – length of the edge</p></li>
+<li><p><strong>verbosity</strong> (<em>int</em>) – logging verbosity</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>tensor with indices <span class="math notranslate nohighlight">\(\chi \times (D^2)^l \times \chi\)</span></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.tensor</p>
+</dd>
+</dl>
+<p>Build an edge of length l by contracting a following network:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>       <span class="o">----&gt;</span>
+<span class="n">E</span> <span class="o">=</span> <span class="n">A</span> <span class="n">C</span><span class="o">--</span><span class="n">T</span><span class="o">--...--</span><span class="n">T</span><span class="o">--</span><span class="n">C</span>   <span class="o">|</span>
+    <span class="o">|</span> <span class="o">|</span>  <span class="o">|</span>       <span class="o">|</span>  <span class="o">|</span>   <span class="n">V</span>
+      <span class="mi">0</span>  <span class="mi">1</span>       <span class="n">l</span>  <span class="n">l</span><span class="o">+</span><span class="mi">1</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</section>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../one_site_c4v_abelian.html" class="btn btn-neutral float-right" title="Abelian-symmetric 1-site C4v iPEPS" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="transfer_matrix.html" class="btn btn-neutral float-left" title="Transfer Matrices" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Juraj Hasik, Glen B. Mbeng
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

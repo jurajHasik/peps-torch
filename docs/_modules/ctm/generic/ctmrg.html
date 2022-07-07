@@ -1,0 +1,981 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>ctm.generic.ctmrg &mdash; peps-torch alpha documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> peps-torch
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../ipeps.html">iPEPS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps.html">Generic iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_kagome.html">Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_c4v.html">1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_lc_1site_pg.html">1-site iPEPS from lin. combination</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipess_kagome.html">Generic Kagome iPESS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipess_kagome_pg.html">Kagome iPESS with point groups</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipess_kagome_pg_lc.html">Kagome iPESS from lin. combination</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../ipeps.html#abelian-symmetric-ipeps">Abelian-symmetric iPEPS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_abelian.html">Generic  abelian-symmetric iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_abelian.html#generic-abelian-symmetric-ipeps-with-weights">Generic abelian-symmetric iPEPS with weights</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_kagome_abelian.html">Abelian-symmetric Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_abelian_c4v.html">Abelian-symmetric 1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipess_kagome_abelian.html">Abelian-symmetric generic Kagome iPESS</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../envs.html">Environments</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../envs/generic.html">Generic iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/env.html">Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/rdm.html#module-ctm.pess_kagome.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/corrf.html">Correlation functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/transfer_matrix.html">Transfer Matrices</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../envs/generic_abelian.html">Abelian-symmetric generic iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic_abelian/env_abelian.html">Abelian-symmetric environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic_abelian/ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic_abelian/ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic_abelian/ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic_abelian/rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic_abelian/rdm.html#module-ctm.pess_kagome_abelian.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../envs/one_site_c4v.html">1-site C4v iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v/env_c4v.html">1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v/ctmrg_c4v.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v/rdm_c4v.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v/transfer_matrix.html">Transfer Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v/corrf_c4v.html">Correlation functions</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../envs/one_site_c4v_abelian.html">Abelian-symmetric 1-site C4v iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v_abelian/env_c4v_abelian.html">Abelian-symmetric 1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v_abelian/ctmrg_c4v_abelian.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v_abelian/rdm_c4v_abelian.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v_abelian/corrf_c4v_abelian.html">Correlation functions</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../optim.html">Optimization</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../optim/drivers.html">Optimization drivers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../optim/drivers/ad_optim.html">ad_optim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../optim/drivers/ad_optim_lbfgs_mod.html">ad_optim_lbfgs_mod</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../optim/drivers/ad_optim_sgd_mod.html">ad_optim_sgd_mod</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../optim/optimizers.html">Custom optimizers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../optim/optimizers/lbfgs_modified.html">Extended LBFGS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../optim/optimizers/sgd_modified.html">SGD with linesearch</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../config.html">Configuration</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../config.html#main">Main</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../config.html#global">Global</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../config.html#corner-transfer-matrix-algorithm">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../config.html#optimization">Optimization</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../models.html">Models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/akltS2.html">Spin S=2 AKLT Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/akltS2.html#module-models.akltS2">2x1 and 2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/akltS2.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/coupledLadders.html">Coupled Ladders</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/coupledLadders.html#dense-pytorch">Dense (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/coupledLadders.html#dense-yast">Dense (YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/coupledLadders.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/ising.html">Transverse Field Ising Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/ising.html#x1-unit-cell">1x1 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/ising.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/j1j2.html">J1-J2-J3 and J1-J2-lambda Heisenberg Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/j1j2.html#from-2x1-to-4x2-unit-cell-pytorch">from 2x1 to 4x2 unit cell (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/j1j2.html#from-2x1-to-4x2-unit-cell-dense-yast">from 2x1 to 4x2 unit cell (dense YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/j1j2.html#x1-c4v-pytorch">1x1 C4v (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/j1j2.html#x1-c4v-dense-yast">1x1 C4v (dense YAST)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/jq.html">J-Q Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/jq.html#module-models.jq">2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/jq.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/spin_half_kagome.html">SU(2) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/spin_half_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/spin_half_kagome.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/su3_kagome.html">SU(3) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/su3_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/su3_kagome.html#with-explict-u-1-xu-1-symmetry">With explict U(1)xU(1) symmetry</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../groups.html">Groups</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../groups/pg.html">Point group: square lattice</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../groups/su2.html">SU(2)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../groups/su2.html#module-groups.su2_abelian">SU(2) with explicit U(1) structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../groups/su3.html">SU(3)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../groups/su3.html#su-3-with-explicit-u-1-xu-1-structure">SU(3) with explicit U(1)xU(1) structure</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../linalg.html">Linear Algebra</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../linalg/custom_eig.html">Truncated eigendecomposition</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../linalg/custom_svd.html">Truncated SVD</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../linalg/spec_decomp.html">Spectral decompositions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../linalg/spec_decomp.html#module-linalg.svd_gesdd">SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../linalg/spec_decomp.html#module-linalg.svd_arnoldi">Partial SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../linalg/spec_decomp.html#module-linalg.svd_rsvd">Randomized SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../linalg/spec_decomp.html#module-linalg.eig_sym">Symmetric Eigendecomposition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../linalg/spec_decomp.html#module-linalg.eig_arnoldi">Partial diagonalization</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">peps-torch</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>ctm.generic.ctmrg</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for ctm.generic.ctmrg</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">from</span> <span class="nn">torch.utils.checkpoint</span> <span class="kn">import</span> <span class="n">checkpoint</span>
+<span class="kn">import</span> <span class="nn">config</span> <span class="k">as</span> <span class="nn">cfg</span>
+<span class="kn">from</span> <span class="nn">config</span> <span class="kn">import</span> <span class="n">_torch_version_check</span>
+<span class="kn">from</span> <span class="nn">ipeps.ipeps</span> <span class="kn">import</span> <span class="n">IPEPS</span>
+<span class="kn">from</span> <span class="nn">ctm.generic.env</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">ctm.generic.ctm_components</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">ctm.generic.ctm_projectors</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">tn_interface</span> <span class="kn">import</span> <span class="n">contract</span><span class="p">,</span> <span class="n">einsum</span>
+<span class="kn">from</span> <span class="nn">tn_interface</span> <span class="kn">import</span> <span class="n">conj</span>
+<span class="kn">from</span> <span class="nn">tn_interface</span> <span class="kn">import</span> <span class="n">contiguous</span><span class="p">,</span> <span class="n">view</span><span class="p">,</span> <span class="n">permute</span>
+
+<div class="viewcode-block" id="run"><a class="viewcode-back" href="../../../envs/generic/ctmrg.html#ctm.generic.ctmrg.run">[docs]</a><span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">conv_check</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ctm_args</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">ctm_args</span><span class="p">,</span> <span class="n">global_args</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">global_args</span><span class="p">):</span> 
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    :param state: wavefunction</span>
+<span class="sd">    :param env: environment</span>
+<span class="sd">    :param conv_check: function which determines the convergence of CTM algorithm. If ``None``,</span>
+<span class="sd">                       the algorithm performs ``ctm_args.ctm_max_iter`` iterations. </span>
+<span class="sd">    :param ctm_args: CTM algorithm configuration</span>
+<span class="sd">    :param global_args: global configuration</span>
+<span class="sd">    :type state: IPEPS</span>
+<span class="sd">    :type env: ENV</span>
+<span class="sd">    :type conv_check: function(IPEPS,ENV,list[float],CTMARGS)-&gt;bool</span>
+<span class="sd">    :type ctm_args: CTMARGS</span>
+<span class="sd">    :type global_args: GLOBALARGS</span>
+
+<span class="sd">    Executes directional CTM algorithm for generic iPEPS starting from the intial environment ``env``.</span>
+<span class="sd">    </span>
+<span class="sd">    To establish the convergence of CTM before the maximal number of iterations </span>
+<span class="sd">    is reached  a ``conv_check`` function is invoked. Its expected signature is </span>
+<span class="sd">    ``conv_check(IPEPS,ENV,Object,CTMARGS)`` where ``Object`` is an arbitary argument. For </span>
+<span class="sd">    example it can be a list or dict used for storing CTM data from previous steps to   </span>
+<span class="sd">    check convergence.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># 0) Create double-layer (DL) tensors, preserving the same convention</span>
+    <span class="c1"># for order of indices </span>
+    <span class="c1">#</span>
+    <span class="c1">#     /           /</span>
+    <span class="c1">#  --A^dag-- = --a--</span>
+    <span class="c1">#   /|          /</span>
+    <span class="c1">#    |/</span>
+    <span class="c1">#  --A--</span>
+    <span class="c1">#   /</span>
+    <span class="c1">#</span>
+    <span class="n">sitesDL</span><span class="o">=</span><span class="nb">dict</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">coord</span><span class="p">,</span><span class="n">A</span> <span class="ow">in</span> <span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">dimsA</span> <span class="o">=</span> <span class="n">A</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+        <span class="n">a</span> <span class="o">=</span> <span class="n">contiguous</span><span class="p">(</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;mefgh,mabcd-&gt;eafbgchd&#39;</span><span class="p">,</span><span class="n">A</span><span class="p">,</span><span class="n">conj</span><span class="p">(</span><span class="n">A</span><span class="p">)))</span>
+        <span class="n">a</span><span class="o">=</span> <span class="n">view</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="p">(</span><span class="n">dimsA</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span><span class="n">dimsA</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
+        <span class="n">sitesDL</span><span class="p">[</span><span class="n">coord</span><span class="p">]</span><span class="o">=</span><span class="n">a</span>
+    <span class="n">stateDL</span> <span class="o">=</span> <span class="n">IPEPS</span><span class="p">(</span><span class="n">sitesDL</span><span class="p">,</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">)</span>
+
+    <span class="c1"># 1) perform CTMRG</span>
+    <span class="n">t_obs</span><span class="o">=</span><span class="n">t_ctm</span><span class="o">=</span><span class="mf">0.</span>
+    <span class="n">history</span><span class="o">=</span><span class="kc">None</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ctm_args</span><span class="o">.</span><span class="n">ctm_max_iter</span><span class="p">):</span>
+        <span class="n">t0_ctm</span><span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">direction</span> <span class="ow">in</span> <span class="n">ctm_args</span><span class="o">.</span><span class="n">ctm_move_sequence</span><span class="p">:</span>
+            <span class="n">diagnostics</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;ctm_i&quot;</span><span class="p">:</span> <span class="n">i</span><span class="p">,</span> <span class="s2">&quot;ctm_d&quot;</span><span class="p">:</span> <span class="n">direction</span><span class="p">}</span> <span class="k">if</span> <span class="n">ctm_args</span><span class="o">.</span><span class="n">verbosity_projectors</span><span class="o">&gt;</span><span class="mi">0</span> <span class="k">else</span> <span class="kc">None</span>
+            <span class="n">ctm_MOVE</span><span class="p">(</span><span class="n">direction</span><span class="p">,</span> <span class="n">stateDL</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">ctm_args</span><span class="o">=</span><span class="n">ctm_args</span><span class="p">,</span> <span class="n">global_args</span><span class="o">=</span><span class="n">global_args</span><span class="p">,</span> \
+                <span class="n">verbosity</span><span class="o">=</span><span class="n">ctm_args</span><span class="o">.</span><span class="n">verbosity_ctm_move</span><span class="p">,</span><span class="n">diagnostics</span><span class="o">=</span><span class="n">diagnostics</span><span class="p">)</span>
+        <span class="n">t1_ctm</span><span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+
+        <span class="n">t0_obs</span><span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">conv_check</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># evaluate convergence of the CTMRG procedure</span>
+            <span class="n">converged</span><span class="p">,</span> <span class="n">history</span> <span class="o">=</span> <span class="n">conv_check</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">history</span><span class="p">,</span> <span class="n">ctm_args</span><span class="o">=</span><span class="n">ctm_args</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">ctm_args</span><span class="o">.</span><span class="n">verbosity_ctm_convergence</span><span class="o">&gt;</span><span class="mi">1</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="n">history</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">converged</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">ctm_args</span><span class="o">.</span><span class="n">verbosity_ctm_convergence</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span> 
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;CTMRG  converged at iter= </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">, history= </span><span class="si">{</span><span class="n">history</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="k">break</span>
+        <span class="n">t1_obs</span><span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+
+        <span class="n">t_ctm</span><span class="o">+=</span> <span class="n">t1_ctm</span><span class="o">-</span><span class="n">t0_ctm</span>
+        <span class="n">t_obs</span><span class="o">+=</span> <span class="n">t1_obs</span><span class="o">-</span><span class="n">t0_obs</span>
+
+    <span class="k">return</span> <span class="n">env</span><span class="p">,</span> <span class="n">history</span><span class="p">,</span> <span class="n">t_ctm</span><span class="p">,</span> <span class="n">t_obs</span></div>
+
+<span class="k">def</span> <span class="nf">run_overlap</span><span class="p">(</span><span class="n">state1</span><span class="p">,</span> <span class="n">state2</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">conv_check</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ctm_args</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">ctm_args</span><span class="p">,</span> <span class="n">global_args</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">global_args</span><span class="p">):</span>
+    <span class="c1"># r&quot;&quot;&quot;</span>
+    <span class="c1"># :param state: wavefunction</span>
+    <span class="c1"># :param env: environment</span>
+    <span class="c1"># :param conv_check: function which determines the convergence of CTM algorithm. If ``None``,</span>
+    <span class="c1">#                    the algorithm performs ``ctm_args.ctm_max_iter`` iterations.</span>
+    <span class="c1"># :param ctm_args: CTM algorithm configuration</span>
+    <span class="c1"># :param global_args: global configuration</span>
+    <span class="c1"># :type state: IPEPS</span>
+    <span class="c1"># :type env: ENV</span>
+    <span class="c1"># :type conv_check: function(IPEPS,ENV,list[float],CTMARGS)-&gt;bool</span>
+    <span class="c1"># :type ctm_args: CTMARGS</span>
+    <span class="c1"># :type global_args: GLOBALARGS</span>
+
+    <span class="c1"># Executes directional CTM algorithm for generic iPEPS starting from the intial environment ``env``.</span>
+    <span class="c1"># TODO add reference</span>
+    <span class="c1"># &quot;&quot;&quot;</span>
+
+    <span class="c1"># 0) Create double-layer (DL) tensors, preserving the same convention</span>
+    <span class="c1"># for order of indices</span>
+    <span class="c1">#</span>
+    <span class="c1">#     /           /</span>
+    <span class="c1">#  --A1^dag-- = --a--</span>
+    <span class="c1">#   /|          /</span>
+    <span class="c1">#    |/</span>
+    <span class="c1">#  --A2--</span>
+    <span class="c1">#   /</span>
+    <span class="c1">#</span>
+    <span class="n">sitesDL</span><span class="o">=</span><span class="nb">dict</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">coord</span><span class="p">,</span><span class="n">site</span> <span class="ow">in</span> <span class="n">state1</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">A1</span> <span class="o">=</span> <span class="n">state1</span><span class="o">.</span><span class="n">site</span><span class="p">((</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+        <span class="n">A2</span> <span class="o">=</span> <span class="n">state2</span><span class="o">.</span><span class="n">site</span><span class="p">((</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+        <span class="n">dimsA</span> <span class="o">=</span> <span class="n">A1</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+        <span class="n">a</span> <span class="o">=</span> <span class="n">contiguous</span><span class="p">(</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;mefgh,mabcd-&gt;eafbgchd&#39;</span><span class="p">,</span><span class="n">A1</span><span class="p">,</span><span class="n">conj</span><span class="p">(</span><span class="n">A2</span><span class="p">)))</span>
+        <span class="n">a</span> <span class="o">=</span> <span class="n">view</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="p">(</span><span class="n">dimsA</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span><span class="n">dimsA</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">dimsA</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
+        <span class="n">sitesDL</span><span class="p">[</span><span class="n">coord</span><span class="p">]</span><span class="o">=</span><span class="n">a</span>
+    <span class="n">stateDL</span> <span class="o">=</span> <span class="n">IPEPS</span><span class="p">(</span><span class="n">sitesDL</span><span class="p">,</span><span class="n">state1</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">)</span>
+
+    <span class="c1"># 1) perform CTMRG</span>
+    <span class="n">t_obs</span><span class="o">=</span><span class="n">t_ctm</span><span class="o">=</span><span class="mf">0.</span>
+    <span class="n">history</span><span class="o">=</span><span class="kc">None</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ctm_args</span><span class="o">.</span><span class="n">ctm_max_iter</span><span class="p">):</span>
+        <span class="n">t0_ctm</span><span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">direction</span> <span class="ow">in</span> <span class="n">ctm_args</span><span class="o">.</span><span class="n">ctm_move_sequence</span><span class="p">:</span>
+            <span class="n">ctm_MOVE</span><span class="p">(</span><span class="n">direction</span><span class="p">,</span> <span class="n">stateDL</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">ctm_args</span><span class="o">=</span><span class="n">ctm_args</span><span class="p">,</span> <span class="n">global_args</span><span class="o">=</span><span class="n">global_args</span><span class="p">,</span> \
+                <span class="n">verbosity</span><span class="o">=</span><span class="n">ctm_args</span><span class="o">.</span><span class="n">verbosity_ctm_move</span><span class="p">)</span>
+        <span class="n">t1_ctm</span><span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+
+        <span class="n">t0_obs</span><span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">conv_check</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># evaluate convergence of the CTMRG procedure</span>
+            <span class="n">converged</span><span class="p">,</span> <span class="n">history</span> <span class="o">=</span> <span class="n">conv_check</span><span class="p">(</span><span class="n">state1</span><span class="p">,</span> <span class="n">state2</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">history</span><span class="p">,</span> <span class="n">ctm_args</span><span class="o">=</span><span class="n">ctm_args</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">ctm_args</span><span class="o">.</span><span class="n">verbosity_ctm_convergence</span><span class="o">&gt;</span><span class="mi">1</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="n">history</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">converged</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">ctm_args</span><span class="o">.</span><span class="n">verbosity_ctm_convergence</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;CTMRG  converged at iter= </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">, history= </span><span class="si">{</span><span class="n">history</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="k">break</span>
+        <span class="n">t1_obs</span><span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+
+        <span class="n">t_ctm</span><span class="o">+=</span> <span class="n">t1_ctm</span><span class="o">-</span><span class="n">t0_ctm</span>
+        <span class="n">t_obs</span><span class="o">+=</span> <span class="n">t1_obs</span><span class="o">-</span><span class="n">t0_obs</span>
+
+    <span class="k">return</span> <span class="n">env</span><span class="p">,</span> <span class="n">history</span><span class="p">,</span> <span class="n">t_ctm</span><span class="p">,</span> <span class="n">t_obs</span>
+
+<span class="c1"># performs </span>
+<span class="c1"># </span>
+<div class="viewcode-block" id="ctm_MOVE"><a class="viewcode-back" href="../../../envs/generic/ctmrg.html#ctm.generic.ctmrg.ctm_MOVE">[docs]</a><span class="k">def</span> <span class="nf">ctm_MOVE</span><span class="p">(</span><span class="n">direction</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">ctm_args</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">ctm_args</span><span class="p">,</span> <span class="n">global_args</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">global_args</span><span class="p">,</span> \
+    <span class="n">verbosity</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">diagnostics</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    :param direction: one of Up=(0,-1), Left=(-1,0), Down=(0,1), Right=(1,0)</span>
+<span class="sd">    :type direction: tuple(int,int)</span>
+<span class="sd">    :param state: wavefunction</span>
+<span class="sd">    :param env: environment</span>
+<span class="sd">    :param ctm_args: CTM algorithm configuration</span>
+<span class="sd">    :param global_args: global configuration</span>
+<span class="sd">    :type state: IPEPS</span>
+<span class="sd">    :type env: ENV</span>
+<span class="sd">    :type ctm_args: CTMARGS</span>
+<span class="sd">    :type global_args: GLOBALARGS</span>
+
+<span class="sd">    Executes a single directional CTM move in one of the directions. First, build  </span>
+<span class="sd">    projectors for each non-equivalent bond (to be truncated) in the unit cell of iPEPS.</span>
+<span class="sd">    Second, construct enlarged environment tensors and then truncate them </span>
+<span class="sd">    to obtain updated environment tensors.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># select projector function</span>
+    <span class="k">if</span> <span class="n">ctm_args</span><span class="o">.</span><span class="n">projector_method</span><span class="o">==</span><span class="s1">&#39;4X4&#39;</span><span class="p">:</span>
+        <span class="n">ctm_get_projectors</span><span class="o">=</span><span class="n">ctm_get_projectors_4x4</span>
+    <span class="k">elif</span> <span class="n">ctm_args</span><span class="o">.</span><span class="n">projector_method</span><span class="o">==</span><span class="s1">&#39;4X2&#39;</span><span class="p">:</span>
+        <span class="n">ctm_get_projectors</span><span class="o">=</span><span class="n">ctm_get_projectors_4x2</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid Projector method: &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">ctm_args</span><span class="o">.</span><span class="n">projector_method</span><span class="p">))</span>
+
+    <span class="c1"># EXPERIMENTAL</span>
+    <span class="c1"># 0) extract raw tensors as tuple</span>
+    <span class="n">tensors</span><span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span> \
+        <span class="o">+</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span> <span class="o">+</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+
+    <span class="k">def</span> <span class="nf">move_normalize_c</span><span class="p">(</span><span class="n">nC1</span><span class="p">,</span> <span class="n">nC2</span><span class="p">,</span> <span class="n">nT</span><span class="p">,</span> <span class="n">norm_type</span><span class="o">=</span><span class="n">ctm_args</span><span class="o">.</span><span class="n">ctm_absorb_normalization</span><span class="p">,</span>\
+        <span class="n">verbosity</span><span class="o">=</span> <span class="n">ctm_args</span><span class="o">.</span><span class="n">verbosity_ctm_move</span><span class="p">):</span>
+        <span class="n">_ord</span><span class="o">=</span><span class="mi">2</span>
+        <span class="k">if</span> <span class="n">norm_type</span><span class="o">==</span><span class="s1">&#39;inf&#39;</span><span class="p">:</span>
+            <span class="n">_ord</span><span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="s1">&#39;inf&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">_torch_version_check</span><span class="p">(</span><span class="s2">&quot;1.9.0&quot;</span><span class="p">):</span>
+            <span class="n">scale_nC1</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">vector_norm</span><span class="p">(</span><span class="n">nC1</span><span class="p">,</span><span class="nb">ord</span><span class="o">=</span><span class="n">_ord</span><span class="p">)</span>
+            <span class="n">scale_nC2</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">vector_norm</span><span class="p">(</span><span class="n">nC2</span><span class="p">,</span><span class="nb">ord</span><span class="o">=</span><span class="n">_ord</span><span class="p">)</span>
+            <span class="n">scale_nT</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">vector_norm</span><span class="p">(</span><span class="n">nT</span><span class="p">,</span><span class="nb">ord</span><span class="o">=</span><span class="n">_ord</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">scale_nC1</span><span class="o">=</span> <span class="n">nC1</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">p</span><span class="o">=</span><span class="n">_ord</span><span class="p">)</span>
+            <span class="n">scale_nC2</span><span class="o">=</span> <span class="n">nC2</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">p</span><span class="o">=</span><span class="n">_ord</span><span class="p">)</span>
+            <span class="n">scale_nT</span><span class="o">=</span> <span class="n">nT</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">p</span><span class="o">=</span><span class="n">_ord</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;nC1 </span><span class="si">{</span><span class="n">scale_nC1</span><span class="si">}</span><span class="s2"> nC2 </span><span class="si">{</span><span class="n">scale_nC2</span><span class="si">}</span><span class="s2"> nT </span><span class="si">{</span><span class="n">scale_nT</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">nC1</span> <span class="o">=</span> <span class="n">nC1</span><span class="o">/</span><span class="n">scale_nC1</span>
+        <span class="n">nC2</span> <span class="o">=</span> <span class="n">nC2</span><span class="o">/</span><span class="n">scale_nC2</span>
+        <span class="n">nT</span> <span class="o">=</span> <span class="n">nT</span><span class="o">/</span><span class="n">scale_nT</span>
+        <span class="k">return</span> <span class="n">nC1</span><span class="p">,</span> <span class="n">nC2</span><span class="p">,</span> <span class="n">nT</span>
+
+    <span class="c1"># function wrapping up the core of the CTM MOVE segment of CTM algorithm</span>
+    <span class="k">def</span> <span class="nf">ctm_MOVE_c</span><span class="p">(</span><span class="o">*</span><span class="n">tensors</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">global_args</span><span class="o">.</span><span class="n">device</span><span class="o">==</span><span class="s1">&#39;cpu&#39;</span> <span class="ow">and</span> <span class="n">global_args</span><span class="o">.</span><span class="n">offload_to_gpu</span> <span class="o">!=</span> <span class="s1">&#39;None&#39;</span><span class="p">:</span>
+            <span class="n">tensors</span><span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span> <span class="n">t</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">global_args</span><span class="o">.</span><span class="n">offload_to_gpu</span><span class="p">)</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">tensors</span> <span class="p">)</span>
+
+        <span class="c1"># 1) wrap raw tensors back into IPEPS and ENV classes</span>
+        <span class="n">sites_loc</span><span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span><span class="n">tensors</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="nb">len</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="p">)]))</span>
+        <span class="n">state_loc</span><span class="o">=</span> <span class="n">IPEPS</span><span class="p">(</span><span class="n">sites_loc</span><span class="p">,</span> <span class="n">vertexToSite</span><span class="o">=</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">)</span>
+        <span class="n">env_loc</span><span class="o">=</span> <span class="n">ENV</span><span class="p">(</span><span class="n">env</span><span class="o">.</span><span class="n">chi</span><span class="p">)</span>
+        <span class="n">env_loc</span><span class="o">.</span><span class="n">C</span><span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span><span class="n">tensors</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="p">):</span><span class="nb">len</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="p">)</span><span class="o">+</span><span class="nb">len</span><span class="p">(</span><span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">)]))</span>
+        <span class="n">env_loc</span><span class="o">.</span><span class="n">T</span><span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span><span class="n">tensors</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="p">)</span><span class="o">+</span><span class="nb">len</span><span class="p">(</span><span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">):]))</span>
+        <span class="c1"># Loop over all non-equivalent sites of ipeps</span>
+        <span class="c1"># and compute projectors P(coord), P^tilde(coord)</span>
+
+        <span class="n">P</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="n">Pt</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">coord</span><span class="p">,</span><span class="n">site</span> <span class="ow">in</span> <span class="n">state_loc</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="c1"># TODO compute isometries</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">diagnostics</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">):</span> <span class="n">diagnostics</span><span class="p">[</span><span class="s2">&quot;coord&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">coord</span>
+            <span class="n">P</span><span class="p">[</span><span class="n">coord</span><span class="p">],</span> <span class="n">Pt</span><span class="p">[</span><span class="n">coord</span><span class="p">]</span> <span class="o">=</span> <span class="n">ctm_get_projectors</span><span class="p">(</span><span class="n">direction</span><span class="p">,</span> <span class="n">coord</span><span class="p">,</span> <span class="n">state_loc</span><span class="p">,</span> <span class="n">env_loc</span><span class="p">,</span>\
+                <span class="n">ctm_args</span><span class="p">,</span> <span class="n">global_args</span><span class="p">,</span> <span class="n">diagnostics</span><span class="o">=</span><span class="n">diagnostics</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;P,Pt RIGHT &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot; P: &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">P</span><span class="p">[</span><span class="n">coord</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">())</span><span class="o">+</span><span class="s2">&quot; Pt: &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">Pt</span><span class="p">[</span><span class="n">coord</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+            <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">1</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="n">P</span><span class="p">[</span><span class="n">coord</span><span class="p">])</span>
+                <span class="nb">print</span><span class="p">(</span><span class="n">Pt</span><span class="p">[</span><span class="n">coord</span><span class="p">])</span>
+
+        <span class="c1"># Loop over all non-equivalent sites of ipeps</span>
+        <span class="c1"># and perform absorption and truncation</span>
+        <span class="n">nC1</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="n">nC2</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="n">nT</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">coord</span> <span class="ow">in</span> <span class="n">state_loc</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">direction</span><span class="o">==</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+                <span class="n">nC1</span><span class="p">[</span><span class="n">coord</span><span class="p">],</span> <span class="n">nC2</span><span class="p">[</span><span class="n">coord</span><span class="p">],</span> <span class="n">nT</span><span class="p">[</span><span class="n">coord</span><span class="p">]</span> <span class="o">=</span> <span class="n">absorb_truncate_CTM_MOVE_UP</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">state_loc</span><span class="p">,</span> <span class="n">env_loc</span><span class="p">,</span> <span class="n">P</span><span class="p">,</span> <span class="n">Pt</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">direction</span><span class="o">==</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">):</span>
+                <span class="n">nC1</span><span class="p">[</span><span class="n">coord</span><span class="p">],</span> <span class="n">nC2</span><span class="p">[</span><span class="n">coord</span><span class="p">],</span> <span class="n">nT</span><span class="p">[</span><span class="n">coord</span><span class="p">]</span> <span class="o">=</span> <span class="n">absorb_truncate_CTM_MOVE_LEFT</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">state_loc</span><span class="p">,</span> <span class="n">env_loc</span><span class="p">,</span> <span class="n">P</span><span class="p">,</span> <span class="n">Pt</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">direction</span><span class="o">==</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">):</span>
+                <span class="n">nC1</span><span class="p">[</span><span class="n">coord</span><span class="p">],</span> <span class="n">nC2</span><span class="p">[</span><span class="n">coord</span><span class="p">],</span> <span class="n">nT</span><span class="p">[</span><span class="n">coord</span><span class="p">]</span> <span class="o">=</span> <span class="n">absorb_truncate_CTM_MOVE_DOWN</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">state_loc</span><span class="p">,</span> <span class="n">env_loc</span><span class="p">,</span> <span class="n">P</span><span class="p">,</span> <span class="n">Pt</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">direction</span><span class="o">==</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">):</span>
+                <span class="n">nC1</span><span class="p">[</span><span class="n">coord</span><span class="p">],</span> <span class="n">nC2</span><span class="p">[</span><span class="n">coord</span><span class="p">],</span> <span class="n">nT</span><span class="p">[</span><span class="n">coord</span><span class="p">]</span> <span class="o">=</span> <span class="n">absorb_truncate_CTM_MOVE_RIGHT</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">state_loc</span><span class="p">,</span> <span class="n">env_loc</span><span class="p">,</span> <span class="n">P</span><span class="p">,</span> <span class="n">Pt</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid direction: &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">direction</span><span class="p">))</span>
+            <span class="n">nC1</span><span class="p">[</span><span class="n">coord</span><span class="p">],</span> <span class="n">nC2</span><span class="p">[</span><span class="n">coord</span><span class="p">],</span> <span class="n">nT</span><span class="p">[</span><span class="n">coord</span><span class="p">]</span><span class="o">=</span> <span class="n">move_normalize_c</span><span class="p">(</span><span class="n">nC1</span><span class="p">[</span><span class="n">coord</span><span class="p">],</span> <span class="n">nC2</span><span class="p">[</span><span class="n">coord</span><span class="p">],</span> <span class="n">nT</span><span class="p">[</span><span class="n">coord</span><span class="p">])</span>
+
+        <span class="c1"># 2) Return raw new tensors</span>
+        <span class="n">ret_list</span><span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">nC1</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">nC1</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span> <span class="o">+</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">nC2</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">nC2</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span> \
+            <span class="o">+</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">nT</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">nT</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        <span class="k">if</span> <span class="n">global_args</span><span class="o">.</span><span class="n">device</span><span class="o">==</span><span class="s1">&#39;cpu&#39;</span> <span class="ow">and</span> <span class="n">global_args</span><span class="o">.</span><span class="n">offload_to_gpu</span> <span class="o">!=</span> <span class="s1">&#39;None&#39;</span><span class="p">:</span>
+            <span class="n">ret_list</span><span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span> <span class="n">t</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">global_args</span><span class="o">.</span><span class="n">device</span><span class="p">)</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">ret_list</span> <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">ret_list</span>
+
+    <span class="c1"># Call the core function, allowing for checkpointing</span>
+    <span class="k">if</span> <span class="n">ctm_args</span><span class="o">.</span><span class="n">fwd_checkpoint_move</span><span class="p">:</span>
+        <span class="n">new_tensors</span><span class="o">=</span> <span class="n">checkpoint</span><span class="p">(</span><span class="n">ctm_MOVE_c</span><span class="p">,</span><span class="o">*</span><span class="n">tensors</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">new_tensors</span><span class="o">=</span> <span class="n">ctm_MOVE_c</span><span class="p">(</span><span class="o">*</span><span class="n">tensors</span><span class="p">)</span>
+    
+    <span class="c1"># 3) warp the returned raw tensor in dictionary</span>
+    <span class="n">tmp_coords</span><span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+    <span class="n">count_coord</span><span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">tmp_coords</span><span class="p">)</span>
+    <span class="n">nC1</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">tmp_coords</span><span class="p">,</span> <span class="n">new_tensors</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">count_coord</span><span class="p">]))</span>
+    <span class="n">nC2</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">tmp_coords</span><span class="p">,</span> <span class="n">new_tensors</span><span class="p">[</span><span class="n">count_coord</span><span class="p">:</span><span class="mi">2</span><span class="o">*</span><span class="n">count_coord</span><span class="p">]))</span>
+    <span class="n">nT</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">tmp_coords</span><span class="p">,</span> <span class="n">new_tensors</span><span class="p">[</span><span class="mi">2</span><span class="o">*</span><span class="n">count_coord</span><span class="p">:]))</span>
+
+    <span class="c1"># Assign new nC1,nT,nC2 to appropriate environment tensors</span>
+    <span class="n">rel_CandT_vecs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+    <span class="c1"># specify relative vectors identifying the environment tensors</span>
+    <span class="c1"># with respect to the direction </span>
+    <span class="k">if</span> <span class="n">direction</span><span class="o">==</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">rel_CandT_vecs</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;nC1&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="s2">&quot;nC2&quot;</span><span class="p">:</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="s2">&quot;nT&quot;</span><span class="p">:</span> <span class="n">direction</span><span class="p">}</span>
+    <span class="k">elif</span> <span class="n">direction</span><span class="o">==</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">):</span>
+        <span class="n">rel_CandT_vecs</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;nC1&quot;</span><span class="p">:</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="s2">&quot;nC2&quot;</span><span class="p">:</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="s2">&quot;nT&quot;</span><span class="p">:</span> <span class="n">direction</span><span class="p">}</span>
+    <span class="k">elif</span> <span class="n">direction</span><span class="o">==</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">rel_CandT_vecs</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;nC1&quot;</span><span class="p">:</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="s2">&quot;nC2&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="s2">&quot;nT&quot;</span><span class="p">:</span> <span class="n">direction</span><span class="p">}</span>
+    <span class="k">elif</span> <span class="n">direction</span><span class="o">==</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">):</span>
+        <span class="n">rel_CandT_vecs</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;nC1&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="s2">&quot;nC2&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="s2">&quot;nT&quot;</span><span class="p">:</span> <span class="n">direction</span><span class="p">}</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid direction: &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">direction</span><span class="p">))</span>
+
+    <span class="k">for</span> <span class="n">coord</span><span class="p">,</span><span class="n">site</span> <span class="ow">in</span> <span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">new_coord</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">((</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="n">direction</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">direction</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+        <span class="c1"># print(&quot;coord: &quot;+str(coord)+&quot; + &quot;+str(direction)+&quot; -&gt; &quot;+str(new_coord))</span>
+        
+        <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">new_coord</span><span class="p">,</span><span class="n">rel_CandT_vecs</span><span class="p">[</span><span class="s2">&quot;nC1&quot;</span><span class="p">])]</span> <span class="o">=</span> <span class="n">nC1</span><span class="p">[</span><span class="n">coord</span><span class="p">]</span>
+        <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">new_coord</span><span class="p">,</span><span class="n">rel_CandT_vecs</span><span class="p">[</span><span class="s2">&quot;nC2&quot;</span><span class="p">])]</span> <span class="o">=</span> <span class="n">nC2</span><span class="p">[</span><span class="n">coord</span><span class="p">]</span>
+        <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">new_coord</span><span class="p">,</span><span class="n">rel_CandT_vecs</span><span class="p">[</span><span class="s2">&quot;nT&quot;</span><span class="p">])]</span> <span class="o">=</span> <span class="n">nT</span><span class="p">[</span><span class="n">coord</span><span class="p">]</span></div>
+    
+<span class="c1">#####################################################################</span>
+<span class="c1"># functions performing absorption and truncation step</span>
+<span class="c1">#####################################################################</span>
+<span class="k">def</span> <span class="nf">absorb_truncate_CTM_MOVE_UP</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">P</span><span class="p">,</span> <span class="n">Pt</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="n">vec</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">coord_shift_left</span><span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">((</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="n">vec</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">vec</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+    <span class="n">coord_shift_right</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">((</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="n">vec</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="n">vec</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+    <span class="n">tensors</span><span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">coord</span><span class="p">,(</span><span class="mi">1</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">))],</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">coord</span><span class="p">,(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">))],</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">coord</span><span class="p">,(</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">))],</span> \
+        <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">coord</span><span class="p">,(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">))],</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">coord</span><span class="p">,(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">))],</span> <span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">coord</span><span class="p">),</span> \
+        <span class="n">view</span><span class="p">(</span><span class="n">P</span><span class="p">[</span><span class="n">coord</span><span class="p">],</span> <span class="p">(</span><span class="n">env</span><span class="o">.</span><span class="n">chi</span><span class="p">,</span><span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">coord_shift_left</span><span class="p">)</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="mi">3</span><span class="p">],</span><span class="n">env</span><span class="o">.</span><span class="n">chi</span><span class="p">)),</span> \
+        <span class="n">view</span><span class="p">(</span><span class="n">Pt</span><span class="p">[</span><span class="n">coord</span><span class="p">],</span> <span class="p">(</span><span class="n">env</span><span class="o">.</span><span class="n">chi</span><span class="p">,</span><span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="mi">1</span><span class="p">],</span><span class="n">env</span><span class="o">.</span><span class="n">chi</span><span class="p">)),</span> \
+        <span class="n">view</span><span class="p">(</span><span class="n">P</span><span class="p">[</span><span class="n">coord_shift_right</span><span class="p">],</span> <span class="p">(</span><span class="n">env</span><span class="o">.</span><span class="n">chi</span><span class="p">,</span><span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="mi">3</span><span class="p">],</span><span class="n">env</span><span class="o">.</span><span class="n">chi</span><span class="p">)),</span> \
+        <span class="n">view</span><span class="p">(</span><span class="n">Pt</span><span class="p">[</span><span class="n">coord_shift_right</span><span class="p">],</span> <span class="p">(</span><span class="n">env</span><span class="o">.</span><span class="n">chi</span><span class="p">,</span><span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">coord_shift_right</span><span class="p">)</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="mi">1</span><span class="p">],</span><span class="n">env</span><span class="o">.</span><span class="n">chi</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="n">cfg</span><span class="o">.</span><span class="n">ctm_args</span><span class="o">.</span><span class="n">fwd_checkpoint_absorb</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">checkpoint</span><span class="p">(</span><span class="n">absorb_truncate_CTM_MOVE_UP_c</span><span class="p">,</span><span class="o">*</span><span class="n">tensors</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">absorb_truncate_CTM_MOVE_UP_c</span><span class="p">(</span><span class="o">*</span><span class="n">tensors</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">absorb_truncate_CTM_MOVE_UP_c</span><span class="p">(</span><span class="o">*</span><span class="n">tensors</span><span class="p">):</span>
+    <span class="n">C1</span><span class="p">,</span> <span class="n">T1</span><span class="p">,</span> <span class="n">T</span><span class="p">,</span> <span class="n">T2</span><span class="p">,</span> <span class="n">C2</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">P2</span><span class="p">,</span> <span class="n">Pt2</span><span class="p">,</span> <span class="n">P1</span><span class="p">,</span> <span class="n">Pt1</span><span class="o">=</span> <span class="n">tensors</span>
+
+    <span class="c1"># 0--C1</span>
+    <span class="c1">#    1</span>
+    <span class="c1">#    0</span>
+    <span class="c1"># 1--T1</span>
+    <span class="c1">#    2 </span>
+    <span class="n">nC1</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C1</span><span class="p">,</span><span class="n">T1</span><span class="p">,([</span><span class="mi">1</span><span class="p">],[</span><span class="mi">0</span><span class="p">]))</span>
+
+    <span class="c1">#        --0 0--C1</span>
+    <span class="c1">#       |       |</span>
+    <span class="c1"># 0&lt;-2--Pt1     |</span>
+    <span class="c1">#       |       | </span>
+    <span class="c1">#        --1 1--T1</span>
+    <span class="c1">#               2-&gt;1</span>
+    <span class="n">nC1</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">Pt1</span><span class="p">,</span> <span class="n">nC1</span><span class="p">,([</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">],[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]))</span>
+
+    <span class="c1"># C2--1-&gt;0</span>
+    <span class="c1"># 0</span>
+    <span class="c1"># 0</span>
+    <span class="c1"># T2--2</span>
+    <span class="c1"># 1</span>
+    <span class="n">nC2</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C2</span><span class="p">,</span> <span class="n">T2</span><span class="p">,([</span><span class="mi">0</span><span class="p">],[</span><span class="mi">0</span><span class="p">]))</span> 
+
+    <span class="c1"># C2--0 0--</span>
+    <span class="c1"># |        |        </span>
+    <span class="c1"># |        P2--2-&gt;1</span>
+    <span class="c1"># |        |</span>
+    <span class="c1"># T2--2 1--</span>
+    <span class="c1"># 1-&gt;0</span>
+    <span class="n">nC2</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">nC2</span><span class="p">,</span> <span class="n">P2</span><span class="p">,([</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">],[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]))</span>
+
+    <span class="c1">#        --0 0--T--2-&gt;3</span>
+    <span class="c1">#       |       1-&gt;2</span>
+    <span class="c1"># 1&lt;-2--Pt2</span>
+    <span class="c1">#       |</span>
+    <span class="c1">#        --1-&gt;0 </span>
+    <span class="n">nT</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">Pt2</span><span class="p">,</span> <span class="n">T</span><span class="p">,</span> <span class="p">([</span><span class="mi">0</span><span class="p">],[</span><span class="mi">0</span><span class="p">]))</span>
+
+    <span class="c1">#        -------T--3-&gt;1</span>
+    <span class="c1">#       |       2</span>
+    <span class="c1"># 0&lt;-1--Pt2     | </span>
+    <span class="c1">#       |       0</span>
+    <span class="c1">#        --0 1--A--3</span>
+    <span class="c1">#               2 </span>
+    <span class="n">nT</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">nT</span><span class="p">,</span> <span class="n">A</span><span class="p">,([</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">],[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">]))</span>
+
+    <span class="c1">#     -------T--1 0--</span>
+    <span class="c1">#    |       |       |</span>
+    <span class="c1"># 0--Pt2     |       P1--2</span>
+    <span class="c1">#    |       |       |</span>
+    <span class="c1">#     -------A--3 1--</span>
+    <span class="c1">#            2-&gt;1 </span>
+    <span class="n">nT</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">nT</span><span class="p">,</span> <span class="n">P1</span><span class="p">,([</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">],[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]))</span>
+    <span class="n">nT</span> <span class="o">=</span> <span class="n">contiguous</span><span class="p">(</span><span class="n">nT</span><span class="p">)</span>
+
+    <span class="c1"># Assign new C,T </span>
+    <span class="c1">#</span>
+    <span class="c1"># C(coord,(-1,-1))--                --T(coord,(0,-1))--             --C(coord,(1,-1))</span>
+    <span class="c1"># |                  P2--       --Pt2 |                P1--     -Pt1  |</span>
+    <span class="c1"># T(coord,(-1,0))---                --A(coord)---------             --T(coord,(1,0))</span>
+    <span class="c1"># |                                   |                               |</span>
+    <span class="c1">#</span>
+    <span class="c1"># =&gt;                            </span>
+    <span class="c1">#</span>
+    <span class="c1"># C^new(coord+(0,1),(-1,-1))--      --T^new(coord+(0,1),(0,-1))--   --C^new(coord+(0,1),(1,-1))</span>
+    <span class="c1"># |                                   |                               |</span>
+    <span class="k">return</span> <span class="n">nC1</span><span class="p">,</span> <span class="n">nC2</span><span class="p">,</span> <span class="n">nT</span>
+
+<span class="k">def</span> <span class="nf">absorb_truncate_CTM_MOVE_LEFT</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">P</span><span class="p">,</span> <span class="n">Pt</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="n">vec</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">coord_shift_up</span><span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">((</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="n">vec</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="n">vec</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+    <span class="n">coord_shift_down</span><span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">((</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="n">vec</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">vec</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+    <span class="n">tensors</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">coord</span><span class="p">,(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">))],</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">coord</span><span class="p">,(</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">))],</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">coord</span><span class="p">,(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">))],</span> \
+        <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">coord</span><span class="p">,(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">))],</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">coord</span><span class="p">,(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">))],</span> <span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">coord</span><span class="p">),</span> \
+        <span class="n">view</span><span class="p">(</span><span class="n">P</span><span class="p">[</span><span class="n">coord</span><span class="p">],</span> <span class="p">(</span><span class="n">env</span><span class="o">.</span><span class="n">chi</span><span class="p">,</span><span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">coord_shift_down</span><span class="p">)</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="mi">0</span><span class="p">],</span><span class="n">env</span><span class="o">.</span><span class="n">chi</span><span class="p">)),</span> \
+        <span class="n">view</span><span class="p">(</span><span class="n">Pt</span><span class="p">[</span><span class="n">coord</span><span class="p">],</span> <span class="p">(</span><span class="n">env</span><span class="o">.</span><span class="n">chi</span><span class="p">,</span><span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="mi">2</span><span class="p">],</span><span class="n">env</span><span class="o">.</span><span class="n">chi</span><span class="p">)),</span> \
+        <span class="n">view</span><span class="p">(</span><span class="n">P</span><span class="p">[</span><span class="n">coord_shift_up</span><span class="p">],</span> <span class="p">(</span><span class="n">env</span><span class="o">.</span><span class="n">chi</span><span class="p">,</span><span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="mi">0</span><span class="p">],</span><span class="n">env</span><span class="o">.</span><span class="n">chi</span><span class="p">)),</span> \
+        <span class="n">view</span><span class="p">(</span><span class="n">Pt</span><span class="p">[</span><span class="n">coord_shift_up</span><span class="p">],</span> <span class="p">(</span><span class="n">env</span><span class="o">.</span><span class="n">chi</span><span class="p">,</span><span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">coord_shift_up</span><span class="p">)</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="mi">2</span><span class="p">],</span><span class="n">env</span><span class="o">.</span><span class="n">chi</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="n">cfg</span><span class="o">.</span><span class="n">ctm_args</span><span class="o">.</span><span class="n">fwd_checkpoint_absorb</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">checkpoint</span><span class="p">(</span><span class="n">absorb_truncate_CTM_MOVE_LEFT_c</span><span class="p">,</span><span class="o">*</span><span class="n">tensors</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">absorb_truncate_CTM_MOVE_LEFT_c</span><span class="p">(</span><span class="o">*</span><span class="n">tensors</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">absorb_truncate_CTM_MOVE_LEFT_c</span><span class="p">(</span><span class="o">*</span><span class="n">tensors</span><span class="p">):</span>
+    <span class="n">C1</span><span class="p">,</span> <span class="n">T1</span><span class="p">,</span> <span class="n">T</span><span class="p">,</span> <span class="n">T2</span><span class="p">,</span> <span class="n">C2</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">P2</span><span class="p">,</span> <span class="n">Pt2</span><span class="p">,</span> <span class="n">P1</span><span class="p">,</span> <span class="n">Pt1</span><span class="o">=</span> <span class="n">tensors</span>
+
+    <span class="c1"># C1--1 0--T1--2</span>
+    <span class="c1"># |        |</span>
+    <span class="c1"># 0        1</span>
+    <span class="n">nC1</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C1</span><span class="p">,</span><span class="n">T1</span><span class="p">,([</span><span class="mi">1</span><span class="p">],[</span><span class="mi">0</span><span class="p">]))</span>
+
+    <span class="c1"># C1--1 0--T1--2-&gt;1</span>
+    <span class="c1"># |        |</span>
+    <span class="c1"># 0        1</span>
+    <span class="c1"># 0        1</span>
+    <span class="c1"># |___Pt1__|</span>
+    <span class="c1">#     2-&gt;0</span>
+    <span class="n">nC1</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">Pt1</span><span class="p">,</span> <span class="n">nC1</span><span class="p">,([</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">],[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]))</span>
+
+    <span class="c1"># 0        0-&gt;1</span>
+    <span class="c1"># C2--1 1--T2--2</span>
+    <span class="n">nC2</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C2</span><span class="p">,</span> <span class="n">T2</span><span class="p">,([</span><span class="mi">1</span><span class="p">],[</span><span class="mi">1</span><span class="p">]))</span> 
+
+    <span class="c1">#    2-&gt;0</span>
+    <span class="c1"># ___P2___</span>
+    <span class="c1"># 0      1</span>
+    <span class="c1"># 0      1  </span>
+    <span class="c1"># C2-----T2--2-&gt;1</span>
+    <span class="n">nC2</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">P2</span><span class="p">,</span> <span class="n">nC2</span><span class="p">,([</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">],[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]))</span>
+
+    <span class="c1">#    2-&gt;1</span>
+    <span class="c1"># ___P1__</span>
+    <span class="c1"># 0     1-&gt;0</span>
+    <span class="c1"># 0</span>
+    <span class="c1"># T--2-&gt;3</span>
+    <span class="c1"># 1-&gt;2</span>
+    <span class="n">nT</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">P1</span><span class="p">,</span> <span class="n">T</span><span class="p">,([</span><span class="mi">0</span><span class="p">],[</span><span class="mi">0</span><span class="p">]))</span>
+
+    <span class="c1">#    1-&gt;0</span>
+    <span class="c1"># ___P1____</span>
+    <span class="c1"># |       0</span>
+    <span class="c1"># |       0</span>
+    <span class="c1"># T--3 1--A--3</span>
+    <span class="c1"># 2-&gt;1    2</span>
+    <span class="n">nT</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">nT</span><span class="p">,</span> <span class="n">A</span><span class="p">,([</span><span class="mi">0</span><span class="p">,</span><span class="mi">3</span><span class="p">],[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]))</span>
+
+    <span class="c1">#    0</span>
+    <span class="c1"># ___P1___</span>
+    <span class="c1"># |       |</span>
+    <span class="c1"># |       |</span>
+    <span class="c1"># T-------A--3-&gt;1</span>
+    <span class="c1"># 1       2</span>
+    <span class="c1"># 0       1</span>
+    <span class="c1"># |___Pt2_|</span>
+    <span class="c1">#     2</span>
+    <span class="n">nT</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">nT</span><span class="p">,</span> <span class="n">Pt2</span><span class="p">,([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">],[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]))</span>
+    <span class="n">nT</span> <span class="o">=</span> <span class="n">contiguous</span><span class="p">(</span><span class="n">permute</span><span class="p">(</span><span class="n">nT</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">)))</span>
+    
+
+    <span class="c1"># Assign new C,T </span>
+    <span class="c1">#</span>
+    <span class="c1"># C(coord,(-1,-1))--T(coord,(0,-1))-- =&gt; C^new(coord+(1,0),(-1,-1))--</span>
+    <span class="c1"># |________   ______|                    |</span>
+    <span class="c1">#          Pt1</span>
+    <span class="c1">#          |</span>
+    <span class="c1">#</span>
+    <span class="c1">#          |</span>
+    <span class="c1"># _________P1______</span>
+    <span class="c1"># |                |                     |</span>
+    <span class="c1"># T(coord,(-1,0))--A(coord)--            T^new(coord+(1,0),(-1,0))--</span>
+    <span class="c1"># |________   _____|                     |</span>
+    <span class="c1">#          Pt2</span>
+    <span class="c1">#          |                     </span>
+    <span class="c1">#          </span>
+    <span class="c1">#          |</span>
+    <span class="c1">#  ________P2_______</span>
+    <span class="c1"># |                 |                    |</span>
+    <span class="c1"># C(coord,(-1,1))--T(coord,(0,1))--      C^new(coord+(1,0),(-1,1))</span>
+    <span class="k">return</span> <span class="n">nC1</span><span class="p">,</span> <span class="n">nC2</span><span class="p">,</span> <span class="n">nT</span>
+
+<span class="k">def</span> <span class="nf">absorb_truncate_CTM_MOVE_DOWN</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">P</span><span class="p">,</span> <span class="n">Pt</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="n">vec</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">coord_shift_right</span><span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">((</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="n">vec</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">vec</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+    <span class="n">coord_shift_left</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">((</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="n">vec</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="n">vec</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+    <span class="n">tensors</span><span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">coord</span><span class="p">,(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">))],</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">coord</span><span class="p">,(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">))],</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">coord</span><span class="p">,(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">))],</span> \
+        <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">coord</span><span class="p">,(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">))],</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">coord</span><span class="p">,(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">))],</span> <span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">coord</span><span class="p">),</span> \
+        <span class="n">view</span><span class="p">(</span><span class="n">P</span><span class="p">[</span><span class="n">coord</span><span class="p">],</span> <span class="p">(</span><span class="n">env</span><span class="o">.</span><span class="n">chi</span><span class="p">,</span><span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">coord_shift_right</span><span class="p">)</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="mi">1</span><span class="p">],</span><span class="n">env</span><span class="o">.</span><span class="n">chi</span><span class="p">)),</span> \
+        <span class="n">view</span><span class="p">(</span><span class="n">Pt</span><span class="p">[</span><span class="n">coord</span><span class="p">],</span> <span class="p">(</span><span class="n">env</span><span class="o">.</span><span class="n">chi</span><span class="p">,</span><span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="mi">3</span><span class="p">],</span><span class="n">env</span><span class="o">.</span><span class="n">chi</span><span class="p">)),</span> \
+        <span class="n">view</span><span class="p">(</span><span class="n">P</span><span class="p">[</span><span class="n">coord_shift_left</span><span class="p">],</span> <span class="p">(</span><span class="n">env</span><span class="o">.</span><span class="n">chi</span><span class="p">,</span><span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="mi">1</span><span class="p">],</span><span class="n">env</span><span class="o">.</span><span class="n">chi</span><span class="p">)),</span> \
+        <span class="n">view</span><span class="p">(</span><span class="n">Pt</span><span class="p">[</span><span class="n">coord_shift_left</span><span class="p">],</span> <span class="p">(</span><span class="n">env</span><span class="o">.</span><span class="n">chi</span><span class="p">,</span><span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">coord_shift_left</span><span class="p">)</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="mi">3</span><span class="p">],</span><span class="n">env</span><span class="o">.</span><span class="n">chi</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="n">cfg</span><span class="o">.</span><span class="n">ctm_args</span><span class="o">.</span><span class="n">fwd_checkpoint_absorb</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">checkpoint</span><span class="p">(</span><span class="n">absorb_truncate_CTM_MOVE_DOWN_c</span><span class="p">,</span><span class="o">*</span><span class="n">tensors</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">absorb_truncate_CTM_MOVE_DOWN_c</span><span class="p">(</span><span class="o">*</span><span class="n">tensors</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">absorb_truncate_CTM_MOVE_DOWN_c</span><span class="p">(</span><span class="o">*</span><span class="n">tensors</span><span class="p">):</span>
+    <span class="n">C1</span><span class="p">,</span> <span class="n">T1</span><span class="p">,</span> <span class="n">T</span><span class="p">,</span> <span class="n">T2</span><span class="p">,</span> <span class="n">C2</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">P2</span><span class="p">,</span> <span class="n">Pt2</span><span class="p">,</span> <span class="n">P1</span><span class="p">,</span> <span class="n">Pt1</span><span class="o">=</span> <span class="n">tensors</span>
+
+    <span class="c1"># 0-&gt;1</span>
+    <span class="c1"># T1--2-&gt;2</span>
+    <span class="c1"># 1</span>
+    <span class="c1"># 0</span>
+    <span class="c1"># C1--1-&gt;0</span>
+    <span class="n">nC1</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C1</span><span class="p">,</span><span class="n">T1</span><span class="p">,([</span><span class="mi">0</span><span class="p">],[</span><span class="mi">1</span><span class="p">]))</span>
+
+    <span class="c1"># 1-&gt;0</span>
+    <span class="c1"># T1--2 1--</span>
+    <span class="c1"># |        |        </span>
+    <span class="c1"># |        Pt1--2-&gt;1</span>
+    <span class="c1"># |        |</span>
+    <span class="c1"># C1--0 0--   </span>
+    <span class="n">nC1</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">nC1</span><span class="p">,</span> <span class="n">Pt1</span><span class="p">,</span> <span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">],[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]))</span>
+
+    <span class="c1">#    1&lt;-0</span>
+    <span class="c1"># 2&lt;-1--T2</span>
+    <span class="c1">#       2</span>
+    <span class="c1">#       0</span>
+    <span class="c1"># 0&lt;-1--C2</span>
+    <span class="n">nC2</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C2</span><span class="p">,</span> <span class="n">T2</span><span class="p">,([</span><span class="mi">0</span><span class="p">],[</span><span class="mi">2</span><span class="p">]))</span> 
+
+    <span class="c1">#            0&lt;-1</span>
+    <span class="c1">#        --1 2--T2</span>
+    <span class="c1">#       |       |</span>
+    <span class="c1"># 1&lt;-2--P2      |</span>
+    <span class="c1">#       |       | </span>
+    <span class="c1">#        --0 0--C2</span>
+    <span class="n">nC2</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">nC2</span><span class="p">,</span> <span class="n">P2</span><span class="p">,</span> <span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">],[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]))</span>
+
+    <span class="c1">#        --1-&gt;0</span>
+    <span class="c1">#       |</span>
+    <span class="c1"># 1&lt;-2--P1</span>
+    <span class="c1">#       |       0-&gt;2</span>
+    <span class="c1">#        --0 1--T--2-&gt;3 </span>
+    <span class="n">nT</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">P1</span><span class="p">,</span> <span class="n">T</span><span class="p">,</span> <span class="p">([</span><span class="mi">0</span><span class="p">],[</span><span class="mi">1</span><span class="p">]))</span>
+
+    <span class="c1">#               0-&gt;2</span>
+    <span class="c1">#        --0 1--A--3 </span>
+    <span class="c1">#       |       2 </span>
+    <span class="c1"># 0&lt;-1--P1      |</span>
+    <span class="c1">#       |       2</span>
+    <span class="c1">#        -------T--3-&gt;1</span>
+    <span class="n">nT</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">nT</span><span class="p">,</span> <span class="n">A</span><span class="p">,([</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">],[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">]))</span>
+
+    <span class="c1">#               2-&gt;1</span>
+    <span class="c1">#        -------A--3 1--</span>
+    <span class="c1">#       |       |       |</span>
+    <span class="c1">#    0--P1      |       Pt2--2</span>
+    <span class="c1">#       |       |       |</span>
+    <span class="c1">#        -------T--1 0--</span>
+    <span class="n">nT</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">nT</span><span class="p">,</span> <span class="n">Pt2</span><span class="p">,([</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">],[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]))</span>
+    <span class="n">nT</span> <span class="o">=</span> <span class="n">contiguous</span><span class="p">(</span><span class="n">permute</span><span class="p">(</span><span class="n">nT</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">)))</span>
+    
+
+    <span class="c1"># Assign new C,T</span>
+    <span class="c1"># </span>
+    <span class="c1"># |                                 |                              |</span>
+    <span class="c1"># T(coord,(-1,0))--               --A(coord)--------             --T(coord,(1,0))</span>
+    <span class="c1"># |                Pt1--      --P1  |               Pt2--    --P2  |</span>
+    <span class="c1"># C(coord,(-1,1))--               --T(coord,(0,1))--             --C(coord,(1,1))</span>
+    <span class="c1">#</span>
+    <span class="c1"># =&gt;                            </span>
+    <span class="c1">#</span>
+    <span class="c1"># |                                 |                              |</span>
+    <span class="c1"># C^new(coord+(0,-1),(-1,1))--    --T^new(coord+(0,-1),(0,1))--  --C^new(coord+(0,-1),(1,1))</span>
+    <span class="k">return</span> <span class="n">nC1</span><span class="p">,</span> <span class="n">nC2</span><span class="p">,</span> <span class="n">nT</span>
+
+<span class="k">def</span> <span class="nf">absorb_truncate_CTM_MOVE_RIGHT</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">P</span><span class="p">,</span> <span class="n">Pt</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="n">vec</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">coord_shift_down</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">((</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="n">vec</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="n">vec</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+    <span class="n">coord_shift_up</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">((</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="n">vec</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">vec</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+    <span class="n">tensors</span><span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">coord</span><span class="p">,(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">))],</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">coord</span><span class="p">,(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">))],</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">coord</span><span class="p">,(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">))],</span> \
+        <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">coord</span><span class="p">,(</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">))],</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">coord</span><span class="p">,(</span><span class="mi">1</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">))],</span> <span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">coord</span><span class="p">),</span> \
+        <span class="n">view</span><span class="p">(</span><span class="n">P</span><span class="p">[</span><span class="n">coord</span><span class="p">],</span> <span class="p">(</span><span class="n">env</span><span class="o">.</span><span class="n">chi</span><span class="p">,</span><span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">coord_shift_up</span><span class="p">)</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="mi">2</span><span class="p">],</span><span class="n">env</span><span class="o">.</span><span class="n">chi</span><span class="p">)),</span> \
+        <span class="n">view</span><span class="p">(</span><span class="n">Pt</span><span class="p">[</span><span class="n">coord</span><span class="p">],</span> <span class="p">(</span><span class="n">env</span><span class="o">.</span><span class="n">chi</span><span class="p">,</span><span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="mi">0</span><span class="p">],</span><span class="n">env</span><span class="o">.</span><span class="n">chi</span><span class="p">)),</span> \
+        <span class="n">view</span><span class="p">(</span><span class="n">P</span><span class="p">[</span><span class="n">coord_shift_down</span><span class="p">],</span> <span class="p">(</span><span class="n">env</span><span class="o">.</span><span class="n">chi</span><span class="p">,</span><span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="mi">2</span><span class="p">],</span><span class="n">env</span><span class="o">.</span><span class="n">chi</span><span class="p">)),</span> \
+        <span class="n">view</span><span class="p">(</span><span class="n">Pt</span><span class="p">[</span><span class="n">coord_shift_down</span><span class="p">],</span> <span class="p">(</span><span class="n">env</span><span class="o">.</span><span class="n">chi</span><span class="p">,</span><span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">coord_shift_down</span><span class="p">)</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="mi">0</span><span class="p">],</span><span class="n">env</span><span class="o">.</span><span class="n">chi</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="n">cfg</span><span class="o">.</span><span class="n">ctm_args</span><span class="o">.</span><span class="n">fwd_checkpoint_absorb</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">checkpoint</span><span class="p">(</span><span class="n">absorb_truncate_CTM_MOVE_RIGHT_c</span><span class="p">,</span><span class="o">*</span><span class="n">tensors</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">absorb_truncate_CTM_MOVE_RIGHT_c</span><span class="p">(</span><span class="o">*</span><span class="n">tensors</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">absorb_truncate_CTM_MOVE_RIGHT_c</span><span class="p">(</span><span class="o">*</span><span class="n">tensors</span><span class="p">):</span>
+    <span class="n">C1</span><span class="p">,</span> <span class="n">T1</span><span class="p">,</span> <span class="n">T</span><span class="p">,</span> <span class="n">T2</span><span class="p">,</span> <span class="n">C2</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">P2</span><span class="p">,</span> <span class="n">Pt2</span><span class="p">,</span> <span class="n">P1</span><span class="p">,</span> <span class="n">Pt1</span><span class="o">=</span> <span class="n">tensors</span>
+
+    <span class="c1">#       0-&gt;1     0</span>
+    <span class="c1"># 2&lt;-1--T1--2 1--C1</span>
+    <span class="n">nC1</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C1</span><span class="p">,</span> <span class="n">T1</span><span class="p">,([</span><span class="mi">1</span><span class="p">],[</span><span class="mi">2</span><span class="p">]))</span> 
+
+    <span class="c1">#          2-&gt;0</span>
+    <span class="c1">#        __Pt1_</span>
+    <span class="c1">#       1     0</span>
+    <span class="c1">#       1     0</span>
+    <span class="c1"># 1&lt;-2--T1----C1</span>
+    <span class="n">nC1</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">Pt1</span><span class="p">,</span> <span class="n">nC1</span><span class="p">,([</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">],[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]))</span>
+
+    <span class="c1"># 1&lt;-0--T2--2 0--C2</span>
+    <span class="c1">#    2&lt;-1     0&lt;-1</span>
+    <span class="n">nC2</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C2</span><span class="p">,</span><span class="n">T2</span><span class="p">,([</span><span class="mi">0</span><span class="p">],[</span><span class="mi">2</span><span class="p">]))</span>
+
+    <span class="c1"># 0&lt;-1--T2----C2</span>
+    <span class="c1">#       2     0</span>
+    <span class="c1">#       1     0</span>
+    <span class="c1">#       |__P2_|</span>
+    <span class="c1">#          2-&gt;1</span>
+    <span class="n">nC2</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">nC2</span><span class="p">,</span> <span class="n">P2</span><span class="p">,([</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">],[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]))</span>
+
+    <span class="c1">#    1&lt;-2</span>
+    <span class="c1">#    ___Pt2__</span>
+    <span class="c1"># 0&lt;-1      0</span>
+    <span class="c1">#           0</span>
+    <span class="c1">#     2&lt;-1--T</span>
+    <span class="c1">#        3&lt;-2</span>
+    <span class="n">nT</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">Pt2</span><span class="p">,</span> <span class="n">T</span><span class="p">,([</span><span class="mi">0</span><span class="p">],[</span><span class="mi">0</span><span class="p">]))</span>
+
+    <span class="c1">#       0&lt;-1 </span>
+    <span class="c1">#       ___Pt2__</span>
+    <span class="c1">#       0       |</span>
+    <span class="c1">#       0       |</span>
+    <span class="c1"># 2&lt;-1--A--3 2--T</span>
+    <span class="c1">#    3&lt;-2    1&lt;-3</span>
+    <span class="n">nT</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">nT</span><span class="p">,</span> <span class="n">A</span><span class="p">,([</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">],[</span><span class="mi">0</span><span class="p">,</span><span class="mi">3</span><span class="p">]))</span>
+
+    <span class="c1">#          0</span>
+    <span class="c1">#       ___Pt2__</span>
+    <span class="c1">#       |       |</span>
+    <span class="c1">#       |       |</span>
+    <span class="c1"># 1&lt;-2--A-------T</span>
+    <span class="c1">#       3       1</span>
+    <span class="c1">#       1       0</span>
+    <span class="c1">#       |___P1__|</span>
+    <span class="c1">#           2 </span>
+    <span class="n">nT</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">nT</span><span class="p">,</span> <span class="n">P1</span><span class="p">,([</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">],[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]))</span>
+    <span class="n">nT</span> <span class="o">=</span> <span class="n">contiguous</span><span class="p">(</span><span class="n">nT</span><span class="p">)</span>
+    
+
+    <span class="c1"># Assign new C,T </span>
+    <span class="c1">#</span>
+    <span class="c1"># --T(coord,(0,-1))--C(coord,(1,-1)) =&gt;--C^new(coord+(-1,0),(1,-1))</span>
+    <span class="c1">#   |______  ________|                   |</span>
+    <span class="c1">#          P2</span>
+    <span class="c1">#          |</span>
+    <span class="c1">#</span>
+    <span class="c1">#          |</span>
+    <span class="c1">#    ______Pt2</span>
+    <span class="c1">#   |         |                          |</span>
+    <span class="c1"># --A(coord)--T(coord,(1,0))           --T^new(coord+(-1,0),(1,0))</span>
+    <span class="c1">#   |______  _|                          |</span>
+    <span class="c1">#          P1</span>
+    <span class="c1">#          |                     </span>
+    <span class="c1">#          </span>
+    <span class="c1">#          |</span>
+    <span class="c1">#    ______Pt1______</span>
+    <span class="c1">#   |               |                    |</span>
+    <span class="c1"># --T(coord,(0,1))--C(coord,(1,1))     --C^new(coord+(-1,0),(1,1))</span>
+    <span class="k">return</span> <span class="n">nC1</span><span class="p">,</span> <span class="n">nC2</span><span class="p">,</span> <span class="n">nT</span>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Juraj Hasik, Glen B. Mbeng
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

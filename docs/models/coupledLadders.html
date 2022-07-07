@@ -1,0 +1,989 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Coupled Ladders &mdash; peps-torch alpha documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Transverse Field Ising Model" href="ising.html" />
+    <link rel="prev" title="Spin S=2 AKLT Model" href="akltS2.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> peps-torch
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../ipeps.html">iPEPS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../ipeps/ipeps.html">Generic iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../ipeps/ipeps_kagome.html">Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../ipeps/ipeps_c4v.html">1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../ipeps/ipeps_lc_1site_pg.html">1-site iPEPS from lin. combination</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../ipeps/ipess_kagome.html">Generic Kagome iPESS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../ipeps/ipess_kagome_pg.html">Kagome iPESS with point groups</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../ipeps/ipess_kagome_pg_lc.html">Kagome iPESS from lin. combination</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../ipeps.html#abelian-symmetric-ipeps">Abelian-symmetric iPEPS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../ipeps/ipeps_abelian.html">Generic  abelian-symmetric iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../ipeps/ipeps_abelian.html#generic-abelian-symmetric-ipeps-with-weights">Generic abelian-symmetric iPEPS with weights</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../ipeps/ipeps_kagome_abelian.html">Abelian-symmetric Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../ipeps/ipeps_abelian_c4v.html">Abelian-symmetric 1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../ipeps/ipess_kagome_abelian.html">Abelian-symmetric generic Kagome iPESS</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../envs.html">Environments</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../envs/generic.html">Generic iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic/env.html">Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic/ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic/ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic/ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic/rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic/rdm.html#module-ctm.pess_kagome.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic/corrf.html">Correlation functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic/transfer_matrix.html">Transfer Matrices</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../envs/generic_abelian.html">Abelian-symmetric generic iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic_abelian/env_abelian.html">Abelian-symmetric environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic_abelian/ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic_abelian/ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic_abelian/ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic_abelian/rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic_abelian/rdm.html#module-ctm.pess_kagome_abelian.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../envs/one_site_c4v.html">1-site C4v iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../envs/one_site_c4v/env_c4v.html">1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/one_site_c4v/ctmrg_c4v.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/one_site_c4v/rdm_c4v.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/one_site_c4v/transfer_matrix.html">Transfer Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/one_site_c4v/corrf_c4v.html">Correlation functions</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../envs/one_site_c4v_abelian.html">Abelian-symmetric 1-site C4v iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../envs/one_site_c4v_abelian/env_c4v_abelian.html">Abelian-symmetric 1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/one_site_c4v_abelian/ctmrg_c4v_abelian.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/one_site_c4v_abelian/rdm_c4v_abelian.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/one_site_c4v_abelian/corrf_c4v_abelian.html">Correlation functions</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../optim.html">Optimization</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../optim/drivers.html">Optimization drivers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../optim/drivers/ad_optim.html">ad_optim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../optim/drivers/ad_optim_lbfgs_mod.html">ad_optim_lbfgs_mod</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../optim/drivers/ad_optim_sgd_mod.html">ad_optim_sgd_mod</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../optim/optimizers.html">Custom optimizers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../optim/optimizers/lbfgs_modified.html">Extended LBFGS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../optim/optimizers/sgd_modified.html">SGD with linesearch</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../config.html">Configuration</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../config.html#main">Main</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../config.html#global">Global</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../config.html#corner-transfer-matrix-algorithm">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../config.html#optimization">Optimization</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="reference internal" href="../models.html">Models</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="akltS2.html">Spin S=2 AKLT Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="akltS2.html#module-models.akltS2">2x1 and 2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="akltS2.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Coupled Ladders</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#dense-pytorch">Dense (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dense-yast">Dense (YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="ising.html">Transverse Field Ising Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="ising.html#x1-unit-cell">1x1 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ising.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="j1j2.html">J1-J2-J3 and J1-J2-lambda Heisenberg Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="j1j2.html#from-2x1-to-4x2-unit-cell-pytorch">from 2x1 to 4x2 unit cell (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="j1j2.html#from-2x1-to-4x2-unit-cell-dense-yast">from 2x1 to 4x2 unit cell (dense YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="j1j2.html#x1-c4v-pytorch">1x1 C4v (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="j1j2.html#x1-c4v-dense-yast">1x1 C4v (dense YAST)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="jq.html">J-Q Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="jq.html#module-models.jq">2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jq.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="spin_half_kagome.html">SU(2) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="spin_half_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="spin_half_kagome.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="su3_kagome.html">SU(3) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="su3_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="su3_kagome.html#with-explict-u-1-xu-1-symmetry">With explict U(1)xU(1) symmetry</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../groups.html">Groups</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../groups/pg.html">Point group: square lattice</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../groups/su2.html">SU(2)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../groups/su2.html#module-groups.su2_abelian">SU(2) with explicit U(1) structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../groups/su3.html">SU(3)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../groups/su3.html#su-3-with-explicit-u-1-xu-1-structure">SU(3) with explicit U(1)xU(1) structure</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../linalg.html">Linear Algebra</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../linalg/custom_eig.html">Truncated eigendecomposition</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../linalg/custom_svd.html">Truncated SVD</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../linalg/spec_decomp.html">Spectral decompositions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../linalg/spec_decomp.html#module-linalg.svd_gesdd">SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../linalg/spec_decomp.html#module-linalg.svd_arnoldi">Partial SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../linalg/spec_decomp.html#module-linalg.svd_rsvd">Randomized SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../linalg/spec_decomp.html#module-linalg.eig_sym">Symmetric Eigendecomposition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../linalg/spec_decomp.html#module-linalg.eig_arnoldi">Partial diagonalization</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">peps-torch</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../models.html">Models</a> &raquo;</li>
+        
+      <li>Coupled Ladders</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            
+              <!-- User defined GitHub URL -->
+              <a href="https://github.com/jurajHasik/peps-torch" class="fa fa-github"> Edit on GitHub</a>
+            
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <section id="coupled-ladders">
+<h1>Coupled Ladders<a class="headerlink" href="#coupled-ladders" title="Permalink to this heading">¶</a></h1>
+<section id="dense-pytorch">
+<h2>Dense (PyTorch)<a class="headerlink" href="#dense-pytorch" title="Permalink to this heading">¶</a></h2>
+<p>This implementation of SU(2)-symmetric model of coupled spin-1/2 ladders
+on square lattice does not assume any symmetry and works with dense PyTorch tensors.</p>
+<span class="target" id="module-models.coupledLadders"></span><dl class="py class">
+<dt class="sig sig-object py" id="models.coupledLadders.COUPLEDLADDERS">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">models.coupledLadders.</span></span><span class="sig-name descname"><span class="pre">COUPLEDLADDERS</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">alpha=0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bz_val=0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">global_args=&lt;config.GLOBALARGS</span> <span class="pre">object&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/models/coupledLadders.html#COUPLEDLADDERS"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#models.coupledLadders.COUPLEDLADDERS" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>alpha</strong> (<em>float</em>) – nearest-neighbour interaction</p></li>
+<li><p><strong>bz_val</strong> – staggered magnetic field</p></li>
+<li><p><strong>global_args</strong> (<a class="reference internal" href="../config.html#config.GLOBALARGS" title="config.GLOBALARGS"><em>GLOBALARGS</em></a>) – global configuration</p></li>
+</ul>
+</dd>
+</dl>
+<p>Build Hamiltonian of spin-1/2 coupled ladders</p>
+<div class="math notranslate nohighlight">
+\[H = \sum_{i=(x,y)} h2_{i,i+\vec{x}} + \sum_{i=(x,2y)} h2_{i,i+\vec{y}}
++ \alpha \sum_{i=(x,2y+1)} h2_{i,i+\vec{y}} + (-1)^{x+y} B^z h1_{i}\]</div>
+<p>on the square lattice. The spin-1/2 ladders are coupled with strength <span class="math notranslate nohighlight">\(\alpha\)</span>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">y</span>\<span class="n">x</span>
+   <span class="n">_</span><span class="p">:</span><span class="n">__</span><span class="p">:</span><span class="n">__</span><span class="p">:</span><span class="n">__</span><span class="p">:</span><span class="n">_</span>
+<span class="o">...</span><span class="n">_</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">_</span><span class="o">...</span>
+<span class="o">...</span><span class="n">_a__a__a__a_</span><span class="o">...</span>
+<span class="o">...</span><span class="n">_</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">_</span><span class="o">...</span>
+<span class="o">...</span><span class="n">_a__a__a__a_</span><span class="o">...</span>
+<span class="o">...</span><span class="n">_</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">_</span><span class="o">...</span>
+    <span class="p">:</span>  <span class="p">:</span>  <span class="p">:</span>  <span class="p">:</span>      <span class="p">(</span><span class="n">a</span> <span class="o">=</span> \<span class="n">alpha</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>where</p>
+<ul class="simple">
+<li><p><span class="math notranslate nohighlight">\(h2_{ij} = \mathbf{S}_i.\mathbf{S}_j\)</span> with indices of h2 corresponding to <span class="math notranslate nohighlight">\(s_i s_j;s'_i s'_j\)</span></p></li>
+<li><p><span class="math notranslate nohighlight">\(h1_{i} = \mathbf{S}^z_i\)</span> with indices of h1 corresponding to <span class="math notranslate nohighlight">\(s_i ;s'_i\)</span></p></li>
+</ul>
+<dl class="py method">
+<dt class="sig sig-object py" id="models.coupledLadders.COUPLEDLADDERS.energy_2x1_1x2">
+<span class="sig-name descname"><span class="pre">energy_2x1_1x2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/models/coupledLadders.html#COUPLEDLADDERS.energy_2x1_1x2"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#models.coupledLadders.COUPLEDLADDERS.energy_2x1_1x2" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="../ipeps/ipeps.html#ipeps.ipeps.IPEPS" title="ipeps.ipeps.IPEPS"><em>IPEPS</em></a>) – wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="../envs/generic/env.html#ctm.generic.env.ENV" title="ctm.generic.env.ENV"><em>ENV</em></a>) – CTM environment</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>energy per site</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+<p>We assume iPEPS with 2x2 unit cell containing four tensors A, B, C, and D with
+simple PBC tiling:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">A</span> <span class="n">B</span> <span class="n">A</span> <span class="n">B</span>
+<span class="n">C</span> <span class="n">D</span> <span class="n">C</span> <span class="n">D</span>
+<span class="n">A</span> <span class="n">B</span> <span class="n">A</span> <span class="n">B</span>
+<span class="n">C</span> <span class="n">D</span> <span class="n">C</span> <span class="n">D</span>
+</pre></div>
+</div>
+<p>Taking the reduced density matrix <span class="math notranslate nohighlight">\(\rho_{2x1}\)</span> (<span class="math notranslate nohighlight">\(\rho_{1x2}\)</span>)
+of 2x1 (1x2) cluster given by <code class="xref py py-func docutils literal notranslate"><span class="pre">rdm.rdm2x1()</span></code> (<code class="xref py py-func docutils literal notranslate"><span class="pre">rdm.rdm1x2()</span></code>)
+with indexing of sites as follows <span class="math notranslate nohighlight">\(s_0,s_1;s'_0,s'_1\)</span> for both types
+of density matrices:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">rdm2x1</span>   <span class="n">rdm1x2</span>
+
+<span class="n">s0</span><span class="o">--</span><span class="n">s1</span>   <span class="n">s0</span>
+         <span class="o">|</span>
+         <span class="n">s1</span>
+</pre></div>
+</div>
+<p>and without assuming any symmetry on the indices of individual tensors a following
+set of terms has to be evaluated in order to compute energy-per-site:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>   <span class="mi">0</span>       <span class="mi">0</span>       <span class="mi">0</span>
+<span class="mi">1</span><span class="o">--</span><span class="n">A</span><span class="o">--</span><span class="mi">3</span> <span class="mi">1</span><span class="o">--</span><span class="n">B</span><span class="o">--</span><span class="mi">3</span> <span class="mi">1</span><span class="o">--</span><span class="n">A</span><span class="o">--</span><span class="mi">3</span>
+   <span class="mi">2</span>       <span class="mi">2</span>       <span class="mi">2</span>
+   <span class="mi">0</span>       <span class="mi">0</span>       <span class="mi">0</span>
+<span class="mi">1</span><span class="o">--</span><span class="n">C</span><span class="o">--</span><span class="mi">3</span> <span class="mi">1</span><span class="o">--</span><span class="n">D</span><span class="o">--</span><span class="mi">3</span> <span class="mi">1</span><span class="o">--</span><span class="n">C</span><span class="o">--</span><span class="mi">3</span>
+   <span class="mi">2</span>       <span class="mi">2</span>       <span class="mi">2</span>             <span class="n">A</span><span class="o">--</span><span class="mi">3</span> <span class="mi">1</span><span class="o">--</span><span class="n">B</span><span class="p">,</span>      <span class="n">A</span>  <span class="n">B</span>  <span class="n">C</span>  <span class="n">D</span>
+   <span class="mi">0</span>       <span class="mi">0</span>                     <span class="n">B</span><span class="o">--</span><span class="mi">3</span> <span class="mi">1</span><span class="o">--</span><span class="n">A</span><span class="p">,</span>      <span class="mi">2</span>  <span class="mi">2</span>  <span class="mi">2</span>  <span class="mi">2</span>
+<span class="mi">1</span><span class="o">--</span><span class="n">A</span><span class="o">--</span><span class="mi">3</span> <span class="mi">1</span><span class="o">--</span><span class="n">B</span><span class="o">--</span><span class="mi">3</span>                  <span class="n">C</span><span class="o">--</span><span class="mi">3</span> <span class="mi">1</span><span class="o">--</span><span class="n">D</span><span class="p">,</span>      <span class="mi">0</span>  <span class="mi">0</span>  <span class="mi">0</span>  <span class="mi">0</span>
+   <span class="mi">2</span>       <span class="mi">2</span>             <span class="p">,</span> <span class="n">terms</span> <span class="n">D</span><span class="o">--</span><span class="mi">3</span> <span class="mi">1</span><span class="o">--</span><span class="n">C</span><span class="p">,</span> <span class="ow">and</span>  <span class="n">C</span><span class="p">,</span> <span class="n">D</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">B</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="models.coupledLadders.COUPLEDLADDERS.eval_corrf_DD_H">
+<span class="sig-name descname"><span class="pre">eval_corrf_DD_H</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coord</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">direction</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dist</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/models/coupledLadders.html#COUPLEDLADDERS.eval_corrf_DD_H"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#models.coupledLadders.COUPLEDLADDERS.eval_corrf_DD_H" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>coord</strong> (<em>tuple</em><em>(</em><em>int</em><em>,</em><em>int</em><em>)</em>) – tuple (x,y) specifying vertex on a square lattice</p></li>
+<li><p><strong>direction</strong> (<em>tuple</em><em>(</em><em>int</em><em>,</em><em>int</em><em>)</em>) – orientation of correlation function</p></li>
+<li><p><strong>state</strong> (<a class="reference internal" href="../ipeps/ipeps.html#ipeps.ipeps.IPEPS" title="ipeps.ipeps.IPEPS"><em>IPEPS</em></a>) – wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="../envs/generic/env.html#ctm.generic.env.ENV" title="ctm.generic.env.ENV"><em>ENV</em></a>) – CTM environment</p></li>
+<li><p><strong>dist</strong> (<em>int</em>) – maximal distance of correlator</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>dictionary with horizontal dimer-dimer correlation function</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict(str: torch.Tensor)</p>
+</dd>
+</dl>
+<p>Evaluate horizontal dimer-dimer correlation functions</p>
+<div class="math notranslate nohighlight">
+\[\langle(\mathbf{S}(r+3).\mathbf{S}(r+2))(\mathbf{S}(1).\mathbf{S}(0))\rangle\]</div>
+<p>up to r = <code class="docutils literal notranslate"><span class="pre">dist</span></code> in given direction. See <a class="reference internal" href="../envs/generic/corrf.html#ctm.generic.corrf.corrf_2sOH2sOH_E1" title="ctm.generic.corrf.corrf_2sOH2sOH_E1"><code class="xref py py-meth docutils literal notranslate"><span class="pre">ctm.generic.corrf.corrf_2sOH2sOH_E1()</span></code></a>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="models.coupledLadders.COUPLEDLADDERS.eval_corrf_DD_V">
+<span class="sig-name descname"><span class="pre">eval_corrf_DD_V</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coord</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">direction</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dist</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/models/coupledLadders.html#COUPLEDLADDERS.eval_corrf_DD_V"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#models.coupledLadders.COUPLEDLADDERS.eval_corrf_DD_V" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>coord</strong> (<em>tuple</em><em>(</em><em>int</em><em>,</em><em>int</em><em>)</em>) – tuple (x,y) specifying vertex on a square lattice</p></li>
+<li><p><strong>direction</strong> (<em>tuple</em><em>(</em><em>int</em><em>,</em><em>int</em><em>)</em>) – orientation of correlation function</p></li>
+<li><p><strong>state</strong> (<a class="reference internal" href="../ipeps/ipeps.html#ipeps.ipeps.IPEPS" title="ipeps.ipeps.IPEPS"><em>IPEPS</em></a>) – wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="../envs/generic/env.html#ctm.generic.env.ENV" title="ctm.generic.env.ENV"><em>ENV</em></a>) – CTM environment</p></li>
+<li><p><strong>dist</strong> (<em>int</em>) – maximal distance of correlator</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>dictionary with vertical dimer-dimer correlation function</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict(str: torch.Tensor)</p>
+</dd>
+</dl>
+<p>Evaluate vertical dimer-dimer correlation functions</p>
+<div class="math notranslate nohighlight">
+\[\langle(\mathbf{S}(r+1,1).\mathbf{S}(r+1,0))(\mathbf{S}(0,1).\mathbf{S}(0,0))\rangle\]</div>
+<p>up to r = <code class="docutils literal notranslate"><span class="pre">dist</span></code> in given direction. See <a class="reference internal" href="../envs/generic/corrf.html#ctm.generic.corrf.corrf_2sOV2sOV_E2" title="ctm.generic.corrf.corrf_2sOV2sOV_E2"><code class="xref py py-meth docutils literal notranslate"><span class="pre">ctm.generic.corrf.corrf_2sOV2sOV_E2()</span></code></a>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="models.coupledLadders.COUPLEDLADDERS.eval_corrf_SS">
+<span class="sig-name descname"><span class="pre">eval_corrf_SS</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coord</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">direction</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dist</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/models/coupledLadders.html#COUPLEDLADDERS.eval_corrf_SS"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#models.coupledLadders.COUPLEDLADDERS.eval_corrf_SS" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>coord</strong> (<em>tuple</em><em>(</em><em>int</em><em>,</em><em>int</em><em>)</em>) – reference site</p></li>
+<li><p><strong>direction</strong> (<em>tuple</em><em>(</em><em>int</em><em>,</em><em>int</em><em>)</em>) – </p></li>
+<li><p><strong>state</strong> (<a class="reference internal" href="../ipeps/ipeps.html#ipeps.ipeps.IPEPS" title="ipeps.ipeps.IPEPS"><em>IPEPS</em></a>) – wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="../envs/generic/env.html#ctm.generic.env.ENV" title="ctm.generic.env.ENV"><em>ENV</em></a>) – CTM environment</p></li>
+<li><p><strong>dist</strong> (<em>int</em>) – maximal distance of correlator</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>dictionary with full and spin-resolved spin-spin correlation functions</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict(str: torch.Tensor)</p>
+</dd>
+</dl>
+<p>Evaluate spin-spin correlation functions <span class="math notranslate nohighlight">\(\langle\mathbf{S}(r).\mathbf{S}(0)\rangle\)</span>
+up to r = <code class="docutils literal notranslate"><span class="pre">dist</span></code> in given direction. See <a class="reference internal" href="../envs/generic/corrf.html#ctm.generic.corrf.corrf_1sO1sO" title="ctm.generic.corrf.corrf_1sO1sO"><code class="xref py py-meth docutils literal notranslate"><span class="pre">ctm.generic.corrf.corrf_1sO1sO()</span></code></a>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="models.coupledLadders.COUPLEDLADDERS.eval_obs">
+<span class="sig-name descname"><span class="pre">eval_obs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/models/coupledLadders.html#COUPLEDLADDERS.eval_obs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#models.coupledLadders.COUPLEDLADDERS.eval_obs" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="../ipeps/ipeps.html#ipeps.ipeps.IPEPS" title="ipeps.ipeps.IPEPS"><em>IPEPS</em></a>) – wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="../envs/generic/env.html#ctm.generic.env.ENV" title="ctm.generic.env.ENV"><em>ENV</em></a>) – CTM environment</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>expectation values of observables, labels of observables</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[float], list[str]</p>
+</dd>
+</dl>
+<p>Computes the following observables in order</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>average magnetization over the unit cell,</p></li>
+<li><p>magnetization for each site in the unit cell</p></li>
+<li><p><span class="math notranslate nohighlight">\(\langle S^z \rangle,\ \langle S^+ \rangle,\ \langle S^- \rangle\)</span>
+for each site in the unit cell</p></li>
+<li><p><span class="math notranslate nohighlight">\(\mathbf{S}_i.\mathbf{S}_j\)</span> for all non-equivalent nearest neighbour
+bonds</p></li>
+</ol>
+</div></blockquote>
+<p>where the on-site magnetization is defined as</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{align*}
+m &amp;= \sqrt{ \langle S^z \rangle^2+\langle S^x \rangle^2+\langle S^y \rangle^2 }
+=\sqrt{\langle S^z \rangle^2+1/4(\langle S^+ \rangle+\langle S^-
+\rangle)^2 -1/4(\langle S^+\rangle-\langle S^-\rangle)^2} \\
+  &amp;=\sqrt{\langle S^z \rangle^2 + 1/2\langle S^+ \rangle \langle S^- \rangle)}
+\end{align*}\end{split}\]</div>
+<p>Usual spin components can be obtained through the following relations</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{align*}
+S^+ &amp;=S^x+iS^y               &amp; S^x &amp;= 1/2(S^+ + S^-)\\
+S^- &amp;=S^x-iS^y\ \Rightarrow\ &amp; S^y &amp;=-i/2(S^+ - S^-)
+\end{align*}\end{split}\]</div>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="dense-yast">
+<h2>Dense (YAST)<a class="headerlink" href="#dense-yast" title="Permalink to this heading">¶</a></h2>
+<p>This implementation of SU(2)-symmetric model of coupled spin-1/2 ladders
+works with dense YAST tensors. In particular, the physical reduced density matrices,
+Hamiltonian terms, observables, etc. are dense YAST tensors. As such, their indices have signature.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The underlying iPEPS wavefunction can make use of explicit internal symmetry and thus
+block-sparse tensors. After physical reduced density matrices are built from such
+iPEPS and its environment, they are converted to dense form (keeping signature information).</p>
+</div>
+<span class="target" id="module-models.abelian.coupledLadders"></span><dl class="py class">
+<dt class="sig sig-object py" id="models.abelian.coupledLadders.COUPLEDLADDERS_NOSYM">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">models.abelian.coupledLadders.</span></span><span class="sig-name descname"><span class="pre">COUPLEDLADDERS_NOSYM</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">settings</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alpha=0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Bz_val=0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">global_args=&lt;config.GLOBALARGS</span> <span class="pre">object&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/models/abelian/coupledLadders.html#COUPLEDLADDERS_NOSYM"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#models.abelian.coupledLadders.COUPLEDLADDERS_NOSYM" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>alpha</strong> (<em>float</em>) – nearest-neighbour interaction</p></li>
+<li><p><strong>Bz_val</strong> – staggered magnetic field</p></li>
+<li><p><strong>global_args</strong> (<a class="reference internal" href="../config.html#config.GLOBALARGS" title="config.GLOBALARGS"><em>GLOBALARGS</em></a>) – global configuration</p></li>
+</ul>
+</dd>
+</dl>
+<p>Build Hamiltonian of spin-1/2 coupled ladders</p>
+<div class="math notranslate nohighlight">
+\[H = \sum_{i=(x,y)} h2_{i,i+\vec{x}} + \sum_{i=(x,2y)} h2_{i,i+\vec{y}}
++ \alpha \sum_{i=(x,2y+1)} h2_{i,i+\vec{y}} + (-1)^{x+y} Bz h1_{i}\]</div>
+<p>on the square lattice. The spin-1/2 ladders are coupled with strength <span class="math notranslate nohighlight">\(\alpha\)</span>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">y</span>\<span class="n">x</span>
+   <span class="n">_</span><span class="p">:</span><span class="n">__</span><span class="p">:</span><span class="n">__</span><span class="p">:</span><span class="n">__</span><span class="p">:</span><span class="n">_</span>
+<span class="o">...</span><span class="n">_</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">_</span><span class="o">...</span>
+<span class="o">...</span><span class="n">_a__a__a__a_</span><span class="o">...</span>
+<span class="o">...</span><span class="n">_</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">_</span><span class="o">...</span>
+<span class="o">...</span><span class="n">_a__a__a__a_</span><span class="o">...</span>
+<span class="o">...</span><span class="n">_</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">_</span><span class="o">...</span>
+    <span class="p">:</span>  <span class="p">:</span>  <span class="p">:</span>  <span class="p">:</span>      <span class="p">(</span><span class="n">a</span> <span class="o">=</span> \<span class="n">alpha</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>where</p>
+<ul class="simple">
+<li><p><span class="math notranslate nohighlight">\(h2_{ij} = \mathbf{S}_i.\mathbf{S}_j\)</span> with indices of h2 corresponding to <span class="math notranslate nohighlight">\(s_i s_j;s'_i s'_j\)</span></p></li>
+<li><p><span class="math notranslate nohighlight">\(h1_{i} = \mathbf{S}^z_i\)</span> with indices of h1 corresponding to <span class="math notranslate nohighlight">\(s_i ;s'_i\)</span></p></li>
+</ul>
+<dl class="py method">
+<dt class="sig sig-object py" id="models.abelian.coupledLadders.COUPLEDLADDERS_NOSYM.energy_2x1_1x2">
+<span class="sig-name descname"><span class="pre">energy_2x1_1x2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/models/abelian/coupledLadders.html#COUPLEDLADDERS_NOSYM.energy_2x1_1x2"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#models.abelian.coupledLadders.COUPLEDLADDERS_NOSYM.energy_2x1_1x2" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="../ipeps/ipeps_abelian.html#ipeps.ipeps_abelian.IPEPS_ABELIAN" title="ipeps.ipeps_abelian.IPEPS_ABELIAN"><em>IPEPS_ABELIAN</em></a>) – wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="../envs/generic_abelian/env_abelian.html#ctm.generic_abelian.env_abelian.ENV_ABELIAN" title="ctm.generic_abelian.env_abelian.ENV_ABELIAN"><em>ENV_ABELIAN</em></a>) – CTM environment</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>energy per site</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+<p>We assume iPEPS with 2x2 unit cell containing four tensors A, B, C, and D with
+simple PBC tiling:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">A</span> <span class="n">B</span> <span class="n">A</span> <span class="n">B</span>
+<span class="n">C</span> <span class="n">D</span> <span class="n">C</span> <span class="n">D</span>
+<span class="n">A</span> <span class="n">B</span> <span class="n">A</span> <span class="n">B</span>
+<span class="n">C</span> <span class="n">D</span> <span class="n">C</span> <span class="n">D</span>
+</pre></div>
+</div>
+<p>Taking the reduced density matrix <span class="math notranslate nohighlight">\(\rho_{2x1}\)</span> (<span class="math notranslate nohighlight">\(\rho_{1x2}\)</span>)
+of 2x1 (1x2) cluster given by <code class="xref py py-func docutils literal notranslate"><span class="pre">rdm.rdm2x1()</span></code> (<code class="xref py py-func docutils literal notranslate"><span class="pre">rdm.rdm1x2()</span></code>)
+with indexing of sites as follows <span class="math notranslate nohighlight">\(s_0,s_1;s'_0,s'_1\)</span> for both types
+of density matrices:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">rdm2x1</span>   <span class="n">rdm1x2</span>
+
+<span class="n">s0</span><span class="o">--</span><span class="n">s1</span>   <span class="n">s0</span>
+         <span class="o">|</span>
+         <span class="n">s1</span>
+</pre></div>
+</div>
+<p>The primed indices represent “bra”: <span class="math notranslate nohighlight">\(\rho_{2x1} = \sum_{s_0 s_1;s'_0 s'_1}
+| s_0 s_1 \rangle \langle s'_0 s'_1|\)</span> where the signature of primed indices is +1.
+Without assuming any symmetry on the indices of individual tensors a following
+set of terms has to be evaluated in order to compute energy-per-site:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>   <span class="mi">0</span>       <span class="mi">0</span>       <span class="mi">0</span>
+<span class="mi">1</span><span class="o">--</span><span class="n">A</span><span class="o">--</span><span class="mi">3</span> <span class="mi">1</span><span class="o">--</span><span class="n">B</span><span class="o">--</span><span class="mi">3</span> <span class="mi">1</span><span class="o">--</span><span class="n">A</span><span class="o">--</span><span class="mi">3</span>
+   <span class="mi">2</span>       <span class="mi">2</span>       <span class="mi">2</span>
+   <span class="mi">0</span>       <span class="mi">0</span>       <span class="mi">0</span>
+<span class="mi">1</span><span class="o">--</span><span class="n">C</span><span class="o">--</span><span class="mi">3</span> <span class="mi">1</span><span class="o">--</span><span class="n">D</span><span class="o">--</span><span class="mi">3</span> <span class="mi">1</span><span class="o">--</span><span class="n">C</span><span class="o">--</span><span class="mi">3</span>
+   <span class="mi">2</span>       <span class="mi">2</span>       <span class="mi">2</span>             <span class="n">A</span><span class="o">--</span><span class="mi">3</span> <span class="mi">1</span><span class="o">--</span><span class="n">B</span><span class="p">,</span>      <span class="n">A</span>  <span class="n">B</span>  <span class="n">C</span>  <span class="n">D</span>
+   <span class="mi">0</span>       <span class="mi">0</span>                     <span class="n">B</span><span class="o">--</span><span class="mi">3</span> <span class="mi">1</span><span class="o">--</span><span class="n">A</span><span class="p">,</span>      <span class="mi">2</span>  <span class="mi">2</span>  <span class="mi">2</span>  <span class="mi">2</span>
+<span class="mi">1</span><span class="o">--</span><span class="n">A</span><span class="o">--</span><span class="mi">3</span> <span class="mi">1</span><span class="o">--</span><span class="n">B</span><span class="o">--</span><span class="mi">3</span>                  <span class="n">C</span><span class="o">--</span><span class="mi">3</span> <span class="mi">1</span><span class="o">--</span><span class="n">D</span><span class="p">,</span>      <span class="mi">0</span>  <span class="mi">0</span>  <span class="mi">0</span>  <span class="mi">0</span>
+   <span class="mi">2</span>       <span class="mi">2</span>             <span class="p">,</span> <span class="n">terms</span> <span class="n">D</span><span class="o">--</span><span class="mi">3</span> <span class="mi">1</span><span class="o">--</span><span class="n">C</span><span class="p">,</span> <span class="ow">and</span>  <span class="n">C</span><span class="p">,</span> <span class="n">D</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">B</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="models.abelian.coupledLadders.COUPLEDLADDERS_NOSYM.eval_obs">
+<span class="sig-name descname"><span class="pre">eval_obs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/models/abelian/coupledLadders.html#COUPLEDLADDERS_NOSYM.eval_obs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#models.abelian.coupledLadders.COUPLEDLADDERS_NOSYM.eval_obs" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="../ipeps/ipeps_abelian.html#ipeps.ipeps_abelian.IPEPS_ABELIAN" title="ipeps.ipeps_abelian.IPEPS_ABELIAN"><em>IPEPS_ABELIAN</em></a>) – wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="../envs/generic_abelian/env_abelian.html#ctm.generic_abelian.env_abelian.ENV_ABELIAN" title="ctm.generic_abelian.env_abelian.ENV_ABELIAN"><em>ENV_ABELIAN</em></a>) – CTM environment</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>expectation values of observables, labels of observables</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[float], list[str]</p>
+</dd>
+</dl>
+<p>Computes the following observables in order</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>average magnetization over the unit cell,</p></li>
+<li><p>magnetization for each site in the unit cell</p></li>
+<li><p><span class="math notranslate nohighlight">\(\langle S^z \rangle,\ \langle S^+ \rangle,\ \langle S^- \rangle\)</span>
+for each site in the unit cell</p></li>
+<li><p><span class="math notranslate nohighlight">\(\mathbf{S}_i.\mathbf{S}_j\)</span> for all non-equivalent nearest neighbour
+bonds</p></li>
+</ol>
+</div></blockquote>
+<p>where the on-site magnetization is defined as</p>
+<div class="math notranslate nohighlight">
+\[m = \sqrt{ \langle S^z \rangle^2+\langle S^x \rangle^2+\langle S^y \rangle^2 }\]</div>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="with-explict-u-1-symmetry">
+<h2>With explict U(1) symmetry<a class="headerlink" href="#with-explict-u-1-symmetry" title="Permalink to this heading">¶</a></h2>
+<p>This implementation of SU(2)-symmetric model of coupled spin-1/2 ladders
+works with explicit U(1) abelian symmetry (subgroup). The physical reduced density matrices,
+Hamiltonian terms, observables, etc. have U(1) block-sparse structure.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="models.abelian.coupledLadders.COUPLEDLADDERS_U1">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">models.abelian.coupledLadders.</span></span><span class="sig-name descname"><span class="pre">COUPLEDLADDERS_U1</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">settings</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alpha=0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Bz_val=0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">global_args=&lt;config.GLOBALARGS</span> <span class="pre">object&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/models/abelian/coupledLadders.html#COUPLEDLADDERS_U1"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#models.abelian.coupledLadders.COUPLEDLADDERS_U1" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>settings</strong> (<em>NamedTuple</em><em> or </em><em>SimpleNamespace</em><em> (</em><em>TODO link to definition</em><em>)</em>) – YAST configuration</p></li>
+<li><p><strong>alpha</strong> (<em>float</em>) – nearest-neighbour interaction</p></li>
+<li><p><strong>Bz_val</strong> (<em>float</em>) – transverse field</p></li>
+<li><p><strong>global_args</strong> (<a class="reference internal" href="../config.html#config.GLOBALARGS" title="config.GLOBALARGS"><em>GLOBALARGS</em></a>) – global configuration</p></li>
+</ul>
+</dd>
+</dl>
+<p>Build Hamiltonian of spin-1/2 coupled ladders</p>
+<div class="math notranslate nohighlight">
+\[H = \sum_{i=(x,y)} h2_{i,i+\vec{x}} + \sum_{i=(x,2y)} h2_{i,i+\vec{y}}
++ \alpha \sum_{i=(x,2y+1)} h2_{i,i+\vec{y}} + (-1)^{x+y} B_z h1_{i}\]</div>
+<p>on a square lattice. The spin-1/2 ladders are coupled with strength <span class="math notranslate nohighlight">\(\alpha\)</span>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">y</span>\<span class="n">x</span>
+   <span class="n">_</span><span class="p">:</span><span class="n">__</span><span class="p">:</span><span class="n">__</span><span class="p">:</span><span class="n">__</span><span class="p">:</span><span class="n">_</span>
+<span class="o">...</span><span class="n">_</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">_</span><span class="o">...</span>
+<span class="o">...</span><span class="n">_a__a__a__a_</span><span class="o">...</span>
+<span class="o">...</span><span class="n">_</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">_</span><span class="o">...</span>
+<span class="o">...</span><span class="n">_a__a__a__a_</span><span class="o">...</span>
+<span class="o">...</span><span class="n">_</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">_</span><span class="o">...</span>
+    <span class="p">:</span>  <span class="p">:</span>  <span class="p">:</span>  <span class="p">:</span>      <span class="p">(</span><span class="n">a</span> <span class="o">=</span> \<span class="n">alpha</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>where</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><span class="math notranslate nohighlight">\(h2_{ij} = \mathbf{S}_i.\mathbf{S}_j\)</span> with indices of h2 corresponding to <span class="math notranslate nohighlight">\(s_i s_j;s'_i s'_j\)</span></p></li>
+<li><p><span class="math notranslate nohighlight">\(h1_{i} = \mathbf{S}^z_i\)</span> with indices of h1 corresponding to <span class="math notranslate nohighlight">\(s_i ;s'_i\)</span></p></li>
+</ul>
+</div></blockquote>
+<dl class="py method">
+<dt class="sig sig-object py" id="models.abelian.coupledLadders.COUPLEDLADDERS_U1.energy_2x1_1x2">
+<span class="sig-name descname"><span class="pre">energy_2x1_1x2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/models/abelian/coupledLadders.html#COUPLEDLADDERS_U1.energy_2x1_1x2"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#models.abelian.coupledLadders.COUPLEDLADDERS_U1.energy_2x1_1x2" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="../ipeps/ipeps_abelian.html#ipeps.ipeps_abelian.IPEPS_ABELIAN" title="ipeps.ipeps_abelian.IPEPS_ABELIAN"><em>IPEPS_ABELIAN</em></a>) – wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="../envs/generic_abelian/env_abelian.html#ctm.generic_abelian.env_abelian.ENV_ABELIAN" title="ctm.generic_abelian.env_abelian.ENV_ABELIAN"><em>ENV_ABELIAN</em></a>) – CTM environment</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>energy per site</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+<p>We assume iPEPS with 2x2 unit cell containing four tensors A, B, C, and D with
+simple PBC tiling:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">A</span> <span class="n">B</span> <span class="n">A</span> <span class="n">B</span>
+<span class="n">C</span> <span class="n">D</span> <span class="n">C</span> <span class="n">D</span>
+<span class="n">A</span> <span class="n">B</span> <span class="n">A</span> <span class="n">B</span>
+<span class="n">C</span> <span class="n">D</span> <span class="n">C</span> <span class="n">D</span>
+</pre></div>
+</div>
+<p>Taking the reduced density matrix <span class="math notranslate nohighlight">\(\rho_{2x1}\)</span> (<span class="math notranslate nohighlight">\(\rho_{1x2}\)</span>)
+of 2x1 (1x2) cluster given by <code class="xref py py-func docutils literal notranslate"><span class="pre">rdm.rdm2x1()</span></code> (<code class="xref py py-func docutils literal notranslate"><span class="pre">rdm.rdm1x2()</span></code>)
+with indexing of sites as follows <span class="math notranslate nohighlight">\(s_0,s_1;s'_0,s'_1\)</span> for both types
+of density matrices:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">rdm2x1</span>   <span class="n">rdm1x2</span>
+
+<span class="n">s0</span><span class="o">--</span><span class="n">s1</span>   <span class="n">s0</span>
+         <span class="o">|</span>
+         <span class="n">s1</span>
+</pre></div>
+</div>
+<p>The <span class="math notranslate nohighlight">\(\rho_{2x1} = \sum_{s_0 s_1;s'_0 s'_1}
+| s_0 s_1 \rangle \langle s'_0 s'_1|\)</span> where the signature of primed indices (<span class="math notranslate nohighlight">\(|bra\rangle\)</span>)
+is +1. Without assuming any symmetry on the indices of individual tensors a following
+set of terms has to be evaluated in order to compute energy-per-site:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>   <span class="mi">0</span>       <span class="mi">0</span>       <span class="mi">0</span>
+<span class="mi">1</span><span class="o">--</span><span class="n">A</span><span class="o">--</span><span class="mi">3</span> <span class="mi">1</span><span class="o">--</span><span class="n">B</span><span class="o">--</span><span class="mi">3</span> <span class="mi">1</span><span class="o">--</span><span class="n">A</span><span class="o">--</span><span class="mi">3</span>
+   <span class="mi">2</span>       <span class="mi">2</span>       <span class="mi">2</span>
+   <span class="mi">0</span>       <span class="mi">0</span>       <span class="mi">0</span>
+<span class="mi">1</span><span class="o">--</span><span class="n">C</span><span class="o">--</span><span class="mi">3</span> <span class="mi">1</span><span class="o">--</span><span class="n">D</span><span class="o">--</span><span class="mi">3</span> <span class="mi">1</span><span class="o">--</span><span class="n">C</span><span class="o">--</span><span class="mi">3</span>
+   <span class="mi">2</span>       <span class="mi">2</span>       <span class="mi">2</span>             <span class="n">A</span><span class="o">--</span><span class="mi">3</span> <span class="mi">1</span><span class="o">--</span><span class="n">B</span><span class="p">,</span>      <span class="n">A</span>  <span class="n">B</span>  <span class="n">C</span>  <span class="n">D</span>
+   <span class="mi">0</span>       <span class="mi">0</span>                     <span class="n">B</span><span class="o">--</span><span class="mi">3</span> <span class="mi">1</span><span class="o">--</span><span class="n">A</span><span class="p">,</span>      <span class="mi">2</span>  <span class="mi">2</span>  <span class="mi">2</span>  <span class="mi">2</span>
+<span class="mi">1</span><span class="o">--</span><span class="n">A</span><span class="o">--</span><span class="mi">3</span> <span class="mi">1</span><span class="o">--</span><span class="n">B</span><span class="o">--</span><span class="mi">3</span>                  <span class="n">C</span><span class="o">--</span><span class="mi">3</span> <span class="mi">1</span><span class="o">--</span><span class="n">D</span><span class="p">,</span>      <span class="mi">0</span>  <span class="mi">0</span>  <span class="mi">0</span>  <span class="mi">0</span>
+   <span class="mi">2</span>       <span class="mi">2</span>             <span class="p">,</span> <span class="n">terms</span> <span class="n">D</span><span class="o">--</span><span class="mi">3</span> <span class="mi">1</span><span class="o">--</span><span class="n">C</span><span class="p">,</span> <span class="ow">and</span>  <span class="n">C</span><span class="p">,</span> <span class="n">D</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">B</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="models.abelian.coupledLadders.COUPLEDLADDERS_U1.energy_2x1_1x2_H">
+<span class="sig-name descname"><span class="pre">energy_2x1_1x2_H</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/models/abelian/coupledLadders.html#COUPLEDLADDERS_U1.energy_2x1_1x2_H"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#models.abelian.coupledLadders.COUPLEDLADDERS_U1.energy_2x1_1x2_H" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="../ipeps/ipeps_abelian.html#ipeps.ipeps_abelian.IPEPS_ABELIAN" title="ipeps.ipeps_abelian.IPEPS_ABELIAN"><em>IPEPS_ABELIAN</em></a>) – wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="../envs/generic_abelian/env_abelian.html#ctm.generic_abelian.env_abelian.ENV_ABELIAN" title="ctm.generic_abelian.env_abelian.ENV_ABELIAN"><em>ENV_ABELIAN</em></a>) – CTM environment</p></li>
+</ul>
+</dd>
+</dl>
+<p>Analogous to <a class="reference internal" href="#models.abelian.coupledLadders.COUPLEDLADDERS_U1.energy_2x1_1x2" title="models.abelian.coupledLadders.COUPLEDLADDERS_U1.energy_2x1_1x2"><code class="xref py py-meth docutils literal notranslate"><span class="pre">energy_2x1_1x2()</span></code></a>, with ladders being weakly coupled
+in horizontal direction:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">y</span>\<span class="n">x</span>
+       <span class="n">_</span><span class="p">:</span><span class="n">_a_</span><span class="p">:</span><span class="n">__</span><span class="p">:</span><span class="n">_a_</span><span class="p">:</span><span class="n">__</span><span class="p">:</span>
+    <span class="o">...</span><span class="n">_</span><span class="o">|</span><span class="n">_a_</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">_a_</span><span class="o">|</span><span class="n">__</span><span class="o">|...</span>
+    <span class="o">...</span><span class="n">_</span><span class="o">|</span><span class="n">_a_</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">_a_</span><span class="o">|</span><span class="n">__</span><span class="o">|...</span>
+    <span class="o">...</span><span class="n">_</span><span class="o">|</span><span class="n">_a_</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">_a_</span><span class="o">|</span><span class="n">__</span><span class="o">|...</span>
+    <span class="o">...</span><span class="n">_</span><span class="o">|</span><span class="n">_a_</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">_a_</span><span class="o">|</span><span class="n">__</span><span class="o">|...</span>
+    <span class="o">...</span><span class="n">_</span><span class="o">|</span><span class="n">_a_</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">_a_</span><span class="o">|</span><span class="n">__</span><span class="o">|...</span>
+        <span class="p">:</span>   <span class="p">:</span>  <span class="p">:</span>   <span class="p">:</span>  <span class="p">:</span> <span class="p">(</span><span class="n">a</span> <span class="o">=</span> \<span class="n">alpha</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="models.abelian.coupledLadders.COUPLEDLADDERS_U1.eval_obs">
+<span class="sig-name descname"><span class="pre">eval_obs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/models/abelian/coupledLadders.html#COUPLEDLADDERS_U1.eval_obs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#models.abelian.coupledLadders.COUPLEDLADDERS_U1.eval_obs" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="../ipeps/ipeps_abelian.html#ipeps.ipeps_abelian.IPEPS_ABELIAN" title="ipeps.ipeps_abelian.IPEPS_ABELIAN"><em>IPEPS_ABELIAN</em></a>) – wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="../envs/generic_abelian/env_abelian.html#ctm.generic_abelian.env_abelian.ENV_ABELIAN" title="ctm.generic_abelian.env_abelian.ENV_ABELIAN"><em>ENV_ABELIAN</em></a>) – CTM environment</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>expectation values of observables, labels of observables</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[float], list[str]</p>
+</dd>
+</dl>
+<p>Computes the following observables in order</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>average magnetization over the unit cell,</p></li>
+<li><p>magnetization for each site in the unit cell</p></li>
+<li><p><span class="math notranslate nohighlight">\(\langle S^z \rangle,\ \langle S^+ \rangle,\ \langle S^- \rangle\)</span>
+for each site in the unit cell</p></li>
+<li><p><span class="math notranslate nohighlight">\(\mathbf{S}_i.\mathbf{S}_j\)</span> for all non-equivalent nearest neighbour
+bonds</p></li>
+</ol>
+</div></blockquote>
+<p>where the on-site magnetization is defined as</p>
+<div class="math notranslate nohighlight">
+\[m = \sqrt{ \langle S^z \rangle^2+\langle S^x \rangle^2+\langle S^y \rangle^2 }\]</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="models.abelian.coupledLadders.COUPLEDLADDERS_U1.gen_gate_seq_2S">
+<span class="sig-name descname"><span class="pre">gen_gate_seq_2S</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">t</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/models/abelian/coupledLadders.html#COUPLEDLADDERS_U1.gen_gate_seq_2S"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#models.abelian.coupledLadders.COUPLEDLADDERS_U1.gen_gate_seq_2S" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>t</strong> (<em>float</em>) – imaginary time step</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>gate sequence</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[tuple(tuple(tuple(int,int),tuple(int,int),tuple(int,int)), yast.Tensor)]</p>
+</dd>
+</dl>
+<p>Generate a 2-site gate sequence <span class="math notranslate nohighlight">\(exp(-t \vec{S}.\vec{S})\)</span> for imaginary-time optimization.
+Each element of sequence has two parts: First, the placement of the gate encoded by (x,y)
+coords of the two sites and the vector from 1st to 2nd site: (x_1,y_1),
+(x_2-x_1, y_2-y_1), (x_2,y_2). Second, the 2-site gate Tensor.</p>
+<p>The gate sequance generated:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>        <span class="n">g</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>         <span class="n">g</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+<span class="n">g</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span><span class="o">--</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span><span class="o">--</span><span class="n">g</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span><span class="o">--</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span><span class="o">--</span><span class="p">[</span><span class="n">g</span><span class="p">[</span><span class="mi">4</span><span class="p">]]</span>
+        <span class="n">g</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>         <span class="n">g</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
+<span class="n">g</span><span class="p">[</span><span class="mi">6</span><span class="p">]</span><span class="o">--</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span><span class="o">--</span><span class="n">g</span><span class="p">[</span><span class="mi">7</span><span class="p">]</span><span class="o">--</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span><span class="o">--</span><span class="p">[</span><span class="n">g</span><span class="p">[</span><span class="mi">6</span><span class="p">]]</span>
+       <span class="p">[</span><span class="n">g</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>       <span class="p">[</span><span class="n">g</span><span class="p">[</span><span class="mi">2</span><span class="p">]]</span>
+</pre></div>
+</div>
+<p>The g[0] and g[2] are the “weak” links, with <span class="math notranslate nohighlight">\(\alpha \vec{S}.\vec{S}\)</span> interaction,
+coupling the ladders. If <code class="docutils literal notranslate"><span class="pre">self.Bz</span></code> is non-zero, on-site gates with transverse field
+are added to the sequence.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="models.abelian.coupledLadders.COUPLEDLADDERS_U1.gen_gate_seq_2S_2ndOrder">
+<span class="sig-name descname"><span class="pre">gen_gate_seq_2S_2ndOrder</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">t</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/models/abelian/coupledLadders.html#COUPLEDLADDERS_U1.gen_gate_seq_2S_2ndOrder"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#models.abelian.coupledLadders.COUPLEDLADDERS_U1.gen_gate_seq_2S_2ndOrder" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>t</strong> (<em>float</em>) – imaginary time step</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>gate sequence</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[tuple(tuple(tuple(int,int),tuple(int,int),tuple(int,int)), yast.Tensor)]</p>
+</dd>
+</dl>
+<p>Second-order Trotter gate sequence. This sequence can be generated from the result of
+<a class="reference internal" href="#models.abelian.coupledLadders.COUPLEDLADDERS_U1.gen_gate_seq_2S" title="models.abelian.coupledLadders.COUPLEDLADDERS_U1.gen_gate_seq_2S"><code class="xref py py-meth docutils literal notranslate"><span class="pre">gen_gate_seq_2S()</span></code></a> by applying the gates in both direct and reverse order.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="models.abelian.coupledLadders.COUPLEDLADDERS_U1.gen_gate_seq_2S_2ndOrder_H">
+<span class="sig-name descname"><span class="pre">gen_gate_seq_2S_2ndOrder_H</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">t</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/models/abelian/coupledLadders.html#COUPLEDLADDERS_U1.gen_gate_seq_2S_2ndOrder_H"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#models.abelian.coupledLadders.COUPLEDLADDERS_U1.gen_gate_seq_2S_2ndOrder_H" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>t</strong> (<em>float</em>) – imaginary time step</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>gate sequence</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[tuple(tuple(tuple(int,int),tuple(int,int),tuple(int,int)), yast.Tensor)]</p>
+</dd>
+</dl>
+<p>Second-order Trotter gate sequence. This sequence can be generated from the result of
+<a class="reference internal" href="#models.abelian.coupledLadders.COUPLEDLADDERS_U1.gen_gate_seq_2S_H" title="models.abelian.coupledLadders.COUPLEDLADDERS_U1.gen_gate_seq_2S_H"><code class="xref py py-meth docutils literal notranslate"><span class="pre">gen_gate_seq_2S_H()</span></code></a> by applying the gates in both direct and reverse order.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="models.abelian.coupledLadders.COUPLEDLADDERS_U1.gen_gate_seq_2S_H">
+<span class="sig-name descname"><span class="pre">gen_gate_seq_2S_H</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">t</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/models/abelian/coupledLadders.html#COUPLEDLADDERS_U1.gen_gate_seq_2S_H"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#models.abelian.coupledLadders.COUPLEDLADDERS_U1.gen_gate_seq_2S_H" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>t</strong> (<em>float</em>) – imaginary time step</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>gate sequence</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[tuple(tuple(tuple(int,int),tuple(int,int),tuple(int,int)), Tensor)]</p>
+</dd>
+</dl>
+<p>Analogous to <a class="reference internal" href="#models.abelian.coupledLadders.COUPLEDLADDERS_U1.gen_gate_seq_2S" title="models.abelian.coupledLadders.COUPLEDLADDERS_U1.gen_gate_seq_2S"><code class="xref py py-meth docutils literal notranslate"><span class="pre">gen_gate_seq_2S()</span></code></a>, with ladders being weakly coupled
+in horizontal direction.</p>
+<p>The g[5] and g[7] are the “weak” links, with <span class="math notranslate nohighlight">\(\alpha\vec{S}.\vec{S}\)</span> interaction
+coupling the ladders.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="models.abelian.coupledLadders.COUPLEDLADDERS_U1.gen_gate_seq_2S_SS_hz">
+<span class="sig-name descname"><span class="pre">gen_gate_seq_2S_SS_hz</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">t</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/models/abelian/coupledLadders.html#COUPLEDLADDERS_U1.gen_gate_seq_2S_SS_hz"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#models.abelian.coupledLadders.COUPLEDLADDERS_U1.gen_gate_seq_2S_SS_hz" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>t</strong> (<em>float</em>) – imaginary time step</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>gate sequence</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[tuple(tuple(tuple(int,int),tuple(int,int),tuple(int,int)), yast.Tensor)]</p>
+</dd>
+</dl>
+<p>Generate a 2-site gate sequence <span class="math notranslate nohighlight">\(exp(-t (\vec{S}_i.\vec{S}_j + \sum_{r=i,j}(-1)^{x_r+y_r} B_z S^z_r))\)</span>
+for imaginary-time optimization.
+Each element of sequence has two parts: First, the placement of the gate encoded by (x,y)
+coords of the two sites and the vector from 1st to 2nd site: (x_1,y_1),
+(x_2-x_1, y_2-y_1), (x_2,y_2). Second, the 2-site gate Tensor.</p>
+<p>The gate sequance generated:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>        <span class="n">g</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>         <span class="n">g</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+<span class="n">g</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span><span class="o">--</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span><span class="o">--</span><span class="n">g</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span><span class="o">--</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span><span class="o">--</span><span class="p">[</span><span class="n">g</span><span class="p">[</span><span class="mi">4</span><span class="p">]]</span>
+        <span class="n">g</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>         <span class="n">g</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
+<span class="n">g</span><span class="p">[</span><span class="mi">6</span><span class="p">]</span><span class="o">--</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span><span class="o">--</span><span class="n">g</span><span class="p">[</span><span class="mi">7</span><span class="p">]</span><span class="o">--</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span><span class="o">--</span><span class="p">[</span><span class="n">g</span><span class="p">[</span><span class="mi">6</span><span class="p">]]</span>
+       <span class="p">[</span><span class="n">g</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>       <span class="p">[</span><span class="n">g</span><span class="p">[</span><span class="mi">2</span><span class="p">]]</span>
+</pre></div>
+</div>
+<p>The g[0] and g[2] are the “weak” links, with <span class="math notranslate nohighlight">\(\alpha \vec{S}.\vec{S}\)</span> interaction,
+coupling the ladders.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="models.abelian.coupledLadders.COUPLEDLADDERS_U1.gen_gate_seq_2S_SS_hz_2ndOrder">
+<span class="sig-name descname"><span class="pre">gen_gate_seq_2S_SS_hz_2ndOrder</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">t</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/models/abelian/coupledLadders.html#COUPLEDLADDERS_U1.gen_gate_seq_2S_SS_hz_2ndOrder"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#models.abelian.coupledLadders.COUPLEDLADDERS_U1.gen_gate_seq_2S_SS_hz_2ndOrder" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>t</strong> (<em>float</em>) – imaginary time step</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>gate sequence</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[tuple(tuple(tuple(int,int),tuple(int,int),tuple(int,int)), yast.Tensor)]</p>
+</dd>
+</dl>
+<p>Second-order Trotter gate sequence. This sequence can be generated from the result of
+<a class="reference internal" href="#models.abelian.coupledLadders.COUPLEDLADDERS_U1.gen_gate_seq_2S_SS_hz" title="models.abelian.coupledLadders.COUPLEDLADDERS_U1.gen_gate_seq_2S_SS_hz"><code class="xref py py-meth docutils literal notranslate"><span class="pre">gen_gate_seq_2S_SS_hz()</span></code></a> by applying the gates in both direct and reverse order.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="ising.html" class="btn btn-neutral float-right" title="Transverse Field Ising Model" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="akltS2.html" class="btn btn-neutral float-left" title="Spin S=2 AKLT Model" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Juraj Hasik, Glen B. Mbeng
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

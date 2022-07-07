@@ -1,0 +1,1049 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>models.abelian.coupledLadders &mdash; peps-torch alpha documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> peps-torch
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../ipeps.html">iPEPS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps.html">Generic iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_kagome.html">Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_c4v.html">1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_lc_1site_pg.html">1-site iPEPS from lin. combination</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipess_kagome.html">Generic Kagome iPESS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipess_kagome_pg.html">Kagome iPESS with point groups</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipess_kagome_pg_lc.html">Kagome iPESS from lin. combination</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../ipeps.html#abelian-symmetric-ipeps">Abelian-symmetric iPEPS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_abelian.html">Generic  abelian-symmetric iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_abelian.html#generic-abelian-symmetric-ipeps-with-weights">Generic abelian-symmetric iPEPS with weights</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_kagome_abelian.html">Abelian-symmetric Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_abelian_c4v.html">Abelian-symmetric 1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipess_kagome_abelian.html">Abelian-symmetric generic Kagome iPESS</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../envs.html">Environments</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../envs/generic.html">Generic iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/env.html">Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/rdm.html#module-ctm.pess_kagome.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/corrf.html">Correlation functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/transfer_matrix.html">Transfer Matrices</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../envs/generic_abelian.html">Abelian-symmetric generic iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic_abelian/env_abelian.html">Abelian-symmetric environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic_abelian/ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic_abelian/ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic_abelian/ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic_abelian/rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic_abelian/rdm.html#module-ctm.pess_kagome_abelian.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../envs/one_site_c4v.html">1-site C4v iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v/env_c4v.html">1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v/ctmrg_c4v.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v/rdm_c4v.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v/transfer_matrix.html">Transfer Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v/corrf_c4v.html">Correlation functions</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../envs/one_site_c4v_abelian.html">Abelian-symmetric 1-site C4v iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v_abelian/env_c4v_abelian.html">Abelian-symmetric 1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v_abelian/ctmrg_c4v_abelian.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v_abelian/rdm_c4v_abelian.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v_abelian/corrf_c4v_abelian.html">Correlation functions</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../optim.html">Optimization</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../optim/drivers.html">Optimization drivers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../optim/drivers/ad_optim.html">ad_optim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../optim/drivers/ad_optim_lbfgs_mod.html">ad_optim_lbfgs_mod</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../optim/drivers/ad_optim_sgd_mod.html">ad_optim_sgd_mod</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../optim/optimizers.html">Custom optimizers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../optim/optimizers/lbfgs_modified.html">Extended LBFGS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../optim/optimizers/sgd_modified.html">SGD with linesearch</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../config.html">Configuration</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../config.html#main">Main</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../config.html#global">Global</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../config.html#corner-transfer-matrix-algorithm">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../config.html#optimization">Optimization</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../models.html">Models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/akltS2.html">Spin S=2 AKLT Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/akltS2.html#module-models.akltS2">2x1 and 2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/akltS2.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/coupledLadders.html">Coupled Ladders</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/coupledLadders.html#dense-pytorch">Dense (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/coupledLadders.html#dense-yast">Dense (YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/coupledLadders.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/ising.html">Transverse Field Ising Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/ising.html#x1-unit-cell">1x1 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/ising.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/j1j2.html">J1-J2-J3 and J1-J2-lambda Heisenberg Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/j1j2.html#from-2x1-to-4x2-unit-cell-pytorch">from 2x1 to 4x2 unit cell (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/j1j2.html#from-2x1-to-4x2-unit-cell-dense-yast">from 2x1 to 4x2 unit cell (dense YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/j1j2.html#x1-c4v-pytorch">1x1 C4v (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/j1j2.html#x1-c4v-dense-yast">1x1 C4v (dense YAST)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/jq.html">J-Q Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/jq.html#module-models.jq">2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/jq.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/spin_half_kagome.html">SU(2) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/spin_half_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/spin_half_kagome.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/su3_kagome.html">SU(3) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/su3_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/su3_kagome.html#with-explict-u-1-xu-1-symmetry">With explict U(1)xU(1) symmetry</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../groups.html">Groups</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../groups/pg.html">Point group: square lattice</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../groups/su2.html">SU(2)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../groups/su2.html#module-groups.su2_abelian">SU(2) with explicit U(1) structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../groups/su3.html">SU(3)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../groups/su3.html#su-3-with-explicit-u-1-xu-1-structure">SU(3) with explicit U(1)xU(1) structure</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../linalg.html">Linear Algebra</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../linalg/custom_eig.html">Truncated eigendecomposition</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../linalg/custom_svd.html">Truncated SVD</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../linalg/spec_decomp.html">Spectral decompositions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../linalg/spec_decomp.html#module-linalg.svd_gesdd">SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../linalg/spec_decomp.html#module-linalg.svd_arnoldi">Partial SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../linalg/spec_decomp.html#module-linalg.svd_rsvd">Randomized SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../linalg/spec_decomp.html#module-linalg.eig_sym">Symmetric Eigendecomposition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../linalg/spec_decomp.html#module-linalg.eig_arnoldi">Partial diagonalization</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">peps-torch</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>models.abelian.coupledLadders</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for models.abelian.coupledLadders</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">math</span> <span class="kn">import</span> <span class="n">sqrt</span>
+<span class="kn">import</span> <span class="nn">itertools</span>
+<span class="kn">import</span> <span class="nn">config</span> <span class="k">as</span> <span class="nn">cfg</span>
+<span class="kn">import</span> <span class="nn">yast.yast</span> <span class="k">as</span> <span class="nn">yast</span>
+<span class="kn">from</span> <span class="nn">tn_interface_abelian</span> <span class="kn">import</span> <span class="n">contract</span><span class="p">,</span> <span class="n">permute</span>  
+<span class="kn">import</span> <span class="nn">groups.su2_abelian</span> <span class="k">as</span> <span class="nn">su2</span>
+<span class="kn">from</span> <span class="nn">ctm.generic_abelian</span> <span class="kn">import</span> <span class="n">rdm</span>
+
+<span class="k">def</span> <span class="nf">_null_Bz</span><span class="p">(</span><span class="n">coord</span><span class="p">):</span>
+    <span class="k">return</span> <span class="mf">0.0</span>
+
+<span class="k">class</span> <span class="nc">StaggeredLocalField</span><span class="p">():</span>
+    <span class="c1"># staggered field </span>
+    <span class="c1"># Given the coordinates (x, y), a minus sign is used when x+y is odd</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">B</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">B</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">B</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">coord</span><span class="p">):</span>
+        <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">coord</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">B</span> <span class="o">*</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">**</span> <span class="p">((</span><span class="n">x</span><span class="o">+</span><span class="n">y</span><span class="p">)</span><span class="o">%</span><span class="mi">2</span><span class="p">)</span>
+
+<div class="viewcode-block" id="COUPLEDLADDERS_NOSYM"><a class="viewcode-back" href="../../../models/coupledLadders.html#models.abelian.coupledLadders.COUPLEDLADDERS_NOSYM">[docs]</a><span class="k">class</span> <span class="nc">COUPLEDLADDERS_NOSYM</span><span class="p">():</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">settings</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">Bz_val</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">global_args</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">global_args</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param alpha: nearest-neighbour interaction</span>
+<span class="sd">        :param Bz_val: staggered magnetic field</span>
+<span class="sd">        :param global_args: global configuration</span>
+<span class="sd">        :type alpha: float</span>
+<span class="sd">        :type Bz: float</span>
+<span class="sd">        :type global_args: GLOBALARGS</span>
+
+<span class="sd">        Build Hamiltonian of spin-1/2 coupled ladders</span>
+
+<span class="sd">        .. math:: H = \sum_{i=(x,y)} h2_{i,i+\vec{x}} + \sum_{i=(x,2y)} h2_{i,i+\vec{y}}</span>
+<span class="sd">                   + \alpha \sum_{i=(x,2y+1)} h2_{i,i+\vec{y}} + (-1)^{x+y} Bz h1_{i}</span>
+
+<span class="sd">        on the square lattice. The spin-1/2 ladders are coupled with strength :math:`\alpha`::</span>
+
+<span class="sd">            y\x</span>
+<span class="sd">               _:__:__:__:_</span>
+<span class="sd">            ..._|__|__|__|_...</span>
+<span class="sd">            ..._a__a__a__a_...</span>
+<span class="sd">            ..._|__|__|__|_...</span>
+<span class="sd">            ..._a__a__a__a_...   </span>
+<span class="sd">            ..._|__|__|__|_...   </span>
+<span class="sd">                :  :  :  :      (a = \alpha) </span>
+
+<span class="sd">        where</span>
+
+<span class="sd">        * :math:`h2_{ij} = \mathbf{S}_i.\mathbf{S}_j` with indices of h2 corresponding to :math:`s_i s_j;s&#39;_i s&#39;_j`</span>
+
+<span class="sd">        * :math:`h1_{i} = \mathbf{S}^z_i` with indices of h1 corresponding to :math:`s_i ;s&#39;_i`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="n">settings</span><span class="o">.</span><span class="n">sym</span><span class="o">.</span><span class="n">NSYM</span><span class="o">==</span><span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;No abelian symmetry is assumed&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">engine</span><span class="o">=</span> <span class="n">settings</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="o">=</span><span class="n">settings</span><span class="o">.</span><span class="n">default_dtype</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="o">=</span><span class="s1">&#39;cpu&#39;</span> <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">settings</span><span class="p">,</span> <span class="s1">&#39;device&#39;</span><span class="p">)</span> <span class="k">else</span> <span class="n">settings</span><span class="o">.</span><span class="n">device</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">phys_dim</span><span class="o">=</span><span class="mi">2</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span><span class="o">=</span><span class="n">alpha</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Bz_val</span><span class="o">=</span><span class="n">Bz_val</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Bz</span><span class="o">=</span><span class="n">StaggeredLocalField</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Bz_val</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">h1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_h1</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">h2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_h2</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">obs_ops</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_obs_ops</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">get_h1</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">irrep</span> <span class="o">=</span> <span class="n">su2</span><span class="o">.</span><span class="n">SU2_NOSYM</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">engine</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">phys_dim</span><span class="p">)</span>
+        <span class="n">I1</span><span class="p">,</span> <span class="n">SP</span><span class="p">,</span> <span class="n">SM</span><span class="p">,</span> <span class="n">Sz</span> <span class="o">=</span> <span class="n">irrep</span><span class="o">.</span><span class="n">I</span><span class="p">(),</span> <span class="n">irrep</span><span class="o">.</span><span class="n">SP</span><span class="p">(),</span> <span class="n">irrep</span><span class="o">.</span><span class="n">SM</span><span class="p">(),</span> <span class="n">irrep</span><span class="o">.</span><span class="n">SZ</span><span class="p">()</span>
+        <span class="n">SzId</span><span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">Sz</span><span class="p">,</span><span class="n">I1</span><span class="p">,([],[]))</span>
+        <span class="n">SzId</span><span class="o">=</span> <span class="n">permute</span><span class="p">(</span><span class="n">SzId</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">SzId</span>
+
+    <span class="k">def</span> <span class="nf">get_h2</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">irrep</span> <span class="o">=</span> <span class="n">su2</span><span class="o">.</span><span class="n">SU2_NOSYM</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">engine</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">phys_dim</span><span class="p">)</span>
+        <span class="n">SS</span> <span class="o">=</span> <span class="n">irrep</span><span class="o">.</span><span class="n">SS</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">SS</span>
+
+    <span class="k">def</span> <span class="nf">get_obs_ops</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">obs_ops</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="n">irrep</span> <span class="o">=</span> <span class="n">su2</span><span class="o">.</span><span class="n">SU2_NOSYM</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">engine</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">phys_dim</span><span class="p">)</span>
+        <span class="n">obs_ops</span><span class="p">[</span><span class="s2">&quot;sz&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">irrep</span><span class="o">.</span><span class="n">SZ</span><span class="p">()</span>
+        <span class="n">obs_ops</span><span class="p">[</span><span class="s2">&quot;sp&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">irrep</span><span class="o">.</span><span class="n">SP</span><span class="p">()</span>
+        <span class="n">obs_ops</span><span class="p">[</span><span class="s2">&quot;sm&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">irrep</span><span class="o">.</span><span class="n">SM</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">obs_ops</span>
+
+<div class="viewcode-block" id="COUPLEDLADDERS_NOSYM.energy_2x1_1x2"><a class="viewcode-back" href="../../../models/coupledLadders.html#models.abelian.coupledLadders.COUPLEDLADDERS_NOSYM.energy_2x1_1x2">[docs]</a>    <span class="k">def</span> <span class="nf">energy_2x1_1x2</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param state: wavefunction</span>
+<span class="sd">        :param env: CTM environment</span>
+<span class="sd">        :type state: IPEPS_ABELIAN</span>
+<span class="sd">        :type env: ENV_ABELIAN</span>
+<span class="sd">        :return: energy per site</span>
+<span class="sd">        :rtype: float</span>
+<span class="sd">        </span>
+<span class="sd">        We assume iPEPS with 2x2 unit cell containing four tensors A, B, C, and D with</span>
+<span class="sd">        simple PBC tiling::</span>
+
+<span class="sd">            A B A B</span>
+<span class="sd">            C D C D</span>
+<span class="sd">            A B A B</span>
+<span class="sd">            C D C D</span>
+
+<span class="sd">        Taking the reduced density matrix :math:`\rho_{2x1}` (:math:`\rho_{1x2}`) </span>
+<span class="sd">        of 2x1 (1x2) cluster given by :py:func:`rdm.rdm2x1` (:py:func:`rdm.rdm1x2`) </span>
+<span class="sd">        with indexing of sites as follows :math:`s_0,s_1;s&#39;_0,s&#39;_1` for both types</span>
+<span class="sd">        of density matrices::</span>
+
+<span class="sd">            rdm2x1   rdm1x2</span>
+
+<span class="sd">            s0--s1   s0</span>
+<span class="sd">                     |</span>
+<span class="sd">                     s1</span>
+
+<span class="sd">        The primed indices represent &quot;bra&quot;: :math:`\rho_{2x1} = \sum_{s_0 s_1;s&#39;_0 s&#39;_1}</span>
+<span class="sd">        | s_0 s_1 \rangle \langle s&#39;_0 s&#39;_1|` where the signature of primed indices is +1.</span>
+<span class="sd">        Without assuming any symmetry on the indices of individual tensors a following</span>
+<span class="sd">        set of terms has to be evaluated in order to compute energy-per-site::</span>
+
+<span class="sd">               0       0       0</span>
+<span class="sd">            1--A--3 1--B--3 1--A--3</span>
+<span class="sd">               2       2       2</span>
+<span class="sd">               0       0       0</span>
+<span class="sd">            1--C--3 1--D--3 1--C--3</span>
+<span class="sd">               2       2       2             A--3 1--B,      A  B  C  D</span>
+<span class="sd">               0       0                     B--3 1--A,      2  2  2  2</span>
+<span class="sd">            1--A--3 1--B--3                  C--3 1--D,      0  0  0  0</span>
+<span class="sd">               2       2             , terms D--3 1--C, and  C, D, A, B</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">energy</span><span class="o">=</span><span class="n">yast</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">engine</span><span class="p">)</span>
+        <span class="c1">#</span>
+        <span class="c1"># (-1)0--|rho|--2(+1) (-1)0--|S.S|--2(+1)</span>
+        <span class="c1"># (-1)1--|   |--3(+1) (-1)1--|   |--3(+1)</span>
+        <span class="n">_ci</span><span class="o">=</span> <span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],[</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">_tmp_t</span><span class="o">=</span> <span class="n">yast</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="n">state</span><span class="o">.</span><span class="n">engine</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                  <span class="n">t</span><span class="o">=</span><span class="p">((</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span>
+                  <span class="n">D</span><span class="o">=</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)))</span>
+        <span class="n">_lss_dense</span><span class="o">=</span><span class="p">{</span><span class="n">i</span><span class="p">:</span> <span class="n">l</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">l</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">_tmp_t</span><span class="o">.</span><span class="n">get_legs</span><span class="p">())}</span>
+        <span class="k">for</span> <span class="n">coord</span><span class="p">,</span><span class="n">site</span> <span class="ow">in</span> <span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">rdm2x1</span><span class="o">=</span> <span class="n">rdm</span><span class="o">.</span><span class="n">rdm2x1</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span><span class="o">.</span><span class="n">to_nonsymmetric</span><span class="p">(</span><span class="n">legs</span><span class="o">=</span><span class="n">_lss_dense</span><span class="p">,</span><span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">rdm1x2</span><span class="o">=</span> <span class="n">rdm</span><span class="o">.</span><span class="n">rdm1x2</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span><span class="o">.</span><span class="n">to_nonsymmetric</span><span class="p">(</span><span class="n">legs</span><span class="o">=</span><span class="n">_lss_dense</span><span class="p">,</span><span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">ss</span><span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">rdm2x1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">h2</span><span class="p">,</span> <span class="n">_ci</span><span class="p">)</span>
+            <span class="n">energy</span> <span class="o">+=</span> <span class="n">ss</span>
+            <span class="k">if</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">ss</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">rdm1x2</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">h2</span><span class="p">,</span><span class="n">_ci</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">ss</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">rdm1x2</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">h2</span><span class="p">,</span><span class="n">_ci</span><span class="p">)</span>
+            <span class="n">energy</span> <span class="o">+=</span> <span class="n">ss</span>
+
+            <span class="c1"># local field enegy</span>
+            <span class="n">sz</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">rdm1x2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Bz</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">h1</span><span class="p">,</span> <span class="n">_ci</span><span class="p">)</span>
+            <span class="n">energy</span> <span class="o">+=</span> <span class="n">sz</span>
+
+        <span class="c1"># return energy-per-site</span>
+        <span class="n">energy_per_site</span><span class="o">=</span><span class="n">energy</span><span class="o">/</span><span class="nb">len</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
+        <span class="n">energy_per_site</span><span class="o">=</span><span class="n">rdm</span><span class="o">.</span><span class="n">_cast_to_real</span><span class="p">(</span><span class="n">energy_per_site</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">energy_per_site</span></div>
+
+<div class="viewcode-block" id="COUPLEDLADDERS_NOSYM.eval_obs"><a class="viewcode-back" href="../../../models/coupledLadders.html#models.abelian.coupledLadders.COUPLEDLADDERS_NOSYM.eval_obs">[docs]</a>    <span class="k">def</span> <span class="nf">eval_obs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param state: wavefunction</span>
+<span class="sd">        :param env: CTM environment</span>
+<span class="sd">        :type state: IPEPS_ABELIAN</span>
+<span class="sd">        :type env: ENV_ABELIAN</span>
+<span class="sd">        :return:  expectation values of observables, labels of observables</span>
+<span class="sd">        :rtype: list[float], list[str]</span>
+
+<span class="sd">        Computes the following observables in order</span>
+
+<span class="sd">            1. average magnetization over the unit cell,</span>
+<span class="sd">            2. magnetization for each site in the unit cell</span>
+<span class="sd">            3. :math:`\langle S^z \rangle,\ \langle S^+ \rangle,\ \langle S^- \rangle` </span>
+<span class="sd">               for each site in the unit cell</span>
+<span class="sd">            4. :math:`\mathbf{S}_i.\mathbf{S}_j` for all non-equivalent nearest neighbour</span>
+<span class="sd">               bonds</span>
+
+<span class="sd">        where the on-site magnetization is defined as</span>
+<span class="sd">        </span>
+<span class="sd">        .. math::</span>
+<span class="sd">            m = \sqrt{ \langle S^z \rangle^2+\langle S^x \rangle^2+\langle S^y \rangle^2 }</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">obs</span><span class="o">=</span> <span class="nb">dict</span><span class="p">({</span><span class="s2">&quot;avg_m&quot;</span><span class="p">:</span> <span class="mf">0.</span><span class="p">})</span>
+        <span class="n">_ci</span><span class="o">=</span> <span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">],[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">_tmp_t</span><span class="o">=</span> <span class="n">yast</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="n">state</span><span class="o">.</span><span class="n">engine</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                  <span class="n">t</span><span class="o">=</span><span class="p">((</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span>
+                  <span class="n">D</span><span class="o">=</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)))</span>
+        <span class="n">_lss_dense</span><span class="o">=</span><span class="p">{</span><span class="n">i</span><span class="p">:</span> <span class="n">l</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">l</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">_tmp_t</span><span class="o">.</span><span class="n">get_legs</span><span class="p">())}</span>
+        <span class="k">for</span> <span class="n">coord</span><span class="p">,</span><span class="n">site</span> <span class="ow">in</span> <span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">rdm1x1</span> <span class="o">=</span> <span class="n">rdm</span><span class="o">.</span><span class="n">rdm1x1</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span><span class="o">.</span><span class="n">to_nonsymmetric</span><span class="p">(</span><span class="n">legs</span><span class="o">=</span><span class="n">_lss_dense</span><span class="p">,</span><span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">label</span><span class="p">,</span><span class="n">op</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">obs_ops</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">label</span><span class="si">}{</span><span class="n">coord</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">rdm1x1</span><span class="p">,</span> <span class="n">op</span><span class="p">,</span> <span class="n">_ci</span><span class="p">)</span><span class="o">.</span><span class="n">to_number</span><span class="p">()</span>
+            <span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;m</span><span class="si">{</span><span class="n">coord</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">sqrt</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;sz</span><span class="si">{</span><span class="n">coord</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;sp</span><span class="si">{</span><span class="n">coord</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span><span class="o">*</span><span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;sm</span><span class="si">{</span><span class="n">coord</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]))</span>
+            <span class="n">obs</span><span class="p">[</span><span class="s2">&quot;avg_m&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;m</span><span class="si">{</span><span class="n">coord</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span>
+        <span class="n">obs</span><span class="p">[</span><span class="s2">&quot;avg_m&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">obs</span><span class="p">[</span><span class="s2">&quot;avg_m&quot;</span><span class="p">]</span><span class="o">/</span><span class="nb">len</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+    
+        <span class="n">_ci</span><span class="o">=</span> <span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],[</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">_tmp_t</span><span class="o">=</span> <span class="n">yast</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="n">state</span><span class="o">.</span><span class="n">engine</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                  <span class="n">t</span><span class="o">=</span><span class="p">((</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span>
+                  <span class="n">D</span><span class="o">=</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)))</span>
+        <span class="n">_lss_dense</span><span class="o">=</span><span class="p">{</span><span class="n">i</span><span class="p">:</span> <span class="n">l</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">l</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">_tmp_t</span><span class="o">.</span><span class="n">get_legs</span><span class="p">())}</span>
+        <span class="k">for</span> <span class="n">coord</span><span class="p">,</span><span class="n">site</span> <span class="ow">in</span> <span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">rdm2x1</span> <span class="o">=</span> <span class="n">rdm</span><span class="o">.</span><span class="n">rdm2x1</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span><span class="o">.</span><span class="n">to_nonsymmetric</span><span class="p">(</span><span class="n">legs</span><span class="o">=</span><span class="n">_lss_dense</span><span class="p">,</span><span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">rdm1x2</span> <span class="o">=</span> <span class="n">rdm</span><span class="o">.</span><span class="n">rdm1x2</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span><span class="o">.</span><span class="n">to_nonsymmetric</span><span class="p">(</span><span class="n">legs</span><span class="o">=</span><span class="n">_lss_dense</span><span class="p">,</span><span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">SS2x1</span><span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">rdm2x1</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">h2</span><span class="p">,</span><span class="n">_ci</span><span class="p">)</span><span class="o">.</span><span class="n">to_number</span><span class="p">()</span>
+            <span class="n">SS1x2</span><span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">rdm1x2</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">h2</span><span class="p">,</span><span class="n">_ci</span><span class="p">)</span><span class="o">.</span><span class="n">to_number</span><span class="p">()</span>
+            <span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;SS2x1</span><span class="si">{</span><span class="n">coord</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">rdm</span><span class="o">.</span><span class="n">_cast_to_real</span><span class="p">(</span><span class="n">SS2x1</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;SS1x2</span><span class="si">{</span><span class="n">coord</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">rdm</span><span class="o">.</span><span class="n">_cast_to_real</span><span class="p">(</span><span class="n">SS1x2</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="c1"># prepare list with labels and values</span>
+        <span class="n">obs_labels</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;avg_m&quot;</span><span class="p">]</span><span class="o">+</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;m</span><span class="si">{</span><span class="n">coord</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">coord</span> <span class="ow">in</span> <span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">keys</span><span class="p">()]</span>\
+            <span class="o">+</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">lc</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}{</span><span class="n">lc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">lc</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">itertools</span><span class="o">.</span><span class="n">product</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">obs_ops</span><span class="o">.</span><span class="n">keys</span><span class="p">()))]</span>
+        <span class="n">obs_labels</span> <span class="o">+=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;SS2x1</span><span class="si">{</span><span class="n">coord</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">coord</span> <span class="ow">in</span> <span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">keys</span><span class="p">()]</span>
+        <span class="n">obs_labels</span> <span class="o">+=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;SS1x2</span><span class="si">{</span><span class="n">coord</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">coord</span> <span class="ow">in</span> <span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">keys</span><span class="p">()]</span>
+        <span class="n">obs_values</span><span class="o">=</span><span class="p">[</span><span class="n">obs</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">obs_labels</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">obs_values</span><span class="p">,</span> <span class="n">obs_labels</span></div></div>
+
+<div class="viewcode-block" id="COUPLEDLADDERS_U1"><a class="viewcode-back" href="../../../models/coupledLadders.html#models.abelian.coupledLadders.COUPLEDLADDERS_U1">[docs]</a><span class="k">class</span> <span class="nc">COUPLEDLADDERS_U1</span><span class="p">():</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">settings</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">Bz_val</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">global_args</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">global_args</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param settings: YAST configuration</span>
+<span class="sd">        :type settings: NamedTuple or SimpleNamespace (TODO link to definition)</span>
+<span class="sd">        :param alpha: nearest-neighbour interaction</span>
+<span class="sd">        :param Bz_val: transverse field</span>
+<span class="sd">        :type Bz_val: float</span>
+<span class="sd">        :param global_args: global configuration</span>
+<span class="sd">        :type alpha: float</span>
+<span class="sd">        :type global_args: GLOBALARGS</span>
+
+<span class="sd">        Build Hamiltonian of spin-1/2 coupled ladders</span>
+
+<span class="sd">        .. math:: H = \sum_{i=(x,y)} h2_{i,i+\vec{x}} + \sum_{i=(x,2y)} h2_{i,i+\vec{y}}</span>
+<span class="sd">                   + \alpha \sum_{i=(x,2y+1)} h2_{i,i+\vec{y}} + (-1)^{x+y} B_z h1_{i}</span>
+
+<span class="sd">        on a square lattice. The spin-1/2 ladders are coupled with strength :math:`\alpha`::</span>
+
+<span class="sd">            y\x</span>
+<span class="sd">               _:__:__:__:_</span>
+<span class="sd">            ..._|__|__|__|_...</span>
+<span class="sd">            ..._a__a__a__a_...</span>
+<span class="sd">            ..._|__|__|__|_...</span>
+<span class="sd">            ..._a__a__a__a_...   </span>
+<span class="sd">            ..._|__|__|__|_...   </span>
+<span class="sd">                :  :  :  :      (a = \alpha) </span>
+
+<span class="sd">        where</span>
+
+<span class="sd">            * :math:`h2_{ij} = \mathbf{S}_i.\mathbf{S}_j` with indices of h2 corresponding to :math:`s_i s_j;s&#39;_i s&#39;_j`</span>
+<span class="sd">            * :math:`h1_{i} = \mathbf{S}^z_i` with indices of h1 corresponding to :math:`s_i ;s&#39;_i`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="n">settings</span><span class="o">.</span><span class="n">sym</span><span class="o">.</span><span class="n">NSYM</span><span class="o">==</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;U(1) abelian symmetry is assumed&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">engine</span><span class="o">=</span> <span class="n">settings</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="o">=</span><span class="n">settings</span><span class="o">.</span><span class="n">default_dtype</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="o">=</span><span class="s1">&#39;cpu&#39;</span> <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">settings</span><span class="p">,</span> <span class="s1">&#39;device&#39;</span><span class="p">)</span> <span class="k">else</span> <span class="n">settings</span><span class="o">.</span><span class="n">device</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">phys_dim</span><span class="o">=</span><span class="mi">2</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span><span class="o">=</span><span class="n">alpha</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Bz_val</span><span class="o">=</span><span class="n">Bz_val</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Bz</span><span class="o">=</span><span class="n">StaggeredLocalField</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Bz_val</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">h1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_h1</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">h2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_h2</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">obs_ops</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_obs_ops</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">get_h1</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">irrep</span> <span class="o">=</span> <span class="n">su2</span><span class="o">.</span><span class="n">SU2_U1</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">engine</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">phys_dim</span><span class="p">)</span>
+        <span class="n">I1</span><span class="p">,</span> <span class="n">SP</span><span class="p">,</span> <span class="n">SM</span><span class="p">,</span> <span class="n">Sz</span> <span class="o">=</span> <span class="n">irrep</span><span class="o">.</span><span class="n">I</span><span class="p">(),</span> <span class="n">irrep</span><span class="o">.</span><span class="n">SP</span><span class="p">(),</span> <span class="n">irrep</span><span class="o">.</span><span class="n">SM</span><span class="p">(),</span> <span class="n">irrep</span><span class="o">.</span><span class="n">SZ</span><span class="p">()</span>
+        <span class="n">SzId</span><span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">Sz</span><span class="p">,</span><span class="n">I1</span><span class="p">,([],[]))</span>
+        <span class="n">SzId</span><span class="o">=</span> <span class="n">permute</span><span class="p">(</span><span class="n">SzId</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">SzId</span>
+
+    <span class="k">def</span> <span class="nf">get_h2</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">irrep</span> <span class="o">=</span> <span class="n">su2</span><span class="o">.</span><span class="n">SU2_U1</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">engine</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">phys_dim</span><span class="p">)</span>
+        <span class="n">SS</span> <span class="o">=</span> <span class="n">irrep</span><span class="o">.</span><span class="n">SS</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">SS</span>
+
+    <span class="k">def</span> <span class="nf">get_obs_ops</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">obs_ops</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="n">irrep</span> <span class="o">=</span> <span class="n">su2</span><span class="o">.</span><span class="n">SU2_U1</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">engine</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">phys_dim</span><span class="p">)</span>
+        <span class="n">obs_ops</span><span class="p">[</span><span class="s2">&quot;sz&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">irrep</span><span class="o">.</span><span class="n">SZ</span><span class="p">()</span>
+        <span class="n">obs_ops</span><span class="p">[</span><span class="s2">&quot;sp&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">irrep</span><span class="o">.</span><span class="n">SP</span><span class="p">()</span>
+        <span class="n">obs_ops</span><span class="p">[</span><span class="s2">&quot;sm&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">irrep</span><span class="o">.</span><span class="n">SM</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">obs_ops</span>
+
+<div class="viewcode-block" id="COUPLEDLADDERS_U1.energy_2x1_1x2"><a class="viewcode-back" href="../../../models/coupledLadders.html#models.abelian.coupledLadders.COUPLEDLADDERS_U1.energy_2x1_1x2">[docs]</a>    <span class="k">def</span> <span class="nf">energy_2x1_1x2</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param state: wavefunction</span>
+<span class="sd">        :param env: CTM environment</span>
+<span class="sd">        :type state: IPEPS_ABELIAN</span>
+<span class="sd">        :type env: ENV_ABELIAN</span>
+<span class="sd">        :return: energy per site</span>
+<span class="sd">        :rtype: float</span>
+<span class="sd">        </span>
+<span class="sd">        We assume iPEPS with 2x2 unit cell containing four tensors A, B, C, and D with</span>
+<span class="sd">        simple PBC tiling::</span>
+
+<span class="sd">            A B A B</span>
+<span class="sd">            C D C D</span>
+<span class="sd">            A B A B</span>
+<span class="sd">            C D C D</span>
+
+<span class="sd">        Taking the reduced density matrix :math:`\rho_{2x1}` (:math:`\rho_{1x2}`) </span>
+<span class="sd">        of 2x1 (1x2) cluster given by :py:func:`rdm.rdm2x1` (:py:func:`rdm.rdm1x2`) </span>
+<span class="sd">        with indexing of sites as follows :math:`s_0,s_1;s&#39;_0,s&#39;_1` for both types</span>
+<span class="sd">        of density matrices::</span>
+
+<span class="sd">            rdm2x1   rdm1x2</span>
+
+<span class="sd">            s0--s1   s0</span>
+<span class="sd">                     |</span>
+<span class="sd">                     s1</span>
+
+<span class="sd">        The :math:`\rho_{2x1} = \sum_{s_0 s_1;s&#39;_0 s&#39;_1}</span>
+<span class="sd">        | s_0 s_1 \rangle \langle s&#39;_0 s&#39;_1|` where the signature of primed indices (:math:`|bra\rangle`)</span>
+<span class="sd">        is +1. Without assuming any symmetry on the indices of individual tensors a following</span>
+<span class="sd">        set of terms has to be evaluated in order to compute energy-per-site::</span>
+
+<span class="sd">               0       0       0</span>
+<span class="sd">            1--A--3 1--B--3 1--A--3</span>
+<span class="sd">               2       2       2</span>
+<span class="sd">               0       0       0</span>
+<span class="sd">            1--C--3 1--D--3 1--C--3</span>
+<span class="sd">               2       2       2             A--3 1--B,      A  B  C  D</span>
+<span class="sd">               0       0                     B--3 1--A,      2  2  2  2</span>
+<span class="sd">            1--A--3 1--B--3                  C--3 1--D,      0  0  0  0</span>
+<span class="sd">               2       2             , terms D--3 1--C, and  C, D, A, B</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">energy</span><span class="o">=</span><span class="n">yast</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">engine</span><span class="p">)</span>
+        <span class="c1">#</span>
+        <span class="c1"># (-1)0--|rho|--2(+1) (-1)0--|S.S|--2(+1)</span>
+        <span class="c1"># (-1)1--|   |--3(+1) (-1)1--|   |--3(+1)</span>
+        <span class="n">_ci</span><span class="o">=</span> <span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],[</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">coord</span><span class="p">,</span><span class="n">site</span> <span class="ow">in</span> <span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">rdm2x1</span><span class="o">=</span> <span class="n">rdm</span><span class="o">.</span><span class="n">rdm2x1</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span>
+            <span class="n">rdm1x2</span><span class="o">=</span> <span class="n">rdm</span><span class="o">.</span><span class="n">rdm1x2</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span>
+            <span class="n">ss</span><span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">rdm2x1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">h2</span><span class="p">,</span><span class="n">_ci</span><span class="p">)</span>
+            <span class="n">energy</span> <span class="o">+=</span> <span class="n">ss</span>
+            <span class="k">if</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">ss</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">rdm1x2</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">h2</span><span class="p">,</span><span class="n">_ci</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>   
+                <span class="n">ss</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">rdm1x2</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">h2</span><span class="p">,</span><span class="n">_ci</span><span class="p">)</span>
+            <span class="n">energy</span> <span class="o">+=</span> <span class="n">ss</span>
+
+            <span class="c1"># local field enegy</span>
+            <span class="n">sz</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">rdm1x2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Bz</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">h1</span><span class="p">,</span> <span class="n">_ci</span><span class="p">)</span>
+            <span class="n">energy</span> <span class="o">+=</span> <span class="n">sz</span>
+
+        <span class="c1"># return energy-per-site</span>
+        <span class="n">energy_per_site</span><span class="o">=</span><span class="n">energy</span><span class="o">/</span><span class="nb">len</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
+        <span class="n">energy_per_site</span><span class="o">=</span><span class="n">rdm</span><span class="o">.</span><span class="n">_cast_to_real</span><span class="p">(</span><span class="n">energy_per_site</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">energy_per_site</span></div>
+
+<div class="viewcode-block" id="COUPLEDLADDERS_U1.energy_2x1_1x2_H"><a class="viewcode-back" href="../../../models/coupledLadders.html#models.abelian.coupledLadders.COUPLEDLADDERS_U1.energy_2x1_1x2_H">[docs]</a>    <span class="k">def</span> <span class="nf">energy_2x1_1x2_H</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param state: wavefunction</span>
+<span class="sd">        :param env: CTM environment</span>
+<span class="sd">        :type state: IPEPS_ABELIAN</span>
+<span class="sd">        :type env: ENV_ABELIAN</span>
+
+<span class="sd">        Analogous to :meth:`energy_2x1_1x2`, with ladders being weakly coupled </span>
+<span class="sd">        in horizontal direction::</span>
+
+<span class="sd">            y\x</span>
+<span class="sd">                   _:_a_:__:_a_:__:</span>
+<span class="sd">                ..._|_a_|__|_a_|__|...</span>
+<span class="sd">                ..._|_a_|__|_a_|__|...</span>
+<span class="sd">                ..._|_a_|__|_a_|__|...</span>
+<span class="sd">                ..._|_a_|__|_a_|__|...   </span>
+<span class="sd">                ..._|_a_|__|_a_|__|...   </span>
+<span class="sd">                    :   :  :   :  : (a = \alpha)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">energy</span><span class="o">=</span><span class="n">yast</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">engine</span><span class="p">)</span>
+        <span class="c1">#</span>
+        <span class="c1"># (-1)0--|rho|--2(+1) (-1)0--|S.S|--2(+1)</span>
+        <span class="c1"># (-1)1--|   |--3(+1) (-1)1--|   |--3(+1)</span>
+        <span class="n">_ci</span><span class="o">=</span> <span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],[</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">coord</span><span class="p">,</span><span class="n">site</span> <span class="ow">in</span> <span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">rdm2x1</span><span class="o">=</span> <span class="n">rdm</span><span class="o">.</span><span class="n">rdm2x1</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span>
+            <span class="n">rdm1x2</span><span class="o">=</span> <span class="n">rdm</span><span class="o">.</span><span class="n">rdm1x2</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span>
+            <span class="n">ss</span><span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">rdm1x2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">h2</span><span class="p">,</span><span class="n">_ci</span><span class="p">)</span>
+            <span class="n">energy</span> <span class="o">+=</span> <span class="n">ss</span>
+            <span class="k">if</span> <span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">ss</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">rdm2x1</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">h2</span><span class="p">,</span><span class="n">_ci</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>   
+                <span class="n">ss</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">rdm2x1</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">h2</span><span class="p">,</span><span class="n">_ci</span><span class="p">)</span>
+            <span class="n">energy</span> <span class="o">+=</span> <span class="n">ss</span>
+
+            <span class="c1"># local field energy</span>
+            <span class="n">sz</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">rdm1x2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Bz</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">h1</span><span class="p">,</span> <span class="n">_ci</span><span class="p">)</span>
+            <span class="n">energy</span> <span class="o">+=</span> <span class="n">sz</span>
+
+        <span class="c1"># return energy-per-site</span>
+        <span class="n">energy_per_site</span><span class="o">=</span><span class="n">energy</span><span class="o">/</span><span class="nb">len</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
+        <span class="n">energy_per_site</span><span class="o">=</span><span class="n">rdm</span><span class="o">.</span><span class="n">_cast_to_real</span><span class="p">(</span><span class="n">energy_per_site</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">energy_per_site</span></div>
+
+<div class="viewcode-block" id="COUPLEDLADDERS_U1.eval_obs"><a class="viewcode-back" href="../../../models/coupledLadders.html#models.abelian.coupledLadders.COUPLEDLADDERS_U1.eval_obs">[docs]</a>    <span class="k">def</span> <span class="nf">eval_obs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param state: wavefunction</span>
+<span class="sd">        :param env: CTM environment</span>
+<span class="sd">        :type state: IPEPS_ABELIAN</span>
+<span class="sd">        :type env: ENV_ABELIAN</span>
+<span class="sd">        :return:  expectation values of observables, labels of observables</span>
+<span class="sd">        :rtype: list[float], list[str]</span>
+
+<span class="sd">        Computes the following observables in order</span>
+
+<span class="sd">            1. average magnetization over the unit cell,</span>
+<span class="sd">            2. magnetization for each site in the unit cell</span>
+<span class="sd">            3. :math:`\langle S^z \rangle,\ \langle S^+ \rangle,\ \langle S^- \rangle` </span>
+<span class="sd">               for each site in the unit cell</span>
+<span class="sd">            4. :math:`\mathbf{S}_i.\mathbf{S}_j` for all non-equivalent nearest neighbour</span>
+<span class="sd">               bonds</span>
+
+<span class="sd">        where the on-site magnetization is defined as</span>
+<span class="sd">        </span>
+<span class="sd">        .. math::</span>
+<span class="sd">            m = \sqrt{ \langle S^z \rangle^2+\langle S^x \rangle^2+\langle S^y \rangle^2 }</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">obs</span><span class="o">=</span> <span class="nb">dict</span><span class="p">({</span><span class="s2">&quot;avg_m&quot;</span><span class="p">:</span> <span class="mf">0.</span><span class="p">})</span>
+        <span class="n">_ci</span><span class="o">=</span> <span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">],[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">coord</span><span class="p">,</span><span class="n">site</span> <span class="ow">in</span> <span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">rdm1x1</span> <span class="o">=</span> <span class="n">rdm</span><span class="o">.</span><span class="n">rdm1x1</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">label</span><span class="p">,</span><span class="n">op</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">obs_ops</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">label</span><span class="si">}{</span><span class="n">coord</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">rdm1x1</span><span class="p">,</span> <span class="n">op</span><span class="p">,</span> <span class="n">_ci</span><span class="p">)</span><span class="o">.</span><span class="n">to_number</span><span class="p">()</span>
+            <span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;m</span><span class="si">{</span><span class="n">coord</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">sqrt</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;sz</span><span class="si">{</span><span class="n">coord</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;sp</span><span class="si">{</span><span class="n">coord</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span><span class="o">*</span><span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;sm</span><span class="si">{</span><span class="n">coord</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]))</span>
+            <span class="n">obs</span><span class="p">[</span><span class="s2">&quot;avg_m&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;m</span><span class="si">{</span><span class="n">coord</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span>
+        <span class="n">obs</span><span class="p">[</span><span class="s2">&quot;avg_m&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">obs</span><span class="p">[</span><span class="s2">&quot;avg_m&quot;</span><span class="p">]</span><span class="o">/</span><span class="nb">len</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+    
+        <span class="n">_ci</span><span class="o">=</span> <span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],[</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">coord</span><span class="p">,</span><span class="n">site</span> <span class="ow">in</span> <span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">rdm2x1</span> <span class="o">=</span> <span class="n">rdm</span><span class="o">.</span><span class="n">rdm2x1</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span>
+            <span class="n">rdm1x2</span> <span class="o">=</span> <span class="n">rdm</span><span class="o">.</span><span class="n">rdm1x2</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span>
+            <span class="n">SS2x1</span><span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">rdm2x1</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">h2</span><span class="p">,</span><span class="n">_ci</span><span class="p">)</span><span class="o">.</span><span class="n">to_number</span><span class="p">()</span>
+            <span class="n">SS1x2</span><span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">rdm1x2</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">h2</span><span class="p">,</span><span class="n">_ci</span><span class="p">)</span><span class="o">.</span><span class="n">to_number</span><span class="p">()</span>
+            <span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;SS2x1</span><span class="si">{</span><span class="n">coord</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span><span class="o">=</span><span class="n">rdm</span><span class="o">.</span><span class="n">_cast_to_real</span><span class="p">(</span><span class="n">SS2x1</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;SS1x2</span><span class="si">{</span><span class="n">coord</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span><span class="o">=</span><span class="n">rdm</span><span class="o">.</span><span class="n">_cast_to_real</span><span class="p">(</span><span class="n">SS1x2</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="c1"># prepare list with labels and values</span>
+        <span class="n">obs_labels</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;avg_m&quot;</span><span class="p">]</span><span class="o">+</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;m</span><span class="si">{</span><span class="n">coord</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">coord</span> <span class="ow">in</span> <span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">keys</span><span class="p">()]</span>\
+            <span class="o">+</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">lc</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}{</span><span class="n">lc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">lc</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">itertools</span><span class="o">.</span><span class="n">product</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">obs_ops</span><span class="o">.</span><span class="n">keys</span><span class="p">()))]</span>
+        <span class="n">obs_labels</span> <span class="o">+=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;SS2x1</span><span class="si">{</span><span class="n">coord</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">coord</span> <span class="ow">in</span> <span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">keys</span><span class="p">()]</span>
+        <span class="n">obs_labels</span> <span class="o">+=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;SS1x2</span><span class="si">{</span><span class="n">coord</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">coord</span> <span class="ow">in</span> <span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">keys</span><span class="p">()]</span>
+        <span class="n">obs_values</span><span class="o">=</span><span class="p">[</span><span class="n">obs</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">obs_labels</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">obs_values</span><span class="p">,</span> <span class="n">obs_labels</span></div>
+
+    <span class="k">def</span> <span class="nf">_gen_gate_Sz</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">t</span><span class="p">):</span>
+        <span class="n">gate_Sz</span><span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">h1</span>
+        <span class="n">D</span><span class="p">,</span> <span class="n">U</span><span class="o">=</span> <span class="n">yast</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">eigh</span><span class="p">(</span><span class="n">gate_Sz</span><span class="p">,</span> <span class="n">axes</span><span class="o">=</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">],[</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">]))</span>
+        <span class="n">D</span><span class="o">=</span> <span class="n">D</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+        <span class="n">gate_Sz</span> <span class="o">=</span> <span class="n">U</span><span class="o">.</span><span class="n">tensordot</span><span class="p">(</span><span class="n">D</span><span class="p">,</span> <span class="p">([</span><span class="mi">2</span><span class="p">],[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="n">gate_Sz</span> <span class="o">=</span> <span class="n">gate_Sz</span><span class="o">.</span><span class="n">tensordot</span><span class="p">(</span><span class="n">U</span><span class="p">,</span> <span class="p">([</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">]),</span> <span class="n">conj</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">gate_Sz</span>
+
+    <span class="k">def</span> <span class="nf">_gen_gate_SS</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">t</span><span class="p">):</span>
+        <span class="n">gate_SS</span><span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">h2</span>
+        <span class="n">D</span><span class="p">,</span> <span class="n">U</span><span class="o">=</span> <span class="n">yast</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">eigh</span><span class="p">(</span><span class="n">gate_SS</span><span class="p">,</span> <span class="n">axes</span><span class="o">=</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">],[</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">]))</span>
+        <span class="n">D</span><span class="o">=</span> <span class="n">D</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+        <span class="n">gate_SS</span><span class="o">=</span> <span class="n">U</span><span class="o">.</span><span class="n">tensordot</span><span class="p">(</span><span class="n">D</span><span class="p">,</span> <span class="p">([</span><span class="mi">2</span><span class="p">],[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="n">gate_SS</span><span class="o">=</span> <span class="n">gate_SS</span><span class="o">.</span><span class="n">tensordot</span><span class="p">(</span><span class="n">U</span><span class="p">,</span> <span class="p">([</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">]),</span> <span class="n">conj</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">gate_SS</span>
+
+    <span class="k">def</span> <span class="nf">_gen_gate_SS_hz</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">hz_stag</span><span class="p">):</span>
+        <span class="n">gate_SS_Sz</span><span class="o">=</span> <span class="n">alpha</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">h2</span> <span class="o">+</span> <span class="n">hz_stag</span><span class="o">*</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">h1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">h1</span><span class="o">.</span><span class="n">transpose</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">2</span><span class="p">))</span> <span class="p">)</span>
+        <span class="n">D</span><span class="p">,</span> <span class="n">U</span><span class="o">=</span> <span class="n">yast</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">eigh</span><span class="p">(</span><span class="n">gate_SS_Sz</span><span class="p">,</span> <span class="n">axes</span><span class="o">=</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">],[</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">]))</span>
+        <span class="n">D</span><span class="o">=</span> <span class="n">D</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+        <span class="n">gate_SS</span><span class="o">=</span> <span class="n">U</span><span class="o">.</span><span class="n">tensordot</span><span class="p">(</span><span class="n">D</span><span class="p">,</span> <span class="p">([</span><span class="mi">2</span><span class="p">],[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="n">gate_SS</span><span class="o">=</span> <span class="n">gate_SS</span><span class="o">.</span><span class="n">tensordot</span><span class="p">(</span><span class="n">U</span><span class="p">,</span> <span class="p">([</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">]),</span> <span class="n">conj</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">gate_SS</span>
+
+<div class="viewcode-block" id="COUPLEDLADDERS_U1.gen_gate_seq_2S"><a class="viewcode-back" href="../../../models/coupledLadders.html#models.abelian.coupledLadders.COUPLEDLADDERS_U1.gen_gate_seq_2S">[docs]</a>    <span class="k">def</span> <span class="nf">gen_gate_seq_2S</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">t</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param t: imaginary time step</span>
+<span class="sd">        :type t: float</span>
+<span class="sd">        :return: gate sequence</span>
+<span class="sd">        :rtype: list[tuple(tuple(tuple(int,int),tuple(int,int),tuple(int,int)), yast.Tensor)]</span>
+<span class="sd">        </span>
+<span class="sd">        Generate a 2-site gate sequence :math:`exp(-t \vec{S}.\vec{S})` for imaginary-time optimization.</span>
+<span class="sd">        Each element of sequence has two parts: First, the placement of the gate encoded by (x,y) </span>
+<span class="sd">        coords of the two sites and the vector from 1st to 2nd site: (x_1,y_1), </span>
+<span class="sd">        (x_2-x_1, y_2-y_1), (x_2,y_2). Second, the 2-site gate Tensor.</span>
+
+<span class="sd">        The gate sequance generated::</span>
+
+<span class="sd">                    g[0]         g[2]</span>
+<span class="sd">            g[4]--(0,0)--g[5]--(1,0)--[g[4]]</span>
+<span class="sd">                    g[1]         g[3]</span>
+<span class="sd">            g[6]--(0,1)--g[7]--(1,1)--[g[6]]</span>
+<span class="sd">                   [g[0]]       [g[2]]</span>
+
+<span class="sd">        The g[0] and g[2] are the &quot;weak&quot; links, with :math:`\alpha \vec{S}.\vec{S}` interaction, </span>
+<span class="sd">        coupling the ladders. If ``self.Bz`` is non-zero, on-site gates with transverse field </span>
+<span class="sd">        are added to the sequence.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">gate_SS_1</span><span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gen_gate_SS</span><span class="p">(</span><span class="o">-</span><span class="n">t</span><span class="p">)</span>
+        <span class="n">gate_SS_alpha</span><span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gen_gate_SS</span><span class="p">(</span><span class="o">-</span><span class="n">t</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">alpha</span><span class="p">)</span>
+
+        <span class="c1"># two spin gates </span>
+        <span class="n">gate_seq</span><span class="o">=</span><span class="p">[</span>
+            <span class="p">(((</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">)),</span> <span class="n">gate_SS_1</span><span class="p">),</span>
+            <span class="p">(((</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)),</span> <span class="n">gate_SS_1</span><span class="p">),</span>
+            <span class="p">(((</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)),</span> <span class="n">gate_SS_1</span><span class="p">),</span>
+            <span class="p">(((</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">)),</span> <span class="n">gate_SS_1</span><span class="p">),</span>
+            <span class="p">(((</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">)),</span> <span class="n">gate_SS_1</span><span class="p">),</span>
+            <span class="p">(((</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)),</span> <span class="n">gate_SS_1</span><span class="p">),</span>
+            <span class="p">(((</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)),</span> <span class="n">gate_SS_alpha</span><span class="p">),</span>
+            <span class="p">(((</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">)),</span> <span class="n">gate_SS_alpha</span><span class="p">)</span> 
+        <span class="p">]</span>
+
+        <span class="c1"># single spin gates </span>
+        <span class="c1"># Note: it would be better to join the single spin and the two spin gates</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">Bz</span> <span class="o">!=</span> <span class="n">_null_Bz</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">x_1</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">y_1</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">):</span>
+                    <span class="n">dx</span><span class="p">,</span> <span class="n">dy</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+                    <span class="n">x_2</span> <span class="o">=</span> <span class="p">(</span><span class="n">x_1</span> <span class="o">+</span> <span class="n">dx</span><span class="p">)</span> <span class="o">%</span> <span class="mi">2</span>
+                    <span class="n">y_2</span> <span class="o">=</span> <span class="p">(</span><span class="n">y_1</span> <span class="o">+</span> <span class="n">dy</span><span class="p">)</span> <span class="o">%</span> <span class="mi">2</span>
+                    <span class="n">gate_Sz_Bz</span><span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gen_gate_Sz</span><span class="p">(</span><span class="o">-</span><span class="n">t</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">Bz</span><span class="p">((</span><span class="n">x_1</span><span class="p">,</span> <span class="n">y_2</span><span class="p">)))</span>
+                    <span class="n">gate_seq</span><span class="o">+=</span><span class="p">[(((</span><span class="n">x_1</span><span class="p">,</span><span class="n">y_1</span><span class="p">),(</span><span class="n">dx</span><span class="p">,</span><span class="n">dy</span><span class="p">),(</span><span class="n">x_2</span><span class="p">,</span><span class="n">y_2</span><span class="p">)),</span> <span class="n">gate_Sz_Bz</span><span class="p">)]</span>
+            
+        <span class="k">return</span> <span class="n">gate_seq</span></div>
+
+<div class="viewcode-block" id="COUPLEDLADDERS_U1.gen_gate_seq_2S_2ndOrder"><a class="viewcode-back" href="../../../models/coupledLadders.html#models.abelian.coupledLadders.COUPLEDLADDERS_U1.gen_gate_seq_2S_2ndOrder">[docs]</a>    <span class="k">def</span> <span class="nf">gen_gate_seq_2S_2ndOrder</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">t</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param t: imaginary time step</span>
+<span class="sd">        :type t: float</span>
+<span class="sd">        :return: gate sequence</span>
+<span class="sd">        :rtype: list[tuple(tuple(tuple(int,int),tuple(int,int),tuple(int,int)), yast.Tensor)]</span>
+<span class="sd">        </span>
+<span class="sd">        Second-order Trotter gate sequence. This sequence can be generated from the result of </span>
+<span class="sd">        :meth:`gen_gate_seq_2S` by applying the gates in both direct and reverse order. </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">gate_SS_1</span><span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gen_gate_SS</span><span class="p">(</span><span class="o">-</span><span class="n">t</span><span class="p">)</span>
+        <span class="n">gate_SS_2</span><span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gen_gate_SS</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="o">*</span><span class="n">t</span><span class="p">)</span>
+        <span class="n">gate_SS_alpha</span><span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gen_gate_SS</span><span class="p">(</span><span class="o">-</span><span class="n">t</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">alpha</span><span class="p">)</span>
+        <span class="n">gate_SS_2alpha</span><span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gen_gate_SS</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="o">*</span><span class="n">t</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">alpha</span><span class="p">)</span>
+
+        <span class="c1"># single spin gates </span>
+        <span class="c1"># Note: it would be better to join the single spin gates and the two spin gates</span>
+        <span class="n">gate_seq</span><span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">Bz</span> <span class="o">!=</span> <span class="n">_null_Bz</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">x_1</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">y_1</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">):</span>
+                    <span class="n">dx</span><span class="p">,</span> <span class="n">dy</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+                    <span class="n">x_2</span> <span class="o">=</span> <span class="p">(</span><span class="n">x_1</span> <span class="o">+</span> <span class="n">dx</span><span class="p">)</span> <span class="o">%</span> <span class="mi">2</span>
+                    <span class="n">y_2</span> <span class="o">=</span> <span class="p">(</span><span class="n">y_1</span> <span class="o">+</span> <span class="n">dy</span><span class="p">)</span> <span class="o">%</span> <span class="mi">2</span>
+                    <span class="n">gate_Sz_Bz</span><span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gen_gate_Sz</span><span class="p">(</span><span class="o">-</span><span class="n">t</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">Bz</span><span class="p">((</span><span class="n">x_1</span><span class="p">,</span> <span class="n">y_2</span><span class="p">)))</span>
+                    <span class="n">gate_seq</span><span class="o">+=</span><span class="p">[(((</span><span class="n">x_1</span><span class="p">,</span><span class="n">y_1</span><span class="p">),(</span><span class="n">dx</span><span class="p">,</span><span class="n">dy</span><span class="p">),(</span><span class="n">x_2</span><span class="p">,</span><span class="n">y_2</span><span class="p">)),</span> <span class="n">gate_Sz_Bz</span><span class="p">)]</span>
+
+        <span class="c1"># two spin gates </span>
+        <span class="n">gate_seq</span><span class="o">+=</span><span class="p">[</span>
+            <span class="p">(((</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">)),</span> <span class="n">gate_SS_1</span><span class="p">),</span>
+            <span class="p">(((</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)),</span> <span class="n">gate_SS_1</span><span class="p">),</span>
+            <span class="p">(((</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)),</span> <span class="n">gate_SS_1</span><span class="p">),</span>
+            <span class="p">(((</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">)),</span> <span class="n">gate_SS_1</span><span class="p">),</span>
+            <span class="p">(((</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">)),</span> <span class="n">gate_SS_1</span><span class="p">),</span>
+            <span class="p">(((</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)),</span> <span class="n">gate_SS_1</span><span class="p">),</span>
+            <span class="p">(((</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)),</span> <span class="n">gate_SS_alpha</span><span class="p">),</span>
+            <span class="p">(((</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">)),</span> <span class="n">gate_SS_2alpha</span><span class="p">)</span>
+        <span class="p">]</span>
+
+        <span class="c1"># repeat the sequence in inverse order</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span> <span class="nb">len</span><span class="p">(</span><span class="n">gate_seq</span><span class="p">)</span><span class="o">-</span><span class="mi">2</span> <span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">):</span> <span class="n">gate_seq</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">gate_seq</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">gate_seq</span></div>
+
+<div class="viewcode-block" id="COUPLEDLADDERS_U1.gen_gate_seq_2S_SS_hz"><a class="viewcode-back" href="../../../models/coupledLadders.html#models.abelian.coupledLadders.COUPLEDLADDERS_U1.gen_gate_seq_2S_SS_hz">[docs]</a>    <span class="k">def</span> <span class="nf">gen_gate_seq_2S_SS_hz</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">t</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param t: imaginary time step</span>
+<span class="sd">        :type t: float</span>
+<span class="sd">        :return: gate sequence</span>
+<span class="sd">        :rtype: list[tuple(tuple(tuple(int,int),tuple(int,int),tuple(int,int)), yast.Tensor)]</span>
+<span class="sd">        </span>
+<span class="sd">        Generate a 2-site gate sequence :math:`exp(-t (\vec{S}_i.\vec{S}_j + \sum_{r=i,j}(-1)^{x_r+y_r} B_z S^z_r))` </span>
+<span class="sd">        for imaginary-time optimization.</span>
+<span class="sd">        Each element of sequence has two parts: First, the placement of the gate encoded by (x,y) </span>
+<span class="sd">        coords of the two sites and the vector from 1st to 2nd site: (x_1,y_1), </span>
+<span class="sd">        (x_2-x_1, y_2-y_1), (x_2,y_2). Second, the 2-site gate Tensor.</span>
+
+<span class="sd">        The gate sequance generated::</span>
+
+<span class="sd">                    g[0]         g[2]</span>
+<span class="sd">            g[4]--(0,0)--g[5]--(1,0)--[g[4]]</span>
+<span class="sd">                    g[1]         g[3]</span>
+<span class="sd">            g[6]--(0,1)--g[7]--(1,1)--[g[6]]</span>
+<span class="sd">                   [g[0]]       [g[2]]</span>
+
+<span class="sd">        The g[0] and g[2] are the &quot;weak&quot; links, with :math:`\alpha \vec{S}.\vec{S}` interaction, </span>
+<span class="sd">        coupling the ladders.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># two spin gates</span>
+        <span class="c1"># on-site term is applied 4 times on each site, hence its coupling is rescaled</span>
+        <span class="c1"># accordingly</span>
+        <span class="n">gate_seq</span><span class="o">=</span><span class="p">[</span>
+            <span class="p">(((</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">)),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gen_gate_SS_hz</span><span class="p">(</span><span class="o">-</span><span class="n">t</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Bz</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">))</span><span class="o">/</span><span class="mi">4</span> <span class="p">)</span> <span class="p">),</span>
+            <span class="p">(((</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gen_gate_SS_hz</span><span class="p">(</span><span class="o">-</span><span class="n">t</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Bz</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">))</span><span class="o">/</span><span class="mi">4</span> <span class="p">)</span> <span class="p">),</span>
+            <span class="p">(((</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gen_gate_SS_hz</span><span class="p">(</span><span class="o">-</span><span class="n">t</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Bz</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span><span class="o">/</span><span class="mi">4</span> <span class="p">)</span> <span class="p">),</span>
+            <span class="p">(((</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">)),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gen_gate_SS_hz</span><span class="p">(</span><span class="o">-</span><span class="n">t</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Bz</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span><span class="o">/</span><span class="mi">4</span> <span class="p">)</span> <span class="p">),</span>
+            <span class="p">(((</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">)),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gen_gate_SS_hz</span><span class="p">(</span><span class="o">-</span><span class="n">t</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Bz</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">))</span><span class="o">/</span><span class="mi">4</span> <span class="p">)</span> <span class="p">),</span>
+            <span class="p">(((</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gen_gate_SS_hz</span><span class="p">(</span><span class="o">-</span><span class="n">t</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Bz</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">))</span><span class="o">/</span><span class="mi">4</span> <span class="p">)</span> <span class="p">),</span>
+            <span class="p">(((</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gen_gate_SS_hz</span><span class="p">(</span><span class="o">-</span><span class="n">t</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Bz</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span><span class="o">/</span><span class="mi">4</span> <span class="p">)</span> <span class="p">),</span>
+            <span class="p">(((</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">)),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gen_gate_SS_hz</span><span class="p">(</span><span class="o">-</span><span class="n">t</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Bz</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span><span class="o">/</span><span class="mi">4</span> <span class="p">)</span> <span class="p">)</span> 
+        <span class="p">]</span></div>
+
+<div class="viewcode-block" id="COUPLEDLADDERS_U1.gen_gate_seq_2S_SS_hz_2ndOrder"><a class="viewcode-back" href="../../../models/coupledLadders.html#models.abelian.coupledLadders.COUPLEDLADDERS_U1.gen_gate_seq_2S_SS_hz_2ndOrder">[docs]</a>    <span class="k">def</span> <span class="nf">gen_gate_seq_2S_SS_hz_2ndOrder</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">t</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param t: imaginary time step</span>
+<span class="sd">        :type t: float</span>
+<span class="sd">        :return: gate sequence</span>
+<span class="sd">        :rtype: list[tuple(tuple(tuple(int,int),tuple(int,int),tuple(int,int)), yast.Tensor)]</span>
+<span class="sd">        </span>
+<span class="sd">        Second-order Trotter gate sequence. This sequence can be generated from the result of </span>
+<span class="sd">        :meth:`gen_gate_seq_2S_SS_hz` by applying the gates in both direct and reverse order. </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># two spin gates</span>
+        <span class="c1"># on-site term is applied 4 times on each site, hence its coupling is rescaled</span>
+        <span class="c1"># accordingly</span>
+        <span class="n">gate_seq</span><span class="o">=</span><span class="p">[</span>
+            <span class="p">(((</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">)),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gen_gate_SS_hz</span><span class="p">(</span><span class="o">-</span><span class="n">t</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Bz</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">))</span><span class="o">/</span><span class="mi">4</span> <span class="p">)</span> <span class="p">),</span>
+            <span class="p">(((</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gen_gate_SS_hz</span><span class="p">(</span><span class="o">-</span><span class="n">t</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Bz</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">))</span><span class="o">/</span><span class="mi">4</span> <span class="p">)</span> <span class="p">),</span>
+            <span class="p">(((</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gen_gate_SS_hz</span><span class="p">(</span><span class="o">-</span><span class="n">t</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Bz</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span><span class="o">/</span><span class="mi">4</span> <span class="p">)</span> <span class="p">),</span>
+            <span class="p">(((</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">)),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gen_gate_SS_hz</span><span class="p">(</span><span class="o">-</span><span class="n">t</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Bz</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span><span class="o">/</span><span class="mi">4</span> <span class="p">)</span> <span class="p">),</span>
+            <span class="p">(((</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">)),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gen_gate_SS_hz</span><span class="p">(</span><span class="o">-</span><span class="n">t</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Bz</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">))</span><span class="o">/</span><span class="mi">4</span> <span class="p">)</span> <span class="p">),</span>
+            <span class="p">(((</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gen_gate_SS_hz</span><span class="p">(</span><span class="o">-</span><span class="n">t</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Bz</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">))</span><span class="o">/</span><span class="mi">4</span> <span class="p">)</span> <span class="p">),</span>
+            <span class="p">(((</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gen_gate_SS_hz</span><span class="p">(</span><span class="o">-</span><span class="n">t</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Bz</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span><span class="o">/</span><span class="mi">4</span> <span class="p">)</span> <span class="p">),</span>
+            <span class="p">(((</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">)),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gen_gate_SS_hz</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="o">*</span><span class="n">t</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Bz</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span><span class="o">/</span><span class="mi">4</span> <span class="p">)</span> <span class="p">)</span>
+        <span class="p">]</span>
+
+        <span class="c1"># repeat the sequence in inverse order</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span> <span class="nb">len</span><span class="p">(</span><span class="n">gate_seq</span><span class="p">)</span><span class="o">-</span><span class="mi">2</span> <span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">):</span> <span class="n">gate_seq</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">gate_seq</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">gate_seq</span></div>
+
+<div class="viewcode-block" id="COUPLEDLADDERS_U1.gen_gate_seq_2S_H"><a class="viewcode-back" href="../../../models/coupledLadders.html#models.abelian.coupledLadders.COUPLEDLADDERS_U1.gen_gate_seq_2S_H">[docs]</a>    <span class="k">def</span> <span class="nf">gen_gate_seq_2S_H</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">t</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param t: imaginary time step</span>
+<span class="sd">        :type t: float</span>
+<span class="sd">        :return: gate sequence</span>
+<span class="sd">        :rtype: list[tuple(tuple(tuple(int,int),tuple(int,int),tuple(int,int)), Tensor)]</span>
+<span class="sd">        </span>
+<span class="sd">        Analogous to :meth:`gen_gate_seq_2S`, with ladders being weakly coupled </span>
+<span class="sd">        in horizontal direction.</span>
+
+<span class="sd">        The g[5] and g[7] are the &quot;weak&quot; links, with :math:`\alpha\vec{S}.\vec{S}` interaction</span>
+<span class="sd">        coupling the ladders.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">gate_SS_1</span><span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gen_gate_SS</span><span class="p">(</span><span class="o">-</span><span class="n">t</span><span class="p">)</span>
+        <span class="n">gate_SS_alpha</span><span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gen_gate_SS</span><span class="p">(</span><span class="o">-</span><span class="n">t</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">alpha</span><span class="p">)</span>
+
+        <span class="n">gate_seq</span><span class="o">=</span><span class="p">[</span>
+            <span class="p">(((</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">)),</span> <span class="n">gate_SS_1</span><span class="p">),</span>
+            <span class="p">(((</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)),</span> <span class="n">gate_SS_1</span><span class="p">),</span>
+            <span class="p">(((</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)),</span> <span class="n">gate_SS_1</span><span class="p">),</span>
+            <span class="p">(((</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">)),</span> <span class="n">gate_SS_1</span><span class="p">),</span>
+            <span class="p">(((</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">)),</span> <span class="n">gate_SS_1</span><span class="p">),</span>
+            <span class="p">(((</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)),</span> <span class="n">gate_SS_1</span><span class="p">),</span>
+            <span class="p">(((</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)),</span> <span class="n">gate_SS_alpha</span><span class="p">),</span>
+            <span class="p">(((</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">)),</span> <span class="n">gate_SS_alpha</span><span class="p">)</span>
+        <span class="p">]</span>
+
+        <span class="c1"># single spin gates </span>
+        <span class="c1"># Note: it would be better to join the single spin gates and the two spin gates</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">Bz</span> <span class="o">!=</span> <span class="n">_null_Bz</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">x_1</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">y_1</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">):</span>
+                    <span class="n">dx</span><span class="p">,</span> <span class="n">dy</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+                    <span class="n">x_2</span> <span class="o">=</span> <span class="p">(</span><span class="n">x_1</span> <span class="o">+</span> <span class="n">dx</span><span class="p">)</span> <span class="o">%</span> <span class="mi">2</span>
+                    <span class="n">y_2</span> <span class="o">=</span> <span class="p">(</span><span class="n">y_1</span> <span class="o">+</span> <span class="n">dy</span><span class="p">)</span> <span class="o">%</span> <span class="mi">2</span>
+                    <span class="n">gate_Sz_Bz</span><span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gen_gate_Sz</span><span class="p">(</span><span class="o">-</span><span class="n">t</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">Bz</span><span class="p">((</span><span class="n">x_1</span><span class="p">,</span> <span class="n">y_2</span><span class="p">)))</span>
+                    <span class="n">gate_seq</span><span class="o">+=</span><span class="p">[(((</span><span class="n">x_1</span><span class="p">,</span><span class="n">y_1</span><span class="p">),(</span><span class="n">dx</span><span class="p">,</span><span class="n">dy</span><span class="p">),(</span><span class="n">x_2</span><span class="p">,</span><span class="n">y_2</span><span class="p">)),</span> <span class="n">gate_Sz_Bz</span><span class="p">)]</span>
+
+
+        <span class="k">return</span> <span class="n">gate_seq</span></div>
+
+<div class="viewcode-block" id="COUPLEDLADDERS_U1.gen_gate_seq_2S_2ndOrder_H"><a class="viewcode-back" href="../../../models/coupledLadders.html#models.abelian.coupledLadders.COUPLEDLADDERS_U1.gen_gate_seq_2S_2ndOrder_H">[docs]</a>    <span class="k">def</span> <span class="nf">gen_gate_seq_2S_2ndOrder_H</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">t</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param t: imaginary time step</span>
+<span class="sd">        :type t: float</span>
+<span class="sd">        :return: gate sequence</span>
+<span class="sd">        :rtype: list[tuple(tuple(tuple(int,int),tuple(int,int),tuple(int,int)), yast.Tensor)]</span>
+<span class="sd">        </span>
+<span class="sd">        Second-order Trotter gate sequence. This sequence can be generated from the result of </span>
+<span class="sd">        :meth:`gen_gate_seq_2S_H` by applying the gates in both direct and reverse order. </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">gate_SS_1</span><span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gen_gate_SS</span><span class="p">(</span><span class="o">-</span><span class="n">t</span><span class="p">)</span>
+        <span class="n">gate_SS_2</span><span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gen_gate_SS</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="o">*</span><span class="n">t</span><span class="p">)</span>
+        <span class="n">gate_SS_alpha</span><span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gen_gate_SS</span><span class="p">(</span><span class="o">-</span><span class="n">t</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">alpha</span><span class="p">)</span>
+        <span class="n">gate_SS_2alpha</span><span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gen_gate_SS</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="o">*</span><span class="n">t</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">alpha</span><span class="p">)</span>
+
+        <span class="n">gate_seq</span><span class="o">=</span><span class="p">[</span>
+            <span class="p">(((</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">)),</span> <span class="n">gate_SS_1</span><span class="p">),</span>
+            <span class="p">(((</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)),</span> <span class="n">gate_SS_1</span><span class="p">),</span>
+            <span class="p">(((</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)),</span> <span class="n">gate_SS_1</span><span class="p">),</span>
+            <span class="p">(((</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">)),</span> <span class="n">gate_SS_1</span><span class="p">),</span>
+            <span class="p">(((</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">)),</span> <span class="n">gate_SS_1</span><span class="p">),</span>
+            <span class="p">(((</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)),</span> <span class="n">gate_SS_1</span><span class="p">),</span>
+            <span class="p">(((</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)),</span> <span class="n">gate_SS_alpha</span><span class="p">)</span>            
+        <span class="p">]</span>
+
+        <span class="c1"># single spin gates </span>
+        <span class="c1"># Note: it would be better to join the single spin gates and the two spin gates</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">Bz</span> <span class="o">!=</span> <span class="n">_null_Bz</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">x_1</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">y_1</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">):</span>
+                    <span class="n">dx</span><span class="p">,</span> <span class="n">dy</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+                    <span class="n">x_2</span> <span class="o">=</span> <span class="p">(</span><span class="n">x_1</span> <span class="o">+</span> <span class="n">dx</span><span class="p">)</span> <span class="o">%</span> <span class="mi">2</span>
+                    <span class="n">y_2</span> <span class="o">=</span> <span class="p">(</span><span class="n">y_1</span> <span class="o">+</span> <span class="n">dy</span><span class="p">)</span> <span class="o">%</span> <span class="mi">2</span>
+                    <span class="n">gate_Sz_Bz</span><span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gen_gate_Sz</span><span class="p">(</span><span class="o">-</span><span class="n">t</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">Bz</span><span class="p">((</span><span class="n">x_1</span><span class="p">,</span> <span class="n">y_2</span><span class="p">)))</span>
+                    <span class="n">gate_seq</span><span class="o">+=</span><span class="p">[(((</span><span class="n">x_1</span><span class="p">,</span><span class="n">y_1</span><span class="p">),(</span><span class="n">dx</span><span class="p">,</span><span class="n">dy</span><span class="p">),(</span><span class="n">x_2</span><span class="p">,</span><span class="n">y_2</span><span class="p">)),</span> <span class="n">gate_Sz_Bz</span><span class="p">)]</span>
+
+
+        <span class="c1"># last gate </span>
+        <span class="n">gate_seq</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>  <span class="p">(((</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">)),</span> <span class="n">gate_SS_2alpha</span><span class="p">)</span> <span class="p">)</span> 
+        
+        <span class="c1"># repeat the sequence in inverse order</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">):</span> <span class="n">gate_seq</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">gate_seq</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">gate_seq</span></div></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Juraj Hasik, Glen B. Mbeng
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

@@ -1,0 +1,883 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>ctm.generic.ctm_components &mdash; peps-torch alpha documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> peps-torch
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../ipeps.html">iPEPS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps.html">Generic iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_kagome.html">Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_c4v.html">1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_lc_1site_pg.html">1-site iPEPS from lin. combination</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipess_kagome.html">Generic Kagome iPESS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipess_kagome_pg.html">Kagome iPESS with point groups</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipess_kagome_pg_lc.html">Kagome iPESS from lin. combination</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../ipeps.html#abelian-symmetric-ipeps">Abelian-symmetric iPEPS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_abelian.html">Generic  abelian-symmetric iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_abelian.html#generic-abelian-symmetric-ipeps-with-weights">Generic abelian-symmetric iPEPS with weights</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_kagome_abelian.html">Abelian-symmetric Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_abelian_c4v.html">Abelian-symmetric 1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipess_kagome_abelian.html">Abelian-symmetric generic Kagome iPESS</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../envs.html">Environments</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../envs/generic.html">Generic iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/env.html">Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/rdm.html#module-ctm.pess_kagome.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/corrf.html">Correlation functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/transfer_matrix.html">Transfer Matrices</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../envs/generic_abelian.html">Abelian-symmetric generic iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic_abelian/env_abelian.html">Abelian-symmetric environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic_abelian/ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic_abelian/ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic_abelian/ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic_abelian/rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic_abelian/rdm.html#module-ctm.pess_kagome_abelian.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../envs/one_site_c4v.html">1-site C4v iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v/env_c4v.html">1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v/ctmrg_c4v.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v/rdm_c4v.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v/transfer_matrix.html">Transfer Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v/corrf_c4v.html">Correlation functions</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../envs/one_site_c4v_abelian.html">Abelian-symmetric 1-site C4v iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v_abelian/env_c4v_abelian.html">Abelian-symmetric 1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v_abelian/ctmrg_c4v_abelian.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v_abelian/rdm_c4v_abelian.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v_abelian/corrf_c4v_abelian.html">Correlation functions</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../optim.html">Optimization</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../optim/drivers.html">Optimization drivers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../optim/drivers/ad_optim.html">ad_optim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../optim/drivers/ad_optim_lbfgs_mod.html">ad_optim_lbfgs_mod</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../optim/drivers/ad_optim_sgd_mod.html">ad_optim_sgd_mod</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../optim/optimizers.html">Custom optimizers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../optim/optimizers/lbfgs_modified.html">Extended LBFGS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../optim/optimizers/sgd_modified.html">SGD with linesearch</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../config.html">Configuration</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../config.html#main">Main</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../config.html#global">Global</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../config.html#corner-transfer-matrix-algorithm">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../config.html#optimization">Optimization</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../models.html">Models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/akltS2.html">Spin S=2 AKLT Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/akltS2.html#module-models.akltS2">2x1 and 2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/akltS2.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/coupledLadders.html">Coupled Ladders</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/coupledLadders.html#dense-pytorch">Dense (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/coupledLadders.html#dense-yast">Dense (YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/coupledLadders.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/ising.html">Transverse Field Ising Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/ising.html#x1-unit-cell">1x1 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/ising.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/j1j2.html">J1-J2-J3 and J1-J2-lambda Heisenberg Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/j1j2.html#from-2x1-to-4x2-unit-cell-pytorch">from 2x1 to 4x2 unit cell (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/j1j2.html#from-2x1-to-4x2-unit-cell-dense-yast">from 2x1 to 4x2 unit cell (dense YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/j1j2.html#x1-c4v-pytorch">1x1 C4v (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/j1j2.html#x1-c4v-dense-yast">1x1 C4v (dense YAST)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/jq.html">J-Q Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/jq.html#module-models.jq">2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/jq.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/spin_half_kagome.html">SU(2) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/spin_half_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/spin_half_kagome.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/su3_kagome.html">SU(3) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/su3_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/su3_kagome.html#with-explict-u-1-xu-1-symmetry">With explict U(1)xU(1) symmetry</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../groups.html">Groups</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../groups/pg.html">Point group: square lattice</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../groups/su2.html">SU(2)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../groups/su2.html#module-groups.su2_abelian">SU(2) with explicit U(1) structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../groups/su3.html">SU(3)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../groups/su3.html#su-3-with-explicit-u-1-xu-1-structure">SU(3) with explicit U(1)xU(1) structure</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../linalg.html">Linear Algebra</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../linalg/custom_eig.html">Truncated eigendecomposition</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../linalg/custom_svd.html">Truncated SVD</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../linalg/spec_decomp.html">Spectral decompositions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../linalg/spec_decomp.html#module-linalg.svd_gesdd">SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../linalg/spec_decomp.html#module-linalg.svd_arnoldi">Partial SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../linalg/spec_decomp.html#module-linalg.svd_rsvd">Randomized SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../linalg/spec_decomp.html#module-linalg.eig_sym">Symmetric Eigendecomposition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../linalg/spec_decomp.html#module-linalg.eig_arnoldi">Partial diagonalization</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">peps-torch</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>ctm.generic.ctm_components</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for ctm.generic.ctm_components</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">from</span> <span class="nn">torch.utils.checkpoint</span> <span class="kn">import</span> <span class="n">checkpoint</span>
+<span class="kn">from</span> <span class="nn">config</span> <span class="kn">import</span> <span class="n">ctm_args</span>
+<span class="kn">from</span> <span class="nn">tn_interface</span> <span class="kn">import</span> <span class="n">contract</span>
+<span class="kn">from</span> <span class="nn">tn_interface</span> <span class="kn">import</span> <span class="n">view</span><span class="p">,</span> <span class="n">permute</span><span class="p">,</span> <span class="n">contiguous</span>
+
+<span class="c1">#####################################################################</span>
+<span class="c1"># functions building pair of 4x2 (or 2x4) halves of 4x4 TN</span>
+<span class="c1">#####################################################################</span>
+<div class="viewcode-block" id="halves_of_4x4_CTM_MOVE_UP"><a class="viewcode-back" href="../../../envs/generic/ctm_components.html#ctm.generic.ctm_components.halves_of_4x4_CTM_MOVE_UP">[docs]</a><span class="k">def</span> <span class="nf">halves_of_4x4_CTM_MOVE_UP</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    :param coord: site for which to build two halfs of 2x2 subsystem embedded </span>
+<span class="sd">                  in environment </span>
+<span class="sd">    :type coord: tuple(int,int)</span>
+<span class="sd">    :param state: wavefunction</span>
+<span class="sd">    :type state: IPEPS</span>
+<span class="sd">    :param env: environment</span>
+<span class="sd">    :type env: ENV</span>
+<span class="sd">    :return: right and left half of the system as matrices</span>
+<span class="sd">    :rtype: torch.Tensor, torch.Tensor</span>
+
+<span class="sd">    Builds right and left half of 2x2 subsystem embedded into environment. </span>
+<span class="sd">    The `coord` specifies the upper-right site of the 2x2 subsystem. </span>
+<span class="sd">    Performs following contraction and then reshaping the resulting tensors into matrices::</span>
+
+<span class="sd">        C T T        C = C2x2_LU(coord+(-1,0))  C2x2(coord)</span>
+<span class="sd">        T A B(coord) T   C2x2_LD(coord+(-1,-1)) C2x2(coord+(0,1))</span>
+<span class="sd">        T C D        T</span>
+<span class="sd">        C T T        C</span>
+
+<span class="sd">        C2x2--1-&gt;0 0--C2x2(coord) =     _0 0_</span>
+<span class="sd">        |0           1|                |     |</span>
+<span class="sd">        |0           0|             half2    half1</span>
+<span class="sd">        C2x2--1    1--C2x2             |_1 1_|</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># RU, RD, LU, LD</span>
+    <span class="n">tensors</span><span class="o">=</span> <span class="n">c2x2_RU_t</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span> <span class="o">+</span> <span class="n">c2x2_RD_t</span><span class="p">((</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="mi">1</span><span class="p">),</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span> \
+        <span class="o">+</span> <span class="n">c2x2_LU_t</span><span class="p">((</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span> <span class="o">+</span> <span class="n">c2x2_LD_t</span><span class="p">((</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">ctm_args</span><span class="o">.</span><span class="n">fwd_checkpoint_halves</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">checkpoint</span><span class="p">(</span><span class="n">halves_of_4x4_CTM_MOVE_UP_c</span><span class="p">,</span><span class="o">*</span><span class="n">tensors</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">halves_of_4x4_CTM_MOVE_UP_c</span><span class="p">(</span><span class="o">*</span><span class="n">tensors</span><span class="p">)</span></div>
+
+<span class="k">def</span> <span class="nf">halves_of_4x4_CTM_MOVE_UP_t</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">):</span>
+    <span class="c1"># RU, RD, LU, LD</span>
+    <span class="n">tensors</span><span class="o">=</span> <span class="n">c2x2_RU_t</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span> <span class="o">+</span> <span class="n">c2x2_RD_t</span><span class="p">((</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="mi">1</span><span class="p">),</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span> \
+        <span class="o">+</span> <span class="n">c2x2_LU_t</span><span class="p">((</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span> <span class="o">+</span> <span class="n">c2x2_LD_t</span><span class="p">((</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">tensors</span>
+
+<span class="k">def</span> <span class="nf">halves_of_4x4_CTM_MOVE_UP_c</span><span class="p">(</span><span class="o">*</span><span class="n">tensors</span><span class="p">):</span>
+    <span class="c1"># C T T        C = C2x2_LU(coord+(-1,0))  C2x2(coord)</span>
+    <span class="c1"># T A B(coord) T   C2x2_LD(coord+(-1,-1)) C2x2(coord+(0,1))</span>
+    <span class="c1"># T C D        T</span>
+    <span class="c1"># C T T        C</span>
+
+    <span class="c1"># C2x2--1-&gt;0 0--C2x2(coord) =     _0 0_</span>
+    <span class="c1"># |0           1|                |     |</span>
+    <span class="c1"># |0           0|             half2    half1</span>
+    <span class="c1"># C2x2--1    1--C2x2             |_1 1_|</span>
+    
+    <span class="c1"># C_1, T1_1, T2_1, A_1= tensors[0:4]</span>
+    <span class="c1"># C_2, T1_2, T2_2, A_2= tensors[4:8]</span>
+    <span class="c1"># C_3, T1_3, T2_3, A_3= tensors[8:12]</span>
+    <span class="c1"># C_4, T1_4, T2_4, A_4= tensors[12:16]</span>
+
+    <span class="k">return</span> <span class="n">contract</span><span class="p">(</span><span class="n">c2x2_RU_c</span><span class="p">(</span><span class="o">*</span><span class="n">tensors</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">4</span><span class="p">]),</span><span class="n">c2x2_RD_c</span><span class="p">(</span><span class="o">*</span><span class="n">tensors</span><span class="p">[</span><span class="mi">4</span><span class="p">:</span><span class="mi">8</span><span class="p">]),([</span><span class="mi">1</span><span class="p">],[</span><span class="mi">0</span><span class="p">])),</span> \
+        <span class="n">contract</span><span class="p">(</span><span class="n">c2x2_LU_c</span><span class="p">(</span><span class="o">*</span><span class="n">tensors</span><span class="p">[</span><span class="mi">8</span><span class="p">:</span><span class="mi">12</span><span class="p">]),</span><span class="n">c2x2_LD_c</span><span class="p">(</span><span class="o">*</span><span class="n">tensors</span><span class="p">[</span><span class="mi">12</span><span class="p">:</span><span class="mi">16</span><span class="p">]),([</span><span class="mi">0</span><span class="p">],[</span><span class="mi">0</span><span class="p">]))</span>
+
+<div class="viewcode-block" id="halves_of_4x4_CTM_MOVE_LEFT"><a class="viewcode-back" href="../../../envs/generic/ctm_components.html#ctm.generic.ctm_components.halves_of_4x4_CTM_MOVE_LEFT">[docs]</a><span class="k">def</span> <span class="nf">halves_of_4x4_CTM_MOVE_LEFT</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    :param coord: site for which to build two halfs of 2x2 subsystem embedded </span>
+<span class="sd">                  in environment </span>
+<span class="sd">    :type coord: tuple(int,int)</span>
+<span class="sd">    :param state: wavefunction</span>
+<span class="sd">    :type state: IPEPS</span>
+<span class="sd">    :param env: environment</span>
+<span class="sd">    :type env: ENV</span>
+<span class="sd">    :return: upper and lower half of the system as matrices</span>
+<span class="sd">    :rtype: torch.Tensor, torch.Tensor</span>
+
+<span class="sd">    Builds upper and lower half of 2x2 subsystem embedded into environment. </span>
+<span class="sd">    The `coord` specifies the upper-left site of the 2x2 subsystem. </span>
+<span class="sd">    Performs following contraction and then reshaping the resulting tensors into matrices::</span>
+
+<span class="sd">        C T        T C = C2x2_LU(coord)       C2x2(coord+(1,0))</span>
+<span class="sd">        T A(coord) B T   C2x2_LD(coord+(0,1)) C2x2(coord+(1,1))</span>
+<span class="sd">        T C        D T</span>
+<span class="sd">        C T        T C</span>
+
+<span class="sd">        C2x2(coord)--1 0--C2x2 = half1</span>
+<span class="sd">        |0               1|      |0  |1</span>
+<span class="sd">        </span>
+<span class="sd">        |0            1&lt;-0|      |0  |1</span>
+<span class="sd">        C2x2--1 1---------C2x2   half2</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># LU, RU, LS, RD</span>
+    <span class="n">tensors</span><span class="o">=</span> <span class="n">c2x2_LU_t</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span> <span class="o">+</span> <span class="n">c2x2_RU_t</span><span class="p">((</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span> \
+        <span class="o">+</span> <span class="n">c2x2_LD_t</span><span class="p">((</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="mi">1</span><span class="p">),</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span> <span class="o">+</span> <span class="n">c2x2_RD_t</span><span class="p">((</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="mi">1</span><span class="p">),</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">ctm_args</span><span class="o">.</span><span class="n">fwd_checkpoint_halves</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">checkpoint</span><span class="p">(</span><span class="n">halves_of_4x4_CTM_MOVE_LEFT_c</span><span class="p">,</span><span class="o">*</span><span class="n">tensors</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">halves_of_4x4_CTM_MOVE_LEFT_c</span><span class="p">(</span><span class="o">*</span><span class="n">tensors</span><span class="p">)</span></div>
+
+<span class="k">def</span> <span class="nf">halves_of_4x4_CTM_MOVE_LEFT_t</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">):</span>
+    <span class="c1"># LU, RU, LS, RD</span>
+    <span class="n">tensors</span><span class="o">=</span> <span class="n">c2x2_LU_t</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span> <span class="o">+</span> <span class="n">c2x2_RU_t</span><span class="p">((</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span> \
+        <span class="o">+</span> <span class="n">c2x2_LD_t</span><span class="p">((</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="mi">1</span><span class="p">),</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span> <span class="o">+</span> <span class="n">c2x2_RD_t</span><span class="p">((</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="mi">1</span><span class="p">),</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">tensors</span>
+
+<span class="k">def</span> <span class="nf">halves_of_4x4_CTM_MOVE_LEFT_c</span><span class="p">(</span><span class="o">*</span><span class="n">tensors</span><span class="p">):</span>
+    <span class="c1"># C T        T C = C2x2_LU(coord)       C2x2(coord+(1,0))</span>
+    <span class="c1"># T A(coord) B T   C2x2_LD(coord+(0,1)) C2x2(coord+(1,1))</span>
+    <span class="c1"># T C        D T</span>
+    <span class="c1"># C T        T C</span>
+
+    <span class="c1"># C2x2(coord)--1 0--C2x2 = half1</span>
+    <span class="c1"># |0               1|      |0  |1</span>
+    <span class="c1"># </span>
+    <span class="c1"># |0            1&lt;-0|      |0  |1</span>
+    <span class="c1"># C2x2--1 1---------C2x2   half2</span>
+    
+    <span class="k">return</span> <span class="n">contract</span><span class="p">(</span><span class="n">c2x2_LU_c</span><span class="p">(</span><span class="o">*</span><span class="n">tensors</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">4</span><span class="p">]),</span><span class="n">c2x2_RU_c</span><span class="p">(</span><span class="o">*</span><span class="n">tensors</span><span class="p">[</span><span class="mi">4</span><span class="p">:</span><span class="mi">8</span><span class="p">]),([</span><span class="mi">1</span><span class="p">],[</span><span class="mi">0</span><span class="p">])),</span> \
+        <span class="n">contract</span><span class="p">(</span><span class="n">c2x2_LD_c</span><span class="p">(</span><span class="o">*</span><span class="n">tensors</span><span class="p">[</span><span class="mi">8</span><span class="p">:</span><span class="mi">12</span><span class="p">]),</span><span class="n">c2x2_RD_c</span><span class="p">(</span><span class="o">*</span><span class="n">tensors</span><span class="p">[</span><span class="mi">12</span><span class="p">:</span><span class="mi">16</span><span class="p">]),([</span><span class="mi">1</span><span class="p">],[</span><span class="mi">1</span><span class="p">]))</span>
+
+<div class="viewcode-block" id="halves_of_4x4_CTM_MOVE_DOWN"><a class="viewcode-back" href="../../../envs/generic/ctm_components.html#ctm.generic.ctm_components.halves_of_4x4_CTM_MOVE_DOWN">[docs]</a><span class="k">def</span> <span class="nf">halves_of_4x4_CTM_MOVE_DOWN</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    :param coord: site for which to build two halfs of 2x2 subsystem embedded </span>
+<span class="sd">                  in environment </span>
+<span class="sd">    :type coord: tuple(int,int)</span>
+<span class="sd">    :param state: wavefunction</span>
+<span class="sd">    :type state: IPEPS</span>
+<span class="sd">    :param env: environment</span>
+<span class="sd">    :type env: ENV</span>
+<span class="sd">    :return: left and right half of the system as matrices</span>
+<span class="sd">    :rtype: torch.Tensor, torch.Tensor</span>
+
+<span class="sd">    Builds left and right half of 2x2 subsystem embedded into environment. </span>
+<span class="sd">    The `coord` specifies the lower-left site of the 2x2 subsystem. </span>
+<span class="sd">    Performs following contraction and then reshaping the resulting tensors into matrices::</span>
+
+<span class="sd">        C T T        C = C2x2_LU(coord+(0,-1)) C2x2(coord+(1,-1))</span>
+<span class="sd">        T A        B T   C2x2_LD(coord)        C2x2(coord+(1,0))</span>
+<span class="sd">        T C(coord) D T</span>
+<span class="sd">        C T        T C</span>
+
+<span class="sd">        C2x2---------1    1&lt;-0--C2x2 =     _1 1_</span>
+<span class="sd">        |0                      |1        |     |</span>
+<span class="sd">        |0                      |0      half1    half2</span>
+<span class="sd">        C2x2(coord)--1-&gt;0 0&lt;-1--C2x2      |_0 0_|</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># LD, LU, RD, RU</span>
+    <span class="n">tensors</span><span class="o">=</span> <span class="n">c2x2_LD_t</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span> <span class="o">+</span> <span class="n">c2x2_LU_t</span><span class="p">((</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span> \
+        <span class="o">+</span> <span class="n">c2x2_RD_t</span><span class="p">((</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span> <span class="o">+</span> <span class="n">c2x2_RU_t</span><span class="p">((</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="n">ctm_args</span><span class="o">.</span><span class="n">fwd_checkpoint_halves</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">checkpoint</span><span class="p">(</span><span class="n">halves_of_4x4_CTM_MOVE_DOWN_c</span><span class="p">,</span><span class="o">*</span><span class="n">tensors</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">halves_of_4x4_CTM_MOVE_DOWN_c</span><span class="p">(</span><span class="o">*</span><span class="n">tensors</span><span class="p">)</span></div>
+
+<span class="k">def</span> <span class="nf">halves_of_4x4_CTM_MOVE_DOWN_t</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">):</span>
+    <span class="c1"># LD, LU, RD, RU</span>
+    <span class="n">tensors</span><span class="o">=</span> <span class="n">c2x2_LD_t</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span> <span class="o">+</span> <span class="n">c2x2_LU_t</span><span class="p">((</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span> \
+        <span class="o">+</span> <span class="n">c2x2_RD_t</span><span class="p">((</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span> <span class="o">+</span> <span class="n">c2x2_RU_t</span><span class="p">((</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">tensors</span>
+
+<span class="k">def</span> <span class="nf">halves_of_4x4_CTM_MOVE_DOWN_c</span><span class="p">(</span><span class="o">*</span><span class="n">tensors</span><span class="p">):</span>
+    <span class="c1"># C T T        C = C2x2_LU(coord+(0,-1)) C2x2(coord+(1,-1))</span>
+    <span class="c1"># T A        B T   C2x2_LD(coord)        C2x2(coord+(1,0))</span>
+    <span class="c1"># T C(coord) D T</span>
+    <span class="c1"># C T        T C</span>
+
+    <span class="c1"># C2x2---------1    1&lt;-0--C2x2 =     _1 1_</span>
+    <span class="c1"># |0                      |1        |     |</span>
+    <span class="c1"># |0                      |0      half1    half2</span>
+    <span class="c1"># C2x2(coord)--1-&gt;0 0&lt;-1--C2x2      |_0 0_|</span>
+
+    <span class="k">return</span> <span class="n">contract</span><span class="p">(</span><span class="n">c2x2_LD_c</span><span class="p">(</span><span class="o">*</span><span class="n">tensors</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">4</span><span class="p">]),</span><span class="n">c2x2_LU_c</span><span class="p">(</span><span class="o">*</span><span class="n">tensors</span><span class="p">[</span><span class="mi">4</span><span class="p">:</span><span class="mi">8</span><span class="p">]),([</span><span class="mi">0</span><span class="p">],[</span><span class="mi">0</span><span class="p">])),</span> \
+        <span class="n">contract</span><span class="p">(</span><span class="n">c2x2_RD_c</span><span class="p">(</span><span class="o">*</span><span class="n">tensors</span><span class="p">[</span><span class="mi">8</span><span class="p">:</span><span class="mi">12</span><span class="p">]),</span><span class="n">c2x2_RU_c</span><span class="p">(</span><span class="o">*</span><span class="n">tensors</span><span class="p">[</span><span class="mi">12</span><span class="p">:</span><span class="mi">16</span><span class="p">]),([</span><span class="mi">0</span><span class="p">],[</span><span class="mi">1</span><span class="p">]))</span>
+
+<div class="viewcode-block" id="halves_of_4x4_CTM_MOVE_RIGHT"><a class="viewcode-back" href="../../../envs/generic/ctm_components.html#ctm.generic.ctm_components.halves_of_4x4_CTM_MOVE_RIGHT">[docs]</a><span class="k">def</span> <span class="nf">halves_of_4x4_CTM_MOVE_RIGHT</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    :param coord: site for which to build two halfs of 2x2 subsystem embedded </span>
+<span class="sd">                  in environment </span>
+<span class="sd">    :type coord: tuple(int,int)</span>
+<span class="sd">    :param state: wavefunction</span>
+<span class="sd">    :type state: IPEPS</span>
+<span class="sd">    :param env: environment</span>
+<span class="sd">    :type env: ENV</span>
+<span class="sd">    :return: upper and lower half of the system as matrices</span>
+<span class="sd">    :rtype: torch.Tensor, torch.Tensor</span>
+
+<span class="sd">    Builds uoper and lower half of 2x2 subsystem embedded into environment. </span>
+<span class="sd">    The `coord` specifies the lower-right site of the 2x2 subsystem. </span>
+<span class="sd">    Performs following contraction and then reshaping the resulting tensors into matrices::</span>
+
+<span class="sd">        C T T        C = C2x2_LU(coord+(-1,-1)) C2x2(coord+(0,-1))</span>
+<span class="sd">        T A B        T   C2x2_LD(coord+(-1,0))  C2x2(coord)</span>
+<span class="sd">        T C D(coord) T</span>
+<span class="sd">        C T T        C</span>
+
+<span class="sd">        C2x2--1 0--C2x2        = half2</span>
+<span class="sd">        |0-&gt;1      |1-&gt;0         |1  |0</span>
+<span class="sd">        </span>
+<span class="sd">        |0-&gt;1      |0            |1  |0</span>
+<span class="sd">        C2x2--1 1--C2x2(coord)   half1</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># RD, LD, RU, LU</span>
+    <span class="n">tensors</span><span class="o">=</span> <span class="n">c2x2_RD_t</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span> <span class="o">+</span> <span class="n">c2x2_LD_t</span><span class="p">((</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span> \
+        <span class="o">+</span> <span class="n">c2x2_RU_t</span><span class="p">((</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span> <span class="o">+</span> <span class="n">c2x2_LU_t</span><span class="p">((</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="n">ctm_args</span><span class="o">.</span><span class="n">fwd_checkpoint_halves</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">checkpoint</span><span class="p">(</span><span class="n">halves_of_4x4_CTM_MOVE_RIGHT_c</span><span class="p">,</span><span class="o">*</span><span class="n">tensors</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">halves_of_4x4_CTM_MOVE_RIGHT_c</span><span class="p">(</span><span class="o">*</span><span class="n">tensors</span><span class="p">)</span></div>
+
+<span class="k">def</span> <span class="nf">halves_of_4x4_CTM_MOVE_RIGHT_t</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">):</span>
+    <span class="c1"># RD, LD, RU, LU</span>
+    <span class="n">tensors</span><span class="o">=</span> <span class="n">c2x2_RD_t</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span> <span class="o">+</span> <span class="n">c2x2_LD_t</span><span class="p">((</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span> \
+        <span class="o">+</span> <span class="n">c2x2_RU_t</span><span class="p">((</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span> <span class="o">+</span> <span class="n">c2x2_LU_t</span><span class="p">((</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">tensors</span>
+
+<span class="k">def</span> <span class="nf">halves_of_4x4_CTM_MOVE_RIGHT_c</span><span class="p">(</span><span class="o">*</span><span class="n">tensors</span><span class="p">):</span>
+    <span class="c1"># C T T        C = C2x2_LU(coord+(-1,-1)) C2x2(coord+(0,-1))</span>
+    <span class="c1"># T A B        T   C2x2_LD(coord+(-1,0))  C2x2(coord)</span>
+    <span class="c1"># T C D(coord) T</span>
+    <span class="c1"># C T T        C</span>
+
+    <span class="c1"># C2x2--1 0--C2x2        = half2</span>
+    <span class="c1"># |0-&gt;1      |1-&gt;0         |1  |0</span>
+    <span class="c1"># </span>
+    <span class="c1"># |0-&gt;1      |0            |1  |0</span>
+    <span class="c1"># C2x2--1 1--C2x2(coord)   half1</span>
+
+    <span class="k">return</span> <span class="n">contract</span><span class="p">(</span><span class="n">c2x2_RD_c</span><span class="p">(</span><span class="o">*</span><span class="n">tensors</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">4</span><span class="p">]),</span><span class="n">c2x2_LD_c</span><span class="p">(</span><span class="o">*</span><span class="n">tensors</span><span class="p">[</span><span class="mi">4</span><span class="p">:</span><span class="mi">8</span><span class="p">]),([</span><span class="mi">1</span><span class="p">],[</span><span class="mi">1</span><span class="p">])),</span> \
+        <span class="n">contract</span><span class="p">(</span><span class="n">c2x2_RU_c</span><span class="p">(</span><span class="o">*</span><span class="n">tensors</span><span class="p">[</span><span class="mi">8</span><span class="p">:</span><span class="mi">12</span><span class="p">]),</span><span class="n">c2x2_LU_c</span><span class="p">(</span><span class="o">*</span><span class="n">tensors</span><span class="p">[</span><span class="mi">12</span><span class="p">:</span><span class="mi">16</span><span class="p">]),([</span><span class="mi">0</span><span class="p">],[</span><span class="mi">1</span><span class="p">]))</span>
+
+<span class="c1">#####################################################################</span>
+<span class="c1"># functions building 2x2 Corner</span>
+<span class="c1">#####################################################################</span>
+<div class="viewcode-block" id="c2x2_LU"><a class="viewcode-back" href="../../../envs/generic/ctm_components.html#ctm.generic.ctm_components.c2x2_LU">[docs]</a><span class="k">def</span> <span class="nf">c2x2_LU</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    :param coord: site for which to build enlarged upper-left corner </span>
+<span class="sd">    :type coord: tuple(int,int)</span>
+<span class="sd">    :param state: wavefunction</span>
+<span class="sd">    :type state: IPEPS</span>
+<span class="sd">    :param env: environment</span>
+<span class="sd">    :type env: ENV</span>
+<span class="sd">    :return: enlarged upper-left corner</span>
+<span class="sd">    :rtype: torch.Tensor</span>
+
+<span class="sd">    Builds upper-left corner at site `coord` by performing following</span>
+<span class="sd">    contraction and then reshaping the resulting tensor into matrix::</span>
+
+<span class="sd">        C----T--2         =&gt; C2x2--(2,3)-&gt;1</span>
+<span class="sd">        |    |               |</span>
+<span class="sd">        |    |               (0,1)-&gt;0</span>
+<span class="sd">        T----A(coord)--3</span>
+<span class="sd">        |    |</span>
+<span class="sd">        0    1</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">C</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">),(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">))]</span>
+    <span class="n">T1</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">))]</span>
+    <span class="n">T2</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">),(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">))]</span>
+    <span class="n">A</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span>
+
+    <span class="n">tensors</span><span class="o">=</span> <span class="n">C</span><span class="p">,</span> <span class="n">T1</span><span class="p">,</span> <span class="n">T2</span><span class="p">,</span> <span class="n">A</span>
+
+    <span class="k">if</span> <span class="n">ctm_args</span><span class="o">.</span><span class="n">fwd_checkpoint_c2x2</span><span class="p">:</span>
+        <span class="n">C2x2</span><span class="o">=</span> <span class="n">checkpoint</span><span class="p">(</span><span class="n">c2x2_LU_c</span><span class="p">,</span><span class="o">*</span><span class="n">tensors</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">C2x2</span><span class="o">=</span> <span class="n">c2x2_LU_c</span><span class="p">(</span><span class="o">*</span><span class="n">tensors</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;C2X2 LU &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;-&gt;&quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">))</span><span class="o">+</span><span class="s2">&quot; (-1,-1)&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">1</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">C2x2</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">C2x2</span></div>
+
+<span class="k">def</span> <span class="nf">c2x2_LU_t</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">):</span>
+    <span class="n">tensors</span><span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">),(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">))],</span> \
+        <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">))],</span> \
+        <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">),(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">))],</span> \
+        <span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">tensors</span>
+
+<span class="k">def</span> <span class="nf">c2x2_LU_c</span><span class="p">(</span><span class="o">*</span><span class="n">tensors</span><span class="p">):</span>
+        <span class="n">C</span><span class="p">,</span> <span class="n">T1</span><span class="p">,</span> <span class="n">T2</span><span class="p">,</span> <span class="n">A</span><span class="o">=</span> <span class="n">tensors</span>
+        <span class="c1"># C--10--T1--2</span>
+        <span class="c1"># 0      1</span>
+        <span class="n">C2x2</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C</span><span class="p">,</span> <span class="n">T1</span><span class="p">,</span> <span class="p">([</span><span class="mi">1</span><span class="p">],[</span><span class="mi">0</span><span class="p">]))</span>
+
+        <span class="c1"># C------T1--2-&gt;1</span>
+        <span class="c1"># 0      1-&gt;0</span>
+        <span class="c1"># 0</span>
+        <span class="c1"># T2--2-&gt;3</span>
+        <span class="c1"># 1-&gt;2</span>
+        <span class="n">C2x2</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C2x2</span><span class="p">,</span> <span class="n">T2</span><span class="p">,</span> <span class="p">([</span><span class="mi">0</span><span class="p">],[</span><span class="mi">0</span><span class="p">]))</span>
+
+        <span class="c1"># C-------T1--1-&gt;0</span>
+        <span class="c1"># |       0</span>
+        <span class="c1"># |       0</span>
+        <span class="c1"># T2--3 1 A--3 </span>
+        <span class="c1"># 2-&gt;1    2</span>
+        <span class="n">C2x2</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C2x2</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mi">3</span><span class="p">],[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]))</span>
+
+        <span class="c1"># permute 0123-&gt;1203</span>
+        <span class="c1"># reshape (12)(03)-&gt;01</span>
+        <span class="n">C2x2</span> <span class="o">=</span> <span class="n">contiguous</span><span class="p">(</span><span class="n">permute</span><span class="p">(</span><span class="n">C2x2</span><span class="p">,(</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">3</span><span class="p">)))</span>
+        <span class="n">C2x2</span> <span class="o">=</span> <span class="n">view</span><span class="p">(</span><span class="n">C2x2</span><span class="p">,(</span><span class="n">T2</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">A</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span><span class="n">T1</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">*</span><span class="n">A</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">3</span><span class="p">)))</span>
+
+        <span class="c1"># C2x2--1</span>
+        <span class="c1"># |</span>
+        <span class="c1"># 0</span>
+        <span class="k">return</span> <span class="n">C2x2</span>
+
+<div class="viewcode-block" id="c2x2_RU"><a class="viewcode-back" href="../../../envs/generic/ctm_components.html#ctm.generic.ctm_components.c2x2_RU">[docs]</a><span class="k">def</span> <span class="nf">c2x2_RU</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    :param coord: site for which to build enlarged upper-right corner </span>
+<span class="sd">    :type coord: tuple(int,int)</span>
+<span class="sd">    :param state: wavefunction</span>
+<span class="sd">    :type state: IPEPS</span>
+<span class="sd">    :param env: environment</span>
+<span class="sd">    :type env: ENV</span>
+<span class="sd">    :return: enlarged upper-left corner</span>
+<span class="sd">    :rtype: torch.Tensor</span>
+
+<span class="sd">    Builds upper-right corner at site `coord` by performing following</span>
+<span class="sd">    contraction and then reshaping the resulting tensor into matrix::</span>
+
+<span class="sd">            0--T---------C  =&gt;  0&lt;-(0,1)--C2x2</span>
+<span class="sd">               |         |                |</span>
+<span class="sd">               |         |          1&lt;-(2,3)</span>
+<span class="sd">            1--A(coord)--T</span>
+<span class="sd">               3         2</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">C</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">))]</span>
+    <span class="n">T1</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">))]</span>
+    <span class="n">T2</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">))]</span>
+    <span class="n">A</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span>
+
+    <span class="n">tensors</span><span class="o">=</span> <span class="n">C</span><span class="p">,</span> <span class="n">T1</span><span class="p">,</span> <span class="n">T2</span><span class="p">,</span> <span class="n">A</span>
+
+    <span class="k">if</span> <span class="n">ctm_args</span><span class="o">.</span><span class="n">fwd_checkpoint_c2x2</span><span class="p">:</span>
+        <span class="n">C2x2</span><span class="o">=</span> <span class="n">checkpoint</span><span class="p">(</span><span class="n">c2x2_RU_c</span><span class="p">,</span><span class="o">*</span><span class="n">tensors</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">C2x2</span><span class="o">=</span> <span class="n">c2x2_RU_c</span><span class="p">(</span><span class="o">*</span><span class="n">tensors</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;C2X2 RU &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;-&gt;&quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">))</span><span class="o">+</span><span class="s2">&quot; (1,-1)&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">1</span><span class="p">:</span> 
+        <span class="nb">print</span><span class="p">(</span><span class="n">C2x2</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">C2x2</span></div>
+
+<span class="k">def</span> <span class="nf">c2x2_RU_t</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">):</span>
+    <span class="n">tensors</span><span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">))],</span> \
+        <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">))],</span> \
+        <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">))],</span> \
+        <span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">tensors</span>
+
+<span class="k">def</span> <span class="nf">c2x2_RU_c</span><span class="p">(</span><span class="o">*</span><span class="n">tensors</span><span class="p">):</span>
+        <span class="n">C</span><span class="p">,</span> <span class="n">T1</span><span class="p">,</span> <span class="n">T2</span><span class="p">,</span> <span class="n">A</span><span class="o">=</span> <span class="n">tensors</span> 
+        <span class="c1"># 0--C</span>
+        <span class="c1">#    1</span>
+        <span class="c1">#    0</span>
+        <span class="c1"># 1--T1</span>
+        <span class="c1">#    2</span>
+        <span class="n">C2x2</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C</span><span class="p">,</span> <span class="n">T1</span><span class="p">,</span> <span class="p">([</span><span class="mi">1</span><span class="p">],[</span><span class="mi">0</span><span class="p">]))</span>
+
+        <span class="c1"># 2&lt;-0--T2--2 0--C</span>
+        <span class="c1">#    3&lt;-1        |</span>
+        <span class="c1">#          0&lt;-1--T1</span>
+        <span class="c1">#             1&lt;-2</span>
+        <span class="n">C2x2</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C2x2</span><span class="p">,</span> <span class="n">T2</span><span class="p">,</span> <span class="p">([</span><span class="mi">0</span><span class="p">],[</span><span class="mi">2</span><span class="p">]))</span>
+
+        <span class="c1"># 1&lt;-2--T2------C</span>
+        <span class="c1">#       3       |</span>
+        <span class="c1">#       0       |</span>
+        <span class="c1"># 2&lt;-1--A--3 0--T1</span>
+        <span class="c1">#    3&lt;-2    0&lt;-1</span>
+        <span class="n">C2x2</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C2x2</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mi">3</span><span class="p">],[</span><span class="mi">3</span><span class="p">,</span><span class="mi">0</span><span class="p">]))</span>
+
+        <span class="c1"># permute 0123-&gt;1203</span>
+        <span class="c1"># reshape (12)(03)-&gt;01</span>
+        <span class="n">C2x2</span> <span class="o">=</span> <span class="n">contiguous</span><span class="p">(</span><span class="n">permute</span><span class="p">(</span><span class="n">C2x2</span><span class="p">,(</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">3</span><span class="p">)))</span>
+        <span class="n">C2x2</span> <span class="o">=</span> <span class="n">view</span><span class="p">(</span><span class="n">C2x2</span><span class="p">,(</span><span class="n">T2</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">*</span><span class="n">A</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span><span class="n">T1</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">*</span><span class="n">A</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">2</span><span class="p">)))</span>
+     
+        <span class="c1"># 0--C2x2</span>
+        <span class="c1">#    |</span>
+        <span class="c1">#    1</span>
+        <span class="k">return</span> <span class="n">C2x2</span>
+
+<div class="viewcode-block" id="c2x2_RD"><a class="viewcode-back" href="../../../envs/generic/ctm_components.html#ctm.generic.ctm_components.c2x2_RD">[docs]</a><span class="k">def</span> <span class="nf">c2x2_RD</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    :param coord: site for which to build enlarged lower-right corner </span>
+<span class="sd">    :type coord: tuple(int,int)</span>
+<span class="sd">    :param state: wavefunction</span>
+<span class="sd">    :type state: IPEPS</span>
+<span class="sd">    :param env: environment</span>
+<span class="sd">    :type env: ENV</span>
+<span class="sd">    :return: enlarged upper-left corner</span>
+<span class="sd">    :rtype: torch.Tensor</span>
+
+<span class="sd">    Builds lower-right corner at site `coord` by performing following</span>
+<span class="sd">    contraction and then reshaping the resulting tensor into matrix::</span>
+
+<span class="sd">               1         0 </span>
+<span class="sd">            3--A(coord)--T  =&gt;      0&lt;-(0,1)</span>
+<span class="sd">               |         |                |</span>
+<span class="sd">               |         |      1&lt;-(2,3)--C2x2</span>
+<span class="sd">            2--T---------C</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">C</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">))]</span>
+    <span class="n">T1</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">))]</span>
+    <span class="n">T2</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">))]</span>
+    <span class="n">A</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span>
+
+    <span class="n">tensors</span><span class="o">=</span> <span class="n">C</span><span class="p">,</span> <span class="n">T1</span><span class="p">,</span> <span class="n">T2</span><span class="p">,</span> <span class="n">A</span>
+
+    <span class="k">if</span> <span class="n">ctm_args</span><span class="o">.</span><span class="n">fwd_checkpoint_c2x2</span><span class="p">:</span>
+        <span class="n">C2x2</span><span class="o">=</span> <span class="n">checkpoint</span><span class="p">(</span><span class="n">c2x2_RD_c</span><span class="p">,</span><span class="o">*</span><span class="n">tensors</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">C2x2</span><span class="o">=</span> <span class="n">c2x2_RD_c</span><span class="p">(</span><span class="o">*</span><span class="n">tensors</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;C2X2 RD &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;-&gt;&quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">))</span><span class="o">+</span><span class="s2">&quot; (1,1)&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">1</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">C2x2</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">C2x2</span></div>
+
+<span class="k">def</span> <span class="nf">c2x2_RD_t</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">):</span>
+    <span class="n">tensors</span><span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">))],</span> \
+        <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">))],</span> \
+        <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">))],</span> \
+        <span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">tensors</span>
+
+<span class="k">def</span> <span class="nf">c2x2_RD_c</span><span class="p">(</span><span class="o">*</span><span class="n">tensors</span><span class="p">):</span>
+        <span class="n">C</span><span class="p">,</span> <span class="n">T1</span><span class="p">,</span> <span class="n">T2</span><span class="p">,</span> <span class="n">A</span><span class="o">=</span> <span class="n">tensors</span>
+        <span class="c1">#    1&lt;-0        0</span>
+        <span class="c1"># 2&lt;-1--T1--2 1--C</span>
+        <span class="n">C2x2</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C</span><span class="p">,</span> <span class="n">T1</span><span class="p">,</span> <span class="p">([</span><span class="mi">1</span><span class="p">],[</span><span class="mi">2</span><span class="p">]))</span>
+
+        <span class="c1">#         2&lt;-0</span>
+        <span class="c1">#      3&lt;-1--T2</span>
+        <span class="c1">#            2</span>
+        <span class="c1">#    0&lt;-1    0</span>
+        <span class="c1"># 1&lt;-2--T1---C</span>
+        <span class="n">C2x2</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C2x2</span><span class="p">,</span> <span class="n">T2</span><span class="p">,</span> <span class="p">([</span><span class="mi">0</span><span class="p">],[</span><span class="mi">2</span><span class="p">]))</span>
+
+        <span class="c1">#    2&lt;-0    1&lt;-2</span>
+        <span class="c1"># 3&lt;-1--A--3 3--T2</span>
+        <span class="c1">#       2       |</span>
+        <span class="c1">#       0       |</span>
+        <span class="c1"># 0&lt;-1--T1------C</span>
+        <span class="n">C2x2</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C2x2</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mi">3</span><span class="p">],[</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">]))</span>
+
+        <span class="c1"># permute 0123-&gt;1203</span>
+        <span class="c1"># reshape (12)(03)-&gt;01</span>
+        <span class="n">C2x2</span> <span class="o">=</span> <span class="n">contiguous</span><span class="p">(</span><span class="n">permute</span><span class="p">(</span><span class="n">C2x2</span><span class="p">,(</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">3</span><span class="p">)))</span>
+        <span class="n">C2x2</span> <span class="o">=</span> <span class="n">view</span><span class="p">(</span><span class="n">C2x2</span><span class="p">,(</span><span class="n">T2</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">*</span><span class="n">A</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span><span class="n">T1</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">A</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">)))</span>
+
+        <span class="c1">#    0</span>
+        <span class="c1">#    |</span>
+        <span class="c1"># 1--C2x2</span>
+        <span class="k">return</span> <span class="n">C2x2</span>
+
+<div class="viewcode-block" id="c2x2_LD"><a class="viewcode-back" href="../../../envs/generic/ctm_components.html#ctm.generic.ctm_components.c2x2_LD">[docs]</a><span class="k">def</span> <span class="nf">c2x2_LD</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    :param coord: site for which to build enlarged lower-right corner </span>
+<span class="sd">    :type coord: tuple(int,int)</span>
+<span class="sd">    :param state: wavefunction</span>
+<span class="sd">    :type state: IPEPS</span>
+<span class="sd">    :param env: environment</span>
+<span class="sd">    :type env: ENV</span>
+<span class="sd">    :return: enlarged upper-left corner</span>
+<span class="sd">    :rtype: torch.Tensor</span>
+
+<span class="sd">    Builds lower-right corner at site `coord` by performing following</span>
+<span class="sd">    contraction and then reshaping the resulting tensor into matrix::</span>
+
+<span class="sd">        0  1</span>
+<span class="sd">        T--A(coord)--3</span>
+<span class="sd">        |  |                (0,1)-&gt;0(+)</span>
+<span class="sd">        |  |                 |</span>
+<span class="sd">        C--T---------2  =&gt;   C2x2--(2,3)-&gt;1(-)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">C</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">),(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">))]</span>
+    <span class="n">T1</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">),(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">))]</span>
+    <span class="n">T2</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">))]</span>
+    <span class="n">A</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span>
+
+    <span class="n">tensors</span><span class="o">=</span> <span class="n">C</span><span class="p">,</span> <span class="n">T1</span><span class="p">,</span> <span class="n">T2</span><span class="p">,</span> <span class="n">A</span>
+
+    <span class="k">if</span> <span class="n">ctm_args</span><span class="o">.</span><span class="n">fwd_checkpoint_c2x2</span><span class="p">:</span>
+        <span class="n">C2x2</span><span class="o">=</span> <span class="n">checkpoint</span><span class="p">(</span><span class="n">c2x2_LD_c</span><span class="p">,</span><span class="o">*</span><span class="n">tensors</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">C2x2</span><span class="o">=</span> <span class="n">c2x2_LD_c</span><span class="p">(</span><span class="o">*</span><span class="n">tensors</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span> 
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;C2X2 LD &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;-&gt;&quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">))</span><span class="o">+</span><span class="s2">&quot; (-1,1)&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">1</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">C2x2</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">C2x2</span></div>
+
+<span class="k">def</span> <span class="nf">c2x2_LD_t</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">):</span>
+    <span class="n">tensors</span><span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">),(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">))],</span> \
+        <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">),(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">))],</span> \
+        <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">))],</span> \
+        <span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">tensors</span>
+
+<span class="k">def</span> <span class="nf">c2x2_LD_c</span><span class="p">(</span><span class="o">*</span><span class="n">tensors</span><span class="p">):</span>
+        <span class="n">C</span><span class="p">,</span> <span class="n">T1</span><span class="p">,</span> <span class="n">T2</span><span class="p">,</span> <span class="n">A</span><span class="o">=</span> <span class="n">tensors</span>
+        <span class="c1"># 0-&gt;1</span>
+        <span class="c1"># T1--2</span>
+        <span class="c1"># 1</span>
+        <span class="c1"># 0</span>
+        <span class="c1"># C--1-&gt;0</span>
+        <span class="n">C2x2</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C</span><span class="p">,</span> <span class="n">T1</span><span class="p">,</span> <span class="p">([</span><span class="mi">0</span><span class="p">],[</span><span class="mi">1</span><span class="p">]))</span>
+
+        <span class="c1"># 1-&gt;0</span>
+        <span class="c1"># T1--2-&gt;1</span>
+        <span class="c1"># |</span>
+        <span class="c1"># |       0-&gt;2</span>
+        <span class="c1"># C--0 1--T1--2-&gt;3</span>
+        <span class="n">C2x2</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C2x2</span><span class="p">,</span> <span class="n">T2</span><span class="p">,</span> <span class="p">([</span><span class="mi">0</span><span class="p">],[</span><span class="mi">1</span><span class="p">]))</span>
+
+        <span class="c1"># 0       0-&gt;2</span>
+        <span class="c1"># T1--1 1--A--3</span>
+        <span class="c1"># |        2</span>
+        <span class="c1"># |        2</span>
+        <span class="c1"># C--------T2--3-&gt;1</span>
+        <span class="n">C2x2</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C2x2</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">],[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">]))</span>
+
+        <span class="c1"># permute 0123-&gt;0213</span>
+        <span class="c1"># reshape (02)(13)-&gt;01</span>
+        <span class="n">C2x2</span> <span class="o">=</span> <span class="n">contiguous</span><span class="p">(</span><span class="n">permute</span><span class="p">(</span><span class="n">C2x2</span><span class="p">,(</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">)))</span>
+        <span class="n">C2x2</span> <span class="o">=</span> <span class="n">view</span><span class="p">(</span><span class="n">C2x2</span><span class="p">,(</span><span class="n">T1</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">*</span><span class="n">A</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span><span class="n">T2</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">*</span><span class="n">A</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">3</span><span class="p">)))</span>
+
+        <span class="c1"># 0</span>
+        <span class="c1"># |</span>
+        <span class="c1"># C2x2--1</span>
+        <span class="k">return</span> <span class="n">C2x2</span>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Juraj Hasik, Glen B. Mbeng
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

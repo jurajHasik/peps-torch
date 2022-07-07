@@ -1,0 +1,1564 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>ctm.generic.corrf &mdash; peps-torch alpha documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> peps-torch
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../ipeps.html">iPEPS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps.html">Generic iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_kagome.html">Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_c4v.html">1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_lc_1site_pg.html">1-site iPEPS from lin. combination</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipess_kagome.html">Generic Kagome iPESS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipess_kagome_pg.html">Kagome iPESS with point groups</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipess_kagome_pg_lc.html">Kagome iPESS from lin. combination</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../ipeps.html#abelian-symmetric-ipeps">Abelian-symmetric iPEPS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_abelian.html">Generic  abelian-symmetric iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_abelian.html#generic-abelian-symmetric-ipeps-with-weights">Generic abelian-symmetric iPEPS with weights</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_kagome_abelian.html">Abelian-symmetric Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipeps_abelian_c4v.html">Abelian-symmetric 1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../ipeps/ipess_kagome_abelian.html">Abelian-symmetric generic Kagome iPESS</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../envs.html">Environments</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../envs/generic.html">Generic iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/env.html">Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/rdm.html#module-ctm.pess_kagome.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/corrf.html">Correlation functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic/transfer_matrix.html">Transfer Matrices</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../envs/generic_abelian.html">Abelian-symmetric generic iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic_abelian/env_abelian.html">Abelian-symmetric environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic_abelian/ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic_abelian/ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic_abelian/ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic_abelian/rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/generic_abelian/rdm.html#module-ctm.pess_kagome_abelian.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../envs/one_site_c4v.html">1-site C4v iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v/env_c4v.html">1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v/ctmrg_c4v.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v/rdm_c4v.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v/transfer_matrix.html">Transfer Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v/corrf_c4v.html">Correlation functions</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../envs/one_site_c4v_abelian.html">Abelian-symmetric 1-site C4v iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v_abelian/env_c4v_abelian.html">Abelian-symmetric 1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v_abelian/ctmrg_c4v_abelian.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v_abelian/rdm_c4v_abelian.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../envs/one_site_c4v_abelian/corrf_c4v_abelian.html">Correlation functions</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../optim.html">Optimization</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../optim/drivers.html">Optimization drivers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../optim/drivers/ad_optim.html">ad_optim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../optim/drivers/ad_optim_lbfgs_mod.html">ad_optim_lbfgs_mod</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../optim/drivers/ad_optim_sgd_mod.html">ad_optim_sgd_mod</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../optim/optimizers.html">Custom optimizers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../optim/optimizers/lbfgs_modified.html">Extended LBFGS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../optim/optimizers/sgd_modified.html">SGD with linesearch</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../config.html">Configuration</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../config.html#main">Main</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../config.html#global">Global</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../config.html#corner-transfer-matrix-algorithm">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../config.html#optimization">Optimization</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../models.html">Models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/akltS2.html">Spin S=2 AKLT Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/akltS2.html#module-models.akltS2">2x1 and 2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/akltS2.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/coupledLadders.html">Coupled Ladders</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/coupledLadders.html#dense-pytorch">Dense (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/coupledLadders.html#dense-yast">Dense (YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/coupledLadders.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/ising.html">Transverse Field Ising Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/ising.html#x1-unit-cell">1x1 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/ising.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/j1j2.html">J1-J2-J3 and J1-J2-lambda Heisenberg Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/j1j2.html#from-2x1-to-4x2-unit-cell-pytorch">from 2x1 to 4x2 unit cell (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/j1j2.html#from-2x1-to-4x2-unit-cell-dense-yast">from 2x1 to 4x2 unit cell (dense YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/j1j2.html#x1-c4v-pytorch">1x1 C4v (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/j1j2.html#x1-c4v-dense-yast">1x1 C4v (dense YAST)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/jq.html">J-Q Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/jq.html#module-models.jq">2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/jq.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/spin_half_kagome.html">SU(2) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/spin_half_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/spin_half_kagome.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../models/su3_kagome.html">SU(3) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/su3_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../models/su3_kagome.html#with-explict-u-1-xu-1-symmetry">With explict U(1)xU(1) symmetry</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../groups.html">Groups</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../groups/pg.html">Point group: square lattice</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../groups/su2.html">SU(2)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../groups/su2.html#module-groups.su2_abelian">SU(2) with explicit U(1) structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../groups/su3.html">SU(3)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../groups/su3.html#su-3-with-explicit-u-1-xu-1-structure">SU(3) with explicit U(1)xU(1) structure</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../linalg.html">Linear Algebra</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../linalg/custom_eig.html">Truncated eigendecomposition</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../linalg/custom_svd.html">Truncated SVD</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../linalg/spec_decomp.html">Spectral decompositions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../linalg/spec_decomp.html#module-linalg.svd_gesdd">SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../linalg/spec_decomp.html#module-linalg.svd_arnoldi">Partial SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../linalg/spec_decomp.html#module-linalg.svd_rsvd">Randomized SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../linalg/spec_decomp.html#module-linalg.eig_sym">Symmetric Eigendecomposition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../linalg/spec_decomp.html#module-linalg.eig_arnoldi">Partial diagonalization</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">peps-torch</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>ctm.generic.corrf</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for ctm.generic.corrf</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">from</span> <span class="nn">ipeps.ipeps</span> <span class="kn">import</span> <span class="n">IPEPS</span>
+<span class="kn">from</span> <span class="nn">ctm.generic.env</span> <span class="kn">import</span> <span class="n">ENV</span>
+<span class="kn">from</span> <span class="nn">linalg.custom_svd</span> <span class="kn">import</span> <span class="n">truncated_svd_gesdd</span>
+<span class="kn">from</span> <span class="nn">tn_interface</span> <span class="kn">import</span> <span class="n">mm</span><span class="p">,</span> <span class="n">contract</span><span class="p">,</span> <span class="n">einsum</span>
+<span class="kn">from</span> <span class="nn">tn_interface</span> <span class="kn">import</span> <span class="n">view</span><span class="p">,</span> <span class="n">permute</span><span class="p">,</span> <span class="n">contiguous</span>
+<span class="kn">from</span> <span class="nn">tn_interface</span> <span class="kn">import</span> <span class="n">conj</span><span class="p">,</span> <span class="n">transpose</span>
+
+
+<div class="viewcode-block" id="get_edge"><a class="viewcode-back" href="../../../envs/generic/corrf.html#ctm.generic.corrf.get_edge">[docs]</a><span class="k">def</span> <span class="nf">get_edge</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    :param coord: tuple (x,y) specifying vertex on a square lattice</span>
+<span class="sd">    :param direction: direction of the edge</span>
+<span class="sd">    :param state: underlying wavefunction</span>
+<span class="sd">    :param env: environment corresponding to ``state``</span>
+<span class="sd">    :param verbosity: logging verbosity</span>
+<span class="sd">    :type coord: tuple(int,int)</span>
+<span class="sd">    :type direction: tuple(int,int)</span>
+<span class="sd">    :type state: IPEPS</span>
+<span class="sd">    :type env: ENV</span>
+<span class="sd">    :type verbosity: int</span>
+<span class="sd">    :return: tensor with indices :math:`\chi \times D^2 \times \chi`</span>
+<span class="sd">    :rtype: torch.tensor</span>
+
+<span class="sd">    Build an edge of site ``coord`` by contracting one of the following networks</span>
+<span class="sd">    depending on the chosen ``direction``::</span>
+
+<span class="sd">            up=(0,-1)   left=(-1,0)  down=(0,1)   right=(1,0)</span>
+
+<span class="sd">                         C--0         0  1  2       0--C</span>
+<span class="sd">                         |            |  |  |          |</span>
+<span class="sd">        E =  C--T--C     T--1         C--T--C       1--T  </span>
+<span class="sd">             |  |  |     |                             |</span>
+<span class="sd">             0  1  2     C--2                       2--C</span>
+
+<span class="sd">    The indices of the resulting tensor are always ordered from </span>
+<span class="sd">    left-to-right and from up-to-down.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">direction</span><span class="o">==</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">):</span> <span class="c1">#up</span>
+        <span class="n">C1</span><span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">c</span><span class="p">,(</span><span class="mi">1</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">))]</span>
+        <span class="n">T</span><span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">c</span><span class="p">,</span><span class="n">direction</span><span class="p">)]</span>
+        <span class="c1"># 0--T--2 0--C1</span>
+        <span class="c1">#    1       1-&gt;2</span>
+        <span class="n">E</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">T</span><span class="p">,</span><span class="n">C1</span><span class="p">,([</span><span class="mi">2</span><span class="p">],[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;E=CT &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">E</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+        <span class="c1"># C2--1 0--T--C1</span>
+        <span class="c1"># 0        1  2 </span>
+        <span class="n">C2</span><span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">c</span><span class="p">,(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">))]</span>
+        <span class="n">E</span><span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C2</span><span class="p">,</span><span class="n">E</span><span class="p">,([</span><span class="mi">1</span><span class="p">],[</span><span class="mi">0</span><span class="p">]))</span>
+    <span class="k">elif</span> <span class="n">direction</span><span class="o">==</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">):</span> <span class="c1">#left</span>
+        <span class="n">C1</span><span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">c</span><span class="p">,(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">))]</span>
+        <span class="n">T</span><span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">c</span><span class="p">,</span><span class="n">direction</span><span class="p">)]</span>
+        <span class="c1"># C1--1-&gt;0</span>
+        <span class="c1"># 0</span>
+        <span class="c1"># 0</span>
+        <span class="c1"># T--2</span>
+        <span class="c1"># 1</span>
+        <span class="n">E</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C1</span><span class="p">,</span><span class="n">T</span><span class="p">,([</span><span class="mi">0</span><span class="p">],[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;E=CT &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">E</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+        <span class="c1"># C1--0</span>
+        <span class="c1"># |</span>
+        <span class="c1"># T--2-&gt;1</span>
+        <span class="c1"># 1</span>
+        <span class="c1"># 0</span>
+        <span class="c1"># C2--1-&gt;2</span>
+        <span class="n">C2</span><span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">c</span><span class="p">,(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">))]</span>
+        <span class="n">E</span><span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">E</span><span class="p">,</span><span class="n">C2</span><span class="p">,([</span><span class="mi">1</span><span class="p">],[</span><span class="mi">0</span><span class="p">]))</span>
+    <span class="k">elif</span> <span class="n">direction</span><span class="o">==</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">):</span> <span class="c1">#down</span>
+        <span class="n">C1</span><span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">c</span><span class="p">,(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">))]</span>
+        <span class="n">T</span><span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">c</span><span class="p">,</span><span class="n">direction</span><span class="p">)]</span>
+        <span class="c1"># 0        0-&gt;1</span>
+        <span class="c1"># C1--1 1--T--2</span>
+        <span class="n">E</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C1</span><span class="p">,</span><span class="n">T</span><span class="p">,([</span><span class="mi">1</span><span class="p">],[</span><span class="mi">1</span><span class="p">]))</span>
+        <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;E=CT &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">E</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+        <span class="c1"># 0   1       0-&gt;2</span>
+        <span class="c1"># C1--T--2 1--C2 </span>
+        <span class="n">C2</span><span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">c</span><span class="p">,(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">))]</span>
+        <span class="n">E</span><span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">E</span><span class="p">,</span><span class="n">C2</span><span class="p">,([</span><span class="mi">2</span><span class="p">],[</span><span class="mi">1</span><span class="p">]))</span>
+    <span class="k">elif</span> <span class="n">direction</span><span class="o">==</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">):</span> <span class="c1">#right</span>
+        <span class="n">C1</span><span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">c</span><span class="p">,(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">))]</span>
+        <span class="n">T</span><span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">c</span><span class="p">,</span><span class="n">direction</span><span class="p">)]</span>
+        <span class="c1">#       0 </span>
+        <span class="c1">#    1--T</span>
+        <span class="c1">#       2</span>
+        <span class="c1">#       0</span>
+        <span class="c1"># 2&lt;-1--C1</span>
+        <span class="n">E</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">T</span><span class="p">,</span><span class="n">C1</span><span class="p">,([</span><span class="mi">2</span><span class="p">],[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;E=CT &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">E</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+        <span class="c1">#    0--C2</span>
+        <span class="c1">#       1</span>
+        <span class="c1">#       0</span>
+        <span class="c1">#    1--T</span>
+        <span class="c1">#       |</span>
+        <span class="c1">#    2--C1</span>
+        <span class="n">C2</span><span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">c</span><span class="p">,(</span><span class="mi">1</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">))]</span>
+        <span class="n">E</span><span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C2</span><span class="p">,</span><span class="n">E</span><span class="p">,([</span><span class="mi">1</span><span class="p">],[</span><span class="mi">0</span><span class="p">]))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid direction: &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">direction</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;E=CTC &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">E</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+    
+    <span class="k">return</span> <span class="n">E</span></div>
+
+<div class="viewcode-block" id="get_edge_2"><a class="viewcode-back" href="../../../envs/generic/corrf.html#ctm.generic.corrf.get_edge_2">[docs]</a><span class="k">def</span> <span class="nf">get_edge_2</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    :param coord: tuple (x,y) specifying vertex on a square lattice</span>
+<span class="sd">    :param direction: direction of the edge</span>
+<span class="sd">    :param state: underlying wavefunction</span>
+<span class="sd">    :param env: environment corresponding to ``state``</span>
+<span class="sd">    :param verbosity: logging verbosity</span>
+<span class="sd">    :type coord: tuple(int,int)</span>
+<span class="sd">    :type direction: tuple(int,int)</span>
+<span class="sd">    :type state: IPEPS</span>
+<span class="sd">    :type env: ENV</span>
+<span class="sd">    :type verbosity: int</span>
+<span class="sd">    :return: tensor with indices :math:`\chi \times D^2 \times \chi`</span>
+<span class="sd">    :rtype: torch.tensor</span>
+
+<span class="sd">    Build an edge of two sites, starting at position ``coord``, by contracting </span>
+<span class="sd">    one of the following networks depending on the chosen ``direction``::</span>
+
+<span class="sd">            up=(0,-1)   left=(-1,0)  down=(0,1)   right=(1,0)</span>
+
+<span class="sd">                        C--0         0  1  2  3    0--C</span>
+<span class="sd">                        |            |  |  |  |       |</span>
+<span class="sd">        E = C--T--T--C  T--1         C--T--T--C    1--T  </span>
+<span class="sd">            |  |  |  |  |                             |</span>
+<span class="sd">            0  1  2  3  T--2                       2--T</span>
+<span class="sd">                        |                             |</span>
+<span class="sd">                        C--3                       3--C</span>
+<span class="sd">    </span>
+<span class="sd">    The edge itself is grown from top to bottom or from left to right.</span>
+<span class="sd">    The indices of the resulting tensor are always ordered from </span>
+<span class="sd">    left-to-right and from up-to-down.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">dir_r</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">dir_b</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">shift_coord</span><span class="p">(</span><span class="n">c</span><span class="p">,</span><span class="n">d</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)):</span>
+        <span class="n">c0</span><span class="o">=</span> <span class="p">(</span><span class="n">c</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="n">d</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">c</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="n">d</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">c0</span><span class="p">,</span> <span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">c0</span><span class="p">)</span>
+
+    <span class="n">c0</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span> <span class="n">shift_coord</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">direction</span><span class="o">==</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">):</span> <span class="c1">#up</span>
+        <span class="n">C2</span><span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">s</span><span class="p">,(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">))]</span>
+        <span class="n">T</span><span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">s</span><span class="p">,</span><span class="n">direction</span><span class="p">)]</span>
+        <span class="c1"># C2--1 0--T--2</span>
+        <span class="c1"># 0        1</span>
+        <span class="n">E</span><span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C2</span><span class="p">,</span><span class="n">T</span><span class="p">,([</span><span class="mi">1</span><span class="p">],[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="n">c0</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span> <span class="n">shift_coord</span><span class="p">(</span><span class="n">c0</span><span class="p">,</span><span class="n">dir_r</span><span class="p">)</span>
+        <span class="n">T</span><span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">s</span><span class="p">,</span><span class="n">direction</span><span class="p">)]</span>
+        <span class="c1"># C2--T--2 0--T--2-&gt;3</span>
+        <span class="c1"># 0   1       1-&gt;2</span>
+        <span class="n">E</span><span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">E</span><span class="p">,</span><span class="n">T</span><span class="p">,([</span><span class="mi">2</span><span class="p">],[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="n">C1</span><span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">s</span><span class="p">,(</span><span class="mi">1</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">))]</span>
+        <span class="c1"># C2--T--T--3 0--C1</span>
+        <span class="c1"># 0   1  2        1-&gt;3</span>
+        <span class="n">E</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">E</span><span class="p">,</span><span class="n">C1</span><span class="p">,([</span><span class="mi">3</span><span class="p">],[</span><span class="mi">0</span><span class="p">]))</span>
+    <span class="k">elif</span> <span class="n">direction</span><span class="o">==</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">):</span> <span class="c1">#left</span>
+        <span class="n">C1</span><span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">s</span><span class="p">,(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">))]</span>
+        <span class="n">T</span><span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">s</span><span class="p">,</span><span class="n">direction</span><span class="p">)]</span>
+        <span class="c1"># C1--1-&gt;0</span>
+        <span class="c1"># 0</span>
+        <span class="c1"># 0</span>
+        <span class="c1"># T--2</span>
+        <span class="c1"># 1</span>
+        <span class="n">E</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C1</span><span class="p">,</span><span class="n">T</span><span class="p">,([</span><span class="mi">0</span><span class="p">],[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="n">c0</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span> <span class="n">shift_coord</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span><span class="n">dir_b</span><span class="p">)</span>
+        <span class="n">T</span><span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">s</span><span class="p">,</span><span class="n">direction</span><span class="p">)]</span>
+        <span class="c1"># C1--0</span>
+        <span class="c1"># T--2-&gt;1</span>
+        <span class="c1"># 1</span>
+        <span class="c1"># 0</span>
+        <span class="c1"># T--2-&gt;3</span>
+        <span class="c1"># 1-&gt;2</span>
+        <span class="n">E</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">E</span><span class="p">,</span><span class="n">T</span><span class="p">,([</span><span class="mi">1</span><span class="p">],[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="n">C2</span><span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">s</span><span class="p">,(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">))]</span>
+        <span class="c1"># C1--0</span>
+        <span class="c1"># |</span>
+        <span class="c1"># T--1</span>
+        <span class="c1"># T--3-&gt;2</span>
+        <span class="c1"># 2</span>
+        <span class="c1"># 0</span>
+        <span class="c1"># C2--1-&gt;3</span>
+        <span class="n">E</span><span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">E</span><span class="p">,</span><span class="n">C2</span><span class="p">,([</span><span class="mi">2</span><span class="p">],[</span><span class="mi">0</span><span class="p">]))</span>
+    <span class="k">elif</span> <span class="n">direction</span><span class="o">==</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">):</span> <span class="c1">#down</span>
+        <span class="n">C1</span><span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">s</span><span class="p">,(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">))]</span>
+        <span class="n">T</span><span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">s</span><span class="p">,</span><span class="n">direction</span><span class="p">)]</span>
+        <span class="c1"># 0        0-&gt;1</span>
+        <span class="c1"># C1--1 1--T--2</span>
+        <span class="n">E</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C1</span><span class="p">,</span><span class="n">T</span><span class="p">,([</span><span class="mi">1</span><span class="p">],[</span><span class="mi">1</span><span class="p">]))</span>
+        <span class="n">c0</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span> <span class="n">shift_coord</span><span class="p">(</span><span class="n">c0</span><span class="p">,</span><span class="n">dir_r</span><span class="p">)</span>
+        <span class="n">T</span><span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">s</span><span class="p">,</span><span class="n">direction</span><span class="p">)]</span>
+        <span class="c1"># 0   1       0-&gt;2</span>
+        <span class="c1"># C1--T--2 1--T--2-&gt;3</span>
+        <span class="n">E</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">E</span><span class="p">,</span><span class="n">T</span><span class="p">,([</span><span class="mi">2</span><span class="p">],[</span><span class="mi">1</span><span class="p">]))</span>
+        <span class="n">C2</span><span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">s</span><span class="p">,(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">))]</span>
+        <span class="c1"># 0   1  2       0-&gt;3</span>
+        <span class="c1"># C1--T--T--3 1--C2 </span>
+        <span class="n">E</span><span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">E</span><span class="p">,</span><span class="n">C2</span><span class="p">,([</span><span class="mi">3</span><span class="p">],[</span><span class="mi">1</span><span class="p">]))</span>
+    <span class="k">elif</span> <span class="n">direction</span><span class="o">==</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">):</span> <span class="c1">#right</span>
+        <span class="n">C2</span><span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">s</span><span class="p">,(</span><span class="mi">1</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">))]</span>
+        <span class="n">T</span><span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">s</span><span class="p">,</span><span class="n">direction</span><span class="p">)]</span>
+        <span class="c1">#    0--C2</span>
+        <span class="c1">#       1</span>
+        <span class="c1">#       0</span>
+        <span class="c1">#    1--T</span>
+        <span class="c1">#       2</span>
+        <span class="n">E</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">C2</span><span class="p">,</span><span class="n">T</span><span class="p">,([</span><span class="mi">1</span><span class="p">],[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="n">c0</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span> <span class="n">shift_coord</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">dir_b</span><span class="p">)</span>
+        <span class="n">T</span><span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">s</span><span class="p">,</span><span class="n">direction</span><span class="p">)]</span>        
+        <span class="c1">#    0--C2</span>
+        <span class="c1">#    1--T</span>
+        <span class="c1">#       2</span>
+        <span class="c1">#       0</span>
+        <span class="c1"># 2&lt;-1--T</span>
+        <span class="c1">#    3&lt;-2</span>
+        <span class="n">E</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">E</span><span class="p">,</span><span class="n">T</span><span class="p">,([</span><span class="mi">2</span><span class="p">],[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="n">C1</span><span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">C</span><span class="p">[(</span><span class="n">s</span><span class="p">,(</span><span class="mi">1</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">))]</span>
+        <span class="c1">#    0--C2</span>
+        <span class="c1">#    1--T</span>
+        <span class="c1">#    2--T</span>
+        <span class="c1">#       3</span>
+        <span class="c1">#       0 </span>
+        <span class="c1"># 3&lt;-2--C1</span>
+        <span class="n">E</span><span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">E</span><span class="p">,</span><span class="n">C1</span><span class="p">,([</span><span class="mi">3</span><span class="p">],[</span><span class="mi">0</span><span class="p">]))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid direction: &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">direction</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;E=CTTC &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">E</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+    
+    <span class="k">return</span> <span class="n">E</span></div>
+
+<div class="viewcode-block" id="apply_edge"><a class="viewcode-back" href="../../../envs/generic/corrf.html#ctm.generic.corrf.apply_edge">[docs]</a><span class="k">def</span> <span class="nf">apply_edge</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">vec</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    :param coord: tuple (x,y) specifying vertex on a square lattice</span>
+<span class="sd">    :param direction: direction of the edge</span>
+<span class="sd">    :param state: underlying wavefunction</span>
+<span class="sd">    :param env: environment corresponding to ``state``</span>
+<span class="sd">    :param vec: tensor of dimensions :math:`\chi \times (D^2)^l \times \chi`</span>
+<span class="sd">                representing an edge of length l</span>
+<span class="sd">    :param verbosity: logging verbosity</span>
+<span class="sd">    :type coord: tuple(int,int)</span>
+<span class="sd">    :type direction: tuple(int,int)</span>
+<span class="sd">    :type state: IPEPS</span>
+<span class="sd">    :type env: ENV</span>
+<span class="sd">    :type vec: torch.tensor</span>
+<span class="sd">    :type verbosity: int</span>
+<span class="sd">    :return: scalar resulting from the contraction of ``vec`` with an edge</span>
+<span class="sd">             built from the environment</span>
+<span class="sd">    :rtype: torch.tensor</span>
+<span class="sd">    </span>
+<span class="sd">    Contracts ``vec`` tensor with the edge of length l defined by ``coord`` site </span>
+<span class="sd">    and a chosen ``direction``. Afterwards, their dot product is computed::</span>
+
+<span class="sd">                            get_edge(coord,direction,...)</span>
+<span class="sd">                   ------0 0------C</span>
+<span class="sd">                  |               |     </span>
+<span class="sd">        scalar = vec-----1 1------T</span>
+<span class="sd">                  |               |</span>
+<span class="sd">                 ...--         --... </span>
+<span class="sd">                  |               |</span>
+<span class="sd">                   --(V+1) (V+1)--C</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">vec</span><span class="o">.</span><span class="n">size</span><span class="p">())</span><span class="o">==</span><span class="mi">3</span><span class="p">:</span>
+        <span class="n">E</span><span class="o">=</span> <span class="n">get_edge</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="n">verbosity</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">vec</span><span class="o">.</span><span class="n">size</span><span class="p">())</span><span class="o">==</span><span class="mi">4</span><span class="p">:</span>
+        <span class="n">E</span><span class="o">=</span> <span class="n">get_edge_2</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="n">verbosity</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Unsupported edge: &quot;</span><span class="o">+</span><span class="n">vec</span><span class="o">.</span><span class="n">size</span><span class="p">())</span>
+
+    <span class="n">inds</span><span class="o">=</span><span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">vec</span><span class="o">.</span><span class="n">size</span><span class="p">()))]</span>
+    <span class="n">S</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">vec</span><span class="p">,</span><span class="n">E</span><span class="p">,(</span><span class="n">inds</span><span class="p">,</span><span class="n">inds</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;S &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">S</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+
+    <span class="k">return</span> <span class="n">S</span></div>
+
+<div class="viewcode-block" id="apply_TM_0sO"><a class="viewcode-back" href="../../../envs/generic/corrf.html#ctm.generic.corrf.apply_TM_0sO">[docs]</a><span class="k">def</span> <span class="nf">apply_TM_0sO</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">edge</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    :param coord: tuple (x,y) specifying vertex on a square lattice</span>
+<span class="sd">    :param direction: direction in which the transfer operator is applied</span>
+<span class="sd">    :param state: underlying wavefunction</span>
+<span class="sd">    :param env: environment corresponding to ``state``</span>
+<span class="sd">    :param edge: tensor of dimensions :math:`\chi^2`</span>
+<span class="sd">    :param verbosity: logging verbosity</span>
+<span class="sd">    :type coord: tuple(int,int)</span>
+<span class="sd">    :type direction: tuple(int,int)</span>
+<span class="sd">    :type state: IPEPS</span>
+<span class="sd">    :type env: ENV</span>
+<span class="sd">    :type edge: torch.tensor</span>
+<span class="sd">    :type verbosity: int</span>
+<span class="sd">    :return: ``edge`` with a single instance of the transfer matrix applied </span>
+<span class="sd">             The resulting tensor has an identical index structure as the </span>
+<span class="sd">             original ``edge`` </span>
+<span class="sd">    :rtype: torch.tensor</span>
+<span class="sd">    </span>
+<span class="sd">    Applies a single instance of the &quot;0-width channel&quot; transfer matrix of site r=(x,y) to </span>
+<span class="sd">    the ``edge`` tensor by contracting the following network, or its corresponding </span>
+<span class="sd">    rotation depending on the ``direction``::</span>
+
+<span class="sd">        direction:  right=(1,0)                down=(0,1)</span>
+
+<span class="sd">                 -----T--                    edge</span>
+<span class="sd">                |     |                     |    |</span>
+<span class="sd">                 -----T--                   T----T</span>
+<span class="sd">                                            |    |</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">assert</span> <span class="n">direction</span> <span class="ow">in</span> <span class="p">[(</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">),(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">)],</span><span class="s2">&quot;Invalid direction: &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">direction</span><span class="p">)</span>
+    <span class="c1"># right is identical do down and left is identical to right</span>
+    <span class="k">if</span> <span class="n">direction</span><span class="o">==</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">):</span> <span class="n">direction</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span> 
+    <span class="k">if</span> <span class="n">direction</span><span class="o">==</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">):</span> <span class="n">direction</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">c</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">direction</span> <span class="o">==</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">):</span> <span class="c1">#up</span>
+        <span class="n">T1</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">c</span><span class="p">,(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">))]</span>
+        <span class="c1"># Assume index structure of ``edge`` tensor to be as follows</span>
+        <span class="c1"># </span>
+        <span class="c1"># 0</span>
+        <span class="c1"># T1(x,y)--2-&gt;1</span>
+        <span class="c1"># 1</span>
+        <span class="c1"># 0       1-&gt;2 </span>
+        <span class="c1"># --edge--- </span>
+        <span class="n">E</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">T1</span><span class="p">,</span><span class="n">edge</span><span class="p">,([</span><span class="mi">1</span><span class="p">],[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;E=edgeT &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">E</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+
+
+        <span class="c1"># 0             0-&gt;1</span>
+        <span class="c1"># |             |</span>
+        <span class="c1"># T1(x,y)--1 1--T2(x-1,y)</span>
+        <span class="c1"># |             2</span>
+        <span class="c1"># |             2</span>
+        <span class="c1"># ---edge--------</span>
+        <span class="n">T2</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span> <span class="p">(</span><span class="n">c</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="n">c</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">))]</span>
+        <span class="n">E</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">E</span><span class="p">,</span><span class="n">T2</span><span class="p">,([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">],[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">]))</span>
+        <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;E=ETT &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">E</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+    <span class="k">elif</span> <span class="n">direction</span> <span class="o">==</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">):</span> <span class="c1">#left</span>
+        <span class="n">T1</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">c</span><span class="p">,(</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">))]</span>
+        <span class="c1"># Assume index structure of ``edge`` tensor to be as follows</span>
+        <span class="c1"># </span>
+        <span class="c1">#       0 -- </span>
+        <span class="c1">#           | edge</span>
+        <span class="c1">#       2 -- </span>
+        <span class="c1">#</span>
+        <span class="c1">#   0--T1(x,y)--2 0---- </span>
+        <span class="c1">#      1               edge</span>
+        <span class="c1">#              2&lt;-1---- </span>
+        <span class="c1">#                </span>
+        <span class="n">E</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">T1</span><span class="p">,</span><span class="n">edge</span><span class="p">,([</span><span class="mi">2</span><span class="p">],[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;E=edgeT &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">E</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+
+        <span class="c1">#           0--T1(x,y)---------</span>
+        <span class="c1">#              1               |</span>
+        <span class="c1">#              0              edge</span>
+        <span class="c1">#              |               |</span>
+        <span class="c1">#           1--T2(x,y-1)--2 2--</span>
+        <span class="c1">#              (c+(0,-1))</span>
+        <span class="n">T2</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span> <span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span> <span class="p">(</span><span class="n">c</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">c</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">))]</span>
+        <span class="n">E</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">E</span><span class="p">,</span><span class="n">T2</span><span class="p">,([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">],[</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">]))</span>
+        <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;E=ETT &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">E</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+
+    <span class="k">return</span> <span class="n">E</span></div>
+
+<div class="viewcode-block" id="apply_TM_1sO"><a class="viewcode-back" href="../../../envs/generic/corrf.html#ctm.generic.corrf.apply_TM_1sO">[docs]</a><span class="k">def</span> <span class="nf">apply_TM_1sO</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">edge</span><span class="p">,</span> <span class="n">op</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    :param coord: tuple (x,y) specifying vertex on a square lattice</span>
+<span class="sd">    :param direction: direction in which the transfer operator is applied</span>
+<span class="sd">    :param state: underlying wavefunction</span>
+<span class="sd">    :param env: environment corresponding to ``state``</span>
+<span class="sd">    :param edge: tensor of dimensions :math:`\chi \times D^2 \times \chi (\times d_{MPO})`,</span>
+<span class="sd">                 potentially with 4th index beloning to some MPO</span>
+<span class="sd">    :param op: operator to be inserted into transfer matrix</span>
+<span class="sd">    :param verbosity: logging verbosity</span>
+<span class="sd">    :type coord: tuple(int,int)</span>
+<span class="sd">    :type direction: tuple(int,int)</span>
+<span class="sd">    :type state: IPEPS</span>
+<span class="sd">    :type env: ENV</span>
+<span class="sd">    :type edge: torch.tensor</span>
+<span class="sd">    :type op: torch.tensor</span>
+<span class="sd">    :type verbosity: int</span>
+<span class="sd">    :return: ``edge`` with a single instance of the transfer matrix applied </span>
+<span class="sd">             The resulting tensor has an identical index structure as the </span>
+<span class="sd">             original ``edge`` </span>
+<span class="sd">    :rtype: torch.tensor</span>
+<span class="sd">    </span>
+<span class="sd">    Applies a single instance of the transfer matrix of site r=(x,y) to </span>
+<span class="sd">    the ``edge`` tensor by contracting the following network, or its corresponding </span>
+<span class="sd">    rotation depending on the ``direction``::</span>
+
+<span class="sd">        direction:  right=(1,0)                down=(0,1)</span>
+
+<span class="sd">                 -----T----------------      --------edge--------   </span>
+<span class="sd">                |     |                     |         |          |\</span>
+<span class="sd">               edge--(a(r)^+ op a(r))--     T--(a(r)^+ op a(r))--T \</span>
+<span class="sd">                |     |                     |         |          | (MPO)</span>
+<span class="sd">                 -----T----------------</span>
+<span class="sd">                (\-----------------MPO)</span>
+
+<span class="sd">    where the physical indices `s` and `s&#39;` of the on-site tensor :math:`a` </span>
+<span class="sd">    and it&#39;s hermitian conjugate :math:`a^\dagger` are contracted with </span>
+<span class="sd">    identity :math:`\delta_{s,s&#39;}` or ``op`` (if supplied). Potentially,</span>
+<span class="sd">    the ``edge`` can carry an extra MPO index. </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Check if edge has MPO index</span>
+    <span class="n">contains_mpo</span><span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">edge</span><span class="o">.</span><span class="n">size</span><span class="p">())</span><span class="o">==</span><span class="mi">4</span>
+
+    <span class="c1"># Four basic cases of passed op</span>
+    <span class="k">def</span> <span class="nf">get_aXa</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">op</span><span class="p">):</span>
+        <span class="c1"># a - on-site tensor</span>
+        <span class="c1"># op - operator</span>
+        <span class="n">dims_a</span><span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+        <span class="n">dims_op</span><span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">op</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">op</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">op</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># identity</span>
+            <span class="n">A</span><span class="o">=</span> <span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;nefgh,nabcd-&gt;eafbgchd&#39;</span><span class="p">,</span><span class="n">a</span><span class="p">,</span><span class="n">conj</span><span class="p">(</span><span class="n">a</span><span class="p">))</span>
+            <span class="n">A</span><span class="o">=</span> <span class="n">view</span><span class="p">(</span><span class="n">contiguous</span><span class="p">(</span><span class="n">A</span><span class="p">),</span> \
+                <span class="p">(</span><span class="n">dims_a</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">dims_a</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">dims_a</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">dims_a</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">dims_op</span><span class="p">)</span><span class="o">==</span><span class="mi">2</span><span class="p">:</span>
+            <span class="c1"># one-site operator</span>
+            <span class="n">A</span><span class="o">=</span> <span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;nefgh,nabcd-&gt;eafbgchd&#39;</span><span class="p">,</span> <span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;mefgh,mn-&gt;nefgh&#39;</span><span class="p">,</span><span class="n">a</span><span class="p">,</span><span class="n">op</span><span class="p">),</span> <span class="n">conj</span><span class="p">(</span><span class="n">a</span><span class="p">))</span>
+            <span class="n">A</span><span class="o">=</span> <span class="n">view</span><span class="p">(</span><span class="n">contiguous</span><span class="p">(</span><span class="n">A</span><span class="p">),</span> \
+                <span class="p">(</span><span class="n">dims_a</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">dims_a</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">dims_a</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">dims_a</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">dims_op</span><span class="p">)</span><span class="o">==</span><span class="mi">3</span><span class="p">:</span>
+            <span class="c1"># edge operators of some MPO</span>
+            <span class="c1">#</span>
+            <span class="c1"># 0                   0</span>
+            <span class="c1"># |                   |</span>
+            <span class="c1"># op--2 ... or ... 2--op</span>
+            <span class="c1"># |                   |</span>
+            <span class="c1"># 1                   1</span>
+            <span class="c1">#</span>
+            <span class="c1"># assume the last index of the op is the MPO dimension.</span>
+            <span class="c1"># It will become the last index of the resulting edge </span>
+            <span class="n">A</span><span class="o">=</span> <span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;nefghl,nabcd-&gt;eafbgchdl&#39;</span><span class="p">,</span> <span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;mefgh,mnl-&gt;nefghl&#39;</span><span class="p">,</span><span class="n">a</span><span class="p">,</span><span class="n">op</span><span class="p">),</span> <span class="n">conj</span><span class="p">(</span><span class="n">a</span><span class="p">))</span>
+            <span class="n">A</span><span class="o">=</span> <span class="n">view</span><span class="p">(</span><span class="n">contiguous</span><span class="p">(</span><span class="n">A</span><span class="p">),</span> \
+                <span class="p">(</span><span class="n">dims_a</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">dims_a</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">dims_a</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">dims_a</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">dims_op</span><span class="p">)</span><span class="o">==</span><span class="mi">4</span><span class="p">:</span>
+            <span class="c1"># intermediate op of some MPO</span>
+            <span class="c1">#</span>
+            <span class="c1">#        0</span>
+            <span class="c1">#        |</span>
+            <span class="c1"># ... 2--op--3 ...</span>
+            <span class="c1">#        |</span>
+            <span class="c1">#        1</span>
+            <span class="c1">#</span>
+            <span class="c1"># assume the index 2 is to be contracted with extra (MPO) index</span>
+            <span class="c1"># of edge. The remaining index 3 becomes last index resulting edge</span>
+            <span class="n">A</span><span class="o">=</span> <span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;nefghlk,nabcd-&gt;eafbgchdlk&#39;</span><span class="p">,</span> <span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;mefgh,mnlk-&gt;nefghlk&#39;</span><span class="p">,</span><span class="n">a</span><span class="p">,</span><span class="n">op</span><span class="p">),</span> <span class="n">conj</span><span class="p">(</span><span class="n">a</span><span class="p">))</span>
+            <span class="n">A</span><span class="o">=</span> <span class="n">view</span><span class="p">(</span><span class="n">contiguous</span><span class="p">(</span><span class="n">A</span><span class="p">),</span> \
+                <span class="p">(</span><span class="n">dims_a</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">dims_a</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">dims_a</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">dims_a</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">dims_op</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">dims_op</span><span class="p">[</span><span class="mi">3</span><span class="p">]))</span>
+        <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;aXa </span><span class="si">{</span><span class="n">A</span><span class="o">.</span><span class="n">size</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">A</span>
+
+    <span class="n">c</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">direction</span> <span class="o">==</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">):</span> <span class="c1">#up</span>
+        <span class="n">T1</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">c</span><span class="p">,(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">))]</span>
+        <span class="c1"># Assume index structure of ``edge`` tensor to be as follows</span>
+        <span class="c1"># </span>
+        <span class="c1"># 0</span>
+        <span class="c1"># T1--2-&gt;1</span>
+        <span class="c1"># 1</span>
+        <span class="c1"># 0  1-&gt;2 2-&gt;3 (3-&gt;4)</span>
+        <span class="c1"># --edge-- -----</span>
+        <span class="n">E</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">T1</span><span class="p">,</span><span class="n">edge</span><span class="p">,([</span><span class="mi">1</span><span class="p">],[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;E=edgeT &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">E</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+
+        <span class="c1"># TODO - more efficent contraction with uncontracted-double-layer on-site tensor</span>
+        <span class="c1">#        Possibly reshape indices 1,2 of E, which are to be contracted with </span>
+        <span class="c1">#        on-site tensor and contract bra,ket in two steps instead of creating </span>
+        <span class="c1">#        double layer tensor</span>
+        <span class="c1">#    /</span>
+        <span class="c1"># --A--</span>
+        <span class="c1">#  /|s</span>
+        <span class="c1">#   X   </span>
+        <span class="c1"># s&#39;|/</span>
+        <span class="c1"># --A--</span>
+        <span class="c1">#  /</span>
+        <span class="c1">#</span>
+        <span class="c1"># where X is Id or op</span>
+        <span class="n">a</span><span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+        <span class="n">A</span><span class="o">=</span> <span class="n">get_aXa</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">op</span><span class="p">)</span>
+
+        <span class="c1"># edge with no MPO              edge with MPO index</span>
+        <span class="c1">#</span>
+        <span class="c1"># 0     2&lt;-0 (4)                0     2&lt;-0 ---------(4)(5-&gt;4)</span>
+        <span class="c1"># |        |/                   |        |/          |</span>
+        <span class="c1"># T1--1 1--A--3                 T1--1 1--A--3        |</span>
+        <span class="c1"># |        2                    |        2           | </span>
+        <span class="c1"># |        2    3-&gt;1            |        2    3-&gt;1  (4)</span>
+        <span class="c1"># --------edge--                --------edge-- ------</span>
+        <span class="n">E</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">E</span><span class="p">,</span><span class="n">A</span><span class="p">,([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">4</span><span class="p">],[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">4</span><span class="p">]))</span> <span class="k">if</span> <span class="n">contains_mpo</span> <span class="k">else</span> \
+            <span class="n">contract</span><span class="p">(</span><span class="n">E</span><span class="p">,</span><span class="n">A</span><span class="p">,([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">],[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">]))</span>
+        <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;E=EA &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">E</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+
+        <span class="c1"># 0  1&lt;-2 (4-&gt;2)    0-&gt;2 (0-&gt;3)</span>
+        <span class="c1"># |     |/          |</span>
+        <span class="c1"># T1----A--3 1------T2</span>
+        <span class="c1"># |     |           2</span>
+        <span class="c1"># |     |           1</span>
+        <span class="c1"># -----edge---------</span>
+        <span class="n">T2</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">c</span><span class="p">,(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">))]</span>
+        <span class="n">E</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">E</span><span class="p">,</span><span class="n">T2</span><span class="p">,([</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">],[</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">]))</span>
+        <span class="c1"># if we have extra MPO dimension, permute it to the last index</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">E</span><span class="o">.</span><span class="n">size</span><span class="p">())</span><span class="o">==</span><span class="mi">4</span><span class="p">:</span> <span class="n">E</span><span class="o">=</span> <span class="n">contiguous</span><span class="p">(</span><span class="n">permute</span><span class="p">(</span><span class="n">E</span><span class="p">,(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">2</span><span class="p">)))</span>
+        <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;E=ET &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">E</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+    <span class="k">elif</span> <span class="n">direction</span> <span class="o">==</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">):</span> <span class="c1">#left</span>
+        <span class="n">T1</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">c</span><span class="p">,(</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">))]</span>
+        <span class="c1"># Assume index structure of ``edge`` tensor to be as follows</span>
+        <span class="c1"># </span>
+        <span class="c1">#       0 -- </span>
+        <span class="c1">#       1 --| edge </span>
+        <span class="c1">#       2 -- </span>
+        <span class="c1">#</span>
+        <span class="c1">#   0--T1--2 0---- </span>
+        <span class="c1">#      1          |</span>
+        <span class="c1">#         2&lt;-1--edge </span>
+        <span class="c1">#                 |</span>
+        <span class="c1">#         3&lt;-2----|</span>
+        <span class="c1">#        (4&lt;-3)--- </span>
+        <span class="n">E</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">T1</span><span class="p">,</span><span class="n">edge</span><span class="p">,([</span><span class="mi">2</span><span class="p">],[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;E=edgeT &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">E</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+
+        <span class="c1"># TODO - more efficent contraction with uncontracted-double-layer on-site tensor</span>
+        <span class="c1">#        Possibly reshape indices 1,2 of E, which are to be contracted with </span>
+        <span class="c1">#        on-site tensor and contract bra,ket in two steps instead of creating </span>
+        <span class="c1">#        double layer tensor</span>
+        <span class="c1">#    /</span>
+        <span class="c1"># --A--</span>
+        <span class="c1">#  /|s</span>
+        <span class="c1">#   X   </span>
+        <span class="c1"># s&#39;|/</span>
+        <span class="c1"># --A--</span>
+        <span class="c1">#  /</span>
+        <span class="c1">#</span>
+        <span class="c1"># where X is Id or op</span>
+        <span class="n">a</span><span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+        <span class="n">A</span><span class="o">=</span> <span class="n">get_aXa</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">op</span><span class="p">)</span>
+
+        <span class="c1">#        0--T1---------              0--T1---------</span>
+        <span class="c1">#           1          |                1          | </span>
+        <span class="c1">#           0          |                0          |</span>
+        <span class="c1">#     2&lt;-1--A----3 2--edge        2&lt;-1--A----3 2--edge</span>
+        <span class="c1">#         / 2-&gt;3       |              / 2-&gt;3       |</span>
+        <span class="c1">#        |       1&lt;-3--|             (4)     1&lt;-3--</span>
+        <span class="c1"># (4&lt;-5)(4)-------(4)--</span>
+        <span class="n">E</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">E</span><span class="p">,</span><span class="n">A</span><span class="p">,([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">4</span><span class="p">],[</span><span class="mi">0</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">]))</span> <span class="k">if</span> <span class="n">contains_mpo</span> <span class="k">else</span> \
+            <span class="n">contract</span><span class="p">(</span><span class="n">E</span><span class="p">,</span><span class="n">A</span><span class="p">,([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">],[</span><span class="mi">0</span><span class="p">,</span><span class="mi">3</span><span class="p">]))</span>
+        <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;E=EA &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">E</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+
+        <span class="c1">#           0--T1-------</span>
+        <span class="c1">#              |        |</span>
+        <span class="c1">#              |        |</span>
+        <span class="c1">#        1&lt;-2--A-------edge</span>
+        <span class="c1">#            / 3        |</span>
+        <span class="c1">#       (2&lt;-4) 0        |</span>
+        <span class="c1"># (3&lt;-1) 2&lt;-1--T2--2 1--</span>
+        <span class="n">T2</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">c</span><span class="p">,(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">))]</span>
+        <span class="n">E</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">E</span><span class="p">,</span><span class="n">T2</span><span class="p">,([</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">],[</span><span class="mi">2</span><span class="p">,</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">E</span><span class="o">.</span><span class="n">size</span><span class="p">())</span><span class="o">==</span><span class="mi">4</span><span class="p">:</span> <span class="n">E</span><span class="o">=</span> <span class="n">contiguous</span><span class="p">(</span><span class="n">permute</span><span class="p">(</span><span class="n">E</span><span class="p">,(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">2</span><span class="p">)))</span>
+        <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;E=ET &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">E</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+    <span class="k">elif</span> <span class="n">direction</span> <span class="o">==</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">):</span> <span class="c1">#down</span>
+        <span class="n">T1</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">c</span><span class="p">,(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">))]</span>
+        <span class="c1"># Assume index structure of ``edge`` tensor to be as follows</span>
+        <span class="c1"># </span>
+        <span class="c1">#  --edge-- ------</span>
+        <span class="c1"># 0   1-&gt;2 2-&gt;3  (3-&gt;4)</span>
+        <span class="c1"># 0</span>
+        <span class="c1"># T1--2-&gt;1</span>
+        <span class="c1"># 1-&gt;0</span>
+        <span class="n">E</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">T1</span><span class="p">,</span><span class="n">edge</span><span class="p">,([</span><span class="mi">0</span><span class="p">],[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;E=edgeT &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">E</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+
+        <span class="c1"># TODO - more efficent contraction with uncontracted-double-layer on-site tensor</span>
+        <span class="c1">#        Possibly reshape indices 1,2 of E, which are to be contracted with </span>
+        <span class="c1">#        on-site tensor and contract bra,ket in two steps instead of creating </span>
+        <span class="c1">#        double layer tensor</span>
+        <span class="c1">#    /</span>
+        <span class="c1"># --A--</span>
+        <span class="c1">#  /|s</span>
+        <span class="c1">#   X   </span>
+        <span class="c1"># s&#39;|/</span>
+        <span class="c1"># --A--</span>
+        <span class="c1">#  /</span>
+        <span class="c1">#</span>
+        <span class="c1"># where X is Id or op</span>
+        <span class="n">a</span><span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+        <span class="n">A</span><span class="o">=</span> <span class="n">get_aXa</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">op</span><span class="p">)</span>
+
+        <span class="c1">#  -------edge----         -------edge---- ------</span>
+        <span class="c1"># |        2      3-&gt;1    |        2      3-&gt;1  (4)</span>
+        <span class="c1"># |        0              |        0             |</span>
+        <span class="c1"># T1--1 1--A--3           T1--1 1--A--3          |</span>
+        <span class="c1"># |        |\             |        |\            |</span>
+        <span class="c1"># 0        2 (4)          0        2 -----------(4)(5-&gt;4) </span>
+        <span class="n">E</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">E</span><span class="p">,</span><span class="n">A</span><span class="p">,([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">4</span><span class="p">],[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">4</span><span class="p">]))</span> <span class="k">if</span> <span class="n">contains_mpo</span> <span class="k">else</span> \
+            <span class="n">contract</span><span class="p">(</span><span class="n">E</span><span class="p">,</span><span class="n">A</span><span class="p">,([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">],[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;E=EA &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">E</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+
+        <span class="c1">#  ----edge-------</span>
+        <span class="c1"># |     |         1</span>
+        <span class="c1"># |     |         0</span>
+        <span class="c1"># T1----A--3 1----T2</span>
+        <span class="c1"># |     |\        |</span>
+        <span class="c1"># 0  1&lt;-2 (4-&gt;2)  2 (2-&gt;3)</span>
+        <span class="n">T2</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">c</span><span class="p">,(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">))]</span>
+        <span class="n">E</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">E</span><span class="p">,</span><span class="n">T2</span><span class="p">,([</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">],[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]))</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">E</span><span class="o">.</span><span class="n">size</span><span class="p">())</span><span class="o">==</span><span class="mi">4</span><span class="p">:</span> <span class="n">E</span><span class="o">=</span> <span class="n">contiguous</span><span class="p">(</span><span class="n">permute</span><span class="p">(</span><span class="n">E</span><span class="p">,(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">2</span><span class="p">)))</span>
+        <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;E=ET &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">E</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+    <span class="k">elif</span> <span class="n">direction</span> <span class="o">==</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">):</span> <span class="c1">#right</span>
+        <span class="n">T1</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">c</span><span class="p">,(</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">))]</span>
+        <span class="c1"># Assume index structure of ``edge`` tensor to be as follows</span>
+        <span class="c1"># </span>
+        <span class="c1">#       -- 0</span>
+        <span class="c1"># edge |-- 1</span>
+        <span class="c1">#       -- 2</span>
+        <span class="c1">#</span>
+        <span class="c1">#   ----0 0--T1--2-&gt;1</span>
+        <span class="c1">#  |         1-&gt;0</span>
+        <span class="c1"># edge--1-&gt;2</span>
+        <span class="c1">#  |</span>
+        <span class="c1">#   ----2-&gt;3</span>
+        <span class="c1">#  |</span>
+        <span class="c1">#   ----(3-&gt;4)</span>
+        <span class="n">E</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">T1</span><span class="p">,</span><span class="n">edge</span><span class="p">,([</span><span class="mi">0</span><span class="p">],[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;E=edgeT &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">E</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+
+        <span class="c1"># TODO - more efficent contraction with uncontracted-double-layer on-site tensor</span>
+        <span class="c1">#        Possibly reshape indices 1,2 of E, which are to be contracted with </span>
+        <span class="c1">#        on-site tensor and contract bra,ket in two steps instead of creating </span>
+        <span class="c1">#        double layer tensor</span>
+        <span class="c1">#    /</span>
+        <span class="c1"># --A--</span>
+        <span class="c1">#  /|s</span>
+        <span class="c1">#   X   </span>
+        <span class="c1"># s&#39;|/</span>
+        <span class="c1"># --A--</span>
+        <span class="c1">#  /</span>
+        <span class="c1">#</span>
+        <span class="c1"># where X is Id or op</span>
+        <span class="n">a</span><span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+        <span class="n">A</span><span class="o">=</span> <span class="n">get_aXa</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">op</span><span class="p">)</span>
+
+        <span class="c1">#   ---------T1--1-&gt;0       ---------T1--1-&gt;0</span>
+        <span class="c1">#  |         0             |         0</span>
+        <span class="c1">#  |         0             |         0</span>
+        <span class="c1"># edge--2 1--A--3         edge--2 1--A--3</span>
+        <span class="c1">#  |         2 \           |         2</span>
+        <span class="c1">#   ----3-&gt;1    |           ----3-&gt;1</span>
+        <span class="c1">#  |            |</span>
+        <span class="c1">#   ----4 ---- (4)(5-&gt;4)</span>
+        <span class="n">E</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">E</span><span class="p">,</span><span class="n">A</span><span class="p">,([</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">4</span><span class="p">],[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">4</span><span class="p">]))</span> <span class="k">if</span> <span class="n">contains_mpo</span> <span class="k">else</span> \
+            <span class="n">contract</span><span class="p">(</span><span class="n">E</span><span class="p">,</span><span class="n">A</span><span class="p">,([</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">],[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]))</span>
+        <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;E=EA &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">E</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+
+        <span class="c1">#   -------T1--0</span>
+        <span class="c1">#  |       |</span>
+        <span class="c1">#  |       |</span>
+        <span class="c1"># edge-----A--3-&gt;1</span>
+        <span class="c1">#  |       2 \(4-&gt;2)</span>
+        <span class="c1">#  |       0</span>
+        <span class="c1">#   --1 1--T2--2 (2-&gt;3)</span>
+        <span class="n">T2</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">c</span><span class="p">,(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">))]</span>
+        <span class="n">E</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">E</span><span class="p">,</span><span class="n">T2</span><span class="p">,([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">],[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">E</span><span class="o">.</span><span class="n">size</span><span class="p">())</span><span class="o">==</span><span class="mi">4</span><span class="p">:</span> <span class="n">E</span><span class="o">=</span> <span class="n">contiguous</span><span class="p">(</span><span class="n">permute</span><span class="p">(</span><span class="n">E</span><span class="p">,(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">2</span><span class="p">)))</span>
+        <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;E=ET &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">E</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>     
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid direction: &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">direction</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">E</span></div>
+
+<div class="viewcode-block" id="apply_TM_2sO_2sChannel"><a class="viewcode-back" href="../../../envs/generic/corrf.html#ctm.generic.corrf.apply_TM_2sO_2sChannel">[docs]</a><span class="k">def</span> <span class="nf">apply_TM_2sO_2sChannel</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">edge</span><span class="p">,</span> <span class="n">op</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    :param coord: tuple (x,y) specifying vertex on a square lattice</span>
+<span class="sd">    :param direction: direction in which the transfer operator is applied</span>
+<span class="sd">    :param state: underlying wavefunction</span>
+<span class="sd">    :param env: environment corresponding to ``state``</span>
+<span class="sd">    :param edge: tensor of dimensions :math:`\chi \times (D^2)^2 \times \chi`</span>
+<span class="sd">    :param op: two-site operator to be inserted within the two-site transfer matrix</span>
+<span class="sd">    :param verbosity: logging verbosity</span>
+<span class="sd">    :type coord: tuple(int,int)</span>
+<span class="sd">    :type direction: tuple(int,int)</span>
+<span class="sd">    :type state: IPEPS</span>
+<span class="sd">    :type env: ENV</span>
+<span class="sd">    :type edge: torch.tensor</span>
+<span class="sd">    :type op: torch.tensor</span>
+<span class="sd">    :type verbosity: int</span>
+<span class="sd">    :return: ``edge`` with a single instance of the transfer matrix applied </span>
+<span class="sd">             The resulting tensor has an identical index structure as the </span>
+<span class="sd">             original ``edge`` </span>
+<span class="sd">    :rtype: torch.tensor</span>
+<span class="sd">    </span>
+<span class="sd">    Applies a single instance of the two-site &quot;transfer matrix&quot; with site r=(x,y) to </span>
+<span class="sd">    the ``edge`` tensor by contracting the following network, or its corresponding </span>
+<span class="sd">    rotation depending on the ``direction``::</span>
+
+<span class="sd">        direction:  right=(1,0)                       down=(0,1)</span>
+
+<span class="sd">                 -----T--------------------     --------edge-------------   </span>
+<span class="sd">                |     |                        |    |          |         |</span>
+<span class="sd">               edge--(a(r)^+ o1 a(r))------    T--(a(r)^+)---(a(r+x)^+)--T</span>
+<span class="sd">                |     |        \               |\   o1---------o2        |</span>
+<span class="sd">                |----(a(r+y)^+) o2 a(r+y)--    | --a(r)-------a(r+x)-----T</span>
+<span class="sd">                |     |                        |    |          |         |</span>
+<span class="sd">                 -----T--------------------</span>
+
+<span class="sd">    The two-site operator is first decomposed into a simple MPO o1--o2</span>
+<span class="sd">    (TODO case where op comes with extra MPO index)::</span>
+<span class="sd">        </span>
+<span class="sd">         s1&#39;  s2&#39;    s1&#39;      s2&#39;</span>
+<span class="sd">        |  op   | = |o1|-----|o2|</span>
+<span class="sd">         s1   s2     s1       s2  </span>
+
+<span class="sd">    where the physical indices `s` and `s&#39;` of the on-site tensor :math:`a` </span>
+<span class="sd">    and it&#39;s hermitian conjugate :math:`a^\dagger` are contracted with </span>
+<span class="sd">    identity :math:`\delta_{s,s&#39;}` or ``o1``, ``o2``. The transfer matrix</span>
+<span class="sd">    is always grown from left to right or from top to bottom.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># TODO stronger verification</span>
+    <span class="n">op_1</span><span class="p">,</span> <span class="n">op_2</span><span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">op</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">op</span><span class="o">.</span><span class="n">size</span><span class="p">())</span><span class="o">==</span><span class="mi">4</span><span class="p">:</span>
+            <span class="c1"># pre-process ``op``</span>
+            <span class="c1"># TODO possibly truncate/compress according to the vanishingly small singular values</span>
+            <span class="n">dims_op</span><span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+            <span class="n">op_mat</span><span class="o">=</span> <span class="n">view</span><span class="p">(</span><span class="n">contiguous</span><span class="p">(</span><span class="n">permute</span><span class="p">(</span><span class="n">op</span><span class="p">,(</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">))),(</span><span class="n">dims_op</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span><span class="n">dims_op</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
+            <span class="n">op_1</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">op_2</span><span class="o">=</span> <span class="n">truncated_svd_gesdd</span><span class="p">(</span><span class="n">op_mat</span><span class="p">,</span> <span class="n">op_mat</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
+            <span class="n">op_1</span><span class="o">=</span> <span class="n">view</span><span class="p">(</span><span class="n">op_1</span><span class="p">,</span> <span class="p">(</span><span class="n">dims_op</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">dims_op</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">s</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="mi">0</span><span class="p">]))</span>
+            <span class="n">op_2</span><span class="o">=</span> <span class="n">conj</span><span class="p">(</span><span class="n">transpose</span><span class="p">(</span><span class="n">op_2</span><span class="p">))</span>
+            <span class="n">op_2</span><span class="o">=</span> <span class="n">contiguous</span><span class="p">(</span><span class="n">permute</span><span class="p">(</span><span class="n">view</span><span class="p">(</span><span class="n">op_2</span><span class="p">,</span> <span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="mi">0</span><span class="p">],</span><span class="n">dims_op</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">dims_op</span><span class="p">[</span><span class="mi">0</span><span class="p">])),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">0</span><span class="p">)))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid op: rank </span><span class="si">{</span><span class="n">op</span><span class="o">.</span><span class="n">size</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">shift_coord</span><span class="p">(</span><span class="n">c</span><span class="p">,</span><span class="n">d</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)):</span>
+        <span class="n">c0</span><span class="o">=</span> <span class="p">(</span><span class="n">c</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="n">d</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">c</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="n">d</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">c0</span><span class="p">,</span> <span class="n">state</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">(</span><span class="n">c0</span><span class="p">)</span>
+
+    <span class="c1"># Four basic cases of passed op</span>
+    <span class="k">def</span> <span class="nf">get_aXa</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">op</span><span class="p">):</span>
+        <span class="c1"># a - on-site tensor</span>
+        <span class="c1"># op - operator</span>
+        <span class="n">dims_a</span><span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+        <span class="n">dims_op</span><span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">op</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">op</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">op</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># identity</span>
+            <span class="n">A</span><span class="o">=</span> <span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;nefgh,nabcd-&gt;eafbgchd&#39;</span><span class="p">,</span><span class="n">a</span><span class="p">,</span><span class="n">conj</span><span class="p">(</span><span class="n">a</span><span class="p">))</span>
+            <span class="n">A</span><span class="o">=</span> <span class="n">view</span><span class="p">(</span><span class="n">contiguous</span><span class="p">(</span><span class="n">A</span><span class="p">),</span> <span class="p">(</span><span class="n">dims_a</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">dims_a</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">dims_a</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">dims_a</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">dims_op</span><span class="p">)</span><span class="o">==</span><span class="mi">2</span><span class="p">:</span>
+            <span class="c1"># one-site operator</span>
+            <span class="n">A</span><span class="o">=</span> <span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;nefgh,nabcd-&gt;eafbgchd&#39;</span><span class="p">,</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;mefgh,mn-&gt;nefgh&#39;</span><span class="p">,</span><span class="n">a</span><span class="p">,</span><span class="n">op</span><span class="p">),</span><span class="n">conj</span><span class="p">(</span><span class="n">a</span><span class="p">))</span>
+            <span class="n">A</span><span class="o">=</span> <span class="n">view</span><span class="p">(</span><span class="n">contiguous</span><span class="p">(</span><span class="n">A</span><span class="p">),</span> \
+                <span class="p">(</span><span class="n">dims_a</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">dims_a</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">dims_a</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">dims_a</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">dims_op</span><span class="p">)</span><span class="o">==</span><span class="mi">3</span><span class="p">:</span>
+            <span class="c1"># edge operators of some MPO within the transfer matrix</span>
+            <span class="c1">#</span>
+            <span class="c1"># 0                   0</span>
+            <span class="c1"># |                   |</span>
+            <span class="c1"># op--2 ... or ... 2--op</span>
+            <span class="c1"># |                   |</span>
+            <span class="c1"># 1                   1</span>
+            <span class="c1">#</span>
+            <span class="c1"># assume the last index of the op is the MPO dimension.</span>
+            <span class="c1"># It will become the last index of the resulting edge </span>
+            <span class="n">A</span><span class="o">=</span> <span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;nefghl,nabcd-&gt;eafbgchdl&#39;</span><span class="p">,</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;mefgh,mnl-&gt;nefghl&#39;</span><span class="p">,</span><span class="n">a</span><span class="p">,</span><span class="n">op</span><span class="p">),</span><span class="n">conj</span><span class="p">(</span><span class="n">a</span><span class="p">))</span>
+            <span class="n">A</span><span class="o">=</span> <span class="n">view</span><span class="p">(</span><span class="n">contiguous</span><span class="p">(</span><span class="n">A</span><span class="p">),</span> \
+                <span class="p">(</span><span class="n">dims_a</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">dims_a</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">dims_a</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">dims_a</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;aXa </span><span class="si">{</span><span class="n">A</span><span class="o">.</span><span class="n">size</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">A</span>
+
+    <span class="n">dir_r</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">dir_b</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">c0</span><span class="p">,</span> <span class="n">c</span> <span class="o">=</span> <span class="n">shift_coord</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">direction</span> <span class="o">==</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">):</span> <span class="c1">#up</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Direction: &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">direction</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;not implemented&quot;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">direction</span> <span class="o">==</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">):</span> <span class="c1">#left</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Direction: &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">direction</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;not implemented&quot;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">direction</span> <span class="o">==</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">):</span> <span class="c1">#down</span>
+        <span class="n">T1</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">c</span><span class="p">,(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">))]</span>
+        <span class="c1"># Assume index structure of ``edge`` tensor to be as follows</span>
+        <span class="c1"># </span>
+        <span class="c1">#  --edge-- ------</span>
+        <span class="c1"># 0   1-&gt;2 2-&gt;3  3-&gt;4</span>
+        <span class="c1"># 0</span>
+        <span class="c1"># T1--2-&gt;1</span>
+        <span class="c1"># 1-&gt;0</span>
+        <span class="n">E</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">T1</span><span class="p">,</span><span class="n">edge</span><span class="p">,([</span><span class="mi">0</span><span class="p">],[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;E=edgeT &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">E</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+
+        <span class="c1"># TODO - more efficent contraction with uncontracted-double-layer on-site tensor</span>
+        <span class="c1">#        Possibly reshape indices 1,2 of E, which are to be contracted with </span>
+        <span class="c1">#        on-site tensor and contract bra,ket in two steps instead of creating </span>
+        <span class="c1">#        double layer tensor</span>
+        <span class="c1">#    /</span>
+        <span class="c1"># --A--</span>
+        <span class="c1">#  /|s</span>
+        <span class="c1">#   X   </span>
+        <span class="c1"># s&#39;|/</span>
+        <span class="c1"># --A--</span>
+        <span class="c1">#  /</span>
+        <span class="c1">#</span>
+        <span class="c1"># where X is Id or op</span>
+        <span class="n">a</span><span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+        <span class="n">A</span><span class="o">=</span> <span class="n">get_aXa</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">op_1</span><span class="p">)</span>
+        <span class="c1">#  -------edge---- ------    </span>
+        <span class="c1"># |        2      3-&gt;1   4-&gt;2</span>
+        <span class="c1"># |        0                </span>
+        <span class="c1"># T1--1 1--A--3-&gt;4</span>
+        <span class="c1"># |        |\             </span>
+        <span class="c1"># 0     3&lt;-2 (4-&gt;5)        </span>
+        <span class="n">E</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">E</span><span class="p">,</span><span class="n">A</span><span class="p">,([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">],[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;E=edgeTA &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">E</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+
+        <span class="n">c0</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span> <span class="n">shift_coord</span><span class="p">(</span><span class="n">c0</span><span class="p">,</span> <span class="n">dir_r</span><span class="p">)</span>
+        <span class="n">a</span><span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+        <span class="n">A</span><span class="o">=</span> <span class="n">get_aXa</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">op_2</span><span class="p">)</span>
+        <span class="c1">#  ----edge------ ------</span>
+        <span class="c1"># |     |        1      2-&gt;1</span>
+        <span class="c1"># |     |        0</span>
+        <span class="c1"># T1----A--4 1---A--3-&gt;4 </span>
+        <span class="c1"># |     |\      /|</span>
+        <span class="c1"># 0  2&lt;-3 (5)(4) 2-&gt;3</span>
+        <span class="n">E</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">E</span><span class="p">,</span><span class="n">A</span><span class="p">,([</span><span class="mi">1</span><span class="p">,</span><span class="mi">4</span><span class="p">],[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]))</span> <span class="k">if</span> <span class="n">op</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> \
+            <span class="n">contract</span><span class="p">(</span><span class="n">E</span><span class="p">,</span><span class="n">A</span><span class="p">,([</span><span class="mi">1</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">],[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">4</span><span class="p">]))</span>
+        <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;E=edgeTAA &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">E</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+
+        <span class="n">T2</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">c</span><span class="p">,(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">))]</span>
+        <span class="c1">#  ----edge----- -------</span>
+        <span class="c1"># |     |       |       1</span>
+        <span class="c1"># |     |       |       0</span>
+        <span class="c1"># T1----A=======A--4 1--T2</span>
+        <span class="c1"># |     |       |       2-&gt;4</span>
+        <span class="c1"># 0     2-&gt;1    3-&gt;2</span>
+        <span class="n">E</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">E</span><span class="p">,</span><span class="n">T2</span><span class="p">,([</span><span class="mi">1</span><span class="p">,</span><span class="mi">4</span><span class="p">],[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]))</span>
+        <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;E=edgeTAAT &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">E</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+    <span class="k">elif</span> <span class="n">direction</span> <span class="o">==</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">):</span> <span class="c1">#right</span>
+        <span class="n">T1</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">c</span><span class="p">,(</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">))]</span>
+        <span class="c1"># Assume index structure of ``edge`` tensor to be as follows</span>
+        <span class="c1"># </span>
+        <span class="c1">#       -- 0</span>
+        <span class="c1"># edge |-- 1</span>
+        <span class="c1">#      |---2</span>
+        <span class="c1">#       -- 3</span>
+        <span class="c1">#</span>
+        <span class="c1">#   ----0 0--T1--2-&gt;1</span>
+        <span class="c1">#  |         1-&gt;0</span>
+        <span class="c1"># edge--1-&gt;2</span>
+        <span class="c1">#  |</span>
+        <span class="c1">#   ----2-&gt;3</span>
+        <span class="c1">#  |</span>
+        <span class="c1">#   ----3-&gt;4</span>
+        <span class="n">E</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">T1</span><span class="p">,</span><span class="n">edge</span><span class="p">,([</span><span class="mi">0</span><span class="p">],[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;E=edgeT &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">E</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+
+        <span class="c1"># TODO - more efficent contraction with uncontracted-double-layer on-site tensor</span>
+        <span class="c1">#        Possibly reshape indices 1,2 of E, which are to be contracted with </span>
+        <span class="c1">#        on-site tensor and contract bra,ket in two steps instead of creating </span>
+        <span class="c1">#        double layer tensor</span>
+        <span class="c1">#    /</span>
+        <span class="c1"># --A--</span>
+        <span class="c1">#  /|s</span>
+        <span class="c1">#   X   </span>
+        <span class="c1"># s&#39;|/</span>
+        <span class="c1"># --A--</span>
+        <span class="c1">#  /</span>
+        <span class="c1">#</span>
+        <span class="c1"># where X is Id or op</span>
+        <span class="n">a</span><span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+        <span class="n">A</span><span class="o">=</span> <span class="n">get_aXa</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">op_1</span><span class="p">)</span>
+
+        <span class="c1">#   ---------T1--1-&gt;0</span>
+        <span class="c1">#  |         0</span>
+        <span class="c1">#  |         0</span>
+        <span class="c1"># edge--2 1--A--3-&gt;4</span>
+        <span class="c1">#  |      3&lt;-2 \</span>
+        <span class="c1">#   ----3-&gt;1   (4-&gt;5)</span>
+        <span class="c1">#  |            </span>
+        <span class="c1">#   ----4-&gt;2</span>
+        <span class="n">E</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">E</span><span class="p">,</span><span class="n">A</span><span class="p">,([</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">],[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]))</span>
+        <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;E=edgeTA &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">E</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+
+        <span class="n">c0</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span> <span class="n">shift_coord</span><span class="p">(</span><span class="n">c0</span><span class="p">,</span> <span class="n">dir_b</span><span class="p">)</span>
+        <span class="n">a</span><span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+        <span class="n">A</span><span class="o">=</span> <span class="n">get_aXa</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">op_2</span><span class="p">)</span>
+        <span class="c1">#   ---------T1--0</span>
+        <span class="c1">#  |         |</span>
+        <span class="c1"># edge-------A--4-&gt;2</span>
+        <span class="c1">#  |         | \</span>
+        <span class="c1">#  |         3 (5)</span>
+        <span class="c1">#  |         0 (4)</span>
+        <span class="c1">#  |         | /     </span>
+        <span class="c1">#   ----1 1--A--2-&gt;3</span>
+        <span class="c1">#  |         3-&gt;4   </span>
+        <span class="c1">#   ----2-&gt;1</span>
+        <span class="n">E</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">E</span><span class="p">,</span><span class="n">A</span><span class="p">,([</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">],[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">]))</span> <span class="k">if</span> <span class="n">op</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> \
+            <span class="n">contract</span><span class="p">(</span><span class="n">E</span><span class="p">,</span><span class="n">A</span><span class="p">,([</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">5</span><span class="p">],[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">4</span><span class="p">]))</span>
+        <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;E=edgeTAA &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">E</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+
+        <span class="n">T2</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">T</span><span class="p">[(</span><span class="n">c</span><span class="p">,(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">))]</span>
+        <span class="c1">#   ---------T1--0</span>
+        <span class="c1">#  |         |</span>
+        <span class="c1"># edge-------A--2-&gt;1</span>
+        <span class="c1">#  |         |   </span>
+        <span class="c1">#   ---------A--3-&gt;2</span>
+        <span class="c1">#  |         3</span>
+        <span class="c1">#  |         0   </span>
+        <span class="c1">#   ----1 1--T2--2-&gt;3</span>
+        <span class="n">E</span> <span class="o">=</span> <span class="n">contract</span><span class="p">(</span><span class="n">E</span><span class="p">,</span><span class="n">T2</span><span class="p">,([</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">],[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="k">if</span> <span class="n">verbosity</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;E=edgeTAAT &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">E</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>     
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid direction: &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">direction</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">E</span></div>
+
+<div class="viewcode-block" id="apply_TM_2sO_1sChannel"><a class="viewcode-back" href="../../../envs/generic/corrf.html#ctm.generic.corrf.apply_TM_2sO_1sChannel">[docs]</a><span class="k">def</span> <span class="nf">apply_TM_2sO_1sChannel</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">edge</span><span class="p">,</span> <span class="n">op</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    :param coord: tuple (x,y) specifying vertex on a square lattice</span>
+<span class="sd">    :param direction: direction in which the transfer operator is applied</span>
+<span class="sd">    :param state: underlying wavefunction</span>
+<span class="sd">    :param env: environment corresponding to ``state``</span>
+<span class="sd">    :param edge: tensor of dimensions :math:`\chi \times D^2 \times \chi`</span>
+<span class="sd">    :param op: two-site operator to be inserted into the two consecutive</span>
+<span class="sd">               transfer matrices</span>
+<span class="sd">    :param verbosity: logging verbosity</span>
+<span class="sd">    :type coord: tuple(int,int)</span>
+<span class="sd">    :type direction: tuple(int,int)</span>
+<span class="sd">    :type state: IPEPS</span>
+<span class="sd">    :type env: ENV</span>
+<span class="sd">    :type edge: torch.tensor</span>
+<span class="sd">    :type op: torch.tensor</span>
+<span class="sd">    :type verbosity: int</span>
+<span class="sd">    :return: ``edge`` with two transfer matrices (and operator ``op``, if any) applied.</span>
+<span class="sd">             The resulting tensor has an identical index structure as the </span>
+<span class="sd">             original ``edge``</span>
+<span class="sd">    :rtype: torch.tensor</span>
+<span class="sd">    </span>
+<span class="sd">    Applies two transfer matrices to the ``edge`` tensor, including the two-site operator</span>
+<span class="sd">    ``op``. The applied transfer matrices depend on the selected site r=(x,y) and  </span>
+<span class="sd">    the ``direction`` of the growth. The following network is contracted::</span>
+
+<span class="sd">         -----T-------------------T--------------------------</span>
+<span class="sd">        |     |                   |</span>
+<span class="sd">       edge--(a(r)^+ op_l a(r))==(a(r+dir)^+ op_r a(r+dir))--</span>
+<span class="sd">        |     |                   |</span>
+<span class="sd">         -----T-------------------T--------------------------</span>
+
+<span class="sd">    where the physical indices `s` and `s&#39;` of the on-site tensor :math:`a` </span>
+<span class="sd">    and it&#39;s hermitian conjugate :math:`a^\dagger` are contracted with </span>
+<span class="sd">    identity :math:`\delta_{s,s&#39;}` or ``op_l`` and ``op_r`` if ``op`` is supplied.</span>
+<span class="sd">    The ``op_l`` and ``op_r`` are given by the SVD decomposition of the two-site operator</span>
+<span class="sd">    ``op``::</span>
+
+<span class="sd">         0  1        0           1          0            1-&gt;0</span>
+<span class="sd">         |  |  SVD   |           |          |            |</span>
+<span class="sd">        | op |  =  |op_l|--(S--|op^~_r|) = |op_l|--2 2--|op_r|</span>
+<span class="sd">         |  |        |           |          |            |</span>
+<span class="sd">         2  3        2           3          2-&gt;1         3-&gt;1</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># TODO stronger verification</span>
+    <span class="k">if</span> <span class="n">op</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">assert</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">op</span><span class="o">.</span><span class="n">size</span><span class="p">())</span><span class="o">==</span><span class="mi">4</span><span class="p">)</span>
+
+        <span class="c1"># pre-process ``op``</span>
+        <span class="c1"># TODO possibly truncate/compress according to the vanishingly small singular values</span>
+        <span class="n">dims_op</span><span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+        <span class="n">op_mat</span><span class="o">=</span> <span class="n">view</span><span class="p">(</span><span class="n">contiguous</span><span class="p">(</span><span class="n">permute</span><span class="p">(</span><span class="n">op</span><span class="p">,(</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">))),</span> <span class="p">(</span><span class="n">dims_op</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span><span class="n">dims_op</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
+        <span class="n">op_l</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">op_r</span><span class="o">=</span> <span class="n">truncated_svd_gesdd</span><span class="p">(</span><span class="n">op_mat</span><span class="p">,</span> <span class="n">op_mat</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
+        <span class="n">op_l</span><span class="o">=</span> <span class="n">view</span><span class="p">(</span><span class="n">op_l</span><span class="p">,</span> <span class="p">(</span><span class="n">dims_op</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">dims_op</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">s</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="n">op_r</span><span class="o">=</span> <span class="n">conj</span><span class="p">(</span><span class="n">transpose</span><span class="p">(</span><span class="n">op_r</span><span class="p">))</span><span class="o">*</span><span class="n">s</span><span class="p">[:,</span><span class="kc">None</span><span class="p">]</span>
+        <span class="n">op_r</span><span class="o">=</span> <span class="n">contiguous</span><span class="p">(</span><span class="n">permute</span><span class="p">(</span><span class="n">view</span><span class="p">(</span><span class="n">op_r</span><span class="p">,</span> <span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="mi">0</span><span class="p">],</span><span class="n">dims_op</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">dims_op</span><span class="p">[</span><span class="mi">0</span><span class="p">])),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">0</span><span class="p">)))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">op_l</span><span class="o">=</span><span class="kc">None</span>
+        <span class="n">op_r</span><span class="o">=</span><span class="kc">None</span>
+
+    <span class="n">E</span><span class="o">=</span> <span class="n">apply_TM_1sO</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">edge</span><span class="p">,</span> <span class="n">op</span><span class="o">=</span><span class="n">op_l</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="n">verbosity</span><span class="p">)</span>
+    <span class="n">c1</span><span class="o">=</span> <span class="p">(</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="n">direction</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="n">direction</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">E</span><span class="o">=</span> <span class="n">apply_TM_1sO</span><span class="p">(</span><span class="n">c1</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">E</span><span class="p">,</span> <span class="n">op</span><span class="o">=</span><span class="n">op_r</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="n">verbosity</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">E</span></div>
+
+<div class="viewcode-block" id="corrf_1sO1sO"><a class="viewcode-back" href="../../../envs/generic/corrf.html#ctm.generic.corrf.corrf_1sO1sO">[docs]</a><span class="k">def</span> <span class="nf">corrf_1sO1sO</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">op1</span><span class="p">,</span> <span class="n">get_op2</span><span class="p">,</span> <span class="n">dist</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    :param coord: tuple (x,y) specifying vertex on a square lattice</span>
+<span class="sd">    :param direction: orientation of correlation function</span>
+<span class="sd">    :param state: underlying wavefunction</span>
+<span class="sd">    :param env: environment corresponding to ``state``</span>
+<span class="sd">    :param op1: first one-site operator :math:`O_1`</span>
+<span class="sd">    :param get_op2: function returning (position-dependent) second</span>
+<span class="sd">                    one-site operator :math:`\text{get_op2}(r)=O_2`</span>
+<span class="sd">    :param dist: maximal distance of correlation function</span>
+<span class="sd">    :param verbosity: logging verbosity</span>
+<span class="sd">    :type coord: tuple(int,int)</span>
+<span class="sd">    :type direction: tuple(int,int)</span>
+<span class="sd">    :type state: IPEPS</span>
+<span class="sd">    :type env: ENV</span>
+<span class="sd">    :type op1: torch.tensor</span>
+<span class="sd">    :type get_op2: function(int)-&gt;torch.tensor</span>
+<span class="sd">    :type dist: int</span>
+<span class="sd">    :type verbosity: int</span>
+<span class="sd">    :return: vector ``corrf`` of length ``dist`` holding the values of </span>
+<span class="sd">             correlation function :math:`\langle O_1(0) O_2(r) \rangle` </span>
+<span class="sd">             for :math:`r \in [1,dist]`</span>
+<span class="sd">    :rtype: torch.tensor</span>
+<span class="sd">    </span>
+<span class="sd">    Computes the two-point correlation function :math:`\langle O_1(0) O_2(r) \rangle`</span>
+<span class="sd">    by contracting the following network::</span>
+
+<span class="sd">        C-----T------- ... -----T------- ... ------T----------C</span>
+<span class="sd">        |     |                 |                  |          |</span>
+<span class="sd">        |    a(0)^+            a(i)^+             a(r)^+      |</span>
+<span class="sd">        T--( op_1  )-- ... --(  |    )-- ... --( gen_op2(r))--T</span>
+<span class="sd">        |    a(0))             a(i)               a(r)        |</span>
+<span class="sd">        |     |                 |                  |          | </span>
+<span class="sd">        C-----T------- ... -----T------- ... ------T----------C</span>
+
+<span class="sd">    for increasingly large distance ``r`` up to ``dist``. The ``op1`` is </span>
+<span class="sd">    applied at site 0=(x,y), the transfer matrices are applied in the </span>
+<span class="sd">    ``direction`` up to site :math:`r=(x,y) + \text{dist} \times \text{direction}`. </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">shift_c</span><span class="p">(</span><span class="n">c</span><span class="p">,</span><span class="n">d</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">c</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="n">d</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">c</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="n">d</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+
+    <span class="n">c0</span><span class="o">=</span> <span class="n">coord</span>
+    <span class="n">rev_d</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="n">direction</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="o">-</span><span class="n">direction</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="c1"># opposite direction</span>
+    <span class="n">E0</span> <span class="o">=</span> <span class="n">get_edge</span><span class="p">(</span><span class="n">c0</span><span class="p">,</span> <span class="n">rev_d</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="n">verbosity</span><span class="p">)</span>
+    <span class="c1"># Apply transfer matrix with operator op1</span>
+    <span class="c1">#</span>
+    <span class="c1">#   -- 0     -- -----T--------- 0</span>
+    <span class="c1"># E1-- 1 = E0-- --(A^+ op1 A)-- 1</span>
+    <span class="c1">#   -- 2     -- -----T--------- 2</span>
+    <span class="n">E1</span> <span class="o">=</span> <span class="n">apply_TM_1sO</span><span class="p">(</span><span class="n">c0</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">E0</span><span class="p">,</span> <span class="n">op</span><span class="o">=</span><span class="n">op1</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="n">verbosity</span><span class="p">)</span>
+    <span class="c1"># used for normalization</span>
+    <span class="n">E0</span> <span class="o">=</span> <span class="n">apply_TM_1sO</span><span class="p">(</span><span class="n">c0</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">E0</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="n">verbosity</span><span class="p">)</span>
+
+    <span class="n">corrf</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">dist</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span><span class="n">dtype</span><span class="o">=</span><span class="n">state</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span><span class="n">device</span><span class="o">=</span><span class="n">state</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">dist</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+        <span class="c1"># close the end of the network by appending final transfer matrix </span>
+        <span class="c1"># with op2</span>
+        <span class="c1">#</span>
+        <span class="c1">#       C--T--- [ --T-- ]^r --T---</span>
+        <span class="c1"># E12 = T--O1-- [ --A-- ]   --O2--</span>
+        <span class="c1">#       C--T--- [ --T-- ]   --T---</span>
+        <span class="n">c0</span><span class="o">=</span> <span class="n">shift_c</span><span class="p">(</span><span class="n">c0</span><span class="p">,</span><span class="n">direction</span><span class="p">)</span>
+        <span class="n">E12</span><span class="o">=</span> <span class="n">apply_TM_1sO</span><span class="p">(</span><span class="n">c0</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">E1</span><span class="p">,</span> <span class="n">op</span><span class="o">=</span><span class="n">get_op2</span><span class="p">(</span><span class="n">r</span><span class="p">),</span> <span class="n">verbosity</span><span class="o">=</span><span class="n">verbosity</span><span class="p">)</span>
+        <span class="c1"># and corresponding normalization network</span>
+        <span class="n">E0</span> <span class="o">=</span> <span class="n">apply_TM_1sO</span><span class="p">(</span><span class="n">c0</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">E0</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="n">verbosity</span><span class="p">)</span>
+        <span class="c1"># and to network with only a op1 operator</span>
+        <span class="n">E1</span> <span class="o">=</span> <span class="n">apply_TM_1sO</span><span class="p">(</span><span class="n">c0</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">E1</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="n">verbosity</span><span class="p">)</span>
+
+        <span class="c1"># and finally apply edge of opposite direction</span>
+        <span class="n">E12</span><span class="o">=</span> <span class="n">apply_edge</span><span class="p">(</span><span class="n">c0</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">E12</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="n">verbosity</span><span class="p">)</span>
+        <span class="n">E00</span><span class="o">=</span> <span class="n">apply_edge</span><span class="p">(</span><span class="n">c0</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">E0</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="n">verbosity</span><span class="p">)</span>
+        <span class="n">corrf</span><span class="p">[</span><span class="n">r</span><span class="p">]</span><span class="o">=</span> <span class="n">E12</span><span class="o">/</span><span class="n">E00</span>
+
+        <span class="c1"># normalize by largest element of E0</span>
+        <span class="n">max_elem_E0</span> <span class="o">=</span> <span class="n">E0</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+        <span class="n">E0</span><span class="o">=</span><span class="n">E0</span><span class="o">/</span><span class="n">max_elem_E0</span>
+        <span class="n">E1</span><span class="o">=</span><span class="n">E1</span><span class="o">/</span><span class="n">max_elem_E0</span>
+
+    <span class="k">return</span> <span class="n">corrf</span></div>
+
+<div class="viewcode-block" id="corrf_2sOH2sOH_E1"><a class="viewcode-back" href="../../../envs/generic/corrf.html#ctm.generic.corrf.corrf_2sOH2sOH_E1">[docs]</a><span class="k">def</span> <span class="nf">corrf_2sOH2sOH_E1</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">op1</span><span class="p">,</span> <span class="n">get_op2</span><span class="p">,</span> <span class="n">dist</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    :param coord: tuple (x,y) specifying vertex on a square lattice</span>
+<span class="sd">    :param direction: orientation of correlation function</span>
+<span class="sd">    :param state: underlying wavefunction</span>
+<span class="sd">    :param env: environment corresponding to ``state``</span>
+<span class="sd">    :param op1: first two-site operator :math:`O_1`</span>
+<span class="sd">    :param get_op2: function returning (position-dependent) second</span>
+<span class="sd">                    two-site operator :math:`\text{get_op2}(r)=O_2`</span>
+<span class="sd">    :param dist: maximal distance of correlation function</span>
+<span class="sd">    :param verbosity: logging verbosity</span>
+<span class="sd">    :type coord: tuple(int,int)</span>
+<span class="sd">    :type direction: tuple(int,int)</span>
+<span class="sd">    :type state: IPEPS</span>
+<span class="sd">    :type env: ENV</span>
+<span class="sd">    :type op1: torch.tensor</span>
+<span class="sd">    :type get_op2: function(int)-&gt;torch.tensor</span>
+<span class="sd">    :type dist: int</span>
+<span class="sd">    :type verbosity: int</span>
+<span class="sd">    :return: vector ``corrf`` of length ``dist`` holding the values of </span>
+<span class="sd">             correlation function :math:`\langle O_1(0) O_2(r) \rangle` </span>
+<span class="sd">             for :math:`r \in [1,dist]`</span>
+<span class="sd">    :rtype: torch.tensor</span>
+
+<span class="sd">    Computes the correlation function :math:`\langle O_1(0) O_2(r) \rangle`</span>
+<span class="sd">    of two horizontaly-oriented two-site operators by contracting </span>
+<span class="sd">    the following network::</span>
+
+<span class="sd">        C-----T-------T---------- ... ---T---- ... -----T-------T-------------C</span>
+<span class="sd">        |     |       |                  |              |       |             |</span>
+<span class="sd">        |   /-a(0)^+--a(1)^+-\           a(i)^+      /--a(r)^+--a(r+1)^+--\   |</span>
+<span class="sd">        T--&lt;    ( op 1 )      &gt;-- ... --&lt;|&gt;-- ... --&lt;  (gen_op2(r))        &gt;--T </span>
+<span class="sd">        |   \-a(0)----a(1)---/           a(i))       \--a(r)----a(r+1)----/   |</span>
+<span class="sd">        |     |       |                  |              |       |             |</span>
+<span class="sd">        C-----T-------T---------- ... ---T---- ... -----T-------T-------------C</span>
+
+<span class="sd">    for increasingly large distance ``r`` up to ``dist+1``. The ``op1`` is </span>
+<span class="sd">    applied at site 0=(x,y) &amp; 1, the transfer matrices are applied in the </span>
+<span class="sd">    ``direction`` up to site :math:`r=(x,y) + \text{dist} \times \text{direction}`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">shift_c</span><span class="p">(</span><span class="n">c</span><span class="p">,</span><span class="n">d</span><span class="p">,</span><span class="n">r</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">c</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="n">r</span><span class="o">*</span><span class="n">d</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">c</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="n">r</span><span class="o">*</span><span class="n">d</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+
+    <span class="n">c0</span><span class="o">=</span> <span class="n">coord</span>
+    <span class="n">rev_d</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="n">direction</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="o">-</span><span class="n">direction</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="c1"># opposite direction</span>
+    <span class="n">E0</span> <span class="o">=</span> <span class="n">get_edge</span><span class="p">(</span><span class="n">c0</span><span class="p">,</span> <span class="n">rev_d</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="n">verbosity</span><span class="p">)</span>
+    <span class="c1"># Apply double transfer matrix with operator op2</span>
+    <span class="c1">#</span>
+    <span class="c1">#   -- 0     ----T-------T---- 0</span>
+    <span class="c1">#  |        |  --A^+     A^+</span>
+    <span class="c1">#  |        | /  |--op1--|   \  </span>
+    <span class="c1"># E1-- 1 = E0----A       A---- 1</span>
+    <span class="c1">#   -- 2     ----T-------T---- 2</span>
+    <span class="n">E1</span> <span class="o">=</span> <span class="n">apply_TM_2sO_1sChannel</span><span class="p">(</span><span class="n">c0</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">E0</span><span class="p">,</span> <span class="n">op</span><span class="o">=</span><span class="n">op1</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="n">verbosity</span><span class="p">)</span>
+    <span class="c1"># used for normalization</span>
+    <span class="n">E0</span> <span class="o">=</span> <span class="n">apply_TM_2sO_1sChannel</span><span class="p">(</span><span class="n">c0</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">E0</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="n">verbosity</span><span class="p">)</span>
+
+    <span class="n">c0</span><span class="o">=</span> <span class="n">shift_c</span><span class="p">(</span><span class="n">c0</span><span class="p">,</span><span class="n">direction</span><span class="p">,</span><span class="n">r</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">corrf</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">dist</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span><span class="n">dtype</span><span class="o">=</span><span class="n">state</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span><span class="n">device</span><span class="o">=</span><span class="n">state</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">dist</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+        <span class="c1"># close the end of the network by appending final double transfer matrix </span>
+        <span class="c1"># with op2</span>
+        <span class="c1">#</span>
+        <span class="c1">#       C--T--T-- [ --T-- ]^r --T--T--</span>
+        <span class="c1"># E12 = T--|O1|-- [ --A-- ]   --|O2|--</span>
+        <span class="c1">#       C--T--T-- [ --T-- ]   --T--T--</span>
+        <span class="n">E12</span><span class="o">=</span> <span class="n">apply_TM_2sO_1sChannel</span><span class="p">(</span><span class="n">c0</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">E1</span><span class="p">,</span> <span class="n">op</span><span class="o">=</span><span class="n">get_op2</span><span class="p">(</span><span class="n">r</span><span class="p">),</span> <span class="n">verbosity</span><span class="o">=</span><span class="n">verbosity</span><span class="p">)</span>
+        <span class="c1">#c12_e= shift_c(c0,direction)</span>
+        <span class="c1">#print(f&quot;c0: {c0} c12_e: {c12_e}&quot;)</span>
+        <span class="c1"># grow normalization network by single TM</span>
+        <span class="n">E0</span> <span class="o">=</span> <span class="n">apply_TM_1sO</span><span class="p">(</span><span class="n">c0</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">E0</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="n">verbosity</span><span class="p">)</span>
+        <span class="c1"># grow network with only a op1 operator by single TM</span>
+        <span class="n">E1</span> <span class="o">=</span> <span class="n">apply_TM_1sO</span><span class="p">(</span><span class="n">c0</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">E1</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="n">verbosity</span><span class="p">)</span>
+        <span class="n">c0</span><span class="o">=</span> <span class="n">shift_c</span><span class="p">(</span><span class="n">c0</span><span class="p">,</span><span class="n">direction</span><span class="p">)</span>
+
+        <span class="n">E12</span><span class="o">=</span> <span class="n">apply_edge</span><span class="p">(</span><span class="n">c0</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">E12</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="n">verbosity</span><span class="p">)</span>
+        <span class="c1"># grow normalization network by additional TM to match the length</span>
+        <span class="c1"># of the network with op2 applied</span>
+        <span class="n">E00</span><span class="o">=</span> <span class="n">apply_TM_1sO</span><span class="p">(</span><span class="n">c0</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">E0</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="n">verbosity</span><span class="p">)</span>
+        <span class="n">E00</span><span class="o">=</span> <span class="n">apply_edge</span><span class="p">(</span><span class="n">c0</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">E00</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="n">verbosity</span><span class="p">)</span>
+        <span class="n">corrf</span><span class="p">[</span><span class="n">r</span><span class="p">]</span><span class="o">=</span> <span class="n">E12</span><span class="o">/</span><span class="n">E00</span>
+
+        <span class="c1"># normalize by largest element of E0</span>
+        <span class="n">max_elem_E0</span> <span class="o">=</span> <span class="n">E0</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+        <span class="n">E0</span><span class="o">=</span><span class="n">E0</span><span class="o">/</span><span class="n">max_elem_E0</span>
+        <span class="n">E1</span><span class="o">=</span><span class="n">E1</span><span class="o">/</span><span class="n">max_elem_E0</span>
+
+    <span class="k">return</span> <span class="n">corrf</span></div>
+
+<div class="viewcode-block" id="corrf_2sOV2sOV_E2"><a class="viewcode-back" href="../../../envs/generic/corrf.html#ctm.generic.corrf.corrf_2sOV2sOV_E2">[docs]</a><span class="k">def</span> <span class="nf">corrf_2sOV2sOV_E2</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">op1</span><span class="p">,</span> <span class="n">get_op2</span><span class="p">,</span> <span class="n">dist</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    :param coord: tuple (x,y) specifying vertex on a square lattice</span>
+<span class="sd">    :param direction: orientation of correlation function</span>
+<span class="sd">    :param state: underlying wavefunction</span>
+<span class="sd">    :param env: environment corresponding to ``state``</span>
+<span class="sd">    :param op1: first two-site operator :math:`O_1`</span>
+<span class="sd">    :param get_op2: function returning (position-dependent) second</span>
+<span class="sd">                    two-site operator :math:`\text{get_op2}(r)=O_2`</span>
+<span class="sd">    :param dist: maximal distance of correlation function</span>
+<span class="sd">    :param verbosity: logging verbosity</span>
+<span class="sd">    :type coord: tuple(int,int)</span>
+<span class="sd">    :type direction: tuple(int,int)</span>
+<span class="sd">    :type state: IPEPS</span>
+<span class="sd">    :type env: ENV</span>
+<span class="sd">    :type op1: torch.tensor</span>
+<span class="sd">    :type get_op2: function(int)-&gt;torch.tensor</span>
+<span class="sd">    :type dist: int</span>
+<span class="sd">    :type verbosity: int</span>
+<span class="sd">    :return: vector ``corrf`` of length ``dist`` holding the values of </span>
+<span class="sd">             correlation function :math:`\langle O_1(0) O_2(r) \rangle` </span>
+<span class="sd">             for :math:`r \in [1,dist]`</span>
+<span class="sd">    :rtype: torch.tensor</span>
+<span class="sd">    </span>
+<span class="sd">    Computes the four-point correlation function :math:`\langle O_1(0) O_2(r) \rangle`,</span>
+<span class="sd">    where both O_1 and O_2 are two-site operator by contracting the following network::</span>
+
+<span class="sd">        C-----T--------------- ... ----T------------- ... -----T-------------C</span>
+<span class="sd">        |     |                        |                       |             |</span>
+<span class="sd">        T--(a(0)^+-----a(0))-- ... --a(i)^+(ai)------ ... --(a(r)^+a(r)------T</span>
+<span class="sd">        |          op1                 |                   ( gen_op2(r))     |</span>
+<span class="sd">        T--(a(y)^+-----a(y))-- ... --a(i+y)^+a(i+y)-- ... --(a(r+y)^+a(r+y)--T</span>
+<span class="sd">        |     |                        |                       |             | </span>
+<span class="sd">        C-----T--------------- ... ----T------------- ... -----T-------------C</span>
+
+<span class="sd">    for increasingly large distance ``r`` up to ``dist``. The ``op1`` is </span>
+<span class="sd">    applied within the transfer matrix defined by site 0=(x,y). The transfer matrices </span>
+<span class="sd">    are applied in the ``direction`` up to site :math:`r=(x,y) + \text{dist} \times \text{direction}`. </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">shift_c</span><span class="p">(</span><span class="n">c</span><span class="p">,</span><span class="n">d</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">c</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="n">d</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">c</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="n">d</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+
+    <span class="n">c0</span><span class="o">=</span> <span class="n">coord</span>
+    <span class="n">rev_d</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="n">direction</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="o">-</span><span class="n">direction</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="c1"># opposite direction</span>
+    <span class="n">E0</span> <span class="o">=</span> <span class="n">get_edge_2</span><span class="p">(</span><span class="n">c0</span><span class="p">,</span> <span class="n">rev_d</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="n">verbosity</span><span class="p">)</span>
+    <span class="c1"># Apply transfer matrix with operator op1</span>
+    <span class="c1">#</span>
+    <span class="c1">#   -- 0     -- -----T--------- 0</span>
+    <span class="c1"># E1-- 1 = E0-- --(A^+ op1 A)-- 1</span>
+    <span class="c1">#   -- 2     -- --(A^+ op1 A)-- 2</span>
+    <span class="c1">#   -- 3     -- -----T--------- 3</span>
+    <span class="n">E1</span> <span class="o">=</span> <span class="n">apply_TM_2sO_2sChannel</span><span class="p">(</span><span class="n">c0</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">E0</span><span class="p">,</span> <span class="n">op</span><span class="o">=</span><span class="n">op1</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="n">verbosity</span><span class="p">)</span>
+    <span class="c1"># used for normalization</span>
+    <span class="n">E0</span> <span class="o">=</span> <span class="n">apply_TM_2sO_2sChannel</span><span class="p">(</span><span class="n">c0</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">E0</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="n">verbosity</span><span class="p">)</span>
+
+    <span class="n">corrf</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">dist</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span><span class="n">dtype</span><span class="o">=</span><span class="n">state</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span><span class="n">device</span><span class="o">=</span><span class="n">state</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">dist</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+        <span class="c1"># close the end of the network by appending final transfer matrix </span>
+        <span class="c1"># with op2</span>
+        <span class="c1">#</span>
+        <span class="c1">#       C--T--- [ --T-- ]^r --T---</span>
+        <span class="c1"># E12 = T--O1-- [ --A-- ]   --O2--</span>
+        <span class="c1">#       T--O1-- [ --A-- ]   --O2--</span>
+        <span class="c1">#       C--T--- [ --T-- ]   --T---</span>
+        <span class="n">c0</span><span class="o">=</span> <span class="n">shift_c</span><span class="p">(</span><span class="n">c0</span><span class="p">,</span><span class="n">direction</span><span class="p">)</span>
+        <span class="n">E12</span><span class="o">=</span> <span class="n">apply_TM_2sO_2sChannel</span><span class="p">(</span><span class="n">c0</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">E1</span><span class="p">,</span> <span class="n">op</span><span class="o">=</span><span class="n">get_op2</span><span class="p">(</span><span class="n">r</span><span class="p">),</span> <span class="n">verbosity</span><span class="o">=</span><span class="n">verbosity</span><span class="p">)</span>
+        <span class="c1"># and corresponding normalization network</span>
+        <span class="n">E0</span> <span class="o">=</span> <span class="n">apply_TM_2sO_2sChannel</span><span class="p">(</span><span class="n">c0</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">E0</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="n">verbosity</span><span class="p">)</span>
+        <span class="c1"># and to network with only a op1 operator</span>
+        <span class="n">E1</span> <span class="o">=</span> <span class="n">apply_TM_2sO_2sChannel</span><span class="p">(</span><span class="n">c0</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">E1</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="n">verbosity</span><span class="p">)</span>
+
+        <span class="c1"># and finally apply edge of opposite direction</span>
+        <span class="n">E12</span><span class="o">=</span> <span class="n">apply_edge</span><span class="p">(</span><span class="n">c0</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">E12</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="n">verbosity</span><span class="p">)</span>
+        <span class="n">E00</span><span class="o">=</span> <span class="n">apply_edge</span><span class="p">(</span><span class="n">c0</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">E0</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="n">verbosity</span><span class="p">)</span>
+        <span class="n">corrf</span><span class="p">[</span><span class="n">r</span><span class="p">]</span><span class="o">=</span> <span class="n">E12</span><span class="o">/</span><span class="n">E00</span>
+
+        <span class="c1"># normalize by largest element of E0</span>
+        <span class="n">max_elem_E0</span> <span class="o">=</span> <span class="n">E0</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+        <span class="n">E0</span><span class="o">=</span><span class="n">E0</span><span class="o">/</span><span class="n">max_elem_E0</span>
+        <span class="n">E1</span><span class="o">=</span><span class="n">E1</span><span class="o">/</span><span class="n">max_elem_E0</span>
+
+    <span class="k">return</span> <span class="n">corrf</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Juraj Hasik, Glen B. Mbeng
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

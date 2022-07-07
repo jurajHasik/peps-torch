@@ -1,0 +1,2044 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Index &mdash; peps-torch alpha documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+    <link rel="index" title="Index" href="#" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> peps-torch
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="ipeps.html">iPEPS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="ipeps/ipeps.html">Generic iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ipeps/ipeps_kagome.html">Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ipeps/ipeps_c4v.html">1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ipeps/ipeps_lc_1site_pg.html">1-site iPEPS from lin. combination</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ipeps/ipess_kagome.html">Generic Kagome iPESS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ipeps/ipess_kagome_pg.html">Kagome iPESS with point groups</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ipeps/ipess_kagome_pg_lc.html">Kagome iPESS from lin. combination</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="ipeps.html#abelian-symmetric-ipeps">Abelian-symmetric iPEPS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="ipeps/ipeps_abelian.html">Generic  abelian-symmetric iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ipeps/ipeps_abelian.html#generic-abelian-symmetric-ipeps-with-weights">Generic abelian-symmetric iPEPS with weights</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ipeps/ipeps_kagome_abelian.html">Abelian-symmetric Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ipeps/ipeps_abelian_c4v.html">Abelian-symmetric 1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ipeps/ipess_kagome_abelian.html">Abelian-symmetric generic Kagome iPESS</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="envs.html">Environments</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="envs/generic.html">Generic iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="envs/generic/env.html">Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="envs/generic/ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="envs/generic/ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="envs/generic/ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="envs/generic/rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="envs/generic/rdm.html#module-ctm.pess_kagome.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="envs/generic/corrf.html">Correlation functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="envs/generic/transfer_matrix.html">Transfer Matrices</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="envs/generic_abelian.html">Abelian-symmetric generic iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="envs/generic_abelian/env_abelian.html">Abelian-symmetric environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="envs/generic_abelian/ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="envs/generic_abelian/ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="envs/generic_abelian/ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="envs/generic_abelian/rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="envs/generic_abelian/rdm.html#module-ctm.pess_kagome_abelian.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="envs/one_site_c4v.html">1-site C4v iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="envs/one_site_c4v/env_c4v.html">1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="envs/one_site_c4v/ctmrg_c4v.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="envs/one_site_c4v/rdm_c4v.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="envs/one_site_c4v/transfer_matrix.html">Transfer Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="envs/one_site_c4v/corrf_c4v.html">Correlation functions</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="envs/one_site_c4v_abelian.html">Abelian-symmetric 1-site C4v iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="envs/one_site_c4v_abelian/env_c4v_abelian.html">Abelian-symmetric 1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="envs/one_site_c4v_abelian/ctmrg_c4v_abelian.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="envs/one_site_c4v_abelian/rdm_c4v_abelian.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="envs/one_site_c4v_abelian/corrf_c4v_abelian.html">Correlation functions</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="optim.html">Optimization</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="optim/drivers.html">Optimization drivers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="optim/drivers/ad_optim.html">ad_optim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="optim/drivers/ad_optim_lbfgs_mod.html">ad_optim_lbfgs_mod</a></li>
+<li class="toctree-l3"><a class="reference internal" href="optim/drivers/ad_optim_sgd_mod.html">ad_optim_sgd_mod</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="optim/optimizers.html">Custom optimizers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="optim/optimizers/lbfgs_modified.html">Extended LBFGS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="optim/optimizers/sgd_modified.html">SGD with linesearch</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="config.html">Configuration</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="config.html#main">Main</a></li>
+<li class="toctree-l2"><a class="reference internal" href="config.html#global">Global</a></li>
+<li class="toctree-l2"><a class="reference internal" href="config.html#corner-transfer-matrix-algorithm">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="config.html#optimization">Optimization</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">Models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="models/akltS2.html">Spin S=2 AKLT Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="models/akltS2.html#module-models.akltS2">2x1 and 2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="models/akltS2.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="models/coupledLadders.html">Coupled Ladders</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="models/coupledLadders.html#dense-pytorch">Dense (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="models/coupledLadders.html#dense-yast">Dense (YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="models/coupledLadders.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="models/ising.html">Transverse Field Ising Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="models/ising.html#x1-unit-cell">1x1 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="models/ising.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="models/j1j2.html">J1-J2-J3 and J1-J2-lambda Heisenberg Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="models/j1j2.html#from-2x1-to-4x2-unit-cell-pytorch">from 2x1 to 4x2 unit cell (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="models/j1j2.html#from-2x1-to-4x2-unit-cell-dense-yast">from 2x1 to 4x2 unit cell (dense YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="models/j1j2.html#x1-c4v-pytorch">1x1 C4v (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="models/j1j2.html#x1-c4v-dense-yast">1x1 C4v (dense YAST)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="models/jq.html">J-Q Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="models/jq.html#module-models.jq">2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="models/jq.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="models/spin_half_kagome.html">SU(2) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="models/spin_half_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="models/spin_half_kagome.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="models/su3_kagome.html">SU(3) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="models/su3_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="models/su3_kagome.html#with-explict-u-1-xu-1-symmetry">With explict U(1)xU(1) symmetry</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="groups.html">Groups</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="groups/pg.html">Point group: square lattice</a></li>
+<li class="toctree-l2"><a class="reference internal" href="groups/su2.html">SU(2)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="groups/su2.html#module-groups.su2_abelian">SU(2) with explicit U(1) structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="groups/su3.html">SU(3)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="groups/su3.html#su-3-with-explicit-u-1-xu-1-structure">SU(3) with explicit U(1)xU(1) structure</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="linalg.html">Linear Algebra</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="linalg/custom_eig.html">Truncated eigendecomposition</a></li>
+<li class="toctree-l2"><a class="reference internal" href="linalg/custom_svd.html">Truncated SVD</a></li>
+<li class="toctree-l2"><a class="reference internal" href="linalg/spec_decomp.html">Spectral decompositions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="linalg/spec_decomp.html#module-linalg.svd_gesdd">SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="linalg/spec_decomp.html#module-linalg.svd_arnoldi">Partial SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="linalg/spec_decomp.html#module-linalg.svd_rsvd">Randomized SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="linalg/spec_decomp.html#module-linalg.eig_sym">Symmetric Eigendecomposition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="linalg/spec_decomp.html#module-linalg.eig_arnoldi">Partial diagonalization</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">peps-torch</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Index</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+
+<h1 id="index">Index</h1>
+
+<div class="genindex-jumpbox">
+ <a href="#A"><strong>A</strong></a>
+ | <a href="#B"><strong>B</strong></a>
+ | <a href="#C"><strong>C</strong></a>
+ | <a href="#D"><strong>D</strong></a>
+ | <a href="#E"><strong>E</strong></a>
+ | <a href="#F"><strong>F</strong></a>
+ | <a href="#G"><strong>G</strong></a>
+ | <a href="#H"><strong>H</strong></a>
+ | <a href="#I"><strong>I</strong></a>
+ | <a href="#J"><strong>J</strong></a>
+ | <a href="#K"><strong>K</strong></a>
+ | <a href="#L"><strong>L</strong></a>
+ | <a href="#M"><strong>M</strong></a>
+ | <a href="#O"><strong>O</strong></a>
+ | <a href="#R"><strong>R</strong></a>
+ | <a href="#S"><strong>S</strong></a>
+ | <a href="#T"><strong>T</strong></a>
+ | <a href="#U"><strong>U</strong></a>
+ | <a href="#V"><strong>V</strong></a>
+ | <a href="#W"><strong>W</strong></a>
+ | <a href="#Y"><strong>Y</strong></a>
+ 
+</div>
+<h2 id="A">A</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="ipeps/ipeps_abelian.html#ipeps.ipeps_abelian.IPEPS_ABELIAN_WEIGHTED.absorb_weights">absorb_weights() (ipeps.ipeps_abelian.IPEPS_ABELIAN_WEIGHTED method)</a>
+</li>
+      <li><a href="ipeps/ipeps.html#ipeps.ipeps.IPEPS.add_noise">add_noise() (ipeps.ipeps.IPEPS method)</a>
+
+      <ul>
+        <li><a href="ipeps/ipeps_abelian.html#ipeps.ipeps_abelian.IPEPS_ABELIAN.add_noise">(ipeps.ipeps_abelian.IPEPS_ABELIAN method)</a>
+</li>
+        <li><a href="ipeps/ipeps_abelian_c4v.html#ipeps.ipeps_abelian_c4v.IPEPS_ABELIAN_C4V.add_noise">(ipeps.ipeps_abelian_c4v.IPEPS_ABELIAN_C4V method)</a>
+</li>
+        <li><a href="ipeps/ipeps_c4v.html#ipeps.ipeps_c4v.IPEPS_C4V.add_noise">(ipeps.ipeps_c4v.IPEPS_C4V method)</a>
+</li>
+        <li><a href="ipeps/ipeps_lc_1site_pg.html#ipeps.ipeps_lc.IPEPS_LC_1SITE_PG.add_noise">(ipeps.ipeps_lc.IPEPS_LC_1SITE_PG method)</a>
+</li>
+        <li><a href="ipeps/ipess_kagome.html#ipeps.ipess_kagome.IPESS_KAGOME_GENERIC.add_noise">(ipeps.ipess_kagome.IPESS_KAGOME_GENERIC method)</a>
+</li>
+        <li><a href="ipeps/ipess_kagome_pg.html#ipeps.ipess_kagome.IPESS_KAGOME_PG.add_noise">(ipeps.ipess_kagome.IPESS_KAGOME_PG method)</a>
+</li>
+        <li><a href="ipeps/ipess_kagome_pg_lc.html#ipeps.ipess_kagome.IPESS_KAGOME_PG_LC.add_noise">(ipeps.ipess_kagome.IPESS_KAGOME_PG_LC method)</a>
+</li>
+        <li><a href="ipeps/ipess_kagome_abelian.html#ipeps.ipess_kagome_abelian.IPESS_KAGOME_GENERIC_ABELIAN.add_noise">(ipeps.ipess_kagome_abelian.IPESS_KAGOME_GENERIC_ABELIAN method)</a>
+</li>
+      </ul></li>
+      <li><a href="models/akltS2.html#models.akltS2.AKLTS2">AKLTS2 (class in models.akltS2)</a>
+</li>
+      <li><a href="models/akltS2.html#models.akltS2.AKLTS2_C4V_BIPARTITE">AKLTS2_C4V_BIPARTITE (class in models.akltS2)</a>
+</li>
+      <li><a href="envs/generic/corrf.html#ctm.generic.corrf.apply_edge">apply_edge() (in module ctm.generic.corrf)</a>
+
+      <ul>
+        <li><a href="envs/one_site_c4v/corrf_c4v.html#ctm.one_site_c4v.corrf_c4v.apply_edge">(in module ctm.one_site_c4v.corrf_c4v)</a>
+</li>
+        <li><a href="envs/one_site_c4v_abelian/corrf_c4v_abelian.html#ctm.one_site_c4v_abelian.corrf_c4v.apply_edge">(in module ctm.one_site_c4v_abelian.corrf_c4v)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="envs/one_site_c4v/corrf_c4v.html#ctm.one_site_c4v.corrf_c4v.apply_edge_L">apply_edge_L() (in module ctm.one_site_c4v.corrf_c4v)</a>
+</li>
+      <li><a href="envs/generic/corrf.html#ctm.generic.corrf.apply_TM_0sO">apply_TM_0sO() (in module ctm.generic.corrf)</a>
+</li>
+      <li><a href="envs/generic/corrf.html#ctm.generic.corrf.apply_TM_1sO">apply_TM_1sO() (in module ctm.generic.corrf)</a>
+
+      <ul>
+        <li><a href="envs/one_site_c4v/corrf_c4v.html#ctm.one_site_c4v.corrf_c4v.apply_TM_1sO">(in module ctm.one_site_c4v.corrf_c4v)</a>
+</li>
+        <li><a href="envs/one_site_c4v_abelian/corrf_c4v_abelian.html#ctm.one_site_c4v_abelian.corrf_c4v.apply_TM_1sO">(in module ctm.one_site_c4v_abelian.corrf_c4v)</a>
+</li>
+      </ul></li>
+      <li><a href="envs/one_site_c4v/corrf_c4v.html#ctm.one_site_c4v.corrf_c4v.apply_TM_1sO_2">apply_TM_1sO_2() (in module ctm.one_site_c4v.corrf_c4v)</a>
+</li>
+      <li><a href="envs/one_site_c4v/corrf_c4v.html#ctm.one_site_c4v.corrf_c4v.apply_TM_2sO">apply_TM_2sO() (in module ctm.one_site_c4v.corrf_c4v)</a>
+</li>
+      <li><a href="envs/generic/corrf.html#ctm.generic.corrf.apply_TM_2sO_1sChannel">apply_TM_2sO_1sChannel() (in module ctm.generic.corrf)</a>
+</li>
+      <li><a href="envs/generic/corrf.html#ctm.generic.corrf.apply_TM_2sO_2sChannel">apply_TM_2sO_2sChannel() (in module ctm.generic.corrf)</a>
+</li>
+      <li><a href="envs/one_site_c4v/rdm_c4v.html#ctm.one_site_c4v.rdm_c4v.aux_rdm2x2">aux_rdm2x2() (in module ctm.one_site_c4v.rdm_c4v)</a>
+</li>
+      <li><a href="envs/one_site_c4v/rdm_c4v.html#ctm.one_site_c4v.rdm_c4v.aux_rdm2x2_NN">aux_rdm2x2_NN() (in module ctm.one_site_c4v.rdm_c4v)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="B">B</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="linalg/spec_decomp.html#linalg.eig_arnoldi.SYMARNOLDI.backward">backward() (linalg.eig_arnoldi.SYMARNOLDI static method)</a>
+
+      <ul>
+        <li><a href="linalg/spec_decomp.html#linalg.eig_sym.SYMEIG.backward">(linalg.eig_sym.SYMEIG static method)</a>
+</li>
+        <li><a href="linalg/spec_decomp.html#linalg.svd_arnoldi.SVDARNOLDI.backward">(linalg.svd_arnoldi.SVDARNOLDI static method)</a>
+</li>
+        <li><a href="linalg/spec_decomp.html#linalg.svd_gesdd.SVDGESDD.backward">(linalg.svd_gesdd.SVDGESDD static method)</a>
+</li>
+        <li><a href="linalg/spec_decomp.html#linalg.svd_rsvd.RSVD.backward">(linalg.svd_rsvd.RSVD static method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="ipeps/ipess_kagome_pg_lc.html#ipeps.ipess_kagome.IPESS_KAGOME_PG_LC.build_elem_tensors">build_elem_tensors() (ipeps.ipess_kagome.IPESS_KAGOME_PG_LC method)</a>
+</li>
+      <li><a href="ipeps/ipeps_lc_1site_pg.html#ipeps.ipeps_lc.IPEPS_LC_1SITE_PG.build_onsite_tensors">build_onsite_tensors() (ipeps.ipeps_lc.IPEPS_LC_1SITE_PG method)</a>
+
+      <ul>
+        <li><a href="ipeps/ipess_kagome.html#ipeps.ipess_kagome.IPESS_KAGOME_GENERIC.build_onsite_tensors">(ipeps.ipess_kagome.IPESS_KAGOME_GENERIC method)</a>
+</li>
+        <li><a href="ipeps/ipess_kagome_abelian.html#ipeps.ipess_kagome_abelian.IPESS_KAGOME_GENERIC_ABELIAN.build_onsite_tensors">(ipeps.ipess_kagome_abelian.IPESS_KAGOME_GENERIC_ABELIAN method)</a>
+</li>
+      </ul></li>
+      <li><a href="ipeps/ipeps_abelian.html#ipeps.ipeps_abelian.IPEPS_ABELIAN.build_sites_dl">build_sites_dl() (ipeps.ipeps_abelian.IPEPS_ABELIAN method)</a>
+</li>
+      <li><a href="ipeps/ipeps_abelian.html#ipeps.ipeps_abelian.IPEPS_ABELIAN.build_sites_dl_open">build_sites_dl_open() (ipeps.ipeps_abelian.IPEPS_ABELIAN method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="C">C</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="groups/su3.html#groups.su3.SU3_DEFINING.C1">C1() (groups.su3.SU3_DEFINING method)</a>
+
+      <ul>
+        <li><a href="groups/su3.html#groups.su3_abelian.SU3_DEFINING_U1xU1.C1">(groups.su3_abelian.SU3_DEFINING_U1xU1 method)</a>
+</li>
+      </ul></li>
+      <li><a href="groups/su3.html#groups.su3.SU3_DEFINING.C2">C2() (groups.su3.SU3_DEFINING method)</a>
+</li>
+      <li><a href="envs/generic/ctm_components.html#ctm.generic.ctm_components.c2x2_LD">c2x2_LD() (in module ctm.generic.ctm_components)</a>
+
+      <ul>
+        <li><a href="envs/generic_abelian/ctm_components.html#ctm.generic_abelian.ctm_components.c2x2_LD">(in module ctm.generic_abelian.ctm_components)</a>
+</li>
+      </ul></li>
+      <li><a href="envs/generic/ctm_components.html#ctm.generic.ctm_components.c2x2_LU">c2x2_LU() (in module ctm.generic.ctm_components)</a>
+
+      <ul>
+        <li><a href="envs/generic_abelian/ctm_components.html#ctm.generic_abelian.ctm_components.c2x2_LU">(in module ctm.generic_abelian.ctm_components)</a>
+</li>
+      </ul></li>
+      <li><a href="envs/generic/ctm_components.html#ctm.generic.ctm_components.c2x2_RD">c2x2_RD() (in module ctm.generic.ctm_components)</a>
+
+      <ul>
+        <li><a href="envs/generic_abelian/ctm_components.html#ctm.generic_abelian.ctm_components.c2x2_RD">(in module ctm.generic_abelian.ctm_components)</a>
+</li>
+      </ul></li>
+      <li><a href="envs/generic/ctm_components.html#ctm.generic.ctm_components.c2x2_RU">c2x2_RU() (in module ctm.generic.ctm_components)</a>
+
+      <ul>
+        <li><a href="envs/generic_abelian/ctm_components.html#ctm.generic_abelian.ctm_components.c2x2_RU">(in module ctm.generic_abelian.ctm_components)</a>
+</li>
+      </ul></li>
+      <li><a href="groups/su3.html#groups.su3.SU3_DEFINING.Cartan_Weyl">Cartan_Weyl() (groups.su3.SU3_DEFINING method)</a>
+
+      <ul>
+        <li><a href="groups/su3.html#groups.su3_abelian.SU3_DEFINING_U1xU1.Cartan_Weyl">(groups.su3_abelian.SU3_DEFINING_U1xU1 method)</a>
+</li>
+      </ul></li>
+      <li><a href="envs/generic/env.html#ctm.generic.env.ENV.clone">clone() (ctm.generic.env.ENV method)</a>
+
+      <ul>
+        <li><a href="envs/generic_abelian/env_abelian.html#ctm.generic_abelian.env_abelian.ENV_ABELIAN.clone">(ctm.generic_abelian.env_abelian.ENV_ABELIAN method)</a>
+</li>
+        <li><a href="envs/one_site_c4v/env_c4v.html#ctm.one_site_c4v.env_c4v.ENV_C4V.clone">(ctm.one_site_c4v.env_c4v.ENV_C4V method)</a>
+</li>
+        <li><a href="envs/one_site_c4v_abelian/env_c4v_abelian.html#ctm.one_site_c4v_abelian.env_c4v_abelian.ENV_C4V_ABELIAN.clone">(ctm.one_site_c4v_abelian.env_c4v_abelian.ENV_C4V_ABELIAN method)</a>
+</li>
+      </ul></li>
+      <li><a href="envs/generic/corrf.html#ctm.generic.corrf.corrf_1sO1sO">corrf_1sO1sO() (in module ctm.generic.corrf)</a>
+
+      <ul>
+        <li><a href="envs/one_site_c4v/corrf_c4v.html#ctm.one_site_c4v.corrf_c4v.corrf_1sO1sO">(in module ctm.one_site_c4v.corrf_c4v)</a>
+</li>
+        <li><a href="envs/one_site_c4v_abelian/corrf_c4v_abelian.html#ctm.one_site_c4v_abelian.corrf_c4v.corrf_1sO1sO">(in module ctm.one_site_c4v_abelian.corrf_c4v)</a>
+</li>
+      </ul></li>
+      <li><a href="envs/generic/corrf.html#ctm.generic.corrf.corrf_2sOH2sOH_E1">corrf_2sOH2sOH_E1() (in module ctm.generic.corrf)</a>
+
+      <ul>
+        <li><a href="envs/one_site_c4v/corrf_c4v.html#ctm.one_site_c4v.corrf_c4v.corrf_2sOH2sOH_E1">(in module ctm.one_site_c4v.corrf_c4v)</a>
+</li>
+      </ul></li>
+      <li><a href="envs/generic/corrf.html#ctm.generic.corrf.corrf_2sOV2sOV_E2">corrf_2sOV2sOV_E2() (in module ctm.generic.corrf)</a>
+
+      <ul>
+        <li><a href="envs/one_site_c4v/corrf_c4v.html#ctm.one_site_c4v.corrf_c4v.corrf_2sOV2sOV_E2">(in module ctm.one_site_c4v.corrf_c4v)</a>
+</li>
+      </ul></li>
+      <li><a href="models/coupledLadders.html#models.coupledLadders.COUPLEDLADDERS">COUPLEDLADDERS (class in models.coupledLadders)</a>
+</li>
+      <li><a href="models/coupledLadders.html#models.abelian.coupledLadders.COUPLEDLADDERS_NOSYM">COUPLEDLADDERS_NOSYM (class in models.abelian.coupledLadders)</a>
+</li>
+      <li><a href="models/coupledLadders.html#models.abelian.coupledLadders.COUPLEDLADDERS_U1">COUPLEDLADDERS_U1 (class in models.abelian.coupledLadders)</a>
+</li>
+      <li>
+    ctm.generic.corrf
+
+      <ul>
+        <li><a href="envs/generic/corrf.html#module-ctm.generic.corrf">module</a>
+</li>
+      </ul></li>
+      <li>
+    ctm.generic.ctm_components
+
+      <ul>
+        <li><a href="envs/generic/ctm_components.html#module-ctm.generic.ctm_components">module</a>
+</li>
+      </ul></li>
+      <li>
+    ctm.generic.ctm_projectors
+
+      <ul>
+        <li><a href="envs/generic/ctm_projectors.html#module-ctm.generic.ctm_projectors">module</a>
+</li>
+      </ul></li>
+      <li>
+    ctm.generic.ctmrg
+
+      <ul>
+        <li><a href="envs/generic/ctmrg.html#module-ctm.generic.ctmrg">module</a>
+</li>
+      </ul></li>
+      <li>
+    ctm.generic.env
+
+      <ul>
+        <li><a href="envs/generic/env.html#module-ctm.generic.env">module</a>
+</li>
+      </ul></li>
+      <li>
+    ctm.generic.rdm
+
+      <ul>
+        <li><a href="envs/generic/rdm.html#module-ctm.generic.rdm">module</a>
+</li>
+      </ul></li>
+      <li>
+    ctm.generic.transferops
+
+      <ul>
+        <li><a href="envs/generic/transfer_matrix.html#module-ctm.generic.transferops">module</a>
+</li>
+      </ul></li>
+      <li>
+    ctm.generic_abelian.ctm_components
+
+      <ul>
+        <li><a href="envs/generic_abelian/ctm_components.html#module-ctm.generic_abelian.ctm_components">module</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    ctm.generic_abelian.ctm_projectors
+
+      <ul>
+        <li><a href="envs/generic_abelian/ctm_projectors.html#module-ctm.generic_abelian.ctm_projectors">module</a>
+</li>
+      </ul></li>
+      <li>
+    ctm.generic_abelian.ctmrg
+
+      <ul>
+        <li><a href="envs/generic_abelian/ctmrg.html#module-ctm.generic_abelian.ctmrg">module</a>
+</li>
+      </ul></li>
+      <li>
+    ctm.generic_abelian.env_abelian
+
+      <ul>
+        <li><a href="envs/generic_abelian/env_abelian.html#module-ctm.generic_abelian.env_abelian">module</a>
+</li>
+      </ul></li>
+      <li>
+    ctm.generic_abelian.rdm
+
+      <ul>
+        <li><a href="envs/generic_abelian/rdm.html#module-ctm.generic_abelian.rdm">module</a>
+</li>
+      </ul></li>
+      <li>
+    ctm.one_site_c4v.corrf_c4v
+
+      <ul>
+        <li><a href="envs/one_site_c4v/corrf_c4v.html#module-ctm.one_site_c4v.corrf_c4v">module</a>
+</li>
+      </ul></li>
+      <li>
+    ctm.one_site_c4v.ctmrg_c4v
+
+      <ul>
+        <li><a href="envs/one_site_c4v/ctmrg_c4v.html#module-ctm.one_site_c4v.ctmrg_c4v">module</a>
+</li>
+      </ul></li>
+      <li>
+    ctm.one_site_c4v.env_c4v
+
+      <ul>
+        <li><a href="envs/one_site_c4v/env_c4v.html#module-ctm.one_site_c4v.env_c4v">module</a>
+</li>
+      </ul></li>
+      <li>
+    ctm.one_site_c4v.rdm_c4v
+
+      <ul>
+        <li><a href="envs/one_site_c4v/rdm_c4v.html#module-ctm.one_site_c4v.rdm_c4v">module</a>
+</li>
+      </ul></li>
+      <li>
+    ctm.one_site_c4v.transferops_c4v
+
+      <ul>
+        <li><a href="envs/one_site_c4v/transfer_matrix.html#module-ctm.one_site_c4v.transferops_c4v">module</a>
+</li>
+      </ul></li>
+      <li>
+    ctm.one_site_c4v_abelian.corrf_c4v
+
+      <ul>
+        <li><a href="envs/one_site_c4v_abelian/corrf_c4v_abelian.html#module-ctm.one_site_c4v_abelian.corrf_c4v">module</a>
+</li>
+      </ul></li>
+      <li>
+    ctm.one_site_c4v_abelian.ctmrg_c4v
+
+      <ul>
+        <li><a href="envs/one_site_c4v_abelian/ctmrg_c4v_abelian.html#module-ctm.one_site_c4v_abelian.ctmrg_c4v">module</a>
+</li>
+      </ul></li>
+      <li>
+    ctm.one_site_c4v_abelian.env_c4v_abelian
+
+      <ul>
+        <li><a href="envs/one_site_c4v_abelian/env_c4v_abelian.html#module-ctm.one_site_c4v_abelian.env_c4v_abelian">module</a>
+</li>
+      </ul></li>
+      <li>
+    ctm.one_site_c4v_abelian.rdm_c4v
+
+      <ul>
+        <li><a href="envs/one_site_c4v_abelian/rdm_c4v_abelian.html#module-ctm.one_site_c4v_abelian.rdm_c4v">module</a>
+</li>
+      </ul></li>
+      <li>
+    ctm.pess_kagome.rdm_kagome
+
+      <ul>
+        <li><a href="envs/generic/rdm.html#module-ctm.pess_kagome.rdm_kagome">module</a>
+</li>
+      </ul></li>
+      <li>
+    ctm.pess_kagome_abelian.rdm_kagome
+
+      <ul>
+        <li><a href="envs/generic_abelian/rdm.html#module-ctm.pess_kagome_abelian.rdm_kagome">module</a>
+</li>
+      </ul></li>
+      <li><a href="envs/generic/ctm_projectors.html#ctm.generic.ctm_projectors.ctm_get_projectors_4x2">ctm_get_projectors_4x2() (in module ctm.generic.ctm_projectors)</a>
+
+      <ul>
+        <li><a href="envs/generic_abelian/ctm_projectors.html#ctm.generic_abelian.ctm_projectors.ctm_get_projectors_4x2">(in module ctm.generic_abelian.ctm_projectors)</a>
+</li>
+      </ul></li>
+      <li><a href="envs/generic/ctm_projectors.html#ctm.generic.ctm_projectors.ctm_get_projectors_4x4">ctm_get_projectors_4x4() (in module ctm.generic.ctm_projectors)</a>
+
+      <ul>
+        <li><a href="envs/generic_abelian/ctm_projectors.html#ctm.generic_abelian.ctm_projectors.ctm_get_projectors_4x4">(in module ctm.generic_abelian.ctm_projectors)</a>
+</li>
+      </ul></li>
+      <li><a href="envs/generic/ctm_projectors.html#ctm.generic.ctm_projectors.ctm_get_projectors_from_matrices">ctm_get_projectors_from_matrices() (in module ctm.generic.ctm_projectors)</a>
+
+      <ul>
+        <li><a href="envs/generic_abelian/ctm_projectors.html#ctm.generic_abelian.ctm_projectors.ctm_get_projectors_from_matrices">(in module ctm.generic_abelian.ctm_projectors)</a>
+</li>
+      </ul></li>
+      <li><a href="envs/generic/ctmrg.html#ctm.generic.ctmrg.ctm_MOVE">ctm_MOVE() (in module ctm.generic.ctmrg)</a>
+
+      <ul>
+        <li><a href="envs/generic_abelian/ctmrg.html#ctm.generic_abelian.ctmrg.ctm_MOVE">(in module ctm.generic_abelian.ctmrg)</a>
+</li>
+      </ul></li>
+      <li><a href="envs/one_site_c4v/ctmrg_c4v.html#ctm.one_site_c4v.ctmrg_c4v.ctm_MOVE_dl">ctm_MOVE_dl() (in module ctm.one_site_c4v.ctmrg_c4v)</a>
+
+      <ul>
+        <li><a href="envs/one_site_c4v_abelian/ctmrg_c4v_abelian.html#ctm.one_site_c4v_abelian.ctmrg_c4v.ctm_MOVE_dl">(in module ctm.one_site_c4v_abelian.ctmrg_c4v)</a>
+</li>
+      </ul></li>
+      <li><a href="envs/one_site_c4v/ctmrg_c4v.html#ctm.one_site_c4v.ctmrg_c4v.ctm_MOVE_sl">ctm_MOVE_sl() (in module ctm.one_site_c4v.ctmrg_c4v)</a>
+
+      <ul>
+        <li><a href="envs/one_site_c4v_abelian/ctmrg_c4v_abelian.html#ctm.one_site_c4v_abelian.ctmrg_c4v.ctm_MOVE_sl">(in module ctm.one_site_c4v_abelian.ctmrg_c4v)</a>
+</li>
+      </ul></li>
+      <li><a href="config.html#config.CTMARGS">CTMARGS (class in config)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="D">D</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="envs/generic/env.html#ctm.generic.env.ENV.detach">detach() (ctm.generic.env.ENV method)</a>
+
+      <ul>
+        <li><a href="envs/generic_abelian/env_abelian.html#ctm.generic_abelian.env_abelian.ENV_ABELIAN.detach">(ctm.generic_abelian.env_abelian.ENV_ABELIAN method)</a>
+</li>
+        <li><a href="envs/one_site_c4v/env_c4v.html#ctm.one_site_c4v.env_c4v.ENV_C4V.detach">(ctm.one_site_c4v.env_c4v.ENV_C4V method)</a>
+</li>
+        <li><a href="envs/one_site_c4v_abelian/env_c4v_abelian.html#ctm.one_site_c4v_abelian.env_c4v_abelian.ENV_C4V_ABELIAN.detach">(ctm.one_site_c4v_abelian.env_c4v_abelian.ENV_C4V_ABELIAN method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="envs/generic/rdm.html#ctm.pess_kagome.rdm_kagome.double_layer_a">double_layer_a() (in module ctm.pess_kagome.rdm_kagome)</a>
+
+      <ul>
+        <li><a href="envs/generic_abelian/rdm.html#ctm.pess_kagome_abelian.rdm_kagome.double_layer_a">(in module ctm.pess_kagome_abelian.rdm_kagome)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="E">E</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="models/su3_kagome.html#models.su3_kagome.KAGOME_SU3.energy_1site">energy_1site() (models.su3_kagome.KAGOME_SU3 method)</a>
+</li>
+      <li><a href="models/j1j2.html#models.abelian.j1j2.J1J2_C4V_BIPARTITE_NOSYM.energy_1x1">energy_1x1() (models.abelian.j1j2.J1J2_C4V_BIPARTITE_NOSYM method)</a>
+
+      <ul>
+        <li><a href="models/akltS2.html#models.akltS2.AKLTS2_C4V_BIPARTITE.energy_1x1">(models.akltS2.AKLTS2_C4V_BIPARTITE method)</a>
+</li>
+        <li><a href="models/ising.html#models.ising.ISING.energy_1x1">(models.ising.ISING method)</a>
+</li>
+        <li><a href="models/j1j2.html#models.j1j2.J1J2_C4V_BIPARTITE.energy_1x1">(models.j1j2.J1J2_C4V_BIPARTITE method)</a>
+</li>
+        <li><a href="models/j1j2.html#models.j1j2lambda.J1J2LAMBDA_C4V_BIPARTITE.energy_1x1">(models.j1j2lambda.J1J2LAMBDA_C4V_BIPARTITE method)</a>
+</li>
+        <li><a href="models/jq.html#models.jq.JQ_C4V.energy_1x1">(models.jq.JQ_C4V method)</a>
+</li>
+      </ul></li>
+      <li><a href="models/j1j2.html#models.abelian.j1j2.J1J2_C4V_BIPARTITE_NOSYM.energy_1x1_lowmem">energy_1x1_lowmem() (models.abelian.j1j2.J1J2_C4V_BIPARTITE_NOSYM method)</a>
+
+      <ul>
+        <li><a href="models/j1j2.html#models.j1j2.J1J2_C4V_BIPARTITE.energy_1x1_lowmem">(models.j1j2.J1J2_C4V_BIPARTITE method)</a>
+</li>
+      </ul></li>
+      <li><a href="models/ising.html#models.ising.ISING_C4V.energy_1x1_nn">energy_1x1_nn() (models.ising.ISING_C4V method)</a>
+</li>
+      <li><a href="models/ising.html#models.ising.ISING_C4V.energy_1x1_plaqette">energy_1x1_plaqette() (models.ising.ISING_C4V method)</a>
+</li>
+      <li><a href="models/j1j2.html#models.j1j2.J1J2_C4V_BIPARTITE.energy_1x1_tiled">energy_1x1_tiled() (models.j1j2.J1J2_C4V_BIPARTITE method)</a>
+</li>
+      <li><a href="models/coupledLadders.html#models.abelian.coupledLadders.COUPLEDLADDERS_NOSYM.energy_2x1_1x2">energy_2x1_1x2() (models.abelian.coupledLadders.COUPLEDLADDERS_NOSYM method)</a>
+
+      <ul>
+        <li><a href="models/coupledLadders.html#models.abelian.coupledLadders.COUPLEDLADDERS_U1.energy_2x1_1x2">(models.abelian.coupledLadders.COUPLEDLADDERS_U1 method)</a>
+</li>
+        <li><a href="models/akltS2.html#models.akltS2.AKLTS2.energy_2x1_1x2">(models.akltS2.AKLTS2 method)</a>
+</li>
+        <li><a href="models/coupledLadders.html#models.coupledLadders.COUPLEDLADDERS.energy_2x1_1x2">(models.coupledLadders.COUPLEDLADDERS method)</a>
+</li>
+      </ul></li>
+      <li><a href="models/coupledLadders.html#models.abelian.coupledLadders.COUPLEDLADDERS_U1.energy_2x1_1x2_H">energy_2x1_1x2_H() (models.abelian.coupledLadders.COUPLEDLADDERS_U1 method)</a>
+</li>
+      <li><a href="models/j1j2.html#models.abelian.j1j2.J1J2_NOSYM.energy_2x1_or_2Lx2site_2x2rdms">energy_2x1_or_2Lx2site_2x2rdms() (models.abelian.j1j2.J1J2_NOSYM method)</a>
+</li>
+      <li><a href="models/j1j2.html#models.j1j2.J1J2.energy_2x2_1site_BP">energy_2x2_1site_BP() (models.j1j2.J1J2 method)</a>
+</li>
+      <li><a href="models/j1j2.html#models.j1j2.J1J2.energy_2x2_2site">energy_2x2_2site() (models.j1j2.J1J2 method)</a>
+</li>
+      <li><a href="models/j1j2.html#models.j1j2.J1J2.energy_2x2_4site">energy_2x2_4site() (models.j1j2.J1J2 method)</a>
+
+      <ul>
+        <li><a href="models/jq.html#models.jq.JQ.energy_2x2_4site">(models.jq.JQ method)</a>
+</li>
+      </ul></li>
+      <li><a href="models/j1j2.html#models.j1j2.J1J2.energy_2x2_8site">energy_2x2_8site() (models.j1j2.J1J2 method)</a>
+</li>
+      <li><a href="models/spin_half_kagome.html#models.abelian.kagome_u1.KAGOME_U1.energy_down_t_1x1subsystem">energy_down_t_1x1subsystem() (models.abelian.kagome_u1.KAGOME_U1 method)</a>
+
+      <ul>
+        <li><a href="models/su3_kagome.html#models.abelian.su3_kagome.KAGOME_SU3_U1xU1.energy_down_t_1x1subsystem">(models.abelian.su3_kagome.KAGOME_SU3_U1xU1 method)</a>
+</li>
+        <li><a href="models/su3_kagome.html#models.su3_kagome.KAGOME_SU3.energy_down_t_1x1subsystem">(models.su3_kagome.KAGOME_SU3 method)</a>
+</li>
+      </ul></li>
+      <li><a href="models/spin_half_kagome.html#models.abelian.kagome_u1.KAGOME_U1.energy_down_t_2x2subsystem">energy_down_t_2x2subsystem() (models.abelian.kagome_u1.KAGOME_U1 method)</a>
+</li>
+      <li><a href="models/su3_kagome.html#models.abelian.su3_kagome.KAGOME_SU3_U1xU1.energy_per_site_2x2subsystem">energy_per_site_2x2subsystem() (models.abelian.su3_kagome.KAGOME_SU3_U1xU1 method)</a>
+
+      <ul>
+        <li><a href="models/su3_kagome.html#models.su3_kagome.KAGOME_SU3.energy_per_site_2x2subsystem">(models.su3_kagome.KAGOME_SU3 method)</a>
+</li>
+      </ul></li>
+      <li><a href="models/spin_half_kagome.html#models.spin_half_kagome.S_HALF_KAGOME.energy_triangle_dn">energy_triangle_dn() (models.spin_half_kagome.S_HALF_KAGOME method)</a>
+</li>
+      <li><a href="models/spin_half_kagome.html#models.spin_half_kagome.S_HALF_KAGOME.energy_triangle_dn_1x1">energy_triangle_dn_1x1() (models.spin_half_kagome.S_HALF_KAGOME method)</a>
+</li>
+      <li><a href="models/spin_half_kagome.html#models.spin_half_kagome.S_HALF_KAGOME.energy_triangle_up">energy_triangle_up() (models.spin_half_kagome.S_HALF_KAGOME method)</a>
+</li>
+      <li><a href="models/su3_kagome.html#models.abelian.su3_kagome.KAGOME_SU3_U1xU1.energy_triangles_2x2subsystem">energy_triangles_2x2subsystem() (models.abelian.su3_kagome.KAGOME_SU3_U1xU1 method)</a>
+
+      <ul>
+        <li><a href="models/su3_kagome.html#models.su3_kagome.KAGOME_SU3.energy_triangles_2x2subsystem">(models.su3_kagome.KAGOME_SU3 method)</a>
+</li>
+      </ul></li>
+      <li><a href="models/spin_half_kagome.html#models.abelian.kagome_u1.KAGOME_U1.energy_up_t_2x2subsystem">energy_up_t_2x2subsystem() (models.abelian.kagome_u1.KAGOME_U1 method)</a>
+</li>
+      <li><a href="envs/generic/rdm.html#ctm.pess_kagome.rdm_kagome.enlarged_corner">enlarged_corner() (in module ctm.pess_kagome.rdm_kagome)</a>
+
+      <ul>
+        <li><a href="envs/generic_abelian/rdm.html#ctm.pess_kagome_abelian.rdm_kagome.enlarged_corner">(in module ctm.pess_kagome_abelian.rdm_kagome)</a>
+</li>
+      </ul></li>
+      <li><a href="envs/generic/env.html#ctm.generic.env.ENV">ENV (class in ctm.generic.env)</a>
+</li>
+      <li><a href="envs/generic_abelian/env_abelian.html#ctm.generic_abelian.env_abelian.ENV_ABELIAN">ENV_ABELIAN (class in ctm.generic_abelian.env_abelian)</a>
+</li>
+      <li><a href="envs/one_site_c4v/env_c4v.html#ctm.one_site_c4v.env_c4v.ENV_C4V">ENV_C4V (class in ctm.one_site_c4v.env_c4v)</a>
+</li>
+      <li><a href="envs/one_site_c4v_abelian/env_c4v_abelian.html#ctm.one_site_c4v_abelian.env_c4v_abelian.ENV_C4V_ABELIAN">ENV_C4V_ABELIAN (class in ctm.one_site_c4v_abelian.env_c4v_abelian)</a>
+</li>
+      <li><a href="models/akltS2.html#models.akltS2.AKLTS2_C4V_BIPARTITE.eval_corrf_DD_H">eval_corrf_DD_H() (models.akltS2.AKLTS2_C4V_BIPARTITE method)</a>
+
+      <ul>
+        <li><a href="models/coupledLadders.html#models.coupledLadders.COUPLEDLADDERS.eval_corrf_DD_H">(models.coupledLadders.COUPLEDLADDERS method)</a>
+</li>
+        <li><a href="models/j1j2.html#models.j1j2.J1J2_C4V_BIPARTITE.eval_corrf_DD_H">(models.j1j2.J1J2_C4V_BIPARTITE method)</a>
+</li>
+        <li><a href="models/j1j2.html#models.j1j2lambda.J1J2LAMBDA_C4V_BIPARTITE.eval_corrf_DD_H">(models.j1j2lambda.J1J2LAMBDA_C4V_BIPARTITE method)</a>
+</li>
+        <li><a href="models/jq.html#models.jq.JQ.eval_corrf_DD_H">(models.jq.JQ method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="models/coupledLadders.html#models.coupledLadders.COUPLEDLADDERS.eval_corrf_DD_V">eval_corrf_DD_V() (models.coupledLadders.COUPLEDLADDERS method)</a>
+
+      <ul>
+        <li><a href="models/j1j2.html#models.j1j2.J1J2_C4V_BIPARTITE.eval_corrf_DD_V">(models.j1j2.J1J2_C4V_BIPARTITE method)</a>
+</li>
+        <li><a href="models/j1j2.html#models.j1j2lambda.J1J2LAMBDA_C4V_BIPARTITE.eval_corrf_DD_V">(models.j1j2lambda.J1J2LAMBDA_C4V_BIPARTITE method)</a>
+</li>
+        <li><a href="models/jq.html#models.jq.JQ.eval_corrf_DD_V">(models.jq.JQ method)</a>
+</li>
+      </ul></li>
+      <li><a href="models/akltS2.html#models.akltS2.AKLTS2_C4V_BIPARTITE.eval_corrf_SS">eval_corrf_SS() (models.akltS2.AKLTS2_C4V_BIPARTITE method)</a>
+
+      <ul>
+        <li><a href="models/coupledLadders.html#models.coupledLadders.COUPLEDLADDERS.eval_corrf_SS">(models.coupledLadders.COUPLEDLADDERS method)</a>
+</li>
+        <li><a href="models/j1j2.html#models.j1j2.J1J2.eval_corrf_SS">(models.j1j2.J1J2 method)</a>
+</li>
+        <li><a href="models/j1j2.html#models.j1j2.J1J2_C4V_BIPARTITE.eval_corrf_SS">(models.j1j2.J1J2_C4V_BIPARTITE method)</a>
+</li>
+        <li><a href="models/j1j2.html#models.j1j2lambda.J1J2LAMBDA_C4V_BIPARTITE.eval_corrf_SS">(models.j1j2lambda.J1J2LAMBDA_C4V_BIPARTITE method)</a>
+</li>
+        <li><a href="models/jq.html#models.jq.JQ.eval_corrf_SS">(models.jq.JQ method)</a>
+</li>
+        <li><a href="models/spin_half_kagome.html#models.spin_half_kagome.S_HALF_KAGOME.eval_corrf_SS">(models.spin_half_kagome.S_HALF_KAGOME method)</a>
+</li>
+      </ul></li>
+      <li><a href="models/su3_kagome.html#models.abelian.su3_kagome.KAGOME_SU3_U1xU1.eval_generators">eval_generators() (models.abelian.su3_kagome.KAGOME_SU3_U1xU1 method)</a>
+</li>
+      <li><a href="models/coupledLadders.html#models.abelian.coupledLadders.COUPLEDLADDERS_NOSYM.eval_obs">eval_obs() (models.abelian.coupledLadders.COUPLEDLADDERS_NOSYM method)</a>
+
+      <ul>
+        <li><a href="models/coupledLadders.html#models.abelian.coupledLadders.COUPLEDLADDERS_U1.eval_obs">(models.abelian.coupledLadders.COUPLEDLADDERS_U1 method)</a>
+</li>
+        <li><a href="models/j1j2.html#models.abelian.j1j2.J1J2_C4V_BIPARTITE_NOSYM.eval_obs">(models.abelian.j1j2.J1J2_C4V_BIPARTITE_NOSYM method)</a>
+</li>
+        <li><a href="models/j1j2.html#models.abelian.j1j2.J1J2_NOSYM.eval_obs">(models.abelian.j1j2.J1J2_NOSYM method)</a>
+</li>
+        <li><a href="models/spin_half_kagome.html#models.abelian.kagome_u1.KAGOME_U1.eval_obs">(models.abelian.kagome_u1.KAGOME_U1 method)</a>
+</li>
+        <li><a href="models/su3_kagome.html#models.abelian.su3_kagome.KAGOME_SU3_U1xU1.eval_obs">(models.abelian.su3_kagome.KAGOME_SU3_U1xU1 method)</a>
+</li>
+        <li><a href="models/akltS2.html#models.akltS2.AKLTS2.eval_obs">(models.akltS2.AKLTS2 method)</a>
+</li>
+        <li><a href="models/akltS2.html#models.akltS2.AKLTS2_C4V_BIPARTITE.eval_obs">(models.akltS2.AKLTS2_C4V_BIPARTITE method)</a>
+</li>
+        <li><a href="models/coupledLadders.html#models.coupledLadders.COUPLEDLADDERS.eval_obs">(models.coupledLadders.COUPLEDLADDERS method)</a>
+</li>
+        <li><a href="models/ising.html#models.ising.ISING.eval_obs">(models.ising.ISING method)</a>
+</li>
+        <li><a href="models/ising.html#models.ising.ISING_C4V.eval_obs">(models.ising.ISING_C4V method)</a>
+</li>
+        <li><a href="models/j1j2.html#models.j1j2.J1J2.eval_obs">(models.j1j2.J1J2 method)</a>
+</li>
+        <li><a href="models/j1j2.html#models.j1j2.J1J2_C4V_BIPARTITE.eval_obs">(models.j1j2.J1J2_C4V_BIPARTITE method)</a>
+</li>
+        <li><a href="models/j1j2.html#models.j1j2lambda.J1J2LAMBDA_C4V_BIPARTITE.eval_obs">(models.j1j2lambda.J1J2LAMBDA_C4V_BIPARTITE method)</a>
+</li>
+        <li><a href="models/jq.html#models.jq.JQ.eval_obs">(models.jq.JQ method)</a>
+</li>
+        <li><a href="models/jq.html#models.jq.JQ_C4V.eval_obs">(models.jq.JQ_C4V method)</a>
+</li>
+        <li><a href="models/spin_half_kagome.html#models.spin_half_kagome.S_HALF_KAGOME.eval_obs">(models.spin_half_kagome.S_HALF_KAGOME method)</a>
+</li>
+        <li><a href="models/su3_kagome.html#models.su3_kagome.KAGOME_SU3.eval_obs">(models.su3_kagome.KAGOME_SU3 method)</a>
+</li>
+      </ul></li>
+      <li><a href="models/j1j2.html#models.j1j2.J1J2.eval_obs_1site_BP">eval_obs_1site_BP() (models.j1j2.J1J2 method)</a>
+</li>
+      <li><a href="models/su3_kagome.html#models.abelian.su3_kagome.KAGOME_SU3_U1xU1.eval_obs_2x2subsystem">eval_obs_2x2subsystem() (models.abelian.su3_kagome.KAGOME_SU3_U1xU1 method)</a>
+
+      <ul>
+        <li><a href="models/su3_kagome.html#models.su3_kagome.KAGOME_SU3.eval_obs_2x2subsystem">(models.su3_kagome.KAGOME_SU3 method)</a>
+</li>
+      </ul></li>
+      <li><a href="envs/generic/env.html#ctm.generic.env.ENV.extend">extend() (ctm.generic.env.ENV method)</a>
+
+      <ul>
+        <li><a href="envs/one_site_c4v/env_c4v.html#ctm.one_site_c4v.env_c4v.ENV_C4V.extend">(ctm.one_site_c4v.env_c4v.ENV_C4V method)</a>
+</li>
+      </ul></li>
+      <li><a href="ipeps/ipeps.html#ipeps.ipeps.extend_bond_dim">extend_bond_dim() (in module ipeps.ipeps)</a>
+
+      <ul>
+        <li><a href="ipeps/ipeps_kagome.html#ipeps.ipeps_kagome.IPEPS_KAGOME.extend_bond_dim">(ipeps.ipeps_kagome.IPEPS_KAGOME method)</a>
+</li>
+        <li><a href="ipeps/ipess_kagome.html#ipeps.ipess_kagome.IPESS_KAGOME_GENERIC.extend_bond_dim">(ipeps.ipess_kagome.IPESS_KAGOME_GENERIC method)</a>
+</li>
+        <li><a href="ipeps/ipess_kagome_pg.html#ipeps.ipess_kagome.IPESS_KAGOME_PG.extend_bond_dim">(ipeps.ipess_kagome.IPESS_KAGOME_PG method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="F">F</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="linalg/spec_decomp.html#linalg.eig_arnoldi.SYMARNOLDI.forward">forward() (linalg.eig_arnoldi.SYMARNOLDI static method)</a>
+
+      <ul>
+        <li><a href="linalg/spec_decomp.html#linalg.eig_sym.SYMEIG.forward">(linalg.eig_sym.SYMEIG static method)</a>
+</li>
+        <li><a href="linalg/spec_decomp.html#linalg.svd_arnoldi.SVDARNOLDI.forward">(linalg.svd_arnoldi.SVDARNOLDI static method)</a>
+</li>
+        <li><a href="linalg/spec_decomp.html#linalg.svd_gesdd.SVDGESDD.forward">(linalg.svd_gesdd.SVDGESDD static method)</a>
+</li>
+        <li><a href="linalg/spec_decomp.html#linalg.svd_rsvd.RSVD.forward">(linalg.svd_rsvd.RSVD static method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="ipeps/ipeps_lc_1site_pg.html#ipeps.ipeps_lc.from_json_str">from_json_str() (in module ipeps.ipeps_lc)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="G">G</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="groups/su3.html#groups.su3_abelian.SU3_DEFINING_U1xU1.G">G() (groups.su3_abelian.SU3_DEFINING_U1xU1 method)</a>
+</li>
+      <li><a href="models/coupledLadders.html#models.abelian.coupledLadders.COUPLEDLADDERS_U1.gen_gate_seq_2S">gen_gate_seq_2S() (models.abelian.coupledLadders.COUPLEDLADDERS_U1 method)</a>
+</li>
+      <li><a href="models/coupledLadders.html#models.abelian.coupledLadders.COUPLEDLADDERS_U1.gen_gate_seq_2S_2ndOrder">gen_gate_seq_2S_2ndOrder() (models.abelian.coupledLadders.COUPLEDLADDERS_U1 method)</a>
+</li>
+      <li><a href="models/coupledLadders.html#models.abelian.coupledLadders.COUPLEDLADDERS_U1.gen_gate_seq_2S_2ndOrder_H">gen_gate_seq_2S_2ndOrder_H() (models.abelian.coupledLadders.COUPLEDLADDERS_U1 method)</a>
+</li>
+      <li><a href="models/coupledLadders.html#models.abelian.coupledLadders.COUPLEDLADDERS_U1.gen_gate_seq_2S_H">gen_gate_seq_2S_H() (models.abelian.coupledLadders.COUPLEDLADDERS_U1 method)</a>
+</li>
+      <li><a href="models/coupledLadders.html#models.abelian.coupledLadders.COUPLEDLADDERS_U1.gen_gate_seq_2S_SS_hz">gen_gate_seq_2S_SS_hz() (models.abelian.coupledLadders.COUPLEDLADDERS_U1 method)</a>
+</li>
+      <li><a href="models/coupledLadders.html#models.abelian.coupledLadders.COUPLEDLADDERS_U1.gen_gate_seq_2S_SS_hz_2ndOrder">gen_gate_seq_2S_SS_hz_2ndOrder() (models.abelian.coupledLadders.COUPLEDLADDERS_U1 method)</a>
+</li>
+      <li><a href="ipeps/ipess_kagome_abelian.html#ipeps.ipess_kagome_abelian.IPESS_KAGOME_GENERIC_ABELIAN.generate_weights">generate_weights() (ipeps.ipess_kagome_abelian.IPESS_KAGOME_GENERIC_ABELIAN method)</a>
+</li>
+      <li><a href="envs/one_site_c4v/env_c4v.html#ctm.one_site_c4v.env_c4v.ENV_C4V.get_C">get_C() (ctm.one_site_c4v.env_c4v.ENV_C4V method)</a>
+
+      <ul>
+        <li><a href="envs/one_site_c4v_abelian/env_c4v_abelian.html#ctm.one_site_c4v_abelian.env_c4v_abelian.ENV_C4V_ABELIAN.get_C">(ctm.one_site_c4v_abelian.env_c4v_abelian.ENV_C4V_ABELIAN method)</a>
+</li>
+      </ul></li>
+      <li><a href="ipeps/ipeps.html#ipeps.ipeps.IPEPS.get_checkpoint">get_checkpoint() (ipeps.ipeps.IPEPS method)</a>
+
+      <ul>
+        <li><a href="ipeps/ipeps_abelian.html#ipeps.ipeps_abelian.IPEPS_ABELIAN.get_checkpoint">(ipeps.ipeps_abelian.IPEPS_ABELIAN method)</a>
+</li>
+        <li><a href="ipeps/ipeps_lc_1site_pg.html#ipeps.ipeps_lc.IPEPS_LC_1SITE_PG.get_checkpoint">(ipeps.ipeps_lc.IPEPS_LC_1SITE_PG method)</a>
+</li>
+        <li><a href="ipeps/ipess_kagome.html#ipeps.ipess_kagome.IPESS_KAGOME_GENERIC.get_checkpoint">(ipeps.ipess_kagome.IPESS_KAGOME_GENERIC method)</a>
+</li>
+        <li><a href="ipeps/ipess_kagome_pg.html#ipeps.ipess_kagome.IPESS_KAGOME_PG.get_checkpoint">(ipeps.ipess_kagome.IPESS_KAGOME_PG method)</a>
+</li>
+        <li><a href="ipeps/ipess_kagome_pg_lc.html#ipeps.ipess_kagome.IPESS_KAGOME_PG_LC.get_checkpoint">(ipeps.ipess_kagome.IPESS_KAGOME_PG_LC method)</a>
+</li>
+        <li><a href="ipeps/ipess_kagome_abelian.html#ipeps.ipess_kagome_abelian.IPESS_KAGOME_GENERIC_ABELIAN.get_checkpoint">(ipeps.ipess_kagome_abelian.IPESS_KAGOME_GENERIC_ABELIAN method)</a>
+</li>
+      </ul></li>
+      <li><a href="envs/generic/corrf.html#ctm.generic.corrf.get_edge">get_edge() (in module ctm.generic.corrf)</a>
+
+      <ul>
+        <li><a href="envs/one_site_c4v/corrf_c4v.html#ctm.one_site_c4v.corrf_c4v.get_edge">(in module ctm.one_site_c4v.corrf_c4v)</a>
+</li>
+        <li><a href="envs/one_site_c4v_abelian/corrf_c4v_abelian.html#ctm.one_site_c4v_abelian.corrf_c4v.get_edge">(in module ctm.one_site_c4v_abelian.corrf_c4v)</a>
+</li>
+      </ul></li>
+      <li><a href="envs/generic/corrf.html#ctm.generic.corrf.get_edge_2">get_edge_2() (in module ctm.generic.corrf)</a>
+</li>
+      <li><a href="envs/one_site_c4v/corrf_c4v.html#ctm.one_site_c4v.corrf_c4v.get_edge_L">get_edge_L() (in module ctm.one_site_c4v.corrf_c4v)</a>
+</li>
+      <li><a href="envs/generic/transfer_matrix.html#ctm.generic.transferops.get_EH_spec_Ttensor">get_EH_spec_Ttensor() (in module ctm.generic.transferops)</a>
+
+      <ul>
+        <li><a href="envs/one_site_c4v/transfer_matrix.html#ctm.one_site_c4v.transferops_c4v.get_EH_spec_Ttensor">(in module ctm.one_site_c4v.transferops_c4v)</a>
+</li>
+      </ul></li>
+      <li><a href="envs/generic/transfer_matrix.html#ctm.generic.transferops.get_full_EH_spec_Ttensor">get_full_EH_spec_Ttensor() (in module ctm.generic.transferops)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="ipeps/ipeps.html#ipeps.ipeps.IPEPS.get_parameters">get_parameters() (ipeps.ipeps.IPEPS method)</a>
+
+      <ul>
+        <li><a href="ipeps/ipeps_abelian.html#ipeps.ipeps_abelian.IPEPS_ABELIAN.get_parameters">(ipeps.ipeps_abelian.IPEPS_ABELIAN method)</a>
+</li>
+        <li><a href="ipeps/ipeps_lc_1site_pg.html#ipeps.ipeps_lc.IPEPS_LC_1SITE_PG.get_parameters">(ipeps.ipeps_lc.IPEPS_LC_1SITE_PG method)</a>
+</li>
+        <li><a href="ipeps/ipess_kagome.html#ipeps.ipess_kagome.IPESS_KAGOME_GENERIC.get_parameters">(ipeps.ipess_kagome.IPESS_KAGOME_GENERIC method)</a>
+</li>
+        <li><a href="ipeps/ipess_kagome_pg.html#ipeps.ipess_kagome.IPESS_KAGOME_PG.get_parameters">(ipeps.ipess_kagome.IPESS_KAGOME_PG method)</a>
+</li>
+        <li><a href="ipeps/ipess_kagome_pg_lc.html#ipeps.ipess_kagome.IPESS_KAGOME_PG_LC.get_parameters">(ipeps.ipess_kagome.IPESS_KAGOME_PG_LC method)</a>
+</li>
+        <li><a href="ipeps/ipess_kagome_abelian.html#ipeps.ipess_kagome_abelian.IPESS_KAGOME_GENERIC_ABELIAN.get_parameters">(ipeps.ipess_kagome_abelian.IPESS_KAGOME_GENERIC_ABELIAN method)</a>
+</li>
+      </ul></li>
+      <li><a href="ipeps/ipeps_kagome.html#ipeps.ipeps_kagome.IPEPS_KAGOME.get_physical_dim">get_physical_dim() (ipeps.ipeps_kagome.IPEPS_KAGOME method)</a>
+
+      <ul>
+        <li><a href="ipeps/ipess_kagome.html#ipeps.ipess_kagome.IPESS_KAGOME_GENERIC.get_physical_dim">(ipeps.ipess_kagome.IPESS_KAGOME_GENERIC method)</a>
+</li>
+      </ul></li>
+      <li><a href="envs/one_site_c4v/env_c4v.html#ctm.one_site_c4v.env_c4v.ENV_C4V.get_T">get_T() (ctm.one_site_c4v.env_c4v.ENV_C4V method)</a>
+
+      <ul>
+        <li><a href="envs/one_site_c4v_abelian/env_c4v_abelian.html#ctm.one_site_c4v_abelian.env_c4v_abelian.ENV_C4V_ABELIAN.get_T">(ctm.one_site_c4v_abelian.env_c4v_abelian.ENV_C4V_ABELIAN method)</a>
+</li>
+      </ul></li>
+      <li><a href="envs/one_site_c4v/transfer_matrix.html#ctm.one_site_c4v.transferops_c4v.get_Top2_spec_c4v">get_Top2_spec_c4v() (in module ctm.one_site_c4v.transferops_c4v)</a>
+</li>
+      <li><a href="envs/generic/transfer_matrix.html#ctm.generic.transferops.get_Top_spec">get_Top_spec() (in module ctm.generic.transferops)</a>
+</li>
+      <li><a href="envs/one_site_c4v/transfer_matrix.html#ctm.one_site_c4v.transferops_c4v.get_Top_spec_c4v">get_Top_spec_c4v() (in module ctm.one_site_c4v.transferops_c4v)</a>
+</li>
+      <li><a href="envs/generic/transfer_matrix.html#ctm.generic.transferops.get_Top_w0_spec">get_Top_w0_spec() (in module ctm.generic.transferops)</a>
+</li>
+      <li><a href="config.html#config.GLOBALARGS">GLOBALARGS (class in config)</a>
+</li>
+      <li>
+    groups.pg
+
+      <ul>
+        <li><a href="groups/pg.html#module-groups.pg">module</a>
+</li>
+      </ul></li>
+      <li>
+    groups.su2
+
+      <ul>
+        <li><a href="groups/su2.html#module-groups.su2">module</a>
+</li>
+      </ul></li>
+      <li>
+    groups.su2_abelian
+
+      <ul>
+        <li><a href="groups/su2.html#module-groups.su2_abelian">module</a>
+</li>
+      </ul></li>
+      <li>
+    groups.su3
+
+      <ul>
+        <li><a href="groups/su3.html#module-groups.su3">module</a>
+</li>
+      </ul></li>
+      <li>
+    groups.su3_abelian
+
+      <ul>
+        <li><a href="groups/su3.html#module-groups.su3_abelian">module</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="H">H</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="envs/generic/ctm_components.html#ctm.generic.ctm_components.halves_of_4x4_CTM_MOVE_DOWN">halves_of_4x4_CTM_MOVE_DOWN() (in module ctm.generic.ctm_components)</a>
+
+      <ul>
+        <li><a href="envs/generic_abelian/ctm_components.html#ctm.generic_abelian.ctm_components.halves_of_4x4_CTM_MOVE_DOWN">(in module ctm.generic_abelian.ctm_components)</a>
+</li>
+      </ul></li>
+      <li><a href="envs/generic/ctm_components.html#ctm.generic.ctm_components.halves_of_4x4_CTM_MOVE_LEFT">halves_of_4x4_CTM_MOVE_LEFT() (in module ctm.generic.ctm_components)</a>
+
+      <ul>
+        <li><a href="envs/generic_abelian/ctm_components.html#ctm.generic_abelian.ctm_components.halves_of_4x4_CTM_MOVE_LEFT">(in module ctm.generic_abelian.ctm_components)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="envs/generic/ctm_components.html#ctm.generic.ctm_components.halves_of_4x4_CTM_MOVE_RIGHT">halves_of_4x4_CTM_MOVE_RIGHT() (in module ctm.generic.ctm_components)</a>
+
+      <ul>
+        <li><a href="envs/generic_abelian/ctm_components.html#ctm.generic_abelian.ctm_components.halves_of_4x4_CTM_MOVE_RIGHT">(in module ctm.generic_abelian.ctm_components)</a>
+</li>
+      </ul></li>
+      <li><a href="envs/generic/ctm_components.html#ctm.generic.ctm_components.halves_of_4x4_CTM_MOVE_UP">halves_of_4x4_CTM_MOVE_UP() (in module ctm.generic.ctm_components)</a>
+
+      <ul>
+        <li><a href="envs/generic_abelian/ctm_components.html#ctm.generic_abelian.ctm_components.halves_of_4x4_CTM_MOVE_UP">(in module ctm.generic_abelian.ctm_components)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="I">I</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="groups/su2.html#groups.su2.SU2.I">I() (groups.su2.SU2 method)</a>
+
+      <ul>
+        <li><a href="groups/su2.html#groups.su2_abelian.SU2_U1.I">(groups.su2_abelian.SU2_U1 method)</a>
+</li>
+        <li><a href="groups/su3.html#groups.su3.SU3_DEFINING.I">(groups.su3.SU3_DEFINING method)</a>
+</li>
+        <li><a href="groups/su3.html#groups.su3_abelian.SU3_DEFINING_U1xU1.I">(groups.su3_abelian.SU3_DEFINING_U1xU1 method)</a>
+</li>
+      </ul></li>
+      <li><a href="envs/generic/env.html#ctm.generic.env.init_env">init_env() (in module ctm.generic.env)</a>
+
+      <ul>
+        <li><a href="envs/generic_abelian/env_abelian.html#ctm.generic_abelian.env_abelian.init_env">(in module ctm.generic_abelian.env_abelian)</a>
+</li>
+        <li><a href="envs/one_site_c4v/env_c4v.html#ctm.one_site_c4v.env_c4v.init_env">(in module ctm.one_site_c4v.env_c4v)</a>
+</li>
+        <li><a href="envs/one_site_c4v_abelian/env_c4v_abelian.html#ctm.one_site_c4v_abelian.env_c4v_abelian.init_env">(in module ctm.one_site_c4v_abelian.env_c4v_abelian)</a>
+</li>
+      </ul></li>
+      <li><a href="envs/one_site_c4v_abelian/env_c4v_abelian.html#ctm.one_site_c4v_abelian.env_c4v_abelian.init_from_ipeps_pbc">init_from_ipeps_pbc() (in module ctm.one_site_c4v_abelian.env_c4v_abelian)</a>
+</li>
+      <li><a href="ipeps/ipeps.html#ipeps.ipeps.IPEPS">IPEPS (class in ipeps.ipeps)</a>
+</li>
+      <li>
+    ipeps.ipeps
+
+      <ul>
+        <li><a href="ipeps/ipeps.html#module-ipeps.ipeps">module</a>
+</li>
+      </ul></li>
+      <li>
+    ipeps.ipeps_abelian
+
+      <ul>
+        <li><a href="ipeps/ipeps_abelian.html#module-ipeps.ipeps_abelian">module</a>
+</li>
+      </ul></li>
+      <li>
+    ipeps.ipeps_abelian_c4v
+
+      <ul>
+        <li><a href="ipeps/ipeps_abelian_c4v.html#module-ipeps.ipeps_abelian_c4v">module</a>
+</li>
+      </ul></li>
+      <li>
+    ipeps.ipeps_c4v
+
+      <ul>
+        <li><a href="ipeps/ipeps_c4v.html#module-ipeps.ipeps_c4v">module</a>
+</li>
+      </ul></li>
+      <li>
+    ipeps.ipeps_kagome
+
+      <ul>
+        <li><a href="ipeps/ipeps_kagome.html#module-ipeps.ipeps_kagome">module</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    ipeps.ipeps_kagome_abelian
+
+      <ul>
+        <li><a href="ipeps/ipeps_kagome_abelian.html#module-ipeps.ipeps_kagome_abelian">module</a>
+</li>
+      </ul></li>
+      <li>
+    ipeps.ipeps_lc
+
+      <ul>
+        <li><a href="ipeps/ipeps_lc_1site_pg.html#module-ipeps.ipeps_lc">module</a>
+</li>
+      </ul></li>
+      <li>
+    ipeps.ipess_kagome
+
+      <ul>
+        <li><a href="ipeps/ipess_kagome.html#module-ipeps.ipess_kagome">module</a>
+</li>
+      </ul></li>
+      <li>
+    ipeps.ipess_kagome_abelian
+
+      <ul>
+        <li><a href="ipeps/ipess_kagome_abelian.html#module-ipeps.ipess_kagome_abelian">module</a>
+</li>
+      </ul></li>
+      <li><a href="ipeps/ipeps_abelian.html#ipeps.ipeps_abelian.IPEPS_ABELIAN">IPEPS_ABELIAN (class in ipeps.ipeps_abelian)</a>
+</li>
+      <li><a href="ipeps/ipeps_abelian_c4v.html#ipeps.ipeps_abelian_c4v.IPEPS_ABELIAN_C4V">IPEPS_ABELIAN_C4V (class in ipeps.ipeps_abelian_c4v)</a>
+</li>
+      <li><a href="ipeps/ipeps_abelian.html#ipeps.ipeps_abelian.IPEPS_ABELIAN_WEIGHTED">IPEPS_ABELIAN_WEIGHTED (class in ipeps.ipeps_abelian)</a>
+</li>
+      <li><a href="ipeps/ipeps_c4v.html#ipeps.ipeps_c4v.IPEPS_C4V">IPEPS_C4V (class in ipeps.ipeps_c4v)</a>
+</li>
+      <li><a href="ipeps/ipeps_kagome.html#ipeps.ipeps_kagome.IPEPS_KAGOME">IPEPS_KAGOME (class in ipeps.ipeps_kagome)</a>
+</li>
+      <li><a href="ipeps/ipeps_kagome_abelian.html#ipeps.ipeps_kagome_abelian.IPEPS_KAGOME_ABELIAN">IPEPS_KAGOME_ABELIAN (class in ipeps.ipeps_kagome_abelian)</a>
+</li>
+      <li><a href="ipeps/ipeps_lc_1site_pg.html#ipeps.ipeps_lc.IPEPS_LC_1SITE_PG">IPEPS_LC_1SITE_PG (class in ipeps.ipeps_lc)</a>
+</li>
+      <li><a href="ipeps/ipess_kagome.html#ipeps.ipess_kagome.IPESS_KAGOME_GENERIC">IPESS_KAGOME_GENERIC (class in ipeps.ipess_kagome)</a>
+</li>
+      <li><a href="ipeps/ipess_kagome_abelian.html#ipeps.ipess_kagome_abelian.IPESS_KAGOME_GENERIC_ABELIAN">IPESS_KAGOME_GENERIC_ABELIAN (class in ipeps.ipess_kagome_abelian)</a>
+</li>
+      <li><a href="ipeps/ipess_kagome_pg.html#ipeps.ipess_kagome.IPESS_KAGOME_PG">IPESS_KAGOME_PG (class in ipeps.ipess_kagome)</a>
+</li>
+      <li><a href="ipeps/ipess_kagome_pg_lc.html#ipeps.ipess_kagome.IPESS_KAGOME_PG_LC">IPESS_KAGOME_PG_LC (class in ipeps.ipess_kagome)</a>
+</li>
+      <li><a href="models/ising.html#models.ising.ISING">ISING (class in models.ising)</a>
+</li>
+      <li><a href="models/ising.html#models.ising.ISING_C4V">ISING_C4V (class in models.ising)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="J">J</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="models/j1j2.html#models.j1j2.J1J2">J1J2 (class in models.j1j2)</a>
+</li>
+      <li><a href="models/j1j2.html#models.j1j2.J1J2_C4V_BIPARTITE">J1J2_C4V_BIPARTITE (class in models.j1j2)</a>
+</li>
+      <li><a href="models/j1j2.html#models.abelian.j1j2.J1J2_C4V_BIPARTITE_NOSYM">J1J2_C4V_BIPARTITE_NOSYM (class in models.abelian.j1j2)</a>
+</li>
+      <li><a href="models/j1j2.html#models.abelian.j1j2.J1J2_NOSYM">J1J2_NOSYM (class in models.abelian.j1j2)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="models/j1j2.html#models.j1j2lambda.J1J2LAMBDA_C4V_BIPARTITE">J1J2LAMBDA_C4V_BIPARTITE (class in models.j1j2lambda)</a>
+</li>
+      <li><a href="groups/su3.html#groups.su3.SU3_DEFINING.J_Gell_Mann">J_Gell_Mann() (groups.su3.SU3_DEFINING method)</a>
+</li>
+      <li><a href="models/jq.html#models.jq.JQ">JQ (class in models.jq)</a>
+</li>
+      <li><a href="models/jq.html#models.jq.JQ_C4V">JQ_C4V (class in models.jq)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="K">K</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="models/su3_kagome.html#models.su3_kagome.KAGOME_SU3">KAGOME_SU3 (class in models.su3_kagome)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="models/su3_kagome.html#models.abelian.su3_kagome.KAGOME_SU3_U1xU1">KAGOME_SU3_U1xU1 (class in models.abelian.su3_kagome)</a>
+</li>
+      <li><a href="models/spin_half_kagome.html#models.abelian.kagome_u1.KAGOME_U1">KAGOME_U1 (class in models.abelian.kagome_u1)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="L">L</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="optim/optimizers/lbfgs_modified.html#optim.lbfgs_modified.LBFGS_MOD">LBFGS_MOD (class in optim.lbfgs_modified)</a>
+</li>
+      <li>
+    linalg.custom_eig
+
+      <ul>
+        <li><a href="linalg/custom_eig.html#module-linalg.custom_eig">module</a>
+</li>
+      </ul></li>
+      <li>
+    linalg.custom_svd
+
+      <ul>
+        <li><a href="linalg/custom_svd.html#module-linalg.custom_svd">module</a>
+</li>
+      </ul></li>
+      <li>
+    linalg.eig_arnoldi
+
+      <ul>
+        <li><a href="linalg/spec_decomp.html#module-linalg.eig_arnoldi">module</a>
+</li>
+      </ul></li>
+      <li>
+    linalg.eig_sym
+
+      <ul>
+        <li><a href="linalg/spec_decomp.html#module-linalg.eig_sym">module</a>
+</li>
+      </ul></li>
+      <li>
+    linalg.svd_arnoldi
+
+      <ul>
+        <li><a href="linalg/spec_decomp.html#module-linalg.svd_arnoldi">module</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    linalg.svd_gesdd
+
+      <ul>
+        <li><a href="linalg/spec_decomp.html#module-linalg.svd_gesdd">module</a>
+</li>
+      </ul></li>
+      <li>
+    linalg.svd_rsvd
+
+      <ul>
+        <li><a href="linalg/spec_decomp.html#module-linalg.svd_rsvd">module</a>
+</li>
+      </ul></li>
+      <li><a href="ipeps/ipeps.html#ipeps.ipeps.IPEPS.load_checkpoint">load_checkpoint() (ipeps.ipeps.IPEPS method)</a>
+
+      <ul>
+        <li><a href="ipeps/ipeps_abelian.html#ipeps.ipeps_abelian.IPEPS_ABELIAN.load_checkpoint">(ipeps.ipeps_abelian.IPEPS_ABELIAN method)</a>
+</li>
+        <li><a href="ipeps/ipeps_lc_1site_pg.html#ipeps.ipeps_lc.IPEPS_LC_1SITE_PG.load_checkpoint">(ipeps.ipeps_lc.IPEPS_LC_1SITE_PG method)</a>
+</li>
+        <li><a href="ipeps/ipess_kagome.html#ipeps.ipess_kagome.IPESS_KAGOME_GENERIC.load_checkpoint">(ipeps.ipess_kagome.IPESS_KAGOME_GENERIC method)</a>
+</li>
+        <li><a href="ipeps/ipess_kagome_pg.html#ipeps.ipess_kagome.IPESS_KAGOME_PG.load_checkpoint">(ipeps.ipess_kagome.IPESS_KAGOME_PG method)</a>
+</li>
+        <li><a href="ipeps/ipess_kagome_pg_lc.html#ipeps.ipess_kagome.IPESS_KAGOME_PG_LC.load_checkpoint">(ipeps.ipess_kagome.IPESS_KAGOME_PG_LC method)</a>
+</li>
+        <li><a href="ipeps/ipess_kagome_abelian.html#ipeps.ipess_kagome_abelian.IPESS_KAGOME_GENERIC_ABELIAN.load_checkpoint">(ipeps.ipess_kagome_abelian.IPESS_KAGOME_GENERIC_ABELIAN method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="M">M</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="config.html#config.MAINARGS">MAINARGS (class in config)</a>
+</li>
+      <li><a href="groups/pg.html#groups.pg.make_c4v_symm">make_c4v_symm() (in module groups.pg)</a>
+</li>
+      <li><a href="groups/pg.html#groups.pg.make_c4v_symm_A1">make_c4v_symm_A1() (in module groups.pg)</a>
+</li>
+      <li><a href="groups/pg.html#groups.pg.make_c4v_symm_A2">make_c4v_symm_A2() (in module groups.pg)</a>
+</li>
+      <li><a href="groups/pg.html#groups.pg.make_c4v_symm_B1">make_c4v_symm_B1() (in module groups.pg)</a>
+</li>
+      <li><a href="groups/pg.html#groups.pg.make_c4v_symm_B2">make_c4v_symm_B2() (in module groups.pg)</a>
+</li>
+      <li><a href="groups/pg.html#groups.pg.make_d2_antisymm">make_d2_antisymm() (in module groups.pg)</a>
+</li>
+      <li><a href="groups/pg.html#groups.pg.make_d2_symm">make_d2_symm() (in module groups.pg)</a>
+</li>
+      <li>
+    models.abelian.coupledLadders
+
+      <ul>
+        <li><a href="models/coupledLadders.html#module-models.abelian.coupledLadders">module</a>
+</li>
+      </ul></li>
+      <li>
+    models.abelian.kagome_u1
+
+      <ul>
+        <li><a href="models/spin_half_kagome.html#module-models.abelian.kagome_u1">module</a>
+</li>
+      </ul></li>
+      <li>
+    models.abelian.su3_kagome
+
+      <ul>
+        <li><a href="models/su3_kagome.html#module-models.abelian.su3_kagome">module</a>
+</li>
+      </ul></li>
+      <li>
+    models.akltS2
+
+      <ul>
+        <li><a href="models/akltS2.html#module-models.akltS2">module</a>
+</li>
+      </ul></li>
+      <li>
+    models.coupledLadders
+
+      <ul>
+        <li><a href="models/coupledLadders.html#module-models.coupledLadders">module</a>
+</li>
+      </ul></li>
+      <li>
+    models.ising
+
+      <ul>
+        <li><a href="models/ising.html#module-models.ising">module</a>
+</li>
+      </ul></li>
+      <li>
+    models.jq
+
+      <ul>
+        <li><a href="models/jq.html#module-models.jq">module</a>
+</li>
+      </ul></li>
+      <li>
+    models.spin_half_kagome
+
+      <ul>
+        <li><a href="models/spin_half_kagome.html#module-models.spin_half_kagome">module</a>
+</li>
+      </ul></li>
+      <li>
+    models.su3_kagome
+
+      <ul>
+        <li><a href="models/su3_kagome.html#module-models.su3_kagome">module</a>
+</li>
+      </ul></li>
+      <li>
+    module
+
+      <ul>
+        <li><a href="envs/generic/corrf.html#module-ctm.generic.corrf">ctm.generic.corrf</a>
+</li>
+        <li><a href="envs/generic/ctm_components.html#module-ctm.generic.ctm_components">ctm.generic.ctm_components</a>
+</li>
+        <li><a href="envs/generic/ctm_projectors.html#module-ctm.generic.ctm_projectors">ctm.generic.ctm_projectors</a>
+</li>
+        <li><a href="envs/generic/ctmrg.html#module-ctm.generic.ctmrg">ctm.generic.ctmrg</a>
+</li>
+        <li><a href="envs/generic/env.html#module-ctm.generic.env">ctm.generic.env</a>
+</li>
+        <li><a href="envs/generic/rdm.html#module-ctm.generic.rdm">ctm.generic.rdm</a>
+</li>
+        <li><a href="envs/generic/transfer_matrix.html#module-ctm.generic.transferops">ctm.generic.transferops</a>
+</li>
+        <li><a href="envs/generic_abelian/ctm_components.html#module-ctm.generic_abelian.ctm_components">ctm.generic_abelian.ctm_components</a>
+</li>
+        <li><a href="envs/generic_abelian/ctm_projectors.html#module-ctm.generic_abelian.ctm_projectors">ctm.generic_abelian.ctm_projectors</a>
+</li>
+        <li><a href="envs/generic_abelian/ctmrg.html#module-ctm.generic_abelian.ctmrg">ctm.generic_abelian.ctmrg</a>
+</li>
+        <li><a href="envs/generic_abelian/env_abelian.html#module-ctm.generic_abelian.env_abelian">ctm.generic_abelian.env_abelian</a>
+</li>
+        <li><a href="envs/generic_abelian/rdm.html#module-ctm.generic_abelian.rdm">ctm.generic_abelian.rdm</a>
+</li>
+        <li><a href="envs/one_site_c4v/corrf_c4v.html#module-ctm.one_site_c4v.corrf_c4v">ctm.one_site_c4v.corrf_c4v</a>
+</li>
+        <li><a href="envs/one_site_c4v/ctmrg_c4v.html#module-ctm.one_site_c4v.ctmrg_c4v">ctm.one_site_c4v.ctmrg_c4v</a>
+</li>
+        <li><a href="envs/one_site_c4v/env_c4v.html#module-ctm.one_site_c4v.env_c4v">ctm.one_site_c4v.env_c4v</a>
+</li>
+        <li><a href="envs/one_site_c4v/rdm_c4v.html#module-ctm.one_site_c4v.rdm_c4v">ctm.one_site_c4v.rdm_c4v</a>
+</li>
+        <li><a href="envs/one_site_c4v/transfer_matrix.html#module-ctm.one_site_c4v.transferops_c4v">ctm.one_site_c4v.transferops_c4v</a>
+</li>
+        <li><a href="envs/one_site_c4v_abelian/corrf_c4v_abelian.html#module-ctm.one_site_c4v_abelian.corrf_c4v">ctm.one_site_c4v_abelian.corrf_c4v</a>
+</li>
+        <li><a href="envs/one_site_c4v_abelian/ctmrg_c4v_abelian.html#module-ctm.one_site_c4v_abelian.ctmrg_c4v">ctm.one_site_c4v_abelian.ctmrg_c4v</a>
+</li>
+        <li><a href="envs/one_site_c4v_abelian/env_c4v_abelian.html#module-ctm.one_site_c4v_abelian.env_c4v_abelian">ctm.one_site_c4v_abelian.env_c4v_abelian</a>
+</li>
+        <li><a href="envs/one_site_c4v_abelian/rdm_c4v_abelian.html#module-ctm.one_site_c4v_abelian.rdm_c4v">ctm.one_site_c4v_abelian.rdm_c4v</a>
+</li>
+        <li><a href="envs/generic/rdm.html#module-ctm.pess_kagome.rdm_kagome">ctm.pess_kagome.rdm_kagome</a>
+</li>
+        <li><a href="envs/generic_abelian/rdm.html#module-ctm.pess_kagome_abelian.rdm_kagome">ctm.pess_kagome_abelian.rdm_kagome</a>
+</li>
+        <li><a href="groups/pg.html#module-groups.pg">groups.pg</a>
+</li>
+        <li><a href="groups/su2.html#module-groups.su2">groups.su2</a>
+</li>
+        <li><a href="groups/su2.html#module-groups.su2_abelian">groups.su2_abelian</a>
+</li>
+        <li><a href="groups/su3.html#module-groups.su3">groups.su3</a>
+</li>
+        <li><a href="groups/su3.html#module-groups.su3_abelian">groups.su3_abelian</a>
+</li>
+        <li><a href="ipeps/ipeps.html#module-ipeps.ipeps">ipeps.ipeps</a>
+</li>
+        <li><a href="ipeps/ipeps_abelian.html#module-ipeps.ipeps_abelian">ipeps.ipeps_abelian</a>
+</li>
+        <li><a href="ipeps/ipeps_abelian_c4v.html#module-ipeps.ipeps_abelian_c4v">ipeps.ipeps_abelian_c4v</a>
+</li>
+        <li><a href="ipeps/ipeps_c4v.html#module-ipeps.ipeps_c4v">ipeps.ipeps_c4v</a>
+</li>
+        <li><a href="ipeps/ipeps_kagome.html#module-ipeps.ipeps_kagome">ipeps.ipeps_kagome</a>
+</li>
+        <li><a href="ipeps/ipeps_kagome_abelian.html#module-ipeps.ipeps_kagome_abelian">ipeps.ipeps_kagome_abelian</a>
+</li>
+        <li><a href="ipeps/ipeps_lc_1site_pg.html#module-ipeps.ipeps_lc">ipeps.ipeps_lc</a>
+</li>
+        <li><a href="ipeps/ipess_kagome.html#module-ipeps.ipess_kagome">ipeps.ipess_kagome</a>
+</li>
+        <li><a href="ipeps/ipess_kagome_abelian.html#module-ipeps.ipess_kagome_abelian">ipeps.ipess_kagome_abelian</a>
+</li>
+        <li><a href="linalg/custom_eig.html#module-linalg.custom_eig">linalg.custom_eig</a>
+</li>
+        <li><a href="linalg/custom_svd.html#module-linalg.custom_svd">linalg.custom_svd</a>
+</li>
+        <li><a href="linalg/spec_decomp.html#module-linalg.eig_arnoldi">linalg.eig_arnoldi</a>
+</li>
+        <li><a href="linalg/spec_decomp.html#module-linalg.eig_sym">linalg.eig_sym</a>
+</li>
+        <li><a href="linalg/spec_decomp.html#module-linalg.svd_arnoldi">linalg.svd_arnoldi</a>
+</li>
+        <li><a href="linalg/spec_decomp.html#module-linalg.svd_gesdd">linalg.svd_gesdd</a>
+</li>
+        <li><a href="linalg/spec_decomp.html#module-linalg.svd_rsvd">linalg.svd_rsvd</a>
+</li>
+        <li><a href="models/coupledLadders.html#module-models.abelian.coupledLadders">models.abelian.coupledLadders</a>
+</li>
+        <li><a href="models/spin_half_kagome.html#module-models.abelian.kagome_u1">models.abelian.kagome_u1</a>
+</li>
+        <li><a href="models/su3_kagome.html#module-models.abelian.su3_kagome">models.abelian.su3_kagome</a>
+</li>
+        <li><a href="models/akltS2.html#module-models.akltS2">models.akltS2</a>
+</li>
+        <li><a href="models/coupledLadders.html#module-models.coupledLadders">models.coupledLadders</a>
+</li>
+        <li><a href="models/ising.html#module-models.ising">models.ising</a>
+</li>
+        <li><a href="models/jq.html#module-models.jq">models.jq</a>
+</li>
+        <li><a href="models/spin_half_kagome.html#module-models.spin_half_kagome">models.spin_half_kagome</a>
+</li>
+        <li><a href="models/su3_kagome.html#module-models.su3_kagome">models.su3_kagome</a>
+</li>
+        <li><a href="optim/drivers/ad_optim.html#module-optim.ad_optim">optim.ad_optim</a>
+</li>
+        <li><a href="optim/drivers/ad_optim_lbfgs_mod.html#module-optim.ad_optim_lbfgs_mod">optim.ad_optim_lbfgs_mod</a>
+</li>
+        <li><a href="optim/drivers/ad_optim_sgd_mod.html#module-optim.ad_optim_sgd_mod">optim.ad_optim_sgd_mod</a>
+</li>
+        <li><a href="optim/optimizers/lbfgs_modified.html#module-optim.lbfgs_modified">optim.lbfgs_modified</a>
+</li>
+        <li><a href="optim/optimizers/sgd_modified.html#module-optim.sgd_modified">optim.sgd_modified</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="O">O</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="envs/generic_abelian/rdm.html#ctm.generic_abelian.rdm.open_C2x2_LD">open_C2x2_LD() (in module ctm.generic_abelian.rdm)</a>
+</li>
+      <li><a href="config.html#config.OPTARGS">OPTARGS (class in config)</a>
+</li>
+      <li>
+    optim.ad_optim
+
+      <ul>
+        <li><a href="optim/drivers/ad_optim.html#module-optim.ad_optim">module</a>
+</li>
+      </ul></li>
+      <li>
+    optim.ad_optim_lbfgs_mod
+
+      <ul>
+        <li><a href="optim/drivers/ad_optim_lbfgs_mod.html#module-optim.ad_optim_lbfgs_mod">module</a>
+</li>
+      </ul></li>
+      <li>
+    optim.ad_optim_sgd_mod
+
+      <ul>
+        <li><a href="optim/drivers/ad_optim_sgd_mod.html#module-optim.ad_optim_sgd_mod">module</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    optim.lbfgs_modified
+
+      <ul>
+        <li><a href="optim/optimizers/lbfgs_modified.html#module-optim.lbfgs_modified">module</a>
+</li>
+      </ul></li>
+      <li>
+    optim.sgd_modified
+
+      <ul>
+        <li><a href="optim/optimizers/sgd_modified.html#module-optim.sgd_modified">module</a>
+</li>
+      </ul></li>
+      <li><a href="optim/drivers/ad_optim.html#optim.ad_optim.optimize_state">optimize_state() (in module optim.ad_optim)</a>
+
+      <ul>
+        <li><a href="optim/drivers/ad_optim_lbfgs_mod.html#optim.ad_optim_lbfgs_mod.optimize_state">(in module optim.ad_optim_lbfgs_mod)</a>
+</li>
+        <li><a href="optim/drivers/ad_optim_sgd_mod.html#optim.ad_optim_sgd_mod.optimize_state">(in module optim.ad_optim_sgd_mod)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="R">R</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="envs/generic/rdm.html#ctm.generic.rdm.rdm1x1">rdm1x1() (in module ctm.generic.rdm)</a>
+
+      <ul>
+        <li><a href="envs/generic_abelian/rdm.html#ctm.generic_abelian.rdm.rdm1x1">(in module ctm.generic_abelian.rdm)</a>
+</li>
+        <li><a href="envs/one_site_c4v/rdm_c4v.html#ctm.one_site_c4v.rdm_c4v.rdm1x1">(in module ctm.one_site_c4v.rdm_c4v)</a>
+</li>
+        <li><a href="envs/one_site_c4v_abelian/rdm_c4v_abelian.html#ctm.one_site_c4v_abelian.rdm_c4v.rdm1x1">(in module ctm.one_site_c4v_abelian.rdm_c4v)</a>
+</li>
+      </ul></li>
+      <li><a href="envs/generic/rdm.html#ctm.pess_kagome.rdm_kagome.rdm1x1_kagome">rdm1x1_kagome() (in module ctm.pess_kagome.rdm_kagome)</a>
+
+      <ul>
+        <li><a href="envs/generic_abelian/rdm.html#ctm.pess_kagome_abelian.rdm_kagome.rdm1x1_kagome">(in module ctm.pess_kagome_abelian.rdm_kagome)</a>
+</li>
+      </ul></li>
+      <li><a href="envs/one_site_c4v/rdm_c4v.html#ctm.one_site_c4v.rdm_c4v.rdm1x1_sl">rdm1x1_sl() (in module ctm.one_site_c4v.rdm_c4v)</a>
+</li>
+      <li><a href="envs/generic/rdm.html#ctm.generic.rdm.rdm1x2">rdm1x2() (in module ctm.generic.rdm)</a>
+
+      <ul>
+        <li><a href="envs/generic_abelian/rdm.html#ctm.generic_abelian.rdm.rdm1x2">(in module ctm.generic_abelian.rdm)</a>
+</li>
+      </ul></li>
+      <li><a href="envs/generic/rdm.html#ctm.pess_kagome.rdm_kagome.rdm1x2_kagome">rdm1x2_kagome() (in module ctm.pess_kagome.rdm_kagome)</a>
+</li>
+      <li><a href="envs/generic/rdm.html#ctm.generic.rdm.rdm2x1">rdm2x1() (in module ctm.generic.rdm)</a>
+
+      <ul>
+        <li><a href="envs/generic_abelian/rdm.html#ctm.generic_abelian.rdm.rdm2x1">(in module ctm.generic_abelian.rdm)</a>
+</li>
+        <li><a href="envs/one_site_c4v/rdm_c4v.html#ctm.one_site_c4v.rdm_c4v.rdm2x1">(in module ctm.one_site_c4v.rdm_c4v)</a>
+</li>
+        <li><a href="envs/one_site_c4v_abelian/rdm_c4v_abelian.html#ctm.one_site_c4v_abelian.rdm_c4v.rdm2x1">(in module ctm.one_site_c4v_abelian.rdm_c4v)</a>
+</li>
+      </ul></li>
+      <li><a href="envs/generic/rdm.html#ctm.pess_kagome.rdm_kagome.rdm2x1_kagome">rdm2x1_kagome() (in module ctm.pess_kagome.rdm_kagome)</a>
+</li>
+      <li><a href="envs/one_site_c4v/rdm_c4v.html#ctm.one_site_c4v.rdm_c4v.rdm2x1_sl">rdm2x1_sl() (in module ctm.one_site_c4v.rdm_c4v)</a>
+</li>
+      <li><a href="envs/generic/rdm.html#ctm.generic.rdm.rdm2x2">rdm2x2() (in module ctm.generic.rdm)</a>
+
+      <ul>
+        <li><a href="envs/generic_abelian/rdm.html#ctm.generic_abelian.rdm.rdm2x2">(in module ctm.generic_abelian.rdm)</a>
+</li>
+        <li><a href="envs/one_site_c4v/rdm_c4v.html#ctm.one_site_c4v.rdm_c4v.rdm2x2">(in module ctm.one_site_c4v.rdm_c4v)</a>
+</li>
+        <li><a href="envs/one_site_c4v_abelian/rdm_c4v_abelian.html#ctm.one_site_c4v_abelian.rdm_c4v.rdm2x2">(in module ctm.one_site_c4v_abelian.rdm_c4v)</a>
+</li>
+      </ul></li>
+      <li><a href="envs/generic/rdm.html#ctm.pess_kagome.rdm_kagome.rdm2x2_dn_triangle_with_operator">rdm2x2_dn_triangle_with_operator() (in module ctm.pess_kagome.rdm_kagome)</a>
+
+      <ul>
+        <li><a href="envs/generic_abelian/rdm.html#ctm.pess_kagome_abelian.rdm_kagome.rdm2x2_dn_triangle_with_operator">(in module ctm.pess_kagome_abelian.rdm_kagome)</a>
+</li>
+      </ul></li>
+      <li><a href="envs/generic/rdm.html#ctm.pess_kagome.rdm_kagome.rdm2x2_kagome">rdm2x2_kagome() (in module ctm.pess_kagome.rdm_kagome)</a>
+
+      <ul>
+        <li><a href="envs/generic_abelian/rdm.html#ctm.pess_kagome_abelian.rdm_kagome.rdm2x2_kagome">(in module ctm.pess_kagome_abelian.rdm_kagome)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="envs/one_site_c4v_abelian/rdm_c4v_abelian.html#ctm.one_site_c4v_abelian.rdm_c4v.rdm2x2_NN">rdm2x2_NN() (in module ctm.one_site_c4v_abelian.rdm_c4v)</a>
+</li>
+      <li><a href="envs/one_site_c4v/rdm_c4v.html#ctm.one_site_c4v.rdm_c4v.rdm2x2_NN_lowmem">rdm2x2_NN_lowmem() (in module ctm.one_site_c4v.rdm_c4v)</a>
+</li>
+      <li><a href="envs/one_site_c4v/rdm_c4v.html#ctm.one_site_c4v.rdm_c4v.rdm2x2_NN_lowmem_sl">rdm2x2_NN_lowmem_sl() (in module ctm.one_site_c4v.rdm_c4v)</a>
+</li>
+      <li><a href="envs/one_site_c4v_abelian/rdm_c4v_abelian.html#ctm.one_site_c4v_abelian.rdm_c4v.rdm2x2_NNN">rdm2x2_NNN() (in module ctm.one_site_c4v_abelian.rdm_c4v)</a>
+</li>
+      <li><a href="envs/one_site_c4v/rdm_c4v.html#ctm.one_site_c4v.rdm_c4v.rdm2x2_NNN_lowmem">rdm2x2_NNN_lowmem() (in module ctm.one_site_c4v.rdm_c4v)</a>
+</li>
+      <li><a href="envs/one_site_c4v/rdm_c4v.html#ctm.one_site_c4v.rdm_c4v.rdm2x2_NNN_lowmem_sl">rdm2x2_NNN_lowmem_sl() (in module ctm.one_site_c4v.rdm_c4v)</a>
+</li>
+      <li><a href="envs/generic/rdm.html#ctm.pess_kagome.rdm_kagome.rdm2x2_up_triangle_open">rdm2x2_up_triangle_open() (in module ctm.pess_kagome.rdm_kagome)</a>
+
+      <ul>
+        <li><a href="envs/generic_abelian/rdm.html#ctm.pess_kagome_abelian.rdm_kagome.rdm2x2_up_triangle_open">(in module ctm.pess_kagome_abelian.rdm_kagome)</a>
+</li>
+      </ul></li>
+      <li><a href="envs/one_site_c4v/rdm_c4v.html#ctm.one_site_c4v.rdm_c4v.rdm3x1">rdm3x1() (in module ctm.one_site_c4v.rdm_c4v)</a>
+</li>
+      <li><a href="envs/one_site_c4v/rdm_c4v.html#ctm.one_site_c4v.rdm_c4v.rdm3x1_sl">rdm3x1_sl() (in module ctm.one_site_c4v.rdm_c4v)</a>
+</li>
+      <li><a href="ipeps/ipeps.html#ipeps.ipeps.read_ipeps">read_ipeps() (in module ipeps.ipeps)</a>
+
+      <ul>
+        <li><a href="ipeps/ipeps_abelian.html#ipeps.ipeps_abelian.read_ipeps">(in module ipeps.ipeps_abelian)</a>
+</li>
+      </ul></li>
+      <li><a href="ipeps/ipeps_abelian_c4v.html#ipeps.ipeps_abelian_c4v.read_ipeps_c4v">read_ipeps_c4v() (in module ipeps.ipeps_abelian_c4v)</a>
+
+      <ul>
+        <li><a href="ipeps/ipeps_c4v.html#ipeps.ipeps_c4v.read_ipeps_c4v">(in module ipeps.ipeps_c4v)</a>
+</li>
+      </ul></li>
+      <li><a href="ipeps/ipeps_kagome.html#ipeps.ipeps_kagome.read_ipeps_kagome">read_ipeps_kagome() (in module ipeps.ipeps_kagome)</a>
+
+      <ul>
+        <li><a href="ipeps/ipeps_kagome_abelian.html#ipeps.ipeps_kagome_abelian.read_ipeps_kagome">(in module ipeps.ipeps_kagome_abelian)</a>
+</li>
+      </ul></li>
+      <li><a href="ipeps/ipeps_lc_1site_pg.html#ipeps.ipeps_lc.read_ipeps_lc_1site_pg">read_ipeps_lc_1site_pg() (in module ipeps.ipeps_lc)</a>
+</li>
+      <li><a href="ipeps/ipess_kagome.html#ipeps.ipess_kagome.read_ipess_kagome_generic">read_ipess_kagome_generic() (in module ipeps.ipess_kagome)</a>
+
+      <ul>
+        <li><a href="ipeps/ipess_kagome_abelian.html#ipeps.ipess_kagome_abelian.read_ipess_kagome_generic">(in module ipeps.ipess_kagome_abelian)</a>
+</li>
+      </ul></li>
+      <li><a href="linalg/spec_decomp.html#linalg.svd_rsvd.RSVD">RSVD (class in linalg.svd_rsvd)</a>
+</li>
+      <li><a href="envs/generic/ctmrg.html#ctm.generic.ctmrg.run">run() (in module ctm.generic.ctmrg)</a>
+
+      <ul>
+        <li><a href="envs/generic_abelian/ctmrg.html#ctm.generic_abelian.ctmrg.run">(in module ctm.generic_abelian.ctmrg)</a>
+</li>
+        <li><a href="envs/one_site_c4v/ctmrg_c4v.html#ctm.one_site_c4v.ctmrg_c4v.run">(in module ctm.one_site_c4v.ctmrg_c4v)</a>
+</li>
+        <li><a href="envs/one_site_c4v_abelian/ctmrg_c4v_abelian.html#ctm.one_site_c4v_abelian.ctmrg_c4v.run">(in module ctm.one_site_c4v_abelian.ctmrg_c4v)</a>
+</li>
+      </ul></li>
+      <li><a href="envs/one_site_c4v/ctmrg_c4v.html#ctm.one_site_c4v.ctmrg_c4v.run_dl">run_dl() (in module ctm.one_site_c4v.ctmrg_c4v)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="S">S</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="groups/su2.html#groups.su2.SU2.S">S() (groups.su2.SU2 method)</a>
+</li>
+      <li><a href="models/spin_half_kagome.html#models.spin_half_kagome.S_HALF_KAGOME">S_HALF_KAGOME (class in models.spin_half_kagome)</a>
+</li>
+      <li><a href="groups/su2.html#groups.su2_abelian.SU2_U1.S_zpm">S_zpm() (groups.su2_abelian.SU2_U1 method)</a>
+</li>
+      <li><a href="optim/optimizers/sgd_modified.html#optim.sgd_modified.SGD_MOD">SGD_MOD (class in optim.sgd_modified)</a>
+</li>
+      <li><a href="ipeps/ipeps.html#ipeps.ipeps.IPEPS.site">site() (ipeps.ipeps.IPEPS method)</a>
+
+      <ul>
+        <li><a href="ipeps/ipeps_abelian.html#ipeps.ipeps_abelian.IPEPS_ABELIAN.site">(ipeps.ipeps_abelian.IPEPS_ABELIAN method)</a>
+</li>
+        <li><a href="ipeps/ipeps_abelian_c4v.html#ipeps.ipeps_abelian_c4v.IPEPS_ABELIAN_C4V.site">(ipeps.ipeps_abelian_c4v.IPEPS_ABELIAN_C4V method)</a>
+</li>
+        <li><a href="ipeps/ipeps_c4v.html#ipeps.ipeps_c4v.IPEPS_C4V.site">(ipeps.ipeps_c4v.IPEPS_C4V method)</a>
+</li>
+        <li><a href="ipeps/ipeps_lc_1site_pg.html#ipeps.ipeps_lc.IPEPS_LC_1SITE_PG.site">(ipeps.ipeps_lc.IPEPS_LC_1SITE_PG method)</a>
+</li>
+      </ul></li>
+      <li><a href="ipeps/ipeps_abelian.html#ipeps.ipeps_abelian.IPEPS_ABELIAN.site_dl">site_dl() (ipeps.ipeps_abelian.IPEPS_ABELIAN method)</a>
+</li>
+      <li><a href="ipeps/ipeps_abelian.html#ipeps.ipeps_abelian.IPEPS_ABELIAN.site_dl_open">site_dl_open() (ipeps.ipeps_abelian.IPEPS_ABELIAN method)</a>
+</li>
+      <li><a href="groups/su2.html#groups.su2.SU2.SM">SM() (groups.su2.SU2 method)</a>
+
+      <ul>
+        <li><a href="groups/su2.html#groups.su2_abelian.SU2_U1.SM">(groups.su2_abelian.SU2_U1 method)</a>
+</li>
+      </ul></li>
+      <li><a href="groups/su2.html#groups.su2.SU2.SP">SP() (groups.su2.SU2 method)</a>
+
+      <ul>
+        <li><a href="groups/su2.html#groups.su2_abelian.SU2_U1.SP">(groups.su2_abelian.SU2_U1 method)</a>
+</li>
+      </ul></li>
+      <li><a href="groups/su2.html#groups.su2.SU2.SS">SS() (groups.su2.SU2 method)</a>
+
+      <ul>
+        <li><a href="groups/su2.html#groups.su2_abelian.SU2_U1.SS">(groups.su2_abelian.SU2_U1 method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="optim/optimizers/lbfgs_modified.html#optim.lbfgs_modified.LBFGS_MOD.step_2c">step_2c() (optim.lbfgs_modified.LBFGS_MOD method)</a>
+
+      <ul>
+        <li><a href="optim/optimizers/sgd_modified.html#optim.sgd_modified.SGD_MOD.step_2c">(optim.sgd_modified.SGD_MOD method)</a>
+</li>
+      </ul></li>
+      <li><a href="optim/drivers/ad_optim.html#optim.ad_optim.store_checkpoint">store_checkpoint() (in module optim.ad_optim)</a>
+
+      <ul>
+        <li><a href="optim/drivers/ad_optim_lbfgs_mod.html#optim.ad_optim_lbfgs_mod.store_checkpoint">(in module optim.ad_optim_lbfgs_mod)</a>
+</li>
+        <li><a href="optim/drivers/ad_optim_sgd_mod.html#optim.ad_optim_sgd_mod.store_checkpoint">(in module optim.ad_optim_sgd_mod)</a>
+</li>
+      </ul></li>
+      <li><a href="groups/su2.html#groups.su2.SU2">SU2 (class in groups.su2)</a>
+</li>
+      <li><a href="groups/su2.html#groups.su2_abelian.SU2_U1">SU2_U1 (class in groups.su2_abelian)</a>
+</li>
+      <li><a href="groups/su3.html#groups.su3.SU3_DEFINING">SU3_DEFINING (class in groups.su3)</a>
+</li>
+      <li><a href="groups/su3.html#groups.su3_abelian.SU3_DEFINING_U1xU1">SU3_DEFINING_U1xU1 (class in groups.su3_abelian)</a>
+</li>
+      <li><a href="linalg/spec_decomp.html#linalg.svd_arnoldi.SVDARNOLDI">SVDARNOLDI (class in linalg.svd_arnoldi)</a>
+</li>
+      <li><a href="linalg/spec_decomp.html#linalg.svd_gesdd.SVDGESDD">SVDGESDD (class in linalg.svd_gesdd)</a>
+</li>
+      <li><a href="linalg/spec_decomp.html#linalg.eig_arnoldi.SYMARNOLDI">SYMARNOLDI (class in linalg.eig_arnoldi)</a>
+</li>
+      <li><a href="linalg/spec_decomp.html#linalg.eig_sym.SYMEIG">SYMEIG (class in linalg.eig_sym)</a>
+</li>
+      <li><a href="ipeps/ipeps_abelian_c4v.html#ipeps.ipeps_abelian_c4v.IPEPS_ABELIAN_C4V.symmetrize">symmetrize() (ipeps.ipeps_abelian_c4v.IPEPS_ABELIAN_C4V method)</a>
+</li>
+      <li><a href="ipeps/ipeps_abelian.html#ipeps.ipeps_abelian.IPEPS_ABELIAN.sync_precomputed">sync_precomputed() (ipeps.ipeps_abelian.IPEPS_ABELIAN method)</a>
+</li>
+      <li><a href="groups/su2.html#groups.su2.SU2.SZ">SZ() (groups.su2.SU2 method)</a>
+
+      <ul>
+        <li><a href="groups/su2.html#groups.su2_abelian.SU2_U1.SZ">(groups.su2_abelian.SU2_U1 method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="T">T</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="groups/su3.html#groups.su3.SU3_DEFINING.TM">TM() (groups.su3.SU3_DEFINING method)</a>
+
+      <ul>
+        <li><a href="groups/su3.html#groups.su3_abelian.SU3_DEFINING_U1xU1.TM">(groups.su3_abelian.SU3_DEFINING_U1xU1 method)</a>
+</li>
+      </ul></li>
+      <li><a href="ipeps/ipeps_abelian.html#ipeps.ipeps_abelian.IPEPS_ABELIAN.to">to() (ipeps.ipeps_abelian.IPEPS_ABELIAN method)</a>
+
+      <ul>
+        <li><a href="ipeps/ipeps_abelian_c4v.html#ipeps.ipeps_abelian_c4v.IPEPS_ABELIAN_C4V.to">(ipeps.ipeps_abelian_c4v.IPEPS_ABELIAN_C4V method)</a>
+</li>
+      </ul></li>
+      <li><a href="envs/generic_abelian/env_abelian.html#ctm.generic_abelian.env_abelian.ENV_ABELIAN.to_dense">to_dense() (ctm.generic_abelian.env_abelian.ENV_ABELIAN method)</a>
+
+      <ul>
+        <li><a href="envs/one_site_c4v_abelian/env_c4v_abelian.html#ctm.one_site_c4v_abelian.env_c4v_abelian.ENV_C4V_ABELIAN.to_dense">(ctm.one_site_c4v_abelian.env_c4v_abelian.ENV_C4V_ABELIAN method)</a>
+</li>
+        <li><a href="ipeps/ipeps_abelian.html#ipeps.ipeps_abelian.IPEPS_ABELIAN.to_dense">(ipeps.ipeps_abelian.IPEPS_ABELIAN method)</a>
+</li>
+        <li><a href="ipeps/ipeps_abelian_c4v.html#ipeps.ipeps_abelian_c4v.IPEPS_ABELIAN_C4V.to_dense">(ipeps.ipeps_abelian_c4v.IPEPS_ABELIAN_C4V method)</a>
+</li>
+        <li><a href="ipeps/ipess_kagome_abelian.html#ipeps.ipess_kagome_abelian.IPESS_KAGOME_GENERIC_ABELIAN.to_dense">(ipeps.ipess_kagome_abelian.IPESS_KAGOME_GENERIC_ABELIAN method)</a>
+</li>
+      </ul></li>
+      <li><a href="ipeps/ipeps_c4v.html#ipeps.ipeps_c4v.to_ipeps_c4v">to_ipeps_c4v() (in module ipeps.ipeps_c4v)</a>
+</li>
+      <li><a href="groups/su3.html#groups.su3.SU3_DEFINING.TP">TP() (groups.su3.SU3_DEFINING method)</a>
+
+      <ul>
+        <li><a href="groups/su3.html#groups.su3_abelian.SU3_DEFINING_U1xU1.TP">(groups.su3_abelian.SU3_DEFINING_U1xU1 method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="envs/generic/rdm.html#ctm.pess_kagome.rdm_kagome.trace1x1_dn_kagome">trace1x1_dn_kagome() (in module ctm.pess_kagome.rdm_kagome)</a>
+
+      <ul>
+        <li><a href="envs/generic_abelian/rdm.html#ctm.pess_kagome_abelian.rdm_kagome.trace1x1_dn_kagome">(in module ctm.pess_kagome_abelian.rdm_kagome)</a>
+</li>
+      </ul></li>
+      <li><a href="linalg/custom_eig.html#linalg.custom_eig.truncated_eig_arnoldi">truncated_eig_arnoldi() (in module linalg.custom_eig)</a>
+</li>
+      <li><a href="linalg/custom_eig.html#linalg.custom_eig.truncated_eig_sym">truncated_eig_sym() (in module linalg.custom_eig)</a>
+</li>
+      <li><a href="linalg/custom_eig.html#linalg.custom_eig.truncated_eig_symarnoldi">truncated_eig_symarnoldi() (in module linalg.custom_eig)</a>
+</li>
+      <li><a href="linalg/custom_svd.html#linalg.custom_svd.truncated_svd_arnoldi">truncated_svd_arnoldi() (in module linalg.custom_svd)</a>
+</li>
+      <li><a href="linalg/custom_svd.html#linalg.custom_svd.truncated_svd_gesdd">truncated_svd_gesdd() (in module linalg.custom_svd)</a>
+</li>
+      <li><a href="linalg/custom_svd.html#linalg.custom_svd.truncated_svd_symarnoldi">truncated_svd_symarnoldi() (in module linalg.custom_svd)</a>
+</li>
+      <li><a href="linalg/custom_svd.html#linalg.custom_svd.truncated_svd_symeig">truncated_svd_symeig() (in module linalg.custom_svd)</a>
+</li>
+      <li><a href="groups/su3.html#groups.su3.SU3_DEFINING.TZ">TZ() (groups.su3.SU3_DEFINING method)</a>
+
+      <ul>
+        <li><a href="groups/su3.html#groups.su3_abelian.SU3_DEFINING_U1xU1.TZ">(groups.su3_abelian.SU3_DEFINING_U1xU1 method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="U">U</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="groups/su3.html#groups.su3.SU3_DEFINING.UM">UM() (groups.su3.SU3_DEFINING method)</a>
+
+      <ul>
+        <li><a href="groups/su3.html#groups.su3_abelian.SU3_DEFINING_U1xU1.UM">(groups.su3_abelian.SU3_DEFINING_U1xU1 method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="groups/su3.html#groups.su3.SU3_DEFINING.UP">UP() (groups.su3.SU3_DEFINING method)</a>
+
+      <ul>
+        <li><a href="groups/su3.html#groups.su3_abelian.SU3_DEFINING_U1xU1.UP">(groups.su3_abelian.SU3_DEFINING_U1xU1 method)</a>
+</li>
+      </ul></li>
+      <li><a href="ipeps/ipess_kagome_pg_lc.html#ipeps.ipess_kagome.IPESS_KAGOME_PG_LC.update_">update_() (ipeps.ipess_kagome.IPESS_KAGOME_PG_LC method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="V">V</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="groups/su3.html#groups.su3.SU3_DEFINING.VM">VM() (groups.su3.SU3_DEFINING method)</a>
+
+      <ul>
+        <li><a href="groups/su3.html#groups.su3_abelian.SU3_DEFINING_U1xU1.VM">(groups.su3_abelian.SU3_DEFINING_U1xU1 method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="groups/su3.html#groups.su3.SU3_DEFINING.VP">VP() (groups.su3.SU3_DEFINING method)</a>
+
+      <ul>
+        <li><a href="groups/su3.html#groups.su3_abelian.SU3_DEFINING_U1xU1.VP">(groups.su3_abelian.SU3_DEFINING_U1xU1 method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="W">W</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="ipeps/ipeps_abelian.html#ipeps.ipeps_abelian.IPEPS_ABELIAN_WEIGHTED.weight">weight() (ipeps.ipeps_abelian.IPEPS_ABELIAN_WEIGHTED method)</a>
+</li>
+      <li><a href="ipeps/ipeps.html#ipeps.ipeps.write_ipeps">write_ipeps() (in module ipeps.ipeps)</a>
+
+      <ul>
+        <li><a href="ipeps/ipeps_abelian.html#ipeps.ipeps_abelian.write_ipeps">(in module ipeps.ipeps_abelian)</a>
+</li>
+      </ul></li>
+      <li><a href="ipeps/ipeps_lc_1site_pg.html#ipeps.ipeps_lc.write_ipeps_lc_1site_pg">write_ipeps_lc_1site_pg() (in module ipeps.ipeps_lc)</a>
+</li>
+      <li><a href="ipeps/ipess_kagome.html#ipeps.ipess_kagome.write_ipess_kagome_generic">write_ipess_kagome_generic() (in module ipeps.ipess_kagome)</a>
+
+      <ul>
+        <li><a href="ipeps/ipess_kagome_abelian.html#ipeps.ipess_kagome_abelian.write_ipess_kagome_generic">(in module ipeps.ipess_kagome_abelian)</a>
+</li>
+      </ul></li>
+      <li><a href="ipeps/ipeps.html#ipeps.ipeps.IPEPS.write_to_file">write_to_file() (ipeps.ipeps.IPEPS method)</a>
+
+      <ul>
+        <li><a href="ipeps/ipeps_abelian.html#ipeps.ipeps_abelian.IPEPS_ABELIAN.write_to_file">(ipeps.ipeps_abelian.IPEPS_ABELIAN method)</a>
+</li>
+        <li><a href="ipeps/ipeps_abelian_c4v.html#ipeps.ipeps_abelian_c4v.IPEPS_ABELIAN_C4V.write_to_file">(ipeps.ipeps_abelian_c4v.IPEPS_ABELIAN_C4V method)</a>
+</li>
+        <li><a href="ipeps/ipeps_c4v.html#ipeps.ipeps_c4v.IPEPS_C4V.write_to_file">(ipeps.ipeps_c4v.IPEPS_C4V method)</a>
+</li>
+        <li><a href="ipeps/ipeps_lc_1site_pg.html#ipeps.ipeps_lc.IPEPS_LC_1SITE_PG.write_to_file">(ipeps.ipeps_lc.IPEPS_LC_1SITE_PG method)</a>
+</li>
+        <li><a href="ipeps/ipess_kagome.html#ipeps.ipess_kagome.IPESS_KAGOME_GENERIC.write_to_file">(ipeps.ipess_kagome.IPESS_KAGOME_GENERIC method)</a>
+</li>
+        <li><a href="ipeps/ipess_kagome_pg.html#ipeps.ipess_kagome.IPESS_KAGOME_PG.write_to_file">(ipeps.ipess_kagome.IPESS_KAGOME_PG method)</a>
+</li>
+        <li><a href="ipeps/ipess_kagome_pg_lc.html#ipeps.ipess_kagome.IPESS_KAGOME_PG_LC.write_to_file">(ipeps.ipess_kagome.IPESS_KAGOME_PG_LC method)</a>
+</li>
+        <li><a href="ipeps/ipess_kagome_abelian.html#ipeps.ipess_kagome_abelian.IPESS_KAGOME_GENERIC_ABELIAN.write_to_file">(ipeps.ipess_kagome_abelian.IPESS_KAGOME_GENERIC_ABELIAN method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="Y">Y</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="groups/su3.html#groups.su3.SU3_DEFINING.Y">Y() (groups.su3.SU3_DEFINING method)</a>
+
+      <ul>
+        <li><a href="groups/su3.html#groups.su3_abelian.SU3_DEFINING_U1xU1.Y">(groups.su3_abelian.SU3_DEFINING_U1xU1 method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Juraj Hasik, Glen B. Mbeng
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

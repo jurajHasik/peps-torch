@@ -1,0 +1,856 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>ipeps.ipeps_lc &mdash; peps-torch alpha documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> peps-torch
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../ipeps.html">iPEPS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps.html">Generic iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_kagome.html">Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_c4v.html">1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_lc_1site_pg.html">1-site iPEPS from lin. combination</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipess_kagome.html">Generic Kagome iPESS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipess_kagome_pg.html">Kagome iPESS with point groups</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipess_kagome_pg_lc.html">Kagome iPESS from lin. combination</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../ipeps.html#abelian-symmetric-ipeps">Abelian-symmetric iPEPS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_abelian.html">Generic  abelian-symmetric iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_abelian.html#generic-abelian-symmetric-ipeps-with-weights">Generic abelian-symmetric iPEPS with weights</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_kagome_abelian.html">Abelian-symmetric Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_abelian_c4v.html">Abelian-symmetric 1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipess_kagome_abelian.html">Abelian-symmetric generic Kagome iPESS</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../envs.html">Environments</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../envs/generic.html">Generic iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/env.html">Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/rdm.html#module-ctm.pess_kagome.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/corrf.html">Correlation functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/transfer_matrix.html">Transfer Matrices</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../envs/generic_abelian.html">Abelian-symmetric generic iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic_abelian/env_abelian.html">Abelian-symmetric environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic_abelian/ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic_abelian/ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic_abelian/ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic_abelian/rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic_abelian/rdm.html#module-ctm.pess_kagome_abelian.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../envs/one_site_c4v.html">1-site C4v iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v/env_c4v.html">1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v/ctmrg_c4v.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v/rdm_c4v.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v/transfer_matrix.html">Transfer Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v/corrf_c4v.html">Correlation functions</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../envs/one_site_c4v_abelian.html">Abelian-symmetric 1-site C4v iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v_abelian/env_c4v_abelian.html">Abelian-symmetric 1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v_abelian/ctmrg_c4v_abelian.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v_abelian/rdm_c4v_abelian.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v_abelian/corrf_c4v_abelian.html">Correlation functions</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../optim.html">Optimization</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../optim/drivers.html">Optimization drivers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/drivers/ad_optim.html">ad_optim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/drivers/ad_optim_lbfgs_mod.html">ad_optim_lbfgs_mod</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/drivers/ad_optim_sgd_mod.html">ad_optim_sgd_mod</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../optim/optimizers.html">Custom optimizers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/optimizers/lbfgs_modified.html">Extended LBFGS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/optimizers/sgd_modified.html">SGD with linesearch</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../config.html">Configuration</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../config.html#main">Main</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../config.html#global">Global</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../config.html#corner-transfer-matrix-algorithm">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../config.html#optimization">Optimization</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../models.html">Models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../models/akltS2.html">Spin S=2 AKLT Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/akltS2.html#module-models.akltS2">2x1 and 2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/akltS2.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/coupledLadders.html">Coupled Ladders</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/coupledLadders.html#dense-pytorch">Dense (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/coupledLadders.html#dense-yast">Dense (YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/coupledLadders.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/ising.html">Transverse Field Ising Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/ising.html#x1-unit-cell">1x1 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/ising.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/j1j2.html">J1-J2-J3 and J1-J2-lambda Heisenberg Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/j1j2.html#from-2x1-to-4x2-unit-cell-pytorch">from 2x1 to 4x2 unit cell (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/j1j2.html#from-2x1-to-4x2-unit-cell-dense-yast">from 2x1 to 4x2 unit cell (dense YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/j1j2.html#x1-c4v-pytorch">1x1 C4v (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/j1j2.html#x1-c4v-dense-yast">1x1 C4v (dense YAST)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/jq.html">J-Q Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/jq.html#module-models.jq">2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/jq.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/spin_half_kagome.html">SU(2) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/spin_half_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/spin_half_kagome.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/su3_kagome.html">SU(3) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/su3_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/su3_kagome.html#with-explict-u-1-xu-1-symmetry">With explict U(1)xU(1) symmetry</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../groups.html">Groups</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/pg.html">Point group: square lattice</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/su2.html">SU(2)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/su2.html#module-groups.su2_abelian">SU(2) with explicit U(1) structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/su3.html">SU(3)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/su3.html#su-3-with-explicit-u-1-xu-1-structure">SU(3) with explicit U(1)xU(1) structure</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../linalg.html">Linear Algebra</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../linalg/custom_eig.html">Truncated eigendecomposition</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../linalg/custom_svd.html">Truncated SVD</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../linalg/spec_decomp.html">Spectral decompositions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.svd_gesdd">SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.svd_arnoldi">Partial SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.svd_rsvd">Randomized SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.eig_sym">Symmetric Eigendecomposition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.eig_arnoldi">Partial diagonalization</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">peps-torch</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+      <li>ipeps.ipeps_lc</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for ipeps.ipeps_lc</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">abc</span> <span class="kn">import</span> <span class="n">ABC</span><span class="p">,</span> <span class="n">abstractmethod</span>
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">OrderedDict</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">import</span> <span class="nn">math</span>
+<span class="kn">import</span> <span class="nn">config</span> <span class="k">as</span> <span class="nn">cfg</span>
+<span class="kn">import</span> <span class="nn">ipeps.ipeps</span> <span class="k">as</span> <span class="nn">ipeps</span>
+
+<span class="k">class</span> <span class="nc">IPEPS_LC</span><span class="p">(</span><span class="n">ipeps</span><span class="o">.</span><span class="n">IPEPS</span><span class="p">,</span> <span class="n">ABC</span><span class="p">):</span>
+    
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">elem_tensors</span><span class="p">,</span> <span class="n">coeffs</span><span class="p">,</span> <span class="n">vertexToSite</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">lX</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">lY</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> \
+        <span class="n">peps_args</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">peps_args</span><span class="p">,</span> <span class="n">global_args</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">global_args</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param elem_tensors: elementary tensors</span>
+<span class="sd">        :param coeffs: coefficients combining elementary tensors into regular iPEPS</span>
+<span class="sd">        :param vertexToSite: function mapping arbitrary vertex of a square lattice </span>
+<span class="sd">                             into a vertex within elementary unit cell</span>
+<span class="sd">        :param lX: length of the elementary unit cell in X direction</span>
+<span class="sd">        :param lY: length of the elementary unit cell in Y direction</span>
+<span class="sd">        :param peps_args: ipeps configuration</span>
+<span class="sd">        :param global_args: global configuration</span>
+<span class="sd">        :type elem_tensors: iterable</span>
+<span class="sd">        :type coeffs: iterable</span>
+<span class="sd">        :type vertexToSite: function(tuple(int,int))-&gt;tuple(int,int)</span>
+<span class="sd">        :type lX: int</span>
+<span class="sd">        :type lY: int</span>
+<span class="sd">        :type peps_args: PEPSARGS</span>
+<span class="sd">        :type global_args: GLOBALARGS</span>
+<span class="sd">        </span>
+<span class="sd">        IPEPS_LC, where LC stands for linear combination, encapsulates a subclass</span>
+<span class="sd">        of iPEPS states where on-site tensors are built as a linear combination of</span>
+<span class="sd">        selected elementary tensors.</span>
+
+<span class="sd">        The function `build_onsite_tensors` is expected to construct regular IPEPS,</span>
+<span class="sd">        which can be then be treated by CTMRG, by combining `elem_tensors` and `coeffs`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">elem_tensors</span><span class="o">=</span> <span class="n">elem_tensors</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">coeffs</span><span class="o">=</span> <span class="n">OrderedDict</span><span class="p">(</span><span class="n">coeffs</span><span class="p">)</span>
+        <span class="n">sites</span><span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">build_onsite_tensors</span><span class="p">()</span>
+
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">sites</span><span class="p">,</span> <span class="n">vertexToSite</span><span class="o">=</span><span class="n">vertexToSite</span><span class="p">,</span> <span class="n">peps_args</span><span class="o">=</span><span class="n">peps_args</span><span class="p">,</span>\
+            <span class="n">global_args</span><span class="o">=</span><span class="n">global_args</span><span class="p">)</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">get_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">get_checkpoint</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">load_checkpoint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">checkpoint_file</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">build_onsite_tensors</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">add_noise</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">noise</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">write_to_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">outputfile</span><span class="p">,</span> <span class="n">aux_seq</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1.0e-14</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+
+<div class="viewcode-block" id="IPEPS_LC_1SITE_PG"><a class="viewcode-back" href="../../ipeps/ipeps_lc_1site_pg.html#ipeps.ipeps_lc.IPEPS_LC_1SITE_PG">[docs]</a><span class="k">class</span> <span class="nc">IPEPS_LC_1SITE_PG</span><span class="p">(</span><span class="n">IPEPS_LC</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">elem_tensors</span><span class="p">,</span> <span class="n">coeffs</span><span class="p">,</span> \
+        <span class="n">peps_args</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">peps_args</span><span class="p">,</span> <span class="n">global_args</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">global_args</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param elem_tensors: elementary tensors</span>
+<span class="sd">        :param coeffs: coefficients combining elementary tensors into regular iPEPS</span>
+<span class="sd">        :param peps_args: ipeps configuration</span>
+<span class="sd">        :param global_args: global configuration</span>
+<span class="sd">        :type elem_tensors: list(tuple(dict,torch.Tensor))</span>
+<span class="sd">        :type coeffs: dict</span>
+<span class="sd">        :type peps_args: PEPSARGS</span>
+<span class="sd">        :type global_args: GLOBALARGS</span>
+
+<span class="sd">        Single-site iPEPS with on-site tensor built from a linear combination</span>
+<span class="sd">        of elementary tensors. These elementary tensors are representatives </span>
+<span class="sd">        of some point group irrep.</span>
+
+<span class="sd">        Currently supported combinations are real :math:`A_1`, and complex :math:`A_1 + iA_2`. </span>
+<span class="sd">        Where elementary tensors `e` are assumed to be real representatives of either  </span>
+<span class="sd">        :math:`A_1` or :math:`A_2` irreps of :math:`C_{4v}` point group. The on-site</span>
+<span class="sd">        tensor is then built as</span>
+
+<span class="sd">        .. math:: </span>
+
+<span class="sd">            a = \sum_i \lambda_i e_{A_1;i} + i\sum_j \lambda_j e_{A_2;j}</span>
+
+
+<span class="sd">        where :math:`\vec{\lambda}` is a real vector. </span>
+
+<span class="sd">        Each elementary tensor is described by dict::</span>
+<span class="sd">            </span>
+<span class="sd">            elem_tensors= [</span>
+<span class="sd">                ...,</span>
+<span class="sd">                ({&quot;meta&quot;: {&quot;pg&quot;: &quot;A_1&quot;}, ...}, torch.Tensor),</span>
+<span class="sd">                ...,</span>
+<span class="sd">            ]</span>
+
+<span class="sd">        where the value of &quot;pg&quot; (specified inside dict &quot;meta&quot;) is either &quot;A_1&quot; or &quot;A_2&quot;. </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pg_irreps</span><span class="o">=</span> <span class="nb">set</span><span class="p">([</span><span class="n">m</span><span class="p">[</span><span class="s2">&quot;meta&quot;</span><span class="p">][</span><span class="s2">&quot;pg&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">m</span><span class="p">,</span><span class="n">t</span> <span class="ow">in</span> <span class="n">elem_tensors</span><span class="p">])</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">elem_tensors</span><span class="p">,</span> <span class="n">coeffs</span><span class="p">,</span> <span class="n">peps_args</span><span class="o">=</span><span class="n">peps_args</span><span class="p">,</span>\
+            <span class="n">global_args</span><span class="o">=</span><span class="n">global_args</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;lX x lY: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">lX</span><span class="si">}</span><span class="s2"> x </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">lY</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">nid</span><span class="p">,</span><span class="n">coord</span><span class="p">,</span><span class="n">site</span> <span class="ow">in</span> <span class="p">[(</span><span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="o">*</span><span class="n">t</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">coeffs</span><span class="o">.</span><span class="n">items</span><span class="p">())]:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;A</span><span class="si">{</span><span class="n">nid</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">coord</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">site</span><span class="o">.</span><span class="n">size</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        
+        <span class="c1"># show tiling of a square lattice</span>
+        <span class="n">coord_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">coeffs</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        <span class="n">mx</span><span class="p">,</span> <span class="n">my</span> <span class="o">=</span> <span class="mi">3</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">lX</span><span class="p">,</span> <span class="mi">3</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">lY</span>
+        <span class="n">label_spacing</span> <span class="o">=</span> <span class="mi">1</span><span class="o">+</span><span class="nb">int</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">coeffs</span><span class="o">.</span><span class="n">keys</span><span class="p">())))</span>
+        <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="n">my</span><span class="p">,</span><span class="n">my</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">y</span> <span class="o">==</span> <span class="o">-</span><span class="n">my</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;y</span><span class="se">\\</span><span class="s2">x &quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="n">mx</span><span class="p">,</span><span class="n">mx</span><span class="p">):</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">+</span><span class="n">label_spacing</span><span class="o">*</span><span class="s2">&quot; &quot;</span><span class="o">+</span><span class="s2">&quot; &quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">y</span><span class="si">:</span><span class="s2">+</span><span class="si">}</span><span class="s2"> &quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="n">mx</span><span class="p">,</span><span class="n">mx</span><span class="p">):</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;A</span><span class="si">{</span><span class="n">coord_list</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vertexToSite</span><span class="p">((</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">)))</span><span class="si">}</span><span class="s2"> &quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+        
+        <span class="c1"># print meta-information of considered symmetric tensors</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">su2t</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">elem_tensors</span><span class="p">):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">su2t</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># print coefficients</span>
+        <span class="k">for</span> <span class="n">nid</span><span class="p">,</span><span class="n">coord</span><span class="p">,</span><span class="n">c</span> <span class="ow">in</span> <span class="p">[(</span><span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="o">*</span><span class="n">t</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">coeffs</span><span class="o">.</span><span class="n">items</span><span class="p">())]:</span>
+            <span class="n">tdims</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+            <span class="n">tlength</span> <span class="o">=</span> <span class="n">tdims</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;x: </span><span class="si">{</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">, y: </span><span class="si">{</span><span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">els</span><span class="o">=</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">c</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">tlength</span><span class="p">)]</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">els</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="s2">&quot;&quot;</span>
+
+<div class="viewcode-block" id="IPEPS_LC_1SITE_PG.site"><a class="viewcode-back" href="../../ipeps/ipeps_lc_1site_pg.html#ipeps.ipeps_lc.IPEPS_LC_1SITE_PG.site">[docs]</a>    <span class="k">def</span> <span class="nf">site</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">coord</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param coord: vertex (x,y). Can be ignored, since the ansatz is single-site.</span>
+<span class="sd">        :type coord: tuple(int,int)</span>
+<span class="sd">        :return: on-site tensor</span>
+<span class="sd">        :rtype: torch.tensor </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">site</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="IPEPS_LC_1SITE_PG.get_parameters"><a class="viewcode-back" href="../../ipeps/ipeps_lc_1site_pg.html#ipeps.ipeps_lc.IPEPS_LC_1SITE_PG.get_parameters">[docs]</a>    <span class="k">def</span> <span class="nf">get_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">coeffs</span><span class="o">.</span><span class="n">values</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="IPEPS_LC_1SITE_PG.get_checkpoint"><a class="viewcode-back" href="../../ipeps/ipeps_lc_1site_pg.html#ipeps.ipeps_lc.IPEPS_LC_1SITE_PG.get_checkpoint">[docs]</a>    <span class="k">def</span> <span class="nf">get_checkpoint</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">checkpoint</span><span class="o">=</span> <span class="p">{</span><span class="s2">&quot;coeffs&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">coeffs</span><span class="p">,</span> <span class="s2">&quot;elem_tensors&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">elem_tensors</span><span class="p">,</span>\
+            <span class="s2">&quot;pg_irreps&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">pg_irreps</span><span class="p">}</span>
+        <span class="k">return</span> <span class="n">checkpoint</span></div>
+
+<div class="viewcode-block" id="IPEPS_LC_1SITE_PG.load_checkpoint"><a class="viewcode-back" href="../../ipeps/ipeps_lc_1site_pg.html#ipeps.ipeps_lc.IPEPS_LC_1SITE_PG.load_checkpoint">[docs]</a>    <span class="k">def</span> <span class="nf">load_checkpoint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">checkpoint_file</span><span class="p">):</span>
+        <span class="n">checkpoint</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">checkpoint_file</span><span class="p">)</span>
+        <span class="n">params</span><span class="o">=</span> <span class="n">checkpoint</span><span class="p">[</span><span class="s2">&quot;parameters&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="s2">&quot;coeffs&quot;</span> <span class="ow">in</span> <span class="n">params</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">coeffs</span><span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;coeffs&quot;</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># legacy checkpoints</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">coeffs</span><span class="o">=</span> <span class="n">params</span>
+        <span class="k">for</span> <span class="n">coeff_t</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">coeffs</span><span class="o">.</span><span class="n">values</span><span class="p">():</span> <span class="n">coeff_t</span><span class="o">.</span><span class="n">requires_grad_</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+        <span class="k">if</span> <span class="s2">&quot;elem_tensors&quot;</span> <span class="ow">in</span> <span class="n">params</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">assert</span> <span class="nb">any</span><span class="p">([</span> <span class="n">coeff_t</span><span class="o">.</span><span class="n">numel</span><span class="p">()</span><span class="o">==</span><span class="nb">len</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;elem_tensors&quot;</span><span class="p">])</span> <span class="k">for</span> <span class="n">coeff_t</span> \
+                <span class="ow">in</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;coeffs&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">()]),</span><span class="s2">&quot;Length of coefficient vectors does &quot;</span>\
+                <span class="o">+</span><span class="s2">&quot;not match the set of elementary tensors&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">elem_tensors</span><span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;elem_tensors&quot;</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Elementary tensors not included in checkpoint. Using class file instead&quot;</span><span class="p">,</span> <span class="ne">Warning</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pg_irreps</span><span class="o">=</span> <span class="nb">set</span><span class="p">([</span><span class="n">m</span><span class="p">[</span><span class="s2">&quot;meta&quot;</span><span class="p">][</span><span class="s2">&quot;pg&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">m</span><span class="p">,</span><span class="n">t</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">elem_tensors</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sites</span><span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">build_onsite_tensors</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="IPEPS_LC_1SITE_PG.build_onsite_tensors"><a class="viewcode-back" href="../../ipeps/ipeps_lc_1site_pg.html#ipeps.ipeps_lc.IPEPS_LC_1SITE_PG.build_onsite_tensors">[docs]</a>    <span class="k">def</span> <span class="nf">build_onsite_tensors</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :return: sites</span>
+<span class="sd">        :rtype: dict[tuple(int,int): torch.tensor]</span>
+
+<span class="sd">        Builds ``sites`` by combining elementary tensors.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pg_irreps</span><span class="p">)</span><span class="o">==</span><span class="mi">1</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">pg_irreps</span><span class="o">==</span><span class="nb">set</span><span class="p">([</span><span class="s2">&quot;A_1&quot;</span><span class="p">]):</span>
+            <span class="n">ts</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">t</span> <span class="k">for</span> <span class="n">m</span><span class="p">,</span><span class="n">t</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">elem_tensors</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pg_irreps</span><span class="p">)</span><span class="o">==</span><span class="mi">2</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">pg_irreps</span><span class="o">==</span><span class="nb">set</span><span class="p">([</span><span class="s2">&quot;A_1&quot;</span><span class="p">,</span><span class="s2">&quot;A_2&quot;</span><span class="p">]):</span>
+            <span class="n">sym_t_A1</span><span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;meta&quot;</span><span class="p">][</span><span class="s2">&quot;pg&quot;</span><span class="p">]</span><span class="o">==</span><span class="s2">&quot;A_1&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">elem_tensors</span><span class="p">))</span>
+            <span class="n">sym_t_A2</span><span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;meta&quot;</span><span class="p">][</span><span class="s2">&quot;pg&quot;</span><span class="p">]</span><span class="o">==</span><span class="s2">&quot;A_2&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">elem_tensors</span><span class="p">))</span>
+            <span class="n">ts</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span> <span class="p">[</span><span class="n">t</span> <span class="k">for</span> <span class="n">m</span><span class="p">,</span><span class="n">t</span> <span class="ow">in</span> <span class="n">sym_t_A1</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span> <span class="mf">1.0</span><span class="n">j</span><span class="o">*</span><span class="n">t</span> <span class="k">for</span> <span class="n">m</span><span class="p">,</span><span class="n">t</span> <span class="ow">in</span> <span class="n">sym_t_A2</span><span class="p">]</span> <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;unexpected point group irrep &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pg_irreps</span><span class="p">))</span>
+
+        <span class="n">sites</span><span class="o">=</span><span class="nb">dict</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">coord</span><span class="p">,</span><span class="n">c</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">coeffs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">ts</span><span class="o">.</span><span class="n">is_complex</span><span class="p">():</span> <span class="n">c</span><span class="o">=</span> <span class="n">c</span><span class="o">*</span><span class="p">(</span><span class="mf">1.0</span><span class="o">+</span><span class="mf">0.</span><span class="n">j</span><span class="p">)</span>
+            <span class="n">sites</span><span class="p">[</span><span class="n">coord</span><span class="p">]</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;i,ipuldr-&gt;puldr&#39;</span><span class="p">,</span><span class="n">c</span><span class="p">,</span><span class="n">ts</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">sites</span></div>
+
+<div class="viewcode-block" id="IPEPS_LC_1SITE_PG.add_noise"><a class="viewcode-back" href="../../ipeps/ipeps_lc_1site_pg.html#ipeps.ipeps_lc.IPEPS_LC_1SITE_PG.add_noise">[docs]</a>    <span class="k">def</span> <span class="nf">add_noise</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">noise</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param noise: magnitude of noise</span>
+<span class="sd">        :type noise: float</span>
+
+<span class="sd">        Take IPEPS_LC_1SITE_PG and add random uniform noise with magnitude noise to </span>
+<span class="sd">        vector of coefficients ``coeffs``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">coord</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">coeffs</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">rand_t</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">coeffs</span><span class="p">[</span><span class="n">coord</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">(),</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">coeffs</span><span class="p">[</span><span class="n">coord</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span>\
+                <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+            <span class="n">tmp_t</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">coeffs</span><span class="p">[</span><span class="n">coord</span><span class="p">]</span> <span class="o">+</span> <span class="n">noise</span> <span class="o">*</span> <span class="p">(</span><span class="n">rand_t</span><span class="o">-</span><span class="mf">0.5</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">coeffs</span><span class="p">[</span><span class="n">coord</span><span class="p">]</span><span class="o">=</span> <span class="n">tmp_t</span><span class="o">/</span><span class="n">torch</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">tmp_t</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sites</span><span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">build_onsite_tensors</span><span class="p">()</span></div>
+
+    <span class="k">def</span> <span class="nf">get_aux_bond_dims</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[</span><span class="nb">max</span><span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="mi">1</span><span class="p">:])</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">elem_tensors</span><span class="p">]</span>
+
+<div class="viewcode-block" id="IPEPS_LC_1SITE_PG.write_to_file"><a class="viewcode-back" href="../../ipeps/ipeps_lc_1site_pg.html#ipeps.ipeps_lc.IPEPS_LC_1SITE_PG.write_to_file">[docs]</a>    <span class="k">def</span> <span class="nf">write_to_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">outputfile</span><span class="p">,</span> <span class="n">aux_seq</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1.0e-14</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Write state to file. See :meth:`write_ipeps_lc_1site_pg`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">write_ipeps_lc_1site_pg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">outputfile</span><span class="p">,</span> <span class="n">aux_seq</span><span class="o">=</span><span class="n">aux_seq</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="n">tol</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="n">normalize</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">clone</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">peps_args</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">peps_args</span><span class="p">,</span> <span class="n">global_args</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">global_args</span><span class="p">,</span> <span class="n">requires_grad</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="n">tmp_elem_t</span><span class="o">=</span><span class="p">[]</span>
+        <span class="k">for</span> <span class="n">m</span><span class="p">,</span><span class="n">t</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">elem_tensors</span><span class="p">:</span>
+            <span class="n">tmp_elem_t</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">m</span><span class="p">,</span> <span class="n">t</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">clone</span><span class="p">()))</span>
+        <span class="n">tmp_coeffs</span><span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span><span class="n">c</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">coeffs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">tmp_coeffs</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+        
+        <span class="n">state_clone</span><span class="o">=</span> <span class="n">IPEPS_LC_1SITE_PG</span><span class="p">(</span><span class="n">tmp_elem_t</span><span class="p">,</span> <span class="n">tmp_coeffs</span><span class="p">,</span>\
+            <span class="n">peps_args</span><span class="o">=</span><span class="n">peps_args</span><span class="p">,</span> <span class="n">global_args</span><span class="o">=</span><span class="n">global_args</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">state_clone</span>
+
+    <span class="k">def</span> <span class="nf">move_to</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">device</span><span class="o">==</span><span class="s1">&#39;cpu&#39;</span> <span class="ow">or</span> <span class="n">device</span><span class="o">==</span><span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s1">&#39;cpu&#39;</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">mt</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">elem_tensors</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">elem_tensors</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">=</span> <span class="n">mt</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">k</span><span class="p">,</span><span class="n">c</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">coeffs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">coeffs</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">device</span><span class="o">.</span><span class="n">type</span><span class="o">==</span><span class="s1">&#39;cuda&#39;</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">mt</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">elem_tensors</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">elem_tensors</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">=</span> <span class="n">mt</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">k</span><span class="p">,</span><span class="n">c</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">coeffs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">coeffs</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported device </span><span class="si">{</span><span class="n">device</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="read_ipeps_lc_1site_pg"><a class="viewcode-back" href="../../ipeps/ipeps_lc_1site_pg.html#ipeps.ipeps_lc.read_ipeps_lc_1site_pg">[docs]</a><span class="k">def</span> <span class="nf">read_ipeps_lc_1site_pg</span><span class="p">(</span><span class="n">jsonfile</span><span class="p">,</span> <span class="n">aux_seq</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],</span>\
+    <span class="n">peps_args</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">peps_args</span><span class="p">,</span> <span class="n">global_args</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">global_args</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    :param jsonfile: input file describing IPEPS_LC_1SITE_PG in json format</span>
+<span class="sd">    :param aux_seq: array specifying order of auxiliary indices of on-site tensors stored</span>
+<span class="sd">                    in `jsonfile`</span>
+<span class="sd">    :param peps_args: ipeps configuration</span>
+<span class="sd">    :param global_args: global configuration</span>
+<span class="sd">    :type jsonfile: str or Path object</span>
+<span class="sd">    :type aux_seq: list[int]</span>
+<span class="sd">    :type peps_args: PEPSARGS</span>
+<span class="sd">    :type global_args: GLOBALARGS</span>
+<span class="sd">    :return: wavefunction</span>
+<span class="sd">    :rtype: IPEPS_LC_1SITE_PG</span>
+<span class="sd">    </span>
+
+<span class="sd">    A simple PBC ``vertexToSite`` function is used by default</span>
+<span class="sd">    </span>
+<span class="sd">    Parameter ``aux_seq`` defines the expected order of auxiliary indices</span>
+<span class="sd">    in input file relative to the convention fixed in tn-torch::</span>
+<span class="sd">    </span>
+<span class="sd">         0</span>
+<span class="sd">        1A3 &lt;=&gt; [up, left, down, right]: aux_seq=[0,1,2,3]</span>
+<span class="sd">         2</span>
+<span class="sd">        </span>
+<span class="sd">        for alternative order, eg.</span>
+<span class="sd">        </span>
+<span class="sd">         1</span>
+<span class="sd">        0A2 &lt;=&gt; [left, up, right, down]: aux_seq=[1,0,3,2] </span>
+<span class="sd">         3</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">jsonfile</span><span class="p">)</span> <span class="k">as</span> <span class="n">j</span><span class="p">:</span>
+        <span class="n">raw_state</span><span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">j</span><span class="p">)</span>
+        <span class="n">state</span><span class="o">=</span> <span class="n">from_json_str</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">raw_state</span><span class="p">),</span> <span class="n">aux_seq</span><span class="o">=</span><span class="n">aux_seq</span><span class="p">,</span>\
+            <span class="n">peps_args</span><span class="o">=</span><span class="n">peps_args</span><span class="p">,</span> <span class="n">global_args</span><span class="o">=</span><span class="n">global_args</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">state</span></div>
+
+<div class="viewcode-block" id="from_json_str"><a class="viewcode-back" href="../../ipeps/ipeps_lc_1site_pg.html#ipeps.ipeps_lc.from_json_str">[docs]</a><span class="k">def</span> <span class="nf">from_json_str</span><span class="p">(</span><span class="n">json_str</span><span class="p">,</span> <span class="n">aux_seq</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],</span>\
+    <span class="n">peps_args</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">peps_args</span><span class="p">,</span> <span class="n">global_args</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">global_args</span><span class="p">):</span>
+
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    :param json_str: str describing IPEPS_LC_1SITE_PG in json format</span>
+<span class="sd">    :param aux_seq: array specifying order of auxiliary indices of on-site tensors stored</span>
+<span class="sd">                    in `jsonfile`</span>
+<span class="sd">    :param peps_args: ipeps configuration</span>
+<span class="sd">    :param global_args: global configuration</span>
+<span class="sd">    :type jsonfile: str or Path object</span>
+<span class="sd">    :type aux_seq: list[int]</span>
+<span class="sd">    :type peps_args: PEPSARGS</span>
+<span class="sd">    :type global_args: GLOBALARGS</span>
+<span class="sd">    :return: wavefunction</span>
+<span class="sd">    :rtype: IPEPS_LC_1SITE_PG</span>
+<span class="sd">    </span>
+
+<span class="sd">    A simple PBC ``vertexToSite`` function is used by default</span>
+<span class="sd">    </span>
+<span class="sd">    Parameter ``aux_seq`` defines the expected order of auxiliary indices</span>
+<span class="sd">    in input file relative to the convention fixed in tn-torch::</span>
+<span class="sd">    </span>
+<span class="sd">         0</span>
+<span class="sd">        1A3 &lt;=&gt; [up, left, down, right]: aux_seq=[0,1,2,3]</span>
+<span class="sd">         2</span>
+<span class="sd">        </span>
+<span class="sd">        for alternative order, eg.</span>
+<span class="sd">        </span>
+<span class="sd">         1</span>
+<span class="sd">        0A2 &lt;=&gt; [left, up, right, down]: aux_seq=[1,0,3,2] </span>
+<span class="sd">         3</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">dtype</span><span class="o">=</span> <span class="n">global_args</span><span class="o">.</span><span class="n">torch_dtype</span>
+    <span class="n">asq</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="o">+</span><span class="mi">1</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">aux_seq</span><span class="p">]</span>
+    <span class="n">sites</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">()</span>
+    
+    <span class="n">raw_state</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">json_str</span><span class="p">)</span>
+
+    <span class="c1"># check for presence of &quot;aux_seq&quot; field in jsonfile</span>
+    <span class="k">if</span> <span class="s2">&quot;aux_ind_seq&quot;</span> <span class="ow">in</span> <span class="n">raw_state</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+        <span class="n">asq</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="o">+</span><span class="mi">1</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">raw_state</span><span class="p">[</span><span class="s2">&quot;aux_ind_seq&quot;</span><span class="p">]]</span>
+
+    <span class="c1"># read the list of considered SU(2)-symmetric tensors</span>
+    <span class="n">ten_list_key</span><span class="o">=</span><span class="s2">&quot;sym_tensors&quot;</span>
+    <span class="k">if</span> <span class="s2">&quot;elem_tensors&quot;</span> <span class="ow">in</span> <span class="n">raw_state</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span> 
+        <span class="n">ten_list_key</span><span class="o">=</span> <span class="s2">&quot;elem_tensors&quot;</span>
+    <span class="k">elif</span> <span class="s2">&quot;su2_tensors&quot;</span> <span class="ow">in</span> <span class="n">raw_state</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span> 
+        <span class="n">ten_list_key</span><span class="o">=</span> <span class="s2">&quot;su2_tensors&quot;</span>
+    <span class="n">elem_tensors</span><span class="o">=</span><span class="p">[]</span>
+    <span class="k">for</span> <span class="n">symt</span> <span class="ow">in</span> <span class="n">raw_state</span><span class="p">[</span><span class="n">ten_list_key</span><span class="p">]:</span>
+        <span class="n">loc_dtype</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">float64</span> <span class="c1"># assume float64 by default </span>
+        <span class="k">if</span> <span class="s2">&quot;dtype&quot;</span> <span class="ow">in</span> <span class="n">symt</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">if</span> <span class="s2">&quot;complex128&quot;</span><span class="o">==</span><span class="n">symt</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">]:</span>
+                <span class="n">loc_dtype</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">complex128</span>  
+            <span class="k">elif</span> <span class="s2">&quot;float64&quot;</span><span class="o">==</span><span class="n">symt</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">]:</span>
+                <span class="n">loc_dtype</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">float64</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;Invalid dtype: &quot;</span><span class="o">+</span><span class="n">symt</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">])</span>
+        <span class="c1"># NOTE elementary tensors are real, yet the final on-site tensor might be complex</span>
+        <span class="c1"># assert loc_dtype==dtype, &quot;dtypes do not match - iPEPS &quot;\</span>
+        <span class="c1">#     +str(dtype)+&quot; vs elementary tensor &quot;+str(loc_dtype)</span>
+
+        <span class="n">meta</span><span class="o">=</span><span class="nb">dict</span><span class="p">({</span><span class="s2">&quot;meta&quot;</span><span class="p">:</span> <span class="n">symt</span><span class="p">[</span><span class="s2">&quot;meta&quot;</span><span class="p">]})</span>
+        <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="n">symt</span><span class="p">[</span><span class="s2">&quot;physDim&quot;</span><span class="p">]]</span><span class="o">+</span><span class="p">[</span><span class="n">symt</span><span class="p">[</span><span class="s2">&quot;auxDim&quot;</span><span class="p">]]</span><span class="o">*</span><span class="mi">4</span>
+        
+        <span class="n">t</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">dims</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">loc_dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">global_args</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">t</span><span class="o">.</span><span class="n">is_complex</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="n">symt</span><span class="p">[</span><span class="s2">&quot;entries&quot;</span><span class="p">]:</span>
+                <span class="n">tokens</span><span class="o">=</span> <span class="n">elem</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)</span>
+                <span class="n">inds</span><span class="o">=</span><span class="nb">tuple</span><span class="p">([</span><span class="nb">int</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">tokens</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">5</span><span class="p">]])</span>
+                <span class="n">t</span><span class="p">[</span><span class="n">inds</span><span class="p">]</span><span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">tokens</span><span class="p">[</span><span class="mi">5</span><span class="p">])</span> <span class="o">+</span> <span class="p">(</span><span class="mf">0.</span><span class="o">+</span><span class="mf">1.</span><span class="n">j</span><span class="p">)</span><span class="o">*</span><span class="nb">float</span><span class="p">(</span><span class="n">tokens</span><span class="p">[</span><span class="mi">6</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="n">symt</span><span class="p">[</span><span class="s2">&quot;entries&quot;</span><span class="p">]:</span>
+                <span class="n">tokens</span><span class="o">=</span> <span class="n">elem</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)</span>
+                <span class="n">inds</span><span class="o">=</span><span class="nb">tuple</span><span class="p">([</span><span class="nb">int</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">tokens</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">5</span><span class="p">]])</span>
+                <span class="n">t</span><span class="p">[</span><span class="n">inds</span><span class="p">]</span><span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">tokens</span><span class="p">[</span><span class="mi">5</span><span class="p">])</span>
+
+        <span class="n">elem_tensors</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">meta</span><span class="p">,</span><span class="n">t</span><span class="p">))</span>
+
+    <span class="c1"># Loop over non-equivalent tensor,coeffs pairs in the unit cell</span>
+    <span class="n">coeffs</span><span class="o">=</span><span class="n">OrderedDict</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">ts</span> <span class="ow">in</span> <span class="n">raw_state</span><span class="p">[</span><span class="s2">&quot;map&quot;</span><span class="p">]:</span>
+        <span class="n">coord</span> <span class="o">=</span> <span class="p">(</span><span class="n">ts</span><span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">],</span><span class="n">ts</span><span class="p">[</span><span class="s2">&quot;y&quot;</span><span class="p">])</span>
+
+        <span class="c1"># find the corresponding tensor of coeffs (and its elements) </span>
+        <span class="c1"># identified by &quot;siteId&quot; in the &quot;sites&quot; list</span>
+        <span class="n">t</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">raw_state</span><span class="p">[</span><span class="s2">&quot;coeffs&quot;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">s</span><span class="p">[</span><span class="s2">&quot;siteId&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">ts</span><span class="p">[</span><span class="s2">&quot;siteId&quot;</span><span class="p">]:</span>
+                <span class="n">t</span> <span class="o">=</span> <span class="n">s</span>
+        <span class="k">if</span> <span class="n">t</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Tensor with siteId: &quot;</span><span class="o">+</span><span class="n">ts</span><span class="p">[</span><span class="s2">&quot;sideId&quot;</span><span class="p">]</span><span class="o">+</span><span class="s2">&quot; NOT FOUND in </span><span class="se">\&quot;</span><span class="s2">sites</span><span class="se">\&quot;</span><span class="s2">&quot;</span><span class="p">)</span> 
+
+        <span class="n">loc_dtype</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">float64</span>
+        <span class="k">if</span> <span class="s2">&quot;dtype&quot;</span> <span class="ow">in</span> <span class="n">t</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">if</span> <span class="s2">&quot;complex128&quot;</span><span class="o">==</span><span class="n">t</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">]:</span>
+                <span class="n">loc_dtype</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">complex128</span>  
+            <span class="k">elif</span> <span class="s2">&quot;float64&quot;</span><span class="o">==</span><span class="n">t</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">]:</span>
+                <span class="n">loc_dtype</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">float64</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;Invalid dtype: &quot;</span><span class="o">+</span><span class="n">t</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">])</span>
+        <span class="c1"># NOTE coeff tensors are real, yet the final on-site tensor might be complex</span>
+        <span class="c1">#      i.e. A_1 + i * A_2 ansatz</span>
+        <span class="c1"># assert loc_dtype==dtype, &quot;dtypes do not match - iPEPS &quot;\</span>
+        <span class="c1">#     +str(dtype)+&quot; vs elementary tensor &quot;+str(loc_dtype)</span>
+
+        <span class="n">X</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="s2">&quot;numEntries&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">loc_dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">global_args</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+
+        <span class="c1"># 1) fill the tensor with elements from the list &quot;entries&quot;</span>
+        <span class="c1"># which list the coefficients in the following</span>
+        <span class="c1"># notation: Dimensions are indexed starting from 0</span>
+        <span class="c1">#</span>
+        <span class="c1"># index (integer) of coeff, (float) Re, Im</span>
+        <span class="k">if</span> <span class="n">X</span><span class="o">.</span><span class="n">is_complex</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">t</span><span class="p">[</span><span class="s2">&quot;entries&quot;</span><span class="p">]:</span>
+                <span class="n">tokens</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+                <span class="n">X</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">tokens</span><span class="p">[</span><span class="mi">0</span><span class="p">])]</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">tokens</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span> <span class="p">(</span><span class="mf">0.</span><span class="o">+</span><span class="mf">1.</span><span class="n">j</span><span class="p">)</span><span class="o">*</span><span class="nb">float</span><span class="p">(</span><span class="n">tokens</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> 
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">t</span><span class="p">[</span><span class="s2">&quot;entries&quot;</span><span class="p">]:</span>
+                <span class="n">tokens</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+                <span class="n">X</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">tokens</span><span class="p">[</span><span class="mi">0</span><span class="p">])]</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">tokens</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+
+        <span class="n">coeffs</span><span class="p">[</span><span class="n">coord</span><span class="p">]</span><span class="o">=</span><span class="n">X</span>
+
+    <span class="n">state</span> <span class="o">=</span> <span class="n">IPEPS_LC_1SITE_PG</span><span class="p">(</span><span class="n">elem_tensors</span><span class="o">=</span><span class="n">elem_tensors</span><span class="p">,</span> <span class="n">coeffs</span><span class="o">=</span><span class="n">coeffs</span><span class="p">,</span> \
+        <span class="n">peps_args</span><span class="o">=</span><span class="n">peps_args</span><span class="p">,</span> <span class="n">global_args</span><span class="o">=</span><span class="n">global_args</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">state</span></div>
+
+<div class="viewcode-block" id="write_ipeps_lc_1site_pg"><a class="viewcode-back" href="../../ipeps/ipeps_lc_1site_pg.html#ipeps.ipeps_lc.write_ipeps_lc_1site_pg">[docs]</a><span class="k">def</span> <span class="nf">write_ipeps_lc_1site_pg</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">outputfile</span><span class="p">,</span> <span class="n">aux_seq</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1.0e-14</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    :param state: wavefunction to write out in json format</span>
+<span class="sd">    :param outputfile: target file</span>
+<span class="sd">    :param aux_seq: array specifying order in which the auxiliary indices of on-site tensors </span>
+<span class="sd">                    will be stored in the `outputfile`</span>
+<span class="sd">    :param tol: minimum magnitude of tensor elements which are written out</span>
+<span class="sd">    :param normalize: if True, on-site tensors are normalized before writing</span>
+<span class="sd">    :type state: IPEPS_LC_1SITE_PG</span>
+<span class="sd">    :type ouputfile: str or Path object</span>
+<span class="sd">    :type aux_seq: list[int]</span>
+<span class="sd">    :type tol: float</span>
+<span class="sd">    :type normalize: bool</span>
+
+<span class="sd">    Parameter ``aux_seq`` defines the order of auxiliary indices relative to the convention </span>
+<span class="sd">    fixed in tn-torch in which the tensor elements are written out::</span>
+<span class="sd">    </span>
+<span class="sd">         0</span>
+<span class="sd">        1A3 &lt;=&gt; [up, left, down, right]: aux_seq=[0,1,2,3]</span>
+<span class="sd">         2</span>
+<span class="sd">        </span>
+<span class="sd">        for alternative order, eg.</span>
+<span class="sd">        </span>
+<span class="sd">         1</span>
+<span class="sd">        0A2 &lt;=&gt; [left, up, right, down]: aux_seq=[1,0,3,2] </span>
+<span class="sd">         3</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># TODO drop constrain for aux bond dimension to be identical on </span>
+    <span class="c1"># all bond indices</span>
+    <span class="c1"># TODO implement cutoff on elements with magnitude below tol</span>
+    <span class="n">asq</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="o">+</span><span class="mi">1</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">aux_seq</span><span class="p">]</span>
+    <span class="n">json_state</span><span class="o">=</span><span class="nb">dict</span><span class="p">({</span><span class="s2">&quot;lX&quot;</span><span class="p">:</span> <span class="n">state</span><span class="o">.</span><span class="n">lX</span><span class="p">,</span> <span class="s2">&quot;lY&quot;</span><span class="p">:</span> <span class="n">state</span><span class="o">.</span><span class="n">lY</span><span class="p">,</span> <span class="s2">&quot;elem_tensors&quot;</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">&quot;coeffs&quot;</span><span class="p">:</span> <span class="p">[]})</span>
+    
+    <span class="c1"># write list of considered elementary tensors</span>
+    <span class="k">for</span> <span class="n">meta</span><span class="p">,</span><span class="n">t</span> <span class="ow">in</span> <span class="n">state</span><span class="o">.</span><span class="n">elem_tensors</span><span class="p">:</span>
+        <span class="n">json_tensor</span><span class="o">=</span><span class="nb">dict</span><span class="p">()</span>
+        <span class="n">json_tensor</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">]</span><span class="o">=</span><span class="s2">&quot;complex128&quot;</span> <span class="k">if</span> <span class="n">t</span><span class="o">.</span><span class="n">is_complex</span><span class="p">()</span> <span class="k">else</span> <span class="s2">&quot;float64&quot;</span>
+        <span class="n">json_tensor</span><span class="p">[</span><span class="s2">&quot;meta&quot;</span><span class="p">]</span><span class="o">=</span><span class="n">meta</span><span class="p">[</span><span class="s2">&quot;meta&quot;</span><span class="p">]</span>
+
+        <span class="n">tdims</span> <span class="o">=</span> <span class="n">t</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+        <span class="n">tlength</span> <span class="o">=</span> <span class="n">tdims</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="n">tdims</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="n">tdims</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">*</span><span class="n">tdims</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="o">*</span><span class="n">tdims</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span>
+        <span class="n">json_tensor</span><span class="p">[</span><span class="s2">&quot;physDim&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">tdims</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="c1"># assuming all auxBondDim are identical</span>
+        <span class="n">json_tensor</span><span class="p">[</span><span class="s2">&quot;auxDim&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">tdims</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="c1"># get non-zero elements</span>
+        <span class="n">t_nonzero</span><span class="o">=</span> <span class="n">t</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()</span>
+        <span class="n">json_tensor</span><span class="p">[</span><span class="s2">&quot;numEntries&quot;</span><span class="p">]</span><span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">t_nonzero</span><span class="p">)</span>
+        <span class="n">entries</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="n">t_nonzero</span><span class="p">:</span>
+            <span class="n">ei</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">elem</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
+            <span class="n">entries</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">ei</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">ei</span><span class="p">[</span><span class="n">asq</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">ei</span><span class="p">[</span><span class="n">asq</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">ei</span><span class="p">[</span><span class="n">asq</span><span class="p">[</span><span class="mi">2</span><span class="p">]]</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">ei</span><span class="p">[</span><span class="n">asq</span><span class="p">[</span><span class="mi">3</span><span class="p">]]</span><span class="si">}</span><span class="s2">&quot;</span>\
+                <span class="o">+</span><span class="sa">f</span><span class="s2">&quot; </span><span class="si">{</span><span class="n">t</span><span class="p">[</span><span class="n">ei</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">json_tensor</span><span class="p">[</span><span class="s2">&quot;entries&quot;</span><span class="p">]</span><span class="o">=</span><span class="n">entries</span>
+        <span class="n">json_state</span><span class="p">[</span><span class="s2">&quot;elem_tensors&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">json_tensor</span><span class="p">)</span>
+
+    <span class="n">site_ids</span><span class="o">=</span><span class="p">[]</span>
+    <span class="n">site_map</span><span class="o">=</span><span class="p">[]</span>
+    <span class="k">for</span> <span class="n">nid</span><span class="p">,</span><span class="n">coord</span><span class="p">,</span><span class="n">c</span> <span class="ow">in</span> <span class="p">[(</span><span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="o">*</span><span class="n">t</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">coeffs</span><span class="o">.</span><span class="n">items</span><span class="p">())]:</span>
+        <span class="k">if</span> <span class="n">normalize</span><span class="p">:</span>
+            <span class="n">c</span><span class="o">=</span> <span class="n">c</span><span class="o">/</span><span class="n">torch</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">c</span><span class="p">))</span>
+
+        <span class="n">json_tensor</span><span class="o">=</span><span class="nb">dict</span><span class="p">()</span>
+        
+        <span class="n">tdims</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+        <span class="n">tlength</span> <span class="o">=</span> <span class="n">tdims</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        
+        <span class="n">site_ids</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;A</span><span class="si">{</span><span class="n">nid</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">site_map</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">dict</span><span class="p">({</span><span class="s2">&quot;siteId&quot;</span><span class="p">:</span> <span class="n">site_ids</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="s2">&quot;x&quot;</span><span class="p">:</span> <span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]}</span> <span class="p">))</span>
+        <span class="n">json_tensor</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">]</span><span class="o">=</span><span class="s2">&quot;complex128&quot;</span> <span class="k">if</span> <span class="n">c</span><span class="o">.</span><span class="n">is_complex</span><span class="p">()</span> <span class="k">else</span> <span class="s2">&quot;float64&quot;</span>
+        <span class="n">json_tensor</span><span class="p">[</span><span class="s2">&quot;siteId&quot;</span><span class="p">]</span><span class="o">=</span><span class="n">site_ids</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="c1"># assuming all auxBondDim are identical</span>
+        <span class="n">json_tensor</span><span class="p">[</span><span class="s2">&quot;numEntries&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">tlength</span>
+        <span class="n">entries</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">c</span><span class="p">)):</span>
+            <span class="n">entries</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">c</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            
+        <span class="n">json_tensor</span><span class="p">[</span><span class="s2">&quot;entries&quot;</span><span class="p">]</span><span class="o">=</span><span class="n">entries</span>
+        <span class="n">json_state</span><span class="p">[</span><span class="s2">&quot;coeffs&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">json_tensor</span><span class="p">)</span>
+
+    <span class="n">json_state</span><span class="p">[</span><span class="s2">&quot;siteIds&quot;</span><span class="p">]</span><span class="o">=</span><span class="n">site_ids</span>
+    <span class="n">json_state</span><span class="p">[</span><span class="s2">&quot;map&quot;</span><span class="p">]</span><span class="o">=</span><span class="n">site_map</span>
+
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">outputfile</span><span class="p">,</span><span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">json_state</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">separators</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">,</span> <span class="s1">&#39;: &#39;</span><span class="p">))</span></div>
+
+<span class="c1"># TODO make consistent with class method</span>
+<span class="k">def</span> <span class="nf">load_checkpoint_lc_1site_pg</span><span class="p">(</span><span class="n">checkpoint_file</span><span class="p">,</span> <span class="n">vertexToSite</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">lX</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">lY</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>\
+    <span class="n">peps_args</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">peps_args</span><span class="p">,</span> <span class="n">global_args</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">global_args</span><span class="p">):</span>
+    <span class="n">checkpoint</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">checkpoint_file</span><span class="p">)</span>
+    <span class="n">params</span><span class="o">=</span> <span class="n">checkpoint</span><span class="p">[</span><span class="s2">&quot;parameters&quot;</span><span class="p">]</span>
+    <span class="k">assert</span> <span class="s2">&quot;coeffs&quot;</span> <span class="ow">in</span> <span class="n">params</span><span class="p">,</span><span class="s2">&quot;missing &#39;coeffs&#39; in checkpoint&quot;</span> 
+    <span class="k">assert</span> <span class="s2">&quot;elem_tensors&quot;</span> <span class="ow">in</span> <span class="n">params</span><span class="p">,</span><span class="s2">&quot;missing &#39;elem_tensors&#39; in checkpoint&quot;</span>
+    <span class="k">assert</span> <span class="s2">&quot;pg_irreps&quot;</span> <span class="ow">in</span> <span class="n">params</span><span class="p">,</span><span class="s2">&quot;missing &#39;pg_irreps&#39; in checkpoint&quot;</span>
+    <span class="k">assert</span> <span class="nb">any</span><span class="p">([</span> <span class="n">coeff_t</span><span class="o">.</span><span class="n">numel</span><span class="p">()</span><span class="o">==</span><span class="nb">len</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;elem_tensors&quot;</span><span class="p">])</span> <span class="k">for</span> <span class="n">coeff_t</span> <span class="ow">in</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;coeffs&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">()]),</span>\
+        <span class="s2">&quot;Length of coefficient vectors does not match the set of elementary tensors&quot;</span>
+    <span class="k">assert</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;pg_irreps&quot;</span><span class="p">]</span><span class="o">==</span><span class="nb">set</span><span class="p">([</span><span class="n">m</span><span class="p">[</span><span class="s2">&quot;meta&quot;</span><span class="p">][</span><span class="s2">&quot;pg&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">m</span><span class="p">,</span><span class="n">t</span> <span class="ow">in</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;elem_tensors&quot;</span><span class="p">]]),</span>\
+        <span class="s2">&quot;Expected point groups do not match&quot;</span>
+    <span class="n">state</span><span class="o">=</span> <span class="n">IPEPS_LC_1SITE_PG</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;elem_tensors&quot;</span><span class="p">],</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;coeffs&quot;</span><span class="p">],</span> <span class="n">vertexToSite</span><span class="o">=</span><span class="n">vertexToSite</span><span class="p">,</span>\
+        <span class="n">lX</span><span class="o">=</span><span class="n">lX</span><span class="p">,</span> <span class="n">lY</span><span class="o">=</span><span class="n">lY</span><span class="p">,</span> <span class="n">peps_args</span><span class="o">=</span><span class="n">peps_args</span><span class="p">,</span> <span class="n">global_args</span><span class="o">=</span><span class="n">global_args</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">coeff_t</span> <span class="ow">in</span> <span class="n">state</span><span class="o">.</span><span class="n">coeffs</span><span class="o">.</span><span class="n">values</span><span class="p">():</span> <span class="n">coeff_t</span><span class="o">.</span><span class="n">requires_grad_</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">state</span>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Juraj Hasik, Glen B. Mbeng
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

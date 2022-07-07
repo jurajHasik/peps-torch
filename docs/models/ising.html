@@ -1,0 +1,577 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Transverse Field Ising Model &mdash; peps-torch alpha documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="J1-J2-J3 and J1-J2-lambda Heisenberg Model" href="j1j2.html" />
+    <link rel="prev" title="Coupled Ladders" href="coupledLadders.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> peps-torch
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../ipeps.html">iPEPS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../ipeps/ipeps.html">Generic iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../ipeps/ipeps_kagome.html">Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../ipeps/ipeps_c4v.html">1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../ipeps/ipeps_lc_1site_pg.html">1-site iPEPS from lin. combination</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../ipeps/ipess_kagome.html">Generic Kagome iPESS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../ipeps/ipess_kagome_pg.html">Kagome iPESS with point groups</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../ipeps/ipess_kagome_pg_lc.html">Kagome iPESS from lin. combination</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../ipeps.html#abelian-symmetric-ipeps">Abelian-symmetric iPEPS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../ipeps/ipeps_abelian.html">Generic  abelian-symmetric iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../ipeps/ipeps_abelian.html#generic-abelian-symmetric-ipeps-with-weights">Generic abelian-symmetric iPEPS with weights</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../ipeps/ipeps_kagome_abelian.html">Abelian-symmetric Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../ipeps/ipeps_abelian_c4v.html">Abelian-symmetric 1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../ipeps/ipess_kagome_abelian.html">Abelian-symmetric generic Kagome iPESS</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../envs.html">Environments</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../envs/generic.html">Generic iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic/env.html">Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic/ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic/ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic/ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic/rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic/rdm.html#module-ctm.pess_kagome.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic/corrf.html">Correlation functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic/transfer_matrix.html">Transfer Matrices</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../envs/generic_abelian.html">Abelian-symmetric generic iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic_abelian/env_abelian.html">Abelian-symmetric environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic_abelian/ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic_abelian/ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic_abelian/ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic_abelian/rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic_abelian/rdm.html#module-ctm.pess_kagome_abelian.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../envs/one_site_c4v.html">1-site C4v iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../envs/one_site_c4v/env_c4v.html">1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/one_site_c4v/ctmrg_c4v.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/one_site_c4v/rdm_c4v.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/one_site_c4v/transfer_matrix.html">Transfer Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/one_site_c4v/corrf_c4v.html">Correlation functions</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../envs/one_site_c4v_abelian.html">Abelian-symmetric 1-site C4v iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../envs/one_site_c4v_abelian/env_c4v_abelian.html">Abelian-symmetric 1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/one_site_c4v_abelian/ctmrg_c4v_abelian.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/one_site_c4v_abelian/rdm_c4v_abelian.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/one_site_c4v_abelian/corrf_c4v_abelian.html">Correlation functions</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../optim.html">Optimization</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../optim/drivers.html">Optimization drivers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../optim/drivers/ad_optim.html">ad_optim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../optim/drivers/ad_optim_lbfgs_mod.html">ad_optim_lbfgs_mod</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../optim/drivers/ad_optim_sgd_mod.html">ad_optim_sgd_mod</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../optim/optimizers.html">Custom optimizers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../optim/optimizers/lbfgs_modified.html">Extended LBFGS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../optim/optimizers/sgd_modified.html">SGD with linesearch</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../config.html">Configuration</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../config.html#main">Main</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../config.html#global">Global</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../config.html#corner-transfer-matrix-algorithm">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../config.html#optimization">Optimization</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="reference internal" href="../models.html">Models</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="akltS2.html">Spin S=2 AKLT Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="akltS2.html#module-models.akltS2">2x1 and 2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="akltS2.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="coupledLadders.html">Coupled Ladders</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="coupledLadders.html#dense-pytorch">Dense (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="coupledLadders.html#dense-yast">Dense (YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="coupledLadders.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Transverse Field Ising Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#x1-unit-cell">1x1 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="j1j2.html">J1-J2-J3 and J1-J2-lambda Heisenberg Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="j1j2.html#from-2x1-to-4x2-unit-cell-pytorch">from 2x1 to 4x2 unit cell (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="j1j2.html#from-2x1-to-4x2-unit-cell-dense-yast">from 2x1 to 4x2 unit cell (dense YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="j1j2.html#x1-c4v-pytorch">1x1 C4v (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="j1j2.html#x1-c4v-dense-yast">1x1 C4v (dense YAST)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="jq.html">J-Q Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="jq.html#module-models.jq">2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jq.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="spin_half_kagome.html">SU(2) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="spin_half_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="spin_half_kagome.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="su3_kagome.html">SU(3) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="su3_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="su3_kagome.html#with-explict-u-1-xu-1-symmetry">With explict U(1)xU(1) symmetry</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../groups.html">Groups</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../groups/pg.html">Point group: square lattice</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../groups/su2.html">SU(2)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../groups/su2.html#module-groups.su2_abelian">SU(2) with explicit U(1) structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../groups/su3.html">SU(3)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../groups/su3.html#su-3-with-explicit-u-1-xu-1-structure">SU(3) with explicit U(1)xU(1) structure</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../linalg.html">Linear Algebra</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../linalg/custom_eig.html">Truncated eigendecomposition</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../linalg/custom_svd.html">Truncated SVD</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../linalg/spec_decomp.html">Spectral decompositions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../linalg/spec_decomp.html#module-linalg.svd_gesdd">SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../linalg/spec_decomp.html#module-linalg.svd_arnoldi">Partial SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../linalg/spec_decomp.html#module-linalg.svd_rsvd">Randomized SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../linalg/spec_decomp.html#module-linalg.eig_sym">Symmetric Eigendecomposition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../linalg/spec_decomp.html#module-linalg.eig_arnoldi">Partial diagonalization</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">peps-torch</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../models.html">Models</a> &raquo;</li>
+        
+      <li>Transverse Field Ising Model</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            
+              <!-- User defined GitHub URL -->
+              <a href="https://github.com/jurajHasik/peps-torch" class="fa fa-github"> Edit on GitHub</a>
+            
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <section id="module-models.ising">
+<span id="transverse-field-ising-model"></span><h1>Transverse Field Ising Model<a class="headerlink" href="#module-models.ising" title="Permalink to this heading">¶</a></h1>
+<section id="x1-unit-cell">
+<h2>1x1 unit cell<a class="headerlink" href="#x1-unit-cell" title="Permalink to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="models.ising.ISING">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">models.ising.</span></span><span class="sig-name descname"><span class="pre">ISING</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">hx=0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">q=0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">global_args=&lt;config.GLOBALARGS</span> <span class="pre">object&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/models/ising.html#ISING"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#models.ising.ISING" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>hx</strong> (<em>float</em>) – transverse field</p></li>
+<li><p><strong>q</strong> (<em>float</em>) – plaquette interaction</p></li>
+<li><p><strong>global_args</strong> (<a class="reference internal" href="../config.html#config.GLOBALARGS" title="config.GLOBALARGS"><em>GLOBALARGS</em></a>) – global configuration</p></li>
+</ul>
+</dd>
+</dl>
+<p>Build Ising Hamiltonian in transverse field with plaquette interaction</p>
+<div class="math notranslate nohighlight">
+\[H = - \sum_{&lt;i,j&gt;} h2_{&lt;i,j&gt;} + q\sum_{p} h4_p - h_x\sum_i h1_i\]</div>
+<p>on the square lattice. Where the first sum runs over the pairs of sites <cite>i,j</cite>
+which are nearest-neighbours (denoted as <cite>&lt;.,.&gt;</cite>), the second sum runs over
+all plaquettes <cite>p</cite>, and the last sum runs over all sites:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">y</span>\<span class="n">x</span>
+   <span class="n">_</span><span class="p">:</span><span class="n">__</span><span class="p">:</span><span class="n">__</span><span class="p">:</span><span class="n">__</span><span class="p">:</span><span class="n">_</span>
+<span class="o">...</span><span class="n">_</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">_</span><span class="o">...</span>
+<span class="o">...</span><span class="n">_</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">_</span><span class="o">...</span>
+<span class="o">...</span><span class="n">_</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">_</span><span class="o">...</span>
+<span class="o">...</span><span class="n">_</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">_</span><span class="o">...</span>
+<span class="o">...</span><span class="n">_</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">_</span><span class="o">...</span>
+    <span class="p">:</span>  <span class="p">:</span>  <span class="p">:</span>  <span class="p">:</span>
+</pre></div>
+</div>
+<p>where</p>
+<ul>
+<li><p><span class="math notranslate nohighlight">\(h2_{ij} = 4S^z_i S^z_j\)</span> with indices of h2 corresponding to <span class="math notranslate nohighlight">\(s_i s_j;s'_i s'_j\)</span></p></li>
+<li><p><span class="math notranslate nohighlight">\(h4_p  = 16S^z_i S^z_j S^z_k S^z_l\)</span> where <cite>i,j,k,l</cite> labels the sites of a plaquette:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">p</span><span class="o">=</span> <span class="n">i</span><span class="o">---</span><span class="n">j</span>
+   <span class="o">|</span>   <span class="o">|</span>
+   <span class="n">k</span><span class="o">---</span><span class="n">l</span>
+</pre></div>
+</div>
+<p>and the indices of <cite>h4</cite> correspond to <span class="math notranslate nohighlight">\(s_is_js_ks_l;s'_is'_js'_ks'_l\)</span></p>
+</li>
+<li><p><span class="math notranslate nohighlight">\(h1_i  = 2S^x_i\)</span></p></li>
+</ul>
+<dl class="py method">
+<dt class="sig sig-object py" id="models.ising.ISING.energy_1x1">
+<span class="sig-name descname"><span class="pre">energy_1x1</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/models/ising.html#ISING.energy_1x1"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#models.ising.ISING.energy_1x1" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="../ipeps/ipeps.html#ipeps.ipeps.IPEPS" title="ipeps.ipeps.IPEPS"><em>IPEPS</em></a>) – wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="../envs/generic/env.html#ctm.generic.env.ENV" title="ctm.generic.env.ENV"><em>ENV</em></a>) – CTM environment</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>energy per site</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+<p>For 1-site invariant iPEPS it’s enough to construct a single reduced
+density matrix of a 2x2 plaquette. Afterwards, the energy per site <cite>e</cite> is
+computed by evaluating individual terms in the Hamiltonian through
+<span class="math notranslate nohighlight">\(\langle \mathcal{O} \rangle = Tr(\rho_{2x2} \mathcal{O})\)</span></p>
+<div class="math notranslate nohighlight">
+\[e = -(\langle h2_{&lt;\bf{0},\bf{x}&gt;} \rangle + \langle h2_{&lt;\bf{0},\bf{y}&gt;} \rangle)
++ q\langle h4_{\bf{0}} \rangle - h_x \langle h4_{\bf{0}} \rangle\]</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="models.ising.ISING.eval_obs">
+<span class="sig-name descname"><span class="pre">eval_obs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/models/ising.html#ISING.eval_obs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#models.ising.ISING.eval_obs" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="../ipeps/ipeps.html#ipeps.ipeps.IPEPS" title="ipeps.ipeps.IPEPS"><em>IPEPS</em></a>) – wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="../envs/generic/env.html#ctm.generic.env.ENV" title="ctm.generic.env.ENV"><em>ENV</em></a>) – CTM environment</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>expectation values of observables, labels of observables</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[float], list[str]</p>
+</dd>
+</dl>
+<p>Computes the following observables in order</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p><span class="math notranslate nohighlight">\(\langle 2S^z \rangle,\ \langle 2S^x \rangle\)</span> for each site in the unit cell</p></li>
+</ol>
+</div></blockquote>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="x1-c4v">
+<h2>1x1 C4v<a class="headerlink" href="#x1-c4v" title="Permalink to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="models.ising.ISING_C4V">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">models.ising.</span></span><span class="sig-name descname"><span class="pre">ISING_C4V</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">hx=0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">q=0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">global_args=&lt;config.GLOBALARGS</span> <span class="pre">object&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/models/ising.html#ISING_C4V"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#models.ising.ISING_C4V" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>hx</strong> (<em>float</em>) – transverse field</p></li>
+<li><p><strong>q</strong> (<em>float</em>) – plaquette interaction</p></li>
+<li><p><strong>global_args</strong> (<a class="reference internal" href="../config.html#config.GLOBALARGS" title="config.GLOBALARGS"><em>GLOBALARGS</em></a>) – global configuration</p></li>
+</ul>
+</dd>
+</dl>
+<p>Build Ising Hamiltonian in transverse field with plaquette interaction</p>
+<div class="math notranslate nohighlight">
+\[H = - \sum_{&lt;i,j&gt;} h2_{&lt;i,j&gt;} + q\sum_{p} h4_p - h_x\sum_i h1_i\]</div>
+<p>on the square lattice. Where the first sum runs over the pairs of sites <cite>i,j</cite>
+which are nearest-neighbours (denoted as <cite>&lt;.,.&gt;</cite>), the second sum runs over
+all plaquettes <cite>p</cite>, and the last sum runs over all sites:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">y</span>\<span class="n">x</span>
+   <span class="n">_</span><span class="p">:</span><span class="n">__</span><span class="p">:</span><span class="n">__</span><span class="p">:</span><span class="n">__</span><span class="p">:</span><span class="n">_</span>
+<span class="o">...</span><span class="n">_</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">_</span><span class="o">...</span>
+<span class="o">...</span><span class="n">_</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">_</span><span class="o">...</span>
+<span class="o">...</span><span class="n">_</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">_</span><span class="o">...</span>
+<span class="o">...</span><span class="n">_</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">_</span><span class="o">...</span>
+<span class="o">...</span><span class="n">_</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">__</span><span class="o">|</span><span class="n">_</span><span class="o">...</span>
+    <span class="p">:</span>  <span class="p">:</span>  <span class="p">:</span>  <span class="p">:</span>
+</pre></div>
+</div>
+<p>where</p>
+<ul>
+<li><p><span class="math notranslate nohighlight">\(h2_{ij} = 4S^z_i S^z_j\)</span> with indices of h2 corresponding to <span class="math notranslate nohighlight">\(s_i s_j;s'_i s'_j\)</span></p></li>
+<li><p><span class="math notranslate nohighlight">\(h4_p  = 16S^z_i S^z_j S^z_k S^z_l\)</span> where <cite>i,j,k,l</cite> labels the sites of a plaquette:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">p</span><span class="o">=</span> <span class="n">i</span><span class="o">---</span><span class="n">j</span>
+   <span class="o">|</span>   <span class="o">|</span>
+   <span class="n">k</span><span class="o">---</span><span class="n">l</span>
+</pre></div>
+</div>
+<p>and the indices of <cite>h4</cite> correspond to <span class="math notranslate nohighlight">\(s_is_js_ks_l;s'_is'_js'_ks'_l\)</span></p>
+</li>
+<li><p><span class="math notranslate nohighlight">\(h1_i  = 2S^x_i\)</span></p></li>
+</ul>
+<dl class="py method">
+<dt class="sig sig-object py" id="models.ising.ISING_C4V.energy_1x1_nn">
+<span class="sig-name descname"><span class="pre">energy_1x1_nn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env_c4v</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/models/ising.html#ISING_C4V.energy_1x1_nn"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#models.ising.ISING_C4V.energy_1x1_nn" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="../ipeps/ipeps.html#ipeps.ipeps.IPEPS" title="ipeps.ipeps.IPEPS"><em>IPEPS</em></a>) – wavefunction</p></li>
+<li><p><strong>env_c4v</strong> (<a class="reference internal" href="../envs/one_site_c4v/env_c4v.html#ctm.one_site_c4v.env_c4v.ENV_C4V" title="ctm.one_site_c4v.env_c4v.ENV_C4V"><em>ENV_C4V</em></a>) – CTM c4v symmetric environment</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>energy per site</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+<p>For 1-site invariant c4v iPEPS with no 4-site term present in Hamiltonian it is enough
+to construct a single reduced density matrix of a 2x1 nearest-neighbour sites.
+Afterwards, the energy per site <cite>e</cite> is computed by evaluating individual terms
+in the Hamiltonian through <span class="math notranslate nohighlight">\(\langle \mathcal{O} \rangle = Tr(\rho_{2x1} \mathcal{O})\)</span></p>
+<div class="math notranslate nohighlight">
+\[e = -\langle h2_{&lt;\bf{0},\bf{x}&gt;} \rangle - h_x \langle h1_{\bf{0}} \rangle\]</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="models.ising.ISING_C4V.energy_1x1_plaqette">
+<span class="sig-name descname"><span class="pre">energy_1x1_plaqette</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env_c4v</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/models/ising.html#ISING_C4V.energy_1x1_plaqette"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#models.ising.ISING_C4V.energy_1x1_plaqette" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="../ipeps/ipeps.html#ipeps.ipeps.IPEPS" title="ipeps.ipeps.IPEPS"><em>IPEPS</em></a>) – wavefunction</p></li>
+<li><p><strong>env_c4v</strong> (<a class="reference internal" href="../envs/one_site_c4v/env_c4v.html#ctm.one_site_c4v.env_c4v.ENV_C4V" title="ctm.one_site_c4v.env_c4v.ENV_C4V"><em>ENV_C4V</em></a>) – CTM c4v symmetric environment</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>energy per site</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+<p>For 1-site invariant c4v iPEPS it’s enough to construct a single reduced
+density matrix of a 2x2 plaquette. Afterwards, the energy per site <cite>e</cite> is
+computed by evaluating individual terms in the Hamiltonian through
+<span class="math notranslate nohighlight">\(\langle \mathcal{O} \rangle = Tr(\rho_{2x2} \mathcal{O})\)</span></p>
+<div class="math notranslate nohighlight">
+\[e = -(\langle h2_{&lt;\bf{0},\bf{x}&gt;} \rangle + \langle h2_{&lt;\bf{0},\bf{y}&gt;} \rangle)
++ q\langle h4_{\bf{0}} \rangle - h_x \langle h4_{\bf{0}} \rangle\]</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="models.ising.ISING_C4V.eval_obs">
+<span class="sig-name descname"><span class="pre">eval_obs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env_c4v</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/models/ising.html#ISING_C4V.eval_obs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#models.ising.ISING_C4V.eval_obs" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="../ipeps/ipeps.html#ipeps.ipeps.IPEPS" title="ipeps.ipeps.IPEPS"><em>IPEPS</em></a>) – wavefunction</p></li>
+<li><p><strong>env_c4v</strong> (<a class="reference internal" href="../envs/one_site_c4v/env_c4v.html#ctm.one_site_c4v.env_c4v.ENV_C4V" title="ctm.one_site_c4v.env_c4v.ENV_C4V"><em>ENV_C4V</em></a>) – CTM c4v symmetric environment</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>expectation values of observables, labels of observables</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[float], list[str]</p>
+</dd>
+</dl>
+<p>Computes the following observables in order</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p><span class="math notranslate nohighlight">\(\langle 2S^z \rangle,\ \langle 2S^x \rangle\)</span> for each site in the unit cell</p></li>
+</ol>
+</div></blockquote>
+<p>TODO 2site observable SzSz</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="j1j2.html" class="btn btn-neutral float-right" title="J1-J2-J3 and J1-J2-lambda Heisenberg Model" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="coupledLadders.html" class="btn btn-neutral float-left" title="Coupled Ladders" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Juraj Hasik, Glen B. Mbeng
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

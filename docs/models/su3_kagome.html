@@ -1,0 +1,733 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>SU(3) model on Kagome lattice &mdash; peps-torch alpha documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Groups" href="../groups.html" />
+    <link rel="prev" title="SU(2) model on Kagome lattice" href="spin_half_kagome.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> peps-torch
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../ipeps.html">iPEPS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../ipeps/ipeps.html">Generic iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../ipeps/ipeps_kagome.html">Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../ipeps/ipeps_c4v.html">1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../ipeps/ipeps_lc_1site_pg.html">1-site iPEPS from lin. combination</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../ipeps/ipess_kagome.html">Generic Kagome iPESS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../ipeps/ipess_kagome_pg.html">Kagome iPESS with point groups</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../ipeps/ipess_kagome_pg_lc.html">Kagome iPESS from lin. combination</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../ipeps.html#abelian-symmetric-ipeps">Abelian-symmetric iPEPS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../ipeps/ipeps_abelian.html">Generic  abelian-symmetric iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../ipeps/ipeps_abelian.html#generic-abelian-symmetric-ipeps-with-weights">Generic abelian-symmetric iPEPS with weights</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../ipeps/ipeps_kagome_abelian.html">Abelian-symmetric Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../ipeps/ipeps_abelian_c4v.html">Abelian-symmetric 1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../ipeps/ipess_kagome_abelian.html">Abelian-symmetric generic Kagome iPESS</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../envs.html">Environments</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../envs/generic.html">Generic iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic/env.html">Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic/ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic/ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic/ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic/rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic/rdm.html#module-ctm.pess_kagome.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic/corrf.html">Correlation functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic/transfer_matrix.html">Transfer Matrices</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../envs/generic_abelian.html">Abelian-symmetric generic iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic_abelian/env_abelian.html">Abelian-symmetric environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic_abelian/ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic_abelian/ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic_abelian/ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic_abelian/rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic_abelian/rdm.html#module-ctm.pess_kagome_abelian.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../envs/one_site_c4v.html">1-site C4v iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../envs/one_site_c4v/env_c4v.html">1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/one_site_c4v/ctmrg_c4v.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/one_site_c4v/rdm_c4v.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/one_site_c4v/transfer_matrix.html">Transfer Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/one_site_c4v/corrf_c4v.html">Correlation functions</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../envs/one_site_c4v_abelian.html">Abelian-symmetric 1-site C4v iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../envs/one_site_c4v_abelian/env_c4v_abelian.html">Abelian-symmetric 1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/one_site_c4v_abelian/ctmrg_c4v_abelian.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/one_site_c4v_abelian/rdm_c4v_abelian.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/one_site_c4v_abelian/corrf_c4v_abelian.html">Correlation functions</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../optim.html">Optimization</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../optim/drivers.html">Optimization drivers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../optim/drivers/ad_optim.html">ad_optim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../optim/drivers/ad_optim_lbfgs_mod.html">ad_optim_lbfgs_mod</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../optim/drivers/ad_optim_sgd_mod.html">ad_optim_sgd_mod</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../optim/optimizers.html">Custom optimizers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../optim/optimizers/lbfgs_modified.html">Extended LBFGS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../optim/optimizers/sgd_modified.html">SGD with linesearch</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../config.html">Configuration</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../config.html#main">Main</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../config.html#global">Global</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../config.html#corner-transfer-matrix-algorithm">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../config.html#optimization">Optimization</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="reference internal" href="../models.html">Models</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="akltS2.html">Spin S=2 AKLT Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="akltS2.html#module-models.akltS2">2x1 and 2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="akltS2.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="coupledLadders.html">Coupled Ladders</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="coupledLadders.html#dense-pytorch">Dense (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="coupledLadders.html#dense-yast">Dense (YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="coupledLadders.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="ising.html">Transverse Field Ising Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="ising.html#x1-unit-cell">1x1 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ising.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="j1j2.html">J1-J2-J3 and J1-J2-lambda Heisenberg Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="j1j2.html#from-2x1-to-4x2-unit-cell-pytorch">from 2x1 to 4x2 unit cell (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="j1j2.html#from-2x1-to-4x2-unit-cell-dense-yast">from 2x1 to 4x2 unit cell (dense YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="j1j2.html#x1-c4v-pytorch">1x1 C4v (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="j1j2.html#x1-c4v-dense-yast">1x1 C4v (dense YAST)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="jq.html">J-Q Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="jq.html#module-models.jq">2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jq.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="spin_half_kagome.html">SU(2) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="spin_half_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="spin_half_kagome.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">SU(3) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#with-explict-u-1-xu-1-symmetry">With explict U(1)xU(1) symmetry</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../groups.html">Groups</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../groups/pg.html">Point group: square lattice</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../groups/su2.html">SU(2)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../groups/su2.html#module-groups.su2_abelian">SU(2) with explicit U(1) structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../groups/su3.html">SU(3)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../groups/su3.html#su-3-with-explicit-u-1-xu-1-structure">SU(3) with explicit U(1)xU(1) structure</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../linalg.html">Linear Algebra</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../linalg/custom_eig.html">Truncated eigendecomposition</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../linalg/custom_svd.html">Truncated SVD</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../linalg/spec_decomp.html">Spectral decompositions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../linalg/spec_decomp.html#module-linalg.svd_gesdd">SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../linalg/spec_decomp.html#module-linalg.svd_arnoldi">Partial SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../linalg/spec_decomp.html#module-linalg.svd_rsvd">Randomized SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../linalg/spec_decomp.html#module-linalg.eig_sym">Symmetric Eigendecomposition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../linalg/spec_decomp.html#module-linalg.eig_arnoldi">Partial diagonalization</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">peps-torch</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../models.html">Models</a> &raquo;</li>
+        
+      <li>SU(3) model on Kagome lattice</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            
+              <!-- User defined GitHub URL -->
+              <a href="https://github.com/jurajHasik/peps-torch" class="fa fa-github"> Edit on GitHub</a>
+            
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <section id="su-3-model-on-kagome-lattice">
+<h1>SU(3) model on Kagome lattice<a class="headerlink" href="#su-3-model-on-kagome-lattice" title="Permalink to this heading">¶</a></h1>
+<section id="dense">
+<h2>Dense<a class="headerlink" href="#dense" title="Permalink to this heading">¶</a></h2>
+<p>This implementation of SU(3)-symmetric model on Kagome lattice does
+not assume any symmetry and hence works with dense tensors.</p>
+<span class="target" id="module-models.su3_kagome"></span><dl class="py class">
+<dt class="sig sig-object py" id="models.su3_kagome.KAGOME_SU3">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">models.su3_kagome.</span></span><span class="sig-name descname"><span class="pre">KAGOME_SU3</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">phys_dim=3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">j=0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">k=1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h=0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">global_args=&lt;config.GLOBALARGS</span> <span class="pre">object&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/models/su3_kagome.html#KAGOME_SU3"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#models.su3_kagome.KAGOME_SU3" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>j</strong> (<em>int</em>) – nearest-neighbour pairing</p></li>
+<li><p><strong>k</strong> (<em>float</em>) – real part of triangle exchange</p></li>
+<li><p><strong>h</strong> (<em>float</em>) – imaginary part of triangle exchange</p></li>
+<li><p><strong>global_args</strong> (<a class="reference internal" href="../config.html#config.GLOBALARGS" title="config.GLOBALARGS"><em>GLOBALARGS</em></a>) – global configuration</p></li>
+</ul>
+</dd>
+</dl>
+<p>The SU(3) Hamiltonian on Kagome lattice</p>
+<div class="math notranslate nohighlight">
+\[H = J \sum_{\langle ij \rangle} P_{ij}
++ K \sum_{t_{up},t_{down}} (P_{ijk} + P^{-1}_{ijk})
++ ih \sum_{t_{up},t_{down}} (P_{ijk} - P^{-1}_{ijk})\]</div>
+<p>or in parametrization through angles</p>
+<div class="math notranslate nohighlight">
+\[H = cos \phi \sum_{\langle ij \rangle} P_{ij}
+    + sin \phi \sum_{t_{up},t_{down}} exp(i\theta) P_{ijk} + exp(-i\theta)P^{-1}_{ijk}\]</div>
+<p>where <span class="math notranslate nohighlight">\(J = cos \phi,\ K = sin \phi cos \theta,\ h= sin \phi sin \theta\)</span>.
+The <span class="math notranslate nohighlight">\(\phi= 0.5\pi\)</span> and <span class="math notranslate nohighlight">\(\theta=0\)</span> corresponds to the AKLT point.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="models.su3_kagome.KAGOME_SU3.energy_1site">
+<span class="sig-name descname"><span class="pre">energy_1site</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/models/su3_kagome.html#KAGOME_SU3.energy_1site"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#models.su3_kagome.KAGOME_SU3.energy_1site" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="../ipeps/ipeps_kagome.html#ipeps.ipeps_kagome.IPEPS_KAGOME" title="ipeps.ipeps_kagome.IPEPS_KAGOME"><em>IPEPS_KAGOME</em></a>) – wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="../envs/generic/env.html#ctm.generic.env.ENV" title="ctm.generic.env.ENV"><em>ENV</em></a>) – CTM environment</p></li>
+<li><p><strong>force_cpu</strong> (<em>bool</em>) – perform computation on CPU</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>energy per site</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+<p>Evaluate energy per site from contributions from down triangle within 1x1 subsystem embedded in environment,
+and from upper triangle embedded in 2x2 environment. See <a class="reference internal" href="../envs/generic/rdm.html#ctm.pess_kagome.rdm_kagome.trace1x1_dn_kagome" title="ctm.pess_kagome.rdm_kagome.trace1x1_dn_kagome"><code class="xref py py-meth docutils literal notranslate"><span class="pre">ctm.pess_kagome.rdm_kagome.trace1x1_dn_kagome()</span></code></a> and
+<a class="reference internal" href="../envs/generic/rdm.html#ctm.pess_kagome.rdm_kagome.rdm2x2_kagome" title="ctm.pess_kagome.rdm_kagome.rdm2x2_kagome"><code class="xref py py-meth docutils literal notranslate"><span class="pre">ctm.pess_kagome.rdm_kagome.rdm2x2_kagome()</span></code></a> respectively.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="models.su3_kagome.KAGOME_SU3.energy_down_t_1x1subsystem">
+<span class="sig-name descname"><span class="pre">energy_down_t_1x1subsystem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_cpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fail_on_check</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">warn_on_check</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/models/su3_kagome.html#KAGOME_SU3.energy_down_t_1x1subsystem"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#models.su3_kagome.KAGOME_SU3.energy_down_t_1x1subsystem" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="../ipeps/ipeps_kagome.html#ipeps.ipeps_kagome.IPEPS_KAGOME" title="ipeps.ipeps_kagome.IPEPS_KAGOME"><em>IPEPS_KAGOME</em></a>) – wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="../envs/generic/env.html#ctm.generic.env.ENV" title="ctm.generic.env.ENV"><em>ENV</em></a>) – CTM environment</p></li>
+<li><p><strong>force_cpu</strong> (<em>bool</em>) – perform computation on CPU</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>energy per site</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+<p>Evaluate energy contribution from down triangle within 1x1 subsystem embedded in environment,
+see <a class="reference internal" href="../envs/generic/rdm.html#ctm.pess_kagome.rdm_kagome.trace1x1_dn_kagome" title="ctm.pess_kagome.rdm_kagome.trace1x1_dn_kagome"><code class="xref py py-meth docutils literal notranslate"><span class="pre">ctm.pess_kagome.rdm_kagome.trace1x1_dn_kagome()</span></code></a>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="models.su3_kagome.KAGOME_SU3.energy_per_site_2x2subsystem">
+<span class="sig-name descname"><span class="pre">energy_per_site_2x2subsystem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_cpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/models/su3_kagome.html#KAGOME_SU3.energy_per_site_2x2subsystem"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#models.su3_kagome.KAGOME_SU3.energy_per_site_2x2subsystem" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="../ipeps/ipeps_kagome.html#ipeps.ipeps_kagome.IPEPS_KAGOME" title="ipeps.ipeps_kagome.IPEPS_KAGOME"><em>IPEPS_KAGOME</em></a>) – wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="../envs/generic/env.html#ctm.generic.env.ENV" title="ctm.generic.env.ENV"><em>ENV</em></a>) – CTM environment</p></li>
+<li><p><strong>force_cpu</strong> (<em>bool</em>) – perform computation on CPU</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>energy per site</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+<p>Evaluate energy per site from contributions from up and down triangle.
+See <a class="reference internal" href="#models.su3_kagome.KAGOME_SU3.energy_triangles_2x2subsystem" title="models.su3_kagome.KAGOME_SU3.energy_triangles_2x2subsystem"><code class="xref py py-meth docutils literal notranslate"><span class="pre">energy_triangles_2x2subsystem()</span></code></a>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="models.su3_kagome.KAGOME_SU3.energy_triangles_2x2subsystem">
+<span class="sig-name descname"><span class="pre">energy_triangles_2x2subsystem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_cpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/models/su3_kagome.html#KAGOME_SU3.energy_triangles_2x2subsystem"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#models.su3_kagome.KAGOME_SU3.energy_triangles_2x2subsystem" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="../ipeps/ipeps_kagome.html#ipeps.ipeps_kagome.IPEPS_KAGOME" title="ipeps.ipeps_kagome.IPEPS_KAGOME"><em>IPEPS_KAGOME</em></a>) – wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="../envs/generic/env.html#ctm.generic.env.ENV" title="ctm.generic.env.ENV"><em>ENV</em></a>) – CTM environment</p></li>
+<li><p><strong>force_cpu</strong> (<em>bool</em>) – perform computation on CPU</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>energy contributions from down and up triangle</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float, float</p>
+</dd>
+</dl>
+<p>Evaluate energy contributions from down triangle within 2x2 subsystem embedded in environment,
+and from upper triangle embedded in 2x2 environment.
+See <a class="reference internal" href="../envs/generic/rdm.html#ctm.pess_kagome.rdm_kagome.rdm2x2_dn_triangle_with_operator" title="ctm.pess_kagome.rdm_kagome.rdm2x2_dn_triangle_with_operator"><code class="xref py py-meth docutils literal notranslate"><span class="pre">ctm.pess_kagome.rdm_kagome.rdm2x2_dn_triangle_with_operator()</span></code></a> and
+<a class="reference internal" href="../envs/generic/rdm.html#ctm.pess_kagome.rdm_kagome.rdm2x2_kagome" title="ctm.pess_kagome.rdm_kagome.rdm2x2_kagome"><code class="xref py py-meth docutils literal notranslate"><span class="pre">ctm.pess_kagome.rdm_kagome.rdm2x2_kagome()</span></code></a> respectively.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="models.su3_kagome.KAGOME_SU3.eval_obs">
+<span class="sig-name descname"><span class="pre">eval_obs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_cpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/models/su3_kagome.html#KAGOME_SU3.eval_obs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#models.su3_kagome.KAGOME_SU3.eval_obs" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="../ipeps/ipeps_kagome.html#ipeps.ipeps_kagome.IPEPS_KAGOME" title="ipeps.ipeps_kagome.IPEPS_KAGOME"><em>IPEPS_KAGOME</em></a>) – wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="../envs/generic/env.html#ctm.generic.env.ENV" title="ctm.generic.env.ENV"><em>ENV</em></a>) – CTM environment</p></li>
+<li><p><strong>force_cpu</strong> (<em>bool</em>) – perform computation on CPU</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>expectation values of observables, labels of observables</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[float], list[str]</p>
+</dd>
+</dl>
+<p>Evaluate observables for IPESS_KAGOME wavefunction. In particular</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>average nearest-neighbour pairing on up and down triangles</p></li>
+<li><p>chiralities on up and down triangles</p></li>
+<li><p>vector of spontaneous magnetization <span class="math notranslate nohighlight">\(\langle \vec{S} \rangle\)</span>
+for each site and its length <span class="math notranslate nohighlight">\(m=|\langle \vec{S} \rangle|\)</span></p></li>
+</ul>
+</div></blockquote>
+<p>The observables on down triangle are evaluated on 1x1 subsystem, while observables
+on up triangle are evaluated on 2x2 subsystem.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="models.su3_kagome.KAGOME_SU3.eval_obs_2x2subsystem">
+<span class="sig-name descname"><span class="pre">eval_obs_2x2subsystem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_cpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/models/su3_kagome.html#KAGOME_SU3.eval_obs_2x2subsystem"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#models.su3_kagome.KAGOME_SU3.eval_obs_2x2subsystem" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="../ipeps/ipeps_kagome.html#ipeps.ipeps_kagome.IPEPS_KAGOME" title="ipeps.ipeps_kagome.IPEPS_KAGOME"><em>IPEPS_KAGOME</em></a>) – wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="../envs/generic/env.html#ctm.generic.env.ENV" title="ctm.generic.env.ENV"><em>ENV</em></a>) – CTM environment</p></li>
+<li><p><strong>force_cpu</strong> (<em>bool</em>) – perform computation on CPU</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>expectation values of observables, labels of observables</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[float], list[str]</p>
+</dd>
+</dl>
+<p>Evaluate observables for IPESS_KAGOME wavefunction. In particular</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>energy contributions from up and down triangle</p></li>
+<li><p>average nearest-neighbour pairing on up and down triangles</p></li>
+<li><p>chiralities on up and down triangles</p></li>
+<li><p>vector of spontaneous magnetization <span class="math notranslate nohighlight">\(\langle \vec{S} \rangle\)</span>
+for each site and its length <span class="math notranslate nohighlight">\(m=|\langle \vec{S} \rangle|\)</span></p></li>
+</ul>
+</div></blockquote>
+<p>The observables on both down triangle and up triangle are evaluated on 2x2 subsystem.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="with-explict-u-1-xu-1-symmetry">
+<h2>With explict U(1)xU(1) symmetry<a class="headerlink" href="#with-explict-u-1-xu-1-symmetry" title="Permalink to this heading">¶</a></h2>
+<p>This implementation of SU(3)-symmetric model on Kagome lattice
+assumes explicit U(1)xU(1) abelian symmetry (subgroup)
+of iPEPS tensors.</p>
+<span class="target" id="module-models.abelian.su3_kagome"></span><dl class="py class">
+<dt class="sig sig-object py" id="models.abelian.su3_kagome.KAGOME_SU3_U1xU1">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">models.abelian.su3_kagome.</span></span><span class="sig-name descname"><span class="pre">KAGOME_SU3_U1xU1</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">settings</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">j=0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">k=1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h=0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">global_args=&lt;config.GLOBALARGS</span> <span class="pre">object&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/models/abelian/su3_kagome.html#KAGOME_SU3_U1xU1"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#models.abelian.su3_kagome.KAGOME_SU3_U1xU1" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>j</strong> (<em>int</em>) – nearest-neighbour pairing</p></li>
+<li><p><strong>k</strong> (<em>float</em>) – real part of triangle exchange</p></li>
+<li><p><strong>h</strong> (<em>float</em>) – imaginary part of triangle exchange</p></li>
+<li><p><strong>settings</strong> (<em>NamedTuple</em><em> or </em><em>SimpleNamespace</em><em> (</em><em>TODO link to definition</em><em>)</em>) – YAST configuration</p></li>
+<li><p><strong>global_args</strong> (<a class="reference internal" href="../config.html#config.GLOBALARGS" title="config.GLOBALARGS"><em>GLOBALARGS</em></a>) – global configuration</p></li>
+</ul>
+</dd>
+</dl>
+<p>The SU(3) Hamiltonian on Kagome lattice</p>
+<div class="math notranslate nohighlight">
+\[H = J \sum_{\langle ij \rangle} P_{ij}
++ K \sum_{t_{up},t_{down}} (P_{ijk} + P^{-1}_{ijk})
++ ih \sum_{t_{up},t_{down}} (P_{ijk} - P^{-1}_{ijk})\]</div>
+<p>or in parametrization through angles</p>
+<div class="math notranslate nohighlight">
+\[H = cos \phi \sum_{\langle ij \rangle} P_{ij}
+    + sin \phi \sum_{t_{up},t_{down}} exp(i\theta) P_{ijk} + exp(-i\theta)P^{-1}_{ijk}\]</div>
+<p>where <span class="math notranslate nohighlight">\(J = cos \phi,\ K = sin \phi cos \theta,\ h= sin \phi sin \theta\)</span>.
+The <span class="math notranslate nohighlight">\(\phi= 0.5\pi\)</span> and <span class="math notranslate nohighlight">\(\theta=0\)</span> corresponds to the AKLT point.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="models.abelian.su3_kagome.KAGOME_SU3_U1xU1.energy_down_t_1x1subsystem">
+<span class="sig-name descname"><span class="pre">energy_down_t_1x1subsystem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_cpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/models/abelian/su3_kagome.html#KAGOME_SU3_U1xU1.energy_down_t_1x1subsystem"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#models.abelian.su3_kagome.KAGOME_SU3_U1xU1.energy_down_t_1x1subsystem" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="../ipeps/ipeps_kagome_abelian.html#ipeps.ipeps_kagome_abelian.IPEPS_KAGOME_ABELIAN" title="ipeps.ipeps_kagome_abelian.IPEPS_KAGOME_ABELIAN"><em>IPEPS_KAGOME_ABELIAN</em></a>) – wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="../envs/generic_abelian/env_abelian.html#ctm.generic_abelian.env_abelian.ENV_ABELIAN" title="ctm.generic_abelian.env_abelian.ENV_ABELIAN"><em>ENV_ABELIAN</em></a>) – CTM environment</p></li>
+<li><p><strong>force_cpu</strong> (<em>bool</em>) – perform computation on CPU</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>energy per site</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+<p>Evaluate energy contribution from down triangle within 1x1 subsystem embedded in environment,
+see <a class="reference internal" href="../envs/generic_abelian/rdm.html#ctm.pess_kagome_abelian.rdm_kagome.trace1x1_dn_kagome" title="ctm.pess_kagome_abelian.rdm_kagome.trace1x1_dn_kagome"><code class="xref py py-meth docutils literal notranslate"><span class="pre">ctm.pess_kagome_abelian.rdm_kagome.trace1x1_dn_kagome()</span></code></a>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="models.abelian.su3_kagome.KAGOME_SU3_U1xU1.energy_per_site_2x2subsystem">
+<span class="sig-name descname"><span class="pre">energy_per_site_2x2subsystem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_cpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/models/abelian/su3_kagome.html#KAGOME_SU3_U1xU1.energy_per_site_2x2subsystem"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#models.abelian.su3_kagome.KAGOME_SU3_U1xU1.energy_per_site_2x2subsystem" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<em>IPEPS_KAGOME_ABELIAN.</em>) – wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="../envs/generic_abelian/env_abelian.html#ctm.generic_abelian.env_abelian.ENV_ABELIAN" title="ctm.generic_abelian.env_abelian.ENV_ABELIAN"><em>ENV_ABELIAN</em></a>) – CTM environment</p></li>
+<li><p><strong>force_cpu</strong> (<em>bool</em>) – perform computation on CPU</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>energy per site</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+<p>Evaluate energy per site from contributions from up and down triangle.
+See <a class="reference internal" href="#models.abelian.su3_kagome.KAGOME_SU3_U1xU1.energy_triangles_2x2subsystem" title="models.abelian.su3_kagome.KAGOME_SU3_U1xU1.energy_triangles_2x2subsystem"><code class="xref py py-meth docutils literal notranslate"><span class="pre">energy_triangles_2x2subsystem()</span></code></a>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="models.abelian.su3_kagome.KAGOME_SU3_U1xU1.energy_triangles_2x2subsystem">
+<span class="sig-name descname"><span class="pre">energy_triangles_2x2subsystem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_cpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/models/abelian/su3_kagome.html#KAGOME_SU3_U1xU1.energy_triangles_2x2subsystem"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#models.abelian.su3_kagome.KAGOME_SU3_U1xU1.energy_triangles_2x2subsystem" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="../ipeps/ipeps_kagome_abelian.html#ipeps.ipeps_kagome_abelian.IPEPS_KAGOME_ABELIAN" title="ipeps.ipeps_kagome_abelian.IPEPS_KAGOME_ABELIAN"><em>IPEPS_KAGOME_ABELIAN</em></a>) – wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="../envs/generic_abelian/env_abelian.html#ctm.generic_abelian.env_abelian.ENV_ABELIAN" title="ctm.generic_abelian.env_abelian.ENV_ABELIAN"><em>ENV_ABELIAN</em></a>) – CTM environment</p></li>
+<li><p><strong>force_cpu</strong> (<em>bool</em>) – perform computation on CPU</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>energy contributions from down and up triangle</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float, float</p>
+</dd>
+</dl>
+<p>Evaluate energy contributions from down triangle within 2x2 subsystem embedded in environment,
+and from upper triangle embedded in 2x2 environment.
+See <a class="reference internal" href="../envs/generic_abelian/rdm.html#ctm.pess_kagome_abelian.rdm_kagome.rdm2x2_dn_triangle_with_operator" title="ctm.pess_kagome_abelian.rdm_kagome.rdm2x2_dn_triangle_with_operator"><code class="xref py py-meth docutils literal notranslate"><span class="pre">ctm.pess_kagome_abelian.rdm_kagome.rdm2x2_dn_triangle_with_operator()</span></code></a> and
+<a class="reference internal" href="../envs/generic_abelian/rdm.html#ctm.pess_kagome_abelian.rdm_kagome.rdm2x2_kagome" title="ctm.pess_kagome_abelian.rdm_kagome.rdm2x2_kagome"><code class="xref py py-meth docutils literal notranslate"><span class="pre">ctm.pess_kagome_abelian.rdm_kagome.rdm2x2_kagome()</span></code></a> respectively.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="models.abelian.su3_kagome.KAGOME_SU3_U1xU1.eval_generators">
+<span class="sig-name descname"><span class="pre">eval_generators</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_cpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/models/abelian/su3_kagome.html#KAGOME_SU3_U1xU1.eval_generators"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#models.abelian.su3_kagome.KAGOME_SU3_U1xU1.eval_generators" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<em>IPEPS_KAGOME_ABELIAN.</em>) – wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="../envs/generic_abelian/env_abelian.html#ctm.generic_abelian.env_abelian.ENV_ABELIAN" title="ctm.generic_abelian.env_abelian.ENV_ABELIAN"><em>ENV_ABELIAN</em></a>) – CTM environment</p></li>
+<li><p><strong>force_cpu</strong> (<em>bool</em>) – perform computation on CPU</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>expectation value of SU(3) generators in Cartan-Weyl basis</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict(str : float)</p>
+</dd>
+</dl>
+<p>Evaluate generators in Cartan-Weyl basis (in fundamental irrep) of su(3).
+The expectation values of generators are ordered as [T^+, T^-, T^z, V^+, V^-, U^+, U^-, Y].
+Compute the length of the vector of spontaneous magnetization, playing the role of
+<span class="math notranslate nohighlight">\(m^2 = |&lt;\\vec{S}&gt;|\)</span> in case of SU(2) models.</p>
+<p>The keys “A”, “B”, and “C” of returned dict hold length-8 vectors with expectation values
+of Cartan-Weyl generators on each of sites “A”, “B”, and “C”.
+The keys “m2_A”, “m2_B”, and “m2_C” hold expectation values of the lengths
+of vectors <span class="math notranslate nohighlight">\(|&lt;\\vec{T}&gt;|\)</span> where Ts are generators in Gell-Mann basis.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="models.abelian.su3_kagome.KAGOME_SU3_U1xU1.eval_obs">
+<span class="sig-name descname"><span class="pre">eval_obs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_cpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/models/abelian/su3_kagome.html#KAGOME_SU3_U1xU1.eval_obs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#models.abelian.su3_kagome.KAGOME_SU3_U1xU1.eval_obs" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="../ipeps/ipeps_kagome_abelian.html#ipeps.ipeps_kagome_abelian.IPEPS_KAGOME_ABELIAN" title="ipeps.ipeps_kagome_abelian.IPEPS_KAGOME_ABELIAN"><em>IPEPS_KAGOME_ABELIAN</em></a>) – wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="../envs/generic_abelian/env_abelian.html#ctm.generic_abelian.env_abelian.ENV_ABELIAN" title="ctm.generic_abelian.env_abelian.ENV_ABELIAN"><em>ENV_ABELIAN</em></a>) – CTM environment</p></li>
+<li><p><strong>force_cpu</strong> (<em>bool</em>) – perform computation on CPU</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>expectation values of observables, labels of observables</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[float], list[str]</p>
+</dd>
+</dl>
+<p>Evaluate observables for IPESS_KAGOME wavefunction. In particular</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>average nearest-neighbour pairing on up and down triangles</p></li>
+<li><p>chiralities on up and down triangles</p></li>
+<li><p>vector of spontaneous magnetization <span class="math notranslate nohighlight">\(\langle \vec{S} \rangle\)</span>
+for each site and its length <span class="math notranslate nohighlight">\(m=|\langle \vec{S} \rangle|\)</span></p></li>
+<li><p>nearest-neighbour pairings on up and down triangles</p></li>
+</ul>
+</div></blockquote>
+<p>The observables on down triangle are evaluated on 1x1 subsystem, while observables
+on up triangle are evaluated on 2x2 subsystem.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="models.abelian.su3_kagome.KAGOME_SU3_U1xU1.eval_obs_2x2subsystem">
+<span class="sig-name descname"><span class="pre">eval_obs_2x2subsystem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_cpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/models/abelian/su3_kagome.html#KAGOME_SU3_U1xU1.eval_obs_2x2subsystem"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#models.abelian.su3_kagome.KAGOME_SU3_U1xU1.eval_obs_2x2subsystem" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="../ipeps/ipeps_kagome_abelian.html#ipeps.ipeps_kagome_abelian.IPEPS_KAGOME_ABELIAN" title="ipeps.ipeps_kagome_abelian.IPEPS_KAGOME_ABELIAN"><em>IPEPS_KAGOME_ABELIAN</em></a>) – wavefunction</p></li>
+<li><p><strong>env</strong> (<a class="reference internal" href="../envs/generic_abelian/env_abelian.html#ctm.generic_abelian.env_abelian.ENV_ABELIAN" title="ctm.generic_abelian.env_abelian.ENV_ABELIAN"><em>ENV_ABELIAN</em></a>) – CTM environment</p></li>
+<li><p><strong>force_cpu</strong> (<em>bool</em>) – perform computation on CPU</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>expectation values of observables, labels of observables</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[float], list[str]</p>
+</dd>
+</dl>
+<p>Evaluate observables for IPESS_KAGOME_ABELIAN wavefunction. In particular</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>energy contributions from up and down triangle</p></li>
+<li><p>average nearest-neighbour pairing on up and down triangles</p></li>
+<li><p>chiralities on up and down triangles</p></li>
+<li><p>vector of spontaneous magnetization <span class="math notranslate nohighlight">\(\langle \vec{S} \rangle\)</span>
+for each site and its length <span class="math notranslate nohighlight">\(m=|\langle \vec{S} \rangle|\)</span></p></li>
+</ul>
+</div></blockquote>
+<p>The observables on both down triangle and up triangle are evaluated on 2x2 subsystem.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../groups.html" class="btn btn-neutral float-right" title="Groups" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="spin_half_kagome.html" class="btn btn-neutral float-left" title="SU(2) model on Kagome lattice" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Juraj Hasik, Glen B. Mbeng
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

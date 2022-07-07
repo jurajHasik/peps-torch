@@ -1,0 +1,744 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>models.spin_half_kagome &mdash; peps-torch alpha documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> peps-torch
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../ipeps.html">iPEPS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps.html">Generic iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_kagome.html">Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_c4v.html">1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_lc_1site_pg.html">1-site iPEPS from lin. combination</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipess_kagome.html">Generic Kagome iPESS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipess_kagome_pg.html">Kagome iPESS with point groups</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipess_kagome_pg_lc.html">Kagome iPESS from lin. combination</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../ipeps.html#abelian-symmetric-ipeps">Abelian-symmetric iPEPS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_abelian.html">Generic  abelian-symmetric iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_abelian.html#generic-abelian-symmetric-ipeps-with-weights">Generic abelian-symmetric iPEPS with weights</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_kagome_abelian.html">Abelian-symmetric Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_abelian_c4v.html">Abelian-symmetric 1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipess_kagome_abelian.html">Abelian-symmetric generic Kagome iPESS</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../envs.html">Environments</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../envs/generic.html">Generic iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/env.html">Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/rdm.html#module-ctm.pess_kagome.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/corrf.html">Correlation functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/transfer_matrix.html">Transfer Matrices</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../envs/generic_abelian.html">Abelian-symmetric generic iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic_abelian/env_abelian.html">Abelian-symmetric environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic_abelian/ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic_abelian/ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic_abelian/ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic_abelian/rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic_abelian/rdm.html#module-ctm.pess_kagome_abelian.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../envs/one_site_c4v.html">1-site C4v iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v/env_c4v.html">1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v/ctmrg_c4v.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v/rdm_c4v.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v/transfer_matrix.html">Transfer Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v/corrf_c4v.html">Correlation functions</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../envs/one_site_c4v_abelian.html">Abelian-symmetric 1-site C4v iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v_abelian/env_c4v_abelian.html">Abelian-symmetric 1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v_abelian/ctmrg_c4v_abelian.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v_abelian/rdm_c4v_abelian.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v_abelian/corrf_c4v_abelian.html">Correlation functions</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../optim.html">Optimization</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../optim/drivers.html">Optimization drivers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/drivers/ad_optim.html">ad_optim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/drivers/ad_optim_lbfgs_mod.html">ad_optim_lbfgs_mod</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/drivers/ad_optim_sgd_mod.html">ad_optim_sgd_mod</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../optim/optimizers.html">Custom optimizers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/optimizers/lbfgs_modified.html">Extended LBFGS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/optimizers/sgd_modified.html">SGD with linesearch</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../config.html">Configuration</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../config.html#main">Main</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../config.html#global">Global</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../config.html#corner-transfer-matrix-algorithm">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../config.html#optimization">Optimization</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../models.html">Models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../models/akltS2.html">Spin S=2 AKLT Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/akltS2.html#module-models.akltS2">2x1 and 2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/akltS2.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/coupledLadders.html">Coupled Ladders</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/coupledLadders.html#dense-pytorch">Dense (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/coupledLadders.html#dense-yast">Dense (YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/coupledLadders.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/ising.html">Transverse Field Ising Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/ising.html#x1-unit-cell">1x1 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/ising.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/j1j2.html">J1-J2-J3 and J1-J2-lambda Heisenberg Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/j1j2.html#from-2x1-to-4x2-unit-cell-pytorch">from 2x1 to 4x2 unit cell (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/j1j2.html#from-2x1-to-4x2-unit-cell-dense-yast">from 2x1 to 4x2 unit cell (dense YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/j1j2.html#x1-c4v-pytorch">1x1 C4v (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/j1j2.html#x1-c4v-dense-yast">1x1 C4v (dense YAST)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/jq.html">J-Q Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/jq.html#module-models.jq">2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/jq.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/spin_half_kagome.html">SU(2) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/spin_half_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/spin_half_kagome.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/su3_kagome.html">SU(3) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/su3_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/su3_kagome.html#with-explict-u-1-xu-1-symmetry">With explict U(1)xU(1) symmetry</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../groups.html">Groups</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/pg.html">Point group: square lattice</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/su2.html">SU(2)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/su2.html#module-groups.su2_abelian">SU(2) with explicit U(1) structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/su3.html">SU(3)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/su3.html#su-3-with-explicit-u-1-xu-1-structure">SU(3) with explicit U(1)xU(1) structure</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../linalg.html">Linear Algebra</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../linalg/custom_eig.html">Truncated eigendecomposition</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../linalg/custom_svd.html">Truncated SVD</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../linalg/spec_decomp.html">Spectral decompositions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.svd_gesdd">SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.svd_arnoldi">Partial SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.svd_rsvd">Randomized SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.eig_sym">Symmetric Eigendecomposition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.eig_arnoldi">Partial diagonalization</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">peps-torch</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+      <li>models.spin_half_kagome</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for models.spin_half_kagome</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">config</span> <span class="k">as</span> <span class="nn">cfg</span>
+<span class="kn">from</span> <span class="nn">ctm.generic.env</span> <span class="kn">import</span> <span class="n">ENV</span>
+<span class="kn">from</span> <span class="nn">ctm.generic</span> <span class="kn">import</span> <span class="n">rdm</span>
+<span class="kn">from</span> <span class="nn">ctm.pess_kagome</span> <span class="kn">import</span> <span class="n">rdm_kagome</span>
+<span class="kn">from</span> <span class="nn">ctm.generic</span> <span class="kn">import</span> <span class="n">corrf</span>
+<span class="kn">from</span> <span class="nn">ctm.generic</span> <span class="kn">import</span> <span class="n">transferops</span>
+<span class="kn">import</span> <span class="nn">groups.su2</span> <span class="k">as</span> <span class="nn">su2</span>
+<span class="kn">from</span> <span class="nn">math</span> <span class="kn">import</span> <span class="n">sqrt</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="kn">import</span> <span class="n">exp</span>
+<span class="kn">import</span> <span class="nn">itertools</span>
+
+<span class="n">_cast_to_real</span><span class="o">=</span> <span class="n">rdm</span><span class="o">.</span><span class="n">_cast_to_real</span>
+
+<div class="viewcode-block" id="S_HALF_KAGOME"><a class="viewcode-back" href="../../models/spin_half_kagome.html#models.spin_half_kagome.S_HALF_KAGOME">[docs]</a><span class="k">class</span> <span class="nc">S_HALF_KAGOME</span><span class="p">():</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">j1</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span> <span class="n">JD</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">j1sq</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">j2</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">j2sq</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">jtrip</span><span class="o">=</span><span class="mf">0.</span><span class="p">,</span>\
+        <span class="n">jperm</span><span class="o">=</span><span class="mi">0</span><span class="o">+</span><span class="mi">0</span><span class="n">j</span><span class="p">,</span> <span class="n">h</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">phys_dim</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">global_args</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">global_args</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param j1: nearest-neighbour spin-spin interaction</span>
+<span class="sd">        :type j1: float</span>
+<span class="sd">        :param JD: Dzyaloshinskii-Moriya interaction</span>
+<span class="sd">        :type JD: float</span>
+<span class="sd">        :param jtrip: scalar chirality</span>
+<span class="sd">        :type jtrip: float</span>
+<span class="sd">        :param jperm: triangle exchange</span>
+<span class="sd">        :type jperm: complex</span>
+<span class="sd">        :param global_args: global configuration</span>
+<span class="sd">        :type global_args: GLOBALARGS</span>
+
+<span class="sd">        Build spin-1/2 Hamiltonian on Kagome lattice</span>
+
+<span class="sd">        .. math::</span>
+
+<span class="sd">            H &amp;= J_1 \sum_{&lt;ij&gt;} S_i.S_j</span>
+<span class="sd">                + J_2 \sum_{&lt;&lt;ij&gt;&gt;} S_i.S_j</span>
+<span class="sd">                - J_{trip} \sum_t (S_{t_1} \times S_{t_2}).S_{t_3} \\</span>
+<span class="sd">                &amp;+ J_{perm} \sum_t P_t + J^*_{perm} \sum_t P^{-1}_t</span>
+
+<span class="sd">        where the first sum runs over the pairs of sites `i,j` </span>
+<span class="sd">        which are nearest-neighbours (denoted as `&lt;.,.&gt;`), the second sum runs over </span>
+<span class="sd">        pairs of sites `i,j` which are next nearest-neighbours (denoted as `&lt;&lt;.,.&gt;&gt;`).</span>
+<span class="sd">        The :math:`J_{trip}` and :math:`J_{perm}` terms represent scalar chirality </span>
+<span class="sd">        and triangle exchange respectively. The :math:`\sum_t` runs over all triangles.</span>
+<span class="sd">        The sites :math:`t_1,t_2,t_3` on the triangles are always ordered anti-clockwise.  </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span> <span class="o">=</span> <span class="n">global_args</span><span class="o">.</span><span class="n">torch_dtype</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="n">global_args</span><span class="o">.</span><span class="n">device</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">phys_dim</span> <span class="o">=</span> <span class="n">phys_dim</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">j1</span> <span class="o">=</span> <span class="n">j1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">j1sq</span> <span class="o">=</span> <span class="n">j1sq</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">JD</span> <span class="o">=</span> <span class="n">JD</span>
+        <span class="c1"># j2, j2sq not implemented</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">j2</span> <span class="o">=</span> <span class="n">j2</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">j2sq</span> <span class="o">=</span> <span class="n">j2sq</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">jtrip</span> <span class="o">=</span> <span class="n">jtrip</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">jperm</span> <span class="o">=</span> <span class="n">jperm</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">h</span> <span class="o">=</span> <span class="n">h</span>
+        
+        <span class="n">irrep</span> <span class="o">=</span> <span class="n">su2</span><span class="o">.</span><span class="n">SU2</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">phys_dim</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+
+        <span class="n">Id1</span><span class="o">=</span> <span class="n">irrep</span><span class="o">.</span><span class="n">I</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Id3_t</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">phys_dim</span><span class="o">**</span><span class="mi">3</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        
+        <span class="c1"># nearest-neighbour terms with DMI</span>
+        <span class="n">SS</span><span class="o">=</span> <span class="n">irrep</span><span class="o">.</span><span class="n">SS</span><span class="p">(</span><span class="n">xyz</span><span class="o">=</span><span class="p">(</span><span class="mf">1.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">))</span>
+        <span class="n">SS_JD</span><span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">j1</span><span class="o">*</span><span class="n">SS</span> <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">JD</span><span class="p">)</span><span class="o">==</span><span class="mi">0</span> <span class="k">else</span> <span class="n">irrep</span><span class="o">.</span><span class="n">SS</span><span class="p">(</span><span class="n">xyz</span><span class="o">=</span><span class="p">(</span><span class="n">j1</span><span class="p">,</span> <span class="n">j1</span><span class="o">+</span><span class="mi">1</span><span class="n">j</span><span class="o">*</span><span class="n">JD</span><span class="p">,</span> <span class="n">j1</span><span class="o">-</span><span class="mi">1</span><span class="n">j</span><span class="o">*</span><span class="n">JD</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SSnnId</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;ijkl,ab-&gt;ijaklb&#39;</span><span class="p">,</span><span class="n">SS_JD</span><span class="p">,</span><span class="n">Id1</span><span class="p">)</span>
+        <span class="n">SSnn_t</span><span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">SSnnId</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">SSnnId</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">3</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">SSnnId</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">)</span>
+        
+        <span class="c1"># nearest-neighbour S.S^2 term. For S&gt;1/2 it is equivalent to a constant</span>
+        <span class="n">SS2</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;ijab,abkl-&gt;ijkl&#39;</span><span class="p">,</span><span class="n">SS</span><span class="p">,</span><span class="n">SS</span><span class="p">)</span>
+        <span class="n">SS2nnId</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;ijkl,ab-&gt;ijaklb&#39;</span><span class="p">,</span><span class="n">SS2</span><span class="p">,</span><span class="n">Id1</span><span class="p">)</span>
+        <span class="n">SS2nn_t</span><span class="o">=</span> <span class="n">SS2nnId</span> <span class="o">+</span> <span class="n">SS2nnId</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">3</span><span class="p">)</span> <span class="o">+</span> <span class="n">SS2nnId</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">)</span>
+
+        <span class="c1"># on-site magnetic field</span>
+        <span class="n">mag_field</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;ij,kl,ab-&gt;ikajlb&#39;</span><span class="p">,</span><span class="n">irrep</span><span class="o">.</span><span class="n">SZ</span><span class="p">(),</span><span class="n">Id1</span><span class="p">,</span><span class="n">Id1</span><span class="p">)</span>
+        <span class="n">mag_field</span><span class="o">=</span><span class="n">mag_field</span> <span class="o">+</span> <span class="n">mag_field</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">3</span><span class="p">)</span> <span class="o">+</span> <span class="n">mag_field</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">)</span>
+
+        <span class="c1"># three-spin chiral interaction S.(SxS)</span>
+        <span class="k">if</span> <span class="n">jtrip</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="o">==</span><span class="n">torch</span><span class="o">.</span><span class="n">complex128</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="o">==</span><span class="n">torch</span><span class="o">.</span><span class="n">complex64</span><span class="p">,</span><span class="s2">&quot;jtrip requires complex dtype&quot;</span>
+        <span class="n">Svec</span><span class="o">=</span> <span class="n">irrep</span><span class="o">.</span><span class="n">S</span><span class="p">()</span>
+        <span class="n">levicivit3</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">levicivit3</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">]</span><span class="o">=</span><span class="n">levicivit3</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">=</span><span class="n">levicivit3</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span><span class="o">=</span><span class="mf">1.</span>
+        <span class="n">levicivit3</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span><span class="o">=</span><span class="n">levicivit3</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">=</span><span class="n">levicivit3</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">]</span><span class="o">=-</span><span class="mf">1.</span>
+        <span class="n">SxSS_t</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;abc,bij,ckl,amn-&gt;ikmjln&#39;</span><span class="p">,</span><span class="n">levicivit3</span><span class="p">,</span><span class="n">Svec</span><span class="p">,</span><span class="n">Svec</span><span class="p">,</span><span class="n">Svec</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">P_triangle</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">phys_dim</span><span class="p">]</span><span class="o">*</span><span class="mi">6</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">P_triangle_inv</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">phys_dim</span><span class="p">]</span><span class="o">*</span><span class="mi">6</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">phys_dim</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">phys_dim</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">phys_dim</span><span class="p">):</span>
+                    <span class="c1"># anticlockwise (direct)</span>
+                    <span class="c1">#</span>
+                    <span class="c1"># 2---1 &lt;- 0---2</span>
+                    <span class="c1">#  \ /      \ /</span>
+                    <span class="c1">#   0        1</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">P_triangle</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">j</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.</span>
+                    <span class="c1"># clockwise (inverse)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">P_triangle_inv</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">h_triangle</span><span class="o">=</span> <span class="n">SSnn_t</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">j1sq</span><span class="o">*</span><span class="n">SS2nn_t</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">jtrip</span><span class="o">*</span><span class="n">SxSS_t</span> \
+            <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">jperm</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">P_triangle</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">jperm</span><span class="o">.</span><span class="n">conjugate</span><span class="p">()</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">P_triangle_inv</span> \
+            <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">h</span><span class="o">*</span><span class="n">mag_field</span>
+
+        <span class="n">szId2</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;ij,kl,ab-&gt;ikajlb&#39;</span><span class="p">,</span><span class="n">irrep</span><span class="o">.</span><span class="n">SZ</span><span class="p">(),</span><span class="n">Id1</span><span class="p">,</span><span class="n">Id1</span><span class="p">)</span><span class="o">.</span><span class="n">contiguous</span><span class="p">()</span>
+        <span class="n">spId2</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;ij,kl,ab-&gt;ikajlb&#39;</span><span class="p">,</span><span class="n">irrep</span><span class="o">.</span><span class="n">SP</span><span class="p">(),</span><span class="n">Id1</span><span class="p">,</span><span class="n">Id1</span><span class="p">)</span><span class="o">.</span><span class="n">contiguous</span><span class="p">()</span>
+        <span class="n">smId2</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;ij,kl,ab-&gt;ikajlb&#39;</span><span class="p">,</span><span class="n">irrep</span><span class="o">.</span><span class="n">SM</span><span class="p">(),</span><span class="n">Id1</span><span class="p">,</span><span class="n">Id1</span><span class="p">)</span><span class="o">.</span><span class="n">contiguous</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">obs_ops</span><span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;sz_0&quot;</span><span class="p">:</span> <span class="n">szId2</span><span class="p">,</span> <span class="s2">&quot;sp_0&quot;</span><span class="p">:</span> <span class="n">spId2</span><span class="p">,</span> <span class="s2">&quot;sm_0&quot;</span><span class="p">:</span> <span class="n">smId2</span><span class="p">,</span>\
+            <span class="s2">&quot;sz_1&quot;</span><span class="p">:</span> <span class="n">szId2</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">)</span><span class="o">.</span><span class="n">contiguous</span><span class="p">(),</span>\
+            <span class="s2">&quot;sp_1&quot;</span><span class="p">:</span> <span class="n">spId2</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">)</span><span class="o">.</span><span class="n">contiguous</span><span class="p">(),</span>\
+            <span class="s2">&quot;sm_1&quot;</span><span class="p">:</span> <span class="n">smId2</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">)</span><span class="o">.</span><span class="n">contiguous</span><span class="p">(),</span>\
+            <span class="s2">&quot;sz_2&quot;</span><span class="p">:</span> <span class="n">szId2</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">3</span><span class="p">)</span><span class="o">.</span><span class="n">contiguous</span><span class="p">(),</span>\
+            <span class="s2">&quot;sp_2&quot;</span><span class="p">:</span> <span class="n">spId2</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">3</span><span class="p">)</span><span class="o">.</span><span class="n">contiguous</span><span class="p">(),</span>\
+            <span class="s2">&quot;sm_2&quot;</span><span class="p">:</span> <span class="n">smId2</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">3</span><span class="p">)</span><span class="o">.</span><span class="n">contiguous</span><span class="p">(),</span>
+        <span class="p">}</span>
+
+    <span class="c1"># :param fail_on_check: raise Exception if the imaginary part of the expectation </span>
+    <span class="c1">#                           value is larger than ``imag_eps``</span>
+    <span class="c1">#     :type fail_on_check: bool</span>
+    <span class="c1">#     :param warn_on_check: raise Warning if the imaginary part of the expectation </span>
+    <span class="c1">#                           value is larger ``imag_eps``</span>
+    <span class="c1">#     :type warn_on_check: bool</span>
+    <span class="c1">#     :param imag_eps: tolerance for imaginary part in expectation value</span>
+    <span class="c1">#     :type imag_eps: float</span>
+
+    <span class="c1"># Energy terms</span>
+<div class="viewcode-block" id="S_HALF_KAGOME.energy_triangle_dn"><a class="viewcode-back" href="../../models/spin_half_kagome.html#models.spin_half_kagome.S_HALF_KAGOME.energy_triangle_dn">[docs]</a>    <span class="k">def</span> <span class="nf">energy_triangle_dn</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">force_cpu</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param state: wavefunction</span>
+<span class="sd">        :param env: CTM environment</span>
+<span class="sd">        :type state: IPEPS_KAGOME</span>
+<span class="sd">        :type env: ENV</span>
+<span class="sd">        :param force_cpu: perform computation on CPU</span>
+<span class="sd">        :type force_cpu: bool</span>
+<span class="sd">        :return: energy per site</span>
+<span class="sd">        :rtype: float</span>
+<span class="sd">        </span>
+<span class="sd">        Evaluate energy contribution from down triangle within 2x2 subsystem embedded in environment, </span>
+<span class="sd">        see :meth:`ctm.pess_kagome.rdm_kagome.rdm2x2_dn_triangle_with_operator`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">e_dn</span><span class="p">,</span> <span class="n">norm_2x2_dn</span><span class="o">=</span> <span class="n">rdm_kagome</span><span class="o">.</span><span class="n">rdm2x2_dn_triangle_with_operator</span><span class="p">(</span>\
+            <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">h_triangle</span><span class="p">,</span> <span class="n">force_cpu</span><span class="o">=</span><span class="n">force_cpu</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">_cast_to_real</span><span class="p">(</span><span class="n">e_dn</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="S_HALF_KAGOME.energy_triangle_dn_1x1"><a class="viewcode-back" href="../../models/spin_half_kagome.html#models.spin_half_kagome.S_HALF_KAGOME.energy_triangle_dn_1x1">[docs]</a>    <span class="k">def</span> <span class="nf">energy_triangle_dn_1x1</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">force_cpu</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param state: wavefunction</span>
+<span class="sd">        :param env: CTM environment</span>
+<span class="sd">        :type state: IPEPS_KAGOME</span>
+<span class="sd">        :type env: ENV</span>
+<span class="sd">        :param force_cpu: perform computation on CPU</span>
+<span class="sd">        :type force_cpu: bool</span>
+<span class="sd">        :return: energy per site</span>
+<span class="sd">        :rtype: float</span>
+<span class="sd">        </span>
+<span class="sd">        Evaluate energy contribution from down triangle within 1x1 subsystem embedded in environment, </span>
+<span class="sd">        see :meth:`ctm.pess_kagome.rdm_kagome.rdm1x1_kagome`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">rdm1x1_dn</span><span class="o">=</span> <span class="n">rdm_kagome</span><span class="o">.</span><span class="n">rdm1x1_kagome</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">force_cpu</span><span class="o">=</span><span class="n">force_cpu</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">e_dn</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;ijkmno,mnoijk&#39;</span><span class="p">,</span> <span class="n">rdm1x1_dn</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">h_triangle</span> <span class="p">)</span>
+        <span class="k">return</span> <span class="n">_cast_to_real</span><span class="p">(</span><span class="n">e_dn</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="S_HALF_KAGOME.energy_triangle_up"><a class="viewcode-back" href="../../models/spin_half_kagome.html#models.spin_half_kagome.S_HALF_KAGOME.energy_triangle_up">[docs]</a>    <span class="k">def</span> <span class="nf">energy_triangle_up</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">force_cpu</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param state: wavefunction</span>
+<span class="sd">        :param env: CTM environment</span>
+<span class="sd">        :type state: IPEPS_KAGOME</span>
+<span class="sd">        :type env: ENV</span>
+<span class="sd">        :param force_cpu: perform computation on CPU</span>
+<span class="sd">        :type force_cpu: bool</span>
+<span class="sd">        :return: energy per site</span>
+<span class="sd">        :rtype: float</span>
+<span class="sd">        </span>
+<span class="sd">        Evaluate energy contribution from up triangle within 2x2 subsystem embedded in environment, </span>
+<span class="sd">        see :meth:`ctm.pess_kagome.rdm_kagome.rdm2x2_up_triangle_open`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">rdm_up</span><span class="o">=</span> <span class="n">rdm_kagome</span><span class="o">.</span><span class="n">rdm2x2_up_triangle_open</span><span class="p">(</span>\
+            <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">force_cpu</span><span class="o">=</span><span class="n">force_cpu</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">e_up</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;ijkmno,mnoijk&#39;</span><span class="p">,</span> <span class="n">rdm_up</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">h_triangle</span> <span class="p">)</span>
+        <span class="k">return</span> <span class="n">_cast_to_real</span><span class="p">(</span><span class="n">e_up</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+    <span class="c1"># These functions do not cast observable into Real, thus returning</span>
+    <span class="c1"># complex numbers</span>
+    <span class="k">def</span> <span class="nf">energy_triangle_up_NoCheck</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">force_cpu</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="n">rdm_up</span><span class="o">=</span> <span class="n">rdm_kagome</span><span class="o">.</span><span class="n">rdm2x2_up_triangle_open</span><span class="p">(</span>\
+            <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">force_cpu</span><span class="o">=</span><span class="n">force_cpu</span><span class="p">)</span>
+        <span class="n">e_up</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;ijkmno,mnoijk&#39;</span><span class="p">,</span> <span class="n">rdm_up</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">h_triangle</span> <span class="p">)</span>
+        <span class="k">return</span> <span class="n">e_up</span>
+
+    <span class="k">def</span> <span class="nf">energy_triangle_dn_NoCheck</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">force_cpu</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="n">e_dn</span><span class="p">,</span> <span class="n">norm_2x2_dn</span><span class="o">=</span> <span class="n">rdm_kagome</span><span class="o">.</span><span class="n">rdm2x2_dn_triangle_with_operator</span><span class="p">(</span>\
+            <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">h_triangle</span><span class="p">,</span> <span class="n">force_cpu</span><span class="o">=</span><span class="n">force_cpu</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">e_dn</span>
+
+    <span class="c1"># def energy_nnn(self, state, env, force_cpu=False):</span>
+    <span class="c1">#     if self.j2 == 0:</span>
+    <span class="c1">#         return 0.</span>
+    <span class="c1">#     else:</span>
+    <span class="c1">#         vNNN = self.P_bonds_nnn(state, env, force_cpu=force_cpu)</span>
+    <span class="c1">#         return(self.j2*(vNNN[0]+vNNN[1]+vNNN[2]+vNNN[3]+vNNN[4]+vNNN[5]))</span>
+
+    <span class="c1"># Observables</span>
+
+    <span class="k">def</span> <span class="nf">P_dn</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">force_cpu</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="n">vP_dn</span><span class="p">,</span><span class="n">norm_2x2_dn</span><span class="o">=</span> <span class="n">rdm_kagome</span><span class="o">.</span><span class="n">rdm2x2_dn_triangle_with_operator</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span>\
+            <span class="n">operator</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">P_triangle</span><span class="p">,</span> <span class="n">force_cpu</span><span class="o">=</span><span class="n">force_cpu</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">vP_dn</span>
+
+    <span class="k">def</span> <span class="nf">P_up</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">force_cpu</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="n">rdm_up</span><span class="o">=</span> <span class="n">rdm_kagome</span><span class="o">.</span><span class="n">rdm2x2_up_triangle_open</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">force_cpu</span><span class="o">=</span><span class="n">force_cpu</span><span class="p">)</span>
+        <span class="n">vP_up</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;ijkmno,mnoijk&#39;</span><span class="p">,</span> <span class="n">rdm_up</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">P_triangle</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">vP_up</span>
+
+    <span class="c1"># def P_bonds_nnn(self, state, env, force_cpu=False):</span>
+    <span class="c1">#     norm_wf = rdm_kagome.rdm2x2_dn_triangle_with_operator((0, 0), state, env, \</span>
+    <span class="c1">#         self.id_downT, force_cpu=force_cpu)</span>
+    <span class="c1">#     vNNN1_12, vNNN1_31 = rdm_kagome.rdm2x2_nnn_1((0, 0), state, env, operator=exchange_bond, force_cpu=force_cpu)</span>
+    <span class="c1">#     vNNN2_32, vNNN2_21 = rdm_kagome.rdm2x2_nnn_2((0, 0), state, env, operator=exchange_bond, force_cpu=force_cpu)</span>
+    <span class="c1">#     vNNN3_31, vNNN3_23 = rdm_kagome.rdm2x2_nnn_3((0, 0), state, env, operator=exchange_bond, force_cpu=force_cpu)</span>
+    <span class="c1">#     return _cast_to_real(vNNN1_12 / norm_wf), _cast_to_real(vNNN2_21 / norm_wf), \</span>
+    <span class="c1">#         _cast_to_real(vNNN1_31 / norm_wf), _cast_to_real(vNNN3_31 / norm_wf), \</span>
+    <span class="c1">#         _cast_to_real(vNNN2_32 / norm_wf), _cast_to_real(vNNN3_23 / norm_wf)</span>
+
+    <span class="c1"># def P_bonds_nn(self, state, env):</span>
+    <span class="c1">#     id_matrix = torch.eye(27, dtype=torch.complex128, device=cfg.global_args.device)</span>
+    <span class="c1">#     norm_wf = rdm.rdm1x1((0, 0), state, env, operator=id_matrix)</span>
+    <span class="c1">#     # bond 2--3</span>
+    <span class="c1">#     bond_op = torch.zeros((27, 27), dtype=torch.complex128, device=cfg.global_args.device)</span>
+    <span class="c1">#     for i in range(3):</span>
+    <span class="c1">#         for j in range(3):</span>
+    <span class="c1">#             for k in range(3):</span>
+    <span class="c1">#                 bond_op[fmap(i,j,k),fmap(i,k,j)] = 1.</span>
+    <span class="c1">#     vP_23 = rdm.rdm1x1((0,0), state, env, operator=bond_op) / norm_wf</span>
+    <span class="c1">#     # bond 1--3</span>
+    <span class="c1">#     bond_op = torch.zeros((27, 27), dtype=torch.complex128, device=cfg.global_args.device)</span>
+    <span class="c1">#     for i in range(3):</span>
+    <span class="c1">#         for j in range(3):</span>
+    <span class="c1">#             for k in range(3):</span>
+    <span class="c1">#                 bond_op[fmap(i,j,k),fmap(k,j,i)] = 1.</span>
+    <span class="c1">#     vP_13 = rdm.rdm1x1((0, 0), state, env, operator=bond_op) / norm_wf</span>
+    <span class="c1">#     # bond 1--2</span>
+    <span class="c1">#     bond_op = torch.zeros((27, 27), dtype=torch.complex128, device=cfg.global_args.device)</span>
+    <span class="c1">#     for i in range(3):</span>
+    <span class="c1">#         for j in range(3):</span>
+    <span class="c1">#             for k in range(3):</span>
+    <span class="c1">#                 bond_op[fmap(i,j,k),fmap(j,i,k)] = 1.</span>
+    <span class="c1">#     vP_12 = rdm.rdm1x1((0, 0), state, env, operator=bond_op) / norm_wf</span>
+    <span class="c1">#     return(torch.real(vP_23), torch.real(vP_13), torch.real(vP_12))</span>
+
+<div class="viewcode-block" id="S_HALF_KAGOME.eval_obs"><a class="viewcode-back" href="../../models/spin_half_kagome.html#models.spin_half_kagome.S_HALF_KAGOME.eval_obs">[docs]</a>    <span class="k">def</span> <span class="nf">eval_obs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">force_cpu</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">cast_real</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">disp_corre_len</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>\
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param state: wavefunction</span>
+<span class="sd">        :param env: CTM environment</span>
+<span class="sd">        :type state: IPEPS_KAGOME</span>
+<span class="sd">        :type env: ENV</span>
+<span class="sd">        :param force_cpu: perform computation on CPU</span>
+<span class="sd">        :type force_cpu: bool</span>
+<span class="sd">        :param cast_real: if ``False`` keep imaginary part of energy contributions </span>
+<span class="sd">                          from up and down triangles</span>
+<span class="sd">        :type cast_real: bool</span>
+<span class="sd">        :param disp_corre_len: compute correlation lengths from transfer matrices</span>
+<span class="sd">        :type disp_corre_len: bool</span>
+<span class="sd">        :return:  expectation values of observables, labels of observables</span>
+<span class="sd">        :rtype: list[float], list[str]</span>
+
+<span class="sd">        Evaluate observables for IPESS_KAGOME wavefunction. In particular</span>
+
+<span class="sd">            * energy contributions from up and down triangles</span>
+<span class="sd">            * vector of spontaneous magnetization :math:`\langle \vec{S} \rangle` </span>
+<span class="sd">              for each site and its length :math:`m=|\langle \vec{S} \rangle|` </span>
+<span class="sd">            * nearest-neighbour spin-spin correlations for all bonds in the unit cell</span>
+<span class="sd">            * (optionally) correlation lengths</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">obs</span><span class="o">=</span> <span class="p">{</span><span class="s2">&quot;e_t_dn&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;e_t_up&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;m2_0&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;m2_1&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;m2_2&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">}</span>
+        <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">cast_real</span><span class="p">:</span>
+                <span class="n">e_t_dn</span><span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">energy_triangle_dn</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">force_cpu</span><span class="o">=</span><span class="n">force_cpu</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+                <span class="n">e_t_up</span><span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">energy_triangle_up</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">force_cpu</span><span class="o">=</span><span class="n">force_cpu</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">e_t_dn</span><span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">energy_triangle_dn_NoCheck</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">force_cpu</span><span class="o">=</span><span class="n">force_cpu</span><span class="p">)</span>
+                <span class="n">e_t_up</span><span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">energy_triangle_up_NoCheck</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">force_cpu</span><span class="o">=</span><span class="n">force_cpu</span><span class="p">)</span>
+            <span class="n">obs</span><span class="p">[</span><span class="s2">&quot;e_t_dn&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">e_t_dn</span>
+            <span class="n">obs</span><span class="p">[</span><span class="s2">&quot;e_t_up&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">e_t_up</span>
+
+            <span class="c1"># compute on-site observables i.e. magnetizations</span>
+            <span class="n">norm_wf_1x1</span> <span class="o">=</span> <span class="n">rdm_kagome</span><span class="o">.</span><span class="n">trace1x1_dn_kagome</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Id3_t</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">obs_ops</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="n">op</span><span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">obs_ops</span><span class="p">[</span><span class="n">label</span><span class="p">]</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">phys_dim</span><span class="o">**</span><span class="mi">3</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">phys_dim</span><span class="o">**</span><span class="mi">3</span><span class="p">)</span>
+                <span class="n">obs_val</span><span class="o">=</span> <span class="n">rdm_kagome</span><span class="o">.</span><span class="n">trace1x1_dn_kagome</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">op</span><span class="p">)</span> <span class="o">/</span> <span class="n">norm_wf_1x1</span>
+                <span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">obs_val</span>
+
+            <span class="c1"># compute magnitude of magnetization, m^2, on-site</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
+                <span class="c1">#obs[f&quot;m_{i}&quot;]= sqrt(_cast_to_real(obs[f&quot;sz_{i}&quot;]*obs[f&quot;sz_{i}&quot;]+ obs[f&quot;sp_{i}&quot;]*obs[f&quot;sm_{i}&quot;]))</span>
+                <span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;m2_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;sz_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span><span class="o">*</span><span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;sz_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span><span class="o">+</span> <span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;sp_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span><span class="o">*</span><span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;sm_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span>
+ 
+            <span class="c1"># nn S.S pattern. In self.SSnnId, the identity is placed on s2 of three sites</span>
+            <span class="c1"># in the unitcell i.e. \vec{S}_0 \cdot \vec{S}_1 \otimes Id_2</span>
+            <span class="n">SS_dn_01</span><span class="p">,</span><span class="n">norm_2x2_dn</span><span class="o">=</span> <span class="n">rdm_kagome</span><span class="o">.</span><span class="n">rdm2x2_dn_triangle_with_operator</span><span class="p">(</span>\
+                <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">SSnnId</span><span class="p">,</span> <span class="n">force_cpu</span><span class="o">=</span><span class="n">force_cpu</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="c1"># move identity from site 2 to site 0</span>
+            <span class="n">SS_dn_12</span><span class="p">,</span><span class="n">_</span><span class="o">=</span> <span class="n">rdm_kagome</span><span class="o">.</span><span class="n">rdm2x2_dn_triangle_with_operator</span><span class="p">(</span>\
+                <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">SSnnId</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">3</span><span class="p">)</span><span class="o">.</span><span class="n">contiguous</span><span class="p">(),</span>\
+                <span class="n">force_cpu</span><span class="o">=</span><span class="n">force_cpu</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="c1"># move identity from site 2 to site 1</span>
+            <span class="n">SS_dn_02</span><span class="p">,</span><span class="n">_</span><span class="o">=</span> <span class="n">rdm_kagome</span><span class="o">.</span><span class="n">rdm2x2_dn_triangle_with_operator</span><span class="p">(</span>\
+                <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">SSnnId</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">4</span><span class="p">)</span><span class="o">.</span><span class="n">contiguous</span><span class="p">(),</span>\
+                <span class="n">force_cpu</span><span class="o">=</span><span class="n">force_cpu</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="n">rdm_up</span><span class="o">=</span> <span class="n">rdm_kagome</span><span class="o">.</span><span class="n">rdm2x2_up_triangle_open</span><span class="p">(</span>\
+                <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">force_cpu</span><span class="o">=</span><span class="n">force_cpu</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="n">SS_up_01</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;ijkmno,mnoijk&#39;</span><span class="p">,</span> <span class="n">rdm_up</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">SSnnId</span> <span class="p">)</span>
+            <span class="n">SS_up_12</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;ijkmno,mnoijk&#39;</span><span class="p">,</span> <span class="n">rdm_up</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">SSnnId</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">3</span><span class="p">)</span> <span class="p">)</span>
+            <span class="n">SS_up_02</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;ijkmno,mnoijk&#39;</span><span class="p">,</span> <span class="n">rdm_up</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">SSnnId</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">4</span><span class="p">)</span> <span class="p">)</span>
+
+            <span class="n">obs</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s2">&quot;SS_dn_01&quot;</span><span class="p">:</span> <span class="n">SS_dn_01</span><span class="p">,</span> <span class="s2">&quot;SS_dn_12&quot;</span><span class="p">:</span> <span class="n">SS_dn_12</span><span class="p">,</span> <span class="s2">&quot;SS_dn_02&quot;</span><span class="p">:</span> <span class="n">SS_dn_02</span><span class="p">,</span>\
+                <span class="s2">&quot;SS_up_01&quot;</span><span class="p">:</span> <span class="n">SS_up_01</span><span class="p">,</span> <span class="s2">&quot;SS_up_12&quot;</span><span class="p">:</span> <span class="n">SS_up_12</span><span class="p">,</span> <span class="s2">&quot;SS_up_02&quot;</span><span class="p">:</span> <span class="n">SS_up_02</span> <span class="p">})</span>
+            
+            <span class="k">if</span> <span class="n">disp_corre_len</span><span class="p">:</span> 
+                <span class="n">obs</span><span class="o">=</span> <span class="n">eval_corr_lengths</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">obs</span><span class="o">=</span><span class="n">obs</span><span class="p">)</span>
+                
+        <span class="c1"># prepare list with labels and values</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">obs</span><span class="o">.</span><span class="n">values</span><span class="p">()),</span> <span class="nb">list</span><span class="p">(</span><span class="n">obs</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+
+        <span class="k">def</span> <span class="nf">eval_corr_lengths</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">coord</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">),</span> <span class="n">obs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+            <span class="n">Ns</span><span class="o">=</span><span class="mi">3</span>
+            <span class="n">direction</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">Lx</span><span class="o">=</span> <span class="n">transferops</span><span class="o">.</span><span class="n">get_Top_spec</span><span class="p">(</span><span class="n">Ns</span><span class="p">,</span> <span class="n">coord</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">)</span>
+            <span class="n">direction</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">Ly</span><span class="o">=</span> <span class="n">transferops</span><span class="o">.</span><span class="n">get_Top_spec</span><span class="p">(</span><span class="n">Ns</span><span class="p">,</span> <span class="n">coord</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">env</span><span class="p">)</span>
+            <span class="n">lambdax_0</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">Lx</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="mi">1</span><span class="n">j</span><span class="o">*</span><span class="n">Lx</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">])</span>
+            <span class="n">lambdax_1</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">Lx</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="mi">1</span><span class="n">j</span><span class="o">*</span><span class="n">Lx</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">])</span>
+            <span class="n">lambdax_2</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">Lx</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="mi">1</span><span class="n">j</span><span class="o">*</span><span class="n">Lx</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">])</span>
+            <span class="n">lambday_0</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">Ly</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="mi">1</span><span class="n">j</span><span class="o">*</span><span class="n">Ly</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">])</span>
+            <span class="n">lambday_1</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">Ly</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="mi">1</span><span class="n">j</span><span class="o">*</span><span class="n">Ly</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">])</span>
+            <span class="n">lambday_2</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">Ly</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="mi">1</span><span class="n">j</span><span class="o">*</span><span class="n">Ly</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">])</span>
+            <span class="n">correlen_x</span><span class="o">=-</span><span class="mi">1</span><span class="o">/</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">lambdax_1</span><span class="o">/</span><span class="n">lambdax_0</span><span class="p">))</span>
+            <span class="n">correlen_y</span><span class="o">=-</span><span class="mi">1</span><span class="o">/</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">lambday_1</span><span class="o">/</span><span class="n">lambday_0</span><span class="p">))</span>
+            <span class="n">corr_len_obs</span><span class="o">=</span> <span class="p">{</span><span class="s2">&quot;lambdax_0&quot;</span><span class="p">:</span> <span class="n">lambdax_0</span><span class="p">,</span> <span class="s2">&quot;lambdax_1&quot;</span><span class="p">:</span> <span class="n">lambdax_1</span><span class="p">,</span>\
+                <span class="s2">&quot;lambdax_2&quot;</span><span class="p">:</span> <span class="n">lambdax_2</span><span class="p">,</span><span class="s2">&quot;lambday_0&quot;</span><span class="p">:</span> <span class="n">lambday_0</span><span class="p">,</span> <span class="s2">&quot;lambday_1&quot;</span><span class="p">:</span> <span class="n">lambday_1</span><span class="p">,</span>\
+                <span class="s2">&quot;lambday_2&quot;</span><span class="p">:</span> <span class="n">lambday_2</span><span class="p">,</span><span class="s2">&quot;correlen_x&quot;</span><span class="p">:</span> <span class="n">correlen_x</span><span class="p">,</span> <span class="s2">&quot;correlen_y&quot;</span><span class="p">:</span> <span class="n">correlen_y</span><span class="p">}</span>
+            <span class="k">if</span> <span class="n">obs</span><span class="p">:</span>
+                <span class="n">obs</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+                <span class="k">return</span> <span class="n">obs</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">corr_len_obs</span></div>
+
+<div class="viewcode-block" id="S_HALF_KAGOME.eval_corrf_SS"><a class="viewcode-back" href="../../models/spin_half_kagome.html#models.spin_half_kagome.S_HALF_KAGOME.eval_corrf_SS">[docs]</a>    <span class="k">def</span> <span class="nf">eval_corrf_SS</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">coord</span><span class="p">,</span><span class="n">direction</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">,</span><span class="n">dist</span><span class="p">,</span><span class="n">site</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param coord: reference site</span>
+<span class="sd">        :type coord: tuple(int,int)</span>
+<span class="sd">        :param direction: </span>
+<span class="sd">        :type direction: tuple(int,int)</span>
+<span class="sd">        :param state: wavefunction</span>
+<span class="sd">        :param env: CTM environment</span>
+<span class="sd">        :type state: IPEPS_KAGOME</span>
+<span class="sd">        :type env: ENV</span>
+<span class="sd">        :param dist: maximal distance of correlator</span>
+<span class="sd">        :type dist: int</span>
+<span class="sd">        :param site: selects one of the non-equivalent physical degrees of freedom</span>
+<span class="sd">                     within the unit cell</span>
+<span class="sd">        :type site: int</span>
+<span class="sd">        :return: dictionary with full and spin-resolved spin-spin correlation functions</span>
+<span class="sd">        :rtype: dict(str: torch.Tensor)</span>
+<span class="sd">        </span>
+<span class="sd">        Evaluate spin-spin correlation functions :math:`\langle\mathbf{S}(r).\mathbf{S}(0)\rangle` </span>
+<span class="sd">        up to r = ``dist`` in given direction. See :meth:`ctm.generic.corrf.corrf_1sO1sO`.</span>
+<span class="sd">        </span>
+<span class="sd">        The on-site tensor of the underlying IPEPS_KAGOME contains all three DoFs </span>
+<span class="sd">        of the down triangle. Choosing ``site`` selects one of them to be used for</span>
+<span class="sd">        evaluating correlation function::</span>
+
+<span class="sd">               a</span>
+<span class="sd">               |</span>
+<span class="sd">            b--\                     </span>
+<span class="sd">                \</span>
+<span class="sd">                s0--s2--d</span>
+<span class="sd">                 | / </span>
+<span class="sd">                 |/   &lt;- down triangle</span>
+<span class="sd">                s1</span>
+<span class="sd">                 |</span>
+<span class="sd">                 c</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># function allowing for additional site-dependent conjugation of op</span>
+        <span class="k">def</span> <span class="nf">conjugate_op</span><span class="p">(</span><span class="n">op</span><span class="p">):</span>
+            <span class="c1"># rot_op= ...</span>
+            <span class="n">op_0</span><span class="o">=</span> <span class="n">op</span>
+            <span class="c1"># op_rot= torch.einsum(&#39;ki,kl,lj-&gt;ij&#39;,rot_op,op_0,rot_op)</span>
+            <span class="k">def</span> <span class="nf">_gen_op</span><span class="p">(</span><span class="n">r</span><span class="p">):</span>
+                <span class="c1">#return op_rot if r%2==0 else op_0</span>
+                <span class="k">return</span> <span class="n">op_0</span>
+            <span class="k">return</span> <span class="n">_gen_op</span>
+
+        <span class="k">assert</span> <span class="n">site</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">],</span><span class="s2">&quot;site has to be 0,1, or 2&quot;</span>
+        <span class="n">op_sz</span><span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">obs_ops</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;sz_</span><span class="si">{</span><span class="n">site</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">view</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">phys_dim</span><span class="o">**</span><span class="mi">3</span><span class="p">]</span><span class="o">*</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">op_sx</span><span class="o">=</span> <span class="mf">0.5</span><span class="o">*</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">obs_ops</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;sp_</span><span class="si">{</span><span class="n">site</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">obs_ops</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;sm_</span><span class="si">{</span><span class="n">site</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">])</span>\
+            <span class="o">.</span><span class="n">view</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">phys_dim</span><span class="o">**</span><span class="mi">3</span><span class="p">]</span><span class="o">*</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">op_isy</span><span class="o">=</span> <span class="o">-</span><span class="mf">0.5</span><span class="o">*</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">obs_ops</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;sp_</span><span class="si">{</span><span class="n">site</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">obs_ops</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;sm_</span><span class="si">{</span><span class="n">site</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">])</span>\
+            <span class="o">.</span><span class="n">view</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">phys_dim</span><span class="o">**</span><span class="mi">3</span><span class="p">]</span><span class="o">*</span><span class="mi">2</span><span class="p">)</span>
+
+        <span class="n">Sz0szR</span><span class="o">=</span> <span class="n">corrf</span><span class="o">.</span><span class="n">corrf_1sO1sO</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span><span class="n">direction</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">,</span> <span class="n">op_sz</span><span class="p">,</span> <span class="n">conjugate_op</span><span class="p">(</span><span class="n">op_sz</span><span class="p">),</span> <span class="n">dist</span><span class="p">)</span>
+        <span class="n">Sx0sxR</span><span class="o">=</span> <span class="n">corrf</span><span class="o">.</span><span class="n">corrf_1sO1sO</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span><span class="n">direction</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">,</span> <span class="n">op_sx</span><span class="p">,</span> <span class="n">conjugate_op</span><span class="p">(</span><span class="n">op_sx</span><span class="p">),</span> <span class="n">dist</span><span class="p">)</span>
+        <span class="n">nSy0SyR</span><span class="o">=</span> <span class="n">corrf</span><span class="o">.</span><span class="n">corrf_1sO1sO</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span><span class="n">direction</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">,</span> <span class="n">op_isy</span><span class="p">,</span> <span class="n">conjugate_op</span><span class="p">(</span><span class="n">op_isy</span><span class="p">),</span> <span class="n">dist</span><span class="p">)</span>
+
+        <span class="n">res</span><span class="o">=</span> <span class="nb">dict</span><span class="p">({</span><span class="s2">&quot;ss&quot;</span><span class="p">:</span> <span class="n">Sz0szR</span><span class="o">+</span><span class="n">Sx0sxR</span><span class="o">-</span><span class="n">nSy0SyR</span><span class="p">,</span> <span class="s2">&quot;szsz&quot;</span><span class="p">:</span> <span class="n">Sz0szR</span><span class="p">,</span> <span class="s2">&quot;sxsx&quot;</span><span class="p">:</span> <span class="n">Sx0sxR</span><span class="p">,</span> <span class="s2">&quot;sysy&quot;</span><span class="p">:</span> <span class="o">-</span><span class="n">nSy0SyR</span><span class="p">})</span>
+        <span class="k">return</span> <span class="n">res</span>  </div></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Juraj Hasik, Glen B. Mbeng
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

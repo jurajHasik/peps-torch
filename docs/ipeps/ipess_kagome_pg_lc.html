@@ -1,0 +1,533 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Kagome iPESS from lin. combination &mdash; peps-torch alpha documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Generic abelian-symmetric iPEPS" href="ipeps_abelian.html" />
+    <link rel="prev" title="Kagome iPESS with point groups" href="ipess_kagome_pg.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> peps-torch
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../ipeps.html">iPEPS</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="ipeps.html">Generic iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ipeps_kagome.html">Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ipeps_c4v.html">1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ipeps_lc_1site_pg.html">1-site iPEPS from lin. combination</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ipess_kagome.html">Generic Kagome iPESS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ipess_kagome_pg.html">Kagome iPESS with point groups</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Kagome iPESS from lin. combination</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../ipeps.html#abelian-symmetric-ipeps">Abelian-symmetric iPEPS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="ipeps_abelian.html">Generic  abelian-symmetric iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ipeps_abelian.html#generic-abelian-symmetric-ipeps-with-weights">Generic abelian-symmetric iPEPS with weights</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ipeps_kagome_abelian.html">Abelian-symmetric Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ipeps_abelian_c4v.html">Abelian-symmetric 1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ipess_kagome_abelian.html">Abelian-symmetric generic Kagome iPESS</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../envs.html">Environments</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../envs/generic.html">Generic iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic/env.html">Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic/ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic/ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic/ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic/rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic/rdm.html#module-ctm.pess_kagome.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic/corrf.html">Correlation functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic/transfer_matrix.html">Transfer Matrices</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../envs/generic_abelian.html">Abelian-symmetric generic iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic_abelian/env_abelian.html">Abelian-symmetric environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic_abelian/ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic_abelian/ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic_abelian/ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic_abelian/rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/generic_abelian/rdm.html#module-ctm.pess_kagome_abelian.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../envs/one_site_c4v.html">1-site C4v iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../envs/one_site_c4v/env_c4v.html">1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/one_site_c4v/ctmrg_c4v.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/one_site_c4v/rdm_c4v.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/one_site_c4v/transfer_matrix.html">Transfer Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/one_site_c4v/corrf_c4v.html">Correlation functions</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../envs/one_site_c4v_abelian.html">Abelian-symmetric 1-site C4v iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../envs/one_site_c4v_abelian/env_c4v_abelian.html">Abelian-symmetric 1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/one_site_c4v_abelian/ctmrg_c4v_abelian.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/one_site_c4v_abelian/rdm_c4v_abelian.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../envs/one_site_c4v_abelian/corrf_c4v_abelian.html">Correlation functions</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../optim.html">Optimization</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../optim/drivers.html">Optimization drivers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../optim/drivers/ad_optim.html">ad_optim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../optim/drivers/ad_optim_lbfgs_mod.html">ad_optim_lbfgs_mod</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../optim/drivers/ad_optim_sgd_mod.html">ad_optim_sgd_mod</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../optim/optimizers.html">Custom optimizers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../optim/optimizers/lbfgs_modified.html">Extended LBFGS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../optim/optimizers/sgd_modified.html">SGD with linesearch</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../config.html">Configuration</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../config.html#main">Main</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../config.html#global">Global</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../config.html#corner-transfer-matrix-algorithm">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../config.html#optimization">Optimization</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../models.html">Models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../models/akltS2.html">Spin S=2 AKLT Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../models/akltS2.html#module-models.akltS2">2x1 and 2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/akltS2.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../models/coupledLadders.html">Coupled Ladders</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../models/coupledLadders.html#dense-pytorch">Dense (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/coupledLadders.html#dense-yast">Dense (YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/coupledLadders.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../models/ising.html">Transverse Field Ising Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../models/ising.html#x1-unit-cell">1x1 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/ising.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../models/j1j2.html">J1-J2-J3 and J1-J2-lambda Heisenberg Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../models/j1j2.html#from-2x1-to-4x2-unit-cell-pytorch">from 2x1 to 4x2 unit cell (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/j1j2.html#from-2x1-to-4x2-unit-cell-dense-yast">from 2x1 to 4x2 unit cell (dense YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/j1j2.html#x1-c4v-pytorch">1x1 C4v (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/j1j2.html#x1-c4v-dense-yast">1x1 C4v (dense YAST)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../models/jq.html">J-Q Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../models/jq.html#module-models.jq">2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/jq.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../models/spin_half_kagome.html">SU(2) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../models/spin_half_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/spin_half_kagome.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../models/su3_kagome.html">SU(3) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../models/su3_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/su3_kagome.html#with-explict-u-1-xu-1-symmetry">With explict U(1)xU(1) symmetry</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../groups.html">Groups</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../groups/pg.html">Point group: square lattice</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../groups/su2.html">SU(2)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../groups/su2.html#module-groups.su2_abelian">SU(2) with explicit U(1) structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../groups/su3.html">SU(3)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../groups/su3.html#su-3-with-explicit-u-1-xu-1-structure">SU(3) with explicit U(1)xU(1) structure</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../linalg.html">Linear Algebra</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../linalg/custom_eig.html">Truncated eigendecomposition</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../linalg/custom_svd.html">Truncated SVD</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../linalg/spec_decomp.html">Spectral decompositions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../linalg/spec_decomp.html#module-linalg.svd_gesdd">SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../linalg/spec_decomp.html#module-linalg.svd_arnoldi">Partial SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../linalg/spec_decomp.html#module-linalg.svd_rsvd">Randomized SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../linalg/spec_decomp.html#module-linalg.eig_sym">Symmetric Eigendecomposition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../linalg/spec_decomp.html#module-linalg.eig_arnoldi">Partial diagonalization</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">peps-torch</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../ipeps.html">iPEPS</a> &raquo;</li>
+        
+      <li>Kagome iPESS from lin. combination</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            
+              <!-- User defined GitHub URL -->
+              <a href="https://github.com/jurajHasik/peps-torch" class="fa fa-github"> Edit on GitHub</a>
+            
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <section id="kagome-ipess-from-lin-combination">
+<h1>Kagome iPESS from lin. combination<a class="headerlink" href="#kagome-ipess-from-lin-combination" title="Permalink to this heading">¶</a></h1>
+<p>Specialized sub-class of <a class="reference internal" href="ipess_kagome_pg.html#ipeps.ipess_kagome.IPESS_KAGOME_PG" title="ipeps.ipess_kagome.IPESS_KAGOME_PG"><code class="xref py py-class docutils literal notranslate"><span class="pre">ipeps.ipess_kagome.IPESS_KAGOME_PG</span></code></a>,
+with iPESS tensors built as linear combination of a set of basis
+tensors <cite>e</cite></p>
+<div class="math notranslate nohighlight">
+\[t = \sum_i \lambda_i e^i,\]</div>
+<p>where <span class="math notranslate nohighlight">\(\vec{\lambda}\)</span> is a vector of real coefficients, which are the variatonal parameters of this ansatz. Both
+trivalent tensors <code class="docutils literal notranslate"><span class="pre">'T_u'</span></code>, <code class="docutils literal notranslate"><span class="pre">'T_d'</span></code> and bond tensors <code class="docutils literal notranslate"><span class="pre">'B_a'</span></code>, <code class="docutils literal notranslate"><span class="pre">'B_b'</span></code>, <code class="docutils literal notranslate"><span class="pre">'B_c'</span></code> are defined in this way.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="ipeps.ipess_kagome.IPESS_KAGOME_PG_LC">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ipeps.ipess_kagome.</span></span><span class="sig-name descname"><span class="pre">IPESS_KAGOME_PG_LC</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">T_u</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">B_c</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">T_d=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">B_a=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">B_b=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">SYM_UP_DOWN=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">SYM_BOND_S=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pgs=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">peps_args=&lt;config.PEPSARGS</span> <span class="pre">object&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">global_args=&lt;config.GLOBALARGS</span> <span class="pre">object&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ipeps/ipess_kagome.html#IPESS_KAGOME_PG_LC"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ipeps.ipess_kagome.IPESS_KAGOME_PG_LC" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="ipess_kagome_pg.html#ipeps.ipess_kagome.IPESS_KAGOME_PG" title="ipeps.ipess_kagome.IPESS_KAGOME_PG"><code class="xref py py-class docutils literal notranslate"><span class="pre">IPESS_KAGOME_PG</span></code></a></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>T_u</strong> (<em>tuple</em><em>(</em><em>torch.tensor</em><em>, </em><em>list</em><em>(</em><em>tuple</em><em>(</em><em>dict</em><em>,</em><em>torch.tensor</em><em>)</em><em>)</em><em>)</em>) – tuple of vector with real coefficients and list of basis tensors
+defining trivalent tensor as linear combination</p></li>
+<li><p><strong>B_c</strong> (<em>tuple</em><em>(</em><em>torch.tensor</em><em>, </em><em>list</em><em>(</em><em>tuple</em><em>(</em><em>dict</em><em>,</em><em>torch.tensor</em><em>)</em><em>)</em><em>)</em>) – tuple of vector with real coefficients and list of basis tensors
+defining bond tensor as linear combination</p></li>
+<li><p><strong>T_d</strong> – analogous to T_u</p></li>
+<li><p><strong>B_a</strong> (<em>tuple</em><em>(</em><em>torch.tensor</em><em>, </em><em>list</em><em>(</em><em>tuple</em><em>(</em><em>dict</em><em>,</em><em>torch.tensor</em><em>)</em><em>)</em><em>)</em>) – analogous to B_c</p></li>
+<li><p><strong>B_b</strong> (<em>tuple</em><em>(</em><em>torch.tensor</em><em>, </em><em>list</em><em>(</em><em>tuple</em><em>(</em><em>dict</em><em>,</em><em>torch.tensor</em><em>)</em><em>)</em><em>)</em>) – analogous to B_c</p></li>
+<li><p><strong>SYM_UP_DOWN</strong> (<em>bool</em>) – is up triangle equivalent to down triangle</p></li>
+<li><p><strong>SYM_BOND_S</strong> (<em>bool</em>) – are bond tensors equivalent to each other</p></li>
+<li><p><strong>pgs</strong> (<em>dict</em><em>[</em><em>str : str</em><em>]</em>) – dictionary assigning point-group irreps to basis tensors</p></li>
+<li><p><strong>peps_args</strong> (<em>PEPSARGS</em>) – ipeps configuration</p></li>
+<li><p><strong>global_args</strong> (<a class="reference internal" href="../config.html#config.GLOBALARGS" title="config.GLOBALARGS"><em>GLOBALARGS</em></a>) – global configuration</p></li>
+</ul>
+</dd>
+</dl>
+<p>Single unit-cell iPESS ansatz (3 sites per unit cell) for Kagome lattice
+with elementary tensors built as linear combination of supplied basis tensors.</p>
+<p>Each basis tensor is described by a dict:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">T_u</span><span class="o">=</span> <span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="p">[</span>
+    <span class="o">...</span><span class="p">,</span>
+    <span class="p">({</span><span class="s2">&quot;meta&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;pg&quot;</span><span class="p">:</span> <span class="s2">&quot;A_1&quot;</span><span class="p">},</span> <span class="o">...</span><span class="p">},</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">),</span>
+    <span class="o">...</span><span class="p">,</span>
+<span class="p">])</span>
+</pre></div>
+</div>
+<p>where the value of “pg” (specified inside dict “meta”) is either “A_1” or “A_2” for
+trivalent tensors <code class="docutils literal notranslate"><span class="pre">'T_u'</span></code>, <code class="docutils literal notranslate"><span class="pre">'T_d'</span></code> and “A” or “B” for bond tensors <code class="docutils literal notranslate"><span class="pre">'B_a'</span></code>,
+<code class="docutils literal notranslate"><span class="pre">'B_b'</span></code>, <code class="docutils literal notranslate"><span class="pre">'B_c'</span></code>.</p>
+<p>Coefficients and basis tensors can be accessed in member dictionaries <code class="docutils literal notranslate"><span class="pre">coeffs</span></code>
+and <code class="docutils literal notranslate"><span class="pre">basis_t</span></code> respectively.</p>
+<p>If <code class="docutils literal notranslate"><span class="pre">SYM_UP_DOWN</span></code>, then <cite>T_d</cite> trivalent tensor is taken to be identical to <cite>T_u</cite>.
+The choice of the contraction guarantees the same (direction of) chirality on up
+and down triangles.</p>
+<p>If <code class="docutils literal notranslate"><span class="pre">SYM_BOND_S</span></code>, then <cite>B_a</cite> and <cite>B_b</cite> bond tensors are taken to be identical to <cite>B_c</cite>.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">pgs</span></code> specifies point-group irreps for elementary tensors, see <a class="reference internal" href="ipess_kagome_pg.html#ipeps.ipess_kagome.IPESS_KAGOME_PG" title="ipeps.ipess_kagome.IPESS_KAGOME_PG"><code class="xref py py-class docutils literal notranslate"><span class="pre">IPESS_KAGOME_PG</span></code></a>.
+Only basis tensors of selected point-group irrep are used to construct ipess tensors.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="ipeps.ipess_kagome.IPESS_KAGOME_PG_LC.add_noise">
+<span class="sig-name descname"><span class="pre">add_noise</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">noise</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ipeps/ipess_kagome.html#IPESS_KAGOME_PG_LC.add_noise"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ipeps.ipess_kagome.IPESS_KAGOME_PG_LC.add_noise" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>noise</strong> (<em>float</em>) – magnitude of noise</p>
+</dd>
+</dl>
+<p>Add uniform random noise to coefficients of linear combinations.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ipeps.ipess_kagome.IPESS_KAGOME_PG_LC.build_elem_tensors">
+<span class="sig-name descname"><span class="pre">build_elem_tensors</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ipeps/ipess_kagome.html#IPESS_KAGOME_PG_LC.build_elem_tensors"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ipeps.ipess_kagome.IPESS_KAGOME_PG_LC.build_elem_tensors" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>elementary tensors</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>dict[str: torch.Tensor]</p>
+</dd>
+</dl>
+<p>Construct elementary tensors <code class="docutils literal notranslate"><span class="pre">'T_u'</span></code>, <code class="docutils literal notranslate"><span class="pre">'B_c'</span></code> and optionally <code class="docutils literal notranslate"><span class="pre">'T_d'</span></code>, <code class="docutils literal notranslate"><span class="pre">'B_a'</span></code>, <code class="docutils literal notranslate"><span class="pre">'B_b'</span></code>
+as linear combinations of basis tensors with real coefficients.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ipeps.ipess_kagome.IPESS_KAGOME_PG_LC.get_checkpoint">
+<span class="sig-name descname"><span class="pre">get_checkpoint</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ipeps/ipess_kagome.html#IPESS_KAGOME_PG_LC.get_checkpoint"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ipeps.ipess_kagome.IPESS_KAGOME_PG_LC.get_checkpoint" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>all data necessary to reconstruct the state. In this case dict containing
+members <code class="docutils literal notranslate"><span class="pre">coeffs</span></code> and <code class="docutils literal notranslate"><span class="pre">basis_t</span></code></p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>dict[str: dict[str: torch.Tensor], str: dict[str: list(tuple(dict,torch.Tensor))]]</p>
+</dd>
+</dl>
+<p>This function is called by optimizer to create checkpoints during
+the optimization process.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ipeps.ipess_kagome.IPESS_KAGOME_PG_LC.get_parameters">
+<span class="sig-name descname"><span class="pre">get_parameters</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ipeps/ipess_kagome.html#IPESS_KAGOME_PG_LC.get_parameters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ipeps.ipess_kagome.IPESS_KAGOME_PG_LC.get_parameters" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>variational parameters of IPESS_KAGOME_PG_LC</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>iterable</p>
+</dd>
+</dl>
+<p>This function is called by optimizer to access variational parameters of the state.
+In this case member <code class="docutils literal notranslate"><span class="pre">coeffs</span></code>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ipeps.ipess_kagome.IPESS_KAGOME_PG_LC.load_checkpoint">
+<span class="sig-name descname"><span class="pre">load_checkpoint</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">checkpoint_file</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ipeps/ipess_kagome.html#IPESS_KAGOME_PG_LC.load_checkpoint"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ipeps.ipess_kagome.IPESS_KAGOME_PG_LC.load_checkpoint" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>checkpoint_file</strong> (<em>str</em>) – path to checkpoint file</p>
+</dd>
+</dl>
+<p>Initializes the state according to the supplied checkpoint file.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The <cite>vertexToSite</cite> mapping function is not a part of checkpoint and must
+be provided either when instantiating IPEPS_ABELIAN or afterwards.</p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ipeps.ipess_kagome.IPESS_KAGOME_PG_LC.update_">
+<span class="sig-name descname"><span class="pre">update_</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ipeps/ipess_kagome.html#IPESS_KAGOME_PG_LC.update_"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ipeps.ipess_kagome.IPESS_KAGOME_PG_LC.update_" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update parent classes <a class="reference internal" href="ipess_kagome_pg.html#ipeps.ipess_kagome.IPESS_KAGOME_PG" title="ipeps.ipess_kagome.IPESS_KAGOME_PG"><code class="xref py py-class docutils literal notranslate"><span class="pre">IPESS_KAGOME_PG</span></code></a>, <a class="reference internal" href="ipess_kagome.html#ipeps.ipess_kagome.IPESS_KAGOME_GENERIC" title="ipeps.ipess_kagome.IPESS_KAGOME_GENERIC"><code class="xref py py-class docutils literal notranslate"><span class="pre">IPESS_KAGOME_GENERIC</span></code></a>,
+and <code class="xref py py-class docutils literal notranslate"><span class="pre">IPEPS_KAGOME</span></code>. First, invoking reconstruction of elementary tensors
+by <a class="reference internal" href="#ipeps.ipess_kagome.IPESS_KAGOME_PG_LC.build_elem_tensors" title="ipeps.ipess_kagome.IPESS_KAGOME_PG_LC.build_elem_tensors"><code class="xref py py-meth docutils literal notranslate"><span class="pre">build_elem_tensors()</span></code></a> and then construct rank-5 iPEPS by <code class="xref py py-meth docutils literal notranslate"><span class="pre">build_onsite_tensors()</span></code>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ipeps.ipess_kagome.IPESS_KAGOME_PG_LC.write_to_file">
+<span class="sig-name descname"><span class="pre">write_to_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">outputfile</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-14</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normalize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ipeps/ipess_kagome.html#IPESS_KAGOME_PG_LC.write_to_file"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ipeps.ipess_kagome.IPESS_KAGOME_PG_LC.write_to_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>See <code class="xref py py-meth docutils literal notranslate"><span class="pre">write_ipess_kagome_pg_lc()</span></code>.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">ipeps.ipess_kagome.</span></span><span class="sig-name descname"><span class="pre">read_ipess_kagome_pg_lc</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">jsonfile</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">peps_args=&lt;config.PEPSARGS</span> <span class="pre">object&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">global_args=&lt;config.GLOBALARGS</span> <span class="pre">object&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ipeps/ipess_kagome.html#read_ipess_kagome_pg_lc"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>jsonfile</strong> (<em>str</em><em> or </em><em>Path object</em>) – input file describing IPESS_KAGOME_PG_LC in json format</p></li>
+<li><p><strong>peps_args</strong> (<em>PEPSARGS</em>) – ipeps configuration</p></li>
+<li><p><strong>global_args</strong> (<a class="reference internal" href="../config.html#config.GLOBALARGS" title="config.GLOBALARGS"><em>GLOBALARGS</em></a>) – global configuration</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>wavefunction</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#ipeps.ipess_kagome.IPESS_KAGOME_PG_LC" title="ipeps.ipess_kagome.IPESS_KAGOME_PG_LC">IPESS_KAGOME_PG_LC</a></p>
+</dd>
+</dl>
+<p>Read IPESS_KAGOME_PG_LC state from file.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">ipeps.ipess_kagome.</span></span><span class="sig-name descname"><span class="pre">write_ipess_kagome_pg_lc</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">outputfile</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-14</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normalize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ipeps/ipess_kagome.html#write_ipess_kagome_pg_lc"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference internal" href="#ipeps.ipess_kagome.IPESS_KAGOME_PG_LC" title="ipeps.ipess_kagome.IPESS_KAGOME_PG_LC"><em>IPESS_KAGOME_PG_LC</em></a>) – wavefunction to write out in json format</p></li>
+<li><p><strong>outputfile</strong> – target file</p></li>
+<li><p><strong>tol</strong> (<em>float</em>) – minimum magnitude of tensor elements which are written out</p></li>
+<li><p><strong>normalize</strong> (<em>bool</em>) – if True, on-site tensors are normalized before writing</p></li>
+</ul>
+</dd>
+</dl>
+<p>Write state to file.</p>
+</dd></dl>
+
+</section>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="ipeps_abelian.html" class="btn btn-neutral float-right" title="Generic abelian-symmetric iPEPS" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="ipess_kagome_pg.html" class="btn btn-neutral float-left" title="Kagome iPESS with point groups" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Juraj Hasik, Glen B. Mbeng
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

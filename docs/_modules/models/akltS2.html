@@ -1,0 +1,684 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>models.akltS2 &mdash; peps-torch alpha documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> peps-torch
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../ipeps.html">iPEPS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps.html">Generic iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_kagome.html">Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_c4v.html">1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_lc_1site_pg.html">1-site iPEPS from lin. combination</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipess_kagome.html">Generic Kagome iPESS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipess_kagome_pg.html">Kagome iPESS with point groups</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipess_kagome_pg_lc.html">Kagome iPESS from lin. combination</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../ipeps.html#abelian-symmetric-ipeps">Abelian-symmetric iPEPS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_abelian.html">Generic  abelian-symmetric iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_abelian.html#generic-abelian-symmetric-ipeps-with-weights">Generic abelian-symmetric iPEPS with weights</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_kagome_abelian.html">Abelian-symmetric Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_abelian_c4v.html">Abelian-symmetric 1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipess_kagome_abelian.html">Abelian-symmetric generic Kagome iPESS</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../envs.html">Environments</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../envs/generic.html">Generic iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/env.html">Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/rdm.html#module-ctm.pess_kagome.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/corrf.html">Correlation functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/transfer_matrix.html">Transfer Matrices</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../envs/generic_abelian.html">Abelian-symmetric generic iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic_abelian/env_abelian.html">Abelian-symmetric environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic_abelian/ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic_abelian/ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic_abelian/ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic_abelian/rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic_abelian/rdm.html#module-ctm.pess_kagome_abelian.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../envs/one_site_c4v.html">1-site C4v iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v/env_c4v.html">1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v/ctmrg_c4v.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v/rdm_c4v.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v/transfer_matrix.html">Transfer Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v/corrf_c4v.html">Correlation functions</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../envs/one_site_c4v_abelian.html">Abelian-symmetric 1-site C4v iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v_abelian/env_c4v_abelian.html">Abelian-symmetric 1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v_abelian/ctmrg_c4v_abelian.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v_abelian/rdm_c4v_abelian.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v_abelian/corrf_c4v_abelian.html">Correlation functions</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../optim.html">Optimization</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../optim/drivers.html">Optimization drivers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/drivers/ad_optim.html">ad_optim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/drivers/ad_optim_lbfgs_mod.html">ad_optim_lbfgs_mod</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/drivers/ad_optim_sgd_mod.html">ad_optim_sgd_mod</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../optim/optimizers.html">Custom optimizers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/optimizers/lbfgs_modified.html">Extended LBFGS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/optimizers/sgd_modified.html">SGD with linesearch</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../config.html">Configuration</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../config.html#main">Main</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../config.html#global">Global</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../config.html#corner-transfer-matrix-algorithm">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../config.html#optimization">Optimization</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../models.html">Models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../models/akltS2.html">Spin S=2 AKLT Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/akltS2.html#module-models.akltS2">2x1 and 2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/akltS2.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/coupledLadders.html">Coupled Ladders</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/coupledLadders.html#dense-pytorch">Dense (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/coupledLadders.html#dense-yast">Dense (YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/coupledLadders.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/ising.html">Transverse Field Ising Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/ising.html#x1-unit-cell">1x1 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/ising.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/j1j2.html">J1-J2-J3 and J1-J2-lambda Heisenberg Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/j1j2.html#from-2x1-to-4x2-unit-cell-pytorch">from 2x1 to 4x2 unit cell (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/j1j2.html#from-2x1-to-4x2-unit-cell-dense-yast">from 2x1 to 4x2 unit cell (dense YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/j1j2.html#x1-c4v-pytorch">1x1 C4v (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/j1j2.html#x1-c4v-dense-yast">1x1 C4v (dense YAST)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/jq.html">J-Q Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/jq.html#module-models.jq">2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/jq.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/spin_half_kagome.html">SU(2) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/spin_half_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/spin_half_kagome.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/su3_kagome.html">SU(3) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/su3_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/su3_kagome.html#with-explict-u-1-xu-1-symmetry">With explict U(1)xU(1) symmetry</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../groups.html">Groups</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/pg.html">Point group: square lattice</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/su2.html">SU(2)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/su2.html#module-groups.su2_abelian">SU(2) with explicit U(1) structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/su3.html">SU(3)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/su3.html#su-3-with-explicit-u-1-xu-1-structure">SU(3) with explicit U(1)xU(1) structure</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../linalg.html">Linear Algebra</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../linalg/custom_eig.html">Truncated eigendecomposition</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../linalg/custom_svd.html">Truncated SVD</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../linalg/spec_decomp.html">Spectral decompositions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.svd_gesdd">SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.svd_arnoldi">Partial SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.svd_rsvd">Randomized SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.eig_sym">Symmetric Eigendecomposition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.eig_arnoldi">Partial diagonalization</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">peps-torch</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+      <li>models.akltS2</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for models.akltS2</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">groups.su2</span> <span class="k">as</span> <span class="nn">su2</span>
+<span class="kn">import</span> <span class="nn">config</span> <span class="k">as</span> <span class="nn">cfg</span>
+<span class="kn">from</span> <span class="nn">ctm.generic.env</span> <span class="kn">import</span> <span class="n">ENV</span>
+<span class="kn">from</span> <span class="nn">ctm.generic</span> <span class="kn">import</span> <span class="n">rdm</span>
+<span class="kn">from</span> <span class="nn">ctm.one_site_c4v.env_c4v</span> <span class="kn">import</span> <span class="n">ENV_C4V</span>
+<span class="kn">from</span> <span class="nn">ctm.one_site_c4v</span> <span class="kn">import</span> <span class="n">rdm_c4v</span>
+<span class="kn">from</span> <span class="nn">ctm.one_site_c4v</span> <span class="kn">import</span> <span class="n">corrf_c4v</span>
+<span class="kn">from</span> <span class="nn">math</span> <span class="kn">import</span> <span class="n">sqrt</span>
+<span class="kn">import</span> <span class="nn">itertools</span>
+
+<span class="n">_cast_to_real</span><span class="o">=</span> <span class="n">rdm</span><span class="o">.</span><span class="n">_cast_to_real</span>
+
+<div class="viewcode-block" id="AKLTS2"><a class="viewcode-back" href="../../models/akltS2.html#models.akltS2.AKLTS2">[docs]</a><span class="k">class</span> <span class="nc">AKLTS2</span><span class="p">():</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">global_args</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">global_args</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param global_args: global configuration</span>
+<span class="sd">        :type global_args: GLOBALARGS</span>
+
+<span class="sd">        Build AKLT S=2 Hamiltonian, equivalent to projector from product of two S=2 DOFs</span>
+<span class="sd">        to S=4 DOF</span>
+<span class="sd">        </span>
+<span class="sd">        .. math::</span>
+<span class="sd">            H = \sum_{&lt;ij&gt;} h_{ij},\ \ \ h_{ij}= \frac{1}{14} \vec{S}_i\cdot\vec{S}_j</span>
+<span class="sd">                + \frac{7}{10} (\vec{S}_i\cdot\vec{S}_j)^2 + \frac{7}{45} (\vec{S}_i\cdot\vec{S}_j)^3</span>
+<span class="sd">                + \frac{1}{90} (\vec{S}_i\cdot\vec{S}_j)^4</span>
+
+<span class="sd">        where `&lt;ij&gt;` denote nearest neighbours.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="o">=</span><span class="n">global_args</span><span class="o">.</span><span class="n">torch_dtype</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="o">=</span><span class="n">global_args</span><span class="o">.</span><span class="n">device</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">phys_dim</span><span class="o">=</span> <span class="mi">5</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">h</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">SS</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_h</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">obs_ops</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_obs</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">get_h</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">pd</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">phys_dim</span>
+        <span class="n">s5</span> <span class="o">=</span> <span class="n">su2</span><span class="o">.</span><span class="n">SU2</span><span class="p">(</span><span class="n">pd</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">expr_kron</span> <span class="o">=</span> <span class="s1">&#39;ij,ab-&gt;iajb&#39;</span>
+        <span class="n">SS</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="n">expr_kron</span><span class="p">,</span><span class="n">s5</span><span class="o">.</span><span class="n">SZ</span><span class="p">(),</span><span class="n">s5</span><span class="o">.</span><span class="n">SZ</span><span class="p">())</span> <span class="o">+</span> <span class="mf">0.5</span><span class="o">*</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="n">expr_kron</span><span class="p">,</span><span class="n">s5</span><span class="o">.</span><span class="n">SP</span><span class="p">(),</span><span class="n">s5</span><span class="o">.</span><span class="n">SM</span><span class="p">())</span> \
+            <span class="o">+</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="n">expr_kron</span><span class="p">,</span><span class="n">s5</span><span class="o">.</span><span class="n">SM</span><span class="p">(),</span><span class="n">s5</span><span class="o">.</span><span class="n">SP</span><span class="p">()))</span>
+        <span class="n">SS</span> <span class="o">=</span> <span class="n">SS</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">pd</span><span class="o">*</span><span class="n">pd</span><span class="p">,</span><span class="n">pd</span><span class="o">*</span><span class="n">pd</span><span class="p">)</span>
+        <span class="n">h</span> <span class="o">=</span> <span class="p">(</span><span class="mf">1.</span><span class="o">/</span><span class="mi">14</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="n">SS</span> <span class="o">+</span> <span class="p">(</span><span class="mf">7.</span><span class="o">/</span><span class="mf">10.</span><span class="p">)</span><span class="o">*</span><span class="n">SS</span><span class="nd">@SS</span> <span class="o">+</span> <span class="p">(</span><span class="mf">7.</span><span class="o">/</span><span class="mf">45.</span><span class="p">)</span><span class="o">*</span><span class="n">SS</span><span class="nd">@SS@SS</span> <span class="o">+</span> <span class="p">(</span><span class="mf">1.</span><span class="o">/</span><span class="mf">90.</span><span class="p">)</span><span class="o">*</span><span class="n">SS</span><span class="nd">@SS@SS@SS</span><span class="p">)</span>
+        <span class="n">h</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">pd</span><span class="p">,</span><span class="n">pd</span><span class="p">,</span><span class="n">pd</span><span class="p">,</span><span class="n">pd</span><span class="p">)</span>
+        <span class="n">SS</span> <span class="o">=</span> <span class="n">SS</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">pd</span><span class="p">,</span><span class="n">pd</span><span class="p">,</span><span class="n">pd</span><span class="p">,</span><span class="n">pd</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">h</span><span class="p">,</span> <span class="n">SS</span>
+
+    <span class="k">def</span> <span class="nf">get_obs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">obs_ops</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="n">s5</span> <span class="o">=</span> <span class="n">su2</span><span class="o">.</span><span class="n">SU2</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">phys_dim</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">obs_ops</span><span class="p">[</span><span class="s2">&quot;sz&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">s5</span><span class="o">.</span><span class="n">SZ</span><span class="p">()</span>
+        <span class="n">obs_ops</span><span class="p">[</span><span class="s2">&quot;sp&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">s5</span><span class="o">.</span><span class="n">SP</span><span class="p">()</span>
+        <span class="n">obs_ops</span><span class="p">[</span><span class="s2">&quot;sm&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">s5</span><span class="o">.</span><span class="n">SM</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">obs_ops</span>
+ 
+<div class="viewcode-block" id="AKLTS2.energy_2x1_1x2"><a class="viewcode-back" href="../../models/akltS2.html#models.akltS2.AKLTS2.energy_2x1_1x2">[docs]</a>    <span class="k">def</span> <span class="nf">energy_2x1_1x2</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param state: wavefunction</span>
+<span class="sd">        :param env: CTM environment</span>
+<span class="sd">        :type state: IPEPS</span>
+<span class="sd">        :type env: ENV</span>
+<span class="sd">        :return: energy per site</span>
+<span class="sd">        :rtype: float</span>
+<span class="sd">        </span>
+<span class="sd">        We assume iPEPS with 2x1 unit cell with tensors A, B and bipartite tiling or </span>
+<span class="sd">        2x2 unit cell containing four tensors A, B, C, and D with a simple PBC tiling::</span>
+
+<span class="sd">            A B A B  or  A B A B</span>
+<span class="sd">            B A B A      C D C D</span>
+<span class="sd">            A B A B      A B A B</span>
+<span class="sd">            B A B A      C D C D</span>
+
+<span class="sd">        Taking the reduced density matrix :math:`\rho_{2x1}` (:math:`\rho_{1x2}`) </span>
+<span class="sd">        of 2x1 (1x2) cluster given by :py:func:`rdm.rdm2x1` (:py:func:`rdm.rdm1x2`) </span>
+<span class="sd">        with indexing of sites as follows :math:`s_0,s_1;s&#39;_0,s&#39;_1` for both types</span>
+<span class="sd">        of density matrices::</span>
+
+<span class="sd">            rdm2x1   rdm1x2</span>
+
+<span class="sd">            s0--s1   s0</span>
+<span class="sd">                     |</span>
+<span class="sd">                     s1</span>
+
+<span class="sd">        and without assuming any symmetry on the indices of individual tensors a following</span>
+<span class="sd">        set of terms has to be evaluated in order to compute energy-per-site for the </span>
+<span class="sd">        case of 2x1 unit cell with bipartite tiling::</span>
+
+<span class="sd">               0       0</span>
+<span class="sd">            1--A--3 1--B--3</span>
+<span class="sd">               2       2                              A  B</span>
+<span class="sd">               0       0                              2  2  </span>
+<span class="sd">            1--B--3 1--A--3           A--3 1--B,      0  0 </span>
+<span class="sd">               2       2      , terms B--3 1--A, and  B, A</span>
+
+<span class="sd">        and for the case of 2x2 unit cell::</span>
+
+<span class="sd">               0       0       0</span>
+<span class="sd">            1--A--3 1--B--3 1--A--3</span>
+<span class="sd">               2       2       2</span>
+<span class="sd">               0       0       0</span>
+<span class="sd">            1--C--3 1--D--3 1--C--3</span>
+<span class="sd">               2       2       2             A--3 1--B,      A  B  C  D</span>
+<span class="sd">               0       0                     B--3 1--A,      2  2  2  2</span>
+<span class="sd">            1--A--3 1--B--3                  C--3 1--D,      0  0  0  0</span>
+<span class="sd">               2       2             , terms D--3 1--C, and  C, D, A, B</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">energy</span><span class="o">=</span><span class="mf">0.</span>
+        <span class="k">for</span> <span class="n">coord</span><span class="p">,</span><span class="n">site</span> <span class="ow">in</span> <span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">rdm2x1</span> <span class="o">=</span> <span class="n">rdm</span><span class="o">.</span><span class="n">rdm2x1</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="n">rdm1x2</span> <span class="o">=</span> <span class="n">rdm</span><span class="o">.</span><span class="n">rdm1x2</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="n">energy</span> <span class="o">+=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;ijab,ijab&#39;</span><span class="p">,</span><span class="n">rdm2x1</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">h</span><span class="p">)</span>
+            <span class="n">energy</span> <span class="o">+=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;ijab,ijab&#39;</span><span class="p">,</span><span class="n">rdm1x2</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">h</span><span class="p">)</span>
+
+        <span class="c1"># return energy-per-site</span>
+        <span class="n">energy_per_site</span><span class="o">=</span><span class="n">energy</span><span class="o">/</span><span class="nb">len</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
+        <span class="n">energy_per_site</span><span class="o">=</span> <span class="n">_cast_to_real</span><span class="p">(</span><span class="n">energy_per_site</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">energy_per_site</span></div>
+        
+    <span class="c1"># definition of other observables</span>
+<div class="viewcode-block" id="AKLTS2.eval_obs"><a class="viewcode-back" href="../../models/akltS2.html#models.akltS2.AKLTS2.eval_obs">[docs]</a>    <span class="k">def</span> <span class="nf">eval_obs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param state: wavefunction</span>
+<span class="sd">        :param env: CTM environment</span>
+<span class="sd">        :type state: IPEPS</span>
+<span class="sd">        :type env: ENV</span>
+<span class="sd">        :return:  expectation values of observables, labels of observables</span>
+<span class="sd">        :rtype: list[float], list[str]</span>
+
+<span class="sd">        Computes the following observables in order</span>
+
+<span class="sd">            1. average magnetization over the unit cell,</span>
+<span class="sd">            2. magnetization for each site in the unit cell</span>
+<span class="sd">            3. :math:`\langle S^z \rangle,\ \langle S^+ \rangle,\ \langle S^- \rangle` </span>
+<span class="sd">               for each site in the unit cell</span>
+<span class="sd">            4. nearest-neighbour spin-spin correlations on non-equivalent bonds</span>
+
+<span class="sd">        where the on-site magnetization is defined as</span>
+<span class="sd">        </span>
+<span class="sd">        .. math::</span>
+<span class="sd">            m = \sqrt{ \langle S^z \rangle^2+\langle S^x \rangle^2+\langle S^y \rangle^2 }</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">obs</span><span class="o">=</span> <span class="nb">dict</span><span class="p">({</span><span class="s2">&quot;avg_m&quot;</span><span class="p">:</span> <span class="mf">0.</span><span class="p">})</span>
+        <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">coord</span><span class="p">,</span><span class="n">site</span> <span class="ow">in</span> <span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">rdm1x1</span> <span class="o">=</span> <span class="n">rdm</span><span class="o">.</span><span class="n">rdm1x1</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">label</span><span class="p">,</span><span class="n">op</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">obs_ops</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">label</span><span class="si">}{</span><span class="n">coord</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">rdm1x1</span><span class="nd">@op</span><span class="p">)</span>
+                <span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;m</span><span class="si">{</span><span class="n">coord</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">sqrt</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;sz</span><span class="si">{</span><span class="n">coord</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;sp</span><span class="si">{</span><span class="n">coord</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span><span class="o">*</span><span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;sm</span><span class="si">{</span><span class="n">coord</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]))</span>
+                <span class="n">obs</span><span class="p">[</span><span class="s2">&quot;avg_m&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;m</span><span class="si">{</span><span class="n">coord</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span>
+            <span class="n">obs</span><span class="p">[</span><span class="s2">&quot;avg_m&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">obs</span><span class="p">[</span><span class="s2">&quot;avg_m&quot;</span><span class="p">]</span><span class="o">/</span><span class="nb">len</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+
+            <span class="k">for</span> <span class="n">coord</span><span class="p">,</span><span class="n">site</span> <span class="ow">in</span> <span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">rdm2x1</span> <span class="o">=</span> <span class="n">rdm</span><span class="o">.</span><span class="n">rdm2x1</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span>
+                <span class="n">rdm1x2</span> <span class="o">=</span> <span class="n">rdm</span><span class="o">.</span><span class="n">rdm1x2</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env</span><span class="p">)</span>
+                <span class="n">SS2x1</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;ijab,ijab&#39;</span><span class="p">,</span><span class="n">rdm2x1</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">SS</span><span class="p">)</span>
+                <span class="n">SS1x2</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;ijab,ijab&#39;</span><span class="p">,</span><span class="n">rdm1x2</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">SS</span><span class="p">)</span>
+                <span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;SS2x1</span><span class="si">{</span><span class="n">coord</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">_cast_to_real</span><span class="p">(</span><span class="n">SS2x1</span><span class="p">)</span>
+                <span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;SS1x2</span><span class="si">{</span><span class="n">coord</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">_cast_to_real</span><span class="p">(</span><span class="n">SS1x2</span><span class="p">)</span>
+        
+        <span class="c1"># prepare list with labels and values</span>
+        <span class="n">obs_labels</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;avg_m&quot;</span><span class="p">]</span><span class="o">+</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;m</span><span class="si">{</span><span class="n">coord</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">coord</span> <span class="ow">in</span> <span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">keys</span><span class="p">()]</span>\
+            <span class="o">+</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">lc</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}{</span><span class="n">lc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">lc</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">itertools</span><span class="o">.</span><span class="n">product</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">obs_ops</span><span class="o">.</span><span class="n">keys</span><span class="p">()))]</span>
+        <span class="n">obs_labels</span> <span class="o">+=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;SS2x1</span><span class="si">{</span><span class="n">coord</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">coord</span> <span class="ow">in</span> <span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">keys</span><span class="p">()]</span>
+        <span class="n">obs_labels</span> <span class="o">+=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;SS1x2</span><span class="si">{</span><span class="n">coord</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">coord</span> <span class="ow">in</span> <span class="n">state</span><span class="o">.</span><span class="n">sites</span><span class="o">.</span><span class="n">keys</span><span class="p">()]</span>
+        <span class="n">obs_values</span><span class="o">=</span><span class="p">[</span><span class="n">obs</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">obs_labels</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">obs_values</span><span class="p">,</span> <span class="n">obs_labels</span></div></div>
+
+<div class="viewcode-block" id="AKLTS2_C4V_BIPARTITE"><a class="viewcode-back" href="../../models/akltS2.html#models.akltS2.AKLTS2_C4V_BIPARTITE">[docs]</a><span class="k">class</span> <span class="nc">AKLTS2_C4V_BIPARTITE</span><span class="p">():</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">global_args</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">global_args</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param global_args: global configuration</span>
+<span class="sd">        :type global_args: GLOBALARGS</span>
+
+<span class="sd">        Build AKLT S=2 Hamiltonian, equivalent to projector from product of two S=2 DOFs</span>
+<span class="sd">        to S=4 DOF</span>
+<span class="sd">        </span>
+<span class="sd">        .. math::</span>
+<span class="sd">            H = \sum_{&lt;ij&gt;} h_{ij},\ \ \ h_{ij}= \frac{1}{14} \vec{S}_i\cdot\vec{S}_j</span>
+<span class="sd">                + \frac{7}{10} (\vec{S}_i\cdot\vec{S}_j)^2 + \frac{7}{45} (\vec{S}_i\cdot\vec{S}_j)^3</span>
+<span class="sd">                + \frac{1}{90} (\vec{S}_i\cdot\vec{S}_j)^4</span>
+
+<span class="sd">        where `&lt;ij&gt;` denote nearest neighbours.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="o">=</span><span class="n">global_args</span><span class="o">.</span><span class="n">torch_dtype</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="o">=</span><span class="n">global_args</span><span class="o">.</span><span class="n">device</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">phys_dim</span><span class="o">=</span> <span class="mi">5</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">h2_rot</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">SS</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">SS_rot</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_h</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">obs_ops</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_obs</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">get_h</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">pd</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">phys_dim</span>
+        <span class="n">s5</span> <span class="o">=</span> <span class="n">su2</span><span class="o">.</span><span class="n">SU2</span><span class="p">(</span><span class="n">pd</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">expr_kron</span> <span class="o">=</span> <span class="s1">&#39;ij,ab-&gt;iajb&#39;</span>
+        <span class="n">SS</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="n">expr_kron</span><span class="p">,</span><span class="n">s5</span><span class="o">.</span><span class="n">SZ</span><span class="p">(),</span><span class="n">s5</span><span class="o">.</span><span class="n">SZ</span><span class="p">())</span> <span class="o">+</span> <span class="mf">0.5</span><span class="o">*</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="n">expr_kron</span><span class="p">,</span><span class="n">s5</span><span class="o">.</span><span class="n">SP</span><span class="p">(),</span><span class="n">s5</span><span class="o">.</span><span class="n">SM</span><span class="p">())</span> \
+            <span class="o">+</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="n">expr_kron</span><span class="p">,</span><span class="n">s5</span><span class="o">.</span><span class="n">SM</span><span class="p">(),</span><span class="n">s5</span><span class="o">.</span><span class="n">SP</span><span class="p">()))</span>
+        <span class="n">rot_op</span> <span class="o">=</span> <span class="n">s5</span><span class="o">.</span><span class="n">BP_rot</span><span class="p">()</span>
+        <span class="n">SS_rot</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;jl,ilak,kb-&gt;ijab&#39;</span><span class="p">,</span><span class="n">rot_op</span><span class="p">,</span><span class="n">SS</span><span class="p">,</span><span class="n">rot_op</span><span class="p">)</span>
+        <span class="n">SS</span> <span class="o">=</span> <span class="n">SS</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">pd</span><span class="o">*</span><span class="n">pd</span><span class="p">,</span><span class="n">pd</span><span class="o">*</span><span class="n">pd</span><span class="p">)</span>
+        <span class="n">h</span> <span class="o">=</span> <span class="p">(</span><span class="mf">1.</span><span class="o">/</span><span class="mi">14</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="n">SS</span> <span class="o">+</span> <span class="p">(</span><span class="mf">7.</span><span class="o">/</span><span class="mf">10.</span><span class="p">)</span><span class="o">*</span><span class="n">SS</span><span class="nd">@SS</span> <span class="o">+</span> <span class="p">(</span><span class="mf">7.</span><span class="o">/</span><span class="mf">45.</span><span class="p">)</span><span class="o">*</span><span class="n">SS</span><span class="nd">@SS@SS</span> <span class="o">+</span> <span class="p">(</span><span class="mf">1.</span><span class="o">/</span><span class="mf">90.</span><span class="p">)</span><span class="o">*</span><span class="n">SS</span><span class="nd">@SS@SS@SS</span><span class="p">)</span>
+        <span class="n">h</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">pd</span><span class="p">,</span><span class="n">pd</span><span class="p">,</span><span class="n">pd</span><span class="p">,</span><span class="n">pd</span><span class="p">)</span>
+        <span class="c1"># apply a rotation on physical index of every &quot;odd&quot; site</span>
+        <span class="c1"># A A =&gt; A B</span>
+        <span class="c1"># A A =&gt; B A</span>
+        <span class="n">h_rot</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;jl,ilak,kb-&gt;ijab&#39;</span><span class="p">,</span><span class="n">rot_op</span><span class="p">,</span><span class="n">h</span><span class="p">,</span><span class="n">rot_op</span><span class="p">)</span>
+        <span class="n">SS</span> <span class="o">=</span> <span class="n">SS</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">pd</span><span class="p">,</span><span class="n">pd</span><span class="p">,</span><span class="n">pd</span><span class="p">,</span><span class="n">pd</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">h_rot</span><span class="p">,</span> <span class="n">SS</span><span class="p">,</span> <span class="n">SS_rot</span>
+
+    <span class="k">def</span> <span class="nf">get_obs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">obs_ops</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="n">s5</span> <span class="o">=</span> <span class="n">su2</span><span class="o">.</span><span class="n">SU2</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">phys_dim</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">obs_ops</span><span class="p">[</span><span class="s2">&quot;sz&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">s5</span><span class="o">.</span><span class="n">SZ</span><span class="p">()</span>
+        <span class="n">obs_ops</span><span class="p">[</span><span class="s2">&quot;sp&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">s5</span><span class="o">.</span><span class="n">SP</span><span class="p">()</span>
+        <span class="n">obs_ops</span><span class="p">[</span><span class="s2">&quot;sm&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">s5</span><span class="o">.</span><span class="n">SM</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">obs_ops</span>
+
+<div class="viewcode-block" id="AKLTS2_C4V_BIPARTITE.energy_1x1"><a class="viewcode-back" href="../../models/akltS2.html#models.akltS2.AKLTS2_C4V_BIPARTITE.energy_1x1">[docs]</a>    <span class="k">def</span> <span class="nf">energy_1x1</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env_c4v</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param state: wavefunction</span>
+<span class="sd">        :param env_c4v: CTM c4v symmetric environment</span>
+<span class="sd">        :type state: IPEPS_C4V</span>
+<span class="sd">        :type env_c4v: ENV_C4V</span>
+<span class="sd">        :return: energy per site</span>
+<span class="sd">        :rtype: float</span>
+
+<span class="sd">        We assume 1x1 C4v iPEPS which tiles the lattice with a bipartite pattern composed </span>
+<span class="sd">        of two tensors A, and B=RA, where R appropriately rotates the physical Hilbert space </span>
+<span class="sd">        of tensor A on every &quot;odd&quot; site::</span>
+
+<span class="sd">            1x1 C4v =&gt; rotation R =&gt; BIPARTITE</span>
+<span class="sd">            A A A A                  A B A B</span>
+<span class="sd">            A A A A                  B A B A</span>
+<span class="sd">            A A A A                  A B A B</span>
+<span class="sd">            A A A A                  B A B A</span>
+
+<span class="sd">        Due to C4v symmetry it is enough to construct just a single nearest-neighbour</span>
+<span class="sd">        reduced density matrix </span>
+
+<span class="sd">        .. math::</span>
+<span class="sd">            e= \langle \mathcal{h} \rangle = Tr(\rho_{2x1} \mathcal{h})</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">rdm2x1</span> <span class="o">=</span> <span class="n">rdm_c4v</span><span class="o">.</span><span class="n">rdm2x1</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">env_c4v</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">energy</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;ijab,ijab&#39;</span><span class="p">,</span><span class="n">rdm2x1</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">h2_rot</span><span class="p">)</span>
+        <span class="n">energy</span> <span class="o">=</span> <span class="n">_cast_to_real</span><span class="p">(</span><span class="n">energy</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">energy</span></div>
+        
+    <span class="c1"># definition of other observables</span>
+<div class="viewcode-block" id="AKLTS2_C4V_BIPARTITE.eval_obs"><a class="viewcode-back" href="../../models/akltS2.html#models.akltS2.AKLTS2_C4V_BIPARTITE.eval_obs">[docs]</a>    <span class="k">def</span> <span class="nf">eval_obs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env_c4v</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param state: wavefunction</span>
+<span class="sd">        :param env_c4v: CTM c4v symmetric environment</span>
+<span class="sd">        :type state: IPEPS_C4V</span>
+<span class="sd">        :type env_c4v: ENV_C4V</span>
+<span class="sd">        :return:  expectation values of observables, labels of observables</span>
+<span class="sd">        :rtype: list[float], list[str]</span>
+
+<span class="sd">        Computes the following observables in order</span>
+
+<span class="sd">            1. magnetization</span>
+<span class="sd">            2. :math:`\langle S^z \rangle,\ \langle S^+ \rangle,\ \langle S^- \rangle`</span>
+<span class="sd">    </span>
+<span class="sd">        where the on-site magnetization is defined as</span>
+<span class="sd">        </span>
+<span class="sd">        .. math::</span>
+<span class="sd">            m = \sqrt{ \langle S^z \rangle^2+\langle S^x \rangle^2+\langle S^y \rangle^2 }</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># TODO optimize/unify ?</span>
+        <span class="c1"># expect &quot;list&quot; of (observable label, value) pairs ?</span>
+        <span class="n">obs</span><span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+            <span class="n">rdm1x1</span><span class="o">=</span> <span class="n">rdm_c4v</span><span class="o">.</span><span class="n">rdm1x1</span><span class="p">(</span><span class="n">state</span><span class="p">,</span><span class="n">env_c4v</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">label</span><span class="p">,</span><span class="n">op</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">obs_ops</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">rdm1x1</span><span class="nd">@op</span><span class="p">)</span>
+            <span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;m&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">sqrt</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;sz&quot;</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;sp&quot;</span><span class="p">]</span><span class="o">*</span><span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;sm&quot;</span><span class="p">]))</span>
+            
+            <span class="n">rdm2x1</span> <span class="o">=</span> <span class="n">rdm_c4v</span><span class="o">.</span><span class="n">rdm2x1</span><span class="p">(</span><span class="n">state</span><span class="p">,</span><span class="n">env_c4v</span><span class="p">)</span>
+            <span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;SS2x1&quot;</span><span class="p">]</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;ijab,ijab&#39;</span><span class="p">,</span><span class="n">rdm2x1</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">SS_rot</span><span class="p">)</span>
+            
+        <span class="c1"># prepare list with labels and values</span>
+        <span class="n">obs_labels</span><span class="o">=</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;m&quot;</span><span class="p">]</span><span class="o">+</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">lc</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">lc</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">obs_ops</span><span class="o">.</span><span class="n">keys</span><span class="p">()]</span><span class="o">+</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;SS2x1&quot;</span><span class="p">]</span>
+        <span class="n">obs_values</span><span class="o">=</span><span class="p">[</span><span class="n">obs</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">obs_labels</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">obs_values</span><span class="p">,</span> <span class="n">obs_labels</span></div>
+
+<div class="viewcode-block" id="AKLTS2_C4V_BIPARTITE.eval_corrf_SS"><a class="viewcode-back" href="../../models/akltS2.html#models.akltS2.AKLTS2_C4V_BIPARTITE.eval_corrf_SS">[docs]</a>    <span class="k">def</span> <span class="nf">eval_corrf_SS</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env_c4v</span><span class="p">,</span><span class="n">dist</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param state: wavefunction</span>
+<span class="sd">        :param env_c4v: CTM c4v symmetric environment</span>
+<span class="sd">        :type state: IPEPS_C4V</span>
+<span class="sd">        :type env_c4v: ENV_C4V</span>
+<span class="sd">        :param dist: maximal distance of correlator</span>
+<span class="sd">        :type dist: int</span>
+<span class="sd">        :return: dictionary with full and spin-resolved spin-spin correlation functions</span>
+<span class="sd">        :rtype: dict(str: torch.Tensor)</span>
+<span class="sd">        </span>
+<span class="sd">        Evaluate spin-spin correlation functions :math:`\langle\mathbf{S}(r).\mathbf{S}(0)\rangle` </span>
+<span class="sd">        up to r = ``dist`` .</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+   
+        <span class="c1"># function generating properly rotated operators on every bi-partite site</span>
+        <span class="k">def</span> <span class="nf">get_bilat_op</span><span class="p">(</span><span class="n">op</span><span class="p">):</span>
+            <span class="n">rot_op</span><span class="o">=</span> <span class="n">su2</span><span class="o">.</span><span class="n">get_rot_op</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">phys_dim</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+            <span class="n">op_0</span><span class="o">=</span> <span class="n">op</span>
+            <span class="n">op_rot</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;ki,kl,lj-&gt;ij&#39;</span><span class="p">,</span><span class="n">rot_op</span><span class="p">,</span><span class="n">op_0</span><span class="p">,</span><span class="n">rot_op</span><span class="p">)</span>
+            <span class="k">def</span> <span class="nf">_gen_op</span><span class="p">(</span><span class="n">r</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">op_rot</span> <span class="k">if</span> <span class="n">r</span><span class="o">%</span><span class="mi">2</span><span class="o">==</span><span class="mi">0</span> <span class="k">else</span> <span class="n">op_0</span>
+            <span class="k">return</span> <span class="n">_gen_op</span>
+
+        <span class="n">op_sx</span><span class="o">=</span> <span class="mf">0.5</span><span class="o">*</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">obs_ops</span><span class="p">[</span><span class="s2">&quot;sp&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">obs_ops</span><span class="p">[</span><span class="s2">&quot;sm&quot;</span><span class="p">])</span>
+        <span class="n">op_isy</span><span class="o">=</span> <span class="o">-</span><span class="mf">0.5</span><span class="o">*</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">obs_ops</span><span class="p">[</span><span class="s2">&quot;sp&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">obs_ops</span><span class="p">[</span><span class="s2">&quot;sm&quot;</span><span class="p">])</span> 
+
+        <span class="n">Sz0szR</span><span class="o">=</span> <span class="n">corrf_c4v</span><span class="o">.</span><span class="n">corrf_1sO1sO</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">env_c4v</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">obs_ops</span><span class="p">[</span><span class="s2">&quot;sz&quot;</span><span class="p">],</span> \
+            <span class="n">get_bilat_op</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">obs_ops</span><span class="p">[</span><span class="s2">&quot;sz&quot;</span><span class="p">]),</span> <span class="n">dist</span><span class="p">)</span>
+        <span class="n">Sx0sxR</span><span class="o">=</span> <span class="n">corrf_c4v</span><span class="o">.</span><span class="n">corrf_1sO1sO</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">env_c4v</span><span class="p">,</span> <span class="n">op_sx</span><span class="p">,</span> <span class="n">get_bilat_op</span><span class="p">(</span><span class="n">op_sx</span><span class="p">),</span> <span class="n">dist</span><span class="p">)</span>
+        <span class="n">nSy0SyR</span><span class="o">=</span> <span class="n">corrf_c4v</span><span class="o">.</span><span class="n">corrf_1sO1sO</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">env_c4v</span><span class="p">,</span> <span class="n">op_isy</span><span class="p">,</span> <span class="n">get_bilat_op</span><span class="p">(</span><span class="n">op_isy</span><span class="p">),</span> <span class="n">dist</span><span class="p">)</span>
+
+        <span class="n">res</span><span class="o">=</span> <span class="nb">dict</span><span class="p">({</span><span class="s2">&quot;ss&quot;</span><span class="p">:</span> <span class="n">Sz0szR</span><span class="o">+</span><span class="n">Sx0sxR</span><span class="o">-</span><span class="n">nSy0SyR</span><span class="p">,</span> <span class="s2">&quot;szsz&quot;</span><span class="p">:</span> <span class="n">Sz0szR</span><span class="p">,</span> <span class="s2">&quot;sxsx&quot;</span><span class="p">:</span> <span class="n">Sx0sxR</span><span class="p">,</span> <span class="s2">&quot;sysy&quot;</span><span class="p">:</span> <span class="o">-</span><span class="n">nSy0SyR</span><span class="p">})</span>
+        <span class="k">return</span> <span class="n">res</span></div>
+
+<div class="viewcode-block" id="AKLTS2_C4V_BIPARTITE.eval_corrf_DD_H"><a class="viewcode-back" href="../../models/akltS2.html#models.akltS2.AKLTS2_C4V_BIPARTITE.eval_corrf_DD_H">[docs]</a>    <span class="k">def</span> <span class="nf">eval_corrf_DD_H</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">env_c4v</span><span class="p">,</span><span class="n">dist</span><span class="p">,</span><span class="n">verbosity</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param state: wavefunction</span>
+<span class="sd">        :param env_c4v: CTM c4v symmetric environment</span>
+<span class="sd">        :type state: IPEPS_C4V</span>
+<span class="sd">        :type env_c4v: ENV_C4V</span>
+<span class="sd">        :param dist: maximal distance of correlator</span>
+<span class="sd">        :type dist: int</span>
+<span class="sd">        :return: dictionary with horizontal dimer-dimer correlation function</span>
+<span class="sd">        :rtype: dict(str: torch.Tensor)</span>
+<span class="sd">        </span>
+<span class="sd">        Evaluate horizontal dimer-dimer correlation functions </span>
+
+<span class="sd">        .. math::</span>
+<span class="sd">            \langle(\mathbf{S}(r+3).\mathbf{S}(r+2))(\mathbf{S}(1).\mathbf{S}(0))\rangle </span>
+
+<span class="sd">        up to r = ``dist`` .</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># function generating properly rotated S.S operator on every bi-partite site</span>
+        <span class="n">rot_op</span><span class="o">=</span> <span class="n">su2</span><span class="o">.</span><span class="n">get_rot_op</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">phys_dim</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="c1"># (S.S)_s1s2,s1&#39;s2&#39; with rotation applied on &quot;first&quot; spin s1,s1&#39; </span>
+        <span class="n">SS_rot</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;ki,kjcb,ca-&gt;ijab&#39;</span><span class="p">,</span><span class="n">rot_op</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">SS</span><span class="p">,</span><span class="n">rot_op</span><span class="p">)</span>
+        <span class="c1"># (S.S)_s1s2,s1&#39;s2&#39; with rotation applied on &quot;second&quot; spin s2,s2&#39;</span>
+        <span class="n">op_rot</span><span class="o">=</span> <span class="n">SS_rot</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">contiguous</span><span class="p">()</span>
+        <span class="k">def</span> <span class="nf">_gen_op</span><span class="p">(</span><span class="n">r</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">SS_rot</span> <span class="k">if</span> <span class="n">r</span><span class="o">%</span><span class="mi">2</span><span class="o">==</span><span class="mi">0</span> <span class="k">else</span> <span class="n">op_rot</span>
+        
+        <span class="n">D0DR</span><span class="o">=</span> <span class="n">corrf_c4v</span><span class="o">.</span><span class="n">corrf_2sOH2sOH_E1</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">env_c4v</span><span class="p">,</span> <span class="n">SS_rot</span><span class="p">,</span> <span class="n">_gen_op</span><span class="p">,</span> <span class="n">dist</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="n">verbosity</span><span class="p">)</span>
+
+        <span class="n">res</span><span class="o">=</span> <span class="nb">dict</span><span class="p">({</span><span class="s2">&quot;dd&quot;</span><span class="p">:</span> <span class="n">D0DR</span><span class="p">})</span>
+        <span class="k">return</span> <span class="n">res</span></div></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Juraj Hasik, Glen B. Mbeng
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

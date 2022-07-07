@@ -1,0 +1,1007 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>linalg.svd_gesdd &mdash; peps-torch alpha documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> peps-torch
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../ipeps.html">iPEPS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps.html">Generic iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_kagome.html">Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_c4v.html">1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_lc_1site_pg.html">1-site iPEPS from lin. combination</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipess_kagome.html">Generic Kagome iPESS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipess_kagome_pg.html">Kagome iPESS with point groups</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipess_kagome_pg_lc.html">Kagome iPESS from lin. combination</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../ipeps.html#abelian-symmetric-ipeps">Abelian-symmetric iPEPS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_abelian.html">Generic  abelian-symmetric iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_abelian.html#generic-abelian-symmetric-ipeps-with-weights">Generic abelian-symmetric iPEPS with weights</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_kagome_abelian.html">Abelian-symmetric Kagome iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipeps_abelian_c4v.html">Abelian-symmetric 1-site C4v iPEPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ipeps/ipess_kagome_abelian.html">Abelian-symmetric generic Kagome iPESS</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../envs.html">Environments</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../envs/generic.html">Generic iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/env.html">Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/rdm.html#module-ctm.pess_kagome.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/corrf.html">Correlation functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic/transfer_matrix.html">Transfer Matrices</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../envs/generic_abelian.html">Abelian-symmetric generic iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic_abelian/env_abelian.html">Abelian-symmetric environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic_abelian/ctmrg.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic_abelian/ctm_projectors.html">Projectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic_abelian/ctm_components.html">Components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic_abelian/rdm.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/generic_abelian/rdm.html#module-ctm.pess_kagome_abelian.rdm_kagome">Specific RDMs for Kagome iPEPS</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../envs/one_site_c4v.html">1-site C4v iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v/env_c4v.html">1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v/ctmrg_c4v.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v/rdm_c4v.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v/transfer_matrix.html">Transfer Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v/corrf_c4v.html">Correlation functions</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../envs/one_site_c4v_abelian.html">Abelian-symmetric 1-site C4v iPEPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v_abelian/env_c4v_abelian.html">Abelian-symmetric 1-site C4v Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v_abelian/ctmrg_c4v_abelian.html">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v_abelian/rdm_c4v_abelian.html">Reduced Density Matrices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../envs/one_site_c4v_abelian/corrf_c4v_abelian.html">Correlation functions</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../optim.html">Optimization</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../optim/drivers.html">Optimization drivers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/drivers/ad_optim.html">ad_optim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/drivers/ad_optim_lbfgs_mod.html">ad_optim_lbfgs_mod</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/drivers/ad_optim_sgd_mod.html">ad_optim_sgd_mod</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../optim/optimizers.html">Custom optimizers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/optimizers/lbfgs_modified.html">Extended LBFGS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../optim/optimizers/sgd_modified.html">SGD with linesearch</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../config.html">Configuration</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../config.html#main">Main</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../config.html#global">Global</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../config.html#corner-transfer-matrix-algorithm">Corner Transfer Matrix Algorithm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../config.html#optimization">Optimization</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../models.html">Models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../models/akltS2.html">Spin S=2 AKLT Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/akltS2.html#module-models.akltS2">2x1 and 2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/akltS2.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/coupledLadders.html">Coupled Ladders</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/coupledLadders.html#dense-pytorch">Dense (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/coupledLadders.html#dense-yast">Dense (YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/coupledLadders.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/ising.html">Transverse Field Ising Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/ising.html#x1-unit-cell">1x1 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/ising.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/j1j2.html">J1-J2-J3 and J1-J2-lambda Heisenberg Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/j1j2.html#from-2x1-to-4x2-unit-cell-pytorch">from 2x1 to 4x2 unit cell (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/j1j2.html#from-2x1-to-4x2-unit-cell-dense-yast">from 2x1 to 4x2 unit cell (dense YAST)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/j1j2.html#x1-c4v-pytorch">1x1 C4v (PyTorch)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/j1j2.html#x1-c4v-dense-yast">1x1 C4v (dense YAST)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/jq.html">J-Q Model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/jq.html#module-models.jq">2x2 unit cell</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/jq.html#x1-c4v">1x1 C4v</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/spin_half_kagome.html">SU(2) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/spin_half_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/spin_half_kagome.html#with-explict-u-1-symmetry">With explict U(1) symmetry</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/su3_kagome.html">SU(3) model on Kagome lattice</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/su3_kagome.html#dense">Dense</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/su3_kagome.html#with-explict-u-1-xu-1-symmetry">With explict U(1)xU(1) symmetry</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../groups.html">Groups</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/pg.html">Point group: square lattice</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/su2.html">SU(2)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/su2.html#module-groups.su2_abelian">SU(2) with explicit U(1) structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/su3.html">SU(3)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../groups/su3.html#su-3-with-explicit-u-1-xu-1-structure">SU(3) with explicit U(1)xU(1) structure</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../linalg.html">Linear Algebra</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../linalg/custom_eig.html">Truncated eigendecomposition</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../linalg/custom_svd.html">Truncated SVD</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../linalg/spec_decomp.html">Spectral decompositions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.svd_gesdd">SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.svd_arnoldi">Partial SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.svd_rsvd">Randomized SVD</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.eig_sym">Symmetric Eigendecomposition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../linalg/spec_decomp.html#module-linalg.eig_arnoldi">Partial diagonalization</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">peps-torch</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+      <li>linalg.svd_gesdd</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for linalg.svd_gesdd</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">config</span> <span class="kn">import</span> <span class="n">_torch_version_check</span>
+
+<span class="k">def</span> <span class="nf">safe_inverse</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">epsilon</span><span class="o">=</span><span class="mf">1E-12</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">x</span><span class="o">/</span><span class="p">(</span><span class="n">x</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">epsilon</span><span class="p">)</span>
+    
+<span class="k">def</span> <span class="nf">safe_inverse_2</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">):</span>
+    <span class="n">x</span><span class="p">[</span><span class="nb">abs</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">&lt;</span><span class="n">epsilon</span><span class="p">]</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="s1">&#39;inf&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">x</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="k">class</span> <span class="nc">SVDGESDD_legacy</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">autograd</span><span class="o">.</span><span class="n">Function</span><span class="p">):</span>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">cutoff</span><span class="p">,</span> <span class="n">diagnostics</span><span class="p">):</span>
+        <span class="n">U</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">V</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">svd</span><span class="p">(</span><span class="n">A</span><span class="p">)</span>
+        <span class="n">cutoff</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">as_tensor</span><span class="p">(</span><span class="n">cutoff</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">S</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">S</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">save_for_backward</span><span class="p">(</span><span class="n">U</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">V</span><span class="p">,</span> <span class="n">cutoff</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">U</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">V</span>
+    
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">backward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dU</span><span class="p">,</span> <span class="n">dS</span><span class="p">,</span> <span class="n">dV</span><span class="p">):</span>
+        <span class="n">U</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">V</span><span class="p">,</span> <span class="n">cutoff</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">saved_tensors</span>
+        
+        <span class="n">Vt</span> <span class="o">=</span> <span class="n">V</span><span class="o">.</span><span class="n">t</span><span class="p">()</span>
+        <span class="n">Ut</span> <span class="o">=</span> <span class="n">U</span><span class="o">.</span><span class="n">t</span><span class="p">()</span>
+        <span class="n">M</span> <span class="o">=</span> <span class="n">U</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">N</span> <span class="o">=</span> <span class="n">V</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">NS</span> <span class="o">=</span> <span class="n">S</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="n">F</span> <span class="o">=</span> <span class="p">(</span><span class="n">S</span> <span class="o">-</span> <span class="n">S</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">])</span>
+        <span class="c1"># mask0= F==0</span>
+        <span class="n">F</span> <span class="o">=</span> <span class="n">safe_inverse</span><span class="p">(</span><span class="n">F</span><span class="p">,</span> <span class="n">cutoff</span><span class="p">)</span>
+        <span class="n">F</span><span class="o">.</span><span class="n">diagonal</span><span class="p">()</span><span class="o">.</span><span class="n">fill_</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="c1"># F[mask0]= 0</span>
+
+        <span class="n">G</span> <span class="o">=</span> <span class="p">(</span><span class="n">S</span> <span class="o">+</span> <span class="n">S</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">])</span>
+        <span class="n">G</span> <span class="o">=</span> <span class="n">safe_inverse</span><span class="p">(</span><span class="n">G</span><span class="p">)</span>
+        <span class="n">G</span><span class="o">.</span><span class="n">diagonal</span><span class="p">()</span><span class="o">.</span><span class="n">fill_</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="n">UdU</span> <span class="o">=</span> <span class="n">Ut</span> <span class="o">@</span> <span class="n">dU</span>
+        <span class="n">VdV</span> <span class="o">=</span> <span class="n">Vt</span> <span class="o">@</span> <span class="n">dV</span>
+
+        <span class="c1"># F_ij= 1/(S_i - S_j)</span>
+        <span class="c1"># G_ij= 1/(S_i + S_j)</span>
+        <span class="c1"># (F+G)_ij= 1/(S_i - S_j) - 1/(S_i + S_j) = ((S_i + S_j) - (S_i - S_j))/((S_i - S_j)*(S_i + S_j))</span>
+        <span class="c1">#         = 2S_j / (S^2_i - S^2_j) </span>
+        <span class="n">Su</span> <span class="o">=</span> <span class="p">(</span><span class="n">F</span><span class="o">+</span><span class="n">G</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="n">UdU</span><span class="o">-</span><span class="n">UdU</span><span class="o">.</span><span class="n">t</span><span class="p">())</span><span class="o">/</span><span class="mi">2</span>
+        <span class="n">Sv</span> <span class="o">=</span> <span class="p">(</span><span class="n">F</span><span class="o">-</span><span class="n">G</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="n">VdV</span><span class="o">-</span><span class="n">VdV</span><span class="o">.</span><span class="n">t</span><span class="p">())</span><span class="o">/</span><span class="mi">2</span>
+
+        <span class="n">dA</span> <span class="o">=</span> <span class="n">U</span> <span class="o">@</span> <span class="p">(</span><span class="n">Su</span> <span class="o">+</span> <span class="n">Sv</span> <span class="o">+</span> <span class="n">torch</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">dS</span><span class="p">))</span> <span class="o">@</span> <span class="n">Vt</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">M</span><span class="o">&gt;</span><span class="n">NS</span><span class="p">):</span>
+            <span class="n">dA</span> <span class="o">=</span> <span class="n">dA</span> <span class="o">+</span> <span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">M</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dU</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">dU</span><span class="o">.</span><span class="n">device</span><span class="p">)</span> <span class="o">-</span> <span class="n">U</span><span class="nd">@Ut</span><span class="p">)</span> <span class="o">@</span> <span class="p">(</span><span class="n">dU</span><span class="o">*</span><span class="n">safe_inverse</span><span class="p">(</span><span class="n">S</span><span class="p">))</span> <span class="o">@</span> <span class="n">Vt</span> 
+        <span class="k">if</span> <span class="p">(</span><span class="n">N</span><span class="o">&gt;</span><span class="n">NS</span><span class="p">):</span>
+            <span class="n">dA</span> <span class="o">=</span> <span class="n">dA</span> <span class="o">+</span> <span class="p">(</span><span class="n">U</span><span class="o">*</span><span class="n">safe_inverse</span><span class="p">(</span><span class="n">S</span><span class="p">))</span> <span class="o">@</span> <span class="n">dV</span><span class="o">.</span><span class="n">t</span><span class="p">()</span> <span class="o">@</span> <span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dU</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">dU</span><span class="o">.</span><span class="n">device</span><span class="p">)</span> <span class="o">-</span> <span class="n">V</span><span class="nd">@Vt</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">dA</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+
+<div class="viewcode-block" id="SVDGESDD"><a class="viewcode-back" href="../../linalg/spec_decomp.html#linalg.svd_gesdd.SVDGESDD">[docs]</a><span class="k">class</span> <span class="nc">SVDGESDD</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">autograd</span><span class="o">.</span><span class="n">Function</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">_torch_version_check</span><span class="p">(</span><span class="s2">&quot;1.8.1&quot;</span><span class="p">):</span>
+        <span class="nd">@staticmethod</span>
+        <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">cutoff</span><span class="p">,</span> <span class="n">diagnostics</span><span class="p">):</span>
+            <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            :param A: rank-2 tensor</span>
+<span class="sd">            :type A: torch.Tensor</span>
+<span class="sd">            :param cutoff: cutoff for backward function</span>
+<span class="sd">            :type cutoff: torch.Tensor</span>
+<span class="sd">            :param diagnostics: optional dictionary for debugging purposes</span>
+<span class="sd">            :type diagnostics: dict</span>
+<span class="sd">            :return: U, S, V</span>
+<span class="sd">            :rtype: torch.Tensor, torch.Tensor, torch.Tensor</span>
+
+<span class="sd">            Computes SVD decompostion of matrix :math:`A = USV^\dagger`.</span>
+<span class="sd">            &quot;&quot;&quot;</span>
+            <span class="c1"># A = U @ diag(S) @ Vh</span>
+            <span class="n">U</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">Vh</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">svd</span><span class="p">(</span><span class="n">A</span><span class="p">)</span>
+            <span class="n">V</span><span class="o">=</span> <span class="n">Vh</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">save_for_backward</span><span class="p">(</span><span class="n">U</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">V</span><span class="p">,</span> <span class="n">cutoff</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">diagnostics</span><span class="o">=</span> <span class="n">diagnostics</span>
+            <span class="k">return</span> <span class="n">U</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">V</span>
+    <span class="k">else</span><span class="p">:</span>
+<div class="viewcode-block" id="SVDGESDD.forward"><a class="viewcode-back" href="../../linalg/spec_decomp.html#linalg.svd_gesdd.SVDGESDD.forward">[docs]</a>        <span class="nd">@staticmethod</span>
+        <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">cutoff</span><span class="p">,</span> <span class="n">diagnostics</span><span class="p">):</span>
+            <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            :param A: rank-2 tensor</span>
+<span class="sd">            :type A: torch.Tensor</span>
+<span class="sd">            :param cutoff: cutoff for backward function</span>
+<span class="sd">            :type cutoff: torch.Tensor</span>
+<span class="sd">            :param diagnostics: optional dictionary for debugging purposes</span>
+<span class="sd">            :type diagnostics: dict</span>
+<span class="sd">            :return: U, S, V</span>
+<span class="sd">            :rtype: torch.Tensor, torch.Tensor, torch.Tensor</span>
+
+<span class="sd">            Computes SVD decompostion of matrix :math:`A = USV^\dagger`.</span>
+<span class="sd">            &quot;&quot;&quot;</span>
+            <span class="n">U</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">V</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">svd</span><span class="p">(</span><span class="n">A</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">diagnostics</span><span class="o">=</span> <span class="n">diagnostics</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">save_for_backward</span><span class="p">(</span><span class="n">U</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">V</span><span class="p">,</span> <span class="n">cutoff</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">U</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">V</span></div>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">v1_10_Fonly_backward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gu</span><span class="p">,</span> <span class="n">gsigma</span><span class="p">,</span> <span class="n">gv</span><span class="p">):</span>
+        <span class="c1"># Adopted from</span>
+        <span class="c1"># https://github.com/pytorch/pytorch/blob/v1.10.2/torch/csrc/autograd/FunctionsManual.cpp</span>
+        <span class="c1"># </span>
+        <span class="c1"># TORCH_CHECK(compute_uv,</span>
+        <span class="c1">#    &quot;svd_backward: Setting compute_uv to false in torch.svd doesn&#39;t compute singular matrices, &quot;,</span>
+        <span class="c1">#    &quot;and hence we cannot compute backward. Please use torch.svd(compute_uv=True)&quot;);</span>
+
+        <span class="n">diagnostics</span><span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">diagnostics</span>
+        <span class="n">u</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">eps</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">saved_tensors</span>
+        <span class="n">m</span><span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">)</span> <span class="c1"># first dim of original tensor A = u sigma v^\dag </span>
+        <span class="n">n</span><span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">)</span> <span class="c1"># second dim of A</span>
+        <span class="n">k</span><span class="o">=</span> <span class="n">sigma</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">sigma_scale</span><span class="o">=</span> <span class="n">sigma</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="c1"># ? some</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">)</span><span class="o">!=</span><span class="n">u</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span> <span class="ow">or</span> <span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">)</span><span class="o">!=</span><span class="n">v</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)):</span>
+            <span class="c1"># We ignore the free subspace here because possible base vectors cancel</span>
+            <span class="c1"># each other, e.g., both -v and +v are valid base for a dimension.</span>
+            <span class="c1"># Don&#39;t assume behavior of any particular implementation of svd.</span>
+            <span class="n">u</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">narrow</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
+            <span class="n">v</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">narrow</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">gu</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">):</span> <span class="n">gu</span> <span class="o">=</span> <span class="n">gu</span><span class="o">.</span><span class="n">narrow</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">gv</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">):</span> <span class="n">gv</span> <span class="o">=</span> <span class="n">gv</span><span class="o">.</span><span class="n">narrow</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
+        <span class="n">vh</span><span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">gsigma</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="c1"># computes u @ diag(gsigma) @ vh</span>
+            <span class="n">sigma_term</span> <span class="o">=</span> <span class="n">u</span> <span class="o">*</span> <span class="n">gsigma</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">)</span> <span class="o">@</span> <span class="n">vh</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">sigma_term</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">m</span><span class="p">,</span><span class="n">n</span><span class="p">,</span><span class="n">dtype</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span><span class="n">device</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="c1"># in case that there are no gu and gv, we can avoid the series of kernel</span>
+        <span class="c1"># calls below</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">gv</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">gv</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">diagnostics</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">):</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">diagnostics</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">dA</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">S</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">sigma_term</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+
+        <span class="n">sigma_inv</span><span class="o">=</span> <span class="n">safe_inverse_2</span><span class="p">(</span><span class="n">sigma</span><span class="o">.</span><span class="n">clone</span><span class="p">(),</span> <span class="n">sigma_scale</span><span class="o">*</span><span class="n">eps</span><span class="p">)</span>
+        <span class="n">sigma_sq</span><span class="o">=</span> <span class="n">sigma</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">F</span><span class="o">=</span> <span class="n">sigma_sq</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">)</span> <span class="o">-</span> <span class="n">sigma_sq</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="c1"># F_ij = 1/(S^2_i - S^2_j)</span>
+        <span class="c1"># // The following two lines invert values of F, and fills the diagonal with 0s.</span>
+        <span class="c1"># // Notice that F currently has 0s on diagonal. So we fill diagonal with +inf</span>
+        <span class="c1"># // first to prevent nan from appearing in backward of this function.</span>
+        <span class="n">F</span><span class="o">.</span><span class="n">diagonal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">fill_</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="s1">&#39;inf&#39;</span><span class="p">))</span>
+        <span class="n">F</span><span class="o">=</span> <span class="n">safe_inverse_2</span><span class="p">(</span><span class="n">F</span><span class="p">,</span> <span class="n">sigma_scale</span><span class="o">*</span><span class="n">eps</span><span class="p">)</span>
+
+        <span class="n">uh</span><span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">gu</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="n">guh</span> <span class="o">=</span> <span class="n">gu</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">);</span>
+            <span class="n">u_term</span> <span class="o">=</span> <span class="n">u</span> <span class="o">@</span> <span class="p">(</span><span class="n">F</span><span class="o">.</span><span class="n">mul</span><span class="p">(</span> <span class="n">uh</span> <span class="o">@</span> <span class="n">gu</span> <span class="o">-</span> <span class="n">guh</span> <span class="o">@</span> <span class="n">u</span><span class="p">)</span> <span class="o">*</span> <span class="n">sigma</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">m</span> <span class="o">&gt;</span> <span class="n">k</span><span class="p">:</span>
+                <span class="c1"># projection operator onto subspace orthogonal to span(U) defined as I - UU^H</span>
+                <span class="n">proj_on_ortho_u</span> <span class="o">=</span> <span class="o">-</span><span class="n">u</span> <span class="o">@</span> <span class="n">uh</span>
+                <span class="n">proj_on_ortho_u</span><span class="o">.</span><span class="n">diagonal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">add_</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+                <span class="n">u_term</span> <span class="o">=</span> <span class="n">u_term</span> <span class="o">+</span> <span class="n">proj_on_ortho_u</span> <span class="o">@</span> <span class="p">(</span><span class="n">gu</span> <span class="o">*</span> <span class="n">sigma_inv</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">))</span> 
+            <span class="n">u_term</span> <span class="o">=</span> <span class="n">u_term</span> <span class="o">@</span> <span class="n">vh</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">u_term</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">m</span><span class="p">,</span><span class="n">n</span><span class="p">,</span><span class="n">dtype</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span><span class="n">device</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">gv</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="n">gvh</span> <span class="o">=</span> <span class="n">gv</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">);</span>
+            <span class="n">v_term</span> <span class="o">=</span> <span class="n">sigma</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">F</span><span class="o">.</span><span class="n">mul</span><span class="p">(</span><span class="n">vh</span> <span class="o">@</span> <span class="n">gv</span> <span class="o">-</span> <span class="n">gvh</span> <span class="o">@</span> <span class="n">v</span><span class="p">)</span> <span class="o">@</span> <span class="n">vh</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">n</span> <span class="o">&gt;</span> <span class="n">k</span><span class="p">:</span>
+                <span class="c1"># projection operator onto subspace orthogonal to span(V) defined as I - VV^H</span>
+                <span class="n">proj_on_v_ortho</span> <span class="o">=</span>  <span class="o">-</span><span class="n">v</span> <span class="o">@</span> <span class="n">vh</span>
+                <span class="n">proj_on_v_ortho</span><span class="o">.</span><span class="n">diagonal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">add_</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+                <span class="n">v_term</span> <span class="o">=</span> <span class="n">v_term</span> <span class="o">+</span> <span class="n">sigma_inv</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">gvh</span> <span class="o">@</span> <span class="n">proj_on_v_ortho</span><span class="p">)</span>
+            <span class="n">v_term</span> <span class="o">=</span> <span class="n">u</span> <span class="o">@</span> <span class="n">v_term</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">v_term</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">m</span><span class="p">,</span><span class="n">n</span><span class="p">,</span><span class="n">dtype</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span><span class="n">device</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        
+
+        <span class="c1"># // for complex-valued input there is an additional term</span>
+        <span class="c1"># // https://giggleliu.github.io/2019/04/02/einsumbp.html</span>
+        <span class="c1"># // https://arxiv.org/abs/1909.02659</span>
+        <span class="n">dA</span><span class="o">=</span> <span class="n">u_term</span> <span class="o">+</span> <span class="n">sigma_term</span> <span class="o">+</span> <span class="n">v_term</span>
+        <span class="k">if</span> <span class="n">u</span><span class="o">.</span><span class="n">is_complex</span><span class="p">()</span> <span class="ow">or</span> <span class="n">v</span><span class="o">.</span><span class="n">is_complex</span><span class="p">():</span>
+            <span class="n">L</span><span class="o">=</span> <span class="p">(</span><span class="n">uh</span> <span class="o">@</span> <span class="n">gu</span><span class="p">)</span><span class="o">.</span><span class="n">diagonal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">L</span><span class="o">.</span><span class="n">real</span><span class="o">.</span><span class="n">zero_</span><span class="p">()</span>
+            <span class="n">L</span><span class="o">.</span><span class="n">imag</span><span class="o">.</span><span class="n">mul_</span><span class="p">(</span><span class="n">sigma_inv</span><span class="p">)</span>
+            <span class="n">imag_term</span><span class="o">=</span> <span class="p">(</span><span class="n">u</span> <span class="o">*</span> <span class="n">L</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">))</span> <span class="o">@</span> <span class="n">vh</span>
+            <span class="n">dA</span><span class="o">=</span> <span class="n">dA</span> <span class="o">+</span> <span class="n">imag_term</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">diagnostics</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">diagnostics</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">dA</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">S</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">dA</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+
+<div class="viewcode-block" id="SVDGESDD.backward"><a class="viewcode-back" href="../../linalg/spec_decomp.html#linalg.svd_gesdd.SVDGESDD.backward">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">backward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gu</span><span class="p">,</span> <span class="n">gsigma</span><span class="p">,</span> <span class="n">gv</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param gu: gradient on U</span>
+<span class="sd">        :type gu: torch.Tensor</span>
+<span class="sd">        :param gsigma: gradient on S</span>
+<span class="sd">        :type gsigma: torch.Tensor</span>
+<span class="sd">        :param gv: gradient on V</span>
+<span class="sd">        :type gv: torch.Tensor</span>
+<span class="sd">        :return: gradient</span>
+<span class="sd">        :rtype: torch.Tensor</span>
+
+<span class="sd">        Computes backward gradient for SVD, adopted from </span>
+<span class="sd">        https://github.com/pytorch/pytorch/blob/v1.10.2/torch/csrc/autograd/FunctionsManual.cpp</span>
+<span class="sd">        </span>
+<span class="sd">        For complex-valued input there is an additional term, see</span>
+
+<span class="sd">            * https://giggleliu.github.io/2019/04/02/einsumbp.html</span>
+<span class="sd">            * https://arxiv.org/abs/1909.02659</span>
+
+<span class="sd">        The backward is regularized following</span>
+<span class="sd">        </span>
+<span class="sd">            * https://github.com/wangleiphy/tensorgrad/blob/master/tensornets/adlib/svd.py</span>
+<span class="sd">            * https://arxiv.org/abs/1903.09650</span>
+
+<span class="sd">        using </span>
+
+<span class="sd">        .. math:: </span>
+<span class="sd">            S_i/(S^2_i-S^2_j) = (F_{ij}+G_{ij})/2\ \ \textrm{and}\ \ S_j/(S^2_i-S^2_j) = (F_{ij}-G_{ij})/2</span>
+<span class="sd">        </span>
+<span class="sd">        where </span>
+<span class="sd">        </span>
+<span class="sd">        .. math:: </span>
+<span class="sd">            F_{ij}=1/(S_i-S_j),\ G_{ij}=1/(S_i+S_j)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># </span>
+        <span class="c1"># TORCH_CHECK(compute_uv,</span>
+        <span class="c1">#    &quot;svd_backward: Setting compute_uv to false in torch.svd doesn&#39;t compute singular matrices, &quot;,</span>
+        <span class="c1">#    &quot;and hence we cannot compute backward. Please use torch.svd(compute_uv=True)&quot;);</span>
+
+        <span class="n">diagnostics</span><span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">diagnostics</span>
+        <span class="n">u</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">eps</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">saved_tensors</span>
+        <span class="n">m</span><span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="c1"># first dim of original tensor A = u sigma v^\dag </span>
+        <span class="n">n</span><span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="c1"># second dim of A</span>
+        <span class="n">k</span><span class="o">=</span> <span class="n">sigma</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">sigma_scale</span><span class="o">=</span> <span class="n">sigma</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="c1"># ? some</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">)</span><span class="o">!=</span><span class="n">u</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span> <span class="ow">or</span> <span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">)</span><span class="o">!=</span><span class="n">v</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)):</span>
+            <span class="c1"># We ignore the free subspace here because possible base vectors cancel</span>
+            <span class="c1"># each other, e.g., both -v and +v are valid base for a dimension.</span>
+            <span class="c1"># Don&#39;t assume behavior of any particular implementation of svd.</span>
+            <span class="n">u</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">narrow</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
+            <span class="n">v</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">narrow</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">gu</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">):</span> <span class="n">gu</span> <span class="o">=</span> <span class="n">gu</span><span class="o">.</span><span class="n">narrow</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">gv</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">):</span> <span class="n">gv</span> <span class="o">=</span> <span class="n">gv</span><span class="o">.</span><span class="n">narrow</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
+        <span class="n">vh</span><span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">gsigma</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="c1"># computes u @ diag(gsigma) @ vh</span>
+            <span class="n">sigma_term</span> <span class="o">=</span> <span class="n">u</span> <span class="o">*</span> <span class="n">gsigma</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">)</span> <span class="o">@</span> <span class="n">vh</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">sigma_term</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">m</span><span class="p">,</span><span class="n">n</span><span class="p">,</span><span class="n">dtype</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span><span class="n">device</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="c1"># in case that there are no gu and gv, we can avoid the series of kernel</span>
+        <span class="c1"># calls below</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">gv</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">gv</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">diagnostics</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">):</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">diagnostics</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">dA</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">S</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">sigma_term</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+
+        <span class="n">sigma_inv</span><span class="o">=</span> <span class="n">safe_inverse_2</span><span class="p">(</span><span class="n">sigma</span><span class="o">.</span><span class="n">clone</span><span class="p">(),</span> <span class="n">sigma_scale</span><span class="o">*</span><span class="n">eps</span><span class="p">)</span>
+
+        <span class="n">F</span> <span class="o">=</span> <span class="n">sigma</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">)</span> <span class="o">-</span> <span class="n">sigma</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">F</span> <span class="o">=</span> <span class="n">safe_inverse</span><span class="p">(</span><span class="n">F</span><span class="p">,</span> <span class="n">sigma_scale</span><span class="o">*</span><span class="n">eps</span><span class="p">)</span>
+        <span class="n">F</span><span class="o">.</span><span class="n">diagonal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">fill_</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="n">G</span> <span class="o">=</span> <span class="n">sigma</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="n">sigma</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">G</span> <span class="o">=</span> <span class="n">safe_inverse</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="n">sigma_scale</span><span class="o">*</span><span class="n">eps</span><span class="p">)</span>
+        <span class="n">G</span><span class="o">.</span><span class="n">diagonal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">fill_</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="n">uh</span><span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">gu</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="n">guh</span> <span class="o">=</span> <span class="n">gu</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">);</span>
+            <span class="n">u_term</span> <span class="o">=</span> <span class="n">u</span> <span class="o">@</span> <span class="p">(</span> <span class="p">(</span><span class="n">F</span><span class="o">+</span><span class="n">G</span><span class="p">)</span><span class="o">.</span><span class="n">mul</span><span class="p">(</span> <span class="n">uh</span> <span class="o">@</span> <span class="n">gu</span> <span class="o">-</span> <span class="n">guh</span> <span class="o">@</span> <span class="n">u</span><span class="p">)</span> <span class="p">)</span> <span class="o">*</span> <span class="mf">0.5</span>
+            <span class="k">if</span> <span class="n">m</span> <span class="o">&gt;</span> <span class="n">k</span><span class="p">:</span>
+                <span class="c1"># projection operator onto subspace orthogonal to span(U) defined as I - UU^H</span>
+                <span class="n">proj_on_ortho_u</span> <span class="o">=</span> <span class="o">-</span><span class="n">u</span> <span class="o">@</span> <span class="n">uh</span>
+                <span class="n">proj_on_ortho_u</span><span class="o">.</span><span class="n">diagonal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">add_</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+                <span class="n">u_term</span> <span class="o">=</span> <span class="n">u_term</span> <span class="o">+</span> <span class="n">proj_on_ortho_u</span> <span class="o">@</span> <span class="p">(</span><span class="n">gu</span> <span class="o">*</span> <span class="n">sigma_inv</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">))</span> 
+            <span class="n">u_term</span> <span class="o">=</span> <span class="n">u_term</span> <span class="o">@</span> <span class="n">vh</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">u_term</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">m</span><span class="p">,</span><span class="n">n</span><span class="p">,</span><span class="n">dtype</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span><span class="n">device</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">gv</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="n">gvh</span> <span class="o">=</span> <span class="n">gv</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">);</span>
+            <span class="n">v_term</span> <span class="o">=</span> <span class="p">(</span> <span class="p">(</span><span class="n">F</span><span class="o">-</span><span class="n">G</span><span class="p">)</span><span class="o">.</span><span class="n">mul</span><span class="p">(</span><span class="n">vh</span> <span class="o">@</span> <span class="n">gv</span> <span class="o">-</span> <span class="n">gvh</span> <span class="o">@</span> <span class="n">v</span><span class="p">)</span> <span class="p">)</span> <span class="o">@</span> <span class="n">vh</span> <span class="o">*</span> <span class="mf">0.5</span>
+            <span class="k">if</span> <span class="n">n</span> <span class="o">&gt;</span> <span class="n">k</span><span class="p">:</span>
+                <span class="c1"># projection operator onto subspace orthogonal to span(V) defined as I - VV^H</span>
+                <span class="n">proj_on_v_ortho</span> <span class="o">=</span>  <span class="o">-</span><span class="n">v</span> <span class="o">@</span> <span class="n">vh</span>
+                <span class="n">proj_on_v_ortho</span><span class="o">.</span><span class="n">diagonal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">add_</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+                <span class="n">v_term</span> <span class="o">=</span> <span class="n">v_term</span> <span class="o">+</span> <span class="n">sigma_inv</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">gvh</span> <span class="o">@</span> <span class="n">proj_on_v_ortho</span><span class="p">)</span>
+            <span class="n">v_term</span> <span class="o">=</span> <span class="n">u</span> <span class="o">@</span> <span class="n">v_term</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">v_term</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">m</span><span class="p">,</span><span class="n">n</span><span class="p">,</span><span class="n">dtype</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span><span class="n">device</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        
+
+        <span class="c1"># // for complex-valued input there is an additional term</span>
+        <span class="c1"># // https://giggleliu.github.io/2019/04/02/einsumbp.html</span>
+        <span class="c1"># // https://arxiv.org/abs/1909.02659</span>
+        <span class="n">dA</span><span class="o">=</span> <span class="n">u_term</span> <span class="o">+</span> <span class="n">sigma_term</span> <span class="o">+</span> <span class="n">v_term</span>
+        <span class="k">if</span> <span class="n">u</span><span class="o">.</span><span class="n">is_complex</span><span class="p">()</span> <span class="ow">or</span> <span class="n">v</span><span class="o">.</span><span class="n">is_complex</span><span class="p">():</span>
+            <span class="n">L</span><span class="o">=</span> <span class="p">(</span><span class="n">uh</span> <span class="o">@</span> <span class="n">gu</span><span class="p">)</span><span class="o">.</span><span class="n">diagonal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">L</span><span class="o">.</span><span class="n">real</span><span class="o">.</span><span class="n">zero_</span><span class="p">()</span>
+            <span class="n">L</span><span class="o">.</span><span class="n">imag</span><span class="o">.</span><span class="n">mul_</span><span class="p">(</span><span class="n">sigma_inv</span><span class="p">)</span>
+            <span class="n">imag_term</span><span class="o">=</span> <span class="p">(</span><span class="n">u</span> <span class="o">*</span> <span class="n">L</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">))</span> <span class="o">@</span> <span class="n">vh</span>
+            <span class="n">dA</span><span class="o">=</span> <span class="n">dA</span> <span class="o">+</span> <span class="n">imag_term</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">diagnostics</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">diagnostics</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">dA</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">S</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">dA</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span></div>
+
+    <span class="c1"># From https://github.com/pytorch/pytorch/blob/master/torch/csrc/autograd/FunctionsManual.cpp</span>
+    <span class="c1"># commit 5375b2e (v1.11.+)</span>
+    <span class="c1"># Tensor svd_backward(const Tensor&amp; gU,</span>
+    <span class="c1">#                     const Tensor&amp; gS,</span>
+    <span class="c1">#                     const Tensor&amp; gVh,</span>
+    <span class="c1">#                     const Tensor&amp; U,</span>
+    <span class="c1">#                     const Tensor&amp; S,</span>
+    <span class="c1">#                     const Tensor&amp; Vh) {</span>
+    <span class="c1">#   at::NoTF32Guard disable_tf32;</span>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">v1_11_backward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gU</span><span class="p">,</span> <span class="n">gS</span><span class="p">,</span> <span class="n">gVh</span><span class="p">):</span>
+        <span class="n">U</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">Vh</span><span class="p">,</span> <span class="n">ad_decomp_reg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">saved_tensors</span>
+        <span class="n">diagnostics</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">diagnostics</span>
+        <span class="c1">#   // Throughout both the real and complex case we assume A has distinct singular values.</span>
+        <span class="c1">#   // Furthermore, if A is rectangular or complex, we assume it&#39;s full-rank.</span>
+        <span class="c1">#   //</span>
+        <span class="c1">#   //</span>
+        <span class="c1">#   // The real case (A \in R)</span>
+        <span class="c1">#   // See e.g. https://j-towns.github.io/papers/svd-derivative.pdf</span>
+        <span class="c1">#   //</span>
+        <span class="c1">#   // Denote by skew(X) = X - X^T, and by A o B the coordinatewise product, then</span>
+        <span class="c1">#   // if m == n</span>
+        <span class="c1">#   //   gA = U [(skew(U^T gU) / E)S + S(skew(V^T gV) / E) + I o gS ]V^T</span>
+        <span class="c1">#   // where E_{jk} = S_k^2 - S_j^2 if j != k and 1 otherwise</span>
+        <span class="c1">#   //</span>
+        <span class="c1">#   // if m &gt; n</span>
+        <span class="c1">#   //   gA = [term in m == n] + (I_m - UU^T)gU S^{-1} V^T</span>
+        <span class="c1">#   // if m &lt; n</span>
+        <span class="c1">#   //   gA = [term in m == n] + U S^{-1} (gV)^T (I_n - VV^T)</span>
+        <span class="c1">#   //</span>
+        <span class="c1">#   //</span>
+        <span class="c1">#   // The complex case (A \in C)</span>
+        <span class="c1">#   // This one is trickier because the svd is not locally unique.</span>
+        <span class="c1">#   // Denote L = diag(e^{i\theta_k}), then we have that if A = USV^H, then (UL, S, VL) is</span>
+        <span class="c1">#   // another valid SVD decomposition of A as</span>
+        <span class="c1">#   // A = ULS(VL)^H = ULSL^{-1}V^H = USV^H,</span>
+        <span class="c1">#   // since L, S and L^{-1} commute, since they are all diagonal.</span>
+        <span class="c1">#   //</span>
+        <span class="c1">#   // Assume wlog that n &gt;= k in what follows, as otherwise we could reason about A^H.</span>
+        <span class="c1">#   // Denote by St_k(C^n) = {A \in C^{n,k} | A^H A = I_k} the complex Stiefel manifold.</span>
+        <span class="c1">#   // What this invariance means is that the svd decomposition is not a map</span>
+        <span class="c1">#   // svd: C^{n x k} -&gt; St_k(C^n) x R^n x St_k(C^k)</span>
+        <span class="c1">#   // (where St_k(C^k) is simply the unitary group U(k)) but a map</span>
+        <span class="c1">#   // svd: C^{n x k} -&gt; M x R^n</span>
+        <span class="c1">#   // where M is the manifold given by quotienting St_k(C^n) x U(n) by the action (U, V) -&gt; (UL, VL)</span>
+        <span class="c1">#   // with L as above.</span>
+        <span class="c1">#   // Note that M is a manifold, because the action is free and proper (as U(1)^k \iso (S^1)^k is compact).</span>
+        <span class="c1">#   // For this reason, pi : St_k(C^n) x U(n) -&gt; M forms a principal bundle.</span>
+        <span class="c1">#   //</span>
+        <span class="c1">#   // To think about M, consider the case case k = 1. The, we have the bundle</span>
+        <span class="c1">#   // pi : St_1(C^n) x U(1) -&gt; M</span>
+        <span class="c1">#   // now, St_1(C^n) are just vectors of norm 1 in C^n. That&#39;s exactly the sphere of dimension 2n-1 in C^n \iso R^{2n}</span>
+        <span class="c1">#   // S^{2n-1} = { z \in C^n | z^H z = 1}.</span>
+        <span class="c1">#   // Then, in this case, we&#39;re quotienting out U(1) completely, so we get that</span>
+        <span class="c1">#   // pi : S^{2n-1} x U(1) -&gt; CP(n-1)</span>
+        <span class="c1">#   // where CP(n-1) is the complex projective space of dimension n-1.</span>
+        <span class="c1">#   // In other words, M is just the complex projective space, and pi is (pretty similar to)</span>
+        <span class="c1">#   // the usual principal bundle from S^{2n-1} to CP(n-1).</span>
+        <span class="c1">#   // The case k &gt; 1 is the same, but requiring a linear inependence condition between the</span>
+        <span class="c1">#   // vectors from the different S^{2n-1} or CP(n-1).</span>
+        <span class="c1">#   //</span>
+        <span class="c1">#   // Note that this is a U(1)^k-bundle. In plain words, this means that the fibres of this bundle,</span>
+        <span class="c1">#   // i.e. pi^{-1}(x) for x \in M are isomorphic to U(1) x ... x U(1).</span>
+        <span class="c1">#   // This is obvious as, if pi(U,V) = x,</span>
+        <span class="c1">#   // pi^{-1}(x) = {(U diag(e^{i\theta}), V diag(e^{i\theta})) | \theta \in R^k}</span>
+        <span class="c1">#   //            = {(U diag(z), V diag(z)) | z \in U(1)^k}</span>
+        <span class="c1">#   // since U(1) = {z \in C | |z| = 1}.</span>
+        <span class="c1">#   //</span>
+        <span class="c1">#   // The big issue here is that M with its induced metric is not locally isometric to St_k(C^n) x U(k).</span>
+        <span class="c1">#   // [The why is rather technical, but you can see that the horizontal distribution is not involutive,</span>
+        <span class="c1">#   // and hence integrable due to Frobenius&#39; theorem]</span>
+        <span class="c1">#   // What this means in plain words is that, no matter how we choose to return the U and V from the</span>
+        <span class="c1">#   // SVD, we won&#39;t be able to simply differentiate wrt. U and V and call it a day.</span>
+        <span class="c1">#   // An example of a case where we can do this is when performing an eigendecomposition on a real</span>
+        <span class="c1">#   // matrix that happens to have real eigendecomposition. In this case, even though you can rescale</span>
+        <span class="c1">#   // the eigenvectors by any real number, you can choose them of norm 1 and call it a day.</span>
+        <span class="c1">#   // In the eigenvector case, we are using that you can isometrically embed S^{n-1} into R^n.</span>
+        <span class="c1">#   // In the svd case, we need to work with the &quot;quotient manifold&quot; M explicitly, which is</span>
+        <span class="c1">#   // slightly more technically challenging.</span>
+        <span class="c1">#   //</span>
+        <span class="c1">#   // Since the columns of U and V are not uniquely defined, but are representatives of certain</span>
+        <span class="c1">#   // classes of equivalence which represent elements M, the user may not depend on the particular</span>
+        <span class="c1">#   // representative that we return from the SVD. In particular, if the loss function depends on U</span>
+        <span class="c1">#   // or V, it must be invariant under the transformation (U, V) -&gt; (UL, VL) with</span>
+        <span class="c1">#   // L = diag(e^{i\theta})), for every \theta \in R^k.</span>
+        <span class="c1">#   // In more geometrical terms, this means that the loss function should be constant on the fibres,</span>
+        <span class="c1">#   // or, in other words, the gradient along the fibres should be zero.</span>
+        <span class="c1">#   // We may see this by checking that the gradients as element in the tangent space</span>
+        <span class="c1">#   // T_{(U, V)}(St(n,k) x U(k)) are normal to the fibres. Differentiating the map</span>
+        <span class="c1">#   // (U, V) -&gt; (UL, VL), we see that the space tangent to the fibres is given by</span>
+        <span class="c1">#   // Vert_{(U, V)}(St(n,k) x U(k)) = { i[U, V]diag(\theta) | \theta in R^k}</span>
+        <span class="c1">#   // where [U, V] denotes the vertical concatenation of U and V to form an (n+k, k) matrix.</span>
+        <span class="c1">#   // Then, solving</span>
+        <span class="c1">#   // &lt;i[U,V]diag(\theta), [S, T]&gt; = 0 for two matrices S, T \in T_{(U, V)}(St(n,k) x U(k))</span>
+        <span class="c1">#   // where &lt;A, B&gt; = Re tr(A^H B) is the canonical (real) inner product in C^{n x k}</span>
+        <span class="c1">#   // we get that the function is invariant under action of U(1)^k iff</span>
+        <span class="c1">#   // Im(diag(U^H gU + V^H gV)) = 0</span>
+        <span class="c1">#   //</span>
+        <span class="c1">#   // Using this in the derviaton for the forward AD, one sees that, with the notation from those notes</span>
+        <span class="c1">#   // Using this and writing sym(X) = X + X^H, we get that the forward AD for SVD in the complex</span>
+        <span class="c1">#   // case is given by</span>
+        <span class="c1">#   // dU = U (sym(dX S) / E + i Im(diag(dX)) / (2S))</span>
+        <span class="c1">#   // if m &gt; n</span>
+        <span class="c1">#   //   dU = [dU for m == n] + (I_m - UU^H) dA V S^{-1}</span>
+        <span class="c1">#   // dS = Re(diag(dP))</span>
+        <span class="c1">#   // dV = V (sym(S dX) / E - i Im(diag(dX)) / (2S))</span>
+        <span class="c1">#   // if m &lt; n</span>
+        <span class="c1">#   //   dV = [dV for m == n] + (I_n - VV^H) (dA)^H U S^{-1}</span>
+        <span class="c1">#   // dVh = dV^H</span>
+        <span class="c1">#   // with dP = U^H dA V</span>
+        <span class="c1">#   //      dX = dP - dS</span>
+        <span class="c1">#   //      E_{jk} = S_k^2 - S_j^2 if j != k</span>
+        <span class="c1">#   //               1             otherwise</span>
+        <span class="c1">#   //</span>
+        <span class="c1">#   // Similarly, writing skew(X) = X - X^H</span>
+        <span class="c1">#   // the adjoint wrt. the canonical metric is given by</span>
+        <span class="c1">#   // if m == n</span>
+        <span class="c1">#   //   gA = U [((skew(U^H gU) / E) S + i Im(diag(U^H gU)) / S + S ((skew(V^H gV) / E)) + I o gS] V^H</span>
+        <span class="c1">#   // if m &gt; n</span>
+        <span class="c1">#   //   gA = [term in m == n] + (I_m - UU^H)gU S^{-1} V^H</span>
+        <span class="c1">#   // if m &lt; n</span>
+        <span class="c1">#   //   gA = [term in m == n] + U S^{-1} (gV)^H (I_n - VV^H)</span>
+        <span class="c1">#   // where we have used that Im(diag(U^H gU)) = - Im(diag(V^h gV)) to group the diagonal imaginary terms into one</span>
+        <span class="c1">#   // that just depends on U^H gU.</span>
+
+        <span class="c1">#   // Checks compute_uv=true</span>
+        <span class="c1">#   TORCH_INTERNAL_ASSERT(U.dim() &gt;= 2 &amp;&amp; Vh.dim() &gt;= 2);</span>
+
+        <span class="c1">#   // Trivial case</span>
+        <span class="c1">#   if (!gS.defined() &amp;&amp; !gU.defined() &amp;&amp; !gVh.defined()) {</span>
+        <span class="c1">#     return {};</span>
+        <span class="c1">#   }</span>
+
+        <span class="n">m</span> <span class="o">=</span> <span class="n">U</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="n">Vh</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="c1">#   // Optimisation for svdvals: gA = U @ diag(gS) @ Vh</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">gU</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">gVh</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">diagnostics</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">):</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">diagnostics</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">gA</span><span class="o">.</span><span class="n">size</span><span class="p">()</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">gA</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">S</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">U</span> <span class="o">@</span> <span class="p">(</span><span class="n">gS</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">Vh</span><span class="p">)</span> <span class="k">if</span> <span class="n">m</span><span class="o">&gt;=</span><span class="n">n</span> <span class="k">else</span> <span class="p">(</span><span class="n">U</span> <span class="o">*</span> <span class="n">gS</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">))</span> <span class="o">@</span> <span class="n">Vh</span>
+        <span class="c1">#   // At this point, at least one of gU, gVh is defined</span>
+
+        <span class="n">is_complex</span> <span class="o">=</span> <span class="n">U</span><span class="o">.</span><span class="n">is_complex</span><span class="p">()</span>
+        <span class="k">def</span> <span class="nf">skew</span><span class="p">(</span><span class="n">A</span><span class="p">):</span> <span class="k">return</span> <span class="n">A</span> <span class="o">-</span> <span class="n">A</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span>
+        <span class="c1">#   const auto UhgU = gU.defined() ? skew(at::matmul(U.mH(), gU)) : Tensor{};</span>
+        <span class="c1">#   const auto VhgV = gVh.defined() ? skew(at::matmul(Vh, gVh.mH())) : Tensor{};</span>
+        <span class="n">UhgU</span><span class="o">=</span> <span class="n">skew</span><span class="p">(</span> <span class="n">U</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="nd">@gU</span> <span class="p">)</span>
+        <span class="n">VhgV</span><span class="o">=</span> <span class="n">skew</span><span class="p">(</span> <span class="n">Vh</span><span class="nd">@gVh</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span> <span class="p">)</span>
+
+        <span class="c1">#   // Check for the invariance of the loss function, i.e.</span>
+        <span class="c1">#   // Im(diag(U^H gU)) + Im(diag(V^H gV)) = 0</span>
+        <span class="c1">#   if (is_complex) {</span>
+        <span class="c1">#     const auto imdiag_UhgU = gU.defined() ? at::imag(UhgU.diagonal(0, -2, -1))</span>
+        <span class="c1">#                                           : at::zeros_like(S);</span>
+        <span class="c1">#     const auto imdiag_VhgV = gVh.defined() ? at::imag(VhgV.diagonal(0, -2, -1))</span>
+        <span class="c1">#                                            : at::zeros_like(S);</span>
+        <span class="c1">#     // Rather lax atol and rtol, as we don&#39;t want false positives</span>
+        <span class="c1">#     TORCH_CHECK(at::allclose(imdiag_UhgU, -imdiag_VhgV, /*rtol=*/1e-2, /*atol=*/1e-2),</span>
+        <span class="c1">#                 &quot;svd_backward: The singular vectors in the complex case are specified up to multiplication &quot;</span>
+        <span class="c1">#                 &quot;by e^{i phi}. The specified loss function depends on this phase term, making &quot;</span>
+        <span class="c1">#                 &quot;it ill-defined.&quot;);</span>
+        <span class="c1">#   }</span>
+        <span class="k">if</span> <span class="n">is_complex</span><span class="p">:</span>
+            <span class="n">imdiag_UhgU</span><span class="o">=</span> <span class="n">UhgU</span><span class="o">.</span><span class="n">diagonal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">imag</span>
+            <span class="n">imdiag_VhgV</span><span class="o">=</span> <span class="n">VhgV</span><span class="o">.</span><span class="n">diagonal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">imag</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span> <span class="n">imdiag_UhgU</span><span class="p">,</span> <span class="o">-</span><span class="n">imdiag_VhgV</span><span class="p">,</span> <span class="mf">1e-2</span><span class="p">,</span> <span class="mf">1e-2</span> <span class="p">):</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;svd_backward: The singular vectors in the complex case are &quot;</span>\
+                <span class="o">+</span><span class="s2">&quot;specified up to multiplication by e^{i phi}. The specified loss function depends on &quot;</span>\
+                <span class="o">+</span><span class="s2">&quot;this phase term, making it ill-defined.&quot;</span><span class="p">,</span><span class="ne">RuntimeWarning</span><span class="p">)</span>
+                <span class="c1"># import pdb; pdb.set_trace()</span>
+
+        <span class="c1">#   // gA = ((U^H gU) / E) S +  S (((V^H gV) / E) + I o (gS + diag(U^H gU) / (2 * S))</span>
+        <span class="c1">#   Tensor gA = [&amp;] {</span>
+        <span class="c1">#     // ret holds everything but the diagonal of gA</span>
+        <span class="c1">#     auto ret = [&amp;] {</span>
+        <span class="c1">#       const auto E = [&amp;S]{</span>
+        <span class="c1">#         const auto S2 = S * S;</span>
+        <span class="c1">#         auto ret = S2.unsqueeze(-2) - S2.unsqueeze(-1);</span>
+        <span class="c1">#         // Any number a != 0 would, as we are just going to use it to compute 0 / a later on</span>
+        <span class="c1">#         ret.diagonal(0, -2, -1).fill_(1);</span>
+        <span class="c1">#         return ret;</span>
+        <span class="c1">#       }();</span>
+
+        <span class="c1">#       if (gU.defined()) {</span>
+        <span class="c1">#         if (gVh.defined()) {</span>
+        <span class="c1">#           return (UhgU * S.unsqueeze(-2) + S.unsqueeze(-1) * VhgV) / E;</span>
+        <span class="c1">#         } else {</span>
+        <span class="c1">#           return (UhgU / E) * S.unsqueeze(-2);</span>
+        <span class="c1">#         }</span>
+        <span class="c1">#       } else { // gVh.defined();</span>
+        <span class="c1">#         return S.unsqueeze(-1) * (VhgV / E);</span>
+        <span class="c1">#       }</span>
+        <span class="c1">#     }();</span>
+        <span class="c1">#     // Fill the diagonal</span>
+        <span class="c1">#     if (gS.defined()) {</span>
+        <span class="c1">#       ret = ret + gS.diag_embed();</span>
+        <span class="c1">#     }</span>
+        <span class="c1">#     if (is_complex &amp;&amp; gU.defined() &amp;&amp; gVh.defined()) {</span>
+        <span class="c1">#       ret = ret + (UhgU.diagonal(0, -2, -1) / (2. * S)).diag_embed();</span>
+        <span class="c1">#     }</span>
+        <span class="c1">#     return ret;</span>
+        <span class="c1">#   }();</span>
+        <span class="k">def</span> <span class="nf">reg_preinv</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+            <span class="n">x_reg</span><span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+            <span class="n">x_scale</span><span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">x_scale</span><span class="o">&lt;</span><span class="n">ad_decomp_reg</span><span class="p">:</span>
+                <span class="n">x_reg</span><span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="s1">&#39;inf&#39;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">x_reg</span><span class="p">[</span><span class="nb">abs</span><span class="p">(</span><span class="n">x_reg</span><span class="o">/</span><span class="n">x_scale</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">ad_decomp_reg</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="s1">&#39;inf&#39;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">x_reg</span>
+
+        <span class="n">S2</span><span class="o">=</span> <span class="n">S</span><span class="o">*</span><span class="n">S</span>
+        <span class="n">E</span><span class="o">=</span> <span class="n">S2</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">)</span> <span class="o">-</span> <span class="n">S2</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="c1"># S^2_i-S^2_j</span>
+        <span class="n">E</span><span class="o">.</span><span class="n">diagonal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">fill_</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        
+        <span class="n">gA</span><span class="o">=</span> <span class="p">(</span><span class="n">UhgU</span> <span class="o">*</span> <span class="n">S</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="n">S</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">VhgV</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.</span><span class="o">/</span><span class="n">reg_preinv</span><span class="p">(</span><span class="n">E</span><span class="p">))</span> <span class="o">+</span> <span class="n">gS</span><span class="o">.</span><span class="n">diag_embed</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">is_complex</span><span class="p">:</span>
+            <span class="n">gA</span> <span class="o">=</span> <span class="n">gA</span> <span class="o">+</span> <span class="p">(</span><span class="n">UhgU</span><span class="o">.</span><span class="n">diagonal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.</span><span class="o">/</span><span class="p">(</span><span class="mf">2.</span> <span class="o">*</span> <span class="n">reg_preinv</span><span class="p">(</span><span class="n">S</span><span class="p">)))</span> <span class="p">)</span><span class="o">.</span><span class="n">diag_embed</span><span class="p">()</span>
+
+        <span class="c1">#   if (m &gt; n &amp;&amp; gU.defined()) {</span>
+        <span class="c1">#     // gA = [UgA + (I_m - UU^H)gU S^{-1}]V^H</span>
+        <span class="c1">#     gA  = at::matmul(U, gA);</span>
+        <span class="c1">#     const auto gUSinv = gU / S.unsqueeze(-2);</span>
+        <span class="c1">#     gA = gA + gUSinv - at::matmul(U, at::matmul(U.mH(), gUSinv));</span>
+        <span class="c1">#     gA = at::matmul(gA, Vh);</span>
+        <span class="c1">#   } else if (m &lt; n &amp;&amp; gVh.defined()) {</span>
+        <span class="c1">#     //   gA = U[gA V^H + S^{-1} (gV)^H (I_n - VV^H)]</span>
+        <span class="c1">#     gA = at::matmul(gA, Vh);</span>
+        <span class="c1">#     const auto SinvgVh = gVh / S.unsqueeze(-1);</span>
+        <span class="c1">#     gA = gA + SinvgVh - at::matmul(at::matmul(SinvgVh, Vh.mH()), Vh);</span>
+        <span class="c1">#     gA = at::matmul(U, gA);</span>
+        <span class="c1">#   } else {</span>
+        <span class="c1">#     // gA = U gA V^H</span>
+        <span class="c1">#     gA = m &gt;= n ? at::matmul(U, at::matmul(gA, Vh))</span>
+        <span class="c1">#                 : at::matmul(at::matmul(U, gA), Vh);</span>
+        <span class="c1">#   }</span>
+
+        <span class="c1"># TODO regularize 1/S</span>
+        <span class="k">if</span> <span class="n">m</span><span class="o">&gt;</span><span class="n">n</span><span class="p">:</span>
+            <span class="n">gA</span> <span class="o">=</span> <span class="n">U</span> <span class="o">@</span> <span class="n">gA</span>
+            <span class="n">gUSinv</span> <span class="o">=</span> <span class="n">gU</span> <span class="o">/</span> <span class="n">S</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">)</span>
+            <span class="n">gA</span> <span class="o">=</span> <span class="n">gA</span> <span class="o">+</span> <span class="n">gUSinv</span> <span class="o">-</span> <span class="n">U</span> <span class="o">@</span> <span class="p">(</span><span class="n">U</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span> <span class="o">@</span> <span class="n">gUSinv</span><span class="p">)</span>
+            <span class="n">gA</span> <span class="o">=</span> <span class="n">gA</span> <span class="o">@</span> <span class="n">Vh</span>
+        <span class="k">elif</span> <span class="n">m</span><span class="o">&lt;</span><span class="n">n</span><span class="p">:</span>
+            <span class="n">gA</span> <span class="o">=</span> <span class="n">gA</span> <span class="o">@</span> <span class="n">Vh</span>
+            <span class="n">SinvgVh</span> <span class="o">=</span> <span class="n">gVh</span> <span class="o">/</span> <span class="n">S</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">gA</span> <span class="o">=</span> <span class="n">gA</span> <span class="o">+</span> <span class="n">SinvgVh</span> <span class="o">-</span> <span class="p">(</span><span class="n">SinvgVh</span> <span class="o">@</span> <span class="n">Vh</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">conj</span><span class="p">())</span> <span class="o">@</span> <span class="n">Vh</span>
+            <span class="n">gA</span> <span class="o">=</span> <span class="n">U</span> <span class="o">@</span> <span class="n">gA</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">gA</span> <span class="o">=</span> <span class="n">U</span> <span class="o">@</span> <span class="p">(</span><span class="n">gA</span> <span class="o">@</span> <span class="n">Vh</span><span class="p">)</span> <span class="k">if</span> <span class="n">m</span><span class="o">&gt;=</span><span class="n">n</span> <span class="k">else</span> <span class="p">(</span><span class="n">U</span> <span class="o">@</span> <span class="n">gA</span><span class="p">)</span> <span class="o">@</span> <span class="n">Vh</span>
+
+        <span class="c1">#   return gA;</span>
+        <span class="c1"># }</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">diagnostics</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">diagnostics</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">gA</span><span class="o">.</span><span class="n">size</span><span class="p">()</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">gA</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">S</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">gA</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span></div>
+
+<span class="k">def</span> <span class="nf">test_SVDGESDD_legacy_random</span><span class="p">():</span>
+    <span class="n">eps</span><span class="o">=</span> <span class="mf">1.0e-12</span>
+    <span class="n">eps</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">as_tensor</span><span class="p">(</span><span class="n">eps</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+
+    <span class="c1"># M, N = 50, 40</span>
+    <span class="c1"># A = torch.rand(M, N, dtype=torch.float64, requires_grad=True)</span>
+    <span class="c1"># assert(torch.autograd.gradcheck(SVDGESDD_legacy.apply, (A, eps, None,) , eps=1e-6, atol=1e-5))</span>
+
+    <span class="c1"># M, N = 40, 40</span>
+    <span class="c1"># A = torch.rand(M, N, dtype=torch.float64, requires_grad=True)</span>
+    <span class="c1"># assert(torch.autograd.gradcheck(SVDGESDD_legacy.apply, (A, eps, None,) , eps=1e-6, atol=1e-5))</span>
+
+    <span class="n">M</span><span class="o">=</span> <span class="mi">50</span>
+    <span class="n">A</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">M</span><span class="p">,</span> <span class="n">M</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+    <span class="n">A</span><span class="o">=</span> <span class="mf">0.5</span><span class="o">*</span><span class="p">(</span><span class="n">A</span><span class="o">+</span><span class="n">A</span><span class="o">.</span><span class="n">t</span><span class="p">())</span>
+
+    <span class="n">D</span><span class="p">,</span> <span class="n">U</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">symeig</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">eigenvectors</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="c1"># make random spectrum with almost degen</span>
+    <span class="k">for</span> <span class="n">split_scale</span> <span class="ow">in</span> <span class="p">[</span><span class="mf">0.</span><span class="p">]:</span> <span class="c1"># 10.0, 1.0, 0.1, 0.01, </span>
+        <span class="n">tot_scale</span><span class="o">=</span><span class="mi">1000</span>
+        <span class="n">d0</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">M</span><span class="o">//</span><span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="n">splits</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">M</span><span class="o">//</span><span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">M</span><span class="o">//</span><span class="mi">2</span><span class="p">):</span>
+            <span class="n">D</span><span class="p">[</span><span class="mi">2</span><span class="o">*</span><span class="n">i</span><span class="p">]</span><span class="o">=</span> <span class="n">tot_scale</span><span class="o">*</span><span class="n">d0</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">D</span><span class="p">[</span><span class="mi">2</span><span class="o">*</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span><span class="o">=</span> <span class="n">tot_scale</span><span class="o">*</span><span class="n">d0</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">+</span><span class="n">split_scale</span><span class="o">*</span><span class="n">splits</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">A</span><span class="o">=</span> <span class="n">U</span><span class="o">.</span><span class="n">t</span><span class="p">()</span> <span class="o">@</span> <span class="n">torch</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">D</span><span class="p">)</span> <span class="o">@</span> <span class="n">U</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;split_scale </span><span class="si">{</span><span class="n">split_scale</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">D</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">A</span><span class="o">.</span><span class="n">requires_grad_</span><span class="p">()</span>
+            <span class="k">assert</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">autograd</span><span class="o">.</span><span class="n">gradcheck</span><span class="p">(</span><span class="n">SVDGESDD_legacy</span><span class="o">.</span><span class="n">apply</span><span class="p">,</span> <span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">eps</span><span class="p">,</span> <span class="kc">None</span><span class="p">,)</span> <span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="mf">1.0e-3</span><span class="p">))</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;FAILED for splits: </span><span class="si">{</span><span class="n">split_scale</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">test_SVDGESDD_random</span><span class="p">():</span>
+    <span class="n">eps</span><span class="o">=</span> <span class="mf">1.0e-12</span>
+    <span class="n">eps</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">as_tensor</span><span class="p">(</span><span class="n">eps</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+
+    <span class="n">M</span><span class="p">,</span> <span class="n">N</span> <span class="o">=</span> <span class="mi">50</span><span class="p">,</span> <span class="mi">40</span>
+    <span class="n">A</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">M</span><span class="p">,</span> <span class="n">N</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">requires_grad</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">assert</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">autograd</span><span class="o">.</span><span class="n">gradcheck</span><span class="p">(</span><span class="n">SVDGESDD_legacy</span><span class="o">.</span><span class="n">apply</span><span class="p">,</span> <span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">eps</span><span class="p">,</span> <span class="kc">None</span><span class="p">,)</span> <span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">))</span>
+
+    <span class="n">M</span><span class="p">,</span> <span class="n">N</span> <span class="o">=</span> <span class="mi">40</span><span class="p">,</span> <span class="mi">40</span>
+    <span class="n">A</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">M</span><span class="p">,</span> <span class="n">N</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">requires_grad</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">assert</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">autograd</span><span class="o">.</span><span class="n">gradcheck</span><span class="p">(</span><span class="n">SVDGESDD_legacy</span><span class="o">.</span><span class="n">apply</span><span class="p">,</span> <span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">eps</span><span class="p">,</span> <span class="kc">None</span><span class="p">,)</span> <span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">))</span>
+
+    <span class="n">M</span><span class="o">=</span> <span class="mi">50</span>
+    <span class="n">A</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">M</span><span class="p">,</span> <span class="n">M</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+    <span class="n">A</span><span class="o">=</span> <span class="mf">0.5</span><span class="o">*</span><span class="p">(</span><span class="n">A</span><span class="o">+</span><span class="n">A</span><span class="o">.</span><span class="n">t</span><span class="p">())</span>
+
+    <span class="n">D</span><span class="p">,</span> <span class="n">U</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">symeig</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">eigenvectors</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="c1"># make random spectrum with almost degen</span>
+    <span class="k">for</span> <span class="n">split_scale</span> <span class="ow">in</span> <span class="p">[</span><span class="mf">10.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.01</span><span class="p">,</span> <span class="mf">0.</span><span class="p">]:</span> 
+        <span class="n">tot_scale</span><span class="o">=</span><span class="mi">1000</span>
+        <span class="n">d0</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">M</span><span class="o">//</span><span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="n">splits</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">M</span><span class="o">//</span><span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">M</span><span class="o">//</span><span class="mi">2</span><span class="p">):</span>
+            <span class="n">D</span><span class="p">[</span><span class="mi">2</span><span class="o">*</span><span class="n">i</span><span class="p">]</span><span class="o">=</span> <span class="n">tot_scale</span><span class="o">*</span><span class="n">d0</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">D</span><span class="p">[</span><span class="mi">2</span><span class="o">*</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span><span class="o">=</span> <span class="n">tot_scale</span><span class="o">*</span><span class="n">d0</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">+</span><span class="n">split_scale</span><span class="o">*</span><span class="n">splits</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">A</span><span class="o">=</span> <span class="n">U</span><span class="o">.</span><span class="n">t</span><span class="p">()</span> <span class="o">@</span> <span class="n">torch</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">D</span><span class="p">)</span> <span class="o">@</span> <span class="n">U</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;split_scale </span><span class="si">{</span><span class="n">split_scale</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">D</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">A</span><span class="o">.</span><span class="n">requires_grad_</span><span class="p">()</span>
+            <span class="k">assert</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">autograd</span><span class="o">.</span><span class="n">gradcheck</span><span class="p">(</span><span class="n">SVDGESDD_legacy</span><span class="o">.</span><span class="n">apply</span><span class="p">,</span> <span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">eps</span><span class="p">,</span> <span class="kc">None</span><span class="p">,)</span> <span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="mf">1.0e-3</span><span class="p">))</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;FAILED for splits: </span><span class="si">{</span><span class="n">split_scale</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">test_SVDGESDD_COMPLEX_random</span><span class="p">():</span>
+    
+    <span class="k">def</span> <span class="nf">test_f_1</span><span class="p">(</span><span class="n">M</span><span class="p">):</span>
+        <span class="n">U</span><span class="p">,</span><span class="n">S</span><span class="p">,</span><span class="n">V</span><span class="o">=</span> <span class="n">SVDGESDD</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">M</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">S</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">1</span><span class="p">])</span>
+
+    <span class="k">def</span> <span class="nf">test_f_2</span><span class="p">(</span><span class="n">M</span><span class="p">):</span>
+        <span class="n">U</span><span class="p">,</span><span class="n">S</span><span class="p">,</span><span class="n">V</span><span class="o">=</span> <span class="n">SVDGESDD</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">M</span><span class="p">)</span>
+        <span class="n">T</span><span class="o">=</span> <span class="n">U</span> <span class="o">@</span> <span class="n">V</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">T</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span>
+
+    <span class="n">M</span><span class="o">=</span> <span class="mi">25</span>
+    <span class="n">A</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">((</span><span class="n">M</span><span class="p">,</span> <span class="n">M</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">complex128</span><span class="p">)</span>
+    <span class="n">U</span><span class="p">,</span><span class="n">S</span><span class="p">,</span><span class="n">V</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">svd</span><span class="p">(</span><span class="n">A</span><span class="p">)</span> 
+    <span class="nb">print</span><span class="p">(</span><span class="n">S</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">split_scale</span> <span class="ow">in</span> <span class="p">[</span><span class="mf">10.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.01</span><span class="p">,</span> <span class="mf">0.</span><span class="p">]:</span> 
+        <span class="n">tot_scale</span><span class="o">=</span><span class="mi">1000</span>
+        <span class="n">d0</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">M</span><span class="o">//</span><span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="n">splits</span><span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">M</span><span class="o">//</span><span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">M</span><span class="o">//</span><span class="mi">2</span><span class="p">):</span>
+            <span class="n">S</span><span class="p">[</span><span class="mi">2</span><span class="o">*</span><span class="n">i</span><span class="p">]</span><span class="o">=</span> <span class="n">tot_scale</span><span class="o">*</span><span class="n">d0</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">S</span><span class="p">[</span><span class="mi">2</span><span class="o">*</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span><span class="o">=</span> <span class="n">tot_scale</span><span class="o">*</span><span class="n">d0</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">+</span><span class="n">split_scale</span><span class="o">*</span><span class="n">splits</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">A</span><span class="o">=</span> <span class="n">U</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">S</span><span class="p">)</span> <span class="o">@</span> <span class="n">V</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">A</span><span class="o">.</span><span class="n">requires_grad_</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;split_scale </span><span class="si">{</span><span class="n">split_scale</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">S</span><span class="p">)</span>
+
+        <span class="k">assert</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">autograd</span><span class="o">.</span><span class="n">gradcheck</span><span class="p">(</span><span class="n">test_f_1</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">))</span>
+        <span class="k">assert</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">autograd</span><span class="o">.</span><span class="n">gradcheck</span><span class="p">(</span><span class="n">test_f_2</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">))</span>
+
+<span class="k">if</span> <span class="vm">__name__</span><span class="o">==</span><span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">test_SVDGESDD_legacy_random</span><span class="p">()</span>
+    <span class="n">test_SVDGESDD_random</span><span class="p">()</span>
+    <span class="c1"># test_SVDGESDD_COMPLEX_random()</span>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Juraj Hasik, Glen B. Mbeng
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
