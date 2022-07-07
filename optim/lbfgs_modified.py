@@ -81,18 +81,23 @@ class LBFGS_MOD(LBFGS):
                  line_search_eps=1.0e-4):
         r"""
         Args:
-            lr (float): learning rate (default: 1)
-            max_iter (int): maximal number of iterations per optimization step
-                (default: 20)
-            max_eval (int): maximal number of function evaluations per optimization
-                step (default: max_iter * 1.25).
-            tolerance_grad (float): termination tolerance on first order optimality
-                (default: 1e-5).
-            tolerance_change (float): termination tolerance on function
-                value/parameter changes (default: 1e-9).
-            history_size (int): update history size (default: 100).
-            line_search_fn (str): either 'strong_wolfe' or None (default: None).
-            line_search_eps (float): minimal step size (default: 1.0e-4).
+            lr : float
+                learning rate
+            max_iter : int 
+                maximal number of iterations per optimization step
+            max_eval : int 
+                maximal number of function evaluations per optimization step 
+                (default: max_iter * 1.25).
+            tolerance_grad : float
+                termination tolerance on first order optimality
+            tolerance_change : float
+                termination tolerance on function value/parameter changes.
+            history_size : int 
+                update history size.
+            line_search_fn : str
+                either 'strong_wolfe' or ``None``.
+            line_search_eps : float
+                minimal step size
         """
         super(LBFGS_MOD, self).__init__(
                 params,
