@@ -33,6 +33,7 @@ parser.add_argument("--obs_freq", type=int, default=-1, help="frequency of compu
 parser.add_argument("--corrf_dd_v", action='store_true', help="compute vertical dimer-dimer"\
     + " correlation function")
 parser.add_argument("--top2", action='store_true', help="compute transfer matrix for width-2 channel")
+parser.add_argument("--ff_ss", action='store_true', help="compute form-factors for spin-spin correlations")
 parser.add_argument("--force_cpu", action='store_true', help="evaluate energy on cpu")
 parser.add_argument("--EH_n", type=int, default=1, help="number of leading eigenvalues "+
     "of EH to compute")
@@ -212,6 +213,7 @@ def main():
         for i in range(args.EH_n):
             print(f"{i} {S[i,0]} {S[i,1]}")
 
+    if not args.ff_ss: return
     # form-factor analysis
     print("\n\nFormfactors(T) for S")
     # Solve eigenvalue problem
