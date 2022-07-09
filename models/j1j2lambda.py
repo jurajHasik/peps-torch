@@ -200,7 +200,7 @@ class J1J2LAMBDA_C4V_BIPARTITE():
                 obs[f"SS3x1"]= torch.einsum('ijab,ijab',rdm3x1,self.SS)
 
             if abs(self.lmbd)>0:
-                rdm2x2= rdm_c4v.rdm2x2(state,env_c4v,\
+                rdm2x2= rdm_c4v.rdm2x2(state,env_c4v,force_cpu=force_cpu,\
                     verbosity=cfg.ctm_args.verbosity_rdm)
                 obs[f"ChiralT"]= torch.einsum('ijklabcd,ijklabcd',rdm2x2,self.chiral_term)
 
