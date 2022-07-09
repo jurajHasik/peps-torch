@@ -3,6 +3,7 @@ import torch
 import argparse
 import config as cfg
 from ipeps.ipeps_c4v import *
+from ipeps.ipeps_lc import read_ipeps_lc_1site_pg 
 from groups.pg import make_c4v_symm
 from groups.su2 import SU2
 from ctm.one_site_c4v.env_c4v import *
@@ -58,10 +59,11 @@ def main():
 
     # 1) initialize an ipeps - read from file or create a random one
     if args.instate!=None:
-        state = read_ipeps_c4v(args.instate)
-        if args.bond_dim > max(state.get_aux_bond_dims()):
-            # extend the auxiliary dimensions
-            state = extend_bond_dim(state, args.bond_dim)
+        try:
+            state = read_ipeps_lc_1site_pg(args.instate)
+            assert len(state.coeffs)==1, "Not a 1-site ipeps"
+        except:
+            state = read_ipeps_c4v(args.instate)
         state.add_noise(args.instate_noise)
         state.sites[(0,0)]= state.sites[(0,0)]/torch.max(torch.abs(state.sites[(0,0)]))
     elif args.ipeps_init_type=='RANDOM':
