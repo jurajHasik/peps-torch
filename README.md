@@ -11,7 +11,7 @@ by the corner-transfer matrix (CTM) algorithm. Afterwards, the gradients are com
 automatic differentiation (AD).
 
 #### Now supporting 
-* **abelian symmetries, with implementation power by [YAST](https://gitlab.com/marekrams/yast)**
+* **abelian symmetries, with implementation powered by [YAST](https://gitlab.com/marekrams/yast)**
 
   Allows definition of abelian-symmetric iPEPS in terms of block-sparse tensors, computing their 
   symmetric environments, and their optimization with gradient-based methods.
