@@ -253,7 +253,9 @@ def init_random(env, verbosity=0):
 def init_from_ipeps_pbc(state, env, verbosity=0):
     if verbosity>0:
         print("ENV: init_from_ipeps_pbc")
+    _init_from_ipeps_pbc(state.site(), state.site().conj(), env, verbosity=verbosity)
 
+def _init_from_ipeps_pbc(a_ket, a_bra, env, verbosity=0):
     # Left-upper corner
     #
     #     i      = C--1     
@@ -264,10 +266,13 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
     #    j--A--3
     #      /
     #     2
-    A= next(iter(state.sites.values()))
-    dimsA= A.size()
-    a= torch.einsum('mijef,mijab->eafb',A,A.conj()).contiguous().view(dimsA[3]**2, dimsA[4]**2)
-    a= a/a.abs().max()
+    d_ket= a_ket.size()
+    d_bra= a_bra.size()
+    d_kb= [d_ket[i+1]*d_bra[i+1] for i in range(4)]
+    a= torch.einsum('mijef,mijab->eafb',a_ket,a_bra).contiguous().view(d_kb[2], d_kb[3])
+    with torch.no_grad():
+        scale= a.abs().max()
+    a= a/scale
 
     a_asymm_norm= torch.norm(a.conj().t()-a)
     assert a_asymm_norm/a.abs().max() < 1.0e-8, "a is not symmetric"
@@ -275,8 +280,8 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
     a= torch.diag(D)
 
     env.C[env.keyC]= torch.zeros(env.chi,env.chi, dtype=env.dtype, device=env.device)
-    env.C[env.keyC][:min(env.chi,dimsA[3]**2),:min(env.chi,dimsA[4]**2)]=\
-       a[:min(env.chi,dimsA[3]**2),:min(env.chi,dimsA[4]**2)]
+    env.C[env.keyC][:min(env.chi,d_kb[2]),:min(env.chi,d_kb[3])]=\
+       a[:min(env.chi,d_kb[2]),:min(env.chi,d_kb[3])]
 
     # left transfer matrix (orientation from 1->0)
     #
@@ -288,16 +293,19 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
     #    i--A--3
     #      /
     #     2
-    a= torch.einsum('meifg,maibc->eafbgc',(A,A.conj())).contiguous().view(dimsA[1]**2, dimsA[3]**2, dimsA[4]**2)
-    a= a/a.abs().max()
+    a= torch.einsum('meifg,maibc->eafbgc',(a_ket,a_bra)).contiguous().view(d_kb[0], d_kb[2], d_kb[3])
+    with torch.no_grad():
+        scale= a.abs().max()
+    a= a/scale
 
     a= torch.einsum('ai,abs,bj->ijs',U,a,U.conj())
     a_asymm_norm= (a-a.permute(1,0,2).conj()).norm()
     assert a_asymm_norm/a.abs().max() < 1.0e-8, "a is not symmetric"
 
-    env.T[env.keyT]= torch.zeros((env.chi,env.chi,dimsA[4]**2), dtype=env.dtype, device=env.device)
-    env.T[env.keyT][:min(env.chi,dimsA[1]**2),:min(env.chi,dimsA[3]**2),:]=\
-        a[:min(env.chi,dimsA[1]**2),:min(env.chi,dimsA[3]**2),:]
+    env.T[env.keyT]= torch.zeros((env.chi,env.chi,d_kb[3]), dtype=env.dtype, device=env.device)
+    env.T[env.keyT][:min(env.chi,d_kb[0]),:min(env.chi,d_kb[2]),:]=\
+        a[:min(env.chi,d_kb[0]),:min(env.chi,d_kb[2]),:]
+
 
 # TODO handle case when chi < bond_dim^2
 def init_from_ipeps_obc(state, env, verbosity=0):

@@ -3,6 +3,7 @@ from math import sqrt
 import torch
 from torch.utils.checkpoint import checkpoint
 import config as cfg
+from config import _torch_version_check
 from ipeps.ipeps_c4v import IPEPS_C4V
 from ctm.one_site_c4v.env_c4v import *
 from ctm.one_site_c4v.ctm_components_c4v import *
@@ -174,6 +175,23 @@ def _log_cuda_mem(device, who="unknown",  uuid=""):
     log.info(f"{who} {uuid} GPU-MEM MAX_ALLOC {torch.cuda.max_memory_allocated(device)}"\
             + f" CURRENT_ALLOC {torch.cuda.memory_allocated(device)}")
 
+def _move_normalize_c(nC, nT, norm_type='inf', verbosity= 0):
+        _ord=2
+        if norm_type=='inf':
+            _ord= float('inf')
+
+        with torch.no_grad():
+            scale_nC= torch.abs(nC[0,0])
+            if _torch_version_check("1.9.0"):
+                scale_nT= torch.linalg.vector_norm(nT,ord=_ord)
+            else:
+                scale_nT= nT.norm(p=_ord)
+            if verbosity>0:
+                print(f"nC {scale_nC} nT {scale_nT}")
+        nC = nC/scale_nC
+        nT = nT/scale_nT
+        return nC, nT
+
 # performs CTM move
 def ctm_MOVE_dl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
     r"""
@@ -281,8 +299,8 @@ def ctm_MOVE_dl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
 
         # 4) symmetrize, normalize and assign new C,T
         nT= 0.5*(nT + nT.permute(1,0,2).conj())
-        C2X2= C2X2/torch.abs(C2X2[0,0])
-        nT= nT/nT.norm()
+        C2X2, nT= _move_normalize_c(C2X2, nT, norm_type=ctm_args.ctm_absorb_normalization,\
+            verbosity= ctm_args.verbosity_ctm_move)
 
         if global_args.device=='cpu' and global_args.offload_to_gpu != 'None':
             C2X2= C2X2.cpu()
@@ -421,10 +439,9 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
         nT = nT.permute(0,2,1).contiguous()
 
         # 4) symmetrize, normalize and assign new C,T
-        nT= 0.5*(nT + nT.conj().permute(1,0,2))
-        C2X2= C2X2/torch.abs(C2X2[0,0])
-        nT= nT/nT.abs().max()
-        #nT= nT/nT.norm()
+        nT= 0.5*(nT + nT.conj().permute(1,0,2))    
+        C2X2, nT= _move_normalize_c(C2X2, nT, norm_type=ctm_args.ctm_absorb_normalization,\
+            verbosity= ctm_args.verbosity_ctm_move)
 
         if global_args.device=='cpu' and global_args.offload_to_gpu != 'None':
             C2X2= C2X2.cpu()

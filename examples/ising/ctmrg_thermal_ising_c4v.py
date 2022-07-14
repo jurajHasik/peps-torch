@@ -50,7 +50,7 @@ def main():
     
     # 1) initialize an thermal ipepo
     if args.instate!=None:
-        state = read_ipeps_c4v_thermal_lc(args.instate)
+        state = read_ipeps_c4v_thermal_ttn_v2(args.instate)
         assert len(state.coeffs)==1, "Not a 1-site ipeps"
 
         # TODO extending from smaller bond-dim to higher bond-dim is 

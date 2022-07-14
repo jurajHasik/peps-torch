@@ -840,7 +840,7 @@ class IPEPS_C4V_THERMAL_TTN_V2(IPEPS_C4V_THERMAL):
             print(f"{iso.size()}")
         return ""
 
-    def build_onsite_tensors(self):
+    def build_onsite_tensors(self,params="generators"):
         A0= self.seed_site
         A= A0.clone()
         for i in range(len(self.isometries)):
@@ -849,8 +849,12 @@ class IPEPS_C4V_THERMAL_TTN_V2(IPEPS_C4V_THERMAL):
             # M= M/M.abs().max()
             # U,S,V= truncated_svd_gesdd(M.view([D_i*D_i]*2), D_ip1,\
                 # keep_multiplets=True, verbosity=cfg.ctm_args.verbosity_projectors)
-            U= self.manifolds[i].forward( self.isometries[i].view(D_i*D_i,D_ip1) )
-            U= U.view(D_i, D_i, D_ip1)
+            if params=="generators":
+                U= self.manifolds[i].forward( self.isometries[i].view(D_i*D_i,D_ip1) ).view(D_i, D_i, D_ip1)
+            elif params=="isometries":
+                U= self._current_iso[i]
+            else:
+                raise RuntimeError("Invalid value for params: "+params)
             #
             #            |/
             #     /--tmp_A--\
@@ -880,12 +884,18 @@ class IPEPS_C4V_THERMAL_TTN_V2(IPEPS_C4V_THERMAL):
             A= torch.einsum('skalxbry,kpauxbdy->spuldr',tmp_A_lr,tmp_A_ud).contiguous()
         return A
 
-    def update_(self):
-        self.sites= {(0,0): self.build_onsite_tensors()}
+    def update_(self,params="generators"):
+        self.sites= {(0,0): self.build_onsite_tensors(params=params)}
 
     def get_parameters(self):
-        # optimize only isometries, which perform truncation
-        return [iso for i,iso in enumerate(self.isometries) if iso.size(0)*iso.size(0) > self.iso_Ds[i]]
+        # optimize only generators X of isometries W defined as W = W_0 exp(X), which perform truncation
+        return [iso for i,iso in enumerate(self.isometries) if iso.size(0)*iso.size(1) > self.iso_Ds[i]]
+
+    def get_isometries(self):
+        if not hasattr(self, '_current_iso') or self._current_iso is None:
+            self._current_iso= [ self.manifolds[i].forward( iso.view(iso.size(0)*iso.size(1),iso.size(2)) ).view(iso.size()) 
+            for i,iso in enumerate(self.isometries) ]
+        return [iso for iso in self._current_iso if iso.size(0)*iso.size(1) > iso.size(2)]
 
     # def add_noise(self,noise,symmetrize=False):
     #     r"""
