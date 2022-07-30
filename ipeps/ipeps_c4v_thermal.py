@@ -499,17 +499,8 @@ class IPEPS_C4V_THERMAL_TTN(IPEPS_C4V_THERMAL):
         A0= self.seed_site
         A= A0.clone()
         for i in range(len(self.isometries)):
-            # create hermitian matrix
-            M= self.isometries[i]
-            M= M/M.abs().max()
-            D_i, D_ip1= M.size(0), self.iso_Ds[i]
-            # MMdag= M.view([D_i*D_i]*2)@(M.view([D_i*D_i]*2).T.conj())
-            # D,U= truncated_eig_sym(MMdag, D_ip1, keep_multiplets=True,\
-                # verbosity=cfg.ctm_args.verbosity_projectors)
-            U,S,V= truncated_svd_gesdd(M.view([D_i*D_i]*2), D_ip1,\
-                keep_multiplets=True, verbosity=cfg.ctm_args.verbosity_projectors)
-            # U= U @ V.conj().transpose(1,0)[:,:D_ip1]
-            U= U.view(D_i, D_i, D_ip1)
+            U= self.isometries[i]
+            D_i, D_ip1= U.size(0), self.iso_Ds[i]
             #
             #            |/
             #     /--tmp_A--\
@@ -742,15 +733,16 @@ def write_ipeps_c4v_thermal_ttn(state, outputfile, aux_seq=[0,1,2,3], tol=1.0e-1
 
         tdims = t.size()
         tlength = t.numel()
-        assert len(tdims)==4, "Unexpected dimensionality of isometry parent tensor rank"+str(len(tdims))
+        assert len(tdims)==3, "Unexpected dimensionality of isometry parent tensor rank"+str(len(tdims))
         json_tensor["D_in"]= tdims[0]
+        json_tensor["shape"]= tdims
         # get non-zero elements
         t_nonzero= t.nonzero()
         json_tensor["numEntries"]= len(t_nonzero)
         entries = []
         for elem in t_nonzero:
             ei=tuple(elem.tolist())
-            entries.append(f"{ei[0]} {ei[1]} {ei[2]} {ei[3]} {t[ei]}")
+            entries.append(f"{ei[0]} {ei[1]} {ei[2]} {t[ei]}")
         json_tensor["entries"]=entries
         json_state["isometries"][i]=json_tensor
 
@@ -828,7 +820,8 @@ class IPEPS_C4V_THERMAL_TTN_V2(IPEPS_C4V_THERMAL):
         # here we initialize constraint spaces
         import geotorch
         self.manifolds= [ geotorch.stiefel.Stiefel(torch.Size([W.size(0)*W.size(1),W.size(2)])) for W in isometries ]
-        self.isometries= [ M.right_inverse(W.view(W.size(0)*W.size(1),W.size(2))).view(W.size()) for M,W in zip(self.manifolds,isometries) ]
+        self.isometries= [ M.right_inverse(W.view(W.size(0)*W.size(1),W.size(2))).view(W.size()) \
+            for M,W in zip(self.manifolds,isometries) ]
         super().__init__(self.build_onsite_tensors(), peps_args=peps_args,\
             global_args=global_args)
 
@@ -840,21 +833,12 @@ class IPEPS_C4V_THERMAL_TTN_V2(IPEPS_C4V_THERMAL):
             print(f"{iso.size()}")
         return ""
 
-    def build_onsite_tensors(self,params="generators"):
+    def build_onsite_tensors(self):
         A0= self.seed_site
         A= A0.clone()
         for i in range(len(self.isometries)):
             D_i, D_ip1= self.isometries[i].size(0), self.iso_Ds[i]
-            # M= self.isometries[i]
-            # M= M/M.abs().max()
-            # U,S,V= truncated_svd_gesdd(M.view([D_i*D_i]*2), D_ip1,\
-                # keep_multiplets=True, verbosity=cfg.ctm_args.verbosity_projectors)
-            if params=="generators":
-                U= self.manifolds[i].forward( self.isometries[i].view(D_i*D_i,D_ip1) ).view(D_i, D_i, D_ip1)
-            elif params=="isometries":
-                U= self._current_iso[i]
-            else:
-                raise RuntimeError("Invalid value for params: "+params)
+            U= self.manifolds[i].forward( self.isometries[i].view(D_i*D_i,D_ip1) ).view(D_i, D_i, D_ip1)
             #
             #            |/
             #     /--tmp_A--\
@@ -884,18 +868,12 @@ class IPEPS_C4V_THERMAL_TTN_V2(IPEPS_C4V_THERMAL):
             A= torch.einsum('skalxbry,kpauxbdy->spuldr',tmp_A_lr,tmp_A_ud).contiguous()
         return A
 
-    def update_(self,params="generators"):
-        self.sites= {(0,0): self.build_onsite_tensors(params=params)}
+    def update_(self):
+        self.sites= {(0,0): self.build_onsite_tensors()}
 
     def get_parameters(self):
         # optimize only generators X of isometries W defined as W = W_0 exp(X), which perform truncation
         return [iso for i,iso in enumerate(self.isometries) if iso.size(0)*iso.size(1) > self.iso_Ds[i]]
-
-    def get_isometries(self):
-        if not hasattr(self, '_current_iso') or self._current_iso is None:
-            self._current_iso= [ self.manifolds[i].forward( iso.view(iso.size(0)*iso.size(1),iso.size(2)) ).view(iso.size()) 
-            for i,iso in enumerate(self.isometries) ]
-        return [iso for iso in self._current_iso if iso.size(0)*iso.size(1) > iso.size(2)]
 
     # def add_noise(self,noise,symmetrize=False):
     #     r"""

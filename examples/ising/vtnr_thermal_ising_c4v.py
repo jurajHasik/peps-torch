@@ -12,7 +12,7 @@ from ctm.one_site_c4v import ctmrg_c4v
 from ctm.one_site_c4v.rdm_c4v import ddA_rdm1x1
 from ctm.one_site_c4v.rdm_c4v_thermal import entropy, rdm1x1_sl, rdm2x1_sl, rdm2x2
 from ctm.one_site_c4v import transferops_c4v
-from optim.ad_optim_lbfgs_mod import optimize_state
+from optim.ad_optim_vtnr import optimize_state
 from models import ising
 import json
 import unittest
@@ -146,7 +146,7 @@ def main():
             for i in range(1,args.layers):
                 A= torch.einsum("sxuldr,xpefgh->spuelfdgrh",A,A0).contiguous()
                 A= A.view([model.phys_dim]*2 + [A0.size(5)**(i+1)]*4)
-        state = IPEPS_C4V_THERMAL_TTN_V2(A,iso_Ds=args.layers_Ds,isometries=isometries)
+        state = IPEPS_C4V_THERMAL_TTN(A,iso_Ds=args.layers_Ds,isometries=isometries)
     else:
         raise ValueError("Missing trial state: --instate=None and --ipeps_init_type= "\
             +str(args.ipeps_init_type)+" is not supported")
@@ -204,71 +204,6 @@ def main():
         return False, history
 
     ctmrg_conv_f= ctmrg_conv_rdm2x1
-
-    # def renyi2_site(a, D1, D2):
-    #     # a rank-6 on-site tensor with indices [apuldr]
-    #     # 0) build projectors
-    #     #
-    #     #    ||/p0
-    #     #  ==a*a== -> ==a*a== = P D P^H
-    #     # p1/||
-    #     #
-    #     tmp_M= torch.einsum('apuldr,apufdh->lfrh',a,a.conj()).contiguous().view(\
-    #         a.size(3)**2,a.size(5)**2)
-    #     D, P= truncated_eig_sym(tmp_M, D1, keep_multiplets=True,\
-    #             verbosity=cfg.ctm_args.verbosity_projectors)
-    #
-    #     #
-    #     # 1) build 1st layer
-    #     #
-    #     #      |
-    #     #      P
-    #     #      ||/p0        |/p0
-    #     # --P==a*a==P-- = --l1--
-    #     #   p1/||        p1/|
-    #     #      P
-    #     #      |
-    #     #
-    #     l1= torch.einsum('apuldr,asefgh->psuelfdgrh',a,a.conj()).contiguous().view(\
-    #         a.size(1), a.size(1),a.size(2)**2,a.size(3)**2,a.size(4)**2,a.size(5)**2)
-    #     l1= torch.einsum('psxywz,xu,yl,wd,zr->psuldr',l1, P, P, P, P).contiguous()
-    #     #
-    #     # 2) build 2nd layer
-    #     #
-    #     #   p0
-    #     #   |/        ||
-    #     # --l1-- => ==l2==
-    #     #  /|         ||
-    #     #   p1
-    #     #   |/
-    #     # --l1--
-    #     #  /p0
-    #     #
-    #     l2= torch.einsum('psuldr,spxywz->uxlydwrz',l1,l1).contiguous().view(
-    #         (D1**2,)*4)
-
-    #     # prepare initial environment tensors
-    #     #
-    #     # C--, --T--
-    #     # |      |
-    #     #
-    #     C_0= torch.einsum('psuldr,spulwz->dwrz',l1,l1).contiguous().view(
-    #         (D1**2,)*2)
-    #     T_0= torch.einsum('psuldr,spuywz->lydwrz',l1,l1).contiguous().view(
-    #         (D1**2,)*3)
-
-    #     #
-    #     # 3) (optional) truncate auxiliary bonds
-    #     if D2<D1**2:
-    #         tmp_M= l2.view( (D1,D1,D1**2)*2 )
-    #         tmp_M= torch.einsum('ijlijr->lr',tmp_M).contiguous()
-    #         D, P= truncated_eig_sym(tmp_M, D2, keep_multiplets=True,\
-    #             verbosity=cfg.ctm_args.verbosity_projectors)
-    #         l2= torch.einsum('xywz,xu,yl,wd,zr->uldr',l2, P, P, P, P).contiguous()
-    #         C_0= torch.einsum('wz,wd,zr',C_0,P,P).contiguous()
-    #         T_0= torch.einsum('ywz,yl,wd,zr',T_0,P,P,P).contiguous()
-
-    #     return l2, C_0, T_0
 
     def get_z(A, C, T):
         if len(A.size())==5:
@@ -384,34 +319,6 @@ def main():
         return logz_per_site
         # return z_per_site
 
-    # def approx_renyi2(state,env,D1,D2):
-    #     # get intial renyi2 on-site tensor and env tensors
-    #     # state.site() rank-6 tensor [apuldr]
-    #     a= state.site()
-    #     # l2 - rank-4 tensor [uldr]
-    #     l2, C0, T0= renyi2_site(a,D1,D2)
-    #     state_r2= IPEPS_C4V(l2)
-    #     env_r2= ENV_C4V(args.chi, state_r2)
-    #     init_env(None, env_r2, (C0,T0))
-
-    #     # run CTM
-    #     env_r2, history, t_ctm, t_obs= ctmrg_c4v.run_dl(state_r2, env_r2, \
-    #         conv_check=ctmrg_conv_f2)
-    #     print(history)
-
-    #     # renyi-2 = -log( (Tr \rho^2)/Z^2 ) = -log ( (Tr \rho^2) / (Tr \rho)^2 )
-    #     #
-
-    #     rho2_per_site= get_z_per_site( state_r2.site(), env_r2.get_C(), env_r2.get_T() )
-
-    #     # double-layer
-    #     l1= torch.einsum('apuldr,apxywz->uxlydwrz',a,a.conj())\
-    #         .contiguous().view(a.size(2)**2,a.size(3)**2,a.size(4)**2,a.size(5)**2)
-    #     rho1_per_site= get_z_per_site( l1, env.get_C(), env.get_T() )
-
-    #     renyi2= -torch.log(rho2_per_site/(rho1_per_site**2))
-    #     return renyi2
-
 
     # 0) fuse ancilla+physical index and create regular c4v ipeps with rank-5 on-site
     #    tensor
@@ -420,53 +327,15 @@ def main():
     ctm_env = ENV_C4V(args.chi, state_fused)
     init_env(state_fused, ctm_env)
 
-    # e0 = energy_f(state, ctm_env, force_cpu=True)
-    # S0 = approx_S(state, ctm_env)
-    # r2_0 = approx_renyi2(state, ctm_env, args.l2d, args.bond_dim**2)
-    # loss0 = e0 - 1./args.beta * S0
-    # loss0 = e0 - 1./args.beta * r2_0
     S0= r2_0= 0
     e0= energy_f(state, ctm_env, args.mode, force_cpu=True)
     log_z0= get_logz_per_site(state.site(), ctm_env.get_C(), ctm_env.get_T())
-    z0= get_z(state.site(), ctm_env.get_C(), ctm_env.get_T())
     loss0= -log_z0
     obs_values, obs_labels = eval_obs_f(state, ctm_env, args.mode, force_cpu=True)
     print("\n\n",end="")
     print(", ".join(["beta","epoch","loss","e0","log_z0","S0","r2_0"]+obs_labels+["norm(A)"]))
     print(", ".join([f"{args.beta}",f"{-1}",f"{loss0}",f"{e0}",f"{log_z0}",f"{S0}",f"{r2_0}"]\
         +[f"{v}" for v in obs_values]+[f"{state.site().norm()}"]))
-
-    def loss_fn_logz(state, ctm_env_in, opt_context):
-        ctm_args= opt_context["ctm_args"]
-        opt_args= opt_context["opt_args"]
-
-        # build on-site tensors
-        # new_iso= state.symmetrize_isometries()
-        # state= IPEPS_C4V_THERMAL_TTN(state.seed_site, new_iso)
-        state.update_()
-        state_fused= state.to_fused_ipeps_c4v()
-        # state_fused= s_state.to_nophys_ipeps_c4v()
-
-        # possibly re-initialize the environment
-        if opt_args.opt_ctm_reinit:
-            init_env(state_fused, ctm_env_in)
-
-        # 1) compute environment by CTMRG
-        ctm_env_out, history, t_ctm, t_obs= ctmrg_c4v.run_dl(state_fused, ctm_env_in, \
-            conv_check=ctmrg_conv_f, ctm_args=ctm_args)
-        # e0 = energy_f(state, ctm_env_out, force_cpu=True)
-        # S0 = approx_S(state, ctm_env_out)
-        # loss0 = e0 - 1./args.beta * S0
-
-        # r2_0 = approx_renyi2(state, ctm_env_out, args.l2d, args.bond_dim**2)
-        # loss= torch.max(e0,e1) - 1./args.beta * r2_0
-        # loss= torch.max(loss0,loss1)
-        # z= get_z_per_site(state.site(), ctm_env_out.get_C(), ctm_env_out.get_T())
-        logz= get_logz_per_site(state.site(), ctm_env_out.get_C(), ctm_env_out.get_T())
-        # loss= -torch.log(z) if args.logz else -z
-        loss= -logz
-
-        return loss, ctm_env_out, history, t_ctm, t_obs
 
     class ddA_Z(torch.autograd.Function):
         @staticmethod
@@ -487,15 +356,12 @@ def main():
             A_b= loss_b * ddA_1x1
             return A_b, None
 
-
     def loss_fn_z(state_fused, ctm_env_in, opt_context):
         ctm_args= opt_context["ctm_args"]
         opt_args= opt_context["opt_args"]
 
         # build on-site tensors
         # new_iso= state.symmetrize_isometries()
-        # state= IPEPS_C4V_THERMAL_TTN(state.seed_site, new_iso)
-        # state.update_(params="isometries")
         state.update_()
         state_fused= state.to_fused_ipeps_c4v()
         # state_fused= s_state.to_nophys_ipeps_c4v()
@@ -531,8 +397,6 @@ def main():
             loss= opt_context["loss_history"]["loss"][-1]
         e0 = energy_f(state, ctm_env, args.mode, force_cpu=True)
         log_z0= get_logz_per_site(state.site(), ctm_env.get_C(), ctm_env.get_T())
-        # S0 = approx_S( state, ctm_env )
-        # r2_0 = approx_renyi2(state, ctm_env, args.l2d, args.bond_dim**2)
         S0=r2_0= 0
         obs_values, obs_labels = eval_obs_f(state,ctm_env,args.mode,force_cpu=True)
         print(f"{args.beta}, "+", ".join([f"{epoch}",f"{loss}",f"{e0}", f"{log_z0}", f"{S0}", f"{r2_0}"]\
@@ -547,36 +411,18 @@ def main():
                 l= transferops_c4v.get_Top_spec_c4v(args.top_n, state_fused, ctm_env)
                 print("TOP "+json.dumps(_to_json(l)))
 
-    # state.update_()
-    # state_fused= state.to_fused_ipeps_c4v()
-    # _loss_z0, ctm_env_out, _history,_,_ = loss_fn_z(state_fused, ctm_env, {'ctm_args': cfg.ctm_args, 'opt_args': cfg.opt_args})
-    # _ddA_1x1= ddA_rdm1x1(state_fused, ctm_env_out)
-    # state_fused.site().requires_grad_(True)
-    # cfg.opt_args.opt_ctm_reinit=False
-    # cfg.ctm_args.ctm_conv_tol=-1
-    # cfg.ctm_args.ctm_max_iter=5
-    # # cfg.ctm_args.ctm_absorb_normalization= 'None'
-    # _loss_z0, ctm_env_out, _history,_,_ = loss_fn_z(state_fused, ctm_env, {'ctm_args': cfg.ctm_args, 'opt_args': cfg.opt_args})
-    # _loss_z0.backward()
-
-    # overlap= torch.dot(state_fused.site().grad.view(-1),_ddA_1x1.view(-1))/(torch.linalg.norm(state_fused.site().grad)*torch.linalg.norm(_ddA_1x1))
-    # print(overlap.item())
-
-    # import pdb; pdb.set_trace()
-
     # optimize
     optimize_state(state, ctm_env, loss_fn_z, obs_fn=obs_fn)
 
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"
-    state= read_ipeps_c4v_thermal_ttn_v2(outputstatefile)
+    state= read_ipeps_c4v_thermal_ttn(outputstatefile)
     state_fused= state.to_fused_ipeps_c4v()
     ctm_env = ENV_C4V(args.chi, state_fused)
     init_env(state_fused, ctm_env)
     ctm_env, *ctm_log = ctmrg_c4v.run_dl(state_fused, ctm_env, conv_check=ctmrg_conv_f)
     e0 = energy_f(state,ctm_env,args.mode,force_cpu=True)
     log_z0= get_logz_per_site(state.site(), ctm_env.get_C(), ctm_env.get_T())
-    z0= get_z(state.site(), ctm_env.get_C(), ctm_env.get_T())
     obs_values, obs_labels = eval_obs_f(state, ctm_env, args.mode, force_cpu=True)
     loss0, S0, r2_0= -log_z0, 0, 0
     print("\n\n",end="")

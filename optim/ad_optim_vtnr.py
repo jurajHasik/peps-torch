@@ -5,37 +5,11 @@ import json
 import logging
 log = logging.getLogger(__name__)
 import torch
-from optim import lbfgs_modified
 import config as cfg
-
-def store_checkpoint(checkpoint_file, state, optimizer, current_epoch, current_loss,\
-    verbosity=0):
-    r"""
-    :param checkpoint_file: target file
-    :param state: ipeps wavefunction
-    :param optimizer: Optimizer
-    :param current_epoch: current epoch
-    :param current_loss: current value of a loss function
-    :param verbosity: verbosity
-    :type checkpoint_file: str or Path
-    :type state: IPEPS
-    :type optimizer: torch.optim.Optimizer
-    :type current_epoch: int
-    :type current_loss: float
-    :type verbosity: int
-
-    Store the current state of the optimization in ``checkpoint_file``.
-    """
-    torch.save({
-            'epoch': current_epoch,
-            'loss': current_loss,
-            'parameters': state.get_checkpoint(),
-            'optimizer_state_dict': optimizer.state_dict()}, checkpoint_file)
-    if verbosity>0:
-        print(checkpoint_file)
+from .ad_optim_lbfgs_mod import store_checkpoint
 
 def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
-    main_args=cfg.main_args, opt_args=cfg.opt_args,ctm_args=cfg.ctm_args, 
+    main_args=cfg.main_args, opt_args=cfg.opt_args, ctm_args=cfg.ctm_args, 
     global_args=cfg.global_args):
     r"""
     :param state: initial wavefunction
@@ -76,10 +50,10 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
     parameters= state.get_parameters()
     for A in parameters: A.requires_grad_(True)
 
-    optimizer = lbfgs_modified.LBFGS_MOD(parameters, max_iter=opt_args.max_iter_per_epoch, lr=opt_args.lr, \
-        tolerance_grad=opt_args.tolerance_grad, tolerance_change=opt_args.tolerance_change, \
-        history_size=opt_args.history_size, line_search_fn=opt_args.line_search, \
-        line_search_eps=opt_args.line_search_tol)
+    # optimizer = lbfgs_modified.LBFGS_MOD(parameters, max_iter=opt_args.max_iter_per_epoch, lr=opt_args.lr, \
+    #     tolerance_grad=opt_args.tolerance_grad, tolerance_change=opt_args.tolerance_change, \
+    #     history_size=opt_args.history_size, line_search_fn=opt_args.line_search, \
+    #     line_search_eps=opt_args.line_search_tol)
 
     # load and/or modify optimizer state from checkpoint
     if main_args.opt_resume is not None:
@@ -125,7 +99,9 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         context["line_search"]= linesearching
         
         # 0) evaluate loss
-        optimizer.zero_grad()
+        for A in parameters:
+            if not A.grad is None:
+                A.grad= 0 * A.grad
         loss, ctm_env, history, t_ctm, t_check = loss_fn(state, current_env[0], context)
 
         # 4) evaluate gradient
@@ -172,7 +148,6 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
                 # log_entry["grad_mag"]= [p.grad.norm().item() for p in parameters]
                 flat_grad= torch.cat(tuple(p.grad.view(-1) for p in parameters))
                 log_entry["grad_mag"]= [flat_grad.norm().item(), flat_grad.norm(p=float('inf')).item()]
-                log_entry["grad_mags"]= [p.grad.norm().item() for p in parameters]
                 if opt_args.opt_log_grad: log_entry["grad"]= [p.grad.tolist() for p in parameters]
             log.info(json.dumps(log_entry))        
 
@@ -215,17 +190,65 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
 
         return loss
 
+    def _set_param(x):
+        # x : list[Tensor]
+        with torch.no_grad():
+            for i in range(len(parameters)):
+                parameters[i].copy_(x[i])
+
+    def _add_grad(t,d):
+        with torch.no_grad():
+            for i in range(len(parameters)):
+                parameters[i].add_(t*d[i])
+
+    def _directional_evaluate_derivative_free(self, closure, t, x, d):
+        _add_grad(t, d)
+        with torch.no_grad():
+            orig_loss= closure(True)
+        loss= float(orig_loss)
+        _set_param(x)
+        return loss
+
     for epoch in range(main_args.opt_max_iter):
         # checkpoint the optimizer
         # checkpointing before step, guarantees the correspondence between the wavefunction
         # and the last computed value of loss t_data["loss"][-1]
-        if epoch>0:
-            store_checkpoint(checkpoint_file, state, optimizer, epoch, t_data["loss"][-1])
+        # if epoch>0:
+            # store_checkpoint(checkpoint_file, state, optimizer, epoch, t_data["loss"][-1])
 
         # After execution closure ``current_env`` **IS NOT** corresponding to ``state``, since
         # the ``state`` on-site tensors have been modified by gradient. 
-        optimizer.step_2c(closure, closure_linesearch)
         
+        # 0) execute closure
+        loss0= closure()
+
+        # 1.
+        # compute "direction" in which to update parameters params <- params + step*direction
+        new_iso= []
+        for p in parameters:
+            U,S,Vh= torch.linalg.svd(p.grad.view(p.size(0)*p.size(1),p.size(2)),\
+                full_matrices=False)
+            new_iso.append( (U@Vh).view(p.size()) )
+
+        # optional line search: user function
+        line_search_fn= opt_args.line_search
+        ls_func_evals = 0
+        if line_search_fn is not None and line_search_fn != "default":
+            # perform line search, using user function
+            if line_search_fn == "backtracking":
+                x_init = self._clone_param()
+
+                def obj_func(t, x, d):
+                    return self._directional_evaluate_derivative_free(closure_linesearch, t, x, d)
+
+                # return (xmin, fval, iter, funcalls)
+                t, loss= _scalar_search_armijo(obj_func, loss, gtd, args=(x_init,d), alpha0=t)
+                if t is None:
+                    raise RuntimeError("minimize_scalar failed")
+        else:
+            # no line search, simply replace the parameters with solution of step 1
+            _set_param(new_iso)
+
         # reset line search history
         t_data["loss_ls"]=[]
         t_data["min_loss_ls"]=1.0e+16
@@ -235,11 +258,12 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
 
         # terminate condition
         if len(t_data["loss"])>1 and \
-            abs(t_data["loss"][-1]-t_data["loss"][-2])<opt_args.tolerance_change:
+            ( abs(t_data["loss"][-1]-t_data["loss"][-2])<opt_args.tolerance_change \
+                or t_data["loss"][-1] > t_data["loss"][-2] ):
             break
 
 
     # optimization is over, store the last checkpoint if at least a single step was made
-    if len(t_data["loss"])>0:
-        store_checkpoint(checkpoint_file, state, optimizer, \
-            main_args.opt_max_iter, t_data["loss"][-1])
+    # if len(t_data["loss"])>0:
+    #     store_checkpoint(checkpoint_file, state, optimizer, \
+    #         main_args.opt_max_iter, t_data["loss"][-1])

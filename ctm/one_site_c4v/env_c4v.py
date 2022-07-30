@@ -325,7 +325,9 @@ def init_from_ipeps_obc(state, env, verbosity=0):
     A= next(iter(state.sites.values()))
     dimsA= A.size()
     a= torch.einsum('mijef,mklab->eafb',(A,A.conj())).contiguous().view(dimsA[3]**2, dimsA[4]**2)
-    a= a/a.abs().max()
+    with torch.no_grad():
+        scale= a.abs().max()
+    a= a/scale
     env.C[env.keyC]= torch.zeros(env.chi,env.chi, dtype=env.dtype, device=env.device)
     env.C[env.keyC][:min(env.chi,dimsA[3]**2),:min(env.chi,dimsA[4]**2)]=\
         a[:min(env.chi,dimsA[3]**2),:min(env.chi,dimsA[4]**2)]
@@ -341,7 +343,9 @@ def init_from_ipeps_obc(state, env, verbosity=0):
     #      /
     #     2
     a= torch.einsum('meifg,makbc->eafbgc',(A,A.conj())).contiguous().view(dimsA[1]**2, dimsA[3]**2, dimsA[4]**2)
-    a= a/a.abs().max()
+    with torch.no_grad():
+        scale= a.abs().max()
+    a= a/scale
     env.T[env.keyT]= torch.zeros((env.chi,env.chi,dimsA[4]**2), dtype=env.dtype, device=env.device)
     env.T[env.keyT][:min(env.chi,dimsA[1]**2),:min(env.chi,dimsA[3]**2),:]=\
         a[:min(env.chi,dimsA[1]**2),:min(env.chi,dimsA[3]**2),:]
