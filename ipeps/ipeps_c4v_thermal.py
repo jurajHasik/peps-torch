@@ -815,12 +815,14 @@ class IPEPS_C4V_THERMAL_TTN_V2(IPEPS_C4V_THERMAL):
         if seed_site is not None:
             assert isinstance(seed_site,torch.Tensor), "site is not a torch.Tensor"
             self.seed_site= seed_site
+        # TODO validate iso_Ds, isometries ?
         self.iso_Ds= iso_Ds
         # self.isometries= isometries
         # here we initialize constraint spaces
         import geotorch
         self.manifolds= [ geotorch.stiefel.Stiefel(torch.Size([W.size(0)*W.size(1),W.size(2)])) for W in isometries ]
-        self.isometries= [ M.right_inverse(W.view(W.size(0)*W.size(1),W.size(2))).view(W.size()) \
+        self.isometries= isometries
+        self.generators= [ M.right_inverse(W.view(W.size(0)*W.size(1),W.size(2))).view(W.size()) \
             for M,W in zip(self.manifolds,isometries) ]
         super().__init__(self.build_onsite_tensors(), peps_args=peps_args,\
             global_args=global_args)
@@ -833,12 +835,13 @@ class IPEPS_C4V_THERMAL_TTN_V2(IPEPS_C4V_THERMAL):
             print(f"{iso.size()}")
         return ""
 
-    def build_onsite_tensors(self):
+    def build_onsite_tensors(self, level=float('inf')):
         A0= self.seed_site
         A= A0.clone()
-        for i in range(len(self.isometries)):
-            D_i, D_ip1= self.isometries[i].size(0), self.iso_Ds[i]
-            U= self.manifolds[i].forward( self.isometries[i].view(D_i*D_i,D_ip1) ).view(D_i, D_i, D_ip1)
+        for i in range(min(len(self.generators),level)):
+            D_i, D_ip1= self.generators[i].size(0), self.iso_Ds[i]
+            self.isometries[i]= self.manifolds[i].forward( self.generators[i].view(D_i*D_i,D_ip1) ).view(D_i, D_i, D_ip1)
+            U= self.isometries[i]
             #
             #            |/
             #     /--tmp_A--\
@@ -871,9 +874,15 @@ class IPEPS_C4V_THERMAL_TTN_V2(IPEPS_C4V_THERMAL):
     def update_(self):
         self.sites= {(0,0): self.build_onsite_tensors()}
 
+    def right_inverse_(self):
+        for i in range(len(self.isometries)):
+            W= self.isometries[i]
+            self.generators[i].copy_(self.manifolds[i].right_inverse(
+                W.view(W.size(0)*W.size(1),W.size(2))).view(W.size()))
+            
     def get_parameters(self):
         # optimize only generators X of isometries W defined as W = W_0 exp(X), which perform truncation
-        return [iso for i,iso in enumerate(self.isometries) if iso.size(0)*iso.size(1) > self.iso_Ds[i]]
+        return [gen for i,gen in enumerate(self.generators) if gen.size(0)*gen.size(1) > self.iso_Ds[i]]
 
     # def add_noise(self,noise,symmetrize=False):
     #     r"""
@@ -904,7 +913,8 @@ class IPEPS_C4V_THERMAL_TTN_V2(IPEPS_C4V_THERMAL):
     #     return new_iso
 
     def extend_layers(self, new_layers):
-        self.isometries.extend(new_layers)
+        pass
+        # self.isometries.extend(new_layers)
 
     def write_to_file(self, outputfile, aux_seq=[0,1,2,3], tol=1.0e-14, normalize=False):
         write_ipeps_c4v_thermal_ttn_v2(self, outputfile, aux_seq=aux_seq, tol=tol, normalize=normalize)
@@ -1065,7 +1075,7 @@ def write_ipeps_c4v_thermal_ttn_v2(state, outputfile, aux_seq=[0,1,2,3], tol=1.0
     json_state["iso_Ds"]= state.iso_Ds
 
     # write list of considered isometries
-    for i,t in enumerate(state.isometries):
+    for i,t in enumerate(state.generators):
         json_tensor=dict()
         json_tensor["dtype"]="complex128" if t.is_complex() else "float64"
 

@@ -12,7 +12,7 @@ from ctm.one_site_c4v import ctmrg_c4v
 from ctm.one_site_c4v.rdm_c4v import ddA_rdm1x1
 from ctm.one_site_c4v.rdm_c4v_thermal import entropy, rdm1x1_sl, rdm2x1_sl, rdm2x2
 from ctm.one_site_c4v import transferops_c4v
-from optim.ad_optim_vtnr import optimize_state
+from optim.exp_ad_optim_vtnr import optimize_state
 from models import ising
 import json
 import unittest
@@ -49,7 +49,7 @@ def main():
 
     # initialize an ipeps
     if args.instate!=None:
-        state = read_ipeps_c4v_thermal_ttn(args.instate)
+        state = read_ipeps_c4v_thermal_ttn_v2(args.instate)
         # state.add_noise(args.instate_noise)
         state.seed_site= model.ipepo_trotter_suzuki(args.beta/(2**args.layers))
         if len(state.isometries)< args.layers:
@@ -62,12 +62,12 @@ def main():
                 dtype=model.dtype, device=model.device) \
                 for i in range(len(state.isometries),args.layers) ]
             state.extend_layers(new_iso)
-    elif args.opt_resume is not None:
-        elem_t= _build_elem_t()
-        A= torch.zeros(len(elem_t), dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
-        coeffs = {(0,0): A}
-        state= IPEPS_C4V_THERMAL_LC(elem_t, coeffs)
-        state.load_checkpoint(args.opt_resume)
+    # elif args.opt_resume is not None:
+    #     elem_t= _build_elem_t()
+    #     A= torch.zeros(len(elem_t), dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
+    #     coeffs = {(0,0): A}
+    #     state= IPEPS_C4V_THERMAL_LC(elem_t, coeffs)
+    #     state.load_checkpoint(args.opt_resume)
     elif args.ipeps_init_type in ['RANDOM','SVD','ID','CONST']:
         assert args.layers>0,"number of layers must be larger than 0"
         # 1-layers: tower of 2 ipepo's & single non-equivalent isometry
@@ -146,7 +146,7 @@ def main():
             for i in range(1,args.layers):
                 A= torch.einsum("sxuldr,xpefgh->spuelfdgrh",A,A0).contiguous()
                 A= A.view([model.phys_dim]*2 + [A0.size(5)**(i+1)]*4)
-        state = IPEPS_C4V_THERMAL_TTN(A,iso_Ds=args.layers_Ds,isometries=isometries)
+        state = IPEPS_C4V_THERMAL_TTN_V2(A,iso_Ds=args.layers_Ds,isometries=isometries)
     else:
         raise ValueError("Missing trial state: --instate=None and --ipeps_init_type= "\
             +str(args.ipeps_init_type)+" is not supported")
@@ -205,62 +205,6 @@ def main():
 
     ctmrg_conv_f= ctmrg_conv_rdm2x1
 
-    def get_z(A, C, T):
-        if len(A.size())==5:
-            # assume it is single-layer tensor with physical+ancilla fused
-            auxD= A.size(4)
-            A= torch.einsum('suldr,sefgh->uelfdgrh',A,A.detach().clone().conj()).contiguous()
-            A= A.view([auxD**2]*4)
-        elif len(A.size())==6:
-            # assume it is single-layer tensor with physica+ancilla unfused
-            if args.mode=="sl":
-                auxD= A.size(5)
-                A= torch.einsum('asuldr,asefgh->uelfdgrh',A,A).contiguous()
-                A= A.view([auxD**2]*4)
-            elif args.mode=="dl":
-                A= torch.einsum('ssuldr->uldr',A).contiguous()
-
-        # closed rdm1x1
-        #
-        # C--T--C
-        # |  |  |
-        # T--A--T
-        # |  |  |
-        # C--T--C
-        CTC = torch.tensordot(C,T,([1],[0]))
-        #   C--0
-        # A |
-        # | T--2->1
-        # | 1
-        #   0
-        #   C--1->2
-        CTC = torch.tensordot(CTC,C,([1],[0]))
-        #   C--0
-        # A |
-        # | T--1
-        # | |
-        # | |       2->3
-        #   C-------T--1->2
-        CTC = torch.tensordot(CTC,T,([2],[0]))
-        #   C--0
-        # A |       0->2
-        # | T--1 1--A--3
-        # | |       2
-        # | |       3
-        #   C-------T--2->1
-        rdm = torch.tensordot(CTC,A,([1,3],[1,2]))
-        #   C--0 2--T-------C
-        #   |       3       |
-        # A |       2       |
-        # | T-------A--3 1--T
-        # | |       |       |
-        # | |       |       |
-        #   C-------T--1 0--C
-        rdm = torch.tensordot(rdm,CTC,([0,1,2,3],[2,0,3,1]))
-
-        log.info(f"get_z {rdm.item()}")
-        return rdm
-
     def get_logz_per_site(A, C, T):
         A_sl_scale= A.abs().max()
         if len(A.size())==5:
@@ -288,7 +232,7 @@ def main():
         C4= torch.einsum('ij,jk,kl,li',C,C,C,C)
 
         # closed rdm1x1
-        CTC = torch.tensordot(C,T,([0],[0]))
+        CTC = torch.tensordot(C,T,([1],[0]))
         #   C--0
         # A |
         # | T--2->1
@@ -296,12 +240,6 @@ def main():
         #   0
         #   C--1->2
         CTC = torch.tensordot(CTC,C,([1],[0]))
-        rdm = torch.tensordot(CTC,T,([2],[0]))
-        # rdm = torch.tensordot(rdm,A,([1,3],[1,2]))
-        # rdm = torch.tensordot(rdm,A/(A_sl_scale**2),([1,3],[1,2]))
-        rdm = torch.tensordot(rdm,A/A_sl_scale,([1,3],[1,2]))
-        rdm = torch.tensordot(T,rdm,([1,2],[0,2]))
-        rdm = torch.tensordot(rdm,CTC,([0,1,2],[2,0,1]))
 
         # closed CTCCTC
         #   C--0 2--C
@@ -309,16 +247,34 @@ def main():
         # | T--1 1--T |
         #   |       | V
         #   C--2 0--C
-        CTC= torch.tensordot(CTC,CTC,([0,1,2],[2,1,0]))
+        CTCCTC= torch.tensordot(CTC,CTC,([0,1,2],[2,1,0]))
 
-        log.info(f"get_z_per_site rdm {rdm.item()} CTC {CTC.item()} C4 {C4.item()}")
+        #   C--0
+        # A |
+        # | T--1
+        # | |       2->3
+        #   C--2 0--T--1->2
+        CTC = torch.tensordot(CTC,T,([2],[0]))
+        # rdm = torch.tensordot(rdm,A,([1,3],[1,2]))
+        # rdm = torch.tensordot(rdm,A/(A_sl_scale**2),([1,3],[1,2]))
+        rdm = torch.tensordot(CTC,A/A_sl_scale,([1,3],[1,2]))
+
+        #   C--0 2--T-------C
+        #   |       3       |
+        # A |       2       |
+        # | T-------A--3 1--T
+        # | |       |       |
+        # | |       |       |
+        #   C-------T--1 0--C
+        rdm = torch.tensordot(rdm,CTC,([0,1,2,3],[2,0,3,1]))
+
+        log.info(f"get_z_per_site rdm {rdm.item()} CTCCTC {CTCCTC.item()} C4 {C4.item()}")
 
         # z_per_site= (rdm/CTC)*(CTC/C4)
         logz_per_site= torch.log(A_sl_scale) + torch.log(rdm) + torch.log(C4)\
-            - 2*torch.log(CTC)
+            - 2*torch.log(CTCCTC)
         return logz_per_site
         # return z_per_site
-
 
     # 0) fuse ancilla+physical index and create regular c4v ipeps with rank-5 on-site
     #    tensor
@@ -327,6 +283,11 @@ def main():
     ctm_env = ENV_C4V(args.chi, state_fused)
     init_env(state_fused, ctm_env)
 
+    # e0 = energy_f(state, ctm_env, force_cpu=True)
+    # S0 = approx_S(state, ctm_env)
+    # r2_0 = approx_renyi2(state, ctm_env, args.l2d, args.bond_dim**2)
+    # loss0 = e0 - 1./args.beta * S0
+    # loss0 = e0 - 1./args.beta * r2_0
     S0= r2_0= 0
     e0= energy_f(state, ctm_env, args.mode, force_cpu=True)
     log_z0= get_logz_per_site(state.site(), ctm_env.get_C(), ctm_env.get_T())
@@ -337,11 +298,42 @@ def main():
     print(", ".join([f"{args.beta}",f"{-1}",f"{loss0}",f"{e0}",f"{log_z0}",f"{S0}",f"{r2_0}"]\
         +[f"{v}" for v in obs_values]+[f"{state.site().norm()}"]))
 
+    def loss_fn_logz(state, ctm_env_in, opt_context):
+        ctm_args= opt_context["ctm_args"]
+        opt_args= opt_context["opt_args"]
+
+        # build on-site tensors
+        # new_iso= state.symmetrize_isometries()
+        # state= IPEPS_C4V_THERMAL_TTN(state.seed_site, new_iso)
+        state.update_()
+        state_fused= state.to_fused_ipeps_c4v()
+        # state_fused= s_state.to_nophys_ipeps_c4v()
+
+        # possibly re-initialize the environment
+        if opt_args.opt_ctm_reinit:
+            init_env(state_fused, ctm_env_in)
+
+        # 1) compute environment by CTMRG
+        ctm_env_out, history, t_ctm, t_obs= ctmrg_c4v.run_dl(state_fused, ctm_env_in, \
+            conv_check=ctmrg_conv_f, ctm_args=ctm_args)
+        # e0 = energy_f(state, ctm_env_out, force_cpu=True)
+        # S0 = approx_S(state, ctm_env_out)
+        # loss0 = e0 - 1./args.beta * S0
+
+        # r2_0 = approx_renyi2(state, ctm_env_out, args.l2d, args.bond_dim**2)
+        # loss= torch.max(e0,e1) - 1./args.beta * r2_0
+        # loss= torch.max(loss0,loss1)
+        # z= get_z_per_site(state.site(), ctm_env_out.get_C(), ctm_env_out.get_T())
+        logz= get_logz_per_site(state.site(), ctm_env_out.get_C(), ctm_env_out.get_T())
+        # loss= -torch.log(z) if args.logz else -z
+        loss= -logz
+
+        return loss, ctm_env_out, history, t_ctm, t_obs
+
     class ddA_Z(torch.autograd.Function):
         @staticmethod
         def forward(ctx, site, env):
             state= IPEPS_C4V(site=site)
-            # loss= get_z(state.site(), env.get_C(), env.get_T())
             loss= get_logz_per_site(state.site(), env.get_C(), env.get_T())
             ctx.save_for_backward(state.site(), env.get_C(), env.get_T())
             return loss
@@ -356,12 +348,39 @@ def main():
             A_b= loss_b * ddA_1x1
             return A_b, None
 
-    def loss_fn_z(state_fused, ctm_env_in, opt_context):
+    def loss_fn_vtnr(state, ctm_env_in, opt_context):
         ctm_args= opt_context["ctm_args"]
         opt_args= opt_context["opt_args"]
 
-        # build on-site tensors
-        # new_iso= state.symmetrize_isometries()
+        # build TTN parametrized by generators of the isometries
+        _state= IPEPS_C4V_THERMAL_TTN(state.seed_site, iso_Ds=state.iso_Ds,\
+             isometries=state.isometries)
+        _state.update_()
+        state_fused= _state.to_fused_ipeps_c4v()
+        # state_fused= s_state.to_nophys_ipeps_c4v()
+
+        with torch.no_grad():
+            # possibly re-initialize the environment
+            if opt_args.opt_ctm_reinit:
+                init_env(state_fused, ctm_env_in)
+        
+            # 1) compute environment by CTMRG
+            ctm_env_out, history, t_ctm, t_obs= ctmrg_c4v.run_dl(state_fused, ctm_env_in, \
+                conv_check=ctmrg_conv_f, ctm_args=ctm_args)
+
+        # loss= get_z(state_fused.site(), ctm_env_out.get_C(), ctm_env_out.get_T())
+        log_z0= ddA_Z.apply(state_fused.site(), ctm_env_out)
+        loss= -log_z0
+        return loss, ctm_env_out, history, t_ctm, t_obs
+
+
+    def loss_fn_grad(state, ctm_env_in, opt_context):
+        ctm_args= opt_context["ctm_args"]
+        opt_args= opt_context["opt_args"]
+
+        # # build TTN parametrized by generators of the isometries
+        # _state= IPEPS_C4V_THERMAL_TTN_V2(state.seed_site, iso_Ds=state.iso_Ds,\
+        #     isometries=state.isometries)
         state.update_()
         state_fused= state.to_fused_ipeps_c4v()
         # state_fused= s_state.to_nophys_ipeps_c4v()
@@ -388,7 +407,8 @@ def main():
     @torch.no_grad()
     def obs_fn(state, ctm_env, opt_context):
         ctm_args= opt_context["ctm_args"]
-        if opt_context["line_search"]:
+        is_line_search= opt_context["line_search"] if "line_search" in opt_context else False
+        if is_line_search:
             epoch= len(opt_context["loss_history"]["loss_ls"])
             loss= opt_context["loss_history"]["loss_ls"][-1]
             print("LS",end=" ")
@@ -397,12 +417,14 @@ def main():
             loss= opt_context["loss_history"]["loss"][-1]
         e0 = energy_f(state, ctm_env, args.mode, force_cpu=True)
         log_z0= get_logz_per_site(state.site(), ctm_env.get_C(), ctm_env.get_T())
+        # S0 = approx_S( state, ctm_env )
+        # r2_0 = approx_renyi2(state, ctm_env, args.l2d, args.bond_dim**2)
         S0=r2_0= 0
         obs_values, obs_labels = eval_obs_f(state,ctm_env,args.mode,force_cpu=True)
         print(f"{args.beta}, "+", ".join([f"{epoch}",f"{loss}",f"{e0}", f"{log_z0}", f"{S0}", f"{r2_0}"]\
             +[f"{v}" for v in obs_values]+[f"{state.site().norm()}"]+[f"{iso.norm()}" for iso in state.isometries]))
 
-        if (not opt_context["line_search"]) and args.top_freq>0 and epoch%args.top_freq==0:
+        if (not is_line_search) and args.top_freq>0 and epoch%args.top_freq==0:
             coord_dir_pairs=[((0,0), (1,0))]
             for c,d in coord_dir_pairs:
                 # transfer operator spectrum
@@ -412,7 +434,7 @@ def main():
                 print("TOP "+json.dumps(_to_json(l)))
 
     # optimize
-    optimize_state(state, ctm_env, loss_fn_z, obs_fn=obs_fn)
+    optimize_state(state, ctm_env, loss_fn_vtnr, loss_fn_grad, obs_fn=obs_fn)
 
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"
