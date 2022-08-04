@@ -47,7 +47,8 @@ def optimize_state(state, ctm_env_init, loss_fn_vtnr, loss_fn_grad,
     t_data = dict({"loss": [], "min_loss": 1.0e+16, "loss_ls": [], "min_loss_ls": 1.0e+16})
     current_env= [ctm_env_init]
     context= dict({"ctm_args":ctm_args, "opt_args":opt_args, "loss_history": t_data,\
-        "vtnr_success": True, "vtnr_timeout_counter": 0, "vtnr_timeout": False})
+        "step_history": [], \
+        "vtnr_state": "INIT", "vtnr_timeout_counter": 0, "vtnr_timeout": False})
     epoch=0
 
     # generators 
@@ -131,10 +132,16 @@ def optimize_state(state, ctm_env_init, loss_fn_vtnr, loss_fn_grad,
         if t_data["min_loss"] > t_data["loss"][-1]:
             t_data["min_loss"]= t_data["loss"][-1]
             state.write_to_file(outputstatefile, normalize=True)
-            context["vtnr_success"]=True
+            if len(context["step_history"])>1 and context["step_history"][-1]!="vtnr":
+                # no vtnr update was done yet, just re-evaluation of energy from previous
+                # grad step
+                context["vtnr_state"]="RESUME"
+            else:
+                context["vtnr_state"]="SUCCESS"
         else:
-            context["vtnr_success"]=False
-        print(f"closure_vtnr vtnr_success {context['vtnr_success']}")
+            context["vtnr_state"]="FAIL"
+        print(f"closure_vtnr step_history {context['step_history']}")
+        print(f"closure_vtnr vtnr_state {context['vtnr_state']}")
 
         # 2) log CTM metrics for debugging
         if opt_args.opt_logging:
@@ -160,12 +167,6 @@ def optimize_state(state, ctm_env_init, loss_fn_vtnr, loss_fn_grad,
     
     def closure(linesearching=False):
         context["line_search"]= linesearching
-        loc_opt_args= copy.deepcopy(opt_args)
-        if not context["vtnr_success"]:
-            # loc_opt_args.opt_ctm_reinit= False
-            pass
-        # _context= dict({"ctm_args":ctm_args, "opt_args":loc_opt_args, "loss_history": t_data,
-        #     "line_search": linesearching})
 
         # 0) evaluate loss
         optimizer.zero_grad()
@@ -264,17 +265,16 @@ def optimize_state(state, ctm_env_init, loss_fn_vtnr, loss_fn_grad,
         # evaluate loss and obtain the environments of isometries as gradients
         loss0= closure_vtnr()
 
-        if not context["vtnr_success"]:
+        if context["vtnr_state"]=="FAIL":
             # revert back isometries
             with torch.no_grad():
                 for i in range(len(p_isometries)):
                     p_isometries[i].copy_(old_isometries[i])
                     # p_isometries[i]= old_isometries[i]
-        else:
-            # force update on generators
+        if context["vtnr_state"]=="SUCCESS":
             with torch.no_grad():
                 state.right_inverse_()
-
+        if context["vtnr_state"]=="SUCCESS" or context["vtnr_state"]=="RESUME":
             new_iso= []
             for p in p_isometries:
                 U,S,Vh= torch.linalg.svd(p.grad.view(p.size(0)*p.size(1),p.size(2)),\
@@ -296,31 +296,33 @@ def optimize_state(state, ctm_env_init, loss_fn_vtnr, loss_fn_grad,
 
         # 1) attempt VTNR step
         if context["vtnr_timeout_counter"]==0: 
-            context["vtnr_timeout"]=False
+            context["vtnr_state"]="INIT"
         
-        if not context["vtnr_timeout"]:
+        if not context["vtnr_state"]=="TIMEOUT":
             step_vtnr(closure_vtnr)
+            context["step_history"].append('vtnr')
         else:
             context["vtnr_timeout_counter"]+= -1
 
         # 2) if VTNR failed, timeout VTNR for X steps
-        if not context["vtnr_success"] and not context["vtnr_timeout"]:
-            context["vtnr_timeout"]= True
-            context["vtnr_timeout_counter"]= 10
+        if context["vtnr_state"]=="FAIL":
+            context["vtnr_state"]= "TIMEOUT"
+            context["vtnr_timeout_counter"]= 2
 
-            # if len(t_data["loss"])>3 and t_data["loss"][-2]<t_data["loss"][-3]:
-            # # reset L-BFGS only after at least one successful VTNR step
-            #     print(f"L-BFGS reset")
-            #     optimizer = lbfgs_modified.LBFGS_MOD(parameters, max_iter=opt_args.max_iter_per_epoch, \
-            #         lr=opt_args.lr, tolerance_grad=opt_args.tolerance_grad, \
-            #         tolerance_change=opt_args.tolerance_change, \
-            #         history_size=opt_args.history_size, line_search_fn=opt_args.line_search, \
-            #         line_search_eps=opt_args.line_search_tol)
+            # if there was at least one successful step of VTNR, reset L-BFGS
+            if len(context["step_history"])>3 and context["step_history"][-3:]==["vtnr","vtnr","vtnr"]:
+                print(f"L-BFGS reset")
+                optimizer = lbfgs_modified.LBFGS_MOD(parameters, max_iter=opt_args.max_iter_per_epoch, \
+                    lr=opt_args.lr, tolerance_grad=opt_args.tolerance_grad, \
+                    tolerance_change=opt_args.tolerance_change, \
+                    history_size=opt_args.history_size, line_search_fn=opt_args.line_search, \
+                    line_search_eps=opt_args.line_search_tol)
 
         # After execution closure ``current_env`` **IS NOT** corresponding to ``state``, since
         # the ``state`` on-site tensors have been modified by gradient. 
-        if not context["vtnr_success"]:
+        if context["vtnr_state"]=="TIMEOUT":
             optimizer.step_2c(closure, closure_linesearch)
+            context["step_history"].append('grad')
         
             # reset line search history
             t_data["loss_ls"]=[]
