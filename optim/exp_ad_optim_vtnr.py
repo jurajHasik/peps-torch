@@ -140,8 +140,6 @@ def optimize_state(state, ctm_env_init, loss_fn_vtnr, loss_fn_grad,
                 context["vtnr_state"]="SUCCESS"
         else:
             context["vtnr_state"]="FAIL"
-        print(f"closure_vtnr step_history {context['step_history']}")
-        print(f"closure_vtnr vtnr_state {context['vtnr_state']}")
 
         # 2) log CTM metrics for debugging
         if opt_args.opt_logging:
@@ -307,11 +305,10 @@ def optimize_state(state, ctm_env_init, loss_fn_vtnr, loss_fn_grad,
         # 2) if VTNR failed, timeout VTNR for X steps
         if context["vtnr_state"]=="FAIL":
             context["vtnr_state"]= "TIMEOUT"
-            context["vtnr_timeout_counter"]= 2
+            context["vtnr_timeout_counter"]= opt_args.vtnr_timeout
 
             # if there was at least one successful step of VTNR, reset L-BFGS
             if len(context["step_history"])>3 and context["step_history"][-3:]==["vtnr","vtnr","vtnr"]:
-                print(f"L-BFGS reset")
                 optimizer = lbfgs_modified.LBFGS_MOD(parameters, max_iter=opt_args.max_iter_per_epoch, \
                     lr=opt_args.lr, tolerance_grad=opt_args.tolerance_grad, \
                     tolerance_change=opt_args.tolerance_change, \
