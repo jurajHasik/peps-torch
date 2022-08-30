@@ -113,7 +113,7 @@ def optimize_state(state, ctm_env_init, loss_fn_vtnr, loss_fn_grad,
             if not A.requires_grad: A.requires_grad_(True)
             if not A.grad is None:
                 A.grad= 0 * A.grad
-
+                
         # 0) evaluate loss
         loss, ctm_env, history, t_ctm, t_check = loss_fn_vtnr(state, current_env[0], context)
 

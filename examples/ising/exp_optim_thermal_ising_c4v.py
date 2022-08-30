@@ -62,12 +62,20 @@ def main():
                 dtype=model.dtype, device=model.device) \
                 for i in range(len(state.isometries),args.layers) ]
             state.extend_layers(new_iso)
-    # elif args.opt_resume is not None:
-    #     elem_t= _build_elem_t()
-    #     A= torch.zeros(len(elem_t), dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
-    #     coeffs = {(0,0): A}
-    #     state= IPEPS_C4V_THERMAL_LC(elem_t, coeffs)
-    #     state.load_checkpoint(args.opt_resume)
+    elif args.opt_resume is not None:
+        A= model.ipepo_trotter_suzuki(args.beta/(2**args.layers))
+        iso_D= [A.size(0)] + args.layers_Ds
+        isometries= [torch.zeros([iso_D[i],iso_D[i],iso_D[i+1]],\
+            dtype=cfg.global_args.torch_dtype,\
+            device=cfg.global_args.device) for i in range(len(args.layers_Ds))]
+        for i in range(len(isometries)):
+            iso= isometries[i]
+            iso_size= iso.size()
+            iso= iso.view(iso_size[0]*iso_size[1],iso_size[2])
+            iso[:iso_size[2],:iso_size[2]].fill_diagonal_(1.)
+            isometries[i]= iso.view(iso_size)
+        state= IPEPS_C4V_THERMAL_TTN_V2(A,iso_Ds=args.layers_Ds,isometries=isometries)
+        state.load_checkpoint(args.opt_resume)
     elif args.ipeps_init_type in ['RANDOM','SVD','ID','CONST']:
         assert args.layers>0,"number of layers must be larger than 0"
         # 1-layers: tower of 2 ipepo's & single non-equivalent isometry

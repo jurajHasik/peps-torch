@@ -884,6 +884,44 @@ class IPEPS_C4V_THERMAL_TTN_V2(IPEPS_C4V_THERMAL):
         # optimize only generators X of isometries W defined as W = W_0 exp(X), which perform truncation
         return [gen for i,gen in enumerate(self.generators) if gen.size(0)*gen.size(1) > self.iso_Ds[i]]
 
+    def get_checkpoint(self):
+        # get current points on manifold (bases)
+        checkpoint= { 
+            "seed_site": self.seed_site,
+            "manifolds": [ m.base for m in self.manifolds ],
+            "isometries": self.isometries, 
+            "generators": self.generators 
+            }
+        return checkpoint
+
+    def load_checkpoint(self, checkpoint_file):
+        import geotorch
+        checkpoint= torch.load(checkpoint_file)
+        params= checkpoint["parameters"]
+        self.seed_site= params["seed_site"]
+        if "isometries" in params.keys():
+            assert all([i_s.size()==i_c.size() for i_s,i_c in zip(self.isometries, params["isometries"]) ]),\
+                "Inconsistent isometry dimensions"
+            self.isometries= params["isometries"]
+        else:
+            raise RuntimeError("Missing isometries")
+        for iso_t in self.isometries: iso_t.requires_grad_(False)
+        if "manifolds" in params.keys():
+            self.manifolds= [ geotorch.stiefel.Stiefel(torch.Size([W.size(0)*W.size(1),W.size(2)])) \
+                for W in params["isometries"] ]
+            for M,B in zip(self.manifolds, params["manifolds"]):
+                M.base= B
+                M.base.requires_grad_(False)
+        else:
+            raise RuntimeError("Missing manifold bases")
+        if "generators" in params.keys():
+            self.generators= params["generators"]
+            for g in self.generators:
+                g.requires_grad_(False)
+        else:
+            warnings.warn("Missing generators - keeping zero tensors", Warning)
+        self.update_()
+
     # def add_noise(self,noise,symmetrize=False):
     #     r"""
     #     :param noise: magnitude of the noise
