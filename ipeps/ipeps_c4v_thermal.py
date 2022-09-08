@@ -1113,7 +1113,8 @@ def write_ipeps_c4v_thermal_ttn_v2(state, outputfile, aux_seq=[0,1,2,3], tol=1.0
     json_state["iso_Ds"]= state.iso_Ds
 
     # write list of considered isometries
-    for i,t in enumerate(state.generators):
+    # for i,t in enumerate(state.generators):
+    for i,t in enumerate(state.isometries):
         json_tensor=dict()
         json_tensor["dtype"]="complex128" if t.is_complex() else "float64"
 
@@ -1123,7 +1124,8 @@ def write_ipeps_c4v_thermal_ttn_v2(state, outputfile, aux_seq=[0,1,2,3], tol=1.0
         json_tensor["D_in"]= tdims[0]
         json_tensor["shape"]= tdims
         # generate isometries and then get non-zero elements
-        W= state.manifolds[i].forward(t.view(tdims[0]*tdims[1],tdims[2])).view(tdims)
+        # W= state.manifolds[i].forward(t.view(tdims[0]*tdims[1],tdims[2])).view(tdims)
+        W= t 
         t_nonzero= W.nonzero()
         json_tensor["numEntries"]= len(t_nonzero)
         entries = []

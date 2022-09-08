@@ -22,6 +22,7 @@ parser= cfg.get_args_parser()
 # additional model-dependent arguments
 parser.add_argument("--l2d", type=int, default=1)
 parser.add_argument("--hx", type=float, default=0., help="transverse field")
+parser.add_argument("--hz", type=float, default=0., help="longitudinal field")
 parser.add_argument("--q", type=float, default=0, help="next nearest-neighbour coupling")
 parser.add_argument("--beta", type=float, default=0., help="inverse temperature")
 parser.add_argument("--init_beta", type=float, default=0., \
@@ -32,6 +33,7 @@ parser.add_argument("--obs_freq", type=int, default=-1, help="frequency of compu
     " during CTM convergence")
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
+parser.add_argument("--mode", type=str, default="dl")
 args, unknown_args= parser.parse_known_args()
 # set to BETA
 args.ipeps_init_type= "BETA"
@@ -43,7 +45,7 @@ def main():
     torch.manual_seed(args.seed)
 
     # 0) initialize model
-    model = ising.ISING_C4V(hx=args.hx, q=args.q)
+    model = ising.ISING_C4V(hx=args.hx, hz=args.hz, q=args.q)
     assert args.q==0,"plaquette term is not supported"
     energy_f= model.energy_1x1_nn_thermal
     obs_f= model.eval_obs_thermal
@@ -51,11 +53,6 @@ def main():
     # 1) initialize an thermal ipepo
     if args.instate!=None:
         state = read_ipeps_c4v_thermal_ttn_v2(args.instate)
-        assert len(state.coeffs)==1, "Not a 1-site ipeps"
-
-        # TODO extending from smaller bond-dim to higher bond-dim is 
-        # currently not possible
-
         state.add_noise(args.instate_noise)
     elif args.opt_resume is not None:
         if args.bond_dim in [4]:
@@ -200,41 +197,75 @@ def main():
 
     #     return l2, C_0, T_0
 
-    # def get_z_per_site(A, C, T):
-    #     # C--T--C            / C--C
-    #     # |  |  |   C--C    /  |  |   C--T--C
-    #     # T--A--T * |  |   /   T--T * |  |  |
-    #     # |  |  |   C--C  /    |  |   C--T--C
-    #     # C--T--C        /     C--C
+    def get_logz_per_site(A, C, T):
+        A_sl_scale= A.abs().max()
+        if len(A.size())==5:
+            # assume it is single-layer tensor with physica+ancilla fused
+            auxD= A.size(4)
+            A= torch.einsum('suldr,sefgh->uelfdgrh',A,A).contiguous()
+            A= A.view([auxD**2]*4)
+        elif len(A.size())==6:
+            # assume it is single-layer tensor with physica+ancilla unfused
+            if args.mode=="sl":
+                auxD= A.size(5)
+                A= torch.einsum('asuldr,asefgh->uelfdgrh',A,A).contiguous()
+                A= A.view([auxD**2]*4)
+                A_sl_scale= A_sl_scale**2
+            elif args.mode=="dl":
+                A= torch.einsum('ssuldr->uldr',A).contiguous()
 
-    #     # closed C^4
-    #     C4= torch.einsum('ij,jk,kl,li',C,C,C,C)
+        # C--T--C            / C--C
+        # |  |  |   C--C    /  |  |   C--T--C
+        # T--A--T * |  |   /   T--T * |  |  |
+        # |  |  |   C--C  /    |  |   C--T--C
+        # C--T--C        /     C--C
 
-    #     # closed rdm1x1
-    #     CTC = torch.tensordot(C,T,([0],[0]))
-    #     #   C--0
-    #     # A |
-    #     # | T--2->1
-    #     # | 1
-    #     #   0
-    #     #   C--1->2
-    #     CTC = torch.tensordot(CTC,C,([1],[0]))
-    #     rdm = torch.tensordot(CTC,T,([2],[0]))
-    #     rdm = torch.tensordot(rdm,A,([1,3],[1,2]))
-    #     rdm = torch.tensordot(T,rdm,([1,2],[0,2]))
-    #     rdm = torch.tensordot(rdm,CTC,([0,1,2],[2,0,1]))
+        # closed C^4
+        C4= torch.einsum('ij,jk,kl,li',C,C,C,C)
 
-    #     # closed CTCCTC
-    #     #   C--0 2--C
-    #     # A |       |
-    #     # | T--1 1--T |
-    #     #   |       | V
-    #     #   C--2 0--C
-    #     CTC= torch.tensordot(CTC,CTC,([0,1,2],[2,1,0]))
-        
-    #     z_per_site= (rdm / CTC) * (C4 / CTC)
+        # closed rdm1x1
+        CTC = torch.tensordot(C,T,([1],[0]))
+        #   C--0
+        # A |
+        # | T--2->1
+        # | 1
+        #   0
+        #   C--1->2
+        CTC = torch.tensordot(CTC,C,([1],[0]))
 
-    #     return z_per_site
+        # closed CTCCTC
+        #   C--0 2--C
+        # A |       |
+        # | T--1 1--T |
+        #   |       | V
+        #   C--2 0--C
+        CTCCTC= torch.tensordot(CTC,CTC,([0,1,2],[2,1,0]))
+
+        #   C--0
+        # A |
+        # | T--1
+        # | |       2->3
+        #   C--2 0--T--1->2
+        CTC = torch.tensordot(CTC,T,([2],[0]))
+        # rdm = torch.tensordot(rdm,A,([1,3],[1,2]))
+        # rdm = torch.tensordot(rdm,A/(A_sl_scale**2),([1,3],[1,2]))
+        rdm = torch.tensordot(CTC,A/A_sl_scale,([1,3],[1,2]))
+
+        #   C--0 2--T-------C
+        #   |       3       |
+        # A |       2       |
+        # | T-------A--3 1--T
+        # | |       |       |
+        # | |       |       |
+        #   C-------T--1 0--C
+        rdm = torch.tensordot(rdm,CTC,([0,1,2,3],[2,0,3,1]))
+
+        log.info(f"get_z_per_site rdm {rdm.item()} CTCCTC {CTCCTC.item()} C4 {C4.item()}")
+
+        # z_per_site= (rdm/CTC)*(CTC/C4)
+        logz_per_site= torch.log(A_sl_scale) + torch.log(rdm) + torch.log(C4)\
+            - 2*torch.log(CTCCTC)
+        return logz_per_site
 
     # def approx_renyi2(state,env,D1,D2):
     #     # get intial renyi2 on-site tensor and env tensors
@@ -272,11 +303,12 @@ def main():
 
 
     # 6) evaluate observables on initial environment ansatz
-    e0= energy_f(state, ctm_env, force_cpu=True)
-    obs_values, obs_labels= obs_f(state, ctm_env, force_cpu=True)
+    log_z0= get_logz_per_site(state.site(), ctm_env.get_C(), ctm_env.get_T())
+    e0= energy_f(state, ctm_env, args.mode, force_cpu=True)
+    obs_values, obs_labels= obs_f(state, ctm_env, args.mode, force_cpu=True)
     print("\n",end="")
-    print(", ".join(["epoch","dist","e0"]+obs_labels))
-    print(", ".join(["-1",f"{float('inf')}",f"{e0}"]+[f"{v}" for v in obs_values]))
+    print(", ".join(["epoch","dist","log_z","e0"]+obs_labels))
+    print(", ".join(["-1",f"{float('inf')}",f"{log_z0}",f"{e0}"]+[f"{v}" for v in obs_values]))
 
 
     # 7) compute environment by CTMRG
@@ -284,8 +316,9 @@ def main():
         conv_check=ctmrg_conv_f, ctm_args=cfg.ctm_args)
 
     # 8) evaluate final observables and entropies
-    e0= energy_f(state, ctm_env, force_cpu=True)
-    obs_values, obs_labels= obs_f(state, ctm_env, force_cpu=True)
+    log_z0= get_logz_per_site(state.site(), ctm_env.get_C(), ctm_env.get_T())
+    e0= energy_f(state, ctm_env, args.mode, force_cpu=True)
+    obs_values, obs_labels= obs_f(state, ctm_env, args.mode, force_cpu=True)
     # S0= approx_S(state, ctm_env)
     # r2_0= approx_renyi2(state, ctm_env, args.l2d, args.bond_dim**2)
     # try:
@@ -294,8 +327,8 @@ def main():
     #     F_r2_0= float('inf')
     S0=r2_0=F_r2_0= 0
     print("\n")
-    print(", ".join(["epoch","e0","F_r2_0","S0","r2_0"]+obs_labels))
-    print("FINAL "+", ".join([f"{e0}", f"{F_r2_0}", f"{S0}", f"{r2_0}"]+[f"{v}" for v in obs_values]))
+    print(", ".join(["epoch","log_z0","e0","F_r2_0","S0","r2_0"]+obs_labels))
+    print("FINAL "+", ".join([f"{log_z0}",f"{e0}", f"{F_r2_0}", f"{S0}", f"{r2_0}"]+[f"{v}" for v in obs_values]))
     print(f"TIMINGS ctm: {t_ctm} conv_check: {t_obs}")
 
     # ----- additional observables ---------------------------------------------

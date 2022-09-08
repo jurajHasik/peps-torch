@@ -162,6 +162,60 @@ def optimize_state(state, ctm_env_init, loss_fn_vtnr, loss_fn_grad,
             log.info(json.dumps(log_entry))
 
         return loss
+
+    def closure_sweep(linesearching=False):
+        context["line_search"]= linesearching
+        for i in range(len(p_isometries)):
+            p_isometries[i]= state.isometries[i]
+        for A in p_isometries:
+            if not A.requires_grad: A.requires_grad_(True)
+            if not A.grad is None:
+                A.grad= 0 * A.grad
+                
+        # 0) evaluate loss
+        with torch.no_grad():
+            loss, ctm_env, history, t_ctm, t_check = loss_fn_vtnr(state, current_env[0], context)
+
+        # 6) detach current environment from autograd graph
+        ctm_env.detach_()
+        current_env[0]= ctm_env
+
+        # 1) record loss and store current state if the loss improves
+        t_data["loss"].append(loss.item())
+        if t_data["min_loss"] > t_data["loss"][-1]:
+            t_data["min_loss"]= t_data["loss"][-1]
+            # import pdb; pdb.set_trace()
+            state.write_to_file(outputstatefile, normalize=True)
+        #     if len(context["step_history"])>1 and context["step_history"][-1]!="vtnr":
+        #         # no vtnr update was done yet, just re-evaluation of energy from previous
+        #         # grad step
+        #         context["vtnr_state"]="RESUME"
+        #     else:
+        #         context["vtnr_state"]="SUCCESS"
+        # else:
+        #     context["vtnr_state"]="FAIL"
+
+        # 2) log CTM metrics for debugging
+        if opt_args.opt_logging:
+            log_entry=dict({"id": epoch, "loss": t_data["loss"][-1], "t_ctm": t_ctm, \
+                    "t_check": t_check})
+
+        # 3) compute desired observables
+        if obs_fn is not None:
+            obs_fn(state, current_env[0], context)
+
+        # 5) log grad metrics
+        if opt_args.opt_logging:
+            log_entry=dict({"id": epoch})
+            # log_entry["t_grad"]=t_grad1-t_grad0
+            # log just l2 and l\infty norm of the full grad
+            # log_entry["grad_mag"]= [p.grad.norm().item() for p in parameters]
+            # flat_grad= torch.cat(tuple(p.grad.view(-1) for p in p_isometries))
+            # log_entry["grad_mag"]= [flat_grad.norm().item(), flat_grad.norm(p=float('inf')).item()]
+            # if opt_args.opt_log_grad: log_entry["grad"]= [p.grad.tolist() for p in p_isometries]
+            log.info(json.dumps(log_entry))
+
+        return loss
     
     def closure(linesearching=False):
         context["line_search"]= linesearching
@@ -292,38 +346,46 @@ def optimize_state(state, ctm_env_init, loss_fn_vtnr, loss_fn_grad,
         if epoch>0:
             store_checkpoint(checkpoint_file, state, optimizer, epoch, t_data["loss"][-1])
 
-        # 1) attempt VTNR step
-        if context["vtnr_timeout_counter"]==0: 
-            context["vtnr_state"]="INIT"
+        closure_sweep()
+        from ctm.one_site_c4v.rdm_c4v import ddA_rdm1x1
+        E= ddA_rdm1x1(state.to_fused_ipeps_c4v(), current_env[0])
+        E= E.view([state.site().size(0),state.site().size(1)]+[state.site().size(2)]*4)
+        _tmp_Es= down_sweep(state,E)
+        _tmp_Es= _tmp_Es[1:]+[E]
+        up_sweep(state,_tmp_Es)
+
+        # # 1) attempt VTNR step
+        # if context["vtnr_timeout_counter"]==0: 
+        #     context["vtnr_state"]="INIT"
         
-        if not context["vtnr_state"]=="TIMEOUT":
-            step_vtnr(closure_vtnr)
-            context["step_history"].append('vtnr')
-        else:
-            context["vtnr_timeout_counter"]+= -1
+        # if not context["vtnr_state"]=="TIMEOUT":
+        #     step_vtnr(closure_vtnr)
+        #     context["step_history"].append('vtnr')
+        # else:
+        #     context["vtnr_timeout_counter"]+= -1
 
-        # 2) if VTNR failed, timeout VTNR for X steps
-        if context["vtnr_state"]=="FAIL":
-            context["vtnr_state"]= "TIMEOUT"
-            context["vtnr_timeout_counter"]= opt_args.vtnr_timeout
+        # # 2) if VTNR failed, timeout VTNR for X steps
+        # if context["vtnr_state"]=="FAIL":
+        #     context["vtnr_state"]= "TIMEOUT"
+        #     context["vtnr_timeout_counter"]= opt_args.vtnr_timeout
 
-            # if there was at least one successful step of VTNR, reset L-BFGS
-            if len(context["step_history"])>3 and context["step_history"][-3:]==["vtnr","vtnr","vtnr"]:
-                optimizer = lbfgs_modified.LBFGS_MOD(parameters, max_iter=opt_args.max_iter_per_epoch, \
-                    lr=opt_args.lr, tolerance_grad=opt_args.tolerance_grad, \
-                    tolerance_change=opt_args.tolerance_change, \
-                    history_size=opt_args.history_size, line_search_fn=opt_args.line_search, \
-                    line_search_eps=opt_args.line_search_tol)
+        #     # if there was at least one successful step of VTNR, reset L-BFGS
+        #     if len(context["step_history"])>3 and context["step_history"][-3:]==["vtnr","vtnr","vtnr"]:
+        #         optimizer = lbfgs_modified.LBFGS_MOD(parameters, max_iter=opt_args.max_iter_per_epoch, \
+        #             lr=opt_args.lr, tolerance_grad=opt_args.tolerance_grad, \
+        #             tolerance_change=opt_args.tolerance_change, \
+        #             history_size=opt_args.history_size, line_search_fn=opt_args.line_search, \
+        #             line_search_eps=opt_args.line_search_tol)
 
-        # After execution closure ``current_env`` **IS NOT** corresponding to ``state``, since
-        # the ``state`` on-site tensors have been modified by gradient. 
-        if context["vtnr_state"]=="TIMEOUT":
-            optimizer.step_2c(closure, closure_linesearch)
-            context["step_history"].append('grad')
+        # # After execution closure ``current_env`` **IS NOT** corresponding to ``state``, since
+        # # the ``state`` on-site tensors have been modified by gradient. 
+        # if context["vtnr_state"]=="TIMEOUT":
+        #     optimizer.step_2c(closure, closure_linesearch)
+        #     context["step_history"].append('grad')
         
-            # reset line search history
-            t_data["loss_ls"]=[]
-            t_data["min_loss_ls"]=1.0e+16
+        #     # reset line search history
+        #     t_data["loss_ls"]=[]
+        #     t_data["min_loss_ls"]=1.0e+16
 
         # if post_proc is not None:
         #     post_proc(state, current_env[0], context)
@@ -337,3 +399,159 @@ def optimize_state(state, ctm_env_init, loss_fn_vtnr, loss_fn_grad,
     if len(t_data["loss"])>0:
         store_checkpoint(checkpoint_file, state, optimizer, \
             main_args.opt_max_iter, t_data["loss"][-1])
+
+def down_sweep(state,E_TM):
+    # taking E_TM and T_Mm1 and W compute env of W
+    # perform SVD and built updated W
+
+    # 0) precompute
+    As= [state.seed_site]
+    for i in range(len(state.isometries)):
+        A= As[-1].clone()
+        U= state.isometries[i]
+        #
+        #              a
+        #            |/
+        #     /--tmp_A--\
+        # l--U      /|   U--r   s^2 x (D_i)^4 x (D_i+1)^2
+        #     \x   b   y/
+        #
+        tmp_A_lr= torch.einsum('mxl,nyr,spambn->spalxbry',U,U,A)
+        #
+        #             a   u
+        #              \ /
+        #               U
+        #             |/
+        #      x--tmp_A--y
+        #            /|
+        #        b\ /
+        #          U
+        #         /
+        #        d
+        #
+        tmp_A_ud= torch.einsum('amu,bnd,spmxny->spauxbdy',U,U,A)
+        As.append(torch.einsum('skalxbry,kpauxbdy->spuldr',tmp_A_lr,tmp_A_ud).contiguous())
+    
+    E= E_TM
+    intermediate_E= [None]*len(state.isometries)
+    for i in range(len(state.isometries)-1,-1,-1):
+        U= state.isometries[i]
+        A= As[i]
+        #`1) compute env of (up) isometry
+        
+        #            |/
+        #     /--tmp_A--\
+        # l--U      /|   U--r   s^2 x (D_i)^4 x (D_i+1)^2
+        #     \x       y/
+        tmp_A_lr= torch.einsum('mxl,nyr,spambn->spalxbry',U,U,A)
+        #   
+        #                --0(p)  0(p)---------
+        #               /                   __|__
+        #   2(m-up)----|E|--3(left)  3(l)--|     |--2(a-up)
+        #   4(n-down)--|_|--5(right) 6(r)--|tmp_A|--5(b-down)
+        #               |                  |     |--4(x-left)
+        #               |                  |_____|--7(y-right)
+        #               \--1(s)               1(k) 
+        #
+        tmp_E= torch.einsum('psmlnr,pkalxbry->ksmaxnby',E,tmp_A_lr)
+        #   
+        #                           0(k)
+        #                           |
+        #                           |
+        #              --3(a-up)----|---6(b-down)--
+        #   2(m-up)--               0                --5(n-down)
+        #              --2(u-up)----A---5(d-down)--
+        #                           1
+        #                           1(s)
+        tmp_E= torch.einsum('ksmaxnby,ksuxdy->maunbd',tmp_E,A)
+        # 
+        # a--|\--m
+        # u--|/
+        tmp_E= torch.einsum('maunbd,bdn->aum',tmp_E,U).contiguous()
+        D_tmp_E= tmp_E.size()
+
+        # compute new isometry
+        U,S,Vh= torch.linalg.svd(tmp_E.view(D_tmp_E[0]*D_tmp_E[1],D_tmp_E[2]),\
+                    full_matrices=False)
+        state.isometries[i]= (U@Vh).view(D_tmp_E)
+        # new_iso.append( (U@Vh).view(D_tmp_E) )
+
+        U= state.isometries[i]
+        #
+        #              a
+        #            |/
+        #     /--tmp_A--\
+        # l--U      /|   U--r   s^2 x (D_i)^4 x (D_i+1)^2
+        #     \x   b   y/
+        #
+        tmp_A_lr= torch.einsum('mxl,nyr,spambn->spalxbry',U,U,A)
+        tmp_E= torch.einsum('psmlnr,pkalxbry->ksmaxnby',E,tmp_A_lr)
+        intermediate_E[i]= torch.einsum('psmaxnby,aum,bdn->psuxdy',tmp_E,U,U)
+        E= intermediate_E[i]
+        # NOTE: the first (i=0) environment is the environment of the seed_site itself
+    return intermediate_E
+
+def up_sweep(state, intermediate_E):
+    A= state.seed_site.clone()
+    for i in range(len(state.isometries)):
+        U= state.isometries[i]
+        E= intermediate_E[i]
+        #            |/
+        #     /--tmp_A--\
+        # l--U      /|   U--r   s^2 x (D_i)^4 x (D_i+1)^2
+        #     \x       y/
+        tmp_A_lr= torch.einsum('mxl,nyr,spambn->spalxbry',U,U,A)
+        #   
+        #                --0(p)  0(p)---------
+        #               /                   __|__
+        #   2(m-up)----|E|--3(left)  3(l)--|     |--2(a-up)
+        #   4(n-down)--|_|--5(right) 6(r)--|tmp_A|--5(b-down)
+        #               |                  |     |--4(x-left)
+        #               |                  |_____|--7(y-right)
+        #               \--1(s)               1(k) 
+        #
+        tmp_E= torch.einsum('psmlnr,pkalxbry->ksmaxnby',E,tmp_A_lr)
+        #   
+        #                           0(k)
+        #                           |
+        #                           |
+        #              --3(a-up)----|---6(b-down)--
+        #   2(m-up)--               0                --5(n-down)
+        #              --2(u-up)----A---5(d-down)--
+        #                           1
+        #                           1(s)
+        tmp_E= torch.einsum('ksmaxnby,ksuxdy->maunbd',tmp_E,A)
+        # 
+        # a--|\--m
+        # u--|/
+        tmp_E= torch.einsum('maunbd,bdn->aum',tmp_E,U).contiguous()
+        D_tmp_E= tmp_E.size()
+
+        # compute new isometry
+        U,S,Vh= torch.linalg.svd(tmp_E.view(D_tmp_E[0]*D_tmp_E[1],D_tmp_E[2]),\
+                    full_matrices=False)
+        state.isometries[i]= (U@Vh).view(D_tmp_E)
+
+        U= state.isometries[i]
+        #
+        #              a
+        #            |/
+        #     /--tmp_A--\
+        # l--U      /|   U--r   s^2 x (D_i)^4 x (D_i+1)^2
+        #     \x   b   y/
+        #
+        tmp_B_lr= torch.einsum('mxl,nyr,spambn->spalxbry',U,U,A)
+        #
+        #             a   u
+        #              \ /
+        #               U
+        #             |/
+        #      x--tmp_A--y
+        #            /|
+        #        b\ /
+        #          U
+        #         /
+        #        d
+        #
+        tmp_B_ud= torch.einsum('amu,bnd,spmxny->spauxbdy',U,U,A)
+        A= torch.einsum('skalxbry,kpauxbdy->spuldr',tmp_B_lr,tmp_B_ud).contiguous()
