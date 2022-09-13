@@ -207,12 +207,6 @@ def optimize_state(state, ctm_env_init, loss_fn_vtnr, loss_fn_grad,
         # 5) log grad metrics
         if opt_args.opt_logging:
             log_entry=dict({"id": epoch})
-            # log_entry["t_grad"]=t_grad1-t_grad0
-            # log just l2 and l\infty norm of the full grad
-            # log_entry["grad_mag"]= [p.grad.norm().item() for p in parameters]
-            # flat_grad= torch.cat(tuple(p.grad.view(-1) for p in p_isometries))
-            # log_entry["grad_mag"]= [flat_grad.norm().item(), flat_grad.norm(p=float('inf')).item()]
-            # if opt_args.opt_log_grad: log_entry["grad"]= [p.grad.tolist() for p in p_isometries]
             log.info(json.dumps(log_entry))
 
         return loss
@@ -229,8 +223,9 @@ def optimize_state(state, ctm_env_init, loss_fn_vtnr, loss_fn_grad,
         loss.backward()
         t_grad1= time.perf_counter()
         # rescale ? NOTE: specific to TTN ansatz
-        # for i,p in enumerate(parameters):
-        #     p.grad*= 1./(2**(len(parameters)-1-i))
+        import pdb; pdb.set_trace()
+        for i,p in enumerate(parameters):
+            p.grad*= 1./(2**(len(parameters)-1-i))
 
         # 6) detach current environment from autograd graph
         ctm_env.detach_()
@@ -272,7 +267,7 @@ def optimize_state(state, ctm_env_init, loss_fn_vtnr, loss_fn_grad,
                 log_entry["grad_mag"]= [flat_grad.norm().item(), flat_grad.norm(p=float('inf')).item()]
                 log_entry["grad_mags"]= [p.grad.norm().item() for p in parameters]
                 if opt_args.opt_log_grad: log_entry["grad"]= [p.grad.tolist() for p in parameters]
-            log.info(json.dumps(log_entry))        
+            log.info(json.dumps(log_entry))
 
         return loss
 
@@ -339,6 +334,18 @@ def optimize_state(state, ctm_env_init, loss_fn_vtnr, loss_fn_grad,
                     if p_isometries[i].size(0)*p_isometries[i].size(1)>p_isometries[i].size(2):
                         p_isometries[i].copy_(new_iso[i])
 
+    def step_sweep(closure_sweep):
+        closure_sweep()
+        from ctm.one_site_c4v.rdm_c4v import ddA_rdm1x1
+        E= ddA_rdm1x1(state.to_fused_ipeps_c4v(), current_env[0])
+        E= E.view([state.site().size(0),state.site().size(1)]+[state.site().size(2)]*4)
+        with torch.no_grad():
+            _tmp_Es= down_sweep(state,E)
+            _tmp_Es= _tmp_Es[1:]+[E]
+            up_sweep(state,_tmp_Es)
+            state.right_inverse_()
+
+
     for epoch in range(main_args.opt_max_iter):
         # checkpoint the optimizer
         # checkpointing before step, guarantees the correspondence between the wavefunction
@@ -346,13 +353,9 @@ def optimize_state(state, ctm_env_init, loss_fn_vtnr, loss_fn_grad,
         if epoch>0:
             store_checkpoint(checkpoint_file, state, optimizer, epoch, t_data["loss"][-1])
 
-        closure_sweep()
-        from ctm.one_site_c4v.rdm_c4v import ddA_rdm1x1
-        E= ddA_rdm1x1(state.to_fused_ipeps_c4v(), current_env[0])
-        E= E.view([state.site().size(0),state.site().size(1)]+[state.site().size(2)]*4)
-        _tmp_Es= down_sweep(state,E)
-        _tmp_Es= _tmp_Es[1:]+[E]
-        up_sweep(state,_tmp_Es)
+        if context["vtnr_state"]=="INIT" or context["vtnr_state"]=="SWEEPING": 
+            step_sweep(closure_sweep)
+            context["step_history"].append('sweep')
 
         # # 1) attempt VTNR step
         # if context["vtnr_timeout_counter"]==0: 
@@ -379,21 +382,30 @@ def optimize_state(state, ctm_env_init, loss_fn_vtnr, loss_fn_grad,
 
         # # After execution closure ``current_env`` **IS NOT** corresponding to ``state``, since
         # # the ``state`` on-site tensors have been modified by gradient. 
-        # if context["vtnr_state"]=="TIMEOUT":
-        #     optimizer.step_2c(closure, closure_linesearch)
-        #     context["step_history"].append('grad')
+        if context["vtnr_state"]=="TIMEOUT":
+            optimizer.step_2c(closure, closure_linesearch)
+            context["step_history"].append('grad')
         
-        #     # reset line search history
-        #     t_data["loss_ls"]=[]
-        #     t_data["min_loss_ls"]=1.0e+16
+            # reset line search history
+            t_data["loss_ls"]=[]
+            t_data["min_loss_ls"]=1.0e+16
 
         # if post_proc is not None:
         #     post_proc(state, current_env[0], context)
 
         # terminate condition
+
         if len(t_data["loss"])>1 and \
             abs(t_data["loss"][-1]-t_data["loss"][-2])<opt_args.tolerance_change:
-            break
+            if context["vtnr_state"]=="INIT" or context["vtnr_state"]=="SWEEPING":
+                print(context["vtnr_state"]+f" {abs(t_data['loss'][-1]-t_data['loss'][-2])}")
+                context["vtnr_state"]="TIMEOUT"
+            else:
+                break
+        elif len(t_data["loss"])>1:
+            print(context["vtnr_state"]+f" {abs(t_data['loss'][-1]-t_data['loss'][-2])}")
+            
+
 
     # optimization is over, store the last checkpoint if at least a single step was made
     if len(t_data["loss"])>0:

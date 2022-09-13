@@ -13,7 +13,7 @@ from ctm.one_site_c4v.rdm_c4v import ddA_rdm1x1
 from ctm.one_site_c4v.rdm_c4v_thermal import entropy, rdm1x1_sl, rdm2x1_sl, rdm2x2
 from ctm.one_site_c4v import transferops_c4v
 from optim.exp_ad_optim_vtnr import optimize_state
-from models import ising
+from models import j1j2
 import json
 import unittest
 import logging
@@ -42,10 +42,11 @@ def main():
     torch.manual_seed(args.seed)
 
     # 0) initialize model
-    model = ising.ISING_C4V(hx=args.hx, hz=args.hz, q=args.q)
+    model = j1j2.J1J2_C4V_BIPARTITE_THERMAL(j1=1.0, j2=0, j3=0, hz_stag= 0.0, \
+        delta_zz=1.0, beta=0.)
     assert args.q==0,"plaquette term is not supported"
-    energy_f= model.energy_1x1_nn_thermal
-    eval_obs_f= model.eval_obs_thermal
+    energy_f= model.energy_1x1
+    eval_obs_f= model.eval_obs
 
     # initialize an ipeps
     if args.instate!=None:
@@ -82,7 +83,7 @@ def main():
         # 2-layers: tower of 2**2 ipepo's & two non-equivalent isometries
         # 3-layers: tower of 2**3 ipepo's & three non-equivalent isometries
         # ...
-        A= model.ipepo_trotter_suzuki(args.beta/(2**args.layers))
+        A= None #model.ipepo_trotter_suzuki(args.beta/(2**args.layers))
         if args.ipeps_init_type=='CPEPO-SVD':
             import subprocess
             dt= args.beta/(2**args.layers)
@@ -93,6 +94,7 @@ def main():
             A= torch.from_numpy(loadmat(f"hbpepo_dt{dt:.5f}.mat")['T'])\
                 .permute(4,5,0,1,2,3).contiguous()
             import pdb; pdb.set_trace()
+            args.ipeps_init_type='SVD'
         if args.ipeps_init_type=='RANDOM':
             if args.layers>1:
                 assert len(args.layers_Ds)==args.layers,\
@@ -105,7 +107,7 @@ def main():
         if args.ipeps_init_type=='SVD':
             assert len(args.layers_Ds)==args.layers,\
                 "reduced Ds of isometries must be provided"
-            redD_iso= [A.size(0)] + args.layers_Ds
+            redD_iso= [A.size(2)] + args.layers_Ds
             isometries=[]
             B= A.clone()
             for i in range(args.layers):
@@ -307,10 +309,10 @@ def main():
     # loss0 = e0 - 1./args.beta * S0
     # loss0 = e0 - 1./args.beta * r2_0
     S0= r2_0= 0
-    e0= energy_f(state, ctm_env, args.mode, force_cpu=True)
+    e0= energy_f(state, ctm_env, force_cpu=True) #args.mode,
     log_z0= get_logz_per_site(state.site(), ctm_env.get_C(), ctm_env.get_T())
     loss0= -log_z0
-    obs_values, obs_labels = eval_obs_f(state, ctm_env, args.mode, force_cpu=True)
+    obs_values, obs_labels = eval_obs_f(state, ctm_env, force_cpu=True) #args.mode,
     print("\n\n",end="")
     print(", ".join(["beta","epoch","loss","e0","log_z0","S0","r2_0"]+obs_labels+["norm(A)"]))
     print(", ".join([f"{args.beta}",f"{-1}",f"{loss0}",f"{e0}",f"{log_z0}",f"{S0}",f"{r2_0}"]\
@@ -433,12 +435,12 @@ def main():
         else:
             epoch= len(opt_context["loss_history"]["loss"])
             loss= opt_context["loss_history"]["loss"][-1]
-        e0 = energy_f(state, ctm_env, args.mode, force_cpu=True)
+        e0 = energy_f(state, ctm_env, force_cpu=True) #args.mode, 
         log_z0= get_logz_per_site(state.site(), ctm_env.get_C(), ctm_env.get_T())
         # S0 = approx_S( state, ctm_env )
         # r2_0 = approx_renyi2(state, ctm_env, args.l2d, args.bond_dim**2)
         S0=r2_0= 0
-        obs_values, obs_labels = eval_obs_f(state,ctm_env,args.mode,force_cpu=True)
+        obs_values, obs_labels = eval_obs_f(state,ctm_env,force_cpu=True) #args.mode,
         print(f"{args.beta}, "+", ".join([f"{epoch}",f"{loss}",f"{e0}", f"{log_z0}", f"{S0}", f"{r2_0}"]\
             +[f"{v}" for v in obs_values]+[f"{state.site().norm()}"]+[f"{iso.norm()}" for iso in state.isometries]))
 
