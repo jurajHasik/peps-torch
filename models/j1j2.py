@@ -427,7 +427,7 @@ class J1J2_C4V_BIPARTITE():
         
         Build Spin-1/2 :math:`J_1-J_2-J_3` Hamiltonian
 
-        .. math:: 
+        .. math::
 
             H = J_1\sum_{<i,j>} \mathbf{S}_i.\mathbf{S}_j + J_2\sum_{<<i,j>>} \mathbf{S}_i.\mathbf{S}_j
               + J_3\sum_{<<<i,j>>>} \mathbf{S}_i.\mathbf{S}_j
@@ -437,8 +437,6 @@ class J1J2_C4V_BIPARTITE():
         pairs of sites `i,j` which are next nearest-neighbours (denoted as `<<.,.>>`), and 
         the last sum runs over pairs of sites `i,j` which are next-to-next nearest-neighbours 
         (denoted as `<<<.,.>>>`).
-
-        
         """
         # where
         # * :math:`h_p = J_1(S^x_{r}.S^x_{r+\vec{x}} 
@@ -512,6 +510,7 @@ class J1J2_C4V_BIPARTITE():
         of tensor A on every "odd" site::
 
             1x1 C4v => rotation R => BIPARTITE
+
             A A A A                  A B A B
             A A A A                  B A B A
             A A A A                  A B A B
@@ -628,7 +627,7 @@ class J1J2_C4V_BIPARTITE():
         :rtype: list[float], list[str]
         
         Computes the following observables in order
-
+        
             1. magnetization
             2. :math:`\langle S^z \rangle,\ \langle S^+ \rangle,\ \langle S^- \rangle`
             3. :math:`\langle S.S \rangle_{NN}`, (optionally) :math:`\langle S.S \rangle_{NNNN}`
@@ -636,7 +635,9 @@ class J1J2_C4V_BIPARTITE():
         where the on-site magnetization is defined as
         
         .. math::
+        
             m = \sqrt{ \langle S^z \rangle^2+\langle S^x \rangle^2+\langle S^y \rangle^2 }
+
         """
         # TODO optimize/unify ?
         # expect "list" of (observable label, value) pairs ?

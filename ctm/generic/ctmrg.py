@@ -1,4 +1,5 @@
 import time
+import copy
 import torch
 from torch.utils.checkpoint import checkpoint
 import config as cfg
@@ -172,7 +173,6 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
     else:
         raise ValueError("Invalid Projector method: "+str(ctm_args.projector_method))
 
-    # EXPERIMENTAL
     # 0) extract raw tensors as tuple
     tensors= tuple(state.sites[key] for key in state.sites.keys()) \
         + tuple(env.C[key] for key in env.C.keys()) + tuple(env.T[key] for key in env.T.keys())
