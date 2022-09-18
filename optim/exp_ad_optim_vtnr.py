@@ -223,7 +223,6 @@ def optimize_state(state, ctm_env_init, loss_fn_vtnr, loss_fn_grad,
         loss.backward()
         t_grad1= time.perf_counter()
         # rescale ? NOTE: specific to TTN ansatz
-        import pdb; pdb.set_trace()
         for i,p in enumerate(parameters):
             p.grad*= 1./(2**(len(parameters)-1-i))
 
@@ -394,18 +393,16 @@ def optimize_state(state, ctm_env_init, loss_fn_vtnr, loss_fn_grad,
         #     post_proc(state, current_env[0], context)
 
         # terminate condition
-
-        if len(t_data["loss"])>1 and \
-            abs(t_data["loss"][-1]-t_data["loss"][-2])<opt_args.tolerance_change:
-            if context["vtnr_state"]=="INIT" or context["vtnr_state"]=="SWEEPING":
-                print(context["vtnr_state"]+f" {abs(t_data['loss'][-1]-t_data['loss'][-2])}")
+        if len(t_data["loss"])<2: continue
+        if context["vtnr_state"]=="INIT" or context["vtnr_state"]=="SWEEPING":
+            if abs(t_data["loss"][-1]-t_data["loss"][-2])<opt_args.tolerance_change \
+                or t_data["loss"][-1]-t_data["loss"][-2]>0:
                 context["vtnr_state"]="TIMEOUT"
-            else:
+        elif context["vtnr_state"]=="TIMEOUT":
+            if abs(t_data["loss"][-1]-t_data["loss"][-2])<opt_args.tolerance_change:
                 break
-        elif len(t_data["loss"])>1:
-            print(context["vtnr_state"]+f" {abs(t_data['loss'][-1]-t_data['loss'][-2])}")
+        print(context["vtnr_state"]+f" {t_data['loss'][-1]-t_data['loss'][-2]}")
             
-
 
     # optimization is over, store the last checkpoint if at least a single step was made
     if len(t_data["loss"])>0:

@@ -89,11 +89,10 @@ def main():
             dt= args.beta/(2**args.layers)
             p = subprocess.Popen(f"octave GetPEPO.m {dt:.5f}", \
                 stdout=subprocess.PIPE, shell=True)
-            import pdb; pdb.set_trace()
+            p_status= p.wait()
             from scipy.io import loadmat
             A= torch.from_numpy(loadmat(f"hbpepo_dt{dt:.5f}.mat")['T'])\
                 .permute(4,5,0,1,2,3).contiguous()
-            import pdb; pdb.set_trace()
             args.ipeps_init_type='SVD'
         if args.ipeps_init_type=='RANDOM':
             if args.layers>1:
@@ -463,9 +462,9 @@ def main():
     ctm_env = ENV_C4V(args.chi, state_fused)
     init_env(state_fused, ctm_env)
     ctm_env, *ctm_log = ctmrg_c4v.run_dl(state_fused, ctm_env, conv_check=ctmrg_conv_f)
-    e0 = energy_f(state,ctm_env,args.mode,force_cpu=True)
+    e0 = energy_f(state,ctm_env,force_cpu=True) #args.mode,
     log_z0= get_logz_per_site(state.site(), ctm_env.get_C(), ctm_env.get_T())
-    obs_values, obs_labels = eval_obs_f(state, ctm_env, args.mode, force_cpu=True)
+    obs_values, obs_labels = eval_obs_f(state, ctm_env,force_cpu=True) #args.mode, 
     loss0, S0, r2_0= -log_z0, 0, 0
     print("\n\n",end="")
     print(", ".join(["beta","epoch","loss","e0","log_z0","S0","r2_0"]+obs_labels))
