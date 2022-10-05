@@ -1,11 +1,9 @@
 import os
 import context
-import torch
-import numpy as np
 import argparse
+import numpy as np
+import yast.yast as yast
 import config as cfg
-import examples.abelian.settings_full_torch as settings_full
-import examples.abelian.settings_U1_torch as settings_U1
 from ipeps.ipeps_abelian import *
 from ctm.generic_abelian.env_abelian import *
 import ctm.generic_abelian.ctmrg as ctmrg
@@ -25,16 +23,24 @@ parser.add_argument("--alpha", type=float, default=0., help="inter-ladder coupli
 parser.add_argument("--bz_stag", type=float, default=0., help="staggered magnetic field")
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
+parser.add_argument("--yast_backend", type=str, default='np', 
+    help="YAST backend", choices=['np','torch','torch_cpp'])
 args, unknown_args = parser.parse_known_args()
 
 def main():
     cfg.configure(args)
     cfg.print_config()
-    settings= settings_U1
-    # override default device specified in settings
-    settings.default_device= settings_full.default_device= cfg.global_args.device
-    # override default dtype
-    settings.default_dtype= settings_full.default_dtype= cfg.global_args.dtype
+    from yast.yast.sym import sym_U1
+    if args.yast_backend=='np':
+        from yast.yast.backend import backend_np as backend
+    elif args.yast_backend=='torch':
+        from yast.yast.backend import backend_torch as backend
+    elif args.yast_backend=='torch_cpp':
+        from yast.yast.backend import backend_torch_cpp as backend
+    settings_full= yast.make_config(backend=backend, \
+        default_device= cfg.global_args.device, default_dtype=cfg.global_args.dtype)
+    settings= yast.make_config(backend=backend, sym=sym_U1, \
+        default_device= cfg.global_args.device, default_dtype=cfg.global_args.dtype)
     settings.backend.set_num_threads(args.omp_cores)
     settings.backend.random_seed(args.seed)
 
@@ -61,7 +67,6 @@ def main():
     print(state)
 
     # 2) define convergence criterion for ctmrg
-    @torch.no_grad()
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
             history=[]

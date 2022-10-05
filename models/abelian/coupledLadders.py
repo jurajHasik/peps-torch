@@ -202,10 +202,10 @@ class COUPLEDLADDERS_NOSYM():
         for coord,site in state.sites.items():
             rdm2x1 = rdm.rdm2x1(coord,state,env).to_nonsymmetric(legs=_lss_dense,reverse=True)
             rdm1x2 = rdm.rdm1x2(coord,state,env).to_nonsymmetric(legs=_lss_dense,reverse=True)
-            SS2x1= contract(rdm2x1,self.h2,_ci).to_number()
-            SS1x2= contract(rdm1x2,self.h2,_ci).to_number()
-            obs[f"SS2x1{coord}"]= rdm._cast_to_real(SS2x1,**kwargs)
-            obs[f"SS1x2{coord}"]= rdm._cast_to_real(SS1x2,**kwargs)
+            SS2x1= contract(rdm2x1,self.h2,_ci)
+            SS1x2= contract(rdm1x2,self.h2,_ci)
+            obs[f"SS2x1{coord}"]= rdm._cast_to_real(SS2x1,**kwargs).to_number()
+            obs[f"SS1x2{coord}"]= rdm._cast_to_real(SS1x2,**kwargs).to_number()
 
         # prepare list with labels and values
         obs_labels=["avg_m"]+[f"m{coord}" for coord in state.sites.keys()]\
