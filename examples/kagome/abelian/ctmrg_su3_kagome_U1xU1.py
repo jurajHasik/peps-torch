@@ -1,10 +1,10 @@
 import os
 import context
-import torch
 import numpy as np
+import yast.yast as yast
+from yast.yast.sym import sym_U1xU1
 import argparse
 import config as cfg
-import examples.abelian.settings_U1xU1_torch as settings_U1xU1
 from ipeps.ipess_kagome_abelian import read_ipess_kagome_generic
 from linalg.custom_svd import truncated_svd_gesdd
 from models.abelian import su3_kagome
@@ -24,23 +24,30 @@ parser.add_argument("--theta", type=float, default=0., help="arctan(H/K): K -> 3
 parser.add_argument("--tiling", default="1SITE", help="tiling of the lattice")
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
+parser.add_argument("--yast_backend", type=str, default='np', 
+    help="YAST backend", choices=['np','torch','torch_cpp'])
 args, unknown_args = parser.parse_known_args()
 
 def main():
     cfg.configure(args)
     cfg.print_config()
+    from yast.yast.sym import sym_U1
+    if args.yast_backend=='np':
+        from yast.yast.backend import backend_np as backend
+    elif args.yast_backend=='torch':
+        from yast.yast.backend import backend_torch as backend
+    elif args.yast_backend=='torch_cpp':
+        from yast.yast.backend import backend_torch_cpp as backend
+    settings= yast.make_config(backend=backend, sym=sym_U1xU1, \
+        default_device= cfg.global_args.device, default_dtype=cfg.global_args.dtype)
+    settings.backend.set_num_threads(args.omp_cores)
+    settings.backend.random_seed(args.seed)
+
     param_j = np.round(np.cos(np.pi*args.phi), decimals=15)
     param_k = np.round(np.sin(np.pi*args.phi) * np.cos(np.pi*args.theta), decimals=15)
     param_h = np.round(np.sin(np.pi*args.phi) * np.sin(np.pi*args.theta), decimals=15)
     print("J = {}; K = {}; H = {}".format(param_j, param_k, param_h))
-    settings= settings_U1xU1
-    # override default device specified in settings
-    settings.default_device= cfg.global_args.device
-    # override default dtype
-    settings.default_dtype= cfg.global_args.dtype
-    torch.set_num_threads(args.omp_cores)
-    torch.manual_seed(args.seed)
-
+   
     model= su3_kagome.KAGOME_SU3_U1xU1(settings,j=param_j,k=param_k,h=param_h,global_args=cfg.global_args)
 
     # initialize an ipeps
@@ -56,7 +63,6 @@ def main():
     print(state)
 
     # 2) define convergence criterion for ctmrg
-    @torch.no_grad()
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
             history=[]

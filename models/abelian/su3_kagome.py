@@ -124,41 +124,41 @@ class KAGOME_SU3_U1xU1():
         chirality = 1j * (self.perm3_l - self.perm3_r)
         obs = dict()
         with torch.no_grad():
-            norm = rdm_kagome.trace1x1_dn_kagome((0,0), state, env, self.id3).to_number()
-            norm = _cast_to_real(norm, **kwargs)
+            norm = rdm_kagome.trace1x1_dn_kagome((0,0), state, env, self.id3)
+            norm = _cast_to_real(norm, **kwargs).to_number()
             obs["chirality_dn"] = rdm_kagome.trace1x1_dn_kagome((0,0), state, env,\
-                chirality).to_number() / norm
-            obs["chirality_dn"] = _cast_to_real(obs["chirality_dn"], **kwargs)
+                chirality) / norm
+            obs["chirality_dn"] = _cast_to_real(obs["chirality_dn"], **kwargs).to_number()
             # obs["avg_bonds_dn"] = rdm_kagome.trace1x1_dn_kagome((0,0), state, env,\
             #     self.perm2_tri).to_number() / norm
             # obs["avg_bonds_dn"] = _cast_to_real(obs["avg_bonds_dn"]) / 3.0
             obs["P01_dn"] = rdm_kagome.trace1x1_dn_kagome((0,0), state, env,\
-                self.perm2xI).to_number() / norm
-            obs["P01_dn"] = _cast_to_real(obs["P01_dn"], **kwargs)
+                self.perm2xI) / norm
+            obs["P01_dn"] = _cast_to_real(obs["P01_dn"], **kwargs).to_number()
             obs["P12_dn"] = rdm_kagome.trace1x1_dn_kagome((0,0), state, env,\
-                self.perm2xI.transpose(axes=(2,0,1,5,3,4))).to_number() / norm
-            obs["P12_dn"] = _cast_to_real(obs["P12_dn"], **kwargs)
+                self.perm2xI.transpose(axes=(2,0,1,5,3,4))) / norm
+            obs["P12_dn"] = _cast_to_real(obs["P12_dn"], **kwargs).to_number()
             obs["P20_dn"] = rdm_kagome.trace1x1_dn_kagome((0,0), state, env,\
-                self.perm2xI.transpose(axes=(0,2,1,3,5,4))).to_number() / norm
-            obs["P20_dn"] = _cast_to_real(obs["P20_dn"], **kwargs)
+                self.perm2xI.transpose(axes=(0,2,1,3,5,4))) / norm
+            obs["P20_dn"] = _cast_to_real(obs["P20_dn"], **kwargs).to_number()
 
             rdm2x2_ring = rdm_kagome.rdm2x2_up_triangle_open((0,0), state, env,\
                 force_cpu=force_cpu, **kwargs)
             obs["chirality_up"] = yast.tensordot(rdm2x2_ring, chirality,\
-                ([0,1,2,3,4,5], [3,4,5,0,1,2])).to_number()
-            obs["chirality_up"] = _cast_to_real(obs["chirality_up"], **kwargs)
+                ([0,1,2,3,4,5], [3,4,5,0,1,2]))
+            obs["chirality_up"] = _cast_to_real(obs["chirality_up"], **kwargs).to_number()
             # obs["avg_bonds_up"] = yast.tensordot(rdm2x2_ring, self.perm2_tri,\
             #     ([0,1,2,3,4,5], [3,4,5,0,1,2])).to_number()
             # obs["avg_bonds_up"] = _cast_to_real(obs["avg_bonds_up"]) / 3.0
             obs["P01_up"] = yast.tensordot(rdm2x2_ring, self.perm2xI,\
-                ([0,1,2,3,4,5], [3,4,5,0,1,2])).to_number()
-            obs["P01_up"] = _cast_to_real(obs["P01_up"], **kwargs)
+                ([0,1,2,3,4,5], [3,4,5,0,1,2]))
+            obs["P01_up"] = _cast_to_real(obs["P01_up"], **kwargs).to_number()
             obs["P12_up"] = yast.tensordot(rdm2x2_ring, self.perm2xI.transpose(axes=(2,0,1,5,3,4)),\
-                ([0,1,2,3,4,5], [3,4,5,0,1,2])).to_number()
-            obs["P12_up"] = _cast_to_real(obs["P12_up"], **kwargs)
+                ([0,1,2,3,4,5], [3,4,5,0,1,2]))
+            obs["P12_up"] = _cast_to_real(obs["P12_up"], **kwargs).to_number()
             obs["P20_up"] = yast.tensordot(rdm2x2_ring, self.perm2xI.transpose(axes=(0,2,1,3,5,4)),\
-                ([0,1,2,3,4,5], [3,4,5,0,1,2])).to_number()
-            obs["P20_up"] = _cast_to_real(obs["P20_up"], **kwargs)
+                ([0,1,2,3,4,5], [3,4,5,0,1,2]))
+            obs["P20_up"] = _cast_to_real(obs["P20_up"], **kwargs).to_number()
 
             obs.update(self.eval_generators(state, env, force_cpu=force_cpu, **kwargs))
 
@@ -239,8 +239,8 @@ class KAGOME_SU3_U1xU1():
         """
         norm = rdm_kagome.trace1x1_dn_kagome((0,0), state, env, self.id3).to_number()
         energy_dn = rdm_kagome.trace1x1_dn_kagome((0,0), state, env, \
-            self.h_tri).to_number() / norm
-        energy_dn = _cast_to_real(energy_dn, **kwargs)
+            self.h_tri) / norm
+        energy_dn = _cast_to_real(energy_dn, **kwargs).to_number()
         return energy_dn
 
     def energy_triangles_2x2subsystem(self, state, env, force_cpu=False, **kwargs):
@@ -262,14 +262,12 @@ class KAGOME_SU3_U1xU1():
         # intra-cell (down)
         energy_dn,_ = rdm_kagome.rdm2x2_dn_triangle_with_operator(\
             (0, 0), state, env, self.h_tri, force_cpu=force_cpu, **kwargs)
-        energy_dn= energy_dn.to_number()
-        energy_dn= _cast_to_real(energy_dn, **kwargs)
+        energy_dn= _cast_to_real(energy_dn, **kwargs).to_number()
         # inter-cell (up)
         rdm2x2_up = rdm_kagome.rdm2x2_up_triangle_open(\
             (0,0), state, env, force_cpu=force_cpu, sym_pos_def=False, **kwargs)
         energy_up= yast.tensordot(rdm2x2_up, self.h_tri,([0,1,2,3,4,5],[3,4,5,0,1,2]))
-        energy_up= energy_up.to_number()
-        energy_up= _cast_to_real(energy_up, **kwargs)
+        energy_up= _cast_to_real(energy_up, **kwargs).to_number()
         return energy_dn, energy_up
 
     def energy_per_site_2x2subsystem(self,state,env,force_cpu=False, **kwargs):
