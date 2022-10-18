@@ -9,8 +9,31 @@ import itertools
 import numpy as np
 
 
-class HB():
-    def __init__(self, phys_dim=3, j1_x=1.0, j1_y=1.0, k1_x=0.0, k1_y=0.0, global_args=cfg.global_args):
+class COUPLEDCHAINS():
+    def __init__(self, phys_dim=3, j1_x=1.0, j1_y=1.0, k1_x=0.0, k1_y=0.0, 
+            global_args=cfg.global_args):
+        r"""
+        :param phys_dim: dimension of physical spin, i.e., 3 for spin-1
+        :param j1_x: strength of nearest-neighbour spin-spin interaction along x-axis
+        :param j1_y: strength of nearest-neighbour spin-spin interaction along y-axis
+        :param k1_x: strength of nearest-neighbour biquadratic interaction along x-axis
+        :param k1_y: strength of nearest-neighbour biquadratic interaction along x-axis
+        :param global_args: global configuration
+        :type phys_dim: int
+        :type j1_x: float
+        :type j1_y: float
+        :type k1_x: float
+        :type k1_y: float
+        :type global_args: GLOBALARGS
+
+        Build Spin-S bilinear-biquadratic :math:`J-K` Hamiltonian on square lattice
+
+        .. math:: H =  &\sum_{i,j} \bigg[J_x\boldsymbol{S}_{i,j} \cdot \boldsymbol{S}_{i+1,j} 
+            + K_x (\boldsymbol{S}_{i,j} \cdot \boldsymbol{S}_{i+1,j})^2\bigg] \notag\\ & 
+            + \sum_{i, j} \bigg[J_y\boldsymbol{S}_{i, j} \cdot \boldsymbol{S}_{i, j+1} 
+            + K_y (\boldsymbol{S}_{i, j} \cdot \boldsymbol{S}_{i,j+1})^2\bigg].
+
+        """
         self.dtype = global_args.torch_dtype
         self.device = global_args.device
         self.phys_dim = phys_dim
@@ -21,7 +44,8 @@ class HB():
         self.obs_ops = self.get_obs_ops()
         self.h2_x, self.h2_y, self.hp_h, self.hp_v, self.hp = self.get_h()
         self.Q = self.get_Q()
-        self.flip = torch.tensor([[1., -1., 1.], [-1., 1., -1.], [1., -1., 1.]], dtype=self.dtype, device=self.device)
+        self.flip = torch.tensor([[1., -1., 1.], [-1., 1., -1.], [1., -1., 1.]], \
+            dtype=self.dtype, device=self.device)
 
     def get_obs_ops(self):
         obs_ops = dict()
@@ -66,6 +90,52 @@ class HB():
         return h2_x, h2_y, hp_h, hp_v, hp
 
     def energy_2x1_1x2(self, state, env):
+        r"""
+        :param state: wavefunction
+        :param env: CTM environment
+        :type state: IPEPS
+        :type env: ENV
+        :return: energy per site
+        :rtype: float
+
+        We assume iPEPS with 2x1 unit cell containing two tensors A, B. We can
+        tile the square lattice in two ways::
+
+            BIPARTITE           STRIPE   
+
+            A B A B             A B A B
+            B A B A             A B A B
+            A B A B             A B A B
+            B A B A             A B A B
+
+        Taking reduced density matrix :math:`\rho_{2x2}` of 2x2 cluster with indexing 
+        of sites as follows :math:`\rho_{2x2}(s_0,s_1,s_2,s_3;s'_0,s'_1,s'_2,s'_3)`::
+        
+            s0--s1
+            |   |
+            s2--s3
+
+        and without assuming any symmetry on the indices of individual tensors following
+        set of terms has to be evaluated in order to compute energy-per-site::
+                
+               0           
+            1--A--3
+               2
+            
+            Ex.1 unit cell A B, with BIPARTITE tiling
+
+                A3--1B, B3--1A, A, B, A3  , B3  ,   1A,   1B
+                                2  0   \     \      /     / 
+                                0  2    \     \    /     /  
+                                B  A    1A    1B  A3    B3  
+            
+            Ex.2 unit cell A B, with STRIPE tiling
+
+                A3--1A, B3--1B, A, B, A3  , B3  ,   1A,   1B
+                                2  0   \     \      /     / 
+                                0  2    \     \    /     /  
+                                A  B    1B    1A  B3    A3  
+        """
         energy = 0.
         for coord, site in state.sites.items():
             rdm2x1 = rdm.rdm2x1(coord, state, env)
@@ -77,7 +147,39 @@ class HB():
         return energy_per_site
 
     def energy_2x2_4site(self, state, env):
+        r"""
+        :param state: wavefunction
+        :param env: CTM environment
+        :type state: IPEPS
+        :type env: ENV
+        :return: energy per site
+        :rtype: float
 
+        We assume iPEPS with 2x2 unit cell containing four tensors A, B, C, and D with
+        simple PBC tiling::
+
+            A B A B
+            C D C D
+            A B A B
+            C D C D
+    
+        Taking the reduced density matrix :math:`\rho_{2x2}` of 2x2 cluster given by 
+        :py:func:`ctm.generic.rdm.rdm2x2` with indexing of sites as follows 
+        :math:`\rho_{2x2}(s_0,s_1,s_2,s_3;s'_0,s'_1,s'_2,s'_3)`::
+        
+            s0--s1
+            |   |
+            s2--s3
+
+        and without assuming any symmetry on the indices of the individual tensors a set
+        of four :math:`\rho_{2x2}`'s are needed over which :math:`h2` operators 
+        for the nearest and next-neaerest neighbour pairs are evaluated::  
+
+            A3--1B   B3--1A   C3--1D   D3--1C
+            2    2   2    2   2    2   2    2
+            0    0   0    0   0    0   0    0
+            C3--1D & D3--1C & A3--1B & B3--1A
+        """
         rdm2x2_00 = rdm.rdm2x2((0, 0), state, env)
         rdm2x2_10 = rdm.rdm2x2((1, 0), state, env)
         rdm2x2_01 = rdm.rdm2x2((0, 1), state, env)
@@ -91,13 +193,29 @@ class HB():
         return energy_per_site
 
     def eval_obs(self, state, env):
+        r"""
+        :param state: wavefunction
+        :param env: CTM environment
+        :type state: IPEPS
+        :type env: ENV
+        :return:  expectation values of observables, labels of observables
+        :rtype: list[float], list[str]
 
-        obs = dict({"avg_m": 0., "avg_II_Q": 0., "avg_III_Q": 0.,
-                    "avg_anti_s_vector": np.zeros(3),
-                    "avg_s_vector": np.zeros(3)})
+        Computes the following observables in order
+
+            1. average on-site magnetization over the unit cell
+            2. average 2nd and 3rd moment of quadrupole matrix (see :meth:`get_Q`)
+            3. nearest-neighbour spin-spin and biquadratic correlations
+            4. dimer order parameter (see :meth:`eval_dimer_operator`)
+
+        where the on-site magnetization is defined as
+
+        .. math::
+            m = \sqrt{ \langle S^z \rangle^2+\langle S^x \rangle^2+\langle S^y \rangle^2 }.
+        """
+        obs = dict({"avg_m": 0., "avg_II_Q": 0., "avg_III_Q": 0.})
         with torch.no_grad():
             # one-site observables
-            sign = 1
             for coord, site in state.sites.items():
                 rdm1x1 = rdm.rdm1x1(coord, state, env)
                 for label in ["sz", "sp", "sm"]:
@@ -112,11 +230,7 @@ class HB():
                 obs["avg_II_Q"] += obs[f"avg_II_Q{coord}"]
                 obs["avg_III_Q"] += obs[f"avg_III_Q{coord}"]
 
-            s_vector = obs["avg_s_vector"] / len(state.sites.keys())
-            obs["avg_m"] = sqrt(abs(s_vector[0] ** 2 + s_vector[1] * s_vector[2]))
-            s_vector = obs["avg_anti_s_vector"] / len(state.sites.keys())
-            obs["anti_fm"] = sqrt(abs(s_vector[0] ** 2 + s_vector[1] * s_vector[2]))
-
+            obs["avg_m"] = obs["avg_m"] / len(state.sites.keys())
             obs["avg_II_Q"] = obs["avg_II_Q"] / len(state.sites.keys())
             obs["avg_III_Q"] = obs["avg_III_Q"] / len(state.sites.keys())
 
@@ -164,6 +278,24 @@ class HB():
         return obs
 
     def eval_dimer_operator(self, state, env, direction=(1,0)):
+        r"""
+        :param state: wavefunction
+        :param env: CTM environment
+        :param direction: unit vector specifying direction as either 
+            horizontal ``(1,0)`` or vertical ``(0,1)``
+        :type state: IPEPS
+        :type env: ENV
+        :type direction: tuple(int)
+        :return:  expectation value of dimer order parameter in ``direction``
+        :rtype: float
+
+        The dimer order parameter in horizontal direction is defined as
+
+        .. math::
+            D = |\vec{S}_{i,j}\cdot\vec{S}_{i+1,j} - \vec{S}_{i+1,j}\cdot\vec{S}_{i+2,j}|.
+
+        For vertical direction the definition is analogous.
+        """
         assert direction==(1,0) or direction==(0,1),"Invalid direction"
         ss = []
         with torch.no_grad():
@@ -179,11 +311,21 @@ class HB():
         return dimer_op
 
     def get_Q(self):
-        """
-        Q Matrix is following
-                Q  iQ  Q
-                iQ -Q iQ
-                Q  iQ  Q
+        r"""
+        :return: quadrupole matrix
+        :rtype: torch.Tensor
+
+        Quadrupole matrix is 3x3 matrix of spin operators defined as
+
+        .. math:: Q^{\alpha\beta} = S^{\alpha} S^{\beta} + S^{\beta} S^{\alpha}
+            − \frac{2}{3}S(S + 1)\delta^{\alpha\beta}
+        
+        To work with real-valued entries only, we introduce extra imaginary units
+        as follows::
+
+            Q  iQ  Q
+            iQ -Q iQ
+            Q  iQ  Q
         """
         Q = []
         spin_s = (self.phys_dim - 1) / 2
@@ -203,15 +345,40 @@ class HB():
         return Q
 
     def eval_corrf(self, coord, direction, state, env, dist):
+        r"""
+        :param coord: reference site
+        :type coord: tuple(int,int)
+        :param direction: 
+        :type direction: tuple(int,int)
+        :param state: wavefunction
+        :param env: CTM environment
+        :type state: IPEPS
+        :type env: ENV
+        :param dist: maximal distance of correlator
+        :type dist: int
+        :return: dictionary with full and spin-resolved spin-spin correlation functions,
+            biquadratic correlation function, and quadrupole-quadrupole correlations
+        :rtype: dict(str: torch.Tensor)
+        
+        Evaluate spin-spin correlation functions :math:`\langle\mathbf{S}(r).\mathbf{S}(0)\rangle` 
+        up to r = ``dist`` in given direction. Similarly for correlations 
+        :math:`\langle\mathbf{S}^2(r).\mathbf{S}^2(0)\rangle` 
+        and :math:`\langle\mathbf{Q}(r).\mathbf{Q}(0)\rangle`.
+
+        The quadrupole vector is defined as 
+
+        .. math:: \mathbf{Q}=\bigg[ (S^x)^2 − (S^y)^2, 
+            \frac{1}{\sqrt{3}}[2(S^z)^2 − S(S + 1))], S^xS^y + S^yS^x, \\
+            S^yS^z + S^zS^y, S^zS^x + S^xS^z \bigg].
+
+        See :meth:`ctm.generic.corrf.corrf_1sO1sO`.
+        """
+
         # function allowing for additional site-dependent conjugation of op
         def conjugate_op(op):
-            # rot_op= su2.get_rot_op(self.phys_dim, dtype=self.dtype, device=self.device)
-            rot_op = torch.eye(self.phys_dim, dtype=self.dtype, device=self.device)
             op_0 = op
-            op_rot = torch.einsum('ki,kl,lj->ij', rot_op, op_0, rot_op)
 
             def _gen_op(r):
-                # return op_rot if r%2==0 else op_0
                 return op_0
 
             return _gen_op
@@ -219,6 +386,8 @@ class HB():
         op_sz = self.obs_ops["sz"]
         op_sx = self.obs_ops["sx"]
         op_isy = self.obs_ops["isy"]
+
+        # spin-spin correlation functions
         Sz0szR = corrf.corrf_1sO1sO(coord, direction, state, env, op_sz,
                                     conjugate_op(op_sz), dist)
         Sx0sxR = corrf.corrf_1sO1sO(coord, direction, state, env, op_sx,
@@ -237,6 +406,7 @@ class HB():
         op_isxsy = op_sx @ op_isy
         op_isysx = op_isy @ op_sx
 
+        # S^{\alpha}_0 S^{\beta}_0 S^{\gamma}_r S^{\delta}_r 
         Szz0SzzR = corrf.corrf_1sO1sO(coord, direction, state, env, op_szsz, conjugate_op(op_szsz), dist)
         Sxx0SxxR = corrf.corrf_1sO1sO(coord, direction, state, env, op_sxsx, conjugate_op(op_sxsx), dist)
         Syy0SyyR = corrf.corrf_1sO1sO(coord, direction, state, env, op_nsysy, conjugate_op(op_nsysy), dist)
@@ -256,6 +426,27 @@ class HB():
         return res
 
     def eval_corrf_DD_H(self, coord, direction, state, env, dist):
+        r"""
+        :param coord: reference site
+        :type coord: tuple(int,int)
+        :param direction: 
+        :type direction: tuple(int,int)
+        :param state: wavefunction
+        :param env: CTM environment
+        :type state: IPEPS
+        :type env: ENV
+        :param dist: maximal distance of correlator
+        :type dist: int
+        :return: dictionary with horizontal dimer-dimer correlation function
+        :rtype: dict(str: torch.Tensor)
+        
+        Evaluate horizontal dimer-dimer correlation functions 
+
+        .. math::
+            \langle(\mathbf{S}(r+3).\mathbf{S}(r+2))(\mathbf{S}(1).\mathbf{S}(0))\rangle 
+
+        up to r = ``dist`` .
+        """
         
         # build dimer operator
         op_sz = self.obs_ops["sz"]

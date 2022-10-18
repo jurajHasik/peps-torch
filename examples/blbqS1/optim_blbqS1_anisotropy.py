@@ -39,7 +39,8 @@ def main():
     torch.set_num_threads(args.omp_cores)
     torch.manual_seed(args.seed)
 
-    model = hb_anisotropy.HB(j1_x=args.j1_x, j1_y=args.j1_y, k1_x=args.k1_x, k1_y=args.k1_y)
+    model = hb_anisotropy.COUPLEDCHAINS(j1_x=args.j1_x, j1_y=args.j1_y, \
+        k1_x=args.k1_x, k1_y=args.k1_y)
 
     # initialize an ipeps
     # 1) define lattice-tiling function, that maps arbitrary vertex of square lattice
@@ -52,22 +53,10 @@ def main():
     elif args.tiling == "2SITE":
         def lattice_to_site(coord):
             vx = (coord[0] + abs(coord[0]) * 2) % 2
-            # vy = (coord[1] + abs(coord[1]) * 1) % 1
             return (vx, 0)
-    # elif args.tiling == "4SITE":
-    #     def lattice_to_site(coord):
-    #         vx = (coord[0] + abs(coord[0]) * 2) % 2
-    #         vy = (coord[1] + abs(coord[1]) * 2) % 2
-    #         return (vx, vy)
-    # elif args.tiling == "8SITE":
-    #     def lattice_to_site(coord):
-    #         shift_x = coord[0] + 2 * (coord[1] // 2)
-    #         vx = shift_x % 4
-    #         vy = coord[1] % 2
-    #         return (vx, vy)
     else:
         raise ValueError("Invalid tiling: " + str(args.tiling) + " Supported options: " \
-                         + "BIPARTITE, 2SITE, 4SITE")
+                         + "BIPARTITE, 2SITE")
 
     if args.instate != None:
         state = read_ipeps(args.instate, vertexToSite=lattice_to_site)
@@ -78,18 +67,10 @@ def main():
     elif args.opt_resume is not None:
         if args.tiling == "BIPARTITE" or args.tiling == "2SITE":
             state = IPEPS(dict(), lX=2, lY=1)
-        # elif args.tiling == "4SITE":
-        #     state = IPEPS(dict(), lX=2, lY=2)
-        # elif args.tiling == "8SITE":
-        #     state = IPEPS(dict(), lX=4, lY=2)
         state.load_checkpoint(args.opt_resume)
     elif args.ipeps_init_type == 'RANDOM':
         bond_dim = args.bond_dim
 
-        # A = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim), \
-        #                dtype=cfg.global_args.dtype, device=cfg.global_args.device)
-        # B = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim), \
-        #                dtype=cfg.global_args.dtype, device=cfg.global_args.device)
         A = torch.zeros((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim), \
                         dtype=model.dtype, device=cfg.global_args.device)
         A[:, 0, :, 0, :] = torch.rand_like(A[:, 0, :, 0, :], dtype=A.dtype, device=A.device)
@@ -104,27 +85,6 @@ def main():
         A = A / torch.max(torch.abs(A))
         B = B / torch.max(torch.abs(B))
         sites = {(0, 0): A, (1, 0): B}
-        # if args.tiling == "4SITE" or args.tiling == "8SITE":
-        #     C = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim), \
-        #                    dtype=cfg.global_args.dtype, device=cfg.global_args.device)
-        #     D = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim), \
-        #                    dtype=cfg.global_args.dtype, device=cfg.global_args.device)
-        #     sites[(0, 1)] = C / torch.max(torch.abs(C))
-        #     sites[(1, 1)] = D / torch.max(torch.abs(D))
-
-        # if args.tiling == "8SITE":
-        #     E = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim), \
-        #                    dtype=cfg.global_args.dtype, device=cfg.global_args.device)
-        #     F = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim), \
-        #                    dtype=cfg.global_args.dtype, device=cfg.global_args.device)
-        #     G = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim), \
-        #                    dtype=cfg.global_args.dtype, device=cfg.global_args.device)
-        #     H = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim), \
-        #                    dtype=cfg.global_args.dtype, device=cfg.global_args.device)
-        #     sites[(2, 0)] = E / torch.max(torch.abs(E))
-        #     sites[(3, 0)] = F / torch.max(torch.abs(F))
-        #     sites[(2, 1)] = G / torch.max(torch.abs(G))
-        #     sites[(3, 1)] = H / torch.max(torch.abs(H))
         state = IPEPS(sites, vertexToSite=lattice_to_site)
     else:
         raise ValueError("Missing trial state: -instate=None and -ipeps_init_type= " \
@@ -134,14 +94,11 @@ def main():
     # 2) select the "energy" function
     if args.tiling == "BIPARTITE" or args.tiling == "2SITE":
         energy_f = model.energy_2x1_1x2
-    # elif args.tiling == "4SITE":
-    #     energy_f = model.energy_2x2_4site
-    # elif args.tiling == "8SITE":
-    #     energy_f = model.energy_2x2_8site
     else:
         raise ValueError("Invalid tiling: " + str(args.tiling) + " Supported options: " \
-                         + "BIPARTITE, 2SITE, 4SITE, 8SITE")
+                         + "BIPARTITE, 2SITE")
 
+    # 3) define CTM convergence criterion
     @torch.no_grad()
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
@@ -158,12 +115,14 @@ def main():
     ctm_env = ENV(args.chi, state)
     init_env(state, ctm_env)
 
+    # 4) compute initial observables from converged CTM
     ctm_env, *ctm_log = ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
     loss0 = energy_f(state, ctm_env)
     obs_values, obs_labels = model.eval_obs(state, ctm_env)
     print(", ".join(["epoch", "energy"] + obs_labels))
     print(", ".join([f"{-1}", f"{loss0}"] + [f"{v}" for v in obs_values]))
 
+    # 5) define loss function
     def loss_fn(state, ctm_env_in, opt_context):
         ctm_args = opt_context["ctm_args"]
         opt_args = opt_context["opt_args"]
@@ -174,13 +133,14 @@ def main():
 
         # 1) compute environment by CTMRG
         ctm_env_out, *ctm_log = ctmrg.run(state, ctm_env_in, \
-                                          conv_check=ctmrg_conv_energy, ctm_args=ctm_args)
+            conv_check=ctmrg_conv_energy, ctm_args=ctm_args)
 
         # 2) evaluate loss with the converged environment
         loss = energy_f(state, ctm_env_out)
 
         return (loss, ctm_env_out, *ctm_log)
 
+    # 6) define function reporting optimization progress, i.e. computing observables
     @torch.no_grad()
     def obs_fn(state, ctm_env, opt_context):
         if ("line_search" in opt_context.keys() and not opt_context["line_search"]) \

@@ -40,7 +40,8 @@ def main():
     torch.set_num_threads(args.omp_cores)
     torch.manual_seed(args.seed)
 
-    model = hb_anisotropy.HB(j1_x=args.j1_x, j1_y=args.j1_y, k1_x=args.k1_x, k1_y=args.k1_y)
+    model = hb_anisotropy.COUPLEDCHAINS(j1_x=args.j1_x, j1_y=args.j1_y, \
+        k1_x=args.k1_x, k1_y=args.k1_y)
 
     # initialize an ipeps
     # 1) define lattice-tiling function, that maps arbitrary vertex of square lattice
@@ -53,24 +54,12 @@ def main():
     elif args.tiling == "2SITE":
         def lattice_to_site(coord):
             vx = (coord[0] + abs(coord[0]) * 2) % 2
-            # vy = (coord[1] + abs(coord[1]) * 1) % 1
             return (vx, 0)
-    # elif args.tiling == "4SITE":
-    #     def lattice_to_site(coord):
-    #         vx = (coord[0] + abs(coord[0]) * 2) % 2
-    #         vy = (coord[1] + abs(coord[1]) * 2) % 2
-    #         return (vx, vy)
-    # elif args.tiling == "8SITE":
-    #     def lattice_to_site(coord):
-    #         shift_x = coord[0] + 2 * (coord[1] // 2)
-    #         vx = shift_x % 4
-    #         vy = coord[1] % 2
-    #         return (vx, vy)
     else:
         raise ValueError("Invalid tiling: " + str(args.tiling) + " Supported options: " \
-                         + "BIPARTITE, 2SITE, 4SITE, 8SITE")
+                         + "BIPARTITE, 2SITE")
 
-    # initialize an ipeps
+    # 2) initialize an ipeps
     if args.instate != None:
         state = read_ipeps(args.instate, vertexToSite=lattice_to_site)
         if args.bond_dim > max(state.get_aux_bond_dims()):
@@ -81,38 +70,15 @@ def main():
         bond_dim = args.bond_dim
 
         A = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim), \
-                       dtype=cfg.global_args.dtype, device=cfg.global_args.device)
+                       dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
         B = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim), \
-                       dtype=cfg.global_args.dtype, device=cfg.global_args.device)
+                       dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
 
         # normalization of initial random tensors
         A = A / torch.max(torch.abs(A))
         B = B / torch.max(torch.abs(B))
 
         sites = {(0, 0): A, (1, 0): B}
-
-        # if args.tiling == "4SITE":
-        #     C = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim), \
-        #                    dtype=cfg.global_args.dtype, device=cfg.global_args.device)
-        #     D = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim), \
-        #                    dtype=cfg.global_args.dtype, device=cfg.global_args.device)
-        #     sites[(0, 1)] = C / torch.max(torch.abs(C))
-        #     sites[(1, 1)] = D / torch.max(torch.abs(D))
-        #
-        # if args.tiling == "8SITE":
-        #     E = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim), \
-        #                    dtype=cfg.global_args.dtype, device=cfg.global_args.device)
-        #     F = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim), \
-        #                    dtype=cfg.global_args.dtype, device=cfg.global_args.device)
-        #     G = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim), \
-        #                    dtype=cfg.global_args.dtype, device=cfg.global_args.device)
-        #     H = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim), \
-        #                    dtype=cfg.global_args.dtype, device=cfg.global_args.device)
-        #     sites[(2, 0)] = E / torch.max(torch.abs(E))
-        #     sites[(3, 0)] = F / torch.max(torch.abs(F))
-        #     sites[(2, 1)] = G / torch.max(torch.abs(G))
-        #     sites[(3, 1)] = H / torch.max(torch.abs(H))
-
         state = IPEPS(sites, vertexToSite=lattice_to_site)
     else:
         raise ValueError("Missing trial state: -instate=None and -ipeps_init_type= " \
@@ -120,17 +86,14 @@ def main():
 
     print(state)
 
-    # 2) select the "energy" function
+    # 3) select the "energy" function
     if args.tiling == "BIPARTITE" or args.tiling == "2SITE":
         energy_f = model.energy_2x1_1x2
-    # elif args.tiling == "4SITE":
-    #     energy_f = model.energy_2x2_4site
-    # elif args.tiling == "8SITE":
-    #     energy_f = model.energy_2x2_8site
     else:
         raise ValueError("Invalid tiling: " + str(args.tiling) + " Supported options: " \
                          + "BIPARTITE, 2SITE")
 
+    # 4) define convergence criterion
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         with torch.no_grad():
             if not history:
@@ -148,35 +111,29 @@ def main():
     init_env(state, ctm_env_init)
     print(ctm_env_init)
 
+    # 5.1) compute observables from initial environment
     e_curr0 = energy_f(state, ctm_env_init)
     obs_values0, obs_labels = model.eval_obs(state, ctm_env_init)
 
+    # 5.2) run CTMRG
     print(", ".join(["epoch", "energy"] + obs_labels))
     print(", ".join([f"{-1}", f"{e_curr0}"] + [f"{v}" for v in obs_values0]))
-
     ctm_env_init, *ctm_log = ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
 
 
-    # corrSS = model.eval_corrf_SS((0, 0), (1, 0), state, ctm_env_init, args.corrf_r)
-    # print("\n\nSS[(0,0),(1,0)] r " + " ".join([label for label in corrSS.keys()]))
-    # for i in range(args.corrf_r):
-    #     print(f"{i} " + " ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
+    # compute horizontal and vertical two-point correlations
+    corrSS = model.eval_corrf((0, 0), (1, 0), state, ctm_env_init, args.corrf_r)
+    print("\n\nSS[(0,0),(1,0)] r " + " ".join([label for label in corrSS.keys()]))
+    for i in range(args.corrf_r):
+        print(f"{i} " + " ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
 
-    # corrSS = model.eval_corrf_SS((0, 0), (0, 1), state, ctm_env_init, args.corrf_r)
-    # print("\n\nSS[(0,0),(0,1)] r " + " ".join([label for label in corrSS.keys()]))
-    # for i in range(args.corrf_r):
-    #     print(f"{i} " + " ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
+    corrSS = model.eval_corrf((0, 0), (0, 1), state, ctm_env_init, args.corrf_r)
+    print("\n\nSS[(0,0),(0,1)] r " + " ".join([label for label in corrSS.keys()]))
+    for i in range(args.corrf_r):
+        print(f"{i} " + " ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
 
-    # corrSSSS = model.eval_corrf_SSSS((0, 0), (1, 0), state, ctm_env_init, args.corrf_r)
-    # print("\n\nSSSS[(0,0),(1,0)] r " + " ".join([label for label in corrSSSS.keys()]))
-    # for i in range(args.corrf_r):
-    #     print(f"{i} " + " ".join([f"{corrSSSS[label][i]}" for label in corrSSSS.keys()]))
 
-    # corrSSSS = model.eval_corrf_SSSS((0, 0), (0, 1), state, ctm_env_init, args.corrf_r)
-    # print("\n\nSSSS[(0,0),(0,1)] r " + " ".join([label for label in corrSSSS.keys()]))
-    # for i in range(args.corrf_r):
-    #     print(f"{i} " + " ".join([f"{corrSSSS[label][i]}" for label in corrSSSS.keys()]))
-
+    # compute horizontal dimer-dimer correlations
     corrDD_H= model.eval_corrf_DD_H((0,0), (1,0), state, ctm_env_init,\
         args.corrf_r)
     print("\n\nDD_H[(0,0),(1,0)] r " + " ".join([label for label in corrDD_H.keys()]))
@@ -205,6 +162,3 @@ if __name__ == '__main__':
         print("args not recognized: " + str(unknown_args))
         raise Exception("Unknown command line arguments")
     main()
-
-exp(-r/xi) = (l1/l0)^(r/2)
-xi = -2/[*log(l1)]
