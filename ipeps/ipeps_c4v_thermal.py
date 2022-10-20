@@ -894,9 +894,9 @@ class IPEPS_C4V_THERMAL_TTN_V2(IPEPS_C4V_THERMAL):
             }
         return checkpoint
 
-    def load_checkpoint(self, checkpoint_file):
+    def load_checkpoint_(self, checkpoint_file):
         import geotorch
-        checkpoint= torch.load(checkpoint_file)
+        checkpoint= torch.load(checkpoint_file,map_location=self.device)
         params= checkpoint["parameters"]
         self.seed_site= params["seed_site"]
         if "isometries" in params.keys():
@@ -921,6 +921,37 @@ class IPEPS_C4V_THERMAL_TTN_V2(IPEPS_C4V_THERMAL):
         else:
             warnings.warn("Missing generators - keeping zero tensors", Warning)
         self.update_()
+
+    @staticmethod
+    def load_checkpoint(checkpoint_file, metadata=None, peps_args=cfg.peps_args, 
+            global_args=cfg.global_args):
+        import geotorch
+        checkpoint= torch.load(checkpoint_file,map_location=global_args.device)
+        params= checkpoint["parameters"]
+        seed_site= params["seed_site"]
+        if not ("isometries" in params.keys()):
+            raise RuntimeError("Missing isometries")
+        isometries= params["isometries"]
+        state= IPEPS_C4V_THERMAL_TTN_V2(seed_site, iso_Ds=[iso.size(2) for iso in isometries], 
+            isometries=isometries, metadata=metadata,\
+            peps_args=peps_args, global_args=global_args)
+        for iso_t in state.isometries: iso_t.requires_grad_(False)
+        if "manifolds" in params.keys():
+            state.manifolds= [ geotorch.stiefel.Stiefel(torch.Size([W.size(0)*W.size(1),W.size(2)])) \
+                for W in state.isometries ]
+            for M,B in zip(state.manifolds, params["manifolds"]):
+                M.base= B
+                M.base.requires_grad_(False)
+        else:
+            raise RuntimeError("Missing manifold bases")
+        if "generators" in params.keys():
+            state.generators= params["generators"]
+            for g in state.generators:
+                g.requires_grad_(False)
+        else:
+            warnings.warn("Missing generators - keeping zero tensors", Warning)
+        state.update_()
+        return state
 
     # def add_noise(self,noise,symmetrize=False):
     #     r"""

@@ -64,7 +64,7 @@ def main():
             state.extend_layers(new_iso)
     elif args.opt_resume is not None:
         A= model.ipepo_trotter_suzuki(args.beta/(2**args.layers))
-        iso_D= [A.size(0)] + args.layers_Ds
+        iso_D= [A.size(2)] + args.layers_Ds
         isometries= [torch.zeros([iso_D[i],iso_D[i],iso_D[i+1]],\
             dtype=cfg.global_args.torch_dtype,\
             device=cfg.global_args.device) for i in range(len(args.layers_Ds))]
