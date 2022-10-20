@@ -23,9 +23,8 @@ log = logging.getLogger(__name__)
 parser= cfg.get_args_parser()
 # additional model-dependent arguments
 parser.add_argument("--l2d", type=int, default=1)
-parser.add_argument("--hx", type=float, default=0., help="transverse field")
-parser.add_argument("--hz", type=float, default=0., help="longitudinal field")
-parser.add_argument("--q", type=float, default=0, help="next nearest-neighbour coupling")
+parser.add_argument("--j1", type=float, default=1., help="nearest-neighbour coupling")
+parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour coupling")
 parser.add_argument("--beta", type=float, default=0., help="inverse temperature")
 parser.add_argument("--layers", type=int, default=1)
 parser.add_argument('--layers_Ds', nargs="+", type=int)
@@ -42,9 +41,8 @@ def main():
     torch.manual_seed(args.seed)
 
     # 0) initialize model
-    model = j1j2.J1J2_C4V_BIPARTITE_THERMAL(j1=1.0, j2=0, j3=0, hz_stag= 0.0, \
-        delta_zz=1.0, beta=0.)
-    assert args.q==0,"plaquette term is not supported"
+    model = j1j2.J1J2_C4V_BIPARTITE_THERMAL(j1=args.j1, j2=args.j2, j3=0, 
+        hz_stag= 0.0, delta_zz=1.0, beta=0.)
     energy_f= model.energy_1x1
     eval_obs_f= model.eval_obs
 
@@ -76,11 +74,11 @@ def main():
         if args.ipeps_init_type=='CPEPO-SVD':
             import subprocess
             dt= args.beta/(2**args.layers)
-            p = subprocess.Popen(f"octave GetPEPO.m {dt:.5f}", \
+            p = subprocess.Popen(f"octave GetPEPO.m {dt:.5f} {args.j2:.5f}", \
                 stdout=subprocess.PIPE, shell=True)
             p_status= p.wait()
             from scipy.io import loadmat
-            A= torch.from_numpy(loadmat(f"hbpepo_dt{dt:.5f}.mat")['T'])\
+            A= torch.from_numpy(loadmat(f"hbpepo_dt{dt:.5f}_j2{args.j2:.5f}.mat")['T'])\
                 .permute(4,5,0,1,2,3).contiguous()
             args.ipeps_init_type='SVD'
         if args.ipeps_init_type=='RANDOM':

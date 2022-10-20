@@ -395,14 +395,22 @@ def optimize_state(state, ctm_env_init, loss_fn_vtnr, loss_fn_grad,
 
         # terminate condition
         if len(t_data["loss"])<2: continue
+        _orig_opt_state= context["vtnr_state"]
         if context["vtnr_state"]=="INIT" or context["vtnr_state"]=="SWEEPING":
+            # optimization is in SWEEPING phase
             if abs(t_data["loss"][-1]-t_data["loss"][-2])<opt_args.tolerance_change \
                 or t_data["loss"][-1]-t_data["loss"][-2]>0:
+                # the energy change is too small or even positive
                 context["vtnr_state"]="TIMEOUT"
         elif context["vtnr_state"]=="TIMEOUT":
+            # we are in TIMEOUT phase
             if abs(t_data["loss"][-1]-t_data["loss"][-2])<opt_args.tolerance_change:
                 break
-        print(context["vtnr_state"]+f" {t_data['loss'][-1]-t_data['loss'][-2]}")
+            context["vtnr_timeout_counter"]+= -1
+            if context["vtnr_timeout_counter"]<1:
+                context["vtnr_state"]="SWEEPING"
+        log.info("OPT PHASE: "+_orig_opt_state+" -> "+context["vtnr_state"]
+            +f" {t_data['loss'][-1]-t_data['loss'][-2]}")
             
 
     # optimization is over, store the last checkpoint if at least a single step was made
