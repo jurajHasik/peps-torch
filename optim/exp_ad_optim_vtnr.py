@@ -56,6 +56,7 @@ def optimize_state(state, ctm_env_init, loss_fn_vtnr, loss_fn_grad,
     for A in parameters: A.requires_grad_(True)
 
     # isometries
+    best_isometries= [None]*len(state.isometries)
     old_isometries= [None]*len(state.isometries)
     p_isometries= [None]*len(state.isometries)
 
@@ -308,31 +309,31 @@ def optimize_state(state, ctm_env_init, loss_fn_vtnr, loss_fn_grad,
 
         return loss
 
-    def step_vtnr(closure_vtnr):
-        # evaluate loss and obtain the environments of isometries as gradients
-        loss0= closure_vtnr()
+    # def step_vtnr(closure_vtnr):
+    #     # evaluate loss and obtain the environments of isometries as gradients
+    #     loss0= closure_vtnr()
 
-        if context["vtnr_state"]=="FAIL":
-            # revert back isometries
-            with torch.no_grad():
-                for i in range(len(p_isometries)):
-                    p_isometries[i].copy_(old_isometries[i])
-                    # p_isometries[i]= old_isometries[i]
-        if context["vtnr_state"]=="SUCCESS":
-            with torch.no_grad():
-                state.right_inverse_()
-        if context["vtnr_state"]=="SUCCESS" or context["vtnr_state"]=="RESUME":
-            new_iso= []
-            for p in p_isometries:
-                U,S,Vh= torch.linalg.svd(p.grad.view(p.size(0)*p.size(1),p.size(2)),\
-                    full_matrices=False)
-                new_iso.append( (U@Vh).view(p.size()) )
+    #     if context["vtnr_state"]=="FAIL":
+    #         # revert back isometries
+    #         with torch.no_grad():
+    #             for i in range(len(p_isometries)):
+    #                 p_isometries[i].copy_(old_isometries[i])
+    #                 # p_isometries[i]= old_isometries[i]
+    #     if context["vtnr_state"]=="SUCCESS":
+    #         with torch.no_grad():
+    #             state.right_inverse_()
+    #     if context["vtnr_state"]=="SUCCESS" or context["vtnr_state"]=="RESUME":
+    #         new_iso= []
+    #         for p in p_isometries:
+    #             U,S,Vh= torch.linalg.svd(p.grad.view(p.size(0)*p.size(1),p.size(2)),\
+    #                 full_matrices=False)
+    #             new_iso.append( (U@Vh).view(p.size()) )
             
-            with torch.no_grad():
-                for i in range(len(p_isometries)):
-                    old_isometries[i]= p_isometries[i].detach().clone()
-                    if p_isometries[i].size(0)*p_isometries[i].size(1)>p_isometries[i].size(2):
-                        p_isometries[i].copy_(new_iso[i])
+    #         with torch.no_grad():
+    #             for i in range(len(p_isometries)):
+    #                 old_isometries[i]= p_isometries[i].detach().clone()
+    #                 if p_isometries[i].size(0)*p_isometries[i].size(1)>p_isometries[i].size(2):
+    #                     p_isometries[i].copy_(new_iso[i])
 
     def step_sweep(closure_sweep):
         closure_sweep()
@@ -344,6 +345,9 @@ def optimize_state(state, ctm_env_init, loss_fn_vtnr, loss_fn_grad,
             _tmp_Es= _tmp_Es[1:]+[E]
             up_sweep(state,_tmp_Es)
             state.right_inverse_()
+            # store old isometries
+            for i in range(len(state.isometries)):
+                old_isometries[i]= state.isometries[i].detach().clone()
 
 
     for epoch in range(main_args.opt_max_iter):
@@ -402,6 +406,16 @@ def optimize_state(state, ctm_env_init, loss_fn_vtnr, loss_fn_grad,
                 or t_data["loss"][-1]-t_data["loss"][-2]>0:
                 # the energy change is too small or even positive
                 context["vtnr_state"]="TIMEOUT"
+                context["vtnr_timeout_counter"]=10
+                with torch.no_grad():
+                    for i in range(len(p_isometries)):
+                        state.isometries[i].copy_(best_isometries[i])
+                    state.right_inverse_()
+            else:
+                # the energy was improved, store best isometries
+                for i in range(len(p_isometries)):
+                    best_isometries[i]= p_isometries[i].clone()
+                
         elif context["vtnr_state"]=="TIMEOUT":
             # we are in TIMEOUT phase
             if abs(t_data["loss"][-1]-t_data["loss"][-2])<opt_args.tolerance_change:
@@ -409,8 +423,8 @@ def optimize_state(state, ctm_env_init, loss_fn_vtnr, loss_fn_grad,
             context["vtnr_timeout_counter"]+= -1
             if context["vtnr_timeout_counter"]<1:
                 context["vtnr_state"]="SWEEPING"
-        log.info("OPT PHASE: "+_orig_opt_state+" -> "+context["vtnr_state"]
-            +f" {t_data['loss'][-1]-t_data['loss'][-2]}")
+        print("OPT PHASE: "+_orig_opt_state+" -> "+context["vtnr_state"]
+            + f' c {context["vtnr_timeout_counter"]}'+f" {t_data['loss'][-1]-t_data['loss'][-2]}")
             
 
     # optimization is over, store the last checkpoint if at least a single step was made
