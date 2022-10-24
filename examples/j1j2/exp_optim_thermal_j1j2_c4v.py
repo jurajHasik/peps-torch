@@ -1,3 +1,4 @@
+import os
 import context
 import copy
 import torch
@@ -359,9 +360,10 @@ def main():
         opt_args= opt_context["opt_args"]
 
         # build TTN parametrized by generators of the isometries
+        state.update_()
         _state= IPEPS_C4V_THERMAL_TTN(state.seed_site, iso_Ds=state.iso_Ds,\
              isometries=state.isometries)
-        _state.update_()
+        # _state.update_()
         state_fused= _state.to_fused_ipeps_c4v()
         # state_fused= s_state.to_nophys_ipeps_c4v()
 
@@ -464,44 +466,133 @@ if __name__=='__main__':
         raise Exception("Unknown command line arguments")
     main()
 
-class TestOpt(unittest.TestCase):
+class TestCheckpoint_CPEPO_SWEEP(unittest.TestCase):
+    tol= 1.0e-6
+    DIR_PATH = os.path.dirname(os.path.realpath(__file__))
+    OUT_PRFX = "RESULT_test_run-cpepo-sweep"
+
+    def reset_couplings(self):
+        args.j1= 1.0
+        args.j2= 0.1
+        args.beta= 0.85
+        args.layers= 4
+        args.layers_Ds= [4,4,4,4]
+        args.mode= "sl"
+
     def setUp(self):
-        args.j2=0.0
-        args.bond_dim=3
-        args.chi=18
-        args.opt_max_iter=3
-        try:
-            import scipy.sparse.linalg
-            self.SCIPY= True
-        except:
-            print("Warning: Missing scipy. ARNOLDISVD is not available.")
-            self.SCIPY= False
+        self.reset_couplings()
+        args.bond_dim=2
+        args.chi=50
+        args.ipeps_init_type= "CPEPO-SVD" 
+        args.CTMARGS_ctm_max_iter= 2000 
+        args.CTMARGS_fpcm_init_iter= 10
+        args.CTMARGS_fpcm_freq= 10
+        args.OPTARGS_linesearch= "backtracking"
 
-    # basic tests
-    def test_opt_SYMEIG_LS(self):
-        args.CTMARGS_projector_svd_method="SYMEIG"
-        args.OPTARGS_line_search="backtracking"
+    def test_checkpoint_cpepo_sweep(self):
+        from io import StringIO
+        from unittest.mock import patch
+        from cmath import isclose
+        import numpy as np 
+
+        args.opt_max_iter= 6
+        args.opt_resume= None
+        args.out_prefix=self.OUT_PRFX + f"_l{args.layers}" \
+            +f"_lds{'-'.join([str(x) for x in args.layers_Ds])}_B{args.beta}_iCPEPO"
+        # args.instate= args.out_prefix[len("RESULT_"):]+"_instate.json"
+
+        # i) run optimization and store the optimization data
+        with patch('sys.stdout', new = StringIO()) as tmp_out: 
+            main()
+        tmp_out.seek(0)
+
+        # parse FINAL observables
+        obs_opt_lines=[]
+        final_obs=None
+        OPT_OBS= OPT_OBS_DONE= False
+        l= tmp_out.readline()
+        while l:
+            print(l,end="")
+            if OPT_OBS and not OPT_OBS_DONE and l.rstrip()=="": 
+                OPT_OBS_DONE= True
+                OPT_OBS=False
+            if OPT_OBS and not OPT_OBS_DONE and len(l.split(','))>2:
+                obs_opt_lines.append(l)
+            if "epoch, loss," in l and not OPT_OBS_DONE: 
+                OPT_OBS= True
+            if "FINAL" in l:
+                final_obs= l.rstrip()
+                break
+            l= tmp_out.readline()
+        assert final_obs
+        assert len(obs_opt_lines)>0
+
+        # compare the line of observables with lowest energy from optimization (i) 
+        # and final observables evaluated from best state stored in *_state.json output file
+        # drop the last column, not separated by comma
+        # best_e_line_index= np.argmin([ float(l.split(',')[1]) for l in obs_opt_lines ])
+        # opt_line_last= [complex(x) for x in obs_opt_lines[best_e_line_index].split(",")[1:-1]]
+        # fobs_tokens= [complex(x) for x in final_obs[len("FINAL"):].split(",")]
+        # for val0,val1 in zip(opt_line_last, fobs_tokens):
+        #     assert isclose(val0,val1, rel_tol=self.tol, abs_tol=self.tol)
+
+        # ii) run optimization for 3 steps
+        # reset j1 which is otherwise set by main() if args.theta is used
+        args.opt_max_iter= 3 
+        self.setUp()
         main()
 
-    def test_opt_SYMEIG_LS_SYMARP(self):
-        if not self.SCIPY: self.skipTest("test skipped: missing scipy")
-        args.CTMARGS_projector_svd_method="SYMEIG"
-        args.OPTARGS_line_search="backtracking"
-        args.OPTARGS_line_search_svd_method="SYMARP"
-        main()
+        # iii) run optimization from checkpoint
+        self.setUp()
+        args.instate=None
+        args.opt_resume= args.out_prefix+"_checkpoint.p"
+        args.opt_max_iter= 3
+        with patch('sys.stdout', new = StringIO()) as tmp_out: 
+            main()
+        tmp_out.seek(0)
 
-    @unittest.skipIf(not torch.cuda.is_available(), "CUDA not available")
-    def test_opt_SYMEIG_LS_gpu(self):
-        args.GLOBALARGS_device="cuda:0"
-        args.CTMARGS_projector_svd_method="SYMEIG"
-        args.OPTARGS_line_search="backtracking"
-        main()
+        obs_opt_lines_chk=[]
+        final_obs_chk=None
+        OPT_OBS= OPT_OBS_DONE= False
+        l= tmp_out.readline()
+        while l:
+            print(l,end="")
+            if OPT_OBS and not OPT_OBS_DONE and l.rstrip()=="": 
+                OPT_OBS_DONE= True
+                OPT_OBS=False
+            if OPT_OBS and not OPT_OBS_DONE and len(l.split(','))>2:
+                obs_opt_lines_chk.append(l)
+            if "checkpoint.loss" in l and not OPT_OBS_DONE: 
+                OPT_OBS= True
+            if "FINAL" in l:    
+                final_obs_chk= l.rstrip()
+                break
+            l= tmp_out.readline()
+        assert final_obs_chk
+        assert len(obs_opt_lines_chk)>0
 
-    @unittest.skipIf(not torch.cuda.is_available(), "CUDA not available")
-    def test_opt_SYMEIG_LS_SYMARP_gpu(self):
-        if not self.SCIPY: self.skipTest("test skipped: missing scipy")
-        args.GLOBALARGS_device="cuda:0"
-        args.CTMARGS_projector_svd_method="SYMEIG"
-        args.OPTARGS_line_search="backtracking"
-        args.OPTARGS_line_search_svd_method="SYMARP"
-        main()
+        # compare initial observables from checkpointed optimization (iii) and the observables 
+        # from original optimization (i) at one step after total number of steps done in (ii)
+        # opt_line_iii= [complex(x) for x in obs_opt_lines_chk[0].split(",")[1:]]
+        # drop (last) normalization column
+        # opt_line_i= [complex(x) for x in obs_opt_lines[4].split(",")[1:-1]]
+        # fobs_tokens= [complex(x) for x in final_obs[len("FINAL"):].split(",")]
+        # for val3,val1 in zip(opt_line_iii, opt_line_i):
+        #     assert isclose(val3,val1, rel_tol=self.tol, abs_tol=self.tol)
+
+        # compare final observables from optimization (i) and the final observables 
+        # from the checkpointed optimization (iii)
+        # fobs_tokens_1= [complex(x) for x in final_obs[len("FINAL"):].split(",")]
+        # fobs_tokens_3= [complex(x) for x in final_obs_chk[len("FINAL"):].split(",")]
+        # for val3,val1 in zip(fobs_tokens_3, fobs_tokens_1):
+        #     assert isclose(val3,val1, rel_tol=self.tol, abs_tol=self.tol)
+
+    def tearDown(self):
+        args.opt_resume=None
+        args.instate=None
+       
+        out_prefix=args.out_prefix
+        instate= args.out_prefix+"_instate.json"
+        for f in [out_prefix+"_checkpoint.p",out_prefix+"_state.json",\
+            out_prefix+".log",instate]:
+            if os.path.isfile(f): os.remove(f)

@@ -168,7 +168,7 @@ def optimize_state(state, ctm_env_init, loss_fn_vtnr, loss_fn_grad,
     def closure_sweep(linesearching=False):
         context["line_search"]= linesearching
         for i in range(len(p_isometries)):
-            p_isometries[i]= state.isometries[i]
+            p_isometries[i]= state.isometries[i].detach().clone()
         for A in p_isometries:
             if not A.requires_grad: A.requires_grad_(True)
             if not A.grad is None:
