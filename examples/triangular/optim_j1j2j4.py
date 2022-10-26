@@ -55,7 +55,7 @@ def main():
         state.add_noise(args.instate_noise)
     elif args.opt_resume is not None:
         if args.tiling == "3SITE":
-            state= IPEPS(dict(), lX=3, lY=3)
+            state= IPEPS(dict(), vertexToSite=lattice_to_site, lX=3, lY=3)
         state.load_checkpoint(args.opt_resume)
     elif args.ipeps_init_type=='RANDOM':
         bond_dim = args.bond_dim
