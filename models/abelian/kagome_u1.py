@@ -141,11 +141,11 @@ class KAGOME_U1():
         Evaluate energy contribution from down triangle within 1x1 subsystem embedded in environment, 
         see :meth:`ctm.pess_kagome_abelian.rdm_kagome.trace1x1_dn_kagome`.
         """
-        norm = rdm_kagome.trace1x1_dn_kagome((0,0), state, env, self.id3).to_number()
-        norm = _cast_to_real(norm,  **kwargs)
+        norm = rdm_kagome.trace1x1_dn_kagome((0,0), state, env, self.id3)
+        norm = _cast_to_real(norm,  **kwargs).to_number()
         e_dn = rdm_kagome.trace1x1_dn_kagome((0,0), state, env, \
-            self.h_triangle).to_number() / norm
-        return _cast_to_real(e_dn,  **kwargs)
+            self.h_triangle) / norm
+        return _cast_to_real(e_dn,  **kwargs).to_number()
 
     def energy_down_t_2x2subsystem(self, state, env, force_cpu=False, **kwargs):
         r"""
@@ -163,8 +163,7 @@ class KAGOME_U1():
         """
         e_dn,_ = rdm_kagome.rdm2x2_dn_triangle_with_operator((0, 0), state, env, \
             self.h_triangle.fuse_legs(axes=((0,1,2),(3,4,5))), force_cpu=force_cpu, **kwargs)
-        e_dn= e_dn.to_number()
-        return _cast_to_real(e_dn, **kwargs)
+        return _cast_to_real(e_dn, **kwargs).to_number()
 
     def energy_up_t_2x2subsystem(self, state, env, force_cpu=False, **kwargs):
         r"""
@@ -183,8 +182,8 @@ class KAGOME_U1():
         rdm_up= rdm_kagome.rdm2x2_up_triangle_open((0, 0), state, env, force_cpu=force_cpu,\
             **kwargs)
         e_up=yast.tensordot(rdm_up.fuse_legs(axes=((0,1,2),(3,4,5))),\
-            self.h_triangle.fuse_legs(axes=((0,1,2),(3,4,5))),([0,1],[1,0])).to_number()
-        return _cast_to_real(e_up,  **kwargs)
+            self.h_triangle.fuse_legs(axes=((0,1,2),(3,4,5))),([0,1],[1,0]))
+        return _cast_to_real(e_up,  **kwargs).to_number()
 
     def energy_triangle_dn_NoCheck(self, state, env, force_cpu=False):
         e_dn,_ = rdm_kagome.rdm2x2_dn_triangle_with_operator((0, 0), state, env,\

@@ -4,11 +4,11 @@ from tn_interface_abelian import contract, permute, conj
 
 log= logging.getLogger('peps.ctm.generic_abelian.rdm')
 
-def _cast_to_real(t, fail_on_check=False, warn_on_check=True, imag_eps=1.0e-10,\
+def _cast_to_real(t, fail_on_check=False, warn_on_check=True, imag_eps=1.0e-8,\
     who="unknown", **kwargs):
     if t.is_complex():
         _t= t.item()
-        if abs(_t.imag)/abs(_t.real) > imag_eps and abs(_t.imag)>imag_eps:
+        if abs(_t.imag)/(abs(_t.real)+1.0e-8) > imag_eps:
             if warn_on_check:
                 log.warning(f"Unexpected imaginary part "+who+" "+str(t))
             if fail_on_check: 
