@@ -50,7 +50,8 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
         a = contiguous(einsum('mefgh,mabcd->eafbgchd',A,conj(A)))
         a= view(a, (dimsA[1]**2,dimsA[2]**2, dimsA[3]**2, dimsA[4]**2))
         sitesDL[coord]=a
-    stateDL = IPEPS(sitesDL,state.vertexToSite)
+    stateDL = IPEPS(sites=sitesDL,vertexToSite=state.vertexToSite,lX=state.lX,lY=state.lY,\
+        global_args=global_args)
 
     # 1) perform CTMRG
     t_obs=t_ctm=0.
@@ -59,8 +60,10 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
         t0_ctm= time.perf_counter()
         for direction in ctm_args.ctm_move_sequence:
             diagnostics={"ctm_i": i, "ctm_d": direction} if ctm_args.verbosity_projectors>0 else None
-            ctm_MOVE(direction, stateDL, env, ctm_args=ctm_args, global_args=global_args, \
-                verbosity=ctm_args.verbosity_ctm_move,diagnostics=diagnostics)
+            num_rows_or_cols= stateDL.lX if direction in [(-1,0),(1,0)] else state.lY
+            for row_or_col in range(num_rows_or_cols):
+                ctm_MOVE(direction, stateDL, env, ctm_args=ctm_args, global_args=global_args, \
+                    verbosity=ctm_args.verbosity_ctm_move,diagnostics=diagnostics)
         t1_ctm= time.perf_counter()
 
         t0_obs= time.perf_counter()
@@ -183,14 +186,15 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
         if norm_type=='inf':
             _ord= float('inf')
 
-        if _torch_version_check("1.9.0"):
-            scale_nC1= torch.linalg.vector_norm(nC1,ord=_ord)
-            scale_nC2= torch.linalg.vector_norm(nC2,ord=_ord)
-            scale_nT= torch.linalg.vector_norm(nT,ord=_ord)
-        else:
-            scale_nC1= nC1.norm(p=_ord)
-            scale_nC2= nC2.norm(p=_ord)
-            scale_nT= nT.norm(p=_ord)
+        with torch.no_grad():
+            if _torch_version_check("1.9.0"):
+                scale_nC1= torch.linalg.vector_norm(nC1,ord=_ord)
+                scale_nC2= torch.linalg.vector_norm(nC2,ord=_ord)
+                scale_nT= torch.linalg.vector_norm(nT,ord=_ord)
+            else:
+                scale_nC1= nC1.norm(p=_ord)
+                scale_nC2= nC2.norm(p=_ord)
+                scale_nT= nT.norm(p=_ord)
         if verbosity>0:
             print(f"nC1 {scale_nC1} nC2 {scale_nC2} nT {scale_nT}")
         nC1 = nC1/scale_nC1
