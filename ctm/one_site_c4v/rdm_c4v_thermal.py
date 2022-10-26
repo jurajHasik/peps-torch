@@ -128,6 +128,119 @@ def _get_open_C2x2_LU_dl(C, T, a, verbosity=0):
     
     return C2x2
 
+def _get_left_edge_2x1(C, T, a, mode='sl', verbosity=0):
+    #   C--1->0
+    #   0
+    # A 0
+    # | T--2
+    # | 1
+    CTC = torch.tensordot(C,T,([0],[0]))
+    #   C--0
+    # A |
+    # | T--2->1
+    # | 1
+    #   0
+    #   C--1->2
+    CTC = torch.tensordot(CTC,C,([1],[0]))
+    # C--0
+    # |
+    # T--1
+    # |       2->3
+    # C--2 0--T--1->2
+    #      <------
+    rdm = torch.tensordot(CTC,T,([2],[0]))
+    
+    if mode=="sl" or mode=="sl-open":
+        # 4i) untangle the fused D^2 indices
+        #
+        # C--0
+        # |
+        # T--1->1,2
+        # |    3->4,5
+        # C----T--2->3
+        rdm= rdm.view(rdm.size(0),a.size(3),a.size(3),rdm.size(2),a.size(4),\
+            a.size(4))
+
+        #    /
+        # --a--
+        #  /|s'
+        #
+        #  s|/
+        # --a--
+        #  /
+        #
+
+        # 4ii) first layer "bra"
+        # C--0    2->6
+        # |       |/1->5
+        # T--1 3--a--5->7
+        # |\2->1  4\0->4
+        # |       4 5->3
+        # |       |/
+        # C-------T--3->2
+        rdm= torch.tensordot(rdm,a,([1,4],[3,4]))
+        
+        if mode=="sl-open":
+            # 4iii) second layer "ket"
+            # C--0         2->6
+            # |   6->3     |/1->5
+            # |  -|---1 3--a--5->7
+            # | / |       /4
+            # |/  |/-4 0-/ 3
+            # T---a-----------7->4
+            # |   |\-5->2  |
+            # |   | ------/
+            # |   |/
+            # C---T-----------2->1
+            rdm= torch.tensordot(rdm,a.conj(),([1,3,4],[3,4,0]))
+
+            # 4iv) fuse pairs of aux indices    
+            # C--0 (3 6)->2
+            # |     | |/5
+            # | ----|-a--7\
+            # |/    | |    >3
+            # T-----a----4/
+            # |4<-2/| |
+            # |     |/
+            # C-----T----1
+            rdm= rdm.permute(0,1,3,6,4,7,2,5).contiguous().view(rdm.size(0),rdm.size(1),\
+                a.size(2)**2,a.size(5)**2,a.size(1),a.size(1))
+        else:
+            rdm= torch.tensordot(rdm,a.conj(),([1,3,4,5],[3,4,0,1]))
+            rdm= rdm.permute(0,1,2,4,3,5).contiguous().view(rdm.size(0),rdm.size(1),\
+                a.size(2)**2,a.size(5)**2)
+
+    elif mode=="dl":
+        assert len(a.size())==6,"mode "+mode+" expects rank-6 on-site tensor"
+        # 4ii) first layer "bra"
+        # C--0    2->4       C--0    4->2
+        # |       |/1->3     |       |/3->5
+        # T--1 3--a--5       T-------a--5->3
+        # |       4\0->2     |       |\2->4
+        # |       3          |       |
+        # |       |          |       |
+        # C-------T--2->1    C-------T--1
+        if mode=="dl-open":
+            rdm= torch.tensordot(rdm,a,([1,3],[3,4]))
+            rdm= rdm.permute(0,1,4,5,2,3).contiguous()
+        else:
+            a_traced= torch.einsum('iiuldr->',a)
+            rdm= torch.tensordot(rdm,a_traced,([1,3],[1,2])).contiguous()
+    else:
+        raise RuntimeError("Invalid mode "+mode)
+
+    #      ------>
+    # C--0 1--T--0
+    # |       2
+    # |       2
+    # T-------a--3->2
+    # |       |\45->34(s,s')
+    # |       |
+    # C-------T--1
+    rdm = torch.tensordot(T,rdm,([1,2],[0,2]))
+    return rdm
+
+
 def entropy(rdm, ad_decomp_reg, verbosity=0):
     assert len(rdm.size())%2==0, "invalid rank of RDM"
     nsites= len(rdm.size())//2
@@ -602,3 +715,21 @@ def rdm2x2(state, env, sym_pos_def=False, verbosity=0):
     rdm= _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
 
     return rdm
+
+
+def aux_rdm2x1_open_bond(state,env,force_cpu=False,verbosity=0):
+    C = env.C[env.keyC]
+    T = env.T[env.keyT]
+    a = next(iter(state.sites.values()))
+    #      ------>
+    # C-------T--0
+    # |       |
+    # |       |
+    # T-------a--2
+    # |       |
+    # |       |
+    # C-------T--1
+    le= _get_left_edge_2x1(C,T,a,mode='sl')
+    a_rdm= torch.tensordot(le,le,([0,1],[1,0]))
+
+    return a_rdm
