@@ -1,7 +1,7 @@
 import os
+import warnings
 import context
 import argparse
-import numpy as np
 import yast.yast as yast
 import config as cfg
 from ipeps.ipeps_abelian import *
@@ -113,6 +113,10 @@ def main():
                 print(f"{i} {sector[i]}")
 
     # convert to dense env and compute transfer operator spectrum
+    if args.yast_backend=='np':
+        warnings.warn('Transfer matrix computation requires \'torch\' backend.')
+        return
+            
     state_dense= state.to_dense()
     ctm_env_dense= ctm_env.to_dense(state)
 
@@ -148,6 +152,7 @@ class TestCtmrg_plain_VBS(unittest.TestCase):
     tol= 1.0e-6
     DIR_PATH = os.path.dirname(os.path.realpath(__file__))
     OUT_PRFX = "RESULT_test_run_ctmrg_u1_VBS"
+    BACKENDS = ['np', 'torch']
 
     def setUp(self):
         args.instate=self.DIR_PATH+"/../../../test-input/abelian/VBS_2x2_ABCD.in"
@@ -160,42 +165,46 @@ class TestCtmrg_plain_VBS(unittest.TestCase):
         from unittest.mock import patch 
         from cmath import isclose
 
-        with patch('sys.stdout', new = StringIO()) as tmp_out: 
-            main()
-        tmp_out.seek(0)
+        for b_id in self.BACKENDS:
+            with self.subTest(b_id=b_id):
+                args.yast_backend=b_id
 
-        # parse FINAL observables
-        final_obs=None
-        final_opt_line=None
-        OPT_OBS= OPT_OBS_DONE= False
-        l= tmp_out.readline()
-        while l:
-            print(l,end="")
-            if OPT_OBS and not OPT_OBS_DONE and l.rstrip()=="": OPT_OBS_DONE= True
-            if OPT_OBS and not OPT_OBS_DONE and len(l.split(','))>2:
-                final_opt_line= l
-            if "epoch, energy," in l and not OPT_OBS_DONE: 
-                OPT_OBS= True
-            if "FINAL" in l:
-                final_obs= l.rstrip()
-                break
-            l= tmp_out.readline()
-        assert final_obs
-        assert final_opt_line
+                with patch('sys.stdout', new = StringIO()) as tmp_out: 
+                    main()
+                tmp_out.seek(0)
 
-        # compare with the reference
-        ref_data="""
-        -0.375, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
-        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
-        -0.75, -0.75, 0.0, 0.0
-        """
+                # parse FINAL observables
+                final_obs=None
+                final_opt_line=None
+                OPT_OBS= OPT_OBS_DONE= False
+                l= tmp_out.readline()
+                while l:
+                    print(l,end="")
+                    if OPT_OBS and not OPT_OBS_DONE and l.rstrip()=="": OPT_OBS_DONE= True
+                    if OPT_OBS and not OPT_OBS_DONE and len(l.split(','))>2:
+                        final_opt_line= l
+                    if "epoch, energy," in l and not OPT_OBS_DONE: 
+                        OPT_OBS= True
+                    if "FINAL" in l:
+                        final_obs= l.rstrip()
+                        break
+                    l= tmp_out.readline()
+                assert final_obs
+                assert final_opt_line
 
-        # compare final observables from final state against expected reference 
-        # drop first token, corresponding to iteration step
-        fobs_tokens= [complex(x) for x in final_obs[len("FINAL"):].split(",")]
-        ref_tokens= [complex(x) for x in ref_data.split(",")]
-        for val,ref_val in zip(fobs_tokens, ref_tokens):
-            assert isclose(val,ref_val, rel_tol=self.tol, abs_tol=self.tol)
+                # compare with the reference
+                ref_data="""
+                -0.375, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
+                -0.75, -0.75, 0.0, 0.0
+                """
+
+                # compare final observables from final state against expected reference 
+                # drop first token, corresponding to iteration step
+                fobs_tokens= [complex(x) for x in final_obs[len("FINAL"):].split(",")]
+                ref_tokens= [complex(x) for x in ref_data.split(",")]
+                for val,ref_val in zip(fobs_tokens, ref_tokens):
+                    assert isclose(val,ref_val, rel_tol=self.tol, abs_tol=self.tol)
 
     def tearDown(self):
         args.opt_resume=None

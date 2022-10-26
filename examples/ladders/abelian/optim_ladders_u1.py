@@ -1,11 +1,9 @@
 import os
 import context
 import argparse
-import numpy as np
 import torch
 import config as cfg
-import examples.abelian.settings_full_torch as settings_full
-import examples.abelian.settings_U1_torch as settings_U1
+import yast.yast as yast
 from ipeps.ipeps_abelian import *
 from ctm.generic_abelian.env_abelian import *
 import ctm.generic_abelian.ctmrg as ctmrg
@@ -26,16 +24,22 @@ parser.add_argument("--bz_stag", type=float, default=0., help="staggered magneti
 parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
+parser.add_argument("--yast_backend", type=str, default='torch', 
+    help="YAST backend", choices=['torch','torch_cpp'])
 args, unknown_args = parser.parse_known_args()
 
 def main():
     cfg.configure(args)
     cfg.print_config()
-    settings= settings_U1
-    # override default device specified in settings
-    settings.default_device= settings_full.default_device= cfg.global_args.device
-    # override default dtype
-    settings.default_dtype= settings_full.default_dtype= cfg.global_args.dtype
+    from yast.yast.sym import sym_U1
+    if args.yast_backend=='torch':
+        from yast.yast.backend import backend_torch as backend
+    elif args.yast_backend=='torch_cpp':
+        from yast.yast.backend import backend_torch_cpp as backend
+    settings_full= yast.make_config(backend=backend, \
+        default_device= cfg.global_args.device, default_dtype=cfg.global_args.dtype)
+    settings= yast.make_config(backend=backend, sym=sym_U1, \
+        default_device= cfg.global_args.device, default_dtype=cfg.global_args.dtype)
     settings.backend.set_num_threads(args.omp_cores)
     settings.backend.random_seed(args.seed)
 
@@ -50,7 +54,7 @@ def main():
         state= state.add_noise(args.instate_noise)
     # TODO checkpointing
     elif args.opt_resume is not None:
-        state= IPEPS_ABELIAN(settings_U1, dict(), lX=2, lY=2)
+        state= IPEPS_ABELIAN(settings, dict(), lX=2, lY=2)
         state.load_checkpoint(args.opt_resume)
     else:
         raise ValueError("Missing trial state: --instate=None and --ipeps_init_type= "\

@@ -123,6 +123,7 @@ class TestCtmrg_TrimerState(unittest.TestCase):
     tol= 1.0e-6
     DIR_PATH = os.path.dirname(os.path.realpath(__file__))
     OUT_PRFX = "RESULT_test_run_u1xu1_trimerized"
+    BACKENDS = ['np', 'torch']
 
     def setUp(self):
         args.instate=self.DIR_PATH+"/../../../test-input/abelian/IPESS_TRIMER_1-3_1x1_abelian-U1xU1_T3T8_state.json"
@@ -138,30 +139,32 @@ class TestCtmrg_TrimerState(unittest.TestCase):
         from unittest.mock import patch 
         from cmath import isclose
 
-        with patch('sys.stdout', new = StringIO()) as tmp_out: 
-            main()
-        tmp_out.seek(0)
+        for b_id in self.BACKENDS:
+            with self.subTest(b_id=b_id):
+                with patch('sys.stdout', new = StringIO()) as tmp_out: 
+                    main()
+                tmp_out.seek(0)
 
-        # parse FINAL observables
-        final_obs=None
-        l= tmp_out.readline()
-        while l:
-            print(l,end="")
-            if "FINAL" in l:
-                final_obs= l.rstrip()
-                break
-            l= tmp_out.readline()
-        assert final_obs
+                # parse FINAL observables
+                final_obs=None
+                l= tmp_out.readline()
+                while l:
+                    print(l,end="")
+                    if "FINAL" in l:
+                        final_obs= l.rstrip()
+                        break
+                    l= tmp_out.readline()
+                assert final_obs
 
-        # compare with the reference
-        ref_data="""
-        -0.6666666666666664, 0j, 0j, 0j, 0.0, 0.0, 0.3333333333333333, 0.3333333333333333, 
-        0.3333333333333333, -0.9999999999999999, -0.9999999999999999, -0.9999999999999999
-        """
-        fobs_tokens= [complex(x) for x in final_obs[len("FINAL"):].split(",")]
-        ref_tokens= [complex(x) for x in ref_data.split(",")]
-        for val,ref_val in zip(fobs_tokens, ref_tokens):
-            assert isclose(val,ref_val, rel_tol=self.tol, abs_tol=self.tol)
+                # compare with the reference
+                ref_data="""
+                -0.6666666666666664, 0j, 0j, 0j, 0.0, 0.0, 0.3333333333333333, 0.3333333333333333, 
+                0.3333333333333333, -0.9999999999999999, -0.9999999999999999, -0.9999999999999999
+                """
+                fobs_tokens= [complex(x) for x in final_obs[len("FINAL"):].split(",")]
+                ref_tokens= [complex(x) for x in ref_data.split(",")]
+                for val,ref_val in zip(fobs_tokens, ref_tokens):
+                    assert isclose(val,ref_val, rel_tol=self.tol, abs_tol=self.tol)
 
     def tearDown(self):
         for f in [self.OUT_PRFX+"_state.json",self.OUT_PRFX+".log"]:
@@ -171,6 +174,7 @@ class TestCtmrg_AKLTState(unittest.TestCase):
     tol= 1.0e-6
     DIR_PATH = os.path.dirname(os.path.realpath(__file__))
     OUT_PRFX = "RESULT_test_run_u1xu1_aklt"
+    BACKENDS = ['np', 'torch']
 
     def setUp(self):
         args.instate=self.DIR_PATH+"/../../../test-input/abelian/IPESS_AKLT_b3_1x1_abelian-U1xU1_T3T8_state.json"
@@ -186,29 +190,31 @@ class TestCtmrg_AKLTState(unittest.TestCase):
         from unittest.mock import patch
         from cmath import isclose
 
-        with patch('sys.stdout', new = StringIO()) as tmp_out: 
-            main()
-        tmp_out.seek(0)
+        for b_id in self.BACKENDS:
+            with self.subTest(b_id=b_id):
+                with patch('sys.stdout', new = StringIO()) as tmp_out: 
+                    main()
+                tmp_out.seek(0)
 
-        # parse FINAL observables
-        final_obs=None
-        l= tmp_out.readline()
-        while l:
-            print(l,end="")
-            if "FINAL" in l:
-                final_obs= l.rstrip()
-                break
-            l= tmp_out.readline()
-        assert final_obs
+                # parse FINAL observables
+                final_obs=None
+                l= tmp_out.readline()
+                while l:
+                    print(l,end="")
+                    if "FINAL" in l:
+                        final_obs= l.rstrip()
+                        break
+                    l= tmp_out.readline()
+                assert final_obs
 
-        # compare with the reference
-        ref_data="""
-        -0.6666666666666664, 0j, 0j, 0j, 0.0, 0.0, 0., 0., 0., 0., 0., 0.
-        """
-        fobs_tokens= [complex(x) for x in final_obs[len("FINAL"):].split(",")]
-        ref_tokens= [complex(x) for x in ref_data.split(",")]
-        for val,ref_val in zip(fobs_tokens, ref_tokens):
-            assert isclose(val,ref_val, rel_tol=self.tol, abs_tol=self.tol)
+                # compare with the reference
+                ref_data="""
+                -0.6666666666666664, 0j, 0j, 0j, 0.0, 0.0, 0., 0., 0., 0., 0., 0.
+                """
+                fobs_tokens= [complex(x) for x in final_obs[len("FINAL"):].split(",")]
+                ref_tokens= [complex(x) for x in ref_data.split(",")]
+                for val,ref_val in zip(fobs_tokens, ref_tokens):
+                    assert isclose(val,ref_val, rel_tol=self.tol, abs_tol=self.tol)
 
     def tearDown(self):
         for f in [self.OUT_PRFX+"_state.json",self.OUT_PRFX+".log"]:
