@@ -277,13 +277,7 @@ class J1J2J4_1SITE(J1J2J4):
             energy_nn+= torch.einsum('ijab,abij',
                 torch.einsum('ixay,xj,yb->ijab',self.SS,self.R,self.R),
                 tmp_rdm_2x1)
-            #
-            # B--C
-            # tmp_rdm_2x1= rdm.rdm2x1(coord,state,env)
-            # energy_nn+= torch.einsum('ijab,abij',
-            #     torch.einsum('mnxy,im,jn,ax,by->ijab',self.SS,self.R,self.R,
-            #         self.R@self.R, self.R@self.R),
-            #     tmp_rdm_2x1)
+            
             #
             # A
             # |
@@ -353,34 +347,81 @@ class J1J2J4_1SITE(J1J2J4):
 
             # two-site
             for coord,site in state.sites.items():
+                # s0
+                # s1
                 tmp_rdm_1x2= rdm.rdm1x2(coord,state,env)
+                # s0 s1
                 tmp_rdm_2x1= rdm.rdm2x1(coord,state,env)
                 tmp_rdm_2x2_NNN_1n1= rdm.rdm2x2_NNN_1n1(coord,state,env)
                 #
                 # A--B
-                SS1x2= torch.einsum('ijab,abij',tmp_rdm_1x2,
+                SS2x1= torch.einsum('ijab,abij',tmp_rdm_2x1,
                     torch.einsum('ixay,xj,yb->ijab',self.SS,self.R,self.R))
+                obs[f"SS2x1AB{coord}"]= _cast_to_real(SS2x1)
+
+                # #
+                # # B--C
+                # SS2x1= torch.einsum('ijab,abij',
+                #     torch.einsum('mnxy,mi,xa,nj,yb->ijab',self.SS,self.R,self.R,
+                #         self.R@self.R, self.R@self.R),
+                #     tmp_rdm_2x1)
+                # obs[f"SS2x1BC{coord}"]= _cast_to_real(SS2x1)
+
+                # #
+                # # C--A
+                # SS2x1= torch.einsum('ijab,abij',
+                #     torch.einsum('mjxb,mi,xa->ijab',self.SS,
+                #         self.R@self.R, self.R@self.R),
+                #     tmp_rdm_2x1)
+                # obs[f"SS2x1CA{coord}"]= _cast_to_real(SS2x1)
+
                 #
                 # A
                 # |
                 # C
-                SS2x1= torch.einsum('ijab,abij',tmp_rdm_2x1,
+                SS1x2= torch.einsum('ijab,abij',tmp_rdm_1x2,
                     torch.einsum('ixay,xj,yb->ijab',self.SS,self.R@self.R,self.R@self.R))
+                obs[f"SS1x2AC{coord}"]= _cast_to_real(SS1x2)
+
+                # #
+                # # C
+                # # |
+                # # B
+                # SS1x2= torch.einsum('ijab,abij',tmp_rdm_1x2,
+                #     torch.einsum('mnxy,mi,xa,nj,yb->ijab',self.SS,
+                #         self.R@self.R, self.R@self.R,
+                #         self.R,self.R))
+                # obs[f"SS1x2CB{coord}"]= _cast_to_real(SS1x2)
+
+                # #
+                # # B
+                # # |
+                # # A
+                # SS1x2= torch.einsum('ijab,abij',tmp_rdm_1x2,
+                #     torch.einsum('mjxb,mi,xa->ijab',self.SS,
+                #         self.R, self.R))
+                # obs[f"SS1x2BA{coord}"]= _cast_to_real(SS1x2)
+
+
+
                 #
                 # B C
                 #  /
                 # A B
                 SS2x2_NNN_1n1= torch.einsum('ijab,abij',tmp_rdm_2x2_NNN_1n1,
                     torch.einsum('ixay,xj,yb->ijab',self.SS,self.R@self.R,self.R@self.R))
-                obs[f"SS2x1{coord}"]= _cast_to_real(SS2x1)
-                obs[f"SS1x2{coord}"]= _cast_to_real(SS1x2)
+                
                 obs[f"SS2x2_NNN_1n1{coord}"]= _cast_to_real(SS2x2_NNN_1n1)
         
         # prepare list with labels and values
         obs_labels=["avg_m"]+[f"m{coord}" for coord in state.sites.keys()]\
             +[f"{lc[1]}{lc[0]}" for lc in list(itertools.product(state.sites.keys(), self.obs_ops.keys()))]
-        obs_labels += [f"SS2x1{coord}" for coord in state.sites.keys()]
-        obs_labels += [f"SS1x2{coord}" for coord in state.sites.keys()]
+        obs_labels += [f"SS2x1AB{coord}" for coord in state.sites.keys()]
+            # + [f"SS2x1BC{coord}" for coord in state.sites.keys()] \
+            # + [f"SS2x1CA{coord}" for coord in state.sites.keys()]
+        obs_labels += [f"SS1x2AC{coord}" for coord in state.sites.keys()]
+            # + [f"SS1x2CB{coord}" for coord in state.sites.keys()] \
+            # + [f"SS1x2BA{coord}" for coord in state.sites.keys()]
         obs_labels += [f"SS2x2_NNN_1n1{coord}" for coord in state.sites.keys()]
         obs_values=[obs[label] for label in obs_labels]
         return obs_values, obs_labels
