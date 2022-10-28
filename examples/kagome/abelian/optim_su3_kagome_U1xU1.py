@@ -84,9 +84,39 @@ def main():
             return True, history
         return False, history
 
+    @torch.no_grad()
+    def ctmrg_conv_specC(state, env, history, ctm_args=cfg.ctm_args):
+        if not history:
+            history={'spec': [], 'diffs': []}
+        # use corner spectra
+        diff=float('inf')
+        spec= env.get_spectra()
+        spec_nosym_sorted= { s_key : s_t.to_dense().sort(descending=True)[0] \
+            for s_key, s_t in spec.items() }
+        if len(history['spec'])>0:
+            s_old= history['spec'][-1]
+            diffs= []
+            for k in spec.keys():
+                x_0,x_1 = spec_nosym_sorted[k], s_old[k]
+                if x_0.size(0)>x_1.size(0):
+                    diffs.append( (sum((x_1-x_0[:x_1.size(0)])**2) \
+                        + sum(x_0[x_1.size(0):]**2)).item() )
+                else:
+                    diffs.append( (sum((x_0-x_1[:x_0.size(0)])**2) \
+                        + sum(x_1[x_0.size(0):]**2)).item() )
+            diff= sum(diffs)
+        history['spec'].append(spec_nosym_sorted)
+        history['diffs'].append(diffs)
+
+        if (len(history) > 1 and abs(diff) < ctm_args.ctm_conv_tol)\
+            or len(history) >= ctm_args.ctm_max_iter:
+            log.info({"history_length": len(history['diffs']), "history": history['diffs']})
+            return True, history
+        return False, history
+
     ctm_env= ENV_ABELIAN(args.chi, state=state, init=True)
 
-    ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
+    ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_specC)
     loss0 = energy_f(state, ctm_env)
     obs_values, obs_labels = model.eval_obs(state,ctm_env)
     print(", ".join(["epoch","energy"]+obs_labels))
@@ -134,7 +164,7 @@ def main():
     outputstatefile= args.out_prefix+"_state.json"
     state= read_ipess_kagome_generic(outputstatefile, settings)
     ctm_env = ENV_ABELIAN(args.chi, state=state, init=True)
-    ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
+    ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_specC)
     opt_energy = energy_f(state,ctm_env)
     obs_values, obs_labels = model.eval_obs(state,ctm_env)
     print("\n")

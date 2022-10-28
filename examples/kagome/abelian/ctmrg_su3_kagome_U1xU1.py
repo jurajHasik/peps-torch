@@ -77,17 +77,49 @@ def main():
             return True, history
         return False, history
 
+    def ctmrg_conv_specC(state, env, history, ctm_args=cfg.ctm_args):
+        if not history:
+            history={'spec': [], 'diffs': []}
+        # use corner spectra
+        diff=float('inf')
+        diffs=None
+        spec= env.get_spectra()
+        spec_nosym_sorted= { s_key : s_t._data.sort(descending=True)[0] \
+            for s_key, s_t in spec.items() }
+        if len(history['spec'])>0:
+            s_old= history['spec'][-1]
+            diffs= []
+            for k in spec.keys():
+                x_0,x_1 = spec_nosym_sorted[k], s_old[k]
+                if x_0.size(0)>x_1.size(0):
+                    diffs.append( (sum((x_1-x_0[:x_1.size(0)])**2) \
+                        + sum(x_0[x_1.size(0):]**2)).item() )
+                else:
+                    diffs.append( (sum((x_0-x_1[:x_0.size(0)])**2) \
+                        + sum(x_1[x_0.size(0):]**2)).item() )
+            diff= sum(diffs)
+        history['spec'].append(spec_nosym_sorted)
+        history['diffs'].append(diffs)
+        obs_values, obs_labels = model.eval_obs(state, env)
+        print(", ".join([f"{len(history)}",f"{diff}"]+[f"{v}" for v in obs_values]))
+
+        if (len(history['diffs']) > 1 and abs(diff) < ctm_args.ctm_conv_tol)\
+            or len(history['diffs']) >= ctm_args.ctm_max_iter:
+            log.info({"history_length": len(history['diffs']), "history": history['diffs']})
+            return True, history
+        return False, history
+
     ctm_env = ENV_ABELIAN(args.chi, state=state, init=True)
     print(ctm_env)
 
     # 3) evaluate observables for initial environment
     loss= model.energy_per_site_2x2subsystem(state, ctm_env)
     obs_values, obs_labels= model.eval_obs(state,ctm_env)
-    print(", ".join(["epoch","energy/conv-crit"]+obs_labels))
+    print(", ".join(["epoch","conv-crit"]+obs_labels))
     print(", ".join([f"{-1}",f"{loss}"]+[f"{v}" for v in obs_values]))
 
     # 4) execute ctmrg
-    ctm_env, *ctm_log = ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
+    ctm_env, *ctm_log = ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_specC)
 
     # 5) compute final observables and timings
     loss= model.energy_per_site_2x2subsystem(state, ctm_env)

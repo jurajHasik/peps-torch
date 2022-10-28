@@ -303,6 +303,14 @@ class ENV_ABELIAN():
         for c in self.C.values(): c.detach()
         for t in self.T.values(): t.detach()
 
+    def get_spectra(self):
+        spec= {}
+        for c_key, c_t in self.C.items():
+            _,S,_ = c_t.svd()
+            spec[c_key]= S
+        return spec
+
+
 def init_env(state, env, init_method=None, ctm_args=cfg.ctm_args):
     """
     :param state: wavefunction
