@@ -10,6 +10,7 @@ from ctm.generic_abelian.ctm_components import *
 from ctm.generic_abelian.ctm_projectors import *
 from tn_interface_abelian import contract
 try:
+    import torch
     from torch.utils.checkpoint import checkpoint
 except ImportError as e:
     warnings.warn("torch not available", Warning)
@@ -133,9 +134,15 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
     def move_normalize_c(nC1, nC2, nT, norm_type=ctm_args.ctm_absorb_normalization,\
         verbosity= ctm_args.verbosity_ctm_move):
         assert nC1.size > 0 and nC2.size > 0 and nT.size > 0,"Ill-defined environment"
-        scale_nC1= nC1.norm(p=norm_type)
-        scale_nC2= nC2.norm(p=norm_type)
-        scale_nT= nT.norm(p=norm_type)
+        if any([nC1.requires_grad(), nC2.requires_grad(), nT.requires_grad()]):
+            with torch.no_grad():
+                scale_nC1= nC1.norm(p=norm_type)
+                scale_nC2= nC2.norm(p=norm_type)
+                scale_nT= nT.norm(p=norm_type)
+        else:
+            scale_nC1= nC1.norm(p=norm_type)
+            scale_nC2= nC2.norm(p=norm_type)
+            scale_nT= nT.norm(p=norm_type)
         if verbosity>0:
             print(f"nC1 {scale_nC1} nC2 {scale_nC2} nT {scale_nT}")
         nC1 = nC1/scale_nC1
