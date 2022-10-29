@@ -84,24 +84,30 @@ def main():
         diff=float('inf')
         diffs=None
         spec= env.get_spectra()
-        spec_nosym_sorted= { s_key : s_t._data.sort(descending=True)[0] \
-            for s_key, s_t in spec.items() }
+        if args.yast_backend=='np':
+            spec_nosym_sorted= { s_key : np.sort(s_t._data)[::-1] \
+                for s_key, s_t in spec.items() }            
+        else:
+            spec_nosym_sorted= { s_key : s_t._data.sort(descending=True)[0] \
+                for s_key, s_t in spec.items() }
         if len(history['spec'])>0:
             s_old= history['spec'][-1]
             diffs= []
             for k in spec.keys():
                 x_0,x_1 = spec_nosym_sorted[k], s_old[k]
-                if x_0.size(0)>x_1.size(0):
-                    diffs.append( (sum((x_1-x_0[:x_1.size(0)])**2) \
-                        + sum(x_0[x_1.size(0):]**2)).item() )
+                n_x0= x_0.shape[0] if args.yast_backend=='np' else x_0.size(0)
+                n_x1= x_1.shape[0] if args.yast_backend=='np' else x_1.size(0)
+                if n_x0>n_x1:
+                    diffs.append( (sum((x_1-x_0[:n_x1])**2) \
+                        + sum(x_0[n_x1:]**2)).item() )
                 else:
-                    diffs.append( (sum((x_0-x_1[:x_0.size(0)])**2) \
-                        + sum(x_1[x_0.size(0):]**2)).item() )
+                    diffs.append( (sum((x_0-x_1[:n_x0])**2) \
+                        + sum(x_1[n_x0:]**2)).item() )
             diff= sum(diffs)
         history['spec'].append(spec_nosym_sorted)
         history['diffs'].append(diffs)
         obs_values, obs_labels = model.eval_obs(state, env)
-        print(", ".join([f"{len(history)}",f"{diff}"]+[f"{v}" for v in obs_values]))
+        print(", ".join([f"{len(history['diffs'])}",f"{diff}"]+[f"{v}" for v in obs_values]))
 
         if (len(history['diffs']) > 1 and abs(diff) < ctm_args.ctm_conv_tol)\
             or len(history['diffs']) >= ctm_args.ctm_max_iter:

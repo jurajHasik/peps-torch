@@ -108,8 +108,8 @@ def main():
         history['spec'].append(spec_nosym_sorted)
         history['diffs'].append(diffs)
 
-        if (len(history) > 1 and abs(diff) < ctm_args.ctm_conv_tol)\
-            or len(history) >= ctm_args.ctm_max_iter:
+        if (len(history['diffs']) > 1 and abs(diff) < ctm_args.ctm_conv_tol)\
+            or len(history['diffs']) >= ctm_args.ctm_max_iter:
             log.info({"history_length": len(history['diffs']), "history": history['diffs']})
             return True, history
         return False, history
