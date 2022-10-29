@@ -90,8 +90,9 @@ def main():
             history={'spec': [], 'diffs': []}
         # use corner spectra
         diff=float('inf')
+        diffs=None
         spec= env.get_spectra()
-        spec_nosym_sorted= { s_key : s_t.to_dense().sort(descending=True)[0] \
+        spec_nosym_sorted= { s_key : s_t._data.sort(descending=True)[0] \
             for s_key, s_t in spec.items() }
         if len(history['spec'])>0:
             s_old= history['spec'][-1]

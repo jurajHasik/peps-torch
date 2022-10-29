@@ -134,7 +134,7 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
     def move_normalize_c(nC1, nC2, nT, norm_type=ctm_args.ctm_absorb_normalization,\
         verbosity= ctm_args.verbosity_ctm_move):
         assert nC1.size > 0 and nC2.size > 0 and nT.size > 0,"Ill-defined environment"
-        if any([nC1.requires_grad(), nC2.requires_grad(), nT.requires_grad()]):
+        if any([nC1.requires_grad, nC2.requires_grad, nT.requires_grad]):
             with torch.no_grad():
                 scale_nC1= nC1.norm(p=norm_type)
                 scale_nC2= nC2.norm(p=norm_type)
