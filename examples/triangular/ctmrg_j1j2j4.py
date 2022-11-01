@@ -21,7 +21,7 @@ parser.add_argument("--j1", type=float, default=1., help="nearest-neighbour coup
 parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour coupling")
 parser.add_argument("--j4", type=float, default=0., help="plaquette coupling")
 parser.add_argument("--tiling", default="3SITE", help="tiling of the lattice", \
-    choices=["3SITE"])
+    choices=["1SITE", "3SITE"])
 parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
@@ -33,19 +33,21 @@ def main():
     torch.set_num_threads(args.omp_cores)
     torch.manual_seed(args.seed)
     
-    model= spin_triangular.J1J2J4(j1=args.j1, j2=args.j2, j4=args.j4)
-
     # initialize an ipeps
     # 1) define lattice-tiling function, that maps arbitrary vertex of square lattice
     # coord into one of coordinates within unit-cell of iPEPS ansatz    
-    if args.tiling == "3SITE":
+    if args.tiling == "1SITE":
+        model= spin_triangular.J1J2J4_1SITE(j1=args.j1, j2=args.j2, j4=args.j4)
+        lattice_to_site=None
+    elif args.tiling == "3SITE":
+        model= spin_triangular.J1J2J4(j1=args.j1, j2=args.j2, j4=args.j4)
         def lattice_to_site(coord):
             vx = coord[0] % 3
             vy = coord[1]
             return ((vx - vy) % 3, 0)
     else:
         raise ValueError("Invalid tiling: "+str(args.tiling)+" Supported options: "\
-            +"3SITE")
+            +"1SITE, 3SITE")
 
     if args.instate!=None:
         state = read_ipeps(args.instate, vertexToSite=lattice_to_site)
@@ -54,23 +56,11 @@ def main():
             state = extend_bond_dim(state, args.bond_dim)
         state.add_noise(args.instate_noise)
     elif args.opt_resume is not None:
-        if args.tiling == "3SITE":
-            state= IPEPS(dict(), lX=3, lY=3)
+        if args.tiling == "1SITE":
+            state= IPEPS(dict(), lX=1, lY=1)
+        elif args.tiling == "3SITE":
+            state= IPEPS(dict(), vertexToSite=lattice_to_site, lX=3, lY=3)
         state.load_checkpoint(args.opt_resume)
-    elif args.ipeps_init_type=='RANDOM':
-        bond_dim = args.bond_dim
-        sites = {}
-        if args.tiling in ["3SITE"]:
-            A = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
-            B = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
-            C = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
-            sites[(0,0)]= A/torch.max(torch.abs(A))
-            sites[(1,0)]= B/torch.max(torch.abs(B))
-            sites[(2,0)]= C/torch.max(torch.abs(C))
-        state = IPEPS(sites, vertexToSite=lattice_to_site, lX=3, lY=3)
     else:
         raise ValueError("Missing trial state: -instate=None and -ipeps_init_type= "\
             +str(args.ipeps_init_type)+" is not supported")
@@ -80,17 +70,20 @@ def main():
         print(f"dtype of initial state {state.dtype} and model {model.dtype} do not match.")
         print(f"Setting default dtype to {cfg.global_args.torch_dtype} and reinitializing "\
         +" the model")
-        model= spin_triangular.J1J2J4(j1=args.j1, j2=args.j2, j4=args.j4)
+        model= type(model)(j1=args.j1, j2=args.j2, j4=args.j4)
 
     print(state)
     
     # 2) select the "energy" function 
-    if args.tiling == "3SITE":
+    if args.tiling == "1SITE":
+        energy_f=model.energy_1x3
+        eval_obs_f= model.eval_obs
+    elif args.tiling == "3SITE":
         energy_f=model.energy_1x3
         eval_obs_f= model.eval_obs
     else:
         raise ValueError("Invalid tiling: "+str(args.tiling)+" Supported options: "\
-            +"3SITE")
+            +"1SITE, 3SITE")
 
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:

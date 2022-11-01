@@ -38,6 +38,7 @@ def main():
     # coord into one of coordinates within unit-cell of iPEPS ansatz    
     if args.tiling == "1SITE":
         model= spin_triangular.J1J2J4_1SITE(j1=args.j1, j2=args.j2, j4=args.j4)
+        lattice_to_site=None
     elif args.tiling == "3SITE":
         model= spin_triangular.J1J2J4(j1=args.j1, j2=args.j2, j4=args.j4)
         def lattice_to_site(coord):
