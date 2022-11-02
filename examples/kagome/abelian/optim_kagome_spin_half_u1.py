@@ -5,7 +5,6 @@ import numpy as np
 import torch
 import config as cfg
 import yast.yast as yast
-import examples.abelian.settings_U1_torch as settings_U1
 from ipeps.ipeps_kagome_abelian import *
 from ipeps.ipess_kagome_abelian import *
 from ctm.generic_abelian.env_abelian import *
@@ -21,6 +20,8 @@ log = logging.getLogger(__name__)
 
 # parse command line args and build necessary configuration objects
 parser = cfg.get_args_parser()
+parser.add_argument("--yast_backend", type=str, default='torch', 
+    help="YAST backend", choices=['torch','torch_cpp'])
 parser.add_argument("--theta", type=float, default=0, help="angle [<value> x pi] parametrizing the chiral Hamiltonian")
 parser.add_argument("--j1", type=float, default=1., help="nearest-neighbor exchange coupling")
 parser.add_argument("--JD", type=float, default=0, help="two-spin DM interaction")
@@ -49,10 +50,15 @@ args, unknown_args = parser.parse_known_args()
 def main():
     cfg.configure(args)
     cfg.print_config()
-    torch.set_num_threads(args.omp_cores)
-    torch.manual_seed(args.seed)
-    settings_U1.default_dtype=cfg.global_args.dtype
-    settings_U1.default_device=cfg.global_args.device
+    from yast.yast.sym import sym_U1
+    if args.yast_backend=='torch':
+        from yast.yast.backend import backend_torch as backend
+    elif args.yast_backend=='torch_cpp':
+        from yast.yast.backend import backend_torch_cpp as backend
+    settings_U1= yast.make_config(backend=backend, sym=sym_U1, \
+        default_device= cfg.global_args.device, default_dtype=cfg.global_args.dtype)
+    settings_U1.backend.set_num_threads(args.omp_cores)
+    settings_U1.backend.random_seed(args.seed)
 
     # 0) initialize model
     if not args.theta is None:

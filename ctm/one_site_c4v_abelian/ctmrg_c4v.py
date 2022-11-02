@@ -123,8 +123,8 @@ def ctm_MOVE_dl(a_dl, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg
     # 0) compress abelian symmetric tensor into 1D representation for the purposes of 
     #    checkpointing
     metadata_store= {}
-    tmp= tuple([a_dl.compress_to_1d(), \
-        env.C[env.keyC].compress_to_1d(), env.T[env.keyT].compress_to_1d()])
+    tmp= tuple([a_dl.compress_to_1d(), env.C[env.keyC].compress_to_1d(), \
+        env.T[env.keyT].compress_to_1d()])
     tensors, metadata_store["in"]= list(zip(*tmp))
     
     # function wrapping up the core of the CTM MOVE segment of CTM algorithm
@@ -132,13 +132,12 @@ def ctm_MOVE_dl(a_dl, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg
         #
         # keep inputs for autograd stored on cpu, move to gpu for the core 
         # of the computation if desired
-        _loc_engine= env.engine
         if global_args.offload_to_gpu != 'None' and global_args.device=='cpu':
-            tensors=  tuple(r1d.to(global_args.offload_to_gpu) for r1d in tensors)
-            _loc_engine= SimpleNamespace(backend=_loc_engine.backend, sym=_loc_engine.sym,\
-                dtype=_loc_engine.dtype, device=global_args.offload_to_gpu)
+            tensors= tuple(r1d.to(global_args.offload_to_gpu) for r1d in tensors)
+            for meta in metadata_store["in"]: 
+                meta['config']= meta['config']._replace(default_device=global_args.offload_to_gpu)
 
-        tensors= tuple(yast.decompress_from_1d(r1d, _loc_engine, meta) \
+        tensors= tuple(yast.decompress_from_1d(r1d, meta) \
             for r1d,meta in zip(tensors,metadata_store["in"]))
         A, C, T= tensors
         
@@ -212,13 +211,26 @@ def ctm_MOVE_dl(a_dl, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg
         # 1(-)
         nT= nT.unfuse_legs(axes=2)
 
-        return C2X2, nT
+        # 2) Return raw new tensors
+        tmp_loc= tuple([C2X2.compress_to_1d(), nT.compress_to_1d()])
+        tensors_loc, metadata_store["out"]= list(zip(*tmp_loc))
+
+        # move back to (default) cpu if offload_to_gpu is specified
+        if global_args.offload_to_gpu != 'None' and global_args.device=='cpu':
+            tensors_loc= tuple(r1d.to(global_args.device) for r1d in tensors_loc)
+            for meta in metadata_store["out"]: 
+                meta['config']= meta['config']._replace(default_device=global_args.device)
+        
+        return tensors_loc
 
     # Call the core function, allowing for checkpointing
     if ctm_args.fwd_checkpoint_move:
         new_tensors= checkpoint(ctm_MOVE_dl_c,*tensors)
     else:
         new_tensors= ctm_MOVE_dl_c(*tensors)
+
+    new_tensors= tuple(yast.decompress_from_1d(r1d, meta) \
+            for r1d,meta in zip(new_tensors,metadata_store["out"]))
 
     env.C[env.keyC]= new_tensors[0]
     env.T[env.keyT]= new_tensors[1]
@@ -245,9 +257,12 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
 
     # 0) compress abelian symmetric tensor into 1D representation for the purposes of 
     #    checkpointing
+    #
+    # keep inputs for autograd stored on cpu, move to gpu for the core 
+    # of the computation if desired
     metadata_store= {}
     tmp= tuple([a.compress_to_1d(), \
-        env.C[env.keyC].compress_to_1d(), env.T[env.keyT].compress_to_1d()])
+            env.C[env.keyC].compress_to_1d(), env.T[env.keyT].compress_to_1d()])
     tensors, metadata_store["in"] = list(zip(*tmp))
     
     # function wrapping up the core of the CTM MOVE segment of CTM algorithm
@@ -255,13 +270,12 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
         #
         # keep inputs for autograd stored on cpu, move to gpu for the core 
         # of the computation if desired
-        _loc_engine= env.engine
         if global_args.offload_to_gpu != 'None' and global_args.device=='cpu':
-            tensors=  tuple(r1d.to(global_args.offload_to_gpu) for r1d in tensors)
-            _loc_engine= SimpleNamespace(backend=_loc_engine.backend, sym=_loc_engine.sym,\
-                dtype=_loc_engine.dtype, device=global_args.offload_to_gpu)
-
-        a,C,T= tuple(yast.decompress_from_1d(r1d, _loc_engine, meta) \
+            tensors= tuple(r1d.to(global_args.offload_to_gpu) for r1d in tensors)
+            for meta in metadata_store["in"]: 
+                meta['config']= meta['config']._replace(default_device=global_args.offload_to_gpu)
+                
+        a,C,T= tuple(yast.decompress_from_1d(r1d, meta) \
             for r1d,meta in zip(tensors,metadata_store["in"]))
 
         # 1) build enlarged corner upper left corner
@@ -366,6 +380,8 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
         # move back to (default) cpu if offload_to_gpu is specified
         if global_args.offload_to_gpu != 'None' and global_args.device=='cpu':
             tensors_loc= tuple(r1d.to(global_args.device) for r1d in tensors_loc)
+            for meta in metadata_store["out"]: 
+                meta['config']= meta['config']._replace(default_device=global_args.device)
 
         return tensors_loc
 
@@ -375,7 +391,7 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
     else:
         new_tensors= ctm_MOVE_sl_c(*tensors)
 
-    new_tensors= tuple(yast.decompress_from_1d(r1d, env.engine, meta) \
+    new_tensors= tuple(yast.decompress_from_1d(r1d, meta) \
             for r1d,meta in zip(new_tensors,metadata_store["out"]))
 
     env.C[env.keyC]= new_tensors[0]

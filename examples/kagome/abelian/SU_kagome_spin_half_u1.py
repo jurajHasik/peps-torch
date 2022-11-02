@@ -62,8 +62,8 @@ def main(args=args):
     
     # 0) initialize model and construct the gate
     if not args.theta is None:
-        args.j1= args.j1*math.cos(args.theta*math.pi)
         args.jtrip= args.j1*math.sin(args.theta*math.pi)
+        args.j1= args.j1*math.cos(args.theta*math.pi)
     model= kagome_u1.KAGOME_U1(settings_U1, j1=args.j1, JD=args.JD, j1sq=args.j1sq,\
         j2=args.j2, j2sq=args.j2sq, jtrip=args.jtrip, jperm=args.jperm, h=args.h)
     # elementary term of the Hamiltonian

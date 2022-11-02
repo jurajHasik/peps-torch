@@ -157,78 +157,78 @@ class ENV_ABELIAN():
                 # all legs of current T
                 # 0--T(x-1,y)--3 0--T(x,y)--3 0--T(x+1,y)--3
                 #    1,2            1,2          1,2
-                T_lss[tid]= yast.leg_structures_for_dense( tensors=[tmp_T[tid],\
-                    tmp_T[(vts((t_xy[0]-1, t_xy[1])), t_dir)], {3: 0},\
-                    self.C[((t_xy),(-1,-1))], {1: 0},\
-                    tmp_T[(vts((t_xy[0]+1, t_xy[1])), t_dir)], {0: 3},\
-                    self.C[((t_xy),(1,-1))], {0: 3}] )
+                T_lss[tid]= { 1: tmp_T[tid].get_legs(axis=1), 2: tmp_T[tid].get_legs(axis=2), \
+                    0: yast.leg_union(tmp_T[(vts((t_xy[0]-1, t_xy[1])), t_dir)].get_legs(axis=3),\
+                        self.C[((t_xy),(-1,-1))].get_legs(axis=1)).conj(),\
+                    3: yast.leg_union(tmp_T[(vts((t_xy[0]+1, t_xy[1])), t_dir)].get_legs(axis=0),\
+                        self.C[((t_xy),(1,-1))].get_legs(axis=0)).conj() }
                 # upper-left corner
                 # C--1
                 # 0
-                C_lss[(tid[0],(-1,-1))][1]= T_lss[tid][0]
+                C_lss[(tid[0],(-1,-1))][1]= T_lss[tid][0].conj()
                 # upper-right corner
                 # 0--C
                 #    1
-                C_lss[(tid[0],(1,-1))][0]= T_lss[tid][3]
+                C_lss[(tid[0],(1,-1))][0]= T_lss[tid][3].conj()
             elif t_dir==(0,1): #DOWN
                 #    0,1              0,1        0,1
                 # 2--T(x-1,y)--3 2--T(x,y)--3 2--T(x+1,y)--3
-                T_lss[tid]= yast.leg_structures_for_dense( tensors=[tmp_T[tid],\
-                    tmp_T[(vts((t_xy[0]-1, t_xy[1])), t_dir)], {3: 2},\
-                    self.C[((t_xy),(-1,1))], {1: 2},\
-                    tmp_T[(vts((t_xy[0]+1, t_xy[1])), t_dir)], {2: 3},\
-                    self.C[((t_xy),(1,1))], {1: 3}])
+                T_lss[tid]= { 0: tmp_T[tid].get_legs(axis=0), 1: tmp_T[tid].get_legs(axis=1), \
+                    2: yast.leg_union(tmp_T[(vts((t_xy[0]-1, t_xy[1])), t_dir)].get_legs(axis=3),\
+                        self.C[((t_xy),(-1,1))].get_legs(axis=1)).conj(),\
+                    3: yast.leg_union(tmp_T[(vts((t_xy[0]+1, t_xy[1])), t_dir)].get_legs(axis=2),\
+                        self.C[((t_xy),(1,1))].get_legs(axis=1)).conj() }
                 # lower-left corner
                 # 0
                 # C--1
-                C_lss[(tid[0],(-1,1))][1]= T_lss[tid][2]
+                C_lss[(tid[0],(-1,1))][1]= T_lss[tid][2].conj()
                 # lower-right corner
                 #    0
                 # 1--C
-                C_lss[(tid[0],(1,1))][1]= T_lss[tid][3]
+                C_lss[(tid[0],(1,1))][1]= T_lss[tid][3].conj()
             elif t_dir==(-1,0): #LEFT
                 # 0
                 # T--2,3
                 # 1
-                T_lss[tid]= yast.leg_structures_for_dense( tensors=[tmp_T[tid],\
-                    tmp_T[(vts((t_xy[0], t_xy[1]-1)), t_dir)], {1: 0},\
-                    self.C[((t_xy),(-1,-1))], {0: 0},\
-                    tmp_T[(vts((t_xy[0], t_xy[1]+1)), t_dir)], {0: 1},\
-                    self.C[((t_xy),(-1,1))], {0: 1}])
+                T_lss[tid]= { 2: tmp_T[tid].get_legs(axis=2), 3: tmp_T[tid].get_legs(axis=3),\
+                    0: yast.leg_union(tmp_T[(vts((t_xy[0], t_xy[1]-1)), t_dir)].get_legs(axis=1),\
+                        self.C[((t_xy),(-1,-1))].get_legs(axis=0)).conj(),\
+                    1: yast.leg_union(tmp_T[(vts((t_xy[0], t_xy[1]+1)), t_dir)].get_legs(axis=0),\
+                        self.C[((t_xy),(-1,1))].get_legs(axis=0)).conj() }
                 # upper-left corner
                 # C--1
                 # 0
-                C_lss[(tid[0],(-1,-1))][0]= T_lss[tid][0]
+                C_lss[(tid[0],(-1,-1))][0]= T_lss[tid][0].conj()
                 # lower-left corner
                 # 0
                 # C--1
-                C_lss[(tid[0],(-1,1))][0]= T_lss[tid][1]
+                C_lss[(tid[0],(-1,1))][0]= T_lss[tid][1].conj()
             elif t_dir==(1,0): #RIGHT
                 #      0
                 # 1,2--T
                 #      3
-                T_lss[tid]= yast.leg_structures_for_dense( tensors=[tmp_T[tid],\
-                    tmp_T[(vts((t_xy[0], t_xy[1]-1)), t_dir)], {3: 0},\
-                    self.C[((t_xy),(1,-1))], {1: 0},\
-                    tmp_T[(vts((t_xy[0], t_xy[1]+1)), t_dir)], {0: 3},\
-                    self.C[((t_xy),(1,1))], {0: 3}])
+                T_lss[tid]= { 1: tmp_T[tid].get_legs(axis=1), 2: tmp_T[tid].get_legs(axis=2),\
+                    0: yast.leg_union(tmp_T[(vts((t_xy[0], t_xy[1]-1)), t_dir)].get_legs(axis=3),\
+                        self.C[((t_xy),(1,-1))].get_legs(axis=1)).conj(),\
+                    3: yast.leg_union(tmp_T[(vts((t_xy[0], t_xy[1]+1)), t_dir)].get_legs(axis=0),\
+                        self.C[((t_xy),(1,1))].get_legs(axis=0)).conj() }
                 # upper-right corner
                 # 0--C
                 #    1
-                C_lss[(tid[0],(1,-1))][1]= T_lss[tid][0]
+                C_lss[(tid[0],(1,-1))][1]= T_lss[tid][0].conj()
                 # lower-right corner
                 #    0
                 # 1--C
-                C_lss[(tid[0],(1,1))][0]= T_lss[tid][3]
+                C_lss[(tid[0],(1,1))][0]= T_lss[tid][3].conj()
             else:
                 raise RuntimeError("Invalid T-tensor id "+str(tid))
 
         # 1) convert to dense representation. Reshape T's into double-layer form
-        C_torch= {cid: c.to_dense(leg_structures=C_lss[cid]) for cid,c in self.C.items()}
+        C_torch= {cid: c.to_dense(legs=C_lss[cid]) for cid,c in self.C.items()}
         T_torch= dict()
         for tid,t in tmp_T.items():
             t_xy,t_dir= tid
-            t= t.to_dense(leg_structures=T_lss[tid])
+            t= t.to_dense(legs=T_lss[tid])
             if t_dir==(0,-1):
                 T_torch[tid]= t.view(t.size(0), t.size(1)*t.size(2), t.size(3))
             elif t_dir==(0,1):
@@ -302,6 +302,14 @@ class ENV_ABELIAN():
     def detach_(self):
         for c in self.C.values(): c.detach()
         for t in self.T.values(): t.detach()
+
+    def get_spectra(self):
+        spec= {}
+        for c_key, c_t in self.C.items():
+            _,S,_ = c_t.svd()
+            spec[c_key]= S
+        return spec
+
 
 def init_env(state, env, init_method=None, ctm_args=cfg.ctm_args):
     """

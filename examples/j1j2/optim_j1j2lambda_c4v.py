@@ -119,7 +119,7 @@ def main():
     ctm_env, *ctm_log = ctmrg_c4v.run(state_sym, ctm_env, conv_check=ctmrg_conv_f)
 
     loss= energy_f(state_sym, ctm_env, force_cpu=args.force_cpu)
-    obs_values, obs_labels= model.eval_obs(state_sym,ctm_env)
+    obs_values, obs_labels= model.eval_obs(state_sym,ctm_env,force_cpu=args.force_cpu)
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{loss}"]+[f"{v}" for v in obs_values]))
 
@@ -162,7 +162,8 @@ def main():
             state_sym= to_ipeps_c4v(state, normalize=True)
             epoch= len(opt_context["loss_history"]["loss"])
             loss= opt_context["loss_history"]["loss"][-1]
-            obs_values, obs_labels = model.eval_obs(state_sym, ctm_env)
+            obs_values, obs_labels = model.eval_obs(state_sym, ctm_env,\
+                force_cpu=args.force_cpu)
             print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]+\
                 [f"{torch.max(torch.abs(state.site((0,0))))}"]))
 
@@ -196,8 +197,8 @@ def main():
     ctm_env = ENV_C4V(args.chi, state)
     init_env(state, ctm_env)
     ctm_env, *ctm_log = ctmrg_c4v.run(state, ctm_env, conv_check=ctmrg_conv_f)
-    opt_energy = energy_f(state,ctm_env)
-    obs_values, obs_labels = model.eval_obs(state,ctm_env)
+    opt_energy = energy_f(state,ctm_env, force_cpu=args.force_cpu)
+    obs_values, obs_labels = model.eval_obs(state,ctm_env, force_cpu=args.force_cpu)
     print(", ".join([f"{args.opt_max_iter}",f"{opt_energy}"]+[f"{v}" for v in obs_values]))
 
 if __name__=='__main__':

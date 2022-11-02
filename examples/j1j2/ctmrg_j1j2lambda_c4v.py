@@ -3,9 +3,11 @@ import torch
 import argparse
 import config as cfg
 from ipeps.ipeps_c4v import *
+from ipeps.ipeps_lc import read_ipeps_lc_1site_pg 
 from groups.pg import make_c4v_symm
+from groups.su2 import SU2
 from ctm.one_site_c4v.env_c4v import *
-from ctm.one_site_c4v import ctmrg_c4v, transferops_c4v
+from ctm.one_site_c4v import ctmrg_c4v, transferops_c4v, corrf_c4v
 from ctm.one_site_c4v.rdm_c4v import rdm2x1_sl, rdm2x1, aux_rdm1x1
 from models import j1j2lambda
 import unittest
@@ -32,6 +34,7 @@ parser.add_argument("--obs_freq", type=int, default=-1, help="frequency of compu
 parser.add_argument("--corrf_dd_v", action='store_true', help="compute vertical dimer-dimer"\
     + " correlation function")
 parser.add_argument("--top2", action='store_true', help="compute transfer matrix for width-2 channel")
+parser.add_argument("--ff_ss", action='store_true', help="compute form-factors for spin-spin correlations")
 parser.add_argument("--force_cpu", action='store_true', help="evaluate energy on cpu")
 parser.add_argument("--EH_n", type=int, default=1, help="number of leading eigenvalues "+
     "of EH to compute")
@@ -56,10 +59,11 @@ def main():
 
     # 1) initialize an ipeps - read from file or create a random one
     if args.instate!=None:
-        state = read_ipeps_c4v(args.instate)
-        if args.bond_dim > max(state.get_aux_bond_dims()):
-            # extend the auxiliary dimensions
-            state = extend_bond_dim(state, args.bond_dim)
+        try:
+            state = read_ipeps_lc_1site_pg(args.instate)
+            assert len(state.coeffs)==1, "Not a 1-site ipeps"
+        except:
+            state = read_ipeps_c4v(args.instate)
         state.add_noise(args.instate_noise)
         state.sites[(0,0)]= state.sites[(0,0)]/torch.max(torch.abs(state.sites[(0,0)]))
     elif args.ipeps_init_type=='RANDOM':
@@ -157,11 +161,6 @@ def main():
 
 
     # 7) ----- additional observables ---------------------------------------------
-    corrSS= model.eval_corrf_SS(state, ctm_env_init, args.corrf_r, canonical=args.corrf_canonical)
-    print("\n\nSS r "+" ".join([label for label in corrSS.keys()])+f" canonical {args.corrf_canonical}")
-    for i in range(args.corrf_r):
-        print(f"{i} "+" ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
-
     corrDD= model.eval_corrf_DD_H(state, ctm_env_init, args.corrf_r)
     print("\n\nDD r "+" ".join([label for label in corrDD.keys()]))
     for i in range(args.corrf_r):
@@ -181,9 +180,20 @@ def main():
 
     # transfer operator spectrum
     print("\n\nspectrum(T)")
-    l= transferops_c4v.get_Top_spec_c4v(args.top_n, state, ctm_env_init)
-    for i in range(l.size()[0]):
-        print(f"{i} {l[i,0]} {l[i,1]}")
+    l,vecs= transferops_c4v.get_Top_spec_c4v(args.top_n, state, ctm_env_init,\
+        normalize=False,eigenvectors=True)
+    r_0= vecs[:,0].view(ctm_env_init.chi,state.site().size(1)**2,ctm_env_init.chi)
+    l_0= r_0.conj()
+    _l_norm_fac= (l[0,0]+l[0,1]*1.0j).abs()
+    for i in range(l.size()[0]):        
+        print(f"{i} {l[i,0]/_l_norm_fac} {l[i,1]/_l_norm_fac} {l[i,0]} {l[i,1]}")
+
+
+    corrSS= model.eval_corrf_SS(state, ctm_env_init, args.corrf_r, canonical=args.corrf_canonical,\
+        rl_0=(r_0,l_0))
+    print("\n\nSS r "+" ".join([label for label in corrSS.keys()])+f" canonical {args.corrf_canonical}")
+    for i in range(args.corrf_r):
+        print(f"{i} "+" ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
 
     # transfer operator spectrum
     if args.top2:
@@ -205,6 +215,52 @@ def main():
         for i in range(args.EH_n):
             print(f"{i} {S[i,0]} {S[i,1]}")
 
+    if not args.ff_ss: return
+    # form-factor analysis
+    print("\n\nFormfactors(T) for S")
+    # Solve eigenvalue problem
+    #                        ----T---
+    # <r_i| lmabda_i = <r_i| --A^+A--
+    #                        ----T---
+    #
+    # Since transfer matrix TA^+AT is hermitian, left eigenvector is h.c. of right one
+    #
+    # ---T---- 
+    # --A^+A-- |l_i> = lambda_i |l_i> = lambda_i (<r_i|)^+
+    # ---T----
+    #
+    print("TM S.S resolved by formfactors at r=2")
+    # compute normalization for r=2
+    #
+    #                          --T------T-----T------
+    # <L(O)|TA^+AT|R(O)>= <r_0|--A^+OA--A^+A--A^+OA--|l_0> =\sum_i lambda_i <L(O)|l_i><r_i|R(O)> 
+    #                          --T------T-----T------
+    #
+    irrep= SU2(2,dtype=torch.complex128,device=cfg.global_args.device)
+    S_xyz= irrep.S()
+    S_ops= {'id': irrep.I(), 'sz': S_xyz[0,:,:], 'sx': S_xyz[1,:,:], 'sy': S_xyz[2,:,:]}   
+    ff_ops= {}
+    for op_id,op in S_ops.items():
+        #              ----T----
+        # <L(O)|= <r_0|--A^+OA--
+        #              ----T----
+        r0TopT= corrf_c4v.apply_TM_1sO(state,ctm_env_init,r_0,op=op)
+        ff_ops[op_id]= torch.zeros(args.top_n,dtype=torch.complex128,device=cfg.global_args.device)
+        for i in range(args.top_n):
+            #                   ----T----
+            # <L(O)|l_i> = <r_0|--A^+OA-- (<r_i|)^+
+            #                   ----T----
+            ff_ops[op_id][i]= torch.dot(r0TopT.view(-1), vecs[:,i].conj())
+
+    norm_r2= corrf_c4v.apply_TM_1sO(state,ctm_env_init,r_0)
+    norm_r2= corrf_c4v.apply_TM_1sO(state,ctm_env_init,norm_r2)
+    norm_r2= corrf_c4v.apply_TM_1sO(state,ctm_env_init,norm_r2)
+    norm_r2= torch.tensordot(norm_r2,r_0.conj(),([0,1,2],[0,1,2]))
+    print(f"norm r=2 {norm_r2.item()}")
+    for i in range(args.top_n):
+        if i==0: print("FF(r=2) "+" ".join([f"{op_id}{op_id}" for op_id in S_ops.keys()]))
+        print(" ".join([f"{ff_ops[op_id][i]*(l[i,0]+1.0j*l[i,1])*ff_ops[op_id][i].conj()/norm_r2}" for op_id in S_ops.keys()]))
+        
 
 if __name__=='__main__':
     if len(unknown_args)>0:

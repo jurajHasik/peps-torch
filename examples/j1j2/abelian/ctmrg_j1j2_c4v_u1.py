@@ -1,11 +1,8 @@
 import os
 import context
-import torch
-import numpy as np
 import argparse
+import yast.yast as yast
 import config as cfg
-import examples.abelian.settings_full_torch as settings_full
-import examples.abelian.settings_U1_torch as settings_U1
 from ipeps.ipeps_abelian_c4v import *
 from models.abelian import j1j2
 from ctm.one_site_c4v_abelian.env_c4v_abelian import *
@@ -30,20 +27,24 @@ parser.add_argument("--top_n", type=int, default=2, help="number of leading eige
 parser.add_argument("--obs_freq", type=int, default=-1, help="frequency of computing observables"
     + " during CTM convergence")
 parser.add_argument("--force_cpu", action='store_true', help="evaluate energy on cpu")
+parser.add_argument("--yast_backend", type=str, default='np', 
+    help="YAST backend", choices=['np','torch','torch_cpp'])
 args, unknown_args = parser.parse_known_args()
 
 def main():
     cfg.configure(args)
     cfg.print_config()
-    
-    settings= settings_U1
-    # override default device specified in settings
-    default_device= 'cpu' if not hasattr(settings, 'device') else settings.device
-    if not cfg.global_args.device == default_device:
-        settings.device= settings_full.device= cfg.global_args.device
-        print("Setting backend device: "+settings.device)
-    # override default dtype specified in settings
-    settings.default_dtype= settings_full.default_dtype= cfg.global_args.dtype
+    from yast.yast.sym import sym_U1
+    if args.yast_backend=='np':
+        from yast.yast.backend import backend_np as backend
+    elif args.yast_backend=='torch':
+        from yast.yast.backend import backend_torch as backend
+    elif args.yast_backend=='torch_cpp':
+        from yast.yast.backend import backend_torch_cpp as backend
+    settings_full= yast.make_config(backend=backend, \
+        default_device= cfg.global_args.device, default_dtype=cfg.global_args.dtype)
+    settings= yast.make_config(backend=backend, sym=sym_U1, \
+        default_device= cfg.global_args.device, default_dtype=cfg.global_args.dtype)
     settings.backend.set_num_threads(args.omp_cores)
     settings.backend.random_seed(args.seed)
 
@@ -65,7 +66,6 @@ def main():
 
     # 2) convergence criterion based on 2-site reduced density matrix 
     #    of nearest-neighbours
-    @torch.no_grad()
     def ctmrg_conv_f(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
             history=dict({"log": []})
@@ -150,6 +150,7 @@ class TestCtmrg_D4_u1_Neel(unittest.TestCase):
     tol= 1.0e-6
     DIR_PATH = os.path.dirname(os.path.realpath(__file__))
     OUT_PRFX = "RESULT_test_run_ctmrg_D4_u1_Neel"
+    BACKENDS = ['np', 'torch']
 
     def setUp(self):
         args.instate=self.DIR_PATH+"/../../../test-input/abelian/c4v/BFGS100LS_U1B_D4-chi97-j20.0-run0-iU1BD4j20chi97n0_blocks_1site_state.json"
@@ -162,40 +163,44 @@ class TestCtmrg_D4_u1_Neel(unittest.TestCase):
         from unittest.mock import patch 
         from cmath import isclose
 
-        with patch('sys.stdout', new = StringIO()) as tmp_out: 
-            main()
-        tmp_out.seek(0)
+        for b_id in self.BACKENDS:
+            with self.subTest(b_id=b_id):
+                args.yast_backend=b_id
 
-        # parse FINAL observables
-        final_obs=None
-        final_opt_line=None
-        OPT_OBS= OPT_OBS_DONE= False
-        l= tmp_out.readline()
-        while l:
-            print(l,end="")
-            if OPT_OBS and not OPT_OBS_DONE and l.rstrip()=="": OPT_OBS_DONE= True
-            if OPT_OBS and not OPT_OBS_DONE and len(l.split(','))>2:
-                final_opt_line= l
-            if "epoch, energy," in l and not OPT_OBS_DONE: 
-                OPT_OBS= True
-            if "FINAL" in l:
-                final_obs= l.rstrip()
-                break
-            l= tmp_out.readline()
-        assert final_obs
-        assert final_opt_line
+                with patch('sys.stdout', new = StringIO()) as tmp_out: 
+                    main()
+                tmp_out.seek(0)
 
-        # compare with the reference
-        ref_data="""
-        -0.6283009062904991, 0.3359288237708855, 0.3359288237708855, 0.0, 0.0, -0.33448352974913287
-        """
+                # parse FINAL observables
+                final_obs=None
+                final_opt_line=None
+                OPT_OBS= OPT_OBS_DONE= False
+                l= tmp_out.readline()
+                while l:
+                    print(l,end="")
+                    if OPT_OBS and not OPT_OBS_DONE and l.rstrip()=="": OPT_OBS_DONE= True
+                    if OPT_OBS and not OPT_OBS_DONE and len(l.split(','))>2:
+                        final_opt_line= l
+                    if "epoch, energy," in l and not OPT_OBS_DONE: 
+                        OPT_OBS= True
+                    if "FINAL" in l:
+                        final_obs= l.rstrip()
+                        break
+                    l= tmp_out.readline()
+                assert final_obs
+                assert final_opt_line
 
-        # compare final observables from final state against expected reference 
-        # drop first token, corresponding to iteration step
-        fobs_tokens= [complex(x) for x in final_obs[len("FINAL"):].split(",")]
-        ref_tokens= [complex(x) for x in ref_data.split(",")]
-        for val,ref_val in zip(fobs_tokens, ref_tokens):
-            assert isclose(val,ref_val, rel_tol=self.tol, abs_tol=self.tol)
+                # compare with the reference
+                ref_data="""
+                -0.6283009062904991, 0.3359288237708855, 0.3359288237708855, 0.0, 0.0, -0.33448352974913287
+                """
+
+                # compare final observables from final state against expected reference 
+                # drop first token, corresponding to iteration step
+                fobs_tokens= [complex(x) for x in final_obs[len("FINAL"):].split(",")]
+                ref_tokens= [complex(x) for x in ref_data.split(",")]
+                for val,ref_val in zip(fobs_tokens, ref_tokens):
+                    assert isclose(val,ref_val, rel_tol=self.tol, abs_tol=self.tol)
 
     def tearDown(self):
         args.opt_resume=None

@@ -1,11 +1,9 @@
 import os
+import warnings
 import context
-import torch
-import numpy as np
 import argparse
+import yast.yast as yast
 import config as cfg
-import examples.abelian.settings_full_torch as settings_full
-import examples.abelian.settings_U1_torch as settings_U1
 from ipeps.ipeps_abelian import *
 from ctm.generic_abelian.env_abelian import *
 import ctm.generic_abelian.ctmrg as ctmrg
@@ -25,20 +23,24 @@ parser.add_argument("--alpha", type=float, default=0., help="inter-ladder coupli
 parser.add_argument("--bz_stag", type=float, default=0., help="staggered magnetic field")
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
+parser.add_argument("--yast_backend", type=str, default='np', 
+    help="YAST backend", choices=['np','torch','torch_cpp'])
 args, unknown_args = parser.parse_known_args()
 
 def main():
     cfg.configure(args)
     cfg.print_config()
-    settings= settings_U1
-    # override default device specified in settings
-    default_device= 'cpu' if not hasattr(settings, 'device') else settings.device
-    if not cfg.global_args.device == default_device:
-        settings.device = cfg.global_args.device
-        settings_full.device = cfg.global_args.device
-        print("Setting backend device: "+settings.device)
-    # override default dtype
-    settings_full.dtype= settings.dtype= cfg.global_args.dtype
+    from yast.yast.sym import sym_U1
+    if args.yast_backend=='np':
+        from yast.yast.backend import backend_np as backend
+    elif args.yast_backend=='torch':
+        from yast.yast.backend import backend_torch as backend
+    elif args.yast_backend=='torch_cpp':
+        from yast.yast.backend import backend_torch_cpp as backend
+    settings_full= yast.make_config(backend=backend, \
+        default_device= cfg.global_args.device, default_dtype=cfg.global_args.dtype)
+    settings= yast.make_config(backend=backend, sym=sym_U1, \
+        default_device= cfg.global_args.device, default_dtype=cfg.global_args.dtype)
     settings.backend.set_num_threads(args.omp_cores)
     settings.backend.random_seed(args.seed)
 
@@ -65,7 +67,6 @@ def main():
     print(state)
 
     # 2) define convergence criterion for ctmrg
-    @torch.no_grad()
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
             history=[]
@@ -112,6 +113,10 @@ def main():
                 print(f"{i} {sector[i]}")
 
     # convert to dense env and compute transfer operator spectrum
+    if args.yast_backend=='np':
+        warnings.warn('Transfer matrix computation requires \'torch\' backend.')
+        return
+            
     state_dense= state.to_dense()
     ctm_env_dense= ctm_env.to_dense(state)
 
@@ -147,6 +152,7 @@ class TestCtmrg_plain_VBS(unittest.TestCase):
     tol= 1.0e-6
     DIR_PATH = os.path.dirname(os.path.realpath(__file__))
     OUT_PRFX = "RESULT_test_run_ctmrg_u1_VBS"
+    BACKENDS = ['np', 'torch']
 
     def setUp(self):
         args.instate=self.DIR_PATH+"/../../../test-input/abelian/VBS_2x2_ABCD.in"
@@ -159,42 +165,46 @@ class TestCtmrg_plain_VBS(unittest.TestCase):
         from unittest.mock import patch 
         from cmath import isclose
 
-        with patch('sys.stdout', new = StringIO()) as tmp_out: 
-            main()
-        tmp_out.seek(0)
+        for b_id in self.BACKENDS:
+            with self.subTest(b_id=b_id):
+                args.yast_backend=b_id
 
-        # parse FINAL observables
-        final_obs=None
-        final_opt_line=None
-        OPT_OBS= OPT_OBS_DONE= False
-        l= tmp_out.readline()
-        while l:
-            print(l,end="")
-            if OPT_OBS and not OPT_OBS_DONE and l.rstrip()=="": OPT_OBS_DONE= True
-            if OPT_OBS and not OPT_OBS_DONE and len(l.split(','))>2:
-                final_opt_line= l
-            if "epoch, energy," in l and not OPT_OBS_DONE: 
-                OPT_OBS= True
-            if "FINAL" in l:
-                final_obs= l.rstrip()
-                break
-            l= tmp_out.readline()
-        assert final_obs
-        assert final_opt_line
+                with patch('sys.stdout', new = StringIO()) as tmp_out: 
+                    main()
+                tmp_out.seek(0)
 
-        # compare with the reference
-        ref_data="""
-        -0.375, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
-        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
-        -0.75, -0.75, 0.0, 0.0
-        """
+                # parse FINAL observables
+                final_obs=None
+                final_opt_line=None
+                OPT_OBS= OPT_OBS_DONE= False
+                l= tmp_out.readline()
+                while l:
+                    print(l,end="")
+                    if OPT_OBS and not OPT_OBS_DONE and l.rstrip()=="": OPT_OBS_DONE= True
+                    if OPT_OBS and not OPT_OBS_DONE and len(l.split(','))>2:
+                        final_opt_line= l
+                    if "epoch, energy," in l and not OPT_OBS_DONE: 
+                        OPT_OBS= True
+                    if "FINAL" in l:
+                        final_obs= l.rstrip()
+                        break
+                    l= tmp_out.readline()
+                assert final_obs
+                assert final_opt_line
 
-        # compare final observables from final state against expected reference 
-        # drop first token, corresponding to iteration step
-        fobs_tokens= [complex(x) for x in final_obs[len("FINAL"):].split(",")]
-        ref_tokens= [complex(x) for x in ref_data.split(",")]
-        for val,ref_val in zip(fobs_tokens, ref_tokens):
-            assert isclose(val,ref_val, rel_tol=self.tol, abs_tol=self.tol)
+                # compare with the reference
+                ref_data="""
+                -0.375, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
+                -0.75, -0.75, 0.0, 0.0
+                """
+
+                # compare final observables from final state against expected reference 
+                # drop first token, corresponding to iteration step
+                fobs_tokens= [complex(x) for x in final_obs[len("FINAL"):].split(",")]
+                ref_tokens= [complex(x) for x in ref_data.split(",")]
+                for val,ref_val in zip(fobs_tokens, ref_tokens):
+                    assert isclose(val,ref_val, rel_tol=self.tol, abs_tol=self.tol)
 
     def tearDown(self):
         args.opt_resume=None

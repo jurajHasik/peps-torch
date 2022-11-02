@@ -4,15 +4,16 @@ from tn_interface_abelian import contract, permute, conj
 
 log= logging.getLogger('peps.ctm.generic_abelian.rdm')
 
-def _cast_to_real(t, fail_on_check=False, warn_on_check=True, imag_eps=1.0e-10,\
+def _cast_to_real(t, fail_on_check=False, warn_on_check=True, imag_eps=1.0e-8,\
     who="unknown", **kwargs):
     if t.is_complex():
-        if abs(t.imag)/abs(t.real) > imag_eps and abs(t.imag)>imag_eps:
+        _t= t.item()
+        if abs(_t.imag)/(abs(_t.real)+1.0e-8) > imag_eps:
             if warn_on_check:
                 log.warning(f"Unexpected imaginary part "+who+" "+str(t))
             if fail_on_check: 
                 raise RuntimeError("Unexpected imaginary part "+who+" "+str(t))
-        return t.real
+        return t.real()
     return t
 
 def _sym_pos_def_matrix(rdm, sym_pos_def=False, verbosity=0, who="unknown", **kwargs):
@@ -28,7 +29,7 @@ def _sym_pos_def_matrix(rdm, sym_pos_def=False, verbosity=0, who="unknown", **kw
     #             D= torch.clamp(D, min=0)
     #             rdm_posdef= U@torch.diag(D)@U.t()
     #             rdm.copy_(rdm_posdef)
-    norm= _cast_to_real(rdm.trace().to_number(),who=who,**kwargs)
+    norm= _cast_to_real(rdm.trace(),who=who,**kwargs).to_number()
     rdm = rdm / norm
     return rdm
 

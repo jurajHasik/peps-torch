@@ -223,7 +223,7 @@ class J1J2LAMBDA_C4V_BIPARTITE():
         obs_values=[obs[label] for label in obs_labels]
         return obs_values, obs_labels
 
-    def eval_corrf_SS(self,state,env_c4v,dist,canonical=False):
+    def eval_corrf_SS(self,state,env_c4v,dist,canonical=False,rl_0=None):
         r"""
         :param state: wavefunction
         :param env_c4v: CTM c4v symmetric environment
@@ -271,9 +271,11 @@ class J1J2LAMBDA_C4V_BIPARTITE():
             return _gen_op
 
         Sz0szR= corrf_c4v.corrf_1sO1sO(state, env_c4v, Sop_zxy[0,:,:], \
-            get_bilat_op(Sop_zxy[0,:,:]), dist)
-        Sx0sxR= corrf_c4v.corrf_1sO1sO(state, env_c4v, Sop_zxy[1,:,:], get_bilat_op(Sop_zxy[1,:,:]), dist)
-        nSy0SyR= corrf_c4v.corrf_1sO1sO(state, env_c4v, Sop_zxy[2,:,:], get_bilat_op(Sop_zxy[2,:,:]), dist)
+            get_bilat_op(Sop_zxy[0,:,:]), dist, rl_0=rl_0)
+        Sx0sxR= corrf_c4v.corrf_1sO1sO(state, env_c4v, Sop_zxy[1,:,:], get_bilat_op(Sop_zxy[1,:,:]), \
+            dist, rl_0=rl_0)
+        nSy0SyR= corrf_c4v.corrf_1sO1sO(state, env_c4v, Sop_zxy[2,:,:], get_bilat_op(Sop_zxy[2,:,:]), \
+            dist, rl_0=rl_0)
 
         res= dict({"ss": Sz0szR+Sx0sxR-nSy0SyR, "szsz": Sz0szR, "sxsx": Sx0sxR, "sysy": -nSy0SyR})
         return res

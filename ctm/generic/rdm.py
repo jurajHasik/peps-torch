@@ -1,6 +1,7 @@
 import torch
 from config import _torch_version_check
 from ctm.generic.env import ENV
+from ctm.generic.ctm_components import c2x2_LU, c2x2_LD, c2x2_RU, c2x2_RD
 from tn_interface import contract, einsum
 from tn_interface import contiguous, view, permute
 from tn_interface import conj
@@ -8,10 +9,10 @@ import logging
 
 log = logging.getLogger(__name__)
 
-def _cast_to_real(t, fail_on_check=False, warn_on_check=True, imag_eps=1.0e-10,\
+def _cast_to_real(t, fail_on_check=False, warn_on_check=True, imag_eps=1.0e-8,\
     who="unknown", **kwargs):
     if t.is_complex():
-        if abs(t.imag)/abs(t.real) > imag_eps and abs(t.imag)>imag_eps:
+        if abs(t.imag)/(abs(t.real)+1.0e-8) > imag_eps:
             if warn_on_check:
                 log.warning(f"Unexpected imaginary part "+who+" "+str(t))
             if fail_on_check: 
@@ -323,12 +324,12 @@ def rdm2x1(coord, state, env, sym_pos_def=False, verbosity=0):
 
     # ----- building C2x2_RU ----------------------------------------------------
     vec = (1, 0)
-    shitf_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
-    C = env.C[(shitf_coord, (1, -1))]
-    T1 = env.T[(shitf_coord, (1, 0))]
-    T2 = env.T[(shitf_coord, (0, -1))]
-    dimsA = state.site(shitf_coord).size()
-    a = einsum('mefgh,nabcd->eafbgchdmn', state.site(shitf_coord), conj(state.site(shitf_coord)))
+    shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    C = env.C[(shift_coord, (1, -1))]
+    T1 = env.T[(shift_coord, (1, 0))]
+    T2 = env.T[(shift_coord, (0, -1))]
+    dimsA = state.site(shift_coord).size()
+    a = einsum('mefgh,nabcd->eafbgchdmn', state.site(shift_coord), conj(state.site(shift_coord)))
     a = view(contiguous(a), \
              (dimsA[1] ** 2, dimsA[2] ** 2, dimsA[3] ** 2, dimsA[4] ** 2, dimsA[0], dimsA[0]))
 
@@ -361,12 +362,12 @@ def rdm2x1(coord, state, env, sym_pos_def=False, verbosity=0):
     C2x2_RU = view(contiguous(C2x2_RU), \
                    (T2.size(0) * a.size(1), T1.size(2) * a.size(2), dimsA[0], dimsA[0]))
     if verbosity > 0:
-        print("C2X2 RU " + str((coord[0] + vec[0], coord[1] + vec[1])) + "->" + str(shitf_coord) + " (1,-1): " + str(
+        print("C2X2 RU " + str((coord[0] + vec[0], coord[1] + vec[1])) + "->" + str(shift_coord) + " (1,-1): " + str(
             C2x2_RU.size()))
 
     # ----- building C2x1_RD ----------------------------------------------------
-    C = env.C[(shitf_coord, (1, 1))]
-    T1 = env.T[(shitf_coord, (0, 1))]
+    C = env.C[(shift_coord, (1, 1))]
+    T1 = env.T[(shift_coord, (0, 1))]
 
     #    1<-0        0
     # 2<-1--T1--2 1--C
@@ -379,7 +380,7 @@ def rdm2x1(coord, state, env, sym_pos_def=False, verbosity=0):
     #    |
     # 1--C2x1
     if verbosity > 0:
-        print("C2X1 RD " + str((coord[0] + vec[0], coord[1] + vec[1])) + "->" + str(shitf_coord) + " (1,1): " + str(
+        print("C2X1 RD " + str((coord[0] + vec[0], coord[1] + vec[1])) + "->" + str(shift_coord) + " (1,1): " + str(
             C2x1_RD.size()))
 
     # ----- build right part C2x2_RU--C2x1_RD -----------------------------------
@@ -506,12 +507,12 @@ def rdm1x2(coord, state, env, sym_pos_def=False, verbosity=0):
 
     # ----- building C2x2_LD ----------------------------------------------------
     vec = (0, 1)
-    shitf_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
-    C = env.C[(shitf_coord, (-1, 1))]
-    T1 = env.T[(shitf_coord, (-1, 0))]
-    T2 = env.T[(shitf_coord, (0, 1))]
-    dimsA = state.site(shitf_coord).size()
-    a = einsum('mefgh,nabcd->eafbgchdmn', state.site(shitf_coord), conj(state.site(shitf_coord)))
+    shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    C = env.C[(shift_coord, (-1, 1))]
+    T1 = env.T[(shift_coord, (-1, 0))]
+    T2 = env.T[(shift_coord, (0, 1))]
+    dimsA = state.site(shift_coord).size()
+    a = einsum('mefgh,nabcd->eafbgchdmn', state.site(shift_coord), conj(state.site(shift_coord)))
     a = view(contiguous(a), \
              (dimsA[1] ** 2, dimsA[2] ** 2, dimsA[3] ** 2, dimsA[4] ** 2, dimsA[0], dimsA[0]))
 
@@ -545,12 +546,12 @@ def rdm1x2(coord, state, env, sym_pos_def=False, verbosity=0):
     C2x2_LD = view(contiguous(C2x2_LD), \
                    (T1.size(0) * a.size(0), T2.size(2) * a.size(3), dimsA[0], dimsA[0]))
     if verbosity > 0:
-        print("C2X2 LD " + str((coord[0] + vec[0], coord[1] + vec[1])) + "->" + str(shitf_coord) + " (-1,1): " + str(
+        print("C2X2 LD " + str((coord[0] + vec[0], coord[1] + vec[1])) + "->" + str(shift_coord) + " (-1,1): " + str(
             C2x2_LD.size()))
 
     # ----- building C2x2_RD ----------------------------------------------------
-    C = env.C[(shitf_coord, (1, 1))]
-    T2 = env.T[(shitf_coord, (1, 0))]
+    C = env.C[(shift_coord, (1, 1))]
+    T2 = env.T[(shift_coord, (1, 0))]
 
     #       0
     #    1--T2
@@ -568,7 +569,7 @@ def rdm1x2(coord, state, env, sym_pos_def=False, verbosity=0):
     #    |
     # 1--C1x2
     if verbosity > 0:
-        print("C1X2 RD " + str((coord[0] + vec[0], coord[1] + vec[1])) + "->" + str(shitf_coord) + " (1,1): " + str(
+        print("C1X2 RD " + str((coord[0] + vec[0], coord[1] + vec[1])) + "->" + str(shift_coord) + " (1,1): " + str(
             C1x2_RD.size()))
 
     # ----- build lower part C2x2_LD--C1x2_RD -----------------------------------
@@ -585,6 +586,186 @@ def rdm1x2(coord, state, env, sym_pos_def=False, verbosity=0):
     # |/23         |
     # C2x2_LD------C1x2_RD
     rdm = contract(upper_half, lower_half, ([0, 1], [0, 1]))
+
+    # permute into order of s0,s1;s0',s1' where primed indices
+    # represent "ket"
+    # 0123->0213
+    # symmetrize and normalize
+    rdm = contiguous(permute(rdm, (0, 2, 1, 3)))
+    rdm = _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
+
+    return rdm
+
+
+def rdm2x2_NNN_11(coord, state, env, sym_pos_def=False, verbosity=0):
+    r"""
+    :param coord: vertex (x,y) specifies upper left site of 2x2 subsystem
+    :param state: underlying wavefunction
+    :param env: environment corresponding to ``state``
+    :param verbosity: logging verbosity
+    :type coord: tuple(int,int)
+    :type state: IPEPS
+    :type env: ENV
+    :type verbosity: int
+    :return: 2-site reduced density matrix with indices :math:`s_0s_1;s'_0s'_1
+    :rtype: torch.tensor
+
+    Computes 2-site reduced density matrix :math:`\rho_{NNN,11}` of two-site subsystem 
+    across (1,1) diagonal specified by the vertex ``coord`` of its upper left corner using strategy:
+
+        1. compute four individual corners
+        2. construct upper and lower half of the network
+        3. contract upper and lower half to obtain final reduced density matrix
+
+    ::
+
+        C--T------------------T------------------C = C2x2_LU(coord)--------C2x2(coord+(1,0))
+        |  |                  |                  |   |                     |
+        T--A^+A(coord)--------A^+A(coord+(1,0))--T   C2x2_LD(coord+(0,1))--C2x2(coord+(1,1))
+        |  |                  |                  | 
+        T--A^+A(coord+(0,1))--A^+A(coord+(1,1))--T
+        |  |                  |                  |
+        C--T------------------T------------------C
+
+    The physical indices `s` and `s'` of on-sites tensors :math:`A` (and :math:`A^\dagger`)
+    at vertices ``coord`` and ``coord+(1,1)`` are left uncontracted and given in the same order::
+
+        s0 x
+        x  s1
+
+    """
+    who = "rdm2x2_NNN_11"
+    # ----- building C2x2_LU ----------------------------------------------------
+    C2X2_LU= c2x2_LU(coord,state,env,mode='sl-open',verbosity=verbosity)
+
+    # ----- building C2X2_RU ----------------------------------------------------
+    vec = (1, 0)
+    shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    C2X2_RU= c2x2_RU(shift_coord, state, env, mode='sl',verbosity=verbosity) 
+
+    # ----- build upper part C2x2_LU--C2X2_RU -----------------------------------
+    # C2x2_LU--1 0--C2X2_RU           C2x2_LU------C2X2_RU
+    # |\23->12      |       & permute |\12->23     |
+    # 0             1->3              0            1
+    # TODO is it worthy(performance-wise) to instead overwrite one of C2x2_LU,C2X2_RU ?
+    upper_half = contract(C2X2_LU, C2X2_RU, ([1], [0]))
+    upper_half = permute(upper_half, (0, 3, 1, 2))
+
+    # ----- building C2X2_RD ----------------------------------------------------
+    vec = (1, 1)
+    shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    C2X2_RD= c2x2_RD(shift_coord,state,env,mode='sl-open',verbosity=verbosity)
+
+    # ----- building C2x2_LD ----------------------------------------------------
+    vec = (0, 1)
+    shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    C2X2_LD= c2x2_LD(shift_coord, state, env, mode='sl', verbosity=verbosity)
+
+    # ----- build lower part C2X2_LD--C2X2_RD -----------------------------------
+    # 0             0->1
+    # |             |/23
+    # C2X2_LD--1 1--C2x2_RD
+    # TODO is it worthy(performance-wise) to instead overwrite one of C2X2_LD,C2x2_RD ?
+    lower_half = contract(C2X2_LD, C2X2_RD, ([1], [1]))
+
+    # construct reduced density matrix by contracting lower and upper halfs
+    # C2x2_LU------C2x2_RU
+    # |\23->01     |
+    # 0            1
+    # 0            1
+    # |            |/23
+    # C2X2_LD------C2x2_RD
+    rdm = contract(upper_half, lower_half, ([0, 1], [0, 1]))
+
+    # permute into order of s0,s1;s0',s1' where primed indices
+    # represent "ket"
+    # 0123->0213
+    # symmetrize and normalize
+    rdm = contiguous(permute(rdm, (0, 2, 1, 3)))
+    rdm = _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
+
+    return rdm
+
+
+def rdm2x2_NNN_1n1(coord, state, env, sym_pos_def=False, verbosity=0):
+    r"""
+    :param coord: vertex (x,y) specifies upper left site of 2x2 subsystem
+    :param state: underlying wavefunction
+    :param env: environment corresponding to ``state``
+    :param verbosity: logging verbosity
+    :type coord: tuple(int,int)
+    :type state: IPEPS
+    :type env: ENV
+    :type verbosity: int
+    :return: 2-site reduced density matrix with indices :math:`s_0s_1;s'_0s'_1`
+    :rtype: torch.tensor
+
+    Computes 2-site reduced density matrix :math:`\rho_{NNN,1n1}` of two-site subsystem 
+    across (1,-1) diagonal specified by the vertex ``coord`` of its lower left corner using strategy:
+
+        1. compute four individual corners
+        2. construct upper and lower half of the network
+        3. contract upper and lower half to obtain final reduced density matrix
+
+    ::
+
+        C--T------------------T------------------C = C2x2_LU(coord+(0,-1))-C2x2(coord+(1,-1))
+        |  |                  |                  |   |                     |
+        T--A^+A(coord+(0,-1))-A^+A(coord+(1,-1))-T   C2x2_LD(coord)--------C2x2(coord+(1,0))
+        |  |                  |                  | 
+        T--A^+A(coord)--------A^+A(coord+(1,0))--T
+        |  |                  |                  |
+        C--T------------------T------------------C
+
+    The physical indices `s` and `s'` of on-sites tensors :math:`A` (and :math:`A^\dagger`)
+    at vertices ``coord`` and ``coord+(1,-1)`` are left uncontracted and given in the same order::
+
+        x  s1
+        s0 x
+
+    """
+    who = "rdm2x2_NNN_1n1"
+    # ----- building C2X2_LU ----------------------------------------------------
+    vec = (0, -1)
+    shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    C2X2_LU= c2x2_LU(shift_coord,state,env,mode='sl',verbosity=verbosity)
+
+    # ----- building C2x2_RU ----------------------------------------------------
+    vec = (1, -1)
+    shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    C2X2_RU= c2x2_RU(shift_coord, state, env, mode='sl-open', verbosity=verbosity)
+
+    # ----- build upper part C2x2_LU--C2X2_RU -----------------------------------
+    # C2x2_LU--1 0--C2X2_RU
+    # |             |\23
+    # 0             1
+    # TODO is it worthy(performance-wise) to instead overwrite one of C2x2_LU,C2X2_RU ?
+    upper_half = contract(C2X2_LU, C2X2_RU, ([1], [0]))
+
+    # ----- building C2X2_RD ----------------------------------------------------
+    vec = (1, 0)
+    shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    C2X2_RD= c2x2_RD(shift_coord,state,env,mode='sl',verbosity=verbosity)    
+
+    # ----- building C2X2_LD ----------------------------------------------------
+    C2X2_LD= c2x2_LD(coord,state,env,mode='sl-open',verbosity=verbosity)
+
+    # ----- build lower part C2X2_LD--C2X2_RD -----------------------------------
+    # 0             0->3                 0            3->1
+    # |/23->12      |          & permute |/12->23     |
+    # C2X2_LD--1 1--C2X2_RD              C2X2_LD------C2X2_RD
+    # TODO is it worthy(performance-wise) to instead overwrite one of C2X2_LD,C2X2_RD ?
+    lower_half = contract(C2X2_LD, C2X2_RD, ([1], [1]))
+    lower_half = permute(lower_half, (0, 3, 1, 2))
+
+    # construct reduced density matrix by contracting lower and upper halfs
+    # C2X2_LU------C2X2_RU
+    # |            |\23
+    # 0            1
+    # 0            1
+    # |/23->01     |
+    # C2X2_LD------C2X2_RD
+    rdm = contract(lower_half, upper_half, ([0, 1], [0, 1]))
 
     # permute into order of s0,s1;s0',s1' where primed indices
     # represent "ket"
@@ -673,12 +854,12 @@ def rdm2x2(coord, state, env, sym_pos_def=False, verbosity=0):
 
     # ----- building C2x2_RU ----------------------------------------------------
     vec = (1, 0)
-    shitf_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
-    C = env.C[(shitf_coord, (1, -1))]
-    T1 = env.T[(shitf_coord, (1, 0))]
-    T2 = env.T[(shitf_coord, (0, -1))]
-    dimsA = state.site(shitf_coord).size()
-    a = contiguous(einsum('mefgh,nabcd->eafbgchdmn', state.site(shitf_coord), conj(state.site(shitf_coord))))
+    shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    C = env.C[(shift_coord, (1, -1))]
+    T1 = env.T[(shift_coord, (1, 0))]
+    T2 = env.T[(shift_coord, (0, -1))]
+    dimsA = state.site(shift_coord).size()
+    a = contiguous(einsum('mefgh,nabcd->eafbgchdmn', state.site(shift_coord), conj(state.site(shift_coord))))
     a = view(a, (dimsA[1] ** 2, dimsA[2] ** 2, dimsA[3] ** 2, dimsA[4] ** 2, dimsA[0], dimsA[0]))
 
     # 0--C
@@ -709,7 +890,7 @@ def rdm2x2(coord, state, env, sym_pos_def=False, verbosity=0):
     C2x2_RU = contiguous(permute(C2x2_RU, (1, 2, 0, 3, 4, 5)))
     C2x2_RU = view(C2x2_RU, (T2.size(0) * a.size(1), T1.size(2) * a.size(2), dimsA[0], dimsA[0]))
     if verbosity > 0:
-        print("C2X2 RU " + str((coord[0] + vec[0], coord[1] + vec[1])) + "->" + str(shitf_coord) + " (1,-1): " + str(
+        print("C2X2 RU " + str((coord[0] + vec[0], coord[1] + vec[1])) + "->" + str(shift_coord) + " (1,-1): " + str(
             C2x2_RU.size()))
 
     # ----- build upper part C2x2_LU--C2x2_RU -----------------------------------
@@ -722,12 +903,12 @@ def rdm2x2(coord, state, env, sym_pos_def=False, verbosity=0):
 
     # ----- building C2x2_RD ----------------------------------------------------
     vec = (1, 1)
-    shitf_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
-    C = env.C[(shitf_coord, (1, 1))]
-    T1 = env.T[(shitf_coord, (0, 1))]
-    T2 = env.T[(shitf_coord, (1, 0))]
-    dimsA = state.site(shitf_coord).size()
-    a = contiguous(einsum('mefgh,nabcd->eafbgchdmn', state.site(shitf_coord), conj(state.site(shitf_coord))))
+    shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    C = env.C[(shift_coord, (1, 1))]
+    T1 = env.T[(shift_coord, (0, 1))]
+    T2 = env.T[(shift_coord, (1, 0))]
+    dimsA = state.site(shift_coord).size()
+    a = contiguous(einsum('mefgh,nabcd->eafbgchdmn', state.site(shift_coord), conj(state.site(shift_coord))))
     a = view(a, (dimsA[1] ** 2, dimsA[2] ** 2, dimsA[3] ** 2, dimsA[4] ** 2, dimsA[0], dimsA[0]))
 
     #   1<-0        0
@@ -757,17 +938,17 @@ def rdm2x2(coord, state, env, sym_pos_def=False, verbosity=0):
     #    |/23
     # 1--C2x2
     if verbosity > 0:
-        print("C2X2 RD " + str((coord[0] + vec[0], coord[1] + vec[1])) + "->" + str(shitf_coord) + " (1,1): " + str(
+        print("C2X2 RD " + str((coord[0] + vec[0], coord[1] + vec[1])) + "->" + str(shift_coord) + " (1,1): " + str(
             C2x2_RD.size()))
 
     # ----- building C2x2_LD ----------------------------------------------------
     vec = (0, 1)
-    shitf_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
-    C = env.C[(shitf_coord, (-1, 1))]
-    T1 = env.T[(shitf_coord, (-1, 0))]
-    T2 = env.T[(shitf_coord, (0, 1))]
-    dimsA = state.site(shitf_coord).size()
-    a = contiguous(einsum('mefgh,nabcd->eafbgchdmn', state.site(shitf_coord), conj(state.site(shitf_coord))))
+    shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    C = env.C[(shift_coord, (-1, 1))]
+    T1 = env.T[(shift_coord, (-1, 0))]
+    T2 = env.T[(shift_coord, (0, 1))]
+    dimsA = state.site(shift_coord).size()
+    a = contiguous(einsum('mefgh,nabcd->eafbgchdmn', state.site(shift_coord), conj(state.site(shift_coord))))
     a = view(a, (dimsA[1] ** 2, dimsA[2] ** 2, dimsA[3] ** 2, dimsA[4] ** 2, dimsA[0], dimsA[0]))
 
     # 0->1
@@ -799,7 +980,7 @@ def rdm2x2(coord, state, env, sym_pos_def=False, verbosity=0):
     C2x2_LD = contiguous(permute(C2x2_LD, (0, 2, 1, 3, 4, 5)))
     C2x2_LD = view(C2x2_LD, (T1.size(0) * a.size(0), T2.size(2) * a.size(3), dimsA[0], dimsA[0]))
     if verbosity > 0:
-        print("C2X2 LD " + str((coord[0] + vec[0], coord[1] + vec[1])) + "->" + str(shitf_coord) + " (-1,1): " + str(
+        print("C2X2 LD " + str((coord[0] + vec[0], coord[1] + vec[1])) + "->" + str(shift_coord) + " (-1,1): " + str(
             C2x2_LD.size()))
 
     # ----- build lower part C2x2_LD--C2x2_RD -----------------------------------

@@ -7,7 +7,7 @@ import ipeps
 from ctm.one_site_c4v.env_c4v import ENV_C4V
 from ctm.one_site_c4v import corrf_c4v
 
-def get_Top_spec_c4v(n, state, env_c4v, verbosity=0):
+def get_Top_spec_c4v(n, state, env_c4v, normalize=True, eigenvectors=False, verbosity=0):
     r"""
     :param n: number of leading eigenvalues of a transfer operator to compute
     :type n: int
@@ -15,6 +15,10 @@ def get_Top_spec_c4v(n, state, env_c4v, verbosity=0):
     :type state: IPEPS_C4V
     :param env_c4v: corresponding environment
     :type env_c4v: ENV_C4V
+    :param normalize: normalize eigenvalues such that :math:`\lambda_0=1`
+    :type normalize: bool
+    :param eigenvectors: compute eigenvectors
+    :type eigenvectors: bool
     :return: leading n-eigenvalues, returned as `n x 2` tensor with first and second column
              encoding real and imaginary part respectively.
     :rtype: torch.Tensor   
@@ -44,16 +48,23 @@ def get_Top_spec_c4v(n, state, env_c4v, verbosity=0):
     _test_T= torch.zeros(1,dtype=env_c4v.dtype)
     T= LinearOperator((chi*ad*ad*chi,chi*ad*ad*chi), matvec=_mv, \
         dtype="complex128" if _test_T.is_complex() else "float64")
-    vals= eigs(T, k=n, v0=None, return_eigenvectors=False)
+    if eigenvectors:
+        vals, vecs= eigs(T, k=n, v0=None, return_eigenvectors=True)
+    else:
+        vals= eigs(T, k=n, v0=None, return_eigenvectors=False)
 
     # post-process and return as torch tensor with first and second column
     # containing real and imaginary parts respectively
-    vals= np.copy(vals[::-1]) # descending order
-    vals= (1.0/np.abs(vals[0])) * vals
+    ind_sorted= np.argsort(np.abs(vals))[::-1] # descending order
+    vals= vals[ind_sorted]
+    if normalize: 
+        vals= (1.0/np.abs(vals[0])) * vals
     L= torch.zeros((n,2), dtype=torch.float64, device=state.device)
     L[:,0]= torch.as_tensor(np.real(vals))
     L[:,1]= torch.as_tensor(np.imag(vals))
 
+    if eigenvectors:
+        return L, torch.as_tensor(vecs[:,ind_sorted], device=state.device)
     return L
 
 def get_Top2_spec_c4v(n, state, env_c4v, verbosity=0):

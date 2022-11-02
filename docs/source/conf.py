@@ -40,10 +40,16 @@ release = 'alpha'
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
+    'sphinx.ext.autosectionlabel',
     'sphinx.ext.coverage',
     'sphinx.ext.mathjax',
-    'sphinx.ext.viewcode'
+    'sphinx.ext.napoleon',
+    'sphinx.ext.viewcode',
+    'sphinx_rtd_theme'
 ]
+
+# Make sure the target is unique
+autosectionlabel_prefix_document = True
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -112,7 +118,7 @@ html_static_path = []
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'tn-torchdoc'
+htmlhelp_basename = 'peps-torchdoc'
 
 
 # -- Options for LaTeX output ------------------------------------------------
@@ -175,3 +181,7 @@ texinfo_documents = [
 #}
 autoclass_content = 'both'
 #autodoc_mock_imports = ["torch"]
+
+rst_prolog = """
+:github_url: https://github.com/jurajHasik/peps-torch
+"""

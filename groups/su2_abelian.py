@@ -31,7 +31,7 @@ class SU2_NOSYM():
         self.engine= settings
         self.backend= settings.backend
         self.dtype= settings.default_dtype
-        self.device= 'cpu' if not hasattr(settings, 'device') else settings.device
+        self.device= settings.device if hasattr(settings, 'device') else settings.default_device
 
     def _cast(self, op_id, J, dtype, device):
         tmp_block= self.get_op(op_id, J, dtype)
@@ -321,14 +321,8 @@ class SU2_U1():
             S--0(-1)
             2(+1)
         """
-        # op_v= yast.Tensor(self.engine, s=[-1]+list(self._REF_S_DIRS), n=0)
-        # op_sz, op_sp, op_sm= self.SZ(), self.SP(), self.SM()
-        # for op in [op_sz, op_sp, op_sm]:
-        #     for c in op.A:
-        #         op_v.set_block(ts=(op.get_tensor_charge()[0],*c), val=op.A[c][None,:,:])
-
         op_v= yast.block({i: t.add_leg(axis=0,s=-1) for i,t in enumerate([\
-            self.SZ(), self.SP(), self.SM()])}, common_legs=[1,2])
+            self.SZ(), self.SP(), self.SM()])}, common_legs=[1,2]).drop_leg_history(axis=0)
         return op_v
 
     # TODO: implement xyz for Sx and Sy terms

@@ -1230,7 +1230,7 @@ def rdm2x2_dn_triangle_with_operator(coord, state, env, op, force_cpu=False,\
     # C2x2_LD------C2x2_RD
     rdm_op = contract(upper_half_op, lower_half, ([0, 1], [0, 1]))
     rdm_id = contract(upper_half, lower_half, ([0, 1], [0, 1]))
-    rdm_id = _cast_to_real(rdm_id.to_number(), who=who, **kwargs)
+    rdm_id = _cast_to_real(rdm_id, who=who, **kwargs).to_number()
 
     exp_val_op = rdm_op/rdm_id
     exp_val_op = exp_val_op.to(env.device)
