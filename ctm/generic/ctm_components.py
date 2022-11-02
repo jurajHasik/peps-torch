@@ -255,23 +255,20 @@ def c2x2_LU(coord, state, env, mode='dl', verbosity=0):
     Builds upper-left corner at site `coord` by performing following
     contraction and then reshaping the resulting tensor into matrix::
 
-        C----T--2         => C2x2--(2,3)->1
-        |    |               |
-        |    |               (0,1)->0
-        T----A(coord)--3
-        |    |
-        0    1
+        C----T1--2         => C2x2--(2,3)->1
+        |     |               |
+        |     |               (0,1)->0
+        T2----A(coord)--3
+        |     |
+        0     1
     """
-    C = env.C[(state.vertexToSite(coord),(-1,-1))]
-    T1 = env.T[(state.vertexToSite(coord),(0,-1))]
-    T2 = env.T[(state.vertexToSite(coord),(-1,0))]
-    A = state.site(coord)
+    # tensors= C, T1, T2, A
+    tensors= c2x2_LU_t(coord,state,env)
 
-    tensors= C, T1, T2, A
-    _f_c2x2= c2x2_LU_c if mode=='dl' else c2x2_LU_sl_c
-    if mode=='sl-open':
+    _f_c2x2= c2x2_LU_c if mode in ['dl','dl-open'] else c2x2_LU_sl_c
+    if mode in ['dl-open', 'sl-open']:
         tensors += (torch.ones(1, dtype=torch.bool),)
-    elif mode=='sl':
+    else:
         tensors += (torch.zeros(1, dtype=torch.bool),)
 
     if ctm_args.fwd_checkpoint_c2x2:
@@ -294,7 +291,7 @@ def c2x2_LU_t(coord, state, env):
     return tensors
 
 def c2x2_LU_c(*tensors):
-    C, T1, T2, A= tensors
+    C, T1, T2, A, mode= tensors if len(tensors)==5 else tensors+(None,)
     # C--10--T1--2
     # 0      1
     C2x2 = contract(C, T1, ([1],[0]))
@@ -311,20 +308,33 @@ def c2x2_LU_c(*tensors):
     # |       0
     # T2--3 1 A--3 
     # 2->1    2
-    C2x2 = contract(C2x2, A, ([0,3],[0,1]))
-
-    # permute 0123->1203
-    # reshape (12)(03)->01
-    C2x2 = contiguous(permute(C2x2,(1,2,0,3)))
-    C2x2 = view(C2x2,(T2.size(1)*A.size(2),T1.size(2)*A.size(3)))
+    if not mode:
+        C2x2 = contract(C2x2, A, ([0,3],[0,1]))
+        # permute 0123->1203
+        # reshape (12)(03)->01
+        C2x2 = contiguous(permute(C2x2,(1,2,0,3)))
+        C2x2 = view(C2x2,(T2.size(1)*A.size(2),T1.size(2)*A.size(3)))
+    else:
+        # C-------T1--1->0
+        # |       0
+        # |       2/0->2
+        # T2--3 3 A--5->5 
+        # 2->1    4\1->3
+        #         ->4
+        C2x2 = contract(C2x2, A, ([0,3],[2,3]))
+        # permute 012345->140523
+        # reshape (14)(05)23->0123
+        C2x2 = contiguous(permute(C2x2,(1,4,0,5,2,3)))
+        C2x2 = view(C2x2,(T2.size(1)*A.size(4),T1.size(2)*A.size(5),\
+            A.size(0),A.size(1)))
 
     # C2x2--1
-    # |
-    # 0
+    # |\
+    # 0 optionally(2,3)
     return C2x2
 
 def c2x2_LU_sl_c(*tensors):
-    C, T1, T2, a, mode= tensors
+    C, T1, T2, a, mode= tensors if len(tensors)==5 else tensors+(None,)
     # C--1 0--T1--2
     # 0       1
     C2x2 = contract(C, T1, ([1],[0]))
@@ -373,8 +383,8 @@ def c2x2_LU_sl_c(*tensors):
             a.size(0),a.size(0)))
 
     # C2x2--1
-    # |
-    # 0
+    # |\
+    # 0 optionally(2,3)
     return C2x2
 
 
@@ -394,22 +404,19 @@ def c2x2_RU(coord, state, env, mode='dl', verbosity=0):
     Builds upper-right corner at site `coord` by performing following
     contraction and then reshaping the resulting tensor into matrix::
 
-            0--T---------C  =>  0<-(0,1)--C2x2
+            0--T2--------C  =>  0<-(0,1)--C2x2
                |         |                |
                |         |          1<-(2,3)
-            1--A(coord)--T
+            1--A(coord)--T1
                3         2
     """
-    C = env.C[(state.vertexToSite(coord),(1,-1))]
-    T1 = env.T[(state.vertexToSite(coord),(1,0))]
-    T2 = env.T[(state.vertexToSite(coord),(0,-1))]
-    A = state.site(coord)
+    # tensors= C, T1, T2, A
+    tensors= c2x2_RU_t(coord,state,env)
 
-    tensors= C, T1, T2, A
-    _f_c2x2= c2x2_RU_c if mode=='dl' else c2x2_RU_sl_c
-    if mode=='sl-open':
+    _f_c2x2= c2x2_RU_c if mode in ['dl','dl-open'] else c2x2_RU_sl_c
+    if mode in ['dl-open', 'sl-open']:
         tensors += (torch.ones(1,dtype=torch.bool),)
-    elif mode=='sl':
+    else:
         tensors += (torch.zeros(1,dtype=torch.bool),)
 
     if ctm_args.fwd_checkpoint_c2x2:
@@ -432,7 +439,7 @@ def c2x2_RU_t(coord, state, env):
     return tensors
 
 def c2x2_RU_c(*tensors):
-    C, T1, T2, A= tensors 
+    C, T1, T2, A, mode= tensors if len(tensors)==5 else tensors+(None,)
     # 0--C
     #    1
     #    0
@@ -446,25 +453,38 @@ def c2x2_RU_c(*tensors):
     #             1<-2
     C2x2 = contract(C2x2, T2, ([0],[2]))
 
-    # 1<-2--T2------C
-    #       3       |
-    #       0       |
-    # 2<-1--A--3 0--T1
-    #    3<-2    0<-1
-    C2x2 = contract(C2x2, A, ([0,3],[3,0]))
+    if not mode:
+        # 1<-2--T2------C
+        #       3       |
+        #       0       |
+        # 2<-1--A--3 0--T1
+        #    3<-2    0<-1
+        C2x2 = contract(C2x2, A, ([0,3],[3,0]))
 
-    # permute 0123->1203
-    # reshape (12)(03)->01
-    C2x2 = contiguous(permute(C2x2,(1,2,0,3)))
-    C2x2 = view(C2x2,(T2.size(0)*A.size(1),T1.size(2)*A.size(2)))
+        # permute 0123->1203
+        # reshape (12)(03)->01
+        C2x2 = contiguous(permute(C2x2,(1,2,0,3)))
+        C2x2 = view(C2x2,(T2.size(0)*A.size(1),T1.size(2)*A.size(2)))
+    else:
+        #    1<-2--T2------C
+        #          3       |
+        # 2,3<-0,1\2       |
+        #    4<-3--A--5 0--T1
+        #       5<-4    0<-1
+        C2x2 = contract(C2x2, A, ([0,3],[5,2]))
+        # permute 012345->140523
+        # reshape (14)(05)23->0123
+        C2x2 = contiguous(permute(C2x2,(1,4,0,5,2,3)))
+        C2x2 = view(C2x2,(T2.size(0)*A.size(3),T1.size(2)*A.size(4),\
+            A.size(0),A.size(1)))
  
     # 0--C2x2
-    #    |
-    #    1
+    #    |\
+    #    1 optionally(2,3)
     return C2x2
 
 def c2x2_RU_sl_c(*tensors):
-    C, T1, T2, a, mode= tensors 
+    C, T1, T2, a, mode= tensors if len(tensors)==5 else tensors+(None,)
     # 0--C
     #    1
     #    0
@@ -515,8 +535,8 @@ def c2x2_RU_sl_c(*tensors):
             a.size(0),a.size(0)))
      
     # 0--C2x2
-    #    |
-    #    1
+    #    |\
+    #    1 optionally(2,3)
     return C2x2
 
 
@@ -537,21 +557,18 @@ def c2x2_RD(coord, state, env, mode='dl', verbosity=0):
     contraction and then reshaping the resulting tensor into matrix::
 
                1         0 
-            3--A(coord)--T  =>      0<-(0,1)
+            3--A(coord)--T2 =>      0<-(0,1)
                |         |                |
                |         |      1<-(2,3)--C2x2
-            2--T---------C
+            2--T1--------C
     """
-    C = env.C[(state.vertexToSite(coord),(1,1))]
-    T1 = env.T[(state.vertexToSite(coord),(0,1))]
-    T2 = env.T[(state.vertexToSite(coord),(1,0))]
-    A = state.site(coord)
+    # tensors= C, T1, T2, A
+    tensors= c2x2_RD_t(coord,state,env)
 
-    tensors= C, T1, T2, A
-    _f_c2x2= c2x2_RD_c if mode=='dl' else c2x2_RD_sl_c
-    if mode=='sl-open':
+    _f_c2x2= c2x2_RD_c if mode in ['dl','dl-open'] else c2x2_RD_sl_c
+    if mode in ['dl-open', 'sl-open']:
         tensors += (torch.ones(1, dtype=torch.bool),)
-    elif mode=='sl':
+    else:
         tensors += (torch.zeros(1, dtype=torch.bool),)
 
     if ctm_args.fwd_checkpoint_c2x2:
@@ -574,7 +591,7 @@ def c2x2_RD_t(coord, state, env):
     return tensors
 
 def c2x2_RD_c(*tensors):
-    C, T1, T2, A= tensors
+    C, T1, T2, A, mode= tensors if len(tensors)==5 else tensors+(None,)
     #    1<-0        0
     # 2<-1--T1--2 1--C
     C2x2 = contract(C, T1, ([1],[2]))
@@ -591,20 +608,34 @@ def c2x2_RD_c(*tensors):
     #       2       |
     #       0       |
     # 0<-1--T1------C
-    C2x2 = contract(C2x2, A, ([0,3],[2,3]))
+    if not mode:
+        C2x2 = contract(C2x2, A, ([0,3],[2,3]))
 
-    # permute 0123->1203
-    # reshape (12)(03)->01
-    C2x2 = contiguous(permute(C2x2,(1,2,0,3)))
-    C2x2 = view(C2x2,(T2.size(0)*A.size(0),T1.size(1)*A.size(1)))
+        # permute 0123->1203
+        # reshape (12)(03)->01
+        C2x2 = contiguous(permute(C2x2,(1,2,0,3)))
+        C2x2 = view(C2x2,(T2.size(0)*A.size(0),T1.size(1)*A.size(1)))
+    else:
+        #       4<-2    1<-2
+        #    5<-3--A--5 3--T2
+        # 2,3<-0,1/4       |
+        #          0       |
+        #    0<-1--T1------C
+        C2x2 = contract(C2x2, A, ([0,3],[4,5]))
 
-    #    0
-    #    |
+        # permute 012345->140523
+        # reshape (14)(05)23->0123
+        C2x2 = contiguous(permute(C2x2,(1,4,0,5,2,3)))
+        C2x2 = view(C2x2,(T2.size(0)*A.size(2),T1.size(1)*A.size(3),\
+            A.size(0),A.size(1)))
+
+    #    0 optionally(2,3)
+    #    |/
     # 1--C2x2
     return C2x2
 
 def c2x2_RD_sl_c(*tensors):
-    C, T1, T2, a, mode= tensors
+    C, T1, T2, a, mode= tensors if len(tensors)==5 else tensors+(None,)
     #    1<-0        0
     # 2<-1--T1--2 1--C
     C2x2 = contract(C, T1, ([1],[2]))
@@ -650,8 +681,8 @@ def c2x2_RD_sl_c(*tensors):
             a.size(0),a.size(0)))
 
 
-    #    0
-    #    |
+    #    0 optionally(2,3)
+    #    |/
     # 1--C2x2
     return C2x2
 
@@ -672,22 +703,19 @@ def c2x2_LD(coord, state, env, mode='dl', verbosity=0):
     Builds lower-right corner at site `coord` by performing following
     contraction and then reshaping the resulting tensor into matrix::
 
-        0  1
-        T--A(coord)--3
-        |  |                (0,1)->0(+)
-        |  |                 |
-        C--T---------2  =>   C2x2--(2,3)->1(-)
+        0   1
+        T1--A(coord)--3
+        |   |                (0,1)->0(+)
+        |   |                 |
+        C---T2--------2  =>   C2x2--(2,3)->1(-)
     """
-    C = env.C[(state.vertexToSite(coord),(-1,1))]
-    T1 = env.T[(state.vertexToSite(coord),(-1,0))]
-    T2 = env.T[(state.vertexToSite(coord),(0,1))]
-    A = state.site(coord)
+    #tensors= C, T1, T2, A
+    tensors= c2x2_LD_t(coord,state,env)
 
-    tensors= C, T1, T2, A
-    _f_c2x2= c2x2_LD_c if mode=='dl' else c2x2_LD_sl_c
-    if mode=='sl-open':
+    _f_c2x2= c2x2_LD_c if mode in ['dl','dl-open'] else c2x2_LD_sl_c
+    if mode in ['dl-open', 'sl-open']:
         tensors += (torch.ones(1,dtype=torch.bool),)
-    elif mode=='sl':
+    else:
         tensors += (torch.zeros(1,dtype=torch.bool),)
 
     if ctm_args.fwd_checkpoint_c2x2:
@@ -710,7 +738,7 @@ def c2x2_LD_t(coord, state, env):
     return tensors
 
 def c2x2_LD_c(*tensors):
-    C, T1, T2, A= tensors
+    C, T1, T2, A, mode= tensors if len(tensors)==5 else tensors+(None,)
     # 0->1
     # T1--2
     # 1
@@ -725,25 +753,38 @@ def c2x2_LD_c(*tensors):
     # C--0 1--T2--2->3
     C2x2 = contract(C2x2, T2, ([0],[1]))
 
-    # 0       0->2
+    # 0        0->2
     # T1--1 1--A--3
     # |        2
     # |        2
     # C--------T2--3->1
-    C2x2 = contract(C2x2, A, ([1,2],[1,2]))
+    if not mode:
+        C2x2 = contract(C2x2, A, ([1,2],[1,2]))
 
-    # permute 0123->0213
-    # reshape (02)(13)->01
-    C2x2 = contiguous(permute(C2x2,(0,2,1,3)))
-    C2x2 = view(C2x2,(T1.size(0)*A.size(0),T2.size(2)*A.size(3)))
+        # permute 0123->0213
+        # reshape (02)(13)->01
+        C2x2 = contiguous(permute(C2x2,(0,2,1,3)))
+        C2x2 = view(C2x2,(T1.size(0)*A.size(0),T2.size(2)*A.size(3)))
+    else:
+        # 0        2->4
+        # T1--1 3--A--5
+        # |        4\0,1->2,3
+        # |        2
+        # C--------T2--3->1
+        C2x2 = contract(C2x2, A, ([1,2],[3,4]))
+        # permute 012345->041523
+        # reshape (04)(15)23->0123
+        C2x2 = contiguous(permute(C2x2,(0,4,1,5,2,3)))
+        C2x2 = view(C2x2,(T1.size(0)*A.size(2),T2.size(2)*A.size(5),
+            A.size(0),A.size(1)))
 
-    # 0
-    # |
+    # 0 optionally(2,3)
+    # |/
     # C2x2--1
     return C2x2
 
 def c2x2_LD_sl_c(*tensors):
-    C, T1, T2, a, mode= tensors
+    C, T1, T2, a, mode= tensors if len(tensors)==5 else tensors+(None,)
     # 0->1
     # T1--2
     # 1
@@ -792,7 +833,7 @@ def c2x2_LD_sl_c(*tensors):
             a.size(0),a.size(0)))
 
 
-    # 0
-    # |
+    # 0 optionally(2,3)
+    # |/
     # C2x2--1
     return C2x2
