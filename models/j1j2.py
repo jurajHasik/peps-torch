@@ -3,6 +3,7 @@ import groups.su2 as su2
 import config as cfg
 from ctm.generic.env import ENV
 from ctm.generic import rdm
+from ctm.generic import rdm_thermal
 from ctm.generic import corrf
 from ctm.one_site_c4v.env_c4v import ENV_C4V
 from ctm.one_site_c4v import rdm_c4v
@@ -408,6 +409,84 @@ class J1J2():
 
         res= dict({"ss": Sz0szR+Sx0sxR-nSy0SyR, "szsz": Sz0szR, "sxsx": Sx0sxR, "sysy": -nSy0SyR})
         return res  
+
+class J1J2_THERMAL(J1J2):
+    def __init__(self, j1=1.0, j2=0, beta=0., global_args=cfg.global_args):
+
+        self.beta= beta
+        super().__init__(j1=j1, j2=j2, global_args=global_args)
+
+    def energy_2x2_1site_BP(self,state,env):
+        r"""
+        :param state: wavefunction
+        :param env: CTM environment
+        :type state: IPEPS
+        :type env: ENV
+        :return: energy per site
+        :rtype: float
+
+        We assume 1x1 iPEPS which tiles the lattice with a bipartite pattern composed 
+        of two tensors A, and B=RA, where R appropriately rotates the physical Hilbert space 
+        of tensor A on every "odd" site::
+
+            1x1 C4v => rotation R => BIPARTITE
+
+            A A A A                  A B A B
+            A A A A                  B A B A
+            A A A A                  A B A B
+            A A A A                  B A B A
+
+        A single reduced density matrix :py:func:`ctm.rdm.rdm2x2` of a 2x2 plaquette
+        is used to evaluate the energy.
+        """
+        tmp_rdm= rdm_thermal.rdm2x2((0,0),state,env)
+        energy_nn= torch.einsum('ijklabcd,ijklabcd',tmp_rdm,self.h2x2_nn_rot)
+        energy_nnn= torch.einsum('ijklabcd,ijklabcd',tmp_rdm,self.h2x2_nnn_rot)
+        energy_per_site= 2.0*(self.j1*energy_nn/4.0 + self.j2*energy_nnn/2.0)
+        energy_per_site= _cast_to_real(energy_per_site) 
+
+        return energy_per_site
+
+    def eval_obs_1site_BP(self,state,env):
+        r"""
+        :param state: wavefunction
+        :param env: CTM environment
+        :type state: IPEPS
+        :type env: ENV
+        :return:  expectation values of observables, labels of observables
+        :rtype: list[float], list[str]
+        
+        Evaluates observables for single-site ansatz by including the sublattice
+        rotation in the physical space. 
+        """
+
+        # TODO optimize/unify ?
+        # expect "list" of (observable label, value) pairs ?
+        obs= dict({"avg_m": 0.})
+        with torch.no_grad():
+            for coord,site in state.sites.items():
+                rdm1x1 = rdm_thermal.rdm1x1(coord,state,env)
+                for label,op in self.obs_ops.items():
+                    obs[f"{label}{coord}"]= torch.trace(rdm1x1@op)
+                obs[f"m{coord}"]= sqrt(abs(obs[f"sz{coord}"]**2 + obs[f"sp{coord}"]*obs[f"sm{coord}"]))
+                obs["avg_m"] += obs[f"m{coord}"]
+            obs["avg_m"]= obs["avg_m"]/len(state.sites.keys())
+
+            for coord,site in state.sites.items():
+                rdm2x1 = rdm_thermal.rdm2x1(coord,state,env)
+                rdm1x2 = rdm_thermal.rdm1x2(coord,state,env)
+                SS2x1= torch.einsum('ijab,abij',rdm2x1,self.SS_rot)
+                SS1x2= torch.einsum('ijab,abij',rdm1x2,self.SS_rot)
+                obs[f"SS2x1{coord}"]= _cast_to_real(SS2x1)
+                obs[f"SS1x2{coord}"]= _cast_to_real(SS1x2)
+        
+        # prepare list with labels and values
+        obs_labels=["avg_m"]+[f"m{coord}" for coord in state.sites.keys()]\
+            +[f"{lc[1]}{lc[0]}" for lc in list(itertools.product(state.sites.keys(), self.obs_ops.keys()))]
+        obs_labels += [f"SS2x1{coord}" for coord in state.sites.keys()]
+        obs_labels += [f"SS1x2{coord}" for coord in state.sites.keys()]
+        obs_values=[obs[label] for label in obs_labels]
+        return obs_values, obs_labels
 
 class J1J2_C4V_BIPARTITE():
     def __init__(self, j1=1.0, j2=0, j3=0, hz_stag= 0.0, delta_zz=1.0, \

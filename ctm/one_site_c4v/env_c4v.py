@@ -195,7 +195,7 @@ def init_env(state, env, C_and_T=None, ctm_args=cfg.ctm_args):
         return
 
     if len(state.site().size())==4 and \
-        ctm_args.ctm_env_init_type in ["PROD","CTMRG","CTMRG_OBC"]:
+        ctm_args.ctm_env_init_type in ["CTMRG","CTMRG_OBC"]:
         raise RuntimeError("Incompatible ENV_C4V initialization")
 
     if ctm_args.ctm_env_init_type=='PROD':
@@ -228,8 +228,12 @@ def init_prod(state, env, verbosity=0):
     #    i--A--j
     #      /
     #     2
-    a = torch.einsum('meifj,maibj->eafb',(A,A.conj())).contiguous().view(\
-        A.size()[1]**2, A.size()[3]**2)
+    if len(A.size())==4:
+        # assume only virtual indices are present
+        a= torch.einsum('aibj->ab',A).contiguous()
+    else:    
+        a = torch.einsum('meifj,maibj->eafb',(A,A.conj())).contiguous().view(\
+            A.size()[1]**2, A.size()[3]**2)
     a= a/a.abs().max()
     # check symmetry
     a_asymm_norm= torch.norm(a.conj().t()-a)
