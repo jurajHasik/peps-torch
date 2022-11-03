@@ -4,17 +4,11 @@ import copy
 import torch
 import argparse
 import config as cfg
-from ipeps.ipeps_c4v import IPEPS_C4V
-from ipeps.ipeps_c4v_thermal import *
-from linalg.custom_eig import truncated_eig_sym
-from ctm.one_site_c4v.env_c4v import *
-from ctm.one_site_c4v.env_c4v import _init_from_ipeps_pbc
-from ctm.one_site_c4v import ctmrg_c4v
-from ctm.one_site_c4v.rdm_c4v import ddA_rdm1x1
-from ctm.one_site_c4v.rdm_c4v_thermal import entropy, rdm1x1_sl, rdm2x1_sl, rdm2x2
-from ctm.one_site_c4v import transferops_c4v
-from optim.exp_ad_optim_vtnr import optimize_state
-from models import j1j2
+from ipeps.ipeps import IPEPO, IPEPS, read_ipeps
+from ctm.generic.env import *
+from ctm.generic import ctmrg
+import ctm.generic.rdm_thermal as rdm_thermal
+from models import j1j2, spin_triangular
 import json
 import unittest
 import logging
@@ -23,7 +17,6 @@ log = logging.getLogger(__name__)
 # parse command line args and build necessary configuration objects
 parser= cfg.get_args_parser()
 # additional model-dependent arguments
-parser.add_argument("--l2d", type=int, default=1)
 parser.add_argument("--j1", type=float, default=1., help="nearest-neighbour coupling")
 parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour coupling")
 parser.add_argument("--beta", type=float, default=0., help="inverse temperature")
@@ -40,15 +33,18 @@ def main():
     torch.manual_seed(args.seed)
 
     # 0) initialize model
-    model = j1j2.J1J2_C4V_BIPARTITE_THERMAL(j1=args.j1, j2=args.j2, j3=0, 
-        hz_stag= 0.0, delta_zz=1.0, beta=0.)
-    energy_f= model.energy_1x1
-    eval_obs_f= model.eval_obs
+    model = j1j2.J1J2_THERMAL(j1=args.j1, j2=args.j2, beta=0.)
+    energy_f= model.energy_2x2_1site_BP
+    eval_obs_f= model.eval_obs_1site_BP
+    # model= spin_triangular.J1J2J4_1SITE(j1=args.j1, j2=args.j2)
+    # energy_f=model.energy_1x3
+    # eval_obs_f= model.eval_obs
 
     # initialize an ipeps
     if args.instate!=None:
-        state = read_ipeps_c4v_thermal_ttn_v2(args.instate)
+        # state = read_ipeps_c4v_thermal_ttn_v2(args.instate)
         # state.add_noise(args.instate_noise)
+        state= read_ipeps(args.instate, vertexToSite=None)
     elif args.opt_resume is not None:
         state= IPEPS_C4V_THERMAL_TTN_V2.load_checkpoint(args.opt_resume, metadata=None,
             peps_args=cfg.peps_args, global_args=cfg.global_args)
@@ -64,84 +60,56 @@ def main():
             from scipy.io import loadmat
             A= torch.from_numpy(loadmat(f"hbpepo_dt{dt:.5f}_j2{args.j2:.5f}.mat")['T'])\
                 .permute(4,5,0,1,2,3).contiguous()
-            import pdb; pdb.set_trace()
-        state= IPEPS_C4V_THERMAL(A)
+        state= IPEPO({(0,0): A})
+        # import pdb; pdb.set_trace()
     else:
         raise ValueError("Missing trial state: --instate=None and --ipeps_init_type= "\
             +str(args.ipeps_init_type)+" is not supported")
 
     print(state)
     
-    def get_logz_per_site(A, C, T):
-        A_sl_scale= A.abs().max()
-        if len(A.size())==5:
-            # assume it is single-layer tensor with physica+ancilla fused
-            auxD= A.size(4)
-            A= torch.einsum('suldr,sefgh->uelfdgrh',A,A).contiguous()
-            A= A.view([auxD**2]*4)
-        elif len(A.size())==6:
-            # assume it is single-layer tensor with physica+ancilla unfused
-            if args.mode=="sl":
-                auxD= A.size(5)
-                A= torch.einsum('asuldr,asefgh->uelfdgrh',A,A).contiguous()
-                A= A.view([auxD**2]*4)
-                A_sl_scale= A_sl_scale**2
-            elif args.mode=="dl":
-                A= torch.einsum('ssuldr->uldr',A).contiguous()
+    def get_logz_per_site(coord,state,env):
+        # A= state.site(coord)
+        # A_sl_scale= A.abs().max()
+        # if len(A.size())==5:
+        #     # assume it is single-layer tensor with physica+ancilla fused
+        #     dimsA= A.size()
+        #     A= contiguous(einsum('mefgh,mabcd->eafbgchd',A,conj(A)))
+        #     A= view(a, (dimsA[1]**2,dimsA[2]**2, dimsA[3]**2, dimsA[4]**2))
+        # elif len(A.size())==6:
+        #     # assume it is single-layer tensor with physica+ancilla unfused
+        #     if args.mode=="sl":
+        #         auxD= A.size(5)
+        #         A= torch.einsum('asuldr,asefgh->uelfdgrh',A,A).contiguous()
+        #         A= A.view([auxD**2]*4)
+        #         A_sl_scale= A_sl_scale**2
+        #     elif args.mode=="dl":
+        #         A= torch.einsum('ssuldr->uldr',A).contiguous()
 
-        # C--T--C            / C--C
-        # |  |  |   C--C    /  |  |   C--T--C
-        # T--A--T * |  |   /   T--T * |  |  |
-        # |  |  |   C--C  /    |  |   C--T--C
-        # C--T--C        /     C--C
+        # C1--T1--C2                                          / C1--C2
+        # |   |   |    C1----------------C2(shift=(-1,0))    /  |   |    C1--T2--C2
+        # T4--A---T3 * |                 |                  /   T4--T2 * |   |   |
+        # |   |   |    C4(shift=(0,-1))--C3(shift=(-1,-1)) /    |   |    C4--T3--C3 shift=(0,-1)
+        # C4--T3--C3                                      /     C4--C3
+        #                                                           shift=(-1,0)
 
         # closed C^4
-        C4= torch.einsum('ij,jk,kl,li',C,C,C,C)
+        C4= rdm_thermal.norm_2x2(coord,state,env)
+
+        # closed 2x3 and 3x2
+        norm_2x3= rdm_thermal.norm_2x3(coord,state,env)
+        norm_3x2= rdm_thermal.norm_3x2(coord,state,env)
 
         # closed rdm1x1
-        CTC = torch.tensordot(C,T,([1],[0]))
-        #   C--0
-        # A |
-        # | T--2->1
-        # | 1
-        #   0
-        #   C--1->2
-        CTC = torch.tensordot(CTC,C,([1],[0]))
+        rdm= rdm_thermal.rdm1x1(coord,state,env,mode='dl',\
+            operator=torch.eye(A.size(0),dtype=A.dtype,device=A.device))
 
-        # closed CTCCTC
-        #   C--0 2--C
-        # A |       |
-        # | T--1 1--T |
-        #   |       | V
-        #   C--2 0--C
-        CTCCTC= torch.tensordot(CTC,CTC,([0,1,2],[2,1,0]))
+        log.info(f"get_logz_per_site rdm {rdm.item()} norm_2x3 {norm_2x3.item()}"
+            +f" norm_3x2 {norm_3x2.item()} C4 {C4.item()}")
 
-        #   C--0
-        # A |
-        # | T--1
-        # | |       2->3
-        #   C--2 0--T--1->2
-        CTC = torch.tensordot(CTC,T,([2],[0]))
-        # rdm = torch.tensordot(rdm,A,([1,3],[1,2]))
-        # rdm = torch.tensordot(rdm,A/(A_sl_scale**2),([1,3],[1,2]))
-        rdm = torch.tensordot(CTC,A/A_sl_scale,([1,3],[1,2]))
-
-        #   C--0 2--T-------C
-        #   |       3       |
-        # A |       2       |
-        # | T-------A--3 1--T
-        # | |       |       |
-        # | |       |       |
-        #   C-------T--1 0--C
-        rdm = torch.tensordot(rdm,CTC,([0,1,2,3],[2,0,3,1]))
-
-        log.info(f"get_z_per_site rdm {rdm.item()} CTCCTC {CTCCTC.item()} C4 {C4.item()}")
-
-        # z_per_site= (rdm/CTC)*(CTC/C4)
-        logz_per_site= torch.log(A_sl_scale) + torch.log(rdm) + torch.log(C4)\
-            - 2*torch.log(CTCCTC)
+        logz_per_site= torch.log(rdm) + torch.log(C4)\
+            - torch.log(norm_2x3) - torch.log(norm_3x2)
         return logz_per_site
-        # return z_per_site
 
     def ctmrg_conv_rdm2x1(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
@@ -166,53 +134,75 @@ def main():
         if dist<ctm_args.ctm_conv_tol and len(history['log']) < ctm_args.ctm_max_iter:
             return True, history
         return False, history
-    
-    def ctmrg_conv_Cspec(state, env, history, ctm_args=cfg.ctm_args):
+
+    def ctmrg_conv_specC(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
-            history=dict({"log": []})
-        U, specC, V= torch.svd(env.get_C(), compute_uv=False)
-        dist= float('inf')
-        if len(history["log"]) > 1:
-            dist= torch.dist(specC, history["specC"], p=2).item()
-        history["specC"]=specC
-        history["log"].append(dist)
-        if dist<ctm_args.ctm_conv_tol:
-            log.info({"history_length": len(history['log']), "history": history['log'],
-                "final_multiplets": compute_multiplets(ctm_env)})
+            history={'spec': [], 'diffs': []}
+        # use corner spectra
+        diff=float('inf')
+        diffs=None
+        spec= env.get_spectra()
+        spec_nosym_sorted= { s_key : s_t.sort(descending=True)[0] \
+                for s_key, s_t in spec.items() }
+        if len(history['spec'])>0:
+            s_old= history['spec'][-1]
+            diffs= [ sum((spec_nosym_sorted[k]-s_old[k])**2).item() \
+                for k in spec.keys() ]
+            diff= sum(diffs)
+        history['spec'].append(spec_nosym_sorted)
+        history['diffs'].append(diffs)
+        
+        log_z0= float('NaN') #get_logz_per_site((0,0),state,env)
+        if len(next(iter(state.sites.values())).size())==4:
+            # iPEPS/iPEPO sites have no physical indices, hence no observables
+            # are accessible
+            print(", ".join([f"{len(history['diffs'])}",f"{diff}",f"{log_z0}"]))
+        else:
+            pass
+
+        if (len(history['diffs']) > 1 and abs(diff) < ctm_args.ctm_conv_tol)\
+            or len(history['diffs']) >= ctm_args.ctm_max_iter:
+            log.info({"history_length": len(history['diffs']), "history": history['diffs']})
             return True, history
-        elif len(history['log']) >= ctm_args.ctm_max_iter:
-            log.info({"history_length": len(history['log']), "history": history['log'],
-                "final_multiplets": compute_multiplets(ctm_env)})
-            return False, history
         return False, history
 
-    ctmrg_conv_f= ctmrg_conv_rdm2x1
-
-
-    # 0) 
-    #    fuse ancilla+physical index and create regular c4v ipeps with rank-5 on-site
-    #    tensor
-    state_fused= state.to_nophys_ipeps_c4v() if args.mode=='dl' else \
-        state.to_fused_ipeps_c4v()
-    ctm_env = ENV_C4V(args.chi, state_fused)
+    # 0) For regular iPEPO (mode='dl') contract ancilla and physical index 
+    #    to create regular rank-4 (aux indices only) on-site tensor
+    #    For double-layer iPEPO (mode='sl') ...
+    state_fused= state.to_nophys_ipeps() if args.mode=='dl' else \
+        state.to_fused_ipeps()
+    # sitesDL=dict()
+    # for coord,A in state.sites.items():
+    #     dimsA = A.size()
+    #     a = contiguous(einsum('mefgh,mabcd->eafbgchd',A,conj(A)))
+    #     a= view(a, (dimsA[1]**2,dimsA[2]**2, dimsA[3]**2, dimsA[4]**2))
+    #     sitesDL[coord]=a
+    # state_fused = IPEPS(sites=sitesDL)
+    
+    ctm_env = ENV(args.chi, state_fused)
     init_env(state_fused, ctm_env)
 
+    # 1) choose convergence criterion
+    if len(next(iter(state_fused.sites.values())).size())==4:
+        ctmrg_conv_f= ctmrg_conv_specC
+    else:
+        ctmrg_conv_f= ctmrg_conv_rdm2x1
 
-    e0= energy_f(state, ctm_env, force_cpu=True) #args.mode,
-    log_z0= get_logz_per_site(state.site(), ctm_env.get_C(), ctm_env.get_T())
-    obs_values, obs_labels = eval_obs_f(state, ctm_env, force_cpu=True) #args.mode,
+    e0= energy_f(state, ctm_env) #,force_cpu=True) #args.mode,
+    log_z0= 0 #get_logz_per_site((0,0), state, ctm_env)
+    obs_values, obs_labels = eval_obs_f(state, ctm_env)#, force_cpu=True) #args.mode,
     
     print("\n\n",end="")
     print(", ".join(["epoch","dist","log_z","e0"]+obs_labels))
     print(", ".join([f"{-1}",f"{float('inf')}",f"{log_z0}",f"{e0}"]\
         +[f"{v}" for v in obs_values]))
 
-    ctm_env, *ctm_log = ctmrg_c4v.run_dl(state_fused, ctm_env, conv_check=ctmrg_conv_f)
+    ctm_env, *ctm_log = ctmrg.run(state_fused, ctm_env, conv_check=ctmrg_conv_f)
     history, t_ctm, t_obs= ctm_log 
 
-    e0 = energy_f(state,ctm_env,force_cpu=True) #args.mode,
-    log_z0= get_logz_per_site(state.site(), ctm_env.get_C(), ctm_env.get_T())
-    obs_values, obs_labels = eval_obs_f(state, ctm_env,force_cpu=True) #args.mode, 
+    e0 = energy_f(state,ctm_env)#,force_cpu=True) #args.mode,
+    log_z0= 0 #get_logz_per_site((0,0), state, ctm_env)
+    obs_values, obs_labels = eval_obs_f(state, ctm_env)#,force_cpu=True) #args.mode, 
     S0, r2_0= 0, 0
     print("\n\n",end="")
     print(", ".join(["epoch","log_z0","e0","S0","r2_0"]+obs_labels))

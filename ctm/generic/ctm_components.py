@@ -292,10 +292,14 @@ def c2x2_LU_t(coord, state, env):
 
 def c2x2_LU_c(*tensors):
     C, T1, T2, A, mode= tensors if len(tensors)==5 else tensors+(None,)
+    # flops \chi x (D^2 \chi^2)
+    #
     # C--10--T1--2
     # 0      1
     C2x2 = contract(C, T1, ([1],[0]))
 
+    # flops \chi x (D^4 \chi^2)
+    #
     # C------T1--2->1
     # 0      1->0
     # 0
@@ -309,12 +313,16 @@ def c2x2_LU_c(*tensors):
     # T2--3 1 A--3 
     # 2->1    2
     if not mode:
+        # flops D^4 x (D^4 \chi^2)
+        #
         C2x2 = contract(C2x2, A, ([0,3],[0,1]))
         # permute 0123->1203
         # reshape (12)(03)->01
         C2x2 = contiguous(permute(C2x2,(1,2,0,3)))
         C2x2 = view(C2x2,(T2.size(1)*A.size(2),T1.size(2)*A.size(3)))
     else:
+        # flops D^4 x (D^4 \chi^2 p^2)
+        #
         # C-------T1--1->0
         # |       0
         # |       2/0->2
@@ -335,10 +343,14 @@ def c2x2_LU_c(*tensors):
 
 def c2x2_LU_sl_c(*tensors):
     C, T1, T2, a, mode= tensors if len(tensors)==5 else tensors+(None,)
+    # flops \chi x (D^2 \chi^2)
+    #
     # C--1 0--T1--2
     # 0       1
     C2x2 = contract(C, T1, ([1],[0]))
 
+    # flops \chi x (D^4 \chi^2)
+    #
     # C------T1--2->1
     # 0      1->0
     # 0
@@ -348,6 +360,8 @@ def c2x2_LU_sl_c(*tensors):
     C2x2 = view(C2x2, (a.size(1),a.size(1),T1.size(2),\
         T2.size(1),a.size(2),a.size(2)) )
 
+    # flops D^2 x (D^4 \chi^2 p)
+    #
     # C---------T1--2->1
     # |         0,1->0
     # |         1
@@ -363,12 +377,16 @@ def c2x2_LU_sl_c(*tensors):
     # 1         2,4
     C2x2 = contract(C2x2, a, ([0,4],[1,2]))
     if not mode:
+        # flops (D^2 p) x (D^4 \chi^2)
+        #
         C2x2 = contract(C2x2, conj(a), ([0,3,4],[1,2,0]))
         # permute 012345->124035
         # reshape (124)(035)->01
         C2x2 = contiguous(permute(C2x2,(1,2,4,0,3,5)))
         C2x2 = view(C2x2,(T2.size(1)*(a.size(3)**2),T1.size(2)*(a.size(4)**2)))
     else:
+        # flops D^2 x (D^4 \chi^2 p^2)
+        #
         # C---------T1--0
         # |         |
         # |         |/2,5

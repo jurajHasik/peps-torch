@@ -416,7 +416,7 @@ class J1J2_THERMAL(J1J2):
         self.beta= beta
         super().__init__(j1=j1, j2=j2, global_args=global_args)
 
-    def energy_2x2_1site_BP(self,state,env):
+    def energy_2x2_1site_BP(self,state,env,force_cpu=False):
         r"""
         :param state: wavefunction
         :param env: CTM environment
@@ -447,7 +447,7 @@ class J1J2_THERMAL(J1J2):
 
         return energy_per_site
 
-    def eval_obs_1site_BP(self,state,env):
+    def eval_obs_1site_BP(self,state,env,force_cpu=False):
         r"""
         :param state: wavefunction
         :param env: CTM environment
