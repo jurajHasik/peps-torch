@@ -69,7 +69,7 @@ def main():
                 dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
             sites[(0,0)]= A/torch.max(torch.abs(A))
             state = IPEPS(sites, lX=1, lY=1)
-        elif args.tiling in ["3SITE"]:     
+        if args.tiling in ["3SITE"]:     
             B = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
                 dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
             C = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\

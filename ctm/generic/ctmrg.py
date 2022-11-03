@@ -44,14 +44,17 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
     #  --A--
     #   /
     #
-    sitesDL=dict()
-    for coord,A in state.sites.items():
-        dimsA = A.size()
-        a = contiguous(einsum('mefgh,mabcd->eafbgchd',A,conj(A)))
-        a= view(a, (dimsA[1]**2,dimsA[2]**2, dimsA[3]**2, dimsA[4]**2))
-        sitesDL[coord]=a
-    stateDL = IPEPS(sites=sitesDL,vertexToSite=state.vertexToSite,lX=state.lX,lY=state.lY,\
-        global_args=global_args)
+    if len(next(iter(state.sites.values())).size())==4:
+        stateDL= state
+    elif len(next(iter(state.sites.values())).size())==5:
+        sitesDL=dict()
+        for coord,A in state.sites.items():
+            dimsA = A.size()
+            a = contiguous(einsum('mefgh,mabcd->eafbgchd',A,conj(A)))
+            a= view(a, (dimsA[1]**2,dimsA[2]**2, dimsA[3]**2, dimsA[4]**2))
+            sitesDL[coord]=a
+        stateDL = IPEPS(sites=sitesDL,vertexToSite=state.vertexToSite,lX=state.lX,lY=state.lY,\
+            global_args=global_args)
 
     # 1) perform CTMRG
     t_obs=t_ctm=0.
@@ -209,7 +212,7 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
 
         # 1) wrap raw tensors back into IPEPS and ENV classes
         sites_loc= dict(zip(state.sites.keys(),tensors[0:len(state.sites)]))
-        state_loc= IPEPS(sites_loc, vertexToSite=state.vertexToSite)
+        state_loc= IPEPS(sites_loc, vertexToSite=state.vertexToSite, lX=state.lX, lY=state.lY)
         env_loc= ENV(env.chi)
         env_loc.C= dict(zip(env.C.keys(),tensors[len(state.sites):len(state.sites)+len(env.C)]))
         env_loc.T= dict(zip(env.T.keys(),tensors[len(state.sites)+len(env.C):]))

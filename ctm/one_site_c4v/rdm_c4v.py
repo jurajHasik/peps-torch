@@ -574,7 +574,7 @@ def rdm2x1_sl(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
         C = env.C[env.keyC]
         T = env.T[env.keyT]
         a = next(iter(state.sites.values()))
-
+        
     #----- building C2x2_LU ----------------------------------------------------
     loc_device=C.device
     is_cpu= loc_device==torch.device('cpu')
@@ -1537,6 +1537,87 @@ def rdm2x2(state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
     # symmetrize and normalize
     rdm= _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
     rdm= rdm.to(env.device)
+
+    return rdm
+
+# ----- single hole ------------------------------------------------------------
+def ddA_rdm1x1(state, env, sym_pos_def=False, verbosity=0):
+    r"""
+    :param state: underlying 1-site C4v symmetric wavefunction
+    :param env: C4v symmetric environment corresponding to ``state``
+    :param verbosity: logging verbosity
+    :type state: IPEPS_C4V
+    :type env: ENV_C4V
+    :type verbosity: int
+    :return: partial 1-site reduced density matrix with indices :math:`suldr`
+    :rtype: torch.Tensor
+    
+    Builds partial 1x1 reduced density matrix by 
+    contracting the following tensor network::
+
+        C--T-------C
+        |  |       |
+        T--a^+( )--T
+        |  |       |
+        C--T-------C
+
+    """
+    who= "ddA_rdm1x1"
+    C = env.C[env.keyC]
+    T = env.T[env.keyT]
+    #   C--0
+    #   1
+    # A 0
+    # | T--2
+    # | 1
+    CTC = torch.tensordot(C,T,([1],[0]))
+    #   C--0
+    # A |
+    # | T--2->1
+    # | 1
+    #   0
+    #   C--1->2
+    CTC = torch.tensordot(CTC,C,([1],[0]))
+    # C--0
+    # |
+    # T--1
+    # |       2->3
+    # C--2 0--T--1->2
+    #      <------
+    rdm = torch.tensordot(CTC,T,([2],[0]))
+    
+    #   C--0  2--T-------C
+    # A |        3       |
+    # | T--1->0    2<-1--T 
+    # | |     1<-3       |
+    #   C--------T--2 0--C
+    #       <--
+    rdm= torch.tensordot(rdm,rdm,([0,2],[2,0]))
+    rdm= rdm.permute(3,0,1,2).contiguous()
+
+    # 4i) untangle the fused D^2 indices
+    #
+    #   C----T----C      C------T--------C
+    # A |    0    |      |      0,1      |
+    # | T--1   3--T  =>  T--2,3     6,7--T
+    # | |    2    |      |      4,5      | 
+    #   C----T----C      C------T--------C
+    #       <--
+    a= next(iter(state.sites.values()))
+    rdm= rdm.view([a.size(1)]*2+[a.size(2)]*2+[a.size(3)]*2+[a.size(4)]*2)
+    rdm= rdm.permute(0,2,4,6,1,3,5,7).contiguous()
+
+    if verbosity>0:
+        rdm= _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
+    
+    #    C-------T---------C
+    # A  |    0  4,0->1    |
+    # |  |     \ 1         |
+    # |  T--5 2--a^+--4 7--T
+    # |  |  1    3   4<-3  |
+    # |  |       6,2->3    | 
+    #    C-------T---------C
+    rdm= torch.tensordot(a.conj(),rdm,([1,2,3,4],[4,5,6,7]))
 
     return rdm
 

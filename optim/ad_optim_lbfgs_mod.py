@@ -172,6 +172,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
                 # log_entry["grad_mag"]= [p.grad.norm().item() for p in parameters]
                 flat_grad= torch.cat(tuple(p.grad.view(-1) for p in parameters))
                 log_entry["grad_mag"]= [flat_grad.norm().item(), flat_grad.norm(p=float('inf')).item()]
+                log_entry["grad_mags"]= [p.grad.norm().item() for p in parameters]
                 if opt_args.opt_log_grad: log_entry["grad"]= [p.grad.tolist() for p in parameters]
             log.info(json.dumps(log_entry))        
 

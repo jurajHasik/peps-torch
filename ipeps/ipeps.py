@@ -402,3 +402,204 @@ def write_ipeps(state, outputfile, aux_seq=[0,1,2,3], tol=1.0e-14, normalize=Fal
 
     with open(outputfile,'w') as f:
         json.dump(json_state, f, indent=4, separators=(',', ': '))
+
+
+class IPEPO(IPEPS):
+    def __init__(self, sites=None, vertexToSite=None, lX=None, lY=None, peps_args=cfg.peps_args,\
+        global_args=cfg.global_args):
+        r"""
+        :param sites: map from elementary unit cell to on-site tensors
+        :param vertexToSite: function mapping arbitrary vertex of a square lattice 
+                             into a vertex within elementary unit cell
+        :param lX: length of the elementary unit cell in X direction
+        :param lY: length of the elementary unit cell in Y direction
+        :param peps_args: ipeps configuration
+        :param global_args: global configuration
+        :type sites: dict[tuple(int,int) : torch.tensor]
+        :type vertexToSite: function(tuple(int,int))->tuple(int,int)
+        :type lX: int
+        :type lY: int
+        :type peps_args: PEPSARGS
+        :type global_args: GLOBALARGS
+
+        Member ``sites`` is a dictionary of non-equivalent on-site tensors
+        indexed by tuple of coordinates (x,y) within the elementary unit cell.
+        The index-position convetion for on-site tensors is defined as follows::
+
+               u s
+               |/
+            l--A--r  <=> A[a,s,u,l,d,r]
+              /|
+             a d
+
+        where a denotes ancilla index, s denotes physical index, and u,l,d,r label
+        four principal directions up, left, down, right in anti-clockwise order
+        starting from up
+
+        """
+        super().__init__(sites, vertexToSite=vertexToSite, lX=lX, lY=lY, peps_args=peps_args,\
+            global_args=global_args)
+
+    def get_aux_bond_dims(self):
+        return [d for key in self.sites.keys() for d in self.sites[key].size()[2:]]
+
+    def to_fused_ipeps(self):
+        r"""
+        Transform iPEPO into iPEPS defined by single rank-5 tensor with the
+        physical and ancilla dimensions fused.
+
+        Returns:
+            IPEPSS: ipeps representaion of the ipepo
+        """
+        _sites= { c: t.view([t.size(0)*t.size(1)]+t.size()[2:]) \
+            for c,t in self.sites.items() }
+        return IPEPS(sites=_sites, vertexToSite=self.vertexToSite, lX=self.lX,\
+            lY=self.lY)
+
+    def to_nophys_ipeps(self):
+        r"""
+        Transform iPEPO into iPEPS defined by single rank-4 tensor with the
+        physical and ancilla dimensions contracted over. Ancilla and physical space
+        must be compatible.
+
+        Returns:
+            IPEPS: iPEPS representation with only aux indices
+        """
+        _sites= { c: torch.einsum('iiuldr->uldr',t).contiguous() \
+            for c,t in self.sites.items() }
+        return IPEPS(sites=_sites, vertexToSite=self.vertexToSite, lX=self.lX,\
+            lY=self.lY)
+
+def read_ipepo(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.peps_args,\
+    global_args=cfg.global_args):
+    r"""
+    :param jsonfile: input file describing iPEPO in json format
+    :param vertexToSite: function mapping arbitrary vertex of a square lattice 
+                         into a vertex within elementary unit cell
+    :param aux_seq: array specifying order of auxiliary indices of on-site tensors stored
+                    in `jsonfile`
+    :param peps_args: ipeps configuration
+    :param global_args: global configuration
+    :type jsonfile: str or Path object
+    :type vertexToSite: function(tuple(int,int))->tuple(int,int)
+    :type aux_seq: list[int]
+    :type peps_args: PEPSARGS
+    :type global_args: GLOBALARGS
+    :return: wavefunction
+    :rtype: IPEPO
+    
+
+    A simple PBC ``vertexToSite`` function is used by default
+    
+    Parameter ``aux_seq`` defines the expected order of auxiliary indices
+    in input file relative to the convention fixed in tn-torch::
+    
+         0
+        1A3 <=> [up, left, down, right]: aux_seq=[0,1,2,3]
+         2
+        
+        for alternative order, eg.
+        
+         1
+        0A2 <=> [left, up, right, down]: aux_seq=[1,0,3,2] 
+         3
+    """
+    WARN_REAL_TO_COMPLEX=False
+    asq = [x+2 for x in aux_seq]
+    sites = OrderedDict()
+
+    with open(jsonfile) as j:
+        raw_state = json.load(j)
+
+        # check for presence of "aux_seq" field in jsonfile
+        if "aux_ind_seq" in raw_state.keys():
+            asq = [x+2 for x in raw_state["aux_ind_seq"]]
+
+        # Loop over non-equivalent tensor,site pairs in the unit cell
+        for ts in raw_state["map"]:
+            coord = (ts["x"],ts["y"])
+
+            # find the corresponding tensor (and its elements) 
+            # identified by "siteId" in the "sites" list
+            t = None
+            for s in raw_state["sites"]:
+                if s["siteId"] == ts["siteId"]:
+                    t = s
+            if t == None:
+                raise Exception("Tensor with siteId: "+ts["sideId"]+" NOT FOUND in \"sites\"") 
+
+            # depending on the "format", read the bare tensor
+            if "format" in t.keys():
+                if t["format"]=="1D":
+                    X= torch.from_numpy(read_bare_json_tensor_np(t))
+            else:
+                # default
+                X= torch.from_numpy(read_bare_json_tensor_np_legacy(t))
+
+            sites[coord]= X.permute((0,1, *asq)) 
+
+            # allow promotion of real to complex dtype
+            _typeT= torch.zeros(1,dtype=global_args.torch_dtype)
+            if _typeT.is_complex() and not sites[coord].is_complex():
+                sites[coord]= sites[coord] + 0.j 
+                WARN_REAL_TO_COMPLEX= True
+
+            # move to selected device
+            sites[coord]= sites[coord].to(global_args.device)
+
+        if WARN_REAL_TO_COMPLEX: warnings.warn("Some of the tensors were promoted from float to"\
+            +" complex dtype", Warning)
+
+        # Unless given, construct a function mapping from
+        # any site of square-lattice back to unit-cell
+        # check for legacy keys
+        lX = raw_state["sizeM"] if "sizeM" in raw_state else raw_state["lX"]
+        lY = raw_state["sizeN"] if "sizeN" in raw_state else raw_state["lY"]
+
+        if vertexToSite == None:
+            def vertexToSite(coord):
+                x = coord[0]
+                y = coord[1]
+                return ( (x + abs(x)*lX)%lX, (y + abs(y)*lY)%lY )
+
+            state = IPEPO(sites, vertexToSite, lX=lX, lY=lY, peps_args=peps_args, global_args=global_args)
+        else:
+            state = IPEPO(sites, vertexToSite, lX=lX, lY=lY, peps_args=peps_args, global_args=global_args)
+
+        # set the correct dtype for newly created state (might be different
+        # default in cfg.global_args)
+        # if True in [s.is_complex() for s in sites.values()]:
+        #     state.dtype= torch.complex128
+    return state
+
+def write_ipepo(state, outputfile, tol=1.0e-14, normalize=False,\
+    peps_args=cfg.peps_args, global_args=cfg.global_args):
+    r"""
+    :param state: operator to write out in json format
+    :param outputfile: target file
+    :param aux_seq: array specifying order in which the auxiliary indices of on-site tensors 
+                    will be stored in the `outputfile`
+    :param tol: minimum magnitude of tensor elements which are written out
+    :param normalize: if True, on-site tensors are normalized before writing
+    :type state: IPEPO
+    :type ouputfile: str or Path object
+    :type aux_seq: list[int]
+    :type tol: float
+    :type normalize: bool
+
+    Parameter ``aux_seq`` defines the order of auxiliary indices relative to the convention 
+    fixed in tn-torch in which the tensor elements are written out::
+    
+         0
+        1A3 <=> [up, left, down, right]: aux_seq=[0,1,2,3]
+         2
+        
+        for alternative order, eg.
+        
+         1
+        0A2 <=> [left, up, right, down]: aux_seq=[1,0,3,2] 
+         3
+
+    """
+    write_ipeps(state, outputfile, tol=tol, normalize=normalize,\
+        peps_args=peps_args, global_args=global_args)
