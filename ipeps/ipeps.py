@@ -219,6 +219,10 @@ class IPEPS():
         
         return ""
 
+    def normalize_(self):
+        for c in self.sites.keys():
+            self.sites[c]= self.sites[c]/self.sites[c].abs().max()
+
 def read_ipeps(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.peps_args,\
     global_args=cfg.global_args):
     r"""

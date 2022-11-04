@@ -230,8 +230,8 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         t_data["loss_ls"]=[]
         t_data["min_loss_ls"]=1.0e+16
 
-        # if post_proc is not None:
-        #     post_proc(state, current_env[0], context)
+        if post_proc is not None:
+            post_proc(state, current_env[0], context)
 
         # terminate condition
         if len(t_data["loss"])>1 and \

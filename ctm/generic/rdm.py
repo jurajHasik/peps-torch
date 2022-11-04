@@ -1008,3 +1008,176 @@ def rdm2x2(coord, state, env, sym_pos_def=False, verbosity=0):
     rdm = _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
 
     return rdm
+
+
+def _CTCT_LD(coord,state,env):
+    C1, C2, C3, C4, T1, T2, T3, T4= env.get_site_env_t(coord,state)
+    #  C1--1->0
+    #  0
+    #  0
+    #  T4--2
+    #  1
+    CTC_LD = torch.tensordot(C1,T4,([0],[0]))
+    #  C1--0
+    #  |
+    #  T4--2->1
+    #  1
+    #  0
+    #  C4--1->2
+    CTC_LD = torch.tensordot(CTC_LD,C4,([1],[0]))
+    # C1--0
+    # |
+    # T4--1
+    # |        0->2
+    # C4--2 1--T3--2->3
+    # 
+    CTC_LD = torch.tensordot(CTC_LD,T3,([2],[1]))
+    return CTC_LD
+
+def _Lhalf_1x2(coord,state,env):
+    Lhalf= _CTCT_LD(coord,state,env)
+    # C1--0 0--T1[coord,(0,-1)]--2->1->0
+    # |        1->2->1
+    # T4--1->2
+    # |     2->3
+    # C4----T3--3->4
+    T1= env.T[coord,(0,-1)]
+    Lhalf= torch.tensordot(T1.permute(0,2,1).contiguous(),Lhalf,([0],[0]))
+    return Lhalf
+
+def _CTCT_RU(coord,state,env):
+    C1, C2, C3, C4, T1, T2, T3, T4= env.get_site_env_t(coord,state)
+    #       0
+    #    1--T2
+    #       2
+    #       0
+    # 2<-1--C3
+    CTC_RU= torch.tensordot(T2,C3,([2],[0]))
+    #    0--C2
+    #       1
+    #       0
+    #    1--T2
+    #       |
+    #    2--C3
+    CTC_RU= torch.tensordot(C2,CTC_RU,([1],[0]))
+    #  0--T1--2 0--C2
+    #     1        |
+    #        2<-1--T2
+    #              |
+    #        3<-2--C3
+    CTC_RU= torch.tensordot(T1,CTC_RU,([2],[0]))
+    return CTC_RU
+
+def _Rhalf_1x2(coord,state,env):
+    Rhalf= _CTCT_RU(coord,state,env)
+    #                     0--T1----C2
+    #                        1     |
+    #                           2--T2
+    #        0->3                  |
+    #  4<-1--T3[coord,(0,1)]--2 3--C3
+    T3= env.T[coord,(0,1)]
+    Rhalf= torch.tensordot(Rhalf,T3,([3],[2]))
+    return Rhalf
+
+def aux_rdm1x1(coord, state, env, sym_pos_def=False, verbosity=0):
+    r"""
+    :param coord: vertex (x,y) specifies upper left site of 2x2 subsystem
+    :param state: underlying wavefunction
+    :param env: environment corresponding to ``state``
+    :param verbosity: logging verbosity
+    :type coord: tuple(int,int)
+    :type state: IPEPS
+    :type env: ENV
+    :type verbosity: int
+    :return: 1-site auxilliary reduced density matrix
+    :rtype: torch.tensor
+    
+    Builds 1x1 reduced density matrix by 
+    contracting the following tensor network::
+
+        C1--T1--C2
+        |   |   |
+        T4--  --T2
+        |   |   |
+        C4--T3--C3
+
+    """
+    who= "aux_rdm1x1"
+    CTC_LD= _CTCT_LD(coord,state,env)
+    CTC_RU= _CTCT_RU(coord,state,env)
+
+    #   C1--0  0--T1-------C2
+    #   |         1->2     |
+    #   T4--1->0     3<-2--T2 
+    #   |      1<-2        |
+    #   C4--------T3--3 3--C3
+    #
+    rdm= torch.tensordot(CTC_LD,CTC_RU,([0,3],[0,3]))
+    rdm= rdm.permute(2,0,1,3).contiguous()
+
+    # 4i) unfuse the D^2 indices and permute to bra,ket
+    #
+    #   C----T----C      C------T--------C
+    #   |    0    |      |      0,1      |
+    #   T--1   3--T  =>  T--2,3     6,7--T
+    #   |    2    |      |      4,5      | 
+    #   C----T----C      C------T--------C
+    #        
+    a= state.site(coord)
+    rdm= rdm.view([a.size(1)]*2+[a.size(2)]*2+[a.size(3)]*2+[a.size(4)]*2)
+    rdm= rdm.permute(0,2,4,6,1,3,5,7).contiguous()
+
+    return rdm
+
+def aux_rdm1x2(coord, state, env, sym_pos_def=False, verbosity=0):
+    r"""
+    :param coord: vertex (x,y) specifies upper left site of 2x2 subsystem
+    :param state: underlying wavefunction
+    :param env: environment corresponding to ``state``
+    :param verbosity: logging verbosity
+    :type coord: tuple(int,int)
+    :type state: IPEPS
+    :type env: ENV
+    :type verbosity: int
+    :return: 1-site auxilliary reduced density matrix
+    :rtype: torch.tensor
+    
+    Builds 1x1 reduced density matrix by 
+    contracting the following tensor network::
+
+        C1--T1[(0,0),(0,-1)]--T1[(1,0),(0,-1)]--C2
+        |   |                 |                 |
+        T4--                                  --T2
+        |   |                 |                 |
+        C4--T3[(0,0),(0,1)]---T3[(1,0),(0,1)]---C3
+
+    """
+    who= "aux_rdm1x1"
+    Lhalf= _Lhalf_1x2(coord,state,env)
+    Rhalf= _Rhalf_1x2(coord,state,env)
+
+    #   C1----T1--0 0--T1----C2
+    #   |     1->0     1->3  |
+    #   T4--2->1       4<-2--T2
+    #   |     3->2     3->5  |
+    #   C4----T3--4 4--T3----C3
+    #
+    rdm= torch.tensordot(Lhalf,Rhalf,([0,4],[0,4]))
+    # take anti-clockwise order
+    rdm= rdm.permute(0,1,2,5,4,3).contiguous()
+
+    # 4i) unfuse the D^2 indices and permute to bra,ket
+    #
+    #   C1----T1-------T1----C2
+    #   |     0,1      10,11 |
+    #   T4--2,3         8,9--T2
+    #   |     4,5      6,7   |
+    #   C4----T3-------T3----C3
+    #        
+    dims00= state.site(coord).size()
+    dims10= state.site((coord[0]+1,coord[1])).size()
+    rdm= rdm.view([dims00[1]]*2+[dims00[2]]*2+[dims00[3]]*2\
+        +[dims10[3]]*2+[dims10[4]]*2+[dims10[1]]*2)
+    rdm= rdm.permute(0,2,4,6,8,10, 1,3,5,7,9,11).contiguous()
+
+    return rdm

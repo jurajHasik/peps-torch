@@ -127,17 +127,25 @@ def main():
         ctm_args= opt_context["ctm_args"]
         opt_args= opt_context["opt_args"]
 
+        # build state with normalized tensors
+        sites_n= {}
+        for c in state.sites.keys():
+            with torch.no_grad():
+                _scale= state.sites[c].abs().max()
+        sites_n[c]= state.sites[c]/_scale
+        state_n= IPEPS(sites_n, vertexToSite=lattice_to_site, lX=state.lX, lY=state.lY)
+
         # possibly re-initialize the environment
         if opt_args.opt_ctm_reinit:
-            init_env(state, ctm_env_in)
+            init_env(state_n, ctm_env_in)
 
         # 1) compute environment by CTMRG
-        ctm_env_out, *ctm_log= ctmrg.run(state, ctm_env_in, \
+        ctm_env_out, *ctm_log= ctmrg.run(state_n, ctm_env_in, \
              conv_check=ctmrg_conv_energy, ctm_args=ctm_args)
         ctm_env_out= ctm_env_in
 
         # 2) evaluate loss with the converged environment
-        loss = energy_f(state, ctm_env_out)
+        loss = energy_f(state_n, ctm_env_out)
         
         return (loss, ctm_env_out, *ctm_log)
 
@@ -165,8 +173,15 @@ def main():
             #             l= transferops.get_Top_spec(args.top_n, c,d, state, ctm_env)
             #             print("TOP "+json.dumps(_to_json(l)))
 
+    def post_proc(state, ctm_env, opt_context):
+        with torch.no_grad():
+            for c in state.sites.keys():
+                _tmp= state.sites[c]/state.sites[c].abs().max()
+                state.sites[c].copy_(_tmp)
+
     # optimize
-    optimize_state(state, ctm_env, loss_fn, obs_fn=obs_fn)
+    state.normalize_()
+    optimize_state(state, ctm_env, loss_fn, obs_fn=obs_fn, post_proc=post_proc)
 
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"
