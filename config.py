@@ -199,6 +199,8 @@ class PEPSARGS():
     def __init__(self):
         self.build_dl= True
         self.build_dl_open= False
+        self.quasi_gauge_max_iter= 10**6
+        self.quasi_gauge_tol= 1.0e-8
 
     def __str__(self):
         res=type(self).__name__+"\n"

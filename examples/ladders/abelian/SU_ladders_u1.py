@@ -136,32 +136,8 @@ def main():
         #             l= transferops.get_Top_spec(args.top_n, c,d, state, ctm_env)
         #             print("TOP "+json.dumps(_to_json(l)))
 
-    def generate_weights(state):
-        #   
-        #       w0         w2
-        # w4--(0,0)--w5--(1,0)--[w4]
-        #       w1         w3
-        # w6--(0,1)--w7--(1,1)--[w6]
-        #      [w0]       [w2]
-        def neg_(dxy): return (-dxy[0],-dxy[1])
-        def add_(coord,dxy): return (coord[0]+dxy[0],coord[1]+dxy[1])
-        dxy_w_to_ind= dict({(0,-1): 1, (-1,0): 2, (0,1): 3, (1,0): 4})
-        weights=dict()
-        for coord in state.sites.keys():
-            for dxy,ind in dxy_w_to_ind.items():
-                # generate weight_id and reverse weight_id
-                # (coord,dxy) identifies the same weight as (coord+dxy,-dxy) 
-                w_id= (coord, dxy)
-                w_rid= (state.vertexToSite(add_(coord,dxy)), neg_(dxy))
-
-                if not w_id in weights.keys() and not w_rid in weights.keys():
-                    W= yast.match_legs( tensors=[state.site(w_id[0]), state.site(w_rid[0])],\
-                        legs=[dxy_w_to_ind[w_id[1]], dxy_w_to_ind[w_rid[1]]], isdiag=True )
-                    weights[w_id]= W
-                    weights[w_rid]= W
-        return weights
-
-    state_w= get_weighted_ipeps(state, generate_weights(state))
+    # state_w= get_weighted_ipeps(state, generate_weights(state))
+    state_w= IPEPS_ABELIAN_WEIGHTED(state)
 
     # 4) select gate sequence
     # gen_gate_seq= model.gen_gate_seq_2S_2ndOrder       #  separate S.S and Sz.Id gates

@@ -521,10 +521,11 @@ def write_ipeps(state, outputfile, tol=None, normalize=False,\
 class IPEPS_ABELIAN_WEIGHTED(IPEPS_ABELIAN):
 
     # TODO validate weights
-    def __init__(self, settings, sites, weights, vertexToSite=None, lX=None, lY=None, 
+    def __init__(self, state=None, config=None, sites=None, weights=None, \
+        vertexToSite=None, lX=None, lY=None, 
         peps_args=cfg.peps_args, global_args=cfg.global_args):
         r"""
-        :param settings: YAST configuration
+        :param config: YAST configuration
         :param sites: map from elementary unit cell to on-site tensors
         :param weights: map from edges within unit cell to weight tensors
         :param vertexToSite: function mapping arbitrary vertex of a square lattice 
@@ -533,7 +534,7 @@ class IPEPS_ABELIAN_WEIGHTED(IPEPS_ABELIAN):
         :param lY: length of the elementary unit cell in Y direction
         :param peps_args: ipeps configuration
         :param global_args: global configuration
-        :type settings: NamedTuple or SimpleNamespace (TODO link to definition)
+        :type config: NamedTuple or SimpleNamespace (TODO link to definition)
         :type sites: dict[tuple(int,int) : yast.Tensor]
         :type weights: dict[tuple(tuple(int,int), tuple(int,int)) : yast.Tensor]
         :type vertexToSite: function(tuple(int,int))->tuple(int,int)
@@ -553,15 +554,25 @@ class IPEPS_ABELIAN_WEIGHTED(IPEPS_ABELIAN):
         Thus the `weights` is not injective dictionary, instead keys (coord,dxy) and (coord+dxy,-dxy)
         should index identical tensor.
         """
-        self.weights= OrderedDict(weights)
-        super().__init__(settings, sites, vertexToSite=vertexToSite, lX=lX, lY=lY, 
+        if state:
+            config=state.engine
+            sites=state.sites
+            vertexToSite=state.vertexToSite
+            lX=state.lX
+            lY=state.lY
+        elif sites:
+            assert vertexToSite or (lX and lY),"vertexToSite or lX,lY has to be provided"
+            assert len(sites)>0 or config,"Either non-empty sites or config has to be provided"
+            config= next(iter(sites.values())).config if config is None else config    
+        else:
+            raise RuntimeError("Either state or sites have to be provided")
+        super().__init__(config, sites, vertexToSite=vertexToSite, lX=lX, lY=lY, 
             peps_args=peps_args, global_args=global_args)
+        self.weights= OrderedDict(weights) if weights else self.generate_weights()
 
     def absorb_weights(self, peps_args=cfg.peps_args, 
         global_args=cfg.global_args):
         r"""
-        :param build_open_dl: see IPEPS_ABELIAN
-        :type build_open_dl: bool
         :return: regular IPEPS_ABELIAN obtained by symmetricaly absorbing weights of 
                  IPEPS_ABELIAN_WEIGHTED into its on-site tensors
         :rtype: IPEPS_ABELIAN
@@ -610,6 +621,33 @@ class IPEPS_ABELIAN_WEIGHTED(IPEPS_ABELIAN):
         xy_site, dxy= weight_id
         assert dxy in [(0,-1), (-1,0), (0,1), (1,0)],"invalid direction"
         return self.weights[ (self.vertexToSite(xy_site), dxy) ]
+
+    def generate_weights(self):
+        #   
+        #       w0         w2
+        # w4--(0,0)--w5--(1,0)--[w4]
+        #       w1         w3
+        # w6--(0,1)--w7--(1,1)--[w6]
+        #      [w0]       [w2]
+        def neg_(dxy): return (-dxy[0],-dxy[1])
+        def add_(coord,dxy): return (coord[0]+dxy[0],coord[1]+dxy[1])
+        dxy_w_to_ind= dict({(0,-1): 1, (-1,0): 2, (0,1): 3, (1,0): 4})
+        weights=dict()
+        for coord in self.sites.keys():
+            for dxy,ind in dxy_w_to_ind.items():
+                # generate weight_id and reverse weight_id
+                # (coord,dxy) identifies the same weight as (coord+dxy,-dxy) 
+                w_id= (coord, dxy)
+                w_rid= (self.vertexToSite(add_(coord,dxy)), neg_(dxy))
+
+                if not w_id in weights.keys() and not w_rid in weights.keys():
+                    W= yast.eye( config=self.engine, legs=(
+                        self.site(w_id[0]).get_legs(dxy_w_to_ind[w_id[1]]),
+                        self.site(w_rid[0]).get_legs(dxy_w_to_ind[w_rid[1]])
+                        ))
+                    weights[w_id]= W
+                    weights[w_rid]= W
+        return weights
 
 def get_weighted_ipeps(state, weights, peps_args=cfg.peps_args, global_args=cfg.global_args):
     r"""

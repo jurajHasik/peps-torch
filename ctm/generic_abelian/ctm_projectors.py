@@ -247,9 +247,10 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, direction, \
     #       RIGHT (+1)0--R--1(+1) =>T=> (+1)1--R--0(+1)(-1)0--Rt--1(-1) =>SVD=> (+1)U(?)S(-?)Vh(-1)
     #
     if ctm_args.fwd_checkpoint_projectors:
+        raise RuntimeError("Checkpointing projectors not implemented")
         M = checkpoint(mm, transpose(R), Rt)
     else:
-        M = mm(transpose(R), Rt)
+        M = R.tensordot(Rt,([0],[0]))
 
     # 1) SVD decomposition and Truncation
     signature_U={(0,-1): 1, (-1,0): -1, (0,1): -1, (1,0): 1}
@@ -271,13 +272,13 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, direction, \
         #       ?=-1  (-?)0--Vh--1(+1)=>CT=> (+1)0--Rt--1(+1)(-1)1--Vh--0(?)   = (+1)Pt(-1)
         #       RIGHT (+1)0--U--1(?)=>C=> (+1)0--R--1(+1)(-1)0--U--1(-?)S_sqrt = (+1)P(-1)
         #             (-?)0--Vh--1(-1)=>CT=> (-1)0--Rt--1(-1)(+1)1--Vh--0(?)   = (-1)Pt(+1)
-        P= mm(mm(R, U, conj=(0,1)), S_sqrt.transpose((1,0)) )
-        Pt= mm(mm(Rt,transpose(Vh), conj=(0,1)),S_sqrt)
+        P= ( R.tensordot(U.conj(), ([1],[0])) ).tensordot(S_sqrt,([1],[1]))
+        Pt= ( Rt.tensordot(Vh.conj(),([1],[1])) ).tensordot(S_sqrt,([1],[0]))
         return P, Pt
 
     tensors= R, Rt, U, Vh, S_sqrt
     if ctm_args.fwd_checkpoint_projectors:
-        # return checkpoint(P_Pt_c, *tensors)
-        raise RuntimeError("Checkpointing not implemented")
+        raise RuntimeError("Checkpointing projectors not implemented")
+        return checkpoint(P_Pt_c, *tensors)
     else:
         return P_Pt_c(*tensors)
