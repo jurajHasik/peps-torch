@@ -1,4 +1,5 @@
 import context
+import copy
 import torch
 import argparse
 import config as cfg
@@ -25,6 +26,7 @@ parser.add_argument("--tiling", default="3SITE", help="tiling of the lattice", \
 parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
+parser.add_argument("--test_env_sensitivity", action='store_true', help="compare loss with higher chi env")
 args, unknown_args = parser.parse_known_args()
 
 def main():
@@ -132,7 +134,7 @@ def main():
         for c in state.sites.keys():
             with torch.no_grad():
                 _scale= state.sites[c].abs().max()
-        sites_n[c]= state.sites[c]/_scale
+            sites_n[c]= state.sites[c]/_scale
         state_n= IPEPS(sites_n, vertexToSite=lattice_to_site, lX=state.lX, lY=state.lY)
 
         # possibly re-initialize the environment
@@ -142,7 +144,6 @@ def main():
         # 1) compute environment by CTMRG
         ctm_env_out, *ctm_log= ctmrg.run(state_n, ctm_env_in, \
              conv_check=ctmrg_conv_energy, ctm_args=ctm_args)
-        ctm_env_out= ctm_env_in
 
         # 2) evaluate loss with the converged environment
         loss = energy_f(state_n, ctm_env_out)
@@ -161,8 +162,20 @@ def main():
             epoch= len(opt_context["loss_history"]["loss"]) 
             loss= opt_context["loss_history"]["loss"][-1]
             obs_values, obs_labels = eval_obs_f(state,ctm_env)
-            print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
-            log.info("Norm(sites): "+", ".join([f"{t.norm()}" for c,t in state.sites.items()]))
+            
+            # test ENV sensitivity
+            if args.test_env_sensitivity:
+                loc_ctm_args= copy.deepcopy(opt_context["ctm_args"])
+                loc_ctm_args.ctm_max_iter= 1
+                ctm_env_inv= ctm_env.extend(ctm_env.chi+10)
+                ctm_env_out1, *ctm_log= ctmrg.run(state, ctm_env_inv, \
+                    conv_check=ctmrg_conv_energy, ctm_args=loc_ctm_args)
+                loss1 = energy_f(state, ctm_env_inv)
+
+            print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]\
+                + ([f"{loss1-loss}"] if args.test_env_sensitivity else []) ))
+            log.info(f"env_sensitivity: {loss1-loss} " if args.test_env_sensitivity else ""\
+                +"Norm(sites): "+", ".join([f"{t.norm()}" for c,t in state.sites.items()]))
 
             # with torch.no_grad():
             #     if args.top_freq>0 and epoch%args.top_freq==0:
@@ -180,6 +193,8 @@ def main():
                 state.sites[c].copy_(_tmp)
 
     # optimize
+    # state_g= IPEPS_WEIGHTED(state=state).gauge()
+    # state= state_g.absorb_weights()
     state.normalize_()
     optimize_state(state, ctm_env, loss_fn, obs_fn=obs_fn, post_proc=post_proc)
 
