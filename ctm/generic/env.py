@@ -164,17 +164,24 @@ class ENV():
             This operation preserves gradient tracking.
         """
         new_env= ENV(new_chi, ctm_args=ctm_args, global_args=global_args)
+        opts= {'dtype': self.dtype, 'device': self.device}
         x= min(self.chi, new_chi)
-        for k,old_C in self.C.items(): new_env.C[k]= old_C[:x,:x].clone().detach()
+        for k,old_C in self.C.items(): 
+            new_env.C[k]= torch.zeros(new_chi,new_chi,**opts)
+            new_env.C[k][:x,:x]= old_C[:x,:x].clone().detach()
         for k,old_T in self.T.items():
             if k[1]==(0,-1):
-                new_env.T[k]= old_T[:x,:,:x].clone().detach()
+                new_env.T[k]= torch.zeros((new_chi,old_T.size(1),new_chi),**opts)
+                new_env.T[k][:x,:,:x]= old_T[:x,:,:x].clone().detach()
             elif k[1]==(-1,0):
-                new_env.T[k]= old_T[:x,:x,:].clone().detach()
+                new_env.T[k]= torch.zeros((new_chi,new_chi,old_T.size(2)),**opts)
+                new_env.T[k][:x,:x,:]= old_T[:x,:x,:].clone().detach()
             elif k[1]==(0,1):
-                new_env.T[k]= old_T[:,:x,:x].clone().detach()
+                new_env.T[k]= torch.zeros((old_T.size(0),new_chi,new_chi),**opts)
+                new_env.T[k][:,:x,:x]= old_T[:,:x,:x].clone().detach()
             elif k[1]==(1,0):
-                new_env.T[k]= old_T[:x,:,:x].clone().detach()
+                new_env.T[k]= torch.zeros((new_chi,old_T.size(1),new_chi),**opts)
+                new_env.T[k][:x,:,:x]= old_T[:x,:,:x].clone().detach()
             else:
                 raise Exception(f"Unexpected direction {k[1]}")
 
