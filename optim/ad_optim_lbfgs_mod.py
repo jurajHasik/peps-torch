@@ -238,6 +238,11 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
             abs(t_data["loss"][-1]-t_data["loss"][-2])<opt_args.tolerance_change:
             break
 
+        if (opt_args.line_search not in ["default", None]) and \
+            "STATUS" in context and context["STATUS"]=="ENV_ANTIVAR":
+            raise RuntimeError("Over-optimized environment, see log file for "\
+                +" env_sensitivity and loss_diff.")
+
 
     # optimization is over, store the last checkpoint if at least a single step was made
     if len(t_data["loss"])>0:
