@@ -116,10 +116,35 @@ def main():
             return True, history
         return False, history
 
+    @torch.no_grad()
+    def ctmrg_conv_specC(state, env, history, ctm_args=cfg.ctm_args):
+        if not history:
+            history={'spec': [], 'diffs': []}
+        # use corner spectra
+        diff=float('inf')
+        diffs=None
+        spec= env.get_spectra()
+        spec_nosym_sorted= { s_key : s_t.sort(descending=True)[0] \
+                for s_key, s_t in spec.items() }
+        if len(history['spec'])>0:
+            s_old= history['spec'][-1]
+            diffs= [ sum((spec_nosym_sorted[k]-s_old[k])**2).item() \
+                for k in spec.keys() ]
+            diff= sum(diffs)
+        history['spec'].append(spec_nosym_sorted)
+        history['diffs'].append(diffs)
+        
+        if (len(history['diffs']) > 1 and abs(diff) < ctm_args.ctm_conv_tol)\
+            or len(history['diffs']) >= ctm_args.ctm_max_iter:
+            log.info({"history_length": len(history['diffs']), "history": history['diffs']})
+            return True, history
+        return False, history
+
     ctm_env = ENV(args.chi, state)
     init_env(state, ctm_env)
+    ctmrg_conv_f= ctmrg_conv_specC
     
-    ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
+    ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_f)
     loss0= energy_f(state, ctm_env)
     obs_values, obs_labels = eval_obs_f(state,ctm_env)
     print(", ".join(["epoch","energy"]+obs_labels))
@@ -143,7 +168,7 @@ def main():
 
         # 1) compute environment by CTMRG
         ctm_env_out, *ctm_log= ctmrg.run(state_n, ctm_env_in, \
-             conv_check=ctmrg_conv_energy, ctm_args=ctm_args)
+             conv_check=ctmrg_conv_f, ctm_args=ctm_args)
 
         # 2) evaluate loss with the converged environment
         loss = energy_f(state_n, ctm_env_out)
@@ -169,13 +194,17 @@ def main():
                 loc_ctm_args.ctm_max_iter= 1
                 ctm_env_inv= ctm_env.extend(ctm_env.chi+10)
                 ctm_env_out1, *ctm_log= ctmrg.run(state, ctm_env_inv, \
-                    conv_check=ctmrg_conv_energy, ctm_args=loc_ctm_args)
-                loss1 = energy_f(state, ctm_env_inv)
+                    conv_check=ctmrg_conv_f, ctm_args=loc_ctm_args)
+                loss1= energy_f(state, ctm_env_inv)
+                delta_loss= opt_context['loss_history']['loss'][-1]-opt_context['loss_history']['loss'][-2]\
+                    if len(opt_context['loss_history']['loss'])>1 else float('NaN')
+                opt_context["STATUS"]= "ENV_ANTIVAR" if loss1-loss>0 else "ENV_VAR"
 
             print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]\
                 + ([f"{loss1-loss}"] if args.test_env_sensitivity else []) ))
-            log.info(f"env_sensitivity: {loss1-loss} " if args.test_env_sensitivity else ""\
-                +"Norm(sites): "+", ".join([f"{t.norm()}" for c,t in state.sites.items()]))
+            log.info(f"env_sensitivity: {loss1-loss} loss_diff: "\
+                +f"{delta_loss}" if args.test_env_sensitivity else ""\
+                +" Norm(sites): "+", ".join([f"{t.norm()}" for c,t in state.sites.items()]))
 
             # with torch.no_grad():
             #     if args.top_freq>0 and epoch%args.top_freq==0:
@@ -191,6 +220,10 @@ def main():
             for c in state.sites.keys():
                 _tmp= state.sites[c]/state.sites[c].abs().max()
                 state.sites[c].copy_(_tmp)
+            # if "STATUS" in opt_context and opt_context["STATUS"]=="ENV_ANTIVAR":
+            #     state_g= IPEPS_WEIGHTED(state=state).gauge().absorb_weights()
+            #     for c in state.sites.keys():
+            #         state.sites[c].copy_(state_g.sites[c])
 
     # optimize
     # state_g= IPEPS_WEIGHTED(state=state).gauge()
@@ -203,7 +236,7 @@ def main():
     state= read_ipeps(outputstatefile, vertexToSite=state.vertexToSite)
     ctm_env = ENV(args.chi, state)
     init_env(state, ctm_env)
-    ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
+    ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_f)
     loss0= energy_f(state,ctm_env)
     obs_values, obs_labels = eval_obs_f(state,ctm_env)
     print(", ".join([f"{args.opt_max_iter}",f"{loss0}"]+[f"{v}" for v in obs_values]))  

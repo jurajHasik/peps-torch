@@ -3,6 +3,8 @@ import config as cfg
 from tn_interface import einsum
 from tn_interface import conj
 from tn_interface import contiguous, view
+import logging
+log = logging.getLogger(__name__)
 
 class ENV():
     def __init__(self, chi, state=None, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
@@ -794,3 +796,27 @@ def print_env(env, verbosity=0):
         print(str(key)+" "+str(t.size()))
         if verbosity>0:
             print(t)
+
+@torch.no_grad()
+def ctmrg_conv_specC(state, env, history, ctm_args=cfg.ctm_args):
+    if not history:
+        history={'spec': [], 'diffs': []}
+    # use corner spectra
+    diff=float('inf')
+    diffs=None
+    spec= env.get_spectra()
+    spec_nosym_sorted= { s_key : s_t.sort(descending=True)[0] \
+            for s_key, s_t in spec.items() }
+    if len(history['spec'])>0:
+        s_old= history['spec'][-1]
+        diffs= [ sum((spec_nosym_sorted[k]-s_old[k])**2).item() \
+            for k in spec.keys() ]
+        diff= sum(diffs)
+    history['spec'].append(spec_nosym_sorted)
+    history['diffs'].append(diffs)
+    
+    if (len(history['diffs']) > 1 and abs(diff) < ctm_args.ctm_conv_tol)\
+        or len(history['diffs']) >= ctm_args.ctm_max_iter:
+        log.info({"history_length": len(history['diffs']), "history": history['diffs']})
+        return True, history
+    return False, history

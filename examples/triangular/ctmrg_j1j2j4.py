@@ -25,6 +25,7 @@ parser.add_argument("--tiling", default="3SITE", help="tiling of the lattice", \
 parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
+parser.add_argument("--gauge", action='store_true', help="put into quasi-canonical form")
 args, unknown_args = parser.parse_known_args()
 
 def main():
@@ -74,6 +75,11 @@ def main():
 
     print(state)
     
+    # gauge
+    if args.gauge:
+        state_g= IPEPS_WEIGHTED(state=state).gauge()
+        state= state_g.absorb_weights()
+
     # 2) select the "energy" function 
     if args.tiling == "1SITE":
         energy_f=model.energy_1x3
