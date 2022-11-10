@@ -3,6 +3,7 @@ import torch
 import argparse
 import config as cfg
 from ipeps.ipeps import *
+from ipeps.ipeps_trgl_pg import *
 from ctm.generic.env import *
 from ctm.generic import ctmrg
 from ctm.generic import transferops
@@ -21,7 +22,7 @@ parser.add_argument("--j1", type=float, default=1., help="nearest-neighbour coup
 parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour coupling")
 parser.add_argument("--j4", type=float, default=0., help="plaquette coupling")
 parser.add_argument("--tiling", default="3SITE", help="tiling of the lattice", \
-    choices=["1SITE", "3SITE"])
+    choices=["1SITE", "1STRIV", "1SPG", "3SITE"])
 parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
@@ -37,7 +38,7 @@ def main():
     # initialize an ipeps
     # 1) define lattice-tiling function, that maps arbitrary vertex of square lattice
     # coord into one of coordinates within unit-cell of iPEPS ansatz    
-    if args.tiling == "1SITE":
+    if args.tiling in ["1SITE", "1STRIV", "1SPG"]:
         model= spin_triangular.J1J2J4_1SITE(j1=args.j1, j2=args.j2, j4=args.j4)
         lattice_to_site=None
     elif args.tiling == "3SITE":
@@ -51,7 +52,12 @@ def main():
             +"1SITE, 3SITE")
 
     if args.instate!=None:
-        state = read_ipeps(args.instate, vertexToSite=lattice_to_site)
+        if args.tiling in ["1STRIV"]:
+            state= read_ipeps_trgl_1s_ttphys_pg(args.instate)
+        elif args.tiling in ["1SPG"]:
+            state= read_ipeps_trgl_1s_tbt_pg(args.instate)
+        else:
+            state = read_ipeps(args.instate, vertexToSite=lattice_to_site)
         if args.bond_dim > max(state.get_aux_bond_dims()):
             # extend the auxiliary dimensions
             state = extend_bond_dim(state, args.bond_dim)
@@ -59,6 +65,10 @@ def main():
     elif args.opt_resume is not None:
         if args.tiling == "1SITE":
             state= IPEPS(dict(), lX=1, lY=1)
+        elif args.tiling == "1STRIV":
+            state= IPEPS_TRGL_1S_TTPHYS_PG()
+        elif args.tiling == "1SPG":
+            state= IPEPS_TRGL_1S_TBT_PG()
         elif args.tiling == "3SITE":
             state= IPEPS(dict(), vertexToSite=lattice_to_site, lX=3, lY=3)
         state.load_checkpoint(args.opt_resume)
@@ -75,13 +85,13 @@ def main():
 
     print(state)
     
-    # gauge
+    # gauge, operates only IPEPS base and its sites tensors
     if args.gauge:
         state_g= IPEPS_WEIGHTED(state=state).gauge()
         state= state_g.absorb_weights()
 
     # 2) select the "energy" function 
-    if args.tiling == "1SITE":
+    if args.tiling in ["1SITE", "1STRIV", "1SPG"]:
         energy_f=model.energy_1x3
         eval_obs_f= model.eval_obs
     elif args.tiling == "3SITE":
@@ -103,6 +113,15 @@ def main():
             return True, history
         return False, history
 
+    def ctmrg_conv_specC_loc(state, env, history, ctm_args=cfg.ctm_args):
+        _conv_check, history= ctmrg_conv_specC(state, env, history, ctm_args=ctm_args)
+        e_curr= energy_f(state, env)
+        obs_values, obs_labels = eval_obs_f(state,env)
+        print(", ".join([f"{len(history['diffs'])}",f"{e_curr}"]+[f"{v}" for v in obs_values]))
+        return _conv_check, history
+
+    ctmrg_conv_f= ctmrg_conv_specC_loc
+
     ctm_env_init = ENV(args.chi, state)
     init_env(state, ctm_env_init)
     print(ctm_env_init)
@@ -112,7 +131,7 @@ def main():
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
 
-    ctm_env_init, *ctm_log= ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_energy)
+    ctm_env_init, *ctm_log= ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_f)
 
     # 6) compute final observables
     e_curr0 = energy_f(state, ctm_env_init)

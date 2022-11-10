@@ -54,8 +54,8 @@ def main():
         state = read_state_f(args.instate)
         if args.bond_dim > max(state.get_aux_bond_dims()):
             # extend the auxiliary dimensions
-            state = extend_bond_dim(state, args.bond_dim)
-        state.add_noise(args.instate_noise)
+            state = state.extend_bond_dim(args.bond_dim)
+        state= state.add_noise(args.instate_noise)
     elif args.opt_resume is not None:
         if args.tiling == "1STRIV":
             state= IPEPS_TRGL_1S_TRIVALENT()
@@ -90,7 +90,6 @@ def main():
         model= type(model)(j1=args.j1, j2=args.j2, j4=args.j4)
 
     print(state)
-    import pdb; pdb.set_trace()
 
     @torch.no_grad()
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
@@ -106,11 +105,13 @@ def main():
         return False, history
 
     # alternatively use ctmrg_conv_specC from ctm.generinc.env
+    # ctmrg_conv_f= ctmrg_conv_specC
+    ctmrg_conv_f= ctmrg_conv_energy
 
     ctm_env = ENV(args.chi, state)
     init_env(state, ctm_env)
     
-    ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_specC)
+    ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_f)
     loss0= energy_f(state, ctm_env)
     obs_values, obs_labels = eval_obs_f(state,ctm_env)
     print(", ".join(["epoch","energy"]+obs_labels))
@@ -139,7 +140,7 @@ def main():
 
         # 1) compute environment by CTMRG
         ctm_env_out, *ctm_log= ctmrg.run(state_sym, ctm_env_in, \
-             conv_check=ctmrg_conv_specC, ctm_args=ctm_args)
+             conv_check=ctmrg_conv_f, ctm_args=ctm_args)
 
         # 2) evaluate loss with the converged environment
         loss = energy_f(state_sym, ctm_env_out)
@@ -193,7 +194,7 @@ def main():
     state= read_state_f(outputstatefile)
     ctm_env = ENV(args.chi, state)
     init_env(state, ctm_env)
-    ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_specC)
+    ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_f)
     loss0= energy_f(state,ctm_env)
     obs_values, obs_labels = eval_obs_f(state,ctm_env)
     print(", ".join([f"{args.opt_max_iter}",f"{loss0}"]+[f"{v}" for v in obs_values]))  

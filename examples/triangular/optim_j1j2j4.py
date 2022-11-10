@@ -116,29 +116,7 @@ def main():
             return True, history
         return False, history
 
-    @torch.no_grad()
-    def ctmrg_conv_specC(state, env, history, ctm_args=cfg.ctm_args):
-        if not history:
-            history={'spec': [], 'diffs': []}
-        # use corner spectra
-        diff=float('inf')
-        diffs=None
-        spec= env.get_spectra()
-        spec_nosym_sorted= { s_key : s_t.sort(descending=True)[0] \
-                for s_key, s_t in spec.items() }
-        if len(history['spec'])>0:
-            s_old= history['spec'][-1]
-            diffs= [ sum((spec_nosym_sorted[k]-s_old[k])**2).item() \
-                for k in spec.keys() ]
-            diff= sum(diffs)
-        history['spec'].append(spec_nosym_sorted)
-        history['diffs'].append(diffs)
-        
-        if (len(history['diffs']) > 1 and abs(diff) < ctm_args.ctm_conv_tol)\
-            or len(history['diffs']) >= ctm_args.ctm_max_iter:
-            log.info({"history_length": len(history['diffs']), "history": history['diffs']})
-            return True, history
-        return False, history
+    # another option is ctmrg_conv_specC from ctm.generic.env
 
     ctm_env = ENV(args.chi, state)
     init_env(state, ctm_env)
@@ -229,8 +207,9 @@ def main():
             #         state.sites[c].copy_(state_g.sites[c])
 
     # optimize
-    # state_g= IPEPS_WEIGHTED(state=state).gauge()
-    # state= state_g.absorb_weights()
+    if args.test_env_sensitivity:
+        state_g= IPEPS_WEIGHTED(state=state).gauge()
+        state= state_g.absorb_weights()
     state.normalize_()
     optimize_state(state, ctm_env, loss_fn, obs_fn=obs_fn, post_proc=post_proc)
 
