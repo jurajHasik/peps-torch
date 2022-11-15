@@ -393,7 +393,7 @@ def c2x2_LU_sl_c(*tensors):
         # T2-------a*a--4,7
         # |         |    
         # 1         3,6
-        C2x2 = contract(C2x2, conj(a), ([3,4],[1,2]))
+        C2x2 = contract(C2x2, conj(a), ([0,3],[1,2]))
         # permute 01234567->13604725
         # reshape (136)(047)25->0123
         C2x2 = contiguous(permute(C2x2,(1,3,6,0,4,7,2,5)))

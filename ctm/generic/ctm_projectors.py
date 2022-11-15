@@ -150,7 +150,7 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args, \
     :type chi: int
     :type ctm_args: CTMARGS
     :type global_args: GLOBALARGS
-    :return: pair of projectors, tensors of dimension :math:`\chi \times \chi \times D^2`. 
+    :return: pair of projectors P, Pt, tensors of dimension :math:`\chi \times \chi \times D^2`. 
              The D might vary depending on the auxiliary bond dimension of related on-site
              tensor.
     :rtype: torch.tensor, torch.tensor
@@ -194,11 +194,11 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args, \
              _|___|_      |     |
             |___Rt__|    dim0  dim1
                         __|___  |                                         
-                        \_P__/  |
+                        \_Pt__/ |
                           |     |
                          chi    |
                          _|__   |
-                        /_Pt_\  |
+                        /_P _\  |
                           |     |    
                          dim0  dim1
                          _|_____|_

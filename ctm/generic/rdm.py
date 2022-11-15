@@ -1,7 +1,9 @@
 import torch
 from config import _torch_version_check
+import config as cfg
 from ctm.generic.env import ENV
 from ctm.generic.ctm_components import c2x2_LU, c2x2_LD, c2x2_RU, c2x2_RD
+from ctm.generic.ctm_projectors import ctm_get_projectors_from_matrices
 from tn_interface import contract, einsum
 from tn_interface import contiguous, view, permute
 from tn_interface import conj
@@ -607,7 +609,7 @@ def rdm2x2_NNN_11(coord, state, env, sym_pos_def=False, verbosity=0):
     :type state: IPEPS
     :type env: ENV
     :type verbosity: int
-    :return: 2-site reduced density matrix with indices :math:`s_0s_1;s'_0s'_1
+    :return: 2-site reduced density matrix with indices :math:`s_0s_1;s'_0s'_1`
     :rtype: torch.tensor
 
     Computes 2-site reduced density matrix :math:`\rho_{NNN,11}` of two-site subsystem 
@@ -1009,6 +1011,612 @@ def rdm2x2(coord, state, env, sym_pos_def=False, verbosity=0):
 
     return rdm
 
+
+def rdm2x3(coord, state, env, sym_pos_def=False, verbosity=0):
+    r"""
+    :param coord: vertex (x,y) specifies lower left site of 2x3 subsystem
+    :param state: underlying wavefunction
+    :param env: environment corresponding to ``state``
+    :param verbosity: logging verbosity
+    :type coord: tuple(int,int)
+    :type state: IPEPS
+    :type env: ENV
+    :type verbosity: int
+    :return: 4-site reduced density matrix with indices 
+             :math:`s_0s_1s_2s_3;s'_0s'_1s'_2s'_3`
+    :rtype: torch.tensor
+
+    Computes 4-site reduced density matrix :math:`\rho` of four-site subsystem, 
+    a parallelogram, specified by the vertex ``coord`` of its lower-left 
+    and upper-right corner within 2x3 patch using strategy:
+
+        1. compute left edge of the network
+        2. add extra T-tensor and on-site tensor to the bottom of the left edge
+        3. analogously for the right edge, attaching extra T-tensor
+           and on-site tensor to the top of the right edge
+        4. contract left and right half to obtain final reduced density matrix
+
+    ::
+
+        C--T------------------T-----T-------------------C = C2x2_LU(coord+(0,-1))--T-----C2x2(coord+(2,-1))
+        |  |                  |     |                   |   |___________________|--A^+A--|_______________|
+        T--A^+A(coord+(0,-1))-A^+A--A^+A(coord+(2,-1))--T   |                   |--A^+A--|               |
+        |  |                  |     |                   |   C2x2_LD(coord)---------T-----C2x2(coord+(2,0))
+        T--A^+A(coord)--------A^+A--A^+A(coord+(2,0))---T
+        |  |                  |     |                   |
+        C--T------------------T-----T-------------------C
+
+    The physical indices `s` and `s'` of on-sites tensors :math:`A` (and :math:`A^\dagger`)
+    at vertices ``coord`` and ``coord+(1,1)`` are left uncontracted and given in the same order::
+
+        x  s3 s2
+        s0 s1 x 
+
+    """
+    who="rdm2x3"
+    # ----- building C2x2_LU ----------------------------------------------------
+    vec = (0, -1)
+    shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    C2X2_LU= c2x2_LU(coord,state,env,mode='sl',verbosity=verbosity)
+
+    # ----- building C2x2_LD ----------------------------------------------------
+    C2X2_LD= c2x2_LD(coord,state,env,mode='sl-open',verbosity=verbosity)
+
+    # ----- build left part C2x2_LU--C2X2_LD ------------------------------------
+    # C2x2_LU--1->0
+    # |
+    # 0
+    # 0/23
+    # C2x2_LD--1
+    C2X2_LU= torch.tensordot(C2X2_LU, C2X2_LD, ([0],[0]))
+
+    # attach extra T-tensor and open double-layer tensor
+    vec = (1, 0)
+    shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    T_10= env.T[(shift_coord,(0,1))]
+    T_10= T_10.view([state.site((shift_coord)).size(3)]*2+[T_10.size(1),T_10.size(2)])
+    # C2x2_LU--0
+    # |
+    # |     ->3,4  ->1,2
+    # |/23->4,5 /->2,3     0,1->5,6
+    # C2x2_LD--1-->1    2--T(coord+(1,0),(0,1))--2->7
+    C2X2_LU= C2X2_LU.view([C2X2_LU.size(0)]+[T_10.size(2)]+[state.site((0,0)).size(4)]*2\
+        +[state.site((0,0)).size(0)]*2)
+    C2X2_LU= torch.tensordot(C2X2_LU, T_10, ([1],[2]))
+
+    #               ->7
+    # C2x2LU---0    1 0->6
+    # |_____ /-2->1 |/
+    # |3,4  |--1 2--a--4->8
+    # |->2,3|       3
+    # |     |       5,6->4
+    # C2x2_LD-------T---7->5
+    C2X2_LU= torch.tensordot(C2X2_LU, state.site(shift_coord), ([1,5],[2,3]))
+
+    #             ->5 ->4 ->8 ->7     
+    # C2x2LU---0    7 6   1/--0       left|--0->0,1,2
+    # |_____ /-1 2--|/----a*---4->9   |   |     ->7
+    # |2,3  |-------a--8--|->6        |   |____5 8->10
+    # |->1,2|       | 4 3/            | ->3,4     --9->11
+    # |     |       |/                |1,2  4,7   --6->8
+    # C2x2_LD-------T---5->3          |_____->6,9_--3->5
+    C2X2_LU= torch.tensordot(C2X2_LU, state.site(shift_coord).conj(), ([1,4],[2,3]))
+    vec = (1, -1)
+    shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    C2X2_LU= C2X2_LU.view( [env.T[shift_coord, (0,-1)].size(0)]+\
+        [state.site(shift_coord).size(2)]*2 + list(C2X2_LU.size()[1:]) )
+
+    # ----- building C2x2_RU ----------------------------------------------------
+    vec = (2, -1)
+    shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    C2X2_RU= c2x2_RU(coord,state,env,mode='sl-open',verbosity=verbosity)
+
+     # ----- building C2x2_RD ----------------------------------------------------
+    vec = (2, 0)
+    shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    C2X2_RD= c2x2_RD(coord,state,env,mode='sl',verbosity=verbosity)
+    
+    # ----- build right part C2X2_RU--C2X2_RD -----------------------------------
+    #            0--C2x2_RU--1,2 
+    #               1
+    #               0
+    #         3<-1--C2x2_RD
+    C2X2_RU= torch.tensordot(C2X2_RU,C2X2_RD,([1],[0]))
+
+    # attach extra T-tensor and open double-layer tensor
+    vec = (1, -1)
+    shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    T_11= env.T[(shift_coord,(0,-1))]
+    T_11= T_11.view([T_11.size(0)]+[state.site((shift_coord)).size(1)]*2+[T_11.size(2)])
+
+    #     0--T(coord+(1,1),(0,-1))--3  0<-0--C2x2_RU--1,2->3,4->5,6 
+    #        1,2                 3,4<-1,2/   | 
+    #                                        |
+    #                               7<-5<-3--C2x2_RD
+    C2X2_RU= C2X2_RU.view([T_11.size(3)]+[state.site(shift_coord).size(4)]*2\
+        +[C2X2_RU.size(1)]*2+[C2X2_RU.size(3)])
+    C2X2_RU= torch.tensordot(T_11,C2X2_RU,([3],[0]))
+
+    #     0--T-------C2x2_RU--5,6->3,4 
+    #   1<-2,1       |
+    #        1       |
+    #  7<-2--a--4 3--|
+    #   6<-0/3    4--|
+    #     8<-   2<-  |
+    #          5<-7--C2x2_RD
+    C2X2_RU= torch.tensordot(C2X2_RU,state.site(shift_coord),([1,3],[1,4]))
+
+    #     0--T----------C2x2_RU--3,4->1,2         0--|right |--1,2
+    #        | 1 ->7    |                     10<-8--|      |--4,7->6,9 
+    #        | 1/0      |                      7<-5--|   ___
+    #  8<-2--|-a*--4 2--|                          8<-6 9   |
+    #  5<-7--a----------|                           11<-    |
+    #   4<-6/8 |        |                         3,4,5<-3--|
+    #      6<- 3        |
+    #       9<-   3<-5--C2x2_RD
+    C2X2_RU= torch.tensordot(C2X2_RU,state.site(shift_coord).conj(),([1,2],[1,4]))
+    vec = (1, 0)
+    shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    C2X2_RU= C2X2_RU.view(list(C2X2_RU.size()[:3])+[env.T[shift_coord,(0,1)].size(2)]\
+        +[state.site(shift_coord).size(4)]*2+list(C2X2_RU.size()[4:]))
+
+    #
+    # x   6,7 4,5
+    # 0,1 2,3 x
+    rdm= torch.tensordot(C2X2_LU,C2X2_RU,([0,1,2, 5,8,11, 7,10],[0,7,10, 3,4,5, 8,11]))
+
+    # permute into order of s0,s1,s2,s3;s0',s1',s2',s3' where primed indices
+    # represent "ket"
+    # 01234567->02461357
+    # symmetrize and normalize
+    rdm = contiguous(permute(rdm, (0, 2, 4, 6, 1, 3, 5, 7)))
+    rdm = _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
+    return rdm
+
+
+def rdm2x3_compressed(coord,state,env,sym_pos_def=False,\
+    ctm_args=cfg.ctm_args,global_args=cfg.global_args,verbosity=0):
+    r"""
+    :param coord: vertex (x,y) specifies lower left site of 2x3 subsystem
+    :param state: underlying wavefunction
+    :param env: environment corresponding to ``state``
+    :param ctm_args: CTM algorithm configuration
+    :param global_args: global configuration
+    :type ctm_args: CTMARGS
+    :type global_args: GLOBALARGS
+    :param verbosity: logging verbosity
+    :type coord: tuple(int,int)
+    :type state: IPEPS
+    :type env: ENV
+    :type verbosity: int
+    :return: 4-site reduced density matrix with indices 
+             :math:`s_0s_1s_2s_3;s'_0s'_1s'_2s'_3`
+    :rtype: torch.tensor
+
+    Computes 4-site reduced density matrix :math:`\rho` of four-site subsystem, 
+    a parallelogram, specified by the vertex ``coord`` of its lower-left 
+    and upper-right corner within 2x3 patch using strategy:
+
+        1. compute left edge of the network with compression on the top-left corner
+        2. add extra T-tensor and on-site tensor to the bottom of the left edge
+        3. analogously for the right edge, attaching extra T-tensor
+           and on-site tensor to the top of the right edge and compression 
+           on the bottom right corner
+        4. contract left and right half to obtain final reduced density matrix
+
+    The isometries performing the compresion are obtained as CTMRG projectors
+    using full (:attr:`CTMARGS.projector_method` = ``"4X4"``) method.
+
+    ::
+
+        C--T-------------------|\    /|--T---------------T-------------------C
+        |  |                   | >--< |  |               |                   |
+        T--A^+A(coord+(0,-1))--|/    \|--A^+A------------A^+A(coord+(2,-1))--T
+        |  |                             |               |                   |
+        T--A^+A(coord)-------------------A^+A--|\    /|--A^+A(coord+(2,0))---T
+        |  |                             |     | >--< |  |                   |
+        C--T-----------------------------T-----|/    \|--T-------------------C
+
+    The physical indices `s` and `s'` of on-sites tensors :math:`A` (and :math:`A^\dagger`)
+    at vertices ``coord`` and ``coord+(1,1)`` are left uncontracted and given in the same order::
+
+        x  s3 s2
+        s0 s1 x
+
+    """ 
+    who="rdm2x3_compressed"
+    # ----- building C2x2_LU ----------------------------------------------------
+    vec = (0, -1)
+    shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    C2X2_LU= c2x2_LU(shift_coord,state,env,mode='sl',verbosity=verbosity)
+
+    # ----- building C2x2_LD ----------------------------------------------------
+    C2X2_LD= c2x2_LD(coord,state,env,mode='sl-open',verbosity=verbosity)
+
+    # ----- build left part C2x2_LU--C2X2_LD ------------------------------------
+    # C2x2_LU--1->0
+    # |
+    # 0
+    # 0/23
+    # C2x2_LD--1
+    C2X2_LU= torch.tensordot(C2X2_LU, C2X2_LD, ([0],[0]))
+
+    # construct projector for UP move between coord+(0,-1) and coord+(1,-1)
+    # see :meth:`ctm.generic.ctm_components.halves_of_4x4_CTM_MOVE_UP_c`
+    #
+    #        _0 0_          --|\__/|--
+    #       |     |         --|/  \|--
+    # C2X2_LU     half1 =>    P    Pt
+    #       |_1 1_|
+    vec = (1, -1)
+    shift_coord_1n1 = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    vec = (1, 0)
+    shift_coord_10 = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    half1= torch.tensordot(c2x2_RU(shift_coord_1n1,state,env,mode='sl',verbosity=verbosity),\
+        c2x2_RD(shift_coord_10,state,env,mode='sl',verbosity=verbosity),([1],[0]))
+
+    P_up, Pt_up= ctm_get_projectors_from_matrices(half1, torch.einsum('ijss->ij',C2X2_LU),\
+        env.chi, ctm_args, global_args)
+
+    # compress C2X2_LU
+    #  
+    #      |C2X2_LU--0 0--P--1->0  
+    #      |      |
+    # 2,3--|______|--1
+    C2X2_LU= torch.tensordot(P_up,C2X2_LU,([0],[0]))
+
+    # ----- building C2x2_RU ----------------------------------------------------
+    vec = (2, -1)
+    shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    C2X2_RU= c2x2_RU(shift_coord,state,env,mode='sl-open',verbosity=verbosity)
+
+     # ----- building C2x2_RD ----------------------------------------------------
+    vec = (2, 0)
+    shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    C2X2_RD= c2x2_RD(shift_coord,state,env,mode='sl',verbosity=verbosity)
+    
+    # ----- build right part C2X2_RU--C2X2_RD -----------------------------------
+    #         1<-0--C2x2_RU--1,2->2,3
+    #               1
+    #               0
+    #         0<-1--C2x2_RD
+    C2X2_RU= torch.tensordot(C2X2_RD,C2X2_RU,([0],[1]))
+
+    # construct projector for DOWN move between coord+(1,0) and coord+(2,0)
+    # see :meth:`ctm.generic.ctm_components.halves_of_4x4_CTM_MOVE_DOWN_c`
+    #
+    #        _1 1_            --|\__/|--
+    #       |     |           --|/  \|--
+    #   half1     C2X2_RU =>    Pt   P
+    #       |_0 0_|
+    half1= torch.tensordot(c2x2_LD(shift_coord_10,state,env,mode='sl',verbosity=verbosity),\
+        c2x2_LU(shift_coord_1n1,state,env,mode='sl',verbosity=verbosity),([0],[0]))
+    
+    P_down, Pt_down= ctm_get_projectors_from_matrices(half1, torch.einsum('ijss->ij',C2X2_RU),\
+        env.chi, ctm_args, global_args)
+
+    # compress C2X2_RU
+    #  
+    #            1--|C2X2_RU--2,3 
+    #               |      |
+    # 0<-1--P--0 0--|______|
+    C2X2_RU= torch.tensordot(P_down,C2X2_RU,([0],[0]))
+
+    # contract bottom T-tensor of central column with projector and on-site tensors
+    # mem \chi^2 D^4 p^2
+    #
+    #     9 7  10
+    #      \|  |
+    #    8--a------2   2--|\
+    #   11--|--a*--3   3--| Pt_down--0 
+    #       |  |\         |
+    #       5  6 12       |
+    #                     |
+    #       5,6(0,1)      |
+    # 4(2)--T---1(3) 1----|/
+    #
+    T_10= env.T[shift_coord_10,(0,1)]
+    T_10= T_10.view([state.site(shift_coord_10).size(3)]*2+list(T_10.size())[1:]) 
+    Pt_down= Pt_down.view([T_10.size(3)]+[state.site(shift_coord_10).size(4)]*2+[Pt_down.size(1)])
+    T_10aa_open= torch.einsum(Pt_down,[1,2,3,0],T_10,[5,6,4,1],\
+        state.site(shift_coord_10),[9,7,8,5,2],\
+        state.site(shift_coord_10).conj(),[12,10,11,6,3],[4,8,11, 0, 7,10, 9,12])
+    
+
+    # contract T_10aa_open with compressed left edge
+    # mem \chi^2 D^2 p^4
+    #
+    #           |C2X2_LU--P--0                    7,8(4,5)
+    #           |      |                          |
+    #           |      |                         |aa|--9,10(6,7)
+    # 4,5<-2,3--|______|--1->1,2,3 1,2,3(0,1,2)--T_10--6(3)
+    C2X2_LU= C2X2_LU.view([C2X2_LU.size(0)]+list(T_10aa_open.size()[:3])\
+        + [C2X2_LU.size(2), C2X2_LU.size(3)])
+    C2X2_LU= torch.einsum(C2X2_LU,[0, 1,2,3, 4,5], T_10aa_open, [1,2,3, 6, 7,8, 9,10],\
+        [0,6,7,8, 4,5,9,10])
+
+    # contract top T-tensor of central column with projector and on-site tensors
+    # mem \chi^2 D^4 p^2
+    #    
+    #         /|--1   1--T------4
+    #          |         7, 10         
+    #          |       9 7  10         
+    #          |        \|  |         
+    # 0--Pt_up |--2   2--a------8
+    #         \|--3   3--|--a*--11 
+    #                    |  |\         
+    #                    5  6 12       
+    #
+    T_1n1= env.T[shift_coord_1n1,(0,-1)]
+    T_1n1= T_1n1.view([T_1n1.size(0)]+[state.site(shift_coord_1n1).size(1)]*2+[T_1n1.size(2)])
+    Pt_up= Pt_up.view([T_1n1.size(3)]+[state.site(shift_coord_1n1).size(4)]*2+[Pt_up.size(1)])
+    T_1n1aa_open= torch.einsum(Pt_up,[1,2,3,0],T_1n1,[1,7,10,4],\
+        state.site(shift_coord_1n1),[9,7,2,5,8],\
+        state.site(shift_coord_1n1).conj(),[12,10,3,6,11],[4,8,11, 0, 5,6, 9,12])
+
+    # contract T_1n1aa_open with compressed right edge
+    # mem \chi^2 D^2 p^4
+    #
+    #      6(3)--T_1n1--1,2,3(0,1,2)  1,2,3<-1--|C2X2_RU--2,3->4,5 
+    # 9,10(6,7)--|aa |                          |      |
+    #             7,8(4,5)                      |      |
+    #                                  0<--P----|______|
+    C2X2_RU= C2X2_RU.view([C2X2_RU.size(0)]+list(T_1n1.size()[:3])\
+        +[C2X2_RU.size(2),C2X2_RU.size(3)])
+    C2X2_RU= torch.einsum(C2X2_RU,[0, 1,2,3, 4,5], T_1n1aa_open, [1,2,3, 6, 7,8, 9,10],\
+        [0,6,7,8,4,5,9,10])
+
+    # contract two parts
+    #                               
+    #   C2X2_LU-------0   0(1)--|10,11(6,7) 8,9(4,5)|
+    #   | x      |--2,3    2,3--|                x  | 
+    #   | 4,5 6,7|----1   1(0)----------------C2X2_RU
+    #
+    rdm= torch.einsum(C2X2_LU,[0,1,2,3, 4,5,6,7],C2X2_RU,[1,0,2,3, 8,9,10,11],\
+        [4,5,6,7,8,9,10,11])
+
+    # permute into order of s0,s1,s2,s3;s0',s1',s2',s3' where primed indices
+    # represent "ket"
+    # 01234567->02461357
+    # symmetrize and normalize
+    rdm = contiguous(permute(rdm, (0, 2, 4, 6, 1, 3, 5, 7)))
+    rdm = _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
+    return rdm
+
+
+def rdm3x2_compressed(coord,state,env,sym_pos_def=False,\
+    ctm_args=cfg.ctm_args,global_args=cfg.global_args,verbosity=0):
+    r"""
+    :param coord: vertex (x,y) specifies lower left site of 3x2 subsystem
+    :param state: underlying wavefunction
+    :param env: environment corresponding to ``state``
+    :param ctm_args: CTM algorithm configuration
+    :param global_args: global configuration
+    :type ctm_args: CTMARGS
+    :type global_args: GLOBALARGS
+    :param verbosity: logging verbosity
+    :type coord: tuple(int,int)
+    :type state: IPEPS
+    :type env: ENV
+    :type verbosity: int
+    :return: 4-site reduced density matrix with indices 
+             :math:`s_0s_1s_2s_3;s'_0s'_1s'_2s'_3`
+    :rtype: torch.tensor
+
+    Computes 4-site reduced density matrix :math:`\rho` of four-site subsystem, 
+    a parallelogram, specified by the vertex ``coord`` of its lower-left 
+    and upper-right corner within 3x2 patch using strategy:
+
+        1. compute top edge of the network with compression on the top-left corner
+        2. add extra T-tensor and on-site tensor to the right of the top edge
+        3. analogously for the botton edge with attaching extra T-tensor
+           and on-site tensor to the left of the bottom edge and compression 
+           on the bottom right corner
+        4. contract top and left half to obtain final reduced density matrix
+
+    The isometries performing the compresion are obtained as CTMRG projectors
+    using full (:attr:`CTMARGS.projector_method` = ``"4X4"``) method.
+
+    ::
+
+        C--T-------------------T-------------------C
+        |  |                   |                   |
+        T--A^+A(coord+(0,-2))--A^+A(coord+(1,-2))--T
+        |  |                   |                   |
+         \/                    |                   |
+         |                     |                   |
+         /\                    |                   |
+        |  |                   |                   |
+        T--A^+A(coord+(0,-1))--A^+A(coord+(1,-1))--T
+        |  |                   |                   |
+        |  |                    \_________________/
+        |  |                     ________|________ 
+        |  |                    /                 \
+        |  |                   |                   |
+        T--A^+A(coord)---------A^+A(coord+(1,0))---T
+        |  |                   |                   |
+        C--T-------------------T-------------------C
+
+    The physical indices `s` and `s'` of on-sites tensors :math:`A` (and :math:`A^\dagger`)
+    at vertices ``coord`` and ``coord+(1,1)`` are left uncontracted and given in the same order::
+    
+        x  s2
+        s3 s1
+        s0 x
+
+    """
+    who="rdm3x2_compressed"
+    # ----- building C2x2_LU ----------------------------------------------------
+    vec = (0, -2)
+    shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    C2X2_LU= c2x2_LU(coord,state,env,mode='sl',verbosity=verbosity)
+
+    # ----- building C2x2_RU ----------------------------------------------------
+    C2X2_RU= c2x2_RU(coord,state,env,mode='sl-open',verbosity=verbosity)
+
+    # ----- build top part C2x2_LU--C2X2_RU ------------------------------------
+    # C2x2_LU--1 0--C2x2_RU--2,3
+    # |                  |
+    # 0                  1
+    C2X2_LU= torch.tensordot(C2X2_LU, C2X2_RU, ([1],[0]))
+
+    # construct projector for LEFT move between coord+(0,-2) and coord+(0,-1)
+    # see :meth:`ctm.generic.ctm_components.halves_of_4x4_CTM_MOVE_LEFT_c`
+    #
+    #        _C2X2_LU_          
+    #       0         1        \__/ Pt
+    #       0         1  =>    /  \ P
+    #       |_half2___|
+    vec = (0, -1)
+    shift_coord_0n1 = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    vec = (1, -1)
+    shift_coord_1n1 = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    half2= torch.tensordot(c2x2_LD(shift_coord_0n1,state,env,mode='sl',verbosity=verbosity),\
+        c2x2_RD(shift_coord_1n1,state,env,mode='sl',verbosity=verbosity),([1],[1]))
+
+    P_left, Pt_left= ctm_get_projectors_from_matrices(torch.einsum('ijss->ij',C2X2_LU),half2,\
+        env.chi, ctm_args, global_args)
+
+    # compress C2X2_LU
+    #  
+    #      |C2X2_LU--2,3  
+    #      0      |
+    #      0      1
+    #      Pt
+    #      1->0
+    C2X2_LU= torch.tensordot(Pt_left,C2X2_LU,([0],[0]))
+
+    # ----- building C2x2_LD ----------------------------------------------------
+    C2X2_LD= c2x2_LD(coord,state,env,mode='sl-open',verbosity=verbosity)
+
+     # ----- building C2x2_RD ----------------------------------------------------
+    vec = (1, 0)
+    shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    C2X2_RD= c2x2_RD(coord,state,env,mode='sl',verbosity=verbosity)
+    
+    # ----- build bottom part C2X2_LD--C2X2_RD -----------------------------------
+    #        
+    #       0->1          0
+    #  2,3--C2x2_LD--1 1--C2x2_RD
+    C2X2_RD= torch.tensordot(C2X2_RD,C2X2_LD,([1],[1]))
+
+    # construct projector for RIGHT move between coord+(1,-1) and coord+(1,0)
+    # see :meth:`ctm.generic.ctm_components.halves_of_4x4_CTM_MOVE_RIGHT_c`
+    #
+    #        _half2___     
+    #       1         0      \___/ P
+    #       1         0  =>  /   \ Pt
+    #       |_C2x2_RD_|
+    half2= torch.tensordot(c2x2_RU(shift_coord_1n1,state,env,mode='sl',verbosity=verbosity),\
+        c2x2_LU(shift_coord_0n1,state,env,mode='sl',verbosity=verbosity),([0],[1]))
+    
+    P_right, Pt_right= ctm_get_projectors_from_matrices(torch.einsum('ijss->ij',C2X2_RD),half2,\
+        env.chi, ctm_args, global_args)
+
+    # compress C2X2_RD
+    #  
+    #                 1->0
+    #                 Pt
+    #                 0
+    #       1         0
+    #  2,3--|_C2x2_RD_|
+    C2X2_RD= torch.tensordot(Pt_right,C2X2_RD,([0],[0]))
+
+    # contract right T-tensor of central row with projector and on-site tensors
+    # mem \chi^2 D^4 p^2
+    #
+    #     9 7  10       4
+    #      \|  |        |
+    #    8--a------2 2  |
+    #   11--|--a*--3 3--T   
+    #       |  |\       |
+    #       5  6 12     1
+    #       5__6________1     
+    #       \   P_right/ 
+    #           0
+
+    T_1n1= env.T[shift_coord_1n1,(1,0)]
+    T_1n1= T_1n1.view([T_1n1.size(0)]+[state.site(shift_coord_1n1).size(4)]*2+[T_1n1.size(2)]) 
+    P_right= P_right.view([T_1n1.size(3)]+[state.site(shift_coord_1n1).size(3)]*2+[P_right.size(1)])
+    T_1n1aa_open= torch.einsum(P_right,[1,5,6,0],T_1n1,[4,2,3,1],\
+        state.site(shift_coord_1n1),[9,7,8,5,2],\
+        state.site(shift_coord_1n1).conj(),[12,10,11,6,3],[4,7,10, 0, 8,11, 9,12])
+
+    # contract T_1n1aa_open with compressed top edge
+    # mem \chi^2 D^2 p^4
+    #
+    #      |C2X2_LU--2,3->4,5  
+    #      |      |
+    #      |      1->1,2,3
+    #      Pt        1,2,3(0,1,2)
+    #      0         | 
+    #   7,8(5,6)--|aaT_1n1|--9,10(7,8)
+    #                |
+    #                6(4)  
+    C2X2_LU= C2X2_LU.view([C2X2_LU.size(0)]+list(T_1n1aa_open.size()[:3])\
+        + [C2X2_LU.size(2), C2X2_LU.size(3)])
+    C2X2_LU= torch.einsum(C2X2_LU,[0, 1,2,3, 4,5], T_1n1aa_open, [1,2,3, 6, 7,8, 9,10],\
+        [0,6,7,8, 4,5,9,10])
+
+    # contract left T-tensor of central column with projector and on-site tensors
+    # mem \chi^2 D^4 p^2
+    #    
+    #                  0
+    #            /P_left_____\
+    #            1       7  10             
+    #            1     9 7  10         
+    #            |       \|  |         
+    #            T--2  2--a------8
+    #            |  3  3--|--a*--11 
+    #            |        |  |\         
+    #            4        5  6 12       
+    #
+    T_0n1= env.T[shift_coord_0n1,(-1,0)]
+    T_0n1= T_0n1.view([T_0n1.size(0)]+[T_0n1.size(1)]+[state.site(shift_coord_0n1).size(2)]*2)
+    P_left= P_left.view([T_0n1.size(0)]+[state.site(shift_coord_0n1).size(1)]*2+[P_left.size(1)])
+    T_0n1aa_open= torch.einsum(P_left,[1,7,10,0],T_0n1,[1,4,2,3],\
+        state.site(shift_coord_1n1),[9,7,2,5,8],\
+        state.site(shift_coord_1n1).conj(),[12,10,3,6,11],[4,5,6, 0, 8,11, 9,12])
+
+    # contract T_0n1aa_open with compressed bottom edge
+    # mem \chi^2 D^2 p^4
+    #
+    #            6(4)
+    #            |                 
+    # 9,10(7,8)--T_0n1aa|--7,8(5,6)          
+    #            |          
+    #            1,2,3(0,1,2)  
+    #          ->1,2,3            0
+    #            1                Pt
+    #  4,5<-2,3--|_C2x2_RD________|
+    C2X2_RD= C2X2_RD.view([C2X2_RD.size(0)]+list(T_0n1aa_open.size()[:3])\
+        +[C2X2_RD.size(2),C2X2_RD.size(3)])
+    C2X2_RD= torch.einsum(C2X2_RD,[0, 1,2,3, 4,5], T_0n1aa_open, [1,2,3, 6, 7,8, 9,10],\
+        [0,6,7,8,4,5,9,10])
+
+    # contract two parts
+    #          __________  
+    #   C2X2_LU          |     
+    #   |_x_________  4,5|    
+    #   |           |_6,7|
+    #   0           2,3  1
+    #   0(1)        2,3  1(0)
+    #   |10,11(6,7) |____|
+    #   |8,9(4,5)   x    |
+    #   |C2x2_RD_________|
+    rdm= torch.einsum(C2X2_LU,[0,1,2,3, 4,5,6,7],C2X2_RD,[1,0,2,3, 8,9,10,11],\
+        [8,9,6,7,4,5,10,11])
+
+    # permute into order of s0,s1,s2,s3;s0',s1',s2',s3' where primed indices
+    # represent "ket"
+    # 01234567->02461357
+    # symmetrize and normalize
+    rdm = contiguous(permute(rdm, (0, 2, 4, 6, 1, 3, 5, 7)))
+    rdm = _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
+    return rdm
+
+
+# ----- auxiliary rdms -----
 
 def _CTCT_LD(coord,state,env):
     C1, C2, C3, C4, T1, T2, T3, T4= env.get_site_env_t(coord,state)

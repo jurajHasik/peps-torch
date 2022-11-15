@@ -1,3 +1,4 @@
+from math import sqrt
 import torch
 import config as cfg
 from tn_interface import einsum
@@ -69,7 +70,6 @@ class ENV():
             The structure of fused double-layer legs, which are carried by T-tensors, is obtained
             by fusing on-site tensor (`ket`) with its conjugate (`bra`). The leg of `ket` always
             preceeds `bra` when fusing.
-
         """
         if state:
             self.dtype= state.dtype
@@ -197,8 +197,11 @@ class ENV():
 
     def get_site_env_t(self,coord,state):
         r"""
-        :return: environment of site at ``'coord'``.
+        :return: environment tensors of site at ``'coord'`` in order
+                 C1, C2, C3, C4, T1, T2, T3, T4
         :rtype: tuple(torch.Tensor)
+
+        ::
 
             C1(-1,-1)   T1       (1,-1)C2 
                         |(0,-1)
@@ -799,10 +802,34 @@ def print_env(env, verbosity=0):
 
 @torch.no_grad()
 def ctmrg_conv_specC(state, env, history, ctm_args=cfg.ctm_args):
+    r"""
+    :param state: wavefunction
+    :param ènv: environment
+    :type env: ENV
+    :param history: dictionary with convergence data
+    :type: dict(str,list)
+    :param ctm_args: CTM algorithm configuration
+    :type state: IPEPS
+    :type ctm_args: CTMARGS
+    :return: a tuple (``True``, ``history``) if CTMRG converged, otherwise a tuple (``False``, history) 
+    :rtype: bool, dict(str,list)
+
+    Generic convergence criterion for CTMRG based on the spectra 
+    of the corner tensors
+
+    .. math::
+
+        \textrm{conv_crit}= \sqrt{\sum_{(r,d)} \left[\lambda^{(i)}_{(r,d)} - \lambda^{(i-1)}_{(r,d)}\right]^2}
+
+    where *r* runs over all non-equivalent sites and *d* over all non-equivalent corners of *r*-th site.
+    The superscript *i* denotes CTMRG iterations. Once the difference reaches required
+    tolerance :attr:`CTMARGS.ctm_conv_tol` or maximal number of steps `CTMARGS.ctm_max_iter`,
+    it returns ``True``.
+    """
     if not history:
-        history={'spec': [], 'diffs': []}
+        history={'spec': [], 'diffs': [], 'conv_crit': []}
     # use corner spectra
-    diff=float('inf')
+    conv_crit=float('inf')
     diffs=None
     spec= env.get_spectra()
     spec_nosym_sorted= { s_key : s_t.sort(descending=True)[0] \
@@ -811,11 +838,13 @@ def ctmrg_conv_specC(state, env, history, ctm_args=cfg.ctm_args):
         s_old= history['spec'][-1]
         diffs= [ sum((spec_nosym_sorted[k]-s_old[k])**2).item() \
             for k in spec.keys() ]
-        diff= sum(diffs)
+        # sqrt of sum of squares of all differences of all corner spectra - usual 2-norm
+        conv_crit= sqrt(sum(diffs))
     history['spec'].append(spec_nosym_sorted)
     history['diffs'].append(diffs)
+    history['conv_crit'].append(conv_crit)
     
-    if (len(history['diffs']) > 1 and abs(diff) < ctm_args.ctm_conv_tol)\
+    if (len(history['diffs']) > 1 and conv_crit < ctm_args.ctm_conv_tol)\
         or len(history['diffs']) >= ctm_args.ctm_max_iter:
         log.info({"history_length": len(history['diffs']), "history": history['diffs']})
         return True, history
