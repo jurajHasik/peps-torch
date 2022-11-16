@@ -1449,10 +1449,12 @@ def rdm3x2_compressed(coord,state,env,sym_pos_def=False,\
     # ----- building C2x2_LU ----------------------------------------------------
     vec = (0, -2)
     shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
-    C2X2_LU= c2x2_LU(coord,state,env,mode='sl',verbosity=verbosity)
+    C2X2_LU= c2x2_LU(shift_coord,state,env,mode='sl',verbosity=verbosity)
 
     # ----- building C2x2_RU ----------------------------------------------------
-    C2X2_RU= c2x2_RU(coord,state,env,mode='sl-open',verbosity=verbosity)
+    vec = (1, -2)
+    shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    C2X2_RU= c2x2_RU(shift_coord,state,env,mode='sl-open',verbosity=verbosity)
 
     # ----- build top part C2x2_LU--C2X2_RU ------------------------------------
     # C2x2_LU--1 0--C2x2_RU--2,3
@@ -1492,7 +1494,7 @@ def rdm3x2_compressed(coord,state,env,sym_pos_def=False,\
      # ----- building C2x2_RD ----------------------------------------------------
     vec = (1, 0)
     shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
-    C2X2_RD= c2x2_RD(coord,state,env,mode='sl',verbosity=verbosity)
+    C2X2_RD= c2x2_RD(shift_coord,state,env,mode='sl',verbosity=verbosity)
     
     # ----- build bottom part C2X2_LD--C2X2_RD -----------------------------------
     #        
@@ -1575,8 +1577,8 @@ def rdm3x2_compressed(coord,state,env,sym_pos_def=False,\
     T_0n1= T_0n1.view([T_0n1.size(0)]+[T_0n1.size(1)]+[state.site(shift_coord_0n1).size(2)]*2)
     P_left= P_left.view([T_0n1.size(0)]+[state.site(shift_coord_0n1).size(1)]*2+[P_left.size(1)])
     T_0n1aa_open= torch.einsum(P_left,[1,7,10,0],T_0n1,[1,4,2,3],\
-        state.site(shift_coord_1n1),[9,7,2,5,8],\
-        state.site(shift_coord_1n1).conj(),[12,10,3,6,11],[4,5,6, 0, 8,11, 9,12])
+        state.site(shift_coord_0n1),[9,7,2,5,8],\
+        state.site(shift_coord_0n1).conj(),[12,10,3,6,11],[4,5,6, 0, 8,11, 9,12])
 
     # contract T_0n1aa_open with compressed bottom edge
     # mem \chi^2 D^2 p^4
