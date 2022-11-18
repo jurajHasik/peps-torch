@@ -86,7 +86,8 @@ class J1J2J4():
         obs_ops["sm"]= s2.SM()
         return obs_ops
 
-    def energy_1x3(self,state,env,ctm_args=cfg.ctm_args,global_args=cfg.global_args):
+    def energy_per_site(self,state,env,compressed=False,ctm_args=cfg.ctm_args,\
+        global_args=cfg.global_args):
         r"""
         :param state: wavefunction
         :param env: CTM environment
@@ -98,8 +99,11 @@ class J1J2J4():
         :type global_args: GLOBALARGS
         :return: energy per site
         :rtype: float
+    
+        Computes energy per site of an arbitrary iPEPS by computing contributions
+        from 3 non-equivalent rhombuses for each unique site.
 
-        We assume 1x3 iPEPS which tiles the lattice with a tri-partite pattern composed 
+        As an example, assume 1x3 iPEPS which tiles the lattice with a tri-partite pattern composed 
         of three tensors A, B, and C::
             
             A--B--C--A--B--C
@@ -110,47 +114,47 @@ class J1J2J4():
             | /| /| /| /| /|
             A--B--C--A--B--C
 
-        For example, the NN of site A are only sites B and C.
-        The evaluation of all NN terms requires two NN-RDMs and one NNN-RDM per site::
+        The NN of site A are only sites B and C. The evaluation of all NN terms 
+        requires two NN-RDMs and one NNN-RDM per site::
         
             A            B C
             |             /
             C, A--B, and A B   
 
-        For NNN terms, there are again 3 non-equivalent terms, which can be accounted for 
-        by one NNN-RDM and two NNNN-RDMs::
+        For NNN terms and plaquette terms, there are again 3 non-equivalent patches, 
+        which can be accounted for by one 2x2 RDM and two 2x3 and 3x2 RDMs::
 
-                              C   A
-                                 /
-            A B  B  C _A      B / C
-             \    _ -          /
-            C A, A  B  C, and A   B
-
-        TODO plaquette
+                             C   A
+                               / | 
+            A B  B C _A      B   C
+             \    /_-/       | /
+            C A, A  B C, and A   B
         """
         energy_nn=0.
         energy_nnn=0.
         energy_p=0.
-        if abs(self.j2)>0 or abs(self.j4)>0:
+        if True: #abs(self.j2)>0 or abs(self.j4)>0:
             for coord in state.sites.keys():
                 # (0,-1)  (1,-1) (2,-1)      x  s3 s2
                 # (0,0) --(1,0)  (2,0)  <=>  s0 s1 x
                 tmp_rdm_2x3= rdm.rdm2x3_compressed(coord,state,env,\
-                    ctm_args=ctm_args,global_args=global_args)
+                    ctm_args=ctm_args,global_args=global_args) if compressed else \
+                        rdm.rdm2x3(coord,state,env)
                 energy_nn+= torch.einsum('ijklabcd,abcdijkl',tmp_rdm_2x3,self.h_nn_only)
                 energy_nnn+= torch.einsum('ibkdabcd,acik',tmp_rdm_2x3,self.SS)
                 energy_p+= torch.einsum('ijklabcd,abcdijkl',tmp_rdm_2x3,self.h_p)
-       
+
                 #
                 # (0,-2) (1,-2)     x  s2     x k
                 # (0,-1) (1,-1)     s3 s1     l j
                 # (0,0)  (1,0)  <=> s0 x  <=> i x
                 tmp_rdm_3x2= rdm.rdm3x2_compressed(coord,state,env,\
-                    ctm_args=ctm_args,global_args=global_args)
+                    ctm_args=ctm_args,global_args=global_args) if compressed else \
+                        rdm.rdm3x2(coord,state,env)
                 energy_nn+= torch.einsum('ijklabcd,abcdijkl',tmp_rdm_3x2,self.h_nn_only)
                 energy_nnn+= torch.einsum('ibkdabcd,acik',tmp_rdm_3x2,self.SS)
                 energy_p+= torch.einsum('ijklabcd,abcdijkl',tmp_rdm_3x2,self.h_p)
-                
+
                 # 
                 # (0,0) (1,0)     s0 s1                 s0 s1     i j
                 # (0,1) (1,1) <=> s2 s3 => (permute) => s3 s2 <=> l k
@@ -179,6 +183,27 @@ class J1J2J4():
         energy_per_site= _cast_to_real(energy_per_site)
 
         return energy_per_site
+
+    def energy_per_site_compressed(self,state,env,ctm_args=cfg.ctm_args,global_args=cfg.global_args):
+        r"""
+        :param state: wavefunction
+        :param env: CTM environment
+        :type state: IPEPS
+        :type env: ENV
+        :param ctm_args: CTM algorithm configuration
+        :param global_args: global configuration
+        :type ctm_args: CTMARGS
+        :type global_args: GLOBALARGS
+        :return: energy per site
+        :rtype: float
+    
+        Computes energy per site of an arbitrary iPEPS by computing contributions
+        from 3 non-equivalent rhombuses for each unique site. See :meth:`energy_per_site`.
+
+        This version uses compressed 2x3 and 3x2 RDMs, :meth:`rdm.rdm2x3_compressed` 
+        and :meth:`rdm.rdm3x2_compressed`.
+        """
+        return self.energy_per_site(state,env,compressed=True,ctm_args=ctm_args,global_args=global_args)
 
     def eval_obs(self,state,env):
         r"""

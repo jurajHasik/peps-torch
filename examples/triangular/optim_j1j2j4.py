@@ -27,6 +27,7 @@ parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of trans
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
 parser.add_argument("--test_env_sensitivity", action='store_true', help="compare loss with higher chi env")
+parser.add_argument("--compressed_rdms", action='store_true', help="use compressed RDMs for 2x3 and 3x2 patches")
 args, unknown_args = parser.parse_known_args()
 
 def main():
@@ -112,7 +113,8 @@ def main():
         energy_f=model.energy_1x3
         eval_obs_f= model.eval_obs
     elif args.tiling in ["3SITE", "4SITE"]:
-        energy_f=model.energy_1x3
+        energy_f=model.energy_per_site if not args.compressed_rdms else \
+            model.energy_per_site_compressed
         eval_obs_f= model.eval_obs
     else:
         raise ValueError("Invalid tiling: "+str(args.tiling)+" Supported options: "\
