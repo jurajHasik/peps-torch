@@ -133,7 +133,7 @@ class J1J2J4():
         energy_nn=0.
         energy_nnn=0.
         energy_p=0.
-        if True: #abs(self.j2)>0 or abs(self.j4)>0:
+        if abs(self.j2)>0 or abs(self.j4)>0:
             for coord in state.sites.keys():
                 # (0,-1)  (1,-1) (2,-1)      x  s3 s2
                 # (0,0) --(1,0)  (2,0)  <=>  s0 s1 x

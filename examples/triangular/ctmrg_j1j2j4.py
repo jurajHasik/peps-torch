@@ -22,11 +22,12 @@ parser.add_argument("--j1", type=float, default=1., help="nearest-neighbour coup
 parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour coupling")
 parser.add_argument("--j4", type=float, default=0., help="plaquette coupling")
 parser.add_argument("--tiling", default="3SITE", help="tiling of the lattice", \
-    choices=["1SITE", "1STRIV", "1SPG", "3SITE"])
+    choices=["1SITE", "1STRIV", "1SPG", "3SITE", "4SITE"])
 parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
 parser.add_argument("--gauge", action='store_true', help="put into quasi-canonical form")
+parser.add_argument("--compressed_rdms", action='store_true', help="use compressed RDMs for 2x3 and 3x2 patches")
 args, unknown_args = parser.parse_known_args()
 
 def main():
@@ -47,9 +48,15 @@ def main():
             vx = coord[0] % 3
             vy = coord[1]
             return ((vx - vy) % 3, 0)
+    elif args.tiling == "4SITE":
+        model= spin_triangular.J1J2J4(j1=args.j1, j2=args.j2, j4=args.j4)
+        def lattice_to_site(coord):
+            vx = coord[0] % 2
+            vy = ( coord[1] + ((coord[0]%4)//2) ) % 2
+            return (vx, vy)
     else:
         raise ValueError("Invalid tiling: "+str(args.tiling)+" Supported options: "\
-            +"1SITE, 3SITE")
+            +"1SITE, 3SITE, 4SITE")
 
     if args.instate!=None:
         if args.tiling in ["1STRIV"]:
@@ -71,6 +78,8 @@ def main():
             state= IPEPS_TRGL_1S_TBT_PG()
         elif args.tiling == "3SITE":
             state= IPEPS(dict(), vertexToSite=lattice_to_site, lX=3, lY=3)
+        elif args.tiling == "4SITE":
+            state= IPEPS(dict(), vertexToSite=lattice_to_site, lX=4, lY=2)
         state.load_checkpoint(args.opt_resume)
     else:
         raise ValueError("Missing trial state: -instate=None and -ipeps_init_type= "\
@@ -94,12 +103,13 @@ def main():
     if args.tiling in ["1SITE", "1STRIV", "1SPG"]:
         energy_f=model.energy_1x3
         eval_obs_f= model.eval_obs
-    elif args.tiling == "3SITE":
-        energy_f=model.energy_1x3
+    elif args.tiling in ["3SITE", "4SITE"]:
+        energy_f=model.energy_per_site if not args.compressed_rdms else \
+            model.energy_per_site_compressed
         eval_obs_f= model.eval_obs
     else:
         raise ValueError("Invalid tiling: "+str(args.tiling)+" Supported options: "\
-            +"1SITE, 3SITE")
+            +"1SITE, 3SITE, 4SITE")
 
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
