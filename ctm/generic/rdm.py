@@ -1258,7 +1258,7 @@ def rdm3x2(coord, state, env, sym_pos_def=False, verbosity=0):
     #       |  |\       |
     #       5  6 12     4
     #
-    C2X2_LU= torch.einsum(C2X2_LU,[0,1,7,10,13,14],T_1n1,[4,2,3,1],\
+    C2X2_LU= torch.einsum(C2X2_LU,[0,1,7,10,13,14],T_1n1,[1,2,3,4],\
         state.site(shift_coord_1n1),[9,7,8,5,2],\
         state.site(shift_coord_1n1).conj(),[12,10,11,6,3],\
         [0, 4,5,6, 8,11, 9,12, 13,14]).contiguous()
