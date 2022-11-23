@@ -1058,7 +1058,7 @@ def rdm2x3(coord, state, env, sym_pos_def=False, verbosity=0):
     # ----- building C2x2_LU ----------------------------------------------------
     vec = (0, -1)
     shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
-    C2X2_LU= c2x2_LU(coord,state,env,mode='sl',verbosity=verbosity)
+    C2X2_LU= c2x2_LU(shift_coord,state,env,mode='sl',verbosity=verbosity)
 
     # ----- building C2x2_LD ----------------------------------------------------
     C2X2_LD= c2x2_LD(coord,state,env,mode='sl-open',verbosity=verbosity)
@@ -1078,9 +1078,9 @@ def rdm2x3(coord, state, env, sym_pos_def=False, verbosity=0):
     T_10= T_10.view([state.site((shift_coord)).size(3)]*2+[T_10.size(1),T_10.size(2)])
     # C2x2_LU--0
     # |
-    # |     ->3,4  ->1,2
-    # |/23->4,5 /->2,3     0,1->5,6
-    # C2x2_LD--1-->1    2--T(coord+(1,0),(0,1))--2->7
+    # |     ->3,4    ->1,2
+    # |/23->4,5   /->2,3  0,1->5,6
+    # C2x2_LD-----1->1 2--T[coord+(1,0),(0,1)]--3->7
     C2X2_LU= C2X2_LU.view([C2X2_LU.size(0)]+[T_10.size(2)]+[state.site((0,0)).size(4)]*2\
         +[state.site((0,0)).size(0)]*2)
     C2X2_LU= torch.tensordot(C2X2_LU, T_10, ([1],[2]))
@@ -1094,13 +1094,14 @@ def rdm2x3(coord, state, env, sym_pos_def=False, verbosity=0):
     # C2x2_LD-------T---7->5
     C2X2_LU= torch.tensordot(C2X2_LU, state.site(shift_coord), ([1,5],[2,3]))
 
-    #             ->5 ->4 ->8 ->7     
-    # C2x2LU---0    7 6   1/--0       left|--0->0,1,2
-    # |_____ /-1 2--|/----a*---4->9   |   |     ->7
-    # |2,3  |-------a--8--|->6        |   |____5 8->10
-    # |->1,2|       | 4 3/            | ->3,4     --9->11
-    # |     |       |/                |1,2  4,7   --6->8
-    # C2x2_LD-------T---5->3          |_____->6,9_--3->5
+    #             ->5   ->8      
+    #               7 ->4 |   ->7
+    # C2x2LU---0    | 6   |/--0       left|--0->0,1,2
+    # |_____ /-1 2--|/----a*---4->9   |   |     
+    # |2,3  |-------a--8--|->6        |   |______5 8->7 10
+    # |->1,2|       | 4 3/            | ->3,4   ->6,9  --9->11
+    # |     |       |/                |1,2     4,7     --6->8
+    # C2x2_LD-------T---5->3          |________________--3->5
     C2X2_LU= torch.tensordot(C2X2_LU, state.site(shift_coord).conj(), ([1,4],[2,3]))
     vec = (1, -1)
     shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
@@ -1110,12 +1111,12 @@ def rdm2x3(coord, state, env, sym_pos_def=False, verbosity=0):
     # ----- building C2x2_RU ----------------------------------------------------
     vec = (2, -1)
     shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
-    C2X2_RU= c2x2_RU(coord,state,env,mode='sl-open',verbosity=verbosity)
+    C2X2_RU= c2x2_RU(shift_coord,state,env,mode='sl-open',verbosity=verbosity)
 
      # ----- building C2x2_RD ----------------------------------------------------
     vec = (2, 0)
     shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
-    C2X2_RD= c2x2_RD(coord,state,env,mode='sl',verbosity=verbosity)
+    C2X2_RD= c2x2_RD(shift_coord,state,env,mode='sl',verbosity=verbosity)
     
     # ----- build right part C2X2_RU--C2X2_RD -----------------------------------
     #            0--C2x2_RU--1,2 
