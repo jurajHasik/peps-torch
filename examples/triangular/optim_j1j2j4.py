@@ -187,10 +187,10 @@ def main():
             if args.test_env_sensitivity:
                 loc_ctm_args= copy.deepcopy(opt_context["ctm_args"])
                 loc_ctm_args.ctm_max_iter= 1
-                ctm_env_inv= ctm_env.extend(ctm_env.chi+10)
-                ctm_env_out1, *ctm_log= ctmrg.run(state, ctm_env_inv, \
+                ctm_env_out1= ctm_env.extend(ctm_env.chi+10)
+                ctm_env_out1, *ctm_log= ctmrg.run(state, ctm_env_out1, \
                     conv_check=ctmrg_conv_f, ctm_args=loc_ctm_args)
-                loss1= energy_f(state, ctm_env_inv)
+                loss1= energy_f(state, ctm_env_out1)
                 delta_loss= opt_context['loss_history']['loss'][-1]-opt_context['loss_history']['loss'][-2]\
                     if len(opt_context['loss_history']['loss'])>1 else float('NaN')
                 # if we are not linesearching, this can always happen

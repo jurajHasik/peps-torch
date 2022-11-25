@@ -170,7 +170,7 @@ def main():
             # # rollback to previous state
             opt_context["loss_history"]["beta"] -= opt_context["loss_history"]["time_step"][-1]
             state= read_ipeps(outputstatefile, settings)
-            state_w= get_weighted_ipeps(state, generate_weights(state))
+            state_w= IPEPS_ABELIAN_WEIGHTED(state)
 
             # generate new gate sequence
             new_ts= args.SU_adaptive_slowdown_factor * opt_context["loss_history"]["time_step"][-1] 

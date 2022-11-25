@@ -229,9 +229,12 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, direction, \
 
     if ctm_args.projector_svd_method=='DEFAULT' or ctm_args.projector_svd_method=='GESDD':
         def truncation_f(S):
-            return yast.linalg.truncation_mask_multiplets(S,keep_multiplets=True, D_total=chi,\
-                tol=ctm_args.projector_svd_reltol, tol_block=ctm_args.projector_svd_reltol_block, \
-                eps_multiplet=ctm_args.projector_eps_multiplet)
+            if ctm_args.projector_eps_multiplet>0:
+                return yast.linalg.truncation_mask_multiplets(S,keep_multiplets=True, D_total=chi,\
+                    tol=ctm_args.projector_svd_reltol, tol_block=ctm_args.projector_svd_reltol_block, \
+                    eps_multiplet=ctm_args.projector_eps_multiplet)
+            return yast.linalg.truncation_mask(S, D_total=chi,\
+                tol=ctm_args.projector_svd_reltol, tol_block=ctm_args.projector_svd_reltol_block)
         def truncated_svd(M, chi, sU=1):
             return yast.linalg.svd_with_truncation(M, (0,1), sU=sU, mask_f=truncation_f, diagnostics=diagnostics)
     # elif ctm_args.projector_svd_method == 'ARP':

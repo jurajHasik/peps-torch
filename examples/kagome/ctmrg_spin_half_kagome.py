@@ -7,6 +7,7 @@ import math
 import torch
 import copy
 from collections import OrderedDict
+from ipeps.ipeps import IPEPS_WEIGHTED
 from ipeps.ipess_kagome import *
 from ipeps.ipeps_kagome import *
 from models import spin_half_kagome
@@ -44,6 +45,7 @@ parser.add_argument("--obs_freq", type=int, default=-1, help="frequency of compu
 parser.add_argument("--corrf_r", type=int, default=1, help="maximal correlation function distance")
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues "+
     "of transfer operator to compute")
+parser.add_argument("--gauge", action='store_true', help="put into quasi-canonical form")
 parser.add_argument("--EH_n", type=int, default=1, help="number of leading eigenvalues "+
     "of EH to compute")
 parser.add_argument("--EH_T_ED_L", type=int, default=0, help="max. cylinder width "+
@@ -184,21 +186,7 @@ def main():
     def dn_energy_f(state, env, force_cpu=False):
         e_dn = model.energy_triangle_dn_NoCheck(state, env, force_cpu=args.force_cpu)
         return e_dn
-        
-    def eval_corner_spectra(env):
-        spectra = []
-        for c_loc,c_ten in env.C.items():
-            u,s,v= torch.svd(c_ten, compute_uv=False)
-            if c_loc[1] == (-1, -1):
-                label = 'LU'
-            if c_loc[1] == (-1, 1):
-                label = 'LD'
-            if c_loc[1] == (1, -1):
-                label = 'RU'
-            if c_loc[1] == (1, 1):
-                label = 'RD'
-            spectra.append([label, s])
-        return spectra
+ 
 
     def report_conv_fn(state, env, conv_step, conv_crit, e_curr=None):
         if args.obs_freq>0 and \
@@ -245,39 +233,20 @@ def main():
             return False, history
     elif args.CTM_check=="SingularValue":
         def ctmrg_conv_fn(state, env, history, ctm_args=cfg.ctm_args):
-            if not history:
-                spec_ers= torch.full((4,), float('inf'))
-                history_spec = []
-                history=[1, history_spec]
-            spect_new=eval_corner_spectra(env)
-            spec1_new=spect_new[0][1]
-            spec1_new=spec1_new/spec1_new[0]
-            spec2_new=spect_new[1][1]
-            spec2_new=spec2_new/spec2_new[0]
-            spec3_new=spect_new[2][1]
-            spec3_new=spec3_new/spec3_new[0]
-            spec4_new=spect_new[3][1]
-            spec4_new=spec4_new/spec4_new[0]
-            if history[0]>1:
-                spec_ers= torch.full((4,), float('inf'))
-                spec_ers[0]=torch.linalg.norm(spec1_new-history[1][0])
-                spec_ers[1]=torch.linalg.norm(spec2_new-history[1][1])
-                spec_ers[2]=torch.linalg.norm(spec3_new-history[1][2])
-                spec_ers[3]=torch.linalg.norm(spec4_new-history[1][3])
-                #print(history[0])
-                #print(torch.max(spec_ers))
+            _conv_check, history= ctmrg_conv_specC(state, env, history, ctm_args=ctm_args)
 
             # log conv_crit and observables
-            report_conv_fn(state,env,history[0],torch.max(spec_ers))
+            report_conv_fn(state,env,len(history['diffs']),history['conv_crit'][-1])
 
-            if (len(history[1])==4 and torch.max(spec_ers) < ctm_args.ctm_conv_tol*100) \
-                    or (history[0] >= ctm_args.ctm_max_iter):
-                log.info({"history_length": history[0], "history": spec_ers})
-                return True, history
-            history[1]=[spec1_new,spec2_new,spec3_new,spec4_new]
-            history[0]=history[0]+1
-            return False, history
+            return _conv_check, history
 
+    # gauge, operates only IPEPS base and its sites tensors
+    if args.gauge and args.ansatz=="IPEPS":
+        state_g= IPEPS_WEIGHTED(state=state).gauge()
+        state_g= state_g.absorb_weights()
+        state= IPEPS_KAGOME(sites=state_g.sites, vertexToSite=state.vertexToSite, \
+            lX=state.lX, lY=state.lY,\
+            peps_args=cfg.peps_args, global_args=cfg.global_args)
     
     # 3) initialize environment 
     ctm_env_init = ENV(args.chi, state)

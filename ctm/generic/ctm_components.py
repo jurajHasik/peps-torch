@@ -24,7 +24,7 @@ def halves_of_4x4_CTM_MOVE_UP(coord, state, env, verbosity=0):
     Performs following contraction and then reshaping the resulting tensors into matrices::
 
         C T T        C = C2x2_LU(coord+(-1,0))  C2x2(coord)
-        T A B(coord) T   C2x2_LD(coord+(-1,-1)) C2x2(coord+(0,1))
+        T A B(coord) T   C2x2_LD(coord+(-1,1))  C2x2(coord+(0,1))
         T C D        T
         C T T        C
 
@@ -50,7 +50,7 @@ def halves_of_4x4_CTM_MOVE_UP_t(coord, state, env):
 
 def halves_of_4x4_CTM_MOVE_UP_c(*tensors):
     # C T T        C = C2x2_LU(coord+(-1,0))  C2x2(coord)
-    # T A B(coord) T   C2x2_LD(coord+(-1,+1)) C2x2(coord+(0,1))
+    # T A B(coord) T   C2x2_LD(coord+(-1,1))  C2x2(coord+(0,1))
     # T C D        T
     # C T T        C
 

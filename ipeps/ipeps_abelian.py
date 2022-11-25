@@ -11,6 +11,9 @@ except ImportError as e:
 import config as cfg
 import yast.yast as yast
 from ipeps.tensor_io import *
+import logging
+log = logging.getLogger(__name__)
+
 
 def _fused_open_dl_site(a, fusion_level="full"):
     r"""
@@ -239,6 +242,11 @@ class IPEPS_ABELIAN():
         """
         if self.build_dl: self.build_sites_dl()
         if self.build_dl_open: self.build_sites_dl_open()
+
+    def normalize_(self):
+        for c in self.sites.keys():
+            self.sites[c]= self.sites[c]/self.sites[c].norm(p='inf')
+        self.sync_precomputed()
 
     def site(self, coord):
         """
@@ -648,6 +656,114 @@ class IPEPS_ABELIAN_WEIGHTED(IPEPS_ABELIAN):
                     weights[w_id]= W
                     weights[w_rid]= W
         return weights
+
+    def gauge(self,peps_args=cfg.peps_args, global_args=cfg.global_args):
+        r"""
+        """
+        def neg_(dxy): return (-dxy[0],-dxy[1])
+        def add_(coord,dxy): return (coord[0]+dxy[0],coord[1]+dxy[1])
+        dxy_w_to_ind= dict({(0,-1): 1, (-1,0): 2, (0,1): 3, (1,0): 4})
+        expr_ws= {(0,-1): 'um', (-1,0): 'ln', (0,1): 'do', (1,0): 'rp'}
+
+        def _get_dl_gauges(coord,direction,sites,weights):
+            coord= self.vertexToSite(coord)
+            A= sites[coord]
+            ds_to_contract= set(dxy_w_to_ind.keys())-set((direction,))
+            
+            #
+            #         /w^2
+            #  ------A^+--w^2
+            #    w^2/|/   |
+            #  -----|A-----
+            #       /
+
+            # get correct order for signatures to match
+            #
+            # A--? 0--w
+            oi= { d: 0 if A.get_signature()[dxy_w_to_ind[d]]==-weights[(coord,d)].get_signature()[0] else 1 \
+                for d in ds_to_contract }
+            expr= 'suldr,smnop,'+','.join([expr_ws[d] if oi[d]==0 else expr_ws[d][::-1] for d in ds_to_contract])\
+                +f'->{expr_ws[direction]}'
+            order= ''.join([expr_ws[d][0] for d in ds_to_contract]+[expr_ws[d][1] for d in ds_to_contract])+'s'
+            a= yast.einsum(expr,\
+                A,A.conj(),*( weights[(coord,d)]**2 for d in ds_to_contract),order=order)
+
+            # diagonalize, since a is hermitian and positive. Force ordering in descending magnitude
+            # n--    (-s)n(1)--U*
+            #    a =           sqrt(D)^2
+            # l--     (s)l(0)--U
+            D,U = yast.linalg.eigh((-1.)*a/a.norm(p='inf'), axes=(0,1), sU=-a.get_signature()[0])
+            D= -1.*D
+            #
+            # (s)0--U--1(sU) (-sU)0--D--1(sU) = (s)0--X--1(sU=-s)
+            X= U.tensordot(D.sqrt(),([1],[0]))
+            D_invsqrt= D.rsqrt(cutoff=D.norm(p='inf')*1.0e-14)
+            # (s)0--UD_invsqrt--1(sU) -> (sU)0--Xinv--1(s) -> (-sU=s)0--Xinv--1(-s)
+            Xinv= (U.tensordot(D_invsqrt,([1],[0]))).transpose((1,0)).conj()
+            return X, Xinv
+
+        def _update_weights_and_sites(sites,weights,Xs):
+            # associate pair X,Y to each unique weight and update it
+            new_weights, Us= dict(), dict()
+            for coord in sites.keys():
+                for dxy,ind in dxy_w_to_ind.items():
+                    # generate weight_id and reverse weight_id
+                    # (coord,dxy) identifies the same weight as (coord+dxy,-dxy) 
+                    w_id= (coord, dxy)
+                    w_rid= (self.vertexToSite(add_(coord,dxy)), neg_(dxy))
+
+                    if not w_id in new_weights.keys() and not w_rid in new_weights.keys():
+                        #   
+                        #       |                                              |
+                        #   --(0,0)-X^{-1}-X[w_id]-w[w_id]-X'[w_rid]-X'^{-1}-(1,0)--
+                        #       |                                              |
+                        #   => 
+                        #       |                               |
+                        #   --(0,0)-X^{-1}--U--S--Vh--X'^{-1}-(1,0)--
+                        #       |                               |
+                        #
+                        _match_diag_signature= 1 if -weights[w_id].get_signature()[1]==Xs[w_id][0].get_signature()[0] else 0
+                        #
+                        #  ... (s)--w[w_id]--?(-s) (s)0--X[w_id]--1(sU=-s) -> 0(sU=-s)--X[w_id]--w[w_id]-- ...
+                        _sgn= -Xs[w_id][0].get_signature()[1] #-weights[w_id].get_signature()[0]
+                        U,S,Vh= yast.linalg.svd( Xs[w_id][0].tensordot(weights[w_id],([0],[_match_diag_signature]))\
+                            .tensordot(Xs[w_rid][0],([1],[0])), sU=_sgn )
+                        new_weights[w_id]= S #/S[0]
+                        new_weights[w_rid]= S #/S[0]
+                        #
+                        # (sU)0--U--1(_sgn) -> (_sgn=s)0--U--1(sU)
+                        Us[w_id]= U.transpose((1,0))
+                        Us[w_rid]= Vh
+            
+            new_sites={}
+            for coord in sites.keys():
+                A= sites[self.vertexToSite(coord)]
+                expr= 'smnop,'+','.join([expr_ws[d] for d in dxy_w_to_ind.keys()])+'->suldr'
+                # (_sgn=s)0--U--1(sU) (-sU)0--Xinv--1(-s) = (_sgn=s)0--UXinv--1(-s)  <=> n,ln->l
+                new_sites[coord]= yast.einsum(expr,A,*(Us[(coord,d)].tensordot(Xs[(coord,d)][1],([1],[0]))\
+                    for d in dxy_w_to_ind.keys()))
+                # new_sites[coord]= A/A.abs().max()
+
+            return new_sites, new_weights
+
+        dist=[float('inf')]
+        n_s, n_w= { c: t/t.norm(p='inf') for c,t in self.sites.items() }, self.weights
+        while dist[-1]>peps_args.quasi_gauge_tol and len(dist)<peps_args.quasi_gauge_max_iter:
+            # generate X, Xinv for site and bond
+            Xs= { (coord,d): _get_dl_gauges(coord,d,n_s,n_w) \
+                for  coord in n_s.keys() for d in [(0,-1),(-1,0),(0,1),(1,0)] }
+
+            n_s, n_w1= _update_weights_and_sites(n_s,n_w,Xs)
+            dist.append(sum([ yast.norm( \
+                n_w1[k] - n_w[k] \
+                if n_w1[k].get_signature()[0]==n_w[k].get_signature()[0] else \
+                n_w1[k] - n_w[k].transpose((1,0)) ).item() for k in n_w.keys() ])/len(n_s))
+            n_w= n_w1
+
+        log.info(f"gauge dist_legth: {len(dist)}, dist: {dist}")
+        return type(self)(sites=n_s, weights=n_w, vertexToSite=self.vertexToSite, \
+            lX=self.lX, lY=self.lY, peps_args=peps_args, global_args=global_args)  
+
 
 def get_weighted_ipeps(state, weights, peps_args=cfg.peps_args, global_args=cfg.global_args):
     r"""
