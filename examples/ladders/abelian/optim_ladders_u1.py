@@ -124,7 +124,7 @@ def main():
         if opt_context["line_search"]:
             epoch= len(opt_context["loss_history"]["loss_ls"])
             loss= opt_context["loss_history"]["loss_ls"][-1]
-            print("LS",end=" ")
+            print("LS "+", ".join([f"{epoch}",f"{loss}"]))
         else:
             epoch= len(opt_context["loss_history"]["loss"]) 
             loss= opt_context["loss_history"]["loss"][-1] 

@@ -28,6 +28,8 @@ parser.add_argument("--top_n", type=int, default=2, help="number of leading eige
     "of transfer operator to compute")
 parser.add_argument("--test_env_sensitivity", action='store_true', help="compare loss with higher chi env")
 parser.add_argument("--compressed_rdms", action='store_true', help="use compressed RDMs for 2x3 and 3x2 patches")
+parser.add_argument("--ctm_conv_crit", default="CSPEC", help="ctm convergence criterion", \
+    choices=["CSPEC", "ENERGY"])
 args, unknown_args = parser.parse_known_args()
 
 def main():
@@ -137,7 +139,10 @@ def main():
 
     ctm_env = ENV(args.chi, state)
     init_env(state, ctm_env)
-    ctmrg_conv_f= ctmrg_conv_specC
+    if args.ctm_conv_crit=="CSPEC":
+        ctmrg_conv_f= ctmrg_conv_specC
+    elif args.ctm_conv_crit=="ENERGY":
+        ctmrg_conv_f= ctmrg_conv_energy
     
     ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_f)
     loss0= energy_f(state, ctm_env)
