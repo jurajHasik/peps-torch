@@ -27,7 +27,8 @@ parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of trans
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
 parser.add_argument("--gauge", action='store_true', help="put into quasi-canonical form")
-parser.add_argument("--compressed_rdms", action='store_true', help="use compressed RDMs for 2x3 and 3x2 patches")
+parser.add_argument("--compressed_rdms", type=int, default=-1, help="use compressed RDMs for 2x3 and 3x2 patches"\
+        +" with chi lower that chi x D^2")
 args, unknown_args = parser.parse_known_args()
 
 def main():
@@ -125,7 +126,7 @@ def main():
 
     def ctmrg_conv_specC_loc(state, env, history, ctm_args=cfg.ctm_args):
         _conv_check, history= ctmrg_conv_specC(state, env, history, ctm_args=ctm_args)
-        e_curr= energy_f(state, env)
+        e_curr= energy_f(state, env, compressed=args.compressed_rdms)
         obs_values, obs_labels = eval_obs_f(state,env)
         print(", ".join([f"{len(history['diffs'])}",f"{history['conv_crit'][-1]}",\
             f"{e_curr}"]+[f"{v}" for v in obs_values]))
@@ -137,7 +138,7 @@ def main():
     init_env(state, ctm_env_init)
     print(ctm_env_init)
     
-    loss0= energy_f(state, ctm_env_init)
+    loss0= energy_f(state, ctm_env_init, compressed=args.compressed_rdms)
     obs_values, obs_labels = eval_obs_f(state,ctm_env_init)
     print(", ".join(["epoch","conv_crit","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
@@ -145,7 +146,7 @@ def main():
     ctm_env_init, *ctm_log= ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_f)
 
     # 6) compute final observables
-    e_curr0 = energy_f(state, ctm_env_init)
+    e_curr0 = energy_f(state, ctm_env_init, compressed=args.compressed_rdms)
     obs_values0, obs_labels = eval_obs_f(state,ctm_env_init)
     history, t_ctm, t_obs= ctm_log
     print("\n")

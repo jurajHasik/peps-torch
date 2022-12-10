@@ -1329,7 +1329,7 @@ def rdm3x2(coord, state, env, sym_pos_def=False, verbosity=0):
     return rdm
 
 
-def rdm2x3_compressed(coord,state,env,sym_pos_def=False,\
+def rdm2x3_compressed(coord,state,env,compressed_chi=None,sym_pos_def=False,\
     ctm_args=cfg.ctm_args,global_args=cfg.global_args,verbosity=0):
     r"""
     :param coord: vertex (x,y) specifies lower left site of 2x3 subsystem
@@ -1380,6 +1380,7 @@ def rdm2x3_compressed(coord,state,env,sym_pos_def=False,\
 
     """ 
     who="rdm2x3_compressed"
+    if not compressed_chi: compressed_chi= env.chi
     # ----- building C2x2_LU ----------------------------------------------------
     vec = (0, -1)
     shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
@@ -1411,7 +1412,7 @@ def rdm2x3_compressed(coord,state,env,sym_pos_def=False,\
         c2x2_RD(shift_coord_10,state,env,mode='sl',verbosity=verbosity),([1],[0]))
 
     P_up, Pt_up= ctm_get_projectors_from_matrices(half1, torch.einsum('ijss->ij',C2X2_LU),\
-        env.chi, ctm_args, global_args)
+        compressed_chi, ctm_args, global_args)
 
     # compress C2X2_LU
     #  
@@ -1448,7 +1449,7 @@ def rdm2x3_compressed(coord,state,env,sym_pos_def=False,\
         c2x2_LU(shift_coord_1n1,state,env,mode='sl',verbosity=verbosity),([0],[0]))
     
     P_down, Pt_down= ctm_get_projectors_from_matrices(half1, torch.einsum('ijss->ij',C2X2_RU),\
-        env.chi, ctm_args, global_args)
+        compressed_chi, ctm_args, global_args)
 
     # compress C2X2_RU
     #  
@@ -1539,7 +1540,7 @@ def rdm2x3_compressed(coord,state,env,sym_pos_def=False,\
     return rdm
 
 
-def rdm3x2_compressed(coord,state,env,sym_pos_def=False,\
+def rdm3x2_compressed(coord,state,env,compressed_chi=None,sym_pos_def=False,\
     ctm_args=cfg.ctm_args,global_args=cfg.global_args,verbosity=0):
     r"""
     :param coord: vertex (x,y) specifies lower left site of 3x2 subsystem
@@ -1601,6 +1602,7 @@ def rdm3x2_compressed(coord,state,env,sym_pos_def=False,\
 
     """
     who="rdm3x2_compressed"
+    if not compressed_chi: compressed_chi= env.chi
     # ----- building C2x2_LU ----------------------------------------------------
     vec = (0, -2)
     shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
@@ -1632,7 +1634,7 @@ def rdm3x2_compressed(coord,state,env,sym_pos_def=False,\
         c2x2_RD(shift_coord_1n1,state,env,mode='sl',verbosity=verbosity),([1],[1]))
 
     P_left, Pt_left= ctm_get_projectors_from_matrices(torch.einsum('ijss->ij',C2X2_LU),half2,\
-        env.chi, ctm_args, global_args)
+        compressed_chi, ctm_args, global_args)
 
     # compress C2X2_LU
     #  
@@ -1668,7 +1670,7 @@ def rdm3x2_compressed(coord,state,env,sym_pos_def=False,\
         c2x2_LU(shift_coord_0n1,state,env,mode='sl',verbosity=verbosity),([0],[1]))
     
     P_right, Pt_right= ctm_get_projectors_from_matrices(torch.einsum('ijss->ij',C2X2_RD),half2,\
-        env.chi, ctm_args, global_args)
+        compressed_chi, ctm_args, global_args)
 
     # compress C2X2_RD
     #  

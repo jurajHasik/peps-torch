@@ -86,7 +86,7 @@ class J1J2J4():
         obs_ops["sm"]= s2.SM()
         return obs_ops
 
-    def energy_per_site(self,state,env,compressed=False,ctm_args=cfg.ctm_args,\
+    def energy_per_site(self,state,env,compressed=-1,ctm_args=cfg.ctm_args,\
         global_args=cfg.global_args):
         r"""
         :param state: wavefunction
@@ -137,8 +137,8 @@ class J1J2J4():
             for coord in state.sites.keys():
                 # (0,-1)  (1,-1) (2,-1)      x  s3 s2
                 # (0,0) --(1,0)  (2,0)  <=>  s0 s1 x
-                tmp_rdm_2x3= rdm.rdm2x3_compressed(coord,state,env,\
-                    ctm_args=ctm_args,global_args=global_args) if compressed else \
+                tmp_rdm_2x3= rdm.rdm2x3_compressed(coord,state,env,compressed,\
+                    ctm_args=ctm_args,global_args=global_args) if compressed>0 else \
                         rdm.rdm2x3(coord,state,env)
                 energy_nn+= torch.einsum('ijklabcd,abcdijkl',tmp_rdm_2x3,self.h_nn_only)
                 energy_nnn+= torch.einsum('ibkdabcd,acik',tmp_rdm_2x3,self.SS)
@@ -148,8 +148,8 @@ class J1J2J4():
                 # (0,-2) (1,-2)     x  s2     x k
                 # (0,-1) (1,-1)     s3 s1     l j
                 # (0,0)  (1,0)  <=> s0 x  <=> i x
-                tmp_rdm_3x2= rdm.rdm3x2_compressed(coord,state,env,\
-                    ctm_args=ctm_args,global_args=global_args) if compressed else \
+                tmp_rdm_3x2= rdm.rdm3x2_compressed(coord,state,env,compressed,\
+                    ctm_args=ctm_args,global_args=global_args) if compressed>0 else \
                         rdm.rdm3x2(coord,state,env)
                 energy_nn+= torch.einsum('ijklabcd,abcdijkl',tmp_rdm_3x2,self.h_nn_only)
                 energy_nnn+= torch.einsum('ibkdabcd,acik',tmp_rdm_3x2,self.SS)
@@ -184,7 +184,7 @@ class J1J2J4():
 
         return energy_per_site
 
-    def energy_per_site_compressed(self,state,env,ctm_args=cfg.ctm_args,global_args=cfg.global_args):
+    def energy_per_site_compressed(self,state,env,compressed=-1,ctm_args=cfg.ctm_args,global_args=cfg.global_args):
         r"""
         :param state: wavefunction
         :param env: CTM environment
@@ -203,7 +203,7 @@ class J1J2J4():
         This version uses compressed 2x3 and 3x2 RDMs, :meth:`rdm.rdm2x3_compressed` 
         and :meth:`rdm.rdm3x2_compressed`.
         """
-        return self.energy_per_site(state,env,compressed=True,ctm_args=ctm_args,global_args=global_args)
+        return self.energy_per_site(state,env,compressed=compressed,ctm_args=ctm_args,global_args=global_args)
 
     def eval_obs(self,state,env):
         r"""
@@ -282,7 +282,7 @@ class J1J2J4_1SITE(J1J2J4):
         self.SS_rot= torch.einsum('ixay,xj,yb->ijab',self.SS,self.R,self.R)
         self.SS_rot2= torch.einsum('ixay,xj,yb->ijab',self.SS,self.R@self.R,self.R@self.R)
 
-    def energy_1x3(self,state,env,compressed=False,ctm_args=cfg.ctm_args,global_args=cfg.global_args):
+    def energy_1x3(self,state,env,compressed=-1,ctm_args=cfg.ctm_args,global_args=cfg.global_args):
         r"""
         :param state: wavefunction
         :param env: CTM environment
@@ -343,8 +343,8 @@ class J1J2J4_1SITE(J1J2J4):
             for coord in state.sites.keys():
                 # B  C--A     x  s3 s2
                 # A--B  C <=> s0 s1 x
-                tmp_rdm_2x3= rdm.rdm2x3_compressed(coord,state,env,\
-                    ctm_args=ctm_args,global_args=global_args) if compressed else \
+                tmp_rdm_2x3= rdm.rdm2x3_compressed(coord,state,env,compressed,\
+                    ctm_args=ctm_args,global_args=global_args) if compressed>0 else \
                         rdm.rdm2x3(coord,state,env)
                 tmp_rdm_2x3= torch.einsum(tmp_rdm_2x3,[0,10,4,12,1,11,5,13],\
                     self.R, [2,10], self.R, [3,11],\
@@ -357,8 +357,8 @@ class J1J2J4_1SITE(J1J2J4):
                 # C A     x  s2     x k
                 # B C     s3 s1     l j
                 # A B <=> s0 x  <=> i x
-                tmp_rdm_3x2= rdm.rdm3x2_compressed(coord,state,env,\
-                    ctm_args=ctm_args,global_args=global_args) if compressed else \
+                tmp_rdm_3x2= rdm.rdm3x2_compressed(coord,state,env,compressed,\
+                    ctm_args=ctm_args,global_args=global_args) if compressed>0 else \
                         rdm.rdm3x2(coord,state,env)
                 tmp_rdm_3x2= torch.einsum(tmp_rdm_3x2,[0,10,4,12,1,11,5,13],\
                     self.R@self.R, [2,10], self.R@self.R, [3,11],\
@@ -416,7 +416,7 @@ class J1J2J4_1SITE(J1J2J4):
 
         return energy_per_site
 
-    def energy_1x3_compressed(self,state,env,ctm_args=cfg.ctm_args,global_args=cfg.global_args):
+    def energy_1x3_compressed(self,state,env,compressed=-1,ctm_args=cfg.ctm_args,global_args=cfg.global_args):
         r"""
         :param state: wavefunction
         :param env: CTM environment
@@ -435,7 +435,7 @@ class J1J2J4_1SITE(J1J2J4):
         This version uses compressed 2x3 and 3x2 RDMs, :meth:`rdm.rdm2x3_compressed` 
         and :meth:`rdm.rdm3x2_compressed`.
         """
-        return self.energy_1x3(state,env,compressed=True,ctm_args=ctm_args,global_args=global_args)
+        return self.energy_1x3(state,env,compressed=compressed,ctm_args=ctm_args,global_args=global_args)
 
 
     def eval_obs(self,state,env):
