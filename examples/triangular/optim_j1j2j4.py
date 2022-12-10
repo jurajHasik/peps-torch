@@ -22,11 +22,14 @@ parser.add_argument("--j1", type=float, default=1., help="nearest-neighbour coup
 parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour coupling")
 parser.add_argument("--j4", type=float, default=0., help="plaquette coupling")
 parser.add_argument("--tiling", default="3SITE", help="tiling of the lattice", \
-    choices=["1SITE", "3SITE"])
+    choices=["1SITE", "3SITE", "4SITE"])
 parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
 parser.add_argument("--test_env_sensitivity", action='store_true', help="compare loss with higher chi env")
+parser.add_argument("--compressed_rdms", action='store_true', help="use compressed RDMs for 2x3 and 3x2 patches")
+parser.add_argument("--ctm_conv_crit", default="CSPEC", help="ctm convergence criterion", \
+    choices=["CSPEC", "ENERGY"])
 args, unknown_args = parser.parse_known_args()
 
 def main():
@@ -41,15 +44,21 @@ def main():
     if args.tiling == "1SITE":
         model= spin_triangular.J1J2J4_1SITE(j1=args.j1, j2=args.j2, j4=args.j4)
         lattice_to_site=None
-    elif args.tiling == "3SITE":
+    elif args.tiling=="3SITE":
         model= spin_triangular.J1J2J4(j1=args.j1, j2=args.j2, j4=args.j4)
         def lattice_to_site(coord):
             vx = coord[0] % 3
             vy = coord[1]
             return ((vx - vy) % 3, 0)
+    elif args.tiling=="4SITE":
+        model= spin_triangular.J1J2J4(j1=args.j1, j2=args.j2, j4=args.j4)
+        def lattice_to_site(coord):
+            vx = coord[0] % 2
+            vy = ( coord[1] + ((coord[0]%4)//2) ) % 2
+            return (vx, vy)
     else:
         raise ValueError("Invalid tiling: "+str(args.tiling)+" Supported options: "\
-            +"1ISTE, 3SITE")
+            +"1SITE, 3SITE, 4SITE")
 
     if args.instate!=None:
         state = read_ipeps(args.instate, vertexToSite=lattice_to_site)
@@ -62,16 +71,18 @@ def main():
             state= IPEPS(dict(), lX=1, lY=1)
         elif args.tiling == "3SITE":
             state= IPEPS(dict(), vertexToSite=lattice_to_site, lX=3, lY=3)
+        elif args.tiling == "4SITE":
+            state= IPEPS(dict(), vertexToSite=lattice_to_site, lX=4, lY=2)
         state.load_checkpoint(args.opt_resume)
     elif args.ipeps_init_type=='RANDOM':
         bond_dim = args.bond_dim
         sites = {}
-        if args.tiling in ["1SITE","3SITE"]:
+        if args.tiling in ["1SITE","3SITE","4SITE"]:
             A = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
                 dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
             sites[(0,0)]= A/torch.max(torch.abs(A))
             state = IPEPS(sites, lX=1, lY=1)
-        if args.tiling in ["3SITE"]:     
+        if args.tiling in ["3SITE","4SITE"]:     
             B = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
                 dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
             C = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
@@ -79,6 +90,13 @@ def main():
             sites[(1,0)]= B/torch.max(torch.abs(B))
             sites[(2,0)]= C/torch.max(torch.abs(C))
             state = IPEPS(sites, vertexToSite=lattice_to_site, lX=3, lY=3)
+        if args.tiling in ["4SITE"]:     
+            D = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+                dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
+            del sites[(2,0)]
+            sites[(0,1)]= C/torch.max(torch.abs(C))
+            sites[(1,1)]= D/torch.max(torch.abs(D))
+            state = IPEPS(sites, vertexToSite=lattice_to_site, lX=4, lY=2)
     else:
         raise ValueError("Missing trial state: -instate=None and -ipeps_init_type= "\
             +str(args.ipeps_init_type)+" is not supported")
@@ -94,14 +112,16 @@ def main():
     
     # 2) select the "energy" function 
     if args.tiling == "1SITE":
-        energy_f=model.energy_1x3
+        energy_f=energy_f=model.energy_1x3 if not args.compressed_rdms else \
+            model.energy_1x3_compressed
         eval_obs_f= model.eval_obs
-    elif args.tiling == "3SITE":
-        energy_f=model.energy_1x3
+    elif args.tiling in ["3SITE", "4SITE"]:
+        energy_f=model.energy_per_site if not args.compressed_rdms else \
+            model.energy_per_site_compressed
         eval_obs_f= model.eval_obs
     else:
         raise ValueError("Invalid tiling: "+str(args.tiling)+" Supported options: "\
-            +"1SITE, 3SITE")
+            +"1SITE, 3SITE, 4SITE")
 
     @torch.no_grad()
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
@@ -120,7 +140,10 @@ def main():
 
     ctm_env = ENV(args.chi, state)
     init_env(state, ctm_env)
-    ctmrg_conv_f= ctmrg_conv_specC
+    if args.ctm_conv_crit=="CSPEC":
+        ctmrg_conv_f= ctmrg_conv_specC
+    elif args.ctm_conv_crit=="ENERGY":
+        ctmrg_conv_f= ctmrg_conv_energy
     
     ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_f)
     loss0= energy_f(state, ctm_env)
@@ -170,10 +193,10 @@ def main():
             if args.test_env_sensitivity:
                 loc_ctm_args= copy.deepcopy(opt_context["ctm_args"])
                 loc_ctm_args.ctm_max_iter= 1
-                ctm_env_inv= ctm_env.extend(ctm_env.chi+10)
-                ctm_env_out1, *ctm_log= ctmrg.run(state, ctm_env_inv, \
+                ctm_env_out1= ctm_env.extend(ctm_env.chi+10)
+                ctm_env_out1, *ctm_log= ctmrg.run(state, ctm_env_out1, \
                     conv_check=ctmrg_conv_f, ctm_args=loc_ctm_args)
-                loss1= energy_f(state, ctm_env_inv)
+                loss1= energy_f(state, ctm_env_out1)
                 delta_loss= opt_context['loss_history']['loss'][-1]-opt_context['loss_history']['loss'][-2]\
                     if len(opt_context['loss_history']['loss'])>1 else float('NaN')
                 # if we are not linesearching, this can always happen

@@ -478,7 +478,7 @@ class IPEPS_WEIGHTED(IPEPS):
                     assert self.site(w_id[0]).size(dxy_w_to_ind[w_id[1]])==\
                         self.site(w_rid[0]).size(dxy_w_to_ind[w_rid[1]]),"Bond dims do not match"
                     W= torch.eye(self.site(w_id[0]).size(dxy_w_to_ind[w_id[1]]),\
-                        dtype=self.site(w_id[0]).dtype, device=self.site(w_id[0]).device)
+                        dtype=torch.float64, device=self.site(w_id[0]).device)
                     weights[w_id]= W
                     weights[w_rid]= W
         return weights
@@ -514,7 +514,8 @@ class IPEPS_WEIGHTED(IPEPS):
             # ...
             expr='smnop,'+','.join([expr_ws[dxy] for dxy in dxy_w_to_ind])+'->suldr'
             a_sites[coord]= torch.einsum(expr,\
-                A,*( self.weight((coord, dxy)).sqrt() for dxy in dxy_w_to_ind.keys() ) )
+                A,*( self.weight((coord, dxy)).sqrt()*(1.0+0j) if A.is_complex() \
+                    else self.weight((coord, dxy)).sqrt() for dxy in dxy_w_to_ind.keys() ) )
             #for dxy,ind in dxy_w_to_ind.items():
             #    w= self.weight((coord, dxy)).sqrt()
             #    A= torch.tensordot(A, w, ([1],[0]))
@@ -560,7 +561,8 @@ class IPEPS_WEIGHTED(IPEPS):
             expr= 'suldr,smnop,'+','.join([expr_ws[d] for d in ds_to_contract])\
                 +f'->{expr_ws[direction]}'
             a= torch.einsum(expr,\
-                A,A.conj(),*(weights[(coord,d)]**2 for d in ds_to_contract) ).contiguous()
+                A,A.conj(),*( (weights[(coord,d)]**2)*(1.+0j) if A.is_complex() else weights[(coord,d)]**2 \
+                    for d in ds_to_contract) ).contiguous()
 
             # diagonalize, since a is hermitian and positive. Force ordering in descending magnitude
             # l--    l(0)--U
@@ -594,7 +596,8 @@ class IPEPS_WEIGHTED(IPEPS):
                         #   --(0,0)-X^{-1}--U--S--Vh--X'^{-1}-(1,0)--
                         #       |                               |
                         #
-                        U,S,Vh= torch.linalg.svd(Xs[w_id][0].t()@weights[w_id]@Xs[w_rid][0])
+                        U,S,Vh= torch.linalg.svd(Xs[w_id][0].t()@( \
+                            weights[w_id]*(1.0+0j) if Xs[w_id][0].is_complex() else weights[w_id] ) @Xs[w_rid][0])
                         new_weights[w_id]= torch.diag(S)#/S[0]
                         new_weights[w_rid]= torch.diag(S)#/S[0]
                         Us[w_id]= U.t()

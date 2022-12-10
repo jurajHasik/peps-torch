@@ -1,4 +1,5 @@
 import os
+import copy
 import context
 import argparse
 import torch
@@ -26,6 +27,7 @@ parser.add_argument("--top_n", type=int, default=2, help="number of leading eige
     "of transfer operator to compute")
 parser.add_argument("--yast_backend", type=str, default='torch', 
     help="YAST backend", choices=['torch','torch_cpp'])
+parser.add_argument("--test_env_sensitivity", action='store_true', help="compare loss with higher chi env")
 args, unknown_args = parser.parse_known_args()
 
 def main():
@@ -122,12 +124,33 @@ def main():
         if opt_context["line_search"]:
             epoch= len(opt_context["loss_history"]["loss_ls"])
             loss= opt_context["loss_history"]["loss_ls"][-1]
-            print("LS",end=" ")
+            print("LS "+", ".join([f"{epoch}",f"{loss}"]))
         else:
             epoch= len(opt_context["loss_history"]["loss"]) 
             loss= opt_context["loss_history"]["loss"][-1] 
-        obs_values, obs_labels = model.eval_obs(state,ctm_env)
-        print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
+            obs_values, obs_labels = model.eval_obs(state,ctm_env)
+
+            # test ENV sensitivity
+            if args.test_env_sensitivity:
+                loc_ctm_args= copy.deepcopy(opt_context["ctm_args"])
+                loc_ctm_args.ctm_max_iter= 1
+                ctm_env_out1= ctm_env.clone()
+                ctm_env_out1.chi= ctm_env.chi+10
+                ctm_env_out1, *ctm_log= ctmrg.run(state, ctm_env_out1, \
+                    conv_check=ctmrg_conv_energy, ctm_args=loc_ctm_args)
+                loss1= model.energy_2x1_1x2(state, ctm_env_out1).to_number()
+                delta_loss= opt_context['loss_history']['loss'][-1]-opt_context['loss_history']['loss'][-2]\
+                    if len(opt_context['loss_history']['loss'])>1 else float('NaN')
+                # if we are not linesearching, this can always happen
+                # not "line_search" in opt_context.keys()
+                _flag_antivar= (loss1-loss)>0 and (loss1-loss)>abs(delta_loss)
+                opt_context["STATUS"]= "ENV_ANTIVAR" if _flag_antivar else "ENV_VAR"
+
+            print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]\
+                + ([f"{loss1-loss}"] if args.test_env_sensitivity else []) ))
+            log.info(f"env_sensitivity: {loss1-loss} loss_diff: "\
+                +f"{delta_loss}" if args.test_env_sensitivity else ""\
+                +" Norm(sites): "+", ".join([f"{t.norm()}" for c,t in state.sites.items()]))
 
         # with torch.no_grad():
         #     if (not opt_context["line_search"]) and args.top_freq>0 \
@@ -140,6 +163,9 @@ def main():
         #             print("TOP "+json.dumps(_to_json(l)))
 
     # optimize
+    if args.test_env_sensitivity:
+        state_g= IPEPS_ABELIAN_WEIGHTED(state=state).gauge()
+        state= state_g.absorb_weights()
     optimize_state(state, ctm_env, loss_fn, obs_fn=obs_fn)
 
     # compute final observables for the best variational state
