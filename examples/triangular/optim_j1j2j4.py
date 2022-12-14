@@ -22,7 +22,7 @@ parser.add_argument("--j1", type=float, default=1., help="nearest-neighbour coup
 parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour coupling")
 parser.add_argument("--j4", type=float, default=0., help="plaquette coupling")
 parser.add_argument("--tiling", default="3SITE", help="tiling of the lattice", \
-    choices=["1SITE", "2SITE", "2SITE_Y", "3SITE", "4SITE"])
+    choices=["1SITE", "1SITE_NOROT", "2SITE", "2SITE_Y", "3SITE", "4SITE"])
 parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
@@ -43,6 +43,9 @@ def main():
     # coord into one of coordinates within unit-cell of iPEPS ansatz    
     if args.tiling == "1SITE":
         model= spin_triangular.J1J2J4_1SITE(j1=args.j1, j2=args.j2, j4=args.j4)
+        lattice_to_site=None
+    elif args.tiling in ["1SITE_NOROT"]:
+        model= spin_triangular.J1J2J4(j1=args.j1, j2=args.j2, j4=args.j4)
         lattice_to_site=None
     elif args.tiling in ["2SITE", "2SITE_Y"]:
         model= spin_triangular.J1J2J4(j1=args.j1, j2=args.j2, j4=args.j4)
@@ -79,7 +82,7 @@ def main():
             state = extend_bond_dim(state, args.bond_dim)
         state.add_noise(args.instate_noise)
     elif args.opt_resume is not None:
-        if args.tiling == "1SITE":
+        if args.tiling in ["1SITE", "1SITE_NOROT"]:
             state= IPEPS(dict(), lX=1, lY=1)
         elif args.tiling == "2SITE":
             state= IPEPS(dict(), vertexToSite=lattice_to_site, lX=2, lY=1)
@@ -133,7 +136,7 @@ def main():
         energy_f=energy_f=model.energy_1x3 if not args.compressed_rdms else \
             model.energy_1x3_compressed
         eval_obs_f= model.eval_obs
-    elif args.tiling in ["2SITE", "2SITE_Y", "3SITE", "4SITE"]:
+    elif args.tiling in ["1SITE_NOROT", "2SITE", "2SITE_Y", "3SITE", "4SITE"]:
         energy_f=model.energy_per_site if not args.compressed_rdms else \
             model.energy_per_site_compressed
         eval_obs_f= model.eval_obs
