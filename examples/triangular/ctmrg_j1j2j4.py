@@ -5,7 +5,6 @@ import config as cfg
 from ipeps.ipeps import *
 from ipeps.ipeps_trgl_pg import *
 from ctm.generic.env import *
-from ctm.generic.rdm import norm_C4, norm_3x3
 from ctm.generic import ctmrg
 from ctm.generic import transferops
 from models import spin_triangular
@@ -23,13 +22,15 @@ parser.add_argument("--j1", type=float, default=1., help="nearest-neighbour coup
 parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour coupling")
 parser.add_argument("--j4", type=float, default=0., help="plaquette coupling")
 parser.add_argument("--tiling", default="3SITE", help="tiling of the lattice", \
-    choices=["1SITE", "1STRIV", "1SPG", "2SITE", "3SITE", "4SITE"])
+    choices=["1SITE", "1SITE_NOROT", "1STRIV", "1SPG", "2SITE", "3SITE", "4SITE"])
 parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
 parser.add_argument("--gauge", action='store_true', help="put into quasi-canonical form")
 parser.add_argument("--compressed_rdms", type=int, default=-1, help="use compressed RDMs for 2x3 and 3x2 patches"\
         +" with chi lower that chi x D^2")
+parser.add_argument("--ctm_conv_crit", default="CSPEC", help="ctm convergence criterion", \
+    choices=["CSPEC", "ENERGY"])
 args, unknown_args = parser.parse_known_args()
 
 def main():
@@ -43,6 +44,9 @@ def main():
     # coord into one of coordinates within unit-cell of iPEPS ansatz    
     if args.tiling in ["1SITE", "1STRIV", "1SPG"]:
         model= spin_triangular.J1J2J4_1SITE(j1=args.j1, j2=args.j2, j4=args.j4)
+        lattice_to_site=None
+    elif args.tiling in ["1SITE_NOROT"]:
+        model= spin_triangular.J1J2J4(j1=args.j1, j2=args.j2, j4=args.j4)
         lattice_to_site=None
     elif args.tiling == "2SITE":
         model= spin_triangular.J1J2J4(j1=args.j1, j2=args.j2, j4=args.j4)
@@ -78,7 +82,7 @@ def main():
             state = extend_bond_dim(state, args.bond_dim)
         state.add_noise(args.instate_noise)
     elif args.opt_resume is not None:
-        if args.tiling == "1SITE":
+        if args.tiling in ["1SITE", "1SITE_NOROT"]:
             state= IPEPS(dict(), lX=1, lY=1)
         elif args.tiling == "1STRIV":
             state= IPEPS_TRGL_1S_TTPHYS_PG()
@@ -113,7 +117,7 @@ def main():
     if args.tiling in ["1SITE", "1STRIV", "1SPG"]:
         energy_f=model.energy_1x3
         eval_obs_f= model.eval_obs
-    elif args.tiling in ["2SITE", "3SITE", "4SITE"]:
+    elif args.tiling in ["1SITE_NOROT", "2SITE", "3SITE", "4SITE"]:
         energy_f=model.energy_per_site if not args.compressed_rdms else \
             model.energy_per_site_compressed
         eval_obs_f= model.eval_obs
@@ -139,10 +143,12 @@ def main():
         obs_values, obs_labels = eval_obs_f(state,env)
         print(", ".join([f"{len(history['diffs'])}",f"{history['conv_crit'][-1]}",\
             f"{e_curr}"]+[f"{v}" for v in obs_values]))
-        print(f"{norm_C4((0,0),state,env)} {norm_3x3((0,0),state,env)}")
         return _conv_check, history
 
-    ctmrg_conv_f= ctmrg_conv_specC_loc
+    if args.ctm_conv_crit=="CSPEC":
+        ctmrg_conv_f= ctmrg_conv_specC_loc
+    elif args.ctm_conv_crit=="ENERGY":
+        ctmrg_conv_f= ctmrg_conv_energy
 
     ctm_env_init = ENV(args.chi, state)
     init_env(state, ctm_env_init)
