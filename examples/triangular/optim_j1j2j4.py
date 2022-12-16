@@ -27,7 +27,8 @@ parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of trans
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
 parser.add_argument("--test_env_sensitivity", action='store_true', help="compare loss with higher chi env")
-parser.add_argument("--compressed_rdms", action='store_true', help="use compressed RDMs for 2x3 and 3x2 patches")
+parser.add_argument("--compressed_rdms", type=int, default=-1, help="use compressed RDMs for 2x3 and 3x2 patches"\
+        +" with chi lower that chi x D^2")
 parser.add_argument("--ctm_conv_crit", default="CSPEC", help="ctm convergence criterion", \
     choices=["CSPEC", "ENERGY"])
 args, unknown_args = parser.parse_known_args()
@@ -148,7 +149,7 @@ def main():
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
             history=[]
-        e_curr= energy_f(state, env)
+        e_curr= energy_f(state, env, compressed=args.compressed_rdms)
         history.append(e_curr.item())
 
         if (len(history) > 1 and abs(history[-1]-history[-2]) < ctm_args.ctm_conv_tol)\
@@ -167,7 +168,7 @@ def main():
         ctmrg_conv_f= ctmrg_conv_energy
     
     ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_f)
-    loss0= energy_f(state, ctm_env)
+    loss0= energy_f(state, ctm_env, compressed=args.compressed_rdms)
     obs_values, obs_labels = eval_obs_f(state,ctm_env)
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
@@ -193,8 +194,8 @@ def main():
              conv_check=ctmrg_conv_f, ctm_args=ctm_args)
 
         # 2) evaluate loss with the converged environment
-        loss = energy_f(state_n, ctm_env_out)
-        
+        loss = energy_f(state_n, ctm_env_out, compressed=args.compressed_rdms)
+
         return (loss, ctm_env_out, *ctm_log)
 
     def _to_json(l):
@@ -263,7 +264,7 @@ def main():
     ctm_env = ENV(args.chi, state)
     init_env(state, ctm_env)
     ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_f)
-    loss0= energy_f(state,ctm_env)
+    loss0= energy_f(state,ctm_env,compressed=args.compressed_rdms)
     obs_values, obs_labels = eval_obs_f(state,ctm_env)
     print(", ".join([f"{args.opt_max_iter}",f"{loss0}"]+[f"{v}" for v in obs_values]))  
 

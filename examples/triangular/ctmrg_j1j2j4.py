@@ -5,6 +5,7 @@ import config as cfg
 from ipeps.ipeps import *
 from ipeps.ipeps_trgl_pg import *
 from ctm.generic.env import *
+from ctm.generic.rdm import norm_C4, norm_3x3
 from ctm.generic import ctmrg
 from ctm.generic import transferops
 from models import spin_triangular
@@ -123,7 +124,7 @@ def main():
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
             history=[]
-        e_curr= energy_f(state, env)
+        e_curr= energy_f(state, env, compressed=args.compressed_rdms)
         obs_values, obs_labels = eval_obs_f(state,env)
         history.append([e_curr.item()]+obs_values)
         print(", ".join([f"{len(history)}"]+[f"{e_curr}"]*2+[f"{v}" for v in obs_values]))
@@ -138,6 +139,7 @@ def main():
         obs_values, obs_labels = eval_obs_f(state,env)
         print(", ".join([f"{len(history['diffs'])}",f"{history['conv_crit'][-1]}",\
             f"{e_curr}"]+[f"{v}" for v in obs_values]))
+        print(f"{norm_C4((0,0),state,env)} {norm_3x3((0,0),state,env)}")
         return _conv_check, history
 
     ctmrg_conv_f= ctmrg_conv_specC_loc
