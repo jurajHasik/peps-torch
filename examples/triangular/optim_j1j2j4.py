@@ -21,6 +21,7 @@ parser= cfg.get_args_parser()
 parser.add_argument("--j1", type=float, default=1., help="nearest-neighbour coupling")
 parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour coupling")
 parser.add_argument("--j4", type=float, default=0., help="plaquette coupling")
+parser.add_argument("--jchi", type=float, default=0., help="scalar chirality")
 parser.add_argument("--tiling", default="3SITE", help="tiling of the lattice", \
     choices=["1SITE", "1SITE_NOROT", "2SITE", "2SITE_Y", "3SITE", "4SITE"])
 parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
@@ -43,13 +44,13 @@ def main():
     # 1) define lattice-tiling function, that maps arbitrary vertex of square lattice
     # coord into one of coordinates within unit-cell of iPEPS ansatz    
     if args.tiling == "1SITE":
-        model= spin_triangular.J1J2J4_1SITE(j1=args.j1, j2=args.j2, j4=args.j4)
+        model= spin_triangular.J1J2J4_1SITE(j1=args.j1, j2=args.j2, j4=args.j4, jchi=args.jchi)
         lattice_to_site=None
     elif args.tiling in ["1SITE_NOROT"]:
-        model= spin_triangular.J1J2J4(j1=args.j1, j2=args.j2, j4=args.j4)
+        model= spin_triangular.J1J2J4(j1=args.j1, j2=args.j2, j4=args.j4, jchi=args.jchi)
         lattice_to_site=None
     elif args.tiling in ["2SITE", "2SITE_Y"]:
-        model= spin_triangular.J1J2J4(j1=args.j1, j2=args.j2, j4=args.j4)
+        model= spin_triangular.J1J2J4(j1=args.j1, j2=args.j2, j4=args.j4, jchi=args.jchi)
         if args.tiling=="2SITE":
             def lattice_to_site(coord):
                 vx = coord[0] % 2
@@ -61,13 +62,13 @@ def main():
                 vy = coord[1] % 2
                 return (0, vy)
     elif args.tiling=="3SITE":
-        model= spin_triangular.J1J2J4(j1=args.j1, j2=args.j2, j4=args.j4)
+        model= spin_triangular.J1J2J4(j1=args.j1, j2=args.j2, j4=args.j4, jchi=args.jchi)
         def lattice_to_site(coord):
             vx = coord[0] % 3
             vy = coord[1]
             return ((vx - vy) % 3, 0)
     elif args.tiling=="4SITE":
-        model= spin_triangular.J1J2J4(j1=args.j1, j2=args.j2, j4=args.j4)
+        model= spin_triangular.J1J2J4(j1=args.j1, j2=args.j2, j4=args.j4, jchi=args.jchi)
         def lattice_to_site(coord):
             vx = coord[0] % 2
             vy = ( coord[1] + ((coord[0]%4)//2) ) % 2

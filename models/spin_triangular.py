@@ -11,20 +11,23 @@ def _cast_to_real(t):
     return t.real if t.is_complex() else t
 
 class J1J2J4():
-    def __init__(self, phys_dim=2, j1=1.0, j2=0, j4=0, global_args=cfg.global_args):
+    def __init__(self, phys_dim=2, j1=1.0, j2=0, j4=0, jchi=0,\
+        global_args=cfg.global_args):
         r"""
         :param phys_dim: dimension of physical spin irrep, i.e. 2 for spin S=1/2 
         :param j1: nearest-neighbour interaction
         :param j2: next nearest-neighbour interaction
         :param j4: plaquette interaction
+        :param jchi: scalar chirality
         :param global_args: global configuration
         :type phys_dim: int
         :type j1: float
         :type j2: float
         :type j4: float
+        :type jchi: float
         :type global_args: GLOBALARGS
 
-        Build Spin-S :math:`J_1-J_2-J_4` Hamiltonian
+        Build Spin-S :math:`J_1-J_2-J_4-J_\chi` Hamiltonian
 
         .. math:: H = J_1\sum_{<i,j>} \mathbf{S}_i.\mathbf{S}_j + J_2\sum_{<<i,j>>} 
                   \mathbf{S}_i.\mathbf{S}_j 
@@ -32,6 +35,7 @@ class J1J2J4():
                     (\mathbf{S}_i.\mathbf{S}_j)(\mathbf{S}_k.\mathbf{S}_l) 
                   + (\mathbf{S}_i.\mathbf{S}_l)(\mathbf{S}_j.\mathbf{S}_k)
                   - (\mathbf{S}_i.\mathbf{S}_k)(\mathbf{S}_j.\mathbf{S}_l) ]
+                  + J_\chi \sum_{i,j,k\in\Delta} \mathbf{S}_i.(\mathbf{S}_j \cross \mathbf{S}_k)
 
         on the triangular lattice. Where the first sum runs over the pairs of sites `i,j` 
         which are nearest-neighbours (denoted as `<.,.>`), and the second sum runs over 
@@ -45,8 +49,9 @@ class J1J2J4():
         self.j1=j1
         self.j2=j2
         self.j4=j4
+        self.jchi=jchi
         
-        self.SS, self.SSSS, self.h_p, self.h_p_and_nnn, self.h_nn_only= self.get_h()
+        self.SS, self.SSSS, self.h_p, self.h_p_and_nnn, self.h_nn_only, self.h_chi= self.get_h()
         self.obs_ops= self.get_obs_ops()
 
     def get_h(self):
@@ -76,7 +81,15 @@ class J1J2J4():
          + SSId.permute(2,3,0,1, 6,7,4,5).contiguous()\
          + SSId.permute(2,0,1,3, 6,4,5,7).contiguous())
 
-        return SS, SSSS, h_p, h_p_and_nnn, h_nn_only
+        if self.jchi != 0:
+            assert self.dtype==torch.complex128 or self.dtype==torch.complex64,"jchi requires complex dtype"
+        Svec= s2.S()
+        levicivit3= torch.zeros(3,3,3, dtype=self.dtype, device=self.device)
+        levicivit3[0,1,2]=levicivit3[1,2,0]=levicivit3[2,0,1]=1.
+        levicivit3[0,2,1]=levicivit3[2,1,0]=levicivit3[1,0,2]=-1.
+        SxSS_t= torch.einsum('abc,bij,ckl,amn->ikmjln',levicivit3,Svec,Svec,Svec).contiguous()
+
+        return SS, SSSS, h_p, h_p_and_nnn, h_nn_only, SxSS_t
 
     def get_obs_ops(self):
         obs_ops = dict()
@@ -260,22 +273,24 @@ class J1J2J4():
 
 
 class J1J2J4_1SITE(J1J2J4):
-    def __init__(self, phys_dim=2, j1=1.0, j2=0, j4=0, global_args=cfg.global_args):
+    def __init__(self, phys_dim=2, j1=1.0, j2=0, j4=0, jchi=0, global_args=cfg.global_args):
         r"""
         :param phys_dim: dimension of physical spin irrep, i.e. 2 for spin S=1/2 
         :param j1: nearest-neighbour interaction
         :param j2: next nearest-neighbour interaction
         :param j4: plaquette interaction
+        :param jchi: scalar chirality
         :param global_args: global configuration
         :type phys_dim: int
         :type j1: float
         :type j2: float
         :type j4: float
+        :type jchi: float
         :type global_args: GLOBALARGS
         
         See :class:`J1J2J4`.
         """
-        super().__init__(phys_dim=phys_dim, j1=j1, j2=j2, j4=j4, 
+        super().__init__(phys_dim=phys_dim, j1=j1, j2=j2, j4=j4, jchi=jchi,
             global_args=global_args)
         s2 = su2.SU2(self.phys_dim, dtype=self.dtype, device=self.device)
         self.R= torch.linalg.matrix_exp( (2*pi/3)*(s2.SP()-s2.SM()) )
@@ -338,8 +353,9 @@ class J1J2J4_1SITE(J1J2J4):
         energy_nn=0.
         energy_nnn=0.
         energy_p=0.
+        energy_chi=0.
 
-        if abs(self.j2)>0 or abs(self.j4)>0:
+        if abs(self.j2)>0 or abs(self.j4)>0 or abs(self.jchi)>0:
             for coord in state.sites.keys():
                 # B  C--A     x  s3 s2
                 # A--B  C <=> s0 s1 x
@@ -352,6 +368,10 @@ class J1J2J4_1SITE(J1J2J4):
                 energy_nn+= torch.einsum('ijklabcd,abcdijkl',tmp_rdm_2x3,self.h_nn_only)
                 energy_nnn+= torch.einsum('ibkdabcd,acik',tmp_rdm_2x3,self.SS) # A--A nnn
                 energy_p+= torch.einsum('ijklabcd,abcdijkl',tmp_rdm_2x3,self.h_p)
+                #
+                # anti-clockwise, i.e. s0,s1,s3 and s1,s2,s3
+                energy_chi+= torch.einsum('ijclabcd,abdijl',tmp_rdm_2x3,self.h_chi)
+                energy_chi+= torch.einsum('ajklabcd,bcdjkl',tmp_rdm_2x3,self.h_chi)
 
                 #
                 # C A     x  s2     x k
@@ -366,6 +386,8 @@ class J1J2J4_1SITE(J1J2J4):
                 energy_nn+= torch.einsum('ijklabcd,abcdijkl',tmp_rdm_3x2,self.h_nn_only)
                 energy_nnn+= torch.einsum('ibkdabcd,acik',tmp_rdm_3x2,self.SS) # A--A nnn
                 energy_p+= torch.einsum('ijklabcd,abcdijkl',tmp_rdm_3x2,self.h_p)
+                energy_chi+= torch.einsum('ijclabcd,abdijl',tmp_rdm_3x2,self.h_chi)
+                energy_chi+= torch.einsum('ajklabcd,bcdjkl',tmp_rdm_3x2,self.h_chi)
 
                 # 
                 # A B     s0 s1                 s0 s1     i j
@@ -377,11 +399,15 @@ class J1J2J4_1SITE(J1J2J4):
                 energy_nn+= torch.einsum('ijklabcd,abcdijkl',tmp_rdm_2x2,self.h_nn_only)
                 energy_nnn+= torch.einsum('ibkdabcd,acik',tmp_rdm_2x2,self.SS) # A--A nnn
                 energy_p+= torch.einsum('ijklabcd,abcdijkl',tmp_rdm_2x2,self.h_p)
+                #
+                # anti-clockwise, i.e. s0,s1,s3 and s1,s2,s3
+                energy_chi+= torch.einsum('ijclabcd,adbilj',tmp_rdm_2x2,self.h_chi)
+                energy_chi+= torch.einsum('ajklabcd,bdcjlk',tmp_rdm_2x2,self.h_chi)
 
                 num_sites= len(state.sites)
                 # the ratio between #nn (the number of) and #nn(diag) is 2:1
                 energy_per_site= self.j1*energy_nn/(4*num_sites) + self.j2*energy_nnn/num_sites \
-                    + self.j4*energy_p/num_sites
+                    + self.j4*energy_p/num_sites + self.jchi*energy_chi/(2*num_sites)
         else:
             for coord in state.sites.keys():
                 #
