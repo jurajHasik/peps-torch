@@ -99,23 +99,23 @@ def main():
         bond_dim = args.bond_dim
         sites = {}
         A = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-            dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
+            dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)-0.5
         sites[(0,0)]= A/torch.max(torch.abs(A))
         state = IPEPS(sites, lX=1, lY=1)
         if args.tiling in ["2SITE","2SITE_Y","3SITE","4SITE"]:     
             B = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
+                dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)-0.5
             sites[ (0,1) if args.tiling=="2SITE_Y" else (1,0) ]= B/torch.max(torch.abs(B))
             lX_lY= dict(lX= 1, lY= 2) if args.tiling=="2SITE_Y" else dict(lX= 2, lY= 1)
             state = IPEPS(sites, vertexToSite=lattice_to_site, **lX_lY)
         if args.tiling in ["3SITE","4SITE"]: 
             C = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
+                dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)-0.5
             sites[(2,0)]= C/torch.max(torch.abs(C))
             state = IPEPS(sites, vertexToSite=lattice_to_site, lX=3, lY=3)
         if args.tiling in ["4SITE"]:     
             D = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
+                dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)-0.5
             del sites[(2,0)]
             sites[(0,1)]= C/torch.max(torch.abs(C))
             sites[(1,1)]= D/torch.max(torch.abs(D))
