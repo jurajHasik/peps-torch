@@ -23,12 +23,14 @@ parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour
 parser.add_argument("--j4", type=float, default=0., help="plaquette coupling")
 parser.add_argument("--tiling", default="3SITE", help="tiling of the lattice", \
     choices=["1SITE", "1SITE_NOROT", "1STRIV", "1SPG", "2SITE", "3SITE", "4SITE"])
+parser.add_argument("--corrf_r", type=int, default=1, help="maximal correlation function distance")
 parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
 parser.add_argument("--gauge", action='store_true', help="put into quasi-canonical form")
 parser.add_argument("--compressed_rdms", type=int, default=-1, help="use compressed RDMs for 2x3 and 3x2 patches"\
         +" with chi lower that chi x D^2")
+parser.add_argument("--loop_rdms", action='store_true', help="loop over central aux index in rdm2x3 and rdm3x2")
 parser.add_argument("--ctm_conv_crit", default="CSPEC", help="ctm convergence criterion", \
     choices=["CSPEC", "ENERGY"])
 args, unknown_args = parser.parse_known_args()
@@ -118,8 +120,7 @@ def main():
         energy_f=model.energy_1x3
         eval_obs_f= model.eval_obs
     elif args.tiling in ["1SITE_NOROT", "2SITE", "3SITE", "4SITE"]:
-        energy_f=model.energy_per_site if not args.compressed_rdms else \
-            model.energy_per_site_compressed
+        energy_f=model.energy_per_site
         eval_obs_f= model.eval_obs
     else:
         raise ValueError("Invalid tiling: "+str(args.tiling)+" Supported options: "\
@@ -154,6 +155,7 @@ def main():
     init_env(state, ctm_env_init)
     print(ctm_env_init)
     
+    
     loss0= energy_f(state, ctm_env_init, compressed=args.compressed_rdms)
     obs_values, obs_labels = eval_obs_f(state,ctm_env_init)
     print(", ".join(["epoch","conv_crit","energy"]+obs_labels))
@@ -171,12 +173,20 @@ def main():
     print(f"TIMINGS ctm: {t_ctm} conv_check: {t_obs}")
 
     # environment diagnostics
-    print("\n")
-    for c_loc,c_ten in ctm_env_init.C.items(): 
-        u,s,v= torch.svd(c_ten, compute_uv=False)
-        print(f"spectrum C[{c_loc}]")
-        for i in range(args.chi):
-            print(f"{i} {s[i]}")
+    # print("\n")
+    # for c_loc,c_ten in ctm_env_init.C.items(): 
+    #     u,s,v= torch.svd(c_ten, compute_uv=False)
+    #     print(f"spectrum C[{c_loc}]")
+    #     for i in range(args.chi):
+    #         print(f"{i} {s[i]}")
+
+    # ----- S(0).S(r) -----
+    site_dir_list=[((0,0), (1,0)),((0,0), (0,1))]
+    for sdp in site_dir_list:
+        corrSS= model.eval_corrf_SS(*sdp, state, ctm_env_init, args.corrf_r)
+        print(f"\n\nSS[{sdp[0]},{sdp[1]}] r "+" ".join([label for label in corrSS.keys()]))
+        for i in range(args.corrf_r):
+            print(f"{i} "+" ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
 
     # transfer operator spectrum
     site_dir_list=[((0,0), (1,0)),((0,0), (0,1))]

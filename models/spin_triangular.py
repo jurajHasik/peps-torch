@@ -99,8 +99,8 @@ class J1J2J4():
         obs_ops["sm"]= s2.SM()
         return obs_ops
 
-    def energy_per_site(self,state,env,compressed=-1,ctm_args=cfg.ctm_args,\
-        global_args=cfg.global_args):
+    def energy_per_site(self,state,env,compressed=-1,looped=False,\
+        ctm_args=cfg.ctm_args,global_args=cfg.global_args):
         r"""
         :param state: wavefunction
         :param env: CTM environment
@@ -146,27 +146,46 @@ class J1J2J4():
         energy_nn=0.
         energy_nnn=0.
         energy_p=0.
-        if abs(self.j2)>0 or abs(self.j4)>0:
+        energy_chi=0.
+        if abs(self.j2)>0 or abs(self.j4)>0 or abs(self.jchi)>0:
             for coord in state.sites.keys():
                 # (0,-1)  (1,-1) (2,-1)      x  s3 s2
                 # (0,0) --(1,0)  (2,0)  <=>  s0 s1 x
-                tmp_rdm_2x3= rdm.rdm2x3_compressed(coord,state,env,compressed,\
-                    ctm_args=ctm_args,global_args=global_args) if compressed>0 else \
-                        rdm.rdm2x3(coord,state,env)
+                tmp_rdm_2x3= None
+                if compressed>0:
+                    tmp_rdm_2x3= rdm.rdm2x3_compressed(coord,state,env,compressed,\
+                        ctm_args=ctm_args,global_args=global_args) 
+                elif looped:
+                    tmp_rdm_2x3= rdm_mc.rdm2x3_loop(coord,state,env,\
+                        use_checkpoint=ctm_args.fwd_checkpoint_loop_rdm)
+                else:
+                    tmp_rdm_2x3= rdm.rdm2x3(coord,state,env)
                 energy_nn+= torch.einsum('ijklabcd,abcdijkl',tmp_rdm_2x3,self.h_nn_only)
                 energy_nnn+= torch.einsum('ibkdabcd,acik',tmp_rdm_2x3,self.SS)
                 energy_p+= torch.einsum('ijklabcd,abcdijkl',tmp_rdm_2x3,self.h_p)
+                #
+                # anti-clockwise, i.e. s0,s1,s3 and s1,s2,s3
+                energy_chi+= torch.einsum('ijclabcd,abdijl',tmp_rdm_2x3,self.h_chi)
+                energy_chi+= torch.einsum('ajklabcd,bcdjkl',tmp_rdm_2x3,self.h_chi)
 
                 #
                 # (0,-2) (1,-2)     x  s2     x k
                 # (0,-1) (1,-1)     s3 s1     l j
                 # (0,0)  (1,0)  <=> s0 x  <=> i x
-                tmp_rdm_3x2= rdm.rdm3x2_compressed(coord,state,env,compressed,\
-                    ctm_args=ctm_args,global_args=global_args) if compressed>0 else \
-                        rdm.rdm3x2(coord,state,env)
+                tmp_rdm_3x2= None
+                if compressed>0:
+                    tmp_rdm_3x2= rdm.rdm3x2_compressed(coord,state,env,compressed,\
+                        ctm_args=ctm_args,global_args=global_args) 
+                elif looped:
+                    tmp_rdm_3x2= rdm_mc.rdm3x2_loop(coord,state,env,\
+                        use_checkpoint=ctm_args.fwd_checkpoint_loop_rdm)
+                else:
+                    tmp_rdm_3x2= rdm.rdm3x2(coord,state,env)
                 energy_nn+= torch.einsum('ijklabcd,abcdijkl',tmp_rdm_3x2,self.h_nn_only)
                 energy_nnn+= torch.einsum('ibkdabcd,acik',tmp_rdm_3x2,self.SS)
                 energy_p+= torch.einsum('ijklabcd,abcdijkl',tmp_rdm_3x2,self.h_p)
+                energy_chi+= torch.einsum('ijclabcd,abdijl',tmp_rdm_3x2,self.h_chi)
+                energy_chi+= torch.einsum('ajklabcd,bcdjkl',tmp_rdm_3x2,self.h_chi)
 
                 # 
                 # (0,0) (1,0)     s0 s1                 s0 s1     i j
@@ -175,6 +194,10 @@ class J1J2J4():
                 energy_nn+= torch.einsum('ijklabcd,abcdijkl',tmp_rdm_2x2,self.h_nn_only)
                 energy_nnn+= torch.einsum('ibkdabcd,acik',tmp_rdm_2x2,self.SS)
                 energy_p+= torch.einsum('ijklabcd,abcdijkl',tmp_rdm_2x2,self.h_p)
+                #
+                # anti-clockwise, i.e. s0,s1,s3 and s1,s2,s3
+                energy_chi+= torch.einsum('ijclabcd,adbilj',tmp_rdm_2x2,self.h_chi)
+                energy_chi+= torch.einsum('ajklabcd,bdcjlk',tmp_rdm_2x2,self.h_chi)
 
             num_sites= len(state.sites)
             energy_per_site= self.j1*energy_nn/(4*num_sites) + self.j2*energy_nnn/num_sites \
@@ -190,14 +213,15 @@ class J1J2J4():
                 energy_nn+= torch.einsum('ijab,abij',self.SS,tmp_rdm_2x2_NNN_1n1)
         
             num_sites= len(state.sites)
-            energy_per_site= self.j1*energy_nn/num_sites + self.j2*energy_nnn/num_sites \
-                + self.j4*energy_p/num_sites
+            energy_per_site= self.j1*energy_nn/(4*num_sites) + self.j2*energy_nnn/num_sites \
+                    + self.j4*energy_p/num_sites + self.jchi*energy_chi/(2*num_sites)
         
         energy_per_site= _cast_to_real(energy_per_site)
 
         return energy_per_site
 
-    def energy_per_site_compressed(self,state,env,compressed=-1,ctm_args=cfg.ctm_args,global_args=cfg.global_args):
+    def energy_per_site_compressed(self,state,env,compressed=-1,looped=False,\
+        ctm_args=cfg.ctm_args,global_args=cfg.global_args):
         r"""
         :param state: wavefunction
         :param env: CTM environment
@@ -216,7 +240,8 @@ class J1J2J4():
         This version uses compressed 2x3 and 3x2 RDMs, :meth:`rdm.rdm2x3_compressed` 
         and :meth:`rdm.rdm3x2_compressed`.
         """
-        return self.energy_per_site(state,env,compressed=compressed,ctm_args=ctm_args,global_args=global_args)
+        return self.energy_per_site(state,env,compressed=compressed,looped=looped,\
+            ctm_args=ctm_args,global_args=global_args)
 
     def eval_obs(self,state,env):
         r"""
@@ -271,6 +296,41 @@ class J1J2J4():
         obs_values=[obs[label] for label in obs_labels]
         return obs_values, obs_labels
 
+    def eval_corrf_SS(self,coord,direction,state,env,dist):
+        r"""
+        :param coord: reference site
+        :type coord: tuple(int,int)
+        :param direction: 
+        :type direction: tuple(int,int)
+        :param state: wavefunction
+        :param env: CTM environment
+        :type state: IPEPS
+        :type env: ENV
+        :param dist: maximal distance of correlator
+        :type dist: int
+        :return: dictionary with full and spin-resolved spin-spin correlation functions
+        :rtype: dict(str: torch.Tensor)
+        
+        Evaluate spin-spin correlation functions :math:`\langle\mathbf{S}(r).\mathbf{S}(0)\rangle` 
+        up to r = ``dist`` in given direction. See :meth:`ctm.generic.corrf.corrf_1sO1sO`.
+        """
+        # function allowing for additional site-dependent conjugation of op
+        # r=0 is nearest-neighbour
+        def conjugate_op(op):
+            def _gen_op(r):
+                return op
+            return _gen_op
+
+        op_sx= 0.5*(self.obs_ops["sp"] + self.obs_ops["sm"])
+        op_isy= -0.5*(self.obs_ops["sp"] - self.obs_ops["sm"]) 
+
+        Sz0szR= corrf.corrf_1sO1sO(coord,direction,state,env, self.obs_ops["sz"], \
+            conjugate_op(self.obs_ops["sz"]), dist)
+        Sx0sxR= corrf.corrf_1sO1sO(coord,direction,state,env, op_sx, conjugate_op(op_sx), dist)
+        nSy0SyR= corrf.corrf_1sO1sO(coord,direction,state,env, op_isy, conjugate_op(op_isy), dist)
+
+        res= dict({"ss": Sz0szR+Sx0sxR-nSy0SyR, "szsz": Sz0szR, "sxsx": Sx0sxR, "sysy": -nSy0SyR})
+        return res
 
 class J1J2J4_1SITE(J1J2J4):
     def __init__(self, phys_dim=2, j1=1.0, j2=0, j4=0, jchi=0, global_args=cfg.global_args):
@@ -355,7 +415,6 @@ class J1J2J4_1SITE(J1J2J4):
         energy_nnn=0.
         energy_p=0.
         energy_chi=0.
-
         if abs(self.j2)>0 or abs(self.j4)>0 or abs(self.jchi)>0:
             for coord in state.sites.keys():
                 # B  C--A     x  s3 s2
@@ -478,7 +537,6 @@ class J1J2J4_1SITE(J1J2J4):
         return self.energy_1x3(state,env,compressed=compressed,looped=looped,\
             ctm_args=ctm_args,global_args=global_args)
 
-
     def eval_obs(self,state,env):
         r"""
         :param state: wavefunction
@@ -593,3 +651,50 @@ class J1J2J4_1SITE(J1J2J4):
         obs_labels += [f"SS2x2_NNN_1n1{coord}" for coord in state.sites.keys()]
         obs_values=[obs[label] for label in obs_labels]
         return obs_values, obs_labels
+
+    def eval_corrf_SS(self,coord,direction,state,env,dist):
+        r"""
+        :param coord: reference site
+        :type coord: tuple(int,int)
+        :param direction: 
+        :type direction: tuple(int,int)
+        :param state: wavefunction
+        :param env: CTM environment
+        :type state: IPEPS
+        :type env: ENV
+        :param dist: maximal distance of correlator
+        :type dist: int
+        :return: dictionary with full and spin-resolved spin-spin correlation functions
+        :rtype: dict(str: torch.Tensor)
+        
+        Evaluate spin-spin correlation functions :math:`\langle\mathbf{S}(r).\mathbf{S}(0)\rangle` 
+        up to r = ``dist`` in given direction. See :meth:`ctm.generic.corrf.corrf_1sO1sO`.
+        """
+        # function allowing for additional site-dependent conjugation of op
+        # r=0 is nearest-neighbour
+        def conjugate_op(op):
+            op_0= op
+            op_rot= torch.einsum('ki,kj->ij', self.R, op_0 @ self.R)
+            op_rot2= torch.einsum('ki,kj->ij', self.R, op_rot @ self.R)
+            if direction in [(1,0), (0,-1)]:
+                r_to_op= {0: op_rot, 1: op_rot2, 2: op_0}
+            elif direction in [(-1,0), (0,1)]:
+                r_to_op= {0: op_rot2, 1: op_rot, 2: op_0}
+            else:
+                raise RuntimeError("Invalid direction "+str(direction))
+            def _gen_op(r):
+                return r_to_op[abs(r%3)]
+            return _gen_op
+
+        op_sx= 0.5*(self.obs_ops["sp"] + self.obs_ops["sm"])
+        op_isy= -0.5*(self.obs_ops["sp"] - self.obs_ops["sm"]) 
+
+        Sz0szR= corrf.corrf_1sO1sO(coord,direction,state,env, self.obs_ops["sz"], \
+            conjugate_op(self.obs_ops["sz"]), dist)
+        Sx0sxR= corrf.corrf_1sO1sO(coord,direction,state,env, op_sx, conjugate_op(op_sx), dist)
+        nSy0SyR= corrf.corrf_1sO1sO(coord,direction,state,env, op_isy, conjugate_op(op_isy), dist)
+
+        Sz0szR, Sx0sxR, nSy0SyR= _cast_to_real(Sz0szR), _cast_to_real(Sx0sxR), _cast_to_real(nSy0SyR)
+
+        res= dict({"ss": Sz0szR+Sx0sxR-nSy0SyR, "szsz": Sz0szR, "sxsx": Sx0sxR, "sysy": -nSy0SyR})
+        return res

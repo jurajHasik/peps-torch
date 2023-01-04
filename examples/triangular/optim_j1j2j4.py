@@ -136,12 +136,10 @@ def main():
     
     # 2) select the "energy" function 
     if args.tiling == "1SITE":
-        energy_f=energy_f=model.energy_1x3 if not args.compressed_rdms else \
-            model.energy_1x3_compressed
+        energy_f=energy_f=model.energy_1x3
         eval_obs_f= model.eval_obs
     elif args.tiling in ["1SITE_NOROT", "2SITE", "2SITE_Y", "3SITE", "4SITE"]:
-        energy_f=model.energy_per_site if not args.compressed_rdms else \
-            model.energy_per_site_compressed
+        energy_f=model.energy_per_site
         eval_obs_f= model.eval_obs
     else:
         raise ValueError("Invalid tiling: "+str(args.tiling)+" Supported options: "\
