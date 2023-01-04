@@ -5,6 +5,7 @@ import config as cfg
 from ctm.generic.env import ENV
 from ctm.generic.ctm_components import c2x2_LU, c2x2_LD, c2x2_RU, c2x2_RD
 from ctm.generic.ctm_projectors import ctm_get_projectors_from_matrices
+import ctm.generic.corrf as corrf
 from tn_interface import contract, einsum
 from tn_interface import contiguous, view, permute
 from tn_interface import conj
@@ -1081,8 +1082,8 @@ def rdm2x3(coord, state, env, sym_pos_def=False, verbosity=0):
     # |     ->3,4    ->1,2
     # |/23->4,5   /->2,3  0,1->5,6
     # C2x2_LD-----1->1 2--T[coord+(1,0),(0,1)]--3->7
-    C2X2_LU= C2X2_LU.view([C2X2_LU.size(0)]+[T_10.size(2)]+[state.site((0,0)).size(4)]*2\
-        +[state.site((0,0)).size(0)]*2)
+    C2X2_LU= C2X2_LU.view([C2X2_LU.size(0)]+[T_10.size(2)]+[state.site(coord).size(4)]*2\
+        +[state.site(coord).size(0)]*2)
     C2X2_LU= torch.tensordot(C2X2_LU, T_10, ([1],[2]))
 
     #               ->7
@@ -1776,6 +1777,24 @@ def rdm3x2_compressed(coord,state,env,compressed_chi=None,sym_pos_def=False,\
 
 
 # ----- auxiliary rdms -----
+def norm_C4(coord,state,env):
+    #
+    # C[coord,(-1,-1)]-----------1 1(0)--C[coord+(-1,0),(1,-1)]
+    # 0                                  2(1)
+    # 0                                  2(0)
+    # C[coord+(0,-1),(-1,1)]--(1)3 3(1)--C[coord+(-1,-1),(1,1)]
+    #
+    norm= torch.einsum(env.C[coord,(-1,-1)],[0,1],\
+        env.C[state.vertexToSite((coord[0]-1,coord[1])),(1,-1)],[1,2],\
+        env.C[state.vertexToSite((coord[0]-1,coord[1]-1)),(1,1)],[2,3],\
+        env.C[state.vertexToSite((coord[0],coord[1]-1)),(-1,1)],[0,3])
+    return norm
+
+def norm_3x3(coord,state,env,verbosity=0):
+    E= corrf.get_edge(coord, (-1,0), state, env, verbosity=verbosity)
+    E= corrf.apply_TM_1sO(coord, (0,1), state, env, E, op=None, verbosity=verbosity)
+    E= corrf.apply_edge(coord, (0,1), state, env, E, verbosity=verbosity)
+    return E
 
 def _CTCT_LD(coord,state,env):
     C1, C2, C3, C4, T1, T2, T3, T4= env.get_site_env_t(coord,state)

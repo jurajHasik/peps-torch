@@ -344,6 +344,7 @@ class CTMARGS():
         self.fwd_checkpoint_projectors = False
         self.fwd_checkpoint_absorb = False
         self.fwd_checkpoint_move = False
+        self.fwd_checkpoint_loop_rdm = False
 
     def __str__(self):
         res=type(self).__name__+"\n"
