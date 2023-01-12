@@ -23,7 +23,7 @@ parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour
 parser.add_argument("--j4", type=float, default=0., help="plaquette coupling")
 parser.add_argument("--jchi", type=float, default=0., help="scalar chirality")
 parser.add_argument("--tiling", default="3SITE", help="tiling of the lattice", \
-    choices=["1SITE", "1SITE_NOROT", "2SITE", "2SITE_Y", "3SITE", "4SITE"])
+    choices=["1SITE", "1SITE_NOROT", "2SITE", "2SITE_Y", "3SITE", "4SITE", "4SITE_T"])
 parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
@@ -74,9 +74,15 @@ def main():
             vx = coord[0] % 2
             vy = ( coord[1] + ((coord[0]%4)//2) ) % 2
             return (vx, vy)
+    elif args.tiling=="4SITE_T":
+        model= spin_triangular.J1J2J4(j1=args.j1, j2=args.j2, j4=args.j4, jchi=args.jchi)
+        def lattice_to_site(coord):
+            vx = coord[0] % 2
+            vy = coord[1] % 2
+            return (vx, vy)
     else:
         raise ValueError("Invalid tiling: "+str(args.tiling)+" Supported options: "\
-            +"1SITE, 2SITE, 3SITE, 4SITE")
+            +"1SITE, 2SITE, 3SITE, 4SITE, 4SITE_T")
 
     if args.instate!=None:
         state = read_ipeps(args.instate, vertexToSite=lattice_to_site)
@@ -93,6 +99,8 @@ def main():
             state= IPEPS(dict(), vertexToSite=lattice_to_site, lX=1, lY=2)
         elif args.tiling == "3SITE":
             state= IPEPS(dict(), vertexToSite=lattice_to_site, lX=3, lY=3)
+        elif args.tiling == "4SITE_T":
+            state= IPEPS(dict(), vertexToSite=lattice_to_site, lX=2, lY=2)
         elif args.tiling == "4SITE":
             state= IPEPS(dict(), vertexToSite=lattice_to_site, lX=4, lY=2)
         state.load_checkpoint(args.opt_resume)
@@ -103,24 +111,25 @@ def main():
             dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)-0.5
         sites[(0,0)]= A/torch.max(torch.abs(A))
         state = IPEPS(sites, lX=1, lY=1)
-        if args.tiling in ["2SITE","2SITE_Y","3SITE","4SITE"]:     
+        if args.tiling in ["2SITE","2SITE_Y","3SITE","4SITE","4SITE_T"]:     
             B = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
                 dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)-0.5
             sites[ (0,1) if args.tiling=="2SITE_Y" else (1,0) ]= B/torch.max(torch.abs(B))
             lX_lY= dict(lX= 1, lY= 2) if args.tiling=="2SITE_Y" else dict(lX= 2, lY= 1)
             state = IPEPS(sites, vertexToSite=lattice_to_site, **lX_lY)
-        if args.tiling in ["3SITE","4SITE"]: 
+        if args.tiling in ["3SITE","4SITE","4SITE_T"]: 
             C = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
                 dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)-0.5
             sites[(2,0)]= C/torch.max(torch.abs(C))
             state = IPEPS(sites, vertexToSite=lattice_to_site, lX=3, lY=3)
-        if args.tiling in ["4SITE"]:     
+        if args.tiling in ["4SITE","4SITE_T"]:     
             D = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
                 dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)-0.5
             del sites[(2,0)]
             sites[(0,1)]= C/torch.max(torch.abs(C))
             sites[(1,1)]= D/torch.max(torch.abs(D))
-            state = IPEPS(sites, vertexToSite=lattice_to_site, lX=4, lY=2)
+            lX_lY= dict(lX= 4, lY= 2) if args.tiling=="4SITE" else dict(lX= 2, lY= 2)
+            state = IPEPS(sites, vertexToSite=lattice_to_site, **lX_lY)
     else:
         raise ValueError("Missing trial state: -instate=None and -ipeps_init_type= "\
             +str(args.ipeps_init_type)+" is not supported")
@@ -138,7 +147,7 @@ def main():
     if args.tiling == "1SITE":
         energy_f=energy_f=model.energy_1x3
         eval_obs_f= model.eval_obs
-    elif args.tiling in ["1SITE_NOROT", "2SITE", "2SITE_Y", "3SITE", "4SITE"]:
+    elif args.tiling in ["1SITE_NOROT", "2SITE", "2SITE_Y", "3SITE", "4SITE","4SITE_T"]:
         energy_f=model.energy_per_site
         eval_obs_f= model.eval_obs
     else:

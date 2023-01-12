@@ -21,6 +21,7 @@ parser= cfg.get_args_parser()
 parser.add_argument("--j1", type=float, default=1., help="nearest-neighbour coupling")
 parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour coupling")
 parser.add_argument("--j4", type=float, default=0., help="plaquette coupling")
+parser.add_argument("--jchi", type=float, default=0., help="scalar chirality")
 parser.add_argument("--tiling", default="3SITE", help="tiling of the lattice", \
     choices=["1SITE", "1SITE_NOROT", "1STRIV", "1SPG", "2SITE", "3SITE", "4SITE"])
 parser.add_argument("--corrf_r", type=int, default=1, help="maximal correlation function distance")
@@ -45,32 +46,38 @@ def main():
     # 1) define lattice-tiling function, that maps arbitrary vertex of square lattice
     # coord into one of coordinates within unit-cell of iPEPS ansatz    
     if args.tiling in ["1SITE", "1STRIV", "1SPG"]:
-        model= spin_triangular.J1J2J4_1SITE(j1=args.j1, j2=args.j2, j4=args.j4)
+        model= spin_triangular.J1J2J4_1SITE(j1=args.j1, j2=args.j2, j4=args.j4, jchi=args.jchi)
         lattice_to_site=None
     elif args.tiling in ["1SITE_NOROT"]:
-        model= spin_triangular.J1J2J4(j1=args.j1, j2=args.j2, j4=args.j4)
+        model= spin_triangular.J1J2J4(j1=args.j1, j2=args.j2, j4=args.j4, jchi=args.jchi)
         lattice_to_site=None
     elif args.tiling == "2SITE":
-        model= spin_triangular.J1J2J4(j1=args.j1, j2=args.j2, j4=args.j4)
+        model= spin_triangular.J1J2J4(j1=args.j1, j2=args.j2, j4=args.j4, jchi=args.jchi)
         def lattice_to_site(coord):
             vx = coord[0] % 2
             vy = coord[1]
             return (vx, 0)
     elif args.tiling == "3SITE":
-        model= spin_triangular.J1J2J4(j1=args.j1, j2=args.j2, j4=args.j4)
+        model= spin_triangular.J1J2J4(j1=args.j1, j2=args.j2, j4=args.j4, jchi=args.jchi)
         def lattice_to_site(coord):
             vx = coord[0] % 3
             vy = coord[1]
             return ((vx - vy) % 3, 0)
-    elif args.tiling == "4SITE":
-        model= spin_triangular.J1J2J4(j1=args.j1, j2=args.j2, j4=args.j4)
-        def lattice_to_site(coord):
-            vx = coord[0] % 2
-            vy = ( coord[1] + ((coord[0]%4)//2) ) % 2
-            return (vx, vy)
+    elif args.tiling in ["4SITE", "4SITE_T"]:
+        model= spin_triangular.J1J2J4(j1=args.j1, j2=args.j2, j4=args.j4, jchi=args.jchi)
+        if args.tiling=="4SITE":
+            def lattice_to_site(coord):
+                vx = coord[0] % 2
+                vy = ( coord[1] + ((coord[0]%4)//2) ) % 2
+                return (vx, vy)
+        elif args.tiling=="4SITE_T":
+            def lattice_to_site(coord):
+                vx = coord[0] % 2
+                vy = coord[1] % 2
+                return (vx, vy)
     else:
         raise ValueError("Invalid tiling: "+str(args.tiling)+" Supported options: "\
-            +"1SITE, 2SITE, 3SITE, 4SITE")
+            +"1SITE, 2SITE, 3SITE, 4SITE, 4SITE_T")
 
     if args.instate!=None:
         if args.tiling in ["1STRIV"]:
@@ -119,12 +126,12 @@ def main():
     if args.tiling in ["1SITE", "1STRIV", "1SPG"]:
         energy_f=model.energy_1x3
         eval_obs_f= model.eval_obs
-    elif args.tiling in ["1SITE_NOROT", "2SITE", "3SITE", "4SITE"]:
+    elif args.tiling in ["1SITE_NOROT", "2SITE", "3SITE", "4SITE", "4SITE_T"]:
         energy_f=model.energy_per_site
         eval_obs_f= model.eval_obs
     else:
         raise ValueError("Invalid tiling: "+str(args.tiling)+" Supported options: "\
-            +"1SITE, 2SITE, 3SITE, 4SITE")
+            +"1SITE, 2SITE, 3SITE, 4SITE, 4SITE_T")
 
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
@@ -154,7 +161,7 @@ def main():
     ctm_env_init = ENV(args.chi, state)
     init_env(state, ctm_env_init)
     print(ctm_env_init)
-    
+
     
     loss0= energy_f(state, ctm_env_init, compressed=args.compressed_rdms)
     obs_values, obs_labels = eval_obs_f(state,ctm_env_init)
@@ -179,6 +186,14 @@ def main():
     #     print(f"spectrum C[{c_loc}]")
     #     for i in range(args.chi):
     #         print(f"{i} {s[i]}")
+
+    # chirality
+    obs= model.eval_obs_chirality(state, ctm_env_init, compressed=args.compressed_rdms,\
+        looped=args.loop_rdms)
+    print("\n\n")
+    for label,val in obs.items():
+        print(f"{label} {val}")
+
 
     # ----- S(0).S(r) -----
     site_dir_list=[((0,0), (1,0)),((0,0), (0,1))]

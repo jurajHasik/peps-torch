@@ -652,6 +652,114 @@ class J1J2J4_1SITE(J1J2J4):
         obs_values=[obs[label] for label in obs_labels]
         return obs_values, obs_labels
 
+    def eval_obs_chirality(self,state,env,compressed=-1,looped=False,\
+        ctm_args=cfg.ctm_args,global_args=cfg.global_args):
+        r"""
+        :param state: wavefunction
+        :param env: CTM environment
+        :type state: IPEPS
+        :type env: ENV
+        :param ctm_args: CTM algorithm configuration
+        :param global_args: global configuration
+        :type ctm_args: CTMARGS
+        :type global_args: GLOBALARGS
+        :return: energy per site
+        :rtype: float
+
+        We assume 1x3 iPEPS which tiles the lattice with a tri-partite pattern composed 
+        of three tensors A, B, and C::
+            
+            A--B--C--A--B--C
+            | /| /| /| /| /|
+            C--A--B--C--A--B
+            | /| /| /| /| /|
+            B--C--A--B--C--A
+            | /| /| /| /| /|
+            A--B--C--A--B--C
+
+        The tensors B and C are obtained from tensor A by applying a unitary R on 
+        the physical index as
+
+        .. math: 
+
+            B^s = R^{ss'}A^{s'}
+            C^s = (R^2)^{ss'}A^{s'}
+
+        where the unitary R is a rotation around spin y-axis by :math:`2\pi/3`, i.e.
+        :math:`R = exp(-i\frac{2\pi}{3}\sigma^y)`.
+
+        For example, the NN of site A are only sites B and C.
+        The evaluation of all NN terms requires two NN-RDMs and one NNN-RDM per site::
+        
+            A            B C
+            |             /
+            C, A--B, and A B   
+
+        For NNN terms, there are again 3 non-equivalent terms, which can be accounted for 
+        by one NNN-RDM and two NNNN-RDMs::
+
+                              C   A
+                                 /
+            A B  B  C _A      B / C
+             \    _ -          /
+            C A, A  B  C, and A   B
+
+        TODO plaquette
+        """
+        obs=dict()
+        for coord in state.sites.keys():
+            # B  C--A     x  s3 s2
+            # A--B  C <=> s0 s1 x
+            tmp_rdm_2x3= None
+            if compressed>0:
+                tmp_rdm_2x3= rdm.rdm2x3_compressed(coord,state,env,compressed,\
+                    ctm_args=ctm_args,global_args=global_args) 
+            elif looped:
+                tmp_rdm_2x3= rdm_mc.rdm2x3_loop(coord,state,env,\
+                    use_checkpoint=ctm_args.fwd_checkpoint_loop_rdm)
+            else:
+                tmp_rdm_2x3= rdm.rdm2x3(coord,state,env)
+            tmp_rdm_2x3= torch.einsum(tmp_rdm_2x3,[0,10,4,12,1,11,5,13],\
+                self.R, [2,10], self.R, [3,11],\
+                self.R@self.R, [6,12], self.R@self.R, [7,13], [0,2,4,6,1,3,5,7])
+            #
+            # anti-clockwise, i.e. s0,s1,s3 and s1,s2,s3
+            obs[f'2x3_013_{coord}']= torch.einsum('ijclabcd,abdijl',tmp_rdm_2x3,self.h_chi)
+            obs[f'2x3_123_{coord}']= torch.einsum('ajklabcd,bcdjkl',tmp_rdm_2x3,self.h_chi)
+
+            #
+            # C A     x  s2     x k
+            # B C     s3 s1     l j
+            # A B <=> s0 x  <=> i x
+            tmp_rdm_3x2= None
+            if compressed>0:
+                tmp_rdm_3x2= rdm.rdm3x2_compressed(coord,state,env,compressed,\
+                    ctm_args=ctm_args,global_args=global_args) 
+            elif looped:
+                tmp_rdm_3x2= rdm_mc.rdm3x2_loop(coord,state,env,\
+                    use_checkpoint=ctm_args.fwd_checkpoint_loop_rdm)
+            else:
+                tmp_rdm_3x2= rdm.rdm3x2(coord,state,env)
+            tmp_rdm_3x2= torch.einsum(tmp_rdm_3x2,[0,10,4,12,1,11,5,13],\
+                self.R@self.R, [2,10], self.R@self.R, [3,11],\
+                self.R, [6,12], self.R, [7,13], [0,2,4,6,1,3,5,7])
+            obs[f'3x2_013_{coord}']= torch.einsum('ijclabcd,abdijl',tmp_rdm_3x2,self.h_chi)
+            obs[f'3x2_123_{coord}']= torch.einsum('ajklabcd,bcdjkl',tmp_rdm_3x2,self.h_chi)
+
+            # 
+            # A B     s0 s1                 s0 s1     i j
+            # C A <=> s2 s3 => (permute) => s3 s2 <=> l k
+            tmp_rdm_2x2= rdm.rdm2x2(coord,state,env).permute(0,1,3,2, 4,5,7,6).contiguous()
+            tmp_rdm_2x2= torch.einsum(tmp_rdm_2x2,[0,10,4,12,1,11,5,13],\
+                self.R, [2,10], self.R, [3,11],\
+                self.R@self.R, [6,12], self.R@self.R, [7,13], [0,2,4,6,1,3,5,7])
+            #
+            # anti-clockwise, i.e. s0,s1,s3 and s1,s2,s3
+            obs[f'2x2_013_{coord}']= torch.einsum('ijclabcd,adbilj',tmp_rdm_2x2,self.h_chi)
+            obs[f'2x2_123_{coord}']= torch.einsum('ajklabcd,bdcjlk',tmp_rdm_2x2,self.h_chi)
+
+        return obs
+
     def eval_corrf_SS(self,coord,direction,state,env,dist):
         r"""
         :param coord: reference site
