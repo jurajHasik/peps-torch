@@ -167,6 +167,7 @@ class J1J2J4():
                 # anti-clockwise, i.e. s0,s1,s3 and s1,s2,s3
                 energy_chi+= torch.einsum('ijclabcd,abdijl',tmp_rdm_2x3,self.h_chi)
                 energy_chi+= torch.einsum('ajklabcd,bcdjkl',tmp_rdm_2x3,self.h_chi)
+                
 
                 #
                 # (0,-2) (1,-2)     x  s2     x k
@@ -201,7 +202,7 @@ class J1J2J4():
 
             num_sites= len(state.sites)
             energy_per_site= self.j1*energy_nn/(4*num_sites) + self.j2*energy_nnn/num_sites \
-                + self.j4*energy_p/num_sites
+                + self.j4*energy_p/num_sites + self.jchi*energy_chi/(2*num_sites)
             
         else:
             for coord in state.sites.keys():
@@ -411,6 +412,17 @@ class J1J2J4_1SITE(J1J2J4):
 
         TODO plaquette
         """
+        id2= torch.eye(self.phys_dim**2,dtype=self.dtype,device=self.device)
+        id2= id2.view([self.phys_dim]*4).contiguous()
+        SSId= torch.einsum('ijab,klcd->ijklabcd',self.SS,id2) 
+        nn_terms=[]
+        def _get_nn_terms(_rdm):
+            nn_terms.append( torch.einsum('ijklabcd,abcdijkl',_rdm,SSId) ) # 01
+            nn_terms.append( torch.einsum('ijklabcd,cdabklij',_rdm,SSId) ) # 23
+            nn_terms.append( torch.einsum('ijklabcd,bcadjkil',_rdm,SSId) ) # 12
+            nn_terms.append( torch.einsum('ijklabcd,adbciljk',_rdm,SSId) ) # 03
+            nn_terms.append( torch.einsum('ijklabcd,bdacjlik',_rdm,SSId) ) # 13
+
         energy_nn=0.
         energy_nnn=0.
         energy_p=0.
@@ -480,6 +492,8 @@ class J1J2J4_1SITE(J1J2J4):
                 # the ratio between #nn (the number of) and #nn(diag) is 2:1
                 energy_per_site= self.j1*energy_nn/(4*num_sites) + self.j2*energy_nnn/num_sites \
                     + self.j4*energy_p/num_sites + self.jchi*energy_chi/(2*num_sites)
+
+                import pdb; pdb.set_trace()
         else:
             for coord in state.sites.keys():
                 #
@@ -563,6 +577,10 @@ class J1J2J4_1SITE(J1J2J4):
         obs= dict({"avg_m": 0.})
         with torch.no_grad():
             # single-site
+            #
+            # magnetization vector <\vec{S}> for B, and C sublattice is obtained simply
+            # by applying appropriate rotation, i.e. <\vec{S}>_B= R <\vec{S}>_A
+            #                                        <\vec{S}>_C= R^2 <\vec{S}>_A   
             for coord,site in state.sites.items():
                 rdm1x1 = rdm.rdm1x1(coord,state,env)
                 for label,op in self.obs_ops.items():

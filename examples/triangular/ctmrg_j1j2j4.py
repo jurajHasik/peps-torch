@@ -188,12 +188,11 @@ def main():
     #         print(f"{i} {s[i]}")
 
     # chirality
-    obs= model.eval_obs_chirality(state, ctm_env_init, compressed=args.compressed_rdms,\
-        looped=args.loop_rdms)
-    print("\n\n")
-    for label,val in obs.items():
-        print(f"{label} {val}")
-
+    # obs= model.eval_obs_chirality(state, ctm_env_init, compressed=args.compressed_rdms,\
+    #     looped=args.loop_rdms)
+    # print("\n\n")
+    # for label,val in obs.items():
+    #     print(f"{label} {val}")
 
     # ----- S(0).S(r) -----
     site_dir_list=[((0,0), (1,0)),((0,0), (0,1))]
