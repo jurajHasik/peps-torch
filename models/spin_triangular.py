@@ -412,17 +412,6 @@ class J1J2J4_1SITE(J1J2J4):
 
         TODO plaquette
         """
-        id2= torch.eye(self.phys_dim**2,dtype=self.dtype,device=self.device)
-        id2= id2.view([self.phys_dim]*4).contiguous()
-        SSId= torch.einsum('ijab,klcd->ijklabcd',self.SS,id2) 
-        nn_terms=[]
-        def _get_nn_terms(_rdm):
-            nn_terms.append( torch.einsum('ijklabcd,abcdijkl',_rdm,SSId) ) # 01
-            nn_terms.append( torch.einsum('ijklabcd,cdabklij',_rdm,SSId) ) # 23
-            nn_terms.append( torch.einsum('ijklabcd,bcadjkil',_rdm,SSId) ) # 12
-            nn_terms.append( torch.einsum('ijklabcd,adbciljk',_rdm,SSId) ) # 03
-            nn_terms.append( torch.einsum('ijklabcd,bdacjlik',_rdm,SSId) ) # 13
-
         energy_nn=0.
         energy_nnn=0.
         energy_p=0.
@@ -492,8 +481,6 @@ class J1J2J4_1SITE(J1J2J4):
                 # the ratio between #nn (the number of) and #nn(diag) is 2:1
                 energy_per_site= self.j1*energy_nn/(4*num_sites) + self.j2*energy_nnn/num_sites \
                     + self.j4*energy_p/num_sites + self.jchi*energy_chi/(2*num_sites)
-
-                import pdb; pdb.set_trace()
         else:
             for coord in state.sites.keys():
                 #
@@ -778,7 +765,7 @@ class J1J2J4_1SITE(J1J2J4):
 
         return obs
 
-    def eval_corrf_SS(self,coord,direction,state,env,dist):
+    def eval_corrf_SS(self,coord,direction,state,env,dist,canonical=False,conj_s=True,rl_0=None):
         r"""
         :param coord: reference site
         :type coord: tuple(int,int)
@@ -790,13 +777,50 @@ class J1J2J4_1SITE(J1J2J4):
         :type env: ENV
         :param dist: maximal distance of correlator
         :type dist: int
+        :param canonical: decompose correlations wrt. to vector of spontaneous magnetization
+                          into longitudinal and transverse parts
+        :type canonical: bool 
+        :param rl_0: right and left edges of the two-point function network. These
+                 are expected to be rank-3 tensor compatible with transfer operator indices.
+                 Typically provided by leading eigenvectors of transfer matrix.
+        :type rl_0: tuple(function(tuple(int,int))->torch.Tensor, function(tuple(int,int))->torch.Tensor)
+        :param conj_s: apply spin-rotation to spin operators to obtain corresponding 120deg corr. functions
+        :type conj: bool 
         :return: dictionary with full and spin-resolved spin-spin correlation functions
         :rtype: dict(str: torch.Tensor)
         
         Evaluate spin-spin correlation functions :math:`\langle\mathbf{S}(r).\mathbf{S}(0)\rangle` 
         up to r = ``dist`` in given direction. See :meth:`ctm.generic.corrf.corrf_1sO1sO`.
         """
-        # function allowing for additional site-dependent conjugation of op
+        s2 = su2.SU2(self.phys_dim, dtype=self.dtype, device=self.device)
+        s3 = su2.SU2(self.phys_dim+1, dtype=self.dtype, device=self.device)
+        S_zxiy= s2.S().real
+        # pass to real, i.e. iS^y= 0.5(S^+ - S^-)
+        S_zxiy[2,:,:]= 0.5*(s2.SP()-s2.SM())
+
+        # compute vector of spontaneous magnetization
+        if canonical:
+            Sexp_zxiy= None
+            if rl_0 is None:
+                rdm1x1 = rdm.rdm1x1(coord,state,env)
+                Sexp_zxiy= torch.einsum('ij,aji->a',rdm1x1,S_zxiy)
+            else:
+                _tmp= self.eval_corrf_SId(coord,direction,state,env,0,rl_0=rl_0)
+                Sexp_zxiy= torch.as_tensor([_tmp['sz'], _tmp['sx'], _tmp['isy']],\
+                    dtype=self.dtype, device=self.device)
+
+            Sexp_zxiy= Sexp_zxiy/torch.norm(Sexp_zxiy)
+            # 1) build rotation matrix
+            SR= s3.I()
+            SR[:2,:2]= Sexp_zxiy[0]*s2.I() + Sexp_zxiy[1]*(2*S_zxiy[2,:,:])
+
+            # 2) rotate the vector of operators
+            S_zxiy= torch.einsum('ab,bij->aij',SR,S_zxiy)
+
+            rdm1x1 = rdm.rdm1x1(coord,state,env)
+            Sexp_zxiy= torch.einsum('ij,aji->a',rdm1x1,S_zxiy)
+
+        # function allowing for additional site-dependent conjugation of op.
         # r=0 is nearest-neighbour
         def conjugate_op(op):
             op_0= op
@@ -809,18 +833,56 @@ class J1J2J4_1SITE(J1J2J4):
             else:
                 raise RuntimeError("Invalid direction "+str(direction))
             def _gen_op(r):
-                return r_to_op[abs(r%3)]
+                return r_to_op[abs(r%3)] if conj_s else op_0
             return _gen_op
 
-        op_sx= 0.5*(self.obs_ops["sp"] + self.obs_ops["sm"])
-        op_isy= -0.5*(self.obs_ops["sp"] - self.obs_ops["sm"]) 
-
-        Sz0szR= corrf.corrf_1sO1sO(coord,direction,state,env, self.obs_ops["sz"], \
-            conjugate_op(self.obs_ops["sz"]), dist)
-        Sx0sxR= corrf.corrf_1sO1sO(coord,direction,state,env, op_sx, conjugate_op(op_sx), dist)
-        nSy0SyR= corrf.corrf_1sO1sO(coord,direction,state,env, op_isy, conjugate_op(op_isy), dist)
+        Sz0szR= corrf.corrf_1sO1sO(coord,direction,state,env, S_zxiy[0,:,:], \
+            conjugate_op(S_zxiy[0,:,:]), dist, rl_0=rl_0)
+        Sx0sxR= corrf.corrf_1sO1sO(coord,direction,state,env, S_zxiy[1,:,:], conjugate_op(S_zxiy[1,:,:]), dist,  rl_0=rl_0)
+        nSy0SyR= corrf.corrf_1sO1sO(coord,direction,state,env, S_zxiy[2,:,:], conjugate_op(S_zxiy[2,:,:]), dist,  rl_0=rl_0)
 
         Sz0szR, Sx0sxR, nSy0SyR= _cast_to_real(Sz0szR), _cast_to_real(Sx0sxR), _cast_to_real(nSy0SyR)
 
         res= dict({"ss": Sz0szR+Sx0sxR-nSy0SyR, "szsz": Sz0szR, "sxsx": Sx0sxR, "sysy": -nSy0SyR})
+        return res
+
+    def eval_corrf_SId(self,coord,direction,state,env,dist,rl_0=None):
+        r"""
+        :param coord: reference site
+        :type coord: tuple(int,int)
+        :param direction: 
+        :type direction: tuple(int,int)
+        :param state: wavefunction
+        :param env: CTM environment
+        :type state: IPEPS
+        :type env: ENV
+        :param dist: maximal distance of correlator
+        :type dist: int
+        :param rl_0: right and left edges of the two-point function network. These
+                 are expected to be rank-3 tensor compatible with transfer operator indices.
+                 Typically provided by leading eigenvectors of transfer matrix.
+        :type rl_0: tuple(function(tuple(int,int))->torch.Tensor, function(tuple(int,int))->torch.Tensor)
+        :return: dictionary with full and spin-resolved spin-spin correlation functions
+        :rtype: dict(str: torch.Tensor)
+        
+        Evaluate spin-spin correlation functions :math:`\langle\mathbf{S}(r).\mathbf{S}(0)\rangle` 
+        up to r = ``dist`` in given direction. See :meth:`ctm.generic.corrf.corrf_1sO1sO`.
+        """
+        # function allowing for additional site-dependent conjugation of op
+        # r=0 is nearest-neighbour
+        id1= torch.eye(self.phys_dim,dtype=self.dtype,device=self.device)
+        def _gen_op(r):
+            return id1
+
+        op_sx= 0.5*(self.obs_ops["sp"] + self.obs_ops["sm"])
+        op_isy= 0.5*(self.obs_ops["sp"] - self.obs_ops["sm"]) 
+
+        Sz0IdR= corrf.corrf_1sO1sO(coord,direction,state,env, self.obs_ops["sz"], \
+            _gen_op, dist, rl_0=rl_0)
+        Sx0IdR= corrf.corrf_1sO1sO(coord,direction,state,env, op_sx, _gen_op, dist, rl_0=rl_0)
+        iSy0IdR= corrf.corrf_1sO1sO(coord,direction,state,env, op_isy, _gen_op, dist, rl_0=rl_0)
+
+        Sz0IdR, Sx0IdR, iSy0IdR= _cast_to_real(Sz0IdR), _cast_to_real(Sx0IdR), _cast_to_real(iSy0IdR)
+
+        res= dict({"sz": Sz0IdR, "sx": Sx0IdR, "isy": iSy0IdR})
         return res

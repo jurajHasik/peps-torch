@@ -84,7 +84,7 @@ def get_Top_w0_spec(n, coord, direction, state, env, verbosity=0):
 
     return L
 
-def get_Top_spec(n, coord, direction, state, env, verbosity=0):
+def get_Top_spec(n, coord, direction, state, env, eigenvectors=False, verbosity=0):
     r"""
     :param n: number of leading eigenvalues of a transfer operator to compute
     :type n: int
@@ -97,6 +97,8 @@ def get_Top_spec(n, coord, direction, state, env, verbosity=0):
     :type state: IPEPS
     :param env: corresponding environment
     :type env: ENV_C4V
+    :param eigenvectors: compute eigenvectors
+    :type eigenvectors: bool
     :return: leading n-eigenvalues, returned as `n x 2` tensor with first and second column
              encoding real and imaginary part respectively.
     :rtype: torch.Tensor   
@@ -150,19 +152,24 @@ def get_Top_spec(n, coord, direction, state, env, verbosity=0):
     _test_T= torch.zeros(1,dtype=env.dtype)
     T= LinearOperator((chi*ad*ad*chi,chi*ad*ad*chi), matvec=_mv, \
         dtype="complex128" if _test_T.is_complex() else "float64")
-    vals= eigs(T, k=n, v0=None, return_eigenvectors=False)
+    if eigenvectors:
+        vals, vecs= eigs(T, k=n, v0=None, return_eigenvectors=True)
+    else:
+        vals= eigs(T, k=n, v0=None, return_eigenvectors=False)
 
     # post-process and return as torch tensor with first and second column
     # containing real and imaginary parts respectively
     # sort by abs value in ascending order, then reverse order to descending
-    ind_sorted= np.argsort(np.abs(vals))
-    vals= vals[ ind_sorted[::-1] ]
+    ind_sorted= np.argsort(np.abs(vals))[::-1]
+    vals= vals[ ind_sorted ]
     # vals= np.copy(vals[::-1]) # descending order
     vals= (1.0/np.abs(vals[0])) * vals
     L= torch.zeros((n,2), dtype=torch.float64, device=state.device)
     L[:,0]= torch.as_tensor(np.real(vals))
     L[:,1]= torch.as_tensor(np.imag(vals))
 
+    if eigenvectors:
+        return L, torch.as_tensor(vecs[:,ind_sorted], device=state.device)
     return L
 
 def get_EH_spec_Ttensor(n, L, coord, direction, state, env, verbosity=0):

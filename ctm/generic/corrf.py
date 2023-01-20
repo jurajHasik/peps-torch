@@ -977,7 +977,7 @@ def apply_TM_2sO_1sChannel(coord, direction, state, env, edge, op=None, verbosit
 
     return E
 
-def corrf_1sO1sO(coord, direction, state, env, op1, get_op2, dist, verbosity=0):
+def corrf_1sO1sO(coord, direction, state, env, op1, get_op2, dist, rl_0=None, verbosity=0):
     r"""
     :param coord: tuple (x,y) specifying vertex on a square lattice
     :param direction: orientation of correlation function
@@ -987,6 +987,9 @@ def corrf_1sO1sO(coord, direction, state, env, op1, get_op2, dist, verbosity=0):
     :param get_op2: function returning (position-dependent) second
                     one-site operator :math:`\text{get_op2}(r)=O_2`
     :param dist: maximal distance of correlation function
+    :param rl_0: right and left edges of the two-point function network. These
+                 are expected to be rank-3 tensor compatible with transfer operator indices.
+                 Typically provided by leading eigenvectors of transfer matrix.
     :param verbosity: logging verbosity
     :type coord: tuple(int,int)
     :type direction: tuple(int,int)
@@ -995,6 +998,7 @@ def corrf_1sO1sO(coord, direction, state, env, op1, get_op2, dist, verbosity=0):
     :type op1: torch.tensor
     :type get_op2: function(int)->torch.tensor
     :type dist: int
+    :type rl_0: tuple(function(tuple(int,int))->torch.Tensor, function(tuple(int,int))->torch.Tensor)
     :type verbosity: int
     :return: vector ``corrf`` of length ``dist`` holding the values of 
              correlation function :math:`\langle O_1(0) O_2(r) \rangle` 
@@ -1021,7 +1025,7 @@ def corrf_1sO1sO(coord, direction, state, env, op1, get_op2, dist, verbosity=0):
 
     c0= coord
     rev_d = (-direction[0],-direction[1]) # opposite direction
-    E0 = get_edge(c0, rev_d, state, env, verbosity=verbosity)
+    E0 = get_edge(c0, rev_d, state, env, verbosity=verbosity) if rl_0 is None else rl_0[0](c0)
     # Apply transfer matrix with operator op1
     #
     #   -- 0     -- -----T--------- 0
@@ -1047,8 +1051,12 @@ def corrf_1sO1sO(coord, direction, state, env, op1, get_op2, dist, verbosity=0):
         E1 = apply_TM_1sO(c0, direction, state, env, E1, verbosity=verbosity)
 
         # and finally apply edge of opposite direction
-        E12= apply_edge(c0, direction, state, env, E12, verbosity=verbosity)
-        E00= apply_edge(c0, direction, state, env, E0, verbosity=verbosity)
+        if rl_0 is None:
+            E12= apply_edge(c0, direction, state, env, E12, verbosity=verbosity)
+            E00= apply_edge(c0, direction, state, env, E0, verbosity=verbosity)
+        else:
+            E12= torch.tensordot(E12,rl_0[1](c0),([0,1,2],[0,1,2]))
+            E00= torch.tensordot(E0,rl_0[1](c0),([0,1,2],[0,1,2]))
         corrf[r]= E12/E00
 
         # normalize by largest element of E0
