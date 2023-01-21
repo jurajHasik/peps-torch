@@ -784,7 +784,7 @@ class J1J2J4_1SITE(J1J2J4):
                  are expected to be rank-3 tensor compatible with transfer operator indices.
                  Typically provided by leading eigenvectors of transfer matrix.
         :type rl_0: tuple(function(tuple(int,int))->torch.Tensor, function(tuple(int,int))->torch.Tensor)
-        :param conj_s: apply spin-rotation to spin operators to obtain corresponding 120deg corr. functions
+        :param conj_s: apply spin-rotation to spin operators to obtain corresponding 120deg corr. function
         :type conj: bool 
         :return: dictionary with full and spin-resolved spin-spin correlation functions
         :rtype: dict(str: torch.Tensor)
@@ -816,9 +816,6 @@ class J1J2J4_1SITE(J1J2J4):
 
             # 2) rotate the vector of operators
             S_zxiy= torch.einsum('ab,bij->aij',SR,S_zxiy)
-
-            rdm1x1 = rdm.rdm1x1(coord,state,env)
-            Sexp_zxiy= torch.einsum('ij,aji->a',rdm1x1,S_zxiy)
 
         # function allowing for additional site-dependent conjugation of op.
         # r=0 is nearest-neighbour

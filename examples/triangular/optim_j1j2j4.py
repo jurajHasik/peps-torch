@@ -27,6 +27,7 @@ parser.add_argument("--tiling", default="3SITE", help="tiling of the lattice", \
 parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
+parser.add_argument("--gauge", action='store_true', help="put into quasi-canonical form")
 parser.add_argument("--test_env_sensitivity", action='store_true', help="compare loss with higher chi env")
 parser.add_argument("--compressed_rdms", type=int, default=-1, help="use compressed RDMs for 2x3 and 3x2 patches"\
         +" with chi lower that chi x D^2")
@@ -263,7 +264,7 @@ def main():
             #         state.sites[c].copy_(state_g.sites[c])
 
     # optimize
-    if args.test_env_sensitivity:
+    if args.gauge:
         state_g= IPEPS_WEIGHTED(state=state).gauge()
         state= state_g.absorb_weights()
     state.normalize_()
