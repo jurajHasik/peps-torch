@@ -184,12 +184,14 @@ def main():
         l, evecs_right= transferops.get_Top_spec(1, sdp[0], (-sdp[1][0],-sdp[1][1]), \
             state, ctm_env_init, eigenvectors=True)
 
-        assert evecs_left[:,0].imag.abs().max()<1.0e-14,"Leading eigenvector is not real"
-        assert evecs_right[:,0].imag.abs().max()<1.0e-14,"Leading eigenvector is not real"
-        evecs[sdp]= (evecs_left[:,0].real.view(ctm_env_init.chi,\
-            state.site(sdp[0]).size(dir_to_ind[(-sdp[1][0],-sdp[1][1])])**2,ctm_env_init.chi).clone(),
-            evecs_right[:,0].real.view(ctm_env_init.chi,\
-                state.site(sdp[0]).size(dir_to_ind[sdp[1]])**2,ctm_env_init.chi).clone())
+        evecs[sdp]= (evecs_left[:,0].view(ctm_env_init.chi,\
+                state.site(sdp[0]).size(dir_to_ind[(-sdp[1][0],-sdp[1][1])])**2,ctm_env_init.chi).clone(),
+                evecs_right[:,0].view(ctm_env_init.chi,\
+                    state.site(sdp[0]).size(dir_to_ind[sdp[1]])**2,ctm_env_init.chi).clone())
+        if not state.site(sdp[0]).is_complex():
+            assert evecs_left[:,0].imag.abs().max()<1.0e-14,"Leading eigenvector is not real"
+            assert evecs_right[:,0].imag.abs().max()<1.0e-14,"Leading eigenvector is not real"
+            evecs[sdp]= (evecs[sdp][0].real, evecs[sdp][1].real) 
 
         # Pass in tuple of leading eigenvector-generating functions. First element gives
         # the left eigenvector, second gives right eigenvector

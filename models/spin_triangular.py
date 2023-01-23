@@ -794,7 +794,7 @@ class J1J2J4_1SITE(J1J2J4):
         """
         s2 = su2.SU2(self.phys_dim, dtype=self.dtype, device=self.device)
         s3 = su2.SU2(self.phys_dim+1, dtype=self.dtype, device=self.device)
-        S_zxiy= s2.S().real
+        S_zxiy= s2.S() if state.site(coord).is_complex() else s2.S().real
         # pass to real, i.e. iS^y= 0.5(S^+ - S^-)
         S_zxiy[2,:,:]= 0.5*(s2.SP()-s2.SM())
 
