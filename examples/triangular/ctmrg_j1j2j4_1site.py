@@ -105,7 +105,7 @@ def main():
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
             history=[]
-        e_curr= energy_f(state, env, compressed=args.compressed_rdms)
+        e_curr= energy_f(state, env, compressed=args.compressed_rdms, looped=args.loop_rdms)
         obs_values, obs_labels = eval_obs_f(state,env)
         history.append([e_curr.item()]+obs_values)
         print(", ".join([f"{len(history)}"]+[f"{e_curr}"]*2+[f"{v}" for v in obs_values]))
@@ -116,7 +116,7 @@ def main():
 
     def ctmrg_conv_specC_loc(state, env, history, ctm_args=cfg.ctm_args):
         _conv_check, history= ctmrg_conv_specC(state, env, history, ctm_args=ctm_args)
-        e_curr= energy_f(state, env, compressed=args.compressed_rdms)
+        e_curr= energy_f(state, env, compressed=args.compressed_rdms, looped=args.loop_rdms)
         obs_values, obs_labels = eval_obs_f(state,env)
         print(", ".join([f"{len(history['diffs'])}",f"{history['conv_crit'][-1]}",\
             f"{e_curr}"]+[f"{v}" for v in obs_values]))
@@ -132,7 +132,7 @@ def main():
     print(ctm_env_init)
 
     
-    loss0= energy_f(state, ctm_env_init, compressed=args.compressed_rdms)
+    loss0= energy_f(state, ctm_env_init, compressed=args.compressed_rdms, looped=args.loop_rdms)
     obs_values, obs_labels = eval_obs_f(state,ctm_env_init)
     print(", ".join(["epoch","conv_crit","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
@@ -140,7 +140,7 @@ def main():
     ctm_env_init, *ctm_log= ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_f)
 
     # 6) compute final observables
-    e_curr0 = energy_f(state, ctm_env_init, compressed=args.compressed_rdms)
+    e_curr0 = energy_f(state, ctm_env_init, compressed=args.compressed_rdms, looped=args.loop_rdms)
     obs_values0, obs_labels = eval_obs_f(state,ctm_env_init)
     history, t_ctm, t_obs= ctm_log
     print("\n")
