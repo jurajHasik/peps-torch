@@ -215,7 +215,7 @@ class J1J2J4():
         
             num_sites= len(state.sites)
             energy_per_site= self.j1*energy_nn/(4*num_sites) + self.j2*energy_nnn/num_sites \
-                    + self.j4*energy_p/num_sites + self.jchi*energy_chi/(2*num_sites)
+                    + self.j4*energy_p/num_sites + self.jchi*energy_chi/(3*num_sites)
         
         energy_per_site= _cast_to_real(energy_per_site)
 
@@ -480,7 +480,7 @@ class J1J2J4_1SITE(J1J2J4):
                 num_sites= len(state.sites)
                 # the ratio between #nn (the number of) and #nn(diag) is 2:1
                 energy_per_site= self.j1*energy_nn/(4*num_sites) + self.j2*energy_nnn/num_sites \
-                    + self.j4*energy_p/num_sites + self.jchi*energy_chi/(2*num_sites)
+                    + self.j4*energy_p/num_sites + self.jchi*energy_chi/(3*num_sites)
         else:
             for coord in state.sites.keys():
                 #
