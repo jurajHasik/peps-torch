@@ -27,6 +27,8 @@ parser.add_argument("--j4", type=float, default=0., help="plaquette coupling")
 parser.add_argument("--q", type=float, default=1., help="pitch vector")
 parser.add_argument("--tiling", default="1STRIV", help="tiling of the lattice", \
     choices=["1SITEQ","1STRIV","1SPG"])
+parser.add_argument("--ctm_conv_crit", default="CSPEC", help="ctm convergence criterion", \
+    choices=["CSPEC", "ENERGY"])
 parser.add_argument("--test_env_sensitivity", action='store_true', help="compare loss with higher chi env")
 parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
@@ -132,8 +134,10 @@ def main():
         return False, history
 
     # alternatively use ctmrg_conv_specC from ctm.generinc.env
-    ctmrg_conv_f= ctmrg_conv_specC
-    # ctmrg_conv_f= ctmrg_conv_energy
+    if args.ctm_conv_crit=="CSPEC":
+        ctmrg_conv_f= ctmrg_conv_specC
+    elif args.ctm_conv_crit=="ENERGY":
+        ctmrg_conv_f= ctmrg_conv_energy
 
     ctm_env = ENV(args.chi, state)
     init_env(state, ctm_env)
