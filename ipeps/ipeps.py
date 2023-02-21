@@ -351,6 +351,35 @@ def extend_bond_dim(state, new_d):
         new_state.sites[coord] = new_site
     return new_state
 
+def _write_ipeps_json(state, aux_seq=[0,1,2,3], tol=1.0e-14, normalize=False,\
+    peps_args=cfg.peps_args, global_args=cfg.global_args):
+    asq = [x+1 for x in aux_seq]
+    json_state=dict({"lX": state.lX, "lY": state.lY, "sites": []})
+    
+    site_ids=[]
+    site_map=[]
+    for nid,coord,site in [(t[0], *t[1]) for t in enumerate(state.sites.items())]:
+        if normalize:
+            site= site/site.abs().max()
+        
+        site_ids.append(f"A{nid}")
+        site_map.append(dict({"siteId": site_ids[-1], "x": coord[0], "y": coord[1]} ))
+        
+        if global_args.tensor_io_format=="legacy":
+            json_tensor= serialize_bare_tensor_legacy(site)
+            # json_tensor["physDim"]= site.size(0)
+            # assuming all auxBondDim are identical
+            # json_tensor["auxDim"]= site.size(1)
+        elif global_args.tensor_io_format=="1D":
+            json_tensor= serialize_bare_tensor_np(site)
+
+        json_tensor["siteId"]=site_ids[-1]
+        json_state["sites"].append(json_tensor)
+
+    json_state["siteIds"]=site_ids
+    json_state["map"]=site_map
+    return json_state
+    
 def write_ipeps(state, outputfile, aux_seq=[0,1,2,3], tol=1.0e-14, normalize=False,\
     peps_args=cfg.peps_args, global_args=cfg.global_args):
     r"""
@@ -380,31 +409,8 @@ def write_ipeps(state, outputfile, aux_seq=[0,1,2,3], tol=1.0e-14, normalize=Fal
          3
 
     """
-    asq = [x+1 for x in aux_seq]
-    json_state=dict({"lX": state.lX, "lY": state.lY, "sites": []})
-    
-    site_ids=[]
-    site_map=[]
-    for nid,coord,site in [(t[0], *t[1]) for t in enumerate(state.sites.items())]:
-        if normalize:
-            site= site/site.abs().max()
-        
-        site_ids.append(f"A{nid}")
-        site_map.append(dict({"siteId": site_ids[-1], "x": coord[0], "y": coord[1]} ))
-        
-        if global_args.tensor_io_format=="legacy":
-            json_tensor= serialize_bare_tensor_legacy(site)
-            # json_tensor["physDim"]= site.size(0)
-            # assuming all auxBondDim are identical
-            # json_tensor["auxDim"]= site.size(1)
-        elif global_args.tensor_io_format=="1D":
-            json_tensor= serialize_bare_tensor_np(site)
-
-        json_tensor["siteId"]=site_ids[-1]
-        json_state["sites"].append(json_tensor)
-
-    json_state["siteIds"]=site_ids
-    json_state["map"]=site_map
+    json_state= _write_ipeps_json(state, aux_seq=aux_seq, tol=tol, normalize=normalize,\
+        peps_args=peps_args, global_args=global_args) 
 
     with open(outputfile,'w') as f:
         json.dump(json_state, f, indent=4, separators=(',', ': '))

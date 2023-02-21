@@ -1,7 +1,10 @@
 import context
 import torch
 import argparse
+import copy
 import config as cfg
+from ipeps.ipeps import *
+from ipeps.ipeps_1s_Q import *
 from ipeps.ipeps_trgl_pg import *
 from ctm.generic.env import *
 from ctm.generic import ctmrg
@@ -18,10 +21,13 @@ log = logging.getLogger(__name__)
 parser= cfg.get_args_parser()
 # additional model-dependent arguments
 parser.add_argument("--j1", type=float, default=1., help="nearest-neighbour coupling")
+parser.add_argument("--diag", type=float, default=1., help="diagonal strength")
 parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour coupling")
 parser.add_argument("--j4", type=float, default=0., help="plaquette coupling")
+parser.add_argument("--q", type=float, default=1., help="pitch vector")
 parser.add_argument("--tiling", default="1STRIV", help="tiling of the lattice", \
-    choices=["1STRIV","1SPG"])
+    choices=["1SITEQ","1STRIV","1SPG"])
+parser.add_argument("--test_env_sensitivity", action='store_true', help="compare loss with higher chi env")
 parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
@@ -46,23 +52,40 @@ def main():
         read_state_f= read_ipeps_trgl_1s_ttphys_pg
         if args.tiling in ["1SPG"]:
             read_state_f= write_ipeps_trgl_1s_tbt_pg
+    elif args.tiling in ["1SITEQ"]:
+        model= spin_triangular.J1J2J4_1SITEQ(j1=args.j1, j2=args.j2, j4=args.j4, diag=args.diag,\
+            q=(1./args.q,1./args.q))
+        energy_f=model.energy_1x3
+        eval_obs_f= model.eval_obs
+        read_state_f= read_ipeps_1s_q
     else:
         raise ValueError("Invalid tiling: "+str(args.tiling)+" Supported options: "\
-            +"1STRIV, 1SPG")
+            +"1SITEQ, 1STRIV, 1SPG")
 
     if args.instate!=None:
         state = read_state_f(args.instate)
         if args.bond_dim > max(state.get_aux_bond_dims()):
             # extend the auxiliary dimensions
             state = state.extend_bond_dim(args.bond_dim)
-        state= state.add_noise(args.instate_noise)
+        if args.tiling in ["1STRIV","1SPG"]:
+            state= state.add_noise(args.instate_noise)
+        else:
+            state.add_noise(args.instate_noise)
     elif args.opt_resume is not None:
         if args.tiling == "1STRIV":
             state= IPEPS_TRGL_1S_TRIVALENT()
+        elif args.tiling in ["1SITEQ"]:
+            state= IPEPS_1S_Q()
         state.load_checkpoint(args.opt_resume)
     elif args.ipeps_init_type=='RANDOM':
         bond_dim = args.bond_dim
-        if args.tiling in ["1STRIV"]:
+        if args.tiling in ["1SITEQ"]:
+            sites = {}
+            A = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
+                dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)-0.5
+            sites[(0,0)]= A/torch.max(torch.abs(A))
+            state = IPEPS_1S_Q(sites, q=(1./args.q,1./args.q))
+        elif args.tiling in ["1STRIV"]:
             ansatz_pgs= IPEPS_TRGL_1S_TTPHYS_PG.PG_A1
             t_aux= torch.rand([bond_dim]*3,\
                 dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
@@ -87,7 +110,11 @@ def main():
         print(f"dtype of initial state {state.dtype} and model {model.dtype} do not match.")
         print(f"Setting default dtype to {cfg.global_args.torch_dtype} and reinitializing "\
             +" the model")
-        model= type(model)(j1=args.j1, j2=args.j2, j4=args.j4)
+        if args.tiling in ["1SITEQ"]:
+            model= type(model)(j1=args.j1, j2=args.j2, j4=args.j4, diag=args.diag,\
+                q=(1./args.q,1./args.q))
+        else:    
+            model= type(model)(j1=args.j1, j2=args.j2, j4=args.j4)
 
     print(state)
 
@@ -105,8 +132,8 @@ def main():
         return False, history
 
     # alternatively use ctmrg_conv_specC from ctm.generinc.env
-    # ctmrg_conv_f= ctmrg_conv_specC
-    ctmrg_conv_f= ctmrg_conv_energy
+    ctmrg_conv_f= ctmrg_conv_specC
+    # ctmrg_conv_f= ctmrg_conv_energy
 
     ctm_env = ENV(args.chi, state)
     init_env(state, ctm_env)
@@ -126,7 +153,7 @@ def main():
             state_sym= to_PG_symmetric(state)
         else:
             state_sym= state
-            state_sym.sites= state.build_onsite_tensors()
+            # state_sym.sites= state.build_onsite_tensors()
         
         # for c in state.sites.keys():
         #     with torch.no_grad():
@@ -144,7 +171,7 @@ def main():
 
         # 2) evaluate loss with the converged environment
         loss = energy_f(state_sym, ctm_env_out)
-        
+
         return (loss, ctm_env_out, *ctm_log)
 
     def _to_json(l):
@@ -164,8 +191,29 @@ def main():
             epoch= len(opt_context["loss_history"]["loss"]) 
             loss= opt_context["loss_history"]["loss"][-1]
             obs_values, obs_labels = eval_obs_f(state_sym,ctm_env)
-            print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
-            log.info("Norm(sites): "+", ".join([f"{t.norm()}" for c,t in state.elem_tensors.items()]))
+            
+            # test ENV sensitivity
+            if args.test_env_sensitivity:
+                loc_ctm_args= copy.deepcopy(opt_context["ctm_args"])
+                loc_ctm_args.ctm_max_iter= 1
+                ctm_env_out1= ctm_env.extend(ctm_env.chi+10)
+                ctm_env_out1, *ctm_log= ctmrg.run(state_sym, ctm_env_out1, \
+                    conv_check=ctmrg_conv_f, ctm_args=loc_ctm_args)
+                loss1= energy_f(state_sym, ctm_env_out1)
+                delta_loss= opt_context['loss_history']['loss'][-1]-opt_context['loss_history']['loss'][-2]\
+                    if len(opt_context['loss_history']['loss'])>1 else float('NaN')
+                # if we are not linesearching, this can always happen
+                # not "line_search" in opt_context.keys()
+                _flag_antivar= (loss1-loss)>0 and (loss1-loss)>abs(delta_loss)
+                opt_context["STATUS"]= "ENV_ANTIVAR" if _flag_antivar else "ENV_VAR"
+
+            print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]\
+                + ([f"{loss1-loss}"] if args.test_env_sensitivity else []) ))
+            
+            if args.tiling in ["1STRIV","1SPG"]:
+                log.info("Norm(sites): "+", ".join([f"{t.norm()}" for c,t in state.elem_tensors.items()]))
+            else:
+                log.info("Norm(sites): "+", ".join([f"{t.norm()}" for c,t in state.sites.items()]))
 
             # with torch.no_grad():
             #     if args.top_freq>0 and epoch%args.top_freq==0:
@@ -187,7 +235,7 @@ def main():
     # state= state_g.absorb_weights()
     # import pdb; pdb.set_trace()
     state.normalize_()
-    optimize_state(state, ctm_env, loss_fn, obs_fn=obs_fn, post_proc=post_proc)
+    optimize_state(state, ctm_env, loss_fn, obs_fn=obs_fn)#, post_proc=post_proc)
 
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"
