@@ -104,6 +104,30 @@ class IPEPS_1S_Q(IPEPS):
         """
         write_ipeps_1s_q(self,outputfile,aux_seq=aux_seq, tol=tol, normalize=normalize)
 
+    def extend_bond_dim(self, new_d):
+        r"""
+        :param state: wavefunction to modify
+        :param new_d: new enlarged auxiliary bond dimension
+        :type state: IPEPS_1S_Q
+        :type new_d: int
+        :return: wavefunction with enlarged auxiliary bond dimensions
+        :rtype: IPEPS_1S_Q
+
+        Take IPEPS_1S_Q and enlarge all auxiliary bond dimensions of on-site tensor up to 
+        size ``new_d``
+        """
+        new_state = self
+        for coord,site in new_state.sites.items():
+            dims = site.size()
+            size_check = [new_d >= d for d in dims[1:]]
+            if False in size_check:
+                raise ValueError("Desired dimension is smaller than following aux dimensions: "+str(size_check))
+
+            new_site = torch.zeros((dims[0],new_d,new_d,new_d,new_d), dtype=self.dtype, device=self.device)
+            new_site[:,:dims[1],:dims[2],:dims[3],:dims[4]] = site
+            new_state.sites[coord] = new_site
+        return new_state
+
     def __str__(self):
         print(f"q=(q_x,q_y) {self.q}")
         print(f"lX x lY: {self.lX} x {self.lY}")
