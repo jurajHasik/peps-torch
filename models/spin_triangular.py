@@ -11,7 +11,7 @@ def _cast_to_real(t):
     return t.real if t.is_complex() else t
 
 class J1J2J4():
-    def __init__(self, phys_dim=2, j1=1.0, j2=0, j4=0, jchi=0,\
+    def __init__(self, phys_dim=2, j1=1.0, j2=0, j4=0, jchi=0, diag=1,\
         global_args=cfg.global_args):
         r"""
         :param phys_dim: dimension of physical spin irrep, i.e. 2 for spin S=1/2 
@@ -19,12 +19,15 @@ class J1J2J4():
         :param j2: next nearest-neighbour interaction
         :param j4: plaquette interaction
         :param jchi: scalar chirality
+        :param diag: strength of "diagonal" interaction on effective square lattice,
+                     (diag*J1) S_r.S_{r+(1,1)}. Default ``diag=1.`` reproduces triangular lattice.
         :param global_args: global configuration
         :type phys_dim: int
         :type j1: float
         :type j2: float
         :type j4: float
         :type jchi: float
+        :type diag: float
         :type global_args: GLOBALARGS
 
         Build Spin-S :math:`J_1-J_2-J_4-J_\chi` Hamiltonian
@@ -50,6 +53,7 @@ class J1J2J4():
         self.j2=j2
         self.j4=j4
         self.jchi=jchi
+        self.diag= diag
         
         self.SS, self.SSSS, self.h_p, self.h_p_and_nnn, self.h_nn_only, self.h_chi= self.get_h()
         self.obs_ops= self.get_obs_ops()
@@ -144,10 +148,12 @@ class J1J2J4():
             C A, A  B C, and A   B
         """
         energy_nn=0.
+        energy_nn_diag=0.
         energy_nnn=0.
         energy_p=0.
         energy_chi=0.
         if abs(self.j2)>0 or abs(self.j4)>0 or abs(self.jchi)>0:
+            assert self.diag==1,"non-equivalent diagonal bonds not implemented"
             for coord in state.sites.keys():
                 # (0,-1)  (1,-1) (2,-1)      x  s3 s2
                 # (0,0) --(1,0)  (2,0)  <=>  s0 s1 x
@@ -202,7 +208,7 @@ class J1J2J4():
 
             num_sites= len(state.sites)
             energy_per_site= self.j1*energy_nn/(4*num_sites) + self.j2*energy_nnn/num_sites \
-                + self.j4*energy_p/num_sites + self.jchi*energy_chi/(2*num_sites)
+                + self.j4*energy_p/num_sites + self.jchi*energy_chi/(3*num_sites)
             
         else:
             for coord in state.sites.keys():
@@ -211,11 +217,10 @@ class J1J2J4():
                 tmp_rdm_2x1= rdm.rdm2x1(coord,state,env)
                 energy_nn+= torch.einsum('ijab,abij',self.SS,tmp_rdm_2x1)
                 tmp_rdm_2x2_NNN_1n1= rdm.rdm2x2_NNN_1n1(coord,state,env)
-                energy_nn+= torch.einsum('ijab,abij',self.SS,tmp_rdm_2x2_NNN_1n1)
+                energy_nn_diag+= torch.einsum('ijab,abij',self.SS,tmp_rdm_2x2_NNN_1n1)
         
             num_sites= len(state.sites)
-            energy_per_site= self.j1*energy_nn/(4*num_sites) + self.j2*energy_nnn/num_sites \
-                    + self.j4*energy_p/num_sites + self.jchi*energy_chi/(3*num_sites)
+            energy_per_site= self.j1*(energy_nn + self.diag*energy_nn_diag)/num_sites
         
         energy_per_site= _cast_to_real(energy_per_site)
 
@@ -334,7 +339,8 @@ class J1J2J4():
         return res
 
 class J1J2J4_1SITE(J1J2J4):
-    def __init__(self, phys_dim=2, j1=1.0, j2=0, j4=0, jchi=0, global_args=cfg.global_args):
+    def __init__(self, phys_dim=2, j1=1.0, j2=0, j4=0, jchi=0,\
+        global_args=cfg.global_args):
         r"""
         :param phys_dim: dimension of physical spin irrep, i.e. 2 for spin S=1/2 
         :param j1: nearest-neighbour interaction
@@ -417,6 +423,7 @@ class J1J2J4_1SITE(J1J2J4):
         energy_p=0.
         energy_chi=0.
         if abs(self.j2)>0 or abs(self.j4)>0 or abs(self.jchi)>0:
+            assert self.diag==1,"non-equivalent diagonal bonds not implemented"
             for coord in state.sites.keys():
                 # B  C--A     x  s3 s2
                 # A--B  C <=> s0 s1 x
@@ -508,8 +515,7 @@ class J1J2J4_1SITE(J1J2J4):
                     tmp_rdm_2x2_NNN_1n1)
 
                 num_sites= len(state.sites)
-                energy_per_site= self.j1*energy_nn/num_sites + self.j2*energy_nnn/num_sites \
-                    + self.j4*energy_p/num_sites
+                energy_per_site= self.j1*energy_nn/num_sites
 
         energy_per_site= _cast_to_real(energy_per_site)
 
@@ -909,8 +915,7 @@ class J1J2J4_1SITEQ(J1J2J4):
         See :class:`J1J2J4`.
         """
         super().__init__(phys_dim=phys_dim, j1=j1, j2=j2, j4=j4, jchi=jchi,\
-            global_args=global_args)
-        self.diag= diag
+            diag=diag, global_args=global_args)
         s2 = su2.SU2(self.phys_dim, dtype=self.dtype, device=self.device)
         self.R= torch.linalg.matrix_exp( (pi*q[0])*(s2.SP()-s2.SM()) )
         self.Rinv= self.R.t().conj()
@@ -1077,8 +1082,7 @@ class J1J2J4_1SITEQ(J1J2J4):
                     tmp_rdm_2x2_NNN_1n1)
 
                 num_sites= len(state.sites)
-                energy_per_site= self.j1*(energy_nn + self.diag*energy_nn_diag)/num_sites \
-                    + self.j2*energy_nnn/num_sites + self.j4*energy_p/num_sites
+                energy_per_site= self.j1*(energy_nn + self.diag*energy_nn_diag)/num_sites
 
         energy_per_site= _cast_to_real(energy_per_site)
 
