@@ -902,6 +902,7 @@ class J1J2J4_1SITEQ(J1J2J4):
         :param diag: strength of "diagonal" interaction on effective square lattice,
                      (diag*J1) S_r.S_{r+(1,1)}. Default ``diag=1.`` reproduces triangular lattice.
         :param q: pitch vector in units of 2pi
+        :type q: tuple(float, float)
         :param global_args: global configuration
         :type phys_dim: int
         :type j1: float
@@ -909,7 +910,6 @@ class J1J2J4_1SITEQ(J1J2J4):
         :type j4: float
         :type jchi: float
         :type diag: float
-        :type q: tuple(float, float)
         :type global_args: GLOBALARGS
         
         See :class:`J1J2J4`.
@@ -927,8 +927,10 @@ class J1J2J4_1SITEQ(J1J2J4):
         r"""
         :param state: wavefunction
         :param env: CTM environment
-        :type state: IPEPS
+        :type state: IPEPS_1S_Q
         :type env: ENV
+        :param q: pitch vector in units of 2pi. By default, pitch vector is read from state.
+        :type q: tuple(float, float)
         :param ctm_args: CTM algorithm configuration
         :param global_args: global configuration
         :type ctm_args: CTMARGS
@@ -1092,8 +1094,10 @@ class J1J2J4_1SITEQ(J1J2J4):
         r"""
         :param state: wavefunction
         :param env: CTM environment
-        :type state: IPEPS
+        :type state: IPEPS_1S_Q
         :type env: ENV
+        :param q: pitch vector in units of 2pi. By default, pitch vector is read from state.
+        :type q: tuple(float, float)
         :return:  expectation values of observables, labels of observables
         :rtype: list[float], list[str]
 
@@ -1198,7 +1202,7 @@ class J1J2J4_1SITEQ(J1J2J4):
                 #  /
                 # A B
                 SS2x2_NNN_1n1= torch.einsum('ijab,abij',tmp_rdm_2x2_NNN_1n1,
-                    torch.einsum('ixay,xj,yb->ijab',self.SS,self.Rinv,self.Rinv))
+                    torch.einsum('ixay,xj,yb->ijab',self.SS,self.R@self.R,self.R@self.R))
                 
                 obs[f"SS2x2_NNN_1n1{coord}"]= _cast_to_real(SS2x2_NNN_1n1)
         
@@ -1214,3 +1218,143 @@ class J1J2J4_1SITEQ(J1J2J4):
         obs_labels += [f"SS2x2_NNN_1n1{coord}" for coord in state.sites.keys()]
         obs_values=[obs[label] for label in obs_labels]
         return obs_values, obs_labels
+
+    def eval_corrf_SS(self,coord,direction,state,env,dist,q=None,canonical=False,conj_s=True,rl_0=None):
+        r"""
+        :param coord: reference site
+        :type coord: tuple(int,int)
+        :param direction: 
+        :type direction: tuple(int,int)
+        :param state: wavefunction
+        :param env: CTM environment
+        :type state: IPEPS_1S_Q
+        :type env: ENV
+        :param q: pitch vector in units of 2pi. By default, pitch vector is read from state.
+        :type q: tuple(float, float)
+        :param dist: maximal distance of correlator
+        :type dist: int
+        :param canonical: decompose correlations wrt. to vector of spontaneous magnetization
+                          into longitudinal and transverse parts
+        :type canonical: bool 
+        :param rl_0: right and left edges of the two-point function network. These
+                 are expected to be rank-3 tensor compatible with transfer operator indices.
+                 Typically provided by leading eigenvectors of transfer matrix.
+        :type rl_0: tuple(function(tuple(int,int))->torch.Tensor, function(tuple(int,int))->torch.Tensor)
+        :param conj_s: apply spin-rotation to spin operators to obtain corresponding 
+                       (2pi*q,2pi*q)-ordered corr. function
+        :type conj: bool 
+        :return: dictionary with full and spin-resolved spin-spin correlation functions
+        :rtype: dict(str: torch.Tensor)
+        
+        Evaluate spin-spin correlation functions :math:`\langle\mathbf{S}(r).\mathbf{S}(0)\rangle` 
+        up to r = ``dist`` in given direction. See :meth:`ctm.generic.corrf.corrf_1sO1sO`.
+        """
+        s2 = su2.SU2(self.phys_dim, dtype=self.dtype, device=self.device)
+        s3 = su2.SU2(self.phys_dim+1, dtype=self.dtype, device=self.device)
+        S_zxiy= s2.S() if state.site(coord).is_complex() else s2.S().real
+        # pass to real, i.e. iS^y= 0.5(S^+ - S^-)
+        S_zxiy[2,:,:]= 0.5*(s2.SP()-s2.SM())
+
+        if q is None: 
+            assert hasattr(state,'q'), "No q-vector available"
+            q= state.q
+
+        # compute vector of spontaneous magnetization
+        if canonical:
+            Sexp_zxiy= None
+            if rl_0 is None:
+                rdm1x1 = rdm.rdm1x1(coord,state,env)
+                Sexp_zxiy= torch.einsum('ij,aji->a',rdm1x1,S_zxiy)
+            else:
+                _tmp= self.eval_corrf_SId(coord,direction,state,env,0,rl_0=rl_0)
+                Sexp_zxiy= torch.as_tensor([_tmp['sz'], _tmp['sx'], _tmp['isy']],\
+                    dtype=self.dtype, device=self.device)
+
+            Sexp_zxiy= Sexp_zxiy/torch.norm(Sexp_zxiy)
+            # 1) build rotation matrix
+            SR= s3.I()
+            SR[:2,:2]= Sexp_zxiy[0]*s2.I() + Sexp_zxiy[1]*(2*S_zxiy[2,:,:])
+
+            # 2) rotate the vector of operators
+            S_zxiy= torch.einsum('ab,bij->aij',SR,S_zxiy)
+
+        # function allowing for additional site-dependent conjugation of op.
+        def conjugate_op(op):
+            op_0= op
+            sign_r=1. 
+            if direction in [(1,0), (0,-1)]:
+                sign_r= 1.
+            elif direction in [(-1,0), (0,1)]:
+                sign_r= -1.
+            else:
+                raise RuntimeError("Invalid direction "+str(direction))
+            
+            def _gen_op(r):
+                # r=0 is nearest-neighbour
+                R= torch.linalg.matrix_exp( (sign_r*(r+1)*pi*q[0])*(s2.SP()-s2.SM()) )
+                return torch.einsum('ki,kj->ij', self.R, op_0 @ self.R) if conj_s else op_0
+            return _gen_op
+
+        Sz0szR= corrf.corrf_1sO1sO(coord,direction,state,env, S_zxiy[0,:,:], \
+            conjugate_op(S_zxiy[0,:,:]), dist, rl_0=rl_0)
+        Sx0sxR= corrf.corrf_1sO1sO(coord,direction,state,env, S_zxiy[1,:,:], conjugate_op(S_zxiy[1,:,:]), dist,  rl_0=rl_0)
+        nSy0SyR= corrf.corrf_1sO1sO(coord,direction,state,env, S_zxiy[2,:,:], conjugate_op(S_zxiy[2,:,:]), dist,  rl_0=rl_0)
+
+        Sz0szR, Sx0sxR, nSy0SyR= _cast_to_real(Sz0szR), _cast_to_real(Sx0sxR), _cast_to_real(nSy0SyR)
+
+        res= dict({"ss": Sz0szR+Sx0sxR-nSy0SyR, "szsz": Sz0szR, "sxsx": Sx0sxR, "sysy": -nSy0SyR})
+        return res
+
+    def eval_corrf_SId(self,coord,direction,state,env,dist,q=None,conj_s=True,rl_0=None):
+        r"""
+        :param coord: reference site
+        :type coord: tuple(int,int)
+        :param direction: 
+        :type direction: tuple(int,int)
+        :param state: wavefunction
+        :param env: CTM environment
+        :type state: IPEPS_1S_Q
+        :type env: ENV
+        :param dist: maximal distance of correlator
+        :type dist: int
+        :param q: pitch vector in units of 2pi. By default, pitch vector is read from state.
+        :type q: tuple(float, float)
+        :param conj_s: apply spin-rotation to spin operators to obtain corresponding (2pi*q,2pi*q)-order
+        :type conj_s: bool
+        :param rl_0: right and left edges of the two-point function network. These
+                 are expected to be rank-3 tensor compatible with transfer operator indices.
+                 Typically provided by leading eigenvectors of transfer matrix.
+        :type rl_0: tuple(function(tuple(int,int))->torch.Tensor, function(tuple(int,int))->torch.Tensor)
+        :return: dictionary with full and spin-resolved spin-spin correlation functions
+        :rtype: dict(str: torch.Tensor)
+        
+        Evaluate spin-spin correlation functions :math:`\langle\mathbf{S}(r).\mathbf{S}(0)\rangle` 
+        up to r = ``dist`` in given direction. See :meth:`ctm.generic.corrf.corrf_1sO1sO`.
+        """
+        # function allowing for additional site-dependent conjugation of op
+        # r=0 is nearest-neighbour
+        s2 = su2.SU2(self.phys_dim, dtype=self.dtype, device=self.device)
+        id1= s2.I()
+        def _gen_op(r):
+            return id1
+
+        if q is None: 
+            assert hasattr(state,'q'), "No q-vector available"
+            q= state.q
+
+        S_zxiy= s2.S() if state.site(coord).is_complex() else s2.S().real
+        # pass to real, i.e. iS^y= 0.5(S^+ - S^-)
+        S_zxiy[2,:,:]= 0.5*(s2.SP()-s2.SM())
+
+        R= torch.linalg.matrix_exp( (pi*(coord[0]*q[0]+coord[1]*q[0]))*(s2.SP()-s2.SM()) )
+        S_zxiy= torch.einsum('ki,xkj->xij', self.R, torch.einsum('xkl,lj->xkj',S_zxiy,self.R)) if conj_s else S_zxiy
+
+        Sz0IdR= corrf.corrf_1sO1sO(coord,direction,state,env, S_zxiy[0,:,:], \
+            _gen_op, dist, rl_0=rl_0)
+        Sx0IdR= corrf.corrf_1sO1sO(coord,direction,state,env, S_zxiy[1,:,:], _gen_op, dist, rl_0=rl_0)
+        iSy0IdR= corrf.corrf_1sO1sO(coord,direction,state,env, S_zxiy[2,:,:], _gen_op, dist, rl_0=rl_0)
+
+        Sz0IdR, Sx0IdR, iSy0IdR= _cast_to_real(Sz0IdR), _cast_to_real(Sx0IdR), _cast_to_real(iSy0IdR)
+
+        res= dict({"sz": Sz0IdR, "sx": Sx0IdR, "isy": iSy0IdR})
+        return res

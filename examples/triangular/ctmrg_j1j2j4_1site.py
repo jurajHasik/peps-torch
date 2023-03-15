@@ -3,6 +3,7 @@ import torch
 import argparse
 import config as cfg
 from ipeps.ipeps import *
+from ipeps.ipeps_1s_Q import *
 from ipeps.ipeps_trgl_pg import *
 from ctm.generic.env import *
 from ctm.generic import ctmrg
@@ -19,11 +20,13 @@ log = logging.getLogger(__name__)
 parser= cfg.get_args_parser()
 # additional model-dependent arguments
 parser.add_argument("--j1", type=float, default=1., help="nearest-neighbour coupling")
+parser.add_argument("--diag", type=float, default=1., help="diagonal strength")
 parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour coupling")
 parser.add_argument("--j4", type=float, default=0., help="plaquette coupling")
+parser.add_argument("--q", type=float, default=1., help="pitch vector")
 parser.add_argument("--jchi", type=float, default=0., help="scalar chirality")
 parser.add_argument("--tiling", default="1SITE", help="tiling of the lattice", \
-    choices=["1SITE", "1SITE_NOROT", "1STRIV", "1SPG"])
+    choices=["1SITE", "1SITE_NOROT", "1STRIV", "1SPG", "1SITEQ"])
 parser.add_argument("--corrf_canonical", action='store_true', help="align spin operators" \
     + " with the vector of spontaneous magnetization")
 parser.add_argument("--corrf_r", type=int, default=1, help="maximal correlation function distance")
@@ -46,28 +49,44 @@ def main():
     
     # initialize an ipeps
     # 1) define lattice-tiling function, that maps arbitrary vertex of square lattice
-    # coord into one of coordinates within unit-cell of iPEPS ansatz    
+    # coord into one of coordinates within unit-cell of iPEPS ansatz
+    # 2) select model and the "energy" function     
     if args.tiling in ["1SITE", "1STRIV", "1SPG"]:
         model= spin_triangular.J1J2J4_1SITE(j1=args.j1, j2=args.j2, j4=args.j4, jchi=args.jchi)
+        energy_f=model.energy_1x3
+        eval_obs_f= model.eval_obs
         lattice_to_site=None
     elif args.tiling in ["1SITE_NOROT"]:
         model= spin_triangular.J1J2J4(j1=args.j1, j2=args.j2, j4=args.j4, jchi=args.jchi)
+        energy_f=model.energy_1x3
+        eval_obs_f= model.eval_obs
         lattice_to_site=None
+    elif args.tiling in ["1SITEQ"]:
+        model= spin_triangular.J1J2J4_1SITEQ(j1=args.j1, j2=args.j2, j4=args.j4, diag=args.diag,\
+            q=(1./args.q,1./args.q))
+        energy_f=model.energy_1x3
+        eval_obs_f= model.eval_obs
     else:
         raise ValueError("Invalid tiling: "+str(args.tiling)+" Supported options: "\
-            +"1SITE")
+            +["1SITE", "1SITE_NOROT", "1STRIV", "1SPG", "1SITEQ"])
 
     if args.instate!=None:
         if args.tiling in ["1STRIV"]:
             state= read_ipeps_trgl_1s_ttphys_pg(args.instate)
         elif args.tiling in ["1SPG"]:
             state= read_ipeps_trgl_1s_tbt_pg(args.instate)
+        elif args.tiling in ["1SITEQ"]:
+            state= read_ipeps_1s_q(args.instate)
         else:
             state = read_ipeps(args.instate, vertexToSite=lattice_to_site)
         if args.bond_dim > max(state.get_aux_bond_dims()):
             # extend the auxiliary dimensions
+            # TODO some ansatze have only instance methods
             state = extend_bond_dim(state, args.bond_dim)
-        state.add_noise(args.instate_noise)
+        if args.tiling in ["1STRIV","1SPG"]:
+            state= state.add_noise(args.instate_noise)
+        else:
+            state.add_noise(args.instate_noise)
     elif args.opt_resume is not None:
         if args.tiling in ["1SITE", "1SITE_NOROT"]:
             state= IPEPS(dict(), lX=1, lY=1)
@@ -75,32 +94,31 @@ def main():
             state= IPEPS_TRGL_1S_TTPHYS_PG()
         elif args.tiling == "1SPG":
             state= IPEPS_TRGL_1S_TBT_PG()
+        elif args.tiling in ["1SITEQ"]:
+            state= IPEPS_1S_Q()
         state.load_checkpoint(args.opt_resume)
     else:
-        raise ValueError("Missing trial state: -instate=None and -ipeps_init_type= "\
+        raise ValueError("Missing trial state: --instate=None and --ipeps_init_type= "\
             +str(args.ipeps_init_type)+" is not supported")
 
     if not state.dtype==model.dtype:
         cfg.global_args.torch_dtype= state.dtype
         print(f"dtype of initial state {state.dtype} and model {model.dtype} do not match.")
         print(f"Setting default dtype to {cfg.global_args.torch_dtype} and reinitializing "\
-        +" the model")
-        model= type(model)(j1=args.j1, j2=args.j2, j4=args.j4)
+            +" the model")
+        if args.tiling in ["1SITEQ"]:
+            model= type(model)(j1=args.j1, j2=args.j2, j4=args.j4, diag=args.diag,\
+                q=(1./args.q,1./args.q))
+        else:
+            model= type(model)(j1=args.j1, j2=args.j2, j4=args.j4, jchi=args.jchi)
 
     print(state)
     
-    # gauge, operates only IPEPS base and its sites tensors
+    # gauge, operates only on IPEPS base and its sites tensors
     if args.gauge:
         state_g= IPEPS_WEIGHTED(state=state).gauge()
         state= state_g.absorb_weights()
 
-    # 2) select the "energy" function 
-    if args.tiling in ["1SITE", "1SITE_NOROT", "1STRIV", "1SPG"]:
-        energy_f=model.energy_1x3
-        eval_obs_f= model.eval_obs
-    else:
-        raise ValueError("Invalid tiling: "+str(args.tiling)+" Supported options: "\
-            +"1SITE")
 
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
