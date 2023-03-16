@@ -1050,7 +1050,7 @@ def corrf_1sO1sO(coord, direction, state, env, op1, get_op2, dist, rl_0=None, ve
         # and to network with only a op1 operator
         E1 = apply_TM_1sO(c0, direction, state, env, E1, verbosity=verbosity)
 
-        # and finally apply edge of opposite direction
+        # and finally apply edge in the direction of growth
         if rl_0 is None:
             E12= apply_edge(c0, direction, state, env, E12, verbosity=verbosity)
             E00= apply_edge(c0, direction, state, env, E0, verbosity=verbosity)

@@ -1,11 +1,14 @@
 import warnings
 import config as cfg
+from math import sqrt
 import yast.yast as yast
 try:
     import torch
     from ctm.generic.env import ENV
 except ImportError as e:
     warnings.warn("torch not available", Warning)
+import logging
+log = logging.getLogger(__name__)
 
 class ENV_ABELIAN():
     def __init__(self, chi=1, state=None, settings=None, init=False,\
@@ -477,3 +480,41 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         a= a.fuse_legs( axes=((0,3),(1,4),(2,5)) )
         a= a/a.norm(p='inf')
         env.T[(coord,vec)]=a
+
+def ctmrg_conv_specC(state, env, history, ctm_args=cfg.ctm_args):
+    if not history:
+        history={'spec': [], 'diffs': [], 'conv_crit': []}
+    # use corner spectra
+    conv_crit=float('inf')
+    diff=float('inf')
+    diffs=None
+    spec= env.get_spectra()
+    if state.engine.backend.BACKEND_ID=='np':
+        spec_nosym_sorted= { s_key : np.sort(s_t._data)[::-1] \
+            for s_key, s_t in spec.items() }            
+    else:
+        spec_nosym_sorted= { s_key : s_t._data.sort(descending=True)[0] \
+            for s_key, s_t in spec.items() }
+    if len(history['spec'])>0:
+        s_old= history['spec'][-1]
+        diffs= []
+        for k in spec.keys():
+            x_0,x_1 = spec_nosym_sorted[k], s_old[k]
+            n_x0= x_0.shape[0] if state.engine.backend.BACKEND_ID=='np' else x_0.size(0)
+            n_x1= x_1.shape[0] if state.engine.backend.BACKEND_ID=='np' else x_1.size(0)
+            if n_x0>n_x1:
+                diffs.append( (sum((x_1-x_0[:n_x1])**2) \
+                    + sum(x_0[n_x1:]**2)).item() )
+            else:
+                diffs.append( (sum((x_0-x_1[:n_x0])**2) \
+                    + sum(x_1[n_x0:]**2)).item() )
+        conv_crit= sqrt(sum(diffs))
+    history['spec'].append(spec_nosym_sorted)
+    history['diffs'].append(diffs)
+    history['conv_crit'].append(conv_crit)
+
+    if (len(history['diffs']) > 1 and conv_crit < ctm_args.ctm_conv_tol)\
+        or len(history['diffs']) >= ctm_args.ctm_max_iter:
+        log.info({"history_length": len(history['diffs']), "history": history['diffs']})
+        return True, history
+    return False, history

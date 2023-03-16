@@ -989,8 +989,8 @@ class J1J2J4_1SITEQ(J1J2J4):
             q= state.q
 
         s2 = su2.SU2(self.phys_dim, dtype=self.dtype, device=self.device)
-        self.R= torch.linalg.matrix_exp( (pi*q[0])*(s2.SP()-s2.SM()) )
-        self.Rinv= self.R.t().conj()
+        R= torch.linalg.matrix_exp( (pi*q[0])*(s2.SP()-s2.SM()) )
+        Rinv= R.t().conj()
 
         if abs(self.j2)>0 or abs(self.j4)>0 or abs(self.jchi)>0:
             for coord in state.sites.keys():
@@ -1006,8 +1006,8 @@ class J1J2J4_1SITEQ(J1J2J4):
                 else:
                     tmp_rdm_2x3= rdm.rdm2x3(coord,state,env)
                 tmp_rdm_2x3= torch.einsum(tmp_rdm_2x3,[0,10,4,12,1,11,5,13],\
-                    self.R, [2,10], self.R, [3,11],\
-                    self.R@self.R, [6,12], self.R@self.R, [7,13], [0,2,4,6,1,3,5,7])
+                    R, [2,10], R, [3,11],\
+                    R@R, [6,12], R@R, [7,13], [0,2,4,6,1,3,5,7])
                 energy_nn+= torch.einsum('ijklabcd,abcdijkl',tmp_rdm_2x3,self.h_nn_only)
                 energy_nnn+= torch.einsum('ibkdabcd,acik',tmp_rdm_2x3,self.SS) # A--A nnn
                 energy_p+= torch.einsum('ijklabcd,abcdijkl',tmp_rdm_2x3,self.h_p)
@@ -1030,8 +1030,8 @@ class J1J2J4_1SITEQ(J1J2J4):
                 else:
                     tmp_rdm_3x2= rdm.rdm3x2(coord,state,env)
                 tmp_rdm_3x2= torch.einsum(tmp_rdm_3x2,[0,10,4,12,1,11,5,13],\
-                    self.R@self.R, [2,10], self.R@self.R, [3,11],\
-                    self.R, [6,12], self.R, [7,13], [0,2,4,6,1,3,5,7])
+                    R@R, [2,10], R@R, [3,11],\
+                    R, [6,12], R, [7,13], [0,2,4,6,1,3,5,7])
                 energy_nn+= torch.einsum('ijklabcd,abcdijkl',tmp_rdm_3x2,self.h_nn_only)
                 energy_nnn+= torch.einsum('ibkdabcd,acik',tmp_rdm_3x2,self.SS) # A--A nnn
                 energy_p+= torch.einsum('ijklabcd,abcdijkl',tmp_rdm_3x2,self.h_p)
@@ -1043,8 +1043,8 @@ class J1J2J4_1SITEQ(J1J2J4):
                 # C A <=> s2 s3 => (permute) => s3 s2 <=> l k
                 tmp_rdm_2x2= rdm.rdm2x2(coord,state,env).permute(0,1,3,2, 4,5,7,6).contiguous()
                 tmp_rdm_2x2= torch.einsum(tmp_rdm_2x2,[0,10,4,12,1,11,5,13],\
-                    self.R, [2,10], self.R, [3,11],\
-                    self.R@self.R, [6,12], self.R@self.R, [7,13], [0,2,4,6,1,3,5,7])
+                    R, [2,10], R, [3,11],\
+                    R@R, [6,12], R@R, [7,13], [0,2,4,6,1,3,5,7])
                 energy_nn+= torch.einsum('ijklabcd,abcdijkl',tmp_rdm_2x2,self.h_nn_only)
                 energy_nnn+= torch.einsum('ibkdabcd,acik',tmp_rdm_2x2,self.SS) # A--A nnn
                 energy_p+= torch.einsum('ijklabcd,abcdijkl',tmp_rdm_2x2,self.h_p)
@@ -1063,7 +1063,7 @@ class J1J2J4_1SITEQ(J1J2J4):
                 # A--B
                 tmp_rdm_2x1= rdm.rdm2x1(coord,state,env)
                 energy_nn+= torch.einsum('ijab,abij',
-                    torch.einsum('ixay,xj,yb->ijab',self.SS,self.R,self.R),
+                    torch.einsum('ixay,xj,yb->ijab',self.SS,R,R),
                     tmp_rdm_2x1)
                 
                 #
@@ -1072,7 +1072,7 @@ class J1J2J4_1SITEQ(J1J2J4):
                 # C
                 tmp_rdm_1x2= rdm.rdm1x2(coord,state,env)
                 energy_nn+= torch.einsum('ijab,abij',
-                    torch.einsum('ixay,xj,yb->ijab',self.SS,self.Rinv,self.Rinv),
+                    torch.einsum('ixay,xj,yb->ijab',self.SS,Rinv,Rinv),
                     tmp_rdm_1x2)
                 #
                 # B      C(1,-1)
@@ -1080,7 +1080,7 @@ class J1J2J4_1SITEQ(J1J2J4):
                 # A(0,0) B
                 tmp_rdm_2x2_NNN_1n1= rdm.rdm2x2_NNN_1n1(coord,state,env)
                 energy_nn_diag+= torch.einsum('ijab,abij',
-                    torch.einsum('ixay,xj,yb->ijab',self.SS,self.R@self.R,self.R@self.R),
+                    torch.einsum('ixay,xj,yb->ijab',self.SS,R@R,R@R),
                     tmp_rdm_2x2_NNN_1n1)
 
                 num_sites= len(state.sites)
@@ -1120,8 +1120,8 @@ class J1J2J4_1SITEQ(J1J2J4):
             q= state.q
         
         s2 = su2.SU2(self.phys_dim, dtype=self.dtype, device=self.device)
-        self.R= torch.linalg.matrix_exp( (pi*q[0])*(s2.SP()-s2.SM()) )
-        self.Rinv= self.R.t().conj()
+        R= torch.linalg.matrix_exp( (pi*q[0])*(s2.SP()-s2.SM()) )
+        Rinv= R.t().conj()
 
         obs= dict({"avg_m": 0.})
         with torch.no_grad():
@@ -1149,7 +1149,7 @@ class J1J2J4_1SITEQ(J1J2J4):
                 #
                 # A--B
                 SS2x1= torch.einsum('ijab,abij',tmp_rdm_2x1,
-                    torch.einsum('ixay,xj,yb->ijab',self.SS,self.R,self.R))
+                    torch.einsum('ixay,xj,yb->ijab',self.SS,R,R))
                 obs[f"SS2x1AB{coord}"]= _cast_to_real(SS2x1)
 
                 # #
@@ -1160,20 +1160,20 @@ class J1J2J4_1SITEQ(J1J2J4):
                 #     tmp_rdm_2x1)
                 # obs[f"SS2x1BC{coord}"]= _cast_to_real(SS2x1)
 
-                # #
-                # # C--A
-                # SS2x1= torch.einsum('ijab,abij',
+                #
+                # C--A
+                # ca_SS2x1= torch.einsum('ijab,abij',
                 #     torch.einsum('mjxb,mi,xa->ijab',self.SS,
-                #         self.R@self.R, self.R@self.R),
+                #         self.Rinv, self.Rinv),
                 #     tmp_rdm_2x1)
-                # obs[f"SS2x1CA{coord}"]= _cast_to_real(SS2x1)
+                # obs[f"SS2x1CA{coord}"]= _cast_to_real(ca_SS2x1)
 
                 #
                 # A
                 # |
                 # C
                 SS1x2= torch.einsum('ijab,abij',tmp_rdm_1x2,
-                    torch.einsum('ixay,xj,yb->ijab',self.SS,self.Rinv,self.Rinv))
+                    torch.einsum('ixay,xj,yb->ijab',self.SS,Rinv,Rinv))
                 obs[f"SS1x2AC{coord}"]= _cast_to_real(SS1x2)
 
                 # #
@@ -1186,14 +1186,14 @@ class J1J2J4_1SITEQ(J1J2J4):
                 #         self.R,self.R))
                 # obs[f"SS1x2CB{coord}"]= _cast_to_real(SS1x2)
 
-                # #
-                # # B
-                # # |
-                # # A
-                # SS1x2= torch.einsum('ijab,abij',tmp_rdm_1x2,
+                #
+                # B
+                # |
+                # A
+                # ba_SS1x2= torch.einsum('ijab,abij',tmp_rdm_1x2,
                 #     torch.einsum('mjxb,mi,xa->ijab',self.SS,
                 #         self.R, self.R))
-                # obs[f"SS1x2BA{coord}"]= _cast_to_real(SS1x2)
+                # obs[f"SS1x2BA{coord}"]= _cast_to_real(ba_SS1x2)
 
 
 
@@ -1202,19 +1202,19 @@ class J1J2J4_1SITEQ(J1J2J4):
                 #  /
                 # A B
                 SS2x2_NNN_1n1= torch.einsum('ijab,abij',tmp_rdm_2x2_NNN_1n1,
-                    torch.einsum('ixay,xj,yb->ijab',self.SS,self.R@self.R,self.R@self.R))
+                    torch.einsum('ixay,xj,yb->ijab',self.SS,R@R,R@R))
                 
                 obs[f"SS2x2_NNN_1n1{coord}"]= _cast_to_real(SS2x2_NNN_1n1)
         
         # prepare list with labels and values
         obs_labels=["avg_m"]+[f"m{coord}" for coord in state.sites.keys()]\
             +[f"{lc[1]}{lc[0]}" for lc in list(itertools.product(state.sites.keys(), self.obs_ops.keys()))]
-        obs_labels += [f"SS2x1AB{coord}" for coord in state.sites.keys()]
-            # + [f"SS2x1BC{coord}" for coord in state.sites.keys()] \
+        obs_labels += [f"SS2x1AB{coord}" for coord in state.sites.keys()] \
             # + [f"SS2x1CA{coord}" for coord in state.sites.keys()]
-        obs_labels += [f"SS1x2AC{coord}" for coord in state.sites.keys()]
-            # + [f"SS1x2CB{coord}" for coord in state.sites.keys()] \
+            # + [f"SS2x1BC{coord}" for coord in state.sites.keys()] \
+        obs_labels += [f"SS1x2AC{coord}" for coord in state.sites.keys()] \
             # + [f"SS1x2BA{coord}" for coord in state.sites.keys()]
+            # + [f"SS1x2CB{coord}" for coord in state.sites.keys()] \
         obs_labels += [f"SS2x2_NNN_1n1{coord}" for coord in state.sites.keys()]
         obs_values=[obs[label] for label in obs_labels]
         return obs_values, obs_labels
@@ -1280,7 +1280,7 @@ class J1J2J4_1SITEQ(J1J2J4):
 
         # function allowing for additional site-dependent conjugation of op.
         def conjugate_op(op):
-            op_0= op
+            op_0= op.clone()
             sign_r=1. 
             if direction in [(1,0), (0,-1)]:
                 sign_r= 1.
@@ -1292,7 +1292,7 @@ class J1J2J4_1SITEQ(J1J2J4):
             def _gen_op(r):
                 # r=0 is nearest-neighbour
                 R= torch.linalg.matrix_exp( (sign_r*(r+1)*pi*q[0])*(s2.SP()-s2.SM()) )
-                return torch.einsum('ki,kj->ij', self.R, op_0 @ self.R) if conj_s else op_0
+                return torch.einsum('xy,xj,yb->jb',op_0,R,R) if conj_s else op_0
             return _gen_op
 
         Sz0szR= corrf.corrf_1sO1sO(coord,direction,state,env, S_zxiy[0,:,:], \
@@ -1347,10 +1347,9 @@ class J1J2J4_1SITEQ(J1J2J4):
         S_zxiy[2,:,:]= 0.5*(s2.SP()-s2.SM())
 
         R= torch.linalg.matrix_exp( (pi*(coord[0]*q[0]+coord[1]*q[0]))*(s2.SP()-s2.SM()) )
-        S_zxiy= torch.einsum('ki,xkj->xij', self.R, torch.einsum('xkl,lj->xkj',S_zxiy,self.R)) if conj_s else S_zxiy
+        S_zxiy= torch.einsum('ki,xkj->xij', R, torch.einsum('xkl,lj->xkj',S_zxiy,R)) if conj_s else S_zxiy
 
-        Sz0IdR= corrf.corrf_1sO1sO(coord,direction,state,env, S_zxiy[0,:,:], \
-            _gen_op, dist, rl_0=rl_0)
+        Sz0IdR= corrf.corrf_1sO1sO(coord,direction,state,env, S_zxiy[0,:,:], _gen_op, dist, rl_0=rl_0)
         Sx0IdR= corrf.corrf_1sO1sO(coord,direction,state,env, S_zxiy[1,:,:], _gen_op, dist, rl_0=rl_0)
         iSy0IdR= corrf.corrf_1sO1sO(coord,direction,state,env, S_zxiy[2,:,:], _gen_op, dist, rl_0=rl_0)
 

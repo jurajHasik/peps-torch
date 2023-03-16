@@ -216,7 +216,6 @@ def main():
         evecs_maps[sdp]= (lambda x: evecs[sdp][0], lambda x: evecs[sdp][1])
 
     # ----- S(0).S(r) -----
-    site_dir_list=[((0,0), (1,0)),((0,0), (0,1))]
     for sdp in site_dir_list:
         corrSS= model.eval_corrf_SS(*sdp, state, ctm_env_init, args.corrf_r, \
             canonical=args.corrf_canonical, rl_0=evecs_maps[sdp])
@@ -225,7 +224,6 @@ def main():
         for i in range(args.corrf_r):
             print(f"{i} "+" ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
 
-    site_dir_list=[((0,0), (1,0)),((0,0), (0,1))]
     for sdp in site_dir_list:
         corrSS= model.eval_corrf_SS(*sdp, state, ctm_env_init, args.corrf_r, \
             canonical=args.corrf_canonical, conj_s=False, rl_0=evecs_maps[sdp])
@@ -235,7 +233,6 @@ def main():
             print(f"{i} "+" ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
 
     # ----- S(0).Id(r) -----
-    site_dir_list=[((0,0), (1,0)),((0,0), (0,1))]
     for sdp in site_dir_list:
         corrSId= model.eval_corrf_SId(*sdp, state, ctm_env_init, 0, rl_0=evecs_maps[sdp])
         print(f"\n\nSId[{sdp[0]},{sdp[1]}] r "+" ".join([label for label in corrSId.keys()]))

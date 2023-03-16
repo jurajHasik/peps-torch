@@ -67,8 +67,10 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
         t0_ctm= time.perf_counter()
         for direction in ctm_args.ctm_move_sequence:
             diagnostics= {"ctm_i": i, "ctm_d": direction} if ctm_args.verbosity_projectors>0 else None
-            ctm_MOVE(direction, stateDL, env, ctm_args=ctm_args, global_args=global_args, \
-                verbosity=ctm_args.verbosity_ctm_move, diagnostics=diagnostics)
+            num_rows_or_cols= stateDL.lX if direction in [(-1,0),(1,0)] else stateDL.lY
+            for row_or_col in range(num_rows_or_cols):
+                ctm_MOVE(direction, stateDL, env, ctm_args=ctm_args, global_args=global_args, \
+                    verbosity=ctm_args.verbosity_ctm_move, diagnostics=diagnostics)
         t1_ctm= time.perf_counter()
 
         t0_obs= time.perf_counter()
