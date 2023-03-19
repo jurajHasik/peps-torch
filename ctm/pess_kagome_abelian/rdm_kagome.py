@@ -3,6 +3,7 @@ import torch
 import yast.yast as yast
 from ipeps.ipeps_abelian import _fused_open_dl_site, _fused_dl_site
 from ctm.generic_abelian.rdm import _sym_pos_def_rdm, _cast_to_real
+from ctm.generic_abelian.ctm_components import _enlarged_corner
 from tn_interface_abelian import contract, permute, conj
 
 log= logging.getLogger('peps.ctm.pess_kagome_abelian.rdm_kagome')
@@ -34,7 +35,7 @@ def _expand_perm(n_inds):
 #      unfuse
 # TODO in case of contracted physical space, is trace of physical space
 #      of open double-layer faster then construction from scratch?
-def double_layer_a(state, coord, open_sites=[], force_cpu=False, verbosity=0):
+def double_layer_kagome_a(state, coord, open_sites=[], force_cpu=False, verbosity=0):
     r"""
     :param state: underlying wavefunction
     :param coord: vertex (x,y) for which the reduced density matrix is constructed
@@ -99,220 +100,13 @@ def double_layer_a(state, coord, open_sites=[], force_cpu=False, verbosity=0):
         a= contract(A,A,(contracted_sites,contracted_sites),conj=(0,1))
         a= a.fuse_legs(axes=tuple(zip(aux_indsK,aux_indsB))+(p_indsK+p_indsB,))
     
-    if verbosity>1: print(f"double_layer_a({coord},{open_sites}) {a}")
+    if verbosity>1: print(f"double_layer_kagome_a({coord},{open_sites}) {a}")
     return a
 
-def enlarged_corner(coord, state, env, corner, open_sites=[], force_cpu=False,
-    verbosity=0):
-    r"""
-    :param coord: vertex (x,y) for which the enlarged corner is constructed
-    :param state: underlying wavefunction
-    :param env: environment corresponding to ``state``
-    :param corner: which corner to construct. The four options are: 'LU', 'RU', 'RD', and 'LD' 
-                   for "left up" corner, "right up" corner, "right down" corner, and "left down" corner.
-    :param open_sites: a list DoFs to leave open (uncontracted).
-    :param force_cpu: perform on CPU
-    :type coord: tuple(int,int)
-    :type state: IPEPS_KAGOME_ABELIAN
-    :type env: ENV_ABELIAN
-    :type corner: str
-    :type open_sites: list(int)
-    :type force_cpu: bool
-    :return: result of (partial) contraction of double-layer tensor 
-    :rtype: yast.tensor
-
-    Builds enlarged corner relative to the site at ``coord`` from the environment:: 
-
-        C---T---                            |   |
-        |   |                            --a*a--T
-        T--a*a--                            |   |
-        |   |     for corner='LU', or    ---T---C  for corner='RD'
-
-    The resulting tensor is always reshaped into either rank-2 or rank-3 if some DoFs are left open
-    on the double-layer. In the latter case, these open physical indices are aggregated into 
-    the last index of the resulting tensor. The index-ordering convention for enlarged corners
-    follows convention for corner tensors of the environment ``env``.
-
-    If ``open_sites=0`` returned tensor has rank-2, where env. indices and auxiliary indices
-    of double-layer tensor in the same direction were fused into a single index. 
-    If some DoFs remain open, then returned tensor is rank-3 with extra index carrying 
-    all physical DoFs fused in `:math:`|ket \rangle\langle bra|` order::
-
-        C---T---\                             C---T---\
-        |   |    --1                          |   |    --1   
-        T--a*a--/                             T--a*a--/
-         \ /                                   \ / \
-          |                                     |   2
-          0           for open_sites=[], or     0           for non-empty open_sites 
-    """
-    assert corner in ['LU','RU','RD','LD'],"Invalid choice of corner: "+corner
-    a = double_layer_a(state, coord, open_sites, force_cpu=force_cpu,\
-            verbosity=verbosity)
-
-    if corner == 'LU':
-        if force_cpu:
-            C = env.C[(state.vertexToSite(coord), (-1, -1))].to('cpu')
-            T1 = env.T[(state.vertexToSite(coord), (0, -1))].to('cpu')
-            T2 = env.T[(state.vertexToSite(coord), (-1, 0))].to('cpu')
-        else:
-            C = env.C[(state.vertexToSite(coord), (-1, -1))]
-            T1 = env.T[(state.vertexToSite(coord), (0, -1))]
-            T2 = env.T[(state.vertexToSite(coord), (-1, 0))]
-
-        # C--10--T1--2
-        # 0      1
-        C2x2_LU = contract(C, T1, ([1], [0]))
-
-        # C------T1--2->1(-)
-        # 0      1->0(-)
-        # 0
-        # T2--2->3(-)
-        # 1->2(-)
-        C2x2_LU = contract(C2x2_LU, T2, ([0], [0]))
-
-        # C----------T1--1->0(-)
-        # |          0
-        # |          0
-        # T2--3 1----a--3(+)
-        # 2->1(-) (+)2\...
-        C2x2_LU = contract(C2x2_LU, a, ([0, 3], [0, 1]))
-
-        # permute 0123...->1203...
-        # reshape (12)(03)...->01...
-        # C2x2--1(-)
-        # |\...
-        # 0(-)
-        fuse_axes= ((1,2),(0,3)) if len(open_sites)==0 else ((1,2),(0,3),4)
-        C2x2_LU = C2x2_LU.fuse_legs(axes=fuse_axes)
-        if verbosity > 1:
-            print("C2X2 LU " + str(coord) + "->" + str(state.vertexToSite(coord))\
-                + " (-1,-1): " + str(C2x2_LU.show_properties()))
-        return C2x2_LU
-
-    elif corner == 'RU':
-        if force_cpu:
-            C = env.C[(state.vertexToSite(coord), (1, -1))].to('cpu')
-            T1 = env.T[(state.vertexToSite(coord), (1, 0))].to('cpu')
-            T2 = env.T[(state.vertexToSite(coord), (0, -1))].to('cpu')
-        else:
-            C = env.C[(state.vertexToSite(coord), (1, -1))]
-            T1 = env.T[(state.vertexToSite(coord), (1, 0))]
-            T2 = env.T[(state.vertexToSite(coord), (0, -1))]
-
-        # 0--C
-        #    1
-        #    0
-        # 1--T1
-        #     2
-        C2x2_RU = contract(C, T1, ([1], [0]))
-
-        # (+)2<-0--T2--2 0--C
-        #    (-)3<-1        |
-        #          (+)0<-1--T1
-        #             (-)1<-2
-        C2x2_RU = contract(C2x2_RU, T2, ([0], [2]))
-
-        # (+)1<-2--T2------C
-        #       .. 3       |
-        #         \0       |
-        # (-)2<-1--a--3 0--T1
-        #    (-)3<-2 (-)0<-1
-        C2x2_RU = contract(C2x2_RU, a, ([0, 3], [3, 0]))
-
-        # permute 0123...->1203...
-        # reshape (12)(03)...->01...
-        # (+)0--C2x2
-        #    ../|
-        #       1(-)
-        fuse_axes= ((1,2),(0,3)) if len(open_sites)==0 else ((1,2),(0,3),4)
-        C2x2_RU = C2x2_RU.fuse_legs(axes=fuse_axes)
-        if verbosity > 1:
-            print("C2X2 RU " + str((coord[0] + vec[0], coord[1] + vec[1])) + "->"\
-                + str(shitf_coord) + " (1,-1): " + str(C2x2_RU.show_properties()))
-        return C2x2_RU
-
-    elif corner == 'RD':
-        if force_cpu:
-            C = env.C[(state.vertexToSite(coord), (1, 1))].to('cpu')
-            T1 = env.T[(state.vertexToSite(coord), (0, 1))].to('cpu')
-            T2 = env.T[(state.vertexToSite(coord), (1, 0))].to('cpu')
-        else:
-            C = env.C[(state.vertexToSite(coord), (1, 1))]
-            T1 = env.T[(state.vertexToSite(coord), (0, 1))]
-            T2 = env.T[(state.vertexToSite(coord), (1, 0))]
-
-        #    1<-0        0
-        # 2<-1--T1--2 1--C
-        C2x2_RD = contract(C, T1, ([1], [2]))
-
-        #         (+)2<-0
-        #      (+)3<-1--T2
-        #               2
-        #    (+)0<-1    0
-        # (+)1<-2--T1---C
-        C2x2_RD = contract(C2x2_RD, T2, ([0], [2]))
-
-        #    (-)2<-0 (+)1<-2
-        # (-)3<-1--a--3 3--T2
-        #          2\...   |
-        #          0       |
-        # (+)0<-1--T1------C
-        C2x2_RD = contract(C2x2_RD, a, ([0, 3], [2, 3]))
-
-        # permute 0123...->1203...
-        # reshape (12)(03)...->01...
-        #    (+)0 ...
-        #       |/
-        # (+)1--C2x2
-        fuse_axes= ((1,2),(0,3)) if len(open_sites)==0 else ((1,2),(0,3),4)
-        C2x2_RD = C2x2_RD.fuse_legs(axes=fuse_axes)
-        if verbosity > 1:
-            print("C2X2 RD " + str((coord[0] + vec[0], coord[1] + vec[1])) + "->"\
-                + str(shitf_coord) + " (1,1): " + str(C2x2_RD.show_properties()))
-        return C2x2_RD
-
-    elif corner == 'LD':
-        if force_cpu:
-            C = env.C[(state.vertexToSite(coord), (-1, 1))].to('cpu')
-            T1 = env.T[(state.vertexToSite(coord), (-1, 0))].to('cpu')
-            T2 = env.T[(state.vertexToSite(coord), (0, 1))].to('cpu')
-        else:
-            C = env.C[(state.vertexToSite(coord), (-1, 1))]
-            T1 = env.T[(state.vertexToSite(coord), (-1, 0))]
-            T2 = env.T[(state.vertexToSite(coord), (0, 1))]
-
-        # 0->1
-        # T1--2
-        # 1
-        # 0
-        # C--1->0
-        C2x2_LD = contract(C, T1, ([0], [1]))
-
-        # 1->0(+)
-        # T1--2->1(-)
-        # |
-        # |       0->2(-)
-        # C--0 1--T2--2->3(-)
-        C2x2_LD = contract(C2x2_LD, T2, ([0], [1]))
-
-        # 0(+)     0->2(-)
-        # T1--1 1--a--3(+)
-        # |        2\...
-        # |        2
-        # C--------T2--3->1(-)
-        C2x2_LD = contract(C2x2_LD, a, ([1, 2], [1, 2]))
-
-        # permute 0123...->0213...
-        # reshape (02)(13)...->01...
-        # (+)0 ...
-        #    |/
-        #    C2x2--1(-)
-        fuse_axes= ((0,2),(1,3)) if len(open_sites)==0 else ((0,2),(1,3),4)
-        C2x2_LD = C2x2_LD.fuse_legs(axes=fuse_axes)
-        if verbosity > 1:
-            print("C2X2 LD " + str((coord[0] + vec[0], coord[1] + vec[1])) + "->"\
-                + str(shitf_coord) + " (-1,1): " + str(C2x2_LD.show_properties()))
-        return C2x2_LD
+def enlarged_corner_kagome(coord, state, env, corner, open_sites=[], \
+        force_cpu=False, verbosity=0):
+    return _enlarged_corner(coord, state, env, corner, double_layer_kagome_a, open_sites=open_sites, \
+        force_cpu=force_cpu, verbosity=verbosity)
 
 # ----- main environment contraction functions - 1x1 subsytem -----
 # TODO add force cpu
@@ -514,7 +308,7 @@ def _old_rdm1x1_kagome(coord, state, env, sites_to_keep=('A', 'B', 'C'), force_c
     # --A--
     #  /
     #
-    a= double_layer_a(state,coord,_abc_to_012_site(sites_to_keep), force_cpu=force_cpu)
+    a= double_layer_kagome_a(state,coord,_abc_to_012_site(sites_to_keep), force_cpu=force_cpu)
 
     # C1(-1,-1)--0
     # |
@@ -650,7 +444,7 @@ def rdm1x1_kagome(coord, state, env, sites_to_keep=('A', 'B', 'C'), force_cpu=Fa
     # --A--
     #  /
     #
-    a= double_layer_a(state,coord,_abc_to_012_site(sites_to_keep), force_cpu=force_cpu)
+    a= double_layer_kagome_a(state,coord,_abc_to_012_site(sites_to_keep), force_cpu=force_cpu)
 
 
     # 0->1
@@ -760,7 +554,7 @@ def rdm1x1_kagome(coord, state, env, sites_to_keep=('A', 'B', 'C'), force_cpu=Fa
 #     """
 #     who = "rdm2x1_kagome"
 #     # ----- building C2x2_LU ----------------------------------------------------
-#     C2x2_LU = enlarged_corner(coord, state, env, 'LU',open_sites=_abc_to_012_site(\
+#     C2x2_LU = enlarged_corner_kagome(coord, state, env, 'LU',open_sites=_abc_to_012_site(\
 #         sites_to_keep_00),force_cpu=force_cpu, verbosity=verbosity)
 #     # C2x2--1
 #     # |\2
@@ -793,7 +587,7 @@ def rdm1x1_kagome(coord, state, env, sites_to_keep=('A', 'B', 'C'), force_cpu=Fa
 #     # ----- building C2x2_RU ----------------------------------------------------
 #     vec = (1, 0)
 #     shitf_coord = _shift_coord(state,coord,vec)
-#     C2x2_RU= enlarged_corner(shitf_coord, state, env, 'RU',open_sites=_abc_to_012_site(\
+#     C2x2_RU= enlarged_corner_kagome(shitf_coord, state, env, 'RU',open_sites=_abc_to_012_site(\
 #         sites_to_keep_10),force_cpu=force_cpu, verbosity=verbosity)
 #     # 0--C2x2
 #     #  2/|
@@ -868,7 +662,7 @@ def rdm1x1_kagome(coord, state, env, sites_to_keep=('A', 'B', 'C'), force_cpu=Fa
 #     """
 #     who = "rdm1x2_kagome"
 #     # ----- building C2x2_LU ----------------------------------------------------
-#     C2x2_LU = enlarged_corner(coord, state, env, 'LU',open_sites=_abc_to_012_site(\
+#     C2x2_LU = enlarged_corner_kagome(coord, state, env, 'LU',open_sites=_abc_to_012_site(\
 #         sites_to_keep_00),force_cpu=force_cpu, verbosity=verbosity)
 #     # C2x2--1
 #     # |\2
@@ -902,7 +696,7 @@ def rdm1x1_kagome(coord, state, env, sites_to_keep=('A', 'B', 'C'), force_cpu=Fa
 #     # ----- building C2x2_LD ----------------------------------------------------
 #     vec = (0, 1)
 #     shitf_coord = _shift_coord(state,coord,vec)
-#     C2x2_LD = enlarged_corner(shitf_coord, state, env, 'LD',open_sites=_abc_to_012_site(\
+#     C2x2_LD = enlarged_corner_kagome(shitf_coord, state, env, 'LD',open_sites=_abc_to_012_site(\
 #         sites_to_keep_01),force_cpu=force_cpu, verbosity=verbosity)
 #     # 0
 #     # |/2
@@ -1010,13 +804,13 @@ def rdm2x2_up_triangle_open(coord, state, env, sym_pos_def=False, force_cpu=Fals
     """
     who = "rdm2x2_up_triangle_open"
     # ----- building C2x2_LU ----------------------------------------------------
-    C2x2_LU = enlarged_corner(coord, state, env, 'LU', force_cpu=force_cpu,\
+    C2x2_LU = enlarged_corner_kagome(coord, state, env, 'LU', force_cpu=force_cpu,\
         verbosity=verbosity)
 
     # ----- building C2x2_RU ----------------------------------------------------
     vec = (1, 0)
     shitf_coord = _shift_coord(state,coord,vec)
-    C2x2_RU= enlarged_corner(shitf_coord, state, env, 'RU', open_sites=[1],\
+    C2x2_RU= enlarged_corner_kagome(shitf_coord, state, env, 'RU', open_sites=[1],\
         force_cpu=force_cpu, verbosity=verbosity)
     # 0--C2x2
     #  2/|
@@ -1033,7 +827,7 @@ def rdm2x2_up_triangle_open(coord, state, env, sym_pos_def=False, force_cpu=Fals
     # ----- building C2x2_RD ----------------------------------------------------
     vec = (1, 1)
     shitf_coord = _shift_coord(state,coord,vec)
-    C2x2_RD = enlarged_corner(shitf_coord, state, env, 'RD', open_sites=[0],\
+    C2x2_RD = enlarged_corner_kagome(shitf_coord, state, env, 'RD', open_sites=[0],\
         force_cpu=force_cpu, verbosity=verbosity)
     #    0
     #    |/2
@@ -1042,7 +836,7 @@ def rdm2x2_up_triangle_open(coord, state, env, sym_pos_def=False, force_cpu=Fals
     # ----- building C2x2_LD ----------------------------------------------------
     vec = (0, 1)
     shitf_coord = _shift_coord(state,coord,vec)
-    C2x2_LD = enlarged_corner(shitf_coord, state, env, 'LD', open_sites=[2],\
+    C2x2_LD = enlarged_corner_kagome(shitf_coord, state, env, 'LD', open_sites=[2],\
         force_cpu=force_cpu, verbosity=verbosity)
     # 0
     # |/2
@@ -1153,7 +947,7 @@ def rdm2x2_dn_triangle_with_operator(coord, state, env, op, force_cpu=False,\
         T2 = env.T[(state.vertexToSite(coord), (-1, 0))]
         a_1layer = state.site(coord)
 
-    a = double_layer_a(state,coord,force_cpu=force_cpu,verbosity=verbosity)
+    a = double_layer_kagome_a(state,coord,force_cpu=force_cpu,verbosity=verbosity)
     a_op = contract(op,a_1layer,([0],[0]),conj=(0,1))
     a_op = contract(a_1layer,a_op,([0],[0]))
     a_op = a_op.fuse_legs(axes=((0,4),(1,5),(2,6),(3,7)))
@@ -1191,7 +985,7 @@ def rdm2x2_dn_triangle_with_operator(coord, state, env, op, force_cpu=False,\
     # ----- building C2x2_RU ----------------------------------------------------
     vec = (1, 0)
     shift_coord = _shift_coord(state,coord,vec)
-    C2x2_RU = enlarged_corner(shift_coord, state, env, 'RU', force_cpu=force_cpu,\
+    C2x2_RU = enlarged_corner_kagome(shift_coord, state, env, 'RU', force_cpu=force_cpu,\
         verbosity=verbosity)
 
     # ----- build upper part C2x2_LU--C2x2_RU -----------------------------------
@@ -1205,13 +999,13 @@ def rdm2x2_dn_triangle_with_operator(coord, state, env, op, force_cpu=False,\
     # ----- building C2x2_RD ----------------------------------------------------
     vec = (1, 1)
     shift_coord = _shift_coord(state,coord,vec)
-    C2x2_RD = enlarged_corner(shift_coord, state, env, 'RD', force_cpu=force_cpu,\
+    C2x2_RD = enlarged_corner_kagome(shift_coord, state, env, 'RD', force_cpu=force_cpu,\
         verbosity=verbosity)
 
     # ----- building C2x2_LD ----------------------------------------------------
     vec = (0, 1)
     shift_coord = _shift_coord(state,coord,vec)
-    C2x2_LD = enlarged_corner(shift_coord, state, env, 'LD', force_cpu=force_cpu,\
+    C2x2_LD = enlarged_corner_kagome(shift_coord, state, env, 'LD', force_cpu=force_cpu,\
         verbosity=verbosity)
 
     # ----- build lower part C2x2_LD--C2x2_RD -----------------------------------
@@ -1291,7 +1085,7 @@ def rdm2x2_kagome(coord, state, env, sites_to_keep_00=('A', 'B', 'C'),\
         or len(sites_to_keep_10)>0 or len(sites_to_keep_11)>0,\
         "at least one DoF has to remain untraced" 
     # ----- building C2x2_LU ----------------------------------------------------
-    C2x2_LU = enlarged_corner(coord, state, env, 'LU',open_sites=_abc_to_012_site(\
+    C2x2_LU = enlarged_corner_kagome(coord, state, env, 'LU',open_sites=_abc_to_012_site(\
         sites_to_keep_00),force_cpu=force_cpu, verbosity=verbosity)
     # C2x2--1
     # |\2
@@ -1300,7 +1094,7 @@ def rdm2x2_kagome(coord, state, env, sites_to_keep_00=('A', 'B', 'C'),\
     # ----- building C2x2_RU ----------------------------------------------------
     vec = (1, 0)
     shitf_coord = _shift_coord(state,coord,vec)
-    C2x2_RU= enlarged_corner(shitf_coord, state, env, 'RU',open_sites=_abc_to_012_site(\
+    C2x2_RU= enlarged_corner_kagome(shitf_coord, state, env, 'RU',open_sites=_abc_to_012_site(\
         sites_to_keep_10),force_cpu=force_cpu, verbosity=verbosity)
     # 0--C2x2
     #  2/|
@@ -1320,7 +1114,7 @@ def rdm2x2_kagome(coord, state, env, sites_to_keep_00=('A', 'B', 'C'),\
     # ----- building C2x2_RD ----------------------------------------------------
     vec = (1, 1)
     shitf_coord = _shift_coord(state,coord,vec)
-    C2x2_RD= enlarged_corner(shitf_coord, state, env, 'RD',open_sites=_abc_to_012_site(\
+    C2x2_RD= enlarged_corner_kagome(shitf_coord, state, env, 'RD',open_sites=_abc_to_012_site(\
         sites_to_keep_11),force_cpu=force_cpu, verbosity=verbosity)
 
     #    0
@@ -1330,7 +1124,7 @@ def rdm2x2_kagome(coord, state, env, sites_to_keep_00=('A', 'B', 'C'),\
     # ----- building C2x2_LD ----------------------------------------------------
     vec = (0, 1)
     shitf_coord = _shift_coord(state,coord,vec)
-    C2x2_LD = enlarged_corner(shitf_coord, state, env, 'LD',open_sites=_abc_to_012_site(\
+    C2x2_LD = enlarged_corner_kagome(shitf_coord, state, env, 'LD',open_sites=_abc_to_012_site(\
         sites_to_keep_01),force_cpu=force_cpu, verbosity=verbosity)
     # 0
     # |/2
@@ -1405,19 +1199,19 @@ def rdm2x2_kagome(coord, state, env, sites_to_keep_00=('A', 'B', 'C'),\
 #             |       |                          |       |
 #        C    T       T       C             C    T       T       C
 #     """
-#     C2x2_LU= enlarged_corner(coord, state, env, 'LU', csites=[],\
+#     C2x2_LU= enlarged_corner_kagome(coord, state, env, 'LU', csites=[],\
 #         force_cpu=force_cpu, verbosity=verbosity)
 #     shift_coord= _shift_coord(state,coord,(1,1))
-#     C2x2_RD= enlarged_corner(shift_coord, state, env, 'RD', csites=[],\
+#     C2x2_RD= enlarged_corner_kagome(shift_coord, state, env, 'RD', csites=[],\
 #         force_cpu=force_cpu, verbosity=verbosity)
 
 #     # bond 1--2
 #     # TODO? split operator by SVD and apply to individual corners
 #     shift_coord= _shift_coord(state,coord,(0,1))
-#     C2x2_LD = enlarged_corner(shift_coord, state, env, 'LD', csites=[0],\
+#     C2x2_LD = enlarged_corner_kagome(shift_coord, state, env, 'LD', csites=[0],\
 #         force_cpu=force_cpu, verbosity=verbosity)
 #     shift_coord= _shift_coord(state,coord,(1,0))
-#     C2x2_RU = enlarged_corner(shift_coord, state, env, 'RU', csites=[1],\
+#     C2x2_RU = enlarged_corner_kagome(shift_coord, state, env, 'RU', csites=[1],\
 #         force_cpu=force_cpu, verbosity=verbosity)
 #     upper_half = einsum('ij,jkab->ikab', C2x2_LU, C2x2_RU)
 #     lower_half = einsum('ijab,kj->ikab', C2x2_LD, C2x2_RD)
@@ -1426,10 +1220,10 @@ def rdm2x2_kagome(coord, state, env, sites_to_keep_00=('A', 'B', 'C'),\
 
 #     # bond 3--1
 #     shift_coord= _shift_coord(state,coord,(0,1))
-#     C2x2_LD = enlarged_corner(shift_coord, state, env, 'LD', csites=[2],\
+#     C2x2_LD = enlarged_corner_kagome(shift_coord, state, env, 'LD', csites=[2],\
 #         force_cpu=force_cpu, verbosity=verbosity)
 #     shift_coord= _shift_coord(state,coord,(1,0))
-#     C2x2_RU = enlarged_corner(shift_coord, state, env, 'RU', csites=[0],\
+#     C2x2_RU = enlarged_corner_kagome(shift_coord, state, env, 'RU', csites=[0],\
 #         force_cpu=force_cpu, verbosity=verbosity)
 #     upper_half = einsum('ij,jkab->ikab', C2x2_LU, C2x2_RU)
 #     lower_half = einsum('ijab,kj->ikab', C2x2_LD, C2x2_RD)
@@ -1469,19 +1263,19 @@ def rdm2x2_kagome(coord, state, env, sites_to_keep_00=('A', 'B', 'C'),\
 #     # 0                       1
 
 #     # NNN bond 3--2
-#     C2x2_LU = enlarged_corner(coord, state, env, corner='LU', csites=[2],\
+#     C2x2_LU = enlarged_corner_kagome(coord, state, env, corner='LU', csites=[2],\
 #         force_cpu=force_cpu, verbosity=verbosity)
 #     shift_coord= _shift_coord(state,coord,(1,0))
-#     C2x2_RU = enlarged_corner(shift_coord, state, env, corner='RU', csites=[1],\
+#     C2x2_RU = enlarged_corner_kagome(shift_coord, state, env, corner='RU', csites=[1],\
 #         force_cpu=force_cpu, verbosity=verbosity)
 #     bond_operator = operator.to(C2x2_LU.device)
 #     upper_half_32 = einsum('ijab,badc,jkcd->ik', C2x2_LU, bond_operator, C2x2_RU)
 
 #     # NNN bond 2--1
-#     C2x2_LU = enlarged_corner(coord, state, env, corner='LU', csites=[1],\
+#     C2x2_LU = enlarged_corner_kagome(coord, state, env, corner='LU', csites=[1],\
 #         force_cpu=force_cpu, verbosity=verbosity)
 #     shift_coord= _shift_coord(state,coord,(1,0))
-#     C2x2_RU = enlarged_corner(shift_coord, state, env, corner='RU', csites=[0],\
+#     C2x2_RU = enlarged_corner_kagome(shift_coord, state, env, corner='RU', csites=[0],\
 #         force_cpu=force_cpu, verbosity=verbosity)
 #     upper_half_21 = einsum('ijab,badc,jkcd->ik', C2x2_LU, bond_operator, C2x2_RU)
 
@@ -1491,10 +1285,10 @@ def rdm2x2_kagome(coord, state, env, sites_to_keep_00=('A', 'B', 'C'),\
 #     # |             |
 #     # C2x2_LD--1 1--C2x2_RD
 #     shift_coord= _shift_coord(state,coord,(1,1))
-#     C2x2_RD = enlarged_corner(shift_coord, state, env, corner='RD', csites=[],\
+#     C2x2_RD = enlarged_corner_kagome(shift_coord, state, env, corner='RD', csites=[],\
 #         force_cpu=force_cpu, verbosity=verbosity)
 #     shift_coord= _shift_coord(state,coord,(0,1))
-#     C2x2_LD = enlarged_corner(shift_coord, state, env, corner='LD', csites=[],\
+#     C2x2_LD = enlarged_corner_kagome(shift_coord, state, env, corner='LD', csites=[],\
 #         force_cpu=force_cpu, verbosity=verbosity)
 #     lower_half = contract(C2x2_LD, C2x2_RD, ([1], [1]))
 
@@ -1544,19 +1338,19 @@ def rdm2x2_kagome(coord, state, env, sites_to_keep_00=('A', 'B', 'C'),\
 #     # C2x2_LD--1
 
 #     # NN bond 3--1
-#     C2x2_LU = enlarged_corner(coord, state, env, corner='LU', csites=[2],\
+#     C2x2_LU = enlarged_corner_kagome(coord, state, env, corner='LU', csites=[2],\
 #         force_cpu=force_cpu, verbosity=verbosity)
 #     shift_coord= _shift_coord(state,coord,(0,1))
-#     C2x2_LD = enlarged_corner(shift_coord, state, env, corner='LD', csites=[0],\
+#     C2x2_LD = enlarged_corner_kagome(shift_coord, state, env, corner='LD', csites=[0],\
 #         force_cpu=force_cpu, verbosity=verbosity)
 #     bond_operator = operator.to(C2x2_LU.device)
 #     left_half_31 = einsum('ijab,badc,ikcd->jk', C2x2_LU, bond_operator, C2x2_LD)
 
 #     # NN bond 2--3
-#     C2x2_LU = enlarged_corner(coord, state, env, corner='LU', csites=[1],\
+#     C2x2_LU = enlarged_corner_kagome(coord, state, env, corner='LU', csites=[1],\
 #         force_cpu=force_cpu, verbosity=verbosity)
 #     shift_coord= _shift_coord(state,coord,(0,1))
-#     C2x2_LD = enlarged_corner(shift_coord, state, env, corner='LD', csites=[2],\
+#     C2x2_LD = enlarged_corner_kagome(shift_coord, state, env, corner='LD', csites=[2],\
 #         force_cpu=force_cpu, verbosity=verbosity)
 #     left_half_23 = einsum('ijab,badc,ikcd->jk', C2x2_LU, bond_operator, C2x2_LD)
 
@@ -1569,10 +1363,10 @@ def rdm2x2_kagome(coord, state, env, sites_to_keep_00=('A', 'B', 'C'),\
 #     #    |
 #     # 1--C2x2_RD
 #     shift_coord= _shift_coord(state,coord,(1,0))
-#     C2x2_RU = enlarged_corner(shift_coord, state, env, corner='RU', csites=[],\
+#     C2x2_RU = enlarged_corner_kagome(shift_coord, state, env, corner='RU', csites=[],\
 #         force_cpu=force_cpu, verbosity=verbosity)
 #     shift_coord= _shift_coord(state,coord,(1,1))
-#     C2x2_RD = enlarged_corner(shift_coord, state, env, corner='RD', csites=[],\
+#     C2x2_RD = enlarged_corner_kagome(shift_coord, state, env, corner='RD', csites=[],\
 #         force_cpu=force_cpu, verbosity=verbosity)
 #     right_half = contract(C2x2_RU, C2x2_RD, ([1], [0]))
 

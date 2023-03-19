@@ -1,6 +1,7 @@
 import logging
 import warnings
 from tn_interface_abelian import contract, permute, conj
+from ctm.generic_abelian.ctm_components import enlarged_corner
 
 log= logging.getLogger('peps.ctm.generic_abelian.rdm')
 
@@ -714,6 +715,98 @@ def rdm1x2(coord, state, env, sym_pos_def=False, verbosity=0):
         who=who)
 
     return rdm
+
+def rdm2x2_NNN_1n1(coord, state, env, sym_pos_def=False, verbosity=0):
+    r"""
+    :param coord: vertex (x,y) specifies upper left site of 2x2 subsystem
+    :param state: underlying wavefunction
+    :param env: environment corresponding to ``state``
+    :param verbosity: logging verbosity
+    :type coord: tuple(int,int)
+    :type state: IPEPS_ABELIAN
+    :type env: ENV_ABELIAN
+    :type verbosity: int
+    :return: 2-site reduced density matrix with indices :math:`s_0s_1;s'_0s'_1`
+    :rtype: torch.tensor
+
+    Computes 2-site reduced density matrix :math:`\rho_{NNN,1n1}` of two-site subsystem 
+    across (1,-1) diagonal specified by the vertex ``coord`` of its lower left corner using strategy:
+
+        1. compute four individual corners
+        2. construct upper and lower half of the network
+        3. contract upper and lower half to obtain final reduced density matrix
+
+    ::
+
+        C--T------------------T------------------C = C2x2_LU(coord+(0,-1))-C2x2(coord+(1,-1))
+        |  |                  |                  |   |                     |
+        T--A^+A(coord+(0,-1))-A^+A(coord+(1,-1))-T   C2x2_LD(coord)--------C2x2(coord+(1,0))
+        |  |                  |                  | 
+        T--A^+A(coord)--------A^+A(coord+(1,0))--T
+        |  |                  |                  |
+        C--T------------------T------------------C
+
+    The physical indices `s` and `s'` of on-sites tensors :math:`A` (and :math:`A^\dagger`)
+    at vertices ``coord`` and ``coord+(1,-1)`` are left uncontracted and given in the same order::
+
+        x  s1
+        s0 x
+
+    """
+    who = "rdm2x2_NNN_1n1"
+    assert _validate_precomputed(state,env),"Inconsistent requires_grad for state and/or env tensors"
+    # ----- building C2X2_LU ----------------------------------------------------
+    vec = (0, -1)
+    shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    C2X2_LU= enlarged_corner(shift_coord,state,env,'LU',verbosity=verbosity)
+
+    # ----- building C2x2_RU ----------------------------------------------------
+    vec = (1, -1)
+    shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    C2X2_RU= open_C2x2_RU(shift_coord, state, env, verbosity=verbosity)
+
+    # ----- build upper part C2x2_LU--C2X2_RU -----------------------------------
+    # C2x2_LU--1 0--C2X2_RU
+    # |             |\2
+    # 0             1
+    # TODO is it worthy(performance-wise) to instead overwrite one of C2x2_LU,C2X2_RU ?
+    upper_half = contract(C2X2_LU, C2X2_RU, ([1], [0]))
+
+    # ----- building C2X2_RD ----------------------------------------------------
+    vec = (1, 0)
+    shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    C2X2_RD= enlarged_corner(shift_coord,state,env,'RD',verbosity=verbosity)    
+
+    # ----- building C2X2_LD ----------------------------------------------------
+    C2X2_LD= open_C2x2_LD(coord,state,env,verbosity=verbosity)
+
+    # ----- build lower part C2X2_LD--C2X2_RD -----------------------------------
+    # 0             0->2                 0            2->1
+    # |/2->1        |          & permute |/1->2       |
+    # C2X2_LD--1 1--C2X2_RD              C2X2_LD------C2X2_RD
+    # TODO is it worthy(performance-wise) to instead overwrite one of C2X2_LD,C2X2_RD ?
+    lower_half = contract(C2X2_LD, C2X2_RD, ([1], [1]))
+    lower_half = permute(lower_half, (0, 2, 1))
+
+    # construct reduced density matrix by contracting lower and upper halfs
+    # C2X2_LU------C2X2_RU
+    # |            |\2->1
+    # 0            1
+    # 0            1
+    # |/2->0       |
+    # C2X2_LD------C2X2_RD
+    rdm = contract(lower_half, upper_half, ([0, 1], [0, 1]))
+
+    # permute into order of s0,s1;s0',s1' where primed indices
+    # represent "ket"
+    # 0123->0213
+    # symmetrize and normalize
+    rdm= rdm.unfuse_legs(axes=(0,1))
+    rdm= permute(rdm, (0,2,1,3))
+    
+    rdm = _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
+    return rdm
+
 
 # ----- 2x2-cluster RDM -------------------------------------------------------
 

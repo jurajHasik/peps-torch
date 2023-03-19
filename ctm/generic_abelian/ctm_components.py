@@ -567,3 +567,286 @@ def c2x2_LD_c(*tensors):
         # |
         # C2x2--1(-1)
         return C2x2
+
+#####################################################################
+# generic enlarged corner
+#####################################################################
+
+# TODO currently operates on ``sites`` of IPEPS_ABELIAN, where the 
+#      fusion of physical DoFs has been already performed. One has to
+#      unfuse
+# TODO in case of contracted physical space, is trace of physical space
+#      of open double-layer faster then construction from scratch?
+def double_layer_a(state, coord, open_sites=[], force_cpu=False, verbosity=0):
+    r"""
+    :param state: underlying wavefunction
+    :param coord: vertex (x,y) for which the reduced density matrix is constructed
+    :param open_sites: a list DoFs to leave open (uncontracted).  
+    :param force_cpu: perform on CPU
+    :type state: IPEPS_ABELIAN
+    :type coord: tuple(int,int)
+    :type open_sites: list(int)
+    :type force_cpu: bool
+    :return: result of contraction of double-layer tensor 
+    :rtype: yast.Tensor
+
+    Build double-layer tensor of iPEPS with open or fully contracted 
+    physical space::
+
+              (+)
+              /
+        (+)--A*--(-)         (-)
+         (-)/|               /
+          -> |        (-)--a*a--(+)
+          s' 0             / \
+             ?           (+)  s,s'  
+           s 0
+             |
+         (-)\|
+        (-)--A--(+)
+         (+)/
+
+    Default results in contraction over DoF. Physical indices are aggregated into
+    a single index with structure :math:`|ket \rangle\langle bra| = s;s'`.
+
+    The available choices for ``open_sites`` are: [], [0].
+    """
+    
+    # special handling of all physical indices open (provided by IPEPS_ABELIAN
+    # pre-computation
+    if open_sites==[0]: 
+        if not state.sites_dl_open is None:
+            a= state.site_dl_open(coord).to('cpu') if force_cpu else state.site_dl_open(coord)
+            # move physical index to last position
+            a= permute(a,(1,2,3,4,0))
+        else:
+            A= state.site(coord).to('cpu') if force_cpu else state.site(coord)
+            a= _fused_open_dl_site(A, fusion_level="full")
+            a= permute(a,(1,2,3,4,0))
+    elif open_sites==[]:
+        # special handling of no physical spaces open (most common case)
+        if not state.sites_dl is None:
+            a= state.site_dl(coord).to('cpu') if force_cpu else state.site_dl(coord)
+        else:
+            # no open double-layer present in state, recompute from scratch
+            A= state.site(coord).to('cpu') if force_cpu else state.site(coord)
+            a= _fused_dl_site(A)
+    
+    if verbosity>1: print(f"double_layer_a({coord},{open_sites}) {a}")
+    return a
+
+def _enlarged_corner(coord, state, env, corner, double_layer_f, open_sites=[], \
+    force_cpu=False, verbosity=0):
+    r"""
+    :param coord: vertex (x,y) for which the enlarged corner is constructed
+    :param state: underlying wavefunction
+    :param env: environment corresponding to ``state``
+    :param corner: which corner to construct. The four options are: 'LU', 'RU', 'RD', and 'LD' 
+                   for "left up" corner, "right up" corner, "right down" corner, and "left down" corner.
+    :param open_sites: a list DoFs to leave open (uncontracted).
+    :param force_cpu: perform on CPU
+    :type coord: tuple(int,int)
+    :type state: IPEPS_KAGOME_ABELIAN
+    :type env: ENV_ABELIAN
+    :type corner: str
+    :type open_sites: list(int)
+    :type force_cpu: bool
+    :return: result of (partial) contraction of double-layer tensor 
+    :rtype: yast.tensor
+
+    Builds enlarged corner relative to the site at ``coord`` from the environment:: 
+
+        C---T---                            |   |
+        |   |                            --a*a--T
+        T--a*a--                            |   |
+        |   |     for corner='LU', or    ---T---C  for corner='RD'
+
+    The resulting tensor is always reshaped into either rank-2 or rank-3 if some DoFs are left open
+    on the double-layer. In the latter case, these open physical indices are aggregated into 
+    the last index of the resulting tensor. The index-ordering convention for enlarged corners
+    follows convention for corner tensors of the environment ``env``.
+
+    If ``open_sites=0`` returned tensor has rank-2, where env. indices and auxiliary indices
+    of double-layer tensor in the same direction were fused into a single index. 
+    If some DoFs remain open, then returned tensor is rank-3 with extra index carrying 
+    all physical DoFs fused in `:math:`|ket \rangle\langle bra|` order::
+
+        C---T---\                             C---T---\
+        |   |    --1                          |   |    --1   
+        T--a*a--/                             T--a*a--/
+         \ /                                   \ / \
+          |                                     |   2
+          0           for open_sites=[], or     0           for non-empty open_sites 
+    """
+    assert corner in ['LU','RU','RD','LD'],"Invalid choice of corner: "+corner
+    a = double_layer_f(state, coord, open_sites, force_cpu=force_cpu,\
+            verbosity=verbosity)
+
+    if corner == 'LU':
+        if force_cpu:
+            C = env.C[(state.vertexToSite(coord), (-1, -1))].to('cpu')
+            T1 = env.T[(state.vertexToSite(coord), (0, -1))].to('cpu')
+            T2 = env.T[(state.vertexToSite(coord), (-1, 0))].to('cpu')
+        else:
+            C = env.C[(state.vertexToSite(coord), (-1, -1))]
+            T1 = env.T[(state.vertexToSite(coord), (0, -1))]
+            T2 = env.T[(state.vertexToSite(coord), (-1, 0))]
+
+        # C--10--T1--2
+        # 0      1
+        C2x2_LU = contract(C, T1, ([1], [0]))
+
+        # C------T1--2->1(-)
+        # 0      1->0(-)
+        # 0
+        # T2--2->3(-)
+        # 1->2(-)
+        C2x2_LU = contract(C2x2_LU, T2, ([0], [0]))
+
+        # C----------T1--1->0(-)
+        # |          0
+        # |          0
+        # T2--3 1----a--3(+)
+        # 2->1(-) (+)2\...
+        C2x2_LU = contract(C2x2_LU, a, ([0, 3], [0, 1]))
+
+        # permute 0123...->1203...
+        # reshape (12)(03)...->01...
+        # C2x2--1(-)
+        # |\...
+        # 0(-)
+        fuse_axes= ((1,2),(0,3)) if len(open_sites)==0 else ((1,2),(0,3),4)
+        C2x2_LU = C2x2_LU.fuse_legs(axes=fuse_axes)
+        if verbosity > 1:
+            print("C2X2 LU " + str(coord) + "->" + str(state.vertexToSite(coord))\
+                + " (-1,-1): " + str(C2x2_LU.show_properties()))
+        return C2x2_LU
+
+    elif corner == 'RU':
+        if force_cpu:
+            C = env.C[(state.vertexToSite(coord), (1, -1))].to('cpu')
+            T1 = env.T[(state.vertexToSite(coord), (1, 0))].to('cpu')
+            T2 = env.T[(state.vertexToSite(coord), (0, -1))].to('cpu')
+        else:
+            C = env.C[(state.vertexToSite(coord), (1, -1))]
+            T1 = env.T[(state.vertexToSite(coord), (1, 0))]
+            T2 = env.T[(state.vertexToSite(coord), (0, -1))]
+
+        # 0--C
+        #    1
+        #    0
+        # 1--T1
+        #     2
+        C2x2_RU = contract(C, T1, ([1], [0]))
+
+        # (+)2<-0--T2--2 0--C
+        #    (-)3<-1        |
+        #          (+)0<-1--T1
+        #             (-)1<-2
+        C2x2_RU = contract(C2x2_RU, T2, ([0], [2]))
+
+        # (+)1<-2--T2------C
+        #       .. 3       |
+        #         \0       |
+        # (-)2<-1--a--3 0--T1
+        #    (-)3<-2 (-)0<-1
+        C2x2_RU = contract(C2x2_RU, a, ([0, 3], [3, 0]))
+
+        # permute 0123...->1203...
+        # reshape (12)(03)...->01...
+        # (+)0--C2x2
+        #    ../|
+        #       1(-)
+        fuse_axes= ((1,2),(0,3)) if len(open_sites)==0 else ((1,2),(0,3),4)
+        C2x2_RU = C2x2_RU.fuse_legs(axes=fuse_axes)
+        if verbosity > 1:
+            print("C2X2 RU " + str((coord[0] + vec[0], coord[1] + vec[1])) + "->"\
+                + str(shitf_coord) + " (1,-1): " + str(C2x2_RU.show_properties()))
+        return C2x2_RU
+
+    elif corner == 'RD':
+        if force_cpu:
+            C = env.C[(state.vertexToSite(coord), (1, 1))].to('cpu')
+            T1 = env.T[(state.vertexToSite(coord), (0, 1))].to('cpu')
+            T2 = env.T[(state.vertexToSite(coord), (1, 0))].to('cpu')
+        else:
+            C = env.C[(state.vertexToSite(coord), (1, 1))]
+            T1 = env.T[(state.vertexToSite(coord), (0, 1))]
+            T2 = env.T[(state.vertexToSite(coord), (1, 0))]
+
+        #    1<-0        0
+        # 2<-1--T1--2 1--C
+        C2x2_RD = contract(C, T1, ([1], [2]))
+
+        #         (+)2<-0
+        #      (+)3<-1--T2
+        #               2
+        #    (+)0<-1    0
+        # (+)1<-2--T1---C
+        C2x2_RD = contract(C2x2_RD, T2, ([0], [2]))
+
+        #    (-)2<-0 (+)1<-2
+        # (-)3<-1--a--3 3--T2
+        #          2\...   |
+        #          0       |
+        # (+)0<-1--T1------C
+        C2x2_RD = contract(C2x2_RD, a, ([0, 3], [2, 3]))
+
+        # permute 0123...->1203...
+        # reshape (12)(03)...->01...
+        #    (+)0 ...
+        #       |/
+        # (+)1--C2x2
+        fuse_axes= ((1,2),(0,3)) if len(open_sites)==0 else ((1,2),(0,3),4)
+        C2x2_RD = C2x2_RD.fuse_legs(axes=fuse_axes)
+        if verbosity > 1:
+            print("C2X2 RD " + str((coord[0] + vec[0], coord[1] + vec[1])) + "->"\
+                + str(shitf_coord) + " (1,1): " + str(C2x2_RD.show_properties()))
+        return C2x2_RD
+
+    elif corner == 'LD':
+        if force_cpu:
+            C = env.C[(state.vertexToSite(coord), (-1, 1))].to('cpu')
+            T1 = env.T[(state.vertexToSite(coord), (-1, 0))].to('cpu')
+            T2 = env.T[(state.vertexToSite(coord), (0, 1))].to('cpu')
+        else:
+            C = env.C[(state.vertexToSite(coord), (-1, 1))]
+            T1 = env.T[(state.vertexToSite(coord), (-1, 0))]
+            T2 = env.T[(state.vertexToSite(coord), (0, 1))]
+
+        # 0->1
+        # T1--2
+        # 1
+        # 0
+        # C--1->0
+        C2x2_LD = contract(C, T1, ([0], [1]))
+
+        # 1->0(+)
+        # T1--2->1(-)
+        # |
+        # |       0->2(-)
+        # C--0 1--T2--2->3(-)
+        C2x2_LD = contract(C2x2_LD, T2, ([0], [1]))
+
+        # 0(+)     0->2(-)
+        # T1--1 1--a--3(+)
+        # |        2\...
+        # |        2
+        # C--------T2--3->1(-)
+        C2x2_LD = contract(C2x2_LD, a, ([1, 2], [1, 2]))
+
+        # permute 0123...->0213...
+        # reshape (02)(13)...->01...
+        # (+)0 ...
+        #    |/
+        #    C2x2--1(-)
+        fuse_axes= ((0,2),(1,3)) if len(open_sites)==0 else ((0,2),(1,3),4)
+        C2x2_LD = C2x2_LD.fuse_legs(axes=fuse_axes)
+        if verbosity > 1:
+            print("C2X2 LD " + str((coord[0] + vec[0], coord[1] + vec[1])) + "->"\
+                + str(shitf_coord) + " (-1,1): " + str(C2x2_LD.show_properties()))
+        return C2x2_LD
+
+def enlarged_corner(coord, state, env, corner, open_sites=[], force_cpu=False, verbosity=0):
+    return _enlarged_corner(coord,state,env,corner,double_layer_a,\
+        open_sites=open_sites,force_cpu=force_cpu,verbosity=verbosity)
