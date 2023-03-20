@@ -5,9 +5,9 @@ import copy
 import config as cfg
 import yast.yast as yast
 from ipeps.ipeps_abelian import *
-from ctm.generic.env import *
-import ctm.generic.ctmrg as ctmrg
-from models.spin_triangular import J1J2J4
+from ctm.generic_abelian.env_abelian import *
+import ctm.generic_abelian.ctmrg as ctmrg
+from models.abelian.spin_triangular import J1J2J4_NOSYM
 # from optim.ad_optim import optimize_state
 from optim.ad_optim_lbfgs_mod import optimize_state
 #from ctm.generic import transferops
@@ -51,7 +51,8 @@ def main():
     settings.backend.set_num_threads(args.omp_cores)
     settings.backend.random_seed(args.seed)
 
-    model= J1J2J4(j1=args.j1, j2=args.j2, j4=args.j4, jchi=args.jchi, diag=args.diag)
+    model= J1J2J4_NOSYM(settings_full, j1=args.j1, j2=args.j2, j4=args.j4, jchi=args.jchi, \
+            diag=args.diag)
     energy_f= model.energy_per_site
     eval_obs_f= model.eval_obs
 
@@ -84,12 +85,10 @@ def main():
         print(f"dtype of initial state {state.dtype} and model {model.dtype} do not match.")
         print(f"Setting default dtype to {cfg.global_args.dtype} and reinitializing "\
         +" the model")
-        model= J1J2J4(j1=args.j1, j2=args.j2, j4=args.j4, jchi=args.jchi, diag=args.diag)
+        model= J1J2J4_NOSYM(settings_full, j1=args.j1, j2=args.j2, j4=args.j4, jchi=args.jchi, \
+            diag=args.diag)
 
     print(state)
-    # convert to dense
-    state_d= state.to_dense()
-    print(state_d)
 
     @torch.no_grad()
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
@@ -114,34 +113,34 @@ def main():
     elif args.ctm_conv_crit=="ENERGY":
         ctmrg_conv_f= ctmrg_conv_energy
 
-    ctm_env_d = ENV(args.chi, state_d)
-    init_env(state_d, ctm_env_d)
+    ctm_env= ENV_ABELIAN(args.chi, state=state, init=True)
 
-    ctm_env_d, *ctm_log= ctmrg.run(state_d, ctm_env_d, conv_check=ctmrg_conv_f)
-    loss0= energy_f(state_d, ctm_env_d)
-    obs_values, obs_labels = eval_obs_f(state_d,ctm_env_d)
+    ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_f)
+    loss0= energy_f(state, ctm_env)
+    obs_values, obs_labels = eval_obs_f(state,ctm_env)
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
 
 
-    def loss_fn(state, ctm_env_in_d, opt_context):
+    def loss_fn(state, ctm_env_in, opt_context):
         ctm_args= opt_context["ctm_args"]
         opt_args= opt_context["opt_args"]
 
-        state_d= state.to_dense()
+        # build double-layer open on-site tensors
+        state.sync_precomputed()
 
         # possibly re-initialize the environment
         if opt_args.opt_ctm_reinit:
-            init_env(state_d, ctm_env_in_d)
+            init_env(state, ctm_env_in)
 
         # 1) compute environment by CTMRG
-        ctm_env_out_d, *ctm_log = ctmrg.run(state_d, ctm_env_in_d, \
+        ctm_env_out, *ctm_log = ctmrg.run(state, ctm_env_in, \
             conv_check=ctmrg_conv_f, ctm_args=ctm_args)
 
         # 2) evaluate loss with converged environment
-        loss= energy_f(state_d, ctm_env_out_d)
+        loss= energy_f(state, ctm_env_out)
 
-        return (loss, ctm_env_out_d, *ctm_log)
+        return (loss, ctm_env_out, *ctm_log)
 
     def _to_json(l):
                 re=[l[i,0].item() for i in range(l.size()[0])]
@@ -149,7 +148,7 @@ def main():
                 return dict({"re": re, "im": im})
 
     @torch.no_grad()
-    def obs_fn(state, ctm_env_d, opt_context):
+    def obs_fn(state, ctm_env, opt_context):
         if opt_context["line_search"]:
             epoch= len(opt_context["loss_history"]["loss_ls"])
             loss= opt_context["loss_history"]["loss_ls"][-1]
@@ -157,18 +156,17 @@ def main():
         else:
             epoch= len(opt_context["loss_history"]["loss"]) 
             loss= opt_context["loss_history"]["loss"][-1] 
-            state_d= state.to_dense()
-            obs_values, obs_labels = eval_obs_f(state_d,ctm_env_d)
+            obs_values, obs_labels = eval_obs_f(state,ctm_env)
 
             # test ENV sensitivity
             if args.test_env_sensitivity:
                 loc_ctm_args= copy.deepcopy(opt_context["ctm_args"])
                 loc_ctm_args.ctm_max_iter= 1
-                ctm_env_out1= ctm_env_d.clone()
-                ctm_env_out1.chi= ctm_env_d.chi+10
-                ctm_env_out1, *ctm_log= ctmrg.run(state_d, ctm_env_out1, \
+                ctm_env_out1= ctm_env.clone()
+                ctm_env_out1.chi= ctm_env.chi+10
+                ctm_env_out1, *ctm_log= ctmrg.run(state, ctm_env_out1, \
                     conv_check=ctmrg_conv_f, ctm_args=loc_ctm_args)
-                loss1= energy_f(state_d, ctm_env_out1)
+                loss1= energy_f(state, ctm_env_out1)
                 delta_loss= opt_context['loss_history']['loss'][-1]-opt_context['loss_history']['loss'][-2]\
                     if len(opt_context['loss_history']['loss'])>1 else float('NaN')
                 # if we are not linesearching, this can always happen
@@ -193,17 +191,15 @@ def main():
         #             print("TOP "+json.dumps(_to_json(l)))
 
     # optimize
-    optimize_state(state, ctm_env_d, loss_fn, obs_fn=obs_fn)
+    optimize_state(state, ctm_env, loss_fn, obs_fn=obs_fn)
 
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"
     state= read_ipeps(outputstatefile, settings, vertexToSite=lattice_to_site)
-    state_d= state.to_dense()
-    ctm_env_d = ENV(args.chi, state_d)
-    init_env(state_d, ctm_env_d)
-    ctm_env_d, *ctm_log = ctmrg.run(state_d, ctm_env_d, conv_check=ctmrg_conv_f)
-    opt_energy = energy_f(state_d,ctm_env_d)
-    obs_values, obs_labels = eval_obs_f(state_d,ctm_env_d)
+    ctm_env = ENV_ABELIAN(args.chi, state=state, init=True)
+    ctm_env, *ctm_log = ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_f)
+    opt_energy = energy_f(state,ctm_env)
+    obs_values, obs_labels = eval_obs_f(state,ctm_env)
     print(", ".join([f"{args.opt_max_iter}",f"{opt_energy}"]+[f"{v}" for v in obs_values]))
 
 if __name__=='__main__':
