@@ -57,8 +57,11 @@ def _fused_open_dl_site(a, fusion_level="full"):
         raise RuntimeError("Unsupported fusion_level option "+fusion_level)
     return A
 
-def _fused_dl_site(a):
-    A= a.tensordot(a, axes=([0],[0]), conj=(0,1))
+def _fused_dl_site(a, a_bra=None):
+    if a_bra is None:
+        A= a.tensordot(a, axes=([0],[0]), conj=(0,1))
+    else:
+        A= a.tensordot(a_bra, axes=([0],[0]))
     A= A.fuse_legs( axes=((0,4),(1,5),(2,6),(3,7)) )
     return A
 

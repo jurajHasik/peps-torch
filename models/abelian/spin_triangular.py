@@ -1,10 +1,13 @@
+import numpy as np
 import torch
-import groups.su2 as su2
 import config as cfg
 import yast.yast as yast
+import groups.su2 as su2
+import groups.su2_abelian as su2_abelian
 from models.spin_triangular import J1J2J4, J1J2J4_1SITEQ
 from ctm.generic.rdm import _cast_to_real
 from ctm.generic_abelian import rdm
+from ctm.generic_abelian import corrf
 from math import sqrt, pi
 import itertools
 
@@ -187,6 +190,81 @@ class J1J2J4_NOSYM(J1J2J4):
         obs_labels += [f"SS2x2_NNN_1n1{coord}" for coord in state.sites.keys()]
         obs_values=[obs[label] for label in obs_labels]
         return obs_values, obs_labels
+
+    def eval_corrf_SS(self,coord,direction,state,env,dist,rl_0=None):
+        r"""
+        :param coord: reference site
+        :type coord: tuple(int,int)
+        :param direction: 
+        :type direction: tuple(int,int)
+        :param state: wavefunction
+        :param env: CTM environment
+        :type state: IPEPS_ABELIAN
+        :type env: ENV_ABELIAN
+        :param dist: maximal distance of correlator
+        :type dist: int
+        :param rl_0: right and left edges of the two-point function network. These
+                 are expected to be rank-3 tensor compatible with transfer operator indices.
+                 Typically provided by leading eigenvectors of transfer matrix.
+        :type rl_0: tuple(function(tuple(int,int))->yast.Tensor, function(tuple(int,int))->yast.Tensor)
+        :return: dictionary with full and spin-resolved spin-spin correlation functions
+        :rtype: dict(str: np.ndarray)
+        
+        Evaluate spin-spin correlation functions :math:`\langle\mathbf{S}(r).\mathbf{S}(0)\rangle` 
+        up to r = ``dist`` in given direction. See :meth:`ctm.generic.corrf.corrf_1sO1sO`.
+        """
+        # function allowing for additional site-dependent conjugation of op
+        # r=0 is nearest-neighbour
+        def conjugate_op(op):
+            def _gen_op(r):
+                return op
+            return _gen_op
+
+        s2_U1= su2_abelian.SU2_U1(state.engine, 2)
+
+        Sz0szR= corrf.corrf_1sO1sO(coord,direction,state,env, s2_U1.SZ(), \
+            conjugate_op(s2_U1.SZ()), dist, rl_0=rl_0)
+        Sp0smR= corrf.corrf_1sO1sO(coord,direction,state,env, s2_U1.SP(), conjugate_op(s2_U1.SM()),\
+            dist, rl_0=rl_0)
+        Sm0SpR= corrf.corrf_1sO1sO(coord,direction,state,env, s2_U1.SM(), conjugate_op(s2_U1.SP()),\
+            dist, rl_0=rl_0)
+
+        res= dict({"ss": Sz0szR+0.5*(Sp0smR+Sm0SpR), "szsz": Sz0szR, "spsm": Sp0smR, "smsp": Sm0SpR})
+        return res
+
+    def eval_corrf_SId(self,coord,direction,state,env,dist,rl_0=None):
+        r"""
+        :param coord: reference site
+        :type coord: tuple(int,int)
+        :param direction: 
+        :type direction: tuple(int,int)
+        :param state: wavefunction
+        :param env: CTM environment
+        :type state: IPEPS_1S_Q
+        :type env: ENV
+        :param dist: maximal distance of correlator
+        :type dist: int
+        :param rl_0: right and left edges of the two-point function network. These
+                 are expected to be rank-3 tensor compatible with transfer operator indices.
+                 Typically provided by leading eigenvectors of transfer matrix.
+        :type rl_0: tuple(function(tuple(int,int))->yast.Tensor, function(tuple(int,int))->yast.Tensor)
+        :return: dictionary with spin-Id correlation functions
+        :rtype: dict(str: np.ndarray)
+        
+        Evaluate spin-spin correlation functions :math:`\langle\mathbf{S}(r).\mathbf{S}(0)\rangle` 
+        up to r = ``dist`` in given direction. See :meth:`ctm.generic.corrf.corrf_1sO1sO`.
+        """
+        # function allowing for additional site-dependent conjugation of op
+        # r=0 is nearest-neighbour
+        s2_U1= su2_abelian.SU2_U1(state.engine, 2)
+        id1= s2_U1.I()
+        def _gen_op(r):
+            return id1
+
+        Sz0IdR= corrf.corrf_1sO1sO(coord,direction,state,env, s2_U1.SZ(), _gen_op, dist, rl_0=rl_0)
+
+        res= dict({"sz": Sz0IdR, "sx": np.zeros(len(Sz0IdR)), "isy": np.zeros(len(Sz0IdR))})
+        return res
 
 class J1J2J4_1SITEQ_NOSYM(J1J2J4_1SITEQ):
     def __init__(self, settings, phys_dim=2, j1=1.0, j2=0, j4=0, jchi=0, diag=1.,

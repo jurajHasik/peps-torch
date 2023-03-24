@@ -44,16 +44,16 @@ def main():
         raise ValueError("Missing trial state: --instate=None and --ipeps_init_type= "\
             +str(args.ipeps_init_type)+" is not supported")
 
-    if not state_ab.dtype==model.dtype:
-        cfg.global_args.dtype= state_ab.dtype
-        print(f"dtype of initial state {state_ab.dtype} and model {model.dtype} do not match.")
-        print(f"Setting default dtype to {cfg.global_args.dtype} and reinitializing "\
-        +" the model")
-        model= coupledLadders.COUPLEDLADDERS(alpha=args.alpha)
-
     print(state_ab)
     state= state_ab.to_dense()
     print(state)
+
+    if not state.dtype==model.dtype:
+        cfg.global_args.dtype= state.dtype
+        print(f"dtype of initial state {state.dtype} and model {model.dtype} do not match.")
+        print(f"Setting default dtype to {cfg.global_args.dtype} and reinitializing "\
+        +" the model")
+        model= coupledLadders.COUPLEDLADDERS(alpha=args.alpha)
 
     # 2) define convergence criterion for ctmrg
     @torch.no_grad()

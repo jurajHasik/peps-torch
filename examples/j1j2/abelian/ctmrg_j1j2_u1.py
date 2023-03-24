@@ -6,6 +6,7 @@ import config as cfg
 from ipeps.ipeps_abelian import *
 from ctm.generic_abelian.env_abelian import *
 import ctm.generic_abelian.ctmrg as ctmrg
+from ctm.generic_abelian import transferops
 from models.abelian import j1j2
 import json
 import unittest
@@ -18,6 +19,10 @@ parser= cfg.get_args_parser()
 parser.add_argument("--j1", type=float, default=1., help="nearest-neighbour coupling")
 parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour coupling")
 parser.add_argument("--tiling", default="BIPARTITE", help="tiling of the lattice")
+parser.add_argument("--corrf_r", type=int, default=1, help="maximal correlation function distance")
+parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
+    "of transfer operator to compute")
+parser.add_argument('--top_t', nargs="+", type=int, default=[-2,0,2], help="TM charge sectors")
 parser.add_argument("--yast_backend", type=str, default='np', 
     help="YAST backend", choices=['np','torch','torch_cpp'])
 args, unknown_args = parser.parse_known_args()
@@ -77,7 +82,7 @@ def main():
     elif args.opt_resume is not None:
         if args.tiling == "BIPARTITE" or args.tiling == "2SITE":
             state= IPEPS_ABELIAN(settings, dict(), vertexToSite=lattice_to_site,\
-                lX=2, lY=1)
+                lX=2, lY=2)
         elif args.tiling == "4SITE":
             state= IPEPS_ABELIAN(settings, dict(), vertexToSite=lattice_to_site,\
                 lX=2, lY=2)
@@ -141,14 +146,29 @@ def main():
     print(f"TIMINGS ctm: {t_ctm} conv_check: {t_obs}")
 
     # environment diagnostics
-    for c_loc,c_ten in ctm_env.C.items(): 
-        u,s,v= c_ten.svd(([0],[1]))
-        print(f"\n\nspectrum C[{c_loc}]")
-        for charges in s.get_blocks_charge():
-            print(charges)
-            sector= s[charges]
-            for i in range(len(sector)):
-                print(f"{i} {sector[i]}")
+    # for c_loc,c_ten in ctm_env.C.items(): 
+    #     u,s,v= c_ten.svd(([0],[1]))
+    #     print(f"\n\nspectrum C[{c_loc}]")
+    #     for charges in s.get_blocks_charge():
+    #         print(charges)
+    #         sector= s[charges]
+    #         for i in range(len(sector)):
+    #             print(f"{i} {sector[i]}")
+
+    # ----- S(0).S(r) -----
+    site_dir_list=[((0,0), (1,0)), ((0,0), (0,1)), ((1,0), (1,0)), ((1,0), (0,1))]
+    for sdp in site_dir_list:
+        corrSS= model.eval_corrf_SS(*sdp, state, ctm_env, args.corrf_r, rl_0=None)
+        print(f"\n\nSS[{sdp[0]},{sdp[1]}] r "+" ".join([label for label in corrSS.keys()]))
+        for i in range(args.corrf_r):
+            print(f"{i} "+" ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
+
+    # transfer operator spectrum 1-site-width channel
+    for sdp in site_dir_list:
+        print(f"\n\nspectrum(T)[{sdp[0]},{sdp[1]}] {tuple(args.top_t)}")
+        l= transferops.get_Top_spec(args.top_n, *sdp, state, ctm_env, edge_t=tuple(args.top_t))
+        for i in range(l.shape[0]):
+            print(f"{i} {l[i,0]} {l[i,1]}")
 
 if __name__=='__main__':
     if len(unknown_args)>0:
