@@ -171,7 +171,8 @@ def main():
                     if len(opt_context['loss_history']['loss'])>1 else float('NaN')
                 # if we are not linesearching, this can always happen
                 # not "line_search" in opt_context.keys()
-                _flag_antivar= (loss1-loss)>0 and (loss1-loss)>abs(delta_loss)
+                _flag_antivar= (loss1-loss)>0 and \
+                    (loss1-loss)*opt_context["opt_args"].env_sens_scale>abs(delta_loss)
                 opt_context["STATUS"]= "ENV_ANTIVAR" if _flag_antivar else "ENV_VAR"
 
             print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]\
