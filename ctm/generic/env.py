@@ -193,6 +193,7 @@ class ENV():
         spec= {}
         for c_key, c_t in self.C.items():
             spec[c_key]= torch.linalg.svdvals(c_t)
+            spec[c_key]= spec[c_key]/spec[c_key][0]
         return spec
 
     def get_site_env_t(self,coord,state):
@@ -801,7 +802,7 @@ def print_env(env, verbosity=0):
             print(t)
 
 @torch.no_grad()
-def ctmrg_conv_specC(state, env, history, ctm_args=cfg.ctm_args):
+def ctmrg_conv_specC(state, env, history, p='inf', ctm_args=cfg.ctm_args):
     r"""
     :param state: wavefunction
     :param ènv: environment
@@ -839,7 +840,11 @@ def ctmrg_conv_specC(state, env, history, ctm_args=cfg.ctm_args):
         diffs= [ sum((spec_nosym_sorted[k]-s_old[k])**2).item() \
             for k in spec.keys() ]
         # sqrt of sum of squares of all differences of all corner spectra - usual 2-norm
-        conv_crit= sqrt(sum(diffs))
+        if p in ['fro',2]: 
+            conv_crit= sqrt(sum(diffs))
+        # or take max of the differences
+        elif p in [float('inf'),'inf']:
+            conv_crit= sqrt(max(diffs))
     history['spec'].append(spec_nosym_sorted)
     history['diffs'].append(diffs)
     history['conv_crit'].append(conv_crit)

@@ -6,6 +6,7 @@ import json
 import itertools
 import math
 import config as cfg
+import groups.su2 as su2
 from ipeps.tensor_io import *
 from ipeps.ipeps import IPEPS, read_ipeps, _write_ipeps_json
 import logging

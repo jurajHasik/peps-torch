@@ -1216,6 +1216,8 @@ class J1J2J4_1SITEQ(J1J2J4):
             # + [f"SS1x2BA{coord}" for coord in state.sites.keys()]
             # + [f"SS1x2CB{coord}" for coord in state.sites.keys()] \
         obs_labels += [f"SS2x2_NNN_1n1{coord}" for coord in state.sites.keys()]
+        obs_labels += ["q_x","q_y"]
+        obs["q_x"], obs["q_y"]= q[0], q[1]
         obs_values=[obs[label] for label in obs_labels]
         return obs_values, obs_labels
 

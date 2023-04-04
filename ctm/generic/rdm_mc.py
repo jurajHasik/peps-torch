@@ -429,6 +429,186 @@ def rdm2x3_loop(coord, state, env, sym_pos_def=False, use_checkpoint=False, \
     rdm = _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
     return rdm
 
+def rdm2x3_full_loop(coord, state, env, sym_pos_def=False, use_checkpoint=False, \
+    verbosity=0):
+    r"""
+    :param coord: vertex (x,y) specifies lower left site of 2x3 subsystem
+    :param state: underlying wavefunction
+    :param env: environment corresponding to ``state``
+    :param verbosity: logging verbosity
+    :type coord: tuple(int,int)
+    :type state: IPEPS
+    :type env: ENV
+    :type verbosity: int
+    :return: 6-site reduced density matrix with indices 
+             :math:`s_0...s5;s'_0...s'_5`
+    :rtype: torch.tensor
+
+    Computes 6-site reduced density matrix :math:`\rho` of six-site subsystem, 
+    specified by the vertex ``coord`` of its lower-left 
+    and upper-right corner within 2x3 patch using strategy:
+
+        1. compute left edge of the network
+        2. add extra T-tensor and on-site tensor to the bottom of the left edge
+        3. analogously for the right edge, attaching extra T-tensor
+           and on-site tensor to the top of the right edge
+        4. contract left and right half to obtain final reduced density matrix
+
+    ::
+
+        C--T------------------T-----T-------------------C = C2x2_LU(coord+(0,-1))--T-----C2x2(coord+(2,-1))
+        |  |                  |     |                   |   |___________________|--A^+A--|_______________|
+        T--A^+A(coord+(0,-1))-A^+A--A^+A(coord+(2,-1))--T   |                   |--A^+A--|               |
+        |  |                  |     |                   |   C2x2_LD(coord)---------T-----C2x2(coord+(2,0))
+        T--A^+A(coord)--------A^+A--A^+A(coord+(2,0))---T
+        |  |                  |     |                   |
+        C--T------------------T-----T-------------------C
+
+    The physical indices `s` and `s'` of on-sites tensors :math:`A` (and :math:`A^\dagger`)
+    are left uncontracted and given in the order::
+
+        s3 s4 s5
+        s0 s1 s2
+
+    """
+    who="rdm2x3_loop"
+    # ----- building C2x2_LU ----------------------------------------------------
+    vec = (0, -1)
+    shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    C2X2_LU= c2x2_LU(shift_coord,state,env,mode='sl-open',verbosity=verbosity)
+
+    # ----- building C2x2_LD ----------------------------------------------------
+    C2X2_LD= c2x2_LD(coord,state,env,mode='sl-open',verbosity=verbosity)
+
+    # ----- build left part C2x2_LU--C2X2_LD ------------------------------------
+    #                         /23(LU),45(LD)
+    # C2x2_LU--1->0  permute  C2x2_LU--0
+    # |\23->12                |
+    # 0                       |
+    # 0/23->45                |
+    # C2x2_LD--1->3           C2x2_LD--1
+    C2X2_LU= torch.tensordot(C2X2_LU, C2X2_LD, ([0],[0]))
+    C2X2_LU= C2X2_LU.permute(0,3,1,2,4,5)
+
+    vec = (1, 0)
+    shift_coord_10 = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    T_10= env.T[(shift_coord_10,(0,1))]
+    T_10= T_10.view([state.site((shift_coord_10)).size(3)]*2+[T_10.size(1),T_10.size(2)])
+    
+    vec = (1, -1)
+    shift_coord_1n1 = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    T_1n1= env.T[(shift_coord_1n1,(0,-1))]
+    # 0--T_1n1--2->3
+    #    1->1,2
+    T_1n1= T_1n1.view([T_1n1.size(0)]+[state.site((shift_coord_1n1)).size(1)]*2+[T_1n1.size(2)])
+
+    # /23,45->67(LU),89(LD)
+    # C2x2_LU--0->0
+    # |         ->1,2
+    # |   
+    # |           /->4,5
+    # C2x2_LD-----1->3 
+    C2X2_LU= C2X2_LU.view([T_1n1.size(0)]+[state.site(shift_coord_1n1).size(2)]*2\
+        +[T_10.size(2)]+[state.site(shift_coord_10).size(2)]*2\
+        +[state.site(shift_coord).size(0)]*2+[state.site(coord).size(0)]*2 )
+
+    # ----- building C2x2_RU ----------------------------------------------------
+    vec = (2, -1)
+    shift_coord_2n1 = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    C2X2_RU= c2x2_RU(shift_coord_2n1,state,env,mode='sl-open',verbosity=verbosity)
+
+     # ----- building C2x2_RD ----------------------------------------------------
+    vec = (2, 0)
+    shift_coord_20 = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    C2X2_RD= c2x2_RD(shift_coord_20,state,env,mode='sl-open',verbosity=verbosity)
+    
+    # ----- build right part C2X2_RU--C2X2_RD -----------------------------------
+    #         0<-0--C2x2_RU--2,3->1,2  permute  0--C2x2_RU--23(RU),45(RD)
+    #               1                              |
+    #               0                              |
+    #         3<-1--C2x2_RD--2,3->4,5           1--C2x2_RD
+    C2X2_RU= torch.tensordot(C2X2_RU,C2X2_RD,([1],[0]))
+    C2X2_RU= C2X2_RU.permute(0,3,1,2,4,5)
+    #         0<-0--C2x2_RU--23,45->67(RU),89(RD)
+    #       1,2<-   |
+    #       4,5<-   |
+    #         3<-1--C2x2_RD
+    C2X2_RU= C2X2_RU.view([T_1n1.size(3)]+[state.site(shift_coord_1n1).size(4)]*2\
+        +[T_10.size(3)]+[state.site(shift_coord_10).size(4)]*2\
+        +[state.site(shift_coord_2n1).size(0)]*2+[state.site(shift_coord_20).size(0)]*2)
+
+    _loc_bond_dim= state.site(shift_coord_10).size(1)
+    rdm_acc=torch.zeros([state.site(coord).size(0)]*12+[_loc_bond_dim**2],\
+        device=env.device, dtype=env.dtype)
+    
+    def _loop_body(C2X2_LU, C2X2_RU, T_10, T_1n1, a_10, a_1n1, i_ip):
+        i,ip= i_ip // _loc_bond_dim, i_ip % _loc_bond_dim
+        #       i     ip
+        # 6(2)--------a_10*(9)--(4)7      
+        # 4(2)--a_10(8)---------(4)5
+        #       0(3)  1(3) 
+        #       0     1
+        #       |
+        # 2-----T_10---------------3
+        TA_10= torch.einsum(T_10,[0,1,2,3], a_10[:,i,:,:,:],[8,4,0,5], a_10[:,ip,:,:,:].conj(),\
+            [9,6,1,7], [2,4,6, 3,5,7, 8,9])
+
+        # C2x2_LU--0,1,2   
+        # |                13,14
+        # |                |
+        # |                A_i,ip--11,12 
+        # C2x2_LD----------T_10----10
+        # |        
+        # 67(LU),89(LD)
+        TA_10= torch.einsum(C2X2_LU,[0,1,2, 3,4,5, 6,7,8,9], TA_10,[3,4,5, 10,11,12, 13,14],\
+            [0,1,2, 10,11,12, 6,7,8,9,13,14])
+
+        # 0-----T_1n1---------------3
+        #       | 
+        #       1     2
+        #       1(1)  2(1) 
+        # 6(2)--------a_1n1*(9)--(4)7      
+        # 4(2)--a_1n1(8)---------(4)5
+        #       i     ip
+        TA_1n1= torch.einsum(T_1n1,[0,1,2,3], a_1n1[:,:,:,i,:],[8,1,4,5], a_1n1[:,:,:,ip,:].conj(),
+            [9,2,6,7], [0,4,6, 3,5,7, 8,9])
+
+        #                       67(RU),89(RD)
+        #                       |    
+        #  10----T_1n1----------C2x2_RU
+        # 11,12--A_i,ip         |
+        #        |              |
+        #        13,14          |
+        #                3,4,5--C2x2_RD
+        TA_1n1= torch.einsum(C2X2_RU,[0,1,2, 3,4,5, 6,7,8,9], TA_1n1,[10,11,12, 0,1,2, 13,14],\
+            [10,11,12, 3,4,5, 6,7,8,9,13,14])
+
+        #
+        # 6,7 8,9 10,11
+        # 0,1 2,3 4,5
+        _loc_rdm= torch.einsum(TA_10,[0,1,2, 10,11,12, 6,7,8,9,13,14], TA_1n1,[0,1,2, 10,11,12, 15,16,17,18,19,20 ],\
+            [8,9, 13,14, 17,18, 6,7, 19,20, 15,16])
+        return _loc_rdm
+
+    tensors= (C2X2_LU, C2X2_RU, T_10, T_1n1, state.site(shift_coord_10), \
+        state.site(shift_coord_1n1))
+    for i_ip in range(rdm_acc.size()[-1]):
+        if use_checkpoint:
+            _loc_rdm= checkpoint(_loop_body, *tensors, i_ip)
+        else:
+            _loc_rdm= _loop_body(*tensors, i_ip)
+        rdm_acc[...,i_ip]= _loc_rdm
+
+    rdm= torch.sum(rdm_acc, -1)
+
+    # permute into order of s0,...,s5;s0',...,s5' where primed indices
+    # represent "ket"
+    # 01234567->02461357
+    # symmetrize and normalize
+    rdm = rdm.permute(0,2,4,6,8,10, 1,3,5,7,9,11).contiguous()
+    rdm = _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
+    return rdm
+
 
 def rdm3x2_loop(coord, state, env, sym_pos_def=False, use_checkpoint=False, \
     verbosity=0):
