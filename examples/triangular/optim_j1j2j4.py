@@ -53,7 +53,8 @@ def main():
         model= spin_triangular.J1J2J4(j1=args.j1, j2=args.j2, j4=args.j4, jchi=args.jchi)
         lattice_to_site=None
     elif args.tiling in ["2SITE", "2SITE_Y"]:
-        model= spin_triangular.J1J2J4(j1=args.j1, j2=args.j2, j4=args.j4, jchi=args.jchi)
+        model= spin_triangular.J1J2J4(j1=args.j1, j2=args.j2, j4=args.j4, jchi=args.jchi, \
+            diag=args.diag)
         if args.tiling=="2SITE":
             def lattice_to_site(coord):
                 vx = coord[0] % 2
@@ -71,7 +72,8 @@ def main():
             vy = coord[1]
             return ((vx - vy) % 3, 0)
     elif args.tiling=="4SITE":
-        model= spin_triangular.J1J2J4(j1=args.j1, j2=args.j2, j4=args.j4, jchi=args.jchi)
+        model= spin_triangular.J1J2J4(j1=args.j1, j2=args.j2, j4=args.j4, jchi=args.jchi, \
+            diag=args.diag)
         def lattice_to_site(coord):
             vx = coord[0] % 2
             vy = ( coord[1] + ((coord[0]%4)//2) ) % 2
