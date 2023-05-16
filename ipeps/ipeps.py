@@ -185,7 +185,7 @@ class IPEPS():
         """
         write_ipeps(self,outputfile,aux_seq=aux_seq, tol=tol, normalize=normalize)
 
-    def add_noise(self,noise):
+    def add_noise(self,noise,noise_f=None):
         r"""
         :param noise: magnitude of the noise
         :type noise: float
@@ -193,7 +193,10 @@ class IPEPS():
         Take IPEPS and add random uniform noise with magnitude ``noise`` to all on-site tensors
         """
         for coord in self.sites.keys():
-            rand_t = torch.rand( self.sites[coord].size(), dtype=self.dtype, device=self.device)
+            if noise_f:
+                rand_t = noise_f(self.sites[coord].size(), dtype=self.dtype, device=self.device)    
+            else:
+                rand_t = torch.rand(self.sites[coord].size(), dtype=self.dtype, device=self.device)-0.5
             self.sites[coord] = self.sites[coord] + noise * rand_t
 
     def get_aux_bond_dims(self):
