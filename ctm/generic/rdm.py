@@ -1,3 +1,4 @@
+from functools import lru_cache
 import torch
 from math import prod
 from config import _torch_version_check
@@ -6,12 +7,39 @@ from ctm.generic.env import ENV
 from ctm.generic.ctm_components import c2x2_LU, c2x2_LD, c2x2_RU, c2x2_RD
 from ctm.generic.ctm_projectors import ctm_get_projectors_from_matrices
 import ctm.generic.corrf as corrf
+import opt_einsum as oe
 from tn_interface import contract, einsum
 from tn_interface import contiguous, view, permute
 from tn_interface import conj
 import logging
 
 log = logging.getLogger(__name__)
+
+def _cast_interleaved_to_expr_and_shapes(*args):
+    expr=','.join(map(lambda x: ''.join([oe.get_symbol(y) for y in x]), args[1::2]))
+    if len(args)%2==1:
+        expr+= '->'+''.join([oe.get_symbol(y) for y in args[-1]])
+    ops= tuple(args[0:2*(len(args)//2):2])
+    shapes= tuple(x.size() for x in args[0:2*(len(args)//2):2])
+    return expr, ops, shapes
+
+
+def _get_contraction_path(*tn_to_contract):
+    expr,ops,shapes= _cast_interleaved_to_expr_and_shapes(*tn_to_contract)
+    return _get_contraction_path_cached(expr,shapes)
+
+
+@lru_cache(maxsize=128)
+def _get_contraction_path_cached(expr,shapes):
+    optimizer = oe.DynamicProgramming(
+        minimize='flops',   # 'size' optimize for largest intermediate tensor size
+        search_outer=True,  # search through outer products as well
+        cost_cap=False,     # don't use cost-capping strategy
+    )
+    path, path_info = oe.contract_path(expr,*shapes,\
+        optimize=optimizer,memory_limit=None,shapes=True)#,use_blas=)
+    return path, path_info
+
 
 def _cast_to_real(t, fail_on_check=False, warn_on_check=True, imag_eps=1.0e-8,\
     who="unknown", **kwargs):
@@ -58,17 +86,23 @@ def _sym_pos_def_rdm(rdm, sym_pos_def=False, verbosity=0, who=None,  **kwargs):
     return rdm
 
 
-def rdm1x1(coord, state, env, operator=None, sym_pos_def=False, force_cpu=False, verbosity=0):
+def rdm1x1(coord, state, env, mode='sl', operator=None, sym_pos_def=False, force_cpu=False, verbosity=0):
     r"""
     :param coord: vertex (x,y) for which reduced density matrix is constructed
     :param state: underlying wavefunction
     :param env: environment corresponding to ``state``
-    :param state: 1-site operator to contract with the two physical indices of the rdm
+    :param mode: use double-layer ('dl') or layer-by-layer ('sl') approach when adding on-site tensors
+    :param operator: 1-site operator to contract with the two physical indices of the rdm
+    :param sym_pos_def: enforce hermiticity (always) and positive definiteness if ``True`` 
+    :param force_cpu: compute on CPU
     :param verbosity: logging verbosity
     :type coord: tuple(int,int)
     :type state: IPEPS
     :type env: ENV
+    :type mode: str
     :type operator: torch.tensor
+    :param sym_pos_def: bool
+    :param force_cpu: bool
     :type verbosity: int
     :return: 1-site reduced density matrix with indices :math:`s;s'`. If an operator was provided,
              returns the expectation value of this operator (not normalized by the norm of the wavefunction).
@@ -85,8 +119,17 @@ def rdm1x1(coord, state, env, operator=None, sym_pos_def=False, force_cpu=False,
 
     If no operator was provided, the physical indices `s` and `s'` of on-site tensor :math:`A`
     at vertex ``coord`` and it's hermitian conjugate :math:`A^\dagger` are left uncontracted.
-    Else, they are contracted with the operator.
+    Otherwise, they are contracted with the operator returning a scalar without enforcing 
+    hermiticity or positive definiteness of reduced density matrix.
     """
+    if mode=='sl':
+        return rdm1x1_sl(coord, state, env, operator=operator, sym_pos_def=sym_pos_def,\
+            force_cpu=force_cpu, verbosity=verbosity)
+    else:
+        return rdm1x1_dl(coord, state, env, operator=operator, sym_pos_def=sym_pos_def,\
+            force_cpu=force_cpu, verbosity=verbosity)
+
+def rdm1x1_dl(coord, state, env, operator=None, sym_pos_def=False, force_cpu=False, verbosity=0):
     who = "rdm1x1"
     # C(-1,-1)--1->0
     # 0
@@ -230,16 +273,52 @@ def rdm1x1(coord, state, env, operator=None, sym_pos_def=False, force_cpu=False,
         rdm = _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
     return rdm
 
+def rdm1x1_sl(coord, state, env, operator=None, sym_pos_def=False, force_cpu=False, verbosity=0):
+    # C1--(1)1 1(0)----T1--(3)4 4(0)----C2
+    # 0(0)            (2,3)             5(1)
+    # 0(0)         16  2  3             5(0)
+    # |              \ 2  3              |
+    # T4--(2)14 14-----a--|-----6 6(1)---T2
+    # |                |  |              |
+    # |   (3)15 15--------a*----7 7(2)   |
+    # 13(1)           10 11 \17          8(3)  
+    # 13(0)           (0,1)              8(0)
+    # C4--(1)12 12(2)--T3--(3)9   9(1)--C3
+    #
+    who="rdm1x1_sl"
+    C1, C2, C3, C4, T1, T2, T3, T4= env.get_site_env_t(coord,state)
+    a= state.site(coord)
+    a_op= a if not operator else torch.tensordot(op,a,([1],[0])) 
+    T1= T1.view(T1.size(0),a.size(1),a.size(1),T1.size(2))
+    T2= T2.view(T2.size(0),a.size(4),a.size(4),T2.size(2))
+    T3= T3.view(a.size(3),a.size(3),T3.size(1),T3.size(2))
+    T4= T4.view(T4.size(0),T4.size(1),a.size(2),a.size(2))
 
-def rdm2x1(coord, state, env, sym_pos_def=False, verbosity=0):
+    contract_tn= C1,[0,1],T1,[1,2,3,4],C2,[4,5],T4,[0,13,14,15],\
+        a_op,[16,2,14,10,6],a.conj(),[17,3,15,11,7],T2,[5,6,7,8],\
+        C3,[8,9],T3,[10,11,12,9],C4,[13,12],[16,17]
+    path, path_info= _get_contraction_path(*contract_tn)
+    R= oe.contract(*contract_tn,optimize=path,backend='torch')
+
+    # symmetrize and normalize
+    if operator == None:
+        R = _sym_pos_def_rdm(R, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
+    return R
+
+
+def rdm2x1(coord, state, env, mode='sl', sym_pos_def=False, verbosity=0):
     r"""
     :param coord: vertex (x,y) specifies position of 2x1 subsystem
     :param state: underlying wavefunction
     :param env: environment corresponding to ``state``
+    :param mode: use double-layer ('dl') or layer-by-layer ('sl') approach when adding on-site tensors
+    :param sym_pos_def: enforce hermiticity (always) and positive definiteness if ``True`` 
     :param verbosity: logging verbosity
     :type coord: tuple(int,int)
     :type state: IPEPS
     :type env: ENV
+    :type mode: str
+    :param sym_pos_def: bool
     :type verbosity: int
     :return: 2-site reduced density matrix with indices :math:`s_0s_1;s'_0s'_1`
     :rtype: torch.tensor
@@ -262,6 +341,12 @@ def rdm2x1(coord, state, env, sym_pos_def=False, verbosity=0):
     The physical indices `s` and `s'` of on-sites tensors :math:`A` (and :math:`A^\dagger`)
     at vertices ``coord``, ``coord+(1,0)`` are left uncontracted
     """
+    if mode=='sl':
+        return rdm2x1_sl(coord,state,env,sym_pos_def=sym_pos_def,verbosity=verbosity)
+    else:
+        return rdm2x1_dl(coord,state,env,sym_pos_def=sym_pos_def,verbosity=verbosity)
+
+def rdm2x1_dl(coord, state, env, sym_pos_def=False, verbosity=0):
     who = "rdm2x1"
     # ----- building C2x2_LU ----------------------------------------------------
     C = env.C[(state.vertexToSite(coord), (-1, -1))]
@@ -411,16 +496,63 @@ def rdm2x1(coord, state, env, sym_pos_def=False, verbosity=0):
 
     return rdm
 
+def rdm2x1_sl(coord, state, env, sym_pos_def=False, verbosity=0):
+    # C1--(1)1 1(0)----T1--(3)4 4(0)----T1_x--(3)20 20(0)----C2_x
+    # 0(0)            (2,3)             (2,3)                5(1)
+    # 0(0)         16  2  3         26  18 19                5(0)
+    # |              \ 2  3           \ 18 19                |
+    # T4--(2)14 14-----a--|-----6 6-----a_x-------21 21(1)---T2_x
+    # |                |  |              |  |                |
+    # |   (3)15 15--------a*----7 7---------a_x*--22 22(2)   |
+    # 13(1)           10 11 \17         23 24 \27            8(3)  
+    # 13(0)           (0,1)             (0,1)                8(0)
+    # C4--(1)12 12(2)--T3--(3)9 9(2)----T3_x----(3)25 25(1)--C3_x
+    #
+    who="rdm2x1_sl"
+    a= state.site(coord)
+    a_x= state.site( (coord[0]+1,coord[1]) )
+    C1, C2_x, C3_x, C4= env.C[(state.vertexToSite(coord),(-1,-1))],\
+        env.C[(state.vertexToSite( (coord[0]+1,coord[1]) ), (1,-1))],\
+        env.C[(state.vertexToSite( (coord[0]+1,coord[1]) ), (1,1))],\
+        env.C[(state.vertexToSite(coord), (-1,1))]
+    T1, T1_x, T2_x, T3, T3_x, T4= env.T[(state.vertexToSite(coord),(0,-1))],\
+        env.T[(state.vertexToSite( (coord[0]+1,coord[1]) ), (0,-1))],\
+        env.T[(state.vertexToSite( (coord[0]+1,coord[1]) ), (1,0))],\
+        env.T[(state.vertexToSite(coord), (0,1))],\
+        env.T[(state.vertexToSite( (coord[0]+1,coord[1]) ), (0,1))],\
+        env.T[(state.vertexToSite(coord), (-1,0))]
+    
+    T1= T1.view(T1.size(0),a.size(1),a.size(1),T1.size(2))
+    T1_x= T1_x.view(T1_x.size(0),a_x.size(1),a_x.size(1),T1_x.size(2))
+    T2_x= T2_x.view(T2_x.size(0),a_x.size(4),a_x.size(4),T2_x.size(2))
+    T3= T3.view(a.size(3),a.size(3),T3.size(1),T3.size(2))
+    T3_x= T3_x.view(a_x.size(3),a_x.size(3),T3_x.size(1),T3_x.size(2))
+    T4= T4.view(T4.size(0),T4.size(1),a.size(2),a.size(2))
 
-def rdm1x2(coord, state, env, sym_pos_def=False, verbosity=0):
+    contract_tn= C1,[0,1],T1,[1,2,3,4],T4,[0,13,14,15],C4,[13,12],\
+        a,[16,2,14,10,6],a.conj(),[17,3,15,11,7],T3,[10,11,12,9],\
+        T1_x,[4,18,19,20],C2_x,[20,5],T2_x,[5,21,22,8],C3_x,[8,25],\
+        a_x,[26,18,6,23,21],a_x.conj(),[27,19,7,24,22],T3_x,[23,24,9,25],[16,26,17,27]
+    path, path_info= _get_contraction_path(*contract_tn)
+    R= oe.contract(*contract_tn,optimize=path,backend='torch')
+
+    R = _sym_pos_def_rdm(R, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
+    return R
+
+
+def rdm1x2(coord, state, env, mode='dl', sym_pos_def=False, verbosity=0):
     r"""
     :param coord: vertex (x,y) specifies position of 1x2 subsystem
     :param state: underlying wavefunction
     :param env: environment corresponding to ``state``
+    :param mode: use double-layer ('dl') or layer-by-layer ('sl') approach when adding on-site tensors
+    :param sym_pos_def: enforce hermiticity (always) and positive definiteness if ``True`` 
     :param verbosity: logging verbosity
     :type coord: tuple(int,int)
     :type state: IPEPS
     :type env: ENV
+    :type mode: str
+    :param sym_pos_def: bool
     :type verbosity: int
     :return: 2-site reduced density matrix with indices :math:`s_0s_1;s'_0s'_1`
     :rtype: torch.tensor
@@ -445,6 +577,12 @@ def rdm1x2(coord, state, env, sym_pos_def=False, verbosity=0):
     The physical indices `s` and `s'` of on-sites tensors :math:`A` (and :math:`A^\dagger`)
     at vertices ``coord``, ``coord+(0,1)`` are left uncontracted
     """
+    if mode=='sl':
+        return rdm1x2_sl(coord, state, env, sym_pos_def=sym_pos_def, verbosity=verbosity)
+    else:
+        return rdm1x2_dl(coord, state, env, sym_pos_def=sym_pos_def, verbosity=verbosity)
+
+def rdm1x2_dl(coord, state, env, sym_pos_def=False, verbosity=0): 
     who = "rdm1x2"
     # ----- building C2x2_LU ----------------------------------------------------
     C = env.C[(state.vertexToSite(coord), (-1, -1))]
@@ -600,6 +738,56 @@ def rdm1x2(coord, state, env, sym_pos_def=False, verbosity=0):
 
     return rdm
 
+def rdm1x2_sl(coord, state, env, sym_pos_def=False, verbosity=0):
+    # C1--(1)1 1(0)----T1--(3)4 4(0)-----C2
+    # 0(0)            (2,3)              5(1)
+    # 0(0)         16  2  3              5(0)
+    # |              \ 2  3               |
+    # T4--(2)14 14-----a--|-----6 6(1)----T2
+    # |                |  |               |
+    # |   (3)15 15--------a*----7 7(2)    |
+    # 13(1)           10 11 \17           8(3)
+    # 13(0)       26  10 11               8(0)
+    # |             \ |   |               |
+    # T4_y(2)18 18---a_y--------24 24(1)--T2_y 
+    # |               |   |               |
+    # |   (3)19 19-------a_y*---25 25(2)  |
+    # |               22 23 \27           |
+    # 20(1)           22 23               21(3)
+    # 20(0)           (0,1)               21(0)
+    # C4_y--(1)12 12(2)--T3_y--(3)9 9(1)--C3_y
+    #
+    who="rdm2x1_sl"
+    a= state.site(coord)
+    a_y= state.site( (coord[0],coord[1]+1) )
+    C1, C2, C3_y, C4_y= env.C[(state.vertexToSite(coord),(-1,-1))],\
+        env.C[(state.vertexToSite(coord), (1,-1))],\
+        env.C[(state.vertexToSite( (coord[0],coord[1]+1) ), (1,1))],\
+        env.C[(state.vertexToSite( (coord[0],coord[1]+1) ), (-1,1))]
+    T1, T2, T2_y, T3_y, T4, T4_y= env.T[(state.vertexToSite(coord),(0,-1))],\
+        env.T[(state.vertexToSite(coord), (1,0))],\
+        env.T[(state.vertexToSite( (coord[0],coord[1]+1) ), (1,0))],\
+        env.T[(state.vertexToSite( (coord[0],coord[1]+1) ), (0,1))],\
+        env.T[(state.vertexToSite(coord), (-1,0))],\
+        env.T[(state.vertexToSite( (coord[0],coord[1]+1) ), (-1,0))]
+    
+    T1= T1.view(T1.size(0),a.size(1),a.size(1),T1.size(2))
+    T2= T2.view(T2.size(0),a.size(4),a.size(4),T2.size(2))
+    T2_y= T2_y.view(T2_y.size(0),a_y.size(4),a_y.size(4),T2_y.size(2))
+    T3_y= T3_y.view(a_y.size(3),a_y.size(3),T3_y.size(1),T3_y.size(2))
+    T4= T4.view(T4.size(0),T4.size(1),a.size(2),a.size(2))
+    T4_y= T4_y.view(T4_y.size(0),T4_y.size(1),a_y.size(2),a_y.size(2))
+    
+    contract_tn= C1,[0,1],T1,[1,2,3,4],T4,[0,13,14,15],C2,[4,5],\
+        a,[16,2,14,10,6],a.conj(),[17,3,15,11,7],T2,[5,6,7,8],\
+        T4_y,[13,20,18,19],C4_y,[20,12],T3_y,[22,23,12,9],C3_y,[21,9],\
+        a_y,[26,10,18,22,24],a_y.conj(),[27,11,19,23,25],T2_y,[8,24,25,21],[16,26,17,27]
+    path, path_info= _get_contraction_path(*contract_tn)
+    R= oe.contract(*contract_tn,optimize=path,backend='torch')
+
+    R = _sym_pos_def_rdm(R, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
+    return R
+
 
 def rdm2x2_NNN_11(coord, state, env, sym_pos_def=False, verbosity=0):
     r"""
@@ -636,7 +824,6 @@ def rdm2x2_NNN_11(coord, state, env, sym_pos_def=False, verbosity=0):
 
         s0 x
         x  s1
-
     """
     who = "rdm2x2_NNN_11"
     # ----- building C2x2_LU ----------------------------------------------------

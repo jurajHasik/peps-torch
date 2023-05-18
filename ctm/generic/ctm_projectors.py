@@ -12,7 +12,7 @@ log = logging.getLogger(__name__)
 
 
 def ctm_get_projectors_4x4(direction, coord, state, env, ctm_args=cfg.ctm_args, \
-    global_args=cfg.global_args,diagnostics=None):
+    global_args=cfg.global_args, diagnostics=None):
     r"""
     :param direction: direction of the CTM move for which the projectors are to be computed
     :param coord: vertex (x,y) specifying (together with ``direction``) 4x4 tensor network 
@@ -47,15 +47,16 @@ def ctm_get_projectors_4x4(direction, coord, state, env, ctm_args=cfg.ctm_args, 
     This function constructs two halfs of a 4x4 network and then calls 
     :py:func:`ctm_get_projectors_from_matrices` for projector construction 
     """
+    mode = 'dl' if ctm_args.ctm_force_dl else 'sl'
     verbosity = ctm_args.verbosity_projectors
     if direction==(0,-1):
-        R, Rt = halves_of_4x4_CTM_MOVE_UP(coord, state, env, verbosity=verbosity)
+        R, Rt = halves_of_4x4_CTM_MOVE_UP(coord, state, env, mode=mode, verbosity=verbosity)
     elif direction==(-1,0): 
-        R, Rt = halves_of_4x4_CTM_MOVE_LEFT(coord, state, env, verbosity=verbosity)
+        R, Rt = halves_of_4x4_CTM_MOVE_LEFT(coord, state, env, mode=mode, verbosity=verbosity)
     elif direction==(0,1):
-        R, Rt = halves_of_4x4_CTM_MOVE_DOWN(coord, state, env, verbosity=verbosity)
+        R, Rt = halves_of_4x4_CTM_MOVE_DOWN(coord, state, env, mode=mode, verbosity=verbosity)
     elif direction==(1,0):
-        R, Rt = halves_of_4x4_CTM_MOVE_RIGHT(coord, state, env, verbosity=verbosity)
+        R, Rt = halves_of_4x4_CTM_MOVE_RIGHT(coord, state, env, mode=mode, verbosity=verbosity)
     else:
         raise ValueError("Invalid direction: "+str(direction))
 
@@ -110,22 +111,23 @@ def ctm_get_projectors_4x2(direction, coord, state, env, ctm_args=cfg.ctm_args, 
     # to be truncated. Instead c2x2 family of functions returns corners with 
     # index-position convention following the definition in env module 
     # (anti-clockwise from "up")
+    mode = 'dl' if ctm_args.ctm_force_dl else 'sl'
     verbosity = ctm_args.verbosity_projectors
     if direction==(0,-1): # UP
-        R= c2x2_RU(coord, state, env, verbosity=verbosity)
-        Rt= c2x2_LU((coord[0]-1,coord[1]), state, env, verbosity=verbosity)
+        R= c2x2_RU(coord, state, env, mode=mode, verbosity=verbosity)
+        Rt= c2x2_LU((coord[0]-1,coord[1]), state, env, mode=mode, verbosity=verbosity)
         Rt= transpose(Rt)
     elif direction==(-1,0): # LEFT
-        R= c2x2_LU(coord, state, env, verbosity=verbosity)
-        Rt= c2x2_LD((coord[0],coord[1]+1), state, env, verbosity=verbosity)
+        R= c2x2_LU(coord, state, env, mode=mode, verbosity=verbosity)
+        Rt= c2x2_LD((coord[0],coord[1]+1), state, env, mode=mode, verbosity=verbosity)
     elif direction==(0,1): # DOWN
-        R= c2x2_LD(coord, state, env, verbosity=verbosity)
+        R= c2x2_LD(coord, state, env, mode=mode, verbosity=verbosity)
         R= transpose(R)
-        Rt= c2x2_RD((coord[0]+1,coord[1]), state, env, verbosity=verbosity)
+        Rt= c2x2_RD((coord[0]+1,coord[1]), state, env, mode=mode, verbosity=verbosity)
         Rt= transpose(Rt)
     elif direction==(1,0): # RIGHT
-        R= c2x2_RD(coord, state, env, verbosity=verbosity)
-        Rt= c2x2_RU((coord[0],coord[1]-1), state, env, verbosity=verbosity)
+        R= c2x2_RD(coord, state, env, mode=mode, verbosity=verbosity)
+        Rt= c2x2_RU((coord[0],coord[1]-1), state, env, mode=mode, verbosity=verbosity)
         Rt= transpose(Rt)
     else:
         raise ValueError("Invalid direction: "+str(direction))

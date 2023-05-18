@@ -7,7 +7,7 @@ from tn_interface import view, permute, contiguous, conj
 #####################################################################
 # functions building pair of 4x2 (or 2x4) halves of 4x4 TN
 #####################################################################
-def halves_of_4x4_CTM_MOVE_UP(coord, state, env, verbosity=0):
+def halves_of_4x4_CTM_MOVE_UP(coord, state, env, mode='sl', verbosity=0):
     r"""
     :param coord: site for which to build two halfs of 2x2 subsystem embedded 
                   in environment 
@@ -36,6 +36,10 @@ def halves_of_4x4_CTM_MOVE_UP(coord, state, env, verbosity=0):
     # RU, RD, LU, LD
     tensors= c2x2_RU_t(coord,state,env) + c2x2_RD_t((coord[0], coord[1]+1),state,env) \
         + c2x2_LU_t((coord[0]-1, coord[1]),state,env) + c2x2_LD_t((coord[0]-1, coord[1]+1),state,env)
+    if mode in ['sl']:
+        tensors += (torch.ones(1,dtype=torch.bool),)
+    else:
+        tensors += (torch.zeros(1,dtype=torch.bool),)
 
     if ctm_args.fwd_checkpoint_halves:
         return checkpoint(halves_of_4x4_CTM_MOVE_UP_c,*tensors)
@@ -63,11 +67,14 @@ def halves_of_4x4_CTM_MOVE_UP_c(*tensors):
     # C_2, T1_2, T2_2, A_2= tensors[4:8]
     # C_3, T1_3, T2_3, A_3= tensors[8:12]
     # C_4, T1_4, T2_4, A_4= tensors[12:16]
+    if tensors[-1]: # mode
+        return contract(c2x2_RU_sl_c(*tensors[0:4]),c2x2_RD_sl_c(*tensors[4:8]),([1],[0])), \
+            contract(c2x2_LU_sl_c(*tensors[8:12]),c2x2_LD_sl_c(*tensors[12:16]),([0],[0]))
+    else:
+        return contract(c2x2_RU_c(*tensors[0:4]),c2x2_RD_c(*tensors[4:8]),([1],[0])), \
+            contract(c2x2_LU_c(*tensors[8:12]),c2x2_LD_c(*tensors[12:16]),([0],[0]))
 
-    return contract(c2x2_RU_c(*tensors[0:4]),c2x2_RD_c(*tensors[4:8]),([1],[0])), \
-        contract(c2x2_LU_c(*tensors[8:12]),c2x2_LD_c(*tensors[12:16]),([0],[0]))
-
-def halves_of_4x4_CTM_MOVE_LEFT(coord, state, env, verbosity=0):
+def halves_of_4x4_CTM_MOVE_LEFT(coord, state, env, mode='sl', verbosity=0):
     r"""
     :param coord: site for which to build two halfs of 2x2 subsystem embedded 
                   in environment 
@@ -97,6 +104,10 @@ def halves_of_4x4_CTM_MOVE_LEFT(coord, state, env, verbosity=0):
     # LU, RU, LS, RD
     tensors= c2x2_LU_t(coord,state,env) + c2x2_RU_t((coord[0]+1, coord[1]),state,env) \
         + c2x2_LD_t((coord[0], coord[1]+1),state,env) + c2x2_RD_t((coord[0]+1, coord[1]+1),state,env)
+    if mode in ['sl']:
+        tensors += (torch.ones(1,dtype=torch.bool),)
+    else:
+        tensors += (torch.zeros(1,dtype=torch.bool),)
 
     if ctm_args.fwd_checkpoint_halves:
         return checkpoint(halves_of_4x4_CTM_MOVE_LEFT_c,*tensors)
@@ -120,11 +131,14 @@ def halves_of_4x4_CTM_MOVE_LEFT_c(*tensors):
     # 
     # |0            1<-0|      |0  |1
     # C2x2--1 1---------C2x2   half2
-    
-    return contract(c2x2_LU_c(*tensors[0:4]),c2x2_RU_c(*tensors[4:8]),([1],[0])), \
-        contract(c2x2_LD_c(*tensors[8:12]),c2x2_RD_c(*tensors[12:16]),([1],[1]))
+    if tensors[-1]: # mode
+        return contract(c2x2_LU_sl_c(*tensors[0:4]),c2x2_RU_sl_c(*tensors[4:8]),([1],[0])), \
+            contract(c2x2_LD_sl_c(*tensors[8:12]),c2x2_RD_sl_c(*tensors[12:16]),([1],[1]))
+    else:   
+        return contract(c2x2_LU_c(*tensors[0:4]),c2x2_RU_c(*tensors[4:8]),([1],[0])), \
+            contract(c2x2_LD_c(*tensors[8:12]),c2x2_RD_c(*tensors[12:16]),([1],[1]))
 
-def halves_of_4x4_CTM_MOVE_DOWN(coord, state, env, verbosity=0):
+def halves_of_4x4_CTM_MOVE_DOWN(coord, state, env, mode='sl', verbosity=0):
     r"""
     :param coord: site for which to build two halfs of 2x2 subsystem embedded 
                   in environment 
@@ -153,7 +167,11 @@ def halves_of_4x4_CTM_MOVE_DOWN(coord, state, env, verbosity=0):
     # LD, LU, RD, RU
     tensors= c2x2_LD_t(coord,state,env) + c2x2_LU_t((coord[0], coord[1]-1),state,env) \
         + c2x2_RD_t((coord[0]+1, coord[1]),state,env) + c2x2_RU_t((coord[0]+1, coord[1]-1),state,env)
-    
+    if mode in ['sl']:
+        tensors += (torch.ones(1,dtype=torch.bool),)
+    else:
+        tensors += (torch.zeros(1,dtype=torch.bool),)
+
     if ctm_args.fwd_checkpoint_halves:
         return checkpoint(halves_of_4x4_CTM_MOVE_DOWN_c,*tensors)
     else:
@@ -175,11 +193,14 @@ def halves_of_4x4_CTM_MOVE_DOWN_c(*tensors):
     # |0                      |1        |     |
     # |0                      |0      half1    half2
     # C2x2(coord)--1->0 0<-1--C2x2      |_0 0_|
+    if tensors[-1]: # mode
+        return contract(c2x2_LD_sl_c(*tensors[0:4]),c2x2_LU_sl_c(*tensors[4:8]),([0],[0])), \
+            contract(c2x2_RD_sl_c(*tensors[8:12]),c2x2_RU_sl_c(*tensors[12:16]),([0],[1]))
+    else:
+        return contract(c2x2_LD_c(*tensors[0:4]),c2x2_LU_c(*tensors[4:8]),([0],[0])), \
+            contract(c2x2_RD_c(*tensors[8:12]),c2x2_RU_c(*tensors[12:16]),([0],[1]))
 
-    return contract(c2x2_LD_c(*tensors[0:4]),c2x2_LU_c(*tensors[4:8]),([0],[0])), \
-        contract(c2x2_RD_c(*tensors[8:12]),c2x2_RU_c(*tensors[12:16]),([0],[1]))
-
-def halves_of_4x4_CTM_MOVE_RIGHT(coord, state, env, verbosity=0):
+def halves_of_4x4_CTM_MOVE_RIGHT(coord, state, env, mode='sl', verbosity=0):
     r"""
     :param coord: site for which to build two halfs of 2x2 subsystem embedded 
                   in environment 
@@ -209,7 +230,11 @@ def halves_of_4x4_CTM_MOVE_RIGHT(coord, state, env, verbosity=0):
     # RD, LD, RU, LU
     tensors= c2x2_RD_t(coord,state,env) + c2x2_LD_t((coord[0]-1, coord[1]),state,env) \
         + c2x2_RU_t((coord[0], coord[1]-1),state,env) + c2x2_LU_t((coord[0]-1, coord[1]-1),state,env)
-    
+    if mode in ['sl']:
+        tensors += (torch.ones(1,dtype=torch.bool),)
+    else:
+        tensors += (torch.zeros(1,dtype=torch.bool),)
+
     if ctm_args.fwd_checkpoint_halves:
         return checkpoint(halves_of_4x4_CTM_MOVE_RIGHT_c,*tensors)
     else:
@@ -232,9 +257,12 @@ def halves_of_4x4_CTM_MOVE_RIGHT_c(*tensors):
     # 
     # |0->1      |0            |1  |0
     # C2x2--1 1--C2x2(coord)   half1
-
-    return contract(c2x2_RD_c(*tensors[0:4]),c2x2_LD_c(*tensors[4:8]),([1],[1])), \
-        contract(c2x2_RU_c(*tensors[8:12]),c2x2_LU_c(*tensors[12:16]),([0],[1]))
+    if tensors[-1]: # mode
+        return contract(c2x2_RD_sl_c(*tensors[0:4]),c2x2_LD_sl_c(*tensors[4:8]),([1],[1])), \
+            contract(c2x2_RU_sl_c(*tensors[8:12]),c2x2_LU_sl_c(*tensors[12:16]),([0],[1]))
+    else:
+        return contract(c2x2_RD_c(*tensors[0:4]),c2x2_LD_c(*tensors[4:8]),([1],[1])), \
+            contract(c2x2_RU_c(*tensors[8:12]),c2x2_LU_c(*tensors[12:16]),([0],[1]))
 
 #####################################################################
 # functions building 2x2 Corner
