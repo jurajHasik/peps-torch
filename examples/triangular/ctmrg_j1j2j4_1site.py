@@ -168,11 +168,10 @@ def main():
 
     # environment diagnostics
     # print("\n")
-    # for c_loc,c_ten in ctm_env_init.C.items(): 
-    #     u,s,v= torch.svd(c_ten, compute_uv=False)
-    #     print(f"spectrum C[{c_loc}]")
-    #     for i in range(args.chi):
-    #         print(f"{i} {s[i]}")
+    for c_loc,c_ten in ctm_env_init.C.items(): 
+        u,s,v= torch.svd(c_ten, compute_uv=False)
+        log.info(f"spectrum C[{c_loc}]")
+        log.info(f"{s}")
 
     # chirality
     # obs= model.eval_obs_chirality(state, ctm_env_init, compressed=args.compressed_rdms,\
