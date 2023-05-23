@@ -91,8 +91,9 @@ def get_Top_spec(n, coord, direction, state, env, edge_t=None,
         for i in range(N):
             V= corrf.apply_TM_1sO(c0,direction,state,env,V,verbosity=verbosity)
             c0= (c0[0]+direction[0],c0[1]+direction[1])
+
         v, meta_v= yast.compress_to_1d(V,meta=None)
-        v= v.cpu().numpy()
+        v= state.engine.backend.to_numpy(v)
         return v
 
     T= LinearOperator((E0.size,E0.size), matvec=_mv, dtype=state.dtype)

@@ -59,6 +59,7 @@ class IPEPS_1S_Q(IPEPS):
         if sites:
             assert len(sites)==1,"Too many sites"
         self.q= q if type(q)==torch.Tensor else torch.as_tensor(q,dtype=torch.float64)
+        self.q= self.q.to(device=global_args.device)
         super().__init__(sites, lX=1, lY=1, peps_args=peps_args, global_args=global_args)
 
     def get_parameters(self):

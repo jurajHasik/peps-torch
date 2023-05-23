@@ -923,7 +923,7 @@ class J1J2J4_1SITEQ(J1J2J4):
         # self.SS_rot2= torch.einsum('ixay,xj,yb->ijab',self.SS,self.R@self.R,self.R@self.R)
 
     def energy_1x3(self,state,env,q=None,compressed=-1,looped=False,\
-        ctm_args=cfg.ctm_args,global_args=cfg.global_args):
+        force_cpu=False,ctm_args=cfg.ctm_args,global_args=cfg.global_args):
         r"""
         :param state: wavefunction
         :param env: CTM environment
@@ -931,6 +931,13 @@ class J1J2J4_1SITEQ(J1J2J4):
         :type env: ENV
         :param q: pitch vector in units of 2pi. By default, pitch vector is read from state.
         :type q: tuple(float, float)
+        :param force_cpu: compute on CPU
+        :type force_cpu: bool
+        :param compressed: if ``compressed`` > 0, use projectors to compress :math:`\chi\times D^2`
+                           space to size ``compressed`` 
+        :type compressed: int
+        :param looped: use index unrolling when constructing large reduced density matrices
+        :type looped: bool
         :param ctm_args: CTM algorithm configuration
         :param global_args: global configuration
         :type ctm_args: CTMARGS
@@ -1061,7 +1068,7 @@ class J1J2J4_1SITEQ(J1J2J4):
             for coord in state.sites.keys():
                 #
                 # A--B
-                tmp_rdm_2x1= rdm.rdm2x1(coord,state,env)
+                tmp_rdm_2x1= rdm.rdm2x1(coord,state,env,force_cpu=force_cpu)
                 energy_nn+= torch.einsum('ijab,abij',
                     torch.einsum('ixay,xj,yb->ijab',self.SS,R,R),
                     tmp_rdm_2x1)
@@ -1070,7 +1077,7 @@ class J1J2J4_1SITEQ(J1J2J4):
                 # A
                 # |
                 # C
-                tmp_rdm_1x2= rdm.rdm1x2(coord,state,env)
+                tmp_rdm_1x2= rdm.rdm1x2(coord,state,env,force_cpu=force_cpu)
                 energy_nn+= torch.einsum('ijab,abij',
                     torch.einsum('ixay,xj,yb->ijab',self.SS,Rinv,Rinv),
                     tmp_rdm_1x2)
@@ -1078,7 +1085,7 @@ class J1J2J4_1SITEQ(J1J2J4):
                 # B      C(1,-1)
                 #       /
                 # A(0,0) B
-                tmp_rdm_2x2_NNN_1n1= rdm.rdm2x2_NNN_1n1(coord,state,env)
+                tmp_rdm_2x2_NNN_1n1= rdm.rdm2x2_NNN_1n1(coord,state,env,force_cpu=force_cpu)
                 energy_nn_diag+= torch.einsum('ijab,abij',
                     torch.einsum('ixay,xj,yb->ijab',self.SS,R@R,R@R),
                     tmp_rdm_2x2_NNN_1n1)
@@ -1090,7 +1097,7 @@ class J1J2J4_1SITEQ(J1J2J4):
 
         return energy_per_site
 
-    def eval_obs(self,state,env,q=None):
+    def eval_obs(self,state,env,q=None,force_cpu=False):
         r"""
         :param state: wavefunction
         :param env: CTM environment
@@ -1098,6 +1105,8 @@ class J1J2J4_1SITEQ(J1J2J4):
         :type env: ENV
         :param q: pitch vector in units of 2pi. By default, pitch vector is read from state.
         :type q: tuple(float, float)
+        :param force_cpu: compute on CPU
+        :type force_cpu: bool
         :return:  expectation values of observables, labels of observables
         :rtype: list[float], list[str]
 
@@ -1131,7 +1140,7 @@ class J1J2J4_1SITEQ(J1J2J4):
             # by applying appropriate rotation, i.e. <\vec{S}>_B= R <\vec{S}>_A
             #                                        <\vec{S}>_C= R^2 <\vec{S}>_A   
             for coord,site in state.sites.items():
-                rdm1x1 = rdm.rdm1x1(coord,state,env)
+                rdm1x1 = rdm.rdm1x1(coord,state,env,force_cpu=force_cpu)
                 for label,op in self.obs_ops.items():
                     obs[f"{label}{coord}"]= torch.trace(rdm1x1@op)
                 obs[f"m{coord}"]= sqrt(abs(obs[f"sz{coord}"]**2 + obs[f"sp{coord}"]*obs[f"sm{coord}"]))
@@ -1142,31 +1151,15 @@ class J1J2J4_1SITEQ(J1J2J4):
             for coord,site in state.sites.items():
                 # s0
                 # s1
-                tmp_rdm_1x2= rdm.rdm1x2(coord,state,env)
+                tmp_rdm_1x2= rdm.rdm1x2(coord,state,env,force_cpu=force_cpu)
                 # s0 s1
-                tmp_rdm_2x1= rdm.rdm2x1(coord,state,env)
-                tmp_rdm_2x2_NNN_1n1= rdm.rdm2x2_NNN_1n1(coord,state,env)
+                tmp_rdm_2x1= rdm.rdm2x1(coord,state,env,force_cpu=force_cpu)
+                tmp_rdm_2x2_NNN_1n1= rdm.rdm2x2_NNN_1n1(coord,state,env,force_cpu=force_cpu)
                 #
                 # A--B
                 SS2x1= torch.einsum('ijab,abij',tmp_rdm_2x1,
                     torch.einsum('ixay,xj,yb->ijab',self.SS,R,R))
                 obs[f"SS2x1AB{coord}"]= _cast_to_real(SS2x1)
-
-                # #
-                # # B--C
-                # SS2x1= torch.einsum('ijab,abij',
-                #     torch.einsum('mnxy,mi,xa,nj,yb->ijab',self.SS,self.R,self.R,
-                #         self.R@self.R, self.R@self.R),
-                #     tmp_rdm_2x1)
-                # obs[f"SS2x1BC{coord}"]= _cast_to_real(SS2x1)
-
-                #
-                # C--A
-                # ca_SS2x1= torch.einsum('ijab,abij',
-                #     torch.einsum('mjxb,mi,xa->ijab',self.SS,
-                #         self.Rinv, self.Rinv),
-                #     tmp_rdm_2x1)
-                # obs[f"SS2x1CA{coord}"]= _cast_to_real(ca_SS2x1)
 
                 #
                 # A
@@ -1175,27 +1168,6 @@ class J1J2J4_1SITEQ(J1J2J4):
                 SS1x2= torch.einsum('ijab,abij',tmp_rdm_1x2,
                     torch.einsum('ixay,xj,yb->ijab',self.SS,Rinv,Rinv))
                 obs[f"SS1x2AC{coord}"]= _cast_to_real(SS1x2)
-
-                # #
-                # # C
-                # # |
-                # # B
-                # SS1x2= torch.einsum('ijab,abij',tmp_rdm_1x2,
-                #     torch.einsum('mnxy,mi,xa,nj,yb->ijab',self.SS,
-                #         self.R@self.R, self.R@self.R,
-                #         self.R,self.R))
-                # obs[f"SS1x2CB{coord}"]= _cast_to_real(SS1x2)
-
-                #
-                # B
-                # |
-                # A
-                # ba_SS1x2= torch.einsum('ijab,abij',tmp_rdm_1x2,
-                #     torch.einsum('mjxb,mi,xa->ijab',self.SS,
-                #         self.R, self.R))
-                # obs[f"SS1x2BA{coord}"]= _cast_to_real(ba_SS1x2)
-
-
 
                 #
                 # B C

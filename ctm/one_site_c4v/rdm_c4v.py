@@ -15,6 +15,7 @@ def _get_open_C2x2_LU_sl(C, T, a, verbosity=0):
     loc_device=C.device
     is_cpu= loc_device==torch.device('cpu')
     
+    # O(X^3 D^2)
     #      ------>   
     # C--1 1--T--0->1
     # 0       2
@@ -23,6 +24,7 @@ def _get_open_C2x2_LU_sl(C, T, a, verbosity=0):
     if not is_cpu and verbosity>1: _log_cuda_mem(loc_device,who,"CT")
         
 
+    # O(X^3 D^4)
     #   C------T--1->0
     #   0      2->1
     # A 0
@@ -42,6 +44,7 @@ def _get_open_C2x2_LU_sl(C, T, a, verbosity=0):
         a.size()[2])
 
     # 4ii) first layer "bra" (in principle conjugate)
+    # O(X^2 D^6 p)
     # 
     # C---------T----0
     # |         |\---2->1
@@ -56,7 +59,8 @@ def _get_open_C2x2_LU_sl(C, T, a, verbosity=0):
     if not is_cpu and verbosity>1: _log_cuda_mem(loc_device,who,"CTTa_end")
     
     # 4iii) second layer "ket"
-    # 
+    # O(X^2 D^6 p^2)
+    #
     # C----T----------0
     # |    |\-----\
     # |    |       1
