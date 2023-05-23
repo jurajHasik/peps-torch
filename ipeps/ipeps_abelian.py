@@ -492,7 +492,7 @@ def read_ipeps(jsonfile, settings, vertexToSite=None, \
     # move to desired device and return
     return state.to(global_args.device)
 
-def write_ipeps(state, outputfile, tol=None, normalize=False,\
+def write_ipeps(state, outputfile, tol=None, normalize=False, metadata=None,\
     peps_args=cfg.peps_args, global_args=cfg.global_args):
     r"""
     :param state: wavefunction to write out in json format
@@ -506,7 +506,7 @@ def write_ipeps(state, outputfile, tol=None, normalize=False,\
 
     Write state to file.
     """
-    json_state=dict({"lX": state.lX, "lY": state.lY, "sites": []})
+    json_state=dict({"lX": state.lX, "lY": state.lY, "sites": [], "metadata": metadata})
     
     site_ids=[]
     site_map=[]

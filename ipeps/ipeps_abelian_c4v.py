@@ -11,20 +11,23 @@ except ImportError as e:
 import config as cfg
 import yastn.yastn as yastn
 from ipeps.ipeps_abelian import IPEPS_ABELIAN, write_ipeps
-from groups.pg_abelian import make_c4v_symm_A1
+from groups.pg_abelian import make_c4v_symm_A1, make_d2_SW_NE_symm, make_d2_NW_SE_symm
 from ipeps.tensor_io import *
 
 class IPEPS_ABELIAN_C4V(IPEPS_ABELIAN):
     
     _REF_S_DIRS=(1,1,1,1,1)
 
-    def __init__(self, settings, site=None, peps_args=cfg.peps_args, global_args=cfg.global_args):
+    def __init__(self, settings, site=None, irrep="A1", peps_args=cfg.peps_args,\
+        global_args=cfg.global_args):
         r"""
         :param settings: YAST configuration
         :type settings: NamedTuple or SimpleNamespace (TODO link to definition)
         :param site: on-site tensor
         :param peps_args: ipeps configuration
         :param global_args: global configuration
+        :param irrep: information for symmetrization
+        :type irrep: str
         :type settings: TODO
         :type site: yastn.Tensor
         :type peps_args: PEPSARGS
@@ -53,6 +56,7 @@ class IPEPS_ABELIAN_C4V(IPEPS_ABELIAN):
             sites= OrderedDict({(0,0): site})
         super().__init__(settings, sites, vertexToSite=vertexToSite, lX=1, lY=1,\
             peps_args=peps_args, global_args=global_args)
+        self.irrep=irrep
 
     def site(self, coord=(0,0)):
         return super().site(coord)
@@ -69,7 +73,7 @@ class IPEPS_ABELIAN_C4V(IPEPS_ABELIAN):
         """
         if device==self.device: return self
         site= self.site().to(device)
-        state= IPEPS_ABELIAN_C4V(self.engine, site)
+        state= IPEPS_ABELIAN_C4V(self.engine, site, self.irrep)
         return state
 
     def to_dense(self):
@@ -95,16 +99,23 @@ class IPEPS_ABELIAN_C4V(IPEPS_ABELIAN):
         """
         Writes state to file. See :meth:`ipeps.ipeps_abelian.write_ipeps`.
         """
-        sym_state= self.symmetrize() if symmetrize else self
-        write_ipeps(sym_state, outputfile, tol=tol, normalize=normalize)
+        sym_state=self
+        if symmetrize:
+            sym_state= self.symmetrize()
+        write_ipeps(sym_state, outputfile, tol=tol, normalize=normalize,\
+            metadata={"irrep": self.irrep})
 
-    def symmetrize(self):
+    def symmetrize(self,irrep=None):
         r"""
         :return: symmetrize on-site tensor by projecting to :math:`A_1` irrep of C4v point group.
         :rtype: IPEPS_ABELIAN_C4V
         """
-        site= make_c4v_symm_A1(self.site())
-        state= IPEPS_ABELIAN_C4V(self.engine, site)
+        irrep= self.irrep if not irrep else irrep
+        if irrep=="A1":
+            site= make_c4v_symm_A1(self.site())
+        elif irrep=="NEEL_TRIANGULAR":
+            site= make_d2_NW_SE_symm(make_d2_SW_NE_symm(self.site()))
+        state= IPEPS_ABELIAN_C4V(self.engine, site, irrep)
         return state
 
     # NOTE what about non-initialized blocks, which are however allowed by the symmetry ?
@@ -126,12 +137,12 @@ class IPEPS_ABELIAN_C4V(IPEPS_ABELIAN):
         t_noise= yastn.rand(config=_tmp.config, s=_tmp.s, n=_tmp.n, \
             t=t_data, D=D_data, isdiag=_tmp.isdiag)
         site= _tmp + noise * t_noise
-        state= IPEPS_ABELIAN_C4V(self.engine, site)
+        state= IPEPS_ABELIAN_C4V(self.engine, site, self.irrep)
         state= state.symmetrize()
         return state
 
     def __str__(self):
-        print(f"lX x lY: {self.lX} x {self.lY}")
+        print(f"irrep {self.irrep} lX x lY: {self.lX} x {self.lY}")
         for nid,coord,site in [(t[0], *t[1]) for t in enumerate(self.sites.items())]:
             print(f"a{nid} {coord}: {site}")
         
@@ -215,7 +226,10 @@ def read_ipeps_c4v(jsonfile, settings, \
 
         assert len(sites)==1, "Invalid number of on-site tensors. Expected one."
         site= next(iter(sites.values()))
-        state = IPEPS_ABELIAN_C4V(settings, site, \
+        
+        meta= raw_state.get("metadata",{})
+        irrep= meta.get("irrep","A1")
+        state = IPEPS_ABELIAN_C4V(settings, site, irrep,\
             peps_args=peps_args, global_args=global_args)
 
     # check dtypes of all on-site tensors for newly created state
