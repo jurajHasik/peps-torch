@@ -2,9 +2,9 @@ import context
 import argparse
 import torch
 import config as cfg
-import yast.yast as yast
-from yast.yast.backend import backend_torch as backend
-from yast.yast.sym import sym_U1
+import yastn.yastn as yastn
+from yastn.yastn.backend import backend_torch as backend
+from yastn.yastn.sym import sym_U1
 from ipeps.ipeps_abelian import *
 from ctm.generic.env import *
 import ctm.generic.ctmrg as ctmrg
@@ -30,7 +30,7 @@ args, unknown_args = parser.parse_known_args()
 def main():
     cfg.configure(args)
     cfg.print_config()
-    settings= yast.make_config(backend=backend, sym=sym_U1, \
+    settings= yastn.make_config(backend=backend, sym=sym_U1, \
         default_device= cfg.global_args.device, default_dtype=cfg.global_args.dtype)
     settings.backend.set_num_threads(args.omp_cores)
     settings.backend.random_seed(args.seed)

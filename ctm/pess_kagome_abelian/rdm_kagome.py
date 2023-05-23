@@ -1,6 +1,6 @@
 import logging
 import torch
-import yast.yast as yast
+import yastn.yastn as yastn
 from ipeps.ipeps_abelian import _fused_open_dl_site, _fused_dl_site
 from ctm.generic_abelian.rdm import _sym_pos_def_rdm, _cast_to_real
 from ctm.generic_abelian.ctm_components import _enlarged_corner
@@ -46,7 +46,7 @@ def double_layer_kagome_a(state, coord, open_sites=[], force_cpu=False, verbosit
     :type open_sites: list(int)
     :type force_cpu: bool
     :return: result of (partial) contraction of double-layer tensor 
-    :rtype: yast.Tensor
+    :rtype: yastn.Tensor
 
     Build double-layer tensor of Kagome iPEPS with open, partially or fully contracted 
     physical space of 3 DoFs on down triangle::
@@ -122,9 +122,9 @@ def trace1x1_dn_kagome(coord, state, env, op, verbosity=0):
     :type state: IPEPS_KAGOME_ABELIAN
     :type env: ENV_ABELIAN
     :type verbosity: int
-    :type op: yast.Tensor
+    :type op: yastn.Tensor
     :return: trace of the given on-site observable
-    :rtype: yast.Tensor
+    :rtype: yastn.Tensor
 
     Evaluate operator ``op`` supported on the three sites of the down triangle
     of Kagome lattice :math:`Tr{\rho_{1x1,ABC} op}` centered on vertex ``coord``.
@@ -772,7 +772,7 @@ def rdm2x2_up_triangle_open(coord, state, env, sym_pos_def=False, force_cpu=Fals
     :type env: ENV_ABELIAN
     :type verbosity: int
     :return: reduced density matrix as rank-6 tensor 
-    :rtype: yast.Tensor
+    :rtype: yastn.Tensor
 
     Build reduced density matrix corresponding to the three sites s0, s1, and s2 
     of the "up" triangle of Kagome lattice::
@@ -895,12 +895,12 @@ def rdm2x2_dn_triangle_with_operator(coord, state, env, op, force_cpu=False,\
     :param op: operator to be contracted. It is expected that the op is either 
         rank-6 tensor of shape [physical_dim]*6 or rank-2 tensor 
         of shape [physical_dim**3]*2 (fused bra and ket spaces)
-    :type op: yast.tensor
+    :type op: yastn.tensor
     :param force_cpu: perform on CPU
     :type force_cpu: bool
     :return: normalized expectation value of the operator `op` and the norm 
              of the reduced density matrix
-    :rtype: yast.tensor, yast.tensor
+    :rtype: yastn.tensor, yastn.tensor
 
     Returns a normalized expectation value of operator inserted into down triangle 
     of upper left corner of 2x2 subsystem::
@@ -1053,7 +1053,7 @@ def rdm2x2_kagome(coord, state, env, sites_to_keep_00=('A', 'B', 'C'),\
     :param sym_pos_def: make reduced density matrix positive-(semi)definite
     :type sym_pos_def: bool
     :return: 4-site reduced density matrix with indices :math:`s_0s_1s_2s_3;s'_0s'_1s'_2s'_3`
-    :rtype: yast.Tensor
+    :rtype: yastn.Tensor
 
     Computes 4-site reduced density matrix :math:`\rho_{2x2}` of 2x2 subsystem specified
     by the vertex ``coord`` of its upper left corner using strategy:

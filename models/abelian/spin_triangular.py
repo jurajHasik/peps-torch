@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 import config as cfg
-import yast.yast as yast
+import yastn.yastn as yastn
 import groups.su2 as su2
 import groups.su2_abelian as su2_abelian
 from models.spin_triangular import J1J2J4, J1J2J4_1SITEQ
@@ -77,7 +77,7 @@ class J1J2J4_NOSYM(J1J2J4):
         energy_p=0.
         energy_chi=0.
 
-        _tmp_t= yast.ones(config=state.engine, s=(-1, -1, 1, 1),
+        _tmp_t= yastn.ones(config=state.engine, s=(-1, -1, 1, 1),
             t=((-1, 1), (-1, 1), (-1, 1), (-1, 1)),
             D=((1, 1), (1, 1), (1, 1), (1, 1)))
         _lss_dense_2s={i: l for i,l in enumerate(_tmp_t.get_legs())}
@@ -136,12 +136,12 @@ class J1J2J4_NOSYM(J1J2J4):
         """
         # TODO optimize/unify ?
         # expect "list" of (observable label, value) pairs ?
-        _tmp_t= yast.ones(config=state.engine, s=(-1, 1),
+        _tmp_t= yastn.ones(config=state.engine, s=(-1, 1),
                 t=((-1, 1), (-1, 1)),
                 D=((1, 1), (1, 1)))
         _lss_dense_1s={i: l for i,l in enumerate(_tmp_t.get_legs())}
 
-        _tmp_t= yast.ones(config=state.engine, s=(-1, -1, 1, 1),
+        _tmp_t= yastn.ones(config=state.engine, s=(-1, -1, 1, 1),
                 t=((-1, 1), (-1, 1), (-1, 1), (-1, 1)),
                 D=((1, 1), (1, 1), (1, 1), (1, 1)))
         _lss_dense_2s={i: l for i,l in enumerate(_tmp_t.get_legs())}
@@ -206,7 +206,7 @@ class J1J2J4_NOSYM(J1J2J4):
         :param rl_0: right and left edges of the two-point function network. These
                  are expected to be rank-3 tensor compatible with transfer operator indices.
                  Typically provided by leading eigenvectors of transfer matrix.
-        :type rl_0: tuple(function(tuple(int,int))->yast.Tensor, function(tuple(int,int))->yast.Tensor)
+        :type rl_0: tuple(function(tuple(int,int))->yastn.Tensor, function(tuple(int,int))->yastn.Tensor)
         :return: dictionary with full and spin-resolved spin-spin correlation functions
         :rtype: dict(str: np.ndarray)
         
@@ -247,7 +247,7 @@ class J1J2J4_NOSYM(J1J2J4):
         :param rl_0: right and left edges of the two-point function network. These
                  are expected to be rank-3 tensor compatible with transfer operator indices.
                  Typically provided by leading eigenvectors of transfer matrix.
-        :type rl_0: tuple(function(tuple(int,int))->yast.Tensor, function(tuple(int,int))->yast.Tensor)
+        :type rl_0: tuple(function(tuple(int,int))->yastn.Tensor, function(tuple(int,int))->yastn.Tensor)
         :return: dictionary with spin-Id correlation functions
         :rtype: dict(str: np.ndarray)
         
@@ -371,7 +371,7 @@ class J1J2J4_1SITEQ_NOSYM(J1J2J4_1SITEQ):
         self.R= torch.linalg.matrix_exp( (pi*q[0])*(s2.SP()-s2.SM()) )
         self.Rinv= self.R.t().conj()
 
-        _tmp_t= yast.ones(config=state.engine, s=(-1, -1, 1, 1),
+        _tmp_t= yastn.ones(config=state.engine, s=(-1, -1, 1, 1),
             # t=((-1, 1), (-1, 1), (-1, 1), (-1, 1)),
             t=((0, 1), (0, 1), (0, 1), (0, 1)),
             D=((1, 1), (1, 1), (1, 1), (1, 1)))
@@ -509,13 +509,13 @@ class J1J2J4_1SITEQ_NOSYM(J1J2J4_1SITEQ):
         self.R= torch.linalg.matrix_exp( (pi*q[0])*(s2.SP()-s2.SM()) )
         self.Rinv= self.R.t().conj()
 
-        _tmp_t= yast.ones(config=state.engine, s=(-1, 1),
+        _tmp_t= yastn.ones(config=state.engine, s=(-1, 1),
                 # t=((-1, 1), (-1, 1)),
                 t=((0, 1), (0, 1)),
                 D=((1, 1), (1, 1)))
         _lss_dense_1s={i: l for i,l in enumerate(_tmp_t.get_legs())}
 
-        _tmp_t= yast.ones(config=state.engine, s=(-1, -1, 1, 1),
+        _tmp_t= yastn.ones(config=state.engine, s=(-1, -1, 1, 1),
                 # t=((-1, 1), (-1, 1), (-1, 1), (-1, 1)),
                 t=((0, 1), (0, 1), (0, 1), (0, 1)),
                 D=((1, 1), (1, 1), (1, 1), (1, 1)))

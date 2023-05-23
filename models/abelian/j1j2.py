@@ -2,7 +2,7 @@ from math import sqrt
 import numpy as np
 import itertools
 import config as cfg
-import yast.yast as yast
+import yastn.yastn as yastn
 from tn_interface_abelian import contract, permute
 import groups.su2_abelian as su2
 from ctm.generic_abelian import rdm
@@ -242,8 +242,8 @@ class J1J2_NOSYM():
         """
         N= len(state.sites)
 
-        energy_nn=yast.zeros(self.engine)
-        energy_nnn=yast.zeros(self.engine)
+        energy_nn=yastn.zeros(self.engine)
+        energy_nnn=yastn.zeros(self.engine)
         _ci= ([0,1,2,3, 4,5,6,7],[4,5,6,7, 0,1,2,3])
         for coord in state.sites.keys():
             tmp_rdm= rdm.rdm2x2(coord,state,env).to_nonsymmetric()
@@ -334,7 +334,7 @@ class J1J2_NOSYM():
         :param rl_0: right and left edges of the two-point function network. These
                  are expected to be rank-3 tensor compatible with transfer operator indices.
                  Typically provided by leading eigenvectors of transfer matrix.
-        :type rl_0: tuple(function(tuple(int,int))->yast.Tensor, function(tuple(int,int))->yast.Tensor)
+        :type rl_0: tuple(function(tuple(int,int))->yastn.Tensor, function(tuple(int,int))->yastn.Tensor)
         :return: dictionary with full and spin-resolved spin-spin correlation functions
         :rtype: dict(str: np.ndarray)
         

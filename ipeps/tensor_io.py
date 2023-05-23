@@ -3,7 +3,7 @@ from itertools import product
 import json
 import numpy as np
 try:
-    import yast.yast as yast
+    import yastn.yastn as yastn
 except ImportError as e:
     warnings.warn("yast not available", Warning)
 try:
@@ -121,7 +121,7 @@ def read_json_abelian_tensor_legacy(json_obj, config, dtype=None, device=None):
 
     :param json_obj: dictionary from parsed json file
     :type json_obj: dict
-    :param config: yast.Tensor configuration
+    :param config: yastn.Tensor configuration
     :type config: namedtuple
     :param dtype: dtype 
     :type dtype: str
@@ -161,7 +161,7 @@ def read_json_abelian_tensor_legacy(json_obj, config, dtype=None, device=None):
         raise RuntimeError("Incompatible dtypes: input tensor "+dtype_str+" config: "+dtype)
 
     # create empty abelian tensor
-    T= yast.Tensor(config=config, s=s, n=n, isdiag=isdiag, device=device)
+    T= yastn.Tensor(config=config, s=s, n=n, isdiag=isdiag, device=device)
     # TODO assign symmetry in constructor or settings ?
     # TODO equivalence between different names such as U1 and U(1)
     if symmetry!=T.config.sym.SYM_ID:
@@ -249,7 +249,7 @@ def serialize_abelian_tensor_legacy(t, native=False):
     r"""
     Parameters
     ----------
-    t: yast.Tensor
+    t: yastn.Tensor
 
     native: bool
         if True serialize tensor with all legs unfused
@@ -258,7 +258,7 @@ def serialize_abelian_tensor_legacy(t, native=False):
     -------
     json_tensor: dict
 
-        JSON-compliant representation of yast.Tensor
+        JSON-compliant representation of yastn.Tensor
     """
     json_tensor=dict()
 

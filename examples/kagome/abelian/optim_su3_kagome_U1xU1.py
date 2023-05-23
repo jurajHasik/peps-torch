@@ -4,7 +4,7 @@ import torch
 import numpy as np
 import argparse
 import config as cfg
-import yast.yast as yast
+import yastn.yastn as yastn
 from ipeps.ipess_kagome_abelian import *
 from ctm.generic_abelian.env_abelian import *
 import ctm.generic_abelian.ctmrg as ctmrg
@@ -33,12 +33,12 @@ def main():
     param_k = np.round(np.sin(np.pi*args.phi) * np.cos(np.pi*args.theta), decimals=15)
     param_h = np.round(np.sin(np.pi*args.phi) * np.sin(np.pi*args.theta), decimals=15)
     print("J = {}; K = {}; H = {}".format(param_j, param_k, param_h))
-    from yast.yast.sym import sym_U1xU1
+    from yastn.yastn.sym import sym_U1xU1
     if args.yast_backend=='torch':
-        from yast.yast.backend import backend_torch as backend
+        from yastn.yastn.backend import backend_torch as backend
     elif args.yast_backend=='torch_cpp':
-        from yast.yast.backend import backend_torch_cpp as backend
-    settings= yast.make_config(backend=backend, sym=sym_U1xU1, \
+        from yastn.yastn.backend import backend_torch_cpp as backend
+    settings= yastn.make_config(backend=backend, sym=sym_U1xU1, \
         default_device= cfg.global_args.device, default_dtype=cfg.global_args.dtype)
     settings.backend.set_num_threads(args.omp_cores)
     settings.backend.random_seed(args.seed)
@@ -52,11 +52,11 @@ def main():
         state= read_ipess_kagome_generic(args.instate, settings)
         state= state.add_noise(args.instate_noise)
     elif args.opt_resume is not None:
-        T_u= yast.Tensor(config=settings, s=(-1,-1,-1))
-        T_d= yast.Tensor(config=settings, s=(-1,-1,-1))
-        B_c= yast.Tensor(config=settings, s=(-1,1,1))
-        B_a= yast.Tensor(config=settings, s=(-1,1,1))
-        B_b= yast.Tensor(config=settings, s=(-1,1,1))
+        T_u= yastn.Tensor(config=settings, s=(-1,-1,-1))
+        T_d= yastn.Tensor(config=settings, s=(-1,-1,-1))
+        B_c= yastn.Tensor(config=settings, s=(-1,1,1))
+        B_a= yastn.Tensor(config=settings, s=(-1,1,1))
+        B_b= yastn.Tensor(config=settings, s=(-1,1,1))
         state= IPESS_KAGOME_GENERIC_ABELIAN(settings, {'T_u': T_u, 'B_a': B_a,\
             'T_d': T_d, 'B_b': B_b, 'B_c': B_c}, build_sites=False)
         state.load_checkpoint(args.opt_resume)

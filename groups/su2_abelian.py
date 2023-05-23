@@ -1,4 +1,4 @@
-import yast.yast as yast
+import yastn.yastn as yastn
 import numpy as np
 from math import factorial, sqrt
 
@@ -35,7 +35,7 @@ class SU2_NOSYM():
 
     def _cast(self, op_id, J, dtype, device):
         tmp_block= self.get_op(op_id, J, dtype)
-        op= yast.Tensor(self.engine, s=self._REF_S_DIRS)
+        op= yastn.Tensor(self.engine, s=self._REF_S_DIRS)
         op.set_block(Ds=tmp_block.shape, val=tmp_block)
         op= op.to(device)
         return op
@@ -43,34 +43,34 @@ class SU2_NOSYM():
     def I(self):
         r"""
         :return: Identity operator of irrep
-        :rtype: yast.Tensor
+        :rtype: yastn.Tensor
         """
         return self._cast("I",self.J,self.dtype,self.device)
 
     def SZ(self):
         r"""
         :return: :math:`S^z` operator of irrep
-        :rtype: yast.Tensor
+        :rtype: yastn.Tensor
         """
         return self._cast("sz",self.J,self.dtype,self.device)
 
     def SP(self):
         r"""
         :return: :math:`S^+` operator of irrep.
-        :rtype: yast.Tensor
+        :rtype: yastn.Tensor
         """
         return self._cast("sp",self.J,self.dtype,self.device)
 
     def SM(self):
         r"""
         :return: :math:`S^-` operator of irrep.
-        :rtype: yast.Tensor
+        :rtype: yastn.Tensor
         """
         return self._cast("sm",self.J,self.dtype,self.device)
 
     def BP_rot(self):
         tmp_block= self.get_op("rot", self.J, self.dtype)
-        op= yast.Tensor(self.engine, s=[1,1])
+        op= yastn.Tensor(self.engine, s=[1,1])
         op.set_block(Ds=tmp_block.shape, val=tmp_block)
         op= op.to(self.device)
         return op
@@ -79,7 +79,7 @@ class SU2_NOSYM():
         # 1(-1)
         # S--0(-1)
         # 2(+1)
-        op= yast.Tensor(self.engine, s=[-1]+list(self._REF_S_DIRS))
+        op= yastn.Tensor(self.engine, s=[-1]+list(self._REF_S_DIRS))
         tmp_block= np.zeros((3,self.J,self.J), dtype=self.dtype)
         tmp_block[0,:,:]= self.get_op("sz", self.J, self.dtype)
         tmp_block[1,:,:]= self.get_op("sp", self.J, self.dtype)
@@ -94,7 +94,7 @@ class SU2_NOSYM():
                     zpm[0]*(S^z S^z) + zpm[1]*(S^p S^m)/2 + zpm[2]*(S^m S^p)/2
         :type zpm: tuple(float)
         :return: spin-spin interaction as rank-4 for tensor 
-        :rtype: yast.Tensor
+        :rtype: yastn.Tensor
         """
         # expr_kron = 'ij,ab->iajb'
         # spin-spin interaction \vec{S}_1.\vec{S}_2 between spins on sites 1 and 2
@@ -104,7 +104,7 @@ class SU2_NOSYM():
         #     + np.einsum(expr_kron,get_op("sm", J, self.dtype),get_op("sp", J, self.dtype)))
         S_vec= self.S_zpm()
         S_vec_dag= S_vec.conj().transpose((0,2,1))
-        g= yast.Tensor(self.engine, s=self._REF_S_DIRS)
+        g= yastn.Tensor(self.engine, s=self._REF_S_DIRS)
         tmp_block= np.diag(np.asarray([1.,0.5,0.5])*np.asarray(zpm, dtype=self.dtype))
         g.set_block(Ds=tmp_block.shape, val=tmp_block)
         #
@@ -229,9 +229,9 @@ class SU2_U1():
     def I(self):
         r"""
         :return: Identity operator of irrep
-        :rtype: yast.Tensor
+        :rtype: yastn.Tensor
         """
-        op= yast.Tensor(self.engine, s=self._REF_S_DIRS, n=0)
+        op= yastn.Tensor(self.engine, s=self._REF_S_DIRS, n=0)
         for j in range(-self.HW,self.HW+1,2):
             c= (j,j)
             op.set_block(ts=c, Ds=(1,1), val='ones')
@@ -241,10 +241,10 @@ class SU2_U1():
     def SZ(self):
         r"""
         :return: :math:`S^z` operator of irrep
-        :rtype: yast.Tensor
+        :rtype: yastn.Tensor
         """
         unit_block= np.ones((1,1), dtype=self.dtype)
-        op= yast.Tensor(self.engine, s=self._REF_S_DIRS, n=0)
+        op= yastn.Tensor(self.engine, s=self._REF_S_DIRS, n=0)
         for j in range(-self.HW,self.HW+1,2):
             c= (j,j)
             op.set_block(ts=c, Ds=unit_block.shape, val= (0.5*j)*unit_block)
@@ -254,7 +254,7 @@ class SU2_U1():
     def SP(self):
         r"""
         :return: :math:`S^+` operator of irrep.
-        :rtype: yast.Tensor
+        :rtype: yastn.Tensor
 
         The :math:`S^+` operator maps states with :math:`S^z = x` to states with
         :math:`S^z = x+1` . Therefore as a matrix it must act as follows
@@ -270,7 +270,7 @@ class SU2_U1():
         where :math:`C_+ = \sqrt{S(S+1)-M(M+1)}`.
         """
         unit_block= np.ones((1,1), dtype=self.dtype)
-        op= yast.Tensor(self.engine, s=self._REF_S_DIRS, n=-2)
+        op= yastn.Tensor(self.engine, s=self._REF_S_DIRS, n=-2)
         for j in range(-self.HW,self.HW,2):
             c= (j+2,j) #if j%2==1 else (j//2+1,j//2)
             c_p= sqrt(0.5 * self.HW * (0.5 * self.HW + 1) - 0.5*j * (0.5*j + 1))
@@ -281,7 +281,7 @@ class SU2_U1():
     def SM(self):
         r"""
         :return: :math:`S^-` operator of irrep.
-        :rtype: yast.Tensor
+        :rtype: yastn.Tensor
 
         The :math:`S^-` operator maps states with :math:`S^z = x` to states with
         :math:`S^z = x-1` . Therefore as a matrix it must act as follows
@@ -297,7 +297,7 @@ class SU2_U1():
         where :math:`C_- = \sqrt{S(S+1)-M(M-1)}`.
         """
         unit_block= np.ones((1,1), dtype=self.dtype)
-        op= yast.Tensor(self.engine, s=self._REF_S_DIRS, n=2)
+        op= yastn.Tensor(self.engine, s=self._REF_S_DIRS, n=2)
         for j in range(-self.HW+2,self.HW+1,2):
             c= (j-2,j) #if j%2==1 else (j//2,j//2-1)
             c_p= sqrt(0.5 * self.HW * (0.5 * self.HW + 1) - 0.5*j * (0.5*j - 1))
@@ -311,7 +311,7 @@ class SU2_U1():
     def S_zpm(self):
         r"""
         :return: vector of su(2) generators as rank-3 tensor 
-        :rtype: yast.Tensor
+        :rtype: yastn.Tensor
         
         Returns vector with representation of su(2) generators, in order: :math:`S^z, S^+, S^-`.
         The generators are indexed by first index of the resulting rank-3 tensors.
@@ -321,8 +321,8 @@ class SU2_U1():
             S--0(-1)
             2(+1)
         """
-        op_v= yast.block({i: t.add_leg(axis=0,s=-1) for i,t in enumerate([\
-            self.SZ(), self.SP(), self.SM()])}, common_legs=[1,2]).drop_leg_history(axis=0)
+        op_v= yastn.block({i: t.add_leg(axis=0,s=-1) for i,t in enumerate([\
+            self.SZ(), self.SP(), self.SM()])}, common_legs=[1,2]).drop_leg_history(axes=0)
         return op_v
 
     # TODO: implement xyz for Sx and Sy terms
@@ -332,10 +332,10 @@ class SU2_U1():
                     zpm[0]*(S^z S^z) + zpm[1]*(S^p S^m)/2 + zpm[2]*(S^m S^p)/2
         :type zpm: tuple(float)
         :return: spin-spin interaction as rank-4 for tensor 
-        :rtype: yast.Tensor
+        :rtype: yastn.Tensor
         """
         unit_block= np.ones((1,1), dtype=self.dtype)
-        g= yast.Tensor(self.engine, s=self._REF_S_DIRS)
+        g= yastn.Tensor(self.engine, s=self._REF_S_DIRS)
         g.set_block(ts=(2,2), Ds=unit_block.shape, val=zpm[1]/2*unit_block)
         g.set_block(ts=(0,0), Ds=unit_block.shape, val=zpm[0]*unit_block)
         g.set_block(ts=(-2,-2), Ds=unit_block.shape, val=zpm[2]/2*unit_block)

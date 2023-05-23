@@ -123,7 +123,7 @@ def main(args=args):
         elif args.ipeps_init_type=="RVB":
             args.ansatz= "IPESS"
             unit_block= np.ones((1,1,1), dtype=cfg.global_args.dtype)
-            B_c= yast.Tensor(settings_U1, s=(-1, 1, 1), n=0)
+            B_c= yastn.Tensor(settings_U1, s=(-1, 1, 1), n=0)
             B_c.set_block(ts=(1,1,0), Ds=unit_block.shape, val= unit_block)
             B_c.set_block(ts=(1,0,1), Ds=unit_block.shape, val= unit_block)
             B_c.set_block(ts=(-1,-1,0), Ds=unit_block.shape, val= unit_block)
@@ -132,7 +132,7 @@ def main(args=args):
             B_a=B_c
 
             unit_block= np.ones((1,1,1), dtype=cfg.global_args.dtype)
-            T_u= yast.Tensor(settings_U1, s=(-1, -1, -1), n=0)
+            T_u= yastn.Tensor(settings_U1, s=(-1, -1, -1), n=0)
             T_u.set_block(ts=(1,-1,0), Ds=unit_block.shape, val= unit_block)
             T_u.set_block(ts=(-1,1,0), Ds=unit_block.shape, val= -1*unit_block)
             T_u.set_block(ts=(0,1,-1), Ds=unit_block.shape, val= unit_block)

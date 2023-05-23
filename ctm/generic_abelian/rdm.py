@@ -165,7 +165,7 @@ def open_C2x2_LD(coord, state, env, fusion_level="full", verbosity=0):
     :type fusion_level: str
     :type verbosity: int
     :return: left-down enlarged corner with open physical indices
-    :rtype: yast.tensor
+    :rtype: yastn.tensor
 
     Computes lower-down enlarged corner centered on vertex ``coord`` by contracting 
     the following tensor network::
@@ -501,7 +501,7 @@ def rdm2x1(coord, state, env, sym_pos_def=False, verbosity=0):
     :type env: ENV_ABELIAN
     :type verbosity: int
     :return: 2-site reduced density matrix with indices :math:`s_0s_1;s'_0s'_1`
-    :rtype: yast.tensor
+    :rtype: yastn.tensor
 
     Computes 2-site reduced density matrix :math:`\rho_{2x1}` of a horizontal 
     2x1 subsystem using following strategy:
@@ -610,7 +610,7 @@ def rdm1x2(coord, state, env, sym_pos_def=False, verbosity=0):
     :type env: ENV_ABELIAN
     :type verbosity: int
     :return: 2-site reduced density matrix with indices :math:`s_0s_1;s'_0s'_1`
-    :rtype: yast.tensor
+    :rtype: yastn.tensor
 
     Computes 2-site reduced density matrix :math:`\rho_{1x2}` of a vertical 
     1x2 subsystem using following strategy:
@@ -821,7 +821,7 @@ def rdm2x2(coord, state, env, sym_pos_def=False, verbosity=0):
     :type env: ENV_ABELIAN
     :type verbosity: int
     :return: 4-site reduced density matrix with indices :math:`s_0s_1s_2s_3;s'_0s'_1s'_2s'_3`
-    :rtype: yast.tensor
+    :rtype: yastn.tensor
 
     Computes 4-site reduced density matrix :math:`\rho_{2x2}` of 2x2 subsystem specified
     by the vertex ``coord`` of its upper left corner using strategy:

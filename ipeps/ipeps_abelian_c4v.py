@@ -9,7 +9,7 @@ try:
 except ImportError as e:
     warnings.warn("torch not available", Warning)
 import config as cfg
-import yast.yast as yast
+import yastn.yastn as yastn
 from ipeps.ipeps_abelian import IPEPS_ABELIAN, write_ipeps
 from groups.pg_abelian import make_c4v_symm_A1
 from ipeps.tensor_io import *
@@ -26,7 +26,7 @@ class IPEPS_ABELIAN_C4V(IPEPS_ABELIAN):
         :param peps_args: ipeps configuration
         :param global_args: global configuration
         :type settings: TODO
-        :type site: yast.Tensor
+        :type site: yastn.Tensor
         :type peps_args: PEPSARGS
         :type global_args: GLOBALARGS
 
@@ -123,7 +123,7 @@ class IPEPS_ABELIAN_C4V(IPEPS_ABELIAN):
         if noise==0: return self
         _tmp= self.site()
         t_data, D_data= _tmp.get_leg_charges_and_dims(native=True)
-        t_noise= yast.rand(config=_tmp.config, s=_tmp.s, n=_tmp.n, \
+        t_noise= yastn.rand(config=_tmp.config, s=_tmp.s, n=_tmp.n, \
             t=t_data, D=D_data, isdiag=_tmp.isdiag)
         site= _tmp + noise * t_noise
         state= IPEPS_ABELIAN_C4V(self.engine, site)

@@ -1,5 +1,5 @@
 import config as cfg
-import yast.yast as yast
+import yastn.yastn as yastn
 from ctm.generic_abelian.ctm_components import *
 from tn_interface_abelian import mm
 from tn_interface_abelian import transpose
@@ -27,7 +27,7 @@ def ctm_get_projectors_4x4(direction, coord, state, env, ctm_args=cfg.ctm_args, 
     :return: pair of projectors, tensors of dimension :math:`\chi \times \chi \times D^2`. 
              The D might vary depending on the auxiliary bond dimension of related on-site
              tensor.
-    :rtype: yast.Tensor, yast.Tensor
+    :rtype: yastn.Tensor, yastn.Tensor
 
 
     Compute a pair of projectors from two halfs of 4x4 tensor network given 
@@ -100,7 +100,7 @@ def ctm_get_projectors_4x2(direction, coord, state, env, ctm_args=cfg.ctm_args, 
     :return: pair of projectors, tensors of dimension :math:`\chi \times \chi \times D^2`. 
              The D might vary depending on the auxiliary bond dimension of related on-site
              tensor.
-    :rtype: yast.Tensor, yast.Tensor
+    :rtype: yastn.Tensor, yastn.Tensor
 
 
     Compute a pair of projectors from two enlarged corners making up 4x2 (2x4) tensor network 
@@ -164,15 +164,15 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, direction, \
     :param chi: environment bond dimension
     :param ctm_args: CTM algorithm configuration
     :param global_args: global configuration
-    :type R: yast.Tensor 
-    :type Rt: yast.Tensor
+    :type R: yastn.Tensor 
+    :type Rt: yastn.Tensor
     :type chi: int
     :type ctm_args: CTMARGS
     :type global_args: GLOBALARGS
     :return: pair of projectors, tensors of dimension :math:`\chi \times \chi \times D^2`. 
              The D might vary depending on the auxiliary bond dimension of related on-site
              tensor.
-    :rtype: yast.Tensor, yast.Tensor
+    :rtype: yastn.Tensor, yastn.Tensor
 
     Given the two tensors R and Rt (R tilde) compute the projectors P, Pt (P tilde)
     (PRB 94, 075143 (2016) https://arxiv.org/pdf/1402.2859.pdf). The R, Rt are expected
@@ -230,13 +230,13 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, direction, \
     if ctm_args.projector_svd_method=='DEFAULT' or ctm_args.projector_svd_method=='GESDD':
         def truncation_f(S):
             if ctm_args.projector_eps_multiplet>0:
-                return yast.linalg.truncation_mask_multiplets(S,keep_multiplets=True, D_total=chi,\
+                return yastn.linalg.truncation_mask_multiplets(S,keep_multiplets=True, D_total=chi,\
                     tol=ctm_args.projector_svd_reltol, tol_block=ctm_args.projector_svd_reltol_block, \
                     eps_multiplet=ctm_args.projector_eps_multiplet)
-            return yast.linalg.truncation_mask(S, D_total=chi,\
+            return yastn.linalg.truncation_mask(S, D_total=chi,\
                 tol=ctm_args.projector_svd_reltol, tol_block=ctm_args.projector_svd_reltol_block)
         def truncated_svd(M, chi, sU=1):
-            return yast.linalg.svd_with_truncation(M, (0,1), sU=sU, mask_f=truncation_f, diagnostics=diagnostics)
+            return yastn.linalg.svd_with_truncation(M, (0,1), sU=sU, mask_f=truncation_f, diagnostics=diagnostics)
     # elif ctm_args.projector_svd_method == 'ARP':
     #     def truncated_svd(M, chi):
     #         return truncated_svd_arnoldi(M, chi, verbosity=ctm_args.verbosity_projectors)

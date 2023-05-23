@@ -2,7 +2,7 @@ from math import sqrt
 import itertools
 import numpy as np
 import torch
-import yast.yast as yast
+import yastn.yastn as yastn
 import config as cfg
 import groups.su2_abelian as su2
 import ctm.pess_kagome_abelian.rdm_kagome as rdm_kagome
@@ -65,28 +65,28 @@ class KAGOME_U1():
         irrep = su2.SU2_U1(self.engine, self.phys_dim)
 
         Id1= irrep.I()
-        Id2= yast.tensordot(Id1,Id1,([],[])).transpose(axes=(0,2,1,3))
-        self.Id3_t= yast.tensordot(Id2,Id1,([],[])).transpose(axes=(0,1,4,2,3,5))\
+        Id2= yastn.tensordot(Id1,Id1,([],[])).transpose(axes=(0,2,1,3))
+        self.Id3_t= yastn.tensordot(Id2,Id1,([],[])).transpose(axes=(0,1,4,2,3,5))\
             .fuse_legs(axes=((0,1,2), (3,4,5)))
         self.Id2_t= Id2.fuse_legs(axes=((0,1), (2,3)))
 
         SS= irrep.SS(zpm=(1., 1., 1.))
         SS_JD= self.j1*SS if abs(self.JD) else irrep.SS(zpm=(j1, j1+1j*JD, j1-1j*JD)) 
-        self.SSnnId= yast.tensordot(SS_JD,Id1,([],[])).transpose(axes=(0,1,4,2,3,5))
+        self.SSnnId= yastn.tensordot(SS_JD,Id1,([],[])).transpose(axes=(0,1,4,2,3,5))
         SSnn_t= self.SSnnId + self.SSnnId.transpose(axes=(1,2,0, 4,5,3)) \
             + self.SSnnId.transpose(axes=(2,0,1, 5,3,4))
 
         mag_field= irrep.SZ()
-        mag_field= yast.tensordot(mag_field,Id1,([],[])).transpose(axes=(0,2,1,3))
-        mag_field= yast.tensordot(mag_field,Id1,([],[])).transpose(axes=(0,1,4,2,3,5))
+        mag_field= yastn.tensordot(mag_field,Id1,([],[])).transpose(axes=(0,2,1,3))
+        mag_field= yastn.tensordot(mag_field,Id1,([],[])).transpose(axes=(0,1,4,2,3,5))
         mag_field=mag_field + mag_field.transpose(axes=(1,2,0, 4,5,3)) \
             + mag_field.transpose(axes=(2,0,1, 5,3,4))
 
         if self.jtrip != 0:
             assert self.dtype=="complex128" or self.dtype=="complex64","jtrip requires complex dtype"
-            smsp= yast.tensordot(irrep.SM(),irrep.SP(),([],[])).transpose(axes=(0,2,1,3))
-            spsm= yast.tensordot(irrep.SP(),irrep.SM(),([],[])).transpose(axes=(0,2,1,3))
-            SxSS_t= yast.tensordot(smsp-spsm,irrep.SZ()/(2j),([],[]))\
+            smsp= yastn.tensordot(irrep.SM(),irrep.SP(),([],[])).transpose(axes=(0,2,1,3))
+            spsm= yastn.tensordot(irrep.SP(),irrep.SM(),([],[])).transpose(axes=(0,2,1,3))
+            SxSS_t= yastn.tensordot(smsp-spsm,irrep.SZ()/(2j),([],[]))\
                 .transpose(axes=(0,1,4,2,3,5))
             SxSS_t= SxSS_t+ SxSS_t.transpose(axes=(1,2,0, 4,5,3)) \
                 + SxSS_t.transpose(axes=(2,0,1, 5,3,4))
@@ -102,8 +102,8 @@ class KAGOME_U1():
         #      0    1->3                3  4   5
         #      |-P2-|
         #      2->4 3->5
-        self.P_triangle = yast.tensordot(perm2, perm2, ([3],[0])).transpose(axes=(0,1,3,2,4,5))
-        self.P_triangle_inv = yast.tensordot(perm2, perm2, ([3],[1])).transpose(axes=(0,3,1,2,4,5))
+        self.P_triangle = yastn.tensordot(perm2, perm2, ([3],[0])).transpose(axes=(0,1,3,2,4,5))
+        self.P_triangle_inv = yastn.tensordot(perm2, perm2, ([3],[1])).transpose(axes=(0,3,1,2,4,5))
 
         self.h_triangle= SSnn_t + self.h*mag_field + self.jtrip*SxSS_t
         if self.jperm!=0+0j:
@@ -111,9 +111,9 @@ class KAGOME_U1():
             self.h_triangle = self.h_triangle + self.jperm * self.P_triangle\
                 + self.jperm.conjugate() * self.P_triangle_inv
 
-        szId2= yast.tensordot(irrep.SZ(),Id2,([],[])).transpose(axes=(0,2,3,1,4,5))
-        spId2= yast.tensordot(irrep.SP(),Id2,([],[])).transpose(axes=(0,2,3,1,4,5))
-        smId2= yast.tensordot(irrep.SM(),Id2,([],[])).transpose(axes=(0,2,3,1,4,5))
+        szId2= yastn.tensordot(irrep.SZ(),Id2,([],[])).transpose(axes=(0,2,3,1,4,5))
+        spId2= yastn.tensordot(irrep.SP(),Id2,([],[])).transpose(axes=(0,2,3,1,4,5))
+        smId2= yastn.tensordot(irrep.SM(),Id2,([],[])).transpose(axes=(0,2,3,1,4,5))
         self.obs_ops= {
             "sz_0": szId2, "sp_0": spId2, "sm_0": smId2,\
             "sz_1": szId2.transpose(axes=(1,2,0, 4,5,3)),\
@@ -181,7 +181,7 @@ class KAGOME_U1():
         """
         rdm_up= rdm_kagome.rdm2x2_up_triangle_open((0, 0), state, env, force_cpu=force_cpu,\
             **kwargs)
-        e_up=yast.tensordot(rdm_up.fuse_legs(axes=((0,1,2),(3,4,5))),\
+        e_up=yastn.tensordot(rdm_up.fuse_legs(axes=((0,1,2),(3,4,5))),\
             self.h_triangle.fuse_legs(axes=((0,1,2),(3,4,5))),([0,1],[1,0]))
         return _cast_to_real(e_up,  **kwargs).to_number()
 
@@ -193,7 +193,7 @@ class KAGOME_U1():
 
     def energy_triangle_up_NoCheck(self, state, env, force_cpu=False):
         rdm_up= rdm_kagome.rdm2x2_up_triangle_open((0, 0), state, env, force_cpu=force_cpu)
-        e_up=yast.tensordot(rdm_up.fuse_legs(axes=((0,1,2),(3,4,5))),\
+        e_up=yastn.tensordot(rdm_up.fuse_legs(axes=((0,1,2),(3,4,5))),\
             self.h_triangle.fuse_legs(axes=((0,1,2),(3,4,5))),([0,1],[1,0])).to_number()
         return e_up
 
@@ -297,13 +297,13 @@ class KAGOME_U1():
             SS_dn_02= SS_dn_02.to_number()
             
             rdm_up= rdm_kagome.rdm2x2_up_triangle_open((0, 0), state, env, force_cpu=force_cpu)
-            #bb=yast.tensordot(rdm_up.fuse_legs(axes=((0,1,2),(3,4,5))),self.Id3_t,([0,1],[1,0])).to_number()
+            #bb=yastn.tensordot(rdm_up.fuse_legs(axes=((0,1,2),(3,4,5))),self.Id3_t,([0,1],[1,0])).to_number()
             #print(bb)
-            SS_up_01= yast.tensordot(rdm_up.fuse_legs(axes=((0,1,2),(3,4,5))),\
+            SS_up_01= yastn.tensordot(rdm_up.fuse_legs(axes=((0,1,2),(3,4,5))),\
                 self.SS01.fuse_legs(axes=((0,1,2),(3,4,5))),([0,1],[1,0])).to_number()
-            SS_up_12= yast.tensordot(rdm_up.fuse_legs(axes=((0,1,2),(3,4,5))),\
+            SS_up_12= yastn.tensordot(rdm_up.fuse_legs(axes=((0,1,2),(3,4,5))),\
                 self.SS12.fuse_legs(axes=((0,1,2),(3,4,5))),([0,1],[1,0])).to_number()
-            SS_up_02= yast.tensordot(rdm_up.fuse_legs(axes=((0,1,2),(3,4,5))),\
+            SS_up_02= yastn.tensordot(rdm_up.fuse_legs(axes=((0,1,2),(3,4,5))),\
                 self.SS02.fuse_legs(axes=((0,1,2),(3,4,5))),([0,1],[1,0])).to_number()
 
             obs.update({"SS_dn_01": SS_dn_01, "SS_dn_12": SS_dn_12, "SS_dn_02": SS_dn_02,\

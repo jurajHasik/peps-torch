@@ -1,8 +1,8 @@
 import os
 import context
 import numpy as np
-import yast.yast as yast
-from yast.yast.sym import sym_U1xU1
+import yastn.yastn as yastn
+from yastn.yastn.sym import sym_U1xU1
 import argparse
 import config as cfg
 from ipeps.ipess_kagome_abelian import read_ipess_kagome_generic
@@ -31,14 +31,14 @@ args, unknown_args = parser.parse_known_args()
 def main():
     cfg.configure(args)
     cfg.print_config()
-    from yast.yast.sym import sym_U1
+    from yastn.yastn.sym import sym_U1
     if args.yast_backend=='np':
-        from yast.yast.backend import backend_np as backend
+        from yastn.yastn.backend import backend_np as backend
     elif args.yast_backend=='torch':
-        from yast.yast.backend import backend_torch as backend
+        from yastn.yastn.backend import backend_torch as backend
     elif args.yast_backend=='torch_cpp':
-        from yast.yast.backend import backend_torch_cpp as backend
-    settings= yast.make_config(backend=backend, sym=sym_U1xU1, \
+        from yastn.yastn.backend import backend_torch_cpp as backend
+    settings= yastn.make_config(backend=backend, sym=sym_U1xU1, \
         default_device= cfg.global_args.device, default_dtype=cfg.global_args.dtype)
     settings.backend.set_num_threads(args.omp_cores)
     settings.backend.random_seed(args.seed)

@@ -3,7 +3,7 @@ import argparse
 import torch
 import copy
 import config as cfg
-import yast.yast as yast
+import yastn.yastn as yastn
 from ipeps.ipeps_abelian import *
 from ctm.generic_abelian.env_abelian import *
 import ctm.generic_abelian.ctmrg as ctmrg
@@ -40,14 +40,14 @@ args, unknown_args = parser.parse_known_args()
 def main():
     cfg.configure(args)
     cfg.print_config()
-    from yast.yast.sym import sym_U1
+    from yastn.yastn.sym import sym_U1
     if args.yast_backend=='torch':
-        from yast.yast.backend import backend_torch as backend
+        from yastn.yastn.backend import backend_torch as backend
     elif args.yast_backend=='torch_cpp':
-        from yast.yast.backend import backend_torch_cpp as backend
-    settings_full= yast.make_config(backend=backend, \
+        from yastn.yastn.backend import backend_torch_cpp as backend
+    settings_full= yastn.make_config(backend=backend, \
         default_device= cfg.global_args.device, default_dtype=cfg.global_args.dtype)
-    settings= yast.make_config(backend=backend, sym=sym_U1, \
+    settings= yastn.make_config(backend=backend, sym=sym_U1, \
         default_device= cfg.global_args.device, default_dtype=cfg.global_args.dtype)
     settings.backend.set_num_threads(args.omp_cores)
     settings.backend.random_seed(args.seed)
@@ -71,11 +71,11 @@ def main():
         state.load_checkpoint(args.opt_resume)
     elif args.ipeps_init_type=='RANDOM':
         if args.bond_dim==3:
-            sites= {(0,0): yast.rand(config=settings, s=IPEPS_ABELIAN._REF_S_DIRS,\
+            sites= {(0,0): yastn.rand(config=settings, s=IPEPS_ABELIAN._REF_S_DIRS,\
                 t=((0,1), (0,-1), (0,-1), (0,1), (0,1)), 
                 D=((1,1), (2,1), (2,1), (2,1), (2,1)))}
         elif args.bond_dim==4:
-            sites= {(0,0): yast.rand(config=settings, s=IPEPS_ABELIAN._REF_S_DIRS,\
+            sites= {(0,0): yastn.rand(config=settings, s=IPEPS_ABELIAN._REF_S_DIRS,\
                 t=((0,1), (0,-1,1), (0,-1,1), (0,1,-1), (0,1,-1)), 
                 D=((1,1), (2,1,1), (2,1,1), (2,1,1), (2,1,1)))}
         state= IPEPS_ABELIAN(settings, sites, lX=1, lY=1)

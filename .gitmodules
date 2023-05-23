@@ -1,0 +1,3 @@
+[submodule "yastn"]
+	path = yastn
+	url = https://github.com/yastn/yastn.git

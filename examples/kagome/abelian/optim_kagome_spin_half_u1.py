@@ -4,7 +4,7 @@ import argparse
 import numpy as np
 import torch
 import config as cfg
-import yast.yast as yast
+import yastn.yastn as yastn
 from ipeps.ipeps_kagome_abelian import *
 from ipeps.ipess_kagome_abelian import *
 from ctm.generic_abelian.env_abelian import *
@@ -50,12 +50,12 @@ args, unknown_args = parser.parse_known_args()
 def main():
     cfg.configure(args)
     cfg.print_config()
-    from yast.yast.sym import sym_U1
+    from yastn.yastn.sym import sym_U1
     if args.yast_backend=='torch':
-        from yast.yast.backend import backend_torch as backend
+        from yastn.yastn.backend import backend_torch as backend
     elif args.yast_backend=='torch_cpp':
-        from yast.yast.backend import backend_torch_cpp as backend
-    settings_U1= yast.make_config(backend=backend, sym=sym_U1, \
+        from yastn.yastn.backend import backend_torch_cpp as backend
+    settings_U1= yastn.make_config(backend=backend, sym=sym_U1, \
         default_device= cfg.global_args.device, default_dtype=cfg.global_args.dtype)
     settings_U1.backend.set_num_threads(args.omp_cores)
     settings_U1.backend.random_seed(args.seed)
@@ -100,11 +100,11 @@ def main():
         
         # 1.2) reading from checkpoint file
         elif args.opt_resume is not None:
-            T_u= yast.Tensor(config=settings_U1, s=(-1,-1,-1))
-            T_d= yast.Tensor(config=settings_U1, s=(-1,-1,-1))
-            B_c= yast.Tensor(config=settings_U1, s=(-1,1,1))
-            B_a= yast.Tensor(config=settings_U1, s=(-1,1,1))
-            B_b= yast.Tensor(config=settings_U1, s=(-1,1,1))
+            T_u= yastn.Tensor(config=settings_U1, s=(-1,-1,-1))
+            T_d= yastn.Tensor(config=settings_U1, s=(-1,-1,-1))
+            B_c= yastn.Tensor(config=settings_U1, s=(-1,1,1))
+            B_a= yastn.Tensor(config=settings_U1, s=(-1,1,1))
+            B_b= yastn.Tensor(config=settings_U1, s=(-1,1,1))
             if args.ansatz in ["IPESS"]:
                 state= IPESS_KAGOME_GENERIC_ABELIAN(settings_U1, {'T_u': T_u, 'B_a': B_a, 'T_d': T_d,\
                     'B_b': B_b, 'B_c': B_c}, build_sites=False)
@@ -121,107 +121,107 @@ def main():
 
             #su(2) sectors
             if args.bond_dim==3:
-                B_c = yast.rand(config=settings_U1, s=(-1, 1, 1), n=0,
+                B_c = yastn.rand(config=settings_U1, s=(-1, 1, 1), n=0,
                     t=((-1, 1), (-1, 0, 1), (-1, 0, 1)),
                     D=((1, 1), (1, 1, 1), (1, 1, 1)))
-                B_b = yast.rand(config=settings_U1, s=(-1, 1, 1), n=0,
+                B_b = yastn.rand(config=settings_U1, s=(-1, 1, 1), n=0,
                     t=((-1, 1), (-1, 0, 1), (-1, 0, 1)),
                     D=((1, 1), (1, 1, 1), (1, 1, 1)))
-                B_a = yast.rand(config=settings_U1, s=(-1, 1, 1), n=0,
+                B_a = yastn.rand(config=settings_U1, s=(-1, 1, 1), n=0,
                     t=((-1, 1), (-1, 0, 1), (-1, 0, 1)),
                     D=((1, 1), (1, 1, 1), (1, 1, 1)))
 
-                T_u = yast.rand(config=settings_U1, s=(-1, -1, -1), n=0,
+                T_u = yastn.rand(config=settings_U1, s=(-1, -1, -1), n=0,
                     t=((-1, 0, 1), (-1, 0, 1), (-1, 0, 1)),
                     D=((1, 1, 1), (1, 1, 1), (1, 1, 1)))
-                T_d = yast.rand(config=settings_U1, s=(-1, -1, -1), n=0,
+                T_d = yastn.rand(config=settings_U1, s=(-1, -1, -1), n=0,
                     t=((-1, 0, 1), (-1, 0, 1), (-1, 0, 1)),
                     D=((1, 1, 1), (1, 1, 1), (1, 1, 1)))
             if args.bond_dim==6:
-                B_c = yast.rand(config=settings_U1, s=(-1, 1, 1), n=0,
+                B_c = yastn.rand(config=settings_U1, s=(-1, 1, 1), n=0,
                     t=((-1, 1), (-2, -1, 0, 1, 2), (-2, -1, 0, 1, 2)),
                     D=((1, 1), (1, 1, 2, 1, 1), (1, 1, 2, 1, 1)))
-                B_b = yast.rand(config=settings_U1, s=(-1, 1, 1), n=0,
+                B_b = yastn.rand(config=settings_U1, s=(-1, 1, 1), n=0,
                     t=((-1, 1), (-2, -1, 0, 1, 2), (-2, -1, 0, 1, 2)),
                     D=((1, 1), (1, 1, 2, 1, 1), (1, 1, 2, 1, 1)))
-                B_a = yast.rand(config=settings_U1, s=(-1, 1, 1), n=0,
+                B_a = yastn.rand(config=settings_U1, s=(-1, 1, 1), n=0,
                     t=((-1, 1), (-2, -1, 0, 1, 2), (-2, -1, 0, 1, 2)),
                     D=((1, 1), (1, 1, 2, 1, 1), (1, 1, 2, 1, 1)))
 
-                T_u = yast.rand(config=settings_U1, s=(-1, -1, -1), n=0,
+                T_u = yastn.rand(config=settings_U1, s=(-1, -1, -1), n=0,
                     t=((-2, -1, 0, 1, 2), (-2, -1, 0, 1, 2), (-2, -1, 0, 1, 2)),
                     D=((1, 1, 2, 1, 1), (1, 1, 2, 1, 1), (1, 1, 2, 1, 1)))
-                T_d = yast.rand(config=settings_U1, s=(-1, -1, -1), n=0,
+                T_d = yastn.rand(config=settings_U1, s=(-1, -1, -1), n=0,
                     t=((-2, -1, 0, 1, 2), (-2, -1, 0, 1, 2), (-2, -1, 0, 1, 2)),
                     D=((1, 1, 2, 1, 1), (1, 1, 2, 1, 1), (1, 1, 2, 1, 1)))
             if args.bond_dim==8:
-                B_c = yast.rand(config=settings_U1, s=(-1, 1, 1), n=0,
+                B_c = yastn.rand(config=settings_U1, s=(-1, 1, 1), n=0,
                     t=((-1, 1), (-2, -1, 0, 1, 2), (-2, -1, 0, 1, 2)),
                     D=((1, 1), (1, 2, 2, 2, 1), (1, 2, 2, 2, 1)))
-                B_b = yast.rand(config=settings_U1, s=(-1, 1, 1), n=0,
+                B_b = yastn.rand(config=settings_U1, s=(-1, 1, 1), n=0,
                     t=((-1, 1), (-2, -1, 0, 1, 2), (-2, -1, 0, 1, 2)),
                     D=((1, 1), (1, 2, 2, 2, 1), (1, 2, 2, 2, 1)))
-                B_a = yast.rand(config=settings_U1, s=(-1, 1, 1), n=0,
+                B_a = yastn.rand(config=settings_U1, s=(-1, 1, 1), n=0,
                     t=((-1, 1), (-2, -1, 0, 1, 2), (-2, -1, 0, 1, 2)),
                     D=((1, 1), (1, 2, 2, 2, 1), (1, 2, 2, 2, 1)))
 
-                T_u = yast.rand(config=settings_U1, s=(-1, -1, -1), n=0,
+                T_u = yastn.rand(config=settings_U1, s=(-1, -1, -1), n=0,
                     t=((-2, -1, 0, 1, 2), (-2, -1, 0, 1, 2), (-2, -1, 0, 1, 2)),
                     D=((1, 2, 2, 2, 1), (1, 2, 2, 2, 1), (1, 2, 2, 2, 1)))
-                T_d = yast.rand(config=settings_U1, s=(-1, -1, -1), n=0,
+                T_d = yastn.rand(config=settings_U1, s=(-1, -1, -1), n=0,
                     t=((-2, -1, 0, 1, 2), (-2, -1, 0, 1, 2), (-2, -1, 0, 1, 2)),
                     D=((1, 2, 2, 2, 1), (1, 2, 2, 2, 1), (1, 2, 2, 2, 1)))
             if args.bond_dim==9:
-                B_c = yast.rand(config=settings_U1, s=(-1, 1, 1), n=0,
+                B_c = yastn.rand(config=settings_U1, s=(-1, 1, 1), n=0,
                     t=((-1, 1), (-2, -1, 0, 1, 2), (-2, -1, 0, 1, 2)),
                     D=((1, 1), (1, 2, 3, 2, 1), (1, 2, 3, 2, 1)))
-                B_b = yast.rand(config=settings_U1, s=(-1, 1, 1), n=0,
+                B_b = yastn.rand(config=settings_U1, s=(-1, 1, 1), n=0,
                     t=((-1, 1), (-2, -1, 0, 1, 2), (-2, -1, 0, 1, 2)),
                     D=((1, 1), (1, 2, 3, 2, 1), (1, 2, 3, 2, 1)))
-                B_a = yast.rand(config=settings_U1, s=(-1, 1, 1), n=0,
+                B_a = yastn.rand(config=settings_U1, s=(-1, 1, 1), n=0,
                     t=((-1, 1), (-2, -1, 0, 1, 2), (-2, -1, 0, 1, 2)),
                     D=((1, 1), (1, 2, 3, 2, 1), (1, 2, 3, 2, 1)))
 
-                T_u = yast.rand(config=settings_U1, s=(-1, -1, -1), n=0,
+                T_u = yastn.rand(config=settings_U1, s=(-1, -1, -1), n=0,
                     t=((-2, -1, 0, 1, 2), (-2, -1, 0, 1, 2), (-2, -1, 0, 1, 2)),
                     D=((1, 2, 3, 2, 1), (1, 2, 3, 2, 1), (1, 2, 3, 2, 1)))
-                T_d = yast.rand(config=settings_U1, s=(-1, -1, -1), n=0,
+                T_d = yastn.rand(config=settings_U1, s=(-1, -1, -1), n=0,
                     t=((-2, -1, 0, 1, 2), (-2, -1, 0, 1, 2), (-2, -1, 0, 1, 2)),
                     D=((1, 2, 3, 2, 1), (1, 2, 3, 2, 1), (1, 2, 3, 2, 1)))            
 
             #non-su(2) sectors
             elif args.bond_dim==4:
-                B_c = yast.rand(config=settings_U1, s=(-1, 1, 1), n=0,
+                B_c = yastn.rand(config=settings_U1, s=(-1, 1, 1), n=0,
                     t=((-1, 1), (-1, 0, 1), (-1, 0, 1)),
                     D=((1, 1), (1, 2, 1), (1, 2, 1)))
-                B_b = yast.rand(config=settings_U1, s=(-1, 1, 1), n=0,
+                B_b = yastn.rand(config=settings_U1, s=(-1, 1, 1), n=0,
                     t=((-1, 1), (-1, 0, 1), (-1, 0, 1)),
                     D=((1, 1), (1, 2, 1), (1, 2, 1)))
-                B_a = yast.rand(config=settings_U1, s=(-1, 1, 1), n=0,
+                B_a = yastn.rand(config=settings_U1, s=(-1, 1, 1), n=0,
                     t=((-1, 1), (-1, 0, 1), (-1, 0, 1)),
                     D=((1, 1), (1, 2, 1), (1, 2, 1)))
 
-                T_u = yast.rand(config=settings_U1, s=(-1, -1, -1), n=0,
+                T_u = yastn.rand(config=settings_U1, s=(-1, -1, -1), n=0,
                     t=((-1, 0, 1), (-1, 0, 1), (-1, 0, 1)),
                     D=((1, 2, 1), (1, 2, 1), (1, 2, 1)))
-                T_d = yast.rand(config=settings_U1, s=(-1, -1, -1), n=0,
+                T_d = yastn.rand(config=settings_U1, s=(-1, -1, -1), n=0,
                     t=((-1, 0, 1), (-1, 0, 1), (-1, 0, 1)),
                     D=((1, 2, 1), (1, 2, 1), (1, 2, 1)))
             elif args.bond_dim==5:
-                B_c = yast.rand(config=settings_U1, s=(-1, 1, 1), n=0,
+                B_c = yastn.rand(config=settings_U1, s=(-1, 1, 1), n=0,
                     t=((-1, 1), (-2, -1, 0, 1, 2), (-2,-1, 0, 1, 2)),
                     D=((1, 1), (1, 1, 1, 1, 1), (1, 1, 1, 1, 1)))
-                B_b = yast.rand(config=settings_U1, s=(-1, 1, 1), n=0,
+                B_b = yastn.rand(config=settings_U1, s=(-1, 1, 1), n=0,
                     t=((-1, 1), (-2, -1, 0, 1, 2), (-2,-1, 0, 1, 2)),
                     D=((1, 1), (1, 1, 1, 1, 1), (1, 1, 1, 1, 1)))
-                B_a = yast.rand(config=settings_U1, s=(-1, 1, 1), n=0,
+                B_a = yastn.rand(config=settings_U1, s=(-1, 1, 1), n=0,
                     t=((-1, 1), (-2, -1, 0, 1, 2), (-2,-1, 0, 1, 2)),
                     D=((1, 1), (1, 1, 1, 1, 1), (1, 1, 1, 1, 1)))
 
-                T_u = yast.rand(config=settings_U1, s=(-1, -1, -1), n=0,
+                T_u = yastn.rand(config=settings_U1, s=(-1, -1, -1), n=0,
                     t=((-2, -1, 0, 1, 2), (-2, -1, 0, 1, 2), (-2, -1, 0, 1, 2)),
                     D=((1, 1, 1, 1, 1), (1, 1, 1, 1, 1), (1, 1, 1, 1, 1)))
-                T_d = yast.rand(config=settings_U1, s=(-1, -1, -1), n=0,
+                T_d = yastn.rand(config=settings_U1, s=(-1, -1, -1), n=0,
                     t=((-2, -1, 0, 1, 2), (-2, -1, 0, 1, 2), (-2, -1, 0, 1, 2)),
                     D=((1, 1, 1, 1, 1), (1, 1, 1, 1, 1), (1, 1, 1, 1, 1)))
             state= IPESS_KAGOME_GENERIC_ABELIAN(settings_U1, {'T_u': T_u, 'B_a': B_a,\
@@ -229,7 +229,7 @@ def main():
         
         elif args.ipeps_init_type=="RVB":
             unit_block= np.ones((1,1,1), dtype=cfg.global_args.dtype)
-            B_c= yast.Tensor(settings_U1, s=(-1, 1, 1), n=0)
+            B_c= yastn.Tensor(settings_U1, s=(-1, 1, 1), n=0)
             B_c.set_block(ts=(1,1,0), Ds= unit_block.shape, val= unit_block)
             B_c.set_block(ts=(1,0,1), Ds= unit_block.shape, val= unit_block)
             B_c.set_block(ts=(-1,-1,0), Ds= unit_block.shape, val= unit_block)
@@ -238,7 +238,7 @@ def main():
             B_a=B_c.copy()
 
             unit_block= np.ones((1,1,1), dtype=cfg.global_args.dtype)
-            T_u= yast.Tensor(settings_U1, s=(-1, -1, -1), n=0)
+            T_u= yastn.Tensor(settings_U1, s=(-1, -1, -1), n=0)
             T_u.set_block(ts=(1,-1,0), Ds= unit_block.shape, val= unit_block)
             T_u.set_block(ts=(-1,1,0), Ds= unit_block.shape, val= -1*unit_block)
             T_u.set_block(ts=(0,1,-1), Ds= unit_block.shape, val= unit_block)
@@ -287,7 +287,7 @@ def main():
             #print(torch.Tensor.size(c_ten))
             #print(c_ten)
             u,s,v= torch.svd(c_ten, compute_uv=False)
-            # none, none, none, s=yast.svd(c_ten, axes=((0),(1)), untruncated_S=True)
+            # none, none, none, s=yastn.svd(c_ten, axes=((0),(1)), untruncated_S=True)
             # print(s)
             # s=s.to_dense()
             # s=torch.diag(s)

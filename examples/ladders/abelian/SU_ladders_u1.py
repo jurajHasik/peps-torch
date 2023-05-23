@@ -4,7 +4,7 @@ import argparse
 import numpy as np
 import torch
 import config as cfg
-import yast.yast as yast
+import yastn.yastn as yastn
 import examples.abelian.settings_U1_torch as settings_U1
 from ipeps.ipeps_abelian import *
 from ctm.generic_abelian.env_abelian import *

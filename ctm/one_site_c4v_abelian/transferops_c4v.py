@@ -1,7 +1,7 @@
 import itertools
 import numpy as np
 import torch
-import yast.yast as yast
+import yastn.yastn as yastn
 from tn_interface_abelian import contract, permute
 try:
     from scipy.sparse.linalg import LinearOperator
@@ -28,13 +28,13 @@ def get_Top_spec_c4v(n, state, env_c4v, verbosity=0):
     Cs1= E.s[0]*np.asarray(Cs[0])
     for x in [s*np.asarray(c) for s,c in zip(E.s[1:], Cs[1:])]:
         X= np.add.outer(Cs1, x)
-        Cs1= np.unique(X.reshape(len(Cs1)*len(x),1),axis=0)
+        Cs1= np.unique(X.reshape(len(Cs1)*len(x),1),axes=0)
     Cs1= tuple(map(tuple,Cs1))
 
     # build dummy Nx1 vector
     Cs= Cs + (Cs1,)
     Ds= Ds + (tuple([1]*len(Cs1)),)
-    v0= yast.zeros(config= E.config, s=np.concatenate((E.s,[1])), n=0, t=Cs, D=Ds)
+    v0= yastn.zeros(config= E.config, s=np.concatenate((E.s,[1])), n=0, t=Cs, D=Ds)
     # r1d, meta= v0.compress_to_1d()
     r1d, meta= E.compress_to_1d()
     N= r1d.numel()
@@ -51,7 +51,7 @@ def get_Top_spec_c4v(n, state, env_c4v, verbosity=0):
         # (-)1--E--(-) dummy-index
         # (+)2--
         # pdb.set_trace()
-        V= yast.decompress_from_1d(V1d, E.config, meta)
+        V= yastn.decompress_from_1d(V1d, E.config, meta)
         V= corrf_c4v.apply_TM_1sO(state,env_c4v,V,verbosity=verbosity)
         # V= V.flip_signature(inplace=True)
         # bring the edge back into plain 1d representation
@@ -99,16 +99,16 @@ def get_full_EH_spec_exactTM(state):
     
     def get_eigenvecs(U,S,V,c,ev_ind):
         # given sector charge and eigenvalue index, retrieve left and right eigenvectors
-        Pr= yast.zeros(config=S.config, s=S.get_signature(), 
+        Pr= yastn.zeros(config=S.config, s=S.get_signature(), 
             n=S.get_tensor_charge(), t=list(zip(c)), D=[1]+list(S[c].size()) )
-        Pl= yast.zeros(config=S.config, s=S.get_signature(), 
+        Pl= yastn.zeros(config=S.config, s=S.get_signature(), 
             n=S.get_tensor_charge(), t=list(zip(c)), D=list(S[c].size())+[1] )
         
         Pr[c][0,ev_ind]=1.0
         Pl[c][ev_ind,0]=1.0
 
-        R= yast.tensordot(Pr,V,([1],[0]))
-        L= yast.tensordot(U,Pl,([1],[0]))
+        R= yastn.tensordot(Pr,V,([1],[0]))
+        L= yastn.tensordot(U,Pl,([1],[0]))
         return L,R
 
     def get_leading_ev(U,S,V,c=None,ev_ind=0,verbosity=0):
@@ -136,7 +136,7 @@ def get_full_EH_spec_exactTM(state):
 
     # compute exact transfer matrix
     # get double layer tensor
-    a_dl= yast.tensordot(state.site(),state.site(),([0],[0]),conj=(0,1))
+    a_dl= yastn.tensordot(state.site(),state.site(),([0],[0]),conj=(0,1))
     a_dl_fused= a_dl.fuse_legs( axes=((0,4),(1,5),(2,6),(3,7)) )
     
     # build open transfer matrix, unmerge fused (bra,ket) pairs and fuse into
@@ -149,7 +149,7 @@ def get_full_EH_spec_exactTM(state):
     # -3--A-- -5      4,5--A--8,9
     #    -1                1
     #
-    TM2_open= yast.ncon([a_dl_fused,a_dl_fused.flip_signature()],[[-0,-2,1,-4],[1,-3,-1,-5]])
+    TM2_open= yastn.ncon([a_dl_fused,a_dl_fused.flip_signature()],[[-0,-2,1,-4],[1,-3,-1,-5]])
     TM2_open= TM2_open.unfuse_legs(axes=(2,3,4,5))
     TM2_open= TM2_open.fuse_legs(axes=(0,1,(2,4),(3,5),(6,8),(7,9)))
 
@@ -160,7 +160,7 @@ def get_full_EH_spec_exactTM(state):
     # -0 | -1
     #   \A/
     #    1
-    TM2_closed= yast.ncon([TM2_open.fuse_legs(axes=(0,1,(2,3),(4,5)))],[[1,1,-0,-1]])
+    TM2_closed= yastn.ncon([TM2_open.fuse_legs(axes=(0,1,(2,3),(4,5)))],[[1,1,-0,-1]])
     print(f"TM2_closed size {TM2_closed.size}")
     # signatures on left & right legs are identical
     U,S,V= TM2_closed.svd((0,1))
@@ -215,7 +215,7 @@ def get_full_EH_spec_exactTM(state):
     # -1--A-- -3
     #     A
     #     1
-    TM4_closed= yast.ncon([TM2_open,TM2_open],[[1,2,-0,-2],[2,1,-1,-3]])
+    TM4_closed= yastn.ncon([TM2_open,TM2_open],[[1,2,-0,-2],[2,1,-1,-3]])
     TM4_closed= TM4_closed.fuse_legs(axes=((0,1),(2,3)))
     U,S,V= TM4_closed.svd((0,1))
     print(f"TM4_closed size {TM4_closed.size}")
@@ -257,7 +257,7 @@ def get_full_EH_spec_exactTM(state):
     # -2--A-- -5    A--5
     #     A         A--6-> 11,12
     #     1
-    # TM6_closed= yast.ncon([TM2_open,TM2_open,TM2_open],[[1,2,-0,-3],[2,3,-1,-4],[3,1,-2,-5]])
+    # TM6_closed= yastn.ncon([TM2_open,TM2_open,TM2_open],[[1,2,-0,-3],[2,3,-1,-4],[3,1,-2,-5]])
     # TM6_closed= TM6_closed.fuse_legs(axes=((0,1,2),(3,4,5)))
     # U,S,V= TM6_closed.svd((0,1))
     # L,R= get_leading_ev(U,S,V)

@@ -9,7 +9,7 @@ try:
 except ImportError as e:
     warnings.warn("torch not available", Warning)
 import config as cfg
-import yast.yast as yast
+import yastn.yastn as yastn
 from ipeps.tensor_io import *
 import logging
 log = logging.getLogger(__name__)
@@ -84,7 +84,7 @@ class IPEPS_ABELIAN():
         :param peps_args: ipeps configuration
         :param global_args: global configuration
         :type settings: NamedTuple or SimpleNamespace (TODO link to definition)
-        :type sites: dict[tuple(int,int) : yast.Tensor]
+        :type sites: dict[tuple(int,int) : yastn.Tensor]
         :type vertexToSite: function(tuple(int,int))->tuple(int,int)
         :type lX: int
         :type lY: int
@@ -256,7 +256,7 @@ class IPEPS_ABELIAN():
         :param coord: tuple (x,y) specifying vertex on a square lattice
         :type coord: tuple(int,int)
         :return: on-site tensor corresponding to the vertex (x,y)
-        :rtype: yast.Tensor
+        :rtype: yastn.Tensor
         """
         return self.sites[self.vertexToSite(coord)]
 
@@ -265,7 +265,7 @@ class IPEPS_ABELIAN():
         :param coord: tuple (x,y) specifying vertex on a square lattice
         :type coord: tuple(int,int)
         :return: double-layer on-site tensor corresponding to the vertex (x,y)
-        :rtype: yast.Tensor
+        :rtype: yastn.Tensor
 
         If :py:attr:`config.PEPSARGS.build_dl`, then precomputed double-layer on-site
         tensor is returned. Otherwise, Exception is raised. 
@@ -278,7 +278,7 @@ class IPEPS_ABELIAN():
         :param coord: tuple (x,y) specifying vertex on a square lattice
         :type coord: tuple(int,int)
         :return: open double-layer on-site tensor corresponding to the vertex (x,y)
-        :rtype: yast.Tensor
+        :rtype: yastn.Tensor
 
         If :py:attr:`config.PEPSARGS.build_dl_open`, then precomputed open double-layer 
         on-site tensor is returned. Otherwise, Exception is raised.
@@ -350,7 +350,7 @@ class IPEPS_ABELIAN():
             be provided either when instantiating IPEPS_ABELIAN or afterwards. 
         """
         checkpoint= torch.load(checkpoint_file, map_location=self.device) 
-        self.sites= {ind: yast.load_from_dict(config= self.engine, d=t_dict_repr) \
+        self.sites= {ind: yastn.load_from_dict(config= self.engine, d=t_dict_repr) \
             for ind,t_dict_repr in checkpoint["parameters"].items()}
         for site_t in self.sites.values(): site_t.requires_grad_(False)
         self.sync_precomputed()
@@ -378,7 +378,7 @@ class IPEPS_ABELIAN():
         sites= {}
         for ind,t in self.sites.items():
             ts, Ds= t.get_leg_charges_and_dims(native=True)
-            t_noise= yast.rand(config=t.config, s=t.s, n=t.n, t=ts, D=Ds, isdiag=t.isdiag)
+            t_noise= yastn.rand(config=t.config, s=t.s, n=t.n, t=ts, D=Ds, isdiag=t.isdiag)
             sites[ind]= t + noise * t_noise
         state= IPEPS_ABELIAN(self.engine, sites, self.vertexToSite, 
             lX=self.lX, lY=self.lY, peps_args=peps_args)
@@ -546,8 +546,8 @@ class IPEPS_ABELIAN_WEIGHTED(IPEPS_ABELIAN):
         :param peps_args: ipeps configuration
         :param global_args: global configuration
         :type config: NamedTuple or SimpleNamespace (TODO link to definition)
-        :type sites: dict[tuple(int,int) : yast.Tensor]
-        :type weights: dict[tuple(tuple(int,int), tuple(int,int)) : yast.Tensor]
+        :type sites: dict[tuple(int,int) : yastn.Tensor]
+        :type weights: dict[tuple(tuple(int,int), tuple(int,int)) : yastn.Tensor]
         :type vertexToSite: function(tuple(int,int))->tuple(int,int)
         :type lX: int
         :type lY: int
@@ -627,7 +627,7 @@ class IPEPS_ABELIAN_WEIGHTED(IPEPS_ABELIAN):
                           right respectively.
         :type weight_id: tuple(tuple(int,int), tuple(int,int))
         :return: diagonal weight tensor
-        :rtype: yast.Tensor
+        :rtype: yastn.Tensor
         """
         xy_site, dxy= weight_id
         assert dxy in [(0,-1), (-1,0), (0,1), (1,0)],"invalid direction"
@@ -652,7 +652,7 @@ class IPEPS_ABELIAN_WEIGHTED(IPEPS_ABELIAN):
                 w_rid= (self.vertexToSite(add_(coord,dxy)), neg_(dxy))
 
                 if not w_id in weights.keys() and not w_rid in weights.keys():
-                    W= yast.eye( config=self.engine, legs=(
+                    W= yastn.eye( config=self.engine, legs=(
                         self.site(w_id[0]).get_legs(dxy_w_to_ind[w_id[1]]),
                         self.site(w_rid[0]).get_legs(dxy_w_to_ind[w_rid[1]])
                         ))
@@ -688,14 +688,14 @@ class IPEPS_ABELIAN_WEIGHTED(IPEPS_ABELIAN):
             expr= 'suldr,smnop,'+','.join([expr_ws[d] if oi[d]==0 else expr_ws[d][::-1] for d in ds_to_contract])\
                 +f'->{expr_ws[direction]}'
             order= ''.join([expr_ws[d][0] for d in ds_to_contract]+[expr_ws[d][1] for d in ds_to_contract])+'s'
-            a= yast.einsum(expr,\
+            a= yastn.einsum(expr,\
                 A,A.conj(),*( weights[(coord,d)]**2 for d in ds_to_contract),order=order)
 
             # diagonalize, since a is hermitian and positive. Force ordering in descending magnitude
             # n--    (-s)n(1)--U*
             #    a =           sqrt(D)^2
             # l--     (s)l(0)--U
-            D,U = yast.linalg.eigh((-1.)*a/a.norm(p='inf'), axes=(0,1), sU=-a.get_signature()[0])
+            D,U = yastn.linalg.eigh((-1.)*a/a.norm(p='inf'), axes=(0,1), sU=-a.get_signature()[0])
             D= -1.*D
             #
             # (s)0--U--1(sU) (-sU)0--D--1(sU) = (s)0--X--1(sU=-s)
@@ -729,7 +729,7 @@ class IPEPS_ABELIAN_WEIGHTED(IPEPS_ABELIAN):
                         #
                         #  ... (s)--w[w_id]--?(-s) (s)0--X[w_id]--1(sU=-s) -> 0(sU=-s)--X[w_id]--w[w_id]-- ...
                         _sgn= -Xs[w_id][0].get_signature()[1] #-weights[w_id].get_signature()[0]
-                        U,S,Vh= yast.linalg.svd( Xs[w_id][0].tensordot(weights[w_id],([0],[_match_diag_signature]))\
+                        U,S,Vh= yastn.linalg.svd( Xs[w_id][0].tensordot(weights[w_id],([0],[_match_diag_signature]))\
                             .tensordot(Xs[w_rid][0],([1],[0])), sU=_sgn )
                         new_weights[w_id]= S #/S[0]
                         new_weights[w_rid]= S #/S[0]
@@ -743,7 +743,7 @@ class IPEPS_ABELIAN_WEIGHTED(IPEPS_ABELIAN):
                 A= sites[self.vertexToSite(coord)]
                 expr= 'smnop,'+','.join([expr_ws[d] for d in dxy_w_to_ind.keys()])+'->suldr'
                 # (_sgn=s)0--U--1(sU) (-sU)0--Xinv--1(-s) = (_sgn=s)0--UXinv--1(-s)  <=> n,ln->l
-                new_sites[coord]= yast.einsum(expr,A,*(Us[(coord,d)].tensordot(Xs[(coord,d)][1],([1],[0]))\
+                new_sites[coord]= yastn.einsum(expr,A,*(Us[(coord,d)].tensordot(Xs[(coord,d)][1],([1],[0]))\
                     for d in dxy_w_to_ind.keys()))
                 # new_sites[coord]= A/A.abs().max()
 
@@ -757,7 +757,7 @@ class IPEPS_ABELIAN_WEIGHTED(IPEPS_ABELIAN):
                 for  coord in n_s.keys() for d in [(0,-1),(-1,0),(0,1),(1,0)] }
 
             n_s, n_w1= _update_weights_and_sites(n_s,n_w,Xs)
-            dist.append(sum([ yast.norm( \
+            dist.append(sum([ yastn.norm( \
                 n_w1[k] - n_w[k] \
                 if n_w1[k].get_signature()[0]==n_w[k].get_signature()[0] else \
                 n_w1[k] - n_w[k].transpose((1,0)) ).item() for k in n_w.keys() ])/len(n_s))

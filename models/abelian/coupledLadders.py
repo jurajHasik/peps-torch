@@ -1,7 +1,7 @@
 from math import sqrt
 import itertools
 import config as cfg
-import yast.yast as yast
+import yastn.yastn as yastn
 from tn_interface_abelian import contract, permute  
 import groups.su2_abelian as su2
 from ctm.generic_abelian import rdm
@@ -127,12 +127,12 @@ class COUPLEDLADDERS_NOSYM():
             1--A--3 1--B--3                  C--3 1--D,      0  0  0  0
                2       2             , terms D--3 1--C, and  C, D, A, B
         """
-        energy=yast.zeros(self.engine)
+        energy=yastn.zeros(self.engine)
         #
         # (-1)0--|rho|--2(+1) (-1)0--|S.S|--2(+1)
         # (-1)1--|   |--3(+1) (-1)1--|   |--3(+1)
         _ci= ([0,1,2,3],[2,3,0,1])
-        _tmp_t= yast.ones(config=state.engine, s=(-1, -1, 1, 1),
+        _tmp_t= yastn.ones(config=state.engine, s=(-1, -1, 1, 1),
                   t=((-1, 1), (-1, 1), (-1, 1), (-1, 1)),
                   D=((1, 1), (1, 1), (1, 1), (1, 1)))
         _lss_dense={i: l for i,l in enumerate(_tmp_t.get_legs())}
@@ -182,7 +182,7 @@ class COUPLEDLADDERS_NOSYM():
         """
         obs= dict({"avg_m": 0.})
         _ci= ([0,1],[1,0])
-        _tmp_t= yast.ones(config=state.engine, s=(-1, 1),
+        _tmp_t= yastn.ones(config=state.engine, s=(-1, 1),
                   t=((-1, 1), (-1, 1)),
                   D=((1, 1), (1, 1)))
         _lss_dense={i: l for i,l in enumerate(_tmp_t.get_legs())}
@@ -195,7 +195,7 @@ class COUPLEDLADDERS_NOSYM():
         obs["avg_m"]= obs["avg_m"]/len(state.sites.keys())
     
         _ci= ([0,1,2,3],[2,3,0,1])
-        _tmp_t= yast.ones(config=state.engine, s=(-1, -1, 1, 1),
+        _tmp_t= yastn.ones(config=state.engine, s=(-1, -1, 1, 1),
                   t=((-1, 1), (-1, 1), (-1, 1), (-1, 1)),
                   D=((1, 1), (1, 1), (1, 1), (1, 1)))
         _lss_dense={i: l for i,l in enumerate(_tmp_t.get_legs())}
@@ -324,7 +324,7 @@ class COUPLEDLADDERS_U1():
             1--A--3 1--B--3                  C--3 1--D,      0  0  0  0
                2       2             , terms D--3 1--C, and  C, D, A, B
         """
-        energy=yast.zeros(self.engine)
+        energy=yastn.zeros(self.engine)
         #
         # (-1)0--|rho|--2(+1) (-1)0--|S.S|--2(+1)
         # (-1)1--|   |--3(+1) (-1)1--|   |--3(+1)
@@ -369,7 +369,7 @@ class COUPLEDLADDERS_U1():
                 ..._|_a_|__|_a_|__|...   
                     :   :  :   :  : (a = \alpha)
         """
-        energy=yast.zeros(self.engine)
+        energy=yastn.zeros(self.engine)
         #
         # (-1)0--|rho|--2(+1) (-1)0--|S.S|--2(+1)
         # (-1)1--|   |--3(+1) (-1)1--|   |--3(+1)
@@ -447,7 +447,7 @@ class COUPLEDLADDERS_U1():
 
     def _gen_gate_Sz(self,t):
         gate_Sz= self.h1
-        D, U= yast.linalg.eigh(gate_Sz, axes=([0,1],[2,3]))
+        D, U= yastn.linalg.eigh(gate_Sz, axes=([0,1],[2,3]))
         D= D.exp(t)
         gate_Sz = U.tensordot(D, ([2],[0]))
         gate_Sz = gate_Sz.tensordot(U, ([2,2]), conj=(0,1))
@@ -455,7 +455,7 @@ class COUPLEDLADDERS_U1():
 
     def _gen_gate_SS(self,t):
         gate_SS= self.h2
-        D, U= yast.linalg.eigh(gate_SS, axes=([0,1],[2,3]))
+        D, U= yastn.linalg.eigh(gate_SS, axes=([0,1],[2,3]))
         D= D.exp(t)
         gate_SS= U.tensordot(D, ([2],[0]))
         gate_SS= gate_SS.tensordot(U, ([2,2]), conj=(0,1))
@@ -463,7 +463,7 @@ class COUPLEDLADDERS_U1():
 
     def _gen_gate_SS_hz(self, t, alpha, hz_stag):
         gate_SS_Sz= alpha*self.h2 + hz_stag*(self.h1 - self.h1.transpose((1,0,3,2)) )
-        D, U= yast.linalg.eigh(gate_SS_Sz, axes=([0,1],[2,3]))
+        D, U= yastn.linalg.eigh(gate_SS_Sz, axes=([0,1],[2,3]))
         D= D.exp(t)
         gate_SS= U.tensordot(D, ([2],[0]))
         gate_SS= gate_SS.tensordot(U, ([2,2]), conj=(0,1))
@@ -474,7 +474,7 @@ class COUPLEDLADDERS_U1():
         :param t: imaginary time step
         :type t: float
         :return: gate sequence
-        :rtype: list[tuple(tuple(tuple(int,int),tuple(int,int),tuple(int,int)), yast.Tensor)]
+        :rtype: list[tuple(tuple(tuple(int,int),tuple(int,int),tuple(int,int)), yastn.Tensor)]
         
         Generate a 2-site gate sequence :math:`exp(-t \vec{S}.\vec{S})` for imaginary-time optimization.
         Each element of sequence has two parts: First, the placement of the gate encoded by (x,y) 
@@ -526,7 +526,7 @@ class COUPLEDLADDERS_U1():
         :param t: imaginary time step
         :type t: float
         :return: gate sequence
-        :rtype: list[tuple(tuple(tuple(int,int),tuple(int,int),tuple(int,int)), yast.Tensor)]
+        :rtype: list[tuple(tuple(tuple(int,int),tuple(int,int),tuple(int,int)), yastn.Tensor)]
         
         Second-order Trotter gate sequence. This sequence can be generated from the result of 
         :meth:`gen_gate_seq_2S` by applying the gates in both direct and reverse order. 
@@ -569,7 +569,7 @@ class COUPLEDLADDERS_U1():
         :param t: imaginary time step
         :type t: float
         :return: gate sequence
-        :rtype: list[tuple(tuple(tuple(int,int),tuple(int,int),tuple(int,int)), yast.Tensor)]
+        :rtype: list[tuple(tuple(tuple(int,int),tuple(int,int),tuple(int,int)), yastn.Tensor)]
         
         Generate a 2-site gate sequence :math:`exp(-t (\vec{S}_i.\vec{S}_j + \sum_{r=i,j}(-1)^{x_r+y_r} B_z S^z_r))` 
         for imaginary-time optimization.
@@ -607,7 +607,7 @@ class COUPLEDLADDERS_U1():
         :param t: imaginary time step
         :type t: float
         :return: gate sequence
-        :rtype: list[tuple(tuple(tuple(int,int),tuple(int,int),tuple(int,int)), yast.Tensor)]
+        :rtype: list[tuple(tuple(tuple(int,int),tuple(int,int),tuple(int,int)), yastn.Tensor)]
         
         Second-order Trotter gate sequence. This sequence can be generated from the result of 
         :meth:`gen_gate_seq_2S_SS_hz` by applying the gates in both direct and reverse order. 
@@ -676,7 +676,7 @@ class COUPLEDLADDERS_U1():
         :param t: imaginary time step
         :type t: float
         :return: gate sequence
-        :rtype: list[tuple(tuple(tuple(int,int),tuple(int,int),tuple(int,int)), yast.Tensor)]
+        :rtype: list[tuple(tuple(tuple(int,int),tuple(int,int),tuple(int,int)), yastn.Tensor)]
         
         Second-order Trotter gate sequence. This sequence can be generated from the result of 
         :meth:`gen_gate_seq_2S_H` by applying the gates in both direct and reverse order. 

@@ -1,7 +1,7 @@
 import warnings
 import config as cfg
 from math import sqrt
-import yast.yast as yast
+import yastn.yastn as yastn
 try:
     import torch
     from ctm.generic.env import ENV
@@ -160,11 +160,11 @@ class ENV_ABELIAN():
                 # all legs of current T
                 # 0--T(x-1,y)--3 0--T(x,y)--3 0--T(x+1,y)--3
                 #    1,2            1,2          1,2
-                T_lss[tid]= { 1: tmp_T[tid].get_legs(axis=1), 2: tmp_T[tid].get_legs(axis=2), \
-                    0: yast.leg_union(tmp_T[(vts((t_xy[0]-1, t_xy[1])), t_dir)].get_legs(axis=3),\
-                        self.C[((t_xy),(-1,-1))].get_legs(axis=1)).conj(),\
-                    3: yast.leg_union(tmp_T[(vts((t_xy[0]+1, t_xy[1])), t_dir)].get_legs(axis=0),\
-                        self.C[((t_xy),(1,-1))].get_legs(axis=0)).conj() }
+                T_lss[tid]= { 1: tmp_T[tid].get_legs(axes=1), 2: tmp_T[tid].get_legs(axes=2), \
+                    0: yastn.leg_union(tmp_T[(vts((t_xy[0]-1, t_xy[1])), t_dir)].get_legs(axes=3),\
+                        self.C[((t_xy),(-1,-1))].get_legs(axes=1)).conj(),\
+                    3: yastn.leg_union(tmp_T[(vts((t_xy[0]+1, t_xy[1])), t_dir)].get_legs(axes=0),\
+                        self.C[((t_xy),(1,-1))].get_legs(axes=0)).conj() }
                 # upper-left corner
                 # C--1
                 # 0
@@ -176,11 +176,11 @@ class ENV_ABELIAN():
             elif t_dir==(0,1): #DOWN
                 #    0,1              0,1        0,1
                 # 2--T(x-1,y)--3 2--T(x,y)--3 2--T(x+1,y)--3
-                T_lss[tid]= { 0: tmp_T[tid].get_legs(axis=0), 1: tmp_T[tid].get_legs(axis=1), \
-                    2: yast.leg_union(tmp_T[(vts((t_xy[0]-1, t_xy[1])), t_dir)].get_legs(axis=3),\
-                        self.C[((t_xy),(-1,1))].get_legs(axis=1)).conj(),\
-                    3: yast.leg_union(tmp_T[(vts((t_xy[0]+1, t_xy[1])), t_dir)].get_legs(axis=2),\
-                        self.C[((t_xy),(1,1))].get_legs(axis=1)).conj() }
+                T_lss[tid]= { 0: tmp_T[tid].get_legs(axes=0), 1: tmp_T[tid].get_legs(axes=1), \
+                    2: yastn.leg_union(tmp_T[(vts((t_xy[0]-1, t_xy[1])), t_dir)].get_legs(axes=3),\
+                        self.C[((t_xy),(-1,1))].get_legs(axes=1)).conj(),\
+                    3: yastn.leg_union(tmp_T[(vts((t_xy[0]+1, t_xy[1])), t_dir)].get_legs(axes=2),\
+                        self.C[((t_xy),(1,1))].get_legs(axes=1)).conj() }
                 # lower-left corner
                 # 0
                 # C--1
@@ -193,11 +193,11 @@ class ENV_ABELIAN():
                 # 0
                 # T--2,3
                 # 1
-                T_lss[tid]= { 2: tmp_T[tid].get_legs(axis=2), 3: tmp_T[tid].get_legs(axis=3),\
-                    0: yast.leg_union(tmp_T[(vts((t_xy[0], t_xy[1]-1)), t_dir)].get_legs(axis=1),\
-                        self.C[((t_xy),(-1,-1))].get_legs(axis=0)).conj(),\
-                    1: yast.leg_union(tmp_T[(vts((t_xy[0], t_xy[1]+1)), t_dir)].get_legs(axis=0),\
-                        self.C[((t_xy),(-1,1))].get_legs(axis=0)).conj() }
+                T_lss[tid]= { 2: tmp_T[tid].get_legs(axes=2), 3: tmp_T[tid].get_legs(axes=3),\
+                    0: yastn.leg_union(tmp_T[(vts((t_xy[0], t_xy[1]-1)), t_dir)].get_legs(axes=1),\
+                        self.C[((t_xy),(-1,-1))].get_legs(axes=0)).conj(),\
+                    1: yastn.leg_union(tmp_T[(vts((t_xy[0], t_xy[1]+1)), t_dir)].get_legs(axes=0),\
+                        self.C[((t_xy),(-1,1))].get_legs(axes=0)).conj() }
                 # upper-left corner
                 # C--1
                 # 0
@@ -210,11 +210,11 @@ class ENV_ABELIAN():
                 #      0
                 # 1,2--T
                 #      3
-                T_lss[tid]= { 1: tmp_T[tid].get_legs(axis=1), 2: tmp_T[tid].get_legs(axis=2),\
-                    0: yast.leg_union(tmp_T[(vts((t_xy[0], t_xy[1]-1)), t_dir)].get_legs(axis=3),\
-                        self.C[((t_xy),(1,-1))].get_legs(axis=1)).conj(),\
-                    3: yast.leg_union(tmp_T[(vts((t_xy[0], t_xy[1]+1)), t_dir)].get_legs(axis=0),\
-                        self.C[((t_xy),(1,1))].get_legs(axis=0)).conj() }
+                T_lss[tid]= { 1: tmp_T[tid].get_legs(axes=1), 2: tmp_T[tid].get_legs(axes=2),\
+                    0: yastn.leg_union(tmp_T[(vts((t_xy[0], t_xy[1]-1)), t_dir)].get_legs(axes=3),\
+                        self.C[((t_xy),(1,-1))].get_legs(axes=1)).conj(),\
+                    3: yastn.leg_union(tmp_T[(vts((t_xy[0], t_xy[1]+1)), t_dir)].get_legs(axes=0),\
+                        self.C[((t_xy),(1,1))].get_legs(axes=0)).conj() }
                 # upper-right corner
                 # 0--C
                 #    1

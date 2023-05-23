@@ -2,7 +2,7 @@ from math import sqrt
 import itertools
 import numpy as np
 import torch
-import yast.yast as yast
+import yastn.yastn as yastn
 import config as cfg
 import groups.su3_abelian as su3
 from ctm.generic_abelian.rdm import _cast_to_real
@@ -71,8 +71,8 @@ class KAGOME_SU3_U1xU1():
 
     def get_h(self):
         irrep= su3.SU3_DEFINING_U1xU1(self.engine)
-        id2= yast.tensordot(irrep.I(),irrep.I(),([],[])).transpose(axes=(0,2,1,3))
-        id3= yast.tensordot(id2, irrep.I(),([],[])).transpose(axes=(0,1,4,2,3,5))
+        id2= yastn.tensordot(irrep.I(),irrep.I(),([],[])).transpose(axes=(0,2,1,3))
+        id3= yastn.tensordot(id2, irrep.I(),([],[])).transpose(axes=(0,1,4,2,3,5))
 
         perm2 = 2 * irrep.C1() + (1./3) * id2
         perm2 = perm2.remove_zero_blocks(rtol=1e-14, atol=0)
@@ -83,13 +83,13 @@ class KAGOME_SU3_U1xU1():
         #      0    1->3                3  4   5
         #      |-P2-|
         #      2->4 3->5
-        perm3_l = yast.tensordot(perm2, perm2, ([3],[0])).transpose(axes=(0,1,3,2,4,5))
-        perm3_r = yast.tensordot(perm2, perm2, ([3],[1])).transpose(axes=(0,3,1,2,4,5))
+        perm3_l = yastn.tensordot(perm2, perm2, ([3],[0])).transpose(axes=(0,1,3,2,4,5))
+        perm3_r = yastn.tensordot(perm2, perm2, ([3],[1])).transpose(axes=(0,3,1,2,4,5))
 
         # 0    1     0->4    4->2    0  1     2 
         # |-P2-| (x) I    => 2->3 => |--P2xI--|
         # 2    3     1->5    3->4    3  4     5
-        perm2xI= yast.tensordot(perm2, irrep.I(), ([],[])).transpose(axes=(0,1,4,2,3,5))
+        perm2xI= yastn.tensordot(perm2, irrep.I(), ([],[])).transpose(axes=(0,1,4,2,3,5))
         perm2_tri = perm2xI + perm2xI.transpose(axes=(2,0,1,5,3,4)) \
             + perm2xI.transpose(axes=(0,2,1,3,5,4))
 
@@ -144,19 +144,19 @@ class KAGOME_SU3_U1xU1():
 
             rdm2x2_ring = rdm_kagome.rdm2x2_up_triangle_open((0,0), state, env,\
                 force_cpu=force_cpu, **kwargs)
-            obs["chirality_up"] = yast.tensordot(rdm2x2_ring, chirality,\
+            obs["chirality_up"] = yastn.tensordot(rdm2x2_ring, chirality,\
                 ([0,1,2,3,4,5], [3,4,5,0,1,2]))
             obs["chirality_up"] = _cast_to_real(obs["chirality_up"], **kwargs).to_number()
-            # obs["avg_bonds_up"] = yast.tensordot(rdm2x2_ring, self.perm2_tri,\
+            # obs["avg_bonds_up"] = yastn.tensordot(rdm2x2_ring, self.perm2_tri,\
             #     ([0,1,2,3,4,5], [3,4,5,0,1,2])).to_number()
             # obs["avg_bonds_up"] = _cast_to_real(obs["avg_bonds_up"]) / 3.0
-            obs["P01_up"] = yast.tensordot(rdm2x2_ring, self.perm2xI,\
+            obs["P01_up"] = yastn.tensordot(rdm2x2_ring, self.perm2xI,\
                 ([0,1,2,3,4,5], [3,4,5,0,1,2]))
             obs["P01_up"] = _cast_to_real(obs["P01_up"], **kwargs).to_number()
-            obs["P12_up"] = yast.tensordot(rdm2x2_ring, self.perm2xI.transpose(axes=(2,0,1,5,3,4)),\
+            obs["P12_up"] = yastn.tensordot(rdm2x2_ring, self.perm2xI.transpose(axes=(2,0,1,5,3,4)),\
                 ([0,1,2,3,4,5], [3,4,5,0,1,2]))
             obs["P12_up"] = _cast_to_real(obs["P12_up"], **kwargs).to_number()
-            obs["P20_up"] = yast.tensordot(rdm2x2_ring, self.perm2xI.transpose(axes=(0,2,1,3,5,4)),\
+            obs["P20_up"] = yastn.tensordot(rdm2x2_ring, self.perm2xI.transpose(axes=(0,2,1,3,5,4)),\
                 ([0,1,2,3,4,5], [3,4,5,0,1,2]))
             obs["P20_up"] = _cast_to_real(obs["P20_up"], **kwargs).to_number()
 
@@ -205,13 +205,13 @@ class KAGOME_SU3_U1xU1():
 
             rdm2x2_ring = rdm_kagome.rdm2x2_up_triangle_open((0,0), state, env,\
                 force_cpu=force_cpu,**kwargs)
-            obs["chirality_up"] = yast.tensordot(rdm2x2_ring, chirality,\
+            obs["chirality_up"] = yastn.tensordot(rdm2x2_ring, chirality,\
                 ([0,1,2,3,4,5],[3,4,5,0,1,2])).to_number()
             # obs["chirality_up"] = _cast_to_real(obs["chirality_up"], **kwargs)
-            obs["e_t_up"] = yast.tensordot(rdm2x2_ring, self.h_tri,\
+            obs["e_t_up"] = yastn.tensordot(rdm2x2_ring, self.h_tri,\
                 ([0,1,2,3,4,5],[3,4,5,0,1,2])).to_number()
             obs["e_t_up"] = _cast_to_real(obs["e_t_up"], **kwargs)
-            obs["avg_bonds_up"] = yast.tensordot(rdm2x2_ring, self.perm2_tri, \
+            obs["avg_bonds_up"] = yastn.tensordot(rdm2x2_ring, self.perm2_tri, \
                 ([0,1,2,3,4,5],[3,4,5,0,1,2])).to_number()
             obs["avg_bonds_up"] = _cast_to_real(obs["avg_bonds_up"], **kwargs)/3
 
@@ -266,7 +266,7 @@ class KAGOME_SU3_U1xU1():
         # inter-cell (up)
         rdm2x2_up = rdm_kagome.rdm2x2_up_triangle_open(\
             (0,0), state, env, force_cpu=force_cpu, sym_pos_def=False, **kwargs)
-        energy_up= yast.tensordot(rdm2x2_up, self.h_tri,([0,1,2,3,4,5],[3,4,5,0,1,2]))
+        energy_up= yastn.tensordot(rdm2x2_up, self.h_tri,([0,1,2,3,4,5],[3,4,5,0,1,2]))
         energy_up= _cast_to_real(energy_up, **kwargs).to_number()
         return energy_dn, energy_up
 
@@ -323,7 +323,7 @@ class KAGOME_SU3_U1xU1():
             for site in ["A","B","C"]:
                 rdm_1site= rdm_kagome.rdm1x1_kagome((0,0), state, env, sites_to_keep=(site),\
                     force_cpu=force_cpu)
-                obs_CW= yast.tensordot( rdm_1site, CW, ([0,1],[2,1]) )
+                obs_CW= yastn.tensordot( rdm_1site, CW, ([0,1],[2,1]) )
 
                 # retrieve expectation values of generators by global charge of individual
                 # generators
@@ -339,8 +339,8 @@ class KAGOME_SU3_U1xU1():
                     for i, g_index_g_id in enumerate(gen_center):
                         gens[site][g_index_g_id[0]]= obs_CW[center_charge][i]
 
-                m2= yast.tensordot(irrep.G(), obs_CW, ([1],[0]))
-                m2= yast.tensordot(obs_CW, m2, ([0],[0])).to_number()
+                m2= yastn.tensordot(irrep.G(), obs_CW, ([1],[0]))
+                m2= yastn.tensordot(obs_CW, m2, ([0],[0])).to_number()
 
                 gens[f"m2_{site}"]= m2
         return gens

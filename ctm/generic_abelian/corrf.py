@@ -1,5 +1,5 @@
 import numpy as np
-from yast.yast import einsum as einsum
+from yastn.yastn import einsum as einsum
 from ipeps.ipeps_abelian import _fused_dl_site
 from tn_interface_abelian import contract, permute
 
@@ -16,7 +16,7 @@ def get_edge(coord, direction, state, env, verbosity=0):
     :type env: ENV_ABELIAN
     :type verbosity: int
     :return: tensor with indices :math:`\chi \times D^2 \times \chi`
-    :rtype: yast.Tensor
+    :rtype: yastn.Tensor
 
     Build an edge of site ``coord`` by contracting one of the following networks
     depending on the chosen ``direction``::
@@ -107,11 +107,11 @@ def apply_edge(coord, direction, state, env, vec, verbosity=0):
     :type direction: tuple(int,int)
     :type state: IPEPS_ABELIAN
     :type env: ENV_ABELIAN
-    :type vec: yast.Tensor
+    :type vec: yastn.Tensor
     :type verbosity: int
     :return: scalar resulting from the contraction of ``vec`` with an edge
              built from the environment
-    :rtype: yast.Tensor
+    :rtype: yastn.Tensor
     
     Contracts ``vec`` tensor with the edge of length l defined by ``coord`` site 
     and a chosen ``direction``. Afterwards, their dot product is computed::
@@ -455,15 +455,15 @@ def corrf_1sO1sO(coord, direction, state, env, op1, get_op2, dist, rl_0=None, ve
     :type direction: tuple(int,int)
     :type state: IPEPS_ABELIAN
     :type env: ENV_ABELIAN
-    :type op1: yast.tensor
-    :type get_op2: function(int)->yast.tensor
+    :type op1: yastn.tensor
+    :type get_op2: function(int)->yastn.tensor
     :type dist: int
-    :type rl_0: tuple(function(tuple(int,int))->yast.Tensor, function(tuple(int,int))->yast.Tensor)
+    :type rl_0: tuple(function(tuple(int,int))->yastn.Tensor, function(tuple(int,int))->yastn.Tensor)
     :type verbosity: int
     :return: vector ``corrf`` of length ``dist`` holding the values of 
              correlation function :math:`\langle O_1(0) O_2(r) \rangle` 
              for :math:`r \in [1,dist]`
-    :rtype: yast.tensor
+    :rtype: yastn.tensor
     
     Computes the two-point correlation function :math:`\langle O_1(0) O_2(r) \rangle`
     by contracting the following network::

@@ -3,7 +3,7 @@ import copy
 import torch
 import argparse
 import config as cfg
-import yast.yast as yast
+import yastn.yastn as yastn
 from ipeps.ipeps_abelian_c4v_lc import *
 from models.abelian import j1j2
 from ctm.one_site_c4v_abelian.env_c4v_abelian import *
@@ -293,8 +293,8 @@ def worker_code(rank,size,gpu_id,pipe):
         # dist.recv( tensor=T_loc_cpu, src=0, tag=2000*size + rank )
         C_r1d, C_meta= pipe.recv()
         T_r1d, T_meta= pipe.recv()
-        C_loc_cpu= yast.decompress_from_1d(C_r1d,settings=settings,d=C_meta)
-        T_loc_cpu= yast.decompress_from_1d(T_r1d,settings=settings,d=T_meta)
+        C_loc_cpu= yastn.decompress_from_1d(C_r1d,settings=settings,d=C_meta)
+        T_loc_cpu= yastn.decompress_from_1d(T_r1d,settings=settings,d=T_meta)
         if gpu_id>=0:
             state.coeffs[(0,0)]= coeff_loc.to(cuda_dev)
             ctm_env.C[ctm_env.keyC]= C_loc_cpu.to(cuda_dev)
@@ -338,14 +338,14 @@ def main(rank, size, pipes_to_workers):
     # 0) configure
     cfg.configure(args)
     cfg.print_config()
-    from yast.yast.sym import sym_U1
+    from yastn.yastn.sym import sym_U1
     if args.yast_backend=='torch':
-        from yast.yast.backend import backend_torch as backend
+        from yastn.yastn.backend import backend_torch as backend
     elif args.yast_backend=='torch_cpp':
-        from yast.yast.backend import backend_torch_cpp as backend
-    settings_full= yast.make_config(backend=backend, \
+        from yastn.yastn.backend import backend_torch_cpp as backend
+    settings_full= yastn.make_config(backend=backend, \
         default_device= cfg.global_args.device, default_dtype=cfg.global_args.dtype)
-    settings= yast.make_config(backend=backend, sym=sym_U1, \
+    settings= yastn.make_config(backend=backend, sym=sym_U1, \
         default_device= cfg.global_args.device, default_dtype=cfg.global_args.dtype)
     settings.backend.set_num_threads(args.omp_cores)
     settings.backend.random_seed(args.seed)

@@ -18,7 +18,7 @@ def halves_of_4x4_CTM_MOVE_UP(coord, state, env, verbosity=0):
     :param env: environment
     :type env: ENV_ABELIAN
     :return: right and left half of the system as matrices
-    :rtype: yast.Tensor, yast.Tensor
+    :rtype: yastn.Tensor, yastn.Tensor
 
     Builds right and left half of 2x2 subsystem embedded into environment. 
     The `coord` specifies the upper-right site of the 2x2 subsystem. 
@@ -79,7 +79,7 @@ def halves_of_4x4_CTM_MOVE_LEFT(coord, state, env, verbosity=0):
     :param env: environment
     :type env: ENV_ABELIAN
     :return: upper and lower half of the system as matrices
-    :rtype: yast.Tensor, yast.Tensor
+    :rtype: yastn.Tensor, yastn.Tensor
 
     Builds upper and lower half of 2x2 subsystem embedded into environment. 
     The `coord` specifies the upper-left site of the 2x2 subsystem. 
@@ -143,7 +143,7 @@ def halves_of_4x4_CTM_MOVE_DOWN(coord, state, env, verbosity=0):
     :param env: environment
     :type env: ENV_ABELIAN
     :return: left and right half of the system as matrices
-    :rtype: yast.Tensor, yast.Tensor
+    :rtype: yastn.Tensor, yastn.Tensor
 
     Builds left and right half of 2x2 subsystem embedded into environment. 
     The `coord` specifies the lower-left site of the 2x2 subsystem. 
@@ -205,7 +205,7 @@ def halves_of_4x4_CTM_MOVE_RIGHT(coord, state, env, verbosity=0):
     :param env: environment
     :type env: ENV_ABELIAN
     :return: upper and lower half of the system as matrices
-    :rtype: yast.Tensor, yast.Tensor
+    :rtype: yastn.Tensor, yastn.Tensor
 
     Builds uoper and lower half of 2x2 subsystem embedded into environment. 
     The `coord` specifies the lower-right site of the 2x2 subsystem. 
@@ -271,7 +271,7 @@ def c2x2_LU(coord, state, env, verbosity=0):
     :param env: environment
     :type env: ENV_ABELIAN
     :return: enlarged upper-left corner
-    :rtype: yast.Tensor
+    :rtype: yastn.Tensor
 
     Builds upper-left corner at site `coord` by performing following
     contraction and then reshaping the resulting tensor into matrix::
@@ -347,7 +347,7 @@ def c2x2_RU(coord, state, env, verbosity=0):
     :param env: environment
     :type env: ENV_ABELIAN
     :return: enlarged upper-left corner
-    :rtype: yast.Tensor
+    :rtype: yastn.Tensor
 
     Builds upper-right corner at site `coord` by performing following
     contraction and then reshaping the resulting tensor into matrix::
@@ -424,7 +424,7 @@ def c2x2_RD(coord, state, env, verbosity=0):
     :param env: environment
     :type env: ENV_ABELIAN
     :return: enlarged upper-left corner
-    :rtype: yast.Tensor
+    :rtype: yastn.Tensor
 
     Builds lower-right corner at site `coord` by performing following
     contraction and then reshaping the resulting tensor into matrix::
@@ -499,7 +499,7 @@ def c2x2_LD(coord, state, env, verbosity=0):
     :param env: environment
     :type env: ENV_ABELIAN
     :return: enlarged upper-left corner
-    :rtype: yast.Tensor
+    :rtype: yastn.Tensor
 
     Builds lower-right corner at site `coord` by performing following
     contraction and then reshaping the resulting tensor into matrix::
@@ -588,7 +588,7 @@ def double_layer_a(state, coord, open_sites=[], force_cpu=False, verbosity=0):
     :type open_sites: list(int)
     :type force_cpu: bool
     :return: result of contraction of double-layer tensor 
-    :rtype: yast.Tensor
+    :rtype: yastn.Tensor
 
     Build double-layer tensor of iPEPS with open or fully contracted 
     physical space::
@@ -652,7 +652,7 @@ def _enlarged_corner(coord, state, env, corner, double_layer_f, open_sites=[], \
     :type open_sites: list(int)
     :type force_cpu: bool
     :return: result of (partial) contraction of double-layer tensor 
-    :rtype: yast.tensor
+    :rtype: yastn.tensor
 
     Builds enlarged corner relative to the site at ``coord`` from the environment:: 
 
