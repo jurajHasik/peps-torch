@@ -111,6 +111,8 @@ class IPEPS_ABELIAN_C4V(IPEPS_ABELIAN):
         :rtype: IPEPS_ABELIAN_C4V
         """
         irrep= self.irrep if not irrep else irrep
+        if not irrep:
+            return self
         if irrep=="A1":
             site= make_c4v_symm_A1(self.site())
         elif irrep=="NEEL_TRIANGULAR":
@@ -163,7 +165,7 @@ class IPEPS_ABELIAN_C4V(IPEPS_ABELIAN):
         
         return ""
 
-def read_ipeps_c4v(jsonfile, settings, \
+def read_ipeps_c4v(jsonfile, settings, default_irrep=None,\
     peps_args=cfg.peps_args, global_args=cfg.global_args):
     r"""
     :param jsonfile: input file describing IPEPS_ABELIAN_C4V in json format
@@ -228,7 +230,13 @@ def read_ipeps_c4v(jsonfile, settings, \
         site= next(iter(sites.values()))
         
         meta= raw_state.get("metadata",{})
-        irrep= meta.get("irrep","A1")
+        irrep= meta.get("irrep",None)
+        if irrep:
+            if default_irrep and not (default_irrep==irrep):
+                raise Exception(f"default_irrep {default_irrep} does not match state's irrep {irrep}")
+        elif default_irrep:
+            irrep= default_irrep
+
         state = IPEPS_ABELIAN_C4V(settings, site, irrep,\
             peps_args=peps_args, global_args=global_args)
 
