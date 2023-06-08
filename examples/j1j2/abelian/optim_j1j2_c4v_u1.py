@@ -54,7 +54,7 @@ def main():
 
     # initialize the ipeps
     if args.instate!=None:
-        state= read_ipeps_c4v(args.instate, settings)
+        state= read_ipeps_c4v(args.instate, settings, default_irrep="A1")
         state= state.add_noise(args.instate_noise)
         state.sites[(0,0)]= state.sites[(0,0)]/state.sites[(0,0)].norm(p="inf")
     elif args.opt_resume is not None:
@@ -170,7 +170,7 @@ def main():
 
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"
-    state= read_ipeps_c4v(outputstatefile, settings)
+    state= read_ipeps_c4v(outputstatefile, settings, default_irrep="A1")
     state= state.symmetrize()
     ctm_env= ENV_C4V_ABELIAN(args.chi, state=state, init=True)
     ctm_env, *ctm_log = ctmrg_c4v.run(state, ctm_env, conv_check=ctmrg_conv_f)

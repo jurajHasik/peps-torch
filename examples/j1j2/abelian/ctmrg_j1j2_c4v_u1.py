@@ -53,7 +53,7 @@ def main():
 
     # initialize the ipeps
     if args.instate!=None:
-        state= read_ipeps_c4v(args.instate, settings)
+        state= read_ipeps_c4v(args.instate, settings, default_irrep="A1")
         # state= state.add_noise(args.instate_noise)
     elif args.opt_resume is not None:
         state= IPEPS_ABELIAN_C4V(settings, None)
