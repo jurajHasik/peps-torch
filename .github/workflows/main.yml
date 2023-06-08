@@ -47,9 +47,8 @@ jobs:
           then
             $CONDA/bin/conda install -c pytorch-lts -c anaconda pytorch cpuonly scipy pytest
           else
-            $CONDA/bin/conda install -c pytorch -c anaconda pytorch==${{ matrix.pytorch_v }} cpuonly scipy pytest
+            $CONDA/bin/conda install -c pytorch -c anaconda -c conda-forge pytorch==${{ matrix.pytorch_v }} cpuonly scipy pytest opt_einsum
           fi
-          pip install opt-einsum
           git submodule update --init --recursive
           
       # Run tests
