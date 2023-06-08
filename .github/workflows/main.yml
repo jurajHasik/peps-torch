@@ -21,9 +21,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python_v: [3.7, 3.8, 3.9]
-        pytorch_v: [1.11.0]
-      fail-fast: false  
+        python_v: [3.8, 3.9, 3.10, 3.11]
+        pytorch_v: [2.0]
+      fail-fast: false
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -49,6 +49,7 @@ jobs:
           else
             $CONDA/bin/conda install -c pytorch -c anaconda pytorch==${{ matrix.pytorch_v }} cpuonly scipy pytest
           fi
+          pip install opt-einsum
           git submodule update --init --recursive
           
       # Run tests

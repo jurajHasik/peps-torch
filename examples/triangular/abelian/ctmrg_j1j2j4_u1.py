@@ -4,6 +4,7 @@ import copy
 import config as cfg
 import yastn.yastn as yastn
 from ipeps.ipeps_abelian import *
+from ipeps.ipeps_abelian_c4v import *
 from ctm.generic_abelian.env_abelian import *
 import ctm.generic_abelian.ctmrg as ctmrg
 from models.abelian.spin_triangular import J1J2J4_NOSYM
@@ -22,7 +23,9 @@ parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour
 parser.add_argument("--j4", type=float, default=0., help="plaquette coupling")
 parser.add_argument("--jchi", type=float, default=0., help="scalar chirality")
 parser.add_argument("--tiling", default="BIPARTITE", help="tiling of the lattice", \
-    choices=["BIPARTITE"])
+    choices=["BIPARTITE", "1SITE_BP"])
+parser.add_argument("--pg", default="NEEL_TRIANGULAR", help="point-group symmetries", \
+    choices=["NONE", "NEEL_TRIANGULAR"])
 parser.add_argument("--ctm_conv_crit", default="CSPEC", help="ctm convergence criterion", \
     choices=["CSPEC", "ENERGY"])
 parser.add_argument("--corrf_r", type=int, default=1, help="maximal correlation function distance")
@@ -58,7 +61,7 @@ def main():
     # initialize an ipeps
     # 1) define lattice-tiling function, that maps arbitrary vertex of square lattice
     # coord into one of coordinates within unit-cell of iPEPS ansatz
-    if args.tiling == "BIPARTITE":
+    if args.tiling in ["BIPARTITE", "1SITE_BP"]:
         def lattice_to_site(coord):
             vx = (coord[0] + abs(coord[0]) * 2) % 2
             vy = abs(coord[1])
@@ -68,12 +71,17 @@ def main():
             +"BIPARTITE")
 
     if args.instate!=None:
-        state= read_ipeps(args.instate, settings, vertexToSite=lattice_to_site)
+        if args.tiling == "BIPARTITE":
+            state= read_ipeps(args.instate, settings, vertexToSite=lattice_to_site)
+        if args.tiling == "1SITE_BP":
+            state= read_ipeps_c4v(args.instate, settings)
         state= state.add_noise(args.instate_noise)
     # TODO checkpointing
     elif args.opt_resume is not None:
         if args.tiling in ["BIPARTITE"]:
             state= IPEPS_ABELIAN(settings, dict(), lX=2, lY=2, vertexToSite=lattice_to_site)
+        if args.tiling == "1SITE_BP":
+            state= IPEPS_ABELIAN_C4V(settings, irrep=args.pg)
         state.load_checkpoint(args.opt_resume)
     else:
         raise ValueError("Missing trial state: --instate=None and --ipeps_init_type= "\
@@ -88,6 +96,27 @@ def main():
             diag=args.diag)
 
     print(state)
+    def generate_BP(state_1s_c4v):
+        # 1 1      -1 -1                                        1           -1
+        # 1 a 1 -> -1  a 1 ; a . flip_charges() -> -isigma^y = -1  -isigma^y a -1 
+        #   1          1                                                    -1
+        # create BP_rot op
+        rot_op= yastn.Tensor(config=settings, s=[1,1], n=0,
+            t=((1,-1),(1,-1)), D=((1,1),(1,1)) )
+        rot_op.set_block((1,-1), (1,1), val=-np.ones((1,1)) )
+        rot_op.set_block((-1,1), (1,1), val=np.ones((1,1)) )
+
+        _tmp_sym= state_1s_c4v.symmetrize()
+
+        b= rot_op.tensordot(_tmp_sym.site().flip_signature(),([1],[0]))
+        b= b.flip_charges(axes=(0,3,4))
+
+        return IPEPS_ABELIAN(settings, {(0,0): _tmp_sym.site().flip_charges(axes=(0,1,2)),\
+            (1,0): b}, lattice_to_site, lX=2, lY=2)
+
+    if args.tiling=="1SITE_BP":
+        state= generate_BP(state)
+        print(state)
 
     # 2) define convergence criterion for ctmrg
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):

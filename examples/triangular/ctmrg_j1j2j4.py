@@ -1,3 +1,4 @@
+import os
 import context
 import torch
 import argparse
@@ -123,20 +124,14 @@ def main():
         state= state_g.absorb_weights()
 
     # 2) select the "energy" function 
-    if args.tiling in ["1SITE", "1STRIV", "1SPG"]:
-        energy_f=model.energy_1x3
-        eval_obs_f= model.eval_obs
-    elif args.tiling in ["1SITE_NOROT", "2SITE", "3SITE", "4SITE", "4SITE_T"]:
-        energy_f=model.energy_per_site
-        eval_obs_f= model.eval_obs
-    else:
-        raise ValueError("Invalid tiling: "+str(args.tiling)+" Supported options: "\
-            +"1SITE, 2SITE, 3SITE, 4SITE, 4SITE_T")
+    energy_f=model.energy_per_site
+    eval_obs_f= model.eval_obs
 
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
             history=[]
-        e_curr= energy_f(state, env, compressed=args.compressed_rdms)
+        e_curr= energy_f(state, env, compressed=args.compressed_rdms, \
+            looped=args.loop_rdms)
         obs_values, obs_labels = eval_obs_f(state,env)
         history.append([e_curr.item()]+obs_values)
         print(", ".join([f"{len(history)}"]+[f"{e_curr}"]*2+[f"{v}" for v in obs_values]))
@@ -147,7 +142,8 @@ def main():
 
     def ctmrg_conv_specC_loc(state, env, history, ctm_args=cfg.ctm_args):
         _conv_check, history= ctmrg_conv_specC(state, env, history, ctm_args=ctm_args)
-        e_curr= energy_f(state, env, compressed=args.compressed_rdms)
+        e_curr= energy_f(state, env, compressed=args.compressed_rdms,\
+            looped=args.loop_rdms)
         obs_values, obs_labels = eval_obs_f(state,env)
         print(", ".join([f"{len(history['diffs'])}",f"{history['conv_crit'][-1]}",\
             f"{e_curr}"]+[f"{v}" for v in obs_values]))
@@ -163,7 +159,8 @@ def main():
     print(ctm_env_init)
 
     
-    loss0= energy_f(state, ctm_env_init, compressed=args.compressed_rdms)
+    loss0= energy_f(state, ctm_env_init, compressed=args.compressed_rdms,\
+        looped=args.loop_rdms)
     obs_values, obs_labels = eval_obs_f(state,ctm_env_init)
     print(", ".join(["epoch","conv_crit","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
@@ -171,7 +168,8 @@ def main():
     ctm_env_init, *ctm_log= ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_f)
 
     # 6) compute final observables
-    e_curr0 = energy_f(state, ctm_env_init, compressed=args.compressed_rdms)
+    e_curr0 = energy_f(state, ctm_env_init, compressed=args.compressed_rdms,\
+        looped=args.loop_rdms)
     obs_values0, obs_labels = eval_obs_f(state,ctm_env_init)
     history, t_ctm, t_obs= ctm_log
     print("\n")
@@ -215,3 +213,188 @@ if __name__=='__main__':
         print("args not recognized: "+str(unknown_args))
         raise Exception("Unknown command line arguments")
     main()
+
+
+class TestCtmrg_TRGL_D3_2SITE(unittest.TestCase):
+    tol= 1.0e-6
+    DIR_PATH = os.path.dirname(os.path.realpath(__file__))
+    OUT_PRFX = "RESULT_test_run-ctmrg_d3-trgl_2site"
+    ANSATZE= [
+        ("4SITE",(0,0.2),
+        "trgl_j20_j40.2_D2ch18_r0_4SITE_iD1j408n_state.json",
+        """
+        -0.4285699726740929, 0.31621010409386163, 0.3156632411737321, 0.3167680236637072, 
+        0.3159352048119832, 0.3164739467260239, -0.05096502541476977, -0.3115218259011359, 
+        -0.3115218259011359, -0.051148531957431714, -0.3126112737800903, -0.3126112737800903, 
+        0.051162944045398645, 0.3117649864821211, 0.3117649864821211, 0.050605949320557675, 
+        0.31240165948616755, 0.31240165948616755, 0.14612501689854762, -0.4056401319041736, 
+        0.1467662366349674, -0.4048845166531687, -0.2075142124009132, -0.20847272287628027, 
+        -0.20827045879520084, -0.2076929659422449, -0.3994675501487469, 0.15268205127772405, 
+        -0.3989443401985397, 0.15295405462022651
+        """
+        ),
+        ("2SITE",(0.1,0),
+        "trglC_j20.1_j40_D3ch27_r0_LS_2SITE_iRND_C4X4cS_ptol8_state.json",
+        """
+        -0.5009862860339886, 0.19684623746739846, 0.19684652115010953, 0.1968459537846874, 
+        (0.06767173380753749+0j), (0.061493668336264865-0.17432044655441817j), (0.061493668336264865+0.17432044655441817j), 
+        (-0.06768089236019678+0j), (-0.06149150841720994+0.17431701214542125j), (-0.06149150841720994-0.17431701214542125j), 
+        -0.29891582297393593, -0.29888741633838806, 0.09265360104449452, 0.09264535663046618, 
+        -0.30300708787231867, -0.3026830410396812
+        """
+        ),
+        ("4SITE",(0,1.0),
+        "trglC_j20_j41.0_jchi0_D3ch27_r0_LS_4SITE_c4RNDn2_C4X4cS_ptol8_state.json",
+        """
+         -0.5301114707097865, 0.2830186205720097, 0.2813041259117088, 0.2845940989015287, 0.2856075188804097, 
+         0.28056873859439174, (0.064409627622395+0j), (0.27383067624897484-0.00041457149447410134j), 
+         (0.27383067624897484+0.00041457149447410134j), (0.07113462868430598+0j), (0.27556022980968153-0.00047484603243146557j), 
+         (0.27556022980968153+0.00047484603243146557j), (-0.07342859630370174+0j), (-0.2760068873239239+0.00030697825715491603j), 
+         (-0.2760068873239239-0.00030697825715491603j), (-0.06626942007757877+0j), (-0.272630028325782+0.000220667425893222j), 
+         (-0.272630028325782-0.000220667425893222j), 0.038480907327594675, -0.26579427293657343, 0.03776861880749622, 
+         -0.3102408206123273, -0.06699006502243406, -0.07981284520822408, -0.07627001502257819, -0.07911528502065476, 
+         -0.26694116570300264, 0.050130636793616394, -0.308434886816075, 0.04206050612170027, 1.91034529528622e-07
+        """
+        )]
+
+    def setUp(self):
+        args.j1= 1.0
+        args.chi=27
+        args.GLOBALARGS_dtype= "complex128"
+
+    def test_ctmrg_d3_trgl_2site(self):
+        from io import StringIO
+        from unittest.mock import patch
+        from cmath import isclose
+        import numpy as np
+
+        for ansatz in self.ANSATZE:
+            with self.subTest(ansatz=ansatz):
+                args.tiling= ansatz[0]
+                args.instate= self.DIR_PATH+"/../../test-input/"+ansatz[2]
+                args.out_prefix=self.OUT_PRFX+f"_{ansatz[0]}"
+                args.j2, args.j4= ansatz[1]
+                
+                # i) run ctmrg and compute observables
+                with patch('sys.stdout', new = StringIO()) as tmp_out: 
+                    main()
+                tmp_out.seek(0)
+
+                # parse FINAL observables
+                final_obs=None
+                l= tmp_out.readline()
+                while l:
+                    print(l,end="")
+                    if "FINAL" in l:
+                        final_obs= l.rstrip()
+                        break
+                    l= tmp_out.readline()
+                assert final_obs
+
+                # compare with the reference
+                ref_data= ansatz[3]
+                fobs_tokens= [complex(x) for x in final_obs[len("FINAL"):].split(",")]
+                ref_tokens= [complex(x) for x in ref_data.split(",")]
+                for val,ref_val in zip(fobs_tokens, ref_tokens):
+                    assert isclose(val,ref_val, rel_tol=self.tol, abs_tol=self.tol)
+
+    def tearDown(self):
+        args.instate=None
+        for ansatz in self.ANSATZE:
+            out_prefix=self.OUT_PRFX+f"_{ansatz[0]}"
+            for f in [out_prefix+"_checkpoint.p",out_prefix+"_state.json",\
+                out_prefix+".log"]:
+                if os.path.isfile(f): os.remove(f)
+
+class TestCtmrg_j1j2jXenergy_TRGL_D3_2SITE(unittest.TestCase):
+    tol= 1.0e-4
+    tol_high= 1.0e-6
+    DIR_PATH = os.path.dirname(os.path.realpath(__file__))
+    OUT_PRFX = "RESULT_test_run-ctmrg_d3-trgl_2site"
+    ANSATZE= [("2SITE","trglC_j20.1_j40_D3ch27_r0_LS_2SITE_iRND_C4X4cS_ptol8_state.json")]
+
+    def setUp(self):
+        args.j1= 1.0
+        args.j2= 0.1
+        args.bond_dim=3
+        args.chi=49
+        args.GLOBALARGS_dtype= "complex128"
+        cfg.configure(args)
+
+    def test_j1j2jX_energy_impl_d3_trgl_2site(self):
+        from cmath import isclose
+        import numpy as np
+
+        I= torch.eye(2,dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
+
+        for ansatz in self.ANSATZE:
+            with self.subTest(ansatz=ansatz):
+                args.tiling= ansatz[0]
+                args.instate= self.DIR_PATH+"/../../test-input/"+ansatz[1]
+                args.out_prefix=self.OUT_PRFX+f"_{ansatz[0]}"
+
+                state= read_ipeps(args.instate)
+
+                def ctmrg_conv_specC_loc(state, env, history, ctm_args=cfg.ctm_args):
+                    _conv_check, history= ctmrg_conv_specC(state, env, history, ctm_args=ctm_args)
+                    return _conv_check, history
+
+                env = ENV(args.chi, state)
+                init_env(state, env)
+
+                env, *ctm_log= ctmrg.run(state, env, conv_check=ctmrg_conv_specC_loc)
+
+                model= spin_triangular.J1J2J4(j1=1., j2=0, global_args=cfg.global_args)
+                energy_nn_manual= model.energy_per_site(state,env,compressed=-1,looped=False,\
+                    ctm_args=cfg.ctm_args,global_args=cfg.global_args)
+
+                model= spin_triangular.J1J2J4(j1=0, j2=1., global_args=cfg.global_args)
+                energy_nnn_manual= model.energy_per_site(state,env,compressed=-1,looped=False,\
+                    ctm_args=cfg.ctm_args,global_args=cfg.global_args)
+
+                nn_h_v,nn_diag,nnn=0.,0.,0.
+                for coord in state.sites.keys():
+                    _nn_h_v,_nn_diag= spin_triangular.eval_nn_per_site(coord,state,env,model.R,model.Rinv,model.SS,model.SS)
+                    _nnn= spin_triangular.eval_nnn_per_site(coord,state,env,model.R,model.Rinv,model.SS,looped=False,use_checkpoint=False)
+                    nn_h_v+=_nn_h_v
+                    nn_diag+=_nn_diag
+                    nnn+=_nnn
+                nn=(nn_h_v+nn_diag)/len(state.sites)
+                nnn=nnn/len(state.sites)
+
+                assert isclose(nn,energy_nn_manual, rel_tol=self.tol_high, abs_tol=self.tol_high)
+                assert isclose(nnn,energy_nnn_manual, rel_tol=self.tol_high, abs_tol=self.tol_high)
+
+                model= spin_triangular.J1J2J4(j1=1., j2=1.0e-14, global_args=cfg.global_args)
+                energy_nn_manual= model.energy_per_site(state,env,compressed=-1,looped=False,\
+                    ctm_args=cfg.ctm_args,global_args=cfg.global_args)
+
+                model= spin_triangular.J1J2J4(j1=0, j2=0, jchi=1., global_args=cfg.global_args)
+                energy_chi_manual= model.energy_per_site(state,env,compressed=-1,looped=False,\
+                    ctm_args=cfg.ctm_args,global_args=cfg.global_args)
+
+                nn_h_v,nn_diag,chi=0.,0.,0.
+                for coord in state.sites.keys():
+                    _nn_h_v,_nn_diag,_chi= spin_triangular.eval_nn_and_chirality_per_site(coord,state,env,model.R,model.Rinv,
+                        model.SS,model.SS,model.h_chi,looped=False,use_checkpoint=False)
+                    nn_h_v+=_nn_h_v
+                    nn_diag+=_nn_diag
+                    chi+=_chi
+                nn=(nn_h_v+nn_diag)/len(state.sites)
+                chi=chi/len(state.sites)
+
+                assert isclose(nn,energy_nn_manual, rel_tol=self.tol, abs_tol=self.tol)
+                assert isclose(chi,energy_chi_manual, rel_tol=self.tol, abs_tol=self.tol)
+
+                model= spin_triangular.J1J2J4(j1=0, j2=0, jchi=0, j4=1, global_args=cfg.global_args)
+                energy_j4_manual= model.energy_per_site(state,env,compressed=-1,looped=False,\
+                    ctm_args=cfg.ctm_args,global_args=cfg.global_args)
+
+                j4_term=0
+                for coord in state.sites.keys():
+                    _,_,_,_j4_term= spin_triangular.eval_j1j2j4jX_per_site_legacy(coord,state,env,model.R,model.Rinv,
+                        model.h_nn_only,model.SS,model.h_chi,model.h_p,looped=False,use_checkpoint=False)
+                    j4_term+=_j4_term
+                j4_term= j4_term/len(state.sites)
+
+                assert isclose(j4_term,energy_j4_manual, rel_tol=self.tol, abs_tol=self.tol)

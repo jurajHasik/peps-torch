@@ -1,3 +1,4 @@
+import os
 import context
 import torch
 import argparse
@@ -50,20 +51,20 @@ def main():
     if args.tiling in ["1STRIV","1SPG"]:
         model= spin_triangular.J1J2J4_1SITE(j1=args.j1, j2=args.j2, j4=args.j4)
         lattice_to_site=None
-        energy_f=model.energy_1x3
-        eval_obs_f= model.eval_obs
         read_state_f= read_ipeps_trgl_1s_ttphys_pg
         if args.tiling in ["1SPG"]:
             read_state_f= write_ipeps_trgl_1s_tbt_pg
     elif args.tiling in ["1SITEQ"]:
         model= spin_triangular.J1J2J4_1SITEQ(j1=args.j1, j2=args.j2, j4=args.j4, diag=args.diag,\
-            q=(1./args.q,1./args.q))
-        energy_f=model.energy_1x3
-        eval_obs_f= model.eval_obs
+            q=None)
+        # def energy_f(state,env,q= force_cpu=args.force_cpu):
+        #     model.energy_per_site(state,env,force_cpu=force_cpu)
         read_state_f= read_ipeps_1s_q
     else:
         raise ValueError("Invalid tiling: "+str(args.tiling)+" Supported options: "\
             +"1SITEQ, 1STRIV, 1SPG")
+    energy_f=model.energy_per_site
+    eval_obs_f= model.eval_obs
 
     if args.instate!=None:
         state = read_state_f(args.instate)
@@ -115,7 +116,7 @@ def main():
             +" the model")
         if args.tiling in ["1SITEQ"]:
             model= type(model)(j1=args.j1, j2=args.j2, j4=args.j4, diag=args.diag,\
-                q=(1./args.q,1./args.q))
+                q=None)
         else:    
             model= type(model)(j1=args.j1, j2=args.j2, j4=args.j4)
 
@@ -157,9 +158,8 @@ def main():
         if args.tiling in ["1STRIV", "1SPG"]:
             state_sym= to_PG_symmetric(state)
         else:
-            state_sym= state
-            # state_sym.sites= state.build_onsite_tensors()
-        
+            state_sym= IPEPS_1S_Q({c: t/t.abs().max() for c,t in state.sites.items()}, q=state.q)
+
         # for c in state.sites.keys():
         #     with torch.no_grad():
         #         _scale= state.sites[c].abs().max()
@@ -243,7 +243,7 @@ def main():
     # state_g= IPEPS_WEIGHTED(state=state).gauge()
     # state= state_g.absorb_weights()
     # import pdb; pdb.set_trace()
-    state.normalize_()
+    # state.normalize_()
     optimize_state(state, ctm_env, loss_fn, obs_fn=obs_fn)#, post_proc=post_proc)
 
     # compute final observables for the best variational state
@@ -254,10 +254,149 @@ def main():
     ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_f)
     loss0= energy_f(state,ctm_env,force_cpu=args.force_cpu)
     obs_values, obs_labels = eval_obs_f(state,ctm_env)
-    print(", ".join([f"{args.opt_max_iter}",f"{loss0}"]+[f"{v}" for v in obs_values]))  
+    print("FINAL "+", ".join([f"{loss0}"]+[f"{v}" for v in obs_values]))  
 
 if __name__=='__main__':
     if len(unknown_args)>0:
         print("args not recognized: "+str(unknown_args))
         raise Exception("Unknown command line arguments")
     main()
+
+
+class TestCheckpoint_1SITEQ_Ansatze(unittest.TestCase):
+    tol= 1.0e-6
+    DIR_PATH = os.path.dirname(os.path.realpath(__file__))
+    OUT_PRFX = "RESULT_test_run-opt-chck_trgl"
+    ANSATZE= [("1SITEQ",)]
+
+    def reset_couplings(self):
+        args.j1= 1.0
+        args.diag=0.9
+
+    def setUp(self):
+        self.reset_couplings()
+        args.bond_dim=3
+        args.chi=27
+        args.seed=300
+        args.opt_max_iter= 10
+        args.instate_noise=0.1
+        args.instate=self.DIR_PATH+"/../../test-input/D1_diag0.9_Vq_state.json"
+
+    def test_checkpoint_ipess_ansatze(self):
+        from io import StringIO
+        from unittest.mock import patch
+        from cmath import isclose
+        import numpy as np
+        from ipeps.ipeps_1s_Q import write_ipeps_1s_q
+
+        for ansatz in self.ANSATZE:
+            with self.subTest(ansatz=ansatz):
+                self.reset_couplings()
+                args.opt_max_iter= 10
+                args.tiling= ansatz[0]
+                args.opt_resume= None
+                args.out_prefix=self.OUT_PRFX+f"_{ansatz[0].replace(',','')}"
+                # args.instate= args.out_prefix[len("RESULT_"):]+"_instate.json"
+
+                # create randomized state
+                # elif args.ansatz in ["IPESS"]:
+                #     state= IPESS_KAGOME_GENERIC({'T_u': T_u, 'B_a': B_a, 'T_d': T_d,\
+                #         'B_b': B_b, 'B_c': B_c})
+                #     write_ipess_kagome_generic(state, args.instate)
+
+
+                # i) run optimization and store the optimization data
+                with patch('sys.stdout', new = StringIO()) as tmp_out: 
+                    main()
+                tmp_out.seek(0)
+
+                # parse FINAL observables
+                obs_opt_lines=[]
+                final_obs=None
+                OPT_OBS= OPT_OBS_DONE= False
+                l= tmp_out.readline()
+                while l:
+                    print(l,end="")
+                    if OPT_OBS and not OPT_OBS_DONE and l.rstrip()=="": 
+                        OPT_OBS_DONE= True
+                        OPT_OBS=False
+                    if OPT_OBS and not OPT_OBS_DONE and len(l.split(','))>2:
+                        obs_opt_lines.append(l)
+                    if "epoch, energy," in l and not OPT_OBS_DONE: 
+                        OPT_OBS= True
+                    if "FINAL" in l:
+                        final_obs= l.rstrip()
+                        break
+                    l= tmp_out.readline()
+                assert final_obs
+                assert len(obs_opt_lines)>0
+
+                # compare the line of observables with lowest energy from optimization (i) 
+                # and final observables evaluated from best state stored in *_state.json output file
+                # drop the last column, not separated by comma
+                best_e_line_index= np.argmin([ float(l.split(',')[1]) for l in obs_opt_lines ])
+                opt_line_last= [complex(x) for x in obs_opt_lines[best_e_line_index].split(",")[1:-1]]
+                fobs_tokens= [complex(x) for x in final_obs[len("FINAL"):].split(",")]
+                for val0,val1 in zip(opt_line_last, fobs_tokens):
+                    assert isclose(val0,val1, rel_tol=self.tol, abs_tol=self.tol)
+
+                # ii) run optimization for 3 steps
+                # reset j1 which is otherwise set by main() if args.theta is used
+                args.opt_max_iter= 3 
+                self.reset_couplings()
+                main()
+        
+                # iii) run optimization from checkpoint
+                args.instate=None
+                args.opt_resume= args.out_prefix+"_checkpoint.p"
+                args.opt_max_iter= 7
+                self.reset_couplings()
+                with patch('sys.stdout', new = StringIO()) as tmp_out: 
+                    main()
+                tmp_out.seek(0)
+
+                obs_opt_lines_chk=[]
+                final_obs_chk=None
+                OPT_OBS= OPT_OBS_DONE= False
+                l= tmp_out.readline()
+                while l:
+                    print(l,end="")
+                    if OPT_OBS and not OPT_OBS_DONE and l.rstrip()=="": 
+                        OPT_OBS_DONE= True
+                        OPT_OBS=False
+                    if OPT_OBS and not OPT_OBS_DONE and len(l.split(','))>2:
+                        obs_opt_lines_chk.append(l)
+                    if "checkpoint.loss" in l and not OPT_OBS_DONE: 
+                        OPT_OBS= True
+                    if "FINAL" in l:    
+                        final_obs_chk= l.rstrip()
+                        break
+                    l= tmp_out.readline()
+                assert final_obs_chk
+                assert len(obs_opt_lines_chk)>0
+
+                # compare initial observables from checkpointed optimization (iii) and the observables 
+                # from original optimization (i) at one step after total number of steps done in (ii)
+                opt_line_iii= [complex(x) for x in obs_opt_lines_chk[0].split(",")[1:]]
+                # drop (last) normalization column
+                opt_line_i= [complex(x) for x in obs_opt_lines[4].split(",")[1:-1]]
+                fobs_tokens= [complex(x) for x in final_obs[len("FINAL"):].split(",")]
+                for val3,val1 in zip(opt_line_iii, opt_line_i):
+                    assert isclose(val3,val1, rel_tol=self.tol, abs_tol=self.tol)
+
+                # compare final observables from optimization (i) and the final observables 
+                # from the checkpointed optimization (iii)
+                fobs_tokens_1= [complex(x) for x in final_obs[len("FINAL"):].split(",")]
+                fobs_tokens_3= [complex(x) for x in final_obs_chk[len("FINAL"):].split(",")]
+                for val3,val1 in zip(fobs_tokens_3, fobs_tokens_1):
+                    assert isclose(val3,val1, rel_tol=self.tol, abs_tol=self.tol)
+
+    def tearDown(self):
+        args.opt_resume=None
+        args.instate=None
+        # for ansatz in self.ANSATZE:
+        #     out_prefix=self.OUT_PRFX+f"_{ansatz[0].replace(',','')}"
+        #     instate= out_prefix[len("RESULT_"):]+"_instate.json"
+        #     for f in [out_prefix+"_checkpoint.p",out_prefix+"_state.json",\
+        #         out_prefix+".log",instate]:
+        #         if os.path.isfile(f): os.remove(f)

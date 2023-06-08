@@ -1,5 +1,6 @@
 import warnings
 from functools import lru_cache
+from itertools import product
 import torch
 from math import prod
 from config import _torch_version_check
@@ -11,6 +12,7 @@ import ctm.generic.corrf as corrf
 try:
     import opt_einsum as oe
     from opt_einsum.contract import _VALID_CONTRACT_KWARGS, PathInfo
+    from oe_ext.oe_ext import get_contraction_path, contract_with_unroll
 except:
     oe=False
     warnings.warn("opt_einsum not available.")
@@ -20,158 +22,6 @@ from tn_interface import conj
 import logging
 
 log = logging.getLogger(__name__)
-
-def _cast_interleaved_to_expr_and_shapes(*args):
-    expr=','.join(map(lambda x: ''.join([oe.get_symbol(y) for y in x]), args[1::2]))
-    if len(args)%2==1:
-        expr+= '->'+''.join([oe.get_symbol(y) for y in args[-1]])
-    ops= tuple(args[0:2*(len(args)//2):2])
-    shapes= tuple(x.size() for x in args[0:2*(len(args)//2):2])
-    return expr, ops, shapes
-
-
-def _get_contraction_path(*tn_to_contract,names=None,path=None,who=None):
-    expr,ops,shapes= _cast_interleaved_to_expr_and_shapes(*tn_to_contract)
-    return _get_contraction_path_cached(expr,shapes,names,path,who)
-
-
-@lru_cache(maxsize=128)
-def _get_contraction_path_cached(expr,shapes,names=None,path=None,who=None):
-    optimizer = oe.DynamicProgramming(
-        minimize='flops',   # 'size' optimize for largest intermediate tensor size
-        search_outer=False,  # search through outer products as well
-        cost_cap=True,     # don't use cost-capping strategy
-    )
-    if not path:
-        path, path_info = oe.contract_path(expr,*shapes,\
-            optimize=optimizer,memory_limit=None,shapes=True)#,use_blas=)
-    path_info= _get_contraction_path_info(path,expr,*shapes,names=names,shapes=True)
-    log.info(f"{who}\n{path}\n{path_info}")
-    return path, path_info
-
-
-def _get_contraction_path_info(path,*operands,**kwargs):
-    names = kwargs.pop('names', None)
-    
-    unknown_kwargs = set(kwargs) - _VALID_CONTRACT_KWARGS
-    if len(unknown_kwargs):
-        raise TypeError("einsum_path: Did not understand the following kwargs: {}".format(unknown_kwargs))
-
-    shapes = kwargs.pop('shapes', False)
-    use_blas = kwargs.pop('use_blas', True)
-
-    # Python side parsing
-    input_subscripts, output_subscript, operands = oe.parser.parse_einsum_input(operands)
-
-    # Build a few useful list and sets
-    input_list = input_subscripts.split(',')
-    if names:
-        inputs_to_names = list(names) 
-    input_sets = [set(x) for x in input_list]
-    if shapes:
-        input_shps = operands
-    else:
-        input_shps = [x.shape for x in operands]
-    output_set = set(output_subscript)
-    indices = set(input_subscripts.replace(',', ''))
-
-    # Get length of each unique dimension and ensure all dimensions are correct
-    size_dict = {}
-    for tnum, term in enumerate(input_list):
-        sh = input_shps[tnum]
-
-        if len(sh) != len(term):
-            raise ValueError("Einstein sum subscript '{}' does not contain the "
-                             "correct number of indices for operand {}.".format(input_list[tnum], tnum))
-        for cnum, char in enumerate(term):
-            dim = int(sh[cnum])
-
-            if char in size_dict:
-                # For broadcasting cases we always want the largest dim size
-                if size_dict[char] == 1:
-                    size_dict[char] = dim
-                elif dim not in (1, size_dict[char]):
-                    raise ValueError("Size of label '{}' for operand {} ({}) does not match previous "
-                                     "terms ({}).".format(char, tnum, size_dict[char], dim))
-            else:
-                size_dict[char] = dim
-
-    # Compute size of each input array plus the output array
-    size_list = [oe.helpers.compute_size_by_dict(term, size_dict) for term in input_list + [output_subscript]]
-
-    num_ops = len(input_list)
-
-    # Compute naive cost
-    # This isnt quite right, need to look into exactly how einsum does this
-    # indices_in_input = input_subscripts.replace(',', '')
-
-    inner_product = (sum(len(x) for x in input_sets) - len(indices)) > 0
-    naive_cost = oe.helpers.flop_count(indices, inner_product, num_ops, size_dict)
-
-    cost_list = []
-    scale_list = []
-    size_list = []
-    contraction_list = []
-
-    # Build contraction tuple (positions, gemm, einsum_str, remaining)
-    for cnum, contract_inds in enumerate(path):
-        # Make sure we remove inds from right to left
-        contract_inds = tuple(sorted(list(contract_inds), reverse=True))
-
-        contract_tuple = oe.helpers.find_contraction(contract_inds, input_sets, output_set)
-        out_inds, input_sets, idx_removed, idx_contract = contract_tuple
-
-        # Compute cost, scale, and size
-        cost = oe.helpers.flop_count(idx_contract, idx_removed, len(contract_inds), size_dict)
-        cost_list.append(cost)
-        scale_list.append(len(idx_contract))
-        size_list.append(oe.helpers.compute_size_by_dict(out_inds, size_dict))
-
-        tmp_inputs = [input_list.pop(x) for x in contract_inds]
-        if names:
-            tmp_inds_to_names = [ inputs_to_names.pop(x) for x in contract_inds ]
-        tmp_shapes = [input_shps.pop(x) for x in contract_inds]
-
-        if use_blas:
-            do_blas = oe.blas.can_blas(tmp_inputs, out_inds, idx_removed, tmp_shapes)
-        else:
-            do_blas = False
-
-        # Last contraction
-        if (cnum - len(path)) == -1:
-            idx_result = output_subscript
-        else:
-            # use tensordot order to minimize transpositions
-            all_input_inds = "".join(tmp_inputs)
-            idx_result = "".join(sorted(out_inds, key=all_input_inds.find))
-
-        shp_result = oe.parser.find_output_shape(tmp_inputs, tmp_shapes, idx_result)
-
-        input_list.append(idx_result)
-        if names: inputs_to_names.append(f"_TMP_{cnum}")
-        input_shps.append(shp_result)
-
-        einsum_str = ",".join(tmp_inputs) + "->" + idx_result
-        if names:
-            einsum_str = ",".join(tmp_inds_to_names) + "->" + inputs_to_names[-1]
-
-
-        # for large expressions saving the remaining terms at each step can
-        # incur a large memory footprint - and also be messy to print
-        if len(input_list) <= 20:
-            remaining = tuple(input_list)
-        else:
-            remaining = None
-
-        contraction = (contract_inds, idx_removed, einsum_str, remaining, do_blas)
-        contraction_list.append(contraction)
-
-    opt_cost = sum(cost_list)
-
-    path_print = PathInfo(contraction_list, input_subscripts, output_subscript, indices, path, scale_list, naive_cost,
-                          opt_cost, size_list, size_dict)
-
-    return path_print
 
 
 def _cast_to_real(t, fail_on_check=False, warn_on_check=True, imag_eps=1.0e-8,\
@@ -439,7 +289,7 @@ def rdm1x1_sl(coord, state, env, operator=None, sym_pos_def=False, force_cpu=Fal
         C3,[17,13],T3,[15,16,12,13],C4,[14,12],[4,7]
     names= tuple(x.strip() for x in "C1, T1, T4, a_op, a*, C2, T2, C3, T3, C4".split(','))
 
-    path, path_info= _get_contraction_path(*contract_tn,names=names,path=None,who=who)
+    path, path_info= get_contraction_path(*contract_tn,names=names,path=None,who=who)
     R= oe.contract(*contract_tn,optimize=path,backend='torch')
 
     # symmetrize and normalize
@@ -689,7 +539,7 @@ def rdm2x1_sl(coord, state, env, sym_pos_def=False, force_cpu=False, verbosity=0
     # This (typical) strategy is optimal, when X >> D^2 >> phys_dim
     #
     # path=((2, 5), (0, 12), (3, 11), (2, 10), (1, 9), (0, 8), (2, 5), (1, 6), (3, 5), (2, 4), (1, 3), (0, 2), (0, 1))
-    path, path_info= _get_contraction_path(*contract_tn,names=names,path=None,who=who)
+    path, path_info= get_contraction_path(*contract_tn,names=names,path=None,who=who)
     R= oe.contract(*contract_tn,optimize=path,backend='torch')
 
     R = _sym_pos_def_rdm(R, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
@@ -952,7 +802,7 @@ def rdm1x2_sl(coord, state, env, sym_pos_def=False, force_cpu=False, verbosity=0
     # This (typical) strategy is optimal, when X >> D^2 >> phys_dim
     #
     # path= ((1, 6), (0, 12), (3, 11), (2, 10), (1, 9), (0, 8), (2, 5), (1, 6), (3, 5), (2, 4), (1, 3), (0, 2), (0, 1))
-    path, path_info= _get_contraction_path(*contract_tn,names=names,path=None,who=who)
+    path, path_info= get_contraction_path(*contract_tn,names=names,path=None,who=who)
     R= oe.contract(*contract_tn,optimize=path,backend='torch')
 
     R = _sym_pos_def_rdm(R, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
@@ -1052,7 +902,7 @@ def rdm2x2_NNN_11(coord, state, env, sym_pos_def=False, verbosity=0):
 
 def rdm2x2_NNN_1n1(coord, state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
     r"""
-    :param coord: vertex (x,y) specifies upper left site of 2x2 subsystem
+    :param coord: vertex (x,y) specifies lower left site of 2x2 subsystem
     :param state: underlying wavefunction
     :param env: environment corresponding to ``state``
     :param sym_pos_def: enforce hermiticity (always) and positive definiteness if ``True``
@@ -1197,7 +1047,7 @@ def rdm2x2_NNN_1n1_oe(coord, state, env, sym_pos_def=False, force_cpu=False, ver
     T2_x= T2_x.view(T2_x.size(0),a_x.size(4),a_x.size(4),T2_x.size(2))
     T3_x= T3_x.view(a_x.size(3),a_x.size(3),T3_x.size(1),T3_x.size(2))
     T3= T3.view(a.size(3),a.size(3),T3.size(1),T3.size(2))
-    T4= T4.view(T4.size(0),T4.size(1),a.size(2),a_x.size(2))
+    T4= T4.view(T4.size(0),T4.size(1),a.size(2),a.size(2))
     T4_ny= T4_ny.view(T4_ny.size(0),T4_ny.size(1),a_ny.size(2),a_ny.size(2))
 
     contract_tn= C1_ny,[0,1],T1_ny,[1,2,5,36],T4_ny,[0,15,3,6],a_ny,[4,2,3,16,37],a_ny.conj(),[4,5,6,17,38],\
@@ -1211,7 +1061,7 @@ def rdm2x2_NNN_1n1_oe(coord, state, env, sym_pos_def=False, force_cpu=False, ver
     # 
     # path= ((6, 7), (5, 18), (6, 17), (5, 16), (0, 2), (0, 14), (1, 13), (0, 12), (1, 2), (0, 10),\
     #     (1, 9), (0, 8), (1, 2), (0, 6), (1, 5), (0, 4), (2, 3), (1, 2), (0, 1))
-    path, path_info= _get_contraction_path(*contract_tn,names=names,path=None,who=who)
+    path, path_info= get_contraction_path(*contract_tn,names=names,path=None,who=who)
     R= oe.contract(*contract_tn,optimize=path,backend='torch')
 
     R = _sym_pos_def_rdm(R, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
@@ -1220,7 +1070,62 @@ def rdm2x2_NNN_1n1_oe(coord, state, env, sym_pos_def=False, force_cpu=False, ver
     return R
 
 
-def rdm2x2(coord, state, env, sym_pos_def=False, verbosity=0):
+def rdm2x2(coord, state, env, open_sites=[0,1,2,3],\
+        unroll=[], use_checkpoint=False, sym_pos_def=False, force_cpu=False, verbosity=0):
+    r"""
+    :param coord: vertex (x,y) specifies upper left site of 2x2 subsystem
+    :param state: underlying wavefunction
+    :param env: environment corresponding to ``state``
+    :param open_sites: which sites to keep open
+    :type open_sites: list(int)
+    :param sym_pos_def: enforce hermiticity (always) and positive definiteness if ``True``
+    :type sym_pos_def: bool
+    :param verbosity: logging verbosity
+    :type coord: tuple(int,int)
+    :type state: IPEPS
+    :type env: ENV
+    :param force_cpu: compute on CPU
+    :type force_cpu: bool
+    :type verbosity: int
+    :return: 4-site reduced density matrix with indices :math:`s_0s_1s_2s_3;s'_0s'_1s'_2s'_3`
+    :rtype: torch.tensor
+
+    Computes 4-site reduced density matrix :math:`\rho_{2x2}` of 2x2 subsystem specified
+    by the vertex ``coord`` of its upper left corner using strategy:
+
+        1. compute four individual corners
+        2. construct upper and lower half of the network
+        3. contract upper and lower half to obtain final reduced density matrix
+
+    ::
+
+        C--T------------------T------------------C = C2x2_LU(coord)--------C2x2(coord+(1,0))
+        |  |                  |                  |   |                     |
+        T--A^+A(coord)--------A^+A(coord+(1,0))--T   C2x2_LD(coord+(0,1))--C2x2(coord+(1,1))
+        |  |                  |                  | 
+        T--A^+A(coord+(0,1))--A^+A(coord+(1,1))--T
+        |  |                  |                  |
+        C--T------------------T------------------C
+
+    The physical indices `s` and `s'` of on-sites tensors :math:`A` (and :math:`A^\dagger`)
+    at vertices ``coord``, ``coord+(1,0)``, ``coord+(0,1)``, and ``coord+(1,1)`` are
+    left uncontracted and given in the same order::
+
+        s0 s1
+        s2 s3
+
+    If ``open_sites`` is provided with smaller number of sites to be left open, the returned
+    density matrix indices still follow the order above.
+    """
+    if oe:
+        return rdm2x2_oe(coord, state, env, open_sites=open_sites, unroll=unroll, 
+            use_checkpoint=use_checkpoint, sym_pos_def=sym_pos_def, force_cpu=force_cpu, 
+            verbosity=verbosity)
+    else:
+        return rdm2x2_legacy(coord, state, env, sym_pos_def=sym_pos_def, force_cpu=force_cpu,\
+            verbosity=verbosity)
+
+def rdm2x2_legacy(coord, state, env, sym_pos_def=False, verbosity=0):
     r"""
     :param coord: vertex (x,y) specifies upper left site of 2x2 subsystem
     :param state: underlying wavefunction
@@ -1452,8 +1357,88 @@ def rdm2x2(coord, state, env, sym_pos_def=False, verbosity=0):
 
     return rdm
 
+def rdm2x2_oe(coord, state, env, open_sites=[0,1,2,3], unroll=[], 
+    use_checkpoint=False, sym_pos_def=False, force_cpu=False, verbosity=0):
+    # C1------(1)1 1(0)----T1----(3)36 36(0)----T1_x----(3)18 18(0)----C2_x
+    # 0(0)               (1,2)                 (1,2)                   19(1)
+    # 0(0)           100  2  5             102 20 23                   19(0)
+    # |                 \ 2  5               \ |  |                    |  
+    # T4-------(2)3 3-----a--|------37 37----a_x--6(1)----21 21(1)-----T2_x
+    # |                   |  |                 |  |                    |
+    # |        (3)6 6-------a*------38 38--------a*_x-----24 24(2)     |
+    # 15(1)               16 17 \101          34 35 \103               33(3)
+    # 15(0)          104  16 17           106 34 35                    33(0)
+    # |                 \ |   |              \ |  |                    |
+    # T4_y--(2)9 9--------a_y-------39 39-----a_xy--------28 28(1)-----T2_xy
+    # |                   |   |                |30|                    |
+    # |     (3)12 12---------a*_y---40 40------- a*_xy----31 31(2)     |
+    # |                   10 13 \105           29 32 \107              |
+    # 8(1)                10 13                29 32                  26(3)
+    # 8(0)                (0,1)                (0,1)                  26(0)
+    # C4_y---(1)7 7(2)-----T3_y--(3)41 41(2)----T3_xy---(3)27 27(1)----C3_xy
+    ind_os= set(sorted(open_sites))
+    assert len(ind_os)==len(open_sites),"contains repeated elements"
+    assert ind_os <= {0,1,2,3},"allowed site labels are 0,1,2, and 3"
+    I= sum([[100+2*x,100+2*x+1] if x in ind_os else [100+2*x]*2 for x in [0,1,2,3]],[])
+    I_out= [100+2*x for x in ind_os]+[100+2*x+1 for x in ind_os]
+    assert set(unroll)<=ind_os,"Unrolling is assummed to be done over open sites"
+    unroll= [100+2*x for x in unroll]+[100+2*x+1 for x in unroll]
 
-def rdm2x3(coord, state, env, sym_pos_def=False, verbosity=0):
+    who=f"rdm2x2_{ind_os}"
+    a= state.site(coord)
+    a_x= state.site( (coord[0]+1,coord[1]) )
+    a_y= state.site( (coord[0],coord[1]+1) )
+    a_xy= state.site( (coord[0]+1,coord[1]+1) )
+    C1, C2_x, C3_xy, C4_y= env.C[(state.vertexToSite( coord ),(-1,-1))],\
+        env.C[(state.vertexToSite( (coord[0]+1,coord[1]) ), (1,-1))],\
+        env.C[(state.vertexToSite( (coord[0]+1,coord[1]+1) ), (1,1))],\
+        env.C[(state.vertexToSite( (coord[0],coord[1]+1) ), (-1,1))]
+    T1, T4, T1_x, T2_x, T2_xy, T3_xy, T3_y, T4_y= \
+        env.T[(state.vertexToSite( coord ),(0,-1))],\
+        env.T[(state.vertexToSite( coord ),(-1,0))],\
+        env.T[(state.vertexToSite( (coord[0]+1,coord[1]) ), (0,-1))],\
+        env.T[(state.vertexToSite( (coord[0]+1,coord[1]) ), (1,0))],\
+        env.T[(state.vertexToSite( (coord[0]+1,coord[1]+1) ), (1,0))],\
+        env.T[(state.vertexToSite( (coord[0]+1,coord[1]+1) ), (0,1))],\
+        env.T[(state.vertexToSite( (coord[0],coord[1]+1) ), (0,1))],\
+        env.T[(state.vertexToSite( (coord[0],coord[1]+1) ), (-1,0))]
+    t= C1, C2_x, C3_xy, C4_y, T1, T4, T1_x, T2_x, T2_xy, T3_xy, T3_y, T4_y, a, a_x, a_y, a_xy
+    if force_cpu:
+       t=(x.cpu() for x in t)
+
+    T1= T1.view(T1.size(0),a.size(1),a.size(1),T1.size(2))
+    T1_x= T1_x.view(T1_x.size(0),a_x.size(1),a_x.size(1),T1_x.size(2))
+    T2_xy= T2_xy.view(T2_xy.size(0),a_xy.size(4),a_xy.size(4),T2_xy.size(2))
+    T2_x= T2_x.view(T2_x.size(0),a_x.size(4),a_x.size(4),T2_x.size(2))
+    T3_xy= T3_xy.view(a_xy.size(3),a_xy.size(3),T3_xy.size(1),T3_xy.size(2))
+    T3_y= T3_y.view(a_y.size(3),a_y.size(3),T3_y.size(1),T3_y.size(2))
+    T4= T4.view(T4.size(0),T4.size(1),a.size(2),a.size(2))
+    T4_y= T4_y.view(T4_y.size(0),T4_y.size(1),a_y.size(2),a_y.size(2))
+
+    contract_tn= C1,[0,1],T1,[1,2,5,36],T4,[0,15,3,6],a,[I[0],2,3,16,37],a.conj(),[I[1],5,6,17,38],\
+        T4_y,[15,8,9,12],C4_y,[8,7],T3_y,[10,13,7,41],a_y,[I[4],16,9,10,39],a_y.conj(),[I[5],17,12,13,40],\
+        T1_x,[36,20,23,18],C2_x,[18,19],T2_x,[19,21,24,33],a_x,[I[2],20,37,34,21],a_x.conj(),[I[3],23,38,35,24],\
+        T2_xy,[33,28,31,26],C3_xy,[26,27],T3_xy,[29,32,41,27],a_xy,[I[6],34,39,29,28],a_xy.conj(),[I[7],35,40,32,31],I_out
+    names= tuple(x.strip() for x in ("C1, T1, T4, a, a*, T4_y, C4_y, T3_y, a_y, a_y*, T1_x, C2_x, T2_x, a_x, a_x*,"\
+        +"T2_xy, C3_xy, T3_xy, a_xy, a_xy*").split(','))
+    #
+    # This (typical) strategy is optimal, when X >> D^2 >> phys_dim
+    # 
+    # path= ((6, 7), (5, 18), (6, 17), (5, 16), (0, 2), (0, 14), (1, 13), (0, 12), (1, 2), (0, 10),\
+    #     (1, 9), (0, 8), (1, 2), (0, 6), (1, 5), (0, 4), (2, 3), (1, 2), (0, 1))
+    #
+    path, path_info= get_contraction_path(*contract_tn,unroll=unroll,\
+        names=names,path=None,who=who)
+    R= contract_with_unroll(*contract_tn,unroll=unroll,\
+        optimize=path,backend='torch',use_checkpoint=use_checkpoint)
+
+    R = _sym_pos_def_rdm(R, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
+    if force_cpu:
+        R= R.to(env.device)
+    return R
+
+
+def rdm2x3_trglringex(coord, state, env, sym_pos_def=False, verbosity=0):
     r"""
     :param coord: vertex (x,y) specifies lower left site of 2x3 subsystem
     :param state: underlying wavefunction
@@ -1615,161 +1600,7 @@ def rdm2x3(coord, state, env, sym_pos_def=False, verbosity=0):
     rdm = _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
     return rdm
 
-
-def rdm3x2(coord, state, env, sym_pos_def=False, verbosity=0):
-    r"""
-    :param coord: vertex (x,y) specifies lower left site of 2x3 subsystem
-    :param state: underlying wavefunction
-    :param env: environment corresponding to ``state``
-    :param verbosity: logging verbosity
-    :type coord: tuple(int,int)
-    :type state: IPEPS
-    :type env: ENV
-    :type verbosity: int
-    :return: 4-site reduced density matrix with indices 
-             :math:`s_0s_1s_2s_3;s'_0s'_1s'_2s'_3`
-    :rtype: torch.tensor
-
-    Computes 4-site reduced density matrix :math:`\rho` of four-site subsystem, 
-    a parallelogram, specified by the vertex ``coord`` of its lower-left 
-    and upper-right corner within 3x2 patch using strategy:
-
-        1. compute top edge of the network
-        2. add extra T-tensor and on-site tensor to the right of the top edge
-        3. analogously for the bottom edge, attaching extra T-tensor
-           and on-site tensor to the left of the bottom edge
-        4. contract top and bottom half to obtain final reduced density matrix
-
-    ::
-
-        C--T-------------------T-------------------C
-        |  |                   |                   |
-        T--A^+A(coord+(0,-2))--A^+A(coord+(1,-2))--T
-        |  |                   |                   |
-        T--A^+A(coord+(0,-1))--A^+A(coord+(1,-1))--T
-        |  |                   |                   |
-        T--A^+A(coord)---------A^+A(coord+(1,0))---T
-        |  |                   |                   |
-        C--T-------------------T-------------------C
-
-    The physical indices `s` and `s'` of on-sites tensors :math:`A` (and :math:`A^\dagger`)
-    at vertices ``coord`` and ``coord+(1,1)`` are left uncontracted and given in the same order::
-
-        x  s2
-        s3 s1  
-        s0 x 
-
-    """
-    who="rdm3x2"
-    # ----- building C2x2_LU ----------------------------------------------------
-    vec = (0, -2)
-    shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
-    C2X2_LU= c2x2_LU(shift_coord,state,env,mode='sl',verbosity=verbosity)
-
-    # ----- building C2x2_RU ----------------------------------------------------
-    vec = (1, -2)
-    shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
-    C2X2_RU= c2x2_RU(shift_coord,state,env,mode='sl-open',verbosity=verbosity)
-
-    # ----- build top part C2x2_LU--C2X2_RU ------------------------------------
-    # C2x2_LU--1 0--C2x2_RU--2,3->4,5
-    # |                  |
-    # 0                  1->1,2,3
-    C2X2_LU= torch.tensordot(C2X2_LU, C2X2_RU, ([1],[0]))
-
-    vec = (1, -1)
-    shift_coord_1n1 = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
-    T_1n1= env.T[shift_coord_1n1,(1,0)]
-    T_1n1= T_1n1.view([T_1n1.size(0)]+[state.site(shift_coord_1n1).size(4)]*2+[T_1n1.size(2)]) 
-
-    C2X2_LU= C2X2_LU.view([C2X2_LU.size(0)]+[T_1n1.size(0)]\
-        +[state.site(shift_coord_1n1).size(1)]*2+[C2X2_LU.size(2), C2X2_LU.size(3)])
-
-    # contract right T-tensor of central row and on-site tensors
-    # mem \chi^2 D^4 p^2
-    #
-    # C2x2_LU--------------13(4),14(5)  =>   |C2x2_LU   3,4 
-    # 0     7(2) 10(3)  1(1)                 |       |  1,2
-    #                                        |    2--|____|
-    #     9 7  10       1                    |            |
-    #      \|  |        |                    0            1
-    #    8--a------2 2  |
-    #   11--|--a*--3 3--T   
-    #       |  |\       |
-    #       5  6 12     4
-    #
-    C2X2_LU= torch.einsum(C2X2_LU,[0,1,7,10,13,14],T_1n1,[1,2,3,4],\
-        state.site(shift_coord_1n1),[9,7,8,5,2],\
-        state.site(shift_coord_1n1).conj(),[12,10,11,6,3],\
-        [0, 4,5,6, 8,11, 9,12, 13,14]).contiguous()
-    C2X2_LU= C2X2_LU.view([C2X2_LU.size(0)]+[prod(C2X2_LU.size()[1:4])]\
-        +[prod(C2X2_LU.size()[4:6])]+list(C2X2_LU.size()[6:]))
-
-    # ----- building C2x2_LD ----------------------------------------------------
-    C2X2_LD= c2x2_LD(coord,state,env,mode='sl-open',verbosity=verbosity)
-
-    # ----- building C2x2_RD ----------------------------------------------------
-    vec = (1, 0)
-    shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
-    C2X2_RD= c2x2_RD(shift_coord,state,env,mode='sl',verbosity=verbosity)
-    
-    # ----- build bottom part C2X2_LD--C2X2_RD -----------------------------------
-    #        
-    #            0->1->1,2,3   0
-    #  4,5<-2,3--C2x2_LD--1 1--C2x2_RD
-    C2X2_RD= torch.tensordot(C2X2_RD,C2X2_LD,([1],[1]))
-
-    vec = (0, -1)
-    shift_coord_0n1 = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
-    T_0n1= env.T[shift_coord_0n1,(-1,0)]
-    T_0n1= T_0n1.view([T_0n1.size(0)]+[T_0n1.size(1)]+[state.site(shift_coord_0n1).size(2)]*2)
-
-    C2X2_RD= C2X2_RD.view([C2X2_RD.size(0)]+[T_0n1.size(1)]\
-        +[state.site(shift_coord_0n1).size(3)]*2+[C2X2_RD.size(2),C2X2_RD.size(3)])
-
-    # contract left T-tensor of central row and on-site tensors
-    # mem \chi^2 D^4 p^2
-    #             
-    #               1      9 7  10                <=>  1            0
-    #               |       \|  |                      |______      |
-    #               T--2  2--a------8                  |      |--2  | 
-    #               |  3  3--|--a*--11                 |3,4   |     |
-    #               |        |  |\                     |1,2___C2x2_RD
-    #               |        |  | 12 
-    #               4        5  6  
-    #               4        5(2) 6(3)        0
-    #  13(4),14(5)--C2x2_LD--------------C2x2_RD              
-    #
-    C2X2_RD= torch.einsum(C2X2_RD,[0,4,5,6,13,14],T_0n1,[1,4,2,3],\
-        state.site(shift_coord_0n1),[9,7,2,5,8],\
-        state.site(shift_coord_0n1).conj(),[12,10,3,6,11],\
-        [0, 1,7,10, 8,11, 13,14, 9,12]).contiguous()
-    C2X2_RD= C2X2_RD.view([C2X2_RD.size(0)]+[prod(C2X2_RD.size()[1:4])]\
-        +[prod(C2X2_RD.size()[4:6])]+list(C2X2_RD.size()[6:]))
-
-    # contract two parts
-    #          __________  
-    #   C2X2_LU  7,8(3,4)|     <=>  x  s2
-    #   |_x______5,6(1,2)|          s3 s1
-    #   |           |____|          s0 x 
-    #   0           2    1
-    #   0(1)        2    1(0)
-    #   |9,10_______|____|
-    #   |3,4        x    |
-    #   |C2x2_RD_________|
-    rdm= torch.einsum(C2X2_LU,[0,1,2, 5,6,7,8],C2X2_RD,[1,0,2, 3,4,9,10],\
-        [3,4,5,6,7,8,9,10]).contiguous()
-
-    # permute into order of s0,s1,s2,s3;s0',s1',s2',s3' where primed indices
-    # represent "ket"
-    # 01234567->02461357
-    # symmetrize and normalize
-    rdm = contiguous(permute(rdm, (0, 2, 4, 6, 1, 3, 5, 7)))
-    rdm = _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
-    return rdm
-
-
-def rdm2x3_compressed(coord,state,env,compressed_chi=None,sym_pos_def=False,\
+def rdm2x3_trglringex_compressed(coord,state,env,compressed_chi=None,sym_pos_def=False,\
     ctm_args=cfg.ctm_args,global_args=cfg.global_args,verbosity=0):
     r"""
     :param coord: vertex (x,y) specifies lower left site of 2x3 subsystem
@@ -1980,7 +1811,159 @@ def rdm2x3_compressed(coord,state,env,compressed_chi=None,sym_pos_def=False,\
     return rdm
 
 
-def rdm3x2_compressed(coord,state,env,compressed_chi=None,sym_pos_def=False,\
+def rdm3x2_trglringex(coord, state, env, sym_pos_def=False, verbosity=0):
+    r"""
+    :param coord: vertex (x,y) specifies lower left site of 2x3 subsystem
+    :param state: underlying wavefunction
+    :param env: environment corresponding to ``state``
+    :param verbosity: logging verbosity
+    :type coord: tuple(int,int)
+    :type state: IPEPS
+    :type env: ENV
+    :type verbosity: int
+    :return: 4-site reduced density matrix with indices 
+             :math:`s_0s_1s_2s_3;s'_0s'_1s'_2s'_3`
+    :rtype: torch.tensor
+
+    Computes 4-site reduced density matrix :math:`\rho` of four-site subsystem, 
+    a parallelogram, specified by the vertex ``coord`` of its lower-left 
+    and upper-right corner within 3x2 patch using strategy:
+
+        1. compute top edge of the network
+        2. add extra T-tensor and on-site tensor to the right of the top edge
+        3. analogously for the bottom edge, attaching extra T-tensor
+           and on-site tensor to the left of the bottom edge
+        4. contract top and bottom half to obtain final reduced density matrix
+
+    ::
+
+        C--T-------------------T-------------------C
+        |  |                   |                   |
+        T--A^+A(coord+(0,-2))--A^+A(coord+(1,-2))--T
+        |  |                   |                   |
+        T--A^+A(coord+(0,-1))--A^+A(coord+(1,-1))--T
+        |  |                   |                   |
+        T--A^+A(coord)---------A^+A(coord+(1,0))---T
+        |  |                   |                   |
+        C--T-------------------T-------------------C
+
+    The physical indices `s` and `s'` of on-sites tensors :math:`A` (and :math:`A^\dagger`)
+    at vertices ``coord`` and ``coord+(1,1)`` are left uncontracted and given in the same order::
+
+        x  s2
+        s3 s1  
+        s0 x 
+
+    """
+    who="rdm3x2"
+    # ----- building C2x2_LU ----------------------------------------------------
+    vec = (0, -2)
+    shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    C2X2_LU= c2x2_LU(shift_coord,state,env,mode='sl',verbosity=verbosity)
+
+    # ----- building C2x2_RU ----------------------------------------------------
+    vec = (1, -2)
+    shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    C2X2_RU= c2x2_RU(shift_coord,state,env,mode='sl-open',verbosity=verbosity)
+
+    # ----- build top part C2x2_LU--C2X2_RU ------------------------------------
+    # C2x2_LU--1 0--C2x2_RU--2,3->4,5
+    # |                  |
+    # 0                  1->1,2,3
+    C2X2_LU= torch.tensordot(C2X2_LU, C2X2_RU, ([1],[0]))
+
+    vec = (1, -1)
+    shift_coord_1n1 = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    T_1n1= env.T[shift_coord_1n1,(1,0)]
+    T_1n1= T_1n1.view([T_1n1.size(0)]+[state.site(shift_coord_1n1).size(4)]*2+[T_1n1.size(2)]) 
+
+    C2X2_LU= C2X2_LU.view([C2X2_LU.size(0)]+[T_1n1.size(0)]\
+        +[state.site(shift_coord_1n1).size(1)]*2+[C2X2_LU.size(2), C2X2_LU.size(3)])
+
+    # contract right T-tensor of central row and on-site tensors
+    # mem \chi^2 D^4 p^2
+    #
+    # C2x2_LU--------------13(4),14(5)  =>   |C2x2_LU   3,4 
+    # 0     7(2) 10(3)  1(1)                 |       |  1,2
+    #                                        |    2--|____|
+    #     9 7  10       1                    |            |
+    #      \|  |        |                    0            1
+    #    8--a------2 2  |
+    #   11--|--a*--3 3--T   
+    #       |  |\       |
+    #       5  6 12     4
+    #
+    C2X2_LU= torch.einsum(C2X2_LU,[0,1,7,10,13,14],T_1n1,[1,2,3,4],\
+        state.site(shift_coord_1n1),[9,7,8,5,2],\
+        state.site(shift_coord_1n1).conj(),[12,10,11,6,3],\
+        [0, 4,5,6, 8,11, 9,12, 13,14]).contiguous()
+    C2X2_LU= C2X2_LU.view([C2X2_LU.size(0)]+[prod(C2X2_LU.size()[1:4])]\
+        +[prod(C2X2_LU.size()[4:6])]+list(C2X2_LU.size()[6:]))
+
+    # ----- building C2x2_LD ----------------------------------------------------
+    C2X2_LD= c2x2_LD(coord,state,env,mode='sl-open',verbosity=verbosity)
+
+    # ----- building C2x2_RD ----------------------------------------------------
+    vec = (1, 0)
+    shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    C2X2_RD= c2x2_RD(shift_coord,state,env,mode='sl',verbosity=verbosity)
+    
+    # ----- build bottom part C2X2_LD--C2X2_RD -----------------------------------
+    #        
+    #            0->1->1,2,3   0
+    #  4,5<-2,3--C2x2_LD--1 1--C2x2_RD
+    C2X2_RD= torch.tensordot(C2X2_RD,C2X2_LD,([1],[1]))
+
+    vec = (0, -1)
+    shift_coord_0n1 = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    T_0n1= env.T[shift_coord_0n1,(-1,0)]
+    T_0n1= T_0n1.view([T_0n1.size(0)]+[T_0n1.size(1)]+[state.site(shift_coord_0n1).size(2)]*2)
+
+    C2X2_RD= C2X2_RD.view([C2X2_RD.size(0)]+[T_0n1.size(1)]\
+        +[state.site(shift_coord_0n1).size(3)]*2+[C2X2_RD.size(2),C2X2_RD.size(3)])
+
+    # contract left T-tensor of central row and on-site tensors
+    # mem \chi^2 D^4 p^2
+    #             
+    #               1      9 7  10                <=>  1            0
+    #               |       \|  |                      |______      |
+    #               T--2  2--a------8                  |      |--2  | 
+    #               |  3  3--|--a*--11                 |3,4   |     |
+    #               |        |  |\                     |1,2___C2x2_RD
+    #               |        |  | 12 
+    #               4        5  6  
+    #               4        5(2) 6(3)        0
+    #  13(4),14(5)--C2x2_LD--------------C2x2_RD              
+    #
+    C2X2_RD= torch.einsum(C2X2_RD,[0,4,5,6,13,14],T_0n1,[1,4,2,3],\
+        state.site(shift_coord_0n1),[9,7,2,5,8],\
+        state.site(shift_coord_0n1).conj(),[12,10,3,6,11],\
+        [0, 1,7,10, 8,11, 13,14, 9,12]).contiguous()
+    C2X2_RD= C2X2_RD.view([C2X2_RD.size(0)]+[prod(C2X2_RD.size()[1:4])]\
+        +[prod(C2X2_RD.size()[4:6])]+list(C2X2_RD.size()[6:]))
+
+    # contract two parts
+    #          __________  
+    #   C2X2_LU  7,8(3,4)|     <=>  x  s2
+    #   |_x______5,6(1,2)|          s3 s1
+    #   |           |____|          s0 x 
+    #   0           2    1
+    #   0(1)        2    1(0)
+    #   |9,10_______|____|
+    #   |3,4        x    |
+    #   |C2x2_RD_________|
+    rdm= torch.einsum(C2X2_LU,[0,1,2, 5,6,7,8],C2X2_RD,[1,0,2, 3,4,9,10],\
+        [3,4,5,6,7,8,9,10]).contiguous()
+
+    # permute into order of s0,s1,s2,s3;s0',s1',s2',s3' where primed indices
+    # represent "ket"
+    # 01234567->02461357
+    # symmetrize and normalize
+    rdm = contiguous(permute(rdm, (0, 2, 4, 6, 1, 3, 5, 7)))
+    rdm = _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
+    return rdm
+
+def rdm3x2_trglringex_compressed(coord,state,env,compressed_chi=None,sym_pos_def=False,\
     ctm_args=cfg.ctm_args,global_args=cfg.global_args,verbosity=0):
     r"""
     :param coord: vertex (x,y) specifies lower left site of 3x2 subsystem
