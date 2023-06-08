@@ -154,6 +154,11 @@ def main():
         ctm_args= opt_context["ctm_args"]
         opt_args= opt_context["opt_args"]
 
+        if not opt_context.get('line_search',False) and ctm_args.randomize_ctm_move_sequence:
+            from itertools import permutations
+            perms_ctm_moves= list(permutations([(0,-1),(-1,0),(0,1),(1,0)]))
+            ctm_args.ctm_move_sequence= perms_ctm_moves[torch.randint(len(perms_ctm_moves),(1,))]
+
         # build state with normalized tensors
         if args.tiling in ["1STRIV", "1SPG"]:
             state_sym= to_PG_symmetric(state)
@@ -167,6 +172,7 @@ def main():
         # state_n= IPEPS(sites_n, vertexToSite=lattice_to_site, lX=state.lX, lY=state.lY)
 
         # possibly re-initialize the environment
+        # with torch.no_grad():
         if opt_args.opt_ctm_reinit:
             init_env(state_sym, ctm_env_in)
 
@@ -191,8 +197,7 @@ def main():
             # symmetrization and implicit rebuild of on-site tensors
             state_sym= to_PG_symmetric(state)
 
-        if ("line_search" in opt_context.keys() and not opt_context["line_search"]) \
-            or not "line_search" in opt_context.keys():
+        if not opt_context.get("line_search",False):
             epoch= len(opt_context["loss_history"]["loss"]) 
             loss= opt_context["loss_history"]["loss"][-1]
             obs_values, obs_labels = eval_obs_f(state_sym,ctm_env)
