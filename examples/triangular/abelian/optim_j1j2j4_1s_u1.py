@@ -185,26 +185,25 @@ def main():
             obs_values, obs_labels = eval_obs_f(state_bp,ctm_env)
 
             # test ENV sensitivity
+            loc_ctm_args= copy.deepcopy(opt_context["ctm_args"])
+            loc_ctm_args.ctm_max_iter= 1
+            ctm_env_out1= ctm_env.clone()
+            ctm_env_out1.chi= ctm_env.chi+10
+            ctm_env_out1, *ctm_log= ctmrg.run(state_bp, ctm_env_out1, \
+                conv_check=ctmrg_conv_f, ctm_args=loc_ctm_args)
+            loss1= energy_f(state_bp, ctm_env_out1)
+            delta_loss= opt_context['loss_history']['loss'][-1]-opt_context['loss_history']['loss'][-2]\
+                if len(opt_context['loss_history']['loss'])>1 else float('NaN')
+            # if we are not linesearching, this can always happen
+            # not "line_search" in opt_context.keys()
             if args.test_env_sensitivity:
-                loc_ctm_args= copy.deepcopy(opt_context["ctm_args"])
-                loc_ctm_args.ctm_max_iter= 1
-                ctm_env_out1= ctm_env.clone()
-                ctm_env_out1.chi= ctm_env.chi+10
-                ctm_env_out1, *ctm_log= ctmrg.run(state_bp, ctm_env_out1, \
-                    conv_check=ctmrg_conv_f, ctm_args=loc_ctm_args)
-                loss1= energy_f(state_bp, ctm_env_out1)
-                delta_loss= opt_context['loss_history']['loss'][-1]-opt_context['loss_history']['loss'][-2]\
-                    if len(opt_context['loss_history']['loss'])>1 else float('NaN')
-                # if we are not linesearching, this can always happen
-                # not "line_search" in opt_context.keys()
                 _flag_antivar= (loss1-loss)>0 and \
                     (loss1-loss)*opt_context["opt_args"].env_sens_scale>abs(delta_loss)
                 opt_context["STATUS"]= "ENV_ANTIVAR" if _flag_antivar else "ENV_VAR"
 
             print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]\
-                + ([f"{loss1-loss}"] if args.test_env_sensitivity else []) ))
-            log.info(f"env_sensitivity: {loss1-loss} loss_diff: "\
-                +f"{delta_loss}" if args.test_env_sensitivity else ""\
+                + [f"{loss1-loss}"]))
+            log.info(f"env_sensitivity: {loss1-loss} loss_diff: {delta_loss}"\
                 +" Norm(sites): "+", ".join([f"{t.norm()}" for c,t in state.sites.items()]))
 
         # with torch.no_grad():
