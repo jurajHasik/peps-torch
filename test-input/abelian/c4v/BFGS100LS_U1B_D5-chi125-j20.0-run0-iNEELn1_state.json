@@ -1,4 +1,6 @@
 {
+    "total_abelian_charge": 1,
+    "abelian_charges": [1,-1,0,2,-2,0,2],
     "lX": 1,
     "lY": 1,
     "sym_tensors": [
