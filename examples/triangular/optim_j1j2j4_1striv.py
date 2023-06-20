@@ -59,7 +59,7 @@ def main():
             q=None)
         # def energy_f(state,env,q= force_cpu=args.force_cpu):
         #     model.energy_per_site(state,env,force_cpu=force_cpu)
-        read_state_f= read_ipeps_1s_q
+        read_state_f= lambda instate: read_ipeps_1s_q(instate,q=(args.q,args.q))
     else:
         raise ValueError("Invalid tiling: "+str(args.tiling)+" Supported options: "\
             +"1SITEQ, 1STRIV, 1SPG")

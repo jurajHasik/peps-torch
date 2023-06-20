@@ -153,13 +153,18 @@ class IPEPS_1S_Q(IPEPS):
         
         return ""
 
-def read_ipeps_1s_q(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.peps_args,\
+def read_ipeps_1s_q(jsonfile, q=(0,0), vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.peps_args,\
     global_args=cfg.global_args):
     
     # read q-vector
     with open(jsonfile) as j:
         raw_state = json.load(j)
-        q= torch.from_numpy(read_bare_json_tensor_np_legacy(raw_state["q"]))
+        try:
+            q= torch.from_numpy(read_bare_json_tensor_np_legacy(raw_state["q"]))
+        except Exception as e:
+            log.info(f"{e}")
+            log.info(f"Overriding q {q}")
+            q=q
 
     _state= read_ipeps(jsonfile, vertexToSite, aux_seq, peps_args=peps_args,\
         global_args=global_args)
