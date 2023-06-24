@@ -481,7 +481,7 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         a= a/a.norm(p='inf')
         env.T[(coord,vec)]=a
 
-def ctmrg_conv_specC(state, env, history, ctm_args=cfg.ctm_args):
+def ctmrg_conv_specC(state, env, history, p='inf', ctm_args=cfg.ctm_args):
     if not history:
         history={'spec': [], 'diffs': [], 'conv_crit': []}
     # use corner spectra
@@ -508,7 +508,12 @@ def ctmrg_conv_specC(state, env, history, ctm_args=cfg.ctm_args):
             else:
                 diffs.append( (sum((x_0-x_1[:n_x0])**2) \
                     + sum(x_1[n_x0:]**2)).item() )
-        conv_crit= sqrt(sum(diffs))
+        # sqrt of sum of squares of all differences of all corner spectra - usual 2-norm
+        if p in ['fro',2]: 
+            conv_crit= sqrt(sum(diffs))
+        # or take max of the differences
+        elif p in [float('inf'),'inf']:
+            conv_crit= sqrt(max(diffs))
     history['spec'].append(spec_nosym_sorted)
     history['diffs'].append(diffs)
     history['conv_crit'].append(conv_crit)

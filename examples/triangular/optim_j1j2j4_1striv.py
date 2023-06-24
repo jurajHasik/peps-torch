@@ -219,10 +219,10 @@ def main():
                 opt_context["STATUS"]= "ENV_ANTIVAR" if _flag_antivar else "ENV_VAR"
 
             print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]\
-                + ([f"{loss1-loss}"] if args.test_env_sensitivity else []) ))
+                + [f"{loss1-loss}"] ))
             
             log_info_string= f"env_sensitivity: {loss1-loss} loss_diff: "\
-                +f"{delta_loss}" if args.test_env_sensitivity else ""
+                +f"{delta_loss}"
             if args.tiling in ["1STRIV","1SPG"]:
                 log_info_string += " Norm(sites): "+", ".join([f"{t.norm()}" for c,t in state.elem_tensors.items()])
             else:
