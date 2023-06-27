@@ -182,14 +182,11 @@ def main():
             print(f"{i} "+" ".join([f"{corrSId[label][i]}" for label in corrSId.keys()]))
 
     # environment diagnostics
-    # for c_loc,c_ten in ctm_env.C.items(): 
-    #     u,s,v= c_ten.svd(([0],[1]))
-    #     print(f"\n\nspectrum C[{c_loc}]")
-    #     for charges in s.get_blocks_charge():
-    #         print(charges)
-    #         sector= s[charges]
-    #         for i in range(len(sector)):
-    #             print(f"{i} {sector[i]}")
+    for c_loc,c_ten in ctm_env.C.items(): 
+        u,s,v= c_ten.svd(([0],[1]))
+        log.info(f"\n\nspectrum C[{c_loc}]")
+        for charges in s.get_blocks_charge():
+            log.info(f"{charges} {s[charges]}")
 
     # transfer operator spectrum 1-site-width channel
     for sdp in site_dir_list:
