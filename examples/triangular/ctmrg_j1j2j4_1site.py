@@ -40,6 +40,7 @@ parser.add_argument("--compressed_rdms", type=int, default=-1, help="use compres
 parser.add_argument("--loop_rdms", action='store_true', help="loop over central aux index in rdm2x3 and rdm3x2")
 parser.add_argument("--ctm_conv_crit", default="CSPEC", help="ctm convergence criterion", \
     choices=["CSPEC", "ENERGY"])
+parser.add_argument("--profile_mode",action='store_true')
 args, unknown_args = parser.parse_known_args()
 
 def main():
@@ -138,6 +139,11 @@ def main():
             f"{e_curr}"]+[f"{v}" for v in obs_values]))
         return _conv_check, history
 
+    def ctmrg_conv_specC_loc_profile(state, env, history, ctm_args=cfg.ctm_args):
+        _conv_check, history= ctmrg_conv_specC(state, env, history, ctm_args=ctm_args)
+        print(", ".join([f"{len(history['diffs'])}",f"{history['conv_crit'][-1]}"]))
+        return _conv_check, history
+
     if args.ctm_conv_crit=="CSPEC":
         ctmrg_conv_f= ctmrg_conv_specC_loc
     elif args.ctm_conv_crit=="ENERGY":
@@ -153,7 +159,24 @@ def main():
     print(", ".join(["epoch","conv_crit","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
 
-    ctm_env_init, *ctm_log= ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_f)
+    if args.profile_mode:
+        prof = torch.profiler.profile(
+            activities=[torch.profiler.ProfilerActivity.CPU, torch.profiler.ProfilerActivity.CUDA],
+            #schedule=torch.profiler.schedule(wait=1, warmup=1, active=1),
+            on_trace_ready=torch.profiler.tensorboard_trace_handler('./logs/mnist'),
+            record_shapes=True,
+            #profile_memory=True,
+            with_stack=True,
+            #with_flops=True,
+            #with_modules=True
+        )
+
+        prof.start()
+        ctm_env_init, *ctm_log= ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_specC_loc_profile)
+        prof.step()
+        prof.stop()
+    else:
+        ctm_env_init, *ctm_log= ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_f)
 
     # 6) compute final observables
     e_curr0 = energy_f(state, ctm_env_init, compressed=args.compressed_rdms, looped=args.loop_rdms)
