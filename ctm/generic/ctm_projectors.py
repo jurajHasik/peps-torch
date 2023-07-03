@@ -217,6 +217,13 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args, \
                 abs_tol=ctm_args.projector_multiplet_abstol,\
                 eps_multiplet=ctm_args.projector_eps_multiplet, verbosity=ctm_args.verbosity_projectors,\
                 diagnostics=diagnostics)
+    elif ctm_args.projector_svd_method=='AF':
+        # returns U, S, V of M= USV^\dag
+        def truncated_svd(M, chi):
+            return truncated_svd_af(M, chi, keep_multiplets=True, \
+                abs_tol=ctm_args.projector_multiplet_abstol,\
+                eps_multiplet=ctm_args.projector_eps_multiplet, verbosity=ctm_args.verbosity_projectors,\
+                diagnostics=diagnostics)
     elif ctm_args.projector_svd_method == 'ARP':
         def truncated_svd(M, chi):
             return truncated_svd_arnoldi(M, chi, keep_multiplets=True, \
