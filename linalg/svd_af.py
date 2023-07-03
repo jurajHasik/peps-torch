@@ -31,7 +31,13 @@ class SVDAF(torch.autograd.Function):
             """
             _af_A= af.interop.from_ndarray(A.cpu().numpy())
             _af_U_S_Vh= af.svd(_af_A)
-            U, S, Vh= (torch.from_numpy(x.to_ndarray()).to(device=A.device) for x in _af_U_S_Vh)
+            S= torch.from_numpy(_af_U_S_Vh[1].to_ndarray()).to(device=A.device)
+            _U= _af_U_S_Vh[0].to_ndarray()
+            _Vh= _af_U_S_Vh[2].to_ndarray()
+            del _af_A, _af_U_S_Vh
+            af.device.device_gc()
+            U= torch.from_numpy(_U).to(device=A.device)
+            Vh= torch.from_numpy(_Vh).to(device=A.device)
             V= Vh.transpose(-2,-1).conj()
             self.diagnostics= diagnostics
             self.save_for_backward(U, S, V, cutoff)
