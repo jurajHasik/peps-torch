@@ -210,15 +210,24 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args, \
     assert len(R.shape) == 2
     verbosity = ctm_args.verbosity_projectors
 
-    if ctm_args.projector_svd_method=='DEFAULT' or ctm_args.projector_svd_method=='GESDD':
+    if ctm_args.projector_svd_method=='DEFAULT' or ctm_args.projector_svd_method in ['GESDD','GESDD_CPU']:
         # returns U, S, V of M= USV^\dag
-        def truncated_svd(M, chi):
-            return truncated_svd_gesdd(M, chi, keep_multiplets=True, \
-                abs_tol=ctm_args.projector_multiplet_abstol,\
-                eps_multiplet=ctm_args.projector_eps_multiplet, verbosity=ctm_args.verbosity_projectors,\
-                diagnostics=diagnostics)
+        if ctm_args.projector_svd_method=="GESDD_CPU":
+            def truncated_svd(M, chi):
+                _M= M.cpu()
+                _USV= truncated_svd_gesdd(_M, chi, keep_multiplets=True, \
+                    abs_tol=ctm_args.projector_multiplet_abstol,\
+                    eps_multiplet=ctm_args.projector_eps_multiplet, verbosity=ctm_args.verbosity_projectors,\
+                    diagnostics=diagnostics)
+                import pdb; pdb.set_trace()
+                return (x.to(device=M.device) for x in _USV)
+        else:
+            def truncated_svd(M, chi):
+                return truncated_svd_gesdd(M, chi, keep_multiplets=True, \
+                    abs_tol=ctm_args.projector_multiplet_abstol,\
+                    eps_multiplet=ctm_args.projector_eps_multiplet, verbosity=ctm_args.verbosity_projectors,\
+                    diagnostics=diagnostics)
     elif ctm_args.projector_svd_method=='AF':
-        # returns U, S, V of M= USV^\dag
         def truncated_svd(M, chi):
             return truncated_svd_af(M, chi, keep_multiplets=True, \
                 abs_tol=ctm_args.projector_multiplet_abstol,\
