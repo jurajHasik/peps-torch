@@ -640,7 +640,7 @@ def rdm2x3_loop_oe_semimanual(coord, state, env, open_sites=[0,1,2,3,4,5], unrol
         [44,45,46,20,22,19]+I_left_out
     left_names= tuple(x.strip() for x in ("C1, T1, T4, a, a*, T4_y, C4_y, T3_y, a_y, a_y*").split(','))
     path, path_info= get_contraction_path(*left_tn,\
-        names=left_names,path=None,who=who,memory_limit=None)
+        names=left_names,path=None,who=who+"_L",memory_limit=None)
     L= contract_with_unroll(*left_tn,optimize=path,backend='torch',unroll=[])
 
     # right edge
@@ -649,7 +649,7 @@ def rdm2x3_loop_oe_semimanual(coord, state, env, open_sites=[0,1,2,3,4,5], unrol
         [39,41,43,49,50,51]+I_right_out
     right_names= tuple(x.strip() for x in ("T1_2x, C2_2x, T2_2x, a_2x, a_2x*, T2_2xy, C3_2xy, T3_2xy, a_2xy, a_2xy*").split(','))
     path, path_info= get_contraction_path(*right_tn,\
-        names=right_names,path=None,who=who,memory_limit=None)
+        names=right_names,path=None,who=who+"_R",memory_limit=None)
     R= contract_with_unroll(*right_tn,optimize=path,backend='torch',unroll=[])
 
     joint_tn= L,[44,45,46,20,22,19]+I_left_out,\

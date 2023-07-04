@@ -3,6 +3,7 @@ from functools import lru_cache
 from itertools import product
 
 import torch
+from torch.utils.checkpoint import checkpoint
 import numpy as np
 import opt_einsum as oe  # type: ignore
 from opt_einsum.contract import (  # type: ignore
@@ -132,7 +133,7 @@ def _get_contraction_path_cached(
     log.info(
         f"{who}"
         + (f" unrolled {unrolled}" if len(unrolled) > 0 else "")
-        + f"\n{path}\n{path_info}\npeak-mem {max(mem_list):4.3e} mem {mem_list}"
+        + f"\n{path}\n{path_info}\npeak-mem {max(mem_list):4.3e} mem {[f'{x:4.3e}' for x in mem_list]}"
     )
     return path, path_info
 
@@ -265,7 +266,9 @@ def _get_contraction_path_info(path, *operands, **kwargs):
         if names:
             inputs_to_names.append(f"_TMP_{cnum}")
         input_shps.append(np.asarray(shp_result))
-        mem_list.append(sum([x.prod() for x in input_shps]))
+
+        # sum the currently contracted ops and remaining ops
+        mem_list.append(sum([x.prod() for x in tmp_shapes+input_shps]))
 
         einsum_str= ",".join(tmp_inputs) + "->" + idx_result
         if names:
@@ -341,10 +344,11 @@ def contract_with_unroll(*args, **kwargs):
 
     kwargs["_gen_expression"] = True
     oe_backend = kwargs.pop("backend", "auto")
-    contract_unroll_loop_body = oe.contract(
+    _contract_unroll_loop_body = oe.contract(
         subscripts, *shapes_and_constant_ops, **kwargs
     )
-    # print(contract_unroll_loop_body)
+    def contract_unroll_loop_body(*args):
+        return _contract_unroll_loop_body(*args, backend=oe_backend)
 
     # assign shape to each index label
     i_to_s = {
@@ -381,12 +385,12 @@ def contract_with_unroll(*args, **kwargs):
 
         if use_checkpoint:
             partials[ig_out + ig_contracted_unrolled]= checkpoint(
-                contract_unroll_loop_body, *unrolled_ops, backend=oe_backend)
+                contract_unroll_loop_body, *unrolled_ops)
         else:
             partials[ig_out + ig_contracted_unrolled]= contract_unroll_loop_body(
-                *unrolled_ops, backend=oe_backend
+                *unrolled_ops
             )
-
+            
     result = oe.contract(
         partials, tuple(args[-1]) + ig_out_contracted_unrolled, args[-1]
     )
