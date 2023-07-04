@@ -11,7 +11,7 @@ from ctm.generic.rdm import _cast_to_real, _sym_pos_def_rdm, get_contraction_pat
 import ctm.generic.corrf as corrf
 try:
     import opt_einsum as oe
-    from oe_ext.oe_ext import get_contraction_path, contract_with_unroll
+    from oe_ext.oe_ext import get_contraction_path, contract_with_unroll, _debug_allocated_tensors
 except:
     oe=False
     warnings.warn("opt_einsum not available.")
@@ -668,7 +668,7 @@ def rdm2x3_loop_oe_semimanual(coord, state, env, open_sites=[0,1,2,3,4,5], unrol
     path, path_info= get_contraction_path(*joint_tn,unroll=[47,48] if unroll else [],\
         names=names,path=None,who=who,memory_limit=L.numel()*a_xy.size(0)**2 if unroll else None) 
     res= contract_with_unroll(*joint_tn,optimize=path,backend='torch',
-        unroll=[47,48] if unroll else [],use_checkpoint=use_checkpoint)
+        unroll=[47,48] if unroll else [],use_checkpoint=use_checkpoint,who=who,verbosity=verbosity)
 
     res = _sym_pos_def_rdm(res, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
     if force_cpu:
@@ -968,7 +968,7 @@ def rdm3x2_loop_oe_semimanual(coord, state, env, open_sites=[0,1,2,3,4,5], unrol
     path, path_info= get_contraction_path(*joint_tn,unroll=[83,84] if unroll else [],\
         names=names,path=None,who=who,memory_limit=TE.numel()*a_y.size(0)**2 if unroll else None) 
     res= contract_with_unroll(*joint_tn,optimize=path,backend='torch',
-        unroll=[83,84] if unroll else [],use_checkpoint=use_checkpoint)
+        unroll=[83,84] if unroll else [],use_checkpoint=use_checkpoint,who=who,verbosity=verbosity)
 
     res = _sym_pos_def_rdm(res, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
     if force_cpu:

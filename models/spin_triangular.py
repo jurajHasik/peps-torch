@@ -42,14 +42,14 @@ def eval_nn_per_site(coord,state,env,R,Rinv,op_nn,op_nn_diag,
     return energy_nn, energy_nn_diag
 
 def eval_nnn_per_site(coord,state,env,R,Rinv,op_nnn,looped=False,
-    use_checkpoint=False,force_cpu=False):
+    use_checkpoint=False,force_cpu=False,verbosity=0):
     # O(X^3 D^6 s^2)
     energy_nnn= 0.
     # RA R^2A R^3A                  B  C  A     x  x s2
     # A  RA   R^2A => 120deg order  A  B  C <=> s3 x x
     tmp_rdm_2x3= rdm_looped.rdm2x3_loop_oe_semimanual(coord,state,env,\
             open_sites=[2,3], unroll=looped, 
-            use_checkpoint=use_checkpoint, force_cpu=force_cpu)
+            use_checkpoint=use_checkpoint, force_cpu=force_cpu,verbosity=verbosity)
     energy_nnn+= torch.einsum('iajb,jbia',tmp_rdm_2x3,
         torch.einsum('jxiy,xb,ya->jbia',op_nnn,R@R@R,R@R@R)) # A--A nnn
 
@@ -59,21 +59,22 @@ def eval_nnn_per_site(coord,state,env,R,Rinv,op_nnn,looped=False,
     # A      RA <=> s2 x  => 120deg order A B
     tmp_rdm_3x2= rdm_looped.rdm3x2_loop_oe_semimanual(coord,state,env,\
             open_sites=[2,3], unroll=looped, 
-            use_checkpoint=use_checkpoint, force_cpu=force_cpu)
+            use_checkpoint=use_checkpoint, force_cpu=force_cpu,verbosity=verbosity)
     energy_nnn+= torch.einsum('iajb,jbia',tmp_rdm_3x2,
         torch.einsum('jxiy,xb,ya->jbia',op_nnn,R@R@R,R@R@R)) # A--A nnn
 
     # 
     # A    RA     s0 x                 A B
     # R^-1A A <=> x s3 => 120deg order C A
-    tmp_rdm_2x2= rdm.rdm2x2(coord,state,env,open_sites=[0,3],force_cpu=force_cpu)
+    tmp_rdm_2x2= rdm.rdm2x2(coord,state,env,open_sites=[0,3],force_cpu=force_cpu,
+        verbosity=verbosity)
     energy_nnn+= torch.einsum('iajb,jbia',tmp_rdm_2x2,op_nnn) # A--A nnn
 
     return energy_nnn
 
 def eval_nn_and_chirality_per_site(coord,state,env,R,Rinv,
     op_nn,op_nn_diag,op_chi,
-    looped=False,use_checkpoint=False,force_cpu=False):
+    looped=False,use_checkpoint=False,force_cpu=False,verbosity=0):
     # O(X^3 D^4 s^[2 to 4]) 
     energy_nn, energy_nn_diag, energy_chi= 0.,0.,0.
     # A    RA     x  s1                     A B    
@@ -81,7 +82,7 @@ def eval_nn_and_chirality_per_site(coord,state,env,R,Rinv,
     #                               B  x B
     # where we evaluate for   C--A, A, C x and chirality with anti-clockwise order
     tmp_rdm_2x2= rdm.rdm2x2(coord,state,env,open_sites=[1,2,3],unroll=[2] if looped else [],\
-        use_checkpoint=use_checkpoint,force_cpu=force_cpu)
+        use_checkpoint=use_checkpoint,force_cpu=force_cpu,verbosity=verbosity)
     tmp_rdm_2x2= torch.einsum(tmp_rdm_2x2,[10,12,4, 11,13,5],\
                     R, [0,10], R, [1,11], Rinv, [2,12], Rinv, [3,13], [0,2,4, 1,3,5])
     energy_nn+= torch.einsum('ijab,nabnij',op_nn,tmp_rdm_2x2)\
@@ -93,7 +94,7 @@ def eval_nn_and_chirality_per_site(coord,state,env,R,Rinv,
     # A B     s0 s1                         A  x B
     # C A <=> s2 x, where we evaluate A--B, C, C x and chirality anti-clockwise
     tmp_rdm_2x2= rdm.rdm2x2(coord,state,env,open_sites=[0,1,2],unroll=[1] if looped else [],\
-        use_checkpoint=use_checkpoint,force_cpu=force_cpu)
+        use_checkpoint=use_checkpoint,force_cpu=force_cpu,verbosity=verbosity)
     tmp_rdm_2x2= torch.einsum(tmp_rdm_2x2,[0,10,12, 1,11,13],\
                     R, [2,10], R, [3,11], Rinv, [4,12], Rinv, [5,13], [0,2,4, 1,3,5])
     energy_nn+= torch.einsum('ijab,abnijn',op_nn,tmp_rdm_2x2)\
@@ -381,13 +382,15 @@ class J1J2J4_1SITEQ():
             if abs(self.j2)>0:
                 for coord in state.sites.keys():
                     _nnn= eval_nnn_per_site(coord,state,env,R,Rinv,self.SS,looped=looped,
-                        use_checkpoint=ctm_args.fwd_checkpoint_loop_rdm,force_cpu=force_cpu)
+                        use_checkpoint=ctm_args.fwd_checkpoint_loop_rdm,force_cpu=force_cpu,\
+                        verbosity=ctm_args.verbosity_rdm)
                     energy_nnn+= _nnn
             if abs(self.jchi)>0:
                 for coord in state.sites.keys():
                     _nn,_nn_diag,_chi= eval_nn_and_chirality_per_site(coord,state,env,R,Rinv,
                         self.SS,self.SS,self.h_chi,
-                        looped=looped,use_checkpoint=ctm_args.fwd_checkpoint_loop_rdm,force_cpu=force_cpu)
+                        looped=looped,use_checkpoint=ctm_args.fwd_checkpoint_loop_rdm,force_cpu=force_cpu,
+                        verbosity=ctm_args.verbosity_rdm)
                     energy_nn+= _nn
                     energy_nn_diag+= _nn_diag
                     energy_chi+= _chi

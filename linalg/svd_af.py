@@ -1,10 +1,12 @@
 import torch
+from oe_ext.oe_ext import _debug_allocated_tensors
 from config import _torch_version_check
 try:
     import arrayfire as af
 except:
     print("Warning: Missing arrayfire. SVDAF is not available.")
-
+import logging
+log = logging.getLogger(__name__)
 
 def safe_inverse(x, epsilon=1E-12):
     return x/(x**2 + epsilon)
@@ -30,6 +32,9 @@ class SVDAF(torch.autograd.Function):
             Computes SVD decompostion of matrix :math:`A = USV^\dagger`.
             """
             _af_A= af.interop.from_ndarray(A.cpu().numpy())
+            if diagnostics:
+                log.info(_debug_allocated_tensors(cuda=A.device,totals_only=True))
+                log.info(f"{af.device.device_mem_info()}")
             _af_U_S_Vh= af.svd(_af_A)
             S= torch.from_numpy(_af_U_S_Vh[1].to_ndarray()).to(device=A.device)
             _U= _af_U_S_Vh[0].to_ndarray()
@@ -41,6 +46,9 @@ class SVDAF(torch.autograd.Function):
             V= Vh.transpose(-2,-1).conj()
             self.diagnostics= diagnostics
             self.save_for_backward(U, S, V, cutoff)
+            if diagnostics:
+                log.info(_debug_allocated_tensors(cuda=A.device,totals_only=True))
+                log.info(f"{af.device.device_mem_info()}")
             return U, S, V
 
     @staticmethod

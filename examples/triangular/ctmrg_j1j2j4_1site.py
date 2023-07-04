@@ -153,12 +153,21 @@ def main():
     init_env(state, ctm_env_init)
     print(ctm_env_init)
 
+    torch.cuda.synchronize()
+    from oe_ext.oe_ext import _debug_allocated_tensors
+    log.info("Initial obs evaluation\n"+
+        _debug_allocated_tensors(cuda=cfg.global_args.device,totals_only=True)
+    )
     
     loss0= energy_f(state, ctm_env_init, compressed=args.compressed_rdms, looped=args.loop_rdms)
     obs_values, obs_labels = eval_obs_f(state,ctm_env_init)
     print(", ".join(["epoch","conv_crit","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
-    log.info(torch.cuda.memory_summary(device=cfg.global_args.device))
+
+    torch.cuda.synchronize()
+    log.info("Post-initial obs evaluation\n"+
+        _debug_allocated_tensors(cuda=cfg.global_args.device,totals_only=True)
+    )
 
     if args.profile_mode:
         prof = torch.profiler.profile(
@@ -178,7 +187,6 @@ def main():
         prof.stop()
     else:
         ctm_env_init, *ctm_log= ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_f)
-    log.info(torch.cuda.memory_summary(device=cfg.global_args.device))
 
     # 6) compute final observables
     e_curr0 = energy_f(state, ctm_env_init, compressed=args.compressed_rdms, looped=args.loop_rdms)

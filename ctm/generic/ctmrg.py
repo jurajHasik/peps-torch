@@ -10,6 +10,8 @@ from ctm.generic.ctm_projectors import *
 from tn_interface import contract, einsum
 from tn_interface import conj
 from tn_interface import contiguous, view, permute
+import logging
+log = logging.getLogger(__name__)
 
 def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.global_args): 
     r"""
@@ -228,7 +230,7 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
             P[coord], Pt[coord] = ctm_get_projectors(direction, coord, state_loc, env_loc,\
                 ctm_args, global_args, diagnostics=diagnostics)
             if verbosity>0:
-                print("P,Pt RIGHT "+str(coord)+" P: "+str(P[coord].size())+" Pt: "+str(Pt[coord].size()))
+                log.info("P,Pt RIGHT "+str(coord)+" P: "+str(P[coord].size())+" Pt: "+str(Pt[coord].size()))
             if verbosity>1:
                 print(P[coord])
                 print(Pt[coord])

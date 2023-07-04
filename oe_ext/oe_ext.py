@@ -15,6 +15,27 @@ from opt_einsum.contract import (  # type: ignore
 log = logging.getLogger(__name__)
 
 
+def _debug_allocated_tensors(cuda=None,totals_only=False):
+    import gc
+    report=""
+    tot_cuda=0
+    for obj in gc.get_objects():
+        try:
+            if torch.is_tensor(obj) or (hasattr(obj, 'data') and torch.is_tensor(obj.data)):
+                if not totals_only:
+                    report=report+f"{type(obj)} {obj.size()}\n"
+                if obj.is_cuda:
+                    tot_cuda+= obj.numel() * obj.element_size()
+        except: 
+            pass
+    report=report+f"tot_cuda {tot_cuda}\n"
+    if cuda and cuda!="cpu":
+        a,t= torch.cuda.mem_get_info()
+        report=report+f"alloc/reserved {a/1024**3} total {t/1024**3}\n"
+        report=report+f"alloc {torch.cuda.memory_allocated()/1024**3}\n"
+    return report
+
+
 def _preprocess_interleaved_to_expr_and_shapes(*args, unroll=[]):
     r"""Casts interleaved einsum input into default format, stripping
     away unrolled indices if any.
@@ -311,6 +332,8 @@ def contract_with_unroll(*args, **kwargs):
     :param unroll: indices to unroll
     :param use_checkpoint:
     """
+    who = kwargs.pop("who","unknown")
+    verbosity = kwargs.pop("verbosity", 0)
     unroll = kwargs.pop("unroll", [])
     use_checkpoint = kwargs.pop("use_checkpoint", False)
 
@@ -370,6 +393,10 @@ def contract_with_unroll(*args, **kwargs):
         device=args[0].device, dtype=args[0].dtype
     )
 
+    if verbosity>0:
+        log.info(who+" before unrolled loop\n"
+            +_debug_allocated_tensors(cuda=args[0].device,totals_only=True))
+
     for ui_vals in product(*tuple(range(i_to_s[i]) for i in unroll)):
         ui_map = {u: v for u, v in zip(unroll, ui_vals)}
 
@@ -390,10 +417,19 @@ def contract_with_unroll(*args, **kwargs):
             partials[ig_out + ig_contracted_unrolled]= contract_unroll_loop_body(
                 *unrolled_ops
             )
-            
+
+        if verbosity>0:
+            log.info(who+f" unrolled loop {ui_vals}\n"
+                +_debug_allocated_tensors(cuda=args[0].device,totals_only=True))
+
     result = oe.contract(
         partials, tuple(args[-1]) + ig_out_contracted_unrolled, args[-1]
     )
+
+    if verbosity>0:
+        log.info(who+" unrolled loop concluded\n"
+            +_debug_allocated_tensors(cuda=args[0].device,totals_only=True))
+
     return result
 
 
