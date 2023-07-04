@@ -126,13 +126,13 @@ def _get_contraction_path_cached(
             expr, *shapes_unrolled, optimize=optimizer, shapes=True, **kwargs
         )  # ,use_blas=)
 
-    path_info = _get_contraction_path_info(
+    path_info, mem_list = _get_contraction_path_info(
         path, expr, *shapes_unrolled, unrolled=unrolled, names=names, shapes=True
     )
     log.info(
         f"{who}"
         + (f" unrolled {unrolled}" if len(unrolled) > 0 else "")
-        + f"\n{path}\n{path_info}"
+        + f"\n{path}\n{path_info}\npeak-mem {max(mem_list):4.3e} mem {mem_list}"
     )
     return path, path_info
 
@@ -219,8 +219,9 @@ def _get_contraction_path_info(path, *operands, **kwargs):
 
     cost_list = []
     scale_list = []
-    size_list = []
+    size_list = [] # sizes of outputs
     contraction_list = []
+    mem_list= []
 
     # Build contraction tuple (positions, gemm, einsum_str, remaining)
     for cnum, contract_inds in enumerate(path):
@@ -263,9 +264,10 @@ def _get_contraction_path_info(path, *operands, **kwargs):
         input_list.append(idx_result)
         if names:
             inputs_to_names.append(f"_TMP_{cnum}")
-        input_shps.append(shp_result)
+        input_shps.append(np.asarray(shp_result))
+        mem_list.append(sum([x.prod() for x in input_shps]))
 
-        einsum_str = ",".join(tmp_inputs) + "->" + idx_result
+        einsum_str= ",".join(tmp_inputs) + "->" + idx_result
         if names:
             einsum_str = ",".join(tmp_inds_to_names) + "->" + inputs_to_names[-1]
 
@@ -294,7 +296,7 @@ def _get_contraction_path_info(path, *operands, **kwargs):
         size_dict,
     )
 
-    return path_print
+    return path_print, mem_list
 
 
 def contract_with_unroll(*args, **kwargs):
