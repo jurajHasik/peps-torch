@@ -15,6 +15,12 @@ def safe_inverse_2(x, epsilon):
     x[abs(x)<epsilon]=float('inf')
     return x.pow(-1)
 
+def _log_mem(label,device):
+    _af_mem= af.device.device_mem_info()
+    _af_mem['alloc']['bytes_GiB']= _af_mem['alloc']['bytes']/1024**3
+    _af_mem['lock']['bytes_GiB']= _af_mem['lock']['bytes']/1024**3
+    log.info(label+_debug_allocated_tensors(cuda=device,totals_only=True)\
+        +f"{_af_mem}")
 
 class SVDAF(torch.autograd.Function):
     @staticmethod
@@ -33,14 +39,17 @@ class SVDAF(torch.autograd.Function):
             """
             _af_A= af.interop.from_ndarray(A.cpu().numpy())
             if diagnostics:
-                log.info(_debug_allocated_tensors(cuda=A.device,totals_only=True))
-                log.info(f"{af.device.device_mem_info()}")
+                _log_mem(f"Before SVD {diagnostics}\n",A.device)
             _af_U_S_Vh= af.svd(_af_A)
+            if diagnostics:
+                _log_mem(f"After SVD {diagnostics}\n",A.device)
             S= torch.from_numpy(_af_U_S_Vh[1].to_ndarray()).to(device=A.device)
             _U= _af_U_S_Vh[0].to_ndarray()
             _Vh= _af_U_S_Vh[2].to_ndarray()
             del _af_A, _af_U_S_Vh
             af.device.device_gc()
+            if diagnostics:
+                _log_mem(f"After SVD cleanup {diagnostics}\n",A.device)
             U= torch.from_numpy(_U).to(device=A.device)
             Vh= torch.from_numpy(_Vh).to(device=A.device)
             V= Vh.transpose(-2,-1).conj()

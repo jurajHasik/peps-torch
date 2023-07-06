@@ -28,11 +28,11 @@ def _debug_allocated_tensors(cuda=None,totals_only=False):
                     tot_cuda+= obj.numel() * obj.element_size()
         except: 
             pass
-    report=report+f"tot_cuda {tot_cuda}\n"
+    report=report+f"tot_cuda {tot_cuda/1024**3} GiB\n"
     if cuda and cuda!="cpu":
         a,t= torch.cuda.mem_get_info()
-        report=report+f"alloc/reserved {a/1024**3} total {t/1024**3}\n"
-        report=report+f"alloc {torch.cuda.memory_allocated()/1024**3}\n"
+        report=report+f"alloc/reserved {a/1024**3} GiB total {t/1024**3} GiB\n"
+        report=report+f"alloc {torch.cuda.memory_allocated()/1024**3} GiB\n"
     return report
 
 
@@ -355,6 +355,7 @@ def contract_with_unroll(*args, **kwargs):
     constants = tuple(
         idx for idx, ig in enumerate(args[1::2]) if not any([i in unroll for i in ig])
     )
+
     kwargs["_constants_dict"] = {
         i: args[0 : 2 * (len(args) // 2) : 2][i] for i in constants
     }
@@ -367,7 +368,142 @@ def contract_with_unroll(*args, **kwargs):
 
     kwargs["_gen_expression"] = True
     oe_backend = kwargs.pop("backend", "auto")
-    _contract_unroll_loop_body = oe.contract(
+    _contract_unroll_loop_body= oe.contract(
+        subscripts, *shapes_and_constant_ops, **kwargs
+    )
+    def contract_unroll_loop_body(*args):
+        return _contract_unroll_loop_body(*args, backend=oe_backend)
+    if use_checkpoint:
+        # force evaluation of all constants
+        _contract_unroll_loop_body.evaluate_constants(backend=oe_backend)
+        _expr_const_ts= _contract_unroll_loop_body._evaluated_constants[oe_backend]
+        
+        def _contract_unroll_loop_body_checkpointed(*args):
+            # reassign constants so the checkpointed evaluation preserves gradient flow
+            count,j=0,-1
+            while j>=-len(_expr_const_ts):
+                if not (_expr_const_ts[j] is None):
+                    count+=1
+                    _expr_const_ts[j]= args[-count]
+                j-=1
+
+            return _contract_unroll_loop_body(*args[:-count], backend=oe_backend)
+
+        def contract_unroll_loop_body(*args):
+            # get handle of evaluated constant tensors
+            c_args= tuple(t for t in _expr_const_ts if not (t is None))
+            joint_args= args+c_args
+            return checkpoint(_contract_unroll_loop_body_checkpointed, *joint_args)    
+
+    # assign shape to each index label
+    i_to_s = {
+        i: s
+        for ig, t in zip(args[1::2], args[0 : 2 * (len(args) // 2) : 2])
+        for i, s in zip(ig, t.shape)
+    }
+
+    # index groups stripped of unrolled indices
+    igs = tuple(
+        tuple(i for i in ig if not i in unroll) for ig in (args[1::2] + (args[-1],))
+    )
+
+    # prepare tensor to accumulate individual contractions
+    shape_out = tuple(i_to_s[i] for i in args[-1])
+    ig_out_contracted_unrolled = tuple(i for i in unroll if not (i in args[-1]))
+    partials = torch.empty(
+        shape_out + tuple(i_to_s[i] for i in ig_out_contracted_unrolled),\
+        device=args[0].device, dtype=args[0].dtype
+    )
+
+    if verbosity>0:
+        log.info(who+" before unrolled loop\n"
+            +_debug_allocated_tensors(cuda=args[0].device,totals_only=True))
+
+    for ui_vals in product(*tuple(range(i_to_s[i]) for i in unroll)):
+        ui_map = {u: v for u, v in zip(unroll, ui_vals)}
+
+        ig_out = tuple(ui_map[i] if i in unroll else slice(None) for i in args[-1])
+        ig_contracted_unrolled = tuple(ui_map[i] for i in unroll if not (i in args[-1]))
+
+        # ops containing *only* variable tensors, narrowed by unrolled indices if applicable
+        unrolled_ops = tuple(
+            t[tuple(ui_map[i] if i in unroll else slice(None) for i in ig)]
+            for t, ig in zip(args[0 : 2 * (len(args) // 2) : 2], args[1::2])
+            if len([i for i in unroll if i in ig]) > 0
+        )
+
+        partials[ig_out + ig_contracted_unrolled]= contract_unroll_loop_body(
+            *unrolled_ops
+        )
+
+        if verbosity>0:
+            log.info(who+f" unrolled loop {ui_vals}\n"
+                +_debug_allocated_tensors(cuda=args[0].device,totals_only=True))
+
+    result = oe.contract(
+        partials, tuple(args[-1]) + ig_out_contracted_unrolled, args[-1]
+    )
+
+    if verbosity>0:
+        log.info(who+" unrolled loop concluded\n"
+            +_debug_allocated_tensors(cuda=args[0].device,totals_only=True))
+
+    return result
+
+
+def contract_with_unroll_noconstexpr_in_checkpoint(*args, **kwargs):
+    r"""Extension of opt_einsum's contract allowing for index unrolling
+    and use of checkpointing over unrolled loop.
+
+    :param args: input to einsum in interleaved format. Explicit index labeling
+                 of output is required
+    :param unroll: indices to unroll
+    :param use_checkpoint:
+    """
+    who = kwargs.pop("who","unknown")
+    verbosity = kwargs.pop("verbosity", 0)
+    unroll = kwargs.pop("unroll", [])
+    use_checkpoint = kwargs.pop("use_checkpoint", False)
+
+    if len(unroll) == 0:
+        return oe.contract(*args, **kwargs)
+
+    # We are unrolling. In general, there will be several constant
+    # tensors among the individual unrolled calls.
+    # Strategy is to build opt_einsum's ContractExpression, which makes use of these
+    # constants
+    #
+    # Although contract supports interleaved format in general, in _gen_expression mode
+    # the default subscript format is expected instead
+    subscripts, shapes, unrolled_shapes = _preprocess_interleaved_to_expr_and_shapes(
+        *args, unroll=unroll
+    )
+
+    # Get positions of tensor arguments which are constants wrt to unrolled contraction
+    constants = tuple(
+        idx for idx, ig in enumerate(args[1::2]) if not any([i in unroll for i in ig])
+    )
+
+    if not use_checkpoint:
+        kwargs["_constants_dict"] = {
+            i: args[0 : 2 * (len(args) // 2) : 2][i] for i in constants
+        }
+
+        # Build operands, passing tensors for constants and opt_einsum's Shaped (just shapes) for rest of the ops
+        shapes_and_constant_ops = tuple(
+            t if idx in constants else shape_only(tuple(i for i in shapes[idx] if i > 0))
+            for idx, t in enumerate(args[0 : 2 * (len(args) // 2) : 2])
+        )
+    else:
+        # Build operands, passing opt_einsum's Shaped (just shapes) for both constants and rest of the ops
+        shapes_and_constant_ops = tuple(
+            shape_only(tuple(i for i in shapes[idx] if i > 0)) 
+            for idx, t in enumerate(args[0 : 2 * (len(args) // 2) : 2])
+        )
+
+    kwargs["_gen_expression"] = True
+    oe_backend = kwargs.pop("backend", "auto")
+    _contract_unroll_loop_body= oe.contract(
         subscripts, *shapes_and_constant_ops, **kwargs
     )
     def contract_unroll_loop_body(*args):
@@ -400,20 +536,26 @@ def contract_with_unroll(*args, **kwargs):
     for ui_vals in product(*tuple(range(i_to_s[i]) for i in unroll)):
         ui_map = {u: v for u, v in zip(unroll, ui_vals)}
 
-        # ops containing *only* variable tensors, narrowed by unrolled indices if applicable
-        unrolled_ops = tuple(
-            t[tuple(ui_map[i] if i in unroll else slice(None) for i in ig)]
-            for t, ig in zip(args[0 : 2 * (len(args) // 2) : 2], args[1::2])
-            if len([i for i in unroll if i in ig]) > 0
-        )
-
         ig_out = tuple(ui_map[i] if i in unroll else slice(None) for i in args[-1])
         ig_contracted_unrolled = tuple(ui_map[i] for i in unroll if not (i in args[-1]))
 
         if use_checkpoint:
+            # ops containing all tensors, narrowed by unrolled indices if applicable
+            unrolled_ops = tuple(
+                t[tuple(ui_map[i] if i in unroll else slice(None) for i in ig)]
+                for t, ig in zip(args[0 : 2 * (len(args) // 2) : 2], args[1::2])
+            )
+
             partials[ig_out + ig_contracted_unrolled]= checkpoint(
                 contract_unroll_loop_body, *unrolled_ops)
         else:
+            # ops containing *only* variable tensors, narrowed by unrolled indices if applicable
+            unrolled_ops = tuple(
+                t[tuple(ui_map[i] if i in unroll else slice(None) for i in ig)]
+                for t, ig in zip(args[0 : 2 * (len(args) // 2) : 2], args[1::2])
+                if len([i for i in unroll if i in ig]) > 0
+            )
+
             partials[ig_out + ig_contracted_unrolled]= contract_unroll_loop_body(
                 *unrolled_ops
             )
