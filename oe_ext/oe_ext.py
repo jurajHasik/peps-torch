@@ -1,6 +1,7 @@
 import logging
 from functools import lru_cache
 from itertools import product
+import gc, subprocess
 
 import torch
 from torch.utils.checkpoint import checkpoint
@@ -11,28 +12,31 @@ from opt_einsum.contract import (  # type: ignore
     PathInfo,
     shape_only,
 )
+try:
+    import arrayfire as af
+except:
+    print("Warning: Missing arrayfire. SVDAF is not available.")
+
 
 log = logging.getLogger(__name__)
 
 
 def _debug_allocated_tensors(cuda=None,totals_only=False):
-    import gc, subprocess
-    import arrayfire as af
     if cuda and cuda!="cpu":
         torch.cuda.synchronize(device=cuda)
     af.device.sync(device=af.device.get_device())
     report=""
-    tot_cuda=0
-    for obj in gc.get_objects():
-        try:
-            if torch.is_tensor(obj) or (hasattr(obj, 'data') and torch.is_tensor(obj.data)):
-                if not totals_only:
-                    report=report+f"{type(obj)} {obj.size()}\n"
-                if obj.is_cuda:
-                    tot_cuda+= obj.numel() * obj.element_size()
-        except: 
-            pass
-    report=report+f"tot_cuda {tot_cuda/1024**3} GiB\n"
+    # tot_cuda=0
+    # for obj in gc.get_objects():
+    #     try:
+    #         if torch.is_tensor(obj) or (hasattr(obj, 'data') and torch.is_tensor(obj.data)):
+    #             if not totals_only:
+    #                 report=report+f"{type(obj)} {obj.size()}\n"
+    #             if obj.is_cuda:
+    #                 tot_cuda+= obj.numel() * obj.element_size()
+    #     except: 
+    #         pass
+    # report=report+f"tot_cuda {tot_cuda/1024**3} GiB\n"
     if cuda and cuda!="cpu":
         try:
             cp=subprocess.run(["nvidia-smi"], capture_output=True, text=True)
