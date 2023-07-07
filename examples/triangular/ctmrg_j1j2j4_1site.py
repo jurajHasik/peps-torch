@@ -154,6 +154,9 @@ def main():
     print(ctm_env_init)
 
     torch.cuda.synchronize()
+    import gc
+    gc.collect()
+    torch.cuda.empty_cache()
     from oe_ext.oe_ext import _debug_allocated_tensors
     log.info("Initial obs evaluation\n"+
         _debug_allocated_tensors(cuda=cfg.global_args.device,totals_only=True)
@@ -165,6 +168,8 @@ def main():
     print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
 
     torch.cuda.synchronize()
+    gc.collect()
+    torch.cuda.empty_cache()
     log.info("Post-initial obs evaluation\n"+
         _debug_allocated_tensors(cuda=cfg.global_args.device,totals_only=True)
     )
@@ -187,6 +192,13 @@ def main():
         prof.stop()
     else:
         ctm_env_init, *ctm_log= ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_f)
+
+    torch.cuda.synchronize()
+    gc.collect()
+    torch.cuda.empty_cache()
+    log.info("Post-initial obs evaluation\n"+
+        _debug_allocated_tensors(cuda=cfg.global_args.device,totals_only=True)
+    )
 
     # 6) compute final observables
     e_curr0 = energy_f(state, ctm_env_init, compressed=args.compressed_rdms, looped=args.loop_rdms)

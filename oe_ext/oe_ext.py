@@ -16,7 +16,11 @@ log = logging.getLogger(__name__)
 
 
 def _debug_allocated_tensors(cuda=None,totals_only=False):
-    import gc
+    import gc, subprocess
+    import arrayfire as af
+    if cuda and cuda!="cpu":
+        torch.cuda.synchronize(device=cuda)
+    af.device.sync(device=af.device.get_device())
     report=""
     tot_cuda=0
     for obj in gc.get_objects():
@@ -30,6 +34,11 @@ def _debug_allocated_tensors(cuda=None,totals_only=False):
             pass
     report=report+f"tot_cuda {tot_cuda/1024**3} GiB\n"
     if cuda and cuda!="cpu":
+        try:
+            cp=subprocess.run(["nvidia-smi"], capture_output=True, text=True)
+            report=report+cp.stdout
+        except:
+            pass
         a,t= torch.cuda.mem_get_info()
         report=report+f"alloc/reserved {a/1024**3} GiB total {t/1024**3} GiB\n"
         report=report+f"alloc {torch.cuda.memory_allocated()/1024**3} GiB\n"
@@ -340,7 +349,7 @@ def contract_with_unroll(*args, **kwargs):
         # split args into tensors and index groups
         igs,ts= args[1::2], args[0 : 2 * (len(args) // 2) : 2]
         source_device= ts[0].device
-        
+
         def _core_f(*ts):
             ts_moved= (x.to(device=checkpoint_on_device) for x in ts)
             args_moved= tuple(a for t_ig in zip(ts_moved,igs) for a in t_ig) + (args[-1],) if len(args)%2==1 else ()
