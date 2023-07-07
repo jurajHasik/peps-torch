@@ -33,6 +33,7 @@ def _debug_allocated_tensors(cuda=None,totals_only=False):
         a,t= torch.cuda.mem_get_info()
         report=report+f"alloc/reserved {a/1024**3} GiB total {t/1024**3} GiB\n"
         report=report+f"alloc {torch.cuda.memory_allocated()/1024**3} GiB\n"
+        report=report+f"reserved {torch.cuda.memory_reserved()/1024**3} GiB\n"
     return report
 
 
@@ -110,7 +111,7 @@ def get_contraction_path(*tn_to_contract, unroll=[], names=None, who=None, **kwa
     ), "Explicit specification of output index labels is required"
 
     expr, shapes, unrolled_shapes = _preprocess_interleaved_to_expr_and_shapes(
-        *tn_to_contract, unroll=unroll
+        *tn_to_contract, unroll=unroll if unroll else []
     )
     return _get_contraction_path_cached(
         expr, shapes, unrolled=unrolled_shapes, names=names, who=who, **kwargs
@@ -330,14 +331,30 @@ def contract_with_unroll(*args, **kwargs):
     :param args: input to einsum in interleaved format. Explicit index labeling
                  of output is required
     :param unroll: indices to unroll
-    :param use_checkpoint:
+    :param checkpoint_unrolled:
     """
+    checkpoint_on_device = kwargs.pop("checkpoint_on_device",False)
+    if checkpoint_on_device in ['NONE','none','None',None]:
+        checkpoint_on_device= False
+    if checkpoint_on_device:
+        # split args into tensors and index groups
+        igs,ts= args[1::2], args[0 : 2 * (len(args) // 2) : 2]
+        source_device= ts[0].device
+        
+        def _core_f(*ts):
+            ts_moved= (x.to(device=checkpoint_on_device) for x in ts)
+            args_moved= tuple(a for t_ig in zip(ts_moved,igs) for a in t_ig) + (args[-1],) if len(args)%2==1 else ()
+            res= contract_with_unroll(*args_moved,**kwargs)
+            return res.to(device=source_device)
+
+        return checkpoint(_core_f,*ts)
+
     who = kwargs.pop("who","unknown")
     verbosity = kwargs.pop("verbosity", 0)
     unroll = kwargs.pop("unroll", [])
-    use_checkpoint = kwargs.pop("use_checkpoint", False)
+    checkpoint_unrolled = kwargs.pop("checkpoint_unrolled", False)
 
-    if len(unroll) == 0:
+    if not unroll or len(unroll) == 0:
         return oe.contract(*args, **kwargs)
 
     # We are unrolling. In general, there will be several constant
@@ -373,7 +390,7 @@ def contract_with_unroll(*args, **kwargs):
     )
     def contract_unroll_loop_body(*args):
         return _contract_unroll_loop_body(*args, backend=oe_backend)
-    if use_checkpoint:
+    if checkpoint_unrolled:
         # force evaluation of all constants
         _contract_unroll_loop_body.evaluate_constants(backend=oe_backend)
         _expr_const_ts= _contract_unroll_loop_body._evaluated_constants[oe_backend]

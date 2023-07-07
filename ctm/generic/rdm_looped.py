@@ -123,8 +123,11 @@ def _trace_2x3(C2X2_LU, C2X2_RU, T_1n1, T_10, a_1n1, a_10):
 
     return rho_acc
 
+# mode 1: all tensors are moved to CPU and contraction is evaluated on CPU
+# mode 2: all is evaluated on current device (assumed to be the same for all tensors)
+# mode 3: all is stored on CPU, all is evaluated on GPU under checkpointing (move to GPU happens within checkpointed section)
 
-def rdm2x3_loop(coord, state, env, sym_pos_def=False, use_checkpoint=False, \
+def rdm2x3_loop(coord, state, env, sym_pos_def=False, checkpoint_unrolled=False, \
     verbosity=0):
     r"""
     :param coord: vertex (x,y) specifies lower left site of 2x3 subsystem
@@ -288,7 +291,7 @@ def rdm2x3_loop(coord, state, env, sym_pos_def=False, use_checkpoint=False, \
     tensors= (C2X2_LU, C2X2_RU, T_10, T_1n1, state.site(shift_coord_10), \
         state.site(shift_coord_1n1))
     for i_ip in range(rdm_acc.size()[-1]):
-        if use_checkpoint:
+        if checkpoint_unrolled:
             _loc_rdm= checkpoint(_loop_body, *tensors, i_ip)
         else:
             _loc_rdm= _loop_body(*tensors, i_ip)
@@ -304,7 +307,7 @@ def rdm2x3_loop(coord, state, env, sym_pos_def=False, use_checkpoint=False, \
     rdm = _sym_pos_def_rdm(rdm, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
     return rdm
 
-def rdm2x3_loop_trglringex_manual(coord, state, env, sym_pos_def=False, use_checkpoint=False, \
+def rdm2x3_loop_trglringex_manual(coord, state, env, sym_pos_def=False, checkpoint_unrolled=False, \
     verbosity=0):
     r"""
     :param coord: vertex (x,y) specifies lower left site of 2x3 subsystem
@@ -458,7 +461,7 @@ def rdm2x3_loop_trglringex_manual(coord, state, env, sym_pos_def=False, use_chec
     tensors= (C2X2_LU, C2X2_RU, T_10, T_1n1, state.site(shift_coord_10), \
         state.site(shift_coord_1n1))
     for i_ip in range(rdm_acc.size()[-1]):
-        if use_checkpoint:
+        if checkpoint_unrolled:
             _loc_rdm= checkpoint(_loop_body, *tensors, i_ip)
         else:
             _loc_rdm= _loop_body(*tensors, i_ip)
@@ -475,7 +478,8 @@ def rdm2x3_loop_trglringex_manual(coord, state, env, sym_pos_def=False, use_chec
     return rdm
 
 def rdm2x3_loop_oe(coord, state, env, open_sites=[0,1,2,3,4,5], unroll=True,\
-    sym_pos_def=False, force_cpu=False, use_checkpoint=False, verbosity=0):
+    sym_pos_def=False, force_cpu=False, checkpoint_unrolled=False, 
+    checkpoint_on_device=False,verbosity=0):
     # C1------(1)1 1(0)----T1----(3)44 44(0)----T1_x----(3)39 39(0)---T1_2x---(3)24 24(0)--C2_2x
     # 0(0)               (1,2)                 (1,2)                  (1,2)                25(1)
     # 0(0)           100  2  5             102 40 42              104 26 28                25(0)
@@ -557,11 +561,14 @@ def rdm2x3_loop_oe(coord, state, env, open_sites=[0,1,2,3,4,5], unroll=True,\
     _tmp_a=(a,a_x,a_2x,a_y,a_xy,a_2xy)
     mem_limit= env.chi**2 * a.size(4)**2 * max(a_y.size(4)**2,a_xy.size(4)**2) \
         * prod([_tmp_a[x].size(0)**2 for x in ind_os if x in [0,3,4]])
-    path, path_info= get_contraction_path(*contract_tn,unroll=[47,48] if unroll else [],\
+    if type(unroll)==bool and unroll:
+        unroll= [47,48]
+    path, path_info= get_contraction_path(*contract_tn,unroll=unroll if unroll else [],\
         names=names,path=None,who=who,\
         memory_limit=mem_limit if unroll else None)
     R= contract_with_unroll(*contract_tn,optimize=path,backend='torch',\
-        unroll=[47,48] if unroll else [],use_checkpoint=use_checkpoint)
+        unroll=unroll if unroll else [],checkpoint_unrolled=checkpoint_unrolled,
+        checkpoint_on_device=checkpoint_on_device)
 
     R = _sym_pos_def_rdm(R, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
     if force_cpu:
@@ -569,7 +576,8 @@ def rdm2x3_loop_oe(coord, state, env, open_sites=[0,1,2,3,4,5], unroll=True,\
     return R
 
 def rdm2x3_loop_oe_semimanual(coord, state, env, open_sites=[0,1,2,3,4,5], unroll=True,\
-    sym_pos_def=False, force_cpu=False, use_checkpoint=False, verbosity=0):
+    sym_pos_def=False, force_cpu=False, 
+    checkpoint_unrolled=False, checkpoint_on_device=False, verbosity=0):
     # C1------(1)1 1(0)----T1----(3)44 44(0)----T1_x----(3)39 39(0)---T1_2x---(3)24 24(0)--C2_2x
     # 0(0)               (1,2)                 (1,2)                  (1,2)                25(1)
     # 0(0)           100  2  5             102 40 42              104 26 28                25(0)
@@ -595,7 +603,7 @@ def rdm2x3_loop_oe_semimanual(coord, state, env, open_sites=[0,1,2,3,4,5], unrol
     I_left_out= [100+2*x for x in ind_os if x in [0,3]]+[100+2*x+1 for x in ind_os if x in [0,3]]
     I_right_out= [100+2*x for x in ind_os if x in [2,5]]+[100+2*x+1 for x in ind_os if x in [2,5]]
 
-    who=f"rdm2x3_{ind_os}"
+    who=f"rdm2x3_oe_semimanual_{ind_os}"
     a= state.site(coord)
     a_x= state.site( (coord[0]+1,coord[1]) )
     a_y= state.site( (coord[0],coord[1]+1) )
@@ -641,7 +649,8 @@ def rdm2x3_loop_oe_semimanual(coord, state, env, open_sites=[0,1,2,3,4,5], unrol
     left_names= tuple(x.strip() for x in ("C1, T1, T4, a, a*, T4_y, C4_y, T3_y, a_y, a_y*").split(','))
     path, path_info= get_contraction_path(*left_tn,\
         names=left_names,path=None,who=who+"_L",memory_limit=None)
-    L= contract_with_unroll(*left_tn,optimize=path,backend='torch',unroll=[])
+    L= contract_with_unroll(*left_tn,optimize=path,who=who+"_L",backend='torch',unroll=[],
+        checkpoint_on_device=checkpoint_on_device)
 
     # right edge
     right_tn= T1_2x,[39,26,28,24],C2_2x,[24,25],T2_2x,[25,27,29,36],a_2x,[I[4],26,41,37,27],a_2x.conj(),[I[5],28,43,38,29],\
@@ -650,7 +659,8 @@ def rdm2x3_loop_oe_semimanual(coord, state, env, open_sites=[0,1,2,3,4,5], unrol
     right_names= tuple(x.strip() for x in ("T1_2x, C2_2x, T2_2x, a_2x, a_2x*, T2_2xy, C3_2xy, T3_2xy, a_2xy, a_2xy*").split(','))
     path, path_info= get_contraction_path(*right_tn,\
         names=right_names,path=None,who=who+"_R",memory_limit=None)
-    R= contract_with_unroll(*right_tn,optimize=path,backend='torch',unroll=[])
+    R= contract_with_unroll(*right_tn,optimize=path,who=who+"_R",backend='torch',unroll=[],
+        checkpoint_on_device=checkpoint_on_device)
 
     joint_tn= L,[44,45,46,20,22,19]+I_left_out,\
         T3_xy,[21,23,19,51],a_xy,[I[8],47,20,21,49],a_xy.conj(),[I[9],48,22,23,50],\
@@ -665,10 +675,13 @@ def rdm2x3_loop_oe_semimanual(coord, state, env, open_sites=[0,1,2,3,4,5], unrol
     # |      |== ==a_xy==             |      |==   ||
     # |C2X2_y|-- --T_xy--  instead of |C2X2_y|-- --T_xy-- 
     # 
-    path, path_info= get_contraction_path(*joint_tn,unroll=[47,48] if unroll else [],\
+    if type(unroll)==bool and unroll:
+        unroll= [47,48]
+    path, path_info= get_contraction_path(*joint_tn,unroll=unroll if unroll else [],\
         names=names,path=None,who=who,memory_limit=L.numel()*a_xy.size(0)**2 if unroll else None) 
     res= contract_with_unroll(*joint_tn,optimize=path,backend='torch',
-        unroll=[47,48] if unroll else [],use_checkpoint=use_checkpoint,who=who,verbosity=verbosity)
+        unroll=unroll if unroll else [],checkpoint_unrolled=checkpoint_unrolled,
+        checkpoint_on_device=checkpoint_on_device,who=who,verbosity=verbosity)
 
     res = _sym_pos_def_rdm(res, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
     if force_cpu:
@@ -676,7 +689,7 @@ def rdm2x3_loop_oe_semimanual(coord, state, env, open_sites=[0,1,2,3,4,5], unrol
     return res
 
 
-def rdm3x2_loop_trglringex_manual(coord, state, env, sym_pos_def=False, use_checkpoint=False, \
+def rdm3x2_loop_trglringex_manual(coord, state, env, sym_pos_def=False, checkpoint_unrolled=False, \
     verbosity=0):
     r"""
     :param coord: vertex (x,y) specifies lower left site of 2x3 subsystem
@@ -845,7 +858,7 @@ def rdm3x2_loop_trglringex_manual(coord, state, env, sym_pos_def=False, use_chec
     tensors= (C2X2_LU, C2X2_RD, T_0n1, T_1n1, state.site(shift_coord_0n1), \
         state.site(shift_coord_1n1))
     for i_ip in range(rdm_acc.size()[-1]):
-        if use_checkpoint:
+        if checkpoint_unrolled:
             _loc_rdm= checkpoint(_loop_body, *tensors, i_ip)
         else:
             _loc_rdm= _loop_body(*tensors, i_ip)
@@ -862,7 +875,8 @@ def rdm3x2_loop_trglringex_manual(coord, state, env, sym_pos_def=False, use_chec
     return rdm
 
 def rdm3x2_loop_oe_semimanual(coord, state, env, open_sites=[0,1,2,3,4,5], unroll=True,\
-    sym_pos_def=False, force_cpu=False, use_checkpoint=False, verbosity=0):
+    sym_pos_def=False, force_cpu=False, 
+    checkpoint_unrolled=False, checkpoint_on_device=False, verbosity=0):
     # C1------(1)1 1(0)----T1----(3)13 13(0)----T1_x-----(3)7 7(0)-----C2_x
     # 0(0)               (1,2)                 (1,2)                   8(1)
     # 0(0)           100  2  5             106 9 11                    8(0)
@@ -894,7 +908,7 @@ def rdm3x2_loop_oe_semimanual(coord, state, env, open_sites=[0,1,2,3,4,5], unrol
     I_top_out= [100+2*x for x in ind_os if x in [0,3]]+[100+2*x+1 for x in ind_os if x in [0,3]]
     I_bottom_out= [100+2*x for x in ind_os if x in [2,5]]+[100+2*x+1 for x in ind_os if x in [2,5]]
 
-    who=f"rdm3x2_{ind_os}"
+    who=f"rdm3x2_oe_semimanual_{ind_os}"
     a= state.site(coord)
     a_x= state.site( (coord[0]+1,coord[1]) )
     a_y= state.site( (coord[0],coord[1]+1) )
@@ -940,8 +954,9 @@ def rdm3x2_loop_oe_semimanual(coord, state, env, open_sites=[0,1,2,3,4,5], unrol
         [18,19,20,85,86,87]+I_top_out
     top_names= tuple(x.strip() for x in ("C1, T1, T4, a, a*, T1_x, C2_x, T2_y, a_x, a_x*").split(','))
     path, path_info= get_contraction_path(*top_tn,\
-        names=top_names,path=None,who=who,memory_limit=None)
-    TE= contract_with_unroll(*top_tn,optimize=path,backend='torch',unroll=[])
+        names=top_names,path=None,who=who+"_TE",memory_limit=None)
+    TE= contract_with_unroll(*top_tn,optimize=path,who=who+"_TE",backend='torch',unroll=[],\
+        checkpoint_on_device=checkpoint_on_device)
 
     # bottom edge
     bottom_tn= T3_x2y,[42,44,52,40],C3_x2y,[41,40],T2_x2y,[57,43,45,41],a_x2y,[I[10],58,53,42,43],a_x2y.conj(),[I[11],59,54,44,45],\
@@ -949,8 +964,9 @@ def rdm3x2_loop_oe_semimanual(coord, state, env, open_sites=[0,1,2,3,4,5], unrol
         [80,81,82,58,59,57]+I_bottom_out
     bottom_names= tuple(x.strip() for x in ("T3_x2y, C3_x2y, T2_x2y, a_x2y, a_x2y*, T4_2y, C4_2y, T3_2y, a_2y, a_2y*").split(','))
     path, path_info= get_contraction_path(*bottom_tn,\
-        names=bottom_names,path=None,who=who,memory_limit=None)
-    BE= contract_with_unroll(*bottom_tn,optimize=path,backend='torch',unroll=[])
+        names=bottom_names,path=None,who=who+"_BE",memory_limit=None)
+    BE= contract_with_unroll(*bottom_tn,optimize=path,who=who+"_BE",backend='torch',unroll=[],\
+        checkpoint_on_device=checkpoint_on_device)
 
     joint_tn= TE,[18,19,20,85,86,87]+I_top_out,\
         T4_y,[18,80,16,17],a_y,[I[2],19,16,81,83],a_y.conj(),[I[3],20,17,82,84],\
@@ -965,10 +981,13 @@ def rdm3x2_loop_oe_semimanual(coord, state, env, open_sites=[0,1,2,3,4,5], unrol
     # |      |== ==a==             |      |==   ||
     # |C2X2  |-- --T--  instead of |C2X2  |-- --T-- 
     # 
-    path, path_info= get_contraction_path(*joint_tn,unroll=[83,84] if unroll else [],\
+    if type(unroll)==bool and unroll:
+        unroll= [83,84]
+    path, path_info= get_contraction_path(*joint_tn,unroll=unroll if unroll else [],\
         names=names,path=None,who=who,memory_limit=TE.numel()*a_y.size(0)**2 if unroll else None) 
     res= contract_with_unroll(*joint_tn,optimize=path,backend='torch',
-        unroll=[83,84] if unroll else [],use_checkpoint=use_checkpoint,who=who,verbosity=verbosity)
+        unroll=unroll if unroll else [],checkpoint_unrolled=checkpoint_unrolled,
+        checkpoint_on_device=checkpoint_on_device,who=who,verbosity=verbosity)
 
     res = _sym_pos_def_rdm(res, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
     if force_cpu:
@@ -976,7 +995,8 @@ def rdm3x2_loop_oe_semimanual(coord, state, env, open_sites=[0,1,2,3,4,5], unrol
     return res
 
 def rdm3x2_loop_oe(coord, state, env, open_sites=[0,1,2,3,4,5], unroll=True,\
-    sym_pos_def=False, force_cpu=False, use_checkpoint=False, verbosity=0):
+    sym_pos_def=False, force_cpu=False, checkpoint_unrolled=False, 
+    checkpoint_on_device=False, verbosity=0):
     # C1------(1)1 1(0)----T1----(3)13 13(0)----T1_x-----(3)7 7(0)-----C2_x
     # 0(0)               (1,2)                 (1,2)                   8(1)
     # 0(0)           100  2  5             106 9 11                    8(0)
@@ -1065,11 +1085,14 @@ def rdm3x2_loop_oe(coord, state, env, open_sites=[0,1,2,3,4,5], unroll=True,\
     _tmp_a=(a, a_y, a_2y, a_x, a_xy, a_x2y)
     mem_limit= env.chi**2 * a_x.size(3)**2 * max(a.size(3)**2,a_y.size(3)**2) \
         * prod([_tmp_a[x].size(0)**2 for x in ind_os if x in [0,1,3]])
-    path, path_info= get_contraction_path(*contract_tn,unroll=[83,84] if unroll else [],\
+    if type(unroll)==bool and unroll:
+        unroll= [83,84]
+    path, path_info= get_contraction_path(*contract_tn,unroll=unroll if unroll else [],\
         names=names,path=None,who=who,\
         memory_limit=mem_limit if unroll else None)
     R= contract_with_unroll(*contract_tn,optimize=path,backend='torch',\
-        unroll=[83,84] if unroll else [],use_checkpoint=use_checkpoint)
+        unroll=unroll if unroll else [],checkpoint_unrolled=checkpoint_unrolled,
+        checkpoint_on_device=checkpoint_on_device)
 
     R = _sym_pos_def_rdm(R, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
     if force_cpu:

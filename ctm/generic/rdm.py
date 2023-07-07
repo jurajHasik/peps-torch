@@ -900,7 +900,8 @@ def rdm2x2_NNN_11(coord, state, env, sym_pos_def=False, verbosity=0):
     return rdm
 
 
-def rdm2x2_NNN_1n1(coord, state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
+def rdm2x2_NNN_1n1(coord, state, env, sym_pos_def=False, force_cpu=False, 
+    unroll=False, checkpoint_unrolled=False, checkpoint_on_device=False, verbosity=0):
     r"""
     :param coord: vertex (x,y) specifies lower left site of 2x2 subsystem
     :param state: underlying wavefunction
@@ -943,6 +944,7 @@ def rdm2x2_NNN_1n1(coord, state, env, sym_pos_def=False, force_cpu=False, verbos
     """
     if oe:
         return rdm2x2_NNN_1n1_oe(coord, state, env, sym_pos_def=sym_pos_def, force_cpu=force_cpu,\
+            unroll=unroll, checkpoint_unrolled=checkpoint_unrolled, checkpoint_on_device=checkpoint_on_device,
             verbosity=verbosity)
     else:
         return rdm2x2_NNN_1n1_legacy(coord, state, env, sym_pos_def=sym_pos_def, force_cpu=force_cpu,\
@@ -1001,7 +1003,9 @@ def rdm2x2_NNN_1n1_legacy(coord, state, env, sym_pos_def=False, force_cpu=False,
 
     return rdm
 
-def rdm2x2_NNN_1n1_oe(coord, state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
+def rdm2x2_NNN_1n1_oe(coord, state, env, sym_pos_def=False, force_cpu=False, 
+    unroll=False, checkpoint_unrolled=False, checkpoint_on_device=False,
+    verbosity=0):
     # C1_ny--(1)1 1(0)----T1_ny--(3)36 36(0)----T1_xny--(3)18 18(0)----C2_xny
     # 0(0)               (1,2)                 (1,2)                   19(1)
     # 0(0)                2  5              22 20 23                   19(0)
@@ -1019,7 +1023,7 @@ def rdm2x2_NNN_1n1_oe(coord, state, env, sym_pos_def=False, force_cpu=False, ver
     # 8(1)                10 13                29 32                  26(3)
     # 8(0)                (0,1)                (0,1)                  26(0)
     # C4-----(1)7 7(2)-----T3----(3)41 41(2)----T3_x----(3)27 27(1)----C3_x
-    who="rdm2x2_NNN_1n1"
+    who="rdm2x2_NNN_1n1_oe"
     a= state.site(coord)
     a_x= state.site( (coord[0]+1,coord[1]) )
     a_ny= state.site( (coord[0],coord[1]-1) )
@@ -1061,8 +1065,14 @@ def rdm2x2_NNN_1n1_oe(coord, state, env, sym_pos_def=False, force_cpu=False, ver
     # 
     # path= ((6, 7), (5, 18), (6, 17), (5, 16), (0, 2), (0, 14), (1, 13), (0, 12), (1, 2), (0, 10),\
     #     (1, 9), (0, 8), (1, 2), (0, 6), (1, 5), (0, 4), (2, 3), (1, 2), (0, 1))
-    path, path_info= get_contraction_path(*contract_tn,names=names,path=None,who=who)
-    R= oe.contract(*contract_tn,optimize=path,backend='torch')
+    if type(unroll)==bool and unroll:
+        unroll= [11,14,22,25]
+    path, path_info= get_contraction_path(*contract_tn,names=names,path=None,\
+        unroll=unroll if unroll else [],who=who)
+    R= contract_with_unroll(*contract_tn,optimize=path,unroll=unroll if unroll else [],\
+        checkpoint_unrolled=checkpoint_unrolled,
+        checkpoint_on_device=checkpoint_on_device,
+        backend='torch',who=who,verbosity=verbosity)
 
     R = _sym_pos_def_rdm(R, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
     if force_cpu:
@@ -1071,7 +1081,8 @@ def rdm2x2_NNN_1n1_oe(coord, state, env, sym_pos_def=False, force_cpu=False, ver
 
 
 def rdm2x2(coord, state, env, open_sites=[0,1,2,3],\
-        unroll=[], use_checkpoint=False, sym_pos_def=False, force_cpu=False, verbosity=0):
+        unroll=[], checkpoint_unrolled=False, checkpoint_on_device=False, 
+        sym_pos_def=False, force_cpu=False, verbosity=0):
     r"""
     :param coord: vertex (x,y) specifies upper left site of 2x2 subsystem
     :param state: underlying wavefunction
@@ -1119,8 +1130,8 @@ def rdm2x2(coord, state, env, open_sites=[0,1,2,3],\
     """
     if oe:
         return rdm2x2_oe(coord, state, env, open_sites=open_sites, unroll=unroll, 
-            use_checkpoint=use_checkpoint, sym_pos_def=sym_pos_def, force_cpu=force_cpu, 
-            verbosity=verbosity)
+            checkpoint_unrolled=checkpoint_unrolled, checkpoint_on_device=checkpoint_on_device,
+            sym_pos_def=sym_pos_def, force_cpu=force_cpu, verbosity=verbosity)
     else:
         return rdm2x2_legacy(coord, state, env, sym_pos_def=sym_pos_def, force_cpu=force_cpu,\
             verbosity=verbosity)
@@ -1357,8 +1368,9 @@ def rdm2x2_legacy(coord, state, env, sym_pos_def=False, verbosity=0):
 
     return rdm
 
-def rdm2x2_oe(coord, state, env, open_sites=[0,1,2,3], unroll=[], 
-    use_checkpoint=False, sym_pos_def=False, force_cpu=False, verbosity=0):
+def rdm2x2_oe(coord, state, env, open_sites=[0,1,2,3], unroll=False, 
+    checkpoint_unrolled=False, checkpoint_on_device=False,
+    sym_pos_def=False, force_cpu=False, verbosity=0):
     # C1------(1)1 1(0)----T1----(3)36 36(0)----T1_x----(3)18 18(0)----C2_x
     # 0(0)               (1,2)                 (1,2)                   19(1)
     # 0(0)           100  2  5             102 20 23                   19(0)
@@ -1381,10 +1393,8 @@ def rdm2x2_oe(coord, state, env, open_sites=[0,1,2,3], unroll=[],
     assert ind_os <= {0,1,2,3},"allowed site labels are 0,1,2, and 3"
     I= sum([[100+2*x,100+2*x+1] if x in ind_os else [100+2*x]*2 for x in [0,1,2,3]],[])
     I_out= [100+2*x for x in ind_os]+[100+2*x+1 for x in ind_os]
-    assert set(unroll)<=ind_os,"Unrolling is assummed to be done over open sites"
-    unroll= [100+2*x for x in unroll]+[100+2*x+1 for x in unroll]
 
-    who=f"rdm2x2_{ind_os}"
+    who=f"rdm2x2_oe_{ind_os}"
     a= state.site(coord)
     a_x= state.site( (coord[0]+1,coord[1]) )
     a_y= state.site( (coord[0],coord[1]+1) )
@@ -1427,10 +1437,12 @@ def rdm2x2_oe(coord, state, env, open_sites=[0,1,2,3], unroll=[],
     # path= ((6, 7), (5, 18), (6, 17), (5, 16), (0, 2), (0, 14), (1, 13), (0, 12), (1, 2), (0, 10),\
     #     (1, 9), (0, 8), (1, 2), (0, 6), (1, 5), (0, 4), (2, 3), (1, 2), (0, 1))
     #
+    if type(unroll)==bool and unroll:
+        unroll= I_out
     path, path_info= get_contraction_path(*contract_tn,unroll=unroll,\
         names=names,path=None,who=who)
-    R= contract_with_unroll(*contract_tn,unroll=unroll,\
-        optimize=path,backend='torch',use_checkpoint=use_checkpoint)
+    R= contract_with_unroll(*contract_tn,unroll=unroll,optimize=path,who=who,backend='torch',
+        checkpoint_unrolled=checkpoint_unrolled,checkpoint_on_device=checkpoint_on_device)
 
     R = _sym_pos_def_rdm(R, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
     if force_cpu:
