@@ -1441,8 +1441,9 @@ def rdm2x2_oe(coord, state, env, open_sites=[0,1,2,3], unroll=False,
         unroll= I_out
     path, path_info= get_contraction_path(*contract_tn,unroll=unroll,\
         names=names,path=None,who=who)
-    R= contract_with_unroll(*contract_tn,unroll=unroll,optimize=path,who=who,backend='torch',
-        checkpoint_unrolled=checkpoint_unrolled,checkpoint_on_device=checkpoint_on_device)
+    R= contract_with_unroll(*contract_tn,unroll=unroll,optimize=path,backend='torch',
+        checkpoint_unrolled=checkpoint_unrolled,checkpoint_on_device=checkpoint_on_device,
+        who=who,verbosity=verbosity)
 
     R = _sym_pos_def_rdm(R, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
     if force_cpu:

@@ -24,7 +24,10 @@ log = logging.getLogger(__name__)
 def _debug_allocated_tensors(cuda=None,totals_only=False):
     if cuda and cuda!="cpu":
         torch.cuda.synchronize(device=cuda)
-    af.device.sync(device=af.device.get_device())
+    try:
+        af.device.sync(device=af.device.get_device())
+    except:
+        pass
     report=""
     # tot_cuda=0
     # for obj in gc.get_objects():
@@ -466,7 +469,7 @@ def contract_with_unroll(*args, **kwargs):
             *unrolled_ops
         )
 
-        if verbosity>0:
+        if verbosity>1:
             log.info(who+f" unrolled loop {ui_vals}\n"
                 +_debug_allocated_tensors(cuda=args[0].device,totals_only=True))
 
