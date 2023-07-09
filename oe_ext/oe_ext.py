@@ -32,11 +32,15 @@ def _debug_allocated_tensors(device=None,global_args=None,totals_only=False):
         cuda= device
     if cuda and cuda!="cpu":
         torch.cuda.synchronize(device=cuda)
+    report=""
     try:
         af.device.sync(device=af.device.get_device())
+        _af_mem= af.device.device_mem_info()
+        _af_mem['alloc']['bytes_GiB']= _af_mem['alloc']['bytes']/1024**3
+        _af_mem['lock']['bytes_GiB']= _af_mem['lock']['bytes']/1024**3
+        report=report+f"AF {_af_mem}\n"
     except:
         pass
-    report=""
     tot_cuda=0
     for obj in gc.get_objects():
         try:
@@ -501,12 +505,28 @@ def contract_with_unroll_noconstexpr_in_checkpoint(*args, **kwargs):
     :param unroll: indices to unroll
     :param use_checkpoint:
     """
+    checkpoint_on_device = kwargs.pop("checkpoint_on_device",False)
+    if checkpoint_on_device in ['NONE','none','None',None]:
+        checkpoint_on_device= False
+    if checkpoint_on_device:
+        # split args into tensors and index groups
+        igs,ts= args[1::2], args[0 : 2 * (len(args) // 2) : 2]
+        source_device= ts[0].device
+
+        def _core_f(*ts):
+            ts_moved= (x.to(device=checkpoint_on_device) for x in ts)
+            args_moved= tuple(a for t_ig in zip(ts_moved,igs) for a in t_ig) + (args[-1],) if len(args)%2==1 else ()
+            res= contract_with_unroll(*args_moved,**kwargs)
+            return res.to(device=source_device)
+
+        return checkpoint(_core_f,*ts)
+
     who = kwargs.pop("who","unknown")
     verbosity = kwargs.pop("verbosity", 0)
     unroll = kwargs.pop("unroll", [])
-    use_checkpoint = kwargs.pop("use_checkpoint", False)
+    checkpoint_unrolled = kwargs.pop("checkpoint_unrolled", False)
 
-    if len(unroll) == 0:
+    if not unroll or len(unroll) == 0:
         return oe.contract(*args, **kwargs)
 
     # We are unrolling. In general, there will be several constant
@@ -525,7 +545,7 @@ def contract_with_unroll_noconstexpr_in_checkpoint(*args, **kwargs):
         idx for idx, ig in enumerate(args[1::2]) if not any([i in unroll for i in ig])
     )
 
-    if not use_checkpoint:
+    if not checkpoint_unrolled:
         kwargs["_constants_dict"] = {
             i: args[0 : 2 * (len(args) // 2) : 2][i] for i in constants
         }
@@ -572,7 +592,7 @@ def contract_with_unroll_noconstexpr_in_checkpoint(*args, **kwargs):
 
     if verbosity>0:
         log.info(who+" before unrolled loop\n"
-            +_debug_allocated_tensors(cuda=args[0].device,totals_only=True))
+            +_debug_allocated_tensors(device=args[0].device,totals_only=True))
 
     for ui_vals in product(*tuple(range(i_to_s[i]) for i in unroll)):
         ui_map = {u: v for u, v in zip(unroll, ui_vals)}
@@ -580,7 +600,7 @@ def contract_with_unroll_noconstexpr_in_checkpoint(*args, **kwargs):
         ig_out = tuple(ui_map[i] if i in unroll else slice(None) for i in args[-1])
         ig_contracted_unrolled = tuple(ui_map[i] for i in unroll if not (i in args[-1]))
 
-        if use_checkpoint:
+        if checkpoint_unrolled:
             # ops containing all tensors, narrowed by unrolled indices if applicable
             unrolled_ops = tuple(
                 t[tuple(ui_map[i] if i in unroll else slice(None) for i in ig)]
@@ -601,9 +621,9 @@ def contract_with_unroll_noconstexpr_in_checkpoint(*args, **kwargs):
                 *unrolled_ops
             )
 
-        if verbosity>0:
+        if verbosity>1:
             log.info(who+f" unrolled loop {ui_vals}\n"
-                +_debug_allocated_tensors(cuda=args[0].device,totals_only=True))
+                +_debug_allocated_tensors(device=args[0].device,totals_only=True))
 
     result = oe.contract(
         partials, tuple(args[-1]) + ig_out_contracted_unrolled, args[-1]
@@ -611,7 +631,7 @@ def contract_with_unroll_noconstexpr_in_checkpoint(*args, **kwargs):
 
     if verbosity>0:
         log.info(who+" unrolled loop concluded\n"
-            +_debug_allocated_tensors(cuda=args[0].device,totals_only=True))
+            +_debug_allocated_tensors(device=args[0].device,totals_only=True))
 
     return result
 

@@ -185,12 +185,13 @@ def main():
         opt_args= opt_context["opt_args"]
 
         # build state with normalized tensors
-        sites_n= {}
-        for c in state.sites.keys():
-            with torch.no_grad():
-                _scale= state.sites[c].abs().max()
-            sites_n[c]= state.sites[c]/_scale
-        state_n= IPEPS(sites_n, vertexToSite=lattice_to_site, lX=state.lX, lY=state.lY)
+        state_n= state
+        # sites_n= {}
+        # for c in state.sites.keys():
+        #     with torch.no_grad():
+        #         _scale= state.sites[c].abs().max()
+        #     sites_n[c]= state.sites[c]/_scale
+        # state_n= IPEPS(sites_n, vertexToSite=lattice_to_site, lX=state.lX, lY=state.lY)
 
         # possibly re-initialize the environment
         if opt_args.opt_ctm_reinit:
@@ -220,6 +221,7 @@ def main():
             obs_values, obs_labels = eval_obs_f(state,ctm_env)
             
             # test ENV sensitivity
+            # for J2 or Jchi or J4 > 0, energy computation is expensive
             if args.test_env_sensitivity:
                 loc_ctm_args= copy.deepcopy(opt_context["ctm_args"])
                 loc_ctm_args.ctm_max_iter= 1
@@ -266,7 +268,7 @@ def main():
         state_g= IPEPS_WEIGHTED(state=state).gauge()
         state= state_g.absorb_weights()
     state.normalize_()
-    optimize_state(state, ctm_env, loss_fn, obs_fn=obs_fn, post_proc=post_proc)
+    optimize_state(state, ctm_env, loss_fn, obs_fn=obs_fn)#, post_proc=post_proc)
 
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"

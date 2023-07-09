@@ -16,7 +16,9 @@ def eval_nn_per_site(coord,state,env,R,Rinv,op_nn,op_nn_diag,
     energy_nn, energy_nn_diag= 0., 0.
     #
     # A(0,0)--RA(1,0) (for 120deg A--B)
-    tmp_rdm_2x1= rdm.rdm2x1(coord,state,env,force_cpu=force_cpu)
+    tmp_rdm_2x1= rdm.rdm2x1(coord,state,env,force_cpu=force_cpu,
+        unroll=unroll.get('rdm2x1',False),checkpoint_unrolled=checkpoint_unrolled,
+        checkpoint_on_device=checkpoint_on_device)
     energy_nn+= torch.einsum('ijab,abij',
         torch.einsum('ixay,xj,yb->ijab',op_nn,R,R),
         tmp_rdm_2x1)
@@ -25,7 +27,9 @@ def eval_nn_per_site(coord,state,env,R,Rinv,op_nn,op_nn_diag,
     # A(0,0)                 A
     # |                      |
     # R^-1A(0,1) (for 120deg C)
-    tmp_rdm_1x2= rdm.rdm1x2(coord,state,env,force_cpu=force_cpu)
+    tmp_rdm_1x2= rdm.rdm1x2(coord,state,env,force_cpu=force_cpu,
+        unroll=unroll.get('rdm1x2',False),checkpoint_unrolled=checkpoint_unrolled,
+        checkpoint_on_device=checkpoint_on_device)
     energy_nn+= torch.einsum('ijab,abij',
         torch.einsum('ixay,xj,yb->ijab',op_nn,Rinv,Rinv),
         tmp_rdm_1x2)

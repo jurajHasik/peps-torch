@@ -300,7 +300,9 @@ def rdm1x1_sl(coord, state, env, operator=None, sym_pos_def=False, force_cpu=Fal
     return R
 
 
-def rdm2x1(coord, state, env, mode='sl', sym_pos_def=False, force_cpu=False, verbosity=0):
+def rdm2x1(coord, state, env, mode='sl', sym_pos_def=False, force_cpu=False, 
+    unroll=[], checkpoint_unrolled=False, checkpoint_on_device=False,
+    verbosity=0):
     r"""
     :param coord: vertex (x,y) specifies position of 2x1 subsystem
     :param state: underlying wavefunction
@@ -339,6 +341,8 @@ def rdm2x1(coord, state, env, mode='sl', sym_pos_def=False, force_cpu=False, ver
     """
     if mode=='sl':
         return rdm2x1_sl(coord,state,env,sym_pos_def=sym_pos_def,force_cpu=force_cpu,\
+            unroll=unroll, 
+            checkpoint_unrolled=checkpoint_unrolled, checkpoint_on_device=checkpoint_on_device,
             verbosity=verbosity)
     else:
         return rdm2x1_dl(coord,state,env,sym_pos_def=sym_pos_def,force_cpu=force_cpu,\
@@ -494,7 +498,8 @@ def rdm2x1_dl(coord, state, env, sym_pos_def=False, force_cpu=False, verbosity=0
 
     return rdm
 
-def rdm2x1_sl(coord, state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
+def rdm2x1_sl(coord, state, env, sym_pos_def=False, force_cpu=False, unroll=False, 
+    checkpoint_unrolled=False, checkpoint_on_device=False, verbosity=0):
     # C1--(1)1 1(0)----T1--(3)24 24(0)--T1_x--(3)12 12(0)----C2_x
     # 0(0)            (1,2)             (1,2)                13(1)
     # 0(0)          4  2  5         16  14 17                13(0)
@@ -539,8 +544,10 @@ def rdm2x1_sl(coord, state, env, sym_pos_def=False, force_cpu=False, verbosity=0
     # This (typical) strategy is optimal, when X >> D^2 >> phys_dim
     #
     # path=((2, 5), (0, 12), (3, 11), (2, 10), (1, 9), (0, 8), (2, 5), (1, 6), (3, 5), (2, 4), (1, 3), (0, 2), (0, 1))
-    path, path_info= get_contraction_path(*contract_tn,names=names,path=None,who=who)
-    R= oe.contract(*contract_tn,optimize=path,backend='torch')
+    path, path_info= get_contraction_path(*contract_tn,names=names,path=None,unroll=unroll,who=who)
+    R= contract_with_unroll(*contract_tn,optimize=path,backend='torch',unroll=unroll,
+        checkpoint_unrolled=checkpoint_unrolled,checkpoint_on_device=checkpoint_on_device,
+        who=who,verbosity=verbosity)
 
     R = _sym_pos_def_rdm(R, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
     if force_cpu:
@@ -548,7 +555,9 @@ def rdm2x1_sl(coord, state, env, sym_pos_def=False, force_cpu=False, verbosity=0
     return R
 
 
-def rdm1x2(coord, state, env, mode='sl', sym_pos_def=False, force_cpu=False, verbosity=0):
+def rdm1x2(coord, state, env, mode='sl', sym_pos_def=False, force_cpu=False, 
+    unroll=[], checkpoint_unrolled=False, checkpoint_on_device=False,
+    verbosity=0):
     r"""
     :param coord: vertex (x,y) specifies position of 1x2 subsystem
     :param state: underlying wavefunction
@@ -588,7 +597,9 @@ def rdm1x2(coord, state, env, mode='sl', sym_pos_def=False, force_cpu=False, ver
     at vertices ``coord``, ``coord+(0,1)`` are left uncontracted
     """
     if mode=='sl':
-        return rdm1x2_sl(coord, state, env, sym_pos_def=sym_pos_def, force_cpu=force_cpu,\
+        return rdm1x2_sl(coord, state, env, sym_pos_def=sym_pos_def, force_cpu=force_cpu,
+            unroll=unroll, 
+            checkpoint_unrolled=checkpoint_unrolled, checkpoint_on_device=checkpoint_on_device,
             verbosity=verbosity)
     else:
         return rdm1x2_dl(coord, state, env, sym_pos_def=sym_pos_def, force_cpu=force_cpu,\
@@ -750,7 +761,8 @@ def rdm1x2_dl(coord, state, env, sym_pos_def=False, force_cpu=False, verbosity=0
 
     return rdm
 
-def rdm1x2_sl(coord, state, env, sym_pos_def=False, force_cpu=False, verbosity=0):
+def rdm1x2_sl(coord, state, env, sym_pos_def=False, force_cpu=False, unroll=False, 
+            checkpoint_unrolled=False, checkpoint_on_device=False, verbosity=0):
     # C1--(1)1 1(0)----T1--(3)9 9(0)--------C2
     # 0(0)            (1,2)                 8(1)
     # 0(0)          4  2  5                 8(0)
@@ -802,8 +814,10 @@ def rdm1x2_sl(coord, state, env, sym_pos_def=False, force_cpu=False, verbosity=0
     # This (typical) strategy is optimal, when X >> D^2 >> phys_dim
     #
     # path= ((1, 6), (0, 12), (3, 11), (2, 10), (1, 9), (0, 8), (2, 5), (1, 6), (3, 5), (2, 4), (1, 3), (0, 2), (0, 1))
-    path, path_info= get_contraction_path(*contract_tn,names=names,path=None,who=who)
-    R= oe.contract(*contract_tn,optimize=path,backend='torch')
+    path, path_info= get_contraction_path(*contract_tn,names=names,path=None,unroll=unroll,who=who)
+    R= contract_with_unroll(*contract_tn,optimize=path,backend='torch',unroll=unroll,
+        checkpoint_unrolled=checkpoint_unrolled,checkpoint_on_device=checkpoint_on_device,
+        who=who,verbosity=verbosity)
 
     R = _sym_pos_def_rdm(R, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
     if force_cpu:
