@@ -21,7 +21,15 @@ except:
 log = logging.getLogger(__name__)
 
 
-def _debug_allocated_tensors(cuda=None,totals_only=False):
+def _debug_allocated_tensors(device=None,global_args=None,totals_only=False):
+    if global_args and not device:
+        cuda= global_args.device
+        if cuda == "cpu":
+            cuda= global_args.offload_to_gpu
+            if cuda in ['None','none','NONE']:
+                return
+    if device:
+        cuda= device
     if cuda and cuda!="cpu":
         torch.cuda.synchronize(device=cuda)
     try:
@@ -29,17 +37,17 @@ def _debug_allocated_tensors(cuda=None,totals_only=False):
     except:
         pass
     report=""
-    # tot_cuda=0
-    # for obj in gc.get_objects():
-    #     try:
-    #         if torch.is_tensor(obj) or (hasattr(obj, 'data') and torch.is_tensor(obj.data)):
-    #             if not totals_only:
-    #                 report=report+f"{type(obj)} {obj.size()}\n"
-    #             if obj.is_cuda:
-    #                 tot_cuda+= obj.numel() * obj.element_size()
-    #     except: 
-    #         pass
-    # report=report+f"tot_cuda {tot_cuda/1024**3} GiB\n"
+    tot_cuda=0
+    for obj in gc.get_objects():
+        try:
+            if torch.is_tensor(obj) or (hasattr(obj, 'data') and torch.is_tensor(obj.data)):
+                if not totals_only:
+                    report=report+f"{type(obj)} {obj.size()}\n"
+                if obj.is_cuda:
+                    tot_cuda+= obj.numel() * obj.element_size()
+        except: 
+            pass
+    report=report+f"tot_cuda {tot_cuda/1024**3} GiB\n"
     if cuda and cuda!="cpu":
         try:
             cp=subprocess.run(["nvidia-smi"], capture_output=True, text=True)
@@ -450,7 +458,7 @@ def contract_with_unroll(*args, **kwargs):
 
     if verbosity>0:
         log.info(who+" before unrolled loop\n"
-            +_debug_allocated_tensors(cuda=args[0].device,totals_only=True))
+            +_debug_allocated_tensors(device=args[0].device,totals_only=True))
 
     for ui_vals in product(*tuple(range(i_to_s[i]) for i in unroll)):
         ui_map = {u: v for u, v in zip(unroll, ui_vals)}
@@ -471,7 +479,7 @@ def contract_with_unroll(*args, **kwargs):
 
         if verbosity>1:
             log.info(who+f" unrolled loop {ui_vals}\n"
-                +_debug_allocated_tensors(cuda=args[0].device,totals_only=True))
+                +_debug_allocated_tensors(device=args[0].device,totals_only=True))
 
     result = oe.contract(
         partials, tuple(args[-1]) + ig_out_contracted_unrolled, args[-1]
@@ -479,7 +487,7 @@ def contract_with_unroll(*args, **kwargs):
 
     if verbosity>0:
         log.info(who+" unrolled loop concluded\n"
-            +_debug_allocated_tensors(cuda=args[0].device,totals_only=True))
+            +_debug_allocated_tensors(device=args[0].device,totals_only=True))
 
     return result
 
