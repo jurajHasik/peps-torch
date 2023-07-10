@@ -30,7 +30,7 @@ def _debug_allocated_tensors(device=None,global_args=None,totals_only=False):
                 return
     if device:
         cuda= device
-    if cuda and cuda!="cpu":
+    if cuda and cuda!=torch.device("cpu"):
         torch.cuda.synchronize(device=cuda)
     report=""
     try:
@@ -42,15 +42,21 @@ def _debug_allocated_tensors(device=None,global_args=None,totals_only=False):
     except:
         pass
     tot_cuda=0
+    _t= {}
     for obj in gc.get_objects():
         try:
             if torch.is_tensor(obj) or (hasattr(obj, 'data') and torch.is_tensor(obj.data)):
-                if not totals_only:
-                    report=report+f"{type(obj)} {obj.size()}\n"
-                if obj.is_cuda:
-                    tot_cuda+= obj.numel() * obj.element_size()
+                if obj.data_ptr() in _t:
+                    _t[obj.data_ptr()]['count']=+1
+                else:
+                    _t[obj.data_ptr()]={'count': 1, 'device': {obj.device}, 'shape': obj.size(), \
+                        'size': obj.numel()*obj.element_size()}
         except: 
             pass
+    if not totals_only:
+        for ptr,row in _t.items():
+            report=report+f"{ptr} {row['count']} {row['device']} {row['shape']}\n"
+            tot_cuda+= row['size']
     report=report+f"tot_cuda {tot_cuda/1024**3} GiB\n"
     if cuda and cuda!="cpu":
         try:
@@ -352,7 +358,7 @@ def _get_contraction_path_info(path, *operands, **kwargs):
     return path_print, mem_list
 
 
-def contract_with_unroll(*args, **kwargs):
+def contract_with_unroll_compute_constants(*args, **kwargs):
     r"""Extension of opt_einsum's contract allowing for index unrolling
     and use of checkpointing over unrolled loop.
 
@@ -361,9 +367,10 @@ def contract_with_unroll(*args, **kwargs):
     :param unroll: indices to unroll
     :param checkpoint_unrolled:
     """
+    verbosity = kwargs.get("verbosity", 0)
     checkpoint_on_device = kwargs.pop("checkpoint_on_device",False)
-    if checkpoint_on_device in ['NONE','none','None',None]:
-        checkpoint_on_device= False
+    if checkpoint_on_device in ['NONE','none','None',None]: checkpoint_on_device= False
+
     if checkpoint_on_device:
         # split args into tensors and index groups
         igs,ts= args[1::2], args[0 : 2 * (len(args) // 2) : 2]
@@ -375,7 +382,12 @@ def contract_with_unroll(*args, **kwargs):
             res= contract_with_unroll(*args_moved,**kwargs)
             return res.to(device=source_device)
 
-        return checkpoint(_core_f,*ts)
+        res= checkpoint(_core_f,*ts)
+        if verbosity>0:
+            log.info("After checkpointed contract_with_unroll_mode2\n"
+                +_debug_allocated_tensors(device=checkpoint_on_device,totals_only=True)
+            )
+        return res
 
     who = kwargs.pop("who","unknown")
     verbosity = kwargs.pop("verbosity", 0)
@@ -491,12 +503,13 @@ def contract_with_unroll(*args, **kwargs):
 
     if verbosity>0:
         log.info(who+" unrolled loop concluded\n"
-            +_debug_allocated_tensors(device=args[0].device,totals_only=True))
+            +_debug_allocated_tensors(device=args[0].device,totals_only=False))
 
     return result
 
-
-def contract_with_unroll_noconstexpr_in_checkpoint(*args, **kwargs):
+# IF checkpoint_on_device moves all ops to checkpoint on device
+# does not use constant expressions in opt_einsum contract
+def contract_with_unroll(*args, **kwargs):
     r"""Extension of opt_einsum's contract allowing for index unrolling
     and use of checkpointing over unrolled loop.
 
@@ -505,9 +518,10 @@ def contract_with_unroll_noconstexpr_in_checkpoint(*args, **kwargs):
     :param unroll: indices to unroll
     :param use_checkpoint:
     """
+    verbosity = kwargs.get("verbosity", 0)
     checkpoint_on_device = kwargs.pop("checkpoint_on_device",False)
-    if checkpoint_on_device in ['NONE','none','None',None]:
-        checkpoint_on_device= False
+    if checkpoint_on_device in ['NONE','none','None',None]: checkpoint_on_device= False
+
     if checkpoint_on_device:
         # split args into tensors and index groups
         igs,ts= args[1::2], args[0 : 2 * (len(args) // 2) : 2]
@@ -519,7 +533,12 @@ def contract_with_unroll_noconstexpr_in_checkpoint(*args, **kwargs):
             res= contract_with_unroll(*args_moved,**kwargs)
             return res.to(device=source_device)
 
-        return checkpoint(_core_f,*ts)
+        res= checkpoint(_core_f,*ts)
+        if verbosity>0:
+            log.info("After checkpointed contract_with_unroll_mode2\n"
+                +_debug_allocated_tensors(device=checkpoint_on_device,totals_only=True)
+            )
+        return res
 
     who = kwargs.pop("who","unknown")
     verbosity = kwargs.pop("verbosity", 0)
@@ -570,6 +589,159 @@ def contract_with_unroll_noconstexpr_in_checkpoint(*args, **kwargs):
     def contract_unroll_loop_body(*args):
         return _contract_unroll_loop_body(*args, backend=oe_backend)
 
+    # narrowing of ops by unrolled indices is done within checkpointed section
+    def contract_unroll_loop_body_checkpointed(unrolled_ops_slices,*args):
+        unrolled_ops = tuple(
+            t[s] for t, s in zip(args, unrolled_ops_slices)
+        )
+        return _contract_unroll_loop_body(*unrolled_ops, backend=oe_backend)
+
+    # assign shape to each index label
+    i_to_s = {
+        i: s
+        for ig, t in zip(args[1::2], args[0 : 2 * (len(args) // 2) : 2])
+        for i, s in zip(ig, t.shape)
+    }
+
+    # index groups stripped of unrolled indices
+    igs = tuple(
+        tuple(i for i in ig if not i in unroll) for ig in (args[1::2] + (args[-1],))
+    )
+
+    # prepare tensor to accumulate individual contractions
+    shape_out = tuple(i_to_s[i] for i in args[-1])
+    ig_out_contracted_unrolled = tuple(i for i in unroll if not (i in args[-1]))
+    partials = torch.empty(
+        shape_out + tuple(i_to_s[i] for i in ig_out_contracted_unrolled),\
+        device=args[0].device, dtype=args[0].dtype
+    )
+
+    if verbosity>0:
+        log.info(who+" before unrolled loop\n"
+            +_debug_allocated_tensors(device=args[0].device,totals_only=True))
+
+    all_ops=args[0 : 2 * (len(args) // 2) : 2]
+    for ui_vals in product(*tuple(range(i_to_s[i]) for i in unroll)):
+        ui_map = {u: v for u, v in zip(unroll, ui_vals)}
+
+        ig_out = tuple(ui_map[i] if i in unroll else slice(None) for i in args[-1])
+        ig_contracted_unrolled = tuple(ui_map[i] for i in unroll if not (i in args[-1]))
+
+        # narrowing is done before checkpointing
+        # if checkpoint_unrolled:
+        #     # narrowed ops containing all tensors
+        #     unrolled_ops = tuple(
+        #         t[tuple(ui_map[i] if i in unroll else slice(None) for i in ig)]
+        #         for t, ig in zip(args[0 : 2 * (len(args) // 2) : 2], args[1::2])
+        #     )
+        #     partials[ig_out + ig_contracted_unrolled]= checkpoint(
+        #         contract_unroll_loop_body, *unrolled_ops
+        #     )
+        if checkpoint_unrolled:
+            # ops containing all tensors
+            unrolled_ops_slices = tuple(
+                tuple(ui_map[i] if i in unroll else slice(None) for i in ig)
+                for ig in args[1::2]
+            )
+
+            partials[ig_out + ig_contracted_unrolled]= checkpoint(
+                contract_unroll_loop_body_checkpointed, unrolled_ops_slices, *all_ops )
+        else:
+            # ops containing *only* variable tensors, narrowed by unrolled indices if applicable
+            unrolled_ops = tuple(
+                t[tuple(ui_map[i] if i in unroll else slice(None) for i in ig)]
+                for t, ig in zip(args[0 : 2 * (len(args) // 2) : 2], args[1::2])
+                if len([i for i in unroll if i in ig]) > 0
+            )
+
+            partials[ig_out + ig_contracted_unrolled]= contract_unroll_loop_body(
+                *unrolled_ops
+            )
+
+        if verbosity>1:
+            log.info(who+f" unrolled loop {ui_vals}\n"
+                +_debug_allocated_tensors(device=args[0].device,totals_only=True))
+
+    result = oe.contract(
+        partials, tuple(args[-1]) + ig_out_contracted_unrolled, args[-1]
+    )
+
+    if verbosity>0:
+        log.info(who+" unrolled loop concluded\n"
+            +_debug_allocated_tensors(device=args[0].device,totals_only=False))
+
+    return result
+
+# IF checkpoint_on_device move only unrolled ops at each iteration to device
+def HIGHER_PEAK_MEM_contract_with_unroll(*args, **kwargs):
+    r"""Extension of opt_einsum's contract allowing for index unrolling
+    and use of checkpointing over unrolled loop.
+
+    :param args: input to einsum in interleaved format. Explicit index labeling
+                 of output is required
+    :param unroll: indices to unroll
+    :param use_checkpoint:
+    """
+    verbosity = kwargs.get("verbosity", 0)
+    checkpoint_on_device = kwargs.pop("checkpoint_on_device",False)
+    if checkpoint_on_device in ['NONE','none','None',None]: checkpoint_on_device= False
+
+    who = kwargs.pop("who","unknown")
+    verbosity = kwargs.pop("verbosity", 0)
+    unroll = kwargs.pop("unroll", [])
+    checkpoint_unrolled = kwargs.pop("checkpoint_unrolled", False)
+
+    if not unroll or len(unroll) == 0:
+        return oe.contract(*args, **kwargs)
+
+    # We are unrolling. In general, there will be several constant
+    # tensors among the individual unrolled calls.
+    # Strategy is to build opt_einsum's ContractExpression, which makes use of these
+    # constants
+    #
+    # Although contract supports interleaved format in general, in _gen_expression mode
+    # the default subscript format is expected instead
+    subscripts, shapes, unrolled_shapes = _preprocess_interleaved_to_expr_and_shapes(
+        *args, unroll=unroll
+    )
+
+    # Get positions of tensor arguments which are constants wrt to unrolled contraction
+    constants = tuple(
+        idx for idx, ig in enumerate(args[1::2]) if not any([i in unroll for i in ig])
+    )
+
+    if not checkpoint_unrolled:
+        kwargs["_constants_dict"] = {
+            i: args[0 : 2 * (len(args) // 2) : 2][i] for i in constants
+        }
+
+        # Build operands, passing tensors for constants and opt_einsum's Shaped (just shapes) for rest of the ops
+        shapes_and_constant_ops = tuple(
+            t if idx in constants else shape_only(tuple(i for i in shapes[idx] if i > 0))
+            for idx, t in enumerate(args[0 : 2 * (len(args) // 2) : 2])
+        )
+    else:
+        # Build operands, passing opt_einsum's Shaped (just shapes) for both constants and rest of the ops
+        shapes_and_constant_ops = tuple(
+            shape_only(tuple(i for i in shapes[idx] if i > 0)) 
+            for idx, t in enumerate(args[0 : 2 * (len(args) // 2) : 2])
+        )
+
+    kwargs["_gen_expression"] = True
+    oe_backend = kwargs.pop("backend", "auto")
+    _contract_unroll_loop_body= oe.contract(
+        subscripts, *shapes_and_constant_ops, **kwargs
+    )
+    def contract_unroll_loop_body(*args):
+        return _contract_unroll_loop_body(*args, backend=oe_backend)
+
+    def contract_unroll_loop_body_2(*args):
+        source_device=args[0].device
+        if checkpoint_on_device:
+            args_moved= (a.to(device=checkpoint_on_device) for a in args)
+        res=_contract_unroll_loop_body(*args_moved, backend=oe_backend)
+        return res.to(device=source_device)
+
     # assign shape to each index label
     i_to_s = {
         i: s
@@ -608,7 +780,7 @@ def contract_with_unroll_noconstexpr_in_checkpoint(*args, **kwargs):
             )
 
             partials[ig_out + ig_contracted_unrolled]= checkpoint(
-                contract_unroll_loop_body, *unrolled_ops)
+                contract_unroll_loop_body_2, *unrolled_ops )
         else:
             # ops containing *only* variable tensors, narrowed by unrolled indices if applicable
             unrolled_ops = tuple(
@@ -631,7 +803,7 @@ def contract_with_unroll_noconstexpr_in_checkpoint(*args, **kwargs):
 
     if verbosity>0:
         log.info(who+" unrolled loop concluded\n"
-            +_debug_allocated_tensors(device=args[0].device,totals_only=True))
+            +_debug_allocated_tensors(device=args[0].device,totals_only=False))
 
     return result
 

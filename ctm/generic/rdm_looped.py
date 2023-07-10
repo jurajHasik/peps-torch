@@ -124,6 +124,7 @@ def _trace_2x3(C2X2_LU, C2X2_RU, T_1n1, T_10, a_1n1, a_10):
     return rho_acc
 
 def _find_unrolled(to_unroll,*interleaved_exp): 
+    if (to_unroll is None) or not to_unroll: return []
     indices= set(sum(interleaved_exp[1::2],start=[]))
     intersection= set.intersection(set(to_unroll),indices)
     return list(intersection)
@@ -573,7 +574,7 @@ def rdm2x3_loop_oe(coord, state, env, open_sites=[0,1,2,3,4,5], unroll=True,\
         memory_limit=mem_limit if unroll else None)
     R= contract_with_unroll(*contract_tn,optimize=path,backend='torch',\
         unroll=unroll if unroll else [],checkpoint_unrolled=checkpoint_unrolled,
-        checkpoint_on_device=checkpoint_on_device)
+        checkpoint_on_device=checkpoint_on_device,who=who,verbosity=verbosity)
 
     R = _sym_pos_def_rdm(R, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
     if force_cpu:
@@ -1105,7 +1106,7 @@ def rdm3x2_loop_oe(coord, state, env, open_sites=[0,1,2,3,4,5], unroll=True,\
         memory_limit=mem_limit if unroll else None)
     R= contract_with_unroll(*contract_tn,optimize=path,backend='torch',\
         unroll=unroll if unroll else [],checkpoint_unrolled=checkpoint_unrolled,
-        checkpoint_on_device=checkpoint_on_device)
+        checkpoint_on_device=checkpoint_on_device,who=who,verbosity=verbosity)
 
     R = _sym_pos_def_rdm(R, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
     if force_cpu:

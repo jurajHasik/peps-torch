@@ -152,27 +152,11 @@ def main():
     ctm_env_init = ENV(args.chi, state)
     init_env(state, ctm_env_init)
     print(ctm_env_init)
-
-    torch.cuda.synchronize()
-    import gc
-    gc.collect()
-    torch.cuda.empty_cache()
-    from oe_ext.oe_ext import _debug_allocated_tensors
-    log.info("Initial obs evaluation\n"+
-        _debug_allocated_tensors(global_args=cfg.global_args,totals_only=True)
-    )
     
     loss0= energy_f(state, ctm_env_init, compressed=args.compressed_rdms, unroll=args.loop_rdms)
     obs_values, obs_labels = eval_obs_f(state,ctm_env_init)
     print(", ".join(["epoch","conv_crit","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
-
-    torch.cuda.synchronize()
-    gc.collect()
-    torch.cuda.empty_cache()
-    log.info("Post-initial obs evaluation\n"+
-        _debug_allocated_tensors(global_args=cfg.global_args,totals_only=True)
-    )
 
     if args.profile_mode:
         prof = torch.profiler.profile(
@@ -193,13 +177,6 @@ def main():
     else:
         ctm_env_init, *ctm_log= ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_f)
 
-    torch.cuda.synchronize()
-    gc.collect()
-    torch.cuda.empty_cache()
-    log.info("Post-initial obs evaluation\n"+
-        _debug_allocated_tensors(global_args=cfg.global_args,totals_only=True)
-    )
-
     # 6) compute final observables
     e_curr0 = energy_f(state, ctm_env_init, compressed=args.compressed_rdms, unroll=args.loop_rdms)
     obs_values0, obs_labels = eval_obs_f(state,ctm_env_init)
@@ -218,7 +195,7 @@ def main():
 
     # chirality
     # obs= model.eval_obs_chirality(state, ctm_env_init, compressed=args.compressed_rdms,\
-    #     looped=args.loop_rdms)
+    #     unroll=args.loop_rdms)
     # print("\n\n")
     # for label,val in obs.items():
     #     print(f"{label} {val}")
@@ -293,7 +270,8 @@ class TestCtmrg_TRGL_D3_1SITE(unittest.TestCase):
     tol_high= 1.0e-6
     DIR_PATH = os.path.dirname(os.path.realpath(__file__))
     OUT_PRFX = "RESULT_test_run-ctmrg_d3-trgl_1site"
-    ANSATZE= [("1SITE","trglC_j20.1_j40_D3ch27_r0_LS_1SITE_iD3n_C4X4cS_ptol8_state.json",
+    ANSATZE= [
+        ("1SITE","trglC_j20.1_j40_D3ch27_r0_LS_1SITE_iD3n_C4X4cS_ptol8_state.json",
         (0.1, 1.0),
         """
         -0.5076644938218757, 0.19418241891004798, 0.19418241891004798, (0.08523919965348262+0j), 
@@ -378,15 +356,16 @@ class Test_j1j2energy_TRGL_D3_1SITE(unittest.TestCase):
         init_random(env)
 
         model= spin_triangular.J1J2J4_1SITE(phys_dim=2, j1=1.0, j2=0.0, global_args=cfg.global_args)
-        energy_nn_manual= model.energy_per_site(state,env,compressed=-1,looped=False,\
+        energy_nn_manual= model.energy_per_site(state,env,compressed=-1,unroll=False,\
             ctm_args=cfg.ctm_args,global_args=cfg.global_args)
 
         model= spin_triangular.J1J2J4_1SITE(phys_dim=2, j1=0, j2=1.0, global_args=cfg.global_args)
-        energy_nnn_manual= model.energy_per_site(state,env,compressed=-1,looped=False,\
+        energy_nnn_manual= model.energy_per_site(state,env,compressed=-1,unroll=False,\
             ctm_args=cfg.ctm_args,global_args=cfg.global_args)
 
         nn_h_v,nn_diag= spin_triangular.eval_nn_per_site((0,0),state,env,model.R,model.Rinv,model.SS,model.SS)
-        nnn= spin_triangular.eval_nnn_per_site((0,0),state,env,model.R,model.Rinv,model.SS,looped=False,use_checkpoint=False)
+        nnn= spin_triangular.eval_nnn_per_site((0,0),state,env,model.R,model.Rinv,model.SS,unroll=False,
+            checkpoint_unrolled=False)
 
         assert isclose(nn_h_v+nn_diag,energy_nn_manual, rel_tol=self.tol, abs_tol=self.tol)
         assert isclose(nnn,energy_nnn_manual, rel_tol=self.tol, abs_tol=self.tol)
@@ -429,29 +408,30 @@ class TestCtmrg_j1j2jXenergy_TRGL_D3_1SITE(unittest.TestCase):
                 env, *ctm_log= ctmrg.run(state, env, conv_check=ctmrg_conv_specC_loc)
 
                 model= spin_triangular.J1J2J4_1SITE(phys_dim=2, j1=1., j2=0, global_args=cfg.global_args)
-                energy_nn_manual= model.energy_per_site(state,env,compressed=-1,looped=False,\
+                energy_nn_manual= model.energy_per_site(state,env,compressed=-1,unroll=False,\
                     ctm_args=cfg.ctm_args,global_args=cfg.global_args)
 
                 model= spin_triangular.J1J2J4_1SITE(phys_dim=2, j1=0, j2=1., global_args=cfg.global_args)
-                energy_nnn_manual= model.energy_per_site(state,env,compressed=-1,looped=False,\
+                energy_nnn_manual= model.energy_per_site(state,env,compressed=-1,unroll=False,\
                     ctm_args=cfg.ctm_args,global_args=cfg.global_args)
 
                 nn_h_v,nn_diag= spin_triangular.eval_nn_per_site((0,0),state,env,model.R,model.Rinv,model.SS,model.SS)
-                nnn= spin_triangular.eval_nnn_per_site((0,0),state,env,model.R,model.Rinv,model.SS,looped=False,use_checkpoint=False)
+                nnn= spin_triangular.eval_nnn_per_site((0,0),state,env,model.R,model.Rinv,model.SS,unroll=False,
+                    checkpoint_unrolled=False)
 
                 assert isclose(nn_h_v+nn_diag,energy_nn_manual, rel_tol=self.tol_high, abs_tol=self.tol_high)
                 assert isclose(nnn,energy_nnn_manual, rel_tol=self.tol_high, abs_tol=self.tol_high)
 
                 model= spin_triangular.J1J2J4_1SITE(phys_dim=2, j1=1., j2=1.0e-14, global_args=cfg.global_args)
-                energy_nn_manual= model.energy_per_site(state,env,compressed=-1,looped=False,\
+                energy_nn_manual= model.energy_per_site(state,env,compressed=-1,unroll=False,\
                     ctm_args=cfg.ctm_args,global_args=cfg.global_args)
 
                 model= spin_triangular.J1J2J4_1SITE(phys_dim=2, j1=0, j2=0, jchi=1., global_args=cfg.global_args)
-                energy_chi_manual= model.energy_per_site(state,env,compressed=-1,looped=False,\
+                energy_chi_manual= model.energy_per_site(state,env,compressed=-1,unroll=False,\
                     ctm_args=cfg.ctm_args,global_args=cfg.global_args)
 
                 nn_h_v,nn_diag,chi= spin_triangular.eval_nn_and_chirality_per_site((0,0),state,env,model.R,model.Rinv,
-                    model.SS,model.SS,model.h_chi,looped=False,use_checkpoint=False)
+                    model.SS,model.SS,model.h_chi,unroll=False,checkpoint_unrolled=False)
 
                 assert isclose(nn_h_v+nn_diag,energy_nn_manual, rel_tol=self.tol, abs_tol=self.tol)
                 assert isclose(chi,energy_chi_manual, rel_tol=self.tol, abs_tol=self.tol)
