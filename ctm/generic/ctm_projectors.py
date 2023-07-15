@@ -237,6 +237,14 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args, \
             return truncated_svd_arnoldi(M, chi, keep_multiplets=True, \
                 abs_tol=ctm_args.projector_multiplet_abstol, \
                 eps_multiplet=ctm_args.projector_eps_multiplet, verbosity=ctm_args.verbosity_projectors)
+    elif ctm_args.projector_svd_method == 'PROPACK':
+        def truncated_svd(M, chi):
+            return truncated_svd_propack(M, chi,\
+                int(chi*ctm_args.projector_propack_extra_states), ctm_args.projector_svd_reltol,\
+                v0=None,\
+                keep_multiplets=True, \
+                abs_tol=ctm_args.projector_multiplet_abstol, eps_multiplet=ctm_args.projector_eps_multiplet, \
+                verbosity=ctm_args.verbosity_projectors)
     else:
         raise(f"Projector svd method \"{cfg.ctm_args.projector_svd_method}\" not implemented")
 

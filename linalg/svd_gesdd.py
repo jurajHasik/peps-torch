@@ -1,6 +1,12 @@
 import torch
 import numpy as np
-from config import _torch_version_check
+try:
+    from config import _torch_version_check
+except:
+    import os
+    import sys
+    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../')))
+    from config import _torch_version_check
 
 def safe_inverse(x, epsilon=1E-12):
     return x/(x**2 + epsilon)
@@ -618,9 +624,9 @@ def test_SVDGESDD_random():
     A= torch.rand(M, M, dtype=torch.float64)
     A= 0.5*(A+A.t())
 
-    D, U = torch.symeig(A, eigenvectors=True)
+    D, U = torch.linalg.eigh(A)
     # make random spectrum with almost degen
-    for split_scale in [10.0, 1.0, 0.1, 0.01, 0.]: 
+    for split_scale in [10.0, 1.0, 0.1, 0.01, 0.001, 0.0001, 0.]: 
         tot_scale=1000
         d0= torch.rand(M//2, dtype=torch.float64)
         splits= torch.rand(M//2, dtype=torch.float64)
@@ -669,6 +675,8 @@ def test_SVDGESDD_COMPLEX_random():
         assert(torch.autograd.gradcheck(test_f_2, A, eps=1e-6, atol=1e-4))
 
 if __name__=='__main__':
-    test_SVDGESDD_legacy_random()
-    test_SVDGESDD_random()
+    if _torch_version_check("1.8.1"):
+        test_SVDGESDD_random()
+    else:
+        test_SVDGESDD_legacy_random()
     # test_SVDGESDD_COMPLEX_random()

@@ -1,6 +1,8 @@
 import torch
 import argparse
 import logging
+import os
+os.environ["SCIPY_USE_PROPACK"] = "1"
 
 def _torch_version_check(version):
     # for version="X.Y.Z" checks if current version is higher or equal to X.Y
@@ -331,6 +333,7 @@ class CTMARGS():
         self.projector_svd_reltol_block = 0.0
         self.projector_eps_multiplet = 1.0e-8
         self.projector_multiplet_abstol = 1.0e-14
+        self.projector_propack_extra_states = 1
         self.ad_decomp_reg= 1.0e-12
         self.ctm_move_sequence = [(0,-1), (-1,0), (0,1), (1,0)]
         self.randomize_ctm_move_sequence = False
