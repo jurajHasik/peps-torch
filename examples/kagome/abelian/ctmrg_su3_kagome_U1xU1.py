@@ -215,7 +215,7 @@ class TestCtmrg_AKLTState(unittest.TestCase):
     BACKENDS = ['np', 'torch']
 
     def setUp(self):
-        args.instate=self.DIR_PATH+"/../../../test-input/abelian/IPESS_AKLT_b3_1x1_abelian-U1xU1_T3T8_state.json"
+        args.instate=self.DIR_PATH+"/../../../test-input/abelian/IPESS_AKLT_3b_D3_1x1_abelian-U1xU1_T3T8_state.json"
         args.theta=0
         args.phi=0.5
         args.bond_dim=3
