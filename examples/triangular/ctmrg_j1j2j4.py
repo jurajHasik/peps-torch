@@ -27,6 +27,7 @@ parser.add_argument("--diag", type=float, default=1, help="diagonal strength")
 parser.add_argument("--tiling", default="3SITE", help="tiling of the lattice", \
     choices=["1SITE", "1SITE_NOROT", "1STRIV", "1SPG", "2SITE", "3SITE", "4SITE"])
 parser.add_argument("--corrf_r", type=int, default=1, help="maximal correlation function distance")
+parser.add_argument("--corrf_DD", action='store_true', help="compute horizontal dimer-dimer correlation function")
 parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
@@ -200,6 +201,14 @@ def main():
         print(f"\n\nSS[{sdp[0]},{sdp[1]}] r "+" ".join([label for label in corrSS.keys()]))
         for i in range(args.corrf_r):
             print(f"{i} "+" ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
+
+    # ----- horizontal dimer-dimer (S(0).S(x))(S(rx).S(rx+x)) -----
+    if args.corrf_DD:
+        for sdp in [((0,0), (1,0))]:
+            corrDD= model.eval_corrf_DD_H(*sdp, state, ctm_env_init, args.corrf_r)
+            print(f"\n\nDD[{sdp[0]},{sdp[1]}] r "+" ".join([label for label in corrDD.keys()]))
+            for i in range(args.corrf_r):
+                print(f"{i} "+" ".join([f"{corrDD[label][i]}" for label in corrDD.keys()])) 
 
     # transfer operator spectrum
     site_dir_list=[((0,0), (1,0)),((0,0), (0,1))]

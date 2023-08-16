@@ -813,6 +813,39 @@ class J1J2J4(J1J2J4_1SITEQ):
         res= dict({"ss": Sz0szR+Sx0sxR-nSy0SyR, "szsz": Sz0szR, "sxsx": Sx0sxR, "sysy": -nSy0SyR})
         return res
 
+    def eval_corrf_DD_H(self,coord,direction,state,env,dist,verbosity=0):
+        r"""
+        :param coord: tuple (x,y) specifying vertex on a square lattice
+        :param direction: orientation of correlation function
+        :type coord: tuple(int,int)
+        :type direction: tuple(int,int)
+        :param state: wavefunction
+        :param env: CTM environment
+        :type state: IPEPS
+        :type env: ENV
+        :param dist: maximal distance of correlator
+        :type dist: int
+        :return: dictionary with horizontal dimer-dimer correlation function
+        :rtype: dict(str: torch.Tensor)
+        
+        Evaluate horizontal dimer-dimer correlation functions 
+
+        .. math::
+
+            \langle(\mathbf{S}(r+3).\mathbf{S}(r+2))(\mathbf{S}(1).\mathbf{S}(0))\rangle 
+
+        up to r = ``dist`` in given direction. See :meth:`ctm.generic.corrf.corrf_2sOH2sOH_E1`.
+        """
+        # function generating properly S.S operator
+        def _gen_op(r):
+            return self.SS
+        
+        D0DR= corrf.corrf_2sOH2sOH_E1(coord, direction, state, env, self.SS, _gen_op,\
+            dist, verbosity=verbosity)
+
+        res= dict({"dd": D0DR})
+        return res
+
 
 class J1J2J4_1SITE(J1J2J4_1SITEQ):
     def __init__(self, phys_dim=2, j1=1.0, j2=0, j4=0, jchi=0,\
