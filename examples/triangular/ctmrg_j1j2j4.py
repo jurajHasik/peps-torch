@@ -23,6 +23,7 @@ parser.add_argument("--j1", type=float, default=1., help="nearest-neighbour coup
 parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour coupling")
 parser.add_argument("--j4", type=float, default=0., help="plaquette coupling")
 parser.add_argument("--jchi", type=float, default=0., help="scalar chirality")
+parser.add_argument("--diag", type=float, default=1, help="diagonal strength")
 parser.add_argument("--tiling", default="3SITE", help="tiling of the lattice", \
     choices=["1SITE", "1SITE_NOROT", "1STRIV", "1SPG", "2SITE", "3SITE", "4SITE"])
 parser.add_argument("--corrf_r", type=int, default=1, help="maximal correlation function distance")
@@ -53,7 +54,7 @@ def main():
         model= spin_triangular.J1J2J4(j1=args.j1, j2=args.j2, j4=args.j4, jchi=args.jchi)
         lattice_to_site=None
     elif args.tiling == "2SITE":
-        model= spin_triangular.J1J2J4(j1=args.j1, j2=args.j2, j4=args.j4, jchi=args.jchi)
+        model= spin_triangular.J1J2J4(j1=args.j1, j2=args.j2, j4=args.j4, jchi=args.jchi, diag=args.diag)
         def lattice_to_site(coord):
             vx = coord[0] % 2
             vy = coord[1]
@@ -65,7 +66,7 @@ def main():
             vy = coord[1]
             return ((vx - vy) % 3, 0)
     elif args.tiling in ["4SITE", "4SITE_T"]:
-        model= spin_triangular.J1J2J4(j1=args.j1, j2=args.j2, j4=args.j4, jchi=args.jchi)
+        model= spin_triangular.J1J2J4(j1=args.j1, j2=args.j2, j4=args.j4, jchi=args.jchi, diag=args.diag)
         if args.tiling=="4SITE":
             def lattice_to_site(coord):
                 vx = coord[0] % 2
