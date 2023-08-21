@@ -25,7 +25,7 @@ parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour
 parser.add_argument("--j4", type=float, default=0., help="plaquette coupling")
 parser.add_argument("--jchi", type=float, default=0., help="scalar chirality")
 parser.add_argument("--tiling", default="BIPARTITE", help="tiling of the lattice", \
-    choices=["BIPARTITE"])
+    choices=["BIPARTITE","2SITE"])
 parser.add_argument("--ctm_conv_crit", default="CSPEC", help="ctm convergence criterion", \
     choices=["CSPEC", "ENERGY"])
 parser.add_argument("--test_env_sensitivity", action='store_true', help="compare loss with higher chi env")
@@ -64,6 +64,9 @@ def main():
             vx = (coord[0] + abs(coord[0]) * 2) % 2
             vy = abs(coord[1])
             return ((vx + vy) % 2, 0)
+    if args.tiling in ["2SITE"]:
+        def lattice_to_site(coord):
+            return (coord[0] % 2, 0)
     else:
         raise ValueError("Invalid tiling: "+str(args.tiling)+" Supported options: "\
             +"BIPARTITE")
@@ -75,6 +78,8 @@ def main():
     elif args.opt_resume is not None:
         if args.tiling in ["BIPARTITE"]:
             state= IPEPS_ABELIAN(settings, dict(), lX=2, lY=2, vertexToSite=lattice_to_site)
+        if args.tiling in ["2SITE"]:
+            state= IPEPS_ABELIAN(settings, dict(), lX=2, lY=1, vertexToSite=lattice_to_site)
         state.load_checkpoint(args.opt_resume)
     else:
         raise ValueError("Missing trial state: --instate=None and --ipeps_init_type= "\
