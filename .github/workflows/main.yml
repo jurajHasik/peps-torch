@@ -21,9 +21,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python_v: [3.7, 3.8, 3.9]
-        pytorch_v: [1.11.0]
-      fail-fast: false  
+        python_v: [ "3.8", "3.9", "3.10", "3.11"]
+        pytorch_v: [2.0]
+      fail-fast: false
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -47,7 +47,7 @@ jobs:
           then
             $CONDA/bin/conda install -c pytorch-lts -c anaconda pytorch cpuonly scipy pytest
           else
-            $CONDA/bin/conda install -c pytorch -c anaconda pytorch==${{ matrix.pytorch_v }} cpuonly scipy pytest
+            $CONDA/bin/conda install -c pytorch -c anaconda -c conda-forge pytorch==${{ matrix.pytorch_v }} cpuonly scipy pytest opt_einsum
           fi
           git submodule update --init --recursive
           
@@ -85,6 +85,7 @@ jobs:
         run: |
           $CONDA/bin/python -m pytest examples/ladders/abelian/ctmrg_*.py
           $CONDA/bin/python -m pytest examples/ladders/abelian/optim_*.py
+          $CONDA/bin/python -m pytest examples/ladders/abelian/SU_ladders_u1.py
           
       - name: test kagome
         run: |

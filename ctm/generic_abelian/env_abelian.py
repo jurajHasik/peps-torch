@@ -1,11 +1,14 @@
 import warnings
 import config as cfg
-import yast.yast as yast
+from math import sqrt
+import yastn.yastn as yastn
 try:
     import torch
     from ctm.generic.env import ENV
 except ImportError as e:
     warnings.warn("torch not available", Warning)
+import logging
+log = logging.getLogger(__name__)
 
 class ENV_ABELIAN():
     def __init__(self, chi=1, state=None, settings=None, init=False,\
@@ -157,11 +160,11 @@ class ENV_ABELIAN():
                 # all legs of current T
                 # 0--T(x-1,y)--3 0--T(x,y)--3 0--T(x+1,y)--3
                 #    1,2            1,2          1,2
-                T_lss[tid]= { 1: tmp_T[tid].get_legs(axis=1), 2: tmp_T[tid].get_legs(axis=2), \
-                    0: yast.leg_union(tmp_T[(vts((t_xy[0]-1, t_xy[1])), t_dir)].get_legs(axis=3),\
-                        self.C[((t_xy),(-1,-1))].get_legs(axis=1)).conj(),\
-                    3: yast.leg_union(tmp_T[(vts((t_xy[0]+1, t_xy[1])), t_dir)].get_legs(axis=0),\
-                        self.C[((t_xy),(1,-1))].get_legs(axis=0)).conj() }
+                T_lss[tid]= { 1: tmp_T[tid].get_legs(axes=1), 2: tmp_T[tid].get_legs(axes=2), \
+                    0: yastn.leg_union(tmp_T[(vts((t_xy[0]-1, t_xy[1])), t_dir)].get_legs(axes=3),\
+                        self.C[((t_xy),(-1,-1))].get_legs(axes=1)).conj(),\
+                    3: yastn.leg_union(tmp_T[(vts((t_xy[0]+1, t_xy[1])), t_dir)].get_legs(axes=0),\
+                        self.C[((t_xy),(1,-1))].get_legs(axes=0)).conj() }
                 # upper-left corner
                 # C--1
                 # 0
@@ -173,11 +176,11 @@ class ENV_ABELIAN():
             elif t_dir==(0,1): #DOWN
                 #    0,1              0,1        0,1
                 # 2--T(x-1,y)--3 2--T(x,y)--3 2--T(x+1,y)--3
-                T_lss[tid]= { 0: tmp_T[tid].get_legs(axis=0), 1: tmp_T[tid].get_legs(axis=1), \
-                    2: yast.leg_union(tmp_T[(vts((t_xy[0]-1, t_xy[1])), t_dir)].get_legs(axis=3),\
-                        self.C[((t_xy),(-1,1))].get_legs(axis=1)).conj(),\
-                    3: yast.leg_union(tmp_T[(vts((t_xy[0]+1, t_xy[1])), t_dir)].get_legs(axis=2),\
-                        self.C[((t_xy),(1,1))].get_legs(axis=1)).conj() }
+                T_lss[tid]= { 0: tmp_T[tid].get_legs(axes=0), 1: tmp_T[tid].get_legs(axes=1), \
+                    2: yastn.leg_union(tmp_T[(vts((t_xy[0]-1, t_xy[1])), t_dir)].get_legs(axes=3),\
+                        self.C[((t_xy),(-1,1))].get_legs(axes=1)).conj(),\
+                    3: yastn.leg_union(tmp_T[(vts((t_xy[0]+1, t_xy[1])), t_dir)].get_legs(axes=2),\
+                        self.C[((t_xy),(1,1))].get_legs(axes=1)).conj() }
                 # lower-left corner
                 # 0
                 # C--1
@@ -190,11 +193,11 @@ class ENV_ABELIAN():
                 # 0
                 # T--2,3
                 # 1
-                T_lss[tid]= { 2: tmp_T[tid].get_legs(axis=2), 3: tmp_T[tid].get_legs(axis=3),\
-                    0: yast.leg_union(tmp_T[(vts((t_xy[0], t_xy[1]-1)), t_dir)].get_legs(axis=1),\
-                        self.C[((t_xy),(-1,-1))].get_legs(axis=0)).conj(),\
-                    1: yast.leg_union(tmp_T[(vts((t_xy[0], t_xy[1]+1)), t_dir)].get_legs(axis=0),\
-                        self.C[((t_xy),(-1,1))].get_legs(axis=0)).conj() }
+                T_lss[tid]= { 2: tmp_T[tid].get_legs(axes=2), 3: tmp_T[tid].get_legs(axes=3),\
+                    0: yastn.leg_union(tmp_T[(vts((t_xy[0], t_xy[1]-1)), t_dir)].get_legs(axes=1),\
+                        self.C[((t_xy),(-1,-1))].get_legs(axes=0)).conj(),\
+                    1: yastn.leg_union(tmp_T[(vts((t_xy[0], t_xy[1]+1)), t_dir)].get_legs(axes=0),\
+                        self.C[((t_xy),(-1,1))].get_legs(axes=0)).conj() }
                 # upper-left corner
                 # C--1
                 # 0
@@ -207,11 +210,11 @@ class ENV_ABELIAN():
                 #      0
                 # 1,2--T
                 #      3
-                T_lss[tid]= { 1: tmp_T[tid].get_legs(axis=1), 2: tmp_T[tid].get_legs(axis=2),\
-                    0: yast.leg_union(tmp_T[(vts((t_xy[0], t_xy[1]-1)), t_dir)].get_legs(axis=3),\
-                        self.C[((t_xy),(1,-1))].get_legs(axis=1)).conj(),\
-                    3: yast.leg_union(tmp_T[(vts((t_xy[0], t_xy[1]+1)), t_dir)].get_legs(axis=0),\
-                        self.C[((t_xy),(1,1))].get_legs(axis=0)).conj() }
+                T_lss[tid]= { 1: tmp_T[tid].get_legs(axes=1), 2: tmp_T[tid].get_legs(axes=2),\
+                    0: yastn.leg_union(tmp_T[(vts((t_xy[0], t_xy[1]-1)), t_dir)].get_legs(axes=3),\
+                        self.C[((t_xy),(1,-1))].get_legs(axes=1)).conj(),\
+                    3: yastn.leg_union(tmp_T[(vts((t_xy[0], t_xy[1]+1)), t_dir)].get_legs(axes=0),\
+                        self.C[((t_xy),(1,1))].get_legs(axes=0)).conj() }
                 # upper-right corner
                 # 0--C
                 #    1
@@ -302,6 +305,14 @@ class ENV_ABELIAN():
     def detach_(self):
         for c in self.C.values(): c.detach()
         for t in self.T.values(): t.detach()
+
+    def get_spectra(self):
+        spec= {}
+        for c_key, c_t in self.C.items():
+            _,S,_ = c_t.svd()
+            spec[c_key]= S
+        return spec
+
 
 def init_env(state, env, init_method=None, ctm_args=cfg.ctm_args):
     """
@@ -469,3 +480,46 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
         a= a.fuse_legs( axes=((0,3),(1,4),(2,5)) )
         a= a/a.norm(p='inf')
         env.T[(coord,vec)]=a
+
+def ctmrg_conv_specC(state, env, history, p='inf', ctm_args=cfg.ctm_args):
+    if not history:
+        history={'spec': [], 'diffs': [], 'conv_crit': []}
+    # use corner spectra
+    conv_crit=float('inf')
+    diff=float('inf')
+    diffs=None
+    spec= env.get_spectra()
+    if state.engine.backend.BACKEND_ID=='np':
+        spec_nosym_sorted= { s_key : np.sort(s_t._data)[::-1] \
+            for s_key, s_t in spec.items() }            
+    else:
+        spec_nosym_sorted= { s_key : s_t._data.sort(descending=True)[0] \
+            for s_key, s_t in spec.items() }
+    if len(history['spec'])>0:
+        s_old= history['spec'][-1]
+        diffs= []
+        for k in spec.keys():
+            x_0,x_1 = spec_nosym_sorted[k], s_old[k]
+            n_x0= x_0.shape[0] if state.engine.backend.BACKEND_ID=='np' else x_0.size(0)
+            n_x1= x_1.shape[0] if state.engine.backend.BACKEND_ID=='np' else x_1.size(0)
+            if n_x0>n_x1:
+                diffs.append( (sum((x_1-x_0[:n_x1])**2) \
+                    + sum(x_0[n_x1:]**2)).item() )
+            else:
+                diffs.append( (sum((x_0-x_1[:n_x0])**2) \
+                    + sum(x_1[n_x0:]**2)).item() )
+        # sqrt of sum of squares of all differences of all corner spectra - usual 2-norm
+        if p in ['fro',2]: 
+            conv_crit= sqrt(sum(diffs))
+        # or take max of the differences
+        elif p in [float('inf'),'inf']:
+            conv_crit= sqrt(max(diffs))
+    history['spec'].append(spec_nosym_sorted)
+    history['diffs'].append(diffs)
+    history['conv_crit'].append(conv_crit)
+
+    if (len(history['diffs']) > 1 and conv_crit < ctm_args.ctm_conv_tol)\
+        or len(history['diffs']) >= ctm_args.ctm_max_iter:
+        log.info({"history_length": len(history['diffs']), "history": history['diffs']})
+        return True, history
+    return False, history

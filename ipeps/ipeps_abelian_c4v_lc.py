@@ -9,7 +9,7 @@ try:
 except ImportError as e:
     warnings.warn("torch not available", Warning)
 import config as cfg
-import yast.yast as yast
+import yastn.yastn as yastn
 from groups.pg_abelian import make_c4v_symm_A1
 from ipeps.tensor_io import *
 from ipeps.ipeps_abelian_c4v import IPEPS_ABELIAN_C4V
@@ -68,7 +68,7 @@ class IPEPS_ABELIAN_C4V_LC(IPEPS_ABELIAN_C4V):
             for coord,c in self.coeffs.items():
                 sites[coord]= torch.einsum('i,ipuldr->puldr',c,ts)
             
-            site= yast.Tensor(config=self.engine, s=IPEPS_ABELIAN_C4V._REF_S_DIRS)
+            site= yastn.Tensor(config=self.engine, s=IPEPS_ABELIAN_C4V._REF_S_DIRS)
             site.set_block(val=next(iter(sites.values())))
 
             return site
@@ -132,7 +132,7 @@ class IPEPS_ABELIAN_C4V_LC(IPEPS_ABELIAN_C4V):
         c_phys= set(oc_p) # charges on physical leg
         c_aux= set(oc_a)  # charges on (each) auxiliary leg
         d_aux= (oc_d[c] for c in c_aux)
-        site = yast.Tensor(config=self.engine, s=IPEPS_ABELIAN_C4V._REF_S_DIRS, n=tot_charge,
+        site = yastn.Tensor(config=self.engine, s=IPEPS_ABELIAN_C4V._REF_S_DIRS, n=tot_charge,
                             t=(c_phys, c_aux, c_aux, c_aux, c_aux),
                             D=((1, 1), d_aux, d_aux, d_aux, d_aux))
         for c,b in blocks.items():

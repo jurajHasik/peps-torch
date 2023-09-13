@@ -2,10 +2,11 @@ from math import sqrt
 import numpy as np
 import itertools
 import config as cfg
-import yast.yast as yast
+import yastn.yastn as yastn
 from tn_interface_abelian import contract, permute
 import groups.su2_abelian as su2
 from ctm.generic_abelian import rdm
+from ctm.generic_abelian import corrf
 from ctm.one_site_c4v_abelian import rdm_c4v
 from ctm.one_site_c4v_abelian import corrf_c4v
 
@@ -239,11 +240,10 @@ class J1J2_NOSYM():
             0    0   0    0   0    0   0    0
             B3--1E & E3--1F & F3--1A & A3--1B 
         """
-        N= state.lX*state.lY
-        assert N==len(state.sites), "size of the unit cell does not match number of sites"
+        N= len(state.sites)
 
-        energy_nn=yast.zeros(self.engine)
-        energy_nnn=yast.zeros(self.engine)
+        energy_nn=yastn.zeros(self.engine)
+        energy_nnn=yastn.zeros(self.engine)
         _ci= ([0,1,2,3, 4,5,6,7],[4,5,6,7, 0,1,2,3])
         for coord in state.sites.keys():
             tmp_rdm= rdm.rdm2x2(coord,state,env).to_nonsymmetric()
@@ -306,10 +306,10 @@ class J1J2_NOSYM():
         for coord,site in state.sites.items():
             rdm2x1 = rdm.rdm2x1(coord,state,env).to_nonsymmetric()
             rdm1x2 = rdm.rdm1x2(coord,state,env).to_nonsymmetric()
-            SS2x1= contract(rdm2x1,self.h2,_ci).to_number()
-            SS1x2= contract(rdm1x2,self.h2,_ci).to_number()
-            obs[f"SS2x1{coord}"]= rdm._cast_to_real(SS2x1,**kwargs)
-            obs[f"SS1x2{coord}"]= rdm._cast_to_real(SS1x2,**kwargs)
+            SS2x1= contract(rdm2x1,self.h2,_ci)
+            SS1x2= contract(rdm1x2,self.h2,_ci)
+            obs[f"SS2x1{coord}"]= rdm._cast_to_real(SS2x1,**kwargs).to_number()
+            obs[f"SS1x2{coord}"]= rdm._cast_to_real(SS1x2,**kwargs).to_number()
         
         # prepare list with labels and values
         obs_labels=["avg_m"]+[f"m{coord}" for coord in state.sites.keys()]\
@@ -319,29 +319,46 @@ class J1J2_NOSYM():
         obs_values=[obs[label] for label in obs_labels]
         return obs_values, obs_labels
 
-    # def eval_corrf_SS(self,coord,direction,state,env,dist):
-   
-    #     # function allowing for additional site-dependent conjugation of op
-    #     def conjugate_op(op):
-    #         #rot_op= su2.get_rot_op(self.phys_dim, dtype=self.dtype, device=self.device)
-    #         rot_op= torch.eye(self.phys_dim, dtype=self.dtype, device=self.device)
-    #         op_0= op
-    #         op_rot= einsum('ki,kj->ij',rot_op, mm(op_0,rot_op))
-    #         def _gen_op(r):
-    #             #return op_rot if r%2==0 else op_0
-    #             return op_0
-    #         return _gen_op
+    def eval_corrf_SS(self,coord,direction,state,env,dist,rl_0=None):
+        r"""
+        :param coord: reference site
+        :type coord: tuple(int,int)
+        :param direction: 
+        :type direction: tuple(int,int)
+        :param state: wavefunction
+        :param env: CTM environment
+        :type state: IPEPS_ABELIAN
+        :type env: ENV_ABELIAN
+        :param dist: maximal distance of correlator
+        :type dist: int
+        :param rl_0: right and left edges of the two-point function network. These
+                 are expected to be rank-3 tensor compatible with transfer operator indices.
+                 Typically provided by leading eigenvectors of transfer matrix.
+        :type rl_0: tuple(function(tuple(int,int))->yastn.Tensor, function(tuple(int,int))->yastn.Tensor)
+        :return: dictionary with full and spin-resolved spin-spin correlation functions
+        :rtype: dict(str: np.ndarray)
+        
+        Evaluate spin-spin correlation functions :math:`\langle\mathbf{S}(r).\mathbf{S}(0)\rangle` 
+        up to r = ``dist`` in given direction. See :meth:`ctm.generic.corrf.corrf_1sO1sO`.
+        """
+        # function allowing for additional site-dependent conjugation of op
+        # r=0 is nearest-neighbour
+        def conjugate_op(op):
+            def _gen_op(r):
+                return op
+            return _gen_op
 
-    #     op_sx= 0.5*(self.obs_ops["sp"] + self.obs_ops["sm"])
-    #     op_isy= -0.5*(self.obs_ops["sp"] - self.obs_ops["sm"]) 
+        s2_U1= su2.SU2_U1(state.engine, 2)
 
-    #     Sz0szR= corrf.corrf_1sO1sO(coord,direction,state,env, self.obs_ops["sz"], \
-    #         conjugate_op(self.obs_ops["sz"]), dist)
-    #     Sx0sxR= corrf.corrf_1sO1sO(coord,direction,state,env, op_sx, conjugate_op(op_sx), dist)
-    #     nSy0SyR= corrf.corrf_1sO1sO(coord,direction,state,env, op_isy, conjugate_op(op_isy), dist)
+        Sz0szR= corrf.corrf_1sO1sO(coord,direction,state,env, s2_U1.SZ(), \
+            conjugate_op(s2_U1.SZ()), dist, rl_0=rl_0)
+        Sp0smR= corrf.corrf_1sO1sO(coord,direction,state,env, s2_U1.SP(), conjugate_op(s2_U1.SM()),\
+            dist, rl_0=rl_0)
+        Sm0SpR= corrf.corrf_1sO1sO(coord,direction,state,env, s2_U1.SM(), conjugate_op(s2_U1.SP()),\
+            dist, rl_0=rl_0)
 
-    #     res= dict({"ss": Sz0szR+Sx0sxR-nSy0SyR, "szsz": Sz0szR, "sxsx": Sx0sxR, "sysy": -nSy0SyR})
-    #     return res
+        res= dict({"ss": Sz0szR+0.5*(Sp0smR+Sm0SpR), "szsz": Sz0szR, "spsm": Sp0smR, "smsp": Sm0SpR})
+        return res
 
 class J1J2_C4V_BIPARTITE_NOSYM():
     def __init__(self, settings, j1=1.0, j2=0.0, global_args=cfg.global_args):
@@ -474,8 +491,8 @@ class J1J2_C4V_BIPARTITE_NOSYM():
         # _ci= ([0,1,2,3,4,5,6,7], [4,5,6,7,0,1,2,3])
         rdm2x2= rdm_c4v.rdm2x2(state, env_c4v, sym_pos_def=False,\
             verbosity=cfg.ctm_args.verbosity_rdm, force_cpu=force_cpu).to_nonsymmetric()
-        energy_per_site= contract(rdm2x2,self.hp,_ci).to_number()
-        energy_per_site= rdm._cast_to_real(energy_per_site,**kwargs)
+        energy_per_site= contract(rdm2x2,self.hp,_ci)
+        energy_per_site= rdm._cast_to_real(energy_per_site,**kwargs).to_number()
         return energy_per_site
 
     def energy_1x1_lowmem(self,state,env_c4v,force_cpu=False,**kwargs):
@@ -517,10 +534,10 @@ class J1J2_C4V_BIPARTITE_NOSYM():
             force_cpu=force_cpu, verbosity=cfg.ctm_args.verbosity_rdm).to_nonsymmetric()
         rdm2x2_NNN= rdm_c4v.rdm2x2_NNN(state, env_c4v, sym_pos_def=False,\
             force_cpu=force_cpu, verbosity=cfg.ctm_args.verbosity_rdm).to_nonsymmetric()
-        SS_nn= contract(rdm2x2_NN,self.SS_rot,_ci).to_number()
-        SS_nnn= contract(rdm2x2_NNN,self.SS,_ci).to_number()
+        SS_nn= contract(rdm2x2_NN,self.SS_rot,_ci)
+        SS_nnn= contract(rdm2x2_NNN,self.SS,_ci)
         energy_per_site= 2.0*self.j1*SS_nn + 2.0*self.j2*SS_nnn
-        energy_per_site= rdm._cast_to_real(energy_per_site,**kwargs)
+        energy_per_site= rdm._cast_to_real(energy_per_site,**kwargs).to_number()
         return energy_per_site
 
     def eval_obs(self,state,env_c4v,force_cpu=False,**kwargs):

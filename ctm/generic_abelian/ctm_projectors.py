@@ -1,5 +1,5 @@
 import config as cfg
-import yast.yast as yast
+import yastn.yastn as yastn
 from ctm.generic_abelian.ctm_components import *
 from tn_interface_abelian import mm
 from tn_interface_abelian import transpose
@@ -27,7 +27,7 @@ def ctm_get_projectors_4x4(direction, coord, state, env, ctm_args=cfg.ctm_args, 
     :return: pair of projectors, tensors of dimension :math:`\chi \times \chi \times D^2`. 
              The D might vary depending on the auxiliary bond dimension of related on-site
              tensor.
-    :rtype: yast.Tensor, yast.Tensor
+    :rtype: yastn.Tensor, yastn.Tensor
 
 
     Compute a pair of projectors from two halfs of 4x4 tensor network given 
@@ -100,7 +100,7 @@ def ctm_get_projectors_4x2(direction, coord, state, env, ctm_args=cfg.ctm_args, 
     :return: pair of projectors, tensors of dimension :math:`\chi \times \chi \times D^2`. 
              The D might vary depending on the auxiliary bond dimension of related on-site
              tensor.
-    :rtype: yast.Tensor, yast.Tensor
+    :rtype: yastn.Tensor, yastn.Tensor
 
 
     Compute a pair of projectors from two enlarged corners making up 4x2 (2x4) tensor network 
@@ -164,15 +164,15 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, direction, \
     :param chi: environment bond dimension
     :param ctm_args: CTM algorithm configuration
     :param global_args: global configuration
-    :type R: yast.Tensor 
-    :type Rt: yast.Tensor
+    :type R: yastn.Tensor 
+    :type Rt: yastn.Tensor
     :type chi: int
     :type ctm_args: CTMARGS
     :type global_args: GLOBALARGS
     :return: pair of projectors, tensors of dimension :math:`\chi \times \chi \times D^2`. 
              The D might vary depending on the auxiliary bond dimension of related on-site
              tensor.
-    :rtype: yast.Tensor, yast.Tensor
+    :rtype: yastn.Tensor, yastn.Tensor
 
     Given the two tensors R and Rt (R tilde) compute the projectors P, Pt (P tilde)
     (PRB 94, 075143 (2016) https://arxiv.org/pdf/1402.2859.pdf). The R, Rt are expected
@@ -229,11 +229,14 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, direction, \
 
     if ctm_args.projector_svd_method=='DEFAULT' or ctm_args.projector_svd_method=='GESDD':
         def truncation_f(S):
-            return yast.linalg.truncation_mask_multiplets(S,keep_multiplets=True, D_total=chi,\
-                tol=ctm_args.projector_svd_reltol, tol_block=ctm_args.projector_svd_reltol_block, \
-                eps_multiplet=ctm_args.projector_eps_multiplet)
+            if ctm_args.projector_eps_multiplet>0:
+                return yastn.linalg.truncation_mask_multiplets(S,keep_multiplets=True, D_total=chi,\
+                    tol=ctm_args.projector_svd_reltol, tol_block=ctm_args.projector_svd_reltol_block, \
+                    eps_multiplet=ctm_args.projector_eps_multiplet)
+            return yastn.linalg.truncation_mask(S, D_total=chi,\
+                tol=ctm_args.projector_svd_reltol, tol_block=ctm_args.projector_svd_reltol_block)
         def truncated_svd(M, chi, sU=1):
-            return yast.linalg.svd_with_truncation(M, (0,1), sU=sU, mask_f=truncation_f, diagnostics=diagnostics)
+            return yastn.linalg.svd_with_truncation(M, (0,1), sU=sU, mask_f=truncation_f, diagnostics=diagnostics)
     # elif ctm_args.projector_svd_method == 'ARP':
     #     def truncated_svd(M, chi):
     #         return truncated_svd_arnoldi(M, chi, verbosity=ctm_args.verbosity_projectors)
@@ -247,9 +250,10 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, direction, \
     #       RIGHT (+1)0--R--1(+1) =>T=> (+1)1--R--0(+1)(-1)0--Rt--1(-1) =>SVD=> (+1)U(?)S(-?)Vh(-1)
     #
     if ctm_args.fwd_checkpoint_projectors:
+        raise RuntimeError("Checkpointing projectors not implemented")
         M = checkpoint(mm, transpose(R), Rt)
     else:
-        M = mm(transpose(R), Rt)
+        M = R.tensordot(Rt,([0],[0]))
 
     # 1) SVD decomposition and Truncation
     signature_U={(0,-1): 1, (-1,0): -1, (0,1): -1, (1,0): 1}
@@ -271,13 +275,13 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, direction, \
         #       ?=-1  (-?)0--Vh--1(+1)=>CT=> (+1)0--Rt--1(+1)(-1)1--Vh--0(?)   = (+1)Pt(-1)
         #       RIGHT (+1)0--U--1(?)=>C=> (+1)0--R--1(+1)(-1)0--U--1(-?)S_sqrt = (+1)P(-1)
         #             (-?)0--Vh--1(-1)=>CT=> (-1)0--Rt--1(-1)(+1)1--Vh--0(?)   = (-1)Pt(+1)
-        P= mm(mm(R, U, conj=(0,1)), S_sqrt.transpose((1,0)) )
-        Pt= mm(mm(Rt,transpose(Vh), conj=(0,1)),S_sqrt)
+        P= ( R.tensordot(U.conj(), ([1],[0])) ).tensordot(S_sqrt,([1],[1]))
+        Pt= ( Rt.tensordot(Vh.conj(),([1],[1])) ).tensordot(S_sqrt,([1],[0]))
         return P, Pt
 
     tensors= R, Rt, U, Vh, S_sqrt
     if ctm_args.fwd_checkpoint_projectors:
-        # return checkpoint(P_Pt_c, *tensors)
-        raise RuntimeError("Checkpointing not implemented")
+        raise RuntimeError("Checkpointing projectors not implemented")
+        return checkpoint(P_Pt_c, *tensors)
     else:
         return P_Pt_c(*tensors)

@@ -1,13 +1,10 @@
 import os
 import context
 import copy
-import torch
-import numpy as np
 import argparse
+import torch
 import config as cfg
-import yast.yast as yast
-import examples.abelian.settings_full_torch as settings_full
-import examples.abelian.settings_U1_torch as settings_U1
+import yastn.yastn as yastn
 from ipeps.ipeps_abelian_c4v import *
 from models.abelian import j1j2
 from ctm.one_site_c4v_abelian.env_c4v_abelian import *
@@ -31,19 +28,25 @@ parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of trans
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
 parser.add_argument("--force_cpu", action='store_true', help="evaluate energy on cpu")
+parser.add_argument("--yast_backend", type=str, default='torch', 
+    help="YAST backend", choices=['torch','torch_cpp'])
 args, unknown_args = parser.parse_known_args()
 
 def main():
     cfg.configure(args)
     cfg.print_config()
-    settings= settings_U1
-    # override default device specified in settings
-    settings.default_device= settings_full.default_device= cfg.global_args.device
-    # override default dtype
-    settings.default_dtype= settings_full.default_dtype= cfg.global_args.dtype
-    settings.backend.ad_decomp_reg= cfg.ctm_args.ad_decomp_reg
+    from yastn.yastn.sym import sym_U1
+    if args.yast_backend=='torch':
+        from yastn.yastn.backend import backend_torch as backend
+    elif args.yast_backend=='torch_cpp':
+        from yastn.yastn.backend import backend_torch_cpp as backend
+    settings_full= yastn.make_config(backend=backend, \
+        default_device= cfg.global_args.device, default_dtype=cfg.global_args.dtype)
+    settings= yastn.make_config(backend=backend, sym=sym_U1, \
+        default_device= cfg.global_args.device, default_dtype=cfg.global_args.dtype)
     settings.backend.set_num_threads(args.omp_cores)
     settings.backend.random_seed(args.seed)
+    settings.backend.ad_decomp_reg= cfg.ctm_args.ad_decomp_reg
 
     model= j1j2.J1J2_C4V_BIPARTITE_NOSYM(settings_full, j1=args.j1, j2=args.j2)
     energy_f= model.energy_1x1_lowmem
@@ -51,7 +54,7 @@ def main():
 
     # initialize the ipeps
     if args.instate!=None:
-        state= read_ipeps_c4v(args.instate, settings)
+        state= read_ipeps_c4v(args.instate, settings, default_irrep="A1")
         state= state.add_noise(args.instate_noise)
         state.sites[(0,0)]= state.sites[(0,0)]/state.sites[(0,0)].norm(p="inf")
     elif args.opt_resume is not None:
@@ -167,7 +170,7 @@ def main():
 
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"
-    state= read_ipeps_c4v(outputstatefile, settings)
+    state= read_ipeps_c4v(outputstatefile, settings, default_irrep="A1")
     state= state.symmetrize()
     ctm_env= ENV_C4V_ABELIAN(args.chi, state=state, init=True)
     ctm_env, *ctm_log = ctmrg_c4v.run(state, ctm_env, conv_check=ctmrg_conv_f)

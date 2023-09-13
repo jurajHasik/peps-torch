@@ -194,7 +194,7 @@ class KAGOME_SU3():
         with torch.no_grad():
             obs["chirality_dn"],_ = rdm_kagome.rdm2x2_dn_triangle_with_operator((0,0), state, env, chirality,\
                 force_cpu=force_cpu)
-            # obs["chirality_dn"] = _cast_to_real(obs["chirality_dn"],**kwargs)
+            obs["chirality_dn"] = _cast_to_real(obs["chirality_dn"],**kwargs)
             obs["e_t_dn"],_ = rdm_kagome.rdm2x2_dn_triangle_with_operator((0,0), state, env, self.h_tri,\
                 force_cpu=force_cpu)
             obs["e_t_dn"] = _cast_to_real(obs["e_t_dn"],**kwargs)
@@ -204,7 +204,7 @@ class KAGOME_SU3():
 
             rdm2x2_ring = rdm_kagome.rdm2x2_up_triangle_open((0,0), state, env, force_cpu=force_cpu)
             obs["chirality_up"] = torch.einsum('ijlabc,abcijl', rdm2x2_ring, chirality)
-            # obs["chirality_up"] = _cast_to_real(obs["chirality_up"], **kwargs)
+            obs["chirality_up"] = _cast_to_real(obs["chirality_up"], **kwargs)
             obs["e_t_up"] = torch.einsum('ijlabc,abcijl', rdm2x2_ring, self.h_tri)
             obs["e_t_up"] = _cast_to_real(obs["e_t_up"],**kwargs)
             obs["avg_bonds_up"] = torch.einsum('ijlabc,abcijl', rdm2x2_ring, self.perm2_tri)

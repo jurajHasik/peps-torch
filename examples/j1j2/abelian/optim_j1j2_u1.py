@@ -1,11 +1,9 @@
 import os
 import context
 import torch
-import numpy as np
 import argparse
 import config as cfg
-import examples.abelian.settings_full_torch as settings_full
-import examples.abelian.settings_U1_torch as settings_U1
+import yastn.yastn as yastn
 from ipeps.ipeps_abelian import *
 from ctm.generic_abelian.env_abelian import *
 import ctm.generic_abelian.ctmrg as ctmrg
@@ -23,16 +21,22 @@ parser= cfg.get_args_parser()
 parser.add_argument("--j1", type=float, default=1., help="nearest-neighbour coupling")
 parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour coupling")
 parser.add_argument("--tiling", default="BIPARTITE", help="tiling of the lattice")
+parser.add_argument("--yast_backend", type=str, default='torch', 
+    help="YAST backend", choices=['torch','torch_cpp'])
 args, unknown_args = parser.parse_known_args()
 
 def main():
     cfg.configure(args)
     cfg.print_config()
-    settings= settings_U1
-    # override default device specified in settings
-    settings.default_device= settings_full.default_device= cfg.global_args.device
-    # override default dtype
-    settings.default_dtype= settings_full.default_dtype= cfg.global_args.dtype
+    from yastn.yastn.sym import sym_U1
+    if args.yast_backend=='torch':
+        from yastn.yastn.backend import backend_torch as backend
+    elif args.yast_backend=='torch_cpp':
+        from yastn.yastn.backend import backend_torch_cpp as backend
+    settings_full= yastn.make_config(backend=backend, \
+        default_device= cfg.global_args.device, default_dtype=cfg.global_args.dtype)
+    settings= yastn.make_config(backend=backend, sym=sym_U1, \
+        default_device= cfg.global_args.device, default_dtype=cfg.global_args.dtype)
     settings.backend.set_num_threads(args.omp_cores)
     settings.backend.random_seed(args.seed)
     

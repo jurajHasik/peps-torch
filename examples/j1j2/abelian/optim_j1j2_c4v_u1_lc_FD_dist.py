@@ -3,9 +3,7 @@ import copy
 import torch
 import argparse
 import config as cfg
-import examples.abelian.settings_full_torch as settings_full
-import examples.abelian.settings_U1_torch as settings_U1
-import yast.yast as yast
+import yastn.yastn as yastn
 from ipeps.ipeps_abelian_c4v_lc import *
 from models.abelian import j1j2
 from ctm.one_site_c4v_abelian.env_c4v_abelian import *
@@ -35,6 +33,8 @@ parser.add_argument("--top_n", type=int, default=2, help="number of leading eige
 parser.add_argument("--obs_freq", type=int, default=-1, help="frequency of computing observables"
     + " during CTM convergence")
 parser.add_argument("--symmetry", default=None, help="symmetry structure", choices=["NONE","U1"])
+parser.add_argument("--yast_backend", type=str, default='torch', 
+    help="YAST backend", choices=['torch','torch_cpp'])
 args, unknown_args = parser.parse_known_args()
 
 @torch.no_grad()
@@ -293,8 +293,8 @@ def worker_code(rank,size,gpu_id,pipe):
         # dist.recv( tensor=T_loc_cpu, src=0, tag=2000*size + rank )
         C_r1d, C_meta= pipe.recv()
         T_r1d, T_meta= pipe.recv()
-        C_loc_cpu= yast.decompress_from_1d(C_r1d,settings=settings,d=C_meta)
-        T_loc_cpu= yast.decompress_from_1d(T_r1d,settings=settings,d=T_meta)
+        C_loc_cpu= yastn.decompress_from_1d(C_r1d,settings=settings,d=C_meta)
+        T_loc_cpu= yastn.decompress_from_1d(T_r1d,settings=settings,d=T_meta)
         if gpu_id>=0:
             state.coeffs[(0,0)]= coeff_loc.to(cuda_dev)
             ctm_env.C[ctm_env.keyC]= C_loc_cpu.to(cuda_dev)
@@ -338,20 +338,18 @@ def main(rank, size, pipes_to_workers):
     # 0) configure
     cfg.configure(args)
     cfg.print_config()
-    # TODO(?) choose symmetry group
-    if not args.symmetry or args.symmetry=="NONE":
-        settings= settings_full
-    elif args.symmetry=="U1":
-        settings= settings_U1
-    # override default device specified in settings
-    default_device= 'cpu' if not hasattr(settings, 'device') else settings.device
-    if not cfg.global_args.device == default_device:
-        settings.device = cfg.global_args.device
-        settings_full.device = cfg.global_args.device
-        print("Setting backend device: "+settings.device)
+    from yastn.yastn.sym import sym_U1
+    if args.yast_backend=='torch':
+        from yastn.yastn.backend import backend_torch as backend
+    elif args.yast_backend=='torch_cpp':
+        from yastn.yastn.backend import backend_torch_cpp as backend
+    settings_full= yastn.make_config(backend=backend, \
+        default_device= cfg.global_args.device, default_dtype=cfg.global_args.dtype)
+    settings= yastn.make_config(backend=backend, sym=sym_U1, \
+        default_device= cfg.global_args.device, default_dtype=cfg.global_args.dtype)
+    settings.backend.set_num_threads(args.omp_cores)
+    settings.backend.random_seed(args.seed)
     settings.back.ad_decomp_reg= cfg.ctm_args.ad_decomp_reg
-    settings.back.set_num_threads(args.omp_cores)
-    settings.back.random_seed(args.seed)
 
     # 1) set model
     model= j1j2.J1J2_C4V_BIPARTITE_NOSYM(settings_full, j1=args.j1, j2=args.j2)

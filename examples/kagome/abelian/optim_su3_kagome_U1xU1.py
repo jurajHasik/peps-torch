@@ -4,8 +4,7 @@ import torch
 import numpy as np
 import argparse
 import config as cfg
-import yast.yast as yast
-import examples.abelian.settings_U1xU1_torch as settings_U1xU1
+import yastn.yastn as yastn
 from ipeps.ipess_kagome_abelian import *
 from ctm.generic_abelian.env_abelian import *
 import ctm.generic_abelian.ctmrg as ctmrg
@@ -22,6 +21,8 @@ parser= cfg.get_args_parser()
 # additional model-dependent arguments
 parser.add_argument("--phi", type=float, default=0.5, help="arctan(K/J): J -> 2-site coupling; K -> 3-site coupling")
 parser.add_argument("--theta", type=float, default=0., help="arctan(H/K): K -> 3-site coupling; K -> chiral coupling")
+parser.add_argument("--yast_backend", type=str, default='torch', 
+    help="YAST backend", choices=['torch','torch_cpp'])
 args, unknown_args = parser.parse_known_args()
 
 def main():
@@ -32,11 +33,13 @@ def main():
     param_k = np.round(np.sin(np.pi*args.phi) * np.cos(np.pi*args.theta), decimals=15)
     param_h = np.round(np.sin(np.pi*args.phi) * np.sin(np.pi*args.theta), decimals=15)
     print("J = {}; K = {}; H = {}".format(param_j, param_k, param_h))
-    settings= settings_U1xU1
-    # override default device specified in settings
-    settings.default_device= cfg.global_args.device
-    # override default dtype
-    settings.default_dtype= cfg.global_args.dtype
+    from yastn.yastn.sym import sym_U1xU1
+    if args.yast_backend=='torch':
+        from yastn.yastn.backend import backend_torch as backend
+    elif args.yast_backend=='torch_cpp':
+        from yastn.yastn.backend import backend_torch_cpp as backend
+    settings= yastn.make_config(backend=backend, sym=sym_U1xU1, \
+        default_device= cfg.global_args.device, default_dtype=cfg.global_args.dtype)
     settings.backend.set_num_threads(args.omp_cores)
     settings.backend.random_seed(args.seed)
 
@@ -49,11 +52,11 @@ def main():
         state= read_ipess_kagome_generic(args.instate, settings)
         state= state.add_noise(args.instate_noise)
     elif args.opt_resume is not None:
-        T_u= yast.Tensor(config=settings, s=(-1,-1,-1))
-        T_d= yast.Tensor(config=settings, s=(-1,-1,-1))
-        B_c= yast.Tensor(config=settings, s=(-1,1,1))
-        B_a= yast.Tensor(config=settings, s=(-1,1,1))
-        B_b= yast.Tensor(config=settings, s=(-1,1,1))
+        T_u= yastn.Tensor(config=settings, s=(-1,-1,-1))
+        T_d= yastn.Tensor(config=settings, s=(-1,-1,-1))
+        B_c= yastn.Tensor(config=settings, s=(-1,1,1))
+        B_a= yastn.Tensor(config=settings, s=(-1,1,1))
+        B_b= yastn.Tensor(config=settings, s=(-1,1,1))
         state= IPESS_KAGOME_GENERIC_ABELIAN(settings, {'T_u': T_u, 'B_a': B_a,\
             'T_d': T_d, 'B_b': B_b, 'B_c': B_c}, build_sites=False)
         state.load_checkpoint(args.opt_resume)
@@ -81,9 +84,40 @@ def main():
             return True, history
         return False, history
 
+    @torch.no_grad()
+    def ctmrg_conv_specC(state, env, history, ctm_args=cfg.ctm_args):
+        if not history:
+            history={'spec': [], 'diffs': []}
+        # use corner spectra
+        diff=float('inf')
+        diffs=None
+        spec= env.get_spectra()
+        spec_nosym_sorted= { s_key : s_t._data.sort(descending=True)[0] \
+            for s_key, s_t in spec.items() }
+        if len(history['spec'])>0:
+            s_old= history['spec'][-1]
+            diffs= []
+            for k in spec.keys():
+                x_0,x_1 = spec_nosym_sorted[k], s_old[k]
+                if x_0.size(0)>x_1.size(0):
+                    diffs.append( (sum((x_1-x_0[:x_1.size(0)])**2) \
+                        + sum(x_0[x_1.size(0):]**2)).item() )
+                else:
+                    diffs.append( (sum((x_0-x_1[:x_0.size(0)])**2) \
+                        + sum(x_1[x_0.size(0):]**2)).item() )
+            diff= sum(diffs)
+        history['spec'].append(spec_nosym_sorted)
+        history['diffs'].append(diffs)
+
+        if (len(history['diffs']) > 1 and abs(diff) < ctm_args.ctm_conv_tol)\
+            or len(history['diffs']) >= ctm_args.ctm_max_iter:
+            log.info({"history_length": len(history['diffs']), "history": history['diffs']})
+            return True, history
+        return False, history
+
     ctm_env= ENV_ABELIAN(args.chi, state=state, init=True)
 
-    ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
+    ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_specC)
     loss0 = energy_f(state, ctm_env)
     obs_values, obs_labels = model.eval_obs(state,ctm_env)
     print(", ".join(["epoch","energy"]+obs_labels))
@@ -131,7 +165,7 @@ def main():
     outputstatefile= args.out_prefix+"_state.json"
     state= read_ipess_kagome_generic(outputstatefile, settings)
     ctm_env = ENV_ABELIAN(args.chi, state=state, init=True)
-    ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
+    ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_specC)
     opt_energy = energy_f(state,ctm_env)
     obs_values, obs_labels = model.eval_obs(state,ctm_env)
     print("\n")

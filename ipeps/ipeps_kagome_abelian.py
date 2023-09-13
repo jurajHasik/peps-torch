@@ -23,7 +23,7 @@ class IPEPS_KAGOME_ABELIAN(ipeps_abelian.IPEPS_ABELIAN):
         :param lY: length of the elementary unit cell in Y direction
         :param peps_args: ipeps configuration
         :param global_args: global configuration
-        :type sites: dict[tuple(int,int) : yast.Tensor]
+        :type sites: dict[tuple(int,int) : yastn.Tensor]
         :type vertexToSite: function(tuple(int,int))->tuple(int,int)
         :type lX: int
         :type lY: int

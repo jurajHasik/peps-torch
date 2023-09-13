@@ -199,6 +199,8 @@ class PEPSARGS():
     def __init__(self):
         self.build_dl= True
         self.build_dl_open= False
+        self.quasi_gauge_max_iter= 10**6
+        self.quasi_gauge_tol= 1.0e-8
 
     def __str__(self):
         res=type(self).__name__+"\n"
@@ -256,6 +258,8 @@ class CTMARGS():
     :vartype projector_eps_multiplet: float
     :ivar projector_multiplet_abstol: absolute threshold for spectral values to be considered in multiplets 
     :vartype projector_multiplet_abstol: float
+    :ivar radomize_ctm_move_sequence: If ``True``, then ``ctm_move_sequence`` is randomized in each optimization step
+    :vartype radomize_ctm_move_sequence: bool
     :ivar ctm_move_sequence: sequence of directional moves within single CTM iteration. The possible 
                              directions are encoded as tuples(int,int) 
                                 
@@ -329,6 +333,7 @@ class CTMARGS():
         self.projector_multiplet_abstol = 1.0e-14
         self.ad_decomp_reg= 1.0e-12
         self.ctm_move_sequence = [(0,-1), (-1,0), (0,1), (1,0)]
+        self.randomize_ctm_move_sequence = False
         self.ctm_force_dl = False
         self.ctm_logging = False
         self.verbosity_initialization = 0
@@ -342,6 +347,7 @@ class CTMARGS():
         self.fwd_checkpoint_projectors = False
         self.fwd_checkpoint_absorb = False
         self.fwd_checkpoint_move = False
+        self.fwd_checkpoint_loop_rdm = False
 
     def __str__(self):
         res=type(self).__name__+"\n"
@@ -419,6 +425,7 @@ class OPTARGS():
         self.tolerance_grad= 1e-5
         self.tolerance_change= 1e-9
         self.opt_ctm_reinit= True
+        self.env_sens_scale= 10.0
         self.line_search= "default"
         self.line_search_ctm_reinit= True
         self.line_search_svd_method= 'DEFAULT'

@@ -1,11 +1,10 @@
 import os
+import copy
 import context
 import argparse
-import numpy as np
 import torch
 import config as cfg
-import examples.abelian.settings_full_torch as settings_full
-import examples.abelian.settings_U1_torch as settings_U1
+import yastn.yastn as yastn
 from ipeps.ipeps_abelian import *
 from ctm.generic_abelian.env_abelian import *
 import ctm.generic_abelian.ctmrg as ctmrg
@@ -26,16 +25,23 @@ parser.add_argument("--bz_stag", type=float, default=0., help="staggered magneti
 parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
+parser.add_argument("--yast_backend", type=str, default='torch', 
+    help="YAST backend", choices=['torch','torch_cpp'])
+parser.add_argument("--test_env_sensitivity", action='store_true', help="compare loss with higher chi env")
 args, unknown_args = parser.parse_known_args()
 
 def main():
     cfg.configure(args)
     cfg.print_config()
-    settings= settings_U1
-    # override default device specified in settings
-    settings.default_device= settings_full.default_device= cfg.global_args.device
-    # override default dtype
-    settings.default_dtype= settings_full.default_dtype= cfg.global_args.dtype
+    from yastn.yastn.sym import sym_U1
+    if args.yast_backend=='torch':
+        from yastn.yastn.backend import backend_torch as backend
+    elif args.yast_backend=='torch_cpp':
+        from yastn.yastn.backend import backend_torch_cpp as backend
+    settings_full= yastn.make_config(backend=backend, \
+        default_device= cfg.global_args.device, default_dtype=cfg.global_args.dtype)
+    settings= yastn.make_config(backend=backend, sym=sym_U1, \
+        default_device= cfg.global_args.device, default_dtype=cfg.global_args.dtype)
     settings.backend.set_num_threads(args.omp_cores)
     settings.backend.random_seed(args.seed)
 
@@ -50,7 +56,7 @@ def main():
         state= state.add_noise(args.instate_noise)
     # TODO checkpointing
     elif args.opt_resume is not None:
-        state= IPEPS_ABELIAN(settings_U1, dict(), lX=2, lY=2)
+        state= IPEPS_ABELIAN(settings, dict(), lX=2, lY=2)
         state.load_checkpoint(args.opt_resume)
     else:
         raise ValueError("Missing trial state: --instate=None and --ipeps_init_type= "\
@@ -118,12 +124,33 @@ def main():
         if opt_context["line_search"]:
             epoch= len(opt_context["loss_history"]["loss_ls"])
             loss= opt_context["loss_history"]["loss_ls"][-1]
-            print("LS",end=" ")
+            print("LS "+", ".join([f"{epoch}",f"{loss}"]))
         else:
             epoch= len(opt_context["loss_history"]["loss"]) 
             loss= opt_context["loss_history"]["loss"][-1] 
-        obs_values, obs_labels = model.eval_obs(state,ctm_env)
-        print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
+            obs_values, obs_labels = model.eval_obs(state,ctm_env)
+
+            # test ENV sensitivity
+            if args.test_env_sensitivity:
+                loc_ctm_args= copy.deepcopy(opt_context["ctm_args"])
+                loc_ctm_args.ctm_max_iter= 1
+                ctm_env_out1= ctm_env.clone()
+                ctm_env_out1.chi= ctm_env.chi+10
+                ctm_env_out1, *ctm_log= ctmrg.run(state, ctm_env_out1, \
+                    conv_check=ctmrg_conv_energy, ctm_args=loc_ctm_args)
+                loss1= model.energy_2x1_1x2(state, ctm_env_out1).to_number()
+                delta_loss= opt_context['loss_history']['loss'][-1]-opt_context['loss_history']['loss'][-2]\
+                    if len(opt_context['loss_history']['loss'])>1 else float('NaN')
+                # if we are not linesearching, this can always happen
+                # not "line_search" in opt_context.keys()
+                _flag_antivar= (loss1-loss)>0 and (loss1-loss)>abs(delta_loss)
+                opt_context["STATUS"]= "ENV_ANTIVAR" if _flag_antivar else "ENV_VAR"
+
+            print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]\
+                + ([f"{loss1-loss}"] if args.test_env_sensitivity else []) ))
+            log.info(f"env_sensitivity: {loss1-loss} loss_diff: "\
+                +f"{delta_loss}" if args.test_env_sensitivity else ""\
+                +" Norm(sites): "+", ".join([f"{t.norm()}" for c,t in state.sites.items()]))
 
         # with torch.no_grad():
         #     if (not opt_context["line_search"]) and args.top_freq>0 \
@@ -136,6 +163,9 @@ def main():
         #             print("TOP "+json.dumps(_to_json(l)))
 
     # optimize
+    if args.test_env_sensitivity:
+        state_g= IPEPS_ABELIAN_WEIGHTED(state=state).gauge()
+        state= state_g.absorb_weights()
     optimize_state(state, ctm_env, loss_fn, obs_fn=obs_fn)
 
     # compute final observables for the best variational state

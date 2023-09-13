@@ -1,5 +1,5 @@
 import numpy as np
-import yast.yast as yast
+import yastn.yastn as yastn
 from math import factorial, sqrt
 
 class SU3_DEFINING_U1xU1():
@@ -61,9 +61,9 @@ class SU3_DEFINING_U1xU1():
     def I(self):
         r"""
         :return: Identity operator of irrep
-        :rtype: yast.Tensor
+        :rtype: yastn.Tensor
         """
-        op= yast.Tensor(self.engine, s=self._REF_S_DIRS, n=(0,0))
+        op= yastn.Tensor(self.engine, s=self._REF_S_DIRS, n=(0,0))
         for c in self.charges:
             op.set_block(ts=(c,c), Ds=(1,1), val='ones')
         op= op.to(self.device)
@@ -72,10 +72,10 @@ class SU3_DEFINING_U1xU1():
     def TZ(self):
         r"""
         :return: :math:`T^z` operator of irrep
-        :rtype: yast.Tensor
+        :rtype: yastn.Tensor
         """
         unit_block= np.ones((1,1), dtype=self.dtype)
-        op= yast.Tensor(self.engine, s=self._REF_S_DIRS, n=(0,0))
+        op= yastn.Tensor(self.engine, s=self._REF_S_DIRS, n=(0,0))
         for val, c in zip( [0.5, -0.5], self.charges[:2] ):
             op.set_block(ts=(c,c), Ds=(1,1), val=val*unit_block)
         op= op.to(self.device)
@@ -84,10 +84,10 @@ class SU3_DEFINING_U1xU1():
     def Y(self):
         r"""
         :return: :math:`Y` operator of irrep
-        :rtype: yast.Tensor
+        :rtype: yastn.Tensor
         """
         unit_block= np.ones((1,1), dtype=self.dtype)
-        op= yast.Tensor(self.engine, s=self._REF_S_DIRS, n=(0,0))
+        op= yastn.Tensor(self.engine, s=self._REF_S_DIRS, n=(0,0))
         for val, c in zip( [1./3, 1./3, -2./3], self.charges ):
             op.set_block(ts=(c,c), Ds=(1,1), val=val*unit_block)
         op= op.to(self.device)
@@ -96,9 +96,9 @@ class SU3_DEFINING_U1xU1():
     def TP(self):
         r"""
         :return: :math:`T^+` operator of irrep
-        :rtype: yast.Tensor
+        :rtype: yastn.Tensor
         """
-        op= yast.Tensor(self.engine, s=self._REF_S_DIRS, n=(-2,0))
+        op= yastn.Tensor(self.engine, s=self._REF_S_DIRS, n=(-2,0))
         # (1,1) <- (-1,1)
         op.set_block(ts=(self.charges[0],self.charges[1]), Ds=(1,1), val='ones')
         op= op.to(self.device)
@@ -107,9 +107,9 @@ class SU3_DEFINING_U1xU1():
     def TM(self):
         r"""
         :return: :math:`T^-` operator of irrep
-        :rtype: yast.Tensor
+        :rtype: yastn.Tensor
         """
-        op= yast.Tensor(self.engine, s=self._REF_S_DIRS, n=(2,0))
+        op= yastn.Tensor(self.engine, s=self._REF_S_DIRS, n=(2,0))
         # (-1,1) <- (1,1)
         op.set_block(ts=(self.charges[1],self.charges[0]), Ds=(1,1), val='ones')
         op= op.to(self.device)
@@ -118,9 +118,9 @@ class SU3_DEFINING_U1xU1():
     def VP(self):
         r"""
         :return: :math:`V^+` operator of irrep
-        :rtype: yast.Tensor
+        :rtype: yastn.Tensor
         """
-        op= yast.Tensor(self.engine, s=self._REF_S_DIRS, n=(-1,-3))
+        op= yastn.Tensor(self.engine, s=self._REF_S_DIRS, n=(-1,-3))
         # (1,1) <- (0,-2)
         op.set_block(ts=(self.charges[0],self.charges[2]), Ds=(1,1), val='ones')
         op= op.to(self.device)
@@ -129,9 +129,9 @@ class SU3_DEFINING_U1xU1():
     def VM(self):
         r"""
         :return: :math:`V^-` operator of irrep
-        :rtype: yast.Tensor
+        :rtype: yastn.Tensor
         """
-        op= yast.Tensor(self.engine, s=self._REF_S_DIRS, n=(1,3))
+        op= yastn.Tensor(self.engine, s=self._REF_S_DIRS, n=(1,3))
         # (0,-2) <- (1,1)
         op.set_block(ts=(self.charges[2],self.charges[0]), Ds=(1,1), val='ones')
         op= op.to(self.device)
@@ -140,9 +140,9 @@ class SU3_DEFINING_U1xU1():
     def UP(self):
         r"""
         :return: :math:`U^+` operator of irrep
-        :rtype: yast.Tensor
+        :rtype: yastn.Tensor
         """
-        op= yast.Tensor(self.engine, s=self._REF_S_DIRS, n=(1,-3))
+        op= yastn.Tensor(self.engine, s=self._REF_S_DIRS, n=(1,-3))
         # (-1,1) <- (0,-2)
         op.set_block(ts=(self.charges[1],self.charges[2]), Ds=(1,1), val='ones')
         op= op.to(self.device)
@@ -151,9 +151,9 @@ class SU3_DEFINING_U1xU1():
     def UM(self):
         r"""
         :return: :math:`U^-` operator of irrep
-        :rtype: yast.Tensor
+        :rtype: yastn.Tensor
         """
-        op= yast.Tensor(self.engine, s=self._REF_S_DIRS, n=(-1,3))
+        op= yastn.Tensor(self.engine, s=self._REF_S_DIRS, n=(-1,3))
         # (0,-2) <- (-1,1)
         op.set_block(ts=(self.charges[2],self.charges[1]), Ds=(1,1), val='ones')
         op= op.to(self.device)
@@ -162,7 +162,7 @@ class SU3_DEFINING_U1xU1():
     def G(self):
         r"""
         :return: metric tensor on adjoint irrep :math:`\mathbf{8}=(1,1)`.
-        :rtype: yast.Tensor
+        :rtype: yastn.Tensor
 
         Returns rank-2 tensor G, such that the quadratic Casimir in terms of C-W basis :math:`\vec{T}`
         can be computed as :math:`\vec{T}^T G \vec{T}`.
@@ -180,7 +180,7 @@ class SU3_DEFINING_U1xU1():
         # (1, 3): 1,   VM n=(1,3) 
         # (2, 0): 1    TM n=(2,0)
         #
-        G= yast.Tensor(self.engine, s=(1,1), n=(0,0))
+        G= yastn.Tensor(self.engine, s=(1,1), n=(0,0))
         G.set_block(ts=(0,0,0,0), Ds=(2,2), val=np.asarray([[1.,0.],[0.,3./4]], self.dtype))
         G.set_block(ts=(-1,-3,1,3), Ds=(1,1), val=0.5*unit_block)
         G.set_block(ts=(1,3,-1,-3), Ds=(1,1), val=0.5*unit_block)
@@ -194,7 +194,7 @@ class SU3_DEFINING_U1xU1():
         r"""
         :return: vector of generators forming Cartan-Weyl basis ordered
                  as [T^+, T^-, T^z, V^+, V^-, U^+, U^-, Y]
-        :rtype: yast.Tensor
+        :rtype: yastn.Tensor
         
         The signature of this rank-3 tensor is::
 
@@ -207,15 +207,15 @@ class SU3_DEFINING_U1xU1():
         The first index, which runs over generators, is charged, such that the total tensor 
         is U(1)xU(1)-invariant.
         """
-        op_v= yast.block({i: t.add_leg(axis=0,s=-1) for i,t in enumerate([\
+        op_v= yastn.block({i: t.add_leg(axis=0,s=-1) for i,t in enumerate([\
             self.TZ(), self.Y(), self.TP(), self.TM(), self.VP(), self.VM(),\
-            self.UP(), self.UM()])}, common_legs=[1,2]).drop_leg_history(axis=0)
+            self.UP(), self.UM()])}, common_legs=[1,2]).drop_leg_history(axes=0)
         return op_v
 
     def C1(self):
         r"""
         :return: The quadratic Casimir of su(3) as rank-4 for tensor
-        :rtype: yast.Tensor
+        :rtype: yastn.Tensor
         """
         # spin-spin interaction \sum_k{\vec{F}_{1,k}\vec{S}_{2,k}} between F-spins on sites 1 and 2
         
@@ -224,8 +224,8 @@ class SU3_DEFINING_U1xU1():
         #             1    1->0       1->2
         # 0--G--1 0--CW => CW--0 0--GCW
         #             2    2->1       2->3
-        C1= yast.tensordot(self.G(), CW_basis, ([1],[0]))
-        C1= yast.tensordot(CW_basis, C1, ([0],[0])).transpose(axes=(0,2,1,3))
+        C1= yastn.tensordot(self.G(), CW_basis, ([1],[0]))
+        C1= yastn.tensordot(CW_basis, C1, ([0],[0])).transpose(axes=(0,2,1,3))
         return C1
 
     # def C2(self):

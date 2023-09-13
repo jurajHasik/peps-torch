@@ -54,9 +54,9 @@ class ENV_C4V():
         if state:
             assert len(state.sites)==1, "Not a 1-site ipeps"
             site= next(iter(state.sites.values()))
-            assert site.size()[1]==site.size()[1]==site.size()[1]==site.size()[1],\
+            assert site.size(-4)==site.size(-3)==site.size(-2)==site.size(-1),\
                 "bond dimensions of on-site tensor are not equal"
-            bond_dim= site.size()[1]
+            bond_dim= site.size(-1)
         super(ENV_C4V, self).__init__()
         self.dtype= global_args.torch_dtype
         self.device= global_args.device
@@ -163,7 +163,7 @@ class ENV_C4V():
     #     else:
     #         raise RuntimeError(f"Unsupported device {device}")
 
-def init_env(state, env, ctm_args=cfg.ctm_args):
+def init_env(state, env, C_and_T=None, ctm_args=cfg.ctm_args):
     """
     :param state: wavefunction
     :param env: C4v symmetric CTM environment
@@ -182,6 +182,22 @@ def init_env(state, env, ctm_args=cfg.ctm_args):
           distribution [0,1)
         * ``"CTMRG"`` - tensors C and T are built from the on-site tensor of `state` 
     """
+    if C_and_T:
+        assert len(C_and_T)==2 and type(C_and_T[0])==torch.Tensor \
+            and type(C_and_T[1])==torch.Tensor, "Invalid C and T. Expects tuple (C, T)."
+        # assume custom C and T supplied
+        x= C_and_T[0].size(0)
+        env_aux_D= C_and_T[1].size(2)
+        env.C[env.keyC][:x,:x]= C_and_T[0]
+        env.T[env.keyT]= torch.zeros((env.chi,env.chi,env_aux_D), \
+            dtype=env.dtype, device=env.device)
+        env.T[env.keyT][:x,:x,:]= C_and_T[1]
+        return
+
+    if len(state.site().size())==4 and \
+        ctm_args.ctm_env_init_type in ["CTMRG","CTMRG_OBC"]:
+        raise RuntimeError("Incompatible ENV_C4V initialization")
+
     if ctm_args.ctm_env_init_type=='PROD':
         init_prod(state, env, ctm_args.verbosity_initialization)
     elif ctm_args.ctm_env_init_type=='RANDOM':
@@ -190,6 +206,8 @@ def init_env(state, env, ctm_args=cfg.ctm_args):
         init_from_ipeps_pbc(state, env, ctm_args.verbosity_initialization)
     elif ctm_args.ctm_env_init_type=='CTMRG_OBC':
         init_from_ipeps_obc(state, env, ctm_args.verbosity_initialization)
+    elif ctm_args.ctm_env_init_type=='CTMRG_OBC_SL':
+        init_from_ipeps_obc_sl(state, env, ctm_args.verbosity_initialization)
     else:
         raise ValueError("Invalid environment initialization: "\
             +str(ctm_args.ctm_env_init_type))
@@ -210,8 +228,12 @@ def init_prod(state, env, verbosity=0):
     #    i--A--j
     #      /
     #     2
-    a = torch.einsum('meifj,maibj->eafb',(A,A.conj())).contiguous().view(\
-        A.size()[1]**2, A.size()[3]**2)
+    if len(A.size())==4:
+        # assume only virtual indices are present
+        a= torch.einsum('aibj->ab',A).contiguous()
+    else:    
+        a = torch.einsum('meifj,maibj->eafb',(A,A.conj())).contiguous().view(\
+            A.size()[1]**2, A.size()[3]**2)
     a= a/a.abs().max()
     # check symmetry
     a_asymm_norm= torch.norm(a.conj().t()-a)
@@ -235,7 +257,9 @@ def init_random(env, verbosity=0):
 def init_from_ipeps_pbc(state, env, verbosity=0):
     if verbosity>0:
         print("ENV: init_from_ipeps_pbc")
+    _init_from_ipeps_pbc(state.site(), state.site().conj(), env, verbosity=verbosity)
 
+def _init_from_ipeps_pbc(a_ket, a_bra, env, verbosity=0):
     # Left-upper corner
     #
     #     i      = C--1     
@@ -246,10 +270,13 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
     #    j--A--3
     #      /
     #     2
-    A= next(iter(state.sites.values()))
-    dimsA= A.size()
-    a= torch.einsum('mijef,mijab->eafb',A,A.conj()).contiguous().view(dimsA[3]**2, dimsA[4]**2)
-    a= a/a.abs().max()
+    d_ket= a_ket.size()
+    d_bra= a_bra.size()
+    d_kb= [d_ket[i+1]*d_bra[i+1] for i in range(4)]
+    a= torch.einsum('mijef,mijab->eafb',a_ket,a_bra).contiguous().view(d_kb[2], d_kb[3])
+    with torch.no_grad():
+        scale= a.abs().max()
+    a= a/scale
 
     a_asymm_norm= torch.norm(a.conj().t()-a)
     assert a_asymm_norm/a.abs().max() < 1.0e-8, "a is not symmetric"
@@ -257,8 +284,8 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
     a= torch.diag(D)
 
     env.C[env.keyC]= torch.zeros(env.chi,env.chi, dtype=env.dtype, device=env.device)
-    env.C[env.keyC][:min(env.chi,dimsA[3]**2),:min(env.chi,dimsA[4]**2)]=\
-       a[:min(env.chi,dimsA[3]**2),:min(env.chi,dimsA[4]**2)]
+    env.C[env.keyC][:min(env.chi,d_kb[2]),:min(env.chi,d_kb[3])]=\
+       a[:min(env.chi,d_kb[2]),:min(env.chi,d_kb[3])]
 
     # left transfer matrix (orientation from 1->0)
     #
@@ -270,16 +297,19 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
     #    i--A--3
     #      /
     #     2
-    a= torch.einsum('meifg,maibc->eafbgc',(A,A.conj())).contiguous().view(dimsA[1]**2, dimsA[3]**2, dimsA[4]**2)
-    a= a/a.abs().max()
+    a= torch.einsum('meifg,maibc->eafbgc',(a_ket,a_bra)).contiguous().view(d_kb[0], d_kb[2], d_kb[3])
+    with torch.no_grad():
+        scale= a.abs().max()
+    a= a/scale
 
     a= torch.einsum('ai,abs,bj->ijs',U,a,U.conj())
     a_asymm_norm= (a-a.permute(1,0,2).conj()).norm()
     assert a_asymm_norm/a.abs().max() < 1.0e-8, "a is not symmetric"
 
-    env.T[env.keyT]= torch.zeros((env.chi,env.chi,dimsA[4]**2), dtype=env.dtype, device=env.device)
-    env.T[env.keyT][:min(env.chi,dimsA[1]**2),:min(env.chi,dimsA[3]**2),:]=\
-        a[:min(env.chi,dimsA[1]**2),:min(env.chi,dimsA[3]**2),:]
+    env.T[env.keyT]= torch.zeros((env.chi,env.chi,d_kb[3]), dtype=env.dtype, device=env.device)
+    env.T[env.keyT][:min(env.chi,d_kb[0]),:min(env.chi,d_kb[2]),:]=\
+        a[:min(env.chi,d_kb[0]),:min(env.chi,d_kb[2]),:]
+
 
 # TODO handle case when chi < bond_dim^2
 def init_from_ipeps_obc(state, env, verbosity=0):
@@ -299,7 +329,9 @@ def init_from_ipeps_obc(state, env, verbosity=0):
     A= next(iter(state.sites.values()))
     dimsA= A.size()
     a= torch.einsum('mijef,mklab->eafb',(A,A.conj())).contiguous().view(dimsA[3]**2, dimsA[4]**2)
-    a= a/a.abs().max()
+    with torch.no_grad():
+        scale= a.abs().max()
+    a= a/scale
     env.C[env.keyC]= torch.zeros(env.chi,env.chi, dtype=env.dtype, device=env.device)
     env.C[env.keyC][:min(env.chi,dimsA[3]**2),:min(env.chi,dimsA[4]**2)]=\
         a[:min(env.chi,dimsA[3]**2),:min(env.chi,dimsA[4]**2)]
@@ -315,10 +347,44 @@ def init_from_ipeps_obc(state, env, verbosity=0):
     #      /
     #     2
     a= torch.einsum('meifg,makbc->eafbgc',(A,A.conj())).contiguous().view(dimsA[1]**2, dimsA[3]**2, dimsA[4]**2)
-    a= a/a.abs().max()
+    with torch.no_grad():
+        scale= a.abs().max()
+    a= a/scale
     env.T[env.keyT]= torch.zeros((env.chi,env.chi,dimsA[4]**2), dtype=env.dtype, device=env.device)
     env.T[env.keyT][:min(env.chi,dimsA[1]**2),:min(env.chi,dimsA[3]**2),:]=\
         a[:min(env.chi,dimsA[1]**2),:min(env.chi,dimsA[3]**2),:]
+
+def init_from_ipeps_obc_sl(state, env, verbosity=0):
+    if verbosity>0:
+        print("ENV: init_from_ipeps_obc")
+
+    assert len(state.site().size())==4, "on-site tensor is expected to have only aux indices"
+    # Left-upper corner
+    #
+    #     i      = C--1     
+    # j--A--3      0
+    #   /
+    #  2  
+    A= next(iter(state.sites.values()))
+    dimsA= A.size()
+    a= torch.einsum('ijef->ef',A).contiguous()
+    a= a/a.abs().max()
+    env.C[env.keyC]= torch.zeros(env.chi,env.chi, dtype=env.dtype, device=env.device)
+    env.C[env.keyC][:min(env.chi,dimsA[2]),:min(env.chi,dimsA[3])]=\
+        a[:min(env.chi,dimsA[2]),:min(env.chi,dimsA[3])]
+
+    # left transfer matrix
+    #
+    #     0      = 0     
+    # i--A--3      T--2
+    #   /          1
+    #  2
+    a= torch.einsum('eifg->efg',A).contiguous()
+    a= a/a.abs().max()
+    env.T[env.keyT]= torch.zeros((env.chi,env.chi,dimsA[3]), dtype=env.dtype, device=env.device)
+    env.T[env.keyT][:min(env.chi,dimsA[0]),:min(env.chi,dimsA[2]),:]=\
+        a[:min(env.chi,dimsA[0]),:min(env.chi,dimsA[2]),:]
+
 
 def print_env(env, verbosity=0):
     print("dtype "+str(env.dtype))
