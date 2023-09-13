@@ -85,7 +85,7 @@ jobs:
         run: |
           $CONDA/bin/python -m pytest examples/ladders/abelian/ctmrg_*.py
           $CONDA/bin/python -m pytest examples/ladders/abelian/optim_*.py
-          $CONDA/bin/python -m pytest examples/ladders/abelian/SU2_ladders_u1.py
+          $CONDA/bin/python -m pytest examples/ladders/abelian/SU_ladders_u1.py
           
       - name: test kagome
         run: |
