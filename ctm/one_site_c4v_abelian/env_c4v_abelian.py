@@ -1,6 +1,6 @@
 import config as cfg
 import numpy as np
-import yast.yast as yast
+import yastn.yastn as yastn
 
 class ENV_C4V_ABELIAN():
     def __init__(self, chi=1, state=None, settings=None, init=False, 
@@ -104,14 +104,14 @@ class ENV_C4V_ABELIAN():
     def get_C(self):
         r"""
         :return: get corner tensor
-        :rtype: yast.Tensor
+        :rtype: yastn.Tensor
         """
         return self.C[self.keyC]
 
     def get_T(self):
         r"""
         :return: get half-row/-column tensor
-        :rtype: yast.Tensor
+        :rtype: yastn.Tensor
         """
         return self.T[self.keyT]
 
@@ -279,7 +279,7 @@ def init_from_ipeps_pbc(state, env, verbosity=0):
     env.T[env.keyT]=a
 
 def compute_multiplets(C, eps_multiplet_gap=1.0e-10):
-    U,S,V= yast.linalg.svd(C, (0,1), sU=1)
+    U,S,V= yastn.linalg.svd(C, (0,1), sU=1)
     S_dense= np.diag(S.to_numpy())
     chi= len(S_dense)
     D= np.zeros(chi+1, dtype=S_dense.dtype) # numpy sorts in ascending fashion

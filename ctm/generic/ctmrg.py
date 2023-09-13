@@ -11,6 +11,8 @@ from ctm.generic.ctm_projectors import *
 from tn_interface import contract, einsum
 from tn_interface import conj
 from tn_interface import contiguous, view, permute
+import logging
+log = logging.getLogger(__name__)
 
 def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.global_args): 
     r"""
@@ -45,13 +47,17 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
     #  --A--
     #   /
     #
-    sitesDL=dict()
-    for coord,A in state.sites.items():
-        dimsA = A.size()
-        a = contiguous(einsum('mefgh,mabcd->eafbgchd',A,conj(A)))
-        a= view(a, (dimsA[1]**2,dimsA[2]**2, dimsA[3]**2, dimsA[4]**2))
-        sitesDL[coord]=a
-    stateDL = IPEPS(sitesDL,state.vertexToSite)
+    if not ctm_args.ctm_force_dl or len(next(iter(state.sites.values())).size())==4:
+        stateDL= state
+    elif len(next(iter(state.sites.values())).size())==5:
+        sitesDL=dict()
+        for coord,A in state.sites.items():
+            dimsA = A.size()
+            a = contiguous(einsum('mefgh,mabcd->eafbgchd',A,conj(A)))
+            a= view(a, (dimsA[1]**2,dimsA[2]**2, dimsA[3]**2, dimsA[4]**2))
+            sitesDL[coord]=a
+        stateDL = IPEPS(sites=sitesDL,vertexToSite=state.vertexToSite,lX=state.lX,lY=state.lY,\
+            global_args=global_args)
 
     # 1) perform CTMRG
     t_obs=t_ctm=0.
@@ -60,8 +66,10 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
         t0_ctm= time.perf_counter()
         for direction in ctm_args.ctm_move_sequence:
             diagnostics={"ctm_i": i, "ctm_d": direction} if ctm_args.verbosity_projectors>0 else None
-            ctm_MOVE(direction, stateDL, env, ctm_args=ctm_args, global_args=global_args, \
-                verbosity=ctm_args.verbosity_ctm_move,diagnostics=diagnostics)
+            num_rows_or_cols= stateDL.lX if direction in [(-1,0),(1,0)] else stateDL.lY
+            for row_or_col in range(num_rows_or_cols):
+                ctm_MOVE(direction, stateDL, env, ctm_args=ctm_args, global_args=global_args, \
+                    verbosity=ctm_args.verbosity_ctm_move,diagnostics=diagnostics)
         t1_ctm= time.perf_counter()
 
         t0_obs= time.perf_counter()
@@ -98,6 +106,7 @@ def run_overlap(state1, state2, env, conv_check=None, ctm_args=cfg.ctm_args, glo
     # TODO add reference
     # """
 
+    assert ctm_args.ctm_force_dl,'ctmrg for wavefunction overlap requires use of double-layer routines'
     # 0) Create double-layer (DL) tensors, preserving the same convention
     # for order of indices
     #
@@ -183,14 +192,15 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
         if norm_type=='inf':
             _ord= float('inf')
 
-        if _torch_version_check("1.9.0"):
-            scale_nC1= torch.linalg.vector_norm(nC1,ord=_ord)
-            scale_nC2= torch.linalg.vector_norm(nC2,ord=_ord)
-            scale_nT= torch.linalg.vector_norm(nT,ord=_ord)
-        else:
-            scale_nC1= nC1.norm(p=_ord)
-            scale_nC2= nC2.norm(p=_ord)
-            scale_nT= nT.norm(p=_ord)
+        with torch.no_grad():
+            if _torch_version_check("1.9.0"):
+                scale_nC1= torch.linalg.vector_norm(nC1,ord=_ord)
+                scale_nC2= torch.linalg.vector_norm(nC2,ord=_ord)
+                scale_nT= torch.linalg.vector_norm(nT,ord=_ord)
+            else:
+                scale_nC1= nC1.norm(p=_ord)
+                scale_nC2= nC2.norm(p=_ord)
+                scale_nT= nT.norm(p=_ord)
         if verbosity>0:
             print(f"nC1 {scale_nC1} nC2 {scale_nC2} nT {scale_nT}")
         nC1 = nC1/scale_nC1
@@ -205,7 +215,7 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
 
         # 1) wrap raw tensors back into IPEPS and ENV classes
         sites_loc= dict(zip(state.sites.keys(),tensors[0:len(state.sites)]))
-        state_loc= IPEPS(sites_loc, vertexToSite=state.vertexToSite)
+        state_loc= IPEPS(sites_loc, vertexToSite=state.vertexToSite, lX=state.lX, lY=state.lY)
         env_loc= ENV(env.chi)
         env_loc.C= dict(zip(env.C.keys(),tensors[len(state.sites):len(state.sites)+len(env.C)]))
         env_loc.T= dict(zip(env.T.keys(),tensors[len(state.sites)+len(env.C):]))
@@ -220,7 +230,7 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
             P[coord], Pt[coord] = ctm_get_projectors(direction, coord, state_loc, env_loc,\
                 ctm_args, global_args, diagnostics=diagnostics)
             if verbosity>0:
-                print("P,Pt RIGHT "+str(coord)+" P: "+str(P[coord].size())+" Pt: "+str(Pt[coord].size()))
+                log.info("P,Pt RIGHT "+str(coord)+" P: "+str(P[coord].size())+" Pt: "+str(Pt[coord].size()))
             if verbosity>1:
                 print(P[coord])
                 print(Pt[coord])
@@ -232,13 +242,13 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
         nT = dict()
         for coord in state_loc.sites.keys():
             if direction==(0,-1):
-                nC1[coord], nC2[coord], nT[coord] = absorb_truncate_CTM_MOVE_UP(coord, state_loc, env_loc, P, Pt)
+                nC1[coord], nC2[coord], nT[coord] = absorb_truncate_CTM_MOVE_UP(coord, state_loc, env_loc, P, Pt, ctm_args)
             elif direction==(-1,0):
-                nC1[coord], nC2[coord], nT[coord] = absorb_truncate_CTM_MOVE_LEFT(coord, state_loc, env_loc, P, Pt)
+                nC1[coord], nC2[coord], nT[coord] = absorb_truncate_CTM_MOVE_LEFT(coord, state_loc, env_loc, P, Pt, ctm_args)
             elif direction==(0,1):
-                nC1[coord], nC2[coord], nT[coord] = absorb_truncate_CTM_MOVE_DOWN(coord, state_loc, env_loc, P, Pt)
+                nC1[coord], nC2[coord], nT[coord] = absorb_truncate_CTM_MOVE_DOWN(coord, state_loc, env_loc, P, Pt, ctm_args)
             elif direction==(1,0):
-                nC1[coord], nC2[coord], nT[coord] = absorb_truncate_CTM_MOVE_RIGHT(coord, state_loc, env_loc, P, Pt)
+                nC1[coord], nC2[coord], nT[coord] = absorb_truncate_CTM_MOVE_RIGHT(coord, state_loc, env_loc, P, Pt, ctm_args)
             else:
                 raise ValueError("Invalid direction: "+str(direction))
             nC1[coord], nC2[coord], nT[coord]= move_normalize_c(nC1[coord], nC2[coord], nT[coord])
@@ -290,16 +300,19 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
 #####################################################################
 # functions performing absorption and truncation step
 #####################################################################
-def absorb_truncate_CTM_MOVE_UP(coord, state, env, P, Pt, verbosity=0):
+def absorb_truncate_CTM_MOVE_UP(coord, state, env, P, Pt, ctm_args=cfg.ctm_args):
+    mode= not ctm_args.ctm_force_dl
     vec = (1,0)
     coord_shift_left= state.vertexToSite((coord[0]-vec[0], coord[1]-vec[1]))
     coord_shift_right = state.vertexToSite((coord[0]+vec[0], coord[1]+vec[1]))
     tensors= env.C[(coord,(1,-1))], env.T[(coord,(1,0))], env.T[(coord,(0,-1))], \
         env.T[(coord,(-1,0))], env.C[(coord,(-1,-1))], state.site(coord), \
-        view(P[coord], (env.chi,state.site(coord_shift_left).size()[3],env.chi)), \
-        view(Pt[coord], (env.chi,state.site(coord).size()[1],env.chi)), \
-        view(P[coord_shift_right], (env.chi,state.site(coord).size()[3],env.chi)), \
-        view(Pt[coord_shift_right], (env.chi,state.site(coord_shift_right).size()[1],env.chi))
+        view(P[coord], (env.chi,state.site(coord_shift_left).size(3+mode)**(mode+1),env.chi)), \
+        view(Pt[coord], (env.chi,state.site(coord).size(1+mode)**(mode+1),env.chi)), \
+        view(P[coord_shift_right], (env.chi,state.site(coord).size(3+mode)**(mode+1),env.chi)), \
+        view(Pt[coord_shift_right], (env.chi,state.site(coord_shift_right).size(1+mode)**(mode+1),env.chi))
+    if mode:
+        tensors += (torch.ones(1,dtype=torch.bool),)
 
     if cfg.ctm_args.fwd_checkpoint_absorb:
         return checkpoint(absorb_truncate_CTM_MOVE_UP_c,*tensors)
@@ -307,7 +320,7 @@ def absorb_truncate_CTM_MOVE_UP(coord, state, env, P, Pt, verbosity=0):
         return absorb_truncate_CTM_MOVE_UP_c(*tensors)
 
 def absorb_truncate_CTM_MOVE_UP_c(*tensors):
-    C1, T1, T, T2, C2, A, P2, Pt2, P1, Pt1= tensors
+    C1, T1, T, T2, C2, A, P2, Pt2, P1, Pt1, mode= tensors if len(tensors)==11 else tensors+(None,)
 
     # 0--C1
     #    1
@@ -339,34 +352,61 @@ def absorb_truncate_CTM_MOVE_UP_c(*tensors):
     # 1->0
     nC2 = contract(nC2, P2,([0,2],[0,1]))
 
-    #        --0 0--T--2->3
-    #       |       1->2
-    # 1<-2--Pt2
-    #       |
-    #        --1->0 
-    nT = contract(Pt2, T, ([0],[0]))
+    if not mode:
+        #        --0 0--T--2->3
+        #       |       1->2
+        # 1<-2--Pt2
+        #       |
+        #        --1->0 
+        nT = contract(Pt2, T, ([0],[0]))
 
-    #        -------T--3->1
-    #       |       2
-    # 0<-1--Pt2     | 
-    #       |       0
-    #        --0 1--A--3
-    #               2 
-    nT = contract(nT, A,([0,2],[1,0]))
+        #        -------T--3->1
+        #       |       2
+        # 0<-1--Pt2     | 
+        #       |       0
+        #        --0 1--A--3
+        #               2 
+        nT = contract(nT, A,([0,2],[1,0]))
 
-    #     -------T--1 0--
-    #    |       |       |
-    # 0--Pt2     |       P1--2
-    #    |       |       |
-    #     -------A--3 1--
-    #            2->1 
-    nT = contract(nT, P1,([1,3],[0,1]))
-    nT = contiguous(nT)
+        #     -------T--1 0--
+        #    |       |       |
+        # 0--Pt2     |       P1--2
+        #    |       |       |
+        #     -------A--3 1--
+        #            2->1 
+        nT = contract(nT, P1,([1,3],[0,1]))
+        nT = contiguous(nT)
+    else:
+        # unfuse aux inds connecting to on-site tensor
+        #
+        # 0--T--2
+        #    1
+        T= T.view([T.size(0)]+[A.size(1)]*2+[T.size(2)])
+        #
+        #      /--0
+        # 2--Pt2--1
+        Pt2= Pt2.view([Pt2.size(0)]+[A.size(2)]*2+[Pt2.size(2)])
+        #      0--\
+        #      1--P1--2
+        P1= P1.view([P1.size(0)]+[A.size(4)]*2+[P1.size(2)])
+
+        #        --(0)0 0--T----3 3(0)------
+        #       |          1, 2             |
+        # (3)4--Pt2        1  2             P1--7(3)
+        #       |          |  |             |
+        #        --(1)8 8--a--|---10 10(1)--
+        #       |           12|             |
+        #        --(2)9 9-----a*--11 11(2)-- 
+        #                  |  | 
+        #                  5  6
+        nT= torch.einsum(T,[0,1,2,3],Pt2,[0,8,9,4],A,[12,1,8,5,10],A.conj(),[12,2,9,6,11],\
+            P1,[3,10,11,7],[4,5,6,7])
+        nT= nT.view(nT.size(0),nT.size(1)*nT.size(2),nT.size(3))
 
     # Assign new C,T 
     #
     # C(coord,(-1,-1))--                --T(coord,(0,-1))--             --C(coord,(1,-1))
-    # |                  P2--       --Pt2 |                P1--     -Pt1  |
+    # |                  P2--       --Pt2 |                P1--      -Pt1  |
     # T(coord,(-1,0))---                --A(coord)---------             --T(coord,(1,0))
     # |                                   |                               |
     #
@@ -376,16 +416,19 @@ def absorb_truncate_CTM_MOVE_UP_c(*tensors):
     # |                                   |                               |
     return nC1, nC2, nT
 
-def absorb_truncate_CTM_MOVE_LEFT(coord, state, env, P, Pt, verbosity=0):
+def absorb_truncate_CTM_MOVE_LEFT(coord, state, env, P, Pt, ctm_args=cfg.ctm_args):
+    mode= not ctm_args.ctm_force_dl
     vec = (0,-1)
     coord_shift_up= state.vertexToSite((coord[0]+vec[0], coord[1]+vec[1]))
     coord_shift_down= state.vertexToSite((coord[0]-vec[0], coord[1]-vec[1]))
     tensors = env.C[(coord,(-1,-1))], env.T[(coord,(0,-1))], env.T[(coord,(-1,0))], \
         env.T[(coord,(0,1))], env.C[(coord,(-1,1))], state.site(coord), \
-        view(P[coord], (env.chi,state.site(coord_shift_down).size()[0],env.chi)), \
-        view(Pt[coord], (env.chi,state.site(coord).size()[2],env.chi)), \
-        view(P[coord_shift_up], (env.chi,state.site(coord).size()[0],env.chi)), \
-        view(Pt[coord_shift_up], (env.chi,state.site(coord_shift_up).size()[2],env.chi))
+        view(P[coord], (env.chi,state.site(coord_shift_down).size(0+mode)**(mode+1),env.chi)), \
+        view(Pt[coord], (env.chi,state.site(coord).size(2+mode)**(mode+1),env.chi)), \
+        view(P[coord_shift_up], (env.chi,state.site(coord).size(0+mode)**(mode+1),env.chi)), \
+        view(Pt[coord_shift_up], (env.chi,state.site(coord_shift_up).size(2+mode)**(mode+1),env.chi))
+    if mode:
+        tensors += (torch.ones(1,dtype=torch.bool),)
 
     if cfg.ctm_args.fwd_checkpoint_absorb:
         return checkpoint(absorb_truncate_CTM_MOVE_LEFT_c,*tensors)
@@ -393,7 +436,7 @@ def absorb_truncate_CTM_MOVE_LEFT(coord, state, env, P, Pt, verbosity=0):
         return absorb_truncate_CTM_MOVE_LEFT_c(*tensors)
 
 def absorb_truncate_CTM_MOVE_LEFT_c(*tensors):
-    C1, T1, T, T2, C2, A, P2, Pt2, P1, Pt1= tensors
+    C1, T1, T, T2, C2, A, P2, Pt2, P1, Pt1, mode= tensors if len(tensors)==11 else tensors+(None,)
 
     # C1--1 0--T1--2
     # |        |
@@ -419,34 +462,64 @@ def absorb_truncate_CTM_MOVE_LEFT_c(*tensors):
     # C2-----T2--2->1
     nC2 = contract(P2, nC2,([0,1],[0,1]))
 
-    #    2->1
-    # ___P1__
-    # 0     1->0
-    # 0
-    # T--2->3
-    # 1->2
-    nT = contract(P1, T,([0],[0]))
+    if not mode:
+        #    2->1
+        # ___P1__
+        # 0     1->0
+        # 0
+        # T--2->3
+        # 1->2
+        nT = contract(P1, T,([0],[0]))
 
-    #    1->0
-    # ___P1____
-    # |       0
-    # |       0
-    # T--3 1--A--3
-    # 2->1    2
-    nT = contract(nT, A,([0,3],[0,1]))
+        #    1->0
+        # ___P1____
+        # |       0
+        # |       0
+        # T--3 1--A--3
+        # 2->1    2
+        nT = contract(nT, A,([0,3],[0,1]))
 
-    #    0
-    # ___P1___
-    # |       |
-    # |       |
-    # T-------A--3->1
-    # 1       2
-    # 0       1
-    # |___Pt2_|
-    #     2
-    nT = contract(nT, Pt2,([1,2],[0,1]))
-    nT = contiguous(permute(nT, (0,2,1)))
-    
+        #    0
+        # ___P1___
+        # |       |
+        # |       |
+        # T-------A--3->1=>2
+        # 1       2
+        # 0       1
+        # |___Pt2_|
+        #     2=>1
+        nT = contract(nT, Pt2,([1,2],[0,1]))
+        nT = contiguous(permute(nT, (0,2,1)))
+    else:
+        # unfuse aux inds connecting to on-site tensor
+        # 0
+        # T--2
+        # 1
+        T= T.view(list(T.size()[:2])+[A.size(2)]*2)
+        #
+        #   2
+        # --P1--
+        # 0    1
+        P1= P1.view([P1.size(0)]+[A.size(1)]*2+[P1.size(2)])
+        # 0     1
+        # --Pt2--
+        #   2
+        Pt2= Pt2.view([Pt2.size(0)]+[A.size(3)]*2+[Pt2.size(2)])
+
+        #   9(3)
+        # --P1-------------
+        # 0           4(1) 5(2)
+        # 0           4    5
+        # T---2 2-----a----|-----10
+        # |  \        | 8  |
+        # 1   3 3----------a*----11
+        # 1(0)        6    7
+        # |           6(1) 7(2)     
+        # --Pt2-------------
+        #   12(3) 
+        nT= torch.einsum(T,[0,1,2,3],Pt2,[1,6,7,12],A,[8,4,2,6,10],A.conj(),[8,5,3,7,11],\
+            P1,[0,4,5,9],[9,12,10,11])
+        nT= nT.view(nT.size(0), nT.size(1), nT.size(2)*nT.size(3))
 
     # Assign new C,T 
     #
@@ -469,16 +542,19 @@ def absorb_truncate_CTM_MOVE_LEFT_c(*tensors):
     # C(coord,(-1,1))--T(coord,(0,1))--      C^new(coord+(1,0),(-1,1))
     return nC1, nC2, nT
 
-def absorb_truncate_CTM_MOVE_DOWN(coord, state, env, P, Pt, verbosity=0):
+def absorb_truncate_CTM_MOVE_DOWN(coord, state, env, P, Pt, ctm_args=cfg.ctm_args):
+    mode= not ctm_args.ctm_force_dl
     vec = (-1,0)
     coord_shift_right= state.vertexToSite((coord[0]-vec[0], coord[1]-vec[1]))
     coord_shift_left = state.vertexToSite((coord[0]+vec[0], coord[1]+vec[1]))
     tensors= env.C[(coord,(-1,1))], env.T[(coord,(-1,0))], env.T[(coord,(0,1))], \
         env.T[(coord,(1,0))], env.C[(coord,(1,1))], state.site(coord), \
-        view(P[coord], (env.chi,state.site(coord_shift_right).size()[1],env.chi)), \
-        view(Pt[coord], (env.chi,state.site(coord).size()[3],env.chi)), \
-        view(P[coord_shift_left], (env.chi,state.site(coord).size()[1],env.chi)), \
-        view(Pt[coord_shift_left], (env.chi,state.site(coord_shift_left).size()[3],env.chi))
+        view(P[coord], (env.chi,state.site(coord_shift_right).size(1+mode)**(mode+1),env.chi)), \
+        view(Pt[coord], (env.chi,state.site(coord).size(3+mode)**(mode+1),env.chi)), \
+        view(P[coord_shift_left], (env.chi,state.site(coord).size(1+mode)**(mode+1),env.chi)), \
+        view(Pt[coord_shift_left], (env.chi,state.site(coord_shift_left).size(3+mode)**(mode+1),env.chi))
+    if mode:
+        tensors += (torch.ones(1,dtype=torch.bool),)
 
     if cfg.ctm_args.fwd_checkpoint_absorb:
         return checkpoint(absorb_truncate_CTM_MOVE_DOWN_c,*tensors)
@@ -486,7 +562,7 @@ def absorb_truncate_CTM_MOVE_DOWN(coord, state, env, P, Pt, verbosity=0):
         return absorb_truncate_CTM_MOVE_DOWN_c(*tensors)
 
 def absorb_truncate_CTM_MOVE_DOWN_c(*tensors):
-    C1, T1, T, T2, C2, A, P2, Pt2, P1, Pt1= tensors
+    C1, T1, T, T2, C2, A, P2, Pt2, P1, Pt1, mode= tensors if len(tensors)==11 else tensors+(None,)
 
     # 0->1
     # T1--2->2
@@ -518,30 +594,56 @@ def absorb_truncate_CTM_MOVE_DOWN_c(*tensors):
     #        --0 0--C2
     nC2 = contract(nC2, P2, ([0,2],[0,1]))
 
-    #        --1->0
-    #       |
-    # 1<-2--P1
-    #       |       0->2
-    #        --0 1--T--2->3 
-    nT = contract(P1, T, ([0],[1]))
+    if not mode:
+        #        --1->0
+        #       |
+        # 1<-2--P1
+        #       |       0->2
+        #        --0 1--T--2->3 
+        nT = contract(P1, T, ([0],[1]))
 
-    #               0->2
-    #        --0 1--A--3 
-    #       |       2 
-    # 0<-1--P1      |
-    #       |       2
-    #        -------T--3->1
-    nT = contract(nT, A,([0,2],[1,2]))
+        #               0->2
+        #        --0 1--A--3 
+        #       |       2 
+        # 0<-1--P1      |
+        #       |       2
+        #        -------T--3->1
+        nT = contract(nT, A,([0,2],[1,2]))
 
-    #               2->1
-    #        -------A--3 1--
-    #       |       |       |
-    #    0--P1      |       Pt2--2
-    #       |       |       |
-    #        -------T--1 0--
-    nT = contract(nT, Pt2,([1,3],[0,1]))
-    nT = contiguous(permute(nT, (1,0,2)))
-    
+        #               2->1=>0
+        #        -------A--3 1--
+        #       |       |       |
+        # 1<=0--P1      |       Pt2--2
+        #       |       |       |
+        #        -------T--1 0--
+        nT = contract(nT, Pt2,([1,3],[0,1]))
+        nT = contiguous(permute(nT, (1,0,2)))
+    else:
+        # unfuse aux inds connecting to on-site tensor
+        #  
+        #    0
+        # 1--T--2
+        T= T.view([A.size(3)]*2+list(T.size()[1:]))
+        #
+        #     /--1
+        # 2--P1--0
+        P1= P1.view([P1.size(0)]+[A.size(2)]*2+[P1.size(2)])
+        #      1--\
+        #      0--Pt2--2
+        Pt2= Pt2.view([Pt2.size(0)]+[A.size(4)]*2+[Pt2.size(2)])
+
+        #                  5  6
+        #        --(1)8 8--a--|---10 10(1)--
+        #       |           12|             |
+        #        --(2)9 9-----a*--11 11(2)-- 
+        #       |          |  |             |
+        #       |          0  1             |
+        # (3)4--P1         0  1             Pt2--7(3)
+        #       |          |, |             |
+        #        --(0)2 2--T----3 3(0)------
+        nT= torch.einsum(T,[0,1,2,3],Pt2,[3,10,11,7],A,[12,5,8,0,10],A.conj(),[12,6,9,1,11],\
+            P1,[2,8,9,4],[5,6,4,7])
+        nT= nT.view(nT.size(0)*nT.size(1),nT.size(2),nT.size(3))
 
     # Assign new C,T
     # 
@@ -556,16 +658,19 @@ def absorb_truncate_CTM_MOVE_DOWN_c(*tensors):
     # C^new(coord+(0,-1),(-1,1))--    --T^new(coord+(0,-1),(0,1))--  --C^new(coord+(0,-1),(1,1))
     return nC1, nC2, nT
 
-def absorb_truncate_CTM_MOVE_RIGHT(coord, state, env, P, Pt, verbosity=0):
+def absorb_truncate_CTM_MOVE_RIGHT(coord, state, env, P, Pt, ctm_args=cfg.ctm_args):
+    mode= not ctm_args.ctm_force_dl
     vec = (0,1)
     coord_shift_down = state.vertexToSite((coord[0]+vec[0], coord[1]+vec[1]))
     coord_shift_up = state.vertexToSite((coord[0]-vec[0], coord[1]-vec[1]))
     tensors= env.C[(coord,(1,1))], env.T[(coord,(0,1))], env.T[(coord,(1,0))], \
         env.T[(coord,(0,-1))], env.C[(coord,(1,-1))], state.site(coord), \
-        view(P[coord], (env.chi,state.site(coord_shift_up).size()[2],env.chi)), \
-        view(Pt[coord], (env.chi,state.site(coord).size()[0],env.chi)), \
-        view(P[coord_shift_down], (env.chi,state.site(coord).size()[2],env.chi)), \
-        view(Pt[coord_shift_down], (env.chi,state.site(coord_shift_down).size()[0],env.chi))
+        view(P[coord], (env.chi,state.site(coord_shift_up).size(2+mode)**(mode+1),env.chi)), \
+        view(Pt[coord], (env.chi,state.site(coord).size(0+mode)**(mode+1),env.chi)), \
+        view(P[coord_shift_down], (env.chi,state.site(coord).size(2+mode)**(mode+1),env.chi)), \
+        view(Pt[coord_shift_down], (env.chi,state.site(coord_shift_down).size(0+mode)**(mode+1),env.chi))
+    if mode:
+        tensors += (torch.ones(1,dtype=torch.bool),)
 
     if cfg.ctm_args.fwd_checkpoint_absorb:
         return checkpoint(absorb_truncate_CTM_MOVE_RIGHT_c,*tensors)
@@ -573,7 +678,7 @@ def absorb_truncate_CTM_MOVE_RIGHT(coord, state, env, P, Pt, verbosity=0):
         return absorb_truncate_CTM_MOVE_RIGHT_c(*tensors)
 
 def absorb_truncate_CTM_MOVE_RIGHT_c(*tensors):
-    C1, T1, T, T2, C2, A, P2, Pt2, P1, Pt1= tensors
+    C1, T1, T, T2, C2, A, P2, Pt2, P1, Pt1, mode= tensors if len(tensors)==11 else tensors+(None,)
 
     #       0->1     0
     # 2<-1--T1--2 1--C1
@@ -597,35 +702,65 @@ def absorb_truncate_CTM_MOVE_RIGHT_c(*tensors):
     #          2->1
     nC2 = contract(nC2, P2,([0,2],[0,1]))
 
-    #    1<-2
-    #    ___Pt2__
-    # 0<-1      0
-    #           0
-    #     2<-1--T
-    #        3<-2
-    nT = contract(Pt2, T,([0],[0]))
+    if not mode:
+        #    1<-2
+        #    ___Pt2__
+        # 0<-1      0
+        #           0
+        #     2<-1--T
+        #        3<-2
+        nT = contract(Pt2, T,([0],[0]))
 
-    #       0<-1 
-    #       ___Pt2__
-    #       0       |
-    #       0       |
-    # 2<-1--A--3 2--T
-    #    3<-2    1<-3
-    nT = contract(nT, A,([0,2],[0,3]))
+        #       0<-1 
+        #       ___Pt2__
+        #       0       |
+        #       0       |
+        # 2<-1--A--3 2--T
+        #    3<-2    1<-3
+        nT = contract(nT, A,([0,2],[0,3]))
 
-    #          0
-    #       ___Pt2__
-    #       |       |
-    #       |       |
-    # 1<-2--A-------T
-    #       3       1
-    #       1       0
-    #       |___P1__|
-    #           2 
-    nT = contract(nT, P1,([1,3],[0,1]))
-    nT = contiguous(nT)
+        #          0
+        #       ___Pt2__
+        #       |       |
+        #       |       |
+        # 1<-2--A-------T
+        #       3       1
+        #       1       0
+        #       |___P1__|
+        #           2 
+        nT = contract(nT, P1,([1,3],[0,1]))
+        nT = contiguous(nT)
+    else:
+        # unfuse aux inds connecting to on-site tensor
+        #    0
+        # 1--T
+        #    2
+        T= T.view([T.size(0)]+[A.size(2)]*2+[T.size(2)])
+        #
+        #   2
+        # --Pt2--
+        # 1     0
+        Pt2= Pt2.view([Pt2.size(0)]+[A.size(1)]*2+[Pt2.size(2)])
+        # 1     0
+        # --P1--
+        #   2
+        P1= P1.view([P1.size(0)]+[A.size(3)]*2+[P1.size(2)])
+
+        #                        9(3)
+        #         ---------------Pt2----
+        #         4(1) 5(2)            0
+        #         4    5               0
+        #     10--a----|---------1 1---T
+        #         | 8  |             / |
+        #     11------a*---------2 2   3
+        #         6    7               3(0)
+        #         6(1) 7(2)            |
+        #         ---------------P1-----
+        #                        12(3) 
+        nT= torch.einsum(T,[0,1,2,3],Pt2,[0,4,5,9],A,[8,4,10,6,1],A.conj(),[8,5,11,7,2],\
+            P1,[3,6,7,12],[9,10,11,12])
+        nT= nT.view(nT.size(0), nT.size(1)*nT.size(2), nT.size(3))
     
-
     # Assign new C,T 
     #
     # --T(coord,(0,-1))--C(coord,(1,-1)) =>--C^new(coord+(-1,0),(1,-1))

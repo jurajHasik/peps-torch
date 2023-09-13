@@ -172,6 +172,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
                 # log_entry["grad_mag"]= [p.grad.norm().item() for p in parameters]
                 flat_grad= torch.cat(tuple(p.grad.view(-1) for p in parameters))
                 log_entry["grad_mag"]= [flat_grad.norm().item(), flat_grad.norm(p=float('inf')).item()]
+                log_entry["grad_mags"]= [p.grad.norm().item() for p in parameters]
                 if opt_args.opt_log_grad: log_entry["grad"]= [p.grad.tolist() for p in parameters]
             log.info(json.dumps(log_entry))        
 
@@ -229,13 +230,18 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         t_data["loss_ls"]=[]
         t_data["min_loss_ls"]=1.0e+16
 
-        # if post_proc is not None:
-        #     post_proc(state, current_env[0], context)
+        if post_proc is not None:
+            post_proc(state, current_env[0], context)
 
         # terminate condition
         if len(t_data["loss"])>1 and \
             abs(t_data["loss"][-1]-t_data["loss"][-2])<opt_args.tolerance_change:
             break
+
+        if (opt_args.line_search not in ["default", None]) and \
+            "STATUS" in context and context["STATUS"]=="ENV_ANTIVAR":
+            raise RuntimeError("Over-optimized environment, see log file for "\
+                +" env_sensitivity and loss_diff.")
 
 
     # optimization is over, store the last checkpoint if at least a single step was made

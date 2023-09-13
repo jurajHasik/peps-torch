@@ -1,4 +1,4 @@
-import yast.yast as yast
+import yastn.yastn as yastn
 from tn_interface_abelian import contract
 
 def run_seq_2s(state, gate_seq, su_opts={"weight_inv_cutoff": 1.0e-14, \
@@ -11,10 +11,10 @@ def run_seq_2s(state, gate_seq, su_opts={"weight_inv_cutoff": 1.0e-14, \
 def truncated_svd(M, axes, sU=1, D_total=2**32):
 
     def truncation_f(S):
-        return yast.linalg.truncation_mask_multiplets(S, keep_multiplets=True, D_total=D_total,\
+        return yastn.linalg.truncation_mask_multiplets(S, keep_multiplets=True, D_total=D_total,\
             tol=1.0e-8, tol_block=1.0e-14, eps_multiplet=1.0e-10)
 
-    return yast.linalg.svd_with_truncation(M, axes, sU=sU, mask_f=truncation_f)
+    return yastn.linalg.svd_with_truncation(M, axes, sU=sU, mask_f=truncation_f)
 
 def apply_gate_2s(state,bond,gate,su_opts):
     # dxy_w_s1s2 = xy_s2-xy_s1
@@ -71,9 +71,9 @@ def apply_gate_2s(state,bond,gate,su_opts):
     #      |             |                          
     # (s)--B-- -> 1(s)--rB--(-s)2 0(s)--SB--(-s)1 0(s)--xB--
     W= state.weight((xy_s1, dxy_w_s1s2))
-    xA, SA, rA= yast.linalg.svd(A, (list(outer_inds_s1),[0, dxy_w_to_ind[dxy_w_s1s2]]), \
+    xA, SA, rA= yastn.linalg.svd(A, (list(outer_inds_s1),[0, dxy_w_to_ind[dxy_w_s1s2]]), \
         sU=-A.get_signature()[dxy_w_to_ind[dxy_w_s1s2]])
-    rB, SB, xB= yast.linalg.svd(B, ([0, dxy_w_to_ind[dxy_w_s2s1]], \
+    rB, SB, xB= yastn.linalg.svd(B, ([0, dxy_w_to_ind[dxy_w_s2s1]], \
         list(outer_inds_s2)), sU=-B.get_signature()[dxy_w_to_ind[dxy_w_s2s1]])
 
     # contract

@@ -3,7 +3,7 @@ import warnings
 from types import SimpleNamespace
 import config as cfg
 # from yamps.tensor import decompress_from_1d
-import yast.yast as yast
+import yastn.yastn as yastn
 from tn_interface_abelian import contract, permute
 from ctm.one_site_c4v_abelian.ctm_components_c4v import *
 try:
@@ -44,11 +44,11 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
 
     if ctm_args.projector_svd_method=='DEFAULT' or ctm_args.projector_svd_method=='GESDD':
         def truncation_f(S):
-            return yast.linalg.truncation_mask_multiplets(S,keep_multiplets=True, D_total=env.chi,\
+            return yastn.linalg.truncation_mask_multiplets(S,keep_multiplets=True, D_total=env.chi,\
                 tol=ctm_args.projector_svd_reltol, tol_block=ctm_args.projector_svd_reltol_block, \
                 eps_multiplet=ctm_args.projector_eps_multiplet)
         def truncated_decomp(M, chi, legs=(0,1), sU=1, diagnostics=None):
-            return yast.linalg.svd_with_truncation(M, legs, sU=sU, mask_f=truncation_f, diagnostics=diagnostics)
+            return yastn.linalg.svd_with_truncation(M, legs, sU=sU, mask_f=truncation_f, diagnostics=diagnostics)
     # elif ctm_args.projector_svd_method=='SYMARP':
     #     def truncated_decomp(M, chi, legs=(0,1), sU=1):
     #         return M.split_svd_eigsh_2C(axes=legs, tol=ctm_args.projector_svd_reltol, D_total=chi, \
@@ -110,9 +110,9 @@ def ctm_MOVE_dl(a_dl, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg
                           leading chi spectral values and projector on leading chi spectral values.
     :param ctm_args: CTM algorithm configuration
     :param global_args: global configuration
-    :type a_dl: yast.Tensor
+    :type a_dl: yastn.Tensor
     :type env: ENV_C4V_ABELIAN
-    :type f_c2x2_decomp: function(yast.Tensor, int)->yast.Tensor, yast.Tensor, yast.Tensor
+    :type f_c2x2_decomp: function(yastn.Tensor, int)->yastn.Tensor, yastn.Tensor, yastn.Tensor
     :type ctm_args: CTMARGS
     :type global_args: GLOBALARGS
 
@@ -137,7 +137,7 @@ def ctm_MOVE_dl(a_dl, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg
             for meta in metadata_store["in"]: 
                 meta['config']= meta['config']._replace(default_device=global_args.offload_to_gpu)
 
-        tensors= tuple(yast.decompress_from_1d(r1d, meta) \
+        tensors= tuple(yastn.decompress_from_1d(r1d, meta) \
             for r1d,meta in zip(tensors,metadata_store["in"]))
         A, C, T= tensors
         
@@ -229,7 +229,7 @@ def ctm_MOVE_dl(a_dl, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg
     else:
         new_tensors= ctm_MOVE_dl_c(*tensors)
 
-    new_tensors= tuple(yast.decompress_from_1d(r1d, meta) \
+    new_tensors= tuple(yastn.decompress_from_1d(r1d, meta) \
             for r1d,meta in zip(new_tensors,metadata_store["out"]))
 
     env.C[env.keyC]= new_tensors[0]
@@ -245,9 +245,9 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
                           leading chi spectral values and projector on leading chi spectral values.
     :param ctm_args: CTM algorithm configuration
     :param global_args: global configuration
-    :type a: yast.Tensor
+    :type a: yastn.Tensor
     :type env: ENV_ABELIAN_C4V
-    :type f_c2x2_decomp: function(yast.Tensor, int)->yast.Tensor, yast.Tensor, yast.Tensor
+    :type f_c2x2_decomp: function(yastn.Tensor, int)->yastn.Tensor, yastn.Tensor, yastn.Tensor
     :type ctm_args: CTMARGS
     :type global_args: GLOBALARGS
 
@@ -275,7 +275,7 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
             for meta in metadata_store["in"]: 
                 meta['config']= meta['config']._replace(default_device=global_args.offload_to_gpu)
                 
-        a,C,T= tuple(yast.decompress_from_1d(r1d, meta) \
+        a,C,T= tuple(yastn.decompress_from_1d(r1d, meta) \
             for r1d,meta in zip(tensors,metadata_store["in"]))
 
         # 1) build enlarged corner upper left corner
@@ -391,7 +391,7 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
     else:
         new_tensors= ctm_MOVE_sl_c(*tensors)
 
-    new_tensors= tuple(yast.decompress_from_1d(r1d, meta) \
+    new_tensors= tuple(yastn.decompress_from_1d(r1d, meta) \
             for r1d,meta in zip(new_tensors,metadata_store["out"]))
 
     env.C[env.keyC]= new_tensors[0]

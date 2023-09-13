@@ -3,13 +3,14 @@ import warnings
 import copy
 from typing import NamedTuple
 import config as cfg
-from yast.yast import decompress_from_1d
+from yastn.yastn import decompress_from_1d
 from ipeps.ipeps_abelian import IPEPS_ABELIAN, _fused_dl_site
 from ctm.generic_abelian.env_abelian import ENV_ABELIAN
 from ctm.generic_abelian.ctm_components import *
 from ctm.generic_abelian.ctm_projectors import *
 from tn_interface_abelian import contract
 try:
+    import torch
     from torch.utils.checkpoint import checkpoint
 except ImportError as e:
     warnings.warn("torch not available", Warning)
@@ -66,8 +67,10 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
         t0_ctm= time.perf_counter()
         for direction in ctm_args.ctm_move_sequence:
             diagnostics= {"ctm_i": i, "ctm_d": direction} if ctm_args.verbosity_projectors>0 else None
-            ctm_MOVE(direction, stateDL, env, ctm_args=ctm_args, global_args=global_args, \
-                verbosity=ctm_args.verbosity_ctm_move, diagnostics=diagnostics)
+            num_rows_or_cols= stateDL.lX if direction in [(-1,0),(1,0)] else stateDL.lY
+            for row_or_col in range(num_rows_or_cols):
+                ctm_MOVE(direction, stateDL, env, ctm_args=ctm_args, global_args=global_args, \
+                    verbosity=ctm_args.verbosity_ctm_move, diagnostics=diagnostics)
         t1_ctm= time.perf_counter()
 
         t0_obs= time.perf_counter()
@@ -133,9 +136,15 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
     def move_normalize_c(nC1, nC2, nT, norm_type=ctm_args.ctm_absorb_normalization,\
         verbosity= ctm_args.verbosity_ctm_move):
         assert nC1.size > 0 and nC2.size > 0 and nT.size > 0,"Ill-defined environment"
-        scale_nC1= nC1.norm(p=norm_type)
-        scale_nC2= nC2.norm(p=norm_type)
-        scale_nT= nT.norm(p=norm_type)
+        if any([nC1.requires_grad, nC2.requires_grad, nT.requires_grad]):
+            with torch.no_grad():
+                scale_nC1= nC1.norm(p=norm_type)
+                scale_nC2= nC2.norm(p=norm_type)
+                scale_nT= nT.norm(p=norm_type)
+        else:
+            scale_nC1= nC1.norm(p=norm_type)
+            scale_nC2= nC2.norm(p=norm_type)
+            scale_nT= nT.norm(p=norm_type)
         if verbosity>0:
             print(f"nC1 {scale_nC1} nC2 {scale_nC2} nT {scale_nT}")
         nC1 = nC1/scale_nC1

@@ -11,7 +11,7 @@ by the corner-transfer matrix (CTM) algorithm. Afterwards, the gradients are com
 automatic differentiation (AD).
 
 #### Now supporting 
-* **abelian symmetries, with implementation power by [YAST](https://gitlab.com/marekrams/yast)**
+* **abelian symmetries, with implementation power by [YASTN](https://github.com/yastn/yastn)**
 
   Allows definition of abelian-symmetric iPEPS in terms of block-sparse tensors, computing their 
   symmetric environments, and their optimization with gradient-based methods.
@@ -129,10 +129,12 @@ python examples/j1j2/abelian/ctmrg_j1j2_u1.py --tiling BIPARTITE --chi 48 --j2 0
 
 #### Dependencies
 - PyTorch 1.11+ (see https://pytorch.org/)
-- (optional) YAST (see https://gitlab.com/marekrams/yast)
+- (optional) YASTN (see https://github.com/yastn/yastn)
 - (optional) scipy 1.3.+
+- (optional) opt_einsum
+- (optional) ArrayFire (see https://github.com/arrayfire/arrayfire)
 
-YAST is linked to **peps-torch** as a [git submodule](https://git-scm.com/book/en/v2/Git-Tools-Submodules).
+YASTN is linked to **peps-torch** as a [git submodule](https://git-scm.com/book/en/v2/Git-Tools-Submodules).
 To obtain it, you can use git:
 
 `git submodule update --init --recursive`

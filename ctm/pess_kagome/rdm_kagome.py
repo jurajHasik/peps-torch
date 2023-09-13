@@ -339,10 +339,9 @@ def trace1x1_dn_kagome(coord, state, env, op, verbosity=0, force_cpu=False):
     of Kagome lattice :math:`Tr{\rho_{1x1,ABC} op}` centered on vertex ``coord``.
     """
     assert len(op.size())==2 or len(op.size())==6,"Invalid operator"
-    if len(op.size())==6 and len(set(op.size()))==1:
-        op= op.view([op.size(0)**3]*2)
     if force_cpu:
         # counter-clockwise
+        op= op.cpu()
         A= state.site(coord).cpu()
         C1 = env.C[(state.vertexToSite(coord), (-1, -1))].cpu()
         C2 = env.C[(state.vertexToSite(coord), (-1, 1))].cpu()
@@ -353,7 +352,7 @@ def trace1x1_dn_kagome(coord, state, env, op, verbosity=0, force_cpu=False):
         T3 = env.T[(state.vertexToSite(coord), (1, 0))].cpu()
         T4 = env.T[(state.vertexToSite(coord), (0,-1))].cpu()
     else:
-        A= state.site(coord).cpu()
+        A= state.site(coord)
         C1 = env.C[(state.vertexToSite(coord), (-1, -1))]
         C2 = env.C[(state.vertexToSite(coord), (-1, 1))]
         C3 = env.C[(state.vertexToSite(coord), (1, 1))]
@@ -362,6 +361,9 @@ def trace1x1_dn_kagome(coord, state, env, op, verbosity=0, force_cpu=False):
         T2 = env.T[(state.vertexToSite(coord), (0, 1))]
         T3 = env.T[(state.vertexToSite(coord), (1, 0))]
         T4 = env.T[(state.vertexToSite(coord), (0,-1))]
+
+    if len(op.size())==6 and len(set(op.size()))==1:
+        op= op.view([op.size(0)**3]*2)
 
     # C1(-1,-1)--1->0
     # 0

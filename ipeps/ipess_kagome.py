@@ -365,6 +365,7 @@ class IPESS_KAGOME_PG(IPESS_KAGOME_GENERIC):
         :param SYM_UP_DOWN: is up triangle equivalent to down triangle
         :param SYM_BOND_S: are bond tensors equivalent to each other 
         :param pgs: dictionary assigning point-group irreps to elementary tensors 
+        :type pgs: dict(str,str)
         :param peps_args: ipeps configuration
         :param global_args: global configuration
         :type T_u: torch.tensor

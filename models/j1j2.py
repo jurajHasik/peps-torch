@@ -648,6 +648,11 @@ class J1J2_C4V_BIPARTITE():
                     verbosity=cfg.ctm_args.verbosity_rdm)
                 obs[f"SS3x1"]= torch.einsum('ijab,ijab',rdm3x1,self.SS)
 
+            if abs(self.j2)>0:
+                rdm2x2diag= rdm_c4v.rdm2x2_NNN_lowmem_sl(state, env_c4v,\
+                force_cpu=force_cpu, verbosity=cfg.ctm_args.verbosity_rdm)
+                obs[f"SS_nnn"]= torch.einsum('ijab,ijab',rdm2x2diag,self.SS)
+
             rdm2x1= rdm_c4v.rdm2x1_sl(state,env_c4v,force_cpu=force_cpu,\
                 verbosity=cfg.ctm_args.verbosity_rdm)
             SS2x1= torch.einsum('ijab,ijab',rdm2x1,self.SS_rot)
@@ -662,6 +667,7 @@ class J1J2_C4V_BIPARTITE():
             
         # prepare list with labels and values
         obs_labels=[f"m"]+[f"{lc}" for lc in self.obs_ops.keys()]+[f"SS2x1"]
+        if abs(self.j2)>0: obs_labels += [f"SS_nnn"]
         if abs(self.j3)>0: obs_labels += [f"SS3x1"]
         obs_values=[obs[label] for label in obs_labels]
         return obs_values, obs_labels

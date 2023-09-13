@@ -306,7 +306,7 @@ class SVDGESDD(torch.autograd.Function):
             dA= dA + imag_term
 
         if not (diagnostics is None):
-            print(f"{diagnostics} {dA.abs().max()} {S.max()}")
+            print(f"{diagnostics} {dA.abs().max()} {sigma.max()}")
         return dA, None, None
 
     # From https://github.com/pytorch/pytorch/blob/master/torch/csrc/autograd/FunctionsManual.cpp

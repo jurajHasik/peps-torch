@@ -115,8 +115,8 @@ def apply_TM_1sO(state, env, edge, op=None, verbosity=0):
     :param verbosity: logging verbosity
     :type state: IPEPS_C4V_ABELIAN
     :type env: ENV_C4V_ABELIAN
-    :type edge: yast.Tensor
-    :type op: yast.Tensor
+    :type edge: yastn.Tensor
+    :type op: yastn.Tensor
     :type verbosity: int
     :return: ``edge`` with a single instance of the transfer matrix applied.
              The resulting tensor has an identical index structure as the 
@@ -266,8 +266,8 @@ def corrf_1sO1sO(state, env, op1, get_op2, dist, verbosity=0):
     :param verbosity: logging verbosity
     :type state: IPEPS_ABELIAN_C4V
     :type env: ENV_ABELIAN_C4V
-    :type op1: yast.Tensor
-    :type get_op2: function(int)->yast.Tensor
+    :type op1: yastn.Tensor
+    :type get_op2: function(int)->yastn.Tensor
     :type dist: int
     :type verbosity: int
     :return: vector ``corrf`` of length ``dist`` holding the values of 

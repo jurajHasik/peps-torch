@@ -1,10 +1,10 @@
 import os
 import context
-import torch
 import numpy as np
+import yastn.yastn as yastn
+from yastn.yastn.sym import sym_U1xU1
 import argparse
 import config as cfg
-import examples.abelian.settings_U1xU1_torch as settings_U1xU1
 from ipeps.ipess_kagome_abelian import read_ipess_kagome_generic
 from linalg.custom_svd import truncated_svd_gesdd
 from models.abelian import su3_kagome
@@ -24,23 +24,30 @@ parser.add_argument("--theta", type=float, default=0., help="arctan(H/K): K -> 3
 parser.add_argument("--tiling", default="1SITE", help="tiling of the lattice")
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
+parser.add_argument("--yast_backend", type=str, default='np', 
+    help="YAST backend", choices=['np','torch','torch_cpp'])
 args, unknown_args = parser.parse_known_args()
 
 def main():
     cfg.configure(args)
     cfg.print_config()
+    from yastn.yastn.sym import sym_U1
+    if args.yast_backend=='np':
+        from yastn.yastn.backend import backend_np as backend
+    elif args.yast_backend=='torch':
+        from yastn.yastn.backend import backend_torch as backend
+    elif args.yast_backend=='torch_cpp':
+        from yastn.yastn.backend import backend_torch_cpp as backend
+    settings= yastn.make_config(backend=backend, sym=sym_U1xU1, \
+        default_device= cfg.global_args.device, default_dtype=cfg.global_args.dtype)
+    settings.backend.set_num_threads(args.omp_cores)
+    settings.backend.random_seed(args.seed)
+
     param_j = np.round(np.cos(np.pi*args.phi), decimals=15)
     param_k = np.round(np.sin(np.pi*args.phi) * np.cos(np.pi*args.theta), decimals=15)
     param_h = np.round(np.sin(np.pi*args.phi) * np.sin(np.pi*args.theta), decimals=15)
     print("J = {}; K = {}; H = {}".format(param_j, param_k, param_h))
-    settings= settings_U1xU1
-    # override default device specified in settings
-    settings.default_device= cfg.global_args.device
-    # override default dtype
-    settings.default_dtype= cfg.global_args.dtype
-    torch.set_num_threads(args.omp_cores)
-    torch.manual_seed(args.seed)
-
+   
     model= su3_kagome.KAGOME_SU3_U1xU1(settings,j=param_j,k=param_k,h=param_h,global_args=cfg.global_args)
 
     # initialize an ipeps
@@ -56,7 +63,6 @@ def main():
     print(state)
 
     # 2) define convergence criterion for ctmrg
-    @torch.no_grad()
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
             history=[]
@@ -71,17 +77,55 @@ def main():
             return True, history
         return False, history
 
+    def ctmrg_conv_specC(state, env, history, ctm_args=cfg.ctm_args):
+        if not history:
+            history={'spec': [], 'diffs': []}
+        # use corner spectra
+        diff=float('inf')
+        diffs=None
+        spec= env.get_spectra()
+        if args.yast_backend=='np':
+            spec_nosym_sorted= { s_key : np.sort(s_t._data)[::-1] \
+                for s_key, s_t in spec.items() }            
+        else:
+            spec_nosym_sorted= { s_key : s_t._data.sort(descending=True)[0] \
+                for s_key, s_t in spec.items() }
+        if len(history['spec'])>0:
+            s_old= history['spec'][-1]
+            diffs= []
+            for k in spec.keys():
+                x_0,x_1 = spec_nosym_sorted[k], s_old[k]
+                n_x0= x_0.shape[0] if args.yast_backend=='np' else x_0.size(0)
+                n_x1= x_1.shape[0] if args.yast_backend=='np' else x_1.size(0)
+                if n_x0>n_x1:
+                    diffs.append( (sum((x_1-x_0[:n_x1])**2) \
+                        + sum(x_0[n_x1:]**2)).item() )
+                else:
+                    diffs.append( (sum((x_0-x_1[:n_x0])**2) \
+                        + sum(x_1[n_x0:]**2)).item() )
+            diff= sum(diffs)
+        history['spec'].append(spec_nosym_sorted)
+        history['diffs'].append(diffs)
+        obs_values, obs_labels = model.eval_obs(state, env)
+        print(", ".join([f"{len(history['diffs'])}",f"{diff}"]+[f"{v}" for v in obs_values]))
+
+        if (len(history['diffs']) > 1 and abs(diff) < ctm_args.ctm_conv_tol)\
+            or len(history['diffs']) >= ctm_args.ctm_max_iter:
+            log.info({"history_length": len(history['diffs']), "history": history['diffs']})
+            return True, history
+        return False, history
+
     ctm_env = ENV_ABELIAN(args.chi, state=state, init=True)
     print(ctm_env)
 
     # 3) evaluate observables for initial environment
     loss= model.energy_per_site_2x2subsystem(state, ctm_env)
     obs_values, obs_labels= model.eval_obs(state,ctm_env)
-    print(", ".join(["epoch","energy/conv-crit"]+obs_labels))
+    print(", ".join(["epoch","conv-crit"]+obs_labels))
     print(", ".join([f"{-1}",f"{loss}"]+[f"{v}" for v in obs_values]))
 
     # 4) execute ctmrg
-    ctm_env, *ctm_log = ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
+    ctm_env, *ctm_log = ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_specC)
 
     # 5) compute final observables and timings
     loss= model.energy_per_site_2x2subsystem(state, ctm_env)
@@ -117,6 +161,7 @@ class TestCtmrg_TrimerState(unittest.TestCase):
     tol= 1.0e-6
     DIR_PATH = os.path.dirname(os.path.realpath(__file__))
     OUT_PRFX = "RESULT_test_run_u1xu1_trimerized"
+    BACKENDS = ['np', 'torch']
 
     def setUp(self):
         args.instate=self.DIR_PATH+"/../../../test-input/abelian/IPESS_TRIMER_1-3_1x1_abelian-U1xU1_T3T8_state.json"
@@ -132,30 +177,32 @@ class TestCtmrg_TrimerState(unittest.TestCase):
         from unittest.mock import patch 
         from cmath import isclose
 
-        with patch('sys.stdout', new = StringIO()) as tmp_out: 
-            main()
-        tmp_out.seek(0)
+        for b_id in self.BACKENDS:
+            with self.subTest(b_id=b_id):
+                with patch('sys.stdout', new = StringIO()) as tmp_out: 
+                    main()
+                tmp_out.seek(0)
 
-        # parse FINAL observables
-        final_obs=None
-        l= tmp_out.readline()
-        while l:
-            print(l,end="")
-            if "FINAL" in l:
-                final_obs= l.rstrip()
-                break
-            l= tmp_out.readline()
-        assert final_obs
+                # parse FINAL observables
+                final_obs=None
+                l= tmp_out.readline()
+                while l:
+                    print(l,end="")
+                    if "FINAL" in l:
+                        final_obs= l.rstrip()
+                        break
+                    l= tmp_out.readline()
+                assert final_obs
 
-        # compare with the reference
-        ref_data="""
-        -0.6666666666666664, 0j, 0j, 0j, 0.0, 0.0, 0.3333333333333333, 0.3333333333333333, 
-        0.3333333333333333, -0.9999999999999999, -0.9999999999999999, -0.9999999999999999
-        """
-        fobs_tokens= [complex(x) for x in final_obs[len("FINAL"):].split(",")]
-        ref_tokens= [complex(x) for x in ref_data.split(",")]
-        for val,ref_val in zip(fobs_tokens, ref_tokens):
-            assert isclose(val,ref_val, rel_tol=self.tol, abs_tol=self.tol)
+                # compare with the reference
+                ref_data="""
+                -0.6666666666666664, 0j, 0j, 0j, 0.0, 0.0, 0.3333333333333333, 0.3333333333333333, 
+                0.3333333333333333, -0.9999999999999999, -0.9999999999999999, -0.9999999999999999
+                """
+                fobs_tokens= [complex(x) for x in final_obs[len("FINAL"):].split(",")]
+                ref_tokens= [complex(x) for x in ref_data.split(",")]
+                for val,ref_val in zip(fobs_tokens, ref_tokens):
+                    assert isclose(val,ref_val, rel_tol=self.tol, abs_tol=self.tol)
 
     def tearDown(self):
         for f in [self.OUT_PRFX+"_state.json",self.OUT_PRFX+".log"]:
@@ -165,9 +212,10 @@ class TestCtmrg_AKLTState(unittest.TestCase):
     tol= 1.0e-6
     DIR_PATH = os.path.dirname(os.path.realpath(__file__))
     OUT_PRFX = "RESULT_test_run_u1xu1_aklt"
+    BACKENDS = ['np', 'torch']
 
     def setUp(self):
-        args.instate=self.DIR_PATH+"/../../../test-input/abelian/IPESS_AKLT_b3_1x1_abelian-U1xU1_T3T8_state.json"
+        args.instate=self.DIR_PATH+"/../../../test-input/abelian/IPESS_AKLT_3b_D3_1x1_abelian-U1xU1_T3T8_state.json"
         args.theta=0
         args.phi=0.5
         args.bond_dim=3
@@ -180,29 +228,31 @@ class TestCtmrg_AKLTState(unittest.TestCase):
         from unittest.mock import patch
         from cmath import isclose
 
-        with patch('sys.stdout', new = StringIO()) as tmp_out: 
-            main()
-        tmp_out.seek(0)
+        for b_id in self.BACKENDS:
+            with self.subTest(b_id=b_id):
+                with patch('sys.stdout', new = StringIO()) as tmp_out: 
+                    main()
+                tmp_out.seek(0)
 
-        # parse FINAL observables
-        final_obs=None
-        l= tmp_out.readline()
-        while l:
-            print(l,end="")
-            if "FINAL" in l:
-                final_obs= l.rstrip()
-                break
-            l= tmp_out.readline()
-        assert final_obs
+                # parse FINAL observables
+                final_obs=None
+                l= tmp_out.readline()
+                while l:
+                    print(l,end="")
+                    if "FINAL" in l:
+                        final_obs= l.rstrip()
+                        break
+                    l= tmp_out.readline()
+                assert final_obs
 
-        # compare with the reference
-        ref_data="""
-        -0.6666666666666664, 0j, 0j, 0j, 0.0, 0.0, 0., 0., 0., 0., 0., 0.
-        """
-        fobs_tokens= [complex(x) for x in final_obs[len("FINAL"):].split(",")]
-        ref_tokens= [complex(x) for x in ref_data.split(",")]
-        for val,ref_val in zip(fobs_tokens, ref_tokens):
-            assert isclose(val,ref_val, rel_tol=self.tol, abs_tol=self.tol)
+                # compare with the reference
+                ref_data="""
+                -0.6666666666666664, 0j, 0j, 0j, 0.0, 0.0, 0., 0., 0., 0., 0., 0.
+                """
+                fobs_tokens= [complex(x) for x in final_obs[len("FINAL"):].split(",")]
+                ref_tokens= [complex(x) for x in ref_data.split(",")]
+                for val,ref_val in zip(fobs_tokens, ref_tokens):
+                    assert isclose(val,ref_val, rel_tol=self.tol, abs_tol=self.tol)
 
     def tearDown(self):
         for f in [self.OUT_PRFX+"_state.json",self.OUT_PRFX+".log"]:

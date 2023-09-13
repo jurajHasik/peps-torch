@@ -5,7 +5,7 @@ def make_d2_symm(A):
     :param A: on-site tensor
     :type A: torch.tensor
     :return: d2 symmetrized tensor ``A``
-    :rtype: torch.tensor
+    :rtype: yastn.Tensor
 
     ::
            u s 
@@ -24,7 +24,7 @@ def make_d2_antisymm(A):
     :param A: on-site tensor
     :type A: torch.tensor
     :return: d2 anti-symmetrized tensor ``A``
-    :rtype: torch.tensor
+    :rtype: yaatn.Tensor
 
     ::
            u s 
@@ -36,6 +36,44 @@ def make_d2_antisymm(A):
     Perform left-right symmetrization
     """
     A= 0.5*(A - permute(A,(0,1,4,3,2)))   # left-right symmetry
+    return A
+
+def make_d2_SW_NE_symm(A):
+    r"""
+    :param A: on-site tensor
+    :type A: torch.tensor
+    :return: d2 symmetrized tensor ``A``
+    :rtype: yastn.Tensor
+
+    ::
+           u s 
+           |/ 
+        l--A--r  <=> A[s,u,l,d,r] -> A[s,r,d,l,u]
+           |
+           d
+    
+    Perform symmetrization wrt reflection along SW-NE
+    """
+    A= 0.5*(A + permute(A,(0,4,3,2,1)))   # SW-NE reflection symmetry
+    return A
+
+def make_d2_NW_SE_symm(A):
+    r"""
+    :param A: on-site tensor
+    :type A: torch.tensor
+    :return: d2 symmetrized tensor ``A``
+    :rtype: yastn.Tensor
+
+    ::
+           u s 
+           |/ 
+        l--A--r  <=> A[s,u,l,d,r] -> A[s,l,u,r,d]
+           |
+           d
+    
+    Perform symmetrization wrt reflection along NW-SE
+    """
+    A= 0.5*(A + permute(A,(0,2,1,4,3)))   # NW-SE reflection symmetry
     return A
 
 def make_c4v_symm(A, irreps=["A1"]):

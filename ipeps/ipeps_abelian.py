@@ -9,8 +9,11 @@ try:
 except ImportError as e:
     warnings.warn("torch not available", Warning)
 import config as cfg
-import yast.yast as yast
+import yastn.yastn as yastn
 from ipeps.tensor_io import *
+import logging
+log = logging.getLogger(__name__)
+
 
 def _fused_open_dl_site(a, fusion_level="full"):
     r"""
@@ -54,8 +57,11 @@ def _fused_open_dl_site(a, fusion_level="full"):
         raise RuntimeError("Unsupported fusion_level option "+fusion_level)
     return A
 
-def _fused_dl_site(a):
-    A= a.tensordot(a, axes=([0],[0]), conj=(0,1))
+def _fused_dl_site(a, a_bra=None):
+    if a_bra is None:
+        A= a.tensordot(a, axes=([0],[0]), conj=(0,1))
+    else:
+        A= a.tensordot(a_bra, axes=([0],[0]))
     A= A.fuse_legs( axes=((0,4),(1,5),(2,6),(3,7)) )
     return A
 
@@ -78,7 +84,7 @@ class IPEPS_ABELIAN():
         :param peps_args: ipeps configuration
         :param global_args: global configuration
         :type settings: NamedTuple or SimpleNamespace (TODO link to definition)
-        :type sites: dict[tuple(int,int) : yast.Tensor]
+        :type sites: dict[tuple(int,int) : yastn.Tensor]
         :type vertexToSite: function(tuple(int,int))->tuple(int,int)
         :type lX: int
         :type lY: int
@@ -240,12 +246,17 @@ class IPEPS_ABELIAN():
         if self.build_dl: self.build_sites_dl()
         if self.build_dl_open: self.build_sites_dl_open()
 
+    def normalize_(self):
+        for c in self.sites.keys():
+            self.sites[c]= self.sites[c]/self.sites[c].norm(p='inf')
+        self.sync_precomputed()
+
     def site(self, coord):
         """
         :param coord: tuple (x,y) specifying vertex on a square lattice
         :type coord: tuple(int,int)
         :return: on-site tensor corresponding to the vertex (x,y)
-        :rtype: yast.Tensor
+        :rtype: yastn.Tensor
         """
         return self.sites[self.vertexToSite(coord)]
 
@@ -254,7 +265,7 @@ class IPEPS_ABELIAN():
         :param coord: tuple (x,y) specifying vertex on a square lattice
         :type coord: tuple(int,int)
         :return: double-layer on-site tensor corresponding to the vertex (x,y)
-        :rtype: yast.Tensor
+        :rtype: yastn.Tensor
 
         If :py:attr:`config.PEPSARGS.build_dl`, then precomputed double-layer on-site
         tensor is returned. Otherwise, Exception is raised. 
@@ -267,7 +278,7 @@ class IPEPS_ABELIAN():
         :param coord: tuple (x,y) specifying vertex on a square lattice
         :type coord: tuple(int,int)
         :return: open double-layer on-site tensor corresponding to the vertex (x,y)
-        :rtype: yast.Tensor
+        :rtype: yastn.Tensor
 
         If :py:attr:`config.PEPSARGS.build_dl_open`, then precomputed open double-layer 
         on-site tensor is returned. Otherwise, Exception is raised.
@@ -339,7 +350,7 @@ class IPEPS_ABELIAN():
             be provided either when instantiating IPEPS_ABELIAN or afterwards. 
         """
         checkpoint= torch.load(checkpoint_file, map_location=self.device) 
-        self.sites= {ind: yast.load_from_dict(config= self.engine, d=t_dict_repr) \
+        self.sites= {ind: yastn.load_from_dict(config= self.engine, d=t_dict_repr) \
             for ind,t_dict_repr in checkpoint["parameters"].items()}
         for site_t in self.sites.values(): site_t.requires_grad_(False)
         self.sync_precomputed()
@@ -367,7 +378,7 @@ class IPEPS_ABELIAN():
         sites= {}
         for ind,t in self.sites.items():
             ts, Ds= t.get_leg_charges_and_dims(native=True)
-            t_noise= yast.rand(config=t.config, s=t.s, n=t.n, t=ts, D=Ds, isdiag=t.isdiag)
+            t_noise= yastn.rand(config=t.config, s=t.s, n=t.n, t=ts, D=Ds, isdiag=t.isdiag)
             sites[ind]= t + noise * t_noise
         state= IPEPS_ABELIAN(self.engine, sites, self.vertexToSite, 
             lX=self.lX, lY=self.lY, peps_args=peps_args)
@@ -481,7 +492,7 @@ def read_ipeps(jsonfile, settings, vertexToSite=None, \
     # move to desired device and return
     return state.to(global_args.device)
 
-def write_ipeps(state, outputfile, tol=None, normalize=False,\
+def write_ipeps(state, outputfile, tol=None, normalize=False, metadata=None,\
     peps_args=cfg.peps_args, global_args=cfg.global_args):
     r"""
     :param state: wavefunction to write out in json format
@@ -495,7 +506,7 @@ def write_ipeps(state, outputfile, tol=None, normalize=False,\
 
     Write state to file.
     """
-    json_state=dict({"lX": state.lX, "lY": state.lY, "sites": []})
+    json_state=dict({"lX": state.lX, "lY": state.lY, "sites": [], "metadata": metadata})
     
     site_ids=[]
     site_map=[]
@@ -521,10 +532,11 @@ def write_ipeps(state, outputfile, tol=None, normalize=False,\
 class IPEPS_ABELIAN_WEIGHTED(IPEPS_ABELIAN):
 
     # TODO validate weights
-    def __init__(self, settings, sites, weights, vertexToSite=None, lX=None, lY=None, 
+    def __init__(self, state=None, config=None, sites=None, weights=None, \
+        vertexToSite=None, lX=None, lY=None, 
         peps_args=cfg.peps_args, global_args=cfg.global_args):
         r"""
-        :param settings: YAST configuration
+        :param config: YAST configuration
         :param sites: map from elementary unit cell to on-site tensors
         :param weights: map from edges within unit cell to weight tensors
         :param vertexToSite: function mapping arbitrary vertex of a square lattice 
@@ -533,9 +545,9 @@ class IPEPS_ABELIAN_WEIGHTED(IPEPS_ABELIAN):
         :param lY: length of the elementary unit cell in Y direction
         :param peps_args: ipeps configuration
         :param global_args: global configuration
-        :type settings: NamedTuple or SimpleNamespace (TODO link to definition)
-        :type sites: dict[tuple(int,int) : yast.Tensor]
-        :type weights: dict[tuple(tuple(int,int), tuple(int,int)) : yast.Tensor]
+        :type config: NamedTuple or SimpleNamespace (TODO link to definition)
+        :type sites: dict[tuple(int,int) : yastn.Tensor]
+        :type weights: dict[tuple(tuple(int,int), tuple(int,int)) : yastn.Tensor]
         :type vertexToSite: function(tuple(int,int))->tuple(int,int)
         :type lX: int
         :type lY: int
@@ -553,15 +565,25 @@ class IPEPS_ABELIAN_WEIGHTED(IPEPS_ABELIAN):
         Thus the `weights` is not injective dictionary, instead keys (coord,dxy) and (coord+dxy,-dxy)
         should index identical tensor.
         """
-        self.weights= OrderedDict(weights)
-        super().__init__(settings, sites, vertexToSite=vertexToSite, lX=lX, lY=lY, 
+        if state:
+            config=state.engine
+            sites=state.sites
+            vertexToSite=state.vertexToSite
+            lX=state.lX
+            lY=state.lY
+        elif sites:
+            assert vertexToSite or (lX and lY),"vertexToSite or lX,lY has to be provided"
+            assert len(sites)>0 or config,"Either non-empty sites or config has to be provided"
+            config= next(iter(sites.values())).config if config is None else config    
+        else:
+            raise RuntimeError("Either state or sites have to be provided")
+        super().__init__(config, sites, vertexToSite=vertexToSite, lX=lX, lY=lY, 
             peps_args=peps_args, global_args=global_args)
+        self.weights= OrderedDict(weights) if weights else self.generate_weights()
 
     def absorb_weights(self, peps_args=cfg.peps_args, 
         global_args=cfg.global_args):
         r"""
-        :param build_open_dl: see IPEPS_ABELIAN
-        :type build_open_dl: bool
         :return: regular IPEPS_ABELIAN obtained by symmetricaly absorbing weights of 
                  IPEPS_ABELIAN_WEIGHTED into its on-site tensors
         :rtype: IPEPS_ABELIAN
@@ -605,11 +627,146 @@ class IPEPS_ABELIAN_WEIGHTED(IPEPS_ABELIAN):
                           right respectively.
         :type weight_id: tuple(tuple(int,int), tuple(int,int))
         :return: diagonal weight tensor
-        :rtype: yast.Tensor
+        :rtype: yastn.Tensor
         """
         xy_site, dxy= weight_id
         assert dxy in [(0,-1), (-1,0), (0,1), (1,0)],"invalid direction"
         return self.weights[ (self.vertexToSite(xy_site), dxy) ]
+
+    def generate_weights(self):
+        #   
+        #       w0         w2
+        # w4--(0,0)--w5--(1,0)--[w4]
+        #       w1         w3
+        # w6--(0,1)--w7--(1,1)--[w6]
+        #      [w0]       [w2]
+        def neg_(dxy): return (-dxy[0],-dxy[1])
+        def add_(coord,dxy): return (coord[0]+dxy[0],coord[1]+dxy[1])
+        dxy_w_to_ind= dict({(0,-1): 1, (-1,0): 2, (0,1): 3, (1,0): 4})
+        weights=dict()
+        for coord in self.sites.keys():
+            for dxy,ind in dxy_w_to_ind.items():
+                # generate weight_id and reverse weight_id
+                # (coord,dxy) identifies the same weight as (coord+dxy,-dxy) 
+                w_id= (coord, dxy)
+                w_rid= (self.vertexToSite(add_(coord,dxy)), neg_(dxy))
+
+                if not w_id in weights.keys() and not w_rid in weights.keys():
+                    W= yastn.eye( config=self.engine, legs=(
+                        self.site(w_id[0]).get_legs(dxy_w_to_ind[w_id[1]]),
+                        self.site(w_rid[0]).get_legs(dxy_w_to_ind[w_rid[1]])
+                        ))
+                    weights[w_id]= W
+                    weights[w_rid]= W
+        return weights
+
+    def gauge(self,peps_args=cfg.peps_args, global_args=cfg.global_args):
+        r"""
+        """
+        def neg_(dxy): return (-dxy[0],-dxy[1])
+        def add_(coord,dxy): return (coord[0]+dxy[0],coord[1]+dxy[1])
+        dxy_w_to_ind= dict({(0,-1): 1, (-1,0): 2, (0,1): 3, (1,0): 4})
+        expr_ws= {(0,-1): 'um', (-1,0): 'ln', (0,1): 'do', (1,0): 'rp'}
+
+        def _get_dl_gauges(coord,direction,sites,weights):
+            coord= self.vertexToSite(coord)
+            A= sites[coord]
+            ds_to_contract= set(dxy_w_to_ind.keys())-set((direction,))
+            
+            #
+            #         /w^2
+            #  ------A^+--w^2
+            #    w^2/|/   |
+            #  -----|A-----
+            #       /
+
+            # get correct order for signatures to match
+            #
+            # A--? 0--w
+            oi= { d: 0 if A.get_signature()[dxy_w_to_ind[d]]==-weights[(coord,d)].get_signature()[0] else 1 \
+                for d in ds_to_contract }
+            expr= 'suldr,smnop,'+','.join([expr_ws[d] if oi[d]==0 else expr_ws[d][::-1] for d in ds_to_contract])\
+                +f'->{expr_ws[direction]}'
+            order= ''.join([expr_ws[d][0] for d in ds_to_contract]+[expr_ws[d][1] for d in ds_to_contract])+'s'
+            a= yastn.einsum(expr,\
+                A,A.conj(),*( weights[(coord,d)]**2 for d in ds_to_contract),order=order)
+
+            # diagonalize, since a is hermitian and positive. Force ordering in descending magnitude
+            # n--    (-s)n(1)--U*
+            #    a =           sqrt(D)^2
+            # l--     (s)l(0)--U
+            D,U = yastn.linalg.eigh((-1.)*a/a.norm(p='inf'), axes=(0,1), sU=-a.get_signature()[0])
+            D= -1.*D
+            #
+            # (s)0--U--1(sU) (-sU)0--D--1(sU) = (s)0--X--1(sU=-s)
+            X= U.tensordot(D.sqrt(),([1],[0]))
+            D_invsqrt= D.rsqrt(cutoff=D.norm(p='inf')*1.0e-14)
+            # (s)0--UD_invsqrt--1(sU) -> (sU)0--Xinv--1(s) -> (-sU=s)0--Xinv--1(-s)
+            Xinv= (U.tensordot(D_invsqrt,([1],[0]))).transpose((1,0)).conj()
+            return X, Xinv
+
+        def _update_weights_and_sites(sites,weights,Xs):
+            # associate pair X,Y to each unique weight and update it
+            new_weights, Us= dict(), dict()
+            for coord in sites.keys():
+                for dxy,ind in dxy_w_to_ind.items():
+                    # generate weight_id and reverse weight_id
+                    # (coord,dxy) identifies the same weight as (coord+dxy,-dxy) 
+                    w_id= (coord, dxy)
+                    w_rid= (self.vertexToSite(add_(coord,dxy)), neg_(dxy))
+
+                    if not w_id in new_weights.keys() and not w_rid in new_weights.keys():
+                        #   
+                        #       |                                              |
+                        #   --(0,0)-X^{-1}-X[w_id]-w[w_id]-X'[w_rid]-X'^{-1}-(1,0)--
+                        #       |                                              |
+                        #   => 
+                        #       |                               |
+                        #   --(0,0)-X^{-1}--U--S--Vh--X'^{-1}-(1,0)--
+                        #       |                               |
+                        #
+                        _match_diag_signature= 1 if -weights[w_id].get_signature()[1]==Xs[w_id][0].get_signature()[0] else 0
+                        #
+                        #  ... (s)--w[w_id]--?(-s) (s)0--X[w_id]--1(sU=-s) -> 0(sU=-s)--X[w_id]--w[w_id]-- ...
+                        _sgn= -Xs[w_id][0].get_signature()[1] #-weights[w_id].get_signature()[0]
+                        U,S,Vh= yastn.linalg.svd( Xs[w_id][0].tensordot(weights[w_id],([0],[_match_diag_signature]))\
+                            .tensordot(Xs[w_rid][0],([1],[0])), sU=_sgn )
+                        new_weights[w_id]= S #/S[0]
+                        new_weights[w_rid]= S #/S[0]
+                        #
+                        # (sU)0--U--1(_sgn) -> (_sgn=s)0--U--1(sU)
+                        Us[w_id]= U.transpose((1,0))
+                        Us[w_rid]= Vh
+            
+            new_sites={}
+            for coord in sites.keys():
+                A= sites[self.vertexToSite(coord)]
+                expr= 'smnop,'+','.join([expr_ws[d] for d in dxy_w_to_ind.keys()])+'->suldr'
+                # (_sgn=s)0--U--1(sU) (-sU)0--Xinv--1(-s) = (_sgn=s)0--UXinv--1(-s)  <=> n,ln->l
+                new_sites[coord]= yastn.einsum(expr,A,*(Us[(coord,d)].tensordot(Xs[(coord,d)][1],([1],[0]))\
+                    for d in dxy_w_to_ind.keys()))
+                # new_sites[coord]= A/A.abs().max()
+
+            return new_sites, new_weights
+
+        dist=[float('inf')]
+        n_s, n_w= { c: t/t.norm(p='inf') for c,t in self.sites.items() }, self.weights
+        while dist[-1]>peps_args.quasi_gauge_tol and len(dist)<peps_args.quasi_gauge_max_iter:
+            # generate X, Xinv for site and bond
+            Xs= { (coord,d): _get_dl_gauges(coord,d,n_s,n_w) \
+                for  coord in n_s.keys() for d in [(0,-1),(-1,0),(0,1),(1,0)] }
+
+            n_s, n_w1= _update_weights_and_sites(n_s,n_w,Xs)
+            dist.append(sum([ yastn.norm( \
+                n_w1[k] - n_w[k] \
+                if n_w1[k].get_signature()[0]==n_w[k].get_signature()[0] else \
+                n_w1[k] - n_w[k].transpose((1,0)) ).item() for k in n_w.keys() ])/len(n_s))
+            n_w= n_w1
+
+        log.info(f"gauge dist_legth: {len(dist)}, dist: {dist}")
+        return type(self)(sites=n_s, weights=n_w, vertexToSite=self.vertexToSite, \
+            lX=self.lX, lY=self.lY, peps_args=peps_args, global_args=global_args)  
+
 
 def get_weighted_ipeps(state, weights, peps_args=cfg.peps_args, global_args=cfg.global_args):
     r"""

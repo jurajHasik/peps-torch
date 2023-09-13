@@ -1,14 +1,12 @@
 import os
 import context
-import torch
-import numpy as np
 import argparse
+import yastn.yastn as yastn
 import config as cfg
-import examples.abelian.settings_full_torch as settings_full
-import examples.abelian.settings_U1_torch as settings_U1
 from ipeps.ipeps_abelian import *
 from ctm.generic_abelian.env_abelian import *
 import ctm.generic_abelian.ctmrg as ctmrg
+from ctm.generic_abelian import transferops
 from models.abelian import j1j2
 import json
 import unittest
@@ -21,16 +19,28 @@ parser= cfg.get_args_parser()
 parser.add_argument("--j1", type=float, default=1., help="nearest-neighbour coupling")
 parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour coupling")
 parser.add_argument("--tiling", default="BIPARTITE", help="tiling of the lattice")
+parser.add_argument("--corrf_r", type=int, default=1, help="maximal correlation function distance")
+parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
+    "of transfer operator to compute")
+parser.add_argument('--top_t', nargs="+", type=int, default=[-2,0,2], help="TM charge sectors")
+parser.add_argument("--yast_backend", type=str, default='np', 
+    help="YAST backend", choices=['np','torch','torch_cpp'])
 args, unknown_args = parser.parse_known_args()
 
 def main():
     cfg.configure(args)
     cfg.print_config()
-    settings= settings_U1
-    # override default device specified in settings
-    settings.default_device= settings_full.default_device= cfg.global_args.device
-    # override default dtype
-    settings.default_dtype= settings_full.default_dtype= cfg.global_args.dtype
+    from yastn.yastn.sym import sym_U1
+    if args.yast_backend=='np':
+        from yastn.yastn.backend import backend_np as backend
+    elif args.yast_backend=='torch':
+        from yastn.yastn.backend import backend_torch as backend
+    elif args.yast_backend=='torch_cpp':
+        from yastn.yastn.backend import backend_torch_cpp as backend
+    settings_full= yastn.make_config(backend=backend, \
+        default_device= cfg.global_args.device, default_dtype=cfg.global_args.dtype)
+    settings= yastn.make_config(backend=backend, sym=sym_U1, \
+        default_device= cfg.global_args.device, default_dtype=cfg.global_args.dtype)
     settings.backend.set_num_threads(args.omp_cores)
     settings.backend.random_seed(args.seed)
     
@@ -72,7 +82,7 @@ def main():
     elif args.opt_resume is not None:
         if args.tiling == "BIPARTITE" or args.tiling == "2SITE":
             state= IPEPS_ABELIAN(settings, dict(), vertexToSite=lattice_to_site,\
-                lX=2, lY=1)
+                lX=2, lY=2)
         elif args.tiling == "4SITE":
             state= IPEPS_ABELIAN(settings, dict(), vertexToSite=lattice_to_site,\
                 lX=2, lY=2)
@@ -101,7 +111,6 @@ def main():
         raise ValueError("Invalid tiling: "+str(args.tiling)+" Supported options: "\
             +"BIPARTITE, 2SITE, 4SITE, 8SITE")
 
-    @torch.no_grad()
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
             history=[]
@@ -137,14 +146,29 @@ def main():
     print(f"TIMINGS ctm: {t_ctm} conv_check: {t_obs}")
 
     # environment diagnostics
-    for c_loc,c_ten in ctm_env.C.items(): 
-        u,s,v= c_ten.svd(([0],[1]))
-        print(f"\n\nspectrum C[{c_loc}]")
-        for charges in s.get_blocks_charge():
-            print(charges)
-            sector= s[charges]
-            for i in range(len(sector)):
-                print(f"{i} {sector[i]}")
+    # for c_loc,c_ten in ctm_env.C.items(): 
+    #     u,s,v= c_ten.svd(([0],[1]))
+    #     print(f"\n\nspectrum C[{c_loc}]")
+    #     for charges in s.get_blocks_charge():
+    #         print(charges)
+    #         sector= s[charges]
+    #         for i in range(len(sector)):
+    #             print(f"{i} {sector[i]}")
+
+    # ----- S(0).S(r) -----
+    site_dir_list=[((0,0), (1,0)), ((0,0), (0,1)), ((1,0), (1,0)), ((1,0), (0,1))]
+    for sdp in site_dir_list:
+        corrSS= model.eval_corrf_SS(*sdp, state, ctm_env, args.corrf_r, rl_0=None)
+        print(f"\n\nSS[{sdp[0]},{sdp[1]}] r "+" ".join([label for label in corrSS.keys()]))
+        for i in range(args.corrf_r):
+            print(f"{i} "+" ".join([f"{corrSS[label][i]}" for label in corrSS.keys()]))
+
+    # transfer operator spectrum 1-site-width channel
+    for sdp in site_dir_list:
+        print(f"\n\nspectrum(T)[{sdp[0]},{sdp[1]}] {tuple(args.top_t)}")
+        l= transferops.get_Top_spec(args.top_n, *sdp, state, ctm_env, edge_t=tuple(args.top_t))
+        for i in range(l.shape[0]):
+            print(f"{i} {l[i,0]} {l[i,1]}")
 
 if __name__=='__main__':
     if len(unknown_args)>0:
@@ -157,6 +181,7 @@ class TestCtmrg(unittest.TestCase):
     tol= 1.0e-6
     DIR_PATH = os.path.dirname(os.path.realpath(__file__))
     OUT_PRFX = "RESULT_test_run_u1_d3_2x1_neel"
+    BACKENDS = ['np', 'torch']
 
     def setUp(self):
         args.instate=self.DIR_PATH+"/../../../test-input/abelian/c4v/BFGS100LS_U1B_D3-chi72-j20.0-run0-iRNDseed321_blocks_2site_state.json"
@@ -169,30 +194,33 @@ class TestCtmrg(unittest.TestCase):
         from unittest.mock import patch 
         from math import isclose
 
-        with patch('sys.stdout', new = StringIO()) as tmp_out: 
-            main()
-        tmp_out.seek(0)
+        for b_id in self.BACKENDS:
+            with self.subTest(b_id=b_id):
+                args.yast_backend=b_id
+                with patch('sys.stdout', new = StringIO()) as tmp_out: 
+                    main()
+                tmp_out.seek(0)
 
-        # parse FINAL observables
-        final_obs=None
-        l= tmp_out.readline()
-        while l:
-            if "FINAL" in l:
-                final_obs= l.rstrip()
-                break
-            l= tmp_out.readline()
-        assert final_obs
+                # parse FINAL observables
+                final_obs=None
+                l= tmp_out.readline()
+                while l:
+                    if "FINAL" in l:
+                        final_obs= l.rstrip()
+                        break
+                    l= tmp_out.readline()
+                assert final_obs
 
-        # compare with the reference
-        ref_data="""
-        -0.6645979511667757, 0.3713621967866411, 0.3713621967866413, 0.37136219678664095, 
-        0.3713621967866413, 0.0, 0.0, -0.37136219678664095, 0.0, 0.0, -0.33229727696449596, 
-        -0.33229727696449607, -0.3322972769393827, -0.33229727693938854
-        """
-        fobs_tokens= [float(x) for x in final_obs[len("FINAL"):].split(",")]
-        ref_tokens= [float(x) for x in ref_data.split(",")]
-        for val,ref_val in zip(fobs_tokens, ref_tokens):
-            assert isclose(val,ref_val, rel_tol=self.tol)
+                # compare with the reference
+                ref_data="""
+                -0.6645979511667757, 0.3713621967866411, 0.3713621967866413, 0.37136219678664095, 
+                0.3713621967866413, 0.0, 0.0, -0.37136219678664095, 0.0, 0.0, -0.33229727696449596, 
+                -0.33229727696449607, -0.3322972769393827, -0.33229727693938854
+                """
+                fobs_tokens= [float(x) for x in final_obs[len("FINAL"):].split(",")]
+                ref_tokens= [float(x) for x in ref_data.split(",")]
+                for val,ref_val in zip(fobs_tokens, ref_tokens):
+                    assert isclose(val,ref_val, rel_tol=self.tol)
 
     def tearDown(self):
         for f in [self.OUT_PRFX+"_state.json"]:

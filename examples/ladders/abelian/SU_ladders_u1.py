@@ -4,8 +4,7 @@ import argparse
 import numpy as np
 import torch
 import config as cfg
-import yast.yast as yast
-import examples.abelian.settings_U1_torch as settings_U1
+import yastn.yastn as yastn
 from ipeps.ipeps_abelian import *
 from ctm.generic_abelian.env_abelian import *
 import ctm.generic_abelian.ctmrg as ctmrg
@@ -24,6 +23,8 @@ parser.add_argument("--bz_stag", type=float, default=0., help="staggered magneti
 parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
+parser.add_argument("--yast_backend", type=str, default='torch', 
+    help="YAST backend", choices=['torch','torch_cpp'])
 # Alternative 
 # --bond_dim, default=1, help="maximal bond dimension within SU")
 # ADAPTIVE policy computes real (CTM) energy every SU step
@@ -41,9 +42,13 @@ args, unknown_args = parser.parse_known_args()
 def main():
     cfg.configure(args)
     cfg.print_config()
-    
-    settings= settings_U1
-    settings.dtype= cfg.global_args.dtype
+    from yastn.yastn.sym import sym_U1
+    if args.yast_backend=='torch':
+        from yastn.yastn.backend import backend_torch as backend
+    elif args.yast_backend=='torch_cpp':
+        from yastn.yastn.backend import backend_torch_cpp as backend
+    settings= yastn.make_config(backend=backend, sym=sym_U1, \
+        default_device= cfg.global_args.device, default_dtype=cfg.global_args.dtype)
     model= coupledLadders.COUPLEDLADDERS_U1(settings,alpha=args.alpha,Bz_val=args.bz_stag)
     # override default device specified in settings
     default_device= 'cpu' if not hasattr(settings, 'device') else settings.device
@@ -136,32 +141,8 @@ def main():
         #             l= transferops.get_Top_spec(args.top_n, c,d, state, ctm_env)
         #             print("TOP "+json.dumps(_to_json(l)))
 
-    def generate_weights(state):
-        #   
-        #       w0         w2
-        # w4--(0,0)--w5--(1,0)--[w4]
-        #       w1         w3
-        # w6--(0,1)--w7--(1,1)--[w6]
-        #      [w0]       [w2]
-        def neg_(dxy): return (-dxy[0],-dxy[1])
-        def add_(coord,dxy): return (coord[0]+dxy[0],coord[1]+dxy[1])
-        dxy_w_to_ind= dict({(0,-1): 1, (-1,0): 2, (0,1): 3, (1,0): 4})
-        weights=dict()
-        for coord in state.sites.keys():
-            for dxy,ind in dxy_w_to_ind.items():
-                # generate weight_id and reverse weight_id
-                # (coord,dxy) identifies the same weight as (coord+dxy,-dxy) 
-                w_id= (coord, dxy)
-                w_rid= (state.vertexToSite(add_(coord,dxy)), neg_(dxy))
-
-                if not w_id in weights.keys() and not w_rid in weights.keys():
-                    W= yast.match_legs( tensors=[state.site(w_id[0]), state.site(w_rid[0])],\
-                        legs=[dxy_w_to_ind[w_id[1]], dxy_w_to_ind[w_rid[1]]], isdiag=True )
-                    weights[w_id]= W
-                    weights[w_rid]= W
-        return weights
-
-    state_w= get_weighted_ipeps(state, generate_weights(state))
+    # state_w= get_weighted_ipeps(state, generate_weights(state))
+    state_w= IPEPS_ABELIAN_WEIGHTED(state)
 
     # 4) select gate sequence
     # gen_gate_seq= model.gen_gate_seq_2S_2ndOrder       #  separate S.S and Sz.Id gates
@@ -194,7 +175,7 @@ def main():
             # # rollback to previous state
             opt_context["loss_history"]["beta"] -= opt_context["loss_history"]["time_step"][-1]
             state= read_ipeps(outputstatefile, settings)
-            state_w= get_weighted_ipeps(state, generate_weights(state))
+            state_w= IPEPS_ABELIAN_WEIGHTED(state)
 
             # generate new gate sequence
             new_ts= args.SU_adaptive_slowdown_factor * opt_context["loss_history"]["time_step"][-1] 

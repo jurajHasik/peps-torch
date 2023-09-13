@@ -112,7 +112,7 @@ def rdm1x1(state, env, sym_pos_def=False, force_cpu=False, verbosity=0, **kwargs
     :type env: ENV_ABELIAN_C4V
     :type verbosity: int
     :return: 1-site reduced density matrix with indices :math:`s;s'`
-    :rtype: yast.Tensor
+    :rtype: yastn.Tensor
 
     Computes 1-site reduced density matrix :math:`\rho_{1x1}` centered on vertex ``coord`` by 
     contracting the following tensor network::
@@ -204,7 +204,7 @@ def rdm2x1(state, env, sym_pos_def=False, force_cpu=False, verbosity=0, **kwargs
     :type env: ENV_ABELIAN_C4V
     :type verbosity: int
     :return: 2-site reduced density matrix with indices :math:`s_0s_1;s'_0s'_1`
-    :rtype: yast.Tensor
+    :rtype: yastn.Tensor
 
     Computes 2-site reduced density matrix :math:`\rho_{2x1}` of a horizontal 
     2x1 subsystem using following strategy:
@@ -294,7 +294,7 @@ def rdm2x2_NN(state, env, sym_pos_def=False, force_cpu=False, verbosity=0, **kwa
     :type force_cpu: bool
     :type verbosity: int
     :return: 2-site reduced density matrix with indices :math:`s_0s_1;s'_0s'_1`
-    :rtype: yast.Tensor
+    :rtype: yastn.Tensor
 
     Computes 2-site reduced density matrix :math:`\rho_{2x1}` of 2 sites 
     that are nearest neighbours using strategy:
@@ -400,7 +400,7 @@ def rdm2x2_NNN(state, env, sym_pos_def=False, force_cpu=False, verbosity=0, **kw
     :type force_cpu: bool
     :type verbosity: int
     :return: 2-site reduced density matrix with indices :math:`s_0s_1;s'_0s'_1`
-    :rtype: yast.Tensor
+    :rtype: yastn.Tensor
 
     Computes 2-site reduced density matrix :math:`\rho_{2x1}^{diag}` of 2 sites 
     that are next-nearest neighbours (along diagonal) using strategy:
@@ -499,7 +499,7 @@ def rdm2x2(state, env, sym_pos_def=False, force_cpu=False, verbosity=0, **kwargs
     :type env: ENV_ABELIAN_C4V
     :type verbosity: int
     :return: 4-site reduced density matrix with indices :math:`s_0s_1s_2s_3;s'_0s'_1s'_2s'_3`
-    :rtype: yast.Tensor
+    :rtype: yastn.Tensor
 
     Computes 4-site reduced density matrix :math:`\rho_{2x2}` of 2x2 subsystem using strategy:
 

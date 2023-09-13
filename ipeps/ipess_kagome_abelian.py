@@ -10,7 +10,7 @@ try:
     from ipeps.ipess_kagome import IPESS_KAGOME_GENERIC
 except ImportError as e:
     warnings.warn("torch not available", Warning)
-import yast.yast as yast
+import yastn.yastn as yastn
 import ipeps.ipeps_kagome_abelian as ipeps_kagome
 from ipeps.tensor_io import *
 
@@ -24,14 +24,14 @@ class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
                               ansatz 
         :param peps_args: ipeps configuration
         :param global_args: global configuration
-        :type ipess_tensors: dict(str, yast.Tensor)
+        :type ipess_tensors: dict(str, yastn.Tensor)
         :type peps_args: PEPSARGS
         :type global_args: GLOBALARGS
 
         iPESS ansatz for Kagome lattice composes five tensors, specified
         by dictionary::
 
-            ipess_tensors = {'T_u': yast.Tensor, 'T_d': ..., 'B_a': ..., 'B_b': ..., 'B_c': ...}
+            ipess_tensors = {'T_u': yastn.Tensor, 'T_d': ..., 'B_a': ..., 'B_b': ..., 'B_c': ...}
 
         into a single rank-5 on-site tensor of parent IPEPS. These iPESS tensors can
         be accessed through member ``ipess_tensors``. 
@@ -147,7 +147,7 @@ class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
         Initializes IPESS_KAGOME_GENERIC_ABELIAN from checkpoint file. 
         """
         checkpoint= torch.load(checkpoint_file, map_location=self.device)
-        self.ipess_tensors= {ind: yast.load_from_dict(config= self.engine, d=t_dict_repr) \
+        self.ipess_tensors= {ind: yastn.load_from_dict(config= self.engine, d=t_dict_repr) \
             for ind,t_dict_repr in checkpoint["parameters"].items()}
         for t in self.ipess_tensors.values(): t.requires_grad_(False)
         self.sites = self.build_onsite_tensors()
@@ -171,7 +171,7 @@ class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
     def build_onsite_tensors(self):
         r"""
         :return: elementary unit cell of underlying IPEPS
-        :rtype: dict[tuple(int,int): yast.Tensor]
+        :rtype: dict[tuple(int,int): yastn.Tensor]
 
         Build on-site tensor of corresponding IPEPS_KAGOME_ABELIAN be 
         performing following contraction of ``ipess_tensors``::
@@ -197,7 +197,7 @@ class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
                        /   \ 
                      1(-4)  2(-5)
         """
-        A= yast.ncon([self.ipess_tensors['T_u'], self.ipess_tensors['B_c'],\
+        A= yastn.ncon([self.ipess_tensors['T_u'], self.ipess_tensors['B_c'],\
             self.ipess_tensors['T_d'], self.ipess_tensors['B_b'], self.ipess_tensors['B_a']],\
             [[1,-3,-4], [-0,2,1], [2,3,4], [-1,3,-5], [-2,4,-6]])
         #    [[0,-4,-5], [-1,1,0], [1,2,3], [-2,2,-6], [-3,3,-7]]
@@ -222,7 +222,7 @@ class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
         ipess_tensors= {}
         for ind,t in self.ipess_tensors.items():
             ts, Ds= t.get_leg_charges_and_dims(native=True)
-            t_noise= yast.rand(config= t.config, s=t.s, n=t.n, t=ts, D=Ds, isdiag=t.isdiag)
+            t_noise= yastn.rand(config= t.config, s=t.s, n=t.n, t=ts, D=Ds, isdiag=t.isdiag)
             ipess_tensors[ind]= t + noise*t_noise
         return IPESS_KAGOME_GENERIC_ABELIAN(self.engine, ipess_tensors,\
                  peps_args=peps_args)
@@ -230,7 +230,7 @@ class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
     def generate_weights(self):
         r"""
         :return: dictionary of weights on non-equivalent bonds of the iPESS ansatz
-        :rtype: dict( str: yast.Tensor )
+        :rtype: dict( str: yastn.Tensor )
          
         Generate a set of identity tensors, weights W, for each non-equivalent link 
         in the iPESS ansatz::
@@ -269,7 +269,7 @@ class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
                 ('lambda_dn_a', ('T_d',2), ('B_a',1)),
                 ('lambda_up_b', ('T_u',1), ('B_b',1))
             ]:
-            W= yast.match_legs( tensors=[self.ipess_tensors[ind1[0]], self.ipess_tensors[ind2[0]]],\
+            W= yastn.match_legs( tensors=[self.ipess_tensors[ind1[0]], self.ipess_tensors[ind2[0]]],\
                 legs=[ ind1[1] , ind2[1] ], isdiag=True ).flip_signature()
             weights[w_id]= W
         return weights

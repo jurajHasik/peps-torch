@@ -1,10 +1,10 @@
 import context
 import torch
-import numpy as np
 import argparse
 import config as cfg
-import examples.abelian.settings_full_torch as settings_full
-import examples.abelian.settings_U1_torch as settings_U1
+import yastn.yastn as yastn
+from yastn.yastn.sym import sym_U1
+from yastn.yastn.backend import backend_torch as backend
 from ipeps.ipeps_abelian import read_ipeps
 from linalg.custom_svd import truncated_svd_gesdd
 from models import coupledLadders
@@ -27,11 +27,8 @@ args, unknown_args = parser.parse_known_args()
 def main():
     cfg.configure(args)
     cfg.print_config()
-    settings= settings_U1
-    # override default device specified in settings
-    settings.default_device= settings_full.default_device= cfg.global_args.device
-    # override default dtype
-    settings.default_dtype= settings_full.default_dtype= cfg.global_args.dtype
+    settings= yastn.make_config(backend=backend, sym=sym_U1, \
+        default_device= cfg.global_args.device, default_dtype=cfg.global_args.dtype)
     torch.set_num_threads(args.omp_cores)
     torch.manual_seed(args.seed)
 
@@ -47,16 +44,16 @@ def main():
         raise ValueError("Missing trial state: --instate=None and --ipeps_init_type= "\
             +str(args.ipeps_init_type)+" is not supported")
 
-    if not state_ab.dtype==model.dtype:
-        cfg.global_args.dtype= state_ab.dtype
-        print(f"dtype of initial state {state_ab.dtype} and model {model.dtype} do not match.")
-        print(f"Setting default dtype to {cfg.global_args.dtype} and reinitializing "\
-        +" the model")
-        model= coupledLadders.COUPLEDLADDERS(alpha=args.alpha)
-
     print(state_ab)
     state= state_ab.to_dense()
     print(state)
+
+    if not state.dtype==model.dtype:
+        cfg.global_args.dtype= state.dtype
+        print(f"dtype of initial state {state.dtype} and model {model.dtype} do not match.")
+        print(f"Setting default dtype to {cfg.global_args.dtype} and reinitializing "\
+        +" the model")
+        model= coupledLadders.COUPLEDLADDERS(alpha=args.alpha)
 
     # 2) define convergence criterion for ctmrg
     @torch.no_grad()
