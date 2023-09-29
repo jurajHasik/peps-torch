@@ -1,0 +1,7 @@
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -q"
+testpaths = [
+    "examples",
+]
+python_files = [ "ctmrg_*.py", "optim_*.py" ]

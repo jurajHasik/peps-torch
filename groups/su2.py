@@ -35,6 +35,17 @@ class SU2():
         """
         return get_op("I",self.J,dtype=self.dtype,device=self.device)
 
+    def I_N(self,N):
+        r"""
+        :param N: number of irreps
+        :type N: int
+        :return: Identity operator over N irreps, i.e. :math:`I_N = \otimes_N I`
+                 as rank-2N tensor
+        :rtype: torch.Tensor
+        """
+        I_N= get_op("I",self.J**N,dtype=self.dtype,device=self.device)
+        return I_N.view( [self.J]*(2*N) )
+
     def SZ(self):
         r"""
         :return: :math:`S^z` operator of irrep
@@ -56,6 +67,14 @@ class SU2():
         """
         return get_op("sm",self.J,dtype=self.dtype,device=self.device)
 
+    def SY(self):
+        r"""
+        :return: :math:`S^y` operator of irrep.
+        :rtype: torch.tensor
+        """
+        assert self.dtype in [torch.complex32, torch.complex128],"SY requires complex dtype"
+        return -0.5j*(self.SP()-self.SM())
+
     def BP_rot(self):
         return get_rot_op(self.J,dtype=self.dtype,device=self.device)
 
@@ -67,7 +86,8 @@ class SU2():
         S= torch.zeros(3, self.J, self.J,dtype=self.dtype,device=self.device)
         S[0,:,:]= self.SZ()
         S[1,:,:]= 0.5*(self.SP() + self.SM())
-        S[2,:,:]= -0.5j*(self.SP() - self.SM())
+        if S.is_complex():
+            S[2,:,:]= -0.5j*(self.SP() - self.SM())
         return S
 
     # TODO: implement xyz for Sx and Sy terms
