@@ -277,7 +277,7 @@ def serialize_abelian_tensor_legacy(t, native=False):
     # json_tensor["data"]= serialize_bare_tensor_legacy(t._data)
 
     json_tensor["blocks"]= []
-    for k,D,source in zip(t.struct.t,t.struct.D,t.struct.sl):
+    for k,D in zip(t.struct.t,t.struct.D):
         json_block= serialize_bare_tensor_legacy(t[k])
         json_block["charges"]= k
         json_tensor["blocks"].append(json_block)
