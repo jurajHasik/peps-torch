@@ -153,6 +153,15 @@ class IPEPS_1S_Q(IPEPS):
         
         return ""
 
+def gen_3site(state,q=-1./3):
+    phys_dim= state.site((0,0)).shape[0]
+    s2 = su2.SU2(phys_dim, dtype=state.dtype, device=state.device)
+    R= torch.linalg.matrix_exp( (math.pi*q)*(s2.SP()-s2.SM()) )
+    sites= {(0,0): state.site((0,0)),
+        (1,0): torch.einsum('sp,puldr->suldr',R,state.site((0,0))),
+        (2,0): torch.einsum('ps,puldr->suldr',R,state.site((0,0)))} # transpose<=>inverse<=>R^2
+    return IPEPS(sites, vertexToSite= lambda coord: ((coord[0]%3 - coord[1]) % 3, 0), lX=3, lY=3)
+
 def read_ipeps_1s_q(jsonfile, q=(0,0), vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.peps_args,\
     global_args=cfg.global_args):
     
