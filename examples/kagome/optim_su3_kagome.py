@@ -35,6 +35,8 @@ parser.add_argument("--no_sym_bonds", action='store_false', dest='sym_bond_S',\
     help="same bond tensors for sites A,B and C")
 parser.add_argument("--legacy_instate", action='store_true', dest='legacy_instate',\
     help="legacy format of states")
+parser.add_argument("--ctm_conv_crit", default="CSPEC", help="ctm convergence criterion", \
+    choices=["CSPEC", "ENERGY"])
 parser.add_argument("--force_cpu", action='store_true', help="evaluate energy on cpu")
 args, unknown_args = parser.parse_known_args()
 
@@ -179,9 +181,16 @@ def main():
 
     ctm_env = ENV(args.chi, state)
     init_env(state, ctm_env)
+    if args.ctm_conv_crit=="CSPEC":
+        ctmrg_conv_f= ctmrg_conv_specC
+    elif args.ctm_conv_crit=="ENERGY":
+        ctmrg_conv_f= ctmrg_conv_energy
+
+    ctm_env = ENV(args.chi, state)
+    init_env(state, ctm_env)
 
     # 2) compute initial observables
-    ctm_env, *ctm_log = ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
+    ctm_env, *ctm_log = ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_f)
     loss0= energy_f(state, ctm_env, force_cpu=args.force_cpu)
     obs_values, obs_labels = model.eval_obs_2x2subsystem(state, ctm_env, force_cpu=args.force_cpu)
     print(", ".join(["epoch", "energy"] + obs_labels))
@@ -212,7 +221,7 @@ def main():
 
         # 1) compute environment by CTMRG
         ctm_env_out, *ctm_log = ctmrg.run(sym_state, ctm_env_in, \
-            conv_check=ctmrg_conv_energy, ctm_args=ctm_args)
+            conv_check=ctmrg_conv_f, ctm_args=ctm_args)
 
         # 2) evaluate loss with the converged environment
         loss= energy_f(sym_state, ctm_env_out, force_cpu=args.force_cpu)
@@ -253,7 +262,7 @@ def main():
             +str(args.ansatz)+" is not supported")
     ctm_env = ENV(args.chi, state)
     init_env(state, ctm_env)
-    ctm_env, *ctm_log = ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
+    ctm_env, *ctm_log = ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_f)
     loss0= energy_f(state, ctm_env, force_cpu=args.force_cpu)
     obs_values, obs_labels = model.eval_obs_2x2subsystem(state, ctm_env, force_cpu=args.force_cpu)
     print(", ".join([f"{args.opt_max_iter}", f"{loss0}"] + [f"{v}" for v in obs_values]))
