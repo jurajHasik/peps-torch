@@ -148,10 +148,11 @@ def main():
         # 1) compute environment by CTMRG
         ctm_env_out, *ctm_log= ctmrg.run(state, ctm_env_in, \
             conv_check=ctmrg_conv_f, ctm_args=ctm_args)
-        
-        # 2) evaluate loss with the converged environment
-        loss= energy_f(state, ctm_env_out)
 
+        # 2) evaluate mock-loss with the converged environment
+        loss= sum( [ c.norm() for c in ctm_env_out.C.values() ] \
+            + [ c.norm() for c in ctm_env_out.T.values() ] + [state.site((0,0)).norm(),] )
+        
         return (loss, ctm_env_out, *ctm_log)
 
     @torch.no_grad()
@@ -166,6 +167,25 @@ def main():
 
     # optimize
     optimize_state(state, ctm_env, loss_fn, obs_fn=obs_fn)
+
+    # 2) evaluate loss with the converged environment
+    import time
+    state.sites= state.build_onsite_tensors()
+    # 1) re-build precomputed double-layer on-site tensors
+    #    Some objects, in this case open-double layer tensors, are pre-computed
+    state.sync_precomputed()
+    
+    ctm_env= ctm_env.detach().clone()
+    [ c.requires_grad_() for c in ctm_env.C.values() ]
+    [ c.requires_grad_() for c in ctm_env.T.values() ]
+    
+    t_loss0= time.perf_counter()
+    loss= energy_f(state, ctm_env)
+    t_loss1= time.perf_counter()
+    loss.backward()
+    t_loss2= time.perf_counter()
+    print(f"t_loss {t_loss1-t_loss0} [s] t_loss_grad {t_loss2-t_loss1}")
+    log.info(f"t_loss {t_loss1-t_loss0} [s] t_loss_grad {t_loss2-t_loss1}")
 
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"
