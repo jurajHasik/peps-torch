@@ -8,6 +8,7 @@ from ipeps.ipeps_abelian_c4v import *
 from ctm.generic_abelian.env_abelian import *
 import ctm.generic_abelian.ctmrg as ctmrg
 from models.abelian.spin_triangular import J1J2J4_NOSYM
+from models.spin_triangular import J1J2J4
 from ctm.generic_abelian import transferops
 import json
 import unittest
@@ -29,6 +30,7 @@ parser.add_argument("--pg", default="NEEL_TRIANGULAR", help="point-group symmetr
 parser.add_argument("--ctm_conv_crit", default="CSPEC", help="ctm convergence criterion", \
     choices=["CSPEC", "ENERGY"])
 parser.add_argument("--corrf_r", type=int, default=1, help="maximal correlation function distance")
+parser.add_argument("--corrf_DD", action='store_true', help="compute horizontal dimer-dimer correlation function")
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
 parser.add_argument('--top_t', nargs="+", type=int, default=[-2,0,2], help="TM charge sectors")
@@ -66,7 +68,7 @@ def main():
             vx = (coord[0] + abs(coord[0]) * 2) % 2
             vy = abs(coord[1])
             return ((vx + vy) % 2, 0)
-    if args.tiling in ["2SITE"]:
+    elif args.tiling in ["2SITE"]:
         def lattice_to_site(coord):
             return (coord[0] % 2, 0)
     else:
@@ -185,6 +187,18 @@ def main():
         print(f"\n\nSId[{sdp[0]},{sdp[1]}] r "+" ".join([label for label in corrSId.keys()]))
         for i in range(len(next(iter(corrSId.values())))):
             print(f"{i} "+" ".join([f"{corrSId[label][i]}" for label in corrSId.keys()]))
+
+    # ----- horizontal dimer-dimer (S(0).S(x))(S(rx).S(rx+x)) -----
+    # TODO conversion to dense
+    state_dense= state.to_dense()
+    ctm_env_dense= ctm_env.to_dense(state)
+    model_dd= J1J2J4(j1=args.j1, j2=args.j2, j4=args.j4, jchi=args.jchi, diag=args.diag)
+    if args.corrf_DD:
+        for sdp in [((0,0), (1,0))]:
+            corrDD= model_dd.eval_corrf_DD_H(*sdp, state_dense, ctm_env_dense, args.corrf_r)
+            print(f"\n\nDD[{sdp[0]},{sdp[1]}] r "+" ".join([label for label in corrDD.keys()]))
+            for i in range(args.corrf_r):
+                print(f"{i} "+" ".join([f"{corrDD[label][i]}" for label in corrDD.keys()])) 
 
     # environment diagnostics
     for c_loc,c_ten in ctm_env.C.items(): 
