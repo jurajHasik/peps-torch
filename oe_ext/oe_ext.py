@@ -166,18 +166,19 @@ def _get_contraction_path_cached(
                   names has to follow order of tensors as they appear in ``tn_to_contract``
     :param who: string id for logging identifying this optimal contraction path search
     """
-    optimizer = oe.DynamicProgramming(
-        minimize="flops",  # 'size' optimize for largest intermediate tensor size, 'flops' for computation complexity
-        search_outer=False,  # search through outer products as well
-        cost_cap=True,  # don't use cost-capping strategy
-    )
+    optimizer = kwargs.pop("optimizer", None)
+    if optimizer in [None, "default", "dynamic-programming"]:
+        optimizer = oe.DynamicProgramming(
+            minimize="flops",  # 'size' optimize for largest intermediate tensor size, 'flops' for computation complexity
+            search_outer=False,  # search through outer products as well
+            cost_cap=True,  # don't use cost-capping strategy
+        )
 
     # pre-process shapes, by dropping negative values (unrolled index) and last tuple,
     # which holds shapes of output tensor
     shapes_unrolled = tuple(tuple(x for x in s if x > 0) for s in shapes[:-1])
     path = kwargs.pop("path", None)
     kwargs.pop("shapes", False)
-    optimizer = kwargs.pop("optimizer", optimizer)
     if not path:
         path, path_info = oe.contract_path(
             expr, *shapes_unrolled, optimize=optimizer, shapes=True, **kwargs
@@ -187,7 +188,7 @@ def _get_contraction_path_cached(
         path, expr, *shapes_unrolled, unrolled=unrolled, names=names, shapes=True
     )
     log.info(
-        f"{who}"
+        f"{who} optimizer {optimizer}"
         + (f" unrolled {unrolled}" if len(unrolled) > 0 else "")
         + f"\n{path}\n{path_info}\npeak-mem {max(mem_list):4.3e} mem {[f'{x:4.3e}' for x in mem_list]}"
     )

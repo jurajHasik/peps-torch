@@ -571,7 +571,7 @@ def rdm2x3_loop_oe(coord, state, env, open_sites=[0,1,2,3,4,5], unroll=True,\
         unroll= [47,48]
     path, path_info= get_contraction_path(*contract_tn,unroll=unroll if unroll else [],\
         names=names,path=None,who=who,\
-        memory_limit=mem_limit if unroll else None)
+        memory_limit=mem_limit if unroll else None,optimizer="default" if env.chi>1 else "auto")
     R= contract_with_unroll(*contract_tn,optimize=path,backend='torch',\
         unroll=unroll if unroll else [],checkpoint_unrolled=checkpoint_unrolled,
         checkpoint_on_device=checkpoint_on_device,who=who,verbosity=verbosity)
@@ -655,7 +655,7 @@ def rdm2x3_loop_oe_semimanual(coord, state, env, open_sites=[0,1,2,3,4,5], unrol
     left_names= tuple(x.strip() for x in ("C1, T1, T4, a, a*, T4_y, C4_y, T3_y, a_y, a_y*").split(','))
     unroll_L=_find_unrolled(unroll,*left_tn)
     path, path_info= get_contraction_path(*left_tn,\
-        names=left_names,path=None,unroll=unroll_L,who=who+"_L",memory_limit=None)
+        names=left_names,path=None,unroll=unroll_L,who=who+"_L",memory_limit=None,optimizer="default" if env.chi>1 else "auto")
     L= contract_with_unroll(*left_tn,optimize=path,who=who+"_L",backend='torch',
         unroll=unroll_L,checkpoint_unrolled=checkpoint_unrolled,
         checkpoint_on_device=checkpoint_on_device,verbosity=verbosity)
@@ -667,7 +667,7 @@ def rdm2x3_loop_oe_semimanual(coord, state, env, open_sites=[0,1,2,3,4,5], unrol
     right_names= tuple(x.strip() for x in ("T1_2x, C2_2x, T2_2x, a_2x, a_2x*, T2_2xy, C3_2xy, T3_2xy, a_2xy, a_2xy*").split(','))
     unroll_R=_find_unrolled(unroll,*right_tn)
     path, path_info= get_contraction_path(*right_tn,\
-        names=right_names,path=None,unroll=unroll_R,who=who+"_R",memory_limit=None)
+        names=right_names,path=None,unroll=unroll_R,who=who+"_R",memory_limit=None,optimizer="default" if env.chi>1 else "auto")
     R= contract_with_unroll(*right_tn,optimize=path,who=who+"_R",backend='torch',
         unroll=unroll_R,checkpoint_unrolled=checkpoint_unrolled,
         checkpoint_on_device=checkpoint_on_device,verbosity=verbosity)
@@ -688,7 +688,8 @@ def rdm2x3_loop_oe_semimanual(coord, state, env, open_sites=[0,1,2,3,4,5], unrol
     if type(unroll)==bool and unroll:
         unroll= [47,48]
     path, path_info= get_contraction_path(*joint_tn,unroll=unroll if unroll else [],\
-        names=names,path=None,who=who,memory_limit=L.numel()*a_xy.size(0)**2 if unroll else None) 
+        names=names,path=None,who=who,memory_limit=L.numel()*a_xy.size(0)**2 if unroll else None,\
+            optimizer="default" if env.chi>1 else "auto") 
     res= contract_with_unroll(*joint_tn,optimize=path,backend='torch',
         unroll=unroll if unroll else [],checkpoint_unrolled=checkpoint_unrolled,
         checkpoint_on_device=checkpoint_on_device,who=who,verbosity=verbosity)
@@ -965,7 +966,8 @@ def rdm3x2_loop_oe_semimanual(coord, state, env, open_sites=[0,1,2,3,4,5], unrol
     top_names= tuple(x.strip() for x in ("C1, T1, T4, a, a*, T1_x, C2_x, T2_y, a_x, a_x*").split(','))
     unroll_TE=_find_unrolled(unroll,*top_tn)
     path, path_info= get_contraction_path(*top_tn,\
-        names=top_names,path=None,unroll=unroll_TE,who=who+"_TE",memory_limit=None)
+        names=top_names,path=None,unroll=unroll_TE,who=who+"_TE",memory_limit=None,\
+            optimizer="default" if env.chi>1 else "auto")
     TE= contract_with_unroll(*top_tn,optimize=path,who=who+"_TE",backend='torch',
         unroll=unroll_TE,checkpoint_unrolled=checkpoint_unrolled,\
         checkpoint_on_device=checkpoint_on_device,verbosity=verbosity)
@@ -977,7 +979,8 @@ def rdm3x2_loop_oe_semimanual(coord, state, env, open_sites=[0,1,2,3,4,5], unrol
     bottom_names= tuple(x.strip() for x in ("T3_x2y, C3_x2y, T2_x2y, a_x2y, a_x2y*, T4_2y, C4_2y, T3_2y, a_2y, a_2y*").split(','))
     unroll_BE=_find_unrolled(unroll,*bottom_tn)
     path, path_info= get_contraction_path(*bottom_tn,\
-        names=bottom_names,path=None,unroll=unroll_BE,who=who+"_BE",memory_limit=None)
+        names=bottom_names,path=None,unroll=unroll_BE,who=who+"_BE",memory_limit=None,\
+            optimizer="default" if env.chi>1 else "auto")
     BE= contract_with_unroll(*bottom_tn,optimize=path,who=who+"_BE",backend='torch',
         unroll=unroll_BE,checkpoint_unrolled=checkpoint_unrolled,\
         checkpoint_on_device=checkpoint_on_device,verbosity=verbosity)
@@ -998,7 +1001,8 @@ def rdm3x2_loop_oe_semimanual(coord, state, env, open_sites=[0,1,2,3,4,5], unrol
     if type(unroll)==bool and unroll:
         unroll= [83,84]
     path, path_info= get_contraction_path(*joint_tn,unroll=unroll if unroll else [],\
-        names=names,path=None,who=who,memory_limit=TE.numel()*a_y.size(0)**2 if unroll else None) 
+        names=names,path=None,who=who,memory_limit=TE.numel()*a_y.size(0)**2 if unroll else None,\
+            optimizer="default" if env.chi>1 else "auto") 
     res= contract_with_unroll(*joint_tn,optimize=path,backend='torch',
         unroll=unroll if unroll else [],checkpoint_unrolled=checkpoint_unrolled,
         checkpoint_on_device=checkpoint_on_device,who=who,verbosity=verbosity)
@@ -1103,7 +1107,8 @@ def rdm3x2_loop_oe(coord, state, env, open_sites=[0,1,2,3,4,5], unroll=True,\
         unroll= [83,84]
     path, path_info= get_contraction_path(*contract_tn,unroll=unroll if unroll else [],\
         names=names,path=None,who=who,\
-        memory_limit=mem_limit if unroll else None)
+        memory_limit=mem_limit if unroll else None,\
+            optimizer="default" if env.chi>1 else "auto")
     R= contract_with_unroll(*contract_tn,optimize=path,backend='torch',\
         unroll=unroll if unroll else [],checkpoint_unrolled=checkpoint_unrolled,
         checkpoint_on_device=checkpoint_on_device,who=who,verbosity=verbosity)
