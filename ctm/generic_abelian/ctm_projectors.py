@@ -254,6 +254,9 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, direction, \
         M = checkpoint(mm, transpose(R), Rt)
     else:
         M = R.tensordot(Rt,([0],[0]))
+    if ctm_args.verbosity_projectors > 0:
+        print(f"{diagnostics}")
+        M.print_blocks_shape()
 
     # 1) SVD decomposition and Truncation
     signature_U={(0,-1): 1, (-1,0): -1, (0,1): -1, (1,0): 1}
