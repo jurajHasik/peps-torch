@@ -10,12 +10,6 @@ from ctm.generic.ctm_components import c2x2_LU, c2x2_LD, c2x2_RU, c2x2_RD
 from ctm.generic.ctm_projectors import ctm_get_projectors_from_matrices
 from ctm.generic.rdm import _cast_to_real, _sym_pos_def_rdm, get_contraction_path, contract_with_unroll
 import ctm.generic.corrf as corrf
-try:
-    import opt_einsum as oe
-    from oe_ext.oe_ext import get_contraction_path, contract_with_unroll, _debug_allocated_tensors
-except:
-    oe=False
-    warnings.warn("opt_einsum not available.")
 import logging
 
 log = logging.getLogger(__name__)
@@ -486,7 +480,7 @@ def rdm2x3_loop_trglringex_manual(coord, state, env, sym_pos_def=False, checkpoi
 
 def rdm2x3_loop_oe(coord, state, env, open_sites=[0,1,2,3,4,5], unroll=True,\
     sym_pos_def=False, force_cpu=False, checkpoint_unrolled=False, 
-    checkpoint_on_device=False,verbosity=0):
+    checkpoint_on_device=False,verbosity=0,global_args=cfg.global_args):
     # C1------(1)1 1(0)----T1----(3)44 44(0)----T1_x----(3)39 39(0)---T1_2x---(3)24 24(0)--C2_2x
     # 0(0)               (1,2)                 (1,2)                  (1,2)                25(1)
     # 0(0)           100  2  5             102 40 42              104 26 28                25(0)
@@ -572,8 +566,9 @@ def rdm2x3_loop_oe(coord, state, env, open_sites=[0,1,2,3,4,5], unroll=True,\
         unroll= [47,48]
     path, path_info= get_contraction_path(*contract_tn,unroll=unroll if unroll else [],\
         names=names,path=None,who=who,\
-        memory_limit=mem_limit if unroll else None,optimizer="default" if env.chi>1 else "auto")
-    R= contract_with_unroll(*contract_tn,optimize=path,backend='torch',\
+        memory_limit=mem_limit if unroll else None,optimizer="default" if env.chi>1 else "auto",
+        global_args=global_args)
+    R= contract_with_unroll(*contract_tn,optimize=path,backend=global_args.oe_backend,\
         unroll=unroll if unroll else [],checkpoint_unrolled=checkpoint_unrolled,
         checkpoint_on_device=checkpoint_on_device,who=who,verbosity=verbosity)
 
@@ -1015,7 +1010,7 @@ def rdm3x2_loop_oe_semimanual(coord, state, env, open_sites=[0,1,2,3,4,5], unrol
 
 def rdm3x2_loop_oe(coord, state, env, open_sites=[0,1,2,3,4,5], unroll=True,\
     sym_pos_def=False, force_cpu=False, checkpoint_unrolled=False, 
-    checkpoint_on_device=False, verbosity=0):
+    checkpoint_on_device=False, verbosity=0, global_args=cfg.global_args):
     # C1------(1)1 1(0)----T1----(3)13 13(0)----T1_x-----(3)7 7(0)-----C2_x
     # 0(0)               (1,2)                 (1,2)                   8(1)
     # 0(0)           100  2  5             106 9 11                    8(0)
@@ -1109,8 +1104,9 @@ def rdm3x2_loop_oe(coord, state, env, open_sites=[0,1,2,3,4,5], unroll=True,\
     path, path_info= get_contraction_path(*contract_tn,unroll=unroll if unroll else [],\
         names=names,path=None,who=who,\
         memory_limit=mem_limit if unroll else None,\
-            optimizer="default" if env.chi>1 else "auto")
-    R= contract_with_unroll(*contract_tn,optimize=path,backend='torch',\
+            optimizer="default" if env.chi>1 else "auto",
+            global_args=global_args)
+    R= contract_with_unroll(*contract_tn,optimize=path,backend=global_args.oe_backend,\
         unroll=unroll if unroll else [],checkpoint_unrolled=checkpoint_unrolled,
         checkpoint_on_device=checkpoint_on_device,who=who,verbosity=verbosity)
 

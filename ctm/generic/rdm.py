@@ -1,8 +1,8 @@
 import warnings
 from functools import lru_cache
 from itertools import product
-import torch
 from math import prod
+import torch
 from config import _torch_version_check
 import config as cfg
 from ctm.generic.env import ENV
@@ -1099,7 +1099,7 @@ def rdm2x2_NNN_1n1_oe(coord, state, env, sym_pos_def=False, force_cpu=False,
 
 def rdm2x2(coord, state, env, open_sites=[0,1,2,3],\
         unroll=[], checkpoint_unrolled=False, checkpoint_on_device=False, 
-        sym_pos_def=False, force_cpu=False, verbosity=0):
+        sym_pos_def=False, force_cpu=False, verbosity=0, global_args=cfg.global_args):
     r"""
     :param coord: vertex (x,y) specifies upper left site of 2x2 subsystem
     :param state: underlying wavefunction
@@ -1148,7 +1148,7 @@ def rdm2x2(coord, state, env, open_sites=[0,1,2,3],\
     if oe:
         return rdm2x2_oe(coord, state, env, open_sites=open_sites, unroll=unroll, 
             checkpoint_unrolled=checkpoint_unrolled, checkpoint_on_device=checkpoint_on_device,
-            sym_pos_def=sym_pos_def, force_cpu=force_cpu, verbosity=verbosity)
+            sym_pos_def=sym_pos_def, force_cpu=force_cpu, verbosity=verbosity, global_args=global_args)
     else:
         return rdm2x2_legacy(coord, state, env, sym_pos_def=sym_pos_def, force_cpu=force_cpu,\
             verbosity=verbosity)
@@ -1387,7 +1387,7 @@ def rdm2x2_legacy(coord, state, env, sym_pos_def=False, verbosity=0):
 
 def rdm2x2_oe(coord, state, env, open_sites=[0,1,2,3], unroll=False, 
     checkpoint_unrolled=False, checkpoint_on_device=False,
-    sym_pos_def=False, force_cpu=False, verbosity=0):
+    sym_pos_def=False, force_cpu=False, verbosity=0, global_args=cfg.global_args):
     # C1------(1)1 1(0)----T1----(3)36 36(0)----T1_x----(3)18 18(0)----C2_x
     # 0(0)               (1,2)                 (1,2)                   19(1)
     # 0(0)           100  2  5             102 20 23                   19(0)
@@ -1457,8 +1457,9 @@ def rdm2x2_oe(coord, state, env, open_sites=[0,1,2,3], unroll=False,
     if type(unroll)==bool and unroll:
         unroll= I_out
     path, path_info= get_contraction_path(*contract_tn,unroll=unroll,\
-        names=names,path=None,who=who,optimizer="default" if env.chi>1 else "auto")
-    R= contract_with_unroll(*contract_tn,unroll=unroll,optimize=path,backend='torch',
+        names=names,path=None,who=who,optimizer="default" if env.chi>1 else "auto",
+        global_args=global_args)
+    R= contract_with_unroll(*contract_tn,unroll=unroll,optimize=path,backend=global_args.oe_backend,
         checkpoint_unrolled=checkpoint_unrolled,checkpoint_on_device=checkpoint_on_device,
         who=who,verbosity=verbosity)
 

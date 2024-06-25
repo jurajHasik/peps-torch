@@ -167,6 +167,8 @@ def eval_nn_and_chirality_per_site(coord,state,env,R,Rinv,
 
     return energy_nn/2, energy_nn_diag/2, energy_chi
 
+# force_cpu=True - entire computation is performed on CPU
+# if force_cpu=False and we run on GPU *AND* checkpoint_on_device=True - store 
 def eval_j1j2j4jX_per_site_legacy(coord,state,env,R,Rinv,\
     op_nn,op_nnn,op_chi,op_p,compressed=-1,unroll=False,
     checkpoint_unrolled=False,checkpoint_on_device=False,force_cpu=False,\
@@ -180,16 +182,19 @@ def eval_j1j2j4jX_per_site_legacy(coord,state,env,R,Rinv,\
     if compressed>0:
         tmp_rdm_2x3= rdm.rdm2x3_trglringex_compressed(coord,state,env,compressed,\
             ctm_args=ctm_args,global_args=global_args) 
-    elif type(unroll)==dict and unroll=={}:
-        tmp_rdm_2x3= rdm_looped.rdm2x3_loop_trglringex_manual(coord,state,env,\
-            checkpoint_unrolled=checkpoint_unrolled)
+    # elif type(unroll)==dict and unroll=={}:
+    #     tmp_rdm_2x3= rdm_looped.rdm2x3_loop_trglringex_manual(coord,state,env,\
+    #         checkpoint_unrolled=checkpoint_unrolled)
     else:
         # x  s0 s1              x  s3 s2
         # s2 s3 x  => (permute) s0 s1 x
         tmp_rdm_2x3= rdm_looped.rdm2x3_loop_oe(coord, state, env, open_sites=[1,2,3,4], 
             unroll=unroll.get('rdm2x3_loop_oe',False),\
-            sym_pos_def=False, force_cpu=force_cpu, checkpoint_unrolled=checkpoint_unrolled,
-            checkpoint_on_device=checkpoint_on_device)
+            sym_pos_def=False, 
+            force_cpu=force_cpu, 
+            checkpoint_unrolled=checkpoint_unrolled,
+            checkpoint_on_device=checkpoint_on_device,
+            global_args=global_args)
         tmp_rdm_2x3= tmp_rdm_2x3.permute(2,3,1,0, 6,7,5,4).contiguous()
     tmp_rdm_2x3= torch.einsum(tmp_rdm_2x3,[0,10,12,14,1,11,13,15],\
         R, [2,10], R, [3,11], R@R@R,[4,12],R@R@R,[5,13],\
@@ -210,9 +215,9 @@ def eval_j1j2j4jX_per_site_legacy(coord,state,env,R,Rinv,\
     if compressed>0:
         tmp_rdm_3x2= rdm.rdm3x2_trglringex_compressed(coord,state,env,compressed,\
             ctm_args=ctm_args,global_args=global_args) 
-    elif type(unroll)==dict and unroll=={}:
-        tmp_rdm_3x2= rdm_looped.rdm3x2_loop_trglringex_manual(coord,state,env,\
-            checkpoint_unrolled=checkpoint_unrolled)
+    # elif type(unroll)==dict and unroll=={}:
+    #     tmp_rdm_3x2= rdm_looped.rdm3x2_loop_trglringex_manual(coord,state,env,\
+    #         checkpoint_unrolled=checkpoint_unrolled)
     else:
         # x  s2               x  s2
         # s0 s3               s3 s1
@@ -220,7 +225,7 @@ def eval_j1j2j4jX_per_site_legacy(coord,state,env,R,Rinv,\
         tmp_rdm_3x2= rdm_looped.rdm3x2_loop_oe(coord, state, env, open_sites=[1,2,3,4], 
             unroll=unroll.get('rdm3x2_loop_oe',False),\
             sym_pos_def=False, force_cpu=force_cpu, checkpoint_unrolled=checkpoint_unrolled,
-            checkpoint_on_device=checkpoint_on_device)
+            checkpoint_on_device=checkpoint_on_device,global_args=global_args)
         tmp_rdm_3x2= tmp_rdm_3x2.permute(1,3,2,0, 5,7,6,4).contiguous()
     tmp_rdm_3x2= torch.einsum(tmp_rdm_3x2,[0,10,12,14, 1,11,13,15],\
         R@R,[2,10],R@R,[3,11], R@R@R,[4,12],R@R@R,[5,13], R,[6,14],R,[7,15], [0,2,4,6,1,3,5,7])
@@ -233,7 +238,8 @@ def eval_j1j2j4jX_per_site_legacy(coord,state,env,R,Rinv,\
     # A    RA     s0 s1                 s0 s1     i j                 A B   
     # R^-1A A <=> s2 s3 => (permute) => s3 s2 <=> l k => 120def order C A
     tmp_rdm_2x2= rdm.rdm2x2(coord,state,env,open_sites=[0,1,2,3],unroll=unroll.get('rdm2x2',False),\
-        checkpoint_unrolled=checkpoint_unrolled,checkpoint_on_device=checkpoint_on_device,force_cpu=force_cpu)
+        checkpoint_unrolled=checkpoint_unrolled,checkpoint_on_device=checkpoint_on_device,force_cpu=force_cpu,
+        global_args=global_args)
     tmp_rdm_2x2= tmp_rdm_2x2.permute(0,1,3,2, 4,5,7,6).contiguous()
     tmp_rdm_2x2= torch.einsum(tmp_rdm_2x2,[0,10,4,12,1,11,5,13],\
         R, [2,10], R, [3,11],\

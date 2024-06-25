@@ -13,6 +13,10 @@ from opt_einsum.contract import (  # type: ignore
     shape_only,
 )
 try:
+    import cuquantum as cuqn
+except:
+    print("Warning: Missing cuquantum.")
+try:
     import arrayfire as af
 except:
     print("Warning: Missing arrayfire. SVDAF is not available.")
@@ -77,6 +81,36 @@ def _preprocess_interleaved_to_expr_and_shapes(*args, unroll=[]):
     return expr, shapes, unrolled_shapes
 
 
+def _cuqn_search(expr, shapes, options=None, optimize=None, 
+    dtype=None, device=None):
+    """
+    Path searching without device memory allocation.
+
+    Args:
+        inputs: A sequence of string specifying the modes for all inputs.
+        output: A string specifying the output modes.
+        size_dict: A dictionary mapping all modes to corresponding extent.
+        options : Options for the tensor network as a :class:`~cuquantum.NetworkOptions` object. 
+            Alternatively, a `dict` containing the parameters for the ``NetworkOptions`` constructor can also be provided. 
+        optimize : Options for path optimization as an :class:`OptimizerOptions` object. 
+            Alternatively, a dictionary containing the parameters for the ``OptimizerOptions`` constructor can also be provided.
+    
+    Returns:
+        path: A list of pairs of operand ordinals representing the best contraction order in the :func:`numpy.einsum_path` format.
+    """
+    # create dummy cp.ndarray, note this is only meant for path finding, and should not be used 
+    # for operations that requires physical operands, e.g, autotuning and contraction.
+    operands = []
+    # m = cp.cuda.MemoryPointer(cp.cuda.UnownedMemory(0, 0, [], 0), 0)
+    device= torch.get_default_dtype() if not device else device
+    dtype= torch.get_default_dtype() if not dtype else dtype
+    for shape in shapes:
+        # operands.append(cp.ndarray(shape, memptr=m))
+        operands.append( torch.empty(shape, dtype=dtype, device=device) )
+    path, info = cuqn.contract_path(expr, *operands, options=options, optimize=optimize)
+    return path, info
+
+
 def get_contraction_path(*tn_to_contract, unroll=[], names=None, who=None, **kwargs):
     r"""Returns optimal contraction path for tensor network contraction specified in interleaved
     format. Takes into account unrolled indices if any.
@@ -117,12 +151,20 @@ def _get_contraction_path_cached(
     :param who: string id for logging identifying this optimal contraction path search
     """
     optimizer = kwargs.pop("optimizer", None)
+    global_args= kwargs.pop("global_args",None)
+    backend= "torch" if not global_args else global_args.oe_backend
+
     if optimizer in [None, "default", "dynamic-programming"]:
         optimizer = oe.DynamicProgramming(
             minimize="flops",  # 'size' optimize for largest intermediate tensor size, 'flops' for computation complexity
             search_outer=False,  # search through outer products as well
             cost_cap=True,  # don't use cost-capping strategy
         )
+    if backend in ["cuquantum_torch"]:
+        assert global_args
+        optimizer = cuqn.OptimizerOptions(slicing=cuqn.SlicerOptions(
+            disable_slicing=int(not global_args.oe_cuquantum_slicing)
+            ))
 
     # pre-process shapes, by dropping negative values (unrolled index) and last tuple,
     # which holds shapes of output tensor
@@ -130,9 +172,16 @@ def _get_contraction_path_cached(
     path = kwargs.pop("path", None)
     kwargs.pop("shapes", False)
     if not path:
-        path, path_info = oe.contract_path(
-            expr, *shapes_unrolled, optimize=optimizer, shapes=True, **kwargs
-        )  # ,use_blas=)
+        path, path_info= None, None
+        if backend in ["cuquantum_torch"]: 
+            path, path_info = _cuqn_search(expr, shapes_unrolled, 
+            options=None, 
+            optimize=optimizer, 
+                dtype=global_args.torch_dtype, device=global_args.device)
+        else:
+            path, path_info = oe.contract_path(
+                expr, *shapes_unrolled, optimize=optimizer, shapes=True, **kwargs
+            )  # ,use_blas=)
 
     path_info, mem_list = _get_contraction_path_info(
         path, expr, *shapes_unrolled, unrolled=unrolled, names=names, shapes=True
@@ -497,6 +546,12 @@ def contract_with_unroll(*args, **kwargs):
     checkpoint_unrolled = kwargs.pop("checkpoint_unrolled", False)
 
     if not unroll or len(unroll) == 0:
+        backend= kwargs.get("backend","")
+        if backend in ["cuquantum_torch"]:
+            path= kwargs.pop("optimize",None)
+            assert path
+            # args<=>contract_tn which is network and operands in interleaved description
+            return cuqn.contract(*args, optimize=cuqn.OptimizerOptions(path=path), stream=None, return_info=False)
         return oe.contract(*args, **kwargs)
 
     # We are unrolling. In general, there will be several constant

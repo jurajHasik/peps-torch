@@ -188,6 +188,8 @@ class GLOBALARGS():
         self.torch_dtype= torch.float64
         self.device= 'cpu'
         self.offload_to_gpu= 'None'
+        self.oe_backend= 'torch'
+        self.oe_cuquantum_slicing= False
 
     def __str__(self):
         res=type(self).__name__+"\n"
