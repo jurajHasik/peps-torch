@@ -587,6 +587,26 @@ def contract_with_unroll(*args, **kwargs):
             for idx, t in enumerate(args[0 : 2 * (len(args) // 2) : 2])
         )
 
+    backend= kwargs.get("backend","")
+    if backend in ["cuquantum_torch"]:
+        # _contract_with_unroll_cuqn_noautotune
+        # _contract_with_unroll_cuqn
+        result = _contract_with_unroll_cuqn(subscripts, shapes_and_constant_ops, *args, 
+            unroll=unroll, checkpoint_unrolled=checkpoint_unrolled, verbosity=verbosity, who=who, **kwargs)
+    else:
+        result = _contract_with_unroll_oe(subscripts, shapes_and_constant_ops, *args, 
+            unroll=unroll, checkpoint_unrolled=checkpoint_unrolled, verbosity=verbosity, who=who, **kwargs)
+
+    if verbosity>0:
+        log.info(who+" unrolled loop concluded\n"
+            +_debug_allocated_tensors(device=args[0].device,totals_only=False))
+
+    return result
+
+
+def _contract_with_unroll_oe(subscripts, shapes_and_constant_ops, *args, 
+    unroll=None, checkpoint_unrolled=None, verbosity=0, who=None, **kwargs):
+    
     kwargs["_gen_expression"] = True
     oe_backend = kwargs.pop("backend", "auto")
     _contract_unroll_loop_body= oe.contract(
@@ -610,11 +630,12 @@ def contract_with_unroll(*args, **kwargs):
     }
 
     # index groups stripped of unrolled indices
-    igs = tuple(
-        tuple(i for i in ig if not i in unroll) for ig in (args[1::2] + (args[-1],))
-    )
+    # igs = tuple(
+    #     tuple(i for i in ig if not i in unroll) for ig in (args[1::2] + (args[-1],))
+    # )
 
     # prepare tensor to accumulate individual contractions
+    import pdb; pdb.set_trace()
     shape_out = tuple(i_to_s[i] for i in args[-1])
     ig_out_contracted_unrolled = tuple(i for i in unroll if not (i in args[-1]))
     partials = torch.empty(
@@ -671,12 +692,194 @@ def contract_with_unroll(*args, **kwargs):
     result = oe.contract(
         partials, tuple(args[-1]) + ig_out_contracted_unrolled, args[-1]
     )
+    return result
+
+
+def _contract_with_unroll_cuqn(subscripts, shapes_and_constant_ops, *args, 
+    unroll=None, checkpoint_unrolled=None, verbosity=0, who=None, **kwargs):
+    
+    # get operands
+    all_ops=args[0 : 2 * (len(args) // 2) : 2]
+    
+    # assign shape to each index label
+    i_to_s = {
+        i: s
+        for ig, t in zip(args[1::2], args[0 : 2 * (len(args) // 2) : 2])
+        for i, s in zip(ig, t.shape)
+    }
+
+    # sequence of slices (here just index values, i.e. slices of length 1) for unrolled indices
+    ui_seq= tuple(product(*tuple(range(i_to_s[i]) for i in unroll)))
+
+    # create tuple of slices to apply to operands
+    def _get_unrolled_ops_slices(ui_map):
+        return tuple(
+            tuple(ui_map[i] if i in unroll else slice(None) for i in ig) for ig in args[1::2]
+            )
+
+    def _map_slices_to_indices(ui_vals):
+        return {u: v for u, v in zip(unroll, ui_vals)}
+
+    # first create with dummy (i.e. empty) arrays
+    # ASSUME shapes_and_constant_ops are shapes only -> this does not have the correct strides
+    # _dummy_shaped= tuple(torch.empty(s.shape, dtype=args[0].dtype, device=args[0].device) for s in shapes_and_constant_ops)
+
+    # get "tensor layouts" for first element of ui_seq to setup network
+    unrolled_ops_0= tuple( t[s] for t, s in 
+        zip(all_ops, _get_unrolled_ops_slices(_map_slices_to_indices(ui_seq[0]))) )
+
+    # prepare the network context
+    with cuqn.Network(subscripts, *unrolled_ops_0) as tn:
+        path= kwargs.pop("optimize",None)
+        assert path
+        _path, opt_info= tn.contract_path(optimize=cuqn.OptimizerOptions(path=path))
+        tn.autotune()
+
+        def contract_unroll_loop_body(*args):
+            tn.reset_operands(*args)
+            return tn.contract()
+
+        # narrowing of ops by unrolled indices is done within checkpointed section
+        def contract_unroll_loop_body_checkpointed(unrolled_ops_slices,*args):
+            unrolled_ops = tuple(
+                t[s] for t, s in zip(args, unrolled_ops_slices)
+            )
+            tn.reset_operands(*unrolled_ops)
+            return tn.contract()
+
+        import pdb; pdb.set_trace()
+        # prepare tensor to accumulate individual contractions
+        shape_out = tuple(i_to_s[i] for i in args[-1])
+        ig_out_contracted_unrolled = tuple(i for i in unroll if not (i in args[-1]))
+        partials = torch.empty(
+            shape_out + tuple(i_to_s[i] for i in ig_out_contracted_unrolled),\
+            device=args[0].device, dtype=args[0].dtype
+        )
+
+        if verbosity>0:
+            log.info(who+" before unrolled loop\n"
+                +_debug_allocated_tensors(device=args[0].device,totals_only=True))
+
+        #   ui_vals= unrolled index values and list/tuple/sequence 
+        for ui_vals in ui_seq:
+            ui_map = _map_slices_to_indices(ui_vals)
+
+            ig_out = tuple(ui_map[i] if i in unroll else slice(None) for i in args[-1])
+            ig_contracted_unrolled = tuple(ui_map[i] for i in unroll if not (i in args[-1]))
+
+            if checkpoint_unrolled:
+                # ops containing all tensors
+                unrolled_ops_slices = _get_unrolled_ops_slices(ui_map)
+
+                partials[ig_out + ig_contracted_unrolled]= checkpoint(
+                    contract_unroll_loop_body_checkpointed, unrolled_ops_slices, *all_ops )
+            else:
+                # ops containing *only* variable tensors, narrowed by unrolled indices if applicable
+                unrolled_ops = tuple(
+                    t[tuple(ui_map[i] if i in unroll else slice(None) for i in ig)]
+                    for t, ig in zip(args[0 : 2 * (len(args) // 2) : 2], args[1::2])
+                    if len([i for i in unroll if i in ig]) > 0
+                )
+
+                partials[ig_out + ig_contracted_unrolled]= contract_unroll_loop_body(
+                    *unrolled_ops
+                )
+
+            if verbosity>1:
+                log.info(who+f" unrolled loop {ui_vals}\n"
+                    +_debug_allocated_tensors(device=args[0].device,totals_only=True))
+
+    result = oe.contract(
+        partials, tuple(args[-1]) + ig_out_contracted_unrolled, args[-1]
+    )
+    return result
+
+
+def _contract_with_unroll_cuqn_noautotune(subscripts, shapes_and_constant_ops, *args, 
+    unroll=None, checkpoint_unrolled=None, verbosity=0, who=None, **kwargs):
+    
+    # get operands
+    all_ops=args[0 : 2 * (len(args) // 2) : 2]
+    
+    # assign shape to each index label
+    i_to_s = {
+        i: s
+        for ig, t in zip(args[1::2], args[0 : 2 * (len(args) // 2) : 2])
+        for i, s in zip(ig, t.shape)
+    }
+
+    # sequence of slices (here just index values, i.e. slices of length 1) for unrolled indices
+    ui_seq= tuple(product(*tuple(range(i_to_s[i]) for i in unroll)))
+
+    # create tuple of slices to apply to operands
+    def _get_unrolled_ops_slices(ui_map):
+        return tuple(
+            tuple(ui_map[i] if i in unroll else slice(None) for i in ig) for ig in args[1::2]
+            )
+
+    def _map_slices_to_indices(ui_vals):
+        return {u: v for u, v in zip(unroll, ui_vals)}
+
+    path= kwargs.pop("optimize",None)
+    assert path
+
+    def contract_unroll_loop_body(*args):
+        return cuqn.contract(subscripts, *args, optimize=cuqn.OptimizerOptions(path=path), stream=None, return_info=False)
+
+    # narrowing of ops by unrolled indices is done within checkpointed section
+    def contract_unroll_loop_body_checkpointed(unrolled_ops_slices,*args):
+        unrolled_ops = tuple(
+            t[s] for t, s in zip(args, unrolled_ops_slices)
+        )
+        return cuqn.contract(subscripts, *unrolled_ops, optimize=cuqn.OptimizerOptions(path=path), stream=None, return_info=False)
+
+    # prepare tensor to accumulate individual contractions
+    shape_out = tuple(i_to_s[i] for i in args[-1])
+    ig_out_contracted_unrolled = tuple(i for i in unroll if not (i in args[-1]))
+    partials = torch.empty(
+        shape_out + tuple(i_to_s[i] for i in ig_out_contracted_unrolled),\
+        device=args[0].device, dtype=args[0].dtype
+    )
 
     if verbosity>0:
-        log.info(who+" unrolled loop concluded\n"
-            +_debug_allocated_tensors(device=args[0].device,totals_only=False))
+        log.info(who+" before unrolled loop\n"
+            +_debug_allocated_tensors(device=args[0].device,totals_only=True))
 
+    for ui_vals in ui_seq:
+        ui_map = _map_slices_to_indices(ui_vals)
+
+        ig_out = tuple(ui_map[i] if i in unroll else slice(None) for i in args[-1])
+        ig_contracted_unrolled = tuple(ui_map[i] for i in unroll if not (i in args[-1]))
+
+        if checkpoint_unrolled:
+            # ops containing all tensors
+            unrolled_ops_slices = _get_unrolled_ops_slices(ui_map)
+
+            partials[ig_out + ig_contracted_unrolled]= checkpoint(
+                contract_unroll_loop_body_checkpointed, unrolled_ops_slices, *all_ops )
+        else:
+            # ops containing *only* variable tensors, narrowed by unrolled indices if applicable
+            # NOTE: all tensors
+            unrolled_ops = tuple(
+                t[tuple(ui_map[i] if i in unroll else slice(None) for i in ig)]
+                for t, ig in zip(args[0 : 2 * (len(args) // 2) : 2], args[1::2])
+            )
+            # if len([i for i in unroll if i in ig]) > 0
+
+            partials[ig_out + ig_contracted_unrolled]= contract_unroll_loop_body(
+                *unrolled_ops
+            )
+
+        if verbosity>1:
+            log.info(who+f" unrolled loop {ui_vals}\n"
+                +_debug_allocated_tensors(device=args[0].device,totals_only=True))
+
+    result = cuqn.contract(
+        partials, tuple(args[-1]) + ig_out_contracted_unrolled, args[-1], stream=None, return_info=False
+    )
     return result
+
+
 
 # IF checkpoint_on_device move only unrolled ops at each iteration to device
 def HIGHER_PEAK_MEM_contract_with_unroll(*args, **kwargs):
