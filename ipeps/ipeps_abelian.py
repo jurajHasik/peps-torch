@@ -377,8 +377,7 @@ class IPEPS_ABELIAN():
         if noise==0: return self
         sites= {}
         for ind,t in self.sites.items():
-            ts, Ds= t.get_leg_charges_and_dims(native=True)
-            t_noise= yastn.rand(config=t.config, s=t.s, n=t.n, t=ts, D=Ds, isdiag=t.isdiag)
+            t_noise= yastn.rand(config=t.config, n=t.n, legs=t.get_legs(), isdiag=t.isdiag)
             sites[ind]= t + noise * t_noise
         state= IPEPS_ABELIAN(self.engine, sites, self.vertexToSite, 
             lX=self.lX, lY=self.lY, peps_args=peps_args)
