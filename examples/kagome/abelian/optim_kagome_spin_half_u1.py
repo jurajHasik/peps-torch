@@ -228,27 +228,9 @@ def main():
                 'T_d': T_d,'B_b': B_b, 'B_c': B_c})
         
         elif args.ipeps_init_type=="RVB":
-            unit_block= np.ones((1,1,1), dtype=cfg.global_args.dtype)
-            B_c= yastn.Tensor(settings_U1, s=(-1, 1, 1), n=0)
-            B_c.set_block(ts=(1,1,0), Ds= unit_block.shape, val= unit_block)
-            B_c.set_block(ts=(1,0,1), Ds= unit_block.shape, val= unit_block)
-            B_c.set_block(ts=(-1,-1,0), Ds= unit_block.shape, val= unit_block)
-            B_c.set_block(ts=(-1,0,-1), Ds= unit_block.shape, val= unit_block)
-            B_b=B_c.copy()
-            B_a=B_c.copy()
-
-            unit_block= np.ones((1,1,1), dtype=cfg.global_args.dtype)
-            T_u= yastn.Tensor(settings_U1, s=(-1, -1, -1), n=0)
-            T_u.set_block(ts=(1,-1,0), Ds= unit_block.shape, val= unit_block)
-            T_u.set_block(ts=(-1,1,0), Ds= unit_block.shape, val= -1*unit_block)
-            T_u.set_block(ts=(0,1,-1), Ds= unit_block.shape, val= unit_block)
-            T_u.set_block(ts=(0,-1,1), Ds= unit_block.shape, val= -1*unit_block)
-            T_u.set_block(ts=(-1,0,1), Ds= unit_block.shape, val= unit_block)
-            T_u.set_block(ts=(1,0,-1), Ds= unit_block.shape, val= -1*unit_block)
-            T_u.set_block(ts=(0,0,0), Ds= unit_block.shape, val= unit_block)
-            T_d=T_u.copy()
-            state= IPESS_KAGOME_GENERIC_ABELIAN(settings_U1, {'T_u': T_u, 'B_a': B_a,\
-                'T_d': T_d,'B_b': B_b, 'B_c': B_c})
+            DIR_PATH = os.path.dirname(os.path.realpath(__file__))
+            state= read_ipess_kagome_generic(DIR_PATH+"/../../../test-input/abelian/IPESS_KAGOME_RVB_D3_abelian-U1_state.json", \
+                    settings_U1, peps_args=cfg.peps_args, global_args=cfg.global_args)
             state= state.add_noise(args.instate_noise)
             
     # 2) (optional) perform iTEBD on top of the initial state
@@ -331,35 +313,7 @@ def main():
             return False, history
     elif args.CTM_check=="SingularValue":
         def ctmrg_conv_f(state, env, history, ctm_args=cfg.ctm_args):
-            if not history:
-                history_spec = []
-                history_ite=1
-                history=[history_ite, history_spec]
-            spect_new=print_corner_spectra(env)
-            spec1_new=spect_new[0][1]
-            spec1_new=spec1_new/spec1_new[0]
-            spec2_new=spect_new[1][1]
-            spec2_new=spec2_new/spec2_new[0]
-            spec3_new=spect_new[2][1]
-            spec3_new=spec3_new/spec3_new[0]
-            spec4_new=spect_new[3][1]
-            spec4_new=spec4_new/spec4_new[0]
-            if len(history[1])==4:
-                spec_ers=torch.zeros(4)
-                spec_ers[0]=torch.linalg.norm(spec1_new-history[1][0])
-                spec_ers[1]=torch.linalg.norm(spec2_new-history[1][1])
-                spec_ers[2]=torch.linalg.norm(spec3_new-history[1][2])
-                spec_ers[3]=torch.linalg.norm(spec4_new-history[1][3])
-                #print(history[0])
-                #print(torch.max(spec_ers))
-
-            if (len(history[1])==4 and torch.max(spec_ers) < ctm_args.ctm_conv_tol*100) \
-                    or (history[0] >= ctm_args.ctm_max_iter):
-                log.info({"history_length": history[0], "history": spec_ers})
-                return True, history
-            history[1]=[spec1_new,spec2_new,spec3_new,spec4_new]
-            history[0]=history[0]+1
-            return False, history
+            return ctmrg_conv_specC(state, env, history, ctm_args=ctm_args)
 
     print(state)
 
@@ -393,7 +347,7 @@ def main():
         else:
             A= state.sites[(0,0)]
             A= A/A.abs().max()
-            state_sym= IPEPS_KAGOME({(0,0): A}, lX=1, lY=1)
+            state_sym= IPEPS_KAGOME_ABELIAN(settings_U1, {(0,0): A}, lX=1, lY=1)
 
         # 1) re-build precomputed double-layer on-site tensors
         #    Some objects, in this case open-double layer tensors, are pre-computed
@@ -644,6 +598,58 @@ class TestCheckpoint_RVB(unittest.TestCase):
         fobs_tokens_3= [complex(x) for x in final_obs_chk[len("FINAL"):].split(",")[:6]]
         for val,ref_val in zip(fobs_tokens_3, ref_tokens):
             assert isclose(val,ref_val, rel_tol=self.tol, abs_tol=self.tol)
+
+    def tearDown(self):
+        args.opt_resume=None
+        args.instate=None
+        for f in [self.OUT_PRFX+"_state.json",self.OUT_PRFX+"_checkpoint.p",self.OUT_PRFX+".log"]:
+            if os.path.isfile(f): os.remove(f)
+
+
+class TestOptim_RVB_r1x1(unittest.TestCase):
+    tol= 1.0e-6
+    DIR_PATH = os.path.dirname(os.path.realpath(__file__))
+    OUT_PRFX = "RESULT_test_run-opt_u1_RVB_r1x1"
+
+    def setUp(self):
+        args.chi=64
+        args.out_prefix=self.OUT_PRFX
+        args.GLOBALARGS_dtype= "complex128"
+        args.instate_noise= 0.1
+        args.seed= 100
+
+    def test_basic_opt_rvb_r1x1(self):
+        cfg.configure(args)
+        cfg.print_config()
+        from yastn.yastn.sym import sym_U1
+        from yastn.yastn.backend import backend_torch as backend
+
+        settings_U1= yastn.make_config(backend=backend, sym=sym_U1, \
+            default_device= cfg.global_args.device, default_dtype=cfg.global_args.dtype)
+        settings_U1.backend.random_seed(args.seed)
+
+        state= read_ipess_kagome_generic(self.DIR_PATH+"/../../../test-input/abelian/IPESS_KAGOME_RVB_D3_abelian-U1_state.json", \
+                    settings_U1, peps_args=cfg.peps_args, global_args=cfg.global_args)
+        state= state.add_noise(args.instate_noise)
+
+        state_peps = IPEPS_KAGOME_ABELIAN(settings_U1, {(0,0): state.sites[(0,0)].clone()}, lX=1, lY=1)
+
+        import pdb; pdb.set_trace()
+
+        state_peps.sites[(0,0)].requires_grad_()
+        state_peps.sync_precomputed()
+        ctm_env_init= ENV_ABELIAN(args.chi, state=state_peps, init=True)
+        ctm_env_init, history, t_ctm, t_conv_check = ctmrg.run(state_peps, ctm_env_init, \
+            conv_check=ctmrg_conv_specC, ctm_args=cfg.ctm_args)
+        print(history['conv_crit'])
+        
+        R= rdm_kagome.rdm1x1_kagome((0,0), state_peps, ctm_env_init)
+        R= R.fuse_legs(axes=((0,1,2),(3,4,5)))
+        loss= R[(-1,-1)].trace().real
+        loss.backward()
+
+        print(loss)
+        print(state_peps.sites[(0,0)]._data.grad)
 
     def tearDown(self):
         args.opt_resume=None

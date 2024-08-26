@@ -13,247 +13,14 @@ import config as cfg
 import numpy as np
 import torch
 
-from optim.ad_optim_lbfgs_mod import optimize_state
 import yastn.yastn as yastn
 from yastn.yastn import Tensor, tensordot, load_from_dict
 from yastn.yastn.tensor import YastnError
-from yastn.yastn.tn.fpeps import Bond, EnvCTM, Peps, Site, SquareLattice, RectangularUnitcell
+from yastn.yastn.tn.fpeps import Bond, EnvCTM, Site, RectangularUnitcell
 from yastn.yastn.sym import sym_Z2
 from yastn.yastn.tn.fpeps.envs.rdm import *
-
-
-class PepsExtended(Peps):
-    # TODO accept pattern in the form of i) Sequence[Sequence[Tensor]], then ids of tensors can be labels for lower constructors
-    #                        ii) analogously dict[tuple[int,int],Tensor]
-    def __init__(
-        self,
-        geometry=None,
-        tensors: Union[
-            None, Sequence[Sequence[Tensor]], dict[tuple[int, int], Tensor]
-        ] = None,
-        global_args=cfg.global_args,
-    ):
-        """
-        Empty PEPS instance on a lattice specified by provided geometry and optionally tensors.
-
-            i), ii)
-            iii) geometry and tensors. Here, the tensors and geometry must be compatible in terms of non-equivalent sites ?
-
-        Inherits methods from geometry.
-
-        Empty PEPS has no tensors assigned.
-        Supports :code:`[]` notation to get/set individual tensors.
-        Intended both for PEPS with physical legs (rank-5 PEPS tensors)
-        and without physical legs (rank-4 PEPS tensors).
-
-        Example 1
-        ---------
-
-        ::
-
-            import yastn
-            import yastn.tn.fpeps as fpeps
-
-            # create tensors
-            config = yastn.make_config(sym='U1')
-            leg = yastn.Leg(config, s=1, t=(0, 1), D=(1, 1))
-            #
-            # for rank-5 tensors
-            #
-            A00 = yastn.rand(config, legs=[leg.conj(), leg, leg, leg.conj(), leg])
-            A01 = yastn.rand(config, legs=[leg.conj(), leg, leg, leg.conj(), leg])
-
-            geometry = fpeps.RectangularUnitcell(pattern={ (0,0):0, (0,1):1, (1,0):1, (1,1):0 })
-            #
-            # or equivalently
-            # geometry = fpeps.RectangularUnitcell(pattern=[[0,1],[1,0]])
-
-            # create PEPS on this geometry. In this invocation one must know, either
-            #    a) which non-equivalent sites to pass, OR
-            #    b) pass correct assignment over entire unit cell
-            psi = fpeps.PepsExtended(geometry, tensors={ (0,0):A00, (0,1):A01 })
-            psi = fpeps.PepsExtended(geometry, tensors={ (0,0):A00, (0,1):A01, (1,0):A01, (1,1):A00 })
-
-        Example 2
-        ---------
-
-        ::
-            # directly pass the geometry and tensors in dictionary. The geometry is created implicitly.
-            psi = fpeps.PepsExtended(tensors={ (0,0):A00, (0,1):A01, (1,0):A01, (1,1):A00 })
-            #
-            # or equivalently
-            # psi = fpeps.PepsExtended(tensors=[[A00, A01], [A01, A00]])
-        """
-        self.raw_data = tensors
-        if geometry is not None and isinstance(tensors, dict):
-            super().__init__(geometry)
-            assert set(self.sites()) <= set(
-                tensors.keys()
-            ), "geometry and tensors are not compatible"
-
-            self.sync_precomputed()
-
-        elif geometry is None and isinstance(tensors, dict):
-            id_map = {
-                uuid: i for i, uuid in enumerate(set([id(t) for t in tensors.values()]))
-            }  # convert to small integers
-            geometry = RectangularUnitcell(
-                pattern={site: id_map[id(t)] for site, t in tensors.items()}
-            )
-            super().__init__(geometry)
-            self.sync_precomputed()
-        elif (
-            geometry is None
-            and isinstance(tensors, Sequence)
-            and set(map(type(row) for row in tensors))
-            == set(
-                Sequence,
-            )
-        ):
-            pass
-        self.dtype = global_args.torch_dtype
-        self.device = global_args.device
-
-    def merge_tensor(self, tensors):
-        # Merge two tensors defined on the A, B sublattice of the honeycomb lattice
-        # tensors = [tensorA, tensorB] for A, B sublattice
-        #   0       2   1       t(0)  r(3)
-        #   |        \ /         \   /
-        #   A--3      B--3  =>     B--
-        #  / \        |            |   -> (4)
-        # 1   2       0            A--
-        #                        /   \
-        #                       l(1)  b(2)
-
-        A, B = tensors[0], tensors[1]
-        ncon_order = ((1, -1, -2, -4), (1, -3, -0, -5))
-        res = yastn.ncon([A, B], ncon_order)
-        if res.get_legs(axes=5).is_fused():
-            res = res.unfuse_legs(axes=5)
-        if res.get_legs(axes=4).is_fused():
-            res = res.unfuse_legs(axes=4)
-        if res.ndim == 6:
-            res = res.fuse_legs(axes=(0, 1, 2, 3, (4, 5)))
-            res = res.drop_leg_history(axes=4)
-        elif res.ndim == 8:
-            res = res.fuse_legs(axes=(0, 1, 2, 3, (4, 6), (5, 7)))
-            res = res.drop_leg_history(axes=4)
-            res = res.fuse_legs(axes=(0, 1, 2, 3, (4, 5)))
-        return res
-
-    def sync_precomputed(self):
-        for site in self.sites():
-            if isinstance(self.raw_data[site], list):
-                self[site] = self.merge_tensor(self.raw_data[site])
-            else:
-                self[site] = self.raw_data[site]
-
-    def get_parameters(self):
-        r"""
-        :return: variational parameters of iPEPS
-        :rtype: iterable
-
-        This function is called by optimizer to access variational parameters of the state.
-        """
-        # return list(self[site]._data for site in self.sites())
-        params = []
-        for site in self.sites():
-            if isinstance(self.raw_data[site], list):
-                params += list(t._data for t in self.raw_data[site])
-            else:
-                params.append(self.raw_data[site]._data)
-        return params
-
-    def write_to_file(self, outputfile, tol=None, normalize=False):
-        torch.save(self.get_checkpoint(), outputfile)
-
-    def get_checkpoint(self):
-        r"""
-        :return: serializable representation of IPEPS_ABELIAN state
-        :rtype: dict
-
-        Return dict containing serialized on-site (block-sparse) tensors. The individual
-        blocks are serialized into Numpy ndarrays. This function is called by optimizer
-        to create checkpoints during the optimization process.
-        """
-        return {site: self[site].save_to_dict() for site in self.sites()}
-
-    def load_checkpoint(self, checkpoint_file):
-        r"""
-        :param checkpoint_file: path to checkpoint file
-        :type checkpoint_file: str
-
-        Initializes the state according to the supplied checkpoint file.
-
-        .. note::
-
-            The `vertexToSite` mapping function is not a part of checkpoint and must
-            be provided either when instantiating IPEPS_ABELIAN or afterwards.
-        """
-        checkpoint = torch.load(checkpoint_file, map_location=self.device)
-        self.load_params(checkpoint["parameters"])
-
-    def load_state(self, state_file):
-        d = torch.load(state_file, map_location=self.device)
-        self.load_params(d)
-
-    def load_params(self, d):
-        # self._data = {
-        #     self.site2index(site): load_from_dict(config=self.config, d=t_data)
-        #     for site, t_data in d.items()
-        # }
-        self.raw_data = {
-            site: load_from_dict(config=self.config, d=t_data)
-            for site, t_data in d.items()
-        }
-        for site_t in self.raw_data.values():
-            if isinstance(site_t, list):
-                for t in site_t: t.requires_grad_(False)
-            else:
-                site_t.requires_grad_(False)
-        self.sync_precomputed()
-        # if True in [s.is_complex() for s in self._data.values()]:
-        #     self.dtype= torch.complex128
-
-    def __repr__(self):
-        return (
-            f"PepsExtended(geometry={self.geometry.__repr__()}, tensors={ self._data })"
-        )
-
-    def __dict__(self):
-        """
-        Serialize PEPS into a dictionary.
-        """
-        d = {
-            "lattice": type(self.geometry).__name__,
-            "dims": self.dims,
-            "boundary": self.boundary,
-            "pattern": self.geometry.__dict__(),
-            "data": {},
-        }
-
-        for site in self.sites():
-            d["data"][site] = self[site].save_to_dict()
-
-        return d
-
-def add_noise(state, noise=1.0):
-    for site in state.sites():
-        data = state.raw_data[site]
-        if isinstance(data, list):
-            for site_t in data:
-                for charge in site_t.get_blocks_charge():
-                    t = site_t[charge]
-                    t += noise * torch.rand_like(t)
-                    site_t.set_block(ts=charge, Ds=t.shape, val=t)
-        else:
-            site_t = data
-            for charge in site_t.get_blocks_charge():
-                t = site_t[charge]
-                t += noise * torch.rand_like(t)
-                site_t.set_block(ts=charge, Ds=t.shape, val=t)
-    state.sync_precomputed()
-    return state
+from ipeps.integration_yastn import PepsAD
+from optim.ad_optim_lbfgs_mod import optimize_state
 
 
 class tV_model:
@@ -500,31 +267,6 @@ class tV_model:
         return obs
 
 
-class EnvCTM_v2(EnvCTM):
-    def __init__(self, psi, init="rand", leg=None):
-        r"""
-        Environment used in Corner Transfer Matrix Renormalization algorithm.
-
-        Parameters
-        ----------
-        psi: yastn.tn.Peps
-            Peps lattice to be contracted using CTM.
-            If :code:`psi` has physical legs, a double-layer PEPS with no physical legs is formed.
-
-        init: str
-            None, 'eye' or 'rand'. Initialization scheme, see :meth:`yastn.tn.fpeps.EnvCTM.reset_`.
-
-        leg: yastn.Leg | None
-            Passed to :meth:`yastn.tn.fpeps.EnvCTM.reset_`.
-        """
-        super().__init__(psi, init=init, leg=leg)
-
-    def detach_(self):
-        for site in self.sites():
-            for dirn in ["tl", "tr", "bl", "br", "t", "l", "b", "r"]:
-                getattr(self[site], dirn)._data.detach_()
-
-
 def test_state(config=None, noise=0):
     geometry = RectangularUnitcell(
         pattern={
@@ -551,7 +293,7 @@ def test_state(config=None, noise=0):
     t1 = t1.fuse_legs(axes=(0, 1, 2, 3, (4, 5)))
 
     # |0110> + |1100> per iPEPS unit-cell
-    psi = PepsExtended(geometry, tensors={(0, 0): t0, (0, 1): t1})
+    psi = PepsAD(geometry, tensors={(0, 0): t0, (0, 1): t1})
 
     return psi
 
@@ -606,7 +348,7 @@ def random_3x3_state(config=None, bond_dim=(1, 1)):
             A = yastn.rand(config=config, n=n, legs=legs)
         return A
 
-    psi = PepsExtended(
+    psi = PepsAD(
         geometry,
         tensors={
             (0, 0): rand_tensor_norm(0, legs, dummy_leg_flag='odd'),
@@ -868,7 +610,7 @@ def main():
 
 
     def loss_fn(state, ctm_env_in, opt_context):
-        state.sync_precomputed()
+        state.sync_()
         ctm_args = opt_context["ctm_args"]
         opt_args = opt_context["opt_args"]
 
@@ -877,7 +619,7 @@ def main():
             # print("Reinit")
             chi = cfg.main_args.chi // 2
             env_leg = yastn.Leg(yastn_config, s=1, t=(0, 1), D=(chi, chi))
-            ctm_env_in = EnvCTM_v2(state, init=ctm_args.ctm_env_init_type, leg=env_leg)
+            ctm_env_in = EnvCTM(state, init=ctm_args.ctm_env_init_type, leg=env_leg)
 
         # 1) compute environment by CTMRG
         ctm_env_out, converged, *ctm_log, t_ctm, t_check = get_converged_env(
@@ -899,7 +641,7 @@ def main():
 
     @torch.no_grad()
     def obs_fn(state, ctm_env, opt_context):
-        state.sync_precomputed()
+        state.sync_()
         if opt_context["line_search"]:
             epoch = len(opt_context["loss_history"]["loss_ls"])
             loss = opt_context["loss_history"]["loss_ls"][-1]
