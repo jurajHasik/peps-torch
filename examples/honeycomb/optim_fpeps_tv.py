@@ -397,7 +397,7 @@ def random_1x1_state(config=None, bond_dim=(1, 1)):
             A = yastn.rand(config=config, n=n, legs=legs)
         return A
 
-    psi = PepsExtended(
+    psi = PepsAD(
         geometry,
         tensors={
             (0, 0): rand_tensor_norm(0, legs, dummy_leg_flag='odd'),
@@ -596,7 +596,7 @@ def main():
         old_corner_sv = None
         converged = False
         for sweep in range(max_sweeps):
-            env.update_(opts_svd=opts_svd, method=method)
+            env.update_(opts_svd=opts_svd, method=method, use_qr=False)
             t_ctm_after = time.perf_counter()
             t_ctm += t_ctm_after - t_ctm_prev
             t_ctm_prev = t_ctm_after
