@@ -15,8 +15,12 @@ YASTN_CONFIG = TypeVar('YASTN_CONFIG')
 #     )
 
 def apply_and_copy(nested_iterable, func, f_keys=None):
-    if isinstance(nested_iterable,dict):
-        return { (f_keys(k) if f_keys else k): apply_and_copy(v,func) if isinstance(v,(list,tuple,set,dict)) else func(v) for k,v in nested_iterable.items() }
+    if isinstance(nested_iterable,dict): 
+        if 'type' in nested_iterable and nested_iterable['type'] in ['yastn.Tensor', 'Tensor']:
+            # we don't traverse deeper - this is a leaf
+            return nested_iterable
+        else:
+            return { (f_keys(k) if f_keys else k): apply_and_copy(v,func) if isinstance(v,(list,tuple,set,dict)) else func(v) for k,v in nested_iterable.items() }
     elif isinstance(nested_iterable, (list, tuple, set)):
         return type(nested_iterable)( apply_and_copy(v) if isinstance(v,(list,tuple,set,dict)) else func(v) for v in nested_iterable )
     else:
@@ -82,7 +86,8 @@ class PepsAD(Peps):
     def write_to_file(self, outputfile, tol=None, normalize=False):
         d= self.__dict__()
         # preprocess
-        if any([isinstance(k,tuple) for k in d['geometry']['pattern'].keys()]):
+        # Handles case when geometry pattern is given as a dictionary with non-compliant keys
+        if isinstance(d['geometry']['pattern'],dict) and any([isinstance(k,tuple) for k in d['geometry']['pattern'].keys()]):
             pattern_key_to_id={}
             _pattern={}
             for k in d['geometry']['pattern'].keys():
@@ -95,17 +100,19 @@ class PepsAD(Peps):
             d['pattern_key_to_id']= pattern_key_to_id
             d['geometry']['pattern']= _pattern
             
-            parameters_key_to_id={}
-            def map_keys(k):
-                if isinstance(k,tuple):
-                    new_k= str(k)+f"_{len(parameters_key_to_id)}"
-                    parameters_key_to_id[new_k]= k
-                    return new_k
-                else:
-                    return k
-            _parameters= apply_and_copy(self.parameters, save_to_dict, f_keys=map_keys)
-            d['parameters_key_to_id']= parameters_key_to_id
-            d['parameters']= _parameters
+        # We don't make any assumption on (nested) structure of parameters. Hence, we remap keys of dicts
+        # in parameters if necessary
+        parameters_key_to_id={}
+        def map_keys(k):
+            if isinstance(k,tuple):
+                new_k= str(k)+f"_{len(parameters_key_to_id)}"
+                parameters_key_to_id[new_k]= k
+                return new_k
+            else:
+                return k
+        _parameters= apply_and_copy(self.parameters, save_to_dict, f_keys=map_keys)
+        d['parameters_key_to_id']= parameters_key_to_id
+        d['parameters']= _parameters
         with open(outputfile, 'w') as file:
             json.dump(d, file, indent=4, cls=NumPy_Encoder)
 
@@ -156,6 +163,17 @@ class PepsAD(Peps):
 
     @staticmethod
     def from_dict(yastn_config, d : dict) -> PepsAD:
+        # post-process in case of prior need to remap uncompliant dict keys
+        if 'parameters_key_to_id' in d and len(d['parameters_key_to_id'])>0:
+            from ast import literal_eval
+            def remap_keys(k):
+                if k in d['parameters_key_to_id']:
+                    k= k[:k.rfind('_')] if k.rfind('_') != -1 else k
+                    return literal_eval(k)
+                else:
+                    return k
+            _parameters= apply_and_copy(d['parameters'], lambda x: load_from_dict(yastn_config,x), f_keys=remap_keys)
+            d['parameters']= _parameters
         return PepsAD(geometry=RectangularUnitcell(**d['geometry']),
             tensors= apply_and_copy(d['parameters'], lambda x : load_from_dict(yastn_config,x) ),
             global_args=cfg.global_args

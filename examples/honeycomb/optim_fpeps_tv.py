@@ -17,9 +17,10 @@ import yastn.yastn as yastn
 from yastn.yastn import Tensor, tensordot, load_from_dict
 from yastn.yastn.tensor import YastnError
 from yastn.yastn.tn.fpeps import Bond, EnvCTM, Site, RectangularUnitcell
+from yastn.yastn.tn.fpeps.envs._env_ctm import ctm_conv_corner_spec
 from yastn.yastn.sym import sym_Z2
 from yastn.yastn.tn.fpeps.envs.rdm import *
-from ipeps.integration_yastn import PepsAD
+from ipeps.integration_yastn import PepsAD, load_PepsAD
 from optim.ad_optim_lbfgs_mod import optimize_state
 
 
@@ -85,7 +86,6 @@ class tV_model:
         for site in psi.sites():
             # onsite
             onsite_rdm, onsite_norm = rdm1x1(site, psi, env)  # s s'
-            # onsite_norm = yastn.trace(onsite_rdm, axes=(0, 1)).to_number()
 
             op = (
                 self.V1 * (n_A @ n_B)
@@ -93,7 +93,7 @@ class tV_model:
                 - self.t1 * (cp_A @ c_B + cp_B @ c_A).remove_zero_blocks()
             )
             energy_onsite += (
-                yastn.ncon([op, onsite_rdm], ((1, 2), (2, 1))) / onsite_norm
+                yastn.ncon([op, onsite_rdm], ((1, 2), (2, 1)))
             )
 
             # horizontal bond
@@ -510,7 +510,7 @@ args, unknown_args = parser.parse_known_args(
         "--chi",
         "20",
         "--opt_max_iter",
-        "1000",
+        "100",
         "--omp_cores",
         "8",
         # "--opt_resume",
@@ -563,50 +563,27 @@ def main():
     model = tV_model(yastn_config, pd)
 
     @torch.no_grad()
-    def calculate_corner_svd(env):
-        corner_sv = {}
-        for site in env.sites():
-            corner_sv[site, 'tl'] = env[site].tl.svd(compute_uv=False)
-            corner_sv[site, 'tr'] = env[site].tr.svd(compute_uv=False)
-            corner_sv[site, 'bl'] = env[site].bl.svd(compute_uv=False)
-            corner_sv[site, 'br'] = env[site].br.svd(compute_uv=False)
-        for k, v in corner_sv.items():
-            corner_sv[k] = v / v.norm(p='inf')
-        return corner_sv
-
-    old_corner_sv = None
-    def conv_check(env, corner_tol):
-        nonlocal old_corner_sv
-        corner_sv = calculate_corner_svd(env)
-        max_dsv, converged = None, False
-        if old_corner_sv:
-            max_dsv = max((old_corner_sv[k] - corner_sv[k]).norm().item() for k in corner_sv)
-        old_corner_sv = corner_sv
-        # logging.info(f'max_diff_corner_singular_values = {max_dsv:0.2e}')
-
-        if max_dsv and max_dsv < corner_tol:
-            converged = True
-            return converged
-        return converged
+    def ctm_conv_check(env,history,corner_tol):
+        converged,max_dsv,history= ctm_conv_corner_spec(env,history,corner_tol)
+        log.log(logging.INFO,f"CTM iter {len(history)} |delta_C| {max_dsv}")
+        return converged, history
 
     def get_converged_env(env, method='2site', max_sweeps=100, iterator_step=1, opts_svd=None, corner_tol=1e-8):
         t_ctm, t_check = 0.0, 0.0
         t_ctm_prev = time.perf_counter()
-        global old_corner_sv
-        old_corner_sv = None
-        converged = False
+        converged,conv_history=False,[]
+
         for sweep in range(max_sweeps):
             env.update_(opts_svd=opts_svd, method=method, use_qr=False)
             t_ctm_after = time.perf_counter()
             t_ctm += t_ctm_after - t_ctm_prev
             t_ctm_prev = t_ctm_after
-            if conv_check(env, corner_tol):
-                converged = True
+            
+            converged, conv_history= ctm_conv_check(env, conv_history, corner_tol)
+            if converged: 
                 break
 
-        ctm_log = []
-        print(sweep, converged)
-        return env, converged, ctm_log, t_ctm, t_check
+        return env, converged, conv_history, t_ctm, t_check
 
 
     def loss_fn(state, ctm_env_in, opt_context):
@@ -685,23 +662,6 @@ def main():
     conv_env = None
     optimize_state(state, conv_env, loss_fn, obs_fn=obs_fn, post_proc=None)
 
-    # compute final observables for the best variational state
-    # state_file = f"data/tV_1x1_D_{D1+D2}_chi_{args.chi}_V_{V1:.2f}_state"
-    # state.load_state(state_file)
-    # env_leg = yastn.Leg(yastn_config, s=1, t=(0, 1), D=(args.chi, args.chi))
-    # env = EnvCTM_v2(state, init=cfg.ctm_args.ctm_env_init_type, leg=env_leg)
-    # env, ctm_info, *ctm_log, t_ctm, t_check = get_converged_env(
-    #     env,
-    #     max_sweeps=cfg.ctm_args.ctm_max_iter,
-    #     iterator_step=1,
-    #     opts_svd=opts_svd,
-    #     corner_tol=1e-8,
-    # )
-    # obs = model.eval_obs(state, env)
-    # obs_list.append(obs[state.sites()[0]][-1])
-
-    # with open(f"data/order_1x1_D_{D1+D2:d}.pickle", "wb") as handle:
-    #     pickle.dump(obs_list, handle)
 
 if __name__ == "__main__":
     if len(unknown_args) > 0:
