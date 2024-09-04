@@ -46,6 +46,11 @@ class tV_model:
         self.t2 = pd["t2"]
         self.phi = pd["phi"]
 
+    def get_parameters(self):
+        if self.mu.requires_grad:
+            return [self.mu,]
+        return []
+
     def energy_per_site(self, psi, env):
         r"""
         :param psi: Peps
@@ -63,11 +68,7 @@ class tV_model:
         #  ..._|__|__|__|_...
         #      :  :  :  :
 
-        energy_onsite = yastn.zeros(self.config)
-        energy_horz = yastn.zeros(self.config)
-        energy_vert = yastn.zeros(self.config)
-        energy_diag = yastn.zeros(self.config)
-        energy_anti_diag = yastn.zeros(self.config)
+        energy_onsite, energy_horz, energy_vert, energy_diag, energy_anti_diag= 0,0,0,0,0
 
         # sf = yastn.operators.SpinfulFermions(sym=str(self.config.sym), fermionic=True)
         _tmp_config = {x: y for x, y in self.config._asdict().items() if x != "sym"}
@@ -92,30 +93,30 @@ class tV_model:
                 - self.mu * (n_A + n_B)
                 - self.t1 * (cp_A @ c_B + cp_B @ c_A).remove_zero_blocks()
             )
-            energy_onsite += (
+            e_1x1_loc = (
                 yastn.ncon([op, onsite_rdm], ((1, 2), (2, 1)))
             )
+            energy_onsite += e_1x1_loc.to_number()
 
             # horizontal bond
             horz_rdm, horz_rdm_norm = rdm1x2(site, psi, env)  # s0 s0' s1 s1'
             # horz_norm = yastn.trace(horz_rdm, ((0, 2), (1, 3))).to_number()
-            energy_horz += self.V1 * yastn.ncon([n_B, n_A, horz_rdm], ncon_order1)
-            energy_horz += self.V2 * yastn.ncon([n_B, n_B, horz_rdm], ncon_order1)
-            energy_horz += self.V2 * yastn.ncon([n_A, n_A, horz_rdm], ncon_order1)
+            e_1x2_loc = self.V1 * yastn.ncon([n_B, n_A, horz_rdm], ncon_order1)
+            e_1x2_loc += self.V2 * yastn.ncon([n_B, n_B, horz_rdm], ncon_order1)
+            e_1x2_loc += self.V2 * yastn.ncon([n_A, n_A, horz_rdm], ncon_order1)
 
             site_r = psi.nn_site(site, "r")
             ordered = psi.geometry.f_ordered(site, site_r)
             ci_B, cjp_A = op_order(c_B, cp_A, ordered, fermionic=True)
             cip_B, cj_A = op_order(cp_B, c_A, ordered, fermionic=True)
-            energy_horz += -self.t1 * (
+            e_1x2_loc += -self.t1 * (
                 -yastn.ncon([ci_B, cjp_A, horz_rdm], ncon_order2)
                 + yastn.ncon([cip_B, cj_A, horz_rdm], ncon_order2)
             )
 
             ci_A, cjp_A = op_order(c_A, cp_A, ordered, fermionic=True)
             cip_B, cj_B = op_order(cp_B, c_B, ordered, fermionic=True)
-            tmp = 0
-            energy_horz += (
+            e_1x2_loc += (
                 -self.t2
                 * np.exp(1j * self.phi)
                 * (
@@ -126,7 +127,7 @@ class tV_model:
 
             cip_A, cj_A = op_order(cp_A, c_A, ordered, fermionic=True)
             ci_B, cjp_B = op_order(c_B, cp_B, ordered, fermionic=True)
-            energy_horz += (
+            e_1x2_loc += (
                 -self.t2
                 * np.exp(-1j * self.phi)
                 * (
@@ -134,26 +135,27 @@ class tV_model:
                     + -yastn.ncon([ci_B, cjp_B, horz_rdm], ncon_order2)
                 )
             )
+            energy_horz += e_1x2_loc.to_number()
 
             # vertical bond
             vert_rdm, vert_rdm_norm = rdm2x1(site, psi, env)  # s0 s0' s1 s1'
             # vert_norm = yastn.trace(vert_rdm, axes=((0, 2), (1, 3))).to_number()
-            energy_vert += self.V1 * yastn.ncon([n_A, n_B, vert_rdm], ncon_order1)
-            energy_vert += self.V2 * yastn.ncon([n_B, n_B, vert_rdm], ncon_order1)
-            energy_vert += self.V2 * yastn.ncon([n_A, n_A, vert_rdm], ncon_order1)
+            e_2x1_loc = self.V1 * yastn.ncon([n_A, n_B, vert_rdm], ncon_order1)
+            e_2x1_loc += self.V2 * yastn.ncon([n_B, n_B, vert_rdm], ncon_order1)
+            e_2x1_loc += self.V2 * yastn.ncon([n_A, n_A, vert_rdm], ncon_order1)
 
             site_b = psi.nn_site(site, "b")
             ordered = psi.geometry.f_ordered(site, site_b)
 
             cip_A, cj_B = op_order(cp_A, c_B, ordered, fermionic=True)
             ci_A, cjp_B = op_order(c_A, cp_B, ordered, fermionic=True)
-            energy_vert += -self.t1 * (
+            e_2x1_loc += -self.t1 * (
                 yastn.ncon([cip_A, cj_B, vert_rdm], ncon_order2)
                 + -yastn.ncon([ci_A, cjp_B, vert_rdm], ncon_order2)
             )
             ci_A, cjp_A = op_order(c_A, cp_A, ordered, fermionic=True)
             cip_B, cj_B = op_order(cp_B, c_B, ordered, fermionic=True)
-            energy_vert += (
+            e_2x1_loc += (
                 -self.t2
                 * np.exp(1j * self.phi)
                 * (
@@ -163,7 +165,7 @@ class tV_model:
             )
             cip_A, cj_A = op_order(cp_A, c_A, ordered, fermionic=True)
             ci_B, cjp_B = op_order(c_B, cp_B, ordered, fermionic=True)
-            energy_vert += (
+            e_2x1_loc += (
                 -self.t2
                 * np.exp(-1j * self.phi)
                 * (
@@ -171,67 +173,62 @@ class tV_model:
                     + -yastn.ncon([ci_B, cjp_B, vert_rdm], ncon_order2)
                 )
             )
+            energy_vert += e_2x1_loc.to_number()
 
-            # print(f"Energy vertical: {energy_vert.to_number()}")
+            if self.V2 != 0 or self.V3 != 0 or self.t2 != 0:
 
-            plaq_rdm, plaq_rdm_norm  = rdm2x2(site, psi, env)  # s0 s0' s1 s1' s2 s2' s3 s3'
-            # plaq_norm = yastn.trace(
-            #     plaq_rdm, axes=((0, 2, 4, 6), (1, 3, 5, 7))
-            # ).to_number()
+                plaq_rdm, plaq_rdm_norm  = rdm2x2(site, psi, env)  # s0 s0' s1 s1' s2 s2' s3 s3'
+                # plaq_norm = yastn.trace(
+                #     plaq_rdm, axes=((0, 2, 4, 6), (1, 3, 5, 7))
+                # ).to_number()
 
-            # diagonal bond
-            diag_rdm = yastn.trace(plaq_rdm, ((2, 4), (3, 5)))  # s0 s0' s3 s3'
-            energy_diag += self.V2 * (
-                yastn.ncon([n_A, n_A, diag_rdm], ncon_order1)
-                + yastn.ncon([n_B, n_B, diag_rdm], ncon_order1)
-            )
-            energy_diag += self.V3 * (
-                yastn.ncon([n_A, n_B, diag_rdm], ncon_order1)
-                + yastn.ncon([n_B, n_A, diag_rdm], ncon_order1)
-            )
-
-            site_br = psi.nn_site(site, "br")
-            ordered = psi.geometry.f_ordered(site, site_br)
-
-            cip_A, cj_A = op_order(cp_A, c_A, ordered, fermionic=True)
-            ci_B, cjp_B = op_order(c_B, cp_B, ordered, fermionic=True)
-            energy_diag += (
-                -self.t2
-                * np.exp(1j * self.phi)
-                * (
-                    yastn.ncon([cip_A, cj_A, diag_rdm], ncon_order2)
-                    + -yastn.ncon([ci_B, cjp_B, diag_rdm], ncon_order2)
+                # diagonal bond
+                diag_rdm = yastn.trace(plaq_rdm, ((2, 4), (3, 5)))  # s0 s0' s3 s3'
+                e_2x2_diag_loc = self.V2 * (
+                    yastn.ncon([n_A, n_A, diag_rdm], ncon_order1)
+                    + yastn.ncon([n_B, n_B, diag_rdm], ncon_order1)
                 )
-            )
-            ci_A, cjp_A = op_order(c_A, cp_A, ordered, fermionic=True)
-            cip_B, cj_B = op_order(cp_B, c_B, ordered, fermionic=True)
-            energy_diag += (
-                -self.t2
-                * np.exp(-1j * self.phi)
-                * (
-                    -yastn.ncon([ci_A, cjp_A, diag_rdm], ncon_order2)
-                    + yastn.ncon([cip_B, cj_B, diag_rdm], ncon_order2)
+                e_2x2_diag_loc += self.V3 * (
+                    yastn.ncon([n_A, n_B, diag_rdm], ncon_order1)
+                    + yastn.ncon([n_B, n_A, diag_rdm], ncon_order1)
                 )
-            )
 
-            # anti-diagonal bond
-            anti_diag_rdm = yastn.trace(plaq_rdm, ((0, 6), (1, 7)))  # s1 s1' s2 s2'
-            energy_anti_diag += self.V3 * yastn.ncon(
-                [n_A, n_B, anti_diag_rdm], ncon_order1
-            )
+                site_br = psi.nn_site(site, "br")
+                ordered = psi.geometry.f_ordered(site, site_br)
 
-        # print(
-        #     energy_onsite.to_number().item()/N,
-        #     energy_horz.to_number().item()/N,
-        #     energy_vert.to_number().item()/N,
-        #     energy_diag.to_number().item()/N,
-        #     energy_anti_diag.to_number().item()/N,
-        # )
+                cip_A, cj_A = op_order(cp_A, c_A, ordered, fermionic=True)
+                ci_B, cjp_B = op_order(c_B, cp_B, ordered, fermionic=True)
+                e_2x2_diag_loc += (
+                    -self.t2
+                    * np.exp(1j * self.phi)
+                    * (
+                        yastn.ncon([cip_A, cj_A, diag_rdm], ncon_order2)
+                        + -yastn.ncon([ci_B, cjp_B, diag_rdm], ncon_order2)
+                    )
+                )
+                ci_A, cjp_A = op_order(c_A, cp_A, ordered, fermionic=True)
+                cip_B, cj_B = op_order(cp_B, c_B, ordered, fermionic=True)
+                e_2x2_diag_loc += (
+                    -self.t2
+                    * np.exp(-1j * self.phi)
+                    * (
+                        -yastn.ncon([ci_A, cjp_A, diag_rdm], ncon_order2)
+                        + yastn.ncon([cip_B, cj_B, diag_rdm], ncon_order2)
+                    )
+                )
+                energy_diag += e_2x2_diag_loc.to_number()
+
+                # anti-diagonal bond
+                anti_diag_rdm = yastn.trace(plaq_rdm, ((0, 6), (1, 7)))  # s1 s1' s2 s2'
+                energy_anti_diag += self.V3 * yastn.ncon(
+                    [n_A, n_B, anti_diag_rdm], ncon_order1
+                ).to_number()
+
         energy_per_site = (
             energy_onsite + energy_horz + energy_vert + energy_diag + energy_anti_diag
         ) / N
 
-        return energy_per_site.to_number().real
+        return energy_per_site.real
 
     def eval_obs(self, psi, env):
         _tmp_config = {x: y for x, y in self.config._asdict().items() if x != "sym"}
@@ -248,8 +245,8 @@ class tV_model:
         op_c_list = {}
         op_cp_list = {}
         for s0 in psi.sites():
-            obs_nA = measure_rdm_1site(s0, psi, env, n_A).item()
-            obs_nB = measure_rdm_1site(s0, psi, env, n_B).item()
+            obs_nA = measure_rdm_1site(s0, psi, env, n_A)
+            obs_nB = measure_rdm_1site(s0, psi, env, n_B)
             m = abs(obs_nA - obs_nB)
             obs[s0] = [obs_nA, obs_nB, m]
             print(f"nA: {obs_nA:.4f}, nB: {obs_nB:.4f}, m: {m:.4f}")
@@ -518,16 +515,17 @@ args, unknown_args = parser.parse_known_args(
         # "tV_1x1_D_2_chi_20_V_1.5_checkpoint.p",
         # "--opt_resume_override_params",
         "--seed",
-        "100",
+        "120",
         "--CTMARGS_ctm_max_iter",
-        "300",
+        "100",
         "--CTMARGS_ctm_env_init_type",
         "eye",
         "--OPTARGS_fd_eps",
         "1e-8",
         "--OPTARGS_opt_log_grad",
-        # "--OPTARGS_line_search",
-        # "backtracking",
+        # "--CTMARGS_fwd_checkpoint_move",
+        "--OPTARGS_line_search",
+        "backtracking",
         # "strong_wolfe",
     ],
     namespace=args,
@@ -574,7 +572,7 @@ def main():
         converged,conv_history=False,[]
 
         for sweep in range(max_sweeps):
-            env.update_(opts_svd=opts_svd, method=method, use_qr=False)
+            env.update_(opts_svd=opts_svd, method=method, use_qr=False, checkpoint_move=True)
             t_ctm_after = time.perf_counter()
             t_ctm += t_ctm_after - t_ctm_prev
             t_ctm_prev = t_ctm_after
@@ -608,7 +606,7 @@ def main():
         )
 
         # 2) evaluate loss with converged environment
-        loss = model.energy_per_site(state, ctm_env_out)
+        loss = model.energy_per_site(state, ctm_env_out) # H= H_0 + mu * (nA + nB)
 
         return (loss, ctm_env_out, *ctm_log, t_ctm, t_check)
 
@@ -622,25 +620,26 @@ def main():
         if opt_context["line_search"]:
             epoch = len(opt_context["loss_history"]["loss_ls"])
             loss = opt_context["loss_history"]["loss_ls"][-1]
-            print("LS " + ", ".join([f"{epoch}", f"{loss}"]))
+            print("LS " + ", ".join([f"{epoch}", f"{loss}"]+[f"{x.item()}" for x in model.get_parameters()]))
             # print("LS " + ", ".join([f"{epoch}", f"{(loss+0.75*pd['V1'])/2}"]))
         else:
             epoch = len(opt_context["loss_history"]["loss"])
             loss = opt_context["loss_history"]["loss"][-1]
-            print(", ".join([f"{epoch}", f"{loss}"]))
+            print(", ".join([f"{epoch}", f"{loss}"]+[f"{x.item()}" for x in model.get_parameters()]))
             # print(", ".join([f"{epoch}", f"{(loss+0.75*pd['V1'])/2}"]))
 
         model.eval_obs(state, ctm_env)
 
-    V1 = 2.0
+    V1 = 1.4
     pd["V1"] = V1
-    pd["mu"] = 1.5 * pd["V1"]
+    pd["mu"] = torch.tensor([0.,],dtype=torch.float64,device=yastn_config.default_device,requires_grad=False)
+    pd["t1"] = 1.
     D = args.bond_dim
-    D1, D2 = D, D
+    D1, D2 = 2, 2
     args, unknown_args = parser.parse_known_args(
         [
             "--out_prefix",
-            f"tV_3x3_D_{D1+D2}_chi_{args.chi}_V_{pd['V1']:.2f}",
+            f"tV_1x1_D_{D1}+{D2}_chi{args.chi}_V_{pd['V1']:.2f}",
         ],
         namespace=args,
     )
@@ -656,8 +655,10 @@ def main():
         "eps_multiplet": cfg.ctm_args.projector_eps_multiplet,
     }
 
-    # state = random_1x1_state(config=yastn_config, bond_dim=(D1, D2))
-    state = random_3x3_state(config=yastn_config, bond_dim=(D1, D2))
+    # state= load_PepsAD(yastn_config, "tV_1x1_D_2+3_chi20_V_1.40_0r1_state.json")
+    # state= load_PepsAD(yastn_config,"tV_1x1_D_2+2_chi20_V_1.40_state.json")
+    state = random_1x1_state(config=yastn_config, bond_dim=(D1, D2))
+    # state = random_3x3_state(config=yastn_config, bond_dim=(D1, D2))
     # state = add_noise(state, noise=1.0)
     conv_env = None
     optimize_state(state, conv_env, loss_fn, obs_fn=obs_fn, post_proc=None)

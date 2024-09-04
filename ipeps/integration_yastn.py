@@ -18,7 +18,7 @@ def apply_and_copy(nested_iterable, func, f_keys=None):
     if isinstance(nested_iterable,dict): 
         if 'type' in nested_iterable and nested_iterable['type'] in ['yastn.Tensor', 'Tensor']:
             # we don't traverse deeper - this is a leaf
-            return nested_iterable
+            return func(nested_iterable)
         else:
             return { (f_keys(k) if f_keys else k): apply_and_copy(v,func) if isinstance(v,(list,tuple,set,dict)) else func(v) for k,v in nested_iterable.items() }
     elif isinstance(nested_iterable, (list, tuple, set)):
@@ -67,7 +67,7 @@ class PepsAD(Peps):
         r"""
         Add random noise with magnitude ``noise`` to parameters.
         """
-        apply_and_copy( self.parameters, lambda x: x + noise * yastn.rand_like(x) )
+        self.parameters= apply_and_copy( self.parameters, lambda x: x + noise * yastn.rand_like(x) )
         self.sync_()
 
 
@@ -175,7 +175,7 @@ class PepsAD(Peps):
             _parameters= apply_and_copy(d['parameters'], lambda x: load_from_dict(yastn_config,x), f_keys=remap_keys)
             d['parameters']= _parameters
         return PepsAD(geometry=RectangularUnitcell(**d['geometry']),
-            tensors= apply_and_copy(d['parameters'], lambda x : load_from_dict(yastn_config,x) ),
+            tensors= d['parameters'],
             global_args=cfg.global_args
         )
 
