@@ -114,7 +114,7 @@ def main():
     torch.set_default_dtype(torch.float64)
     torch.set_default_device(cfg.global_args.device)
 
-    model= czx.CZX(g_czx=args.gczx, g_zxz=args.gzxz, V=args.V)
+    model= czx.CZX(g_czx=args.gczx, g_zxz=args.gzxz, V=args.gzxz * args.V)
 
     # We will track convergence of CTM using spectra of CTM's corners
     # Lets modify generic conv. check to print convergence info
@@ -131,7 +131,7 @@ def main():
 
     # Loss function, which, given an iPEPS, first performs CTMRG until convergence
     # and then evaluates the energy per plaquette
-    def loss_fn(state, ctm_env_in, opt_context, f_conv_ctm_opt):
+    def loss_fn(state, ctm_env_in, opt_context, f_conv_ctm_opt, verbosity=0):
         ctm_args= opt_context["ctm_args"]
         opt_args= opt_context["opt_args"]
 
@@ -145,12 +145,13 @@ def main():
         ctm_env_out= ctm_env_in
 
         # 2) evaluate loss with the converged environment
-        loss= model.energy_per_site(state,ctm_env)
+        loss= model.energy_per_site(state,ctm_env,verbosity=verbosity)
 
         # Add normalization of on-site tensor(s)
         #
         norm_penalty= sum( [ (1-state.site(c).norm())**2 for c in state.sites ] )
-        loss = loss + norm_penalty
+        loss = loss + 0*norm_penalty
+        
 
         return (loss, ctm_env_out, *ctm_log)
 
@@ -187,7 +188,7 @@ def main():
     init_env(state, ctm_env)
     def f_conv_ctm_opt(*args,**kwargs):
         return custom_ctmrg_conv_specC(*args,verbosity=1,**kwargs)
-    loc_loss_fn= lambda state,env,opt_context : loss_fn(state,env,opt_context, f_conv_ctm_opt)
+    loc_loss_fn= lambda state,env,opt_context : loss_fn(state,env,opt_context, f_conv_ctm_opt, verbosity=2)
 
     # converge initial environment
     # ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=custom_ctmrg_conv_specC)

@@ -250,9 +250,10 @@ class CZX():
         for coord in state.sites:
             r1x1_id= rdm1x1(coord, state, env, operator=id_site, sym_pos_def=False,)
             e_uz_i= rdm1x1(coord, state, env, operator=self.U_Z, sym_pos_def=False,)
-            e_uz+=e_uz_i/r1x1_id 
+            e_uz+=e_uz_i/r1x1_id
             e_ux_i= rdm1x1(coord, state, env, operator=self.U_X, sym_pos_def=False,)
             e_ux+=e_ux_i/r1x1_id
+            if verbosity>1: print(f"{coord} norm {r1x1_id} <U_Z>/norm {e_uz_i/r1x1_id} <U_X>/norm {e_ux_i/r1x1_id}")
 
             e_h_p= eval_mpo_rdm2x2_oe(coord, state, env, mpo_czx)
             e_id_p= eval_mpo_rdm2x2_oe(coord, state, env, (id_mpo_site,)*4 )

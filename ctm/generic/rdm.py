@@ -284,11 +284,11 @@ def rdm1x1_sl(coord, state, env, operator=None, sym_pos_def=False, force_cpu=Fal
     T4= T4.view(T4.size(0),T4.size(1),a.size(2),a.size(2))
 
 
-    contract_tn= C1,[0,1],T1,[1,2,5,9],T4,[0,14,3,6],a_op,[4,2,3,15,10],a.conj(),[7,5,6,16,11],\
-        C2,[9,8],T2,[8,10,11,17],\
-        C3,[17,13],T3,[15,16,12,13],C4,[14,12],
-    contract_tn += ([4,7],) if operator is None else ([],)
-    names= tuple(x.strip() for x in "C1, T1, T4, a_op, a*, C2, T2, C3, T3, C4".split(','))
+    contract_tn= C1,[0,1],T1,[1,2,5,9],T4,[0,14,3,6],\
+        C2,[9,8],T2,[8,10,11,17],C3,[17,13],T3,[15,16,12,13],C4,[14,12],
+    contract_tn += (a_op,[4,2,3,15,10],a.conj(),[7,5,6,16,11],[4,7],) if operator is None else \
+        (a_op,[4,2,3,15,10],a.conj(),[4,5,6,16,11],[],)
+    names= tuple(x.strip() for x in "C1, T1, T4, C2, T2, C3, T3, C4, a_op, a*".split(','))
 
     path, path_info= get_contraction_path(*contract_tn,names=names,path=None,who=who,\
         optimizer="default" if env.chi>1 else "auto")
