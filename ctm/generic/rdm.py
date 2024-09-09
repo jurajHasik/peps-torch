@@ -273,7 +273,7 @@ def rdm1x1_sl(coord, state, env, operator=None, sym_pos_def=False, force_cpu=Fal
     who="rdm1x1_sl"
     C1, C2, C3, C4, T1, T2, T3, T4= env.get_site_env_t(coord,state)
     a= state.site(coord)
-    a_op= a if not operator else torch.tensordot(op,a,([1],[0]))
+    a_op= a if (operator is None) else torch.tensordot(operator,a,([1],[0]))
     t= C1, C2, C3, C4, T1, T2, T3, T4, a, a_op
     if force_cpu:
         t=(x.cpu() for x in t)
@@ -286,7 +286,8 @@ def rdm1x1_sl(coord, state, env, operator=None, sym_pos_def=False, force_cpu=Fal
 
     contract_tn= C1,[0,1],T1,[1,2,5,9],T4,[0,14,3,6],a_op,[4,2,3,15,10],a.conj(),[7,5,6,16,11],\
         C2,[9,8],T2,[8,10,11,17],\
-        C3,[17,13],T3,[15,16,12,13],C4,[14,12],[4,7]
+        C3,[17,13],T3,[15,16,12,13],C4,[14,12],
+    contract_tn += ([4,7],) if operator is None else ([],)
     names= tuple(x.strip() for x in "C1, T1, T4, a_op, a*, C2, T2, C3, T3, C4".split(','))
 
     path, path_info= get_contraction_path(*contract_tn,names=names,path=None,who=who,\
@@ -1464,6 +1465,291 @@ def rdm2x2_oe(coord, state, env, open_sites=[0,1,2,3], unroll=False,
         who=who,verbosity=verbosity)
 
     R = _sym_pos_def_rdm(R, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
+    if force_cpu:
+        R= R.to(env.device)
+    return R
+
+def eval_mpo_rdm2x2_oe(coord, state, env, mpo, unroll=False,
+    checkpoint_unrolled=False, checkpoint_on_device=False,
+    sym_pos_def=False, force_cpu=False, verbosity=0):
+    #
+    # To evaluate 4-site plaquette MPO, the strategy will be to contract a following network
+    # taking a specific ordering of the sites
+    #
+    # C T                           T      C
+    # T A*MPO[1]*A^\dag -- A*MPO[2]*A^\dag T
+    #                        |
+    # T A*MPO[3]*A^\dag -- A*MPO[4]*A^\dag T
+    # C T                           T      C
+    #
+    # where A is on-site tensor of underlying iPEPS and C,T are environment tensors
+    # of the converged CTMRG environment.
+    # 
+    # This is the tensor network to be contracted - with all indices labeled by integers.
+    # All indices with matching labels are contracted.
+    # When present, integers in brackets () give position of the index of the tensor.
+    #
+    # This network uses index-ordering convention from peps-torch for on-site and environment
+    # tensors.
+    # We also expect a convention for MPO. Each MPO tensor has 4 indices, ordered as
+    # left auxiliary, physical (ket), right auxiliary, physical (bra)
+    #
+    # This function relies on opt_einsum to find (asymptotically) optimal contraction path.
+    # Afterwards, it is cached for future invocations.
+    #
+    # C1------(1)1 1(0)----T1----(3)36 36(0)----T1_x----(3)18 18(0)----C2_x
+    # 0(0)               (1,2)                 (1,2)                   19(1)
+    # 0(0)                2  5                 20 23                   19(0)
+    # |                   2  5                 |  |                    |
+    # T4-------(2)3 3-----a--|------37 37----a_x--6(1)----21 21(1)-----T2_x
+    # |                   | \100               | \102                  |
+    # |                   |  \100(1)           |  \102(1)              |
+    # |               300(0)---MPO[0]--(2)200 200----MPO[1]-           |
+    # |                   |  | 101(3)          |   | 103(3)|
+    # |                   |  | 101             |   | 103   |           |
+    # |                   |  |/                |   |/      |           |
+    # |        (3)6 6-------a*------38 38---------a*_x----24 24(2)     |
+    # 15(1)               16 17                34 35       |           33(3)
+    #                                  201 201------------/            |
+    # 15(0)               16 17       /         34 35                  33(0)
+    # |                   |   |      |         |  |                    |
+    # T4_y--(2)9 9--------a_y-------39 39-----a_xy--------28 28(1)-----T2_xy
+    # |                   |   |\104 |          |  |\106                |
+    # |                   |   | MPO[2]--202 202-----MPO[3]--301         |
+    # |                   |   | 105            |  | 107                |
+    # |                   |   |/               |  |/                   |
+    # |     (3)12 12---------a*_y---40 40--------a*_xy----31 31(2)     |
+    # |                   10 13                29 32                   |
+    # 8(1)                10 13                29 32                  26(3)
+    # 8(0)                (0,1)                (0,1)                  26(0)
+    # C4_y---(1)7 7(2)-----T3_y--(3)41 41(2)----T3_xy---(3)27 27(1)----C3_xy
+    who=f"eval_mpo_rdm2x2_oe"
+    assert len(mpo)==4
+    a= state.site(coord)
+    a_x= state.site( (coord[0]+1,coord[1]) )
+    a_y= state.site( (coord[0],coord[1]+1) )
+    a_xy= state.site( (coord[0]+1,coord[1]+1) )
+    C1, C2_x, C3_xy, C4_y= env.C[(state.vertexToSite( coord ),(-1,-1))],\
+        env.C[(state.vertexToSite( (coord[0]+1,coord[1]) ), (1,-1))],\
+        env.C[(state.vertexToSite( (coord[0]+1,coord[1]+1) ), (1,1))],\
+        env.C[(state.vertexToSite( (coord[0],coord[1]+1) ), (-1,1))]
+    T1, T4, T1_x, T2_x, T2_xy, T3_xy, T3_y, T4_y= \
+        env.T[(state.vertexToSite( coord ),(0,-1))],\
+        env.T[(state.vertexToSite( coord ),(-1,0))],\
+        env.T[(state.vertexToSite( (coord[0]+1,coord[1]) ), (0,-1))],\
+        env.T[(state.vertexToSite( (coord[0]+1,coord[1]) ), (1,0))],\
+        env.T[(state.vertexToSite( (coord[0]+1,coord[1]+1) ), (1,0))],\
+        env.T[(state.vertexToSite( (coord[0]+1,coord[1]+1) ), (0,1))],\
+        env.T[(state.vertexToSite( (coord[0],coord[1]+1) ), (0,1))],\
+        env.T[(state.vertexToSite( (coord[0],coord[1]+1) ), (-1,0))]
+    # mpos= mpo[0], mpo[1], mpo[2], mpo[3]
+    t= C1, C2_x, C3_xy, C4_y, T1, T4, T1_x, T2_x, T2_xy, T3_xy, T3_y, T4_y, a, a_x, a_y, a_xy, *mpo
+    if force_cpu:
+       t=(x.cpu() for x in t)
+
+    T1= T1.view(T1.size(0),a.size(1),a.size(1),T1.size(2))
+    T1_x= T1_x.view(T1_x.size(0),a_x.size(1),a_x.size(1),T1_x.size(2))
+    T2_xy= T2_xy.view(T2_xy.size(0),a_xy.size(4),a_xy.size(4),T2_xy.size(2))
+    T2_x= T2_x.view(T2_x.size(0),a_x.size(4),a_x.size(4),T2_x.size(2))
+    T3_xy= T3_xy.view(a_xy.size(3),a_xy.size(3),T3_xy.size(1),T3_xy.size(2))
+    T3_y= T3_y.view(a_y.size(3),a_y.size(3),T3_y.size(1),T3_y.size(2))
+    T4= T4.view(T4.size(0),T4.size(1),a.size(2),a.size(2))
+    T4_y= T4_y.view(T4_y.size(0),T4_y.size(1),a_y.size(2),a_y.size(2))
+
+    contract_tn= C1,[0,1],T1,[1,2,5,36],T4,[0,15,3,6],a,[100,2,3,16,37],a.conj(),[101,5,6,17,38],\
+        T4_y,[15,8,9,12],C4_y,[8,7],T3_y,[10,13,7,41],a_y,[104,16,9,10,39],a_y.conj(),[105,17,12,13,40],\
+        T1_x,[36,20,23,18],C2_x,[18,19],T2_x,[19,21,24,33],a_x,[102,20,37,34,21],a_x.conj(),[103,23,38,35,24],\
+        T2_xy,[33,28,31,26],C3_xy,[26,27],T3_xy,[29,32,41,27],a_xy,[106,34,39,29,28],a_xy.conj(),[107,35,40,32,31],\
+        mpo[0],[300,100,200,101],mpo[1],[200,102,201,103],mpo[2],[201,104,202,105],mpo[3],[202,106,301,107],[]
+
+    names= tuple(x.strip() for x in ("C1, T1, T4, a, a*, T4_y, C4_y, T3_y, a_y, a_y*, T1_x, C2_x, T2_x, a_x, a_x*,"\
+        +"T2_xy, C3_xy, T3_xy, a_xy, a_xy*, mpo[0], mpo[1], mpo[2], mpo[3]").split(','))
+
+    if type(unroll)==bool and unroll:
+        pass
+    # TODO: update public repo
+    # path, path_info= get_contraction_path(*contract_tn,unroll=unroll,\
+    #    names=names,path=None,who=who,optimizer="default" if env.chi>1 else "auto")
+    path, path_info= get_contraction_path(*contract_tn,unroll=unroll,\
+        names=names,path=None,who=who,optimizer="dynamic-programming")
+    R= contract_with_unroll(*contract_tn,unroll=unroll,optimize=path,backend='torch',
+        checkpoint_unrolled=checkpoint_unrolled,checkpoint_on_device=checkpoint_on_device,
+        who=who,verbosity=verbosity)
+
+    if force_cpu:
+        R= R.to(env.device)
+    return R
+
+
+def eval_mpo_rdm1x3_oe(coord, state, env, mpo, unroll=False,
+    checkpoint_unrolled=False, checkpoint_on_device=False,
+    sym_pos_def=False, force_cpu=False, verbosity=0):
+    #
+    # To evaluate 3-site MPO on 1x3 or 3x1 geometry, the strategy will be to contract a following network
+    # taking a specific ordering of the sites
+    #
+    # C T                  T                  T               C
+    # T A*MPO[1]*A^\dag -- A*MPO[2]*A^\dag -- A*MPO[3]*A^\dag T
+    # C T                  T                  T               C
+    #
+    # where A is on-site tensor of underlying iPEPS and C,T are environment tensors
+    # of the converged CTMRG environment.
+    #
+    # This is the tensor network to be contracted - with all indices labeled by integers.
+    # All indices with matching labels are contracted.
+    # When present, integers in brackets () give position of the index of the tensor.
+    #
+    # This network uses index-ordering convention from peps-torch for on-site and environment
+    # tensors.
+    # We also expect a convention for MPO. Each MPO tensor has 4 indices, ordered as
+    # left auxiliary, physical (ket), right auxiliary, physical (bra)
+    #
+    # This function relies on opt_einsum to find (asymptotically) optimal contraction path.
+    # Afterwards, it is cached for future invocations.
+    #
+    # C1------(1)1 1(0)----T1-----(3)4 4(0)----T1_x----(3)7 7(0)-----T2_2x ---(3)10 10(0)C2_2x
+    # 0(0)               (1,2)                 (1,2)                 (1 2)               11(1)
+    # 0(0)                2  3                 5  6                   8  9               11(0)
+    # |                   2  3                 |  |                   |  |                |
+    # T4-------(2)12 12---a--|------13 13------a_x-------14 14(1)-----a_2x-----15 15(1)---T2_2x
+    # |                   | \100               | \102                 | \104              |
+    # |                   |  \100(1)           |  \102(1)             |  \104(1)          |
+    # |               300(0)---MPO[0]--(2)200 200----MPO[1]---201 201----MPO[2]---301     |
+    # |                   |  | 101(3)          |   | 103(3)           |  | 105            |
+    # |                   |  | 101             |   | 103              |  | 105            |
+    # |                   |  |/                |   |/                 |  | /              |
+    # |       (3)16 16-------a*------17 17--------a*_x----18 18---------a*_2x--19 19(2)   |
+    # |                   20 21                22 23                  24 25               |
+    # 26(1)               20 21                22 23                  24 25              27(3)
+    # 26(0)               (0,1)                (0,1)                  (0 1)              27(0)
+    # C4----(1)28 28(2)---T3-----(3)29 29(2)----T3_x----(3)30 30(1)---T3_2x----31 31(1)--C3_2x
+    who=f"eval_mpo_rdm1x3_oe"
+    assert len(mpo)==3
+    a= state.site(coord)
+    a_x= state.site( (coord[0]+1,coord[1]) )
+    a_2x= state.site( (coord[0]+2,coord[1]) )
+    C1, C2_2x, C3_2x, C4= env.C[(state.vertexToSite( coord ),(-1,-1))],\
+        env.C[(state.vertexToSite( (coord[0]+2,coord[1]) ), (1,-1))],\
+        env.C[(state.vertexToSite( (coord[0]+2,coord[1]) ), (1,1))],\
+        env.C[(state.vertexToSite( (coord[0],coord[1]) ), (-1,1))]
+    T1, T1_x, T1_2x, T2_2x, T3, T3_x, T3_2x, T4= \
+        env.T[(state.vertexToSite( coord ), (0,-1))],\
+        env.T[(state.vertexToSite( (coord[0]+1,coord[1]) ),(0,-1))],\
+        env.T[(state.vertexToSite( (coord[0]+2,coord[1]) ),(0,-1))],\
+        env.T[(state.vertexToSite( (coord[0]+2,coord[1]) ),(1,0))],\
+        env.T[(state.vertexToSite( coord ), (0,1))],\
+        env.T[(state.vertexToSite( (coord[0]+1,coord[1]) ), (0,1))],\
+        env.T[(state.vertexToSite( (coord[0]+2,coord[1]) ), (0,1))],\
+        env.T[(state.vertexToSite( coord ), (-1,0))]
+    # mpos= mpo[0], mpo[1], mpo[2], mpo[3]
+    t= C1, C2_2x, C3_2x, C4, T1, T1_x, T1_2x, T2_2x, T3, T3_x, T3_2x, T4, a, a_x, a_2x, *mpo
+    if force_cpu:
+       t=(x.cpu() for x in t)
+
+    T1= T1.view(      T1.size(0),a.size(1),a.size(1),T1.size(2))
+    T1_x= T1_x.view(  T1_x.size(0),a_x.size(1),a_x.size(1),T1_x.size(2))
+    T1_2x= T1_2x.view(T1_2x.size(0),a_2x.size(1),a_2x.size(1),T1_2x.size(2))
+    T2_2x= T2_2x.view(T2_2x.size(0),a_2x.size(4),a_2x.size(4),T2_2x.size(2))
+    T3= T3.view(      a.size(3),a.size(3),T3.size(1),T3.size(2))
+    T3_x= T3_x.view(  a_x.size(3),a_x.size(3),T3_x.size(1),T3_x.size(2))
+    T3_2x= T3_2x.view(a_2x.size(3),a_2x.size(3),T3_2x.size(1),T3_2x.size(2))
+    T4= T4.view(T4.size(0),T4.size(1),a.size(2),a.size(2))
+
+    contract_tn= C1,[0,1],T1,[1,2,3,4],T1_x,[4,5,6,7],T1_2x,[7,8,9,10],C2_2x,[10,11],\
+        T4,[0,26,12,16],a,[100,2,12,20,13],a.conj(),[101,3,16,21,17],\
+        a_x,[102,5,13,22,14],a_x.conj(),[103,6,17,23,18],\
+        a_2x,[104,9,14,24,15],a_2x.conj(),[105,9,18,25,19],T2_2x,[11,15,19,27],\
+        C4,[26,28],T3,[20,21,28,29],T3_x,[22,23,29,30],T3_2x,[24,25,30,31],C3_2x,[27,31],\
+        mpo[0],[300,100,200,101],mpo[1],[200,102,201,103],mpo[2],[201,104,302,105],[]
+
+    names= tuple(x.strip() for x in ("C1, T1, T1_x, T1_x, C2_2x, T4, a, a*, a_x, a_x*, a_2x, a_2x*, T2_2x, "\
+        +"C4, T3, T3_x, T3_2x, C3_2x, mpo[0], mpo[1], mpo[2]").split(','))
+
+    if type(unroll)==bool and unroll:
+        pass
+    path, path_info= get_contraction_path(*contract_tn,names=names,path=None,unroll=unroll,who=who,\
+                                          optimizer='dynamic-programming' if env.chi>1 else "auto")
+    R= contract_with_unroll(*contract_tn,unroll=unroll,optimize=path,backend='torch',
+        checkpoint_unrolled=checkpoint_unrolled,checkpoint_on_device=checkpoint_on_device,
+        who=who,verbosity=verbosity)
+
+    if force_cpu:
+        R= R.to(env.device)
+    return R
+
+def eval_mpo_rdm3x1_oe(coord, state, env, mpo, unroll=False,
+    checkpoint_unrolled=False, checkpoint_on_device=False,
+    sym_pos_def=False, force_cpu=False, verbosity=0):
+    # C1--(1)1 1(0)----T1--------(3)9 9(0)-------C2
+    # 0(0)            (1,2)                      8(1)
+    # 0(0)        100  2  5     300(0)           8(0)
+    # |              \ 2  5      |               |
+    # T4----(2)3 3-----a--|--------10 10(1)------T2
+    # |                |  |    Mpo[0]            |
+    # |     (3)6 6--------a*-------11 11(2)      |
+    # 24(1)           25 26 \101 |              27(3)
+    # 24(0)      102  25 26     200             27(0)
+    # |             \ |   |     200              |
+    # T4_y(2)14 14---a_y-----------22 22(1)------T2_y
+    # |               |   |     Mpo[1]           |
+    # |   (3)17 17-------a_y*------23 23(2)      |
+    # |               28 29 \103 |               |
+    # 30(1)           28 29     201             31(3)
+    # 30(0)       104 (0,1)     201             31(0)
+    # |             \ |   |      |               |
+    # T4_2y(2)32 32---a_2y----------34 34(1)-----T2_2y
+    # |               |   |     Mpo[2]           |
+    # |    (3)35 35-------a_2y*-----36 36(2)     |
+    # |               37 38 \105 |               |
+    # 39(1)           37 38      301            40(3)
+    # C4_2y-(1)41 41(2)--T3_2y---(3)42 42(1)-----C3_2y
+    #
+    who="eval_mpo_rdm3x1_oe"
+    a= state.site(coord)
+    a_y= state.site( (coord[0],coord[1]+1) )
+    a_2y= state.site( (coord[0],coord[1]+2) )
+    C1, C2, C3_2y, C4_2y= env.C[(state.vertexToSite(coord),(-1,-1))],\
+        env.C[(state.vertexToSite(coord), (1,-1))],\
+        env.C[(state.vertexToSite( (coord[0],coord[1]+2) ), (1,1))],\
+        env.C[(state.vertexToSite( (coord[0],coord[1]+2) ), (-1,1))]
+    T1, T2, T2_y, T2_2y, T3_2y, T4, T4_y, T4_2y= env.T[(state.vertexToSite(coord),(0,-1))],\
+        env.T[(state.vertexToSite(coord), (1,0))],\
+        env.T[(state.vertexToSite( (coord[0],coord[1]+1) ), (1,0))],\
+        env.T[(state.vertexToSite( (coord[0],coord[1]+2) ), (1,0))],\
+        env.T[(state.vertexToSite( (coord[0],coord[1]+2) ), (0,1))],\
+        env.T[(state.vertexToSite(coord), (-1,0))],\
+        env.T[(state.vertexToSite( (coord[0],coord[1]+1) ), (-1,0))],\
+        env.T[(state.vertexToSite( (coord[0],coord[1]+2) ), (-1,0))]
+    t= C1, C2, C3_2y, C4_2y, T1, T2, T2_y, T2_2y, T3_2y, T4, T4_y, T4_2y, a, a_y, a_2y, *mpo
+    if force_cpu:
+        t=(x.cpu() for x in t)
+
+    T1= T1.view(T1.size(0),a.size(1),a.size(1),T1.size(2))
+    T2= T2.view(      T2.size(0),a.size(4),a.size(4),T2.size(2))
+    T2_y= T2_y.view(  T2_y.size(0),a_y.size(4),a_y.size(4),T2_y.size(2))
+    T2_2y= T2_2y.view(T2_2y.size(0),a_y.size(4),a_y.size(4),T2_2y.size(2))
+    T3_2y= T3_2y.view(a_2y.size(3),a_2y.size(3),T3_2y.size(1),T3_2y.size(2))
+    T4= T4.view(      T4.size(0),T4.size(1),a.size(2),a.size(2))
+    T4_y= T4_y.view(  T4_y.size(0),T4_y.size(1),a_y.size(2),a_y.size(2))
+    T4_2y= T4_2y.view(T4_2y.size(0),T4_2y.size(1),a_2y.size(2),a_2y.size(2))
+
+    contract_tn= C1,[0,1],T1,[1,2,5,9],C2,[9,8],\
+        T4,[0,24,3,6],a,[100,2,3,25,10],a.conj(),[101,5,6,26,11],mpo[0],[300,100,200,101],T2,[8,10,11,27],\
+        T4_y,[24,30,14,17],a_y,[102,25,14,28,22],a_y.conj(),[103,26,17,29,23],mpo[1],[200,102,201,103],T2_y,[27,22,23,31],\
+        T4_2y,[30,39,32,35],a_2y,[104,28,32,37,34],a_2y.conj(),[105,29,35,38,36],mpo[2],[201,104,301,105],T2_2y,[31,34,36,40],\
+        C4_2y,[39,41],T3_2y,[37,38,41,42],C3_2y,[40,42],[]
+    names= tuple(x.strip() for x in ("C1, T1, C2, T4, a, a*, mpo[0], T2, T4_y, a_y, a_y*, mpo[1], T2_y, "\
+        +"T4_2y, a_2y, a_2y*, mpo[2], T2_2y, C4_2y, T3_2y, C3_2y").split(','))
+    #
+    # This (typical) strategy is optimal, when X >> D^2 >> phys_dim
+    #
+    # path= ((1, 6), (0, 12), (3, 11), (2, 10), (1, 9), (0, 8), (2, 5), (1, 6), (3, 5), (2, 4), (1, 3), (0, 2), (0, 1))
+    path, path_info= get_contraction_path(*contract_tn,names=names,path=None,unroll=unroll,who=who,\
+                                          optimizer='dynamic-programming' if env.chi>1 else "auto")
+    R= contract_with_unroll(*contract_tn,optimize=path,backend='torch',unroll=unroll,
+        checkpoint_unrolled=checkpoint_unrolled,checkpoint_on_device=checkpoint_on_device,
+        who=who,verbosity=verbosity)
+
     if force_cpu:
         R= R.to(env.device)
     return R
