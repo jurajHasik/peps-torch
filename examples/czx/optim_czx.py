@@ -181,17 +181,33 @@ def main():
             print("OPT "+ ", ".join([f"{epoch}",f"{loss}",f"{norm_penalty.item()}",f"{loss-norm_penalty.item()}"]+[f"{v}" for v in obs_values]))
             log.info("Norm(sites): "+", ".join([f"{t.norm()}" for c,t in state.sites.items()]))
 
-    # create CTMRG environment with environment bond dimension \chi (which governs the precision) and initialize it
-    state= IPEPS(sites={(0,0): model.g_czx * A_czx() + model.g_zxz * A_zxz()})
+    # Choose initial state
+    if args.instate:
+        state= read_ipeps(args.instate)
+    else:
+        state= IPEPS(sites={(0,0): model.g_czx * A_czx() + model.g_zxz * A_zxz()})
+    if args.bond_dim>state.site((0,0)).shape[-1]:
+        state= extend_bond_dim(state, args.bond_dim)
+    state.add_noise(args.instate_noise)
 
+    # create CTMRG environment with environment bond dimension \chi (which governs the precision) and initialize it
     ctm_env= ENV(args.chi, state)
     init_env(state, ctm_env)
     def f_conv_ctm_opt(*args,**kwargs):
         return custom_ctmrg_conv_specC(*args,verbosity=1,**kwargs)
     loc_loss_fn= lambda state,env,opt_context : loss_fn(state,env,opt_context, f_conv_ctm_opt, verbosity=2)
 
+    # 0) pre-optimization status
     # converge initial environment
-    # ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=custom_ctmrg_conv_specC)
+
+    # 1) compute environment by CTMRG
+    init_env(state, ctm_env)
+    ctm_env_out, *ctm_log= ctmrg.run(state, ctm_env, \
+            conv_check=f_conv_ctm_opt, ctm_args=cfg.ctm_args)
+
+    # 2) evaluate loss with the converged environment
+    loss= model.energy_per_site(state,ctm_env_out,verbosity=0)
+    print(f"OPT INIT {loss}")
 
     # We enter optimization
     print(f"iter loss")
