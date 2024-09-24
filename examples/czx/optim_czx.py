@@ -103,6 +103,7 @@ parser= cfg.get_args_parser()
 parser.add_argument("--gczx", type=float, default=1, help="CZX coupling")
 parser.add_argument("--gzxz", type=float, default=0., help="ZXZ coupling")
 parser.add_argument("--V", type=float, default=0., help="ZXZ projection")
+parser.add_argument("--tiling", type=str, default="1site", help="tiling", choices=["1site","2site"])
 args, unknown_args = parser.parse_known_args()
 
 def main():
@@ -186,6 +187,8 @@ def main():
         state= read_ipeps(args.instate)
     else:
         state= IPEPS(sites={(0,0): model.g_czx * A_czx() + model.g_zxz * A_zxz()})
+        if args.tiling in ["2site"]:
+            state= IPEPS(sites={(0,0): state.site((0,0)).clone(), (0,1): state.site((0,0)).clone()})
     if args.bond_dim>state.site((0,0)).shape[-1]:
         state= extend_bond_dim(state, args.bond_dim)
     state.add_noise(args.instate_noise)
@@ -193,6 +196,7 @@ def main():
     # create CTMRG environment with environment bond dimension \chi (which governs the precision) and initialize it
     ctm_env= ENV(args.chi, state)
     init_env(state, ctm_env)
+
     def f_conv_ctm_opt(*args,**kwargs):
         return custom_ctmrg_conv_specC(*args,verbosity=1,**kwargs)
     loc_loss_fn= lambda state,env,opt_context : loss_fn(state,env,opt_context, f_conv_ctm_opt, verbosity=2)
@@ -201,13 +205,12 @@ def main():
     # converge initial environment
 
     # 1) compute environment by CTMRG
-    init_env(state, ctm_env)
-    ctm_env_out, *ctm_log= ctmrg.run(state, ctm_env, \
+    ctm_env, *ctm_log= ctmrg.run(state, ctm_env, \
             conv_check=f_conv_ctm_opt, ctm_args=cfg.ctm_args)
 
     # 2) evaluate loss with the converged environment
-    loss= model.energy_per_site(state,ctm_env_out,verbosity=0)
-    print(f"OPT INIT {loss}")
+    loss= model.energy_per_site(state,ctm_env,verbosity=0)
+    obs_fn(state, ctm_env, {"loss_history": {"loss": [loss,]}})
 
     # We enter optimization
     print(f"iter loss")
