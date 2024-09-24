@@ -216,7 +216,8 @@ def get_mirrors():
     return Mx, My
 
 class CZX():
-    def __init__(self, g_czx=1, g_zxz=0, V=0, yastn_cfg=None, global_args=cfg.global_args):
+    def __init__(self, g_czx=1, g_zxz=0, V=0, zxz_x_projected=True,
+                 yastn_cfg=None, global_args=cfg.global_args):
         self.dtype=global_args.torch_dtype
         self.device=global_args.device
         self.phys_dim=2**4
@@ -229,11 +230,15 @@ class CZX():
             yastn.make_config(backend=backend_torch)
         self.h_p_czx_fused= get_H_czx_mpo_fused(yastn_cfg)
         
-        x = torch.tensor([[0, 1], [1, 0]], dtype=self.dtype)
-        z = torch.tensor([[1, 0], [0, -1]], dtype=self.dtype)
+        I = torch.eye(2**4, dtype=self.dtype, device=self.device)
+        x = torch.tensor([[0, 1], [1, 0]], dtype=self.dtype, device=self.device)
+        z = torch.tensor([[1, 0], [0, -1]], dtype=self.dtype, device=self.device)
         self.U_Z= torch.einsum('ai,bj,ck,dl->abcdijkl',z,z,z,z).reshape([2**4,]*2)
         self.U_X= torch.einsum('ai,bj,ck,dl->abcdijkl',x,x,x,x).reshape([2**4,]*2)
         self.Za, self.Xa, self.Zb, self.Xb= get_H_zxz()
+        if zxz_x_projected:
+            self.Xa= self.Xa @ ( I - self.U_Z ) * 0.5
+            self.Xb= self.Xb @ ( I - self.U_Z ) * 0.5
 
     def eval_H_ops(self, state, env, verbosity=0):
         # Given an iPEPS and its CTMRG environment, evaluate the energy over all non-equivalent plaquettes
