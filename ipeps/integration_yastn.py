@@ -183,8 +183,14 @@ class PepsAD(Peps):
 def load_PepsAD(yastn_config : YASTN_CONFIG, state_file : str)->PepsAD:
     r"""
     """
+    # decoder used for assembling complex number from a dict
+    def complex_decoder(dct):
+        if "real" in dct and "imag" in dct:
+            return complex(dct["real"], dct["imag"])
+        return dct
+
     with open(state_file) as f:
-        d = json.load(f)
+        d = json.load(f, object_hook=complex_decoder)
     return PepsAD.from_dict(yastn_config, d)
 
 

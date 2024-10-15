@@ -17,6 +17,8 @@ class NumPy_Encoder(json.JSONEncoder):
             return int(obj)
         elif isinstance(obj, np.floating):
             return float(obj)
+        elif isinstance(obj, complex): # type complex is not json-serializable
+            return {"real": obj.real, "imag": obj.imag}
         elif isinstance(obj, np.ndarray):
             return obj.tolist()
         else:
