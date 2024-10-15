@@ -2318,6 +2318,50 @@ def _Rhalf_1x2(coord,state,env):
     Rhalf= torch.tensordot(Rhalf,T3,([3],[2]))
     return Rhalf
 
+def aux_rdm0x1(coord, state, env, unroll=False, 
+    checkpoint_unrolled=False, checkpoint_on_device=False,
+    sym_pos_def=False, force_cpu=False, verbosity=0):
+    r"""
+    C1(0,0)--1 1(0)------C2_nx(-1,0)
+    0                    2(1)
+    0                    2(0)
+    T4(0,0)--4(2)  7(1)--T2_nx(-1,0)
+    |        5(3)  8(2)  |
+    3(1)                 9(3)
+    3(0)                 9(0)
+    C4--(1)6 6(1)--------C3_nx
+    """
+    T4_auxD_r= T2_nx_auxD_l= state.site(coord).size(2)
+    who=f"aux_rdm0x1_oe"
+    C1, C2_nx, C3_nx, C4= env.C[(state.vertexToSite( coord ),(-1,-1))],\
+        env.C[(state.vertexToSite( (coord[0]-1,coord[1]) ), (1,-1))],\
+        env.C[(state.vertexToSite( (coord[0]-1,coord[1]) ), (1,1))],\
+        env.C[(state.vertexToSite( coord ), (-1,1))]
+    T4, T2_nx= \
+        env.T[(state.vertexToSite( coord ),(-1,0))],\
+        env.T[(state.vertexToSite( (coord[0]-1,coord[1]) ), (1,0))]
+    t= C1, C2_nx, C3_nx, C4, T4, T2_nx
+    if force_cpu:
+       t=(x.cpu() for x in t)
+
+    T4= T4.view(T4.size(0),T4.size(1),T4_auxD_r,T4_auxD_r)
+    T2_nx= T2_nx.view(T2_nx.size(0),T2_nx_auxD_l,T2_nx_auxD_l,T2_nx.size(2))
+    
+    contract_tn= C1,[0,1],C2_nx,[1,2],T4,[0,3,4,5],C4,[3,6],C3_nx,[9,6],T2_nx,[2,7,8,9],[4,7,5,8]
+    names= tuple(x.strip() for x in ("C1, C2_nx, T4, C4, C3_nx, T2_nx").split(','))
+    if type(unroll)==bool and unroll:
+        unroll= []
+    path, path_info= get_contraction_path(*contract_tn,unroll=unroll,\
+        names=names,path=None,who=who)
+    R= contract_with_unroll(*contract_tn,unroll=unroll,optimize=path,backend='torch',
+        checkpoint_unrolled=checkpoint_unrolled,checkpoint_on_device=checkpoint_on_device,
+        who=who,verbosity=verbosity)
+        
+    # R = _sym_pos_def_rdm(R, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
+    if force_cpu:
+        R= R.to(env.device)
+    return R
+
 def aux_rdm1x1(coord, state, env, sym_pos_def=False, verbosity=0):
     r"""
     :param coord: vertex (x,y) specifies upper left site of 2x2 subsystem
