@@ -103,6 +103,7 @@ parser= cfg.get_args_parser()
 parser.add_argument("--gczx", type=float, default=1, help="CZX coupling")
 parser.add_argument("--gzxz", type=float, default=0., help="ZXZ coupling")
 parser.add_argument("--V", type=float, default=0., help="ZXZ projection")
+parser.add_argument("--delta", type=float, default=0., help="U_Z perturbation")
 parser.add_argument("--tiling", type=str, default="1site", help="tiling", choices=["1site","2site"])
 args, unknown_args = parser.parse_known_args()
 
@@ -115,7 +116,7 @@ def main():
     torch.set_default_dtype(torch.float64)
     torch.set_default_device(cfg.global_args.device)
 
-    model= czx.CZX(g_czx=args.gczx, g_zxz=args.gzxz, V=args.gzxz * args.V)
+    model= czx.CZX(g_czx=args.gczx, g_zxz=args.gzxz, V=args.gzxz * args.V, delta= args.delta)
 
     # We will track convergence of CTM using spectra of CTM's corners
     # Lets modify generic conv. check to print convergence info

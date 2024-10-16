@@ -216,7 +216,7 @@ def get_mirrors():
     return Mx, My
 
 class CZX():
-    def __init__(self, g_czx=1, g_zxz=0, V=0, zxz_x_projected=True,
+    def __init__(self, g_czx=1, g_zxz=0, V=0, delta=0, zxz_x_projected=True,
                  yastn_cfg=None, global_args=cfg.global_args):
         self.dtype=global_args.torch_dtype
         self.device=global_args.device
@@ -225,16 +225,20 @@ class CZX():
         self.g_czx=g_czx
         self.g_zxz=g_zxz
         self.V= V
+        self.delta= delta
 
         yastn_cfg= yastn_cfg if not (yastn_cfg is None) else \
             yastn.make_config(backend=backend_torch)
         self.h_p_czx_fused= get_H_czx_mpo_fused(yastn_cfg)
         
         I = torch.eye(2**4, dtype=self.dtype, device=self.device)
+        i2= torch.eye(2**1, dtype=self.dtype, device=self.device)
         x = torch.tensor([[0, 1], [1, 0]], dtype=self.dtype, device=self.device)
         z = torch.tensor([[1, 0], [0, -1]], dtype=self.dtype, device=self.device)
-        self.U_Z= torch.einsum('ai,bj,ck,dl->abcdijkl',z,z,z,z).reshape([2**4,]*2)
-        self.U_X= torch.einsum('ai,bj,ck,dl->abcdijkl',x,x,x,x).reshape([2**4,]*2)
+        _prod_op = lambda o1,o2,o3,o4: torch.einsum('ai,bj,ck,dl->abcdijkl',o1,o2,o3,o4).reshape([2**4,]*2)
+        self.U_Z= _prod_op(z,z,z,z)
+        self.U_X= _prod_op(x,x,x,x)
+        self.h_site= -(0.5*delta)*(_prod_op(x,z,i2,z) + _prod_op(z,x,z,i2) + _prod_op(i2,z,x,z) + _prod_op(z,i2,z,x))
         self.Za, self.Xa, self.Zb, self.Xb= get_H_zxz()
         if zxz_x_projected:
             self.Xa= self.Xa @ ( I - self.U_Z ) * 0.5
@@ -251,14 +255,16 @@ class CZX():
         mpo_ZaXaZa= ( self.Za[None,:,None,:], self.Xa[None,:,None,:], self.Za[None,:,None,:] )
         mpo_ZbXbZb= ( self.Zb[None,:,None,:], self.Xb[None,:,None,:], self.Zb[None,:,None,:] )
 
-        eczx, ezxza, ezxzb, e_uz, e_ux= 0, 0, 0, 0, 0
+        eczx, ezxza, ezxzb, e_uz, e_ux, e_hz= 0, 0, 0, 0, 0, 0
         for coord in state.sites:
-            r1x1_id= rdm1x1(coord, state, env, operator=id_site, sym_pos_def=False,)
+            r1x1_id= rdm1x1(coord, state, env, operator=id_site, sym_pos_def=False,) #norm
             e_uz_i= rdm1x1(coord, state, env, operator=self.U_Z, sym_pos_def=False,)
             e_uz+=e_uz_i/r1x1_id
             e_ux_i= rdm1x1(coord, state, env, operator=self.U_X, sym_pos_def=False,)
             e_ux+=e_ux_i/r1x1_id
-            if verbosity>1: print(f"{coord} norm {r1x1_id} <U_Z>/norm {e_uz_i/r1x1_id} <U_X>/norm {e_ux_i/r1x1_id}")
+            e_hz_i= rdm1x1(coord, state, env, operator=self.h_site, sym_pos_def=False,)
+            e_hz+=e_hz_i/r1x1_id
+            if verbosity>1: print(f"{coord} norm {r1x1_id} <U_Zr>/norm {e_uz_i/r1x1_id} <U_Xr>/norm {e_ux_i/r1x1_id} <h_Z>/norm {e_hz_i/r1x1_id}")
 
             e_h_p= eval_mpo_rdm2x2_oe(coord, state, env, mpo_czx)
             e_id_p= eval_mpo_rdm2x2_oe(coord, state, env, (id_mpo_site,)*4 )
@@ -274,8 +280,8 @@ class CZX():
             e_id_p= eval_mpo_rdm3x1_oe(coord, state, env, (id_mpo_site,)*3 )
             if verbosity>1: print(f"rdm3x1 {coord} <h_ZbXbZb> {ezxzb_i} norm {e_id_p} <h_ZbXbZb>/norm {ezxzb_i/e_id_p}")
             ezxzb+= ezxzb_i/e_id_p
-        return (x/len(state.sites) for x in (eczx,ezxza,ezxzb,e_uz,e_ux))
+        return (x/len(state.sites) for x in (eczx,ezxza,ezxzb,e_uz,e_ux,e_hz))
     
     def energy_per_site(self,state,env,verbosity=0):
-        eczx,ezxza,ezxzb,e_uz,e_ux= self.eval_H_ops(state, env, verbosity=verbosity)
-        return self.g_zxz/2 * (ezxza + ezxzb) + self.V * (e_uz - e_ux + 2) + self.g_czx * eczx
+        eczx,ezxza,ezxzb,e_uz,e_ux,e_hz= self.eval_H_ops(state, env, verbosity=verbosity)
+        return self.g_zxz/2 * (ezxza + ezxzb) + self.V * (e_uz - e_ux + 2) + self.g_czx * eczx + e_hz
