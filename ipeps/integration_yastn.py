@@ -26,21 +26,24 @@ def apply_and_copy(nested_iterable, func, f_keys=None):
     else:
         return func(nested_iterable)
 
+
+# TODO: one should be able to pass parameters and a callable, which is invoked by sync_ to build on-site tensors
 class PepsAD(Peps):
     # TODO accept pattern in the form of i) Sequence[Sequence[Tensor]], then ids of tensors can be labels for lower constructors
     #                        ii) analogously dict[tuple[int,int],Tensor]
     def __init__(
         self,
         geometry=None,
-        tensors: Union[
+        parameters: Union[
             None, Sequence[Sequence[Tensor]], dict[tuple[int, int], Tensor]
         ] = None,
+        get_tensors: callable = None,
         global_args=cfg.global_args,
     ):
         """
         Wrapper around YASTN'n PEPS.
         """
-        self.parameters = tensors
+        self.parameters = parameters
         self.dtype = global_args.torch_dtype
         self.device = global_args.device
         
@@ -175,7 +178,7 @@ class PepsAD(Peps):
             _parameters= apply_and_copy(d['parameters'], lambda x: load_from_dict(yastn_config,x), f_keys=remap_keys)
             d['parameters']= _parameters
         return PepsAD(geometry=RectangularUnitcell(**d['geometry']),
-            tensors= d['parameters'],
+            parameters= d['parameters'],
             global_args=cfg.global_args
         )
 
