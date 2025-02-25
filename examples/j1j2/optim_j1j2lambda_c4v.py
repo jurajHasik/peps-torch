@@ -227,7 +227,7 @@ class TestOpt(unittest.TestCase):
         args.CTMARGS_projector_svd_method="SYMEIG"
         main()
 
-    @unittest.expectedFailure
+    # @unittest.expectedFailure
     def test_opt_SYMEIG_LS_strong_wolfe(self):
         args.CTMARGS_projector_svd_method="SYMEIG"
         args.OPTARGS_line_search="strong_wolfe"

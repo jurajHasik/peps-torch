@@ -47,7 +47,9 @@ def main():
         default_device= cfg.global_args.device, default_dtype=cfg.global_args.dtype)
     settings= yastn.make_config(backend=backend, sym=sym_U1, \
         default_device= cfg.global_args.device, default_dtype=cfg.global_args.dtype)
-    settings.backend.set_num_threads(args.omp_cores)
+    if settings.backend.BACKEND_ID == 'torch':
+        import torch
+        torch.set_num_threads(args.omp_cores)
     settings.backend.random_seed(args.seed)
 
     model= j1j2.J1J2_C4V_BIPARTITE_NOSYM(settings_full, j1=args.j1, j2=args.j2)
