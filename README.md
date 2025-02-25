@@ -1,10 +1,7 @@
-# peps-torch ![Test Status](https://github.com/jurajHasik/peps-torch/actions/workflows/main.yml/badge.svg?branch=master) ![Docs Status](https://github.com/jurajHasik/peps-torch/actions/workflows/main.yml/badge.svg?branch=gh-pages) [![Documentation Status](https://readthedocs.org/projects/peps-torch/badge/?version=latest)](https://peps-torch.readthedocs.io/en/latest/?badge=latest)
+# peps-torch ![Test Status](https://github.com/jurajHasik/peps-torch/actions/workflows/main.yml/badge.svg?branch=master) ![Docs Status](https://github.com/jurajHasik/peps-torch/actions/workflows/main.yml/badge.svg?branch=gh-pages)
 ### A tensor network library for two-dimensional lattice models
 by Juraj Hasik, Glen Bigan Mbeng\
 with contributions by Wei-Lin Tu, Seydou-Samba Diop, Sen Niu, Yi Xi, Hao Chen
-
-![Test Status](https://github.com/jurajHasik/peps-torch/actions/workflows/main.yml/badge.svg?branch=master)
-![Docs Status](https://github.com/jurajHasik/peps-torch/actions/workflows/main.yml/badge.svg?branch=gh-pages)
 
 \
 **peps-torch** performs optimization of infinite Projected entangled-pair states (iPEPS) 

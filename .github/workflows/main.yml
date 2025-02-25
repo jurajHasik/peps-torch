@@ -95,15 +95,6 @@ jobs:
           $CONDA/bin/python -m pytest examples/kagome/abelian/ctmrg_*.py
           $CONDA/bin/python -m pytest examples/kagome/abelian/optim_*.py
 
-      - name: Create test badge
-        uses: einaregilsson/badge-action@v1
-        with:
-          label: tests
-          status: ${{ job.status }}
-          color: ${{ job.status == 'success' && 'green' || 'red' }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
   deploy-docs:
     runs-on: ubuntu-latest
     needs: build
@@ -122,14 +113,5 @@ jobs:
           git add .
           git commit -m "Deploy documentation"
           git push --force --quiet "https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" master:gh-pages
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Create docs badge
-        uses: einaregilsson/badge-action@v1
-        with:
-          label: docs
-          status: ${{ job.status }}
-          color: ${{ job.status == 'success' && 'green' || 'red' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
