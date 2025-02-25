@@ -161,9 +161,9 @@ class ENV_ABELIAN():
                 # 0--T(x-1,y)--3 0--T(x,y)--3 0--T(x+1,y)--3
                 #    1,2            1,2          1,2
                 T_lss[tid]= { 1: tmp_T[tid].get_legs(axes=1), 2: tmp_T[tid].get_legs(axes=2), \
-                    0: yastn.leg_union(tmp_T[(vts((t_xy[0]-1, t_xy[1])), t_dir)].get_legs(axes=3),\
+                    0: yastn.legs_union(tmp_T[(vts((t_xy[0]-1, t_xy[1])), t_dir)].get_legs(axes=3),\
                         self.C[((t_xy),(-1,-1))].get_legs(axes=1)).conj(),\
-                    3: yastn.leg_union(tmp_T[(vts((t_xy[0]+1, t_xy[1])), t_dir)].get_legs(axes=0),\
+                    3: yastn.legs_union(tmp_T[(vts((t_xy[0]+1, t_xy[1])), t_dir)].get_legs(axes=0),\
                         self.C[((t_xy),(1,-1))].get_legs(axes=0)).conj() }
                 # upper-left corner
                 # C--1
@@ -177,9 +177,9 @@ class ENV_ABELIAN():
                 #    0,1              0,1        0,1
                 # 2--T(x-1,y)--3 2--T(x,y)--3 2--T(x+1,y)--3
                 T_lss[tid]= { 0: tmp_T[tid].get_legs(axes=0), 1: tmp_T[tid].get_legs(axes=1), \
-                    2: yastn.leg_union(tmp_T[(vts((t_xy[0]-1, t_xy[1])), t_dir)].get_legs(axes=3),\
+                    2: yastn.legs_union(tmp_T[(vts((t_xy[0]-1, t_xy[1])), t_dir)].get_legs(axes=3),\
                         self.C[((t_xy),(-1,1))].get_legs(axes=1)).conj(),\
-                    3: yastn.leg_union(tmp_T[(vts((t_xy[0]+1, t_xy[1])), t_dir)].get_legs(axes=2),\
+                    3: yastn.legs_union(tmp_T[(vts((t_xy[0]+1, t_xy[1])), t_dir)].get_legs(axes=2),\
                         self.C[((t_xy),(1,1))].get_legs(axes=1)).conj() }
                 # lower-left corner
                 # 0
@@ -194,9 +194,9 @@ class ENV_ABELIAN():
                 # T--2,3
                 # 1
                 T_lss[tid]= { 2: tmp_T[tid].get_legs(axes=2), 3: tmp_T[tid].get_legs(axes=3),\
-                    0: yastn.leg_union(tmp_T[(vts((t_xy[0], t_xy[1]-1)), t_dir)].get_legs(axes=1),\
+                    0: yastn.legs_union(tmp_T[(vts((t_xy[0], t_xy[1]-1)), t_dir)].get_legs(axes=1),\
                         self.C[((t_xy),(-1,-1))].get_legs(axes=0)).conj(),\
-                    1: yastn.leg_union(tmp_T[(vts((t_xy[0], t_xy[1]+1)), t_dir)].get_legs(axes=0),\
+                    1: yastn.legs_union(tmp_T[(vts((t_xy[0], t_xy[1]+1)), t_dir)].get_legs(axes=0),\
                         self.C[((t_xy),(-1,1))].get_legs(axes=0)).conj() }
                 # upper-left corner
                 # C--1
@@ -211,9 +211,9 @@ class ENV_ABELIAN():
                 # 1,2--T
                 #      3
                 T_lss[tid]= { 1: tmp_T[tid].get_legs(axes=1), 2: tmp_T[tid].get_legs(axes=2),\
-                    0: yastn.leg_union(tmp_T[(vts((t_xy[0], t_xy[1]-1)), t_dir)].get_legs(axes=3),\
+                    0: yastn.legs_union(tmp_T[(vts((t_xy[0], t_xy[1]-1)), t_dir)].get_legs(axes=3),\
                         self.C[((t_xy),(1,-1))].get_legs(axes=1)).conj(),\
-                    3: yastn.leg_union(tmp_T[(vts((t_xy[0], t_xy[1]+1)), t_dir)].get_legs(axes=0),\
+                    3: yastn.legs_union(tmp_T[(vts((t_xy[0], t_xy[1]+1)), t_dir)].get_legs(axes=0),\
                         self.C[((t_xy),(1,1))].get_legs(axes=0)).conj() }
                 # upper-right corner
                 # 0--C
