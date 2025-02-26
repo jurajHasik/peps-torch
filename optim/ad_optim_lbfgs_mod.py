@@ -87,7 +87,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         if not str(global_args.device)==str(state.device):
             warnings.warn(f"Device mismatch: state.device {state.device}"\
                 +f" global_args.device {global_args.device}",RuntimeWarning)
-        checkpoint = torch.load(main_args.opt_resume,map_location=state.device)
+        checkpoint = torch.load(main_args.opt_resume,map_location=state.device, weights_only=False)
         epoch0 = checkpoint["epoch"]
         loss0 = checkpoint["loss"]
         cp_state_dict= checkpoint["optimizer_state_dict"]
@@ -126,7 +126,11 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         
         # 0) evaluate loss
         optimizer.zero_grad()
-        loss, ctm_env, history, t_ctm, t_check = loss_fn(state, current_env[0], context)
+        loss, ctm_env, history, *timings = loss_fn(state, current_env[0], context)
+        if len(timings)==2: # legacy
+            t_ctm, t_check, t_loss= *timings, None
+        elif len(timings)==3: # 
+            t_ctm, t_check, t_loss= timings
 
         # 4) evaluate gradient
         t_grad0= time.perf_counter()
@@ -152,7 +156,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         # 2) log CTM metrics for debugging
         if opt_args.opt_logging:
             log_entry=dict({"id": epoch, "loss": t_data["loss"][-1], "t_ctm": t_ctm, \
-                    "t_check": t_check})
+                    "t_check": t_check, "t_loss": t_loss})
             if linesearching:
                 log_entry["LS"]=len(t_data["loss_ls"])
                 log_entry["loss"]=t_data["loss_ls"]
@@ -194,8 +198,12 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         ls_context= dict({"ctm_args":loc_ctm_args, "opt_args":loc_opt_args, "loss_history": t_data,
             "line_search": linesearching})
         
-        loss, ctm_env, history, t_ctm, t_check = loss_fn(state, current_env[0],\
+        loss, ctm_env, history, *timings = loss_fn(state, current_env[0],\
             ls_context)
+        if len(timings)==2: # legacy
+            t_ctm, t_check, t_loss= *timings, None
+        elif len(timings)==3: # 
+            t_ctm, t_check, t_loss= timings
         current_env[0]= ctm_env
 
         # 2) store current state if the loss improves
@@ -206,7 +214,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         # 3) log metrics for debugging
         if opt_args.opt_logging:
             log_entry=dict({"id": epoch, "LS": len(t_data["loss_ls"]), \
-                "loss": t_data["loss_ls"], "t_ctm": t_ctm, "t_check": t_check})
+                "loss": t_data["loss_ls"], "t_ctm": t_ctm, "t_check": t_check, "t_loss": t_loss})
             log.info(json.dumps(log_entry))
 
         # 4) compute desired observables

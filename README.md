@@ -1,8 +1,9 @@
-# peps-torch ![Test Status](https://github.com/jurajHasik/peps-torch/actions/workflows/main.yml/badge.svg?branch=master) [![Documentation Status](https://readthedocs.org/projects/peps-torch/badge/?version=latest)](https://peps-torch.readthedocs.io/en/latest/?badge=latest)
+# peps-torch 
+![Test Status](https://github.com/jurajHasik/peps-torch/actions/workflows/main.yml/badge.svg?branch=master)
+![Docs Status](https://gist.github.com/jurajHasik/b11fca53c80bbc7224dddad1118d873d)
 ### A tensor network library for two-dimensional lattice models
 by Juraj Hasik, Glen Bigan Mbeng\
-with contributions by Wei-Lin Tu, Seydou-Samba Diop, Sen Niu, Yi Xi
-
+with contributions by Wei-Lin Tu, Seydou-Samba Diop, Sen Niu, Yi Xi, Hao Chen
 
 \
 **peps-torch** performs optimization of infinite Projected entangled-pair states (iPEPS) 
@@ -128,7 +129,7 @@ python examples/j1j2/abelian/ctmrg_j1j2_u1.py --tiling BIPARTITE --chi 48 --j2 0
 - both real- and complex-valued tensors
 
 #### Dependencies
-- PyTorch 1.11+ (see https://pytorch.org/)
+- PyTorch 2.+ (see https://pytorch.org/)
 - (optional) YASTN (see https://github.com/yastn/yastn)
 - (optional) scipy 1.3.+
 - (optional) opt_einsum
@@ -140,7 +141,7 @@ To obtain it, you can use git:
 `git submodule update --init --recursive`
 
 #### Building documentation
-- PyTorch 1.11+
+- PyTorch 2.+
 - sphinx
 - sphinx_rtd_theme
 

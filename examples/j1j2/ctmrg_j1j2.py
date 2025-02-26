@@ -1,3 +1,4 @@
+import os
 import context
 import torch
 import argparse
@@ -13,7 +14,12 @@ import unittest
 parser= cfg.get_args_parser()
 # additional model-dependent arguments
 parser.add_argument("--j1", type=float, default=1., help="nearest-neighbour coupling")
-parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour coupling")
+parser.add_argument("--j2", type=float, default=0, help="next nearest-neighbour coupling")
+parser.add_argument("--j3", type=float, default=0, help="next-to-next nearest-neighbour coupling")
+parser.add_argument("--lmbd", type=float, default=0, help="chiral plaquette interaction")
+parser.add_argument("--hz_stag", type=float, default=0, help="staggered mag. field")
+parser.add_argument("--h_uni", nargs=3, type=float, default=[0,0,0], help="uniform mag. field with components in directions h^z, h^x, h^y")
+parser.add_argument("--delta_zz", type=float, default=1, help="easy-axis (nearest-neighbour) anisotropy")
 parser.add_argument("--tiling", default="BIPARTITE", help="tiling of the lattice", \
     choices=["BIPARTITE", "1SITE", "2SITE", "4SITE", "8SITE"])
 # additional observables-related arguments
@@ -28,7 +34,8 @@ def main():
     torch.set_num_threads(args.omp_cores)
     torch.manual_seed(args.seed)
     
-    model = j1j2.J1J2(j1=args.j1, j2=args.j2)
+    model = j1j2.J1J2(j1=args.j1, j2=args.j2, j3=args.j3, lmbd=args.lmbd,
+        hz_stag=args.hz_stag, h_uni=args.h_uni, delta_zz=args.delta_zz)
 
     # initialize an ipeps
     # 1) define lattice-tiling function, that maps arbitrary vertex of square lattice
@@ -110,7 +117,8 @@ def main():
         print(f"dtype of initial state {state.dtype} and model {model.dtype} do not match.")
         print(f"Setting default dtype to {cfg.global_args.torch_dtype} and reinitializing "\
         +" the model")
-        model= j1j2.J1J2(j1=args.j1, j2=args.j2)
+        model= j1j2.J1J2(j1=args.j1, j2=args.j2, j3=args.j3, lmbd=args.lmbd,
+            hz_stag=args.hz_stag, h_y=args.hy, delta_zz=args.delta_zz)
 
     print(state)
 
@@ -199,11 +207,13 @@ if __name__=='__main__':
         raise Exception("Unknown command line arguments")
     main()
 
-class TestCtmrg(unittest.TestCase):
+
+class TestCtmrgBasic(unittest.TestCase):
     def setUp(self):
         args.j2=0.0
         args.bond_dim=2
         args.chi=16
+        args.CTMARGS_ctm_max_iter=2
 
     # basic tests
     def test_ctmrg_GESDD_BIPARTITE(self):
@@ -229,3 +239,78 @@ class TestCtmrg(unittest.TestCase):
         args.CTMARGS_projector_svd_method="GESDD"
         args.tiling="4SITE"
         main()
+
+
+class TestCtmrg_States(unittest.TestCase):
+    tol= 1.0e-6
+    DIR_PATH = os.path.dirname(os.path.realpath(__file__))
+    OUT_PRFX = "RESULT_CTMRGJ1J2_"
+    ANSATZE= [
+        ("BIPARTITE",{"j3": 0.125, "h_uni": [3.9,0,0]},
+        "BIPARTITE_j2_0_j3_1250_h_39000_D_3_chi_32_seed_100_state.json",
+        """
+        -1.3896897615463615, 0.4884474386344192, 0.48844697363007333, 0.4884479036387651, 
+        -0.46200561021924863, 0.1585284270227813, 0.1585284270227813, -0.4620060817268178, 
+        -0.15852991836412875, -0.15852991836412875, 0.1751621217404098, 0.17516618332251627, 
+        0.17516347390256323, 0.17516132836311246
+        """
+        ),
+        ("2SITE",{"j2": 0.55},
+        "gesdd-D2-chi50-j20.55-run0-iRND2x1_state.json",
+        """
+        -0.4434603770143078, 0.3184895704619597, 0.31842030538406385, 0.31855883553985553, 
+        -0.26397659399034457, 0.17806697814624955, 0.1780669781462514, 0.26446699770693394, 
+        -0.17758642635176156, -0.1775864263517598
+        """
+        )
+        ]
+
+    def setUp(self):
+        args.j1, args.j2, args.j3, args.h_uni= 1.0, 0, 0, [0,0,0]
+        args.CTMARGS_ctm_max_iter=100
+        args.chi=32
+
+    def test_ctmrgj1j2_states(self):
+        from io import StringIO
+        from unittest.mock import patch
+        from cmath import isclose
+        import numpy as np
+
+        for ansatz in self.ANSATZE:
+            with self.subTest(ansatz=ansatz):
+                self.setUp()
+                args.tiling= ansatz[0]
+                args.instate= self.DIR_PATH+"/../../test-input/"+ansatz[2]
+                args.out_prefix=self.OUT_PRFX+f"_{ansatz[0]}"
+                for k in ansatz[1]: args.__setattr__(k,ansatz[1][k])
+                
+                # i) run ctmrg and compute observables
+                with patch('sys.stdout', new = StringIO()) as tmp_out: 
+                    main()
+                tmp_out.seek(0)
+
+                # parse FINAL observables
+                final_obs=None
+                l= tmp_out.readline()
+                while l:
+                    print(l,end="")
+                    if "FINAL" in l:
+                        final_obs= l.rstrip()
+                        break
+                    l= tmp_out.readline()
+                assert final_obs
+
+                # compare with the reference
+                ref_data= ansatz[3]
+                fobs_tokens= [float(x) for x in final_obs[len("FINAL"):].split(",")]
+                ref_tokens= [float(x) for x in ref_data.split(",")]
+                for val,ref_val in zip(fobs_tokens, ref_tokens):
+                    assert isclose(val,ref_val, rel_tol=self.tol, abs_tol=self.tol)
+
+    def tearDown(self):
+        args.instate=None
+        for ansatz in self.ANSATZE:
+            out_prefix=self.OUT_PRFX+f"_{ansatz[0]}"
+            for f in [out_prefix+"_checkpoint.p",out_prefix+"_state.json",\
+                out_prefix+".log"]:
+                if os.path.isfile(f): os.remove(f)

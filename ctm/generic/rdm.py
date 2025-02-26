@@ -273,7 +273,7 @@ def rdm1x1_sl(coord, state, env, operator=None, sym_pos_def=False, force_cpu=Fal
     who="rdm1x1_sl"
     C1, C2, C3, C4, T1, T2, T3, T4= env.get_site_env_t(coord,state)
     a= state.site(coord)
-    a_op= a if not operator else torch.tensordot(op,a,([1],[0]))
+    a_op= a if operator is None else torch.tensordot(operator,a,([1],[0]))
     t= C1, C2, C3, C4, T1, T2, T3, T4, a, a_op
     if force_cpu:
         t=(x.cpu() for x in t)
@@ -289,12 +289,15 @@ def rdm1x1_sl(coord, state, env, operator=None, sym_pos_def=False, force_cpu=Fal
         C3,[17,13],T3,[15,16,12,13],C4,[14,12],[4,7]
     names= tuple(x.strip() for x in "C1, T1, T4, a_op, a*, C2, T2, C3, T3, C4".split(','))
 
-    path, path_info= get_contraction_path(*contract_tn,names=names,path=None,who=who)
+    path, path_info= get_contraction_path(*contract_tn,names=names,path=None,who=who,\
+        optimizer="default" if env.chi>1 else "auto")
     R= oe.contract(*contract_tn,optimize=path,backend='torch')
 
     # symmetrize and normalize
-    if operator == None:
+    if operator is None:
         R = _sym_pos_def_rdm(R, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
+    else:
+        R= R.trace()
     if force_cpu:
         R = R.to(env.device)
     return R
@@ -544,7 +547,8 @@ def rdm2x1_sl(coord, state, env, sym_pos_def=False, force_cpu=False, unroll=Fals
     # This (typical) strategy is optimal, when X >> D^2 >> phys_dim
     #
     # path=((2, 5), (0, 12), (3, 11), (2, 10), (1, 9), (0, 8), (2, 5), (1, 6), (3, 5), (2, 4), (1, 3), (0, 2), (0, 1))
-    path, path_info= get_contraction_path(*contract_tn,names=names,path=None,unroll=unroll,who=who)
+    path, path_info= get_contraction_path(*contract_tn,names=names,path=None,unroll=unroll,who=who,\
+                                          optimizer="default" if env.chi>1 else "auto")
     R= contract_with_unroll(*contract_tn,optimize=path,backend='torch',unroll=unroll,
         checkpoint_unrolled=checkpoint_unrolled,checkpoint_on_device=checkpoint_on_device,
         who=who,verbosity=verbosity)
@@ -814,7 +818,8 @@ def rdm1x2_sl(coord, state, env, sym_pos_def=False, force_cpu=False, unroll=Fals
     # This (typical) strategy is optimal, when X >> D^2 >> phys_dim
     #
     # path= ((1, 6), (0, 12), (3, 11), (2, 10), (1, 9), (0, 8), (2, 5), (1, 6), (3, 5), (2, 4), (1, 3), (0, 2), (0, 1))
-    path, path_info= get_contraction_path(*contract_tn,names=names,path=None,unroll=unroll,who=who)
+    path, path_info= get_contraction_path(*contract_tn,names=names,path=None,unroll=unroll,who=who,\
+                                          optimizer="default" if env.chi>1 else "auto")
     R= contract_with_unroll(*contract_tn,optimize=path,backend='torch',unroll=unroll,
         checkpoint_unrolled=checkpoint_unrolled,checkpoint_on_device=checkpoint_on_device,
         who=who,verbosity=verbosity)
@@ -1082,7 +1087,7 @@ def rdm2x2_NNN_1n1_oe(coord, state, env, sym_pos_def=False, force_cpu=False,
     if type(unroll)==bool and unroll:
         unroll= [11,14,22,25]
     path, path_info= get_contraction_path(*contract_tn,names=names,path=None,\
-        unroll=unroll if unroll else [],who=who)
+        unroll=unroll if unroll else [],who=who,optimizer="default" if env.chi>1 else "auto")
     R= contract_with_unroll(*contract_tn,optimize=path,unroll=unroll if unroll else [],\
         checkpoint_unrolled=checkpoint_unrolled,
         checkpoint_on_device=checkpoint_on_device,
@@ -1454,7 +1459,7 @@ def rdm2x2_oe(coord, state, env, open_sites=[0,1,2,3], unroll=False,
     if type(unroll)==bool and unroll:
         unroll= I_out
     path, path_info= get_contraction_path(*contract_tn,unroll=unroll,\
-        names=names,path=None,who=who)
+        names=names,path=None,who=who,optimizer="default" if env.chi>1 else "auto")
     R= contract_with_unroll(*contract_tn,unroll=unroll,optimize=path,backend='torch',
         checkpoint_unrolled=checkpoint_unrolled,checkpoint_on_device=checkpoint_on_device,
         who=who,verbosity=verbosity)

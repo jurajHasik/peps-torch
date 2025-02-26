@@ -146,7 +146,7 @@ class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
 
         Initializes IPESS_KAGOME_GENERIC_ABELIAN from checkpoint file. 
         """
-        checkpoint= torch.load(checkpoint_file, map_location=self.device)
+        checkpoint= torch.load(checkpoint_file, map_location=self.device, weights_only=False)
         self.ipess_tensors= {ind: yastn.load_from_dict(config= self.engine, d=t_dict_repr) \
             for ind,t_dict_repr in checkpoint["parameters"].items()}
         for t in self.ipess_tensors.values(): t.requires_grad_(False)
@@ -221,7 +221,7 @@ class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
         if noise==0: return self
         ipess_tensors= {}
         for ind,t in self.ipess_tensors.items():
-            ts, Ds= t.get_leg_charges_and_dims(native=True)
+            ts, Ds= (l.t for l in t.get_legs(native=True)), (l.D for l in t.get_legs(native=True))
             t_noise= yastn.rand(config= t.config, s=t.s, n=t.n, t=ts, D=Ds, isdiag=t.isdiag)
             ipess_tensors[ind]= t + noise*t_noise
         return IPESS_KAGOME_GENERIC_ABELIAN(self.engine, ipess_tensors,\

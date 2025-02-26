@@ -111,7 +111,7 @@ class IPESS_KAGOME_GENERIC(IPEPS_KAGOME):
         return self.ipess_tensors
 
     def load_checkpoint(self, checkpoint_file):
-        checkpoint= torch.load(checkpoint_file, map_location=self.device)
+        checkpoint= torch.load(checkpoint_file, map_location=self.device, weights_only=False)
         self.ipess_tensors= checkpoint["parameters"]
         for t in self.ipess_tensors.values(): t.requires_grad_(False)
         self.sites = self.build_onsite_tensors()
@@ -470,7 +470,7 @@ class IPESS_KAGOME_PG(IPESS_KAGOME_GENERIC):
         return self.elem_tensors
 
     def load_checkpoint(self, checkpoint_file):
-        checkpoint= torch.load(checkpoint_file, map_location=self.device)
+        checkpoint= torch.load(checkpoint_file, map_location=self.device, weights_only=False)
         elem_t= checkpoint["parameters"]
 
         # legacy handling
@@ -869,7 +869,7 @@ class IPESS_KAGOME_PG_LC(IPESS_KAGOME_PG):
         return dict(coeffs= self.coeffs, basis_t= self.basis_t)
 
     def load_checkpoint(self, checkpoint_file):
-        checkpoint= torch.load(checkpoint_file, map_location=self.device)
+        checkpoint= torch.load(checkpoint_file, map_location=self.device, weights_only=False)
         self.coeffs= checkpoint["parameters"]["coeffs"]
         self.basis_t= checkpoint["parameters"]["basis_t"]
         self.update_()
@@ -877,7 +877,7 @@ class IPESS_KAGOME_PG_LC(IPESS_KAGOME_PG):
     @staticmethod
     def create_from_checkpoint(checkpoint_file, SYM_UP_DOWN=True, SYM_BOND_S=True,\
             pgs=None, peps_args=cfg.peps_args, global_args=cfg.global_args):
-        checkpoint= torch.load(checkpoint_file, map_location=global_args.device)
+        checkpoint= torch.load(checkpoint_file, map_location=global_args.device, weights_only=False)
         coeffs= checkpoint["parameters"]["coeffs"]
         basis_t= checkpoint["parameters"]["basis_t"]
         c_b= { ind: (coeffs[ind], basis_t[ind]) for ind in coeffs.keys() }

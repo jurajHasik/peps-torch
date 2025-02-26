@@ -57,7 +57,7 @@ class IPEPS_D2SYM(ipeps.IPEPS):
         return self.parent_site
 
     def load_checkpoint(self,checkpoint_file):
-        checkpoint= torch.load(checkpoint_file)
+        checkpoint= torch.load(checkpoint_file, weights_only=False)
         self.parent_site= checkpoint["parameters"]
         self.parent_site.requires_grad_(False)
         self.sites= self.build_onsite_tensors()

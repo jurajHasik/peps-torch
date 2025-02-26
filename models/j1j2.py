@@ -15,65 +15,166 @@ import itertools
 def _cast_to_real(t):
     return t.real if t.is_complex() else t
 
+# function generating properly rotated operators on every bi-partite site
+def _conjugate_op(op,model):
+    rot_op= su2.get_rot_op(model.phys_dim, dtype=model.dtype, device=model.device)
+    op_0= op
+    op_rot= torch.einsum('ki,kl,lj->ij',rot_op,op_0,rot_op)
+    def _gen_op(r):
+        return op_rot if r%2==0 else op_0
+    return _gen_op
+
+def eval_nnnn_per_site(coord,state,env,obs_ops):
+    # Next-to-next nearest neighbour interaction in horizontal(x) and vertical(y) directions
+    def _conj_id(op):
+        return lambda r: op
+    szsz_x = corrf.corrf_1sO1sO(coord, (1, 0), state, env, obs_ops["sz"],
+                                _conj_id(obs_ops["sz"]), 2)
+    smsp_x = corrf.corrf_1sO1sO(coord, (1, 0), state, env, obs_ops["sm"],
+                                _conj_id(obs_ops["sp"]), 2)
+    spsm_x = corrf.corrf_1sO1sO(coord, (1, 0), state, env, obs_ops["sp"],
+                                _conj_id(obs_ops["sm"]), 2)
+    szsz_y = corrf.corrf_1sO1sO(coord, (0, 1), state, env, obs_ops["sz"],
+                                _conj_id(obs_ops["sz"]), 2)
+    spsm_y = corrf.corrf_1sO1sO(coord, (0, 1), state, env, obs_ops["sp"],
+                                _conj_id(obs_ops["sm"]), 2)
+    smsp_y = corrf.corrf_1sO1sO(coord, (0, 1), state, env, obs_ops["sm"],
+                                _conj_id(obs_ops["sp"]), 2)
+    nnnn_per_site= (szsz_x[1] + szsz_y[1] + 0.5 * (spsm_x[1] + spsm_y[1] + smsp_x[1] + smsp_y[1]))
+    return nnnn_per_site
+
 class J1J2():
-    def __init__(self, j1=1.0, j2=0, global_args=cfg.global_args):
+    def __init__(self, j1=1.0, j2=0, j3=0, hz_stag= 0, delta_zz=1, lmbd=0, h_uni= [0,0,0],
+        global_args=cfg.global_args):
         r"""
         :param j1: nearest-neighbour interaction
         :param j2: next nearest-neighbour interaction
+        :param j3: next-to-next nearest-neighbour interaction
+        :param hz_stag: staggered magnetic field in spin-z direction
+        :param delta_zz: easy-axis (nearest-neighbour) anisotropy
         :param global_args: global configuration
+        :param lmbd: chiral 4-site (plaquette) interaction
+        :type lmbd: float
+        :param h_uni: uniform magnetic field in direction [h^z, h^x, h^y]
+        :type h_uni: list(float)
         :type j1: float
         :type j2: float
+        :type j3: float
+        :type hz_stag: float
+        :type detla_zz: float
         :type global_args: GLOBALARGS
+        
+        Build Spin-1/2 :math:`J_1-J_2-J_3-\lambda-h^z_{stag}-h^y` Hamiltonian
 
-        Build Spin-1/2 :math:`J_1-J_2` Hamiltonian
+        .. math:: 
 
-        .. math:: H = J_1\sum_{<i,j>} \mathbf{S}_i.\mathbf{S}_j + J_2\sum_{<<i,j>>} 
-                  \mathbf{S}_i.\mathbf{S}_j
-
-        on the square lattice. Where the first sum runs over the pairs of sites `i,j` 
-        which are nearest-neighbours (denoted as `<.,.>`), and the second sum runs over 
-        pairs of sites `i,j` which are next nearest-neighbours (denoted as `<<.,.>>`)
+            H = J_1\sum_{<i,j>} \mathbf{S}_i.\mathbf{S}_j 
+                + J_2\sum_{<<i,j>>} \mathbf{S}_i.\mathbf{S}_j
+                + J_3\sum_{<<<i,j>>>} \mathbf{S}_i.\mathbf{S}_j
+                + i\lambda \sum_p P_p - P^{-1}_p
+                - \sum_i (-1) h^z_{stag} S^z_i + \vec{h}_{uni}\cdot\vec{S}_i
+        
+        on the square lattice. Where 
+            * the first sum runs over the pairs of sites `i,j` which are nearest-neighbours (denoted as `<.,.>`), 
+            * the second sum runs over pairs of sites `i,j` which are next nearest-neighbours (denoted as `<<.,.>>`), 
+            * the third sum runs over pairs of sites `i,j` which are next-to-next nearest-neighbours (denoted as `<<<.,.>>>`),
+            * the fourth sum runs over all plaquettes `p`, the chiral term P permutes spins on the plaquette in clockwise order 
+              and its inverse P^{-1} in anti-clockwise order,
+            * the fifth sum runs over all sites applying staggered field in spin-z direction and uniform
+              field in :math:`\vec{h}_uni` direction
         """
         self.dtype=global_args.torch_dtype
         self.device=global_args.device
         self.phys_dim=2
         self.j1=j1
         self.j2=j2
-        
-        self.h2, self.SS_rot, self.h2x2_nn, self.h2x2_nnn, self.h2x2_nn_rot, \
-            self.h2x2_nnn_rot= self.get_h()
-        self.obs_ops= self.get_obs_ops()
+        self.j3=j3
+        self.lmbd= lmbd
+        self.hz_stag=hz_stag
+        self.h_uni=torch.as_tensor(h_uni,device=self.device,dtype=self.dtype)
+        self.delta_zz=delta_zz
 
-    def get_h(self):
+        if self.lmbd != 0: assert torch.rand(1, dtype=self.dtype).is_complex(),\
+            "Invalid dtype: Lambda requires complex numbers"
+        if self.h_uni[2] != 0: assert torch.rand(1, dtype=self.dtype).is_complex(),\
+            "Invalid dtype: h^y field requires complex numbers"
+
         s2 = su2.SU2(self.phys_dim, dtype=self.dtype, device=self.device)
-        id2= torch.eye(4,dtype=self.dtype,device=self.device)
-        id2= id2.view(2,2,2,2).contiguous()
-        rot_op= s2.BP_rot()
+        id2= s2.I_N(N=2)
+        id3= s2.I_N(N=3)
         expr_kron = 'ij,ab->iajb'
-        SS= torch.einsum(expr_kron,s2.SZ(),s2.SZ()) + 0.5*(torch.einsum(expr_kron,s2.SP(),s2.SM()) \
-            + torch.einsum(expr_kron,s2.SM(),s2.SP()))
-        SS= SS.contiguous()
 
-        SS_rot= torch.einsum('ki,kjcb,ca->ijab',rot_op,SS,rot_op)
+        self.SS_delta_zz= s2.SS(xyz=(delta_zz,1.,1.))
+        self.SS= s2.SS()
+        h_uni_1x1= torch.einsum('x,xia->ia',self.h_uni,s2.S())
+        hz_2x1_nn= torch.einsum(expr_kron,s2.SZ(),s2.I())\
+            +torch.einsum(expr_kron,s2.I(),-s2.SZ())
+        huni_2x1_nn= torch.einsum(expr_kron,h_uni_1x1,s2.I())\
+            +torch.einsum(expr_kron,s2.I(),h_uni_1x1)
+
+        rot_op= s2.BP_rot()
+        self.SS_rot= torch.einsum('ki,kjcb,ca->ijab',rot_op,self.SS,rot_op).contiguous()
+        self.SS_delta_zz_rot= torch.einsum('ki,kjcb,ca->ijab',rot_op,self.SS_delta_zz,rot_op).contiguous()
+        self.hz_2x1_rot= torch.einsum('ki,kjcb,ca->ijab',rot_op,hz_2x1_nn,rot_op).contiguous()
+        self.huni_2x1_rot= torch.einsum('ki,kjcb,ca->ijab',rot_op,huni_2x1_nn,rot_op).contiguous()
+
+        h2x2_SS_delta_zz= torch.einsum('ijab,klcd->ijklabcd',self.SS_delta_zz,id2) # nearest neighbours
+        h2x2_SS= torch.einsum('ijab,klcd->ijklabcd',self.SS,id2) # next-nearest neighbours
+        h2x2_hz_stag= torch.einsum('ia,jklbcd->ijklabcd',s2.SZ(),id3)
+        h2x2_huni= torch.einsum('ia,jklbcd->ijklabcd', h_uni_1x1 ,id3)
         
-        h2x2_SS= torch.einsum('ijab,klcd->ijklabcd',SS,id2)
-        h2x2_nn= h2x2_SS + h2x2_SS.permute(2,3,0,1,6,7,4,5) + h2x2_SS.permute(0,2,1,3,4,6,5,7)\
-            + h2x2_SS.permute(2,0,3,1,6,4,7,5)
-        h2x2_nnn= h2x2_SS.permute(0,3,2,1,4,7,6,5) + h2x2_SS.permute(2,0,1,3,6,4,5,7)
+        # hp aggregates all terms within plaquette, such that energy-per-site= <h_p>= <H>/number-of-sites
+        #
+        # 0 1     0 1   0 x   x x   x 1
+        # 2 3 ... x x + 2 x + 2 3 + x 3
+        def get_hp(coord):
+            hp= 0.5*self.j1*(h2x2_SS_delta_zz + h2x2_SS_delta_zz.permute(0,2,1,3,4,6,5,7)\
+               + h2x2_SS_delta_zz.permute(2,3,0,1,6,7,4,5) + h2x2_SS_delta_zz.permute(3,1,2,0,7,5,6,4)) \
+               + self.j2*(h2x2_SS.permute(0,3,2,1,4,7,6,5) + h2x2_SS.permute(2,1,0,3,6,5,4,7))\
+               - 0.25*self.hz_stag*((-1)**(coord[0]+coord[1]))*(h2x2_hz_stag\
+                    -h2x2_hz_stag.permute(3,0,1,2, 7,4,5,6)\
+                    -h2x2_hz_stag.permute(2,3,0,1, 6,7,4,5) +h2x2_hz_stag.permute(1,2,3,0, 5,6,7,4))\
+               + 0.25*(h2x2_huni + h2x2_huni.permute(2,3,0,1, 6,7,4,5)\
+                    + h2x2_huni.permute(3,0,1,2, 7,4,5,6) + h2x2_huni.permute(1,2,3,0, 5,6,7,4))
+            return hp
+
+        self.get_hp= get_hp
+
+        self.hp_rot= torch.einsum('xj,yk,ixylauvd,ub,vc->ijklabcd',\
+            rot_op,rot_op,self.get_hp((0,0)),rot_op,rot_op).contiguous()
+
+        self.chiral_term=self.chiral_term_rot= 0*s2.I_N(N=4)
+        self.hp_chiral=self.hp_chiral_rot= self.chiral_term_rot
+        if self.phys_dim==2 and self.lmbd!=0:
+            # ----- phys_dim= 2 specific code -----
+            # chiral term
+            # build permutation operator i->j->k->l->i
+            P12= torch.as_tensor([[1,0,0,0],[0,0,1,0],[0,1,0,0],[0,0,0,1]], \
+                dtype=self.dtype, device=self.device)
+            P12= P12.view(2,2,2,2)
+
+            # 0<->1 , Id, Id
+            P12II= torch.einsum('abij,cdkl->abcdijkl',P12, id2)
+            PI12I= P12II.permute(3,0,1,2, 7,4,5,6).contiguous()
+            PII12= P12II.permute(2,3,0,1, 6,7,4,5).contiguous()
+            # Id, Id, 2<-3>
+            # Id, 1<->2, Id
+            # 0<->1, Id, Id
+            P4= torch.tensordot(PI12I, P12II, ([4,5,6,7],[0,1,2,3]))
+            P4= torch.tensordot(PII12, P4, ([4,5,6,7],[0,1,2,3]))
+            chiral_term= 1.0j*( P4 - P4.view(16,16).t().view(2,2,2,2,2,2,2,2) )
+
+            # spins are ordered as s0 s1 hence, to be compatible with 2x2 RDM permute
+            #                      s2 s3
+            # 
+            # s0 s1 => s0 s1
+            # s2 s3    s3 s2
+            self.chiral_term= chiral_term.permute(0,1,3,2, 4,5,7,6)
+            self.chiral_term_rot= torch.einsum('xj,yk,ixylauvd,ub,vc->ijklabcd',\
+                rot_op,rot_op,self.chiral_term,rot_op,rot_op).contiguous()
+            self.hp_chiral_rot= self.lmbd*self.chiral_term_rot
         
-        h2x2_nn= h2x2_nn.contiguous()
-        h2x2_nnn= h2x2_nnn.contiguous()
-
-        # sublattice rotation for single-site bipartite (BP) ansatz
-        h2x2_nn_rot= torch.einsum('irtlaxyd,jr,kt,xb,yc->ijklabcd',\
-            h2x2_nn,rot_op,rot_op,rot_op,rot_op)
-        h2x2_nnn_rot= torch.einsum('irtlaxyd,jr,kt,xb,yc->ijklabcd',\
-            h2x2_nnn,rot_op,rot_op,rot_op,rot_op)
-
-        h2x2_nn_rot= h2x2_nn_rot.contiguous()
-        h2x2_nnn_rot= h2x2_nnn_rot.contiguous()
-
-        return SS, SS_rot, h2x2_nn, h2x2_nnn, h2x2_nn_rot, h2x2_nnn_rot
+        self.obs_ops = self.get_obs_ops()
 
     def get_obs_ops(self):
         obs_ops = dict()
@@ -106,12 +207,43 @@ class J1J2():
         A single reduced density matrix :py:func:`ctm.rdm.rdm2x2` of a 2x2 plaquette
         is used to evaluate the energy.
         """
+        assert self.h_uni[:2].norm()==0,\
+            "only spin-y direction uniform field is compatible with single-site C4v symmetric ansatz"
         tmp_rdm= rdm.rdm2x2((0,0),state,env)
-        energy_nn= torch.einsum('ijklabcd,ijklabcd',tmp_rdm,self.h2x2_nn_rot)
-        energy_nnn= torch.einsum('ijklabcd,ijklabcd',tmp_rdm,self.h2x2_nnn_rot)
-        energy_per_site= 2.0*(self.j1*energy_nn/4.0 + self.j2*energy_nnn/2.0)
-        energy_per_site= _cast_to_real(energy_per_site) 
+        energy_per_site= torch.einsum('ijklabcd,ijklabcd',tmp_rdm,self.hp_rot)
+        if abs(self.lmbd)>0:
+            energy_per_site+= torch.einsum('ijklabcd,ijklabcd',tmp_rdm,self.hp_chiral_rot)
+        if abs(self.j3)>0:
+            energy_nnnn_per_site= eval_nnnn_per_site((0,0),state,env,self.obs_ops)
+            energy_per_site+= self.j3 * energy_nnnn_per_site
+        energy_per_site= _cast_to_real(energy_per_site)
 
+        return energy_per_site
+
+    def energy_per_site(self,state,env):
+        r"""
+        :param state: wavefunction
+        :param env: CTM environment
+        :type state: IPEPS
+        :type env: ENV
+        :return: energy per site
+        :rtype: float
+
+        Evaluates all non-equivalent energy contributions within unit cell
+        by evaluating all terms aggragated within 4-site plaquette operator over 
+        non-equivalent plaquettes and all non-equivalent next-to-next nearest neighbour terms.
+        """
+        energy_plaquettes=0
+        energy_nnnn= 0
+        for coord in state.sites.keys():
+            tmp_rdm= rdm.rdm2x2(coord,state,env)
+            energy_plaquettes += torch.einsum('ijklabcd,ijklabcd',tmp_rdm,self.get_hp(coord))
+            if abs(self.lmbd)>0:
+                energy_plaquettes += self.lmbd*torch.einsum('ijklabcd,ijklabcd',tmp_rdm,self.chiral_term)
+            if abs(self.j3)>0:
+                energy_nnnn += self.j3*eval_nnnn_per_site((0,0),state,env,self.obs_ops)
+        energy_cell= energy_plaquettes+energy_nnnn
+        energy_per_site= _cast_to_real(energy_cell/len(state.sites))
         return energy_per_site
 
     def energy_2x2_2site(self,state,env):
@@ -170,16 +302,7 @@ class J1J2():
         # 2 \/ 2   2 \/ 2
         # 0 /\ 0   0 /\ 0
         # A3--1B & B3--1A
-        energy_nn=0
-        energy_nnn=0
-        for coord in state.sites.keys():
-            tmp_rdm= rdm.rdm2x2(coord,state,env)
-            energy_nn += torch.einsum('ijklabcd,ijklabcd',tmp_rdm,self.h2x2_nn)
-            energy_nnn += torch.einsum('ijklabcd,ijklabcd',tmp_rdm,self.h2x2_nnn)
-        energy_per_site= 2.0*(self.j1*energy_nn/8.0 + self.j2*energy_nnn/4.0)
-        energy_per_site= _cast_to_real(energy_per_site)
-
-        return energy_per_site
+        return self.energy_per_site(state,env)
 
     def energy_2x2_4site(self,state,env):
         r"""
@@ -216,16 +339,7 @@ class J1J2():
             0    0   0    0   0    0   0    0
             C3--1D & D3--1C & A3--1B & B3--1A
         """
-        energy_nn=0
-        energy_nnn=0
-        for coord in state.sites.keys():
-            tmp_rdm= rdm.rdm2x2(coord,state,env)
-            energy_nn += torch.einsum('ijklabcd,ijklabcd',tmp_rdm,self.h2x2_nn)
-            energy_nnn += torch.einsum('ijklabcd,ijklabcd',tmp_rdm,self.h2x2_nnn)
-        energy_per_site= 2.0*(self.j1*energy_nn/16.0 + self.j2*energy_nnn/8.0)
-        energy_per_site= _cast_to_real(energy_per_site)
-
-        return energy_per_site
+        return self.energy_2x2_2site(state,env)
 
     def energy_2x2_8site(self,state,env):
         r"""
@@ -267,16 +381,7 @@ class J1J2():
             0    0   0    0   0    0   0    0
             B3--1E & E3--1F & F3--1A & A3--1B 
         """
-        energy_nn=0
-        energy_nnn=0
-        for coord in state.sites.keys():
-            tmp_rdm= rdm.rdm2x2(coord,state,env)
-            energy_nn += torch.einsum('ijklabcd,ijklabcd',tmp_rdm,self.h2x2_nn)
-            energy_nnn += torch.einsum('ijklabcd,ijklabcd',tmp_rdm,self.h2x2_nnn)
-        energy_per_site= 2.0*(self.j1*energy_nn/32.0 + self.j2*energy_nnn/16.0)
-        energy_per_site= _cast_to_real(energy_per_site)
-
-        return energy_per_site
+        return self.energy_2x2_2site(state,env)
 
     def eval_obs_1site_BP(self,state,env):
         r"""
@@ -355,8 +460,8 @@ class J1J2():
             for coord,site in state.sites.items():
                 rdm2x1 = rdm.rdm2x1(coord,state,env)
                 rdm1x2 = rdm.rdm1x2(coord,state,env)
-                SS2x1= torch.einsum('ijab,ijab',rdm2x1,self.h2)
-                SS1x2= torch.einsum('ijab,ijab',rdm1x2,self.h2)
+                SS2x1= torch.einsum('ijab,ijab',rdm2x1,self.SS)
+                SS1x2= torch.einsum('ijab,ijab',rdm1x2,self.SS)
                 obs[f"SS2x1{coord}"]= _cast_to_real(SS2x1)
                 obs[f"SS1x2{coord}"]= _cast_to_real(SS1x2)
         
@@ -368,7 +473,7 @@ class J1J2():
         obs_values=[obs[label] for label in obs_labels]
         return obs_values, obs_labels
 
-    def eval_corrf_SS(self,coord,direction,state,env,dist):
+    def eval_corrf_SS(self,coord,direction,state,env,dist,conjugate=False):
         r"""
         :param coord: reference site
         :type coord: tuple(int,int)
@@ -380,25 +485,19 @@ class J1J2():
         :type env: ENV
         :param dist: maximal distance of correlator
         :type dist: int
+        :param conjugate: conjugate operator by sublattice rotation :math:`-i\sigma^y` on every
+                          sublattice-B site of bipartite lattice
+        :type conjugate: bool
         :return: dictionary with full and spin-resolved spin-spin correlation functions
         :rtype: dict(str: torch.Tensor)
         
         Evaluate spin-spin correlation functions :math:`\langle\mathbf{S}(r).\mathbf{S}(0)\rangle` 
         up to r = ``dist`` in given direction. See :meth:`ctm.generic.corrf.corrf_1sO1sO`.
         """
-        # function allowing for additional site-dependent conjugation of op
-        def conjugate_op(op):
-            #rot_op= su2.get_rot_op(self.phys_dim, dtype=self.dtype, device=self.device)
-            rot_op= torch.eye(self.phys_dim, dtype=self.dtype, device=self.device)
-            op_0= op
-            op_rot= torch.einsum('ki,kl,lj->ij',rot_op,op_0,rot_op)
-            def _gen_op(r):
-                #return op_rot if r%2==0 else op_0
-                return op_0
-            return _gen_op
-
         op_sx= 0.5*(self.obs_ops["sp"] + self.obs_ops["sm"])
         op_isy= -0.5*(self.obs_ops["sp"] - self.obs_ops["sm"]) 
+
+        conjugate_op= (lambda op: _conjugate_op(op,self)) if conjugate else lambda op: (lambda r: op) 
 
         Sz0szR= corrf.corrf_1sO1sO(coord,direction,state,env, self.obs_ops["sz"], \
             conjugate_op(self.obs_ops["sz"]), dist)
@@ -408,16 +507,42 @@ class J1J2():
         res= dict({"ss": Sz0szR+Sx0sxR-nSy0SyR, "szsz": Sz0szR, "sxsx": Sx0sxR, "sysy": -nSy0SyR})
         return res  
 
-class J1J2_C4V_BIPARTITE():
-    def __init__(self, j1=1.0, j2=0, j3=0, hz_stag= 0.0, delta_zz=1.0, \
+    def eval_corrf_SpSm(self,coord,direction,state,env,dist,conjugate=False):
+        r"""
+        :return: dictionary with correlation functions
+        :rtype: dict(str: torch.Tensor)
+
+        Evaluates :math:`\langle S^+(0)S^-(r) \rangle` and :math:`\langle S^-(0)S^+(r) \rangle`
+        correlation functions.
+
+        See :meth:`eval_corrf_SS`.
+        """
+        op_sp = self.obs_ops["sp"]
+        op_sm = self.obs_ops["sm"]
+   
+        conjugate_op= (lambda op: _conjugate_op(op,self)) if conjugate else lambda op: (lambda r: op)
+
+        Sp0smR = corrf.corrf_1sO1sO(coord,direction,state,env, op_sp, conjugate_op(op_sm), dist)
+        Sm0spR = corrf.corrf_1sO1sO(coord,direction,state,env, op_sm, conjugate_op(op_sp), dist)
+
+        res= dict({"spsm": Sp0smR, "smsp": Sm0spR})
+        return res
+
+
+class J1J2_C4V_BIPARTITE(J1J2):
+    def __init__(self, j1=1.0, j2=0, j3=0, hz_stag= 0, delta_zz=1, lmbd=0, h_uni= [0,0,0],
         global_args=cfg.global_args):
         r"""
         :param j1: nearest-neighbour interaction
         :param j2: next nearest-neighbour interaction
         :param j3: next-to-next nearest-neighbour interaction
-        :param hz_stag: staggered magnetic field
+        :param hz_stag: staggered magnetic field in spin-z direction
         :param delta_zz: easy-axis (nearest-neighbour) anisotropy
         :param global_args: global configuration
+        :param lmbd: chiral 4-site (plaquette) interaction
+        :type lmbd: float
+        :param h_uni: uniform magnetic field in direction [h^z, h^x, h^y]
+        :type h_uni: list(float)
         :type j1: float
         :type j2: float
         :type j3: float
@@ -425,7 +550,7 @@ class J1J2_C4V_BIPARTITE():
         :type detla_zz: float
         :type global_args: GLOBALARGS
         
-        Build Spin-1/2 :math:`J_1-J_2-J_3` Hamiltonian
+        See :class:`J1J2`.
 
         .. math::
 
@@ -437,6 +562,12 @@ class J1J2_C4V_BIPARTITE():
         pairs of sites `i,j` which are next nearest-neighbours (denoted as `<<.,.>>`), and 
         the last sum runs over pairs of sites `i,j` which are next-to-next nearest-neighbours 
         (denoted as `<<<.,.>>>`).
+        
+        .. note::
+            Unifrom field in z-, and x-directions has no effect on single-site C4v symmetric state
+            by construction. Uniform magnetization in y-direction is prohibited by projection
+            of the on-site tensor to :math:`A_1 + iA_2` irrep.
+            
         """
         # where
         # * :math:`h_p = J_1(S^x_{r}.S^x_{r+\vec{x}} 
@@ -445,48 +576,9 @@ class J1J2_C4V_BIPARTITE():
         #   + h_stag (S^z_{r} - S^z_{r+\vec{x}} - S^z_{r+\vec{y}} + S^z_{r+\vec{x}+\vec{y}})` 
         #   with indices of spins ordered as follows :math:`s_r s_{r+\vec{x}} s_{r+\vec{y}} s_{r+\vec{x}+\vec{y}};
         #   s'_r s'_{r+\vec{x}} s'_{r+\vec{y}} s'_{r+\vec{x}+\vec{y}}`
-        self.dtype=global_args.torch_dtype
-        self.device=global_args.device
-        self.phys_dim=2
-        self.j1=j1
-        self.j2=j2
-        self.j3=j3
-        self.hz_stag=hz_stag
-        self.delta_zz=delta_zz
-        
-        self.obs_ops = self.get_obs_ops()
-
-        s2 = su2.SU2(self.phys_dim, dtype=self.dtype, device=self.device)
-        id2= torch.eye(self.phys_dim**2,dtype=self.dtype,device=self.device)
-        id2= id2.view(tuple([self.phys_dim]*4)).contiguous()
-        expr_kron = 'ij,ab->iajb'
-
-        self.SS_delta_zz= self.delta_zz*torch.einsum(expr_kron,s2.SZ(),s2.SZ()) + \
-            0.5*(torch.einsum(expr_kron,s2.SP(),s2.SM()) \
-            + torch.einsum(expr_kron,s2.SM(),s2.SP()))
-        self.SS= torch.einsum(expr_kron,s2.SZ(),s2.SZ()) + \
-            0.5*(torch.einsum(expr_kron,s2.SP(),s2.SM()) \
-            + torch.einsum(expr_kron,s2.SM(),s2.SP()))
-        hz_2x1_nn= torch.einsum(expr_kron,s2.SZ(),s2.I())+torch.einsum(expr_kron,s2.I(),-s2.SZ())
-
-        rot_op= s2.BP_rot()
-        SS_rot= torch.einsum('ki,kjcb,ca->ijab',rot_op,self.SS,rot_op)
-        SS_delta_zz_rot= torch.einsum('ki,kjcb,ca->ijab',rot_op,self.SS_delta_zz,rot_op)
-        hz_2x1_rot= torch.einsum('ki,kjcb,ca->ijab',rot_op,hz_2x1_nn,rot_op)
-        self.SS_rot= SS_rot.contiguous()
-        self.SS_delta_zz_rot= SS_delta_zz_rot.contiguous()
-        self.hz_2x1_rot= hz_2x1_rot.contiguous()
-
-        h2x2_SS_delta_zz= torch.einsum('ijab,klcd->ijklabcd',self.SS_delta_zz,id2) # nearest neighbours
-        h2x2_SS= torch.einsum('ijab,klcd->ijklabcd',self.SS,id2) # next-nearest neighbours
-        # 0 1     0 1   0 x   x x   x 1
-        # 2 3 ... x x + 2 x + 2 3 + x 3
-        hp= 0.5*self.j1*(h2x2_SS_delta_zz + h2x2_SS_delta_zz.permute(0,2,1,3,4,6,5,7)\
-           + h2x2_SS_delta_zz.permute(2,3,0,1,6,7,4,5) + h2x2_SS_delta_zz.permute(3,1,2,0,7,5,6,4)) \
-           + self.j2*(h2x2_SS.permute(0,3,2,1,4,7,6,5) + h2x2_SS.permute(2,1,0,3,6,5,4,7))\
-           - 0.25*self.hz_stag*torch.einsum('ia,jb,kc,ld->ijklabcd',s2.SZ(),-s2.SZ(),-s2.SZ(),s2.SZ())
-        hp= torch.einsum('xj,yk,ixylauvd,ub,vc->ijklabcd',rot_op,rot_op,hp,rot_op,rot_op)
-        self.hp= hp.contiguous()
+        super().__init__(j1=j1, j2=j2, j3=j3, hz_stag=hz_stag, delta_zz=delta_zz, lmbd=lmbd, 
+            h_uni= h_uni, global_args=global_args)
+        self.obs_ops= self.get_obs_ops()
 
     def get_obs_ops(self):
         obs_ops = dict()
@@ -496,12 +588,14 @@ class J1J2_C4V_BIPARTITE():
         obs_ops["sm"]= s2.SM()
         return obs_ops
 
-    def energy_1x1(self,state,env_c4v,**kwargs):
+    def energy_1x1(self,state,env_c4v,force_cpu=False,**kwargs):
         r"""
         :param state: wavefunction
         :param env_c4v: CTM c4v symmetric environment
         :type state: IPEPS_C4V
         :type env_c4v: ENV_C4V
+        :param force_cpu: perform computation on CPU
+        :type force_cpu: bool
         :return: energy per site
         :rtype: float
 
@@ -532,7 +626,9 @@ class J1J2_C4V_BIPARTITE():
         """
         rdm2x2= rdm_c4v.rdm2x2(state,env_c4v,sym_pos_def=True,\
             verbosity=cfg.ctm_args.verbosity_rdm)
-        energy_per_site= torch.einsum('ijklabcd,ijklabcd',rdm2x2,self.hp)
+        energy_per_site= torch.einsum('ijklabcd,ijklabcd',rdm2x2,self.hp_rot)
+        if abs(self.lmbd)>0:
+            energy_per_site+= torch.einsum('ijklabcd,ijklabcd',rdm2x2,self.hp_chiral_rot)
         if abs(self.j3)>0:
             rdm3x1= rdm_c4v.rdm3x1(state,env_c4v,sym_pos_def=True,\
                 force_cpu=False,verbosity=cfg.ctm_args.verbosity_rdm)
@@ -561,10 +657,13 @@ class J1J2_C4V_BIPARTITE():
             * NNN: :meth:`ctm.one_site_c4v.rdm_c4v.rdm2x2_NNN_lowmem_sl`
             * NNNN: :meth:`ctm.one_site_c4v.rdm_c4v.rdm3x1_sl`
         """
+        assert self.lmbd==0,"energy_1x1_lowmem does not account for lambda term"
         rdm2x2_NN= rdm_c4v.rdm2x2_NN_lowmem_sl(state, env_c4v, sym_pos_def=True,\
             force_cpu=force_cpu, verbosity=cfg.ctm_args.verbosity_rdm)
         energy_per_site= 2.0*self.j1*torch.einsum('ijkl,ijkl',rdm2x2_NN,self.SS_delta_zz_rot)\
             - 0.5*self.hz_stag * torch.einsum('ijkl,ijkl',rdm2x2_NN,self.hz_2x1_rot)
+        if abs(self.h_uni.norm())>0:
+            energy_per_site+= 0.5*torch.einsum('ijkl,ijkl',rdm2x2_NN,self.huni_2x1_rot)
         if abs(self.j2)>0:
             rdm2x2_NNN= rdm_c4v.rdm2x2_NNN_lowmem_sl(state, env_c4v, sym_pos_def=True,\
                 force_cpu=force_cpu, verbosity=cfg.ctm_args.verbosity_rdm)
@@ -599,10 +698,13 @@ class J1J2_C4V_BIPARTITE():
             * NNN: :meth:`ctm.one_site_c4v.rdm_c4v_specialized.rdm2x2_NNN_tiled`
             * NNNN: :meth:`ctm.one_site_c4v.rdm_c4v.rdm3x1_sl`
         """
+        assert self.lmbd==0,"energy_1x1_lowmem does not account for lambda term"
         rdm2x2_NN= rdm2x2_NN_tiled(state, env_c4v, sym_pos_def=True,\
             force_cpu=force_cpu, verbosity=cfg.ctm_args.verbosity_rdm)
         energy_per_site= 2.0*self.j1*torch.einsum('ijkl,ijkl',rdm2x2_NN,self.SS_delta_zz_rot)\
             - 0.5*self.hz_stag * torch.einsum('ijkl,ijkl',rdm2x2_NN,self.hz_2x1_rot)
+        if abs(self.h_uni.norm())>0:
+            energy_per_site+= 0.5* torch.einsum('ijkl,ijkl',rdm2x2_NN,self.huni_2x1_rot)
         if abs(self.j2)>0:
             rdm2x2_NNN= rdm2x2_NNN_tiled(state, env_c4v, sym_pos_def=True,\
                 force_cpu=force_cpu, verbosity=cfg.ctm_args.verbosity_rdm)
@@ -648,6 +750,11 @@ class J1J2_C4V_BIPARTITE():
                     verbosity=cfg.ctm_args.verbosity_rdm)
                 obs[f"SS3x1"]= torch.einsum('ijab,ijab',rdm3x1,self.SS)
 
+            if abs(self.lmbd)>0:
+                rdm2x2= rdm_c4v.rdm2x2(state,env_c4v,force_cpu=force_cpu,\
+                    verbosity=cfg.ctm_args.verbosity_rdm)
+                obs[f"ChiralT"]= torch.einsum('ijklabcd,ijklabcd',rdm2x2,self.chiral_term_rot)
+
             if abs(self.j2)>0:
                 rdm2x2diag= rdm_c4v.rdm2x2_NNN_lowmem_sl(state, env_c4v,\
                 force_cpu=force_cpu, verbosity=cfg.ctm_args.verbosity_rdm)
@@ -669,6 +776,7 @@ class J1J2_C4V_BIPARTITE():
         obs_labels=[f"m"]+[f"{lc}" for lc in self.obs_ops.keys()]+[f"SS2x1"]
         if abs(self.j2)>0: obs_labels += [f"SS_nnn"]
         if abs(self.j3)>0: obs_labels += [f"SS3x1"]
+        if abs(self.lmbd)>0: obs_labels += [f"ChiralT"]
         obs_values=[obs[label] for label in obs_labels]
         return obs_values, obs_labels
 
@@ -692,7 +800,7 @@ class J1J2_C4V_BIPARTITE():
         obs_values=[obs[label] for label in obs_labels]
         return obs_values, obs_labels
 
-    def eval_corrf_SS(self,state,env_c4v,dist,canonical=False):
+    def eval_corrf_SS(self,state,env_c4v,dist,canonical=False,rl_0=None):
         r"""
         :param state: wavefunction
         :param env_c4v: CTM c4v symmetric environment
@@ -702,7 +810,10 @@ class J1J2_C4V_BIPARTITE():
         :type dist: int
         :param canonical: decompose correlations wrt. to vector of spontaneous magnetization
                           into longitudinal and transverse parts
-        :type canonical: bool 
+        :type canonical: bool
+        :param rl_0: right and left leading eigenvector of width-1 transfer matrix
+                     as obtained from :meth:`ctm.one_site_c4v.transferops_c4v.get_Top_spec_c4v`.
+        :type rl_0: tuple(torch.Tensor) 
         :return: dictionary with full and spin-resolved spin-spin correlation functions
         :rtype: dict(str: torch.Tensor)
         
@@ -741,9 +852,11 @@ class J1J2_C4V_BIPARTITE():
             return _gen_op
 
         Sz0szR= corrf_c4v.corrf_1sO1sO(state, env_c4v, Sop_zxy[0,:,:], \
-            get_bilat_op(Sop_zxy[0,:,:]), dist)
-        Sx0sxR= corrf_c4v.corrf_1sO1sO(state, env_c4v, Sop_zxy[1,:,:], get_bilat_op(Sop_zxy[1,:,:]), dist)
-        nSy0SyR= corrf_c4v.corrf_1sO1sO(state, env_c4v, Sop_zxy[2,:,:], get_bilat_op(Sop_zxy[2,:,:]), dist)
+            get_bilat_op(Sop_zxy[0,:,:]), dist, rl_0=rl_0)
+        Sx0sxR= corrf_c4v.corrf_1sO1sO(state, env_c4v, Sop_zxy[1,:,:], get_bilat_op(Sop_zxy[1,:,:]), \
+            dist, rl_0=rl_0)
+        nSy0SyR= corrf_c4v.corrf_1sO1sO(state, env_c4v, Sop_zxy[2,:,:], get_bilat_op(Sop_zxy[2,:,:]), \
+            dist, rl_0=rl_0)
 
         res= dict({"ss": Sz0szR+Sx0sxR-nSy0SyR, "szsz": Sz0szR, "sxsx": Sx0sxR, "sysy": -nSy0SyR})
         return res

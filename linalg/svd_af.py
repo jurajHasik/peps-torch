@@ -1,5 +1,5 @@
 import torch
-from oe_ext.oe_ext import _debug_allocated_tensors
+from profiling import _debug_allocated_tensors
 from config import _torch_version_check
 try:
     import arrayfire as af

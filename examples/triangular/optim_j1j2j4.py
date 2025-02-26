@@ -3,6 +3,7 @@ import copy
 import torch
 import argparse
 import config as cfg
+import time
 from ipeps.ipeps import *
 from ctm.generic.env import *
 from ctm.generic import ctmrg
@@ -202,10 +203,11 @@ def main():
              conv_check=ctmrg_conv_f, ctm_args=ctm_args)
 
         # 2) evaluate loss with the converged environment
+        t_loss0= time.perf_counter()
         loss = energy_f(state_n, ctm_env_out, compressed=args.compressed_rdms,\
             unroll=args.loop_rdms)
-
-        return (loss, ctm_env_out, *ctm_log)
+        t_loss1= time.perf_counter()
+        return (loss, ctm_env_out, *ctm_log, t_loss1-t_loss0)
 
     def _to_json(l):
                 re=[l[i,0].item() for i in range(l.size()[0])]

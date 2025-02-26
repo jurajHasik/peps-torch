@@ -25,6 +25,8 @@ parser.add_argument("--bz_stag", type=float, default=0., help="staggered magneti
 parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
+parser.add_argument("--ctm_conv_crit", default="CSPEC", help="ctm convergence criterion", \
+    choices=["CSPEC", "ENERGY"])
 args, unknown_args = parser.parse_known_args()
 
 def main():
@@ -32,7 +34,7 @@ def main():
     cfg.print_config()
     settings= yastn.make_config(backend=backend, sym=sym_U1, \
         default_device= cfg.global_args.device, default_dtype=cfg.global_args.dtype)
-    settings.backend.set_num_threads(args.omp_cores)
+    torch.set_num_threads(args.omp_cores)
     settings.backend.random_seed(args.seed)
 
     model= coupledLadders.COUPLEDLADDERS(alpha=args.alpha, bz_val=args.bz_stag)
@@ -78,8 +80,12 @@ def main():
 
     ctm_env_d = ENV(args.chi, state_d)
     init_env(state_d, ctm_env_d)
+    if args.ctm_conv_crit=="CSPEC":
+        ctmrg_conv_f= ctmrg_conv_specC
+    elif args.ctm_conv_crit=="ENERGY":
+        ctmrg_conv_f= ctmrg_conv_energy
 
-    ctm_env_d, *ctm_log = ctmrg.run(state_d, ctm_env_d, conv_check=ctmrg_conv_energy)
+    ctm_env_d, *ctm_log = ctmrg.run(state_d, ctm_env_d, conv_check=ctmrg_conv_f)
     loss= model.energy_2x1_1x2(state_d, ctm_env_d)
     obs_values, obs_labels= model.eval_obs(state_d,ctm_env_d)
     print(", ".join(["epoch","energy"]+obs_labels))
@@ -97,7 +103,7 @@ def main():
 
         # 1) compute environment by CTMRG
         ctm_env_out_d, *ctm_log = ctmrg.run(state_d, ctm_env_in_d, \
-            conv_check=ctmrg_conv_energy, ctm_args=ctm_args)
+            conv_check=ctmrg_conv_f, ctm_args=ctm_args)
 
         # 2) evaluate loss with converged environment
         loss= model.energy_2x1_1x2(state_d, ctm_env_out_d)
@@ -141,7 +147,7 @@ def main():
     state_d= state.to_dense()
     ctm_env_d = ENV(args.chi, state_d)
     init_env(state_d, ctm_env_d)
-    ctm_env_d, *ctm_log = ctmrg.run(state_d, ctm_env_d, conv_check=ctmrg_conv_energy)
+    ctm_env_d, *ctm_log = ctmrg.run(state_d, ctm_env_d, conv_check=ctmrg_conv_f)
     opt_energy = model.energy_2x1_1x2(state_d,ctm_env_d)
     obs_values, obs_labels = model.eval_obs(state_d,ctm_env_d)
     print(", ".join([f"{args.opt_max_iter}",f"{opt_energy}"]+[f"{v}" for v in obs_values]))

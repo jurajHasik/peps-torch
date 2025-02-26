@@ -135,7 +135,7 @@ class IPEPS_ABELIAN_C4V(IPEPS_ABELIAN):
         """
         if noise==0: return self
         _tmp= self.site()
-        t_data, D_data= _tmp.get_leg_charges_and_dims(native=True)
+        t_data, D_data= (l.t for l in _tmp.get_legs(native=True)), (l.D for l in _tmp.get_legs(native=True))
         t_noise= yastn.rand(config=_tmp.config, s=_tmp.s, n=_tmp.n, \
             t=t_data, D=D_data, isdiag=_tmp.isdiag)
         site= _tmp + noise * t_noise

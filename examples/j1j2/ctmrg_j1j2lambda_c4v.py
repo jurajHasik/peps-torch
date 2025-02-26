@@ -9,7 +9,7 @@ from groups.su2 import SU2
 from ctm.one_site_c4v.env_c4v import *
 from ctm.one_site_c4v import ctmrg_c4v, transferops_c4v, corrf_c4v
 from ctm.one_site_c4v.rdm_c4v import rdm2x1_sl, rdm2x1, aux_rdm1x1
-from models import j1j2lambda
+from models import j1j2
 import unittest
 import logging
 log = logging.getLogger(__name__)
@@ -53,7 +53,7 @@ def main():
     torch.set_num_threads(args.omp_cores)
     torch.manual_seed(args.seed)
     
-    model= j1j2lambda.J1J2LAMBDA_C4V_BIPARTITE(j1=args.j1, j2=args.j2, j3=args.j3, \
+    model= j1j2.J1J2_C4V_BIPARTITE(j1=args.j1, j2=args.j2, j3=args.j3, \
         hz_stag=args.hz_stag, delta_zz=args.delta_zz, lmbd=args.lmbd)
     energy_f= model.energy_1x1
 
@@ -177,7 +177,7 @@ def main():
     u,s,v= torch.svd(ctm_env_init.C[ctm_env_init.keyC], compute_uv=False)
     for i in range(args.chi):
         print(f"{i} {s[i]}")
-
+    return
     # transfer operator spectrum
     print("\n\nspectrum(T)")
     l,vecs= transferops_c4v.get_Top_spec_c4v(args.top_n, state, ctm_env_init,\
@@ -268,7 +268,7 @@ if __name__=='__main__':
         raise Exception("Unknown command line arguments")
     main()
 
-class TestCtmrg(unittest.TestCase):
+class TestCtmrgBase(unittest.TestCase):
     def setUp(self):
         args.instate=None 
         args.j2=0.0
@@ -288,23 +288,29 @@ class TestCtmrg(unittest.TestCase):
         args.CTMARGS_projector_svd_method="SYMEIG"
         main()
 
-class TestRVB(unittest.TestCase):
+class TestCtmrgStates(unittest.TestCase):
+    tol= 1.0e-6
+
     def setUp(self):
         import os
-        args.instate=os.path.dirname(os.path.realpath(__file__))+"/../../test-input/RVB_1x1.in"
-        args.j2=0.5
+        self.DIR_PATH = os.path.dirname(os.path.realpath(__file__))
         args.bond_dim=3
-        args.chi=16
+        args.j1, args.j2, args.lmbd= 1., 0, 0
         args.GLOBALARGS_device="cpu"
         args.GLOBALARGS_dtype="complex128"
         args.CTMARGS_ctm_max_iter=200
 
     # basic tests
     def test_ctmrg_RVB(self):
+        args.instate=self.DIR_PATH+"/../../test-input/RVB_1x1.in"
+        args.j2=0.5
+        args.bond_dim=3
+        args.chi=16
+        
         cfg.configure(args)
         torch.set_num_threads(args.omp_cores)
         
-        model = j1j2lambda.J1J2LAMBDA_C4V_BIPARTITE(j1=args.j1, j2=args.j2)
+        model = j1j2.J1J2_C4V_BIPARTITE(j1=args.j1, j2=args.j2)
         energy_f= model.energy_1x1
 
         state = read_ipeps_c4v(args.instate)
@@ -335,3 +341,39 @@ class TestRVB(unittest.TestCase):
         self.assertTrue(obs_dict["m"] < eps_m)
         for l in ["sz","sp","sm"]:
             self.assertTrue(abs(obs_dict[l]) < eps_m)
+
+    def test_ctmrg_J1J2Lambda(self):
+        from io import StringIO
+        from unittest.mock import patch
+        from cmath import isclose
+        import numpy as np
+        
+        args.instate= self.DIR_PATH+"/../../test-input/"+"BFGS_D3-chi81-PTL0.23423-run0-iD3PT3n0.0_state.json"
+        args.out_prefix=f"{args.instate}".replace("BFGS","TEST_J1J2L_BFGS")
+        args.j1, args.j2, args.lmbd= 1.7776001555035785, 0.856096294165775, 0.23423
+        args.chi=81
+                
+        # i) run ctmrg and compute observables
+        with patch('sys.stdout', new = StringIO()) as tmp_out: 
+            main()
+        tmp_out.seek(0)
+
+        # parse FINAL observables
+        final_obs=None
+        l= tmp_out.readline()
+        while l:
+            print(l,end="")
+            if "FINAL" in l:
+                final_obs= l.rstrip()
+                break
+            l= tmp_out.readline()
+        assert final_obs
+
+        # compare with the reference
+        ref_data= """-0.9108441312441784, 0.07899239704953201, (-0.05711682700606768+0j), 
+        (0.05456616959609545-1.1486641093887501e-17j), (0.05456616959609545+1.1486641093887501e-17j), 
+        -0.26385027148964796, (0.06540441131450128+0j), (-0.3618962289515061+0j)"""
+        fobs_tokens= [complex(x) for x in final_obs[len("FINAL"):].split(",")]
+        ref_tokens= [complex(x) for x in ref_data.split(",")]
+        for val,ref_val in zip(fobs_tokens, ref_tokens):
+            assert isclose(val,ref_val, rel_tol=self.tol, abs_tol=self.tol)

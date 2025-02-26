@@ -191,7 +191,7 @@ class IPEPS_ABELIAN_C4V_LC(IPEPS_ABELIAN_C4V):
         return data
 
     def load_checkpoint(self, checkpoint_file):
-        checkpoint= torch.load(checkpoint_file)
+        checkpoint= torch.load(checkpoint_file, weights_only=False)
         data= checkpoint["parameters"]
         self.abelian_sym_data= data["abelian_sym_data"]
         self.elem_tensors= data["elem_tensors"]

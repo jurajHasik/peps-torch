@@ -9,7 +9,7 @@ from ctm.one_site_c4v.env_c4v import *
 from ctm.one_site_c4v import ctmrg_c4v
 from ctm.one_site_c4v.rdm_c4v import rdm2x1_sl
 from ctm.one_site_c4v import transferops_c4v
-from models import j1j2lambda
+from models import j1j2
 # from optim.ad_optim_sgd_mod import optimize_state
 from optim.ad_optim_lbfgs_mod import optimize_state
 # from optim.ad_optim import optimize_state
@@ -28,6 +28,7 @@ parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour
 parser.add_argument("--j3", type=float, default=0., help="next-to-next nearest-neighbour coupling")
 parser.add_argument("--lmbd", type=float, default=0., help="chiral plaquette interaction")
 parser.add_argument("--hz_stag", type=float, default=0., help="staggered mag. field")
+parser.add_argument("--hy", type=float, default=0, help="uniform mag. field")
 parser.add_argument("--delta_zz", type=float, default=1., help="easy-axis (nearest-neighbour) anisotropy")
 parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
@@ -41,7 +42,7 @@ def main():
     torch.set_num_threads(args.omp_cores)
     torch.manual_seed(args.seed)
 
-    model= j1j2lambda.J1J2LAMBDA_C4V_BIPARTITE(j1=args.j1, j2=args.j2, j3=args.j3, \
+    model= j1j2.J1J2_C4V_BIPARTITE(j1=args.j1, j2=args.j2, j3=args.j3, \
         hz_stag=args.hz_stag, delta_zz=args.delta_zz, lmbd=args.lmbd)
     energy_f= model.energy_1x1
 
@@ -226,7 +227,7 @@ class TestOpt(unittest.TestCase):
         args.CTMARGS_projector_svd_method="SYMEIG"
         main()
 
-    @unittest.expectedFailure
+    # @unittest.expectedFailure
     def test_opt_SYMEIG_LS_strong_wolfe(self):
         args.CTMARGS_projector_svd_method="SYMEIG"
         args.OPTARGS_line_search="strong_wolfe"
@@ -236,7 +237,6 @@ class TestOpt(unittest.TestCase):
         args.CTMARGS_projector_svd_method="SYMEIG"
         args.OPTARGS_line_search="backtracking"
         main()
-
 
     def test_opt_SYMEIG_LS_backtracking_SYMARP(self):
         if not self.SCIPY: self.skipTest("test skipped: missing scipy")

@@ -24,6 +24,7 @@ parser.add_argument("--j1", type=float, default=1., help="nearest-neighbour coup
 parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour coupling")
 parser.add_argument("--j3", type=float, default=0., help="next-to-next nearest-neighbour coupling")
 parser.add_argument("--hz_stag", type=float, default=0., help="staggered mag. field")
+parser.add_argument("--h_uni", nargs=3, type=float, default=[0,0,0], help="uniform mag. field with components in directions h^z, h^x, h^y")
 parser.add_argument("--delta_zz", type=float, default=1., help="easy-axis (nearest-neighbour) anisotropy")
 parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
@@ -38,7 +39,7 @@ def main():
     torch.manual_seed(args.seed)
 
     model= j1j2.J1J2_C4V_BIPARTITE(j1=args.j1, j2=args.j2, j3=args.j3, \
-        hz_stag=args.hz_stag, delta_zz=args.delta_zz)
+        hz_stag=args.hz_stag, h_uni=args.h_uni, delta_zz=args.delta_zz)
     # energy_f= model.energy_1x1
     energy_f= model.energy_1x1_lowmem
 
