@@ -87,7 +87,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         if not str(global_args.device)==str(state.device):
             warnings.warn(f"Device mismatch: state.device {state.device}"\
                 +f" global_args.device {global_args.device}",RuntimeWarning)
-        checkpoint = torch.load(main_args.opt_resume,map_location=state.device)
+        checkpoint = torch.load(main_args.opt_resume,map_location=state.device, weights_only=False)
         epoch0 = checkpoint["epoch"]
         loss0 = checkpoint["loss"]
         cp_state_dict= checkpoint["optimizer_state_dict"]

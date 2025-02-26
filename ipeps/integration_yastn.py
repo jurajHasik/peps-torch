@@ -139,7 +139,7 @@ class PepsAD(Peps):
 
         Initializes the state according to the supplied checkpoint file.
         """
-        checkpoint = torch.load(checkpoint_file, map_location=self.device)
+        checkpoint = torch.load(checkpoint_file, map_location=self.device, weights_only=False)
         self.parameters = apply_and_copy(checkpoint['parameters']['parameters'], \
                                      lambda x : load_from_dict(yastn_config,x) )
         self.sync_()
@@ -198,7 +198,7 @@ def load_checkpoint(yastn_config : YASTN_CONFIG, checkpoint_file : str)->PepsAD:
 
     Initializes the state according to the supplied checkpoint file.
     """
-    checkpoint = torch.load(checkpoint_file, map_location=yastn_config.default_device)
+    checkpoint = torch.load(checkpoint_file, map_location=yastn_config.default_device, weights_only=False)
     return PepsAD.from_dict(yastn_config, checkpoint["parameters"])
 
 

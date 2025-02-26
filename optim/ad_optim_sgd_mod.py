@@ -79,7 +79,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
     # TODO test opt_resume
     if main_args.opt_resume is not None:
         print(f"INFO: resuming from check point. resume = {main_args.opt_resume}")
-        checkpoint = torch.load(main_args.opt_resume)
+        checkpoint = torch.load(main_args.opt_resume, weights_only=False)
         epoch0 = checkpoint["epoch"]
         loss0 = checkpoint["loss"]
         cp_state_dict= checkpoint["optimizer_state_dict"]

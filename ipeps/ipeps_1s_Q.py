@@ -93,7 +93,7 @@ class IPEPS_1S_Q(IPEPS):
             The `vertexToSite` mapping function is not a part of checkpoint and must 
             be provided either when instantiating IPEPS_ABELIAN or afterwards.
         """
-        checkpoint= torch.load(checkpoint_file,map_location=self.device)
+        checkpoint= torch.load(checkpoint_file,map_location=self.device, weights_only=False)
         self.sites, self.q= checkpoint["parameters"]
         for site_t in self.sites.values(): site_t.requires_grad_(False)
         self.q.requires_grad_(False)
