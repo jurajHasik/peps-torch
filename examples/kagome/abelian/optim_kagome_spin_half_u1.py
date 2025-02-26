@@ -57,7 +57,7 @@ def main():
         from yastn.yastn.backend import backend_torch_cpp as backend
     settings_U1= yastn.make_config(backend=backend, sym=sym_U1, \
         default_device= cfg.global_args.device, default_dtype=cfg.global_args.dtype)
-    settings_U1.backend.set_num_threads(args.omp_cores)
+    torch.set_num_threads(args.omp_cores)
     settings_U1.backend.random_seed(args.seed)
 
     # 0) initialize model
