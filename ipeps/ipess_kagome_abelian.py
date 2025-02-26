@@ -221,7 +221,7 @@ class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
         if noise==0: return self
         ipess_tensors= {}
         for ind,t in self.ipess_tensors.items():
-            ts, Ds= t.get_leg_charges_and_dims(native=True)
+            ts, Ds= (l.t for l in t.get_legs(native=True)), (l.D for l in t.get_legs(native=True))
             t_noise= yastn.rand(config= t.config, s=t.s, n=t.n, t=ts, D=Ds, isdiag=t.isdiag)
             ipess_tensors[ind]= t + noise*t_noise
         return IPESS_KAGOME_GENERIC_ABELIAN(self.engine, ipess_tensors,\

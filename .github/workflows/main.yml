@@ -1,5 +1,3 @@
-# This is a basic workflow to help you get started with Actions
-
 name: CI
 
 # Controls when the workflow will run
@@ -29,15 +27,11 @@ jobs:
     steps:
       - run: CI=false
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v3
-
-      # Runs a single command using the runners shell
-      # - name: Run a one-line script
-      # run: echo Hello, world!
+      - uses: actions/checkout@v4
 
       # Runs a set of commands using the runners shell
       - name: setup python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python_v }}
       - name: setup pytorch
@@ -94,24 +88,3 @@ jobs:
         run: |
           $CONDA/bin/python -m pytest examples/kagome/abelian/ctmrg_*.py
           $CONDA/bin/python -m pytest examples/kagome/abelian/optim_*.py
-
-  deploy-docs:
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-      - name: Build and deploy documentation
-        if: github.ref == 'refs/heads/master'
-        run: |
-          cd docs
-          make html
-          cd build/html
-          git init
-          git config user.name 'github-actions'
-          git config user.email 'github-actions@github.com'
-          git add .
-          git commit -m "Deploy documentation"
-          git push --force --quiet "https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" master:gh-pages
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
