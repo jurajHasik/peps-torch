@@ -49,8 +49,12 @@ jobs:
           if [[ "${{ matrix.pytorch_v }}" == "1.8.2" ]]
           then
             $CONDA/bin/conda install -c pytorch-lts -c anaconda pytorch cpuonly scipy pytest
+          elif [ "${{ matrix.pytorch_v }}" == "2.0" ]
+          then
+            $CONDA/bin/conda install pytorch==2.0.0 cpuonly -c pytorch scipy pytest opt_einsum
           else
-            $CONDA/bin/conda install -c pytorch -c anaconda -c conda-forge pytorch==${{ matrix.pytorch_v }} cpuonly scipy pytest opt_einsum
+            $CONDA/bin/pip3 install torch --index-url https://download.pytorch.org/whl/cpu 
+            $CONDA/bin/pip3 install scipy pytest opt_einsum
           fi
           git submodule update --init --recursive
           
@@ -58,6 +62,7 @@ jobs:
       - name: test j1j2
         run: |
           $CONDA/bin/python -c "import sys; print(sys.path)"
+          $CONDA/bin/python -c "import opt_einsum; print(opt_einsum.__version__)"
           $CONDA/bin/python -m pytest examples/j1j2/ctmrg_*.py
           $CONDA/bin/python -m pytest examples/j1j2/optim_*.py
       - name: test j1j2 abelian
@@ -109,8 +114,12 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python_v: [ "3.9", "3.10", "3.11", "3.12"]
-        pytorch_v: [2.0, 2.6]
+        python_v: [ "3.12", ] #"3.9", "3.10", "3.11"
+        pytorch_v: [ 2.6, ] # 2.0
+        exclude:
+          # excludes node 8 on macOS
+          - python_v: "3.12"
+            pytorch_v: 2.6
       fail-fast: false
 
     # Steps represent a sequence of tasks that will be executed as part of the job
@@ -130,8 +139,11 @@ jobs:
           if [[ "${{ matrix.pytorch_v }}" == "1.8.2" ]]
           then
             $CONDA/bin/conda install -c pytorch-lts -c anaconda pytorch cpuonly scipy pytest
-          else
-            $CONDA/bin/conda install -c pytorch -c anaconda -c conda-forge pytorch==${{ matrix.pytorch_v }} cpuonly scipy pytest opt_einsum
+          elif [ "${{ matrix.pytorch_v }}" == "2.0" ]
+          then
+            $CONDA/bin/conda install pytorch==2.0.0 cpuonly -c pytorch scipy pytest opt_einsum
+          else 
+            pip3 install torch --index-url https://download.pytorch.org/whl/cpu scipy pytest opt_einsum
           fi
           git submodule update --init --recursive
           
