@@ -1,6 +1,6 @@
 # peps-torch 
 ![Test Status](https://github.com/jurajHasik/peps-torch/actions/workflows/main.yml/badge.svg?branch=master)
-![Docs Status](https://gist.github.com/jurajHasik/b11fca53c80bbc7224dddad1118d873d)
+![Docs Status](https://gist.githubusercontent.com/jurajHasik/b11fca53c80bbc7224dddad1118d873d/raw/docs.svg)
 ### A tensor network library for two-dimensional lattice models
 by Juraj Hasik, Glen Bigan Mbeng\
 with contributions by Wei-Lin Tu, Seydou-Samba Diop, Sen Niu, Yi Xi, Hao Chen
