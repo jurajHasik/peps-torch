@@ -8,10 +8,13 @@ from torch.utils.checkpoint import checkpoint
 import numpy as np
 import opt_einsum as oe  # type: ignore
 from opt_einsum.contract import (  # type: ignore
-    _VALID_CONTRACT_KWARGS,
     PathInfo,
     shape_only,
 )
+try:
+    from opt_einsum.contract import _VALID_CONTRACT_KWARGS
+except:
+    _VALID_CONTRACT_KWARGS = {'optimize', 'memory_limit', 'einsum_call', 'use_blas', 'shapes'}
 try:
     import arrayfire as af
 except:
@@ -236,9 +239,15 @@ def _get_contraction_path_info(path, *operands, **kwargs):
         # Make sure we remove inds from right to left
         contract_inds = tuple(sorted(list(contract_inds), reverse=True))
 
-        contract_tuple = oe.helpers.find_contraction(
-            contract_inds, input_sets, output_set
-        )
+        try:
+            contract_tuple = oe.helpers.find_contraction(
+                contract_inds, input_sets, output_set
+            )
+        except TypeError as e:
+            # inputt_sets have to be frozenset sets for v3.4.0
+            contract_tuple = oe.helpers.find_contraction(
+                contract_inds, [frozenset(s) for s in input_sets], output_set
+            )
         out_inds, input_sets, idx_removed, idx_contract = contract_tuple
 
         # Compute cost, scale, and size
@@ -252,6 +261,8 @@ def _get_contraction_path_info(path, *operands, **kwargs):
         tmp_inputs = [input_list.pop(x) for x in contract_inds]
         if names:
             tmp_inds_to_names = [inputs_to_names.pop(x) for x in contract_inds]
+        # make list
+        input_shps= list(input_shps) if type(input_shps)==tuple else input_shps
         tmp_shapes = [input_shps.pop(x) for x in contract_inds]
 
         if use_blas:
@@ -275,7 +286,8 @@ def _get_contraction_path_info(path, *operands, **kwargs):
         input_shps.append(np.asarray(shp_result))
 
         # sum the currently contracted ops and remaining ops
-        mem_list.append(sum([x.prod() for x in tmp_shapes+input_shps]))
+        # Here, all shapes have to by np.ndarray
+        mem_list.append(sum([x.prod() if hasattr(x,'prod') else np.asarray(x).prod() for x in tmp_shapes+input_shps]))
 
         einsum_str= ",".join(tmp_inputs) + "->" + idx_result
         if names:

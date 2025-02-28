@@ -11,7 +11,6 @@ from ctm.generic.ctm_projectors import ctm_get_projectors_from_matrices
 import ctm.generic.corrf as corrf
 try:
     import opt_einsum as oe
-    from opt_einsum.contract import _VALID_CONTRACT_KWARGS, PathInfo
     from oe_ext.oe_ext import get_contraction_path, contract_with_unroll
 except:
     oe=False
