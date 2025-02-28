@@ -105,7 +105,7 @@ jobs:
           $CONDA/bin/python -m pytest examples/kagome/abelian/optim_*.py
 
   # This workflow contains a single job called "build"
-  test-full:
+  test-opt_einsum:
     if: |
       contains(fromJson('["refs/heads/master", "refs/heads/tests"]'), github.ref) ||
       ( github.event_name == 'pull_request' && contains(fromJson('["master",]'), github.base_ref) )
@@ -116,10 +116,10 @@ jobs:
       matrix:
         python_v: [ "3.12", ] #"3.9", "3.10", "3.11"
         pytorch_v: [ 2.6, ] # 2.0
-        exclude:
-          # excludes node 8 on macOS
-          - python_v: "3.12"
-            pytorch_v: 2.6
+        opt_einsum_v: [ "3.3.0", "3.4.0"]
+        # exclude:
+        #   - python_v: "3.12"
+        #     pytorch_v: 2.6
       fail-fast: false
 
     # Steps represent a sequence of tasks that will be executed as part of the job
@@ -138,12 +138,65 @@ jobs:
           if [[ "${{ matrix.python_v }}" == "3.9" ]]; then export P39C="-c=conda-forge"; fi
           if [[ "${{ matrix.pytorch_v }}" == "1.8.2" ]]
           then
-            $CONDA/bin/conda install -c pytorch-lts -c anaconda pytorch cpuonly scipy pytest
+            $CONDA/bin/conda install -c pytorch-lts -c anaconda pytorch cpuonly scipy pytest opt_einsum=${{ matrix.opt_einsum_v }}
+          elif [ "${{ matrix.pytorch_v }}" == "2.0" ]
+          then
+            $CONDA/bin/conda install pytorch==2.0.0 cpuonly -c pytorch scipy pytest opt_einsum=${{ matrix.opt_einsum_v }}
+          else 
+            $CONDA/bin/pip3 install torch --index-url https://download.pytorch.org/whl/cpu
+            $CONDA/bin/pip3 install scipy pytest opt_einsum==${{ matrix.opt_einsum_v }}
+          fi
+          git submodule update --init --recursive
+          
+      # Run tests
+      - name: test j1j2
+        run: |
+          $CONDA/bin/python -c "import sys; print(sys.path)"
+          $CONDA/bin/python -m pytest examples/j1j2/ctmrg_*.py
+
+
+  # This workflow contains a single job called "build"
+  test-full:
+    if: |
+      contains(fromJson('["refs/heads/master", "refs/heads/tests"]'), github.ref) ||
+      ( github.event_name == 'pull_request' && contains(fromJson('["master",]'), github.base_ref) )
+
+    needs: test-opt_einsum
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python_v: [ "3.12", ] #"3.9", "3.10", "3.11"
+        pytorch_v: [ 2.0, ] # 2.6
+        # opt_einsum_v: [ "3.3.0", "3.4.0"]
+        # exclude:
+        #   - python_v: "3.12"
+        #     pytorch_v: 2.6
+      fail-fast: false
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      - run: CI=false
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v4
+
+      # Runs a set of commands using the runners shell
+      - name: setup python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python_v }}
+      - name: setup pytorch
+        run: |
+          if [[ "${{ matrix.python_v }}" == "3.9" ]]; then export P39C="-c=conda-forge"; fi
+          if [[ "${{ matrix.pytorch_v }}" == "1.8.2" ]]
+          then
+            $CONDA/bin/conda install -c pytorch-lts -c anaconda pytorch cpuonly scipy pytest opt_einsum
           elif [ "${{ matrix.pytorch_v }}" == "2.0" ]
           then
             $CONDA/bin/conda install pytorch==2.0.0 cpuonly -c pytorch scipy pytest opt_einsum
           else 
-            pip3 install torch --index-url https://download.pytorch.org/whl/cpu scipy pytest opt_einsum
+            $CONDA/bin/pip3 install torch --index-url https://download.pytorch.org/whl/cpu
+            $CONDA/bin/pip3 install scipy pytest opt_einsum 
           fi
           git submodule update --init --recursive
           
