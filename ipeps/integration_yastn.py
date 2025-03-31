@@ -15,7 +15,7 @@ YASTN_CONFIG = TypeVar('YASTN_CONFIG')
 #     )
 
 def apply_and_copy(nested_iterable, func, f_keys=None):
-    if isinstance(nested_iterable,dict): 
+    if isinstance(nested_iterable,dict):
         if 'type' in nested_iterable and nested_iterable['type'] in ['yastn.Tensor', 'Tensor']:
             # we don't traverse deeper - this is a leaf
             return func(nested_iterable)
@@ -43,7 +43,7 @@ class PepsAD(Peps):
         self.parameters = tensors
         self.dtype = global_args.torch_dtype
         self.device = global_args.device
-        
+
         super().__init__(geometry=geometry,tensors=None)
         self.sync_()
 
@@ -51,7 +51,7 @@ class PepsAD(Peps):
     def sync_(self):
         r"""
         Build on-site tensors of underlying Peps from parameters.
-        
+
         In straightforward case, simply assigns parameter tensors to on-site tensor of underlying PEPS,
         i.e. acts as identity. More complex cases such extend PepsAD and override this function.
 
@@ -63,11 +63,16 @@ class PepsAD(Peps):
             self[site] = self.parameters[site]
 
 
-    def add_noise_(self, noise : float =1.0):
+    def add_noise_(self, noise : float =0.1):
         r"""
         Add random noise with magnitude ``noise`` to parameters.
         """
-        self.parameters= apply_and_copy( self.parameters, lambda x: x + noise * yastn.rand_like(x) )
+        # self.parameters= apply_and_copy( self.parameters, lambda x: x + noise * yastn.rand_like(x) )
+        # self.parameters= apply_and_copy( self.parameters, lambda x: x + noise * x.norm()*yastn.rand_like(x) )
+        def add_raw_data_noise(t):
+            t._data = t._data + noise*torch.rand_like(t._data)
+            return t
+        self.parameters= apply_and_copy( self.parameters, add_raw_data_noise)
         self.sync_()
 
 
@@ -84,6 +89,11 @@ class PepsAD(Peps):
 
 
     def write_to_file(self, outputfile, tol=None, normalize=False):
+        d = self.to_dict(tol=tol, normalize=normalize)
+        with open(outputfile, 'w') as file:
+            json.dump(d, file, indent=4, cls=NumPy_Encoder)
+
+    def to_dict(self, tol=None, normalize=False):
         d= self.__dict__()
         # preprocess
         # Handles case when geometry pattern is given as a dictionary with non-compliant keys
@@ -94,12 +104,12 @@ class PepsAD(Peps):
                 if isinstance(k,tuple):
                     new_k= str(k)
                     pattern_key_to_id[new_k]= k
-                    _pattern[new_k]= d['geometry']['pattern'][k] 
+                    _pattern[new_k]= d['geometry']['pattern'][k]
                 else:
                     _pattern[k]= d['geometry']['pattern'][k]
             d['pattern_key_to_id']= pattern_key_to_id
             d['geometry']['pattern']= _pattern
-            
+
         # We don't make any assumption on (nested) structure of parameters. Hence, we remap keys of dicts
         # in parameters if necessary
         parameters_key_to_id={}
@@ -113,9 +123,8 @@ class PepsAD(Peps):
         _parameters= apply_and_copy(self.parameters, save_to_dict, f_keys=map_keys)
         d['parameters_key_to_id']= parameters_key_to_id
         d['parameters']= _parameters
-        with open(outputfile, 'w') as file:
-            json.dump(d, file, indent=4, cls=NumPy_Encoder)
 
+        return d
 
     def get_checkpoint(self):
         r"""
@@ -127,7 +136,7 @@ class PepsAD(Peps):
         to create checkpoints during the optimization process.
         """
         return self.__dict__()
-    
+
 
     def load_checkpoint_(self, yastn_config : YASTN_CONFIG, checkpoint_file):
         r"""

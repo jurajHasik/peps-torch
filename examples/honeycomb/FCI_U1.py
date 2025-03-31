@@ -1,26 +1,20 @@
-import argparse
-import copy
 import json
 import logging
 import os
 import time
-import unittest
-import pickle
-from typing import Sequence, Union
-from collections import namedtuple
+import ast, argparse
 
 
+os.environ["OMP_NUM_THREADS"] = "8"
 import context
 import config as cfg
 import numpy as np
 import torch
 
 import yastn.yastn as yastn
-from yastn.yastn import Tensor, tensordot, load_from_dict
-from yastn.yastn.tensor import YastnError
-from yastn.yastn.tn.fpeps import Bond, EnvCTM, Site, RectangularUnitcell
+from yastn.yastn.tn.fpeps import EnvCTM, RectangularUnitcell, Bond
 from yastn.yastn.tn.fpeps.envs._env_ctm import ctm_conv_corner_spec
-from yastn.yastn.sym import sym_Z2, sym_U1
+from yastn.yastn.sym import sym_U1
 from yastn.yastn.tn.fpeps.envs.rdm import *
 from yastn.yastn.tn.fpeps.envs.fixed_pt import FixedPoint, env_raw_data, refill_env
 from ipeps.integration_yastn import PepsAD, load_PepsAD
@@ -54,6 +48,8 @@ class tV_model:
     def get_parameters(self):
         return []
 
+    # from memory_profiler import profile
+    # @profile
     def energy_per_site(self, psi, env):
         r"""
         :param psi: Peps
@@ -91,6 +87,117 @@ class tV_model:
         I = sf.I()
         N = len(psi.sites())
 
+
+        # measure_function-based computation
+        for site in psi.sites():
+            op = (
+                self.V1 * (n_A @ n_B)
+                - self.mu * (n_A + n_B)
+                - self.t1 * (cp_A @ c_B + cp_B @ c_A).remove_zero_blocks()
+                + self.m * (n_A - n_B)
+            )
+            energy_onsite += env.measure_1site(op, site=site)
+
+            # horizontal bond
+            h_bond = Bond(site, psi.nn_site(site, "r"))
+            e_1x2_loc = self.V1 * env.measure_nn(n_B, n_A, bond=h_bond)+ self.V2 * env.measure_nn(n_B, n_B, bond=h_bond)+ self.V2 * env.measure_nn(n_A, n_A, bond=h_bond)
+            site_r = psi.nn_site(site, "r")
+            res = self.t1 * env.measure_nn(c_B, cp_A, bond=h_bond)
+            e_1x2_loc += res + res.conj()
+            res = self.t2*np.exp(1j*self.phi)*env.measure_nn(c_A, cp_A, bond=h_bond)
+            e_1x2_loc += (res + res.conj()).real
+            res = -self.t2*np.exp(1j*self.phi)*env.measure_nn(cp_B, c_B, bond=h_bond)
+            e_1x2_loc += (res + res.conj()).real
+            energy_horz += e_1x2_loc
+
+
+            # vertical bond
+            v_bond = Bond(site, psi.nn_site(site, "b"))
+            e_2x1_loc = self.V1*env.measure_nn(n_A, n_B, bond=v_bond) + self.V2*env.measure_nn(n_B, n_B, bond=v_bond) + self.V2*env.measure_nn(n_A, n_A, bond=v_bond)
+            site_b = psi.nn_site(site, "b")
+            res = -self.t1*env.measure_nn(cp_A, c_B, bond=v_bond)
+            e_2x1_loc += (res + res.conj()).real
+            res = self.t2*np.exp(1j*self.phi)*env.measure_nn(c_A, cp_A, bond=v_bond)
+            e_2x1_loc += (res + res.conj()).real
+            res = -self.t2*np.exp(1j*self.phi)*env.measure_nn(cp_B, c_B, bond=v_bond)
+            e_2x1_loc += (res + res.conj()).real
+            energy_vert += e_2x1_loc
+
+            if self.V2 != 0 or self.V3 != 0 or self.t2 != 0 or self.t3 != 0:
+                site_br = psi.nn_site(site, "br")
+                e_2x2_diag_loc = self.V2*env.measure_2x2(n_A, n_A, sites=[site, site_br]) + self.V2*env.measure_2x2(n_B, n_B, sites=[site, site_br])
+                e_2x2_diag_loc += self.V3*env.measure_2x2(n_A, n_B, sites=[site, site_br]) + self.V3*env.measure_2x2(n_B, n_A, sites=[site, site_br])
+
+                res = -self.t2*np.exp(1j*self.phi) * env.measure_2x2(cp_A, c_A, sites=[site, site_br])
+                e_2x2_diag_loc += (res + res.conj()).real
+                res = self.t2*np.exp(1j*self.phi) * env.measure_2x2(c_B, cp_B, sites=[site, site_br])
+                e_2x2_diag_loc += (res + res.conj()).real
+                res = self.t3*env.measure_2x2(c_B, cp_A, sites=[site, site_br])
+                e_2x2_diag_loc += (res + res.conj()).real
+                res = self.t3*env.measure_2x2(c_A, cp_B, sites=[site, site_br])
+                e_2x2_diag_loc += (res + res.conj()).real
+
+                energy_diag += e_2x2_diag_loc
+
+                site_b = psi.nn_site(site, "b")
+                site_r = psi.nn_site(site, "r")
+                e_2x2_anti_diag_loc = self.V3*env.measure_2x2(n_B, n_A, sites=[site_b, site_r])
+
+                res = self.t3*env.measure_2x2(c_B, cp_A, sites=[site_b, site_r])
+                e_2x2_anti_diag_loc += (res + res.conj()).real
+
+                energy_anti_diag += e_2x2_anti_diag_loc
+
+        energy_per_site = (
+            energy_onsite + energy_horz + energy_vert + energy_diag + energy_anti_diag
+        ) / N
+        return energy_per_site.real
+
+    # @profile
+    def energy_per_site_rdm(self, psi, env):
+        r"""
+        :param psi: Peps
+        :param env: CTM environment
+        :return: energy
+        :rtype: float
+        """
+
+        # x\y
+        #     _:__:__:__:_
+        #  ..._|__|__|__|_...
+        #  ..._|__|__|__|_...
+        #  ..._|__|__|__|_...
+        #  ..._|__|__|__|_...
+        #  ..._|__|__|__|_...
+        #      :  :  :  :
+
+        energy_onsite, energy_horz, energy_vert, energy_diag, energy_anti_diag = (
+            0,
+            0,
+            0,
+            0,
+            0,
+        )
+
+        # sf = yastn.operators.SpinfulFermions(sym=str(self.config.sym), fermionic=True)
+        _tmp_config = {x: y for x, y in self.config._asdict().items() if x != "sym"}
+        sf = yastn.operators.SpinfulFermions(sym=str(self.config.sym), **_tmp_config)
+        n_A = sf.n(spin="u")  # parity-even operator, no swap gate needed
+        n_B = sf.n(spin="d")
+        c_A = sf.c(spin="u")
+        cp_A = sf.cp(spin="u")
+        c_B = sf.c(spin="d")
+        cp_B = sf.cp(spin="d")
+        I = sf.I()
+        N = len(psi.sites())
+
+        energy_onsite, energy_horz, energy_vert, energy_diag, energy_anti_diag = (
+            0,
+            0,
+            0,
+            0,
+            0,
+        )
         ncon_order1 = ((1, 2), (3, 4), (2, 1, 4, 3))
         ncon_order2 = ((1, 2, 5), (3, 4, 5), (2, 1, 4, 3))
         for site in psi.sites():
@@ -104,18 +211,15 @@ class tV_model:
                 + self.m * (n_A - n_B)
             )
             e_1x1_loc = yastn.ncon([op, onsite_rdm], ((1, 2), (2, 1)))
-            assert abs(env.measure_1site(op, site=site).item() - e_1x1_loc.to_number()) < 1e-9
             energy_onsite += e_1x1_loc.to_number()
 
             # horizontal bond
             horz_rdm, horz_rdm_norm = rdm1x2(site, psi, env)  # s0 s0' s1 s1'
-            h_bond = Bond(site, psi.nn_site(site, "r"))
             # horz_norm = yastn.trace(horz_rdm, ((0, 2), (1, 3))).to_number()
             e_1x2_loc = self.V1 * yastn.ncon([n_B, n_A, horz_rdm], ncon_order1)
             e_1x2_loc += self.V2 * yastn.ncon([n_B, n_B, horz_rdm], ncon_order1)
             e_1x2_loc += self.V2 * yastn.ncon([n_A, n_A, horz_rdm], ncon_order1)
 
-            e_1x2_tmp = self.V1 * env.measure_nn(n_B, n_A, bond=h_bond)+ self.V2 * env.measure_nn(n_B, n_B, bond=h_bond)+ self.V2 * env.measure_nn(n_A, n_A, bond=h_bond)
 
             site_r = psi.nn_site(site, "r")
             ordered = psi.geometry.f_ordered(site, site_r)
@@ -125,9 +229,6 @@ class tV_model:
                 -yastn.ncon([ci_B, cjp_A, horz_rdm], ncon_order2)
                 + yastn.ncon([cip_B, cj_A, horz_rdm], ncon_order2)
             )
-
-            res = self.t1 * env.measure_nn(ci_B, cjp_A, bond=h_bond)
-            e_1x2_tmp += res + res.conj()
 
 
             ci_A, cjp_A = op_order(c_A, cp_A, ordered, fermionic=True)
@@ -140,11 +241,6 @@ class tV_model:
                     + yastn.ncon([cip_B, cj_B, horz_rdm], ncon_order2)
                 )
             )
-
-            res = self.t2*np.exp(1j*self.phi)*env.measure_nn(ci_A, cjp_A, bond=h_bond)
-            e_1x2_tmp += (res + res.conj()).real
-            res = -self.t2*np.exp(1j*self.phi)*env.measure_nn(cip_B, cj_B, bond=h_bond)
-            e_1x2_tmp += (res + res.conj()).real
 
             cip_A, cj_A = op_order(cp_A, c_A, ordered, fermionic=True)
             ci_B, cjp_B = op_order(c_B, cp_B, ordered, fermionic=True)
@@ -167,9 +263,6 @@ class tV_model:
             e_2x1_loc += self.V2 * yastn.ncon([n_B, n_B, vert_rdm], ncon_order1)
             e_2x1_loc += self.V2 * yastn.ncon([n_A, n_A, vert_rdm], ncon_order1)
 
-            e_2x1_tmp = self.V1*env.measure_nn(n_A, n_B, bond=v_bond) + self.V2*env.measure_nn(n_B, n_B, bond=v_bond) + self.V2*env.measure_nn(n_A, n_A, bond=v_bond)
-
-
             site_b = psi.nn_site(site, "b")
             ordered = psi.geometry.f_ordered(site, site_b)
 
@@ -180,8 +273,6 @@ class tV_model:
                 + -yastn.ncon([ci_A, cjp_B, vert_rdm], ncon_order2)
             )
 
-            res = -self.t1*env.measure_nn(cip_A, cj_B, bond=v_bond)
-            e_2x1_tmp += (res + res.conj()).real
 
             ci_A, cjp_A = op_order(c_A, cp_A, ordered, fermionic=True)
             cip_B, cj_B = op_order(cp_B, c_B, ordered, fermionic=True)
@@ -194,11 +285,6 @@ class tV_model:
                 )
             )
 
-            res = self.t2*np.exp(1j*self.phi)*env.measure_nn(ci_A, cjp_A, bond=v_bond)
-            e_2x1_tmp += (res + res.conj()).real
-            res = -self.t2*np.exp(1j*self.phi)*env.measure_nn(cip_B, cj_B, bond=v_bond)
-            e_2x1_tmp += (res + res.conj()).real
-
             cip_A, cj_A = op_order(cp_A, c_A, ordered, fermionic=True)
             ci_B, cjp_B = op_order(c_B, cp_B, ordered, fermionic=True)
             e_2x1_loc += (
@@ -209,19 +295,13 @@ class tV_model:
                     + -yastn.ncon([ci_B, cjp_B, vert_rdm], ncon_order2)
                 )
             )
-
             energy_vert += e_2x1_loc.to_number()
-
-
 
             if self.V2 != 0 or self.V3 != 0 or self.t2 != 0 or self.t3 != 0:
                 # plaq_rdm, plaq_rdm_norm  = rdm2x2(site, psi, env)  # s0 s0' s1 s1' s2 s2' s3 s3'
                 diag_rdm, diag_rdm_norm = rdm2x2_diagonal(
                     site, psi, env
                 )  # s0 s0' s3 s3'
-
-                # diagonal bond
-                # diag_rdm = yastn.trace(plaq_rdm, ((2, 4), (3, 5)))  # s0 s0' s3 s3'
                 e_2x2_diag_loc = self.V2 * (
                     yastn.ncon([n_A, n_A, diag_rdm], ncon_order1)
                     + yastn.ncon([n_B, n_B, diag_rdm], ncon_order1)
@@ -235,12 +315,6 @@ class tV_model:
                 site_br = psi.nn_site(site, "br")
                 ordered = psi.geometry.f_ordered(site, site_br)
 
-                e_2x2_diag_tmp = self.V2*env.measure_2x2(operators=[n_A, n_A], sites=[site, site_br])
-                + self.V2*env.measure_2x2(operators=[n_B, n_B], sites=[site, site_br])
-
-                e_2x2_diag_tmp += self.V3*env.measure_2x2(operators=[n_A, n_B], sites=[site, site_br])
-                + self.V3*env.measure_2x2(operators=[n_B, n_A], sites=[site, site_br])
-
                 cip_A, cj_A = op_order(cp_A, c_A, ordered, fermionic=True)
                 ci_B, cjp_B = op_order(c_B, cp_B, ordered, fermionic=True)
                 e_2x2_diag_loc += (
@@ -251,10 +325,6 @@ class tV_model:
                         + -yastn.ncon([ci_B, cjp_B, diag_rdm], ncon_order2)
                     )
                 )
-                res = -self.t2*np.exp(1j*self.phi) * env.measure_2x2(operators=[cip_A, cj_A], sites=[site, site_br])
-                e_2x2_diag_tmp += (res + res.conj()).real
-                res = self.t2*np.exp(1j*self.phi) * env.measure_2x2(operators=[ci_B, cjp_B], sites=[site, site_br])
-                e_2x2_diag_tmp += (res + res.conj()).real
 
                 ci_A, cjp_A = op_order(c_A, cp_A, ordered, fermionic=True)
                 cip_B, cj_B = op_order(cp_B, c_B, ordered, fermionic=True)
@@ -274,13 +344,6 @@ class tV_model:
                 )
                 energy_diag += e_2x2_diag_loc.to_number()
 
-                res = self.t3*env.measure_2x2(operators=[ci_B, cjp_A], sites=[site, site_br])
-                e_2x2_diag_tmp += (res + res.conj()).real
-                res = self.t3*env.measure_2x2(operators=[ci_A, cjp_B], sites=[site, site_br])
-                e_2x2_diag_tmp += (res + res.conj()).real
-
-                assert abs(e_2x2_diag_tmp - e_2x2_diag_loc.item()) < 1e-9
-
                 # anti-diagonal bond
                 anti_diag_rdm, anti_diag_rdm_norm = rdm2x2_anti_diagonal(site, psi, env)
                 # anti_diag_rdm = yastn.trace(plaq_rdm, ((0, 6), (1, 7)))  # s1 s1' s2 s2'
@@ -292,7 +355,6 @@ class tV_model:
                 site_b = psi.nn_site(site, "b")
                 site_r = psi.nn_site(site, "r")
                 ordered = psi.geometry.f_ordered(site_b, site_r)
-                e_2x2_anti_diag_tmp = env.measure_2x2(operators=[n_B, n_A], sites=[site_b, site_r])
 
                 cip_B, cj_A = op_order(cp_B, c_A, ordered, fermionic=True)
                 ci_B, cjp_A = op_order(c_B, cp_A, ordered, fermionic=True)
@@ -303,9 +365,7 @@ class tV_model:
                         + yastn.ncon([cip_B, cj_A, anti_diag_rdm], ncon_order2)
                     ).to_number()
                 )
-                res = self.t3*env.measure_2x2(operators=[ci_B, cjp_A], sites=[site_b, site_r])
-                e_2x2_anti_diag_tmp += (res + res.conj()).real()
-                assert abs(e_2x2_anti_diag_tmp - energy_anti_diag.to_number()) < 1e-9
+
 
         energy_per_site = (
             energy_onsite + energy_horz + energy_vert + energy_diag + energy_anti_diag
@@ -349,25 +409,25 @@ class tV_model:
         # corr_n = measure_rdm_corr_1x2(s0, 30, psi, env, op_list[psi.site2index(s0)], op_list)
         # corr_cc = measure_rdm_corr_1x2(s0, 30, psi, env, op_c_list[psi.site2index(s0)], op_cp_list)
         # print(corr_cc)
-        D = psi[psi.sites()[0]].get_shape(axes=1)
-        obs_file = f"data/obs_FCI_fp_1x1_D_{D:d}_Z2_odd_chi_{args.chi:d}_V_{self.V1:.2f}_t1_{self.t1:.2f}_t2_{self.t2:.2f}_t3_{self.t3:.2f}_mu_{self.mu:.2f}.json"
-        # Initialize the file if it doesn't exist
-        with open(obs_file, "w") as f:
-            json.dump([], f)
+        # D = 2*args.bond_dim
+        # D = sum([args.bond_dims[t] for t in args.bond_dims.keys()])
+        # obs_file = f"data/U1/obs_FCI_fp_1x1_D_{D:d}_U1_chi_{args.chi:d}_V_{self.V1:.2f}_t1_{self.t1:.2f}_t2_{self.t2:.2f}_t3_{self.t3:.2f}_mu_{self.mu:.3f}.json"
+        # with open(obs_file, "w") as f:
+        #     json.dump([], f)
 
-        # Dynamic appending in a loop
-        new_data = {"obs": obs}
+        # # Dynamic appending in a loop
+        # new_data = {"obs": obs}
 
-        # Read the current data
-        with open(obs_file, "r") as f:
-            data = json.load(f)
+        # # Read the current data
+        # with open(obs_file, "r") as f:
+        #     data = json.load(f)
 
-        # Append the new entry
-        data.append(new_data)
+        # # Append the new entry
+        # data.append(new_data)
 
-        # Write the updated data back
-        with open(obs_file, "w") as f:
-            json.dump(data, f, indent=4)
+        # # Write the updated data back
+        # with open(obs_file, "w") as f:
+        #     json.dump(data, f, indent=4)
 
         return obs
 
@@ -381,6 +441,7 @@ def test_state(config=None, noise=0):
     )
 
     if config is None:  # use default
+        from yastn.yastn.backend import backend_np
         config = yastn.make_config(backend=backend_np, fermionic=True, sym="Z2")
 
     # t l b r s a
@@ -400,67 +461,6 @@ def test_state(config=None, noise=0):
     # |0110> + |1100> per iPEPS unit-cell
     psi = PepsAD(geometry, tensors={(0, 0): t0, (0, 1): t1})
 
-    return psi
-
-
-def random_3x3_state_Z2(config=None, bond_dim=(1, 1)):
-    # 3x3 unit-cell pattern in the square lattice:
-    # A B C
-    # B C A
-    # C A B
-    # with one tensor in {A B C} having one electron occupied
-
-    geometry = RectangularUnitcell(
-        pattern={
-            (0, 0): 0,
-            (0, 1): 1,
-            (0, 2): 2,
-            (1, 0): 1,
-            (1, 1): 2,
-            (1, 2): 0,
-            (2, 0): 2,
-            (2, 1): 0,
-            (2, 2): 1,
-        }
-    )
-    if config is None:  # use default
-        config = yastn.make_config(backend=backend_np, fermionic=True, sym="Z2")
-    vectors = {}
-
-    D0, D1 = bond_dim
-    legs = [
-        yastn.Leg(config, s=1, t=(0, 1), D=(D0, D1)),
-        yastn.Leg(config, s=1, t=(0, 1), D=(D0, D1)),
-        yastn.Leg(config, s=-1, t=(0, 1), D=(D0, D1)),
-        yastn.Leg(config, s=-1, t=(0, 1), D=(D0, D1)),
-        yastn.Leg(config, s=1, t=(0, 1), D=(2, 2)),
-    ]
-
-    def rand_tensor_norm(n, legs, dummy_leg_flag=None):
-        if dummy_leg_flag is not None:
-            if dummy_leg_flag == "even":
-                dummy_leg = yastn.Leg(config, s=1, t=(0,), D=(1,))
-            elif dummy_leg_flag == "odd":
-                dummy_leg = yastn.Leg(config, s=1, t=(1,), D=(1,))
-            elif dummy_leg_flag == "even_odd":
-                dummy_leg = yastn.Leg(config, s=1, t=(0, 1), D=(1, 1))
-            legs = legs + [dummy_leg]
-            A = yastn.rand(config=config, n=n, legs=legs)
-            l = len(legs)
-            axes = [i for i in range(l - 2)] + [(l - 2, l - 1)]
-            A = A.fuse_legs(axes=axes)  # Fuse the physical leg with the dummy leg
-        else:
-            A = yastn.rand(config=config, n=n, legs=legs)
-        return A
-
-    psi = PepsAD(
-        geometry,
-        tensors={
-            (0, 0): rand_tensor_norm(0, legs, dummy_leg_flag="odd"),
-            (0, 1): rand_tensor_norm(0, legs, dummy_leg_flag="odd"),
-            (0, 2): rand_tensor_norm(0, legs, dummy_leg_flag="odd"),
-        },
-    )
     return psi
 
 
@@ -485,8 +485,8 @@ def random_3x3_state_U1(bond_dims, config=None):
         }
     )
     if config is None:  # use default
+        from yastn.yastn.backend import backend_np
         config = yastn.make_config(backend=backend_np, fermionic=True, sym="U1")
-    vectors = {}
 
     charges = tuple(bond_dims.keys())
     Ds = tuple([bond_dims[t] for t in charges])
@@ -522,7 +522,7 @@ def random_3x3_state_U1(bond_dims, config=None):
     return psi
 
 
-def random_1x3_state(config=None, bond_dim=(1, 1)):
+def random_1x3_state_U1(bond_dims, config=None):
     # 1x3 unit-cell pattern in the square lattice:
     # A B C
 
@@ -534,26 +534,23 @@ def random_1x3_state(config=None, bond_dim=(1, 1)):
         }
     )
     if config is None:  # use default
-        config = yastn.make_config(backend=backend_np, fermionic=True, sym="Z2")
-    vectors = {}
+        from yastn.yastn.backend import backend_np
+        config = yastn.make_config(backend=backend_np, fermionic=True, sym="U1")
 
-    D0, D1 = bond_dim
+    charges = tuple(bond_dims.keys())
+    Ds = tuple([bond_dims[t] for t in charges])
+
     legs = [
-        yastn.Leg(config, s=1, t=(0, 1), D=(D0, D1)),
-        yastn.Leg(config, s=1, t=(0, 1), D=(D0, D1)),
-        yastn.Leg(config, s=-1, t=(0, 1), D=(D0, D1)),
-        yastn.Leg(config, s=-1, t=(0, 1), D=(D0, D1)),
-        yastn.Leg(config, s=1, t=(0, 1), D=(2, 2)),
+        yastn.Leg(config, s=1, t=charges, D=Ds),
+        yastn.Leg(config, s=1, t=charges, D=Ds),
+        yastn.Leg(config, s=-1, t=charges, D=Ds),
+        yastn.Leg(config, s=-1, t=charges, D=Ds),
+        yastn.Leg(config, s=1, t=(0, 1, 2), D=(1, 2, 1)),
     ]
 
-    def rand_tensor_norm(n, legs, dummy_leg_flag=None):
-        if dummy_leg_flag is not None:
-            if dummy_leg_flag == "even":
-                dummy_leg = yastn.Leg(config, s=1, t=(0,), D=(1,))
-            elif dummy_leg_flag == "odd":
-                dummy_leg = yastn.Leg(config, s=1, t=(1,), D=(1,))
-            elif dummy_leg_flag == "even_odd":
-                dummy_leg = yastn.Leg(config, s=1, t=(0, 1), D=(1, 1))
+    def rand_tensor_norm(n, legs, dummy_leg_charge=0):
+        if dummy_leg_charge != 0:
+            dummy_leg = yastn.Leg(config, s=1, t=(dummy_leg_charge,), D=(1,))
             legs = legs + [dummy_leg]
             A = yastn.rand(config=config, n=n, legs=legs)
             l = len(legs)
@@ -566,44 +563,42 @@ def random_1x3_state(config=None, bond_dim=(1, 1)):
     psi = PepsAD(
         geometry,
         tensors={
-            (0, 0): rand_tensor_norm(0, legs, dummy_leg_flag="odd"),
-            (0, 1): rand_tensor_norm(0, legs, dummy_leg_flag="odd"),
-            (0, 2): rand_tensor_norm(0, legs, dummy_leg_flag="odd"),
+            (0, 0): rand_tensor_norm(0, legs, dummy_leg_charge=-1),
+            (0, 1): rand_tensor_norm(0, legs, dummy_leg_charge=0),
+            (0, 2): rand_tensor_norm(0, legs, dummy_leg_charge=0),
         },
     )
     return psi
 
-
-def random_1x1_state_Z2(config=None, bond_dim=(1, 1)):
-    # 1x1 unit-cell in the square lattice
+def random_3x1_state_U1(bond_dims, config=None):
+    # 1x3 unit-cell pattern in the square lattice:
+    # A B C
 
     geometry = RectangularUnitcell(
         pattern={
             (0, 0): 0,
+            (1, 0): 1,
+            (2, 0): 2,
         }
     )
-
     if config is None:  # use default
-        config = yastn.make_config(backend=backend_np, fermionic=True, sym="Z2")
-    vectors = {}
+        from yastn.yastn.backend import backend_np
+        config = yastn.make_config(backend=backend_np, fermionic=True, sym="U1")
 
-    D0, D1 = bond_dim
+    charges = tuple(bond_dims.keys())
+    Ds = tuple([bond_dims[t] for t in charges])
+
     legs = [
-        yastn.Leg(config, s=1, t=(0, 1), D=(D0, D1)),
-        yastn.Leg(config, s=1, t=(0, 1), D=(D0, D1)),
-        yastn.Leg(config, s=-1, t=(0, 1), D=(D0, D1)),
-        yastn.Leg(config, s=-1, t=(0, 1), D=(D0, D1)),
-        yastn.Leg(config, s=1, t=(0, 1), D=(2, 2)),
+        yastn.Leg(config, s=1, t=charges, D=Ds),
+        yastn.Leg(config, s=1, t=charges, D=Ds),
+        yastn.Leg(config, s=-1, t=charges, D=Ds),
+        yastn.Leg(config, s=-1, t=charges, D=Ds),
+        yastn.Leg(config, s=1, t=(0, 1, 2), D=(1, 2, 1)),
     ]
 
-    def rand_tensor_norm(n, legs, dummy_leg_flag=None):
-        if dummy_leg_flag is not None:
-            if dummy_leg_flag == "even":
-                dummy_leg = yastn.Leg(config, s=1, t=(0,), D=(1,))
-            elif dummy_leg_flag == "odd":
-                dummy_leg = yastn.Leg(config, s=1, t=(1,), D=(1,))
-            elif dummy_leg_flag == "even_odd":
-                dummy_leg = yastn.Leg(config, s=1, t=(0, 1), D=(1, 1))
+    def rand_tensor_norm(n, legs, dummy_leg_charge=0):
+        if dummy_leg_charge != 0:
+            dummy_leg = yastn.Leg(config, s=1, t=(dummy_leg_charge,), D=(1,))
             legs = legs + [dummy_leg]
             A = yastn.rand(config=config, n=n, legs=legs)
             l = len(legs)
@@ -616,13 +611,12 @@ def random_1x1_state_Z2(config=None, bond_dim=(1, 1)):
     psi = PepsAD(
         geometry,
         tensors={
-            (0, 0): rand_tensor_norm(0, legs, dummy_leg_flag="odd"),
-            # (0, 0): rand_tensor_norm(0, legs, dummy_leg_flag='even'),
-            # (0, 0): rand_tensor_norm(0, legs, dummy_leg_flag='even_odd'),
+            (0, 0): rand_tensor_norm(0, legs, dummy_leg_charge=-1),
+            (1, 0): rand_tensor_norm(0, legs, dummy_leg_charge=0),
+            (2, 0): rand_tensor_norm(0, legs, dummy_leg_charge=0),
         },
     )
     return psi
-
 
 def random_1x1_state_U1(bond_dims, config=None):
     # 1x1 unit-cell in the square lattice
@@ -633,6 +627,7 @@ def random_1x1_state_U1(bond_dims, config=None):
     )
 
     if config is None:  # use default
+        from yastn.yastn.backend import backend_np
         config = yastn.make_config(backend=backend_np, fermionic=True, sym="U1")
 
     charges = tuple(bond_dims.keys())
@@ -678,7 +673,9 @@ def random_hc_state(config=None, bond_dim=(1, 1)):
     )
 
     if config is None:  # use default
+        from yastn.yastn.backend import backend_np
         config = yastn.make_config(backend=backend_np, fermionic=True, sym="Z2")
+    vectors = {}
 
     # tensors = [tensorA, tensorB] for A, B sublattice
     #   0       2   1       t(0)  r(3)
@@ -720,7 +717,7 @@ def random_hc_state(config=None, bond_dim=(1, 1)):
             A = yastn.rand(config=config, n=n, legs=legs)
         return A
 
-    psi = PepsAd(
+    psi = PepsAD(
         geometry,
         tensors={
             (0, 0): [
@@ -757,7 +754,22 @@ parser.add_argument(
     "--phi", type=float, default=0.0, help="phase of the 2nd. nearest-neighbor hopping"
 )
 parser.add_argument("--mu", type=float, default=0.0, help="chemical potential")
+parser.add_argument("--m", type=float, default=0.0, help="Semenoff mass")
+parser.add_argument("--pattern", default="1x1", help="unit-cell of iPEPS: choice={1x1, 3x3}")
+parser.add_argument("--init_state_file", default=None, help="initial state file")
 
+def parse_dict(input_string):
+    try:
+        # Use `ast.literal_eval` to safely evaluate the string
+        parsed = ast.literal_eval(input_string)
+        if isinstance(parsed, dict):
+            return parsed
+        else:
+            raise argparse.ArgumentTypeError("Input is not a valid dictionary.")
+    except Exception as e:
+        raise argparse.ArgumentTypeError(f"Invalid dictionary format: {e}")
+
+parser.add_argument("--bond_dims", type=parse_dict, help="dict of bond dimensions keyed on charge sectors  (e.g., \"{'charge1': 'D1', 'charge2': D2}\")")
 
 parser.add_argument(
     "--yast_backend",
@@ -770,31 +782,18 @@ args = parser.parse_args()  # process command line arguments
 num_cores = os.cpu_count() // 2
 args, unknown_args = parser.parse_known_args(
     [
-        "--bond_dim",
-        "2",
-        "--chi",
-        "20",
         "--opt_max_iter",
-        "300",
+        "1000",
         "--omp_cores",
-        "8",
-        # "--opt_resume",
-        # "output_checkpoint.p",
-        # "tV_1x1_D_2_chi_20_V_1.5_checkpoint.p",
-        # "--opt_resume_override_params",
-        "--seed",
-        "120",
-        # "42",
-        "--CTMARGS_ctm_max_iter",
-        "200",
+        "16",
         "--CTMARGS_ctm_env_init_type",
         "eye",
         "--OPTARGS_fd_eps",
         "1e-8",
         "--OPTARGS_no_opt_ctm_reinit",
-        # "--OPTARGS_no_line_search_ctm_reinit",
-        # "--GLOBALARGS_dtype",
-        # "complex128",
+        "--OPTARGS_no_line_search_ctm_reinit",
+        "--GLOBALARGS_dtype",
+        "complex128",
         # "--OPTARGS_opt_log_grad",
         # "--CTMARGS_fwd_checkpoint_move",
         "--OPTARGS_line_search",
@@ -805,33 +804,31 @@ args, unknown_args = parser.parse_known_args(
 )
 cfg.configure(args)
 
+
+
 def main():
     global args
     if args.yast_backend == "torch":
         from yastn.yastn.backend import backend_torch as backend
-    # elif args.yast_backend=='torch_cpp':
-    #     from yastn.yastn.backend import backend_torch_cpp as backend
-    # settings_full= yastn.make_config(backend=backend, \
-    #     default_device= cfg.global_args.device, default_dtype=cfg.global_args.dtype)
 
     yastn_config = yastn.make_config(
         backend=backend,
-        sym=sym_Z2,
-        # sym=sym_U1,
+        sym=sym_U1,
         fermionic=True,
         default_device=cfg.global_args.device,
         default_dtype=cfg.global_args.dtype,
+        tensordot_policy="no_fusion",
     )
 
     torch.set_num_threads(args.omp_cores)
     yastn_config.backend.random_seed(args.seed)
 
-    args.V1, args.V2, args.V3, args.t1, args.t2, args.t3, args.phi, args.m = 1.4, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0
-    args.mu= args.V1*1.5
     pd = {}
     pd["V1"], pd["V2"], pd["V3"] = args.V1, args.V2, args.V3
     pd["t1"], pd["t2"], pd["t3"] = args.t1, args.t2, args.t3
-    pd["phi"] = args.phi
+    # pd["phi"] = args.phi
+    pd["t2"], pd["t3"] = 0.7*pd["t1"], -0.9*pd["t1"]
+    pd["phi"] = 0.35 * np.pi
     pd["m"], pd["mu"] = args.m, args.mu
 
     @torch.no_grad()
@@ -853,10 +850,9 @@ def main():
         t_ctm_prev = time.perf_counter()
         converged, conv_history = False, []
 
-        prev_rdms = None
         for sweep in range(max_sweeps):
             env.update_(
-                opts_svd=opts_svd, method=method, use_qr=False, checkpoint_move=True,
+                opts_svd=opts_svd, method=method, use_qr=False, checkpoint_move=True
             )
             t_ctm_after = time.perf_counter()
             t_ctm += t_ctm_after - t_ctm_prev
@@ -866,7 +862,7 @@ def main():
             if converged:
                 break
         env.update_(
-            opts_svd=opts_svd, method=method, use_qr=False, checkpoint_move=True,
+            opts_svd=opts_svd, method=method, use_qr=False, checkpoint_move=True
         )
 
         return env, converged, conv_history, t_ctm, t_check
@@ -885,23 +881,14 @@ def main():
             # env_leg = yastn.Leg(yastn_config, s=1, t=(0,), D=(chi,))
             ctm_env_in = EnvCTM(state, init=ctm_args.ctm_env_init_type, leg=env_leg)
 
-        # 1) compute environment by CTMRG
-        # ctm_env_out, converged, *ctm_log, t_ctm, t_check = get_converged_env(
-        #     ctm_env_in,
-        #     max_sweeps=ctm_args.ctm_max_iter,
-        #     iterator_step=1,
-        #     opts_svd=opts_svd,
-        #     corner_tol=1e-8,
-        # )
-        # print(converged)
-        # --fixed_point
         state_params = state.get_parameters()
         env_params, slices = env_raw_data(ctm_env_in)
         env_out_data = FixedPoint.apply(env_params, slices, yastn_config, ctm_env_in, opts_svd, cfg.main_args.chi, 1e-10, ctm_args, *state_params)
         ctm_env_out, ctm_log, t_ctm, t_check = FixedPoint.ctm_env_out, FixedPoint.ctm_log, FixedPoint.t_ctm, FixedPoint.t_check
         refill_env(ctm_env_out, env_out_data, FixedPoint.slices)
         # 2) evaluate loss with converged environment
-        loss = model.energy_per_site(state, ctm_env_out)  # H= H_0 + mu * (nA + nB)
+        loss = model.energy_per_site(state, ctm_env_out)  # H= H_0 - mu * (nA + nB)
+        # assert abs(loss - model.energy_per_site_rdm(state, ctm_env_out)) < 1e-9
         return (loss, ctm_env_out, *ctm_log, t_ctm, t_check)
 
     @torch.no_grad()
@@ -935,137 +922,53 @@ def main():
 
         model.eval_obs(state, ctm_env)
 
-    # mus = np.arange(-0.70, -0.76, -0.01)
-    # mus = [0.0]
-    # mus = np.concatenate([[-0.4, -0.60], np.arange(-0.7, -0.75, -0.01)])
-    # mus = np.arange(-0.60, -0.71, -0.1)
-    # mus = np.arange(-0.76, -0.80, -0.01)
-    # mus = np.arange(-0.02, -0.1, -0.01)
-    # mus = np.arange(-0.15, -0.2, -0.01)
-    # ns = np.zeros(len(mus))
-    mus = [-0.9]
+    bond_dims = args.bond_dims
+    D = sum([bond_dims[t] for t in bond_dims.keys()])
+    seed_dir = f"FCI_U1_data_seed_{args.seed:d}"
+    if not os.path.exists(seed_dir):
+        os.mkdir(seed_dir)
+    state_file = f"FCI_U1_data_seed_{args.seed}/FCI_fp_{args.pattern}_D_{D:d}_U1_chi_{args.chi:d}_V_{pd['V1']:.2f}_t1_{pd['t1']:.2f}_t2_{pd['t2']:.2f}_t3_{pd['t3']:.2f}_phi_{pd['phi']/np.pi:.2f}_mu_{pd['mu']:.3f}"
 
-    def collect_density(model, state):
-        ctm_args = cfg.ctm_args
-        chi = cfg.main_args.chi // 2
-        env_leg = yastn.Leg(yastn_config, s=1, t=(0, 1), D=(chi, chi))
-        ctm_env_in = EnvCTM(state, init=ctm_args.ctm_env_init_type, leg=env_leg)
-        ctm_env_out, converged, *ctm_log, t_ctm, t_check = get_converged_env(
-            ctm_env_in,
-            max_sweeps=ctm_args.ctm_max_iter,
-            iterator_step=1,
-            opts_svd=opts_svd,
-            corner_tol=1e-8,
-        )
-        obs = model.eval_obs(state, ctm_env_out)
+    args, unknown_args = parser.parse_known_args(
+        [
+            "--out_prefix",
+            state_file,
+        ],
+        namespace=args,
+    )
+    for handler in logging.root.handlers[:]:
+        logging.root.removeHandler(handler)
+    cfg.configure(args)
+    log.log(logging.INFO, "device: "+cfg.global_args.device)
+    log.log(logging.INFO, f"bond_dims:{bond_dims}")
+    model = tV_model(yastn_config, pd)
 
-        n = 0
-        for s0 in state.sites():
-            n += obs[s0][-2]
+    opts_svd = {
+        "D_total": cfg.main_args.chi,
+        "tol": cfg.ctm_args.projector_svd_reltol,
+        "eps_multiplet": cfg.ctm_args.projector_eps_multiplet,
+        "truncate_multiplets": True,
+    }
 
-        return n / len(state.sites())
+    if args.init_state_file is None or not os.path.exists(args.init_state_file):
+        if args.pattern == '1x1':
+            state = random_1x1_state_U1(bond_dims=bond_dims, config=yastn_config)
+        elif args.pattern == '3x3':
+            state = random_3x3_state_U1(bond_dims=bond_dims, config=yastn_config)
+        elif args.pattern == '1x3':
+            state = random_1x3_state_U1(bond_dims=bond_dims, config=yastn_config)
+        elif args.pattern == '3x1':
+            state = random_3x1_state_U1(bond_dims=bond_dims, config=yastn_config)
+    else:
+        state = load_PepsAD(yastn_config, args.init_state_file)
+        log.log(logging.INFO, "loaded " + args.init_state_file)
+        print("loaded ", args.init_state_file)
+        state.add_noise_(noise=0.5)
 
-    for i, mu in enumerate(mus):
-        # V1 = 1.0
-        # pd["V1"] = V1
-        # pd["mu"] = mu
-        # pd["t1"] = 0.5
-        # pd["t2"] = (np.sqrt(129) / 36) * pd["t1"]
-        # pd["phi"] = np.arccos(-3 * np.sqrt(3 / 43))
-        # pd["t2"] = 0.7 * pd["t1"]
-        # pd["t3"] = -0.9 * pd["t1"]
-        # pd["phi"] = 0.35 * np.pi
-        # pd["m"] = 0.0
-        D = args.bond_dim
-        D1, D2 = 1, 1
-        bond_dims = {-1: 1, 0: 2, 1: 1}
-        D = sum([bond_dims[t] for t in bond_dims.keys()])
-        args, unknown_args = parser.parse_known_args(
-            [
-                "--out_prefix",
-                "tmp",
-                # f"tV_3x3_D_{D:d}_U1_chi_{args.chi:d}_V_{pd['V1']:.2f}_t1_{pd['t1']:.2f}_t2_{pd['t2']:.2f}_t3_{pd['t3']:.2f}_mu_{float(pd['mu']):.2f}",
-                # f"tV_1x1_D_{D1}+{D2}_odd_chi_{args.chi}_V_{pd['V1']:.2f}_t1_{pd['t1']:.2f}_t2_{pd['t2']:.2f}_t3_{pd['t3']:.2f}_mu_{float(pd['mu']):.2f}",
-                # f"tV_3x3_D_{D1}+{D2}_3odd_chi_{args.chi}_V_{pd['V1']:.2f}_t1_{pd['t1']:.2f}_t2_{pd['t2']:.2f}_mu_{float(pd['mu']):.2f}",
-                # f"tV_1x3_D_{D1}+{D2}_3odd_chi_{args.chi}_V_{pd['V1']:.2f}_t1_{pd['t1']:.2f}_t2_{pd['t2']:.2f}_mu_{float(pd['mu']):.2f}",
-            ],
-            namespace=args,
-        )
-        for handler in logging.root.handlers[:]:
-            logging.root.removeHandler(handler)
-        cfg.configure(args)
-        # cfg.print_config()
-        print(pd)
-        model = tV_model(yastn_config, pd)
-
-        opts_svd = {
-            "fix_signs": True,
-            "D_total": cfg.main_args.chi,
-            "tol": cfg.ctm_args.projector_svd_reltol,
-            "eps_multiplet": cfg.ctm_args.projector_eps_multiplet,
-            # "truncate_multiplets": False,
-        }
-
-        # state= load_PepsAD(yastn_config,"tV_1x1_D_2+2_chi20_V_1.40_state.json")
-        state_file = ""
-        if i > 0:
-            # state_file = f"tV_1x3_D_{D1}+{D2}_3odd_chi_{args.chi}_V_{pd['V1']:.2f}_t1_{pd['t1']:.2f}_"\
-            #         + f"t2_{pd['t2']:.2f}_mu_{mus[i-1]:.2f}_state.json"
-            # state_file = f"tV_3x3_D_{D1}+{D2}_3odd_chi_{args.chi:d}_V_{pd['V1']:.2f}_t1_{pd['t1']:.2f}_"\
-            #         + f"t2_{pd['t2']:.2f}_mu_{mus[i-1]:.2f}_state.json"
-            # state_file = f"tV_1x1_D_{D1}+{D2}_odd_chi_{args.chi}_V_{pd['V1']:.2f}_t1_{pd['t1']:.2f}_"\
-            #         + f"t2_{pd['t2']:.2f}_mu_{mus[i-1]:.2f}_state.json"
-            # state_file = f"tV_1x1_D_{D1}+{D2}_even_odd_chi_{args.chi}_V_{pd['V1']:.2f}_t1_{pd['t1']:.2f}_"\
-            #         + f"t2_{pd['t2']:.2f}_t3_{pd['t3']:.2f}_mu_{mus[i-1]:.2f}_state.json"
-            state_file = (
-                f"tV_3x3_D_{D:d}_U1_chi_{args.chi:d}_V_{pd['V1']:.2f}_t1_{pd['t1']:.2f}_"
-                + f"t2_{pd['t2']:.2f}_t3_{pd['t3']:.2f}_mu_{mus[i]:.2f}_state.json"
-            )
-        # else:
-            # state_file = "tmp_state.json"
-            # state_file = f"tV_1x1_D_{D:d}_U1_chi_{args.chi:d}_V_{pd['V1']:.2f}_t1_{pd['t1']:.2f}_"\
-            #         + f"t2_{pd['t2']:.2f}_t3_{pd['t3']:.2f}_mu_{mus[i]:.2f}_state.json"
-            # state_file = f"tV_1x1_D_{D1}+{D2}_odd_chi_{args.chi:d}_V_{pd['V1']:.2f}_t1_{pd['t1']:.2f}_"\
-            #         + f"t2_{pd['t2']:.2f}_t3_{pd['t3']:.2f}_mu_{float(pd['mu']):.2f}_state.json"
-        # state_file = f"tV_1x1_D_{D1}+{D2}_odd_chi_40_V_{pd['V1']:.2f}_t1_{pd['t1']:.2f}_"\
-        #         + f"t2_{pd['t2']:.2f}_t3_{pd['t3']:.2f}_mu_-0.10_state.json"
-        # state_file = f"tV_3x3_D_{D1}+{D2}_3odd_chi_{args.chi}_V_{pd['V1']:.2f}_t1_{pd['t1']:.2f}_"\
-        # + f"t2_{pd['t2']:.2f}_mu_-0.35_state.json"
-        # state_file = f"tV_1x1_D_{D1}+{D2}_even_odd_chi_80_V_{pd['V1']:.2f}_t1_{pd['t1']:.2f}_"\
-        #         + f"t2_{pd['t2']:.2f}_mu_-0.70_state.json"
-        # state_file = f"tmp_state.json"
-
-        # state_file = f"tV_1x3_D_{D1}+{D2}_3odd_chi_{args.chi}_V_{pd['V1']:.2f}_t1_{pd['t1']:.2f}_"\
-        #         + f"t2_{pd['t2']:.2f}_mu_{mus[i]:.2f}_state.json"
-
-        # state_file = f"tV_1x1_D_{D1}+{D2}_odd_chi_{args.chi}_V_{pd['V1']:.2f}_t1_{pd['t1']:.2f}_"\
-        #         + f"t2_{pd['t2']:.2f}_t3_{pd['t3']:.2f}_mu_{mus[i]:.2f}_state.json"
-        # print(D1, D2, args.chi)
-        # print(bond_dims)
-        print(state_file)
-        if not os.path.exists(state_file):
-            state = random_1x1_state_Z2(config=yastn_config, bond_dim=(D1, D2))
-            # state = random_1x1_state_U1(bond_dims=bond_dims, config=yastn_config)
-            # state = random_3x3_state_Z2(config=yastn_config, bond_dim=(D1, D2))
-            # state = random_3x3_state_U1(bond_dims=bond_dims, config=yastn_config)
-            # state = random_1x3_state(config=yastn_config, bond_dim=(D1, D2))
-        else:
-            state = load_PepsAD(yastn_config, state_file)
-            print("loaded " + state_file)
-            state.add_noise_(noise=0.1)
-
-        # chi = cfg.main_args.chi//2
-        # env_leg = yastn.Leg(yastn_config, s=1, t=(0, 1), D=(chi, chi))
-        chi = cfg.main_args.chi
-        env_leg = yastn.Leg(yastn_config, s=1, t=(0,), D=(chi,))
-        ctm_env_in = EnvCTM(state, init=cfg.ctm_args.ctm_env_init_type, leg=env_leg)
-        optimize_state(state, ctm_env_in, loss_fn, obs_fn=obs_fn, post_proc=None)
-        # ns[i] = collect_density(model, state)
-
-    # n_mu_file = f"mu_n_tV_1x1_D_{D1}+{D2}_odd_chi_{args.chi}_V_{pd['V1']:.2f}_t1_{pd['t1']:.2f}_t2_{pd['t2']:.2f}_t3_{pd['t3']:.2f}"
-    # with open(n_mu_file, "wb") as handle:
-    #     pickle.dump((mus, ns), handle)
-
+    chi = cfg.main_args.chi
+    env_leg = yastn.Leg(yastn_config, s=1, t=(0,), D=(chi,))
+    ctm_env_in = EnvCTM(state, init=cfg.ctm_args.ctm_env_init_type, leg=env_leg)
+    optimize_state(state, ctm_env_in, loss_fn, obs_fn=obs_fn, post_proc=None)
 
 if __name__ == "__main__":
     if len(unknown_args) > 0:

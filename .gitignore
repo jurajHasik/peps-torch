@@ -3,3 +3,7 @@
 *~
 __pycache__
 .DS_Store
+*.pdf
+*.log
+*.json
+*checkpoint.p

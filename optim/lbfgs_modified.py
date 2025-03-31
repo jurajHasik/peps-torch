@@ -1,6 +1,5 @@
 from math import sqrt
 import torch
-from functools import reduce
 from torch.optim.lbfgs import LBFGS, _strong_wolfe
 import logging
 log = logging.getLogger(__name__)
@@ -16,7 +15,7 @@ def _scalar_search_armijo(phi, phi0, derphi0, args=(), c1=1e-4, alpha0=1, amin=1
     alpha
     phi1
     """
-    log.info(f"LS expected phi: {phi0+c1*alpha0*derphi0} (derphi0: {derphi0})") 
+    log.info(f"LS expected phi: {phi0+c1*alpha0*derphi0} (derphi0: {derphi0})")
     phi_a0 = phi(alpha0, *args)
     if phi_a0 <= phi0 + c1*alpha0*derphi0:
         return alpha0, phi_a0
@@ -65,7 +64,7 @@ class LBFGS_MOD(LBFGS):
     Extends the original steepest gradient descent of PyTorch
     [`torch.optim.LBFGS <https://pytorch.org/docs/stable/optim.html#torch.optim.LBFGS>`_]
     with optional backtracking linesearch. The linesearch implementation
-    is adapted from scipy 
+    is adapted from scipy
     [`scipy.optimize.linesearch <https://github.com/scipy/scipy/blob/master/scipy/optimize/linesearch.py>`_]
     and relies only on the value of the loss function, not derivatives.
     """
@@ -83,16 +82,16 @@ class LBFGS_MOD(LBFGS):
         Args:
             lr : float
                 learning rate
-            max_iter : int 
+            max_iter : int
                 maximal number of iterations per optimization step
-            max_eval : int 
-                maximal number of function evaluations per optimization step 
+            max_eval : int
+                maximal number of function evaluations per optimization step
                 (default: max_iter * 1.25).
             tolerance_grad : float
                 termination tolerance on first order optimality
             tolerance_change : float
                 termination tolerance on function value/parameter changes.
-            history_size : int 
+            history_size : int
                 update history size.
             line_search_fn : str
                 either 'strong_wolfe' or ``None``.
@@ -130,14 +129,18 @@ class LBFGS_MOD(LBFGS):
         return loss, flat_grad
 
     @torch.no_grad()
-    def step_2c(self, closure, closure_linesearch):
+    def step_2c(self, closure, closure_linesearch, new_loss=None, new_flat_grad=None):
         """Performs a single optimization step.
 
         Args:
             closure (callable): A closure that reevaluates the model
                 and returns the loss.
-            closure_linesearch (callable): A closure that reevaluates the model and returns 
+            closure_linesearch (callable): A closure that reevaluates the model and returns
                 the loss in torch.no_grad context
+            new_loss (float, optional): The loss value at the updated point. If it's is None,
+                the closure is evaluated to compute the gradient.
+            flat_grad (Tensor, optional): The gradient at the updated point. If it's is None,
+                the closure is evaluated to compute the gradient.
         """
         assert len(self.param_groups) == 1
 
@@ -160,20 +163,26 @@ class LBFGS_MOD(LBFGS):
         state.setdefault('func_evals', 0)
         state.setdefault('n_iter', 0)
 
-        # evaluate initial f(x) and df/dx
-        with torch.enable_grad():
-            orig_loss = closure()
-        loss = float(orig_loss)
-        current_evals = 1
-        state['func_evals'] += 1
+        if new_loss is None and new_flat_grad is None:
+            # evaluate initial f(x) and df/dx
+            with torch.enable_grad():
+                orig_loss = closure()
+            loss = float(orig_loss)
+            flat_grad = self._gather_flat_grad()
+            current_evals = 1
+            state['func_evals'] += 1
+        else:
+            orig_loss = new_loss
+            loss = float(new_loss)
+            flat_grad = new_flat_grad
+            current_evals = 0
 
-        flat_grad = self._gather_flat_grad()
         is_complex= flat_grad.is_complex()
         opt_cond = flat_grad.abs().max() <= tolerance_grad
 
         # optimal condition
         if opt_cond:
-            return orig_loss
+            return orig_loss, None, None
 
         # tensors cached in state (for tracing)
         d = state.get('d')
@@ -276,6 +285,7 @@ class LBFGS_MOD(LBFGS):
                 break
 
             # optional line search: user function
+            new_loss, new_flat_grad = None, None
             ls_func_evals = 0
             if line_search_fn is not None and line_search_fn != "default":
                 # perform line search, using user function
@@ -289,22 +299,21 @@ class LBFGS_MOD(LBFGS):
                     t, loss= _scalar_search_armijo(obj_func, loss, gtd, args=(x_init,d), alpha0=t)
                     if t is None:
                         raise RuntimeError("minimize_scalar failed")
-                
+
                 elif line_search_fn == "strong_wolfe":
                     x_init = self._clone_param()
 
                     def obj_func(x, t, d):
                         return self._directional_evaluate(closure, x, t, d)
 
-                    loss, flat_grad, t, ls_func_evals = _strong_wolfe(
+                    new_loss, new_flat_grad, t, ls_func_evals = _strong_wolfe(
                         obj_func, x_init, t, d, loss, flat_grad, gtd)
                 else:
                     raise RuntimeError("unsupported line search")
 
                 log.info(f"LS final step: {t}")
                 self._add_grad(t, d)
-                opt_cond = flat_grad.abs().max() <= tolerance_grad
-            
+                opt_cond = new_flat_grad.abs().max() <= tolerance_grad
             else:
                 # no line search, simply move with fixed-step
                 self._add_grad(t, d)
@@ -313,9 +322,9 @@ class LBFGS_MOD(LBFGS):
                     # the reason we do this: in a stochastic setting,
                     # no use to re-evaluate that function here
                     with torch.enable_grad():
-                        loss = float(closure())
-                    flat_grad = self._gather_flat_grad()
-                    opt_cond = flat_grad.abs().max() <= tolerance_grad
+                        new_loss = float(closure())
+                    new_flat_grad = self._gather_flat_grad()
+                    opt_cond = new_flat_grad.abs().max() <= tolerance_grad
                     ls_func_evals = 1
 
             # update func eval
@@ -351,4 +360,4 @@ class LBFGS_MOD(LBFGS):
         state['prev_flat_grad'] = prev_flat_grad
         state['prev_loss'] = prev_loss
 
-        return orig_loss
+        return orig_loss, new_loss, new_flat_grad
