@@ -3,25 +3,27 @@ import torch
 import numpy as np
 import yastn.yastn as yastn
 from yastn.yastn.tn.fpeps.envs.rdm import *
-from yastn.yastn.tn.fpeps import RectangularUnitcell
+from yastn.yastn.tn.fpeps import RectangularUnitcell, Bond
 from yastn.yastn.backend import backend_np
 from ipeps.integration_yastn import PepsAD, load_PepsAD
 
 class tV_model:
-    def __init__(self, config, V1 : float = 0, V2:float = 0, V3:float = 0, 
-                 t1 : float= 1., t2:float= 0, phi:float=0, mu: Union[float, torch.Tensor] =0, **kwargs):
+    def __init__(self, config, V1 : float = 0, V2:float = 0, V3:float = 0,
+                 t1 : float= 1., t2:float= 0, t3:float=0, phi:float=0, mu: Union[float, torch.Tensor] =0, m:float=0, **kwargs):
         """
         Parameters
         ----------
             config : module | _config(NamedTuple)
                 :ref:`YASTN configuration <tensor/configuration:yastn configuration>`
-            V1 : n.n. interaction 
+            V1 : n.n. interaction
             V2 : 2nd n.n. interaction
             V3 : 3rd n.n. interaction
-            t1: amplitude of n.n. hopping, 
+            t1: amplitude of n.n. hopping,
             t2: amplitude of the 2nd n.n. hopping
+            t3: amplitude of the 3rd n.n. hopping
             phi: phase of the 2nd n.n. hopping along the positive direction
             mu: chemical potential
+            m: semenoff mass
         """
         self.config = config
         self.dtype = config.default_dtype
@@ -31,8 +33,10 @@ class tV_model:
         self.V2 = V2
         self.V3 = V3
         self.mu = mu
+        self.m = m
         self.t1 = t1
         self.t2 = t2
+        self.t3 = t3
         self.phi = phi
 
         self.sf = yastn.operators.SpinfulFermions(**self.config._asdict())
@@ -43,7 +47,7 @@ class tV_model:
             "cp_A": self.sf.cp(spin="u"),
             "c_B": self.sf.c(spin="d"),
             "cp_B": self.sf.cp(spin="d"),
-            "I": self.sf.I() 
+            "I": self.sf.I()
         }
 
 
@@ -53,32 +57,155 @@ class tV_model:
         return []
 
 
-    def energy_per_site(self, psi : yastn.tn.fpeps.Peps, env : yastn.tn.fpeps.EnvCTM) -> float:
+    def energy_per_site(self, psi, env):
         r"""
         :param psi: Peps
         :param env: CTM environment
-        :return: energy per site
-        
-        TODO: link convention for fermionic ordering
-        Coordinates on the lattice ::
-
-            x\y
-                _:__:__:__:_
-            ..._|__|__|__|_...
-            ..._|__|__|__|_...
-            ..._|__|__|__|_...
-            ..._|__|__|__|_...
-            ..._|__|__|__|_...
-                :  :  :  :
+        :return: energy
+        :rtype: float
         """
-        n_A, n_B, c_A, cp_A, c_B, cp_B, I = tuple( self.ops[k] for k in ("n_A", "n_B", "c_A", "cp_A", "c_B", "cp_B", "I") )
+
+        # x\y
+        #     _:__:__:__:_
+        #  ..._|__|__|__|_...
+        #  ..._|__|__|__|_...
+        #  ..._|__|__|__|_...
+        #  ..._|__|__|__|_...
+        #  ..._|__|__|__|_...
+        #      :  :  :  :
+
+        energy_onsite, energy_horz, energy_vert, energy_diag, energy_anti_diag = (
+            0,
+            0,
+            0,
+            0,
+            0,
+        )
+
+        # sf = yastn.operators.SpinfulFermions(sym=str(self.config.sym), fermionic=True)
+        _tmp_config = {x: y for x, y in self.config._asdict().items() if x != "sym"}
+        sf = yastn.operators.SpinfulFermions(sym=str(self.config.sym), **_tmp_config)
+        n_A = sf.n(spin="u")  # parity-even operator, no swap gate needed
+        n_B = sf.n(spin="d")
+        c_A = sf.c(spin="u")
+        cp_A = sf.cp(spin="u")
+        c_B = sf.c(spin="d")
+        cp_B = sf.cp(spin="d")
+        I = sf.I()
         N = len(psi.sites())
 
+
+        # measure_function-based computation
+        for site in psi.sites():
+            op = (
+                self.V1 * (n_A @ n_B)
+                - self.mu * (n_A + n_B)
+                - self.t1 * (cp_A @ c_B + cp_B @ c_A).remove_zero_blocks()
+                + self.m * (n_A - n_B)
+            )
+            energy_onsite += env.measure_1site(op, site=site)
+
+            # horizontal bond
+            h_bond = Bond(site, psi.nn_site(site, "r"))
+            e_1x2_loc = self.V1 * env.measure_nn(n_B, n_A, bond=h_bond)+ self.V2 * env.measure_nn(n_B, n_B, bond=h_bond)+ self.V2 * env.measure_nn(n_A, n_A, bond=h_bond)
+            site_r = psi.nn_site(site, "r")
+            res = self.t1 * env.measure_nn(c_B, cp_A, bond=h_bond)
+            e_1x2_loc += res + res.conj()
+            res = self.t2*np.exp(1j*self.phi)*env.measure_nn(c_A, cp_A, bond=h_bond)
+            e_1x2_loc += (res + res.conj()).real
+            res = -self.t2*np.exp(1j*self.phi)*env.measure_nn(cp_B, c_B, bond=h_bond)
+            e_1x2_loc += (res + res.conj()).real
+            energy_horz += e_1x2_loc
+
+
+            # vertical bond
+            v_bond = Bond(site, psi.nn_site(site, "b"))
+            e_2x1_loc = self.V1*env.measure_nn(n_A, n_B, bond=v_bond) + self.V2*env.measure_nn(n_B, n_B, bond=v_bond) + self.V2*env.measure_nn(n_A, n_A, bond=v_bond)
+            site_b = psi.nn_site(site, "b")
+            res = -self.t1*env.measure_nn(cp_A, c_B, bond=v_bond)
+            e_2x1_loc += (res + res.conj()).real
+            res = self.t2*np.exp(1j*self.phi)*env.measure_nn(c_A, cp_A, bond=v_bond)
+            e_2x1_loc += (res + res.conj()).real
+            res = -self.t2*np.exp(1j*self.phi)*env.measure_nn(cp_B, c_B, bond=v_bond)
+            e_2x1_loc += (res + res.conj()).real
+            energy_vert += e_2x1_loc
+
+            if self.V2 != 0 or self.V3 != 0 or self.t2 != 0 or self.t3 != 0:
+                site_br = psi.nn_site(site, "br")
+                e_2x2_diag_loc = self.V2*env.measure_2x2(n_A, n_A, sites=[site, site_br]) + self.V2*env.measure_2x2(n_B, n_B, sites=[site, site_br])
+                e_2x2_diag_loc += self.V3*env.measure_2x2(n_A, n_B, sites=[site, site_br]) + self.V3*env.measure_2x2(n_B, n_A, sites=[site, site_br])
+
+                res = -self.t2*np.exp(1j*self.phi) * env.measure_2x2(cp_A, c_A, sites=[site, site_br])
+                e_2x2_diag_loc += (res + res.conj()).real
+                res = self.t2*np.exp(1j*self.phi) * env.measure_2x2(c_B, cp_B, sites=[site, site_br])
+                e_2x2_diag_loc += (res + res.conj()).real
+                res = self.t3*env.measure_2x2(c_B, cp_A, sites=[site, site_br])
+                e_2x2_diag_loc += (res + res.conj()).real
+                res = self.t3*env.measure_2x2(c_A, cp_B, sites=[site, site_br])
+                e_2x2_diag_loc += (res + res.conj()).real
+
+                energy_diag += e_2x2_diag_loc
+
+                site_b = psi.nn_site(site, "b")
+                site_r = psi.nn_site(site, "r")
+                e_2x2_anti_diag_loc = self.V3*env.measure_2x2(n_B, n_A, sites=[site_b, site_r])
+
+                res = self.t3*env.measure_2x2(c_B, cp_A, sites=[site_b, site_r])
+                e_2x2_anti_diag_loc += (res + res.conj()).real
+
+                energy_anti_diag += e_2x2_anti_diag_loc
+
+        energy_per_site = (
+            energy_onsite + energy_horz + energy_vert + energy_diag + energy_anti_diag
+        ) / N
+        return energy_per_site.real
+
+    def energy_per_site_rdm(self, psi, env):
+        r"""
+        :param psi: Peps
+        :param env: CTM environment
+        :return: energy
+        :rtype: float
+        """
+
+        # x\y
+        #     _:__:__:__:_
+        #  ..._|__|__|__|_...
+        #  ..._|__|__|__|_...
+        #  ..._|__|__|__|_...
+        #  ..._|__|__|__|_...
+        #  ..._|__|__|__|_...
+        #      :  :  :  :
+
+        energy_onsite, energy_horz, energy_vert, energy_diag, energy_anti_diag = (
+            0,
+            0,
+            0,
+            0,
+            0,
+        )
+
+        # sf = yastn.operators.SpinfulFermions(sym=str(self.config.sym), fermionic=True)
+        _tmp_config = {x: y for x, y in self.config._asdict().items() if x != "sym"}
+        sf = yastn.operators.SpinfulFermions(sym=str(self.config.sym), **_tmp_config)
+        n_A = sf.n(spin="u")  # parity-even operator, no swap gate needed
+        n_B = sf.n(spin="d")
+        c_A = sf.c(spin="u")
+        cp_A = sf.cp(spin="u")
+        c_B = sf.c(spin="d")
+        cp_B = sf.cp(spin="d")
+        I = sf.I()
+        N = len(psi.sites())
+
+        energy_onsite, energy_horz, energy_vert, energy_diag, energy_anti_diag = (
+            0,
+            0,
+            0,
+            0,
+            0,
+        )
         ncon_order1 = ((1, 2), (3, 4), (2, 1, 4, 3))
         ncon_order2 = ((1, 2, 5), (3, 4, 5), (2, 1, 4, 3))
-
-        energy_onsite, energy_horz, energy_vert, energy_diag, energy_anti_diag= 0,0,0,0,0
-
         for site in psi.sites():
             # onsite
             onsite_rdm, onsite_norm = rdm1x1(site, psi, env)  # s s'
@@ -87,10 +214,9 @@ class tV_model:
                 self.V1 * (n_A @ n_B)
                 - self.mu * (n_A + n_B)
                 - self.t1 * (cp_A @ c_B + cp_B @ c_A).remove_zero_blocks()
+                + self.m * (n_A - n_B)
             )
-            e_1x1_loc = (
-                yastn.ncon([op, onsite_rdm], ((1, 2), (2, 1)))
-            )
+            e_1x1_loc = yastn.ncon([op, onsite_rdm], ((1, 2), (2, 1)))
             energy_onsite += e_1x1_loc.to_number()
 
             # horizontal bond
@@ -100,6 +226,7 @@ class tV_model:
             e_1x2_loc += self.V2 * yastn.ncon([n_B, n_B, horz_rdm], ncon_order1)
             e_1x2_loc += self.V2 * yastn.ncon([n_A, n_A, horz_rdm], ncon_order1)
 
+
             site_r = psi.nn_site(site, "r")
             ordered = psi.geometry.f_ordered(site, site_r)
             ci_B, cjp_A = op_order(c_B, cp_A, ordered, fermionic=True)
@@ -108,6 +235,7 @@ class tV_model:
                 -yastn.ncon([ci_B, cjp_A, horz_rdm], ncon_order2)
                 + yastn.ncon([cip_B, cj_A, horz_rdm], ncon_order2)
             )
+
 
             ci_A, cjp_A = op_order(c_A, cp_A, ordered, fermionic=True)
             cip_B, cj_B = op_order(cp_B, c_B, ordered, fermionic=True)
@@ -130,10 +258,12 @@ class tV_model:
                     + -yastn.ncon([ci_B, cjp_B, horz_rdm], ncon_order2)
                 )
             )
+
             energy_horz += e_1x2_loc.to_number()
 
             # vertical bond
             vert_rdm, vert_rdm_norm = rdm2x1(site, psi, env)  # s0 s0' s1 s1'
+            v_bond = Bond(site, psi.nn_site(site, "b"))
             # vert_norm = yastn.trace(vert_rdm, axes=((0, 2), (1, 3))).to_number()
             e_2x1_loc = self.V1 * yastn.ncon([n_A, n_B, vert_rdm], ncon_order1)
             e_2x1_loc += self.V2 * yastn.ncon([n_B, n_B, vert_rdm], ncon_order1)
@@ -148,6 +278,8 @@ class tV_model:
                 yastn.ncon([cip_A, cj_B, vert_rdm], ncon_order2)
                 + -yastn.ncon([ci_A, cjp_B, vert_rdm], ncon_order2)
             )
+
+
             ci_A, cjp_A = op_order(c_A, cp_A, ordered, fermionic=True)
             cip_B, cj_B = op_order(cp_B, c_B, ordered, fermionic=True)
             e_2x1_loc += (
@@ -158,6 +290,7 @@ class tV_model:
                     + yastn.ncon([cip_B, cj_B, vert_rdm], ncon_order2)
                 )
             )
+
             cip_A, cj_A = op_order(cp_A, c_A, ordered, fermionic=True)
             ci_B, cjp_B = op_order(c_B, cp_B, ordered, fermionic=True)
             e_2x1_loc += (
@@ -170,15 +303,11 @@ class tV_model:
             )
             energy_vert += e_2x1_loc.to_number()
 
-            if self.V2 != 0 or self.V3 != 0 or self.t2 != 0:
-
-                plaq_rdm, plaq_rdm_norm  = rdm2x2(site, psi, env)  # s0 s0' s1 s1' s2 s2' s3 s3'
-                # plaq_norm = yastn.trace(
-                #     plaq_rdm, axes=((0, 2, 4, 6), (1, 3, 5, 7))
-                # ).to_number()
-
-                # diagonal bond
-                diag_rdm = yastn.trace(plaq_rdm, ((2, 4), (3, 5)))  # s0 s0' s3 s3'
+            if self.V2 != 0 or self.V3 != 0 or self.t2 != 0 or self.t3 != 0:
+                # plaq_rdm, plaq_rdm_norm  = rdm2x2(site, psi, env)  # s0 s0' s1 s1' s2 s2' s3 s3'
+                diag_rdm, diag_rdm_norm = rdm2x2_diagonal(
+                    site, psi, env
+                )  # s0 s0' s3 s3'
                 e_2x2_diag_loc = self.V2 * (
                     yastn.ncon([n_A, n_A, diag_rdm], ncon_order1)
                     + yastn.ncon([n_B, n_B, diag_rdm], ncon_order1)
@@ -187,6 +316,7 @@ class tV_model:
                     yastn.ncon([n_A, n_B, diag_rdm], ncon_order1)
                     + yastn.ncon([n_B, n_A, diag_rdm], ncon_order1)
                 )
+
 
                 site_br = psi.nn_site(site, "br")
                 ordered = psi.geometry.f_ordered(site, site_br)
@@ -201,6 +331,7 @@ class tV_model:
                         + -yastn.ncon([ci_B, cjp_B, diag_rdm], ncon_order2)
                     )
                 )
+
                 ci_A, cjp_A = op_order(c_A, cp_A, ordered, fermionic=True)
                 cip_B, cj_B = op_order(cp_B, c_B, ordered, fermionic=True)
                 e_2x2_diag_loc += (
@@ -211,13 +342,36 @@ class tV_model:
                         + yastn.ncon([cip_B, cj_B, diag_rdm], ncon_order2)
                     )
                 )
+                e_2x2_diag_loc += -self.t3 * (
+                    -yastn.ncon([ci_B, cjp_A, diag_rdm], ncon_order2)
+                    + yastn.ncon([cip_B, cj_A, diag_rdm], ncon_order2)
+                    - yastn.ncon([ci_A, cjp_B, diag_rdm], ncon_order2)
+                    + yastn.ncon([cip_A, cj_B, diag_rdm], ncon_order2)
+                )
                 energy_diag += e_2x2_diag_loc.to_number()
 
                 # anti-diagonal bond
-                anti_diag_rdm = yastn.trace(plaq_rdm, ((0, 6), (1, 7)))  # s1 s1' s2 s2'
-                energy_anti_diag += self.V3 * yastn.ncon(
-                    [n_A, n_B, anti_diag_rdm], ncon_order1
-                ).to_number()
+                anti_diag_rdm, anti_diag_rdm_norm = rdm2x2_anti_diagonal(site, psi, env)
+                # anti_diag_rdm = yastn.trace(plaq_rdm, ((0, 6), (1, 7)))  # s1 s1' s2 s2'
+                energy_anti_diag += (
+                    self.V3
+                    * yastn.ncon([n_B, n_A, anti_diag_rdm], ncon_order1).to_number()
+                )
+
+                site_b = psi.nn_site(site, "b")
+                site_r = psi.nn_site(site, "r")
+                ordered = psi.geometry.f_ordered(site_b, site_r)
+
+                cip_B, cj_A = op_order(cp_B, c_A, ordered, fermionic=True)
+                ci_B, cjp_A = op_order(c_B, cp_A, ordered, fermionic=True)
+                energy_anti_diag += (
+                    -self.t3
+                    * (
+                        -yastn.ncon([ci_B, cjp_A, anti_diag_rdm], ncon_order2)
+                        + yastn.ncon([cip_B, cj_A, anti_diag_rdm], ncon_order2)
+                    ).to_number()
+                )
+
 
         energy_per_site = (
             energy_onsite + energy_horz + energy_vert + energy_diag + energy_anti_diag
@@ -228,7 +382,7 @@ class tV_model:
 
     def eval_obs(self, psi : yastn.tn.fpeps.Peps, env : yastn.tn.fpeps.EnvCTM) -> dict[str,float]:
         n_A, n_B, c_A, cp_A, c_B, cp_B, I = tuple( self.ops[k] for k in ("n_A", "n_B", "c_A", "cp_A", "c_B", "cp_B", "I") )
-        
+
         obs = {}
         op_n_list = {}
         op_c_list = {}
@@ -250,20 +404,20 @@ class tV_model:
         # corr_cc = measure_rdm_corr_1x2(s0, 30, psi, env, op_c_list[psi.site2index(s0)], op_cp_list)
         # print(corr_cc)
         return obs
-    
+
 
 # Define a set of initial states for the tV model
-# 
+#
 
 # utility functions
 #
 def _rand_tensor(config, n:int, legs:Sequence[yastn.tensor.Leg], dummy_leg_flag:Union[str,None]=None)->yastn.tensor.Tensor:
     """
-    Create random tensor with given legs. Optionally, create charged tensor by appending extra dummy leg (effective dimension 1 with single charge sector) 
+    Create random tensor with given legs. Optionally, create charged tensor by appending extra dummy leg (effective dimension 1 with single charge sector)
     carrying the charge. This keeps the tensor invariant under the symmetry (i.e. in trivial rep).
 
     By convention, dummy leg is the last leg of the tensor and it is fused with the physical leg.
-    
+
     Parameters
     ----------
         config : module | _config(NamedTuple)
@@ -363,7 +517,7 @@ def random_3x3_state(config= yastn.make_config(backend=backend_np, fermionic=Tru
         C A B
 
     One tensor in {A B C}, i.e. one unit cell of out of three on the underlying honeycomb lattice, holds one electron.
-    
+
     Parameters
     ----------
         config : module | _config(NamedTuple)
@@ -396,7 +550,7 @@ def random_ipess_state(config= yastn.make_config(backend=backend_np, fermionic=T
     """
     Coarse-grain honeycomb lattice to square lattice by combining two sites within each honeycomb unit cell.
     The on-site tensor is given further structure (iPESS) by expressing it as a contraction of two rank-4 tensors::
-        
+
           0       2   1       t(0)  r(3)
           |        \ /         \   /
           A--3  x   B--3   =>    B--
@@ -404,7 +558,7 @@ def random_ipess_state(config= yastn.make_config(backend=backend_np, fermionic=T
         1   2       0            A--
                                /   \
                              l(1)  b(2)
-    
+
     Parameters
     ----------
         config : module | _config(NamedTuple)

@@ -48,8 +48,6 @@ class tV_model:
     def get_parameters(self):
         return []
 
-    # from memory_profiler import profile
-    # @profile
     def energy_per_site(self, psi, env):
         r"""
         :param psi: Peps

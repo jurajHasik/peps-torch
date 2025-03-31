@@ -1,13 +1,9 @@
 import argparse
-import copy
 import json
 import logging
 import os
 import time
 import unittest
-import pickle
-from typing import Sequence, Union
-from collections import namedtuple
 
 
 import context
@@ -16,8 +12,6 @@ import numpy as np
 import torch
 
 import yastn.yastn as yastn
-from yastn.yastn import Tensor, tensordot, load_from_dict
-from yastn.yastn.tensor import YastnError
 from yastn.yastn.tn.fpeps import EnvCTM
 from yastn.yastn.tn.fpeps.envs._env_ctm import ctm_conv_corner_spec
 from yastn.yastn.tn.fpeps.envs.fixed_pt import FixedPoint, env_raw_data, refill_env
@@ -55,6 +49,7 @@ parser.add_argument(
     "--phi", type=float, default=0.0, help="phase of the 2nd. nearest-neighbor hopping"
 )
 parser.add_argument("--mu", type=float, default=0.0, help="chemical potential")
+parser.add_argument("--m", type=float, default=0.0, help="Semenoff mass")
 parser.add_argument("--ansatz", type=str, default="1x1", choices=["1x1","2x1","3x3",], help="ansatz type")
 parser.add_argument("--sym", type=str, default="Z2", choices=["Z2","U1"], help="symmetry type")
 parser.add_argument(
@@ -66,9 +61,10 @@ parser.add_argument(
 )
 
 args = parser.parse_args()  # process command line arguments
-cfg.configure(args)
 
 def main():
+    args.CTMARGS_ctm_env_init_type = "eye"
+    args.omp_cores = 4
     cfg.configure(args)
     cfg.print_config()
 
@@ -76,8 +72,6 @@ def main():
         from yastn.yastn.backend import backend_torch as backend
     elif args.yast_backend=='torch_cpp':
         from yastn.yastn.backend import backend_torch_cpp as backend
-    backend.set_num_threads(args.omp_cores)
-    backend.random_seed(args.seed)
 
     sym= sym_Z2
     if args.sym=="U1": sym_U1
@@ -88,10 +82,9 @@ def main():
         default_device=cfg.global_args.device,
         default_dtype=cfg.global_args.dtype,
     )
-
     torch.set_num_threads(args.omp_cores)
     yastn_config.backend.random_seed(args.seed)
-    model = tV_model(yastn_config, V1=args.V1, V2=args.V2, V3=args.V3, t1=args.t1, t2=args.t2, phi=args.phi, mu=args.mu)
+    model = tV_model(yastn_config, V1=args.V1, V2=args.V2, V3=args.V3, t1=args.t1, t2=args.t2, phi=args.phi, mu=args.mu, m=args.m)
 
     @torch.no_grad()
     def ctm_conv_check(env, history, corner_tol):
@@ -139,6 +132,12 @@ def main():
 
         # 1) compute environment by CTMRG
         # ------fixed_point---------
+        opts_svd = {
+            "D_total": cfg.main_args.chi,
+            "tol": cfg.ctm_args.projector_svd_reltol,
+            "eps_multiplet": cfg.ctm_args.projector_eps_multiplet,
+            "truncate_multiplets": True,
+        }
         state_params = state.get_parameters()
         env_params, slices = env_raw_data(ctm_env_in)
         env_out_data = FixedPoint.apply(env_params, slices, yastn_config, ctm_env_in, opts_svd, cfg.main_args.chi, 1e-10, ctm_args, *state_params)
@@ -200,12 +199,6 @@ def main():
     optimize_state(state, conv_env, loss_fn, obs_fn=obs_fn, post_proc=post_proc)
 
 
-if __name__ == "__main__":
-    if len(unknown_args) > 0:
-        print("args not recognized: " + str(unknown_args))
-        raise Exception("Unknown command line arguments")
-    main()
-
 
 class Test_1x1_CDW(unittest.TestCase):
     r"""
@@ -217,14 +210,15 @@ class Test_1x1_CDW(unittest.TestCase):
 
     def setUp(self):
         args.ansatz, args.sym= "1x1", "Z2"
-        args.V1, args.V2, args.V3, args.t1, args.t2, args.phi= 1.4, 0.0, 0.0, 1.0, 0.0, 0.0
+        args.V1, args.V2, args.V3, args.t1, args.t2, args.t3, args.phi= 1.4, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0
         args.mu= args.V1*1.5
+        args.m = 0
         args.bond_dim=1
         args.chi=20
         args.seed=120
         args.opt_max_iter= 35
         args.instate_noise=0
-        args.CTMARGS_ctm_env_init_type= "eye"
+        # args.CTMARGS_ctm_env_init_type= "eye"
         # args.GLOBALARGS_dtype= "complex128"
 
     def test_opt_1x1_CDW(self):
@@ -266,7 +260,7 @@ class Test_1x1_CDW(unittest.TestCase):
                 break
             l= tmp_out.readline()
         assert len(obs_opt_lines)>0
-
+        print(obs_opt_lines)
         # compare the line of observables with lowest energy from optimization (i)
         # TODO and final observables evaluated from best state stored in *_state.json output file
         best_e_line_index= np.argmin([ float(l.split(',')[1]) for l in obs_opt_lines ])
@@ -280,3 +274,6 @@ class Test_1x1_CDW(unittest.TestCase):
         out_prefix=self.OUT_PRFX
         for f in [out_prefix+"_checkpoint.p",out_prefix+"_state.json",out_prefix+".log"]:
             if os.path.isfile(f): os.remove(f)
+
+if __name__ == "__main__":
+    unittest.main()
