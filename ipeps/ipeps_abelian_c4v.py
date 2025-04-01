@@ -165,6 +165,39 @@ class IPEPS_ABELIAN_C4V(IPEPS_ABELIAN):
         
         return ""
 
+    def get_bipartite_state(self, peps_args=cfg.peps_args, global_args=cfg.global_args):
+        r"""
+        :return: return standard iPEPS with [[A,B],[B,A]] unit cell, with default signature of on-site tensors 
+                 `IPEPS_ABELIAN._REF_S_DIRS`.
+        :rtype: IPEPS_ABELIAN
+
+        Both A and B tensors are functions on the underlying C4v-symmetric tensor.
+        """
+        # 1. from a single-site ansatz with signature [phys,u,l,d,r]= [1,1,1,1,1] -> [-1,-1,-1,1,1]
+        A0= self.site((0,0)).flip_charges(axes=(0,1,2))
+
+        # 1.1 create rotation operator to be applied on B-sublattice
+        rot_op= yastn.Tensor(config=A0.config, s=[1,1], n=0,
+            t=((1,-1),(1,-1)), D=((1,1),(1,1)) )
+        rot_op.set_block((1,-1), (1,1), val=[[-1.],] )
+        rot_op.set_block((-1,1), (1,1), val=[[1.],] )
+
+        # 1.2 create B-tensor
+        # A1= state.site((0,0)).conj() # 1.2.1 map into B-sublattice with [phys,u,l,d,r]= [-1,-1,-1,-1,-1]
+        # A1= rot_op.tensordot(A1,([1],[0]))
+        # A1= _switch_signature(A1, (0,3,4))
+
+        # A1= state.site((0,0)).conj() # 1.2.1 map into B-sublattice with [phys,u,l,d,r]= [-1,-1,-1,-1,-1]
+        A1= self.site((0,0)).flip_signature()
+        A1= rot_op.tensordot(A1,([1],[0]))
+        A1= A1.flip_charges(axes=(0,3,4))
+
+        state_bp= IPEPS_ABELIAN(A0.config, {(0,0): A0, (1,0): A1,}, \
+                             vertexToSite= lambda x: ((x[0]+x[1])%2,0), lX=2, lY=2,\
+                                peps_args=peps_args, global_args=global_args)
+        state_bp.sync_precomputed()
+        return state_bp
+
 def read_ipeps_c4v(jsonfile, settings, default_irrep=None,\
     peps_args=cfg.peps_args, global_args=cfg.global_args):
     r"""

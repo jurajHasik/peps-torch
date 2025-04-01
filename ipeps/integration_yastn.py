@@ -3,16 +3,13 @@ from typing import Sequence, Union, TypeVar
 import json
 import torch
 from ipeps.tensor_io import NumPy_Encoder
+from ipeps.ipeps_abelian import IPEPS_ABELIAN
 import yastn.yastn as yastn
 from yastn.yastn import Tensor, load_from_dict, save_to_dict
 from yastn.yastn.tn.fpeps import Peps, RectangularUnitcell
 import config as cfg
 YASTN_CONFIG = TypeVar('YASTN_CONFIG')
 
-# apply_and_copy = lambda nested_iterable, func: type(nested_iterable)(
-#         apply_and_copy(item, func) if isinstance(item,  dict)) else if  func(item)
-#         for item in (nested_iterable.items() if isinstance(nested_iterable, dict) else nested_iterable)
-#     )
 
 def apply_and_copy(nested_iterable, func, f_keys=None):
     if isinstance(nested_iterable,dict): 
@@ -163,6 +160,24 @@ class PepsAD(Peps):
             "parameters": apply_and_copy(self.parameters, save_to_dict),
         }
         return d
+
+    @staticmethod
+    def from_pt(state: Union[IPEPS_ABELIAN,]) -> PepsAD:
+        r"""
+        Convert IPEPS_ABELIAN to YASTN's Peps. 
+        
+        This implies re-ordering of the indices to match YASTN's convention.
+        
+            peps-torch convention physical,up=top,left,down=bottom,right with signature (-1,-1,-1,1,1)
+            YASTN convention (top-left)(bottom-right)physical
+        """
+        unique_sites= {v:i for i,v in enumerate(state.sites.keys())}
+        pattern = [ [unique_sites[state.vertexToSite((x,y))] for x in range(state.lX)] for y in range(state.lY)]
+        
+        geometry=RectangularUnitcell(pattern=pattern)
+        peps_yastn= PepsAD(geometry=geometry,\
+            parameters={ c: state.site(c).transpose(axes=(1,2,3,4,0)) for c in geometry.sites() })
+        return peps_yastn
 
     @staticmethod
     def from_dict(yastn_config, d : dict) -> PepsAD:

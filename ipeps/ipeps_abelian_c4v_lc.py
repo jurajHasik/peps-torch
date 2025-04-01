@@ -12,6 +12,7 @@ import config as cfg
 import yastn.yastn as yastn
 from groups.pg_abelian import make_c4v_symm_A1
 from ipeps.tensor_io import *
+from ipeps.ipeps_abelian import IPEPS_ABELIAN
 from ipeps.ipeps_abelian_c4v import IPEPS_ABELIAN_C4V
 
 class IPEPS_ABELIAN_C4V_LC(IPEPS_ABELIAN_C4V):
