@@ -240,7 +240,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
             _, new_loss, new_flat_grad = optimizer.step_2c(closure, closure_linesearch, new_loss=new_loss, new_flat_grad=new_flat_grad)
         except NoFixedPointError as e:
             print(e)
-            log.log("No fixed point found. Add noise to the state.")
+            log.log(logging.INFO, "No fixed point found. Add noise to the state.")
             # add a random perturbation to the state
             state.add_noise_(noise=0.1)
 
@@ -253,6 +253,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
                 tolerance_grad=opt_args.tolerance_grad, tolerance_change=opt_args.tolerance_change, \
                 history_size=opt_args.history_size, line_search_fn=opt_args.line_search, \
                 line_search_eps=opt_args.line_search_tol)
+            new_loss, new_flat_grad = None, None
             continue
 
         # reset line search history
