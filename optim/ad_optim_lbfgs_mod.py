@@ -150,6 +150,9 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
             t_data["loss_ls"].append(loss.item())
             if t_data["min_loss_ls"] > t_data["loss_ls"][-1]:
                 t_data["min_loss_ls"]= t_data["loss_ls"][-1]
+                # store the state if a lower-energy state is found during linesearch
+                if t_data["min_loss"] > t_data["loss_ls"][-1]:
+                    state.write_to_file(outputstatefile, normalize=True)
         else:
             t_data["loss"].append(loss.item())
             if t_data["min_loss"] > t_data["loss"][-1]:
@@ -213,6 +216,9 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         t_data["loss_ls"].append(loss.item())
         if t_data["min_loss_ls"] > t_data["loss_ls"][-1]:
             t_data["min_loss_ls"]= t_data["loss_ls"][-1]
+            # store the state if a lower-energy state is found during linesearch
+            if t_data["min_loss"] > t_data["loss_ls"][-1]:
+                    state.write_to_file(outputstatefile, normalize=True)
 
         # 3) log metrics for debugging
         if opt_args.opt_logging:

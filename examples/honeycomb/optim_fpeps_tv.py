@@ -14,7 +14,7 @@ import torch
 import yastn.yastn as yastn
 from yastn.yastn.tn.fpeps import EnvCTM
 from yastn.yastn.tn.fpeps.envs._env_ctm import ctm_conv_corner_spec
-from yastn.yastn.tn.fpeps.envs.fixed_pt import FixedPoint, env_raw_data, refill_env
+from yastn.yastn.tn.fpeps.envs.fixed_pt import FixedPoint, env_raw_data, refill_env, fp_ctmrg
 from yastn.yastn.sym import sym_Z2, sym_U1
 
 from ipeps.integration_yastn import PepsAD, load_PepsAD
@@ -138,11 +138,19 @@ def main():
             "eps_multiplet": cfg.ctm_args.projector_eps_multiplet,
             "truncate_multiplets": True,
         }
-        state_params = state.get_parameters()
-        env_params, slices = env_raw_data(ctm_env_in)
-        env_out_data = FixedPoint.apply(env_params, slices, yastn_config, ctm_env_in, opts_svd, cfg.main_args.chi, 1e-10, ctm_args, *state_params)
-        ctm_env_out, ctm_log, t_ctm, t_check = FixedPoint.ctm_env_out, FixedPoint.ctm_log, FixedPoint.t_ctm, FixedPoint.t_check
-        refill_env(ctm_env_out, env_out_data, FixedPoint.slices)
+        # state_params = state.get_parameters()
+        # env_params, slices = env_raw_data(ctm_env_in)
+        # env_out_data = FixedPoint.apply(env_params, slices, yastn_config, ctm_env_in, opts_svd, cfg.main_args.chi, 1e-10, ctm_args, *state_params)
+        # ctm_env_out, ctm_log, t_ctm, t_check = FixedPoint.ctm_env_out, FixedPoint.ctm_log, FixedPoint.t_ctm, FixedPoint.t_check
+        # refill does not modify the data,
+        # but make the grad_fn of the data of ctm_env_out FixedPointBackward
+        # refill_env(ctm_env_out, env_out_data, FixedPoint.slices)
+
+        ctm_env_out = fp_ctmrg(ctm_env_in, \
+            ctm_opts_fwd={'opts_svd': opts_svd, 'corner_tol': 1e-8, 'max_sweeps': 100,
+                'method': "2site", 'use_qr': False, 'svd_poliey': 'fullrank', 'D_block': None}, \
+            ctm_opts_fp={'svd_policy': 'fullrank'})
+        ctm_log, t_ctm, t_check = FixedPoint.ctm_log, FixedPoint.t_ctm, FixedPoint.t_check
 
         # ------direct CTMRG---------
         # ctm_env_out, converged, *ctm_log, t_ctm, t_check = get_converged_env(

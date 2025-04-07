@@ -14,7 +14,7 @@ from yastn.yastn.tn.fpeps import Bond, EnvCTM, RectangularUnitcell
 from yastn.yastn.tn.fpeps.envs._env_ctm import ctm_conv_corner_spec
 from yastn.yastn.sym import sym_Z2
 from yastn.yastn.tn.fpeps.envs.rdm import *
-from yastn.yastn.tn.fpeps.envs.fixed_pt import FixedPoint, env_raw_data, refill_env
+from yastn.yastn.tn.fpeps.envs.fixed_pt import FixedPoint, refill_env, fp_ctmrg
 from ipeps.integration_yastn import PepsAD, load_PepsAD
 from optim.ad_optim_lbfgs_mod import optimize_state
 
@@ -438,6 +438,7 @@ def test_state(config=None, noise=0):
     )
 
     if config is None:  # use default
+        from yastn.yastn.backend import backend_np
         config = yastn.make_config(backend=backend_np, fermionic=True, sym="Z2")
 
     # t l b r s a
@@ -455,7 +456,7 @@ def test_state(config=None, noise=0):
     t1 = t1.fuse_legs(axes=(0, 1, 2, 3, (4, 5)))
 
     # |0110> + |1100> per iPEPS unit-cell
-    psi = PepsAD(geometry, tensors={(0, 0): t0, (0, 1): t1})
+    psi = PepsAD(geometry, parameters={(0, 0): t0, (0, 1): t1})
 
     return psi
 
@@ -481,6 +482,7 @@ def random_3x3_state_Z2(config=None, bond_dim=(1, 1)):
         }
     )
     if config is None:  # use default
+        from yastn.yastn.backend import backend_np
         config = yastn.make_config(backend=backend_np, fermionic=True, sym="Z2")
     vectors = {}
 
@@ -512,7 +514,7 @@ def random_3x3_state_Z2(config=None, bond_dim=(1, 1)):
 
     psi = PepsAD(
         geometry,
-        tensors={
+        parameters={
             (0, 0): rand_tensor_norm(0, legs, dummy_leg_flag="odd"),
             (0, 1): rand_tensor_norm(0, legs, dummy_leg_flag="odd"),
             (0, 2): rand_tensor_norm(0, legs, dummy_leg_flag="odd"),
@@ -542,6 +544,7 @@ def random_3x3_state_U1(bond_dims, config=None):
         }
     )
     if config is None:  # use default
+        from yastn.yastn.backend import backend_np
         config = yastn.make_config(backend=backend_np, fermionic=True, sym="U1")
     vectors = {}
 
@@ -570,7 +573,7 @@ def random_3x3_state_U1(bond_dims, config=None):
 
     psi = PepsAD(
         geometry,
-        tensors={
+        parameters={
             (0, 0): rand_tensor_norm(0, legs, dummy_leg_charge=-1),
             (0, 1): rand_tensor_norm(0, legs, dummy_leg_charge=0),
             (0, 2): rand_tensor_norm(0, legs, dummy_leg_charge=0),
@@ -591,6 +594,7 @@ def random_1x3_state(config=None, bond_dim=(1, 1)):
         }
     )
     if config is None:  # use default
+        from yastn.yastn.backend import backend_np
         config = yastn.make_config(backend=backend_np, fermionic=True, sym="Z2")
     vectors = {}
 
@@ -622,7 +626,7 @@ def random_1x3_state(config=None, bond_dim=(1, 1)):
 
     psi = PepsAD(
         geometry,
-        tensors={
+        parameters={
             (0, 0): rand_tensor_norm(0, legs, dummy_leg_flag="odd"),
             (0, 1): rand_tensor_norm(0, legs, dummy_leg_flag="odd"),
             (0, 2): rand_tensor_norm(0, legs, dummy_leg_flag="odd"),
@@ -641,6 +645,7 @@ def random_1x1_state_Z2(config=None, bond_dim=(1, 1), aux_parity="even"):
     )
 
     if config is None:  # use default
+        from yastn.yastn.backend import backend_np
         config = yastn.make_config(backend=backend_np, fermionic=True, sym="Z2")
 
     D0, D1 = bond_dim
@@ -672,7 +677,7 @@ def random_1x1_state_Z2(config=None, bond_dim=(1, 1), aux_parity="even"):
     A = rand_tensor_norm(0, legs, dummy_leg_flag=aux_parity)
     psi = PepsAD(
         geometry,
-        tensors={
+        parameters={
             (0, 0): A,
         },
     )
@@ -688,6 +693,7 @@ def random_1x1_state_U1(bond_dims, config=None):
     )
 
     if config is None:  # use default
+        from yastn.yastn.backend import backend_np
         config = yastn.make_config(backend=backend_np, fermionic=True, sym="U1")
 
     charges = tuple(bond_dims.keys())
@@ -715,7 +721,7 @@ def random_1x1_state_U1(bond_dims, config=None):
 
     psi = PepsAD(
         geometry,
-        tensors={
+        parameters={
             (0, 0): rand_tensor_norm(
                 0, legs, dummy_leg_charge=-1
             ),  # 1 electron per unit-cell
@@ -733,6 +739,7 @@ def random_hc_state(config=None, bond_dim=(1, 1)):
     )
 
     if config is None:  # use default
+        from yastn.yastn.backend import backend_np
         config = yastn.make_config(backend=backend_np, fermionic=True, sym="Z2")
     vectors = {}
 
@@ -778,7 +785,7 @@ def random_hc_state(config=None, bond_dim=(1, 1)):
 
     psi = PepsAD(
         geometry,
-        tensors={
+        parameters={
             (0, 0): [
                 rand_tensor_norm(0, A_legs, dummy_leg_flag="odd"),
                 rand_tensor_norm(0, B_legs, dummy_leg_flag="even"),
@@ -933,26 +940,27 @@ def main():
             print("Reinit")
             chi = cfg.main_args.chi//2
             env_leg = yastn.Leg(yastn_config, s=1, t=(0, 1), D=(chi, chi))
-            # env_leg = yastn.Leg(yastn_config, s=1, t=(0,), D=(chi,))
             ctm_env_in = EnvCTM(state, init=ctm_args.ctm_env_init_type, leg=env_leg)
 
-        state_params = state.get_parameters()
-        env_params, slices = env_raw_data(ctm_env_in)
-        env_out_data = FixedPoint.apply(env_params, slices, yastn_config, ctm_env_in, opts_svd, cfg.main_args.chi, 1e-10, ctm_args, *state_params)
-        ctm_env_out, ctm_log, t_ctm, t_check = FixedPoint.ctm_env_out, FixedPoint.ctm_log, FixedPoint.t_ctm, FixedPoint.t_check
-        refill_env(ctm_env_out, env_out_data, FixedPoint.slices)
+        opts_svd = {
+            "D_total": cfg.main_args.chi,
+            "tol": cfg.ctm_args.projector_svd_reltol,
+            "eps_multiplet": cfg.ctm_args.projector_eps_multiplet,
+            "truncate_multiplets": True,
+        }
+        ctm_env_out, env_ts_slices, env_ts = fp_ctmrg(ctm_env_in, \
+            ctm_opts_fwd={'opts_svd': opts_svd, 'corner_tol': 1e-8, 'max_sweeps': 100,
+                'method': "2site", 'use_qr': False, 'svd_poliey': 'fullrank', 'D_block': None}, \
+            ctm_opts_fp={'svd_policy': 'fullrank'})
+        refill_env(ctm_env_out, env_ts, env_ts_slices)
+        ctm_log, t_ctm, t_check = FixedPoint.ctm_log, FixedPoint.t_ctm, FixedPoint.t_check
         # 2) evaluate loss with converged environment
-        start = time.time()
-        loss = model.energy_per_site(state, ctm_env_out)  # H= H_0 + mu * (nA + nB)
-        end = time.time()
-        print(f"mmt takes {end-start:.1f}s")
+        t_loss_before = time.perf_counter()
+        loss = model.energy_per_site(state, ctm_env_out)  # H= H_0 - mu * (nA + nB)
+        t_loss_after = time.perf_counter()
+        t_loss = t_loss_after - t_loss_before
 
-        start = time.time()
-        loss1 = model.energy_per_site_rdm(state, ctm_env_out)  # H= H_0 + mu * (nA + nB)
-        end = time.time()
-        print(f"rdm takes {end-start:.1f}s")
-        print(loss, loss1)
-        return (loss, ctm_env_out, *ctm_log, t_ctm, t_check)
+        return (loss, ctm_env_out, *ctm_log, t_ctm, t_check, t_loss)
 
     @torch.no_grad()
     def post_proc(state, env, opt_context):

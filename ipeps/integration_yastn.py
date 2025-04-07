@@ -73,7 +73,8 @@ class PepsAD(Peps):
         # self.parameters= apply_and_copy( self.parameters, lambda x: x + noise * yastn.rand_like(x) )
         # self.parameters= apply_and_copy( self.parameters, lambda x: x + noise * x.norm()*yastn.rand_like(x) )
         def add_raw_data_noise(t):
-            t._data = t._data + noise*torch.rand_like(t._data)
+            # t._data = t._data + noise*torch.rand_like(t._data)
+            t._data = t._data*(1+noise*torch.rand_like(t._data))
             return t
         self.parameters= apply_and_copy( self.parameters, add_raw_data_noise)
         self.sync_()
