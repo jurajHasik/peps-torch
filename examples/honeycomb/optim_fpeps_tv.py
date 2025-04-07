@@ -145,11 +145,11 @@ def main():
         # refill does not modify the data,
         # but make the grad_fn of the data of ctm_env_out FixedPointBackward
         # refill_env(ctm_env_out, env_out_data, FixedPoint.slices)
-
-        ctm_env_out = fp_ctmrg(ctm_env_in, \
+        ctm_env_out, env_ts_slices, env_ts = fp_ctmrg(ctm_env_in, \
             ctm_opts_fwd={'opts_svd': opts_svd, 'corner_tol': 1e-8, 'max_sweeps': 100,
                 'method': "2site", 'use_qr': False, 'svd_poliey': 'fullrank', 'D_block': None}, \
             ctm_opts_fp={'svd_policy': 'fullrank'})
+        refill_env(ctm_env_out, env_ts, env_ts_slices)
         ctm_log, t_ctm, t_check = FixedPoint.ctm_log, FixedPoint.t_ctm, FixedPoint.t_check
 
         # ------direct CTMRG---------
@@ -268,9 +268,9 @@ class Test_1x1_CDW(unittest.TestCase):
                 break
             l= tmp_out.readline()
         assert len(obs_opt_lines)>0
-        print(obs_opt_lines)
         # compare the line of observables with lowest energy from optimization (i)
         # TODO and final observables evaluated from best state stored in *_state.json output file
+        obs_opt_lines = [s for s in obs_opt_lines if "grad diff" not in s]
         best_e_line_index= np.argmin([ float(l.split(',')[1]) for l in obs_opt_lines ])
         opt_line_last= [complex(x) for x in obs_opt_lines[best_e_line_index].split(",")]
         for val0,val1 in zip(opt_line_last, [35,-2.9280089] ):
