@@ -13,8 +13,8 @@ from ctm.one_site_c4v_abelian.env_c4v_abelian import *
 
 import time
 from ctm.generic.env_yastn import ctmrg, YASTN_ENV_INIT
-from ctm.generic_abelian.env_yastn import from_yastn_env_generic
-from yastn.yastn.tn.fpeps import EnvCTM
+from ctm.generic_abelian.env_yastn import *
+from yastn.yastn.tn.fpeps import EnvCTM, EnvCTM_c4v
 from yastn.yastn.tn.fpeps.envs._env_ctm import ctm_conv_corner_spec
 from yastn.yastn.tn.fpeps.envs.fixed_pt import FixedPoint, env_raw_data, refill_env
 from yastn.yastn.tn.fpeps.envs.fixed_pt import fp_ctmrg
@@ -39,7 +39,7 @@ parser.add_argument("--obs_freq", type=int, default=-1, help="frequency of compu
 parser.add_argument("--force_cpu", action='store_true', help="evaluate energy on cpu")
 parser.add_argument("--yast_backend", type=str, default='torch', 
     help="YAST backend", choices=['torch','torch_cpp'])
-parser.add_argument("--grad_type", type=str, default='default', help="gradient algo", choices=['default','fp'])
+parser.add_argument("--grad_type", type=str, default='default', help="gradient algo", choices=['default','fp','c4v'])
 args, unknown_args = parser.parse_known_args()
 
 def main():
@@ -58,10 +58,14 @@ def main():
     settings.backend.random_seed(args.seed)
     settings.backend.ad_decomp_reg= cfg.ctm_args.ad_decomp_reg
 
-    # model= j1j2.J1J2_C4V_BIPARTITE_NOSYM(settings_full, j1=args.j1, j2=args.j2)
-    # energy_f= model.energy_1x1_lowmem
-    model= j1j2.J1J2_NOSYM(settings_full, j1=args.j1, j2=args.j2)
-    energy_f= model.energy_2x1_or_2Lx2site_2x2rdms
+    if args.grad_type in ['default','fp']:
+        model= j1j2.J1J2_NOSYM(settings_full, j1=args.j1, j2=args.j2)
+        energy_f= model.energy_2x1_or_2Lx2site_2x2rdms
+        obs_f= model.eval_obs
+    elif args.grad_type=='c4v':
+        model= j1j2.J1J2_C4V_BIPARTITE_NOSYM(settings_full, j1=args.j1, j2=args.j2)
+        energy_f= model.energy_1x1_lowmem
+    
 
     # initialize the ipeps
     if args.instate!=None:
@@ -116,7 +120,6 @@ def main():
                     checkpoint_move=ctm_args.fwd_checkpoint_move
                     )
 
-
         # 3.3 convert environment to peps-torch format
         env_pt= from_yastn_env_generic(ctm_env_out, vertexToSite=state_bp.vertexToSite)
 
@@ -154,12 +157,6 @@ def main():
                 "eps_multiplet": ctm_args.projector_eps_multiplet,
             }
 
-        # env_serialized= env_raw_data(ctm_env_in)
-        # ctm_env_out, slices_out, env_out_data= FixedPoint.apply(*env_serialized, ctm_env_in.config, ctm_env_in, options_svd, options_svd['D_total'], 
-        #                                ctm_args.ctm_conv_tol, ctm_args, *state_yastn.get_parameters() )
-        # # ctm_env_out= EnvCTM(state_yastn, init=None)
-        # refill_env(ctm_env_out, env_out_data, slices_out)
-
         ctm_env_out, env_ts_slices, env_ts = fp_ctmrg(ctm_env_in, \
             ctm_opts_fwd= {'opts_svd': options_svd, 'corner_tol': ctm_args.ctm_conv_tol, 'max_sweeps': ctm_args.ctm_max_iter, \
                 'method': "2site", 'use_qr': False, 'svd_policy': 'fullrank', 'D_block': None}, \
@@ -177,8 +174,52 @@ def main():
         return (loss, ctm_env_in, [], None, None)
 
 
+    def loss_c4v(state, ctm_env_in, opt_context):
+        ctm_args= opt_context["ctm_args"]
+        opt_args= opt_context["opt_args"]
+
+        # 1. build on-site tensors from su2sym components
+        #    Here, for C4v-symmetric single-site iPEPS
+        # state.coeffs[(0,0)]= state.coeffs[(0,0)]/state.coeffs[(0,0)].abs().max()
+        state.sites[(0,0)]= state.build_onsite_tensors()
+        state.sites[(0,0)]= state.sites[(0,0)]/state.sites[(0,0)].norm(p='inf')
+
+        # 2. convert to 1-site YASTN's iPEPS
+        state_yastn= PepsAD.from_pt(state)
+
+        # 3. proceed with YASTN's C4v-CTMRG implementation
+        # 3.1 possibly re-initialize the environment
+        if opt_args.opt_ctm_reinit:
+            env_leg = yastn.Leg(state_yastn.config, s=1, t=(0,), D=(1,))
+            ctm_env_in = EnvCTM_c4v(state_yastn, init=YASTN_ENV_INIT[ctm_args.ctm_env_init_type], leg=env_leg)
+
+        # 3.2 setup and run CTMRG
+        options_svd={
+                "policy": "fullrank",
+                "D_total": cfg.main_args.chi, "tol": ctm_args.projector_svd_reltol,
+                "eps_multiplet": ctm_args.projector_eps_multiplet,
+            }
+        _ctm_conv_f= lambda _x,_y: yastn_ctm_conv_check(_x,_y,ctm_args.ctm_conv_tol)
+        ctm_env_out, converged, conv_history, t_ctm, t_check= ctmrg(ctm_env_in, _ctm_conv_f,  options_svd,
+                    max_sweeps=ctm_args.ctm_max_iter, 
+                    method="default", 
+                    use_qr=False,
+                    checkpoint_move=ctm_args.fwd_checkpoint_move
+                    )
+        
+        # 3.3 convert environment to peps-torch format
+        env_pt= from_yastn_c4v_env_c4v(ctm_env_out) 
+        
+        # 3.4 evaluate loss
+        t_loss0= time.perf_counter()
+        loss= energy_f(state, env_pt)
+        t_loss1= time.perf_counter()
+
+        return (loss, ctm_env_out, conv_history, t_ctm, t_check)
+    
+
     @torch.no_grad()
-    def obs_fn(state, ctm_env, opt_context):
+    def obs_fn_default(state, ctm_env, opt_context):
         state_bp= state.get_bipartite_state()
         env_pt= from_yastn_env_generic(ctm_env, vertexToSite=state_bp.vertexToSite)
 
@@ -192,12 +233,32 @@ def main():
         obs_values, obs_labels = model.eval_obs(state_bp,env_pt,force_cpu=args.force_cpu)
         print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]\
             +[f"{state.coeffs[(0,0)].abs().max()}"]))
+        
+    @torch.no_grad()
+    def obs_fn_c4v(state, ctm_env, opt_context):
+        env_pt= from_yastn_c4v_env_c4v(ctm_env)
+
+        if opt_context["line_search"]:
+            epoch= len(opt_context["loss_history"]["loss_ls"])
+            loss= opt_context["loss_history"]["loss_ls"][-1]
+            print("LS",end=" ")
+        else:
+            epoch= len(opt_context["loss_history"]["loss"]) 
+            loss= opt_context["loss_history"]["loss"][-1] 
+        obs_values, obs_labels = model.eval_obs(state,env_pt,force_cpu=args.force_cpu)
+        print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]\
+            +[f"{state.coeffs[(0,0)].abs().max()}"]))
 
     # optimize
     if args.grad_type=='default':
         loss_fn= loss_fn_default
+        obs_fn= obs_fn_default
     elif args.grad_type=='fp':
         loss_fn= loss_fn_fp
+        obs_fn= obs_fn_default
+    elif args.grad_type=='c4v':
+        loss_fn= loss_c4v
+        obs_fn= obs_fn_c4v
     optimize_state(state, None, loss_fn, obs_fn=obs_fn)
     
 if __name__=='__main__':

@@ -237,6 +237,10 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args, \
             return truncated_svd_arnoldi(M, chi, keep_multiplets=True, \
                 abs_tol=ctm_args.projector_multiplet_abstol, \
                 eps_multiplet=ctm_args.projector_eps_multiplet, verbosity=ctm_args.verbosity_projectors)
+    elif ctm_args.projector_svd_method == 'RSVD':
+        def truncated_svd(M, chi):
+            U,S,V= torch.svd_lowrank(M, q=2*chi, niter=2)
+            return U[:,:chi], S[:chi], V[:,:chi]
     else:
         raise(f"Projector svd method \"{cfg.ctm_args.projector_svd_method}\" not implemented")
 

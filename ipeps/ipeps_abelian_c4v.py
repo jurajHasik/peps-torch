@@ -182,16 +182,22 @@ class IPEPS_ABELIAN_C4V(IPEPS_ABELIAN):
         rot_op.set_block((1,-1), (1,1), val=[[-1.],] )
         rot_op.set_block((-1,1), (1,1), val=[[1.],] )
 
+        # 1.2 create phase operator to be applied on B-sublattice
+        phase_op= yastn.Tensor(config=A0.config, s=[-1,1], n=0,
+            t=((1,-1),(1,-1)), D=((1,1),(1,1)) )
+        phase_op.set_block((1,1), (1,1), val=[[-1.],] )
+        phase_op.set_block((-1,-1), (1,1), val=[[1.],] )
+
+        # flip_signature() is equivalent to conj().conj_blocks()
+        # flip_charges(axes) is equivalent to switch_signature(axes)
+        #
         # 1.2 create B-tensor
-        # A1= state.site((0,0)).conj() # 1.2.1 map into B-sublattice with [phys,u,l,d,r]= [-1,-1,-1,-1,-1]
-        # A1= rot_op.tensordot(A1,([1],[0]))
-        # A1= _switch_signature(A1, (0,3,4))
+        # A1= state.site((0,0)).flip_signature() # 1.2.1 map into B-sublattice with [phys,u,l,d,r]= [-1,-1,-1,-1,-1]
+        # A1= rot_op.tensordot(A1,([1],[0])).switch_signature(axes=(0,3,4))
 
-        # A1= state.site((0,0)).conj() # 1.2.1 map into B-sublattice with [phys,u,l,d,r]= [-1,-1,-1,-1,-1]
-        A1= self.site((0,0)).flip_signature()
-        A1= rot_op.tensordot(A1,([1],[0]))
-        A1= A1.flip_charges(axes=(0,3,4))
-
+        A1= A0.flip_signature().switch_signature(axes='all')
+        A1= phase_op @ A1
+        
         state_bp= IPEPS_ABELIAN(A0.config, {(0,0): A0, (1,0): A1,}, \
                              vertexToSite= lambda x: ((x[0]+x[1])%2,0), lX=2, lY=2,\
                                 peps_args=peps_args, global_args=global_args)

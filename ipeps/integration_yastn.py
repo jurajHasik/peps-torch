@@ -168,7 +168,9 @@ class PepsAD(Peps):
         
         This implies re-ordering of the indices to match YASTN's convention.
         
-            peps-torch convention physical,up=top,left,down=bottom,right with signature (-1,-1,-1,1,1)
+            * peps-torch convention physical,up=top,left,down=bottom,right with 
+                * signature (-1,-1,-1,1,1) for generic iPEPS
+                * signature (1,1,1,1,1) for C4v-symmetric single-site iPEPS           
             YASTN convention (top-left)(bottom-right)physical
         """
         unique_sites= {v:i for i,v in enumerate(state.sites.keys())}
