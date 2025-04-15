@@ -488,7 +488,7 @@ def read_ipeps(jsonfile, settings, vertexToSite=None, \
             peps_args=peps_args, global_args=global_args)
 
     # check dtypes of all on-site tensors for newly created state
-    assert (False not in [state.dtype==s.yast_dtype for s in sites.values()]), \
+    assert (False not in [state.dtype==s.yastn_dtype for s in sites.values()]), \
         "incompatible dtype among state and on-site tensors"
 
     # move to desired device and return
