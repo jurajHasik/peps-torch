@@ -192,7 +192,8 @@ def main():
                 )
             )
 
-        model.eval_obs(state, ctm_env)
+        obs = model.eval_obs(state, ctm_env)
+        log.info(json.dumps(obs))
 
     if args.init_state_file is None or not os.path.exists(args.init_state_file):
         if args.pattern == '1x1':

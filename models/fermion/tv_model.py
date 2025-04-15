@@ -392,7 +392,7 @@ class tV_model:
             obs_nA = measure_rdm_1site(s0, psi, env, n_A)
             obs_nB = measure_rdm_1site(s0, psi, env, n_B)
             m = abs(obs_nA - obs_nB)
-            obs.update({f"nA_{s0}": obs_nA, f"nB_{s0}": obs_nB, f"m_{s0}": m})
+            obs.update({f"nA_{s0}": obs_nA.item().real, f"nB_{s0}": obs_nB.item().real})
 
             # obs_cA = measure_rdm_1site(s0, psi, env, c_A).item()
             # obs_cpA = measure_rdm_1site(s0, psi, env, cp_A).item()
