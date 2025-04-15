@@ -189,9 +189,9 @@ def main():
     # choose initial state or load it from file / checkpoint
     if not args.instate and args.sym=="Z2":
         if args.ansatz in ["1x1",]:
-            state= random_1x1_state(config=yastn_config, bond_dim=(args.bond_dim, args.bond_dim))
+            state= random_1x1_state_Z2(config=yastn_config, bond_dim=(args.bond_dim, args.bond_dim))
         elif args.ansatz in ["3x3",]:
-            state= random_3x3_state(config=yastn_config, bond_dim=(args.bond_dim, args.bond_dim))
+            state= random_3x3_state_Z2(config=yastn_config, bond_dim=(args.bond_dim, args.bond_dim))
         else:
             raise ValueError("Missing ansatz specification --ansatz "\
                 +str(args.ansatz)+" is not supported")

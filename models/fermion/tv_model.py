@@ -6,6 +6,7 @@ from yastn.yastn.tn.fpeps.envs.rdm import *
 from yastn.yastn.tn.fpeps import RectangularUnitcell, Bond
 from yastn.yastn.backend import backend_np
 from ipeps.integration_yastn import PepsAD, load_PepsAD
+from yastn.yastn.sym import sym_U1, sym_Z2
 
 class tV_model:
     def __init__(self, config, V1 : float = 0, V2:float = 0, V3:float = 0,
@@ -451,8 +452,6 @@ def state_2x1(config= yastn.make_config(backend=backend_np, fermionic=True, sym=
             :ref:`YASTN configuration <tensor/configuration:yastn configuration>`
         noise : float
     """
-    assert config.sym == "Z2", "Expecting Z2 symmetry"
-
     # t l b r s a
     # |11>
     t0 = yastn.Tensor(config=config, n=0, s=(-1, 1, 1, -1, 1, 1))
@@ -473,10 +472,10 @@ def state_2x1(config= yastn.make_config(backend=backend_np, fermionic=True, sym=
     return psi
 
 
-def random_1x1_state(config=yastn.make_config(backend=backend_np, fermionic=True, sym="Z2"), bond_dim=(1, 1)):
+def random_1x1_state_Z2(config=yastn.make_config(backend=backend_np, fermionic=True), bond_dim=(1, 1)):
     """
     Coarse-grain honeycomb lattice to square lattice by combining two sites within each honeycomb unit cell.
-    Resulting iPEPS has a 1x1 unit cell on effective square.
+    Resulting iPEPS has a 1x1 unit cell on the effective square lattice. The filling is fixed at one electron per unit-cell.
 
     Parameters
     ----------
@@ -486,7 +485,7 @@ def random_1x1_state(config=yastn.make_config(backend=backend_np, fermionic=True
     """
     if config is None:  # use default
         config = yastn.make_config(backend=backend_np, fermionic=True, sym="Z2")
-    vectors = {}
+    assert config.sym == sym_Z2, "Expecting Z2 symmetry"
 
     D0, D1 = bond_dim
     legs = [
@@ -505,18 +504,15 @@ def random_1x1_state(config=yastn.make_config(backend=backend_np, fermionic=True
     )
     return psi
 
-
-def random_3x3_state(config= yastn.make_config(backend=backend_np, fermionic=True, sym="Z2"), bond_dim=(1, 1)):
+def random_1x3_state_Z2(config= yastn.make_config(backend=backend_np, fermionic=True), bond_dim=(1, 1)):
     """
     Coarse-grain honeycomb lattice to square lattice by combining two sites within each honeycomb unit cell.
-    Resulting iPEPS has a 3x3 unit cell on effective square with 3 unique tensors arranged in following pattern::
+    Resulting iPEPS has a 1x3 unit cell on the effective square lattice with 3 unique tensors arranged in following pattern::
 
-        3x3 unit-cell pattern in the square lattice:
+        1x3 unit-cell pattern on the square lattice:
         A B C
-        B C A
-        C A B
 
-    One tensor in {A B C}, i.e. one unit cell of out of three on the underlying honeycomb lattice, holds one electron.
+    The filling is fixed at 1/3 electron per unit-cell.
 
     Parameters
     ----------
@@ -524,7 +520,46 @@ def random_3x3_state(config= yastn.make_config(backend=backend_np, fermionic=Tru
             :ref:`YASTN configuration <tensor/configuration:yastn configuration>`
         noise : float
     """
-    assert config.sym == "Z2", "Expecting Z2 symmetry"
+    assert config.sym == sym_Z2, "Expecting Z2 symmetry"
+
+    # define legs of on-site tensor
+    D0, D1 = bond_dim
+    legs = [
+        yastn.Leg(config, s=1, t=(0, 1), D=(D0, D1)),
+        yastn.Leg(config, s=1, t=(0, 1), D=(D0, D1)),
+        yastn.Leg(config, s=-1, t=(0, 1), D=(D0, D1)),
+        yastn.Leg(config, s=-1, t=(0, 1), D=(D0, D1)),
+        yastn.Leg(config, s=1, t=(0, 1), D=(2, 2)),
+    ]
+
+    psi = PepsAD(RectangularUnitcell([[0,1,2],]),
+        parameters={
+            (0, 0): _rand_tensor(config, 0, legs, dummy_leg_flag='odd'),
+            (0, 1): _rand_tensor(config, 0, legs, dummy_leg_flag='even'),
+            (0, 2): _rand_tensor(config, 0, legs, dummy_leg_flag='even'),
+        },
+    )
+    return psi
+
+def random_3x3_state_Z2(config= yastn.make_config(backend=backend_np, fermionic=True), bond_dim=(1, 1)):
+    """
+    Coarse-grain honeycomb lattice to square lattice by combining two sites within each honeycomb unit cell.
+    Resulting iPEPS has a 3x3 unit cell on the effective square lattice with 3 unique tensors arranged in following pattern::
+
+        3x3 unit-cell pattern on the square lattice:
+        A B C
+        B C A
+        C A B
+
+    The filling is fixed at 1/3 electron per unit-cell.
+
+    Parameters
+    ----------
+        config : module | _config(NamedTuple)
+            :ref:`YASTN configuration <tensor/configuration:yastn configuration>`
+        noise : float
+    """
+    assert config.sym == sym_Z2, "Expecting Z2 symmetry"
 
     # define legs of on-site tensor
     D0, D1 = bond_dim
@@ -538,12 +573,222 @@ def random_3x3_state(config= yastn.make_config(backend=backend_np, fermionic=Tru
 
     psi = PepsAD(RectangularUnitcell([[0,1,2],[1,2,0],[2,0,1]]),
         parameters={
-            (0, 0): _rand_tensor(0, legs, dummy_leg_flag='odd'),
-            (0, 1): _rand_tensor(0, legs, dummy_leg_flag='even'),
-            (0, 2): _rand_tensor(0, legs, dummy_leg_flag='even'),
+            (0, 0): _rand_tensor(config, 0, legs, dummy_leg_flag='odd'),
+            (0, 1): _rand_tensor(config, 0, legs, dummy_leg_flag='even'),
+            (0, 2): _rand_tensor(config, 0, legs, dummy_leg_flag='even'),
         },
     )
     return psi
+
+
+def random_3x3_state_U1(bond_dims, config=None):
+    # 3x3 unit-cell pattern on the square lattice:
+    # A B C
+    # B C A
+    # C A B
+    # with one tensor in {A B C} having an extra charge
+
+    geometry = RectangularUnitcell(
+        pattern={
+            (0, 0): 0,
+            (0, 1): 1,
+            (0, 2): 2,
+            (1, 0): 1,
+            (1, 1): 2,
+            (1, 2): 0,
+            (2, 0): 2,
+            (2, 1): 0,
+            (2, 2): 1,
+        }
+    )
+    if config is None:  # use default
+        from yastn.yastn.backend import backend_np
+        config = yastn.make_config(backend=backend_np, fermionic=True, sym="U1")
+
+    assert config.sym == sym_U1, "Expecting U1 symmetry"
+
+    charges = tuple(bond_dims.keys())
+    Ds = tuple([bond_dims[t] for t in charges])
+
+    legs = [
+        yastn.Leg(config, s=1, t=charges, D=Ds),
+        yastn.Leg(config, s=1, t=charges, D=Ds),
+        yastn.Leg(config, s=-1, t=charges, D=Ds),
+        yastn.Leg(config, s=-1, t=charges, D=Ds),
+        yastn.Leg(config, s=1, t=(0, 1, 2), D=(1, 2, 1)),
+    ]
+
+    def _rand_tensor(n, legs, dummy_leg_charge=0):
+        if dummy_leg_charge != 0:
+            dummy_leg = yastn.Leg(config, s=1, t=(dummy_leg_charge,), D=(1,))
+            legs = legs + [dummy_leg]
+            A = yastn.rand(config=config, n=n, legs=legs)
+            l = len(legs)
+            axes = [i for i in range(l - 2)] + [(l - 2, l - 1)]
+            A = A.fuse_legs(axes=axes)  # Fuse the physical leg with the dummy leg
+        else:
+            A = yastn.rand(config=config, n=n, legs=legs)
+        return A
+
+    psi = PepsAD(
+        geometry,
+        parameters={
+            (0, 0): _rand_tensor(0, legs, dummy_leg_charge=-1),
+            (0, 1): _rand_tensor(0, legs, dummy_leg_charge=0),
+            (0, 2): _rand_tensor(0, legs, dummy_leg_charge=0),
+        },
+    )
+    return psi
+
+
+def random_1x3_state_U1(bond_dims, config=None):
+    # 1x3 unit-cell pattern on the square lattice:
+    # A B C
+    # with one tensor in {A B C} having an extra charge
+
+    geometry = RectangularUnitcell(
+        pattern={
+            (0, 0): 0,
+            (0, 1): 1,
+            (0, 2): 2,
+        }
+    )
+    if config is None:  # use default
+        from yastn.yastn.backend import backend_np
+        config = yastn.make_config(backend=backend_np, fermionic=True, sym="U1")
+
+    assert config.sym == sym_U1, "Expecting U1 symmetry"
+
+    charges = tuple(bond_dims.keys())
+    Ds = tuple([bond_dims[t] for t in charges])
+
+    legs = [
+        yastn.Leg(config, s=1, t=charges, D=Ds),
+        yastn.Leg(config, s=1, t=charges, D=Ds),
+        yastn.Leg(config, s=-1, t=charges, D=Ds),
+        yastn.Leg(config, s=-1, t=charges, D=Ds),
+        yastn.Leg(config, s=1, t=(0, 1, 2), D=(1, 2, 1)),
+    ]
+
+    def _rand_tensor(n, legs, dummy_leg_charge=0):
+        if dummy_leg_charge != 0:
+            dummy_leg = yastn.Leg(config, s=1, t=(dummy_leg_charge,), D=(1,))
+            legs = legs + [dummy_leg]
+            A = yastn.rand(config=config, n=n, legs=legs)
+            l = len(legs)
+            axes = [i for i in range(l - 2)] + [(l - 2, l - 1)]
+            A = A.fuse_legs(axes=axes)  # Fuse the physical leg with the dummy leg
+        else:
+            A = yastn.rand(config=config, n=n, legs=legs)
+        return A
+
+    psi = PepsAD(
+        geometry,
+        parameters={
+            (0, 0): _rand_tensor(0, legs, dummy_leg_charge=-1),
+            (0, 1): _rand_tensor(0, legs, dummy_leg_charge=0),
+            (0, 2): _rand_tensor(0, legs, dummy_leg_charge=0),
+        },
+    )
+    return psi
+
+def random_3x1_state_U1(bond_dims, config=None):
+    # 1x3 unit-cell pattern on the square lattice:
+    # A B C
+    # with one tensor in {A B C} having an extra charge
+
+    geometry = RectangularUnitcell(
+        pattern={
+            (0, 0): 0,
+            (1, 0): 1,
+            (2, 0): 2,
+        }
+    )
+    if config is None:  # use default
+        from yastn.yastn.backend import backend_np
+        config = yastn.make_config(backend=backend_np, fermionic=True, sym="U1")
+
+    assert config.sym == sym_U1, "Expecting U1 symmetry"
+    charges = tuple(bond_dims.keys())
+    Ds = tuple([bond_dims[t] for t in charges])
+
+    legs = [
+        yastn.Leg(config, s=1, t=charges, D=Ds),
+        yastn.Leg(config, s=1, t=charges, D=Ds),
+        yastn.Leg(config, s=-1, t=charges, D=Ds),
+        yastn.Leg(config, s=-1, t=charges, D=Ds),
+        yastn.Leg(config, s=1, t=(0, 1, 2), D=(1, 2, 1)),
+    ]
+
+    def _rand_tensor(n, legs, dummy_leg_charge=0):
+        if dummy_leg_charge != 0:
+            dummy_leg = yastn.Leg(config, s=1, t=(dummy_leg_charge,), D=(1,))
+            legs = legs + [dummy_leg]
+            A = yastn.rand(config=config, n=n, legs=legs)
+            l = len(legs)
+            axes = [i for i in range(l - 2)] + [(l - 2, l - 1)]
+            A = A.fuse_legs(axes=axes)  # Fuse the physical leg with the dummy leg
+        else:
+            A = yastn.rand(config=config, n=n, legs=legs)
+        return A
+
+    psi = PepsAD(
+        geometry,
+        parameters={
+            (0, 0): _rand_tensor(0, legs, dummy_leg_charge=-1),
+            (1, 0): _rand_tensor(0, legs, dummy_leg_charge=0),
+            (2, 0): _rand_tensor(0, legs, dummy_leg_charge=0),
+        },
+    )
+    return psi
+
+def random_1x1_state_U1(bond_dims, config=None):
+    # 1x1 unit-cell on the square lattice with the tensor carrying one external charge.
+    geometry = RectangularUnitcell(
+        pattern={
+            (0, 0): 0,
+        }
+    )
+
+    if config is None:  # use default
+        from yastn.yastn.backend import backend_np
+        config = yastn.make_config(backend=backend_np, fermionic=True, sym="U1")
+
+    assert config.sym == sym_U1, "Expecting U1 symmetry"
+    charges = tuple(bond_dims.keys())
+    Ds = tuple([bond_dims[t] for t in charges])
+
+    legs = [
+        yastn.Leg(config, s=1, t=charges, D=Ds),
+        yastn.Leg(config, s=1, t=charges, D=Ds),
+        yastn.Leg(config, s=-1, t=charges, D=Ds),
+        yastn.Leg(config, s=-1, t=charges, D=Ds),
+        yastn.Leg(config, s=1, t=(0, 1, 2), D=(1, 2, 1)),
+    ]
+
+    def _rand_tensor(n, legs, dummy_leg_charge=0):
+        if dummy_leg_charge != 0:
+            dummy_leg = yastn.Leg(config, s=1, t=(dummy_leg_charge,), D=(1,))
+            legs = legs + [dummy_leg]
+            A = yastn.rand(config=config, n=n, legs=legs)
+            l = len(legs)
+            axes = [i for i in range(l - 2)] + [(l - 2, l - 1)]
+            A = A.fuse_legs(axes=axes)  # Fuse the physical leg with the dummy leg
+        else:
+            A = yastn.rand(config=config, n=n, legs=legs)
+        return A
+
+    psi = PepsAD(
+        geometry,
+        parameters={
+            (0, 0): _rand_tensor(
+                0, legs, dummy_leg_charge=-1
+            ),  # 1 electron per unit-cell
+        },
+    )
+    return psi
+
+
 
 
 def random_ipess_state(config= yastn.make_config(backend=backend_np, fermionic=True, sym="Z2"), bond_dim=(1, 1)):
