@@ -133,7 +133,7 @@ def main():
     yastn_config.backend.random_seed(args.seed)
 
     args.t2, args.t3, args.phi= 0.7*args.t1, -0.9*args.t1, 0.35*np.pi
-    model = tV_model(yastn_config, V1=args.V1, V2=args.V2, V3=args.V3, t1=args.t1, t2=args.t2, phi=args.phi, mu=args.mu, m=args.m)
+    model = tV_model(yastn_config, V1=args.V1, V2=args.V2, V3=args.V3, t1=args.t1, t2=args.t2, t3=args.t3, phi=args.phi, mu=args.mu, m=args.m)
 
     def loss_fn(state, ctm_env_in, opt_context):
         state.sync_()

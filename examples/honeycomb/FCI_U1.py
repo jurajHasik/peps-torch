@@ -132,7 +132,7 @@ def main():
     yastn_config.backend.random_seed(args.seed)
 
     args.t2, args.t3, args.phi= 0.7*args.t1, -0.9*args.t1, 0.35*np.pi
-    model = tV_model(yastn_config, V1=args.V1, V2=args.V2, V3=args.V3, t1=args.t1, t2=args.t2, phi=args.phi, mu=args.mu, m=args.m)
+    model = tV_model(yastn_config, V1=args.V1, V2=args.V2, V3=args.V3, t1=args.t1, t2=args.t2, t3=args.t3, phi=args.phi, mu=args.mu, m=args.m)
 
     def loss_fn(state, ctm_env_in, opt_context):
         state.sync_()
@@ -153,7 +153,7 @@ def main():
             "truncate_multiplets": True,
         }
         ctm_env_out, env_ts_slices, env_ts = fp_ctmrg(ctm_env_in, \
-            ctm_opts_fwd={'opts_svd': opts_svd, 'corner_tol': 1e-8, 'max_sweeps': 100,
+            ctm_opts_fwd={'opts_svd': opts_svd, 'corner_tol': 1e-10, 'max_sweeps': cfg.ctm_args.ctm_max_iter,
                 'method': "2site", 'use_qr': True, 'svd_policy': 'fullrank', 'D_krylov':args.chi, 'D_block': args.chi}, \
             ctm_opts_fp={'svd_policy': 'fullrank'})
         refill_env(ctm_env_out, env_ts, env_ts_slices)
@@ -202,6 +202,8 @@ def main():
             state = random_3x3_state_U1(bond_dims=bond_dims, config=yastn_config)
         elif args.pattern == '1x3':
             state = random_1x3_state_U1(bond_dims=bond_dims, config=yastn_config)
+        elif args.pattern == '1x6':
+            state = random_1x6_state_U1(bond_dims=bond_dims, config=yastn_config)
         elif args.pattern == '3x1':
             state = random_3x1_state_U1(bond_dims=bond_dims, config=yastn_config)
         else:

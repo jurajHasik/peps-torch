@@ -1,0 +1,1 @@
+python FCI_Z2.py --bond_dims 3,3 --chi 48 --V1 1.0 --t1 0.2 --mu 0.000 --pattern 1x3 --CTMARGS_ctm_max_iter 300 --seed 38 --omp_cores 8
