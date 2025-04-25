@@ -95,21 +95,21 @@ def main():
             "complex128",
             # "--OPTARGS_opt_log_grad",
             # "--CTMARGS_fwd_checkpoint_move",
-            # "--OPTARGS_line_search",
+            "--OPTARGS_line_search",
             # "backtracking",
-            # "strong_wolfe",
+            "strong_wolfe",
         ],
         namespace=args,
     )
 
-    state_file = f"FCI_U1_data_seed_{args.seed}/FCI_fp_{args.pattern}_cores_{args.omp_cores:d}_D_{D:d}_U1_chi_{args.chi:d}_V_{args.V1:.2f}_t1_{args.t1:.2f}_t2_{args.t2:.2f}_t3_{args.t3:.2f}_phi_{args.phi/np.pi:.2f}_mu_{args.mu:.3f}"
-    args, unknown_args = parser.parse_known_args(
-        [
-            "--out_prefix",
-            state_file,
-        ],
-        namespace=args,
-    )
+    # state_file = f"FCI_U1_data_seed_{args.seed}/FCI_fp_{args.pattern}_cores_{args.omp_cores:d}_D_{D:d}_U1_chi_{args.chi:d}_V_{args.V1:.2f}_t1_{args.t1:.2f}_t2_{args.t2:.2f}_t3_{args.t3:.2f}_phi_{args.phi/np.pi:.2f}_mu_{args.mu:.3f}"
+    # args, unknown_args = parser.parse_known_args(
+    #     [
+    #         "--out_prefix",
+    #         state_file,
+    #     ],
+    #     namespace=args,
+    # )
 
 
     if args.yast_backend == "torch":
@@ -120,6 +120,7 @@ def main():
     cfg.print_config()
     log.log(logging.INFO, "device: "+cfg.global_args.device)
     log.log(logging.INFO, f"bond_dims:{bond_dims}")
+    log.log(logging.INFO, f"ctm_args.ctm_max_iter:{cfg.ctm_args.ctm_max_iter}")
 
     yastn_config = yastn.make_config(
         backend=backend,
@@ -132,7 +133,7 @@ def main():
     yastn_config.backend.random_seed(args.seed)
 
     args.t2, args.t3, args.phi= 0.7*args.t1, -0.9*args.t1, 0.35*np.pi
-    model = tV_model(yastn_config, V1=args.V1, V2=args.V2, V3=args.V3, t1=args.t1, t2=args.t2, phi=args.phi, mu=args.mu, m=args.m)
+    model = tV_model(yastn_config, V1=args.V1, V2=args.V2, V3=args.V3, t1=args.t1, t2=args.t2, t3=args.t3, phi=args.phi, mu=args.mu, m=args.m)
 
     def loss_fn(state, ctm_env_in, opt_context):
         state.sync_()
@@ -153,8 +154,8 @@ def main():
             "truncate_multiplets": True,
         }
         ctm_env_out, env_ts_slices, env_ts = fp_ctmrg(ctm_env_in, \
-            ctm_opts_fwd={'opts_svd': opts_svd, 'corner_tol': 1e-8, 'max_sweeps': 100,
-                'method': "2site", 'use_qr': True, 'svd_policy': 'fullrank', 'D_krylov':args.chi, 'D_block': args.chi}, \
+            ctm_opts_fwd={'opts_svd': opts_svd, 'corner_tol': 1e-9, 'max_sweeps':cfg.ctm_args.ctm_max_iter,
+                'method': "2site", 'use_qr': False, 'svd_policy': 'fullrank', 'D_krylov':args.chi, 'D_block': args.chi}, \
             ctm_opts_fp={'svd_policy': 'fullrank'})
         refill_env(ctm_env_out, env_ts, env_ts_slices)
         ctm_log, t_ctm, t_check = FixedPoint.ctm_log, FixedPoint.t_ctm, FixedPoint.t_check
@@ -200,8 +201,12 @@ def main():
             state = random_1x1_state_U1(bond_dims=bond_dims, config=yastn_config)
         elif args.pattern == '3x3':
             state = random_3x3_state_U1(bond_dims=bond_dims, config=yastn_config)
+        elif args.pattern == '3x3_2':
+            state = random_3x3_2_state_U1(bond_dims=bond_dims, config=yastn_config)
         elif args.pattern == '1x3':
             state = random_1x3_state_U1(bond_dims=bond_dims, config=yastn_config)
+        elif args.pattern == '1x6':
+            state = random_1x6_state_U1(bond_dims=bond_dims, config=yastn_config)
         elif args.pattern == '3x1':
             state = random_3x1_state_U1(bond_dims=bond_dims, config=yastn_config)
         else:
