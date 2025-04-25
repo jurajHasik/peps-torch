@@ -700,6 +700,63 @@ def random_3x3_2_state_U1(bond_dims, config=None):
     return psi
 
 
+def random_1x6_state_U1(bond_dims, config=None):
+    # 1x3 unit-cell pattern on the square lattice:
+    # A B C D E F
+    # with two tensors in {A B C D E F} having an extra charge
+
+    geometry = RectangularUnitcell(
+        pattern={
+            (0, 0): 0,
+            (0, 1): 1,
+            (0, 2): 2,
+            (0, 3): 3,
+            (0, 4): 4,
+            (0, 5): 5,
+        }
+    )
+    if config is None:  # use default
+        from yastn.yastn.backend import backend_np
+        config = yastn.make_config(backend=backend_np, fermionic=True, sym="U1")
+
+    assert config.sym == sym_U1, "Expecting U1 symmetry"
+
+    charges = tuple(bond_dims.keys())
+    Ds = tuple([bond_dims[t] for t in charges])
+
+    legs = [
+        yastn.Leg(config, s=1, t=charges, D=Ds),
+        yastn.Leg(config, s=1, t=charges, D=Ds),
+        yastn.Leg(config, s=-1, t=charges, D=Ds),
+        yastn.Leg(config, s=-1, t=charges, D=Ds),
+        yastn.Leg(config, s=1, t=(0, 1, 2), D=(1, 2, 1)),
+    ]
+
+    def _rand_tensor(n, legs, dummy_leg_charge=0):
+        if dummy_leg_charge != 0:
+            dummy_leg = yastn.Leg(config, s=1, t=(dummy_leg_charge,), D=(1,))
+            legs = legs + [dummy_leg]
+            A = yastn.rand(config=config, n=n, legs=legs)
+            l = len(legs)
+            axes = [i for i in range(l - 2)] + [(l - 2, l - 1)]
+            A = A.fuse_legs(axes=axes)  # Fuse the physical leg with the dummy leg
+        else:
+            A = yastn.rand(config=config, n=n, legs=legs)
+        return A
+
+    psi = PepsAD(
+        geometry,
+        parameters={
+            (0, 0): _rand_tensor(0, legs, dummy_leg_charge=-1),
+            (0, 1): _rand_tensor(0, legs, dummy_leg_charge=0),
+            (0, 2): _rand_tensor(0, legs, dummy_leg_charge=0),
+            (0, 3): _rand_tensor(0, legs, dummy_leg_charge=-1),
+            (0, 4): _rand_tensor(0, legs, dummy_leg_charge=0),
+            (0, 5): _rand_tensor(0, legs, dummy_leg_charge=0),
+        },
+    )
+    return psi
+
 def random_1x3_state_U1(bond_dims, config=None):
     # 1x3 unit-cell pattern on the square lattice:
     # A B C

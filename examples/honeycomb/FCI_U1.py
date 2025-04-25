@@ -154,8 +154,8 @@ def main():
             "truncate_multiplets": True,
         }
         ctm_env_out, env_ts_slices, env_ts = fp_ctmrg(ctm_env_in, \
-            ctm_opts_fwd={'opts_svd': opts_svd, 'corner_tol': 1e-9, 'max_sweeps':cfg.ctm_args.ctm_max_iter,
-                'method': "2site", 'use_qr': False, 'svd_policy': 'fullrank', 'D_krylov':args.chi, 'D_block': args.chi}, \
+            ctm_opts_fwd={'opts_svd': opts_svd, 'corner_tol': 1e-10, 'max_sweeps': cfg.ctm_args.ctm_max_iter,
+                'method': "2site", 'use_qr': True, 'svd_policy': 'fullrank', 'D_krylov':args.chi, 'D_block': args.chi}, \
             ctm_opts_fp={'svd_policy': 'fullrank'})
         refill_env(ctm_env_out, env_ts, env_ts_slices)
         ctm_log, t_ctm, t_check = FixedPoint.ctm_log, FixedPoint.t_ctm, FixedPoint.t_check
