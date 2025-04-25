@@ -214,6 +214,7 @@ def main():
                     use_qr=False,
                     checkpoint_move=ctm_args.fwd_checkpoint_move
                     )
+        print(f"t_ctm: {t_ctm:.1f}s")
 
         # 3.3 convert environment to peps-torch format
         env_pt= from_yastn_c4v_env_c4v(ctm_env_out)
@@ -251,12 +252,10 @@ def main():
         options_svd={
             "D_total": cfg.main_args.chi, "tol": ctm_args.projector_svd_reltol,
                 "eps_multiplet": ctm_args.projector_eps_multiplet,
-                "policy": "fullrank",
             }
-
         ctm_env_out, env_ts_slices, env_ts = fp_ctmrg_c4v(ctm_env_in, \
             ctm_opts_fwd= {'opts_svd': options_svd, 'corner_tol': ctm_args.ctm_conv_tol, 'max_sweeps': ctm_args.ctm_max_iter, \
-                'method': "default", 'use_qr': False, 'svd_policy': 'fullrank', 'D_block': None}, \
+                'method': "default", 'use_qr': False, 'svd_policy': 'fullrank', 'D_block': args.chi}, \
             ctm_opts_fp= {'svd_policy': 'fullrank'})
         refill_env_c4v(ctm_env_out, env_ts, env_ts_slices)
 
