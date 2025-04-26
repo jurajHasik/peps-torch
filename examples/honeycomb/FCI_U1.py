@@ -95,21 +95,21 @@ def main():
             "complex128",
             # "--OPTARGS_opt_log_grad",
             # "--CTMARGS_fwd_checkpoint_move",
-            # "--OPTARGS_line_search",
+            "--OPTARGS_line_search",
             # "backtracking",
-            # "strong_wolfe",
+            "strong_wolfe",
         ],
         namespace=args,
     )
 
-    state_file = f"FCI_U1_data_seed_{args.seed}/FCI_fp_{args.pattern}_cores_{args.omp_cores:d}_D_{D:d}_U1_chi_{args.chi:d}_V_{args.V1:.2f}_t1_{args.t1:.2f}_t2_{args.t2:.2f}_t3_{args.t3:.2f}_phi_{args.phi/np.pi:.2f}_mu_{args.mu:.3f}"
-    args, unknown_args = parser.parse_known_args(
-        [
-            "--out_prefix",
-            state_file,
-        ],
-        namespace=args,
-    )
+    # state_file = f"FCI_U1_data_seed_{args.seed}/FCI_fp_{args.pattern}_cores_{args.omp_cores:d}_D_{D:d}_U1_chi_{args.chi:d}_V_{args.V1:.2f}_t1_{args.t1:.2f}_t2_{args.t2:.2f}_t3_{args.t3:.2f}_phi_{args.phi/np.pi:.2f}_mu_{args.mu:.3f}"
+    # args, unknown_args = parser.parse_known_args(
+    #     [
+    #         "--out_prefix",
+    #         state_file,
+    #     ],
+    #     namespace=args,
+    # )
 
 
     if args.yast_backend == "torch":
@@ -120,6 +120,7 @@ def main():
     cfg.print_config()
     log.log(logging.INFO, "device: "+cfg.global_args.device)
     log.log(logging.INFO, f"bond_dims:{bond_dims}")
+    log.log(logging.INFO, f"ctm_args.ctm_max_iter:{cfg.ctm_args.ctm_max_iter}")
 
     yastn_config = yastn.make_config(
         backend=backend,
@@ -200,6 +201,8 @@ def main():
             state = random_1x1_state_U1(bond_dims=bond_dims, config=yastn_config)
         elif args.pattern == '3x3':
             state = random_3x3_state_U1(bond_dims=bond_dims, config=yastn_config)
+        elif args.pattern == '3x3_2':
+            state = random_3x3_2_state_U1(bond_dims=bond_dims, config=yastn_config)
         elif args.pattern == '1x3':
             state = random_1x3_state_U1(bond_dims=bond_dims, config=yastn_config)
         elif args.pattern == '1x6':
