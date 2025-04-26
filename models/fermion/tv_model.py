@@ -93,7 +93,7 @@ class tV_model:
         c_B = sf.c(spin="d")
         cp_B = sf.cp(spin="d")
         I = sf.I()
-        N = len(N.sites())
+        N = len(psi.sites())
 
 
         # measure_function-based computation
@@ -196,7 +196,7 @@ class tV_model:
         c_B = sf.c(spin="d")
         cp_B = sf.cp(spin="d")
         I = sf.I()
-        N = len(N.sites())
+        N = len(psi.sites())
 
         energy_onsite, energy_horz, energy_vert, energy_diag, energy_anti_diag = (
             0,
