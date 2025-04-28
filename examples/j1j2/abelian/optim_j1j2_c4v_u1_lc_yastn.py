@@ -97,7 +97,7 @@ def main():
         u1basis= [ ( {"meta": {"pg": "A_1",}} ,t) for i,t \
                   in enumerate(u1basis.to(dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device).unbind(dim=0)) ]
         state= IPEPS_ABELIAN_C4V_LC(
-            settings, u1basis, 
+            settings, u1basis,
             {(0,0): torch.rand(len(u1basis), dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)},
             {"abelian_charges": args.u1_charges, "total_abelian_charge": args.u1_total_charge},
         )
@@ -239,6 +239,7 @@ def main():
                     checkpoint_move=ctm_args.fwd_checkpoint_move
                     )
         print(f"t_ctm: {t_ctm:.1f}s")
+        log.log(logging.INFO, f"t_ctm: {t_ctm:.1f}s")
 
         # 3.3 convert environment to peps-torch format
         env_pt= from_yastn_c4v_env_c4v(ctm_env_out)
@@ -248,7 +249,7 @@ def main():
         loss= energy_f(state, env_pt)
         t_loss1= time.perf_counter()
 
-        return (loss, ctm_env_out, conv_history, t_ctm, t_check)
+        return (loss, ctm_env_out, conv_history, t_ctm, t_check, t_loss1-t_loss0)
 
 
     def loss_c4v_fp(state, ctm_env_in, opt_context):
@@ -277,11 +278,13 @@ def main():
             "D_total": cfg.main_args.chi, "tol": ctm_args.projector_svd_reltol,
                 "eps_multiplet": ctm_args.projector_eps_multiplet,
             }
-        ctm_env_out, env_ts_slices, env_ts = fp_ctmrg_c4v(ctm_env_in, \
+        ctm_env_out, env_ts_slices, env_ts, t_ctm = fp_ctmrg_c4v(ctm_env_in, \
             ctm_opts_fwd= {'opts_svd': options_svd, 'corner_tol': ctm_args.ctm_conv_tol, 'max_sweeps': ctm_args.ctm_max_iter, \
-                'method': "default", 'use_qr': False, 'svd_policy': 'fullrank', 'D_block': args.chi}, \
+                'method': "default", 'use_qr': False, 'svd_policy': ctm_args.fwd_svd_policy, 'D_block': args.chi, \
+                    "svds_thresh":ctm_args.fwd_svds_thresh, "svds_solver":ctm_args.fwd_svds_solver}, \
             ctm_opts_fp= {'svd_policy': 'fullrank'})
         refill_env_c4v(ctm_env_out, env_ts, env_ts_slices)
+        print(f"t_ctm: {t_ctm:.1f}s")
 
         # 3.3 convert environment to peps-torch format
         env_pt= from_yastn_c4v_env_c4v(ctm_env_out)
@@ -290,7 +293,7 @@ def main():
         t_loss0= time.perf_counter()
         loss= energy_f(state, env_pt)
         t_loss1= time.perf_counter()
-        return (loss, ctm_env_out, [], None, None)
+        return (loss, ctm_env_out, [], t_ctm, None, t_loss1-t_loss0)
 
 
     @torch.no_grad()
