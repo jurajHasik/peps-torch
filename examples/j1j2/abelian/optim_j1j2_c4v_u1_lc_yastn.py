@@ -30,6 +30,21 @@ log = logging.getLogger(__name__)
 # parse command line args and build necessary configuration objects
 parser= cfg.get_args_parser()
 # additional model-dependent arguments
+parser.add_argument(
+    "--u1_charges",
+    dest="u1_charges",
+    default=None,
+    type=int,
+    help="U(1) charges assigned to the states of the local physical Hilbert space followed by charges of states in the virtual space",
+    nargs="+",
+)
+parser.add_argument(
+    "--u1_total_charge",
+    dest="u1_total_charge",
+    default=0,
+    type=int,
+    help="total U(1) charge",
+)
 parser.add_argument("--j1", type=float, default=1., help="nearest-neighbour coupling")
 parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour coupling")
 parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
@@ -77,8 +92,17 @@ def main():
     elif args.opt_resume is not None:
         state= IPEPS_ABELIAN_C4V_LC(settings, None, dict(), None)
         state.load_checkpoint(args.opt_resume)
+    elif args.u1_charges and len(args.u1_charges)==args.bond_dim+2:
+        u1basis= generate_a_basis(2, args.bond_dim, args.u1_charges, args.u1_total_charge)
+        u1basis= [ ( {"meta": {"pg": "A_1",}} ,t) for i,t \
+                  in enumerate(u1basis.to(dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device).unbind(dim=0)) ]
+        state= IPEPS_ABELIAN_C4V_LC(
+            settings, u1basis, 
+            {(0,0): torch.rand(len(u1basis), dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)},
+            {"abelian_charges": args.u1_charges, "total_abelian_charge": args.u1_total_charge},
+        )
     else:
-        raise ValueError("Missing trial state: --instate=None and --ipeps_init_type= "\
+        raise ValueError("Missing trial state: (--instate=None or empty --u1_charges) and --ipeps_init_type= "\
             +str(args.ipeps_init_type)+" is not supported")
 
     print(state)

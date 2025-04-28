@@ -188,8 +188,8 @@ class IPEPS_ABELIAN_C4V(IPEPS_ABELIAN):
         phase_op.set_block((1,1), (1,1), val=[[-1.],] )
         phase_op.set_block((-1,-1), (1,1), val=[[1.],] )
 
-        # flip_signature() is equivalent to conj().conj_blocks()
-        # flip_charges(axes) is equivalent to switch_signature(axes)
+        # flip_signature() is equivalent to conj().conj_blocks(), which changes the total charge from +n to -n
+        # flip_charges(axes) is equivalent to switch_signature(axes), which leaves the total charge unchanged
         #
         # 1.2 create B-tensor
         # A1= state.site((0,0)).flip_signature() # 1.2.1 map into B-sublattice with [phys,u,l,d,r]= [-1,-1,-1,-1,-1]
