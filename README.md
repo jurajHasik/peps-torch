@@ -134,6 +134,7 @@ python examples/j1j2/abelian/ctmrg_j1j2_u1.py --tiling BIPARTITE --chi 48 --j2 0
 - (optional) scipy 1.3.+
 - (optional) opt_einsum
 - (optional) ArrayFire (see https://github.com/arrayfire/arrayfire)
+- (optional) pytest, pytest-subtests
 
 YASTN is linked to **peps-torch** as a [git submodule](https://git-scm.com/book/en/v2/Git-Tools-Submodules).
 To obtain it, you can use git:

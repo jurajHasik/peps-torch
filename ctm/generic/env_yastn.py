@@ -54,12 +54,15 @@ def ctmrg(env: EnvCTM, ctm_conv_check_f : Callable, options_svd : dict, **kwargs
     t_ctm, t_check = 0.0, 0.0
     t_ctm_prev = time.perf_counter()
     converged,conv_history=False,[]
+    checkpoint_move= kwargs.get("checkpoint_move",False)
+    if checkpoint_move is True: # default
+        checkpoint_move= "nonreentrant"
 
     for sweep in range(kwargs.get("max_sweeps",0)):
         env.update_(options_svd,
                     method=kwargs.get("method","2site"), 
                     use_qr=kwargs.get("use_qr",False), \
-                    checkpoint_move=kwargs.get("checkpoint_move",False))
+                    checkpoint_move=checkpoint_move)
         t_ctm_after = time.perf_counter()
         t_ctm += t_ctm_after - t_ctm_prev
         t_ctm_prev = t_ctm_after

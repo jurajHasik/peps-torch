@@ -1,3 +1,4 @@
+import os
 import context
 import copy
 import torch
@@ -23,7 +24,7 @@ from yastn.yastn.tn.fpeps._peps import Peps2Layers
 from optim.ad_optim_lbfgs_mod import optimize_state
 
 import json
-import unittest
+import unittest, pytest
 import logging
 log = logging.getLogger(__name__)
 
@@ -340,6 +341,8 @@ def main():
     elif args.grad_type=='c4v_fp':
         loss_fn= loss_c4v_fp
         obs_fn= obs_fn_c4v
+    
+    print("\n\n"+", ".join(["epoch","loss","avg_m"]))
     optimize_state(state, None, loss_fn, obs_fn=obs_fn)
 
 if __name__=='__main__':
@@ -347,3 +350,95 @@ if __name__=='__main__':
         print("args not recognized: "+str(unknown_args))
         raise Exception("Unknown command line arguments")
     main()
+
+
+class Test_U1c4v_2site(unittest.TestCase):
+    r"""
+    Test case for optimization of U(1) x C4v symmetric ansatz via both explicit 2-site unit cell
+    and implicit 2-site unit cell.
+    """
+    tol= 1.0e-6
+    tol_2site= 1.0e-3 # explicit 2-site unit cell uses generic directional CTM.
+                      # This mainly tests fatal error rather then precise observables.
+    DIR_PATH = os.path.dirname(os.path.realpath(__file__))
+    OUT_PRFX = "RESULT_test_opt_U1c4v_2site"
+
+    def setUp(self):
+        abs_dir = os.path.dirname(os.path.abspath(__file__))
+
+        args.bond_dim=3
+        args.seed=1
+        args.opt_max_iter= 4
+        args.instate_noise=0
+        if args.bond_dim==3:
+            args.instate = os.path.join(abs_dir, "../../../test-input/abelian/c4v/BFGS100LS_U1B_D3-chi72-j20.0-run0-iRNDseed321_state.json")
+            self.expected_energy= -0.6646014335383251 # at chi=36
+            args.chi=36
+        elif args.bond_dim==4:
+            args.instate = os.path.join(abs_dir, "../../../test-input/abelian/c4v/BFGS100LS_U1B_D4-chi97-j20.0-run0-iU1BD4j20chi97n0_state.json")
+            self.expected_energy= -0.6689670982443985 # at chi=32
+            args.chi=32
+
+        # args.CTMARGS_ctm_env_init_type= "eye"
+        # args.GLOBALARGS_dtype= "complex128"
+
+    def _opt_U1c4v_2site(self):
+        import builtins
+        from unittest.mock import patch
+        from io import StringIO
+        local_tol= self.tol if 'c4v' in args.grad_type else self.tol_2site
+
+        # i) run optimization
+        tmp_out= StringIO()
+        original_print = builtins.print
+        def passthrough_print(*args, **kwargs):
+            original_print(*args, **kwargs)
+            kwargs.update(file=tmp_out)
+            original_print(*args, **kwargs)
+
+        with patch('builtins.print', new=passthrough_print) as tmp_print:
+            main()
+
+        # parse FINAL observables
+        obs_opt_lines=[]
+        final_obs=None
+        OPT_OBS= OPT_OBS_DONE= False
+        tmp_out.seek(0)
+        l= tmp_out.readline()
+        while l:
+            if OPT_OBS and not OPT_OBS_DONE and l.rstrip()=="":
+                OPT_OBS_DONE= True
+                OPT_OBS=False
+            if OPT_OBS and not OPT_OBS_DONE and len(l.split(','))>1:
+                if not any(ch.isalpha() for ch in l[:1]): # skip lines with starting non-numeric values (i.e. not epoch)
+                    obs_opt_lines.append(l)
+            if "epoch, loss," in l and not OPT_OBS_DONE:
+                OPT_OBS= True
+            if "FINAL" in l:
+                final_obs= l.rstrip()
+                break
+            l= tmp_out.readline()
+        assert len(obs_opt_lines)>0
+
+        # compare the line of observables with lowest energy from optimization (i)
+        # TODO and final observables evaluated from best state stored in *_state.json output file
+        best_e_line_index= np.argmin([ float(l.split(',')[1]) for l in obs_opt_lines ])
+        opt_line_last= [float(x) for x in obs_opt_lines[best_e_line_index].split(",")]
+        for val0,val1 in zip(opt_line_last[1:2], [self.expected_energy] ):
+            assert np.isclose(val0,val1, rtol=local_tol, atol=local_tol)
+
+    def test_opt(self):
+        for grad_type in ['default','fp','c4v','c4v_fp']:
+            for fwd_checkpoint_move in [True,False]:
+                with self.subTest(grad_type=grad_type, fwd_checkpoint_move=fwd_checkpoint_move):
+                    args.grad_type= grad_type
+                    args.CTMARGS_fwd_checkpoint_move= fwd_checkpoint_move
+                    args.out_prefix= self.OUT_PRFX
+                    self._opt_U1c4v_2site()
+
+    def tearDown(self):
+        args.opt_resume=None
+        args.instate=None
+        out_prefix=self.OUT_PRFX
+        for f in [out_prefix+"_checkpoint.p",out_prefix+"_state.json",out_prefix+".log"]:
+            if os.path.isfile(f): os.remove(f)

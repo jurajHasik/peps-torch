@@ -19,6 +19,18 @@ def _torch_version_check(version):
                 (int(tokens[0])==int(tokens_v[0]) and int(tokens[1]) >= int(tokens_v[1]))
     return True
 
+class _storeTrueOrString(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        if values is None:
+            # If no value is provided, set it to True
+            setattr(namespace, self.dest, True)
+        elif isinstance(values,str) and values.lower() in ['true', 'false']:
+            setattr(namespace, self.dest, values.lower() == 'true')
+        else:
+            # Otherwise, store the provided string
+            setattr(namespace, self.dest, values)
+
+
 def get_args_parser():
     parser = argparse.ArgumentParser(description='',allow_abbrev=False)
     parser.add_argument("--omp_cores", type=int, default=1,help="number of OpenMP cores")
@@ -40,7 +52,9 @@ def get_args_parser():
         parser.add_argument_group(group_prefix)
         c_list= list(filter(lambda x: "__" not in x, dir(c)))
         for x in c_list:
-            if isinstance(getattr(c,x), bool):
+            if group_prefix+x in ["CTMARGS_fwd_checkpoint_move"]:
+                continue
+            elif isinstance(getattr(c,x), bool):
                 # default is False
                 if not getattr(c,x):
                     parser.add_argument("--"+group_prefix+x, action='store_true')
@@ -49,6 +63,15 @@ def get_args_parser():
                     parser.add_argument("--"+group_prefix+"no_"+x, action='store_false', dest=group_prefix+x)
             else:
                 parser.add_argument("--"+group_prefix+x, type=type(getattr(c,x)), default=getattr(c,x))
+
+    parser.add_argument(
+        "--CTMARGS_fwd_checkpoint_move",
+        nargs="?",
+        const=True,  # If the flag is provided without a value, `const` will be used
+        default=False,  # If the flag is not provided, default to False
+        action=_storeTrueOrString,
+        help="Argument that can be either a boolean (True/False) or a string",
+    )
 
     return parser
 
@@ -78,6 +101,7 @@ def configure(parsed_args):
             # strip prefix key+"_"
             a_noprefix=a[1+len(k):]
             setattr(conf_dict[k],a_noprefix,getattr(parsed_args,a))
+    
     # set main args
     for name,val in nogroup_args.items():
         setattr(main_args,name,val)
@@ -89,6 +113,9 @@ def configure(parsed_args):
         global_args.torch_dtype= torch.complex128
     else:
         raise NotImplementedError(f"Unsupported dtype {global_args.dtype}")
+
+    if ctm_args.fwd_checkpoint_move in ["True", "true"]:
+        ctm_args.fwd_checkpoint_move= True
 
     # validate
     # if ctm_args.step_core_gpu:
@@ -284,8 +311,10 @@ class CTMARGS():
     :ivar fwd_checkpoint_absorb: recompute forward pass of absorp and truncate functions (absorb_truncate_*)
                                  during backward pass within optimization to save memory. Default: ``False``
     :vartype fwd_checkpoint_absorb: bool
-    :ivar fwd_checkpoint_move: recompute forward pass of whole ``ctm_MOVE`` during backward pass. Default: ``False``
-    :vartype fwd_checkpoint_move: bool
+    :ivar fwd_checkpoint_move: recompute forward pass of whole ``ctm_MOVE`` during backward pass. Default: ``False``.
+                               One can also provide "reentrant" or "nonreentrant" to specfify the type of checkpointing.
+                               If passed without a value or as "true", it will be set to ``True`` (nonreentrant).
+    :vartype fwd_checkpoint_move: bool | str
 
     FPCM related options
 
