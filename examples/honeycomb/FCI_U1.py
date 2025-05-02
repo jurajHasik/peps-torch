@@ -155,8 +155,10 @@ def main():
         }
         ctm_env_out, env_ts_slices, env_ts = fp_ctmrg(ctm_env_in, \
             ctm_opts_fwd={'opts_svd': opts_svd, 'corner_tol': 1e-10, 'max_sweeps': cfg.ctm_args.ctm_max_iter,
-                'method': "2site", 'use_qr': True, 'svd_policy': 'fullrank', 'D_krylov':args.chi, 'D_block': args.chi}, \
+                'method': "2site", 'use_qr': False, 'svd_policy': ctm_args.fwd_svd_policy, 'D_krylov':args.chi, 'D_block': args.chi, \
+                "svds_thresh":ctm_args.fwd_svds_thresh, "svds_solver":ctm_args.fwd_svds_solver}, \
             ctm_opts_fp={'svd_policy': 'fullrank'})
+
         refill_env(ctm_env_out, env_ts, env_ts_slices)
         ctm_log, t_ctm, t_check = FixedPoint.ctm_log, FixedPoint.t_ctm, FixedPoint.t_check
         # 2) evaluate loss with converged environment
