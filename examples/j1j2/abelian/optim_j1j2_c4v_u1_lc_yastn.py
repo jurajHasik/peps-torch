@@ -24,7 +24,7 @@ from yastn.yastn.tn.fpeps._peps import Peps2Layers
 from optim.ad_optim_lbfgs_mod import optimize_state
 
 import json
-import unittest, pytest
+import unittest
 import logging
 log = logging.getLogger(__name__)
 
@@ -99,7 +99,8 @@ def main():
                   in enumerate(u1basis.to(dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device).unbind(dim=0)) ]
         state= IPEPS_ABELIAN_C4V_LC(
             settings, u1basis,
-            {(0,0): torch.rand(len(u1basis), dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)},
+            # {(0,0): torch.rand(len(u1basis), dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)},
+            {(0,0): torch.rand(len(u1basis), dtype=cfg.global_args.torch_dtype, device='cpu').to(cfg.global_args.device)},
             {"abelian_charges": args.u1_charges, "total_abelian_charge": args.u1_total_charge},
         )
     else:
@@ -240,7 +241,7 @@ def main():
                     checkpoint_move=ctm_args.fwd_checkpoint_move
                     )
         print(f"t_ctm: {t_ctm:.1f}s")
-        log.log(logging.INFO, f"t_ctm: {t_ctm:.1f}s")
+        log.log(logging.INFO, f"# of ctm steps: {len(conv_history):d}, t_ctm: {t_ctm:.1f}s")
 
         # 3.3 convert environment to peps-torch format
         env_pt= from_yastn_c4v_env_c4v(ctm_env_out)
@@ -341,7 +342,7 @@ def main():
     elif args.grad_type=='c4v_fp':
         loss_fn= loss_c4v_fp
         obs_fn= obs_fn_c4v
-    
+
     print("\n\n"+", ".join(["epoch","loss","avg_m"]))
     optimize_state(state, None, loss_fn, obs_fn=obs_fn)
 
