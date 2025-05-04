@@ -8,6 +8,9 @@ import torch
 from optim import lbfgs_modified
 import config as cfg
 
+
+from yastn.yastn.tn.fpeps.envs.fixed_pt import NoFixedPointError
+
 def store_checkpoint(checkpoint_file, state, optimizer, current_epoch, current_loss,\
     verbosity=0):
     r"""
@@ -35,7 +38,7 @@ def store_checkpoint(checkpoint_file, state, optimizer, current_epoch, current_l
         print(checkpoint_file)
 
 def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
-    main_args=cfg.main_args, opt_args=cfg.opt_args,ctm_args=cfg.ctm_args, 
+    main_args=cfg.main_args, opt_args=cfg.opt_args,ctm_args=cfg.ctm_args,
     global_args=cfg.global_args):
     r"""
     :param state: initial wavefunction
@@ -55,7 +58,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
     :type ctm_args: CTMARGS
     :type global_args: GLOBALARGS
 
-    Optimizes initial wavefunction ``state`` with respect to ``loss_fn`` using 
+    Optimizes initial wavefunction ``state`` with respect to ``loss_fn`` using
     :class:`optim.lbfgs_modified.LBFGS_MOD` optimizer.
     The main parameters influencing the optimization process are given in :class:`config.OPTARGS`.
     Calls to functions ``loss_fn``, ``obs_fn``, and ``post_proc`` pass the current configuration
@@ -67,7 +70,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
     verbosity = opt_args.verbosity_opt_epoch
     checkpoint_file = main_args.out_prefix+"_checkpoint.p"
     outputstatefile= main_args.out_prefix+"_state.json"
-    
+
     t_data = dict({"loss": [], "min_loss": 1.0e+16, "loss_ls": [], "min_loss_ls": 1.0e+16})
     current_env= [ctm_env_init]
     context= dict({"ctm_args":ctm_args, "opt_args":opt_args, "loss_history": t_data})
@@ -104,7 +107,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
             cp_history_size= cp_opt_params["history_size"]
             cp_opt_params["history_size"] = opt_args.history_size
             if opt_args.history_size < cp_history_size:
-                if len(cp_opt_history["old_dirs"]) > opt_args.history_size: 
+                if len(cp_opt_history["old_dirs"]) > opt_args.history_size:
                     assert len(cp_opt_history["old_dirs"])==len(cp_opt_history["old_stps"])\
                         ==len(cp_opt_history["ro"]), "Inconsistent L-BFGS history"
                     cp_opt_history["old_dirs"]= cp_opt_history["old_dirs"][-opt_args.history_size:]
@@ -123,13 +126,13 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
     #@profile
     def closure(linesearching=False):
         context["line_search"]= linesearching
-        
+
         # 0) evaluate loss
         optimizer.zero_grad()
         loss, ctm_env, history, *timings = loss_fn(state, current_env[0], context)
         if len(timings)==2: # legacy
             t_ctm, t_check, t_loss= *timings, None
-        elif len(timings)==3: # 
+        elif len(timings)==3: #
             t_ctm, t_check, t_loss= timings
 
         # 4) evaluate gradient
@@ -147,7 +150,10 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
             t_data["loss_ls"].append(loss.item())
             if t_data["min_loss_ls"] > t_data["loss_ls"][-1]:
                 t_data["min_loss_ls"]= t_data["loss_ls"][-1]
-        else:  
+                # store the state if a lower-energy state is found during linesearch
+                if t_data["min_loss"] > t_data["loss_ls"][-1]:
+                    state.write_to_file(outputstatefile, normalize=True)
+        else:
             t_data["loss"].append(loss.item())
             if t_data["min_loss"] > t_data["loss"][-1]:
                 t_data["min_loss"]= t_data["loss"][-1]
@@ -163,14 +169,21 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
             log.info(json.dumps(log_entry))
 
         # 3) compute desired observables
+        context['id']= epoch
         if obs_fn is not None:
             obs_fn(state, current_env[0], context)
 
         # 5) log grad metrics
         if opt_args.opt_logging:
             log_entry=dict({"id": epoch})
-            if linesearching: log_entry["LS"]=len(t_data["loss_ls"])
-            else: 
+            if linesearching:
+                log_entry["LS"]=len(t_data["loss_ls"])
+                log_entry["LS_t_grad"]=t_grad1-t_grad0
+                flat_grad= torch.cat(tuple(p.grad.view(-1) for p in parameters))
+                log_entry["LS_grad_mag"]= [flat_grad.norm().item(), flat_grad.norm(p=float('inf')).item()]
+                log_entry["LS_grad_mags"]= [p.grad.norm().item() for p in parameters]
+                if opt_args.opt_log_grad: log_entry["LS_grad"]= [p.grad.tolist() for p in parameters]
+            else:
                 log_entry["t_grad"]=t_grad1-t_grad0
                 # log just l2 and l\infty norm of the full grad
                 # log_entry["grad_mag"]= [p.grad.norm().item() for p in parameters]
@@ -178,10 +191,10 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
                 log_entry["grad_mag"]= [flat_grad.norm().item(), flat_grad.norm(p=float('inf')).item()]
                 log_entry["grad_mags"]= [p.grad.norm().item() for p in parameters]
                 if opt_args.opt_log_grad: log_entry["grad"]= [p.grad.tolist() for p in parameters]
-            log.info(json.dumps(log_entry))        
+            log.info(json.dumps(log_entry))
 
         return loss
-    
+
     # closure for derivative-free line search. This closure
     # is to be called within torch.no_grad context
     @torch.no_grad()
@@ -197,12 +210,12 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
             loc_ctm_args.projector_svd_method= opt_args.line_search_svd_method
         ls_context= dict({"ctm_args":loc_ctm_args, "opt_args":loc_opt_args, "loss_history": t_data,
             "line_search": linesearching})
-        
+
         loss, ctm_env, history, *timings = loss_fn(state, current_env[0],\
             ls_context)
         if len(timings)==2: # legacy
             t_ctm, t_check, t_loss= *timings, None
-        elif len(timings)==3: # 
+        elif len(timings)==3: #
             t_ctm, t_check, t_loss= timings
         current_env[0]= ctm_env
 
@@ -210,6 +223,9 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         t_data["loss_ls"].append(loss.item())
         if t_data["min_loss_ls"] > t_data["loss_ls"][-1]:
             t_data["min_loss_ls"]= t_data["loss_ls"][-1]
+            # store the state if a lower-energy state is found during linesearch
+            if t_data["min_loss"] > t_data["loss_ls"][-1]:
+                    state.write_to_file(outputstatefile, normalize=True)
 
         # 3) log metrics for debugging
         if opt_args.opt_logging:
@@ -223,17 +239,36 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
 
         return loss
 
+    new_loss, new_flat_grad = None, None
     for epoch in range(main_args.opt_max_iter):
         # checkpoint the optimizer
         # checkpointing before step, guarantees the correspondence between the wavefunction
         # and the last computed value of loss t_data["loss"][-1]
-        if epoch>0:
+        if epoch>0 and len(t_data["loss"]) > 0:
             store_checkpoint(checkpoint_file, state, optimizer, epoch, t_data["loss"][-1])
 
         # After execution closure ``current_env`` **IS NOT** corresponding to ``state``, since
-        # the ``state`` on-site tensors have been modified by gradient. 
-        optimizer.step_2c(closure, closure_linesearch)
-        
+        # the ``state`` on-site tensors have been modified by gradient.
+        try:
+            _, new_loss, new_flat_grad = optimizer.step_2c(closure, closure_linesearch, new_loss=new_loss, new_flat_grad=new_flat_grad)
+        except NoFixedPointError as e:
+            print(e)
+            log.log(logging.INFO, "No fixed point found. Add noise to the state.")
+            # add a random perturbation to the state
+            state = state.add_noise(noise=0.1)
+
+            # reset the state of the optimizer
+            parameters = state.get_parameters()
+            for A in parameters:
+                A.detach_()
+                A.requires_grad_(True)
+            optimizer = lbfgs_modified.LBFGS_MOD(parameters, max_iter=opt_args.max_iter_per_epoch, lr=opt_args.lr, \
+                tolerance_grad=opt_args.tolerance_grad, tolerance_change=opt_args.tolerance_change, \
+                history_size=opt_args.history_size, line_search_fn=opt_args.line_search, \
+                line_search_eps=opt_args.line_search_tol)
+            new_loss, new_flat_grad = None, None
+            continue
+
         # reset line search history
         t_data["loss_ls"]=[]
         t_data["min_loss_ls"]=1.0e+16
@@ -245,7 +280,6 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         if len(t_data["loss"])>1 and \
             abs(t_data["loss"][-1]-t_data["loss"][-2])<opt_args.tolerance_change:
             break
-
         if (opt_args.line_search not in ["default", None]) and \
             "STATUS" in context and context["STATUS"]=="ENV_ANTIVAR":
             raise RuntimeError("Over-optimized environment, see log file for "\
