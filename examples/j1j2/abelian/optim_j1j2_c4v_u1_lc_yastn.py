@@ -388,7 +388,7 @@ def main():
         if opt_context["line_search"]:
             epoch= len(opt_context["loss_history"]["loss_ls"])
             loss= opt_context["loss_history"]["loss_ls"][-1]
-            print("LS",end=" ")
+            print(f"id {opt_context['id']}, LS",end=" ")
         else:
             epoch= len(opt_context["loss_history"]["loss"])
             loss= opt_context["loss_history"]["loss"][-1]
