@@ -269,6 +269,7 @@ class CTMARGS():
                                     * ``'SYMEIG'``: pytorch wrapper of LAPACK's dsyev for symmetric matrices
                                     * ``'SYMARP'``: scipy wrapper of ARPACK's dsaupd for symmetric matrices
                                     * ``'ARP'``: scipy wrapper of ARPACK's svds for general matrices
+                                    * ``'QR'``: QR decomposition for specialized C4v-symmetric CTM
 
                                 Default: ``'SYMEIG'`` for c4v-symmetric CTM, otherwise ``'GESDD'``
     :vartype projector_svd_method: str

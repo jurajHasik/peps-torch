@@ -13,10 +13,11 @@ from models.abelian import j1j2
 from ctm.one_site_c4v_abelian.env_c4v_abelian import *
 
 import time
-from ctm.generic.env_yastn import ctmrg, YASTN_ENV_INIT
+from ctm.generic.env_yastn import ctmrg, YASTN_ENV_INIT, YASTN_PROJ_METHOD
 from ctm.generic_abelian.env_yastn import *
 from yastn.yastn.tn.fpeps import EnvCTM, EnvCTM_c4v
 from yastn.yastn.tn.fpeps.envs._env_ctm import ctm_conv_corner_spec
+from yastn.yastn.tn.fpeps.envs.rdm import rdm1x2
 from yastn.yastn.tn.fpeps.envs.fixed_pt import refill_env, fp_ctmrg
 from yastn.yastn.tn.fpeps.envs.fixed_pt_c4v import refill_env_c4v, fp_ctmrg_c4v
 from yastn.yastn.tn.fpeps._peps import Peps2Layers
@@ -53,6 +54,8 @@ parser.add_argument("--top_n", type=int, default=2, help="number of leading eige
     "of transfer operator to compute")
 parser.add_argument("--obs_freq", type=int, default=-1, help="frequency of computing observables"
     + " during CTM convergence")
+parser.add_argument("--ctm_conv_crit", default="CSPEC", help="ctm convergence criterion", \
+    choices=["CSPEC", "RDM"])
 parser.add_argument("--force_cpu", action='store_true', help="evaluate energy on cpu")
 parser.add_argument("--yast_backend", type=str, default='torch',
     help="YAST backend", choices=['torch','torch_cpp'])
@@ -81,12 +84,14 @@ def main():
         energy_f= model.energy_2x1_or_2Lx2site_2x2rdms
         obs_f= model.eval_obs
     elif args.grad_type in ['c4v', 'c4v_fp']:
+        if cfg.ctm_args.projector_svd_method=='DEFAULT':
+            cfg.ctm_args.projector_svd_method= 'GESDD' if args.grad_type=='c4v' else 'QR'
         model= j1j2.J1J2_C4V_BIPARTITE_NOSYM(settings_full, j1=args.j1, j2=args.j2)
         energy_f= model.energy_1x1_lowmem
 
 
     # initialize the ipeps
-    if args.instate!=None:
+    if args.instate!=None and not args.u1_charges:
         state= read_ipeps_c4v_lc(args.instate, settings)
         state= state.add_noise(args.instate_noise)
         # state.sites[(0,0)]= state.sites[(0,0)]/state.sites[(0,0)].norm(p='inf')()
@@ -95,14 +100,22 @@ def main():
         state.load_checkpoint(args.opt_resume)
     elif args.u1_charges and len(args.u1_charges)==args.bond_dim+2:
         u1basis= generate_a_basis(2, args.bond_dim, args.u1_charges, args.u1_total_charge)
+        coeffs= torch.zeros(len(u1basis), dtype=cfg.global_args.torch_dtype, device='cpu').to(cfg.global_args.device)
+        # if instate is passed together with u1_charges, we assume instate serves as a reference to be extended
+        if args.instate!=None:
+            ref_state= read_ipeps_c4v_lc(args.instate, settings)
+            coeffs= torch.as_tensor(rebase_params(ref_state.coeffs[(0,0)], torch.stack([m_t[1] for m_t in ref_state.elem_tensors ]),\
+                                  u1basis, args.instate_noise, D=None), dtype=cfg.global_args.torch_dtype).to(cfg.global_args.device)
+        else:
+            coeffs= torch.rand_like(coeffs)
         u1basis= [ ( {"meta": {"pg": "A_1",}} ,t) for i,t \
                   in enumerate(u1basis.to(dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device).unbind(dim=0)) ]
         state= IPEPS_ABELIAN_C4V_LC(
             settings, u1basis,
-            # {(0,0): torch.rand(len(u1basis), dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)},
-            {(0,0): torch.rand(len(u1basis), dtype=cfg.global_args.torch_dtype, device='cpu').to(cfg.global_args.device)},
+            {(0,0): coeffs},
             {"abelian_charges": args.u1_charges, "total_abelian_charge": args.u1_total_charge},
         )
+        
     else:
         raise ValueError("Missing trial state: (--instate=None or empty --u1_charges) and --ipeps_init_type= "\
             +str(args.ipeps_init_type)+" is not supported")
@@ -111,9 +124,38 @@ def main():
 
     # 2) convergence criterion based spectra of corner tensors
     @torch.no_grad()
-    def yastn_ctm_conv_check(env,history,corner_tol):
+    def yastn_ctm_conv_check_cspec(env,history,corner_tol):
         converged,max_dsv,history= ctm_conv_corner_spec(env,history,corner_tol)
+        # logging ?
+        # C= history[0][((0,0),'tl')]
+        # print(f"{max_dsv}" + str([f"{b} {C[b].shape[0]}" for b in C.get_blocks_charge() ]))
         return converged, history
+    
+    @torch.no_grad()
+    def ctmrg_conv_rdm2x1(env,history,corner_tol): 
+        if not history:
+            history=dict({"log": []})
+        env_bp = env.get_env_bipartite()
+        R, R_norm= rdm1x2( (0,0), env_bp.psi.ket, env_bp, )
+        # logging ?
+        #D,_= R.fuse_legs(axes=((0,2),(1,3))).eigh(axes=(0,1))
+        #print(f"{[x.item() for x in D.to_dense().diag().sort()[0]]}")
+        dist= float('inf')
+        if len(history["log"]) > 1:
+            dist= (R - history["rdm"]).norm().item()
+        # update history
+        history["rdm"]=R
+        history["log"].append(dist)
+        print(dist)
+
+        converged= dist<corner_tol
+        if converged:
+            log.info({"history_length": len(history['log']), "history": history['log']})
+            return converged, history
+        return False, history
+
+    ctm_conf_f= ctmrg_conv_rdm2x1 if (args.grad_type in ['c4v','c4v_fp'] and args.ctm_conv_crit=="RDM") else yastn_ctm_conv_check_cspec
+
 
     def loss_fn_default(state, ctm_env_in, opt_context):
         ctm_args= opt_context["ctm_args"]
@@ -142,7 +184,7 @@ def main():
             "D_total": cfg.main_args.chi, "tol": ctm_args.projector_svd_reltol,
                 "eps_multiplet": ctm_args.projector_eps_multiplet,
             }
-        _ctm_conv_f= lambda _x,_y: yastn_ctm_conv_check(_x,_y,ctm_args.ctm_conv_tol)
+        _ctm_conv_f= lambda _x,_y: ctm_conf_f(_x,_y,ctm_args.ctm_conv_tol)
         ctm_env_out, converged, conv_history, t_ctm, t_check= ctmrg(ctm_env_in, _ctm_conv_f,  options_svd,
                     max_sweeps=ctm_args.ctm_max_iter,
                     method="2site",
@@ -220,24 +262,35 @@ def main():
         state_yastn= PepsAD.from_pt(state)
 
         # 3. proceed with YASTN's C4v-CTMRG implementation
-        # 3.1 possibly re-initialize the environment
-        if opt_args.opt_ctm_reinit or ctm_env_in is None:
-            env_leg = yastn.Leg(state_yastn.config, s=1, t=(0,), D=(1,))
-            ctm_env_in = EnvCTM_c4v(state_yastn, init=YASTN_ENV_INIT[ctm_args.ctm_env_init_type], leg=env_leg)
-        else:
-            ctm_env_in.psi = Peps2Layers(state_yastn) if state_yastn.has_physical() else state_yastn
 
         # 3.2 setup and run CTMRG
         options_svd={
-                "policy": "fullrank",
+                "policy": YASTN_PROJ_METHOD[ctm_args.projector_svd_method],
                 "D_total": cfg.main_args.chi, "tol": ctm_args.projector_svd_reltol,
                 "eps_multiplet": ctm_args.projector_eps_multiplet,
             }
-        _ctm_conv_f= lambda _x,_y: yastn_ctm_conv_check(_x,_y,ctm_args.ctm_conv_tol)
+        _ctm_conv_f= lambda _x,_y: ctm_conf_f(_x,_y,ctm_args.ctm_conv_tol)
+
+        # 3.1 possibly re-initialize the environment
+        if opt_args.opt_ctm_reinit or ctm_env_in is None:
+            with torch.no_grad():
+                env_leg = yastn.Leg(state_yastn.config, s=1, t=(0,), D=(1,))
+                ctm_env_in = EnvCTM_c4v(state_yastn, init=YASTN_ENV_INIT[ctm_args.ctm_env_init_type], leg=env_leg)
+                # 3.2.1 post-init CTM steps (allow expansion of the environment in case of qr policy)        
+                options_svd_pre_init= {**options_svd} 
+                options_svd_pre_init.update({"policy": "arnoldi"})
+                ctm_env_in, converged, conv_history, t_ctm, t_check= ctmrg(ctm_env_in, _ctm_conv_f,  options_svd_pre_init,
+                    max_sweeps= ctm_args.fpcm_init_iter,
+                    method="default",
+                    checkpoint_move=False
+                    )
+        else:
+            ctm_env_in.psi = Peps2Layers(state_yastn) if state_yastn.has_physical() else state_yastn
+
+        # 3.2.2 run CTMRG
         ctm_env_out, converged, conv_history, t_ctm, t_check= ctmrg(ctm_env_in, _ctm_conv_f,  options_svd,
                     max_sweeps=ctm_args.ctm_max_iter,
                     method="default",
-                    use_qr=False,
                     checkpoint_move=ctm_args.fwd_checkpoint_move
                     )
         print(f"t_ctm: {t_ctm:.1f}s")
@@ -270,8 +323,22 @@ def main():
         # 3. proceed with YASTN's C4v-CTMRG implementation
         # 3.1 possibly re-initialize the environment
         if opt_args.opt_ctm_reinit or ctm_env_in is None:
-            env_leg = yastn.Leg(state_yastn.config, s=1, t=(0,), D=(1,))
-            ctm_env_in = EnvCTM_c4v(state_yastn, init=YASTN_ENV_INIT[ctm_args.ctm_env_init_type], leg=env_leg)
+            with torch.no_grad():
+                env_leg = yastn.Leg(state_yastn.config, s=1, t=(0,), D=(1,))
+                ctm_env_in = EnvCTM_c4v(state_yastn, init=YASTN_ENV_INIT[ctm_args.ctm_env_init_type], leg=env_leg)
+                # 3.1.1 post-init CTM steps (allow expansion of the environment in case of qr policy)
+                if ctm_args.projector_svd_method=='QR':
+                    options_svd_pre_init= {
+                        "policy": "arnoldi",
+                        "D_total": cfg.main_args.chi, "tol": ctm_args.projector_svd_reltol,
+                        "eps_multiplet": ctm_args.projector_eps_multiplet,
+                    }
+                    ctm_env_in, converged, conv_history, t_ctm, t_check= ctmrg(ctm_env_in, lambda _0,_1: (False, None),
+                        options_svd_pre_init,
+                        max_sweeps= ctm_args.fpcm_init_iter,
+                        method="default",
+                        checkpoint_move=False
+                    )
         else:
             ctm_env_in.psi = Peps2Layers(state_yastn) if state_yastn.has_physical() else state_yastn
 
@@ -282,7 +349,7 @@ def main():
             }
         ctm_env_out, env_ts_slices, env_ts, t_ctm = fp_ctmrg_c4v(ctm_env_in, \
             ctm_opts_fwd= {'opts_svd': options_svd, 'corner_tol': ctm_args.ctm_conv_tol, 'max_sweeps': ctm_args.ctm_max_iter, \
-                'method': "default", 'use_qr': False, 'svd_policy': ctm_args.fwd_svd_policy, 'D_block': args.chi, \
+                'method': "default", 'use_qr': False, 'svd_policy': YASTN_PROJ_METHOD[ctm_args.projector_svd_method], 'D_block': args.chi, \
                     "svds_thresh":ctm_args.fwd_svds_thresh, "svds_solver":ctm_args.fwd_svds_solver}, \
             ctm_opts_fp= {'svd_policy': 'fullrank'})
         refill_env_c4v(ctm_env_out, env_ts, env_ts_slices)

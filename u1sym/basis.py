@@ -1,7 +1,7 @@
 import logging
 from itertools import product
 from math import prod
-from typing import Callable, Optional, Sequence
+from typing import Callable, Optional, Sequence, Union
 
 import torch
 import numpy as np
@@ -180,7 +180,7 @@ def get_u1_filter(
 
 
 def rebase_params(
-    params: np.ndarray, D: int, basis0: torch.Tensor, basis: torch.Tensor, rng_noise: float
+    params: np.ndarray, basis0: torch.Tensor, basis: torch.Tensor, rng_noise: float = 0, D: Union[int,None] = None, 
 ) -> np.ndarray:
     # This step is done with NumPy
     """
@@ -197,6 +197,9 @@ def rebase_params(
     basis0, basis = (  # type:ignore
         _to_np_if_tensor(arg) for arg in (basis0, basis)
     )
+    if D is None:
+        assert len(set(basis0.shape[-4:]))==1, "basis0 is not C4v-symmetric"
+        D= basis0.shape[-1]
     overlaps = np.einsum("xpuldr,ypuldr->xy", basis0, basis[(...,) + (slice(D),) * 4])
     permutation = overlaps.nonzero()
     assert (
