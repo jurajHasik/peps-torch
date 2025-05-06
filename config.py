@@ -101,7 +101,7 @@ def configure(parsed_args):
             # strip prefix key+"_"
             a_noprefix=a[1+len(k):]
             setattr(conf_dict[k],a_noprefix,getattr(parsed_args,a))
-    
+
     # set main args
     for name,val in nogroup_args.items():
         setattr(main_args,name,val)
@@ -378,7 +378,7 @@ class CTMARGS():
         self.fwd_checkpoint_absorb = False
         self.fwd_checkpoint_move = False
         self.fwd_checkpoint_loop_rdm = False
-        self.fwd_svd_policy="fullrank"
+        # self.fwd_svd_policy="fullrank"
         self.fwd_svds_thresh=0.2
         self.fwd_svds_solver='arpack'
 
