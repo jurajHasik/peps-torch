@@ -1,4 +1,7 @@
+import builtins
+from io import StringIO
 import os
+from unittest.mock import patch
 import context
 import torch
 import argparse
@@ -24,6 +27,7 @@ parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour
 parser.add_argument("--j4", type=float, default=0., help="plaquette coupling")
 parser.add_argument("--q", type=float, default=1., help="pitch vector")
 parser.add_argument("--jchi", type=float, default=0., help="scalar chirality")
+parser.add_argument("--sequence_chi",type=int,nargs="+",default=[],help="increasing list of chis")
 parser.add_argument("--tiling", default="1SITE", help="tiling of the lattice", \
     choices=["1SITE", "1SITE_NOROT", "1STRIV", "1SPG", "1SITEQ"])
 parser.add_argument("--obs_freq", type=int, default=1, help="frequency of computing observables")
@@ -42,7 +46,7 @@ parser.add_argument("--ctm_conv_crit", default="CSPEC", help="ctm convergence cr
 parser.add_argument("--profile_mode",action='store_true')
 args, unknown_args = parser.parse_known_args()
 
-def main():
+def main(ctm_env_init=None):
     cfg.configure(args)
     cfg.print_config()
     torch.set_num_threads(args.omp_cores)
@@ -152,8 +156,12 @@ def main():
     elif args.ctm_conv_crit=="ENERGY":
         ctmrg_conv_f= ctmrg_conv_energy
 
-    ctm_env_init = ENV(args.chi, state)
-    init_env(state, ctm_env_init)
+    if ctm_env_init is None:
+        ctm_env_init = ENV(args.chi, state)
+        init_env(state, ctm_env_init)
+    else:
+        print(f"Extend provided environment {ctm_env_init.chi} to {args.chi}")
+        ctm_env_init= ctm_env_init.extend(args.chi)
     print(ctm_env_init)
     
     t0= time.perf_counter()
@@ -265,11 +273,28 @@ def main():
         for i in range(len(next(iter(corrSId.values())))):
             print(f"{i} "+" ".join([f"{corrSId[label][i]}" for label in corrSId.keys()]))
 
+    return ctm_env_init
+
 if __name__=='__main__':
     if len(unknown_args)>0:
         print("args not recognized: "+str(unknown_args))
         raise Exception("Unknown command line arguments")
-    main()
+    
+    current_env=None
+    if len(args.sequence_chi)==0:
+        main(current_env)
+        exit(0)
+
+    for chi in args.sequence_chi:
+        args.chi= chi
+        with open(args.out_prefix+f"_X{chi}.dat", "w") as current_fout:
+            original_print = builtins.print
+            def passthrough_print(*args, **kwargs):
+                original_print(*args, **kwargs)
+                current_fout.write(" ".join([str(arg) for arg in args])+"\n")
+
+            with patch('builtins.print', new=passthrough_print) as tmp_print:
+                current_env= main(current_env)
 
 
 class TestCtmrg_TRGL_D3_1SITE(unittest.TestCase):
