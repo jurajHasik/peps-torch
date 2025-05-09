@@ -23,7 +23,7 @@ def get_Top_spec_c4v(n, state, env_c4v, verbosity=0):
     # get symmetry structure of the (grouped) edge and create a dummy Nx1 vector
     # for serialization
     # (+)--M--(+) (-)--V0--(+) = (+)--V1--(+)
-    Cs, Ds= E.get_leg_charges_and_dims()
+    Cs, Ds= (l.t for l in E.get_legs(native=True)), (l.D for l in E.get_legs(native=True))
     # get all the possible sectors given by fusion of E-legs
     Cs1= E.s[0]*np.asarray(Cs[0])
     for x in [s*np.asarray(c) for s,c in zip(E.s[1:], Cs[1:])]:

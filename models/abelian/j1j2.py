@@ -122,6 +122,19 @@ class J1J2_NOSYM():
 
     #     return energy_per_site
 
+    def _get_phys_allsectors(self,state,n):
+        # We want to guarantee all sectors are always present when converting to nonsymmetric,
+        # here we assume at least one leg has full spin-1/2 Hilbert space
+        _ref_leg= None
+        for coord,site in state.sites.items():
+            if sum(site.get_legs(0).D) == 2:
+                _ref_leg= site.get_legs(0)
+                break
+        assert _ref_leg is not None, "No leg with full spin-1/2 Hilbert space found"
+
+        _ref_legs={ **{i: _ref_leg for i in range(n)}, **{i: site.get_legs(0).conj() for i in range(n,2*n)} }
+        return _ref_legs
+
     def energy_2x1_or_2Lx2site_2x2rdms(self,state,env,**kwargs):
         r"""
 
@@ -246,7 +259,7 @@ class J1J2_NOSYM():
         energy_nnn=yastn.zeros(self.engine)
         _ci= ([0,1,2,3, 4,5,6,7],[4,5,6,7, 0,1,2,3])
         for coord in state.sites.keys():
-            tmp_rdm= rdm.rdm2x2(coord,state,env).to_nonsymmetric()
+            tmp_rdm= rdm.rdm2x2(coord,state,env).to_nonsymmetric(legs=self._get_phys_allsectors(state,4))
             energy_nn += contract(tmp_rdm,self.h2x2_nn,_ci)
             energy_nnn += contract(tmp_rdm,self.h2x2_nnn,_ci)
         energy_per_site= 2.0*(self.j1*energy_nn/(4*N) + self.j2*energy_nnn/(2*N))
@@ -295,7 +308,7 @@ class J1J2_NOSYM():
         obs= dict({"avg_m": 0.})
         _ci= ([0,1],[1,0])
         for coord,site in state.sites.items():
-            rdm1x1 = rdm.rdm1x1(coord,state,env).to_nonsymmetric()
+            rdm1x1 = rdm.rdm1x1(coord,state,env).to_nonsymmetric(legs=self._get_phys_allsectors(state,1))
             for label,op in self.obs_ops.items():
                 obs[f"{label}{coord}"]= contract(rdm1x1, op, _ci).to_number()
             obs[f"m{coord}"]= sqrt(abs(obs[f"sz{coord}"]**2 + obs[f"sp{coord}"]*obs[f"sm{coord}"]))
@@ -304,8 +317,8 @@ class J1J2_NOSYM():
 
         _ci= ([0,1,2,3],[2,3,0,1])
         for coord,site in state.sites.items():
-            rdm2x1 = rdm.rdm2x1(coord,state,env).to_nonsymmetric()
-            rdm1x2 = rdm.rdm1x2(coord,state,env).to_nonsymmetric()
+            rdm2x1 = rdm.rdm2x1(coord,state,env).to_nonsymmetric(legs=self._get_phys_allsectors(state,2))
+            rdm1x2 = rdm.rdm1x2(coord,state,env).to_nonsymmetric(legs=self._get_phys_allsectors(state,2))
             SS2x1= contract(rdm2x1,self.h2,_ci)
             SS1x2= contract(rdm1x2,self.h2,_ci)
             obs[f"SS2x1{coord}"]= rdm._cast_to_real(SS2x1,**kwargs).to_number()

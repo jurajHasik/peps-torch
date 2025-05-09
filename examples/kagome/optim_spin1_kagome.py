@@ -1,9 +1,11 @@
+import os
 import context
 import argparse
 import config as cfg
 import math
 import torch
 import copy
+import pytest
 from collections import OrderedDict
 from ipeps.ipess_kagome import *
 from ipeps.ipeps_kagome import *
@@ -221,3 +223,128 @@ if __name__ == '__main__':
         print("args not recognized: " + str(unknown_args))
         raise Exception("Unknown command line arguments")
     main()
+
+
+class TestCheckpoint_IPESS_Ansatze(unittest.TestCase):
+    tol= 1.0e-6
+    DIR_PATH = os.path.dirname(os.path.realpath(__file__))
+    OUT_PRFX = "RESULT_test_run-opt-spin1-trimer"
+    ANSATZE= [("IPESS",False,False), ("IPEPS",None,None)]
+        #("IPESS_PG",False,False), ("IPESS_PG",True,True), ("A_2,B",True,True)]
+
+    def reset_couplings(self):
+        args.j1= 1.0
+        args.j1sq=1.0
+        # P_12 = -1 + SS + SS^2, here we have h_12 = SS + SS^2 = 1 + P_12
+
+    def setUp(self):
+        self.reset_couplings()
+        args.bond_dim=3
+        args.chi=9
+        args.seed=300
+        args.opt_max_iter= 100
+        args.instate_noise=0
+        args.GLOBALARGS_dtype= "float64"
+        args.OPTARGS_tolerance_grad= 1.0e-9
+
+    @pytest.mark.slow
+    def test_checkpoint_ipess_ansatze(self):
+        import builtins
+        from io import StringIO
+        from unittest.mock import patch
+        from cmath import isclose
+        import numpy as np
+        from ipeps.ipess_kagome import write_ipess_kagome_generic, write_ipess_kagome_pg 
+
+        for ansatz in self.ANSATZE:
+            with self.subTest(ansatz=ansatz):
+                self.reset_couplings()
+                args.opt_max_iter= 100
+                args.ansatz= ansatz[0]
+                args.sym_up_dn= ansatz[1]
+                args.sym_bond_S= ansatz[2]
+                args.opt_resume= None
+                args.out_prefix=self.OUT_PRFX+f"_{ansatz[0].replace(',','')}_"\
+                    +("T" if ansatz[1] else "F")+("T" if ansatz[2] else "F")
+                args.instate= args.out_prefix[len("RESULT_"):]+"_instate.json"
+
+                # create random state
+                ansatz_pgs= None
+                if args.ansatz=="A_2,B": ansatz_pgs= IPESS_KAGOME_PG.PG_A2_B
+                bd = args.bond_dim
+                phys_dim= 3
+                T_u= torch.rand(bd, bd, bd,dtype=torch.complex128, device='cpu')
+                T_d= torch.rand(bd, bd, bd,dtype=torch.complex128, device='cpu')
+                B_c= torch.rand(phys_dim, bd, bd,dtype=torch.complex128, device='cpu')
+                B_a= torch.rand(phys_dim, bd, bd,dtype=torch.complex128, device='cpu')
+                B_b= torch.rand(phys_dim, bd, bd,dtype=torch.complex128, device='cpu')
+                if args.ansatz in ["IPESS_PG", "A_2,B"]:
+                    state = IPESS_KAGOME_PG(T_u, B_c, T_d=T_d, B_a=B_a, B_b=B_b,\
+                        SYM_UP_DOWN=args.sym_up_dn,SYM_BOND_S=args.sym_bond_S, pgs=ansatz_pgs)
+                    write_ipess_kagome_pg(state, args.instate)
+                elif args.ansatz in ["IPESS"]:
+                    state= IPESS_KAGOME_GENERIC({'T_u': T_u, 'B_a': B_a, 'T_d': T_d,\
+                        'B_b': B_b, 'B_c': B_c})
+                    write_ipess_kagome_generic(state, args.instate)
+                elif args.ansatz in ["IPEPS"]:
+                    A = torch.rand((phys_dim**3, bd, bd, bd, bd),\
+                        dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
+                    A = A/torch.max(torch.abs(A))
+                    state= IPEPS_KAGOME({(0,0): A}, lX=1, lY=1)
+                    state.write_to_file(args.instate)
+
+                # i) run optimization and store the optimization data
+                tmp_out= StringIO()
+                original_print = builtins.print
+                def passthrough_print(*args, **kwargs):
+                    original_print(*args, **kwargs)
+                    kwargs.update(file=tmp_out)
+                    original_print(*args, **kwargs)
+                
+                with patch('builtins.print', new=passthrough_print) as tmp_print:
+                    main()
+
+                # parse FINAL observables
+                obs_opt_lines=[]
+                final_obs=None
+                OPT_OBS= OPT_OBS_DONE= False
+                tmp_out.seek(0)
+                l= tmp_out.readline()
+                while l:
+                    print(l,end="")
+                    if OPT_OBS and not OPT_OBS_DONE and l.rstrip()=="": 
+                        OPT_OBS_DONE= True
+                        OPT_OBS=False
+                    if OPT_OBS and not OPT_OBS_DONE and len(l.split(','))>2:
+                        obs_opt_lines.append(l)
+                    if "epoch, loss," in l and not OPT_OBS_DONE: 
+                        OPT_OBS= True
+                    if "FINAL" in l:
+                        final_obs= l.rstrip()
+                        break
+                    l= tmp_out.readline()
+                # assert final_obs
+                assert len(obs_opt_lines)>0
+
+                # compare the line of observables with lowest energy from optimization (i) 
+                # and final observables evaluated from best state stored in *_state.json output file
+                # drop the last column, not separated by comma
+                best_e_line_index= np.argmin([ float(l.split(',')[1]) for l in obs_opt_lines ])
+                opt_line_last= [float(x) for x in obs_opt_lines[best_e_line_index].split(",")[1:-1]]
+                assert opt_line_last[0]<1.33 # energy
+                assert abs( opt_line_last[1] - opt_line_last[2] ) > 3 # dimerization as 1,2 are energies from up and down triangle
+                assert opt_line_last[3]<0.1 # m_0
+                assert opt_line_last[4]<0.1 # m_1
+                assert opt_line_last[5]<0.1 # m_2
+
+
+    def tearDown(self):
+        args.opt_resume=None
+        args.instate=None
+        for ansatz in self.ANSATZE:
+            out_prefix=self.OUT_PRFX+f"_{ansatz[0].replace(',','')}_"\
+                +("T" if ansatz[1] else "F")+("T" if ansatz[2] else "F")
+            instate= out_prefix[len("RESULT_"):]+"_instate.json"
+            for f in [out_prefix+"_checkpoint.p",out_prefix+"_state.json",\
+                out_prefix+".log",instate]:
+                if os.path.isfile(f): os.remove(f)

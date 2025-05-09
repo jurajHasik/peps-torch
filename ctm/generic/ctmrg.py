@@ -1,4 +1,5 @@
 import time
+import copy
 import torch
 from torch.utils.checkpoint import checkpoint
 import config as cfg
@@ -181,7 +182,6 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
     else:
         raise ValueError("Invalid Projector method: "+str(ctm_args.projector_method))
 
-    # EXPERIMENTAL
     # 0) extract raw tensors as tuple
     tensors= tuple(state.sites[key] for key in state.sites.keys()) \
         + tuple(env.C[key] for key in env.C.keys()) + tuple(env.T[key] for key in env.T.keys())
@@ -401,7 +401,7 @@ def absorb_truncate_CTM_MOVE_UP_c(*tensors):
         #                  5  6
         nT= torch.einsum(T,[0,1,2,3],Pt2,[0,8,9,4],A,[12,1,8,5,10],A.conj(),[12,2,9,6,11],\
             P1,[3,10,11,7],[4,5,6,7])
-        nT= nT.view(nT.size(0),nT.size(1)*nT.size(2),nT.size(3))
+        nT= nT.reshape(nT.size(0),nT.size(1)*nT.size(2),nT.size(3))
 
     # Assign new C,T 
     #
@@ -519,7 +519,7 @@ def absorb_truncate_CTM_MOVE_LEFT_c(*tensors):
         #   12(3) 
         nT= torch.einsum(T,[0,1,2,3],Pt2,[1,6,7,12],A,[8,4,2,6,10],A.conj(),[8,5,3,7,11],\
             P1,[0,4,5,9],[9,12,10,11])
-        nT= nT.view(nT.size(0), nT.size(1), nT.size(2)*nT.size(3))
+        nT= nT.reshape(nT.size(0), nT.size(1), nT.size(2)*nT.size(3))
 
     # Assign new C,T 
     #
@@ -643,7 +643,7 @@ def absorb_truncate_CTM_MOVE_DOWN_c(*tensors):
         #        --(0)2 2--T----3 3(0)------
         nT= torch.einsum(T,[0,1,2,3],Pt2,[3,10,11,7],A,[12,5,8,0,10],A.conj(),[12,6,9,1,11],\
             P1,[2,8,9,4],[5,6,4,7])
-        nT= nT.view(nT.size(0)*nT.size(1),nT.size(2),nT.size(3))
+        nT= nT.reshape(nT.size(0)*nT.size(1),nT.size(2),nT.size(3))
 
     # Assign new C,T
     # 
@@ -759,7 +759,7 @@ def absorb_truncate_CTM_MOVE_RIGHT_c(*tensors):
         #                        12(3) 
         nT= torch.einsum(T,[0,1,2,3],Pt2,[0,4,5,9],A,[8,4,10,6,1],A.conj(),[8,5,11,7,2],\
             P1,[3,6,7,12],[9,10,11,12])
-        nT= nT.view(nT.size(0), nT.size(1)*nT.size(2), nT.size(3))
+        nT= nT.reshape(nT.size(0), nT.size(1)*nT.size(2), nT.size(3))
     
     # Assign new C,T 
     #

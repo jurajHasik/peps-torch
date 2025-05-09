@@ -85,7 +85,7 @@ class S1_KAGOME():
 
     # Energy terms
     def energy_triangle_dn(self, state, env, force_cpu=False):
-        e_dn= rdm_kagome.rdm2x2_dn_triangle_with_operator(\
+        e_dn, e_norm= rdm_kagome.rdm2x2_dn_triangle_with_operator(\
             (0, 0), state, env, self.h_triangle, force_cpu=force_cpu)
         return _cast_to_real(e_dn)
 
@@ -181,12 +181,12 @@ class S1_KAGOME():
                 )
  
             # nn S.S pattern
-            SS_dn_01= rdm_kagome.rdm2x2_dn_triangle_with_operator(\
+            SS_dn_01, _= rdm_kagome.rdm2x2_dn_triangle_with_operator(\
                 (0, 0), state, env, self.SSnnId, force_cpu=force_cpu)
-            SS_dn_12= rdm_kagome.rdm2x2_dn_triangle_with_operator(\
+            SS_dn_12, _= rdm_kagome.rdm2x2_dn_triangle_with_operator(\
                 (0, 0), state, env, self.SSnnId.permute(2,1,0, 5,4,3).contiguous(),\
                 force_cpu=force_cpu)
-            SS_dn_02= rdm_kagome.rdm2x2_dn_triangle_with_operator(\
+            SS_dn_02, _= rdm_kagome.rdm2x2_dn_triangle_with_operator(\
                 (0, 0), state, env, self.SSnnId.permute(0,2,1, 3,5,4).contiguous(),\
                 force_cpu=force_cpu)
             rdm_up= rdm_kagome.rdm2x2_up_triangle_open(\

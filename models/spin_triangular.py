@@ -171,7 +171,6 @@ def eval_j1j2j4jX_per_site_legacy(coord,state,env,R,Rinv,\
     op_nn,op_nnn,op_chi,op_p,compressed=-1,unroll=False,
     checkpoint_unrolled=False,checkpoint_on_device=False,force_cpu=False,\
     ctm_args=cfg.ctm_args,global_args=cfg.global_args):
-    if not unroll: unroll= {}
 
     # O(X^3 D^4 s^[2 to s^6])
     energy_nn, energy_nnn, energy_chi, energy_p= 0.,0.,0.,0.
@@ -181,7 +180,7 @@ def eval_j1j2j4jX_per_site_legacy(coord,state,env,R,Rinv,\
     if compressed>0:
         tmp_rdm_2x3= rdm.rdm2x3_trglringex_compressed(coord,state,env,compressed,\
             ctm_args=ctm_args,global_args=global_args) 
-    elif unroll:
+    elif type(unroll)==dict and unroll=={}:
         tmp_rdm_2x3= rdm_looped.rdm2x3_loop_trglringex_manual(coord,state,env,\
             checkpoint_unrolled=checkpoint_unrolled)
     else:
@@ -211,7 +210,7 @@ def eval_j1j2j4jX_per_site_legacy(coord,state,env,R,Rinv,\
     if compressed>0:
         tmp_rdm_3x2= rdm.rdm3x2_trglringex_compressed(coord,state,env,compressed,\
             ctm_args=ctm_args,global_args=global_args) 
-    elif unroll:
+    elif type(unroll)==dict and unroll=={}:
         tmp_rdm_3x2= rdm_looped.rdm3x2_loop_trglringex_manual(coord,state,env,\
             checkpoint_unrolled=checkpoint_unrolled)
     else:
@@ -323,7 +322,11 @@ class J1J2J4_1SITEQ():
         self.diag= diag
         self.q= q
         self.unroll= {
-            'j4': {},
+            'j4': {
+                'rdm2x3_loop_oe': [47,48,106,107,108,109,102,103,104,105],
+                'rdm3x2_loop_oe': [83,84,102,103,104,105,106,107,108,109],
+                'rdm2x2': True
+            },
             'j2': {
                 # reduces peak-mem by a factor 2 * 2^2 * D^2 (for two halves of 2x3 [3x2] patch, each with one open site)
                 'rdm2x3_loop_oe_semimanual': [47,48,106,107,104,105], # alternatively [47,48]

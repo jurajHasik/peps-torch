@@ -8,10 +8,13 @@ from torch.utils.checkpoint import checkpoint
 import numpy as np
 import opt_einsum as oe  # type: ignore
 from opt_einsum.contract import (  # type: ignore
-    _VALID_CONTRACT_KWARGS,
     PathInfo,
     shape_only,
 )
+try:
+    from opt_einsum.contract import _VALID_CONTRACT_KWARGS
+except:
+    _VALID_CONTRACT_KWARGS = {'optimize', 'memory_limit', 'einsum_call', 'use_blas', 'shapes'}
 try:
     import arrayfire as af
 except:
@@ -19,56 +22,6 @@ except:
 
 
 log = logging.getLogger(__name__)
-
-
-def _debug_allocated_tensors(device=None,global_args=None,totals_only=False):
-    if global_args and not device:
-        cuda= global_args.device
-        if cuda == "cpu":
-            cuda= global_args.offload_to_gpu
-            if cuda in ['None','none','NONE']:
-                return
-    if device:
-        cuda= device
-    if cuda and cuda!=torch.device("cpu"):
-        torch.cuda.synchronize(device=cuda)
-    report=""
-    try:
-        af.device.sync(device=af.device.get_device())
-        _af_mem= af.device.device_mem_info()
-        _af_mem['alloc']['bytes_GiB']= _af_mem['alloc']['bytes']/1024**3
-        _af_mem['lock']['bytes_GiB']= _af_mem['lock']['bytes']/1024**3
-        report=report+f"AF {_af_mem}\n"
-    except:
-        pass
-    tot_cuda=0
-    _t= {}
-    for obj in gc.get_objects():
-        try:
-            if torch.is_tensor(obj) or (hasattr(obj, 'data') and torch.is_tensor(obj.data)):
-                if obj.data_ptr() in _t:
-                    _t[obj.data_ptr()]['count']=+1
-                else:
-                    _t[obj.data_ptr()]={'count': 1, 'device': {obj.device}, 'shape': obj.size(), \
-                        'size': obj.numel()*obj.element_size()}
-        except: 
-            pass
-    if not totals_only:
-        for ptr,row in _t.items():
-            report=report+f"{ptr} {row['count']} {row['device']} {row['shape']}\n"
-            tot_cuda+= row['size']
-    report=report+f"tot_cuda {tot_cuda/1024**3} GiB\n"
-    if cuda and cuda!="cpu":
-        try:
-            cp=subprocess.run(["nvidia-smi"], capture_output=True, text=True)
-            report=report+cp.stdout
-        except:
-            pass
-        a,t= torch.cuda.mem_get_info()
-        report=report+f"alloc/reserved {a/1024**3} GiB total {t/1024**3} GiB\n"
-        report=report+f"alloc {torch.cuda.memory_allocated()/1024**3} GiB\n"
-        report=report+f"reserved {torch.cuda.memory_reserved()/1024**3} GiB\n"
-    return report
 
 
 def _preprocess_interleaved_to_expr_and_shapes(*args, unroll=[]):
@@ -166,18 +119,19 @@ def _get_contraction_path_cached(
                   names has to follow order of tensors as they appear in ``tn_to_contract``
     :param who: string id for logging identifying this optimal contraction path search
     """
-    optimizer = oe.DynamicProgramming(
-        minimize="flops",  # 'size' optimize for largest intermediate tensor size, 'flops' for computation complexity
-        search_outer=False,  # search through outer products as well
-        cost_cap=True,  # don't use cost-capping strategy
-    )
+    optimizer = kwargs.pop("optimizer", None)
+    if optimizer in [None, "default", "dynamic-programming"]:
+        optimizer = oe.DynamicProgramming(
+            minimize="flops",  # 'size' optimize for largest intermediate tensor size, 'flops' for computation complexity
+            search_outer=False,  # search through outer products as well
+            cost_cap=True,  # don't use cost-capping strategy
+        )
 
     # pre-process shapes, by dropping negative values (unrolled index) and last tuple,
     # which holds shapes of output tensor
     shapes_unrolled = tuple(tuple(x for x in s if x > 0) for s in shapes[:-1])
     path = kwargs.pop("path", None)
     kwargs.pop("shapes", False)
-    optimizer = kwargs.pop("optimizer", optimizer)
     if not path:
         path, path_info = oe.contract_path(
             expr, *shapes_unrolled, optimize=optimizer, shapes=True, **kwargs
@@ -187,7 +141,7 @@ def _get_contraction_path_cached(
         path, expr, *shapes_unrolled, unrolled=unrolled, names=names, shapes=True
     )
     log.info(
-        f"{who}"
+        f"{who} optimizer {optimizer}"
         + (f" unrolled {unrolled}" if len(unrolled) > 0 else "")
         + f"\n{path}\n{path_info}\npeak-mem {max(mem_list):4.3e} mem {[f'{x:4.3e}' for x in mem_list]}"
     )
@@ -285,9 +239,15 @@ def _get_contraction_path_info(path, *operands, **kwargs):
         # Make sure we remove inds from right to left
         contract_inds = tuple(sorted(list(contract_inds), reverse=True))
 
-        contract_tuple = oe.helpers.find_contraction(
-            contract_inds, input_sets, output_set
-        )
+        try:
+            contract_tuple = oe.helpers.find_contraction(
+                contract_inds, input_sets, output_set
+            )
+        except TypeError as e:
+            # inputt_sets have to be frozenset sets for v3.4.0
+            contract_tuple = oe.helpers.find_contraction(
+                contract_inds, [frozenset(s) for s in input_sets], output_set
+            )
         out_inds, input_sets, idx_removed, idx_contract = contract_tuple
 
         # Compute cost, scale, and size
@@ -301,6 +261,8 @@ def _get_contraction_path_info(path, *operands, **kwargs):
         tmp_inputs = [input_list.pop(x) for x in contract_inds]
         if names:
             tmp_inds_to_names = [inputs_to_names.pop(x) for x in contract_inds]
+        # make list
+        input_shps= list(input_shps) if type(input_shps)==tuple else input_shps
         tmp_shapes = [input_shps.pop(x) for x in contract_inds]
 
         if use_blas:
@@ -324,7 +286,8 @@ def _get_contraction_path_info(path, *operands, **kwargs):
         input_shps.append(np.asarray(shp_result))
 
         # sum the currently contracted ops and remaining ops
-        mem_list.append(sum([x.prod() for x in tmp_shapes+input_shps]))
+        # Here, all shapes have to by np.ndarray
+        mem_list.append(sum([x.prod() if hasattr(x,'prod') else np.asarray(x).prod() for x in tmp_shapes+input_shps]))
 
         einsum_str= ",".join(tmp_inputs) + "->" + idx_result
         if names:

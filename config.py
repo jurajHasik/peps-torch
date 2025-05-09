@@ -18,8 +18,20 @@ def _torch_version_check(version):
             tokens= torch.__version__.split('.')
             tokens_v= version.split('.')
             return int(tokens[0]) > int(tokens_v[0]) or \
-                (int(tokens[0])==int(tokens_v[0]) and int(tokens[1]) >= int(tokens_v[1])) 
+                (int(tokens[0])==int(tokens_v[0]) and int(tokens[1]) >= int(tokens_v[1]))
     return True
+
+class _storeTrueOrString(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        if values is None:
+            # If no value is provided, set it to True
+            setattr(namespace, self.dest, True)
+        elif isinstance(values,str) and values.lower() in ['true', 'false']:
+            setattr(namespace, self.dest, values.lower() == 'true')
+        else:
+            # Otherwise, store the provided string
+            setattr(namespace, self.dest, values)
+
 
 def get_args_parser():
     parser = argparse.ArgumentParser(description='',allow_abbrev=False)
@@ -38,19 +50,30 @@ def get_args_parser():
     configs=[global_args, peps_args, ctm_args, opt_args]
     for c in configs:
         group_name=type(c).__name__
-        group_prefix=group_name+"_" 
+        group_prefix=group_name+"_"
         parser.add_argument_group(group_prefix)
         c_list= list(filter(lambda x: "__" not in x, dir(c)))
         for x in c_list:
-            if isinstance(getattr(c,x), bool):
+            if group_prefix+x in ["CTMARGS_fwd_checkpoint_move"]:
+                continue
+            elif isinstance(getattr(c,x), bool):
                 # default is False
-                if not getattr(c,x): 
+                if not getattr(c,x):
                     parser.add_argument("--"+group_prefix+x, action='store_true')
                 # default is True
                 else:
                     parser.add_argument("--"+group_prefix+"no_"+x, action='store_false', dest=group_prefix+x)
             else:
                 parser.add_argument("--"+group_prefix+x, type=type(getattr(c,x)), default=getattr(c,x))
+
+    parser.add_argument(
+        "--CTMARGS_fwd_checkpoint_move",
+        nargs="?",
+        const=True,  # If the flag is provided without a value, `const` will be used
+        default=False,  # If the flag is not provided, default to False
+        action=_storeTrueOrString,
+        help="Argument that can be either a boolean (True/False) or a string",
+    )
 
     return parser
 
@@ -80,6 +103,7 @@ def configure(parsed_args):
             # strip prefix key+"_"
             a_noprefix=a[1+len(k):]
             setattr(conf_dict[k],a_noprefix,getattr(parsed_args,a))
+
     # set main args
     for name,val in nogroup_args.items():
         setattr(main_args,name,val)
@@ -91,6 +115,9 @@ def configure(parsed_args):
         global_args.torch_dtype= torch.complex128
     else:
         raise NotImplementedError(f"Unsupported dtype {global_args.dtype}")
+
+    if ctm_args.fwd_checkpoint_move in ["True", "true"]:
+        ctm_args.fwd_checkpoint_move= True
 
     # validate
     # if ctm_args.step_core_gpu:
@@ -135,7 +162,7 @@ def print_config():
 
 class MAINARGS():
     r"""
-    Main simulation options. The default settings can be modified through 
+    Main simulation options. The default settings can be modified through
     command line arguments as follows ``--<option-name> desired-value``
 
     :ivar omp_cores: number of OpenMP cores. Default: ``1``
@@ -172,14 +199,14 @@ class MAINARGS():
 
 class GLOBALARGS():
     r"""
-    Holds global configuration options. The default settings can be modified through 
+    Holds global configuration options. The default settings can be modified through
     command line arguments as follows ``--GLOBALARGS_<variable-name> desired-value``
 
     :ivar dtype: data type of all torch.tensor. Default: ``float64``
     :vartype dtype: torch.dtype
     :ivar device: device on which all the torch.tensors are stored. Default: ``'cpu'``
     :vartype device: str
-    :ivar offload_to_gpu: gpu used for optional acceleration. It might be desirable to store the model 
+    :ivar offload_to_gpu: gpu used for optional acceleration. It might be desirable to store the model
                and all the intermediates of CTM on CPU and compute only the core parts of the expensive
                CTM step on GPU. Default: ``'None'``
     :vartype offload_to_gpu: str
@@ -212,7 +239,7 @@ class PEPSARGS():
 
 class CTMARGS():
     r"""
-    Holds configuration of the CTM algorithm. The default settings can be modified through 
+    Holds configuration of the CTM algorithm. The default settings can be modified through
     command line arguments as follows ``--CTMARGS_<variable-name> desired-value``
 
     :ivar ctm_max_iter: maximum iterations of directional CTM algorithm. Default: ``50``
@@ -221,9 +248,9 @@ class CTMARGS():
     :vartype ctm_env_init_type: str
     :ivar ctm_conv_tol: threshold for convergence of CTM algorithm. Default: ``'1.0e-10'``
     :vartype ctm_conv_tol: float
-    :ivar conv_check_cpu: execute CTM convergence check on cpu (if applicable). Default: ``False`` 
+    :ivar conv_check_cpu: execute CTM convergence check on cpu (if applicable). Default: ``False``
     :ivar ctm_absorb_normalization: normalization to use for new corner/T tensors. Either ``'fro'`` for usual
-                                    L2 norm or ``'inf'`` for L-\infty norm. Default: ``'fro'``.  
+                                    L2 norm or ``'inf'`` for L-\infty norm. Default: ``'fro'``.
     :vartype ctm_absorb_normalization: str
     :vartype conv_check_cpu: bool
     :ivar projector_method: method used to construct projectors which facilitate truncation
@@ -234,7 +261,7 @@ class CTMARGS():
                                 * 4X2: Projectors are built from two enlarged corners (2x2)
                                   making up a 4x2 (or 2x4) tensor network
 
-                            Default: ``'4X4'``  
+                            Default: ``'4X4'``
     :vartype projector_method: str
     :ivar projector_svd_method: singular/eigen value decomposition algorithm used in the construction
                                 of the projectors:
@@ -244,27 +271,28 @@ class CTMARGS():
                                     * ``'SYMEIG'``: pytorch wrapper of LAPACK's dsyev for symmetric matrices
                                     * ``'SYMARP'``: scipy wrapper of ARPACK's dsaupd for symmetric matrices
                                     * ``'ARP'``: scipy wrapper of ARPACK's svds for general matrices
+                                    * ``'QR'``: QR decomposition for specialized C4v-symmetric CTM
 
                                 Default: ``'SYMEIG'`` for c4v-symmetric CTM, otherwise ``'GESDD'``
     :vartype projector_svd_method: str
-    :ivar projector_svd_reltol: relative threshold on the magnitude of the smallest elements of 
-                                singular value spectrum used in the construction of projectors. 
+    :ivar projector_svd_reltol: relative threshold on the magnitude of the smallest elements of
+                                singular value spectrum used in the construction of projectors.
                                 Default: ``1.0e-8``
     :vartype projector_svd_reltol: float
-    :ivar projector_svd_reltol_block: (relevant only for decompositions of blocks-sparse tensors) 
-                                relative threshold on the magnitude of the smallest elements of 
+    :ivar projector_svd_reltol_block: (relevant only for decompositions of blocks-sparse tensors)
+                                relative threshold on the magnitude of the smallest elements of
                                 singular value spectrum per block used in the construction of projectors.
                                 Default: ``0.0``
     :vartype projector_svd_reltol_block: float
     :ivar projector_eps_multiplet: threshold for defining boundary of the multiplets
     :vartype projector_eps_multiplet: float
-    :ivar projector_multiplet_abstol: absolute threshold for spectral values to be considered in multiplets 
+    :ivar projector_multiplet_abstol: absolute threshold for spectral values to be considered in multiplets
     :vartype projector_multiplet_abstol: float
     :ivar radomize_ctm_move_sequence: If ``True``, then ``ctm_move_sequence`` is randomized in each optimization step
     :vartype radomize_ctm_move_sequence: bool
-    :ivar ctm_move_sequence: sequence of directional moves within single CTM iteration. The possible 
-                             directions are encoded as tuples(int,int) 
-                                
+    :ivar ctm_move_sequence: sequence of directional moves within single CTM iteration. The possible
+                             directions are encoded as tuples(int,int)
+
                                 * up = (0,-1)
                                 * left = (-1,0)
                                 * down = (0,1)
@@ -272,22 +300,24 @@ class CTMARGS():
 
                              Default: ``[(0,-1), (-1,0), (0,1), (1,0)]``
     :vartype ctm_move_sequence: list[tuple(int,int)]
-    :ivar ctm_force_dl: precompute and use on-site double-layer tensors in CTMRG 
+    :ivar ctm_force_dl: precompute and use on-site double-layer tensors in CTMRG
     :vartype ctm_force_dl: bool
-    :ivar fwd_checkpoint_c2x2: recompute forward pass of enlarged corner functions (c2x2_*) during 
+    :ivar fwd_checkpoint_c2x2: recompute forward pass of enlarged corner functions (c2x2_*) during
                                backward pass within optimization to save memory. Default: ``False``
     :vartype fwd_checkpoint_c2x2: bool
-    :ivar fwd_checkpoint_halves: recompute forward pass of halves functions (halves_of_4x4_*) during 
+    :ivar fwd_checkpoint_halves: recompute forward pass of halves functions (halves_of_4x4_*) during
                                  backward pass within optimization to save memory. Default: ``False``
     :vartype fwd_checkpoint_halves: bool
-    :ivar fwd_checkpoint_projectors: recompute forward pass of projector construction (except SVD) during 
+    :ivar fwd_checkpoint_projectors: recompute forward pass of projector construction (except SVD) during
                                      backward pass within optimization to save memory. Default: ``False``
     :vartype fwd_checkpoint_projectors: bool
-    :ivar fwd_checkpoint_absorb: recompute forward pass of absorp and truncate functions (absorb_truncate_*) 
+    :ivar fwd_checkpoint_absorb: recompute forward pass of absorp and truncate functions (absorb_truncate_*)
                                  during backward pass within optimization to save memory. Default: ``False``
     :vartype fwd_checkpoint_absorb: bool
-    :ivar fwd_checkpoint_move: recompute forward pass of whole ``ctm_MOVE`` during backward pass. Default: ``False``
-    :vartype fwd_checkpoint_move: bool
+    :ivar fwd_checkpoint_move: recompute forward pass of whole ``ctm_MOVE`` during backward pass. Default: ``False``.
+                               One can also provide "reentrant" or "nonreentrant" to specfify the type of checkpointing.
+                               If passed without a value or as "true", it will be set to ``True`` (nonreentrant).
+    :vartype fwd_checkpoint_move: bool | str
 
     FPCM related options
 
@@ -304,7 +334,7 @@ class CTMARGS():
 
     Logging and Debugging options
 
-    :ivar ctm_logging: log debug statements into log file. Default: ``False`` 
+    :ivar ctm_logging: log debug statements into log file. Default: ``False``
     :vartype ctm_loggging: bool
     :ivar verbosity_initialization: verbosity of initialization method for ENV objects. Default: ``0``
     :vartype verbosity_initialization: int
@@ -334,6 +364,7 @@ class CTMARGS():
         self.projector_eps_multiplet = 1.0e-8
         self.projector_multiplet_abstol = 1.0e-14
         self.projector_propack_extra_states = 1
+        self.projector_rsvd_niter = 2
         self.ad_decomp_reg= 1.0e-12
         self.ctm_move_sequence = [(0,-1), (-1,0), (0,1), (1,0)]
         self.randomize_ctm_move_sequence = False
@@ -351,6 +382,9 @@ class CTMARGS():
         self.fwd_checkpoint_absorb = False
         self.fwd_checkpoint_move = False
         self.fwd_checkpoint_loop_rdm = False
+        # self.fwd_svd_policy="fullrank"
+        self.fwd_svds_thresh=0.2
+        self.fwd_svds_solver='arpack'
 
     def __str__(self):
         res=type(self).__name__+"\n"
@@ -360,17 +394,17 @@ class CTMARGS():
 
 class OPTARGS():
     r"""
-    Holds configuration of the optimization. The default settings can be modified through 
+    Holds configuration of the optimization. The default settings can be modified through
     command line arguments as follows ``--OPTARGS_<variable-name> desired-value``
 
     General options
 
-    :ivar opt_ctm_reinit: reinitialize environment from scratch within every loss 
+    :ivar opt_ctm_reinit: reinitialize environment from scratch within every loss
                           function evaluation. Default: ``True``
     :vartype opt_ctm_reinit: bool
     :ivar lr: initial learning rate. Default: ``1.0``
     :vartype lr: float
-    :ivar line_search: line search algorithm to use. L-BFGS supports ``'strong_wolfe'`` 
+    :ivar line_search: line search algorithm to use. L-BFGS supports ``'strong_wolfe'``
         and ``'backtracking'``. SGD supports just ``'backtracking'``. Default: ``None``.
     :vartype line_search: str
     :ivar line_search_ctm_reinit: recompute environment from scratch at each step within
@@ -380,21 +414,21 @@ class OPTARGS():
         environment computation. See options in :class:`config.CTMARGS`. Default: ``'DEFAULT'`` which
         depends on the particular CTM algorithm.
     :vartype line_search_svd_method: str
-    
+
     L-BFGS related options
 
-    :ivar tolerance_grad: stopping criterion wrt. norm of the gradient (which norm ? See 
+    :ivar tolerance_grad: stopping criterion wrt. norm of the gradient (which norm ? See
                           ``torch.optim.LBFGS``). Default: ``1.0e-5``
     :vartype tolerance_grad: float
-    :ivar tolerance_change: stopping criterion wrt. change of the loss function. 
+    :ivar tolerance_change: stopping criterion wrt. change of the loss function.
                             Default: ``1.0e-9``
     :vartype tolerance_change: float
     :ivar max_iter_per_epoch: maximum number of optimizer iterations per epoch. Default: ``1``
     :vartype max_iter_per_epoch: int
     :ivar history_size: number past of directions used to approximate inverse Hessian.
         Default: ``100``.
-    :vartype history_size: int 
-    
+    :vartype history_size: int
+
     SGD related options
 
     :ivar momentum: momentum used in the SGD step
@@ -404,16 +438,16 @@ class OPTARGS():
 
     Gradients through finite differences
 
-    :ivar fd_eps: magnitude of displacement when computing the forward difference 
+    :ivar fd_eps: magnitude of displacement when computing the forward difference
         :math:`E(x_0 + \textrm{fd_eps})-E(x_0)/\textrm{fd_eps}`. Default: ``1.0e-4``
     :vartype fd_eps: float
     :ivar fd_ctm_reinit: recompute environment from scratch after applying the displacement.
-        Default: ``True`` 
+        Default: ``True``
 
     Logging
 
     :ivar opt_logging: turns on recording of additional data from optimization, such as
-                       CTM convergence, timings, gradients, etc. The information 
+                       CTM convergence, timings, gradients, etc. The information
                        is logged in file ``{out_prefix}_log.json``. Default: ``True``
     :vartype opt_logging: bool
     :ivar opt_log_grad: log values of gradient. Default: ``False``

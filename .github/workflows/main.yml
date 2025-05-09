@@ -1,43 +1,52 @@
-# This is a basic workflow to help you get started with Actions
-
 name: CI
 
 # Controls when the workflow will run
 on:
   # Triggers the workflow on push or pull request events but only for the master branch
   push:
-    branches: [ master, models, travis, integration-yast ]
+    branches: [ master, integration-yast ]
   pull_request:
-    branches: [ master, models, travis, integration-yast ]
+    branches: [ master, integration-yast ]
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
+  dump_contexts_to_log:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dump GitHub context
+        env:
+          DEBUG_GH_CONTEXT_EVENT: ${{ toJson(github.event_name) }}
+          DEBUG_GH_CONTEXT_BASE_REF: ${{ toJson(github.base_ref) }}
+        run: echo "$DEBUG_GH_CONTEXT_EVENT $DEBUG_GH_CONTEXT_BASE_REF"
+
   # This workflow contains a single job called "build"
-  build:
+  test-fast:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python_v: [ "3.8", "3.9", "3.10", "3.11"]
-        pytorch_v: [2.0]
+        python_v: [ "3.12", ]
+        pytorch_v: [2.6, ]
+        primme_v: ["3.2.3"]
       fail-fast: false
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       - run: CI=false
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
-
-      # Runs a single command using the runners shell
-      # - name: Run a one-line script
-      # run: echo Hello, world!
+      - uses: actions/checkout@v4
 
       # Runs a set of commands using the runners shell
+      - name: Install system LAPACK/BLAS/Fortran
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y liblapack-dev libblas-dev gfortran
+
       - name: setup python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python_v }}
       - name: setup pytorch
@@ -46,11 +55,172 @@ jobs:
           if [[ "${{ matrix.pytorch_v }}" == "1.8.2" ]]
           then
             $CONDA/bin/conda install -c pytorch-lts -c anaconda pytorch cpuonly scipy pytest
+          elif [ "${{ matrix.pytorch_v }}" == "2.0" ]
+          then
+            $CONDA/bin/conda install pytorch==2.0.0 cpuonly -c pytorch scipy pytest opt_einsum
           else
-            $CONDA/bin/conda install -c pytorch -c anaconda -c conda-forge pytorch==${{ matrix.pytorch_v }} cpuonly scipy pytest opt_einsum
+            $CONDA/bin/pip3 install torch --index-url https://download.pytorch.org/whl/cpu
+            $CONDA/bin/pip3 install scipy pytest opt_einsum
           fi
+          $CONDA/bin/pip3 install primme==${{ matrix.primme_v }}
           git submodule update --init --recursive
-          
+
+      # Run tests
+      - name: test j1j2
+        run: |
+          $CONDA/bin/python -c "import sys; print(sys.path)"
+          $CONDA/bin/python -c "import opt_einsum; print(opt_einsum.__version__)"
+          $CONDA/bin/python -m pytest examples/j1j2/ctmrg_*.py
+          $CONDA/bin/python -m pytest examples/j1j2/optim_*.py
+      - name: test j1j2 abelian
+        run: |
+          $CONDA/bin/python -m pytest examples/j1j2/abelian/ctmrg_*.py
+          $CONDA/bin/python -m pytest examples/j1j2/abelian/optim_*.py
+
+      - name: test aklt S2
+        run: |
+          $CONDA/bin/python -m pytest examples/akltS2/ctmrg_*.py
+          $CONDA/bin/python -m pytest examples/akltS2/optim_*.py
+
+      - name: test ising
+        run: |
+          $CONDA/bin/python -m pytest examples/ising/ctmrg_*.py
+          $CONDA/bin/python -m pytest examples/ising/optim_*.py
+
+      - name: test jq
+        run: |
+          $CONDA/bin/python -m pytest examples/jq/ctmrg_*.py
+          $CONDA/bin/python -m pytest examples/jq/optim_*.py
+
+      - name: test ladders
+        run: |
+          $CONDA/bin/python -m pytest examples/ladders/ctmrg_*.py
+          $CONDA/bin/python -m pytest examples/ladders/optim_*.py
+      - name: test ladders abelian
+        run: |
+          $CONDA/bin/python -m pytest examples/ladders/abelian/ctmrg_*.py
+          $CONDA/bin/python -m pytest examples/ladders/abelian/optim_*.py
+          $CONDA/bin/python -m pytest examples/ladders/abelian/SU_ladders_u1.py
+
+      - name: test kagome
+        run: |
+          $CONDA/bin/python -m pytest examples/kagome/ctmrg_*.py
+          $CONDA/bin/python -m pytest examples/kagome/optim_*.py
+      - name: test kagome abelian
+        run: |
+          $CONDA/bin/python -m pytest examples/kagome/abelian/ctmrg_*.py
+          $CONDA/bin/python -m pytest examples/kagome/abelian/optim_*.py
+
+  # This workflow contains a single job called "build"
+  test-opt_einsum:
+    if: |
+      contains(fromJson('["refs/heads/master", "refs/heads/tests"]'), github.ref) ||
+      ( github.event_name == 'pull_request' && contains(fromJson('["master",]'), github.base_ref) )
+
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python_v: [ "3.12", ] #"3.9", "3.10", "3.11"
+        pytorch_v: [ 2.6, ] # 2.0
+        opt_einsum_v: [ "3.3.0", "3.4.0"]
+        primme_v: ["3.2.3"]
+        # exclude:
+        #   - python_v: "3.12"
+        #     pytorch_v: 2.6
+      fail-fast: false
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      - run: CI=false
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v4
+
+      # Runs a set of commands using the runners shell
+      - name: Install system LAPACK/BLAS/Fortran
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y liblapack-dev libblas-dev gfortran
+
+      - name: setup python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python_v }}
+      - name: setup pytorch
+        run: |
+          if [[ "${{ matrix.python_v }}" == "3.9" ]]; then export P39C="-c=conda-forge"; fi
+          if [[ "${{ matrix.pytorch_v }}" == "1.8.2" ]]
+          then
+            $CONDA/bin/conda install -c pytorch-lts -c anaconda pytorch cpuonly scipy pytest opt_einsum=${{ matrix.opt_einsum_v }}
+          elif [ "${{ matrix.pytorch_v }}" == "2.0" ]
+          then
+            $CONDA/bin/conda install pytorch==2.0.0 cpuonly -c pytorch scipy pytest opt_einsum=${{ matrix.opt_einsum_v }}
+          else
+            $CONDA/bin/pip3 install torch --index-url https://download.pytorch.org/whl/cpu
+            $CONDA/bin/pip3 install scipy pytest opt_einsum==${{ matrix.opt_einsum_v }}
+          fi
+          $CONDA/bin/pip3 install primme==${{ matrix.primme_v }}
+          git submodule update --init --recursive
+
+      # Run tests
+      - name: test j1j2
+        run: |
+          $CONDA/bin/python -c "import sys; print(sys.path)"
+          $CONDA/bin/python -m pytest examples/j1j2/ctmrg_*.py
+
+
+  # This workflow contains a single job called "build"
+  test-full:
+    if: |
+      contains(fromJson('["refs/heads/master", "refs/heads/tests"]'), github.ref) ||
+      ( github.event_name == 'pull_request' && contains(fromJson('["master",]'), github.base_ref) )
+
+    needs: test-opt_einsum
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python_v: [ "3.12", ] #"3.9", "3.10", "3.11"
+        pytorch_v: [ 2.0, ] # 2.6
+        primme_v: ["3.2.3"]
+        # opt_einsum_v: [ "3.3.0", "3.4.0"]
+        # exclude:
+        #   - python_v: "3.12"
+        #     pytorch_v: 2.6
+      fail-fast: false
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      - run: CI=false
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v4
+
+      # Runs a set of commands using the runners shell
+      - name: Install system LAPACK/BLAS/Fortran
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y liblapack-dev libblas-dev gfortran
+
+      - name: setup python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python_v }}
+      - name: setup pytorch
+        run: |
+          if [[ "${{ matrix.python_v }}" == "3.9" ]]; then export P39C="-c=conda-forge"; fi
+          if [[ "${{ matrix.pytorch_v }}" == "1.8.2" ]]
+          then
+            $CONDA/bin/conda install -c pytorch-lts -c anaconda pytorch cpuonly scipy pytest opt_einsum
+          elif [ "${{ matrix.pytorch_v }}" == "2.0" ]
+          then
+            $CONDA/bin/conda install pytorch==2.0.0 cpuonly -c pytorch scipy pytest opt_einsum
+          else
+            $CONDA/bin/pip3 install torch --index-url https://download.pytorch.org/whl/cpu
+            $CONDA/bin/pip3 install scipy pytest opt_einsum
+          fi
+          $CONDA/bin/pip3 install primme==${{ matrix.primme_v }}
+          git submodule update --init --recursive
+
       # Run tests
       - name: test j1j2
         run: |
@@ -71,12 +241,12 @@ jobs:
         run: |
           $CONDA/bin/python -m pytest examples/ising/ctmrg_*.py
           $CONDA/bin/python -m pytest examples/ising/optim_*.py
-      
-      - name: test jq 
+
+      - name: test jq
         run: |
           $CONDA/bin/python -m pytest examples/jq/ctmrg_*.py
           $CONDA/bin/python -m pytest examples/jq/optim_*.py
-          
+
       - name: test ladders
         run: |
           $CONDA/bin/python -m pytest examples/ladders/ctmrg_*.py
@@ -85,7 +255,7 @@ jobs:
         run: |
           $CONDA/bin/python -m pytest examples/ladders/abelian/ctmrg_*.py
           $CONDA/bin/python -m pytest examples/ladders/abelian/optim_*.py
-          
+
       - name: test kagome
         run: |
           $CONDA/bin/python -m pytest examples/kagome/ctmrg_*.py

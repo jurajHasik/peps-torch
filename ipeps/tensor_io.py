@@ -269,7 +269,7 @@ def serialize_abelian_tensor_legacy(t, native=False):
     json_tensor["signature"]= t.get_signature(native=native)
     json_tensor["n"]= t.get_tensor_charge()
     json_tensor["isdiag"]= t.isdiag
-    unique_dtype = t.yast_dtype
+    unique_dtype = t.yastn_dtype
     if unique_dtype:
         json_tensor["dtype"]= unique_dtype
 
@@ -277,7 +277,7 @@ def serialize_abelian_tensor_legacy(t, native=False):
     # json_tensor["data"]= serialize_bare_tensor_legacy(t._data)
 
     json_tensor["blocks"]= []
-    for k,D,source in zip(t.struct.t,t.struct.D,t.struct.sl):
+    for k,D in zip(t.struct.t,t.struct.D):
         json_block= serialize_bare_tensor_legacy(t[k])
         json_block["charges"]= k
         json_tensor["blocks"].append(json_block)

@@ -55,7 +55,7 @@ def main():
     if not cfg.global_args.device == default_device:
         settings.device = cfg.global_args.device
         print("Setting backend device: "+settings.device)
-    settings.backend.set_num_threads(args.omp_cores)
+    torch.set_num_threads(args.omp_cores)
     settings.backend.random_seed(args.seed)
 
     # initialize an ipeps
