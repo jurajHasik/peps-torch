@@ -182,7 +182,7 @@ class LBFGS_MOD(LBFGS):
 
         # optimal condition
         if opt_cond:
-            return orig_loss, None, None
+            return orig_loss, loss, flat_grad
 
         # tensors cached in state (for tracing)
         d = state.get('d')

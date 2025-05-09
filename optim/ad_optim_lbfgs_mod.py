@@ -275,11 +275,15 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
 
         if post_proc is not None:
             post_proc(state, current_env[0], context)
-
         # terminate condition
         if len(t_data["loss"])>1 and \
             abs(t_data["loss"][-1]-t_data["loss"][-2])<opt_args.tolerance_change:
             break
+
+        if new_flat_grad is not None and \
+            new_flat_grad.abs().max() <= opt_args.tolerance_grad:
+            break
+
         if (opt_args.line_search not in ["default", None]) and \
             "STATUS" in context and context["STATUS"]=="ENV_ANTIVAR":
             raise RuntimeError("Over-optimized environment, see log file for "\
