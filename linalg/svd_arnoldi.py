@@ -90,7 +90,7 @@ class SVDARNOLDI(torch.autograd.Function):
         r"""
         :param M: square matrix :math:`N \times N`
         :param k: desired rank (must be smaller than :math:`N`)
-        :param thresh: threshold for applying SVDARNOLDI instead of full SVD
+        :param thresh: threshold for applying SVDARNOLDI instead or full SVD
         :param solver: solver for scipy.sparse.linalg.svds
         :type M: torch.Tensor
         :type k: int
@@ -208,18 +208,18 @@ class SVD_PROPACK(torch.autograd.Function):
         # S,p= torch.sort(torch.abs(D),descending=True)
         # S= torch.sqrt(S)
         # U= U[:,p]
-
+        
         def mv(v):
             B= torch.as_tensor(v,dtype=M.dtype,device=M.device)
             B= torch.mv(M,B)
             return B.detach().cpu().numpy()
         def vm(v):
             B= torch.as_tensor(v,dtype=M.dtype,device=M.device)
-            B= torch.einsum('i,ij->j',B,M)           
+            B= torch.einsum('i,ij->j',B.conj(),M).conj().resolve_conj()
             return B.detach().cpu().numpy()
+        lop_M= LinearOperator(M.size(), matvec=mv, rmatvec=vm)
 
-        M_nograd= LinearOperator(M.size(), matvec=mv, rmatvec=vm)
-        U, S, Vh= scipy.sparse.linalg.svds(M_nograd, k=k+k_extra, v0=v0, solver='propack')
+        U, S, Vh= scipy.sparse.linalg.svds(lop_M if M.is_cuda else M.numpy(), k=k+k_extra, v0=v0, solver='propack')
 
         S= torch.as_tensor(np.flip(S)).to(device=M.device)
         U= torch.as_tensor(np.flip(U,axis=1),dtype=M.dtype,device=M.device)
