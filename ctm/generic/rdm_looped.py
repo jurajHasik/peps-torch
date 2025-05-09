@@ -12,7 +12,7 @@ from ctm.generic.rdm import _cast_to_real, _sym_pos_def_rdm, get_contraction_pat
 import ctm.generic.corrf as corrf
 try:
     import opt_einsum as oe
-    from oe_ext.oe_ext import get_contraction_path, contract_with_unroll, _debug_allocated_tensors
+    from oe_ext.oe_ext import get_contraction_path, contract_with_unroll #_debug_allocated_tensors
 except:
     oe=False
     warnings.warn("opt_einsum not available.")

@@ -2,6 +2,7 @@ import os
 import context
 import torch
 import argparse
+import time
 import config as cfg
 from ipeps.ipeps import *
 from ipeps.ipeps_1s_Q import *
@@ -28,6 +29,7 @@ parser.add_argument("--q", type=float, default=1., help="pitch vector")
 parser.add_argument("--jchi", type=float, default=0., help="scalar chirality")
 parser.add_argument("--tiling", default="1SITE", help="tiling of the lattice", \
     choices=["1SITE", "1SITE_NOROT", "1STRIV", "1SPG", "1SITEQ"])
+parser.add_argument("--obs_freq", type=int, default=1, help="frequency of computing observables")
 parser.add_argument("--corrf_canonical", action='store_true', help="align spin operators" \
     + " with the vector of spontaneous magnetization")
 parser.add_argument("--corrf_r", type=int, default=1, help="maximal correlation function distance")
@@ -123,7 +125,9 @@ def main():
         if not history:
             history=[]
         e_curr= energy_f(state, env, compressed=args.compressed_rdms, unroll=args.loop_rdms)
-        obs_values, obs_labels = eval_obs_f(state,env)
+        obs_values= []
+        if args.obs_freq > 0 and len(history) % args.obs_freq == 0:
+            obs_values, obs_labels = eval_obs_f(state,env)
         history.append([e_curr.item()]+obs_values)
         print(", ".join([f"{len(history)}"]+[f"{e_curr}"]*2+[f"{v}" for v in obs_values]))
 
@@ -133,8 +137,10 @@ def main():
 
     def ctmrg_conv_specC_loc(state, env, history, ctm_args=cfg.ctm_args):
         _conv_check, history= ctmrg_conv_specC(state, env, history, ctm_args=ctm_args)
-        e_curr= energy_f(state, env, compressed=args.compressed_rdms, unroll=args.loop_rdms)
-        obs_values, obs_labels = eval_obs_f(state,env)
+        e_curr, obs_values, obs_labels= float('Nan'), [], []
+        if args.obs_freq > 0 and len(history) % args.obs_freq == 0:
+            e_curr= energy_f(state, env, compressed=args.compressed_rdms, unroll=args.loop_rdms)
+            obs_values, obs_labels = eval_obs_f(state,env)
         print(", ".join([f"{len(history['diffs'])}",f"{history['conv_crit'][-1]}",\
             f"{e_curr}"]+[f"{v}" for v in obs_values]))
         return _conv_check, history
@@ -153,10 +159,12 @@ def main():
     init_env(state, ctm_env_init)
     print(ctm_env_init)
     
+    t0= time.perf_counter()
     loss0= energy_f(state, ctm_env_init, compressed=args.compressed_rdms, unroll=args.loop_rdms)
     obs_values, obs_labels = eval_obs_f(state,ctm_env_init)
+    t1= time.perf_counter()
     print(", ".join(["epoch","conv_crit","energy"]+obs_labels))
-    print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
+    print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]+[f"{t1-t0} s"]))
 
     if args.profile_mode:
         prof = torch.profiler.profile(
