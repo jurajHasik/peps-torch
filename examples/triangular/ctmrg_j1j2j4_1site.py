@@ -11,9 +11,6 @@ from ctm.generic.env import *
 from ctm.generic import ctmrg
 from ctm.generic import transferops
 from models import spin_triangular
-# from optim.ad_optim import optimize_state
-from optim.ad_optim_lbfgs_mod import optimize_state
-# from optim.ad_optim_sgd_mod import optimize_state
 import unittest
 import logging
 log = logging.getLogger(__name__)
@@ -161,10 +158,12 @@ def main():
     
     t0= time.perf_counter()
     loss0= energy_f(state, ctm_env_init, compressed=args.compressed_rdms, unroll=args.loop_rdms)
-    obs_values, obs_labels = eval_obs_f(state,ctm_env_init)
     t1= time.perf_counter()
+    obs_values, obs_labels = eval_obs_f(state,ctm_env_init)
+    t2= time.perf_counter()
+    log.info(f"t_energy {t1-t0} s, t_obs {t2-t1} s")
     print(", ".join(["epoch","conv_crit","energy"]+obs_labels))
-    print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]+[f"{t1-t0} s"]))
+    print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
 
     if args.profile_mode:
         prof = torch.profiler.profile(
