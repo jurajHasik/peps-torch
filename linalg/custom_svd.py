@@ -412,7 +412,7 @@ def truncated_svd_rsvd(M, chi, q=10, niter=2, s = 1, vnum = 1,
     """
     reg= torch.as_tensor(ad_decomp_reg, dtype=M.real.dtype if M.is_complex() else M.dtype,\
         device=M.device)
-    U, S, V = rsvd(M, chi+1, p=q, q=niter, s=s, vnum = vnum,)
+    U, S, V = rsvd(M, chi+1, p=q, q=niter, s=s, vnum = vnum, cutoff=reg)
 
     # estimate the chi_new 
     if keep_multiplets and chi<S.shape[0]:

@@ -8,8 +8,9 @@ import torch
 from optim import lbfgs_modified
 import config as cfg
 
-
+from ctm.generic.env import EnvError
 from yastn.yastn.tn.fpeps.envs.fixed_pt import NoFixedPointError
+
 
 def store_checkpoint(checkpoint_file, state, optimizer, current_epoch, current_loss,\
     verbosity=0):
@@ -37,6 +38,93 @@ def store_checkpoint(checkpoint_file, state, optimizer, current_epoch, current_l
     if verbosity>0:
         print(checkpoint_file)
 
+
+def load_optimizer_state_(optimizer, state, main_args=cfg.main_args, opt_args=cfg.opt_args,
+        ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+    r"""
+    :param optimizer: Optimizer
+    :param state: ipeps wavefunction
+    :param main_args: main arguments
+    :param opt_args: optimization arguments
+    :param ctm_args: CTM arguments
+    :param global_args: global arguments
+    :type optimizer: torch.optim.Optimizer
+    :type state: IPEPS
+    :type main_args: argparse.Namespace
+    :type opt_args: OPTARGS
+    :type ctm_args: CTMARGS
+    :type global_args: GLOBALARGS
+
+    Load the state of the optimizer from ``main_args.opt_resume``.
+    The optimizer state is modified to match the current optimization parameters.
+    """
+    print(f"INFO: resuming from check point. resume = {main_args.opt_resume}")
+    if not str(global_args.device)==str(state.device):
+        warnings.warn(f"Device mismatch: state.device {state.device}"\
+            +f" global_args.device {global_args.device}",RuntimeWarning)
+    checkpoint = torch.load(main_args.opt_resume,map_location=state.device, weights_only=False)
+    epoch0 = checkpoint["epoch"]
+    loss0 = checkpoint["loss"]
+    cp_state_dict= checkpoint["optimizer_state_dict"]
+    cp_opt_params= cp_state_dict["param_groups"][0]
+    cp_opt_history= cp_state_dict["state"][cp_opt_params["params"][0]]
+    if main_args.opt_resume_override_params:
+        cp_opt_params["lr"] = opt_args.lr
+        cp_opt_params["max_iter"] = opt_args.max_iter_per_epoch
+        cp_opt_params["tolerance_grad"] = opt_args.tolerance_grad
+        cp_opt_params["tolerance_change"] = opt_args.tolerance_change
+        cp_opt_params["line_search_fn"] = opt_args.line_search
+        cp_opt_params["line_search_eps"] = opt_args.line_search_tol
+        # resize stored old_dirs, old_stps, ro, al to new history size
+        cp_history_size= cp_opt_params["history_size"]
+        cp_opt_params["history_size"] = opt_args.history_size
+        if opt_args.history_size < cp_history_size:
+            if len(cp_opt_history["old_dirs"]) > opt_args.history_size:
+                assert len(cp_opt_history["old_dirs"])==len(cp_opt_history["old_stps"])\
+                    ==len(cp_opt_history["ro"]), "Inconsistent L-BFGS history"
+                cp_opt_history["old_dirs"]= cp_opt_history["old_dirs"][-opt_args.history_size:]
+                cp_opt_history["old_stps"]= cp_opt_history["old_stps"][-opt_args.history_size:]
+                cp_opt_history["ro"]= cp_opt_history["ro"][-opt_args.history_size:]
+        cp_al_filtered= list(filter(None,cp_opt_history["al"]))
+        if len(cp_al_filtered) > opt_args.history_size:
+            cp_opt_history["al"]= cp_al_filtered[-opt_args.history_size:]
+        else:
+            cp_opt_history["al"]= cp_al_filtered + [None for i in range(opt_args.history_size-len(cp_al_filtered))]
+    cp_state_dict["param_groups"][0]= cp_opt_params
+    cp_state_dict["state"][cp_opt_params["params"][0]]= cp_opt_history
+    optimizer.load_state_dict(cp_state_dict)
+    print(f"checkpoint.loss = {loss0}")
+    
+
+def create_optimizer(state, main_args=cfg.main_args, opt_args=cfg.opt_args,
+    ctm_args=cfg.ctm_args, global_args=cfg.global_args):
+    r"""
+    :param optimizer: Optimizer
+    :param parameters: parameters of the optimizer
+    :param main_args: main arguments
+    :param opt_args: optimization arguments 
+    :param ctm_args: CTM arguments
+    :param global_args: global arguments
+    :type optimizer: torch.optim.Optimizer
+    :type parameters: list of torch.Tensor
+    :type main_args: argparse.Namespace
+    :type opt_args: OPTARGS
+    :type ctm_args: CTMARGS
+    :type global_args: GLOBALARGS
+    
+    Reset the state of the optimizer to the initial state.
+    """
+    parameters= state.get_parameters()
+    for A in parameters: A.requires_grad_(True)
+
+    optimizer= lbfgs_modified.LBFGS_MOD(parameters, max_iter=opt_args.max_iter_per_epoch, lr=opt_args.lr, \
+        tolerance_grad=opt_args.tolerance_grad, tolerance_change=opt_args.tolerance_change, \
+        history_size=opt_args.history_size, line_search_fn=opt_args.line_search, \
+        line_search_eps=opt_args.line_search_tol)
+    optimizer.zero_grad()
+    return parameters, optimizer
+    
+
 def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
     main_args=cfg.main_args, opt_args=cfg.opt_args,ctm_args=cfg.ctm_args,
     global_args=cfg.global_args):
@@ -44,7 +132,6 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
     :param state: initial wavefunction
     :param ctm_env_init: initial environment corresponding to ``state``
     :param loss_fn: loss function
-    :param model: model with definition of observables
     :param local_args: parsed command line arguments
     :param opt_args: optimization configuration
     :param ctm_args: CTM algorithm configuration
@@ -52,7 +139,6 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
     :type state: IPEPS
     :type ctm_env_init: ENV
     :type loss_fn: function(IPEPS,ENV,CTMARGS,OPTARGS,GLOBALARGS)->torch.tensor
-    :type model: TODO Model base class
     :type local_args: argparse.Namespace
     :type opt_args: OPTARGS
     :type ctm_args: CTMARGS
@@ -76,52 +162,13 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
     context= dict({"ctm_args":ctm_args, "opt_args":opt_args, "loss_history": t_data})
     epoch=0
 
-    parameters= state.get_parameters()
-    for A in parameters: A.requires_grad_(True)
-
-    optimizer = lbfgs_modified.LBFGS_MOD(parameters, max_iter=opt_args.max_iter_per_epoch, lr=opt_args.lr, \
-        tolerance_grad=opt_args.tolerance_grad, tolerance_change=opt_args.tolerance_change, \
-        history_size=opt_args.history_size, line_search_fn=opt_args.line_search, \
-        line_search_eps=opt_args.line_search_tol)
+    parameters, optimizer = create_optimizer(state, main_args=main_args, opt_args=opt_args,
+        ctm_args=ctm_args, global_args=global_args)
 
     # load and/or modify optimizer state from checkpoint
     if main_args.opt_resume is not None:
-        print(f"INFO: resuming from check point. resume = {main_args.opt_resume}")
-        if not str(global_args.device)==str(state.device):
-            warnings.warn(f"Device mismatch: state.device {state.device}"\
-                +f" global_args.device {global_args.device}",RuntimeWarning)
-        checkpoint = torch.load(main_args.opt_resume,map_location=state.device, weights_only=False)
-        epoch0 = checkpoint["epoch"]
-        loss0 = checkpoint["loss"]
-        cp_state_dict= checkpoint["optimizer_state_dict"]
-        cp_opt_params= cp_state_dict["param_groups"][0]
-        cp_opt_history= cp_state_dict["state"][cp_opt_params["params"][0]]
-        if main_args.opt_resume_override_params:
-            cp_opt_params["lr"] = opt_args.lr
-            cp_opt_params["max_iter"] = opt_args.max_iter_per_epoch
-            cp_opt_params["tolerance_grad"] = opt_args.tolerance_grad
-            cp_opt_params["tolerance_change"] = opt_args.tolerance_change
-            cp_opt_params["line_search_fn"] = opt_args.line_search
-            cp_opt_params["line_search_eps"] = opt_args.line_search_tol
-            # resize stored old_dirs, old_stps, ro, al to new history size
-            cp_history_size= cp_opt_params["history_size"]
-            cp_opt_params["history_size"] = opt_args.history_size
-            if opt_args.history_size < cp_history_size:
-                if len(cp_opt_history["old_dirs"]) > opt_args.history_size:
-                    assert len(cp_opt_history["old_dirs"])==len(cp_opt_history["old_stps"])\
-                        ==len(cp_opt_history["ro"]), "Inconsistent L-BFGS history"
-                    cp_opt_history["old_dirs"]= cp_opt_history["old_dirs"][-opt_args.history_size:]
-                    cp_opt_history["old_stps"]= cp_opt_history["old_stps"][-opt_args.history_size:]
-                    cp_opt_history["ro"]= cp_opt_history["ro"][-opt_args.history_size:]
-            cp_al_filtered= list(filter(None,cp_opt_history["al"]))
-            if len(cp_al_filtered) > opt_args.history_size:
-                cp_opt_history["al"]= cp_al_filtered[-opt_args.history_size:]
-            else:
-                cp_opt_history["al"]= cp_al_filtered + [None for i in range(opt_args.history_size-len(cp_al_filtered))]
-        cp_state_dict["param_groups"][0]= cp_opt_params
-        cp_state_dict["state"][cp_opt_params["params"][0]]= cp_opt_history
-        optimizer.load_state_dict(cp_state_dict)
-        print(f"checkpoint.loss = {loss0}")
+        load_optimizer_state_(optimizer, state, main_args=main_args, opt_args=opt_args,
+            ctm_args=ctm_args, global_args=global_args)
 
     #@profile
     def closure(linesearching=False):
@@ -253,21 +300,24 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
             _, new_loss, new_flat_grad = optimizer.step_2c(closure, closure_linesearch, new_loss=new_loss, new_flat_grad=new_flat_grad)
         except NoFixedPointError as e:
             print(e)
-            log.log(logging.INFO, "No fixed point found. Add noise to the state.")
+            log.info("No fixed point found. Add noise to the state.")
             # add a random perturbation to the state
-            state = state.add_noise(noise=0.1)
+            with torch.no_grad():
+                state = state.add_noise(noise=0.1)
 
-            # reset the state of the optimizer
-            parameters = state.get_parameters()
-            for A in parameters:
-                A.detach_()
-                A.requires_grad_(True)
-            optimizer = lbfgs_modified.LBFGS_MOD(parameters, max_iter=opt_args.max_iter_per_epoch, lr=opt_args.lr, \
-                tolerance_grad=opt_args.tolerance_grad, tolerance_change=opt_args.tolerance_change, \
-                history_size=opt_args.history_size, line_search_fn=opt_args.line_search, \
-                line_search_eps=opt_args.line_search_tol)
-            new_loss, new_flat_grad = None, None
+            parameters, optimizer= create_optimizer(state, main_args=main_args, opt_args=opt_args,
+                ctm_args=ctm_args, global_args=global_args)
             continue
+        except EnvError as e:
+            log.info("Environment approximation error is above threshold.")
+            if opt_args.env_sens_regauge:
+                print("Regauging the environment.")
+                with torch.no_grad():
+                    state= state.gauge()
+
+                parameters, optimizer= create_optimizer(state, main_args=main_args, opt_args=opt_args,
+                    ctm_args=ctm_args, global_args=global_args)
+                continue
 
         # reset line search history
         t_data["loss_ls"]=[]

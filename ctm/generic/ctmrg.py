@@ -1,6 +1,7 @@
 import time
 import copy
 import torch
+from math import ceil
 from torch.utils.checkpoint import checkpoint
 import config as cfg
 from config import _torch_version_check
@@ -59,17 +60,32 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
         stateDL = IPEPS(sites=sitesDL,vertexToSite=state.vertexToSite,lX=state.lX,lY=state.lY,\
             global_args=global_args)
 
-    # 1) perform CTMRG
-    t_obs=t_ctm=0.
-    history=None
-    for i in range(ctm_args.ctm_max_iter):
-        t0_ctm= time.perf_counter()
+    def _ctmrg_iter(i):
         for direction in ctm_args.ctm_move_sequence:
             diagnostics={"ctm_i": i, "ctm_d": direction} if ctm_args.verbosity_projectors>0 else None
             num_rows_or_cols= stateDL.lX if direction in [(-1,0),(1,0)] else stateDL.lY
             for row_or_col in range(num_rows_or_cols):
                 ctm_MOVE(direction, stateDL, env, ctm_args=ctm_args, global_args=global_args, \
                     verbosity=ctm_args.verbosity_ctm_move,diagnostics=diagnostics)
+
+    # 1) perform CTMRG
+    # 1.1) warm-up
+    t_obs=t_ctm=0.
+    history=None
+    if ctm_args.ctm_warmup_iter >= 0:
+        maxD=max(state.get_aux_bond_dims())
+        with torch.no_grad():
+            for i in range(max(ctm_args.ctm_warmup_iter,ceil(env.chi/maxD**2))):
+                t0_ctm= time.perf_counter()
+                _ctmrg_iter(i)
+                t1_ctm= time.perf_counter()
+                t_ctm+= t1_ctm-t0_ctm
+            log.info(f"CTMRG warmup {i} steps, time= {t_ctm:.2f} s")
+    
+    # 1.2) main loop
+    for i in range(ctm_args.ctm_max_iter):
+        t0_ctm= time.perf_counter()
+        _ctmrg_iter(i)
         t1_ctm= time.perf_counter()
 
         t0_obs= time.perf_counter()

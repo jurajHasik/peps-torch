@@ -228,6 +228,9 @@ class IPEPS():
         for c in self.sites.keys():
             self.sites[c]= self.sites[c]/self.sites[c].abs().max()
 
+    def gauge(self):
+        return gauge(self)
+
 def read_ipeps(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.peps_args,\
     global_args=cfg.global_args):
     r"""
@@ -418,6 +421,12 @@ def write_ipeps(state, outputfile, aux_seq=[0,1,2,3], tol=1.0e-14, normalize=Fal
     with open(outputfile,'w') as f:
         json.dump(json_state, f, indent=4, separators=(',', ': '))
 
+def gauge(state):
+    state_g= IPEPS_WEIGHTED(state=state).gauge()
+    res= state_g.absorb_weights()
+    res.normalize_()
+    return res
+
 
 class IPEPS_WEIGHTED(IPEPS):
 
@@ -524,7 +533,7 @@ class IPEPS_WEIGHTED(IPEPS):
             expr='smnop,'+','.join([expr_ws[dxy] for dxy in dxy_w_to_ind])+'->suldr'
             a_sites[coord]= torch.einsum(expr,\
                 A,*( self.weight((coord, dxy)).sqrt()*(1.0+0j) if A.is_complex() \
-                    else self.weight((coord, dxy)).sqrt() for dxy in dxy_w_to_ind.keys() ) )
+                    else self.weight((coord, dxy)).sqrt() for dxy in dxy_w_to_ind.keys() ) ).contiguous()
             #for dxy,ind in dxy_w_to_ind.items():
             #    w= self.weight((coord, dxy)).sqrt()
             #    A= torch.tensordot(A, w, ([1],[0]))

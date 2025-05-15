@@ -7,6 +7,10 @@ from tn_interface import contiguous, view
 import logging
 log = logging.getLogger(__name__)
 
+class EnvError(RuntimeError):
+    def __init__(self, message="Environment error"):
+        super().__init__(message)
+
 class ENV():
     def __init__(self, chi, state=None, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
         r"""

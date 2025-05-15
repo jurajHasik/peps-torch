@@ -244,6 +244,9 @@ class CTMARGS():
 
     :ivar ctm_max_iter: maximum iterations of directional CTM algorithm. Default: ``50``
     :vartype ctm_max_iter: int
+    :ivar ctm_warmup_iter: if >=0, CTMRG performs at most ``max(ctm_warmup_iter, ceil(chi/D^2))`` number of warmup iterations of directional CTM algorithm. 
+                           Default: ``-1`` skips warm-up iterations.
+    :vartype ctm_warmup_iter: int
     :ivar ctm_env_init_type: default initialization method for ENV objects. Default: ``'CTMRG'``
     :vartype ctm_env_init_type: str
     :ivar ctm_conv_tol: threshold for convergence of CTM algorithm. Default: ``'1.0e-10'``
@@ -349,6 +352,7 @@ class CTMARGS():
     """
     def __init__(self):
         self.ctm_max_iter= 50
+        self.ctm_warmup_iter= -1
         self.ctm_env_init_type= 'CTMRG'
         self.ctm_conv_tol= 1.0e-8
         self.ctm_absorb_normalization= 'inf'
@@ -463,6 +467,7 @@ class OPTARGS():
         self.tolerance_change= 1e-9
         self.opt_ctm_reinit= True
         self.env_sens_scale= 10.0
+        self.env_sens_regauge= False
         self.line_search= "default"
         self.line_search_ctm_reinit= True
         self.line_search_svd_method= 'DEFAULT'

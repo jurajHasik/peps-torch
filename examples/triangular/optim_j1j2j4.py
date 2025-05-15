@@ -29,7 +29,6 @@ parser.add_argument("--tiling", default="3SITE", help="tiling of the lattice", \
 parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
-parser.add_argument("--gauge", action='store_true', help="put into quasi-canonical form")
 parser.add_argument("--test_env_sensitivity", action='store_true', help="compare loss with higher chi env")
 parser.add_argument("--compressed_rdms", type=int, default=-1, help="use compressed RDMs for 2x3 and 3x2 patches"\
         +" with chi lower that chi x D^2")
@@ -209,10 +208,6 @@ def main():
         t_loss1= time.perf_counter()
         return (loss, ctm_env_out, *ctm_log, t_loss1-t_loss0)
 
-    def _to_json(l):
-                re=[l[i,0].item() for i in range(l.size()[0])]
-                im=[l[i,1].item() for i in range(l.size()[0])]
-                return dict({"re": re, "im": im})
 
     @torch.no_grad()
     def obs_fn(state, ctm_env, opt_context):
@@ -221,7 +216,8 @@ def main():
             epoch= len(opt_context["loss_history"]["loss"]) 
             loss= opt_context["loss_history"]["loss"][-1]
             obs_values, obs_labels = eval_obs_f(state,ctm_env)
-            
+            _flag_antivar= False
+
             # test ENV sensitivity
             # for J2 or Jchi or J4 > 0, energy computation is expensive
             if args.test_env_sensitivity:
@@ -243,8 +239,10 @@ def main():
             print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]\
                 + ([f"{loss1-loss}"] if args.test_env_sensitivity else []) ))
             log.info(f"env_sensitivity: {loss1-loss} loss_diff: "\
-                +f"{delta_loss}" if args.test_env_sensitivity else ""\
+                +f"{delta_loss} ENV_ANTIVAR {_flag_antivar}" if args.test_env_sensitivity else ""\
                 +" Norm(sites): "+", ".join([f"{t.norm()}" for c,t in state.sites.items()]))
+
+            if _flag_antivar: raise EnvError("ENV_ANTIVAR")
 
             # with torch.no_grad():
             #     if args.top_freq>0 and epoch%args.top_freq==0:
@@ -266,11 +264,8 @@ def main():
             #         state.sites[c].copy_(state_g.sites[c])
 
     # optimize
-    if args.gauge:
-        state_g= IPEPS_WEIGHTED(state=state).gauge()
-        state= state_g.absorb_weights()
     state.normalize_()
-    optimize_state(state, ctm_env, loss_fn, obs_fn=obs_fn)#, post_proc=post_proc)
+    optimize_state(state, ctm_env, loss_fn, obs_fn=obs_fn, post_proc=post_proc)
 
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"

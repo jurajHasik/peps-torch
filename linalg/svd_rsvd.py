@@ -1,4 +1,7 @@
 import torch
+from .svd_gesdd import SVDGESDD
+import logging
+log = logging.getLogger(__name__)
 
 def rsvd(M, k, p = 20, q = 2, s = 1, vnum = 1, **kwargs):
     r"""
@@ -19,6 +22,12 @@ def rsvd(M, k, p = 20, q = 2, s = 1, vnum = 1, **kwargs):
     Performs approximate truncated SVD of real matrix M using randomized sampling 
     as :math:`M=USV^T`. Based on the implementation in https://arxiv.org/abs/1502.05366
     """
+
+    def QR_check(A):
+        Q,R= torch.linalg.qr(A)
+        if R.requires_grad and any(R.diag().abs() < 1.0e-10):
+            log.info("Warning: reduced QR factorization is not full rank")
+        return Q,R
 
     # get dims - torch.size() -> [rows, columns]
     m = list(M.size())[0] 
@@ -47,7 +56,7 @@ def rsvd(M, k, p = 20, q = 2, s = 1, vnum = 1, **kwargs):
 
         if (2*j-2) % s == 0:
             # printf("orthogonalize Y..\n");
-            Yorth, r = torch.linalg.qr(Y)
+            Yorth, r = QR_check(Y)
             # printf("Z = M'*Yorth..\n");
             Z = torch.mm(M.transpose(0,1).conj(),Yorth)
         else:
@@ -57,7 +66,7 @@ def rsvd(M, k, p = 20, q = 2, s = 1, vnum = 1, **kwargs):
     
         if (2*j-1) % s == 0:
             # printf("orthogonalize Z..\n");
-            Zorth, r = torch.linalg.qr(Z)
+            Zorth, r = QR_check(Z)
             # printf("Y = M*Zorth..\n");
             Y = torch.mm(M,Zorth)
         else:
@@ -65,7 +74,7 @@ def rsvd(M, k, p = 20, q = 2, s = 1, vnum = 1, **kwargs):
             Y = torch.mm(M,Z)
 
     # orthogonalize on exit from loop to get Q = m x l
-    Q, r = torch.linalg.qr(Y)
+    Q, r = QR_check(Y)
 
     # either QR of B^T method, or eigendecompose BB^T method
     if (vnum == 1 or vnum > 2):
@@ -79,13 +88,15 @@ def rsvd(M, k, p = 20, q = 2, s = 1, vnum = 1, **kwargs):
         # M is mxn ; Q is mxn ; R is min(m,n) x min(m,n) */ 
         # printf("doing QR..\n");
         ### compact_QR_factorization(Bt,Qhat,Rhat);
-        Qhat, Rhat = torch.linalg.qr(Bt)
+        Qhat, Rhat = QR_check(Bt)
 
         # compute SVD of Rhat (lxl)
         # printf("doing SVD..\n");
         # torch.svd M -> U, S, V such that M = U S V^T
         Uhat, S, Vhat_trans = torch.linalg.svd(Rhat)
-        # Vhat_trans = Vhat_trans.transpose(0,1) # since torch.linalg.svd returns V
+        
+        # Uhat, S, Vhat_trans= SVDGESDD.apply(Rhat, kwargs.get('cutoff'), None)
+        # Vhat_trans = Vhat_trans.transpose(0,1).conj() # since SVDGESDD returns V
 
         # U = Q*Vhat_trans
         # printf("form U..\n");
