@@ -57,7 +57,7 @@ class PepsAD(Peps):
 
         .. Note::
             This function must be invoked as part of cost function to maintain comp. graph between
-            logic which build on-site tensors from parameters and subsequent algos (CTMRG, ...).
+            logic which builds on-site tensors from parameters and subsequent algos (CTMRG, ...).
         """
         for site in self.sites():
             self[site] = self.parameters[site]

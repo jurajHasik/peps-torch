@@ -93,10 +93,10 @@ def rsvd(M, k, p = 20, q = 2, s = 1, vnum = 1, **kwargs):
         # compute SVD of Rhat (lxl)
         # printf("doing SVD..\n");
         # torch.svd M -> U, S, V such that M = U S V^T
-        Uhat, S, Vhat_trans = torch.linalg.svd(Rhat)
+        # Uhat, S, Vhat_trans = torch.linalg.svd(Rhat)
         
-        # Uhat, S, Vhat_trans= SVDGESDD.apply(Rhat, kwargs.get('cutoff'), None)
-        # Vhat_trans = Vhat_trans.transpose(0,1).conj() # since SVDGESDD returns V
+        Uhat, S, Vhat_trans= SVDGESDD.apply(Rhat, kwargs.get('cutoff'), None)
+        Vhat_trans = Vhat_trans.transpose(0,1).conj() # since SVDGESDD returns V
 
         # U = Q*Vhat_trans
         # printf("form U..\n");

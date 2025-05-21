@@ -15,6 +15,16 @@ def safe_inverse_2(x, epsilon):
     x[abs(x)<epsilon]=float('inf')
     return x.pow(-1)
 
+def fix_svd_signs(U, V):
+    Uamp = (U.abs() * (2**40)).to(dtype=torch.int64)
+    ii = torch.argmax(Uamp, dim=0, keepdims=True)
+    phase = torch.take_along_dim(U, ii, dim=0)
+    phase = phase / phase.abs()
+    U = U * phase.conj().reshape(1, -1)
+    # Vh = Vh * phase.reshape(-1, 1)
+    V = V * phase.conj().reshape(1, -1)
+    return U, V
+
 class SVDGESDD_legacy(torch.autograd.Function):
     @staticmethod
     def forward(self, A, cutoff, diagnostics):
@@ -80,6 +90,7 @@ class SVDGESDD(torch.autograd.Function):
             # A = U @ diag(S) @ Vh
             U, S, Vh = torch.linalg.svd(A)
             V= Vh.transpose(-2,-1).conj()
+            U,V= fix_svd_signs(U, V)
             self.save_for_backward(U, S, V, cutoff)
             self.diagnostics= diagnostics
             return U, S, V
@@ -99,6 +110,7 @@ class SVDGESDD(torch.autograd.Function):
             Computes SVD decompostion of matrix :math:`A = USV^\dagger`.
             """
             U, S, V = torch.svd(A)
+            U,V= fix_svd_signs(U, V)
             self.diagnostics= diagnostics
             self.save_for_backward(U, S, V, cutoff)
             return U, S, V
