@@ -2627,6 +2627,68 @@ def aux_rdm1x2(coord, state, env, sym_pos_def=False, verbosity=0):
     return rdm
 
 # ----- auxiliary OP as MPS functions -----
+def get_exact_mps(tensor,ind_dims=None,max_D=float('inf'),min_S=-1,verbosity=0):
+    r"""
+    Decompose a tensor into a MPS form using SVD. The index convention of MPS tensors is as follows:: 
+     
+           1
+           |
+        0--MPS_i--2
+    
+    The first and the last MPS tensors have extra dim=1 indices.
+
+    :param tensor: tensor to be decomposed  
+    :param ind_dims: list of index dimensions of "physical" DoFs in resulting MPS
+    :param max_D: maximal value of bond dimension allowed in the decomposition
+    :param min_S: smallest (relavite) singular values retained in the decomposition
+    :param verbosity: logging verbosity
+    :type tensor: torch.tensor
+    :type ind_dims: list(int)
+    :type max_D: int
+    :type min_S: float
+    :type verbosity: int
+    :return: list of tensors U and singular values S
+    :rtype: list(torch.tensor), list(torch.tensor)
+    """
+    # max_D = maximal value of bond dimension allowed in the decomposition
+    # min_S = smallest (relavite) singular values retained in the decomposition
+    # ind_dims = list of index dimensions of "physical" DoFs in resulting MPS
+    #
+    # Note: The overal scale of the tensor is stored at Ss[-2] in shape (1,) vector of singlar values
+    if ind_dims is None:
+        ind_dims= tensor.shape
+    tmp= tensor.reshape(1,*tensor.shape)
+    Us=[]
+    Ss=[]
+    for i in range(len(ind_dims)):
+        # print(i)
+        left_aux_D= tmp.shape[0]
+        # --tmp--
+        #   |
+        tmp= tmp.reshape(left_aux_D*ind_dims[i],-1)
+        U,S,V= torch.linalg.svd(tmp,full_matrices=False)
+        # check number of sing. values larger than min_S
+        above_min_S= sum(S>S[0]*min_S)
+        retained_D= min(above_min_S,max_D)
+        U=U[:,:min(U.shape[1],retained_D)]
+        #
+        # --
+        # == U --
+        # print(f"i={i} {U.shape} {S.shape} {V.shape}")
+        U= U.reshape(left_aux_D,ind_dims[i],U.shape[1])
+        # print(f"i={i} {U.shape}")
+        # --U-- S -- V
+        #   |
+        tmp= (torch.diag(S)[:min(S.shape[0],retained_D),:]@V).reshape(min(S.shape[0],retained_D),-1)
+        Us.append(U)
+        Ss.append(S[:min(S.shape[0],retained_D)])
+
+    # debugging information
+    if verbosity>0:
+        for i,u in enumerate(Us):
+            print(f"{u.shape} {Ss[i].shape} {sum( (Ss[i]/Ss[i][0]) >min_S)}")
+    return Us, Ss
+
 def _get_mps_tn(op_mps, phys_labels, offset=100, force_cpu=False):
         r"""
         Index convention for mps tensors is as follows::
