@@ -500,20 +500,22 @@ def rdm2x1_dl(coord, state, env, sym_pos_def=False, force_cpu=False, verbosity=0
 
     return rdm
 
-def rdm2x1_sl(coord, state, env, sym_pos_def=False, force_cpu=False, unroll=False, 
-    checkpoint_unrolled=False, checkpoint_on_device=False, verbosity=0):
-    # C1--(1)1 1(0)----T1--(3)24 24(0)--T1_x--(3)12 12(0)----C2_x
-    # 0(0)            (1,2)             (1,2)                13(1)
-    # 0(0)          4  2  5         16  14 17                13(0)
-    # |              \ 2  5           \ 14 17                |
-    # T4--(2)3 3-------a--|----26 26----a_x-------15 15(1)---T2_x
-    # |                |  |              |  |                |
-    # |   (3)6 6----------a*---27 27-------a_x*---18 18(2)   |
-    # 9(1)            10 11 \7          22 23 \19            21(3)
-    # 9(0)            (0,1)             (0,1)                21(0)
-    # C4--(1)8 8(2)----T3--(3)25 25(2)---T3_x---(3)20 20(1)--C3_x
-    #
-    who="rdm2x1_sl"
+def _get_rdm2x1_sl_tn(coord, state, env, force_cpu=False):
+    r"""
+    Define a tensor network for the 2x1 reduced density matrix::
+
+        C1--(1)1 1(0)----T1--(3)24 24(0)--T1_x--(3)12 12(0)----C2_x
+        0(0)            (1,2)             (1,2)                13(1)
+        0(0)          4  2  5         16  14 17                13(0)
+        |              \ 2  5           \ 14 17                |
+        T4--(2)3 3-------a--|----26 26----a_x-------15 15(1)---T2_x
+        |                |  |              |  |                |
+        |   (3)6 6----------a*---27 27-------a_x*---18 18(2)   |
+        9(1)            10 11 \7          22 23 \19            21(3)
+        9(0)            (0,1)             (0,1)                21(0)
+        C4--(1)8 8(2)----T3--(3)25 25(2)---T3_x---(3)20 20(1)--C3_x
+    
+    """
     a= state.site(coord)
     a_x= state.site( (coord[0]+1,coord[1]) )
     C1, C2_x, C3_x, C4= env.C[(state.vertexToSite(coord),(-1,-1))],\
@@ -542,6 +544,16 @@ def rdm2x1_sl(coord, state, env, sym_pos_def=False, force_cpu=False, unroll=Fals
         T1_x,[24,14,17,12],C2_x,[12,13],T2_x,[13,15,18,21],a_x,[16,14,26,22,15],a_x.conj(),[19,17,27,23,18],\
         C3_x,[21,20],T3_x,[22,23,25,20],[4,16,7,19]
     names= tuple(x.strip() for x in "C1, T1, T4, a, a*, C4, T3, T1_x, C2_x, T2_x, a_x, a_x*, C3_x, T3_x".split(','))
+    return contract_tn, names
+
+def rdm2x1_sl(coord, state, env, sym_pos_def=False, force_cpu=False, unroll=False, 
+    checkpoint_unrolled=False, checkpoint_on_device=False, verbosity=0):
+    r"""
+    Contract tensor network specified in :meth:`_get_rdm2x1_sl_tn`
+    """
+    who="rdm2x1_sl"
+    contract_tn, names= _get_rdm2x1_sl_tn(coord, state, env, force_cpu=force_cpu)
+
     #
     # This (typical) strategy is optimal, when X >> D^2 >> phys_dim
     #
@@ -556,6 +568,56 @@ def rdm2x1_sl(coord, state, env, sym_pos_def=False, force_cpu=False, unroll=Fals
     if force_cpu:
         R= R.to(env.device)
     return R
+
+def eval_mpo_rdm2x1(coord, state, env, op_mps, sym_pos_def=False, force_cpu=False, 
+    unroll=[], checkpoint_unrolled=False, checkpoint_on_device=False,
+    verbosity=0):
+    r"""
+    Contract tensor network of :meth:`rdm2x1` with an MPS representation of operator `op_mps`::
+
+        C1--(1)1 1(0)----T1--(3)24 24(0)--T1_x--(3)12 12(0)----C2_x
+        0(0)            (1,2)             (1,2)                13(1)
+        0(0)          4  2  5         16  14 17                13(0)      4--MPS_0
+        |              \ 2  5           \ 14 17                |             |100
+        T4--(2)3 3-------a--|----26 26----a_x-------15 15(1)---T2_x       7--MPS_1
+        |                |  |              |  |                |      &      |101
+        |   (3)6 6----------a*---27 27-------a_x*---18 18(2)   |         16--MPS_2
+        9(1)            10 11 \7          22 23 \19            21(3)         |102
+        9(0)            (0,1)             (0,1)                21(0)     19--MPS_3  
+        C4--(1)8 8(2)----T3--(3)25 25(2)---T3_x---(3)20 20(1)--C3_x
+    
+    """
+    who="mpo_rdm2x1"
+    contract_tn, names= _get_rdm2x1_sl_tn(coord, state, env, force_cpu=force_cpu)
+    
+    # Extend tn specification to include op_mps (and validate internally)
+    # We assume last element on contract_tn contains labels of physical indices 
+    # of rdm2x1 ordered according to the convention specified in :meth:`rdm2x1`
+    op_mps_tn, op_mps_names= _get_mps_tn(op_mps, contract_tn[-1], force_cpu=force_cpu)
+    contract_tn_op= contract_tn[:-1] + op_mps_tn + ([],)
+    names_op= names + op_mps_names
+
+    path, path_info= get_contraction_path(*contract_tn_op,names=names_op,path=None,unroll=unroll,who=who,\
+                                          optimizer="default" if env.chi>1 else "auto")
+    R= contract_with_unroll(*contract_tn_op,optimize=path,backend='torch',unroll=unroll,
+        checkpoint_unrolled=checkpoint_unrolled,checkpoint_on_device=checkpoint_on_device,
+        who=who,verbosity=verbosity)
+    
+    
+    I_mps_tn, I_mps_names= _get_id_tn(op_mps, contract_tn[-1], force_cpu=force_cpu)
+    contract_tn_I= contract_tn[:-1] + I_mps_tn + ([],)
+    names_I= names + I_mps_names
+
+    path_I, path_I_info= get_contraction_path(*contract_tn_I,names=names_I,path=None,unroll=unroll,who=who,\
+                                          optimizer="default" if env.chi>1 else "auto")
+    I= contract_with_unroll(*contract_tn_I,optimize=path_I,backend='torch',unroll=unroll,
+        checkpoint_unrolled=checkpoint_unrolled,checkpoint_on_device=checkpoint_on_device,
+        who=who,verbosity=verbosity)
+    
+    if force_cpu:
+        R= R.to(env.device)
+        I= I.to(env.device)
+    return R/I, I
 
 
 def rdm1x2(coord, state, env, mode='sl', sym_pos_def=False, force_cpu=False, 
@@ -764,27 +826,29 @@ def rdm1x2_dl(coord, state, env, sym_pos_def=False, force_cpu=False, verbosity=0
 
     return rdm
 
-def rdm1x2_sl(coord, state, env, sym_pos_def=False, force_cpu=False, unroll=False, 
-            checkpoint_unrolled=False, checkpoint_on_device=False, verbosity=0):
-    # C1--(1)1 1(0)----T1--(3)9 9(0)--------C2
-    # 0(0)            (1,2)                 8(1)
-    # 0(0)          4  2  5                 8(0)
-    # |              \ 2  5                 |
-    # T4----(2)3 3-----a--|---10 10(1)------T2
-    # |                |  |                 |
-    # |     (3)6 6--------a*--11 11(2)      |
-    # 24(1)           25 26 \7             27(3)
-    # 24(0)       16  25 26                27(0)
-    # |             \ |   |                 |
-    # T4_y(2)14 14---a_y--------22 22(1)----T2_y 
-    # |               |   |                 |
-    # |   (3)17 17-------a_y*---23 23(2)    |
-    # |               15 18 \19             |
-    # 13(1)           15 18                20(3)
-    # 13(0)           (0,1)                20(0)
-    # C4_y--(1)12 12(2)--T3_y--(3)21 21(1)--C3_y
-    #
-    who="rdm1x2_sl"
+def _get_rdm1x2_sl_tn(coord, state, env, force_cpu=False):
+    r"""
+    Define a tensor network for the 1x2 reduced density matrix::
+        
+        C1--(1)1 1(0)----T1--(3)9 9(0)--------C2
+        0(0)            (1,2)                 8(1)
+        0(0)          4  2  5                 8(0)
+        |              \ 2  5                 |
+        T4----(2)3 3-----a--|---10 10(1)------T2
+        |                |  |                 |
+        |     (3)6 6--------a*--11 11(2)      |
+        24(1)           25 26 \7             27(3)
+        24(0)       16  25 26                27(0)
+        |             \ |   |                 |
+        T4_y(2)14 14---a_y--------22 22(1)----T2_y 
+        |               |   |                 |
+        |   (3)17 17-------a_y*---23 23(2)    |
+        |               15 18 \19             |
+        13(1)           15 18                20(3)
+        13(0)           (0,1)                20(0)
+        C4_y--(1)12 12(2)--T3_y--(3)21 21(1)--C3_y
+
+    """
     a= state.site(coord)
     a_y= state.site( (coord[0],coord[1]+1) )
     C1, C2, C3_y, C4_y= env.C[(state.vertexToSite(coord),(-1,-1))],\
@@ -813,6 +877,16 @@ def rdm1x2_sl(coord, state, env, sym_pos_def=False, force_cpu=False, unroll=Fals
         T4_y,[24,13,14,17],C4_y,[13,12],T3_y,[15,18,12,21],a_y,[16,25,14,15,22],a_y.conj(),[19,26,17,18,23],\
         C3_y,[20,21],T2_y,[27,22,23,20],[4,16,7,19]
     names= tuple(x.strip() for x in "C1, T1, T4, a, a*, T2, C2, T4_y, C4_y, T3_y, a_y, a_y*, C3_y, T2_y".split(','))
+    return contract_tn, names
+
+def rdm1x2_sl(coord, state, env, sym_pos_def=False, force_cpu=False, unroll=False, 
+            checkpoint_unrolled=False, checkpoint_on_device=False, verbosity=0):
+    r"""
+    Contract tensor network specified in :meth:`_get_rdm1x2_sl_tn`
+    """
+    who="rdm1x2_sl"
+    contract_tn, names= _get_rdm1x2_sl_tn(coord, state, env, force_cpu=force_cpu)
+
     #
     # This (typical) strategy is optimal, when X >> D^2 >> phys_dim
     #
@@ -827,6 +901,63 @@ def rdm1x2_sl(coord, state, env, sym_pos_def=False, force_cpu=False, unroll=Fals
     if force_cpu:
         R= R.to(env.device)
     return R
+
+def eval_mpo_rdm1x2(coord, state, env, op_mps, sym_pos_def=False, force_cpu=False, 
+    unroll=[], checkpoint_unrolled=False, checkpoint_on_device=False,
+    verbosity=0):
+    r"""
+    Contract tensor network of :meth:`rdm2x1` with an MPS representation of operator `op_mps`::
+        
+        C1--(1)1 1(0)----T1--(3)9 9(0)--------C2
+        0(0)            (1,2)                 8(1)
+        0(0)          4  2  5                 8(0)
+        |              \ 2  5                 |
+        T4----(2)3 3-----a--|---10 10(1)------T2
+        |                |  |                 |            4--MPS_0
+        |     (3)6 6--------a*--11 11(2)      |               |100
+        24(1)           25 26 \7             27(3)         7--MPS_1
+        24(0)       16  25 26                27(0)    &       |101
+        |             \ |   |                 |           16--MPS_2
+        T4_y(2)14 14---a_y--------22 22(1)----T2_y            |102
+        |               |   |                 |           19--MPS_3
+        |   (3)17 17-------a_y*---23 23(2)    |
+        |               15 18 \19             |
+        13(1)           15 18                20(3)
+        13(0)           (0,1)                20(0)
+        C4_y--(1)12 12(2)--T3_y--(3)21 21(1)--C3_y
+
+    """
+    who="mpo_rdm1x2"
+    contract_tn, names= _get_rdm1x2_sl_tn(coord, state, env, force_cpu=force_cpu)
+    
+    # Extend tn specification to include op_mps (and validate internally)
+    # We assume last element on contract_tn contains labels of physical indices 
+    # of rdm1x2 ordered according to the convention specified in :meth:`rdm1x2`
+    op_mps_tn, op_mps_names= _get_mps_tn(op_mps, contract_tn[-1], force_cpu=force_cpu)
+    contract_tn_op= contract_tn[:-1] + op_mps_tn + ([],)
+    names_op= names + op_mps_names
+
+    path, path_info= get_contraction_path(*contract_tn_op,names=names_op,path=None,unroll=unroll,who=who,\
+                                          optimizer="default" if env.chi>1 else "auto")
+    R= contract_with_unroll(*contract_tn_op,optimize=path,backend='torch',unroll=unroll,
+        checkpoint_unrolled=checkpoint_unrolled,checkpoint_on_device=checkpoint_on_device,
+        who=who,verbosity=verbosity)
+    
+    
+    I_mps_tn, I_mps_names= _get_id_tn(op_mps, contract_tn[-1], force_cpu=force_cpu)
+    contract_tn_I= contract_tn[:-1] + I_mps_tn + ([],)
+    names_I= names + I_mps_names
+
+    path_I, path_I_info= get_contraction_path(*contract_tn_I,names=names_I,path=None,unroll=unroll,who=who,\
+                                          optimizer="default" if env.chi>1 else "auto")
+    I= contract_with_unroll(*contract_tn_I,optimize=path_I,backend='torch',unroll=unroll,
+        checkpoint_unrolled=checkpoint_unrolled,checkpoint_on_device=checkpoint_on_device,
+        who=who,verbosity=verbosity)
+    
+    if force_cpu:
+        R= R.to(env.device)
+        I= I.to(env.device)
+    return R/I, I
 
 
 def rdm2x2_NNN_11(coord, state, env, sym_pos_def=False, verbosity=0):
@@ -1021,27 +1152,29 @@ def rdm2x2_NNN_1n1_legacy(coord, state, env, sym_pos_def=False, force_cpu=False,
 
     return rdm
 
-def rdm2x2_NNN_1n1_oe(coord, state, env, sym_pos_def=False, force_cpu=False, 
-    unroll=False, checkpoint_unrolled=False, checkpoint_on_device=False,
-    verbosity=0):
-    # C1_ny--(1)1 1(0)----T1_ny--(3)36 36(0)----T1_xny--(3)18 18(0)----C2_xny
-    # 0(0)               (1,2)                 (1,2)                   19(1)
-    # 0(0)                2  5              22 20 23                   19(0)
-    # |                   2  5               \ |  |                    |  
-    # T4_ny----(2)3 3-- a_ny-|------37 37----a_xny6(1)----21 21(1)-----T2_xny
-    # |                   |4 |                 |  |                    |
-    # |        (3)6 6-------a*_ny---38 38-------a*_xny----24 24(2)     |
-    # 15(1)               16 17               34 35 \25                33(3)
-    # 15(0)           11  16 17               34 35                    33(0)
-    # |                 \ |   |                |  |                    |
-    # T4----(2)9 9--------a---------39 39-----a_x---------28 28(1)-----T2_x 
-    # |                   |   |                |30|                    |
-    # |     (3)12 12----------a*----40 40------- a*_x-----31 31(2)     |
-    # |                   10 13 \14            29 32                   |
-    # 8(1)                10 13                29 32                  26(3)
-    # 8(0)                (0,1)                (0,1)                  26(0)
-    # C4-----(1)7 7(2)-----T3----(3)41 41(2)----T3_x----(3)27 27(1)----C3_x
-    who="rdm2x2_NNN_1n1_oe"
+def _get_rdm2x2_NNN_1n1_oe_tn(coord, state, env, force_cpu=False):
+    r"""
+    Define a tensor network of reduced density matrix of (1,-1) bond within 2x2 patch::
+
+        C1_ny--(1)1 1(0)----T1_ny--(3)36 36(0)----T1_xny--(3)18 18(0)----C2_xny
+        0(0)               (1,2)                 (1,2)                   19(1)
+        0(0)                2  5              22 20 23                   19(0)
+        |                   2  5               \ |  |                    |  
+        T4_ny----(2)3 3-- a_ny-|------37 37----a_xny6(1)----21 21(1)-----T2_xny
+        |                   |4 |                 |  |                    |
+        |        (3)6 6-------a*_ny---38 38-------a*_xny----24 24(2)     |
+        15(1)               16 17               34 35 \25                33(3)
+        15(0)           11  16 17               34 35                    33(0)
+        |                 \ |   |                |  |                    |
+        T4----(2)9 9--------a---------39 39-----a_x---------28 28(1)-----T2_x 
+        |                   |   |                |30|                    |
+        |     (3)12 12----------a*----40 40------- a*_x-----31 31(2)     |
+        |                   10 13 \14            29 32                   |
+        8(1)                10 13                29 32                  26(3)
+        8(0)                (0,1)                (0,1)                  26(0)
+        C4-----(1)7 7(2)-----T3----(3)41 41(2)----T3_x----(3)27 27(1)----C3_x
+    
+    """
     a= state.site(coord)
     a_x= state.site( (coord[0]+1,coord[1]) )
     a_ny= state.site( (coord[0],coord[1]-1) )
@@ -1078,6 +1211,17 @@ def rdm2x2_NNN_1n1_oe(coord, state, env, sym_pos_def=False, force_cpu=False,
         T2_x,[33,28,31,26],C3_x,[26,27],T3_x,[29,32,41,27],a_x,[30,34,39,29,28],a_x.conj(),[30,35,40,32,31],[11,22,14,25]
     names= tuple(x.strip() for x in ("C1_ny, T1_ny, T4_ny, a_ny, a_ny*, T4, C4, T3, a, a*, T1_xny, C2_xny, T2_xny, a_xny, a_xny*,"\
         +"T2_x, C3_x, T3_x, a_x, a_x*").split(','))
+    return contract_tn, names
+
+def rdm2x2_NNN_1n1_oe(coord, state, env, sym_pos_def=False, force_cpu=False, 
+    unroll=False, checkpoint_unrolled=False, checkpoint_on_device=False,
+    verbosity=0):
+    r"""
+    Contract tensor network specified in :meth:`_get_rdm2x2_NNN_1n1_oe_tn`
+    """
+    who="rdm2x2_NNN_1n1_oe"
+    contract_tn, names= _get_rdm2x2_NNN_1n1_oe_tn(coord, state, env, force_cpu=force_cpu)
+
     #
     # This (typical) strategy is optimal, when X >> D^2 >> phys_dim
     # 
@@ -1096,6 +1240,67 @@ def rdm2x2_NNN_1n1_oe(coord, state, env, sym_pos_def=False, force_cpu=False,
     if force_cpu:
         R= R.to(env.device)
     return R
+
+def eval_mpo_rdm2x2_NNN_1n1(coord, state, env, op_mps, sym_pos_def=False, force_cpu=False, 
+    unroll=False, checkpoint_unrolled=False, checkpoint_on_device=False, verbosity=0):
+    r"""
+    Contract tensor network of :meth:`rdm2x2_NNN_1n1` with an MPS representation of operator `op_mps`::
+
+        C1_ny--(1)1 1(0)----T1_ny--(3)36 36(0)----T1_xny--(3)18 18(0)----C2_xny
+        0(0)               (1,2)                 (1,2)                   19(1)
+        0(0)                2  5              22 20 23                   19(0)
+        |                   2  5               \ |  |                    |              11--MPS_0
+        T4_ny----(2)3 3-- a_ny-|------37 37----a_xny6(1)----21 21(1)-----T2_xny             |100
+        |                   |4 |                 |  |                    |              14--MPS_1 
+        |        (3)6 6-------a*_ny---38 38-------a*_xny----24 24(2)     |                  |101   
+        15(1)               16 17               34 35 \25                33(3)     &    22--MPS_2
+        15(0)           11  16 17               34 35                    33(0)              |102
+        |                 \ |   |                |  |                    |              25--MPS_3
+        T4----(2)9 9--------a---------39 39-----a_x---------28 28(1)-----T2_x 
+        |                   |   |                |30|                    |
+        |     (3)12 12----------a*----40 40------- a*_x-----31 31(2)     |
+        |                   10 13 \14            29 32                   |
+        8(1)                10 13                29 32                  26(3)
+        8(0)                (0,1)                (0,1)                  26(0)
+        C4-----(1)7 7(2)-----T3----(3)41 41(2)----T3_x----(3)27 27(1)----C3_x
+
+    """
+    who="mpo_rdm2x2_NNN_1n1"
+    contract_tn, names= _get_rdm2x2_NNN_1n1_oe_tn(coord, state, env, force_cpu=force_cpu)
+
+    if type(unroll)==bool and unroll:
+        unroll= []
+
+    # Extend tn specification to include op_mps (and validate internally)
+    # We assume last element on contract_tn contains labels of physical indices 
+    # of rdm1x2 ordered according to the convention specified in :meth:`rdm1x2`
+    op_mps_tn, op_mps_names= _get_mps_tn(op_mps, contract_tn[-1], force_cpu=force_cpu)
+    contract_tn_op= contract_tn[:-1] + op_mps_tn + ([],)
+    names_op= names + op_mps_names
+
+    path, path_info= get_contraction_path(*contract_tn_op,names=names_op,path=None,\
+        unroll=unroll if unroll else [],who=who,optimizer="default" if env.chi>1 else "auto")
+    R= contract_with_unroll(*contract_tn_op,optimize=path,unroll=unroll if unroll else [],\
+        checkpoint_unrolled=checkpoint_unrolled,
+        checkpoint_on_device=checkpoint_on_device,
+        backend='torch',who=who,verbosity=verbosity)
+    
+    
+    I_mps_tn, I_mps_names= _get_id_tn(op_mps, contract_tn[-1], force_cpu=force_cpu)
+    contract_tn_I= contract_tn[:-1] + I_mps_tn + ([],)
+    names_I= names + I_mps_names
+
+    path_I, path_I_info= get_contraction_path(*contract_tn_I,names=names_I,path=None,\
+        unroll=unroll if unroll else [],who=who,optimizer="default" if env.chi>1 else "auto")
+    I= contract_with_unroll(*contract_tn_I,optimize=path_I,unroll=unroll if unroll else [],\
+        checkpoint_unrolled=checkpoint_unrolled,
+        checkpoint_on_device=checkpoint_on_device,
+        backend='torch',who=who,verbosity=verbosity)
+    
+    if force_cpu:
+        R= R.to(env.device)
+        I= I.to(env.device)
+    return R/I, I
 
 
 def rdm2x2(coord, state, env, open_sites=[0,1,2,3],\
@@ -2420,3 +2625,103 @@ def aux_rdm1x2(coord, state, env, sym_pos_def=False, verbosity=0):
     rdm= rdm.permute(0,2,4,6,8,10, 1,3,5,7,9,11).contiguous()
 
     return rdm
+
+# ----- auxiliary OP as MPS functions -----
+def get_exact_mps(tensor,ind_dims=None,max_D=float('inf'),min_S=-1,verbosity=0):
+    r"""
+    Decompose a tensor into a MPS form using SVD. The index convention of MPS tensors is as follows:: 
+     
+           1
+           |
+        0--MPS_i--2
+    
+    The first and the last MPS tensors have extra dim=1 indices.
+
+    :param tensor: tensor to be decomposed  
+    :param ind_dims: list of index dimensions of "physical" DoFs in resulting MPS
+    :param max_D: maximal value of bond dimension allowed in the decomposition
+    :param min_S: smallest (relavite) singular values retained in the decomposition
+    :param verbosity: logging verbosity
+    :type tensor: torch.tensor
+    :type ind_dims: list(int)
+    :type max_D: int
+    :type min_S: float
+    :type verbosity: int
+    :return: list of tensors U and singular values S
+    :rtype: list(torch.tensor), list(torch.tensor)
+    """
+    # max_D = maximal value of bond dimension allowed in the decomposition
+    # min_S = smallest (relavite) singular values retained in the decomposition
+    # ind_dims = list of index dimensions of "physical" DoFs in resulting MPS
+    #
+    # Note: The overal scale of the tensor is stored at Ss[-2] in shape (1,) vector of singlar values
+    if ind_dims is None:
+        ind_dims= tensor.shape
+    tmp= tensor.reshape(1,*tensor.shape)
+    Us=[]
+    Ss=[]
+    for i in range(len(ind_dims)):
+        # print(i)
+        left_aux_D= tmp.shape[0]
+        # --tmp--
+        #   |
+        tmp= tmp.reshape(left_aux_D*ind_dims[i],-1)
+        U,S,V= torch.linalg.svd(tmp,full_matrices=False)
+        # check number of sing. values larger than min_S
+        above_min_S= sum(S>S[0]*min_S)
+        retained_D= min(above_min_S,max_D)
+        U=U[:,:min(U.shape[1],retained_D)]
+        #
+        # --
+        # == U --
+        # print(f"i={i} {U.shape} {S.shape} {V.shape}")
+        U= U.reshape(left_aux_D,ind_dims[i],U.shape[1])
+        # print(f"i={i} {U.shape}")
+        # --U-- S -- V
+        #   |
+        tmp= (torch.diag(S)[:min(S.shape[0],retained_D),:]@V).reshape(min(S.shape[0],retained_D),-1)
+        Us.append(U)
+        Ss.append(S[:min(S.shape[0],retained_D)])
+
+    # debugging information
+    if verbosity>0:
+        for i,u in enumerate(Us):
+            print(f"{u.shape} {Ss[i].shape} {sum( (Ss[i]/Ss[i][0]) >min_S)}")
+    return Us, Ss
+
+def _get_mps_tn(op_mps, phys_labels, offset=100, force_cpu=False):
+        r"""
+        Index convention for mps tensors is as follows::
+
+               1 
+               |
+            0--MPS_i--2
+
+        The physical indices of mps are ordered as::
+
+            |s0'>,<s0|,|s1'>,<s1|,...,|sN'>,<sN| 
+
+        whereas the physical indices of rdm1x2 are ordered as::
+
+            |s0'>,|s1'>,...,|sN'>,<s0|,<s1|,...,<sN|
+        """
+        N= len(phys_labels)//2
+        _ops= [x.cpu() if force_cpu else x for x in op_mps]
+        contract_mps= [_ops[0].squeeze(0)]+[[phys_labels[0],offset],]
+        for i in range(1,len(_ops)-1):
+            contract_mps.append(_ops[i])
+            contract_mps.append([offset+i-1,phys_labels[N*(i%2)+i-1],offset+i])
+        contract_mps+= [_ops[-1].squeeze(-1)]+[[offset+len(_ops)-2,phys_labels[-1]],]
+        return tuple(contract_mps), tuple(f"mps_{i}" for i in range(len(_ops)))
+
+def _get_id_tn(op_mps, phys_labels, force_cpu=False):
+    r"""
+    Generate identity tensors for the physical indices of rdm2x1 and corresponding extension
+    of the tensor network.
+    """
+    N= len(phys_labels)//2
+    _Is= [torch.eye(x.shape[1], dtype=torch.float64, device='cpu' if force_cpu else x.device) for x in op_mps[::2]]
+    contract_I= []
+    for i in range(len(_Is)):
+        contract_I+= [_Is[i]]+[[phys_labels[i],phys_labels[i+N]],] 
+    return tuple(contract_I), tuple(f"I_{i}" for i in range(len(_Is)))
