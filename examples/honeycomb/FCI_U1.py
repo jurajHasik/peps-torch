@@ -211,6 +211,8 @@ def main():
             state = random_1x6_state_U1(bond_dims=bond_dims, config=yastn_config)
         elif args.pattern == '3x1':
             state = random_3x1_state_U1(bond_dims=bond_dims, config=yastn_config)
+        elif args.pattern == '2x2':
+            state = random_checkerboard_state_U1(bond_dims=bond_dims, config=yastn_config)
         else:
             raise ValueError(f"Unknown pattern: {args.pattern}")
     else:

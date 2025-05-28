@@ -270,7 +270,7 @@ class Test_1x1_CDW(unittest.TestCase):
         assert len(obs_opt_lines)>0
         # compare the line of observables with lowest energy from optimization (i)
         # TODO and final observables evaluated from best state stored in *_state.json output file
-        obs_opt_lines = [s for s in obs_opt_lines if "grad diff" not in s]
+        obs_opt_lines = [s for s in obs_opt_lines if "diff" not in s]
         best_e_line_index= np.argmin([ float(l.split(',')[1]) for l in obs_opt_lines ])
         opt_line_last= [complex(x) for x in obs_opt_lines[best_e_line_index].split(",")]
         for val0,val1 in zip(opt_line_last, [35,-2.9280089] ):

@@ -42,7 +42,7 @@ def get_converged_env(
 
     for sweep in range(max_sweeps):
         env.update_(
-            opts_svd=opts_svd, method=method, use_qr=False, checkpoint_move=True
+            opts_svd=opts_svd, method=method, use_qr=False, checkpoint_move="reentrant",
         )
         converged, conv_history = ctm_conv_check(env, conv_history, corner_tol)
         if converged:
@@ -1329,7 +1329,8 @@ if __name__ == "__main__":
         # "tV_1x1_D_2+2_odd_chi_40_V_0.00_t1_0.50_t2_0.35_t3_-0.45_mu_-0.90_state.json"
         # "tV_1x1_D_2+2_odd_chi_40_V_0.00_t1_0.50_t2_0.16_mu_0.00_state.json"
         # "tV_1x1_D_4_U1_chi_10_V_0.00_t1_0.50_t2_0.35_t3_-0.45_mu_-0.90_state.json"
-        f"tV_1x1_D_{tot_D:d}_U1_chi_{tot_chi:d}_V_0.00_t1_0.50_t2_0.35_t3_-0.45_mu_-0.90_state.json"
+        # f"tV_1x1_D_{tot_D:d}_U1_chi_{tot_chi:d}_V_0.00_t1_0.50_t2_0.35_t3_-0.45_mu_-0.90_state.json"
+        f"CI_U1_data_seed_0/CI_fp_1x1_cores_16_D_4_U1_chi_32_V_0.00_t1_1.00_t2_1.00_t3_0.00_phi_0.50_mu_0.000_state.json"
     )
 
     yastn_config = yastn.make_config(
@@ -1341,7 +1342,7 @@ if __name__ == "__main__":
         default_dtype="complex128",
     )
     omp_cores = 16
-    yastn_config.backend.set_num_threads(omp_cores)
+    torch.set_num_threads(omp_cores)
 
     # Converge environment
     opts_svd = {
@@ -1351,10 +1352,9 @@ if __name__ == "__main__":
         "fix_signs": True,
     }
 
-    chi = tot_chi
-    # env_leg = yastn.Leg(yastn_config, s=1, t=(0, 1), D=(chi, chi))
-    env_leg = yastn.Leg(yastn_config, s=1, t=(-1, 0, 1), D=(chi, chi, chi))
-    env_dict_filename = f"Env_tV_1x1_D_{tot_D:d}_U1_chi_{chi:d}_V_0.00_t1_0.50_t2_0.35_t3_-0.45_mu_-0.90"
+    env_leg = yastn.Leg(yastn_config, s=1, t=(0,), D=(tot_chi,))
+    env_dict_filename = "CI_U1_data_seed_0/env_CI_fp_1x1_D_4_U1_chi_60_V_0.00_t1_1.00_t2_1.00_t3_0.00_phi_0.50_mu_0.000"
+    # env_dict_filename = f"Env_tV_1x1_D_{tot_D:d}_U1_chi_{chi:d}_V_0.00_t1_0.50_t2_0.35_t3_-0.45_mu_-0.90"
     # env_dict_filename = f"Env_tV_1x1_D_2+2_odd_chi_{tot_chi:d}_V_0.00_t1_0.50_t2_0.35_t3_-0.45_mu_-0.90"
     # env_dict_filename = f"Env_tV_1x1_D_2+2_odd_chi_{tot_chi:d}_V_0.00_t1_0.50_t2_0.16_t3_0.00_mu_0.00"
 
@@ -1423,7 +1423,7 @@ if __name__ == "__main__":
                 env_dict = env.save_to_dict()
                 with open(env_dict_filename, "wb") as handle:
                     pickle.dump(env_dict, handle)
-            vals, evecs, meta = ent_spec_cylinder_abelian(yastn_config, state, env, Ly, tot_chi, charge_sector=n, num_evals=70)
+            vals, evecs, meta = ent_spec_cylinder_abelian(yastn_config, state, env, Ly, charge_sector=n, num_evals=70)
             print(vals)
             # k_shift = 0 if n%2 ==0 else 0.5
             k_shift = 0
@@ -1432,7 +1432,8 @@ if __name__ == "__main__":
                 pickle.dump(es, handle)
         # ax = plot_es(es, color=colors[i], ax=ax)
         ax = plot_es(es, color='blue', ax=None)
-        plt.savefig(f"es/es_Ly_{Ly:d}_D_{tot_D:d}_U1_chi_{tot_chi:d}_n_{n:d}_APBC.pdf")
+        # plt.savefig(f"es/es_Ly_{Ly:d}_D_{tot_D:d}_U1_chi_{tot_chi:d}_n_{n:d}_APBC.pdf")
+        plt.savefig(f"es/es_CI_pi_2_Ly_{Ly:d}_D_{tot_D:d}_U1_chi_{tot_chi:d}_n_{n:d}_APBC.pdf")
 
     # ks = np.linspace(0, 4.5, 100)
     # lower_line = 1.3*ks

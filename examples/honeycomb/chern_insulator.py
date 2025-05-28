@@ -23,7 +23,7 @@ log = logging.getLogger(__name__)
 # parse command line args and build necessary configuration objects
 parser = cfg.get_args_parser()
 parser.add_argument(
-    "--V1", type=float, default=1.0, help="Nearest-neighbor interaction"
+    "--V1", type=float, default=0.0, help="Nearest-neighbor interaction"
 )
 parser.add_argument(
     "--V2", type=float, default=0.0, help="2nd. nearest-neighbor interaction"
@@ -46,7 +46,6 @@ parser.add_argument(
 parser.add_argument("--mu", type=float, default=0.0, help="chemical potential")
 parser.add_argument("--m", type=float, default=0.0, help="Semenoff mass")
 parser.add_argument("--pattern", default="1x1", help="unit-cell of iPEPS: choice={1x1, 3x3}")
-parser.add_argument("--init_state_file", default=None, help="initial state file")
 
 def parse_dict(input_string):
     try:
@@ -99,25 +98,24 @@ def main():
         ],
         namespace=args,
     )
-
-    state_file = f"CI_U1_data_seed_{args.seed}/CI_fp_{args.pattern}_cores_{args.omp_cores:d}_D_{D:d}_U1_chi_{args.chi:d}_V_{args.V1:.2f}_t1_{args.t1:.2f}_t2_{args.t2:.2f}_t3_{args.t3:.2f}_phi_{args.phi/np.pi:.2f}_mu_{args.mu:.3f}"
-    args, unknown_args = parser.parse_known_args(
-        [
-            "--out_prefix",
-            state_file,
-        ],
-        namespace=args,
-    )
-
-
     if args.yast_backend == "torch":
         from yastn.yastn.backend import backend_torch as backend
     torch.set_num_threads(args.omp_cores)
     torch.set_num_interop_threads(args.omp_cores)
+
+    # args.t2, args.t3, args.phi= 0.7*args.t1, -0.9*args.t1, 0.35*np.pi
+    args.t2, args.t3, args.phi= 1.0*args.t1, 0.0, 0.5*np.pi
+
+    state_file = f"CI_U1_data_seed_{args.seed}/CI_fp_{args.pattern}_cores_{args.omp_cores:d}_D_{D:d}_U1_chi_{args.chi:d}_V_{args.V1:.2f}_t1_{args.t1:.2f}_t2_{args.t2:.2f}_t3_{args.t3:.2f}_phi_{args.phi/np.pi:.2f}"
+    # args, unknown_args = parser.parse_known_args(
+    #     [
+    #         "--out_prefix",
+    #         state_file,
+    #     ],
+    #     namespace=args,
+    # )
     cfg.configure(args)
     cfg.print_config()
-    log.log(logging.INFO, "device: "+cfg.global_args.device)
-    log.log(logging.INFO, f"bond_dims:{bond_dims}")
 
     yastn_config = yastn.make_config(
         backend=backend,
@@ -128,9 +126,21 @@ def main():
         tensordot_policy="no_fusion",
     )
     yastn_config.backend.random_seed(args.seed)
-
-    args.t2, args.t3, args.phi= 0.7*args.t1, -0.9*args.t1, 0.35*np.pi
     model = tV_model(yastn_config, V1=args.V1, V2=args.V2, V3=args.V3, t1=args.t1, t2=args.t2, phi=args.phi, mu=args.mu, m=args.m)
+
+    if args.instate is None or not os.path.exists(args.instate):
+        if args.pattern == '1x1':
+            state = random_1x1_state_U1(bond_dims=bond_dims, config=yastn_config)
+        else:
+            raise ValueError(f"Unknown pattern: {args.pattern}")
+    else:
+        state = load_PepsAD(yastn_config, args.instate)
+        log.log(logging.INFO, "loaded " + args.instate)
+        print("loaded ", args.instate)
+        # state.add_noise_(noise=0.2)
+
+    log.log(logging.INFO, "device: "+cfg.global_args.device)
+    log.log(logging.INFO, f"bond_dims:{bond_dims}")
 
     def loss_fn(state, ctm_env_in, opt_context):
         state.sync_()
@@ -151,8 +161,8 @@ def main():
             "truncate_multiplets": True,
         }
         ctm_env_out, env_ts_slices, env_ts = fp_ctmrg(ctm_env_in, \
-            ctm_opts_fwd={'opts_svd': opts_svd, 'corner_tol': 1e-8, 'max_sweeps': 100,
-                'method': "2site", 'use_qr': True, 'svd_policy': 'fullrank', 'D_krylov':args.chi, 'D_block': args.chi}, \
+            ctm_opts_fwd={'opts_svd': opts_svd, 'corner_tol': 1e-8, 'max_sweeps': cfg.ctm_args.ctm_max_iter,
+                'method': "2site", 'use_qr': False, 'svd_policy': 'fullrank', 'D_krylov':args.chi, 'D_block': args.chi}, \
             ctm_opts_fp={'svd_policy': 'fullrank'})
         refill_env(ctm_env_out, env_ts, env_ts_slices)
         ctm_log, t_ctm, t_check = FixedPoint.ctm_log, FixedPoint.t_ctm, FixedPoint.t_check
@@ -193,16 +203,6 @@ def main():
         model.eval_obs(state, ctm_env)
 
 
-    if args.init_state_file is None or not os.path.exists(args.init_state_file):
-        if args.pattern == '1x1':
-            state = random_1x1_state_U1(bond_dims=bond_dims, config=yastn_config)
-        else:
-            raise ValueError(f"Unknown pattern: {args.pattern}")
-    else:
-        state = load_PepsAD(yastn_config, args.init_state_file)
-        log.log(logging.INFO, "loaded " + args.init_state_file)
-        print("loaded ", args.init_state_file)
-        # state.add_noise_(noise=0.2)
 
     chi = cfg.main_args.chi
     env_leg = yastn.Leg(yastn_config, s=1, t=(0,), D=(chi,))
