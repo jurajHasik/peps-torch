@@ -29,6 +29,7 @@ parser.add_argument("--JD", type=float, default=0, help="two-spin DM interaction
 parser.add_argument("--j2", type=float, default=0, help="next-nearest-neighbor exchange coupling")
 parser.add_argument("--jtrip", type=float, default=0, help="(SxS).S")
 parser.add_argument("--jperm", type=complex, default=0, help="triangle permutation")
+parser.add_argument("--h_z", type=float, default=0, help="magnetic field in S^z direction")
 parser.add_argument("--ansatz", type=str, default=None, help="choice of the tensor ansatz",\
     choices=["IPEPS", "IPESS", "IPESS_PG", 'A_2,B', 'A_1,B'])
 parser.add_argument("--no_sym_up_dn", action='store_false', dest='sym_up_dn',\
@@ -52,9 +53,9 @@ def main():
     if not args.theta is None:
         args.jtrip= args.j1*math.sin(args.theta*math.pi)
         args.j1= args.j1*math.cos(args.theta*math.pi)
-    print(f"j1={args.j1}; jD={args.JD}; j2={args.j2}; jtrip={args.jtrip}")
+    print(f"j1={args.j1}; jD={args.JD}; j2={args.j2}; jtrip={args.jtrip}",end="\n\n")
     model= spin_half_kagome.S_HALF_KAGOME(j1=args.j1, JD=args.JD,\
-        j2=args.j2, jtrip=args.jtrip, jperm=args.jperm)
+        j2=args.j2, jtrip=args.jtrip, jperm=args.jperm, h=args.h_z)
 
     # initialize the ipess/ipeps
     if args.ansatz in ["IPESS","IPESS_PG","A_1,B","A_2,B"]:
@@ -165,36 +166,42 @@ def main():
             state= IPEPS_KAGOME(dict(), lX=1, lY=1)
             state.load_checkpoint(args.opt_resume)
         elif args.ipeps_init_type=='RANDOM':
+            pattern= eval(args.pattern) if args.pattern else [[0],]
+            unique_sites, _= from_pattern(pattern)
             bond_dim = args.bond_dim
-            A = torch.rand((model.phys_dim**3, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device) - 0.5
-            A = A/torch.max(torch.abs(A))
-            state= IPEPS_KAGOME({(0,0): A}, lX=1, lY=1)
+            sites={}
+            for us in unique_sites:
+                t = torch.rand((model.phys_dim**3, bond_dim, bond_dim, bond_dim, bond_dim),\
+                    dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device) - 0.5
+                sites[us] = t/torch.max(torch.abs(t))
+            state= IPEPS_KAGOME(sites, pattern=pattern)
     else:
         raise ValueError("Missing ansatz specification --ansatz "\
             +str(args.ansatz)+" is not supported")
 
+    print(f"{state}")
 
     def energy_f(state, env, force_cpu=False, fail_on_check=False,\
         warn_on_check=True):
-        e_dn = model.energy_triangle_dn(state, env, force_cpu=force_cpu,\
+        e_dn,n_dn = model.energy_triangle_dn(state, env, force_cpu=force_cpu,\
             fail_on_check=fail_on_check, warn_on_check=warn_on_check)
         # e_dn= model.energy_triangle_dn_1x1(state, env, force_cpu=force_cpu,\
         #     fail_on_check=fail_on_check, warn_on_check=warn_on_check)
-        e_up = model.energy_triangle_up(state, env, force_cpu=force_cpu,\
+        e_up,n_up = model.energy_triangle_up(state, env, force_cpu=force_cpu,\
             fail_on_check=fail_on_check, warn_on_check=warn_on_check)
         # e_nnn = model.energy_nnn(state, env)
-        return (e_up + e_dn)/3 #+ e_nnn) / 3
+        return (sum(e_up.values()) + sum(e_dn.values()))/(3*len(state.sites)) #+ e_nnn) / 3
+    
     def energy_f_complex(state, env, force_cpu=False):
         #print(env)
-        e_dn = model.energy_triangle_dn_NoCheck(state, env, force_cpu=force_cpu)
-        e_up = model.energy_triangle_up_NoCheck(state, env, force_cpu=force_cpu)
+        e_dn,n_dn = model.energy_triangle_dn_NoCheck(state, env, force_cpu=force_cpu)
+        e_up,n_up = model.energy_triangle_up_NoCheck(state, env, force_cpu=force_cpu)
         # e_nnn = model.energy_nnn(state, env)
-        return (e_up + e_dn)/3 #+ e_nnn) / 3
+        return (sum(e_up.values()) + sum(e_dn.values()))/(3*len(state.sites)) #+ e_nnn) / 3
     def dn_energy_f_NoCheck(state, env, force_cpu=False):
         #print(env)
-        e_dn = model.energy_triangle_dn_NoCheck(state, env, force_cpu=force_cpu)
-        return e_dn
+        e_dn,n_dn = model.energy_triangle_dn_NoCheck(state, env, force_cpu=force_cpu)
+        return sum(e_dn.values())
 
     @torch.no_grad()
     def print_corner_spectra(env):
@@ -268,9 +275,9 @@ def main():
                 state_sym= state
                 state_sym.sites= state_sym.build_onsite_tensors()
         else:
-            A= state.sites[(0,0)]
-            A= A/A.abs().max()
-            state_sym= IPEPS_KAGOME({(0,0): A}, lX=1, lY=1)
+            sites_sym= { c: t/torch.max(torch.abs(t)) for c,t in state.sites.items() }
+            state_sym= IPEPS_KAGOME(sites_sym, vertexToSite=state.vertexToSite,\
+                                    lX=state.lX, lY=state.lY)
 
         # possibly re-initialize the environment
         if opt_args.opt_ctm_reinit:

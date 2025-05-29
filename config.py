@@ -35,7 +35,8 @@ class _storeTrueOrString(argparse.Action):
 
 def get_args_parser():
     parser = argparse.ArgumentParser(description='',allow_abbrev=False)
-    parser.add_argument("--omp_cores", type=int, default=1,help="number of OpenMP cores")
+    parser.add_argument("--omp_cores", type=int, default=1, help="number of OpenMP cores")
+    parser.add_argument("--pattern", type=str, default=None, help="Unit cell of iPEPS given as a matrix of labels")
     parser.add_argument("--instate", default=None, help="Input state JSON")
     parser.add_argument("--instate_noise", type=float, default=0., help="magnitude of noise added to the trial \"instate\"")
     parser.add_argument("--ipeps_init_type", default="RANDOM", help="initialization of the trial iPEPS state")
@@ -115,7 +116,7 @@ def configure(parsed_args):
         global_args.torch_dtype= torch.complex128
     else:
         raise NotImplementedError(f"Unsupported dtype {global_args.dtype}")
-
+    
     if ctm_args.fwd_checkpoint_move in ["True", "true"]:
         ctm_args.fwd_checkpoint_move= True
 

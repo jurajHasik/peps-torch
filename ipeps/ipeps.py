@@ -1,5 +1,6 @@
 import warnings
 import torch
+from typing import Sequence, Union, Mapping, Hashable
 from collections import OrderedDict
 import json
 import itertools
@@ -9,22 +10,100 @@ from ipeps.tensor_io import *
 import logging
 log = logging.getLogger(__name__)
 
+
+def from_pattern(pattern: Union[Mapping[tuple[int, int], Hashable],Sequence[Sequence[Hashable]]]):
+    r"""
+    Rectangular unit cells supporting patterns characterized by a single momentum ``Q=(q_x, q_y)``.
+    
+    Inspired by https://github.com/b1592/ad-peps by B. Ponsioen.
+
+    Parameters
+    ----------
+    pattern: Sequence[Sequence[int]] | dict[tuple[int, int], int]
+        Definition of a rectangular unit cell that tiles the square lattice.
+        Integers are labels of unique tensors populating the sites within the unit cell.
+
+        Examples of such patterns can be:
+
+            * [[0,],] : 1x1 unit cell, Q=0
+            * {(0, 0): 0} : 1x1 unit cell, Q=0
+            * [[0, 1],] : 1x2 unit cell, Q=(0, \pi)
+            * {(0, 0): 0, (0, 1): 1} : 1x2 unit cell, Q=(0, \pi)
+            * [[0, 1], [1, 0]] : 2x2 unit cell with bipartite pattern, Q=(\pi, \pi). Equivalent to :class:`yastn.tn.fpeps.CheckerboardLattice`.
+            * [[0, 1, 2], [1, 2, 0], [2, 0, 1]] : 3x3 unit cell with diagonal stripe order, Q=(2\pi/3, 2\pi/3)
+
+
+    Warning
+    -------
+    It is assumed that the neighborhood of each unique tensor is identical.
+    This excludes cases such as ``[[0, 1], [1, 1]]``.
+    """
+    if isinstance(pattern, dict):
+        min_row, min_col = map(min, zip(*pattern.keys()))
+        max_row, max_col = map(max, zip(*pattern.keys()))
+        if (min_row, min_col) != (0, 0):
+            raise Exception("RectangularUnitcell: pattern keys should cover a rectangle index (0, 0) to (Nx - 1, Ny - 1).")
+        try:
+            pattern = [[pattern[(r, c)] for c in range(max_col + 1)] for r in range(max_row + 1)]
+        except KeyError:
+            raise Exception("RectangularUnitcell: pattern keys should cover a rectangle index (0, 0) to (Nx - 1, Ny - 1).")
+
+    try:
+        Nx = len(pattern[0])
+        Ny = len(pattern)
+    except TypeError:
+        raise Exception("RectangularUnitcell: pattern should form a rectangular matrix of labels.")
+    if any(len(row) != Nx for row in pattern):
+        raise Exception("RectangularUnitcell: pattern should form a rectangular square matrix of labels.")
+
+    #
+    _site2index = {(nx, ny): label for ny, row in enumerate(pattern) for nx, label in enumerate(row)}
+    _site2index_pbc= lambda x,y: _site2index[((x + abs(x)*Nx)%Nx, (y + abs(y)*Ny)%Ny)]
+    #
+    try:
+        label_sites, label_envs = {}, {}
+        for nx in range(Nx):
+            for ny in range(Ny):
+                label = _site2index[nx, ny]
+                env = (_site2index_pbc(nx - 1, ny), _site2index_pbc(nx, ny - 1), \
+                       _site2index_pbc(nx + 1, ny), _site2index_pbc(nx, ny + 1))
+                if label in label_sites:
+                    label_sites[label].append((nx, ny))
+                    label_envs[label].append(env)
+                else:
+                    label_sites[label] = [(nx, ny)]
+                    label_envs[label] = [env]
+    except TypeError:
+        raise Exception("RectangularUnitcell: pattern labels should be hashable.")
+    if any(len(set(envs)) > 1 for envs in label_envs.values()):
+        raise Exception("RectangularUnitcell: each unique label should have the same neighbors.")
+    #
+    # unique sites
+    _sites = tuple(sorted(min(sites) for sites in label_sites.values()))
+    return _sites, _site2index
+    
+
 # TODO drop constrain for aux bond dimension to be identical on 
 # all bond indices
 
 class IPEPS():
-    def __init__(self, sites=None, vertexToSite=None, lX=None, lY=None, peps_args=cfg.peps_args,\
-        global_args=cfg.global_args):
+    def __init__(self, sites=None, vertexToSite=None, 
+            pattern : Union[Mapping[tuple[int, int], int],Sequence[Sequence[int]]]=None, 
+            lX=None, lY=None, peps_args=cfg.peps_args,
+            global_args=cfg.global_args):
         r"""
         :param sites: map from elementary unit cell to on-site tensors
         :param vertexToSite: function mapping arbitrary vertex of a square lattice 
                              into a vertex within elementary unit cell
+        :param pattern: rectangular unit cell that tiles the square lattice, see :func:`from_pattern`.
+                        When provided, ``vertexToSite`` parameters are ignored.
         :param lX: length of the elementary unit cell in X direction
         :param lY: length of the elementary unit cell in Y direction
         :param peps_args: ipeps configuration
         :param global_args: global configuration
         :type sites: dict[tuple(int,int) : torch.tensor]
         :type vertexToSite: function(tuple(int,int))->tuple(int,int)
+                            or List[List[int]]
         :type lX: int
         :type lY: int
         :type peps_args: PEPSARGS
@@ -44,6 +123,8 @@ class IPEPS():
         up, left, down, right in anti-clockwise order starting from up.
         Member ``vertexToSite`` is a mapping function from any vertex (x,y) on a square lattice
         passed in as tuple(int,int) to a corresponding vertex within elementary unit cell.
+        Alternatively, the mapping can be defined by a rectangular unit cell specified through
+        ``pattern``. Then ``vertexToSite`` is constructed internally.
         
         On-site tensor of an IPEPS object ``wfc`` at vertex (x,y) is conveniently accessed 
         through the member function ``site``, which internally uses ``vertexToSite`` mapping::
@@ -111,7 +192,9 @@ class IPEPS():
 
         # TODO we infer the size of the cluster from the keys of sites. Is it OK?
         # infer the size of the cluster
-        if (lX is None or lY is None) and sites:
+        if pattern:
+            self.lX, self.lY = len(pattern[0]), len(pattern) # rows x columns
+        elif (lX is None or lY is None) and sites:
             min_x = min([coord[0] for coord in sites.keys()])
             max_x = max([coord[0] for coord in sites.keys()])
             min_y = min([coord[1] for coord in sites.keys()])
@@ -122,10 +205,31 @@ class IPEPS():
             self.lX = lX
             self.lY = lY
         else:
-            raise Exception("lX and lY has to set either directly or implicitly by sites")
+            raise Exception("lX and lY has to be set either directly or implicitly by sites or pattern")  
 
         if vertexToSite is not None:
             self.vertexToSite = vertexToSite
+        elif pattern:
+            self._pattern = pattern
+            _sites, self._site2index= from_pattern(pattern)
+            # map labels from pattern to keys of sites
+
+            # sites
+            # (x0,y0) -> T1
+            # (x1,y1) -> T2
+            # ...
+
+            # pattern
+            # [[l1,l2,l3,...],
+            #  [ln+1,ln+2,ln+3,...],
+            #  ... ]]
+            #
+            if sites:
+                self._label2index = {self._site2index[c]: c for c in sites.keys()}
+                self.vertexToSite= lambda x: self._label2index[self._site2index[
+                    (x[0] + abs(x[0])*self.lX)%self.lX, (x[1] + abs(x[1])*self.lY)%self.lY]]
+            else:
+                raise Exception("Pattern provided, but sites not set. Please provide pattern and sites.")
         else:
             def vertexToSite(coord):
                 x = coord[0]
@@ -231,6 +335,7 @@ class IPEPS():
     def gauge(self):
         return gauge(self)
 
+
 def read_ipeps(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.peps_args,\
     global_args=cfg.global_args):
     r"""
@@ -317,15 +422,17 @@ def read_ipeps(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=cfg.pep
         lX = raw_state["sizeM"] if "sizeM" in raw_state else raw_state["lX"]
         lY = raw_state["sizeN"] if "sizeN" in raw_state else raw_state["lY"]
 
-        if vertexToSite == None:
+        pattern=None
+        if vertexToSite == None and "pattern" in raw_state:
+            pattern=raw_state["pattern"]
+        elif vertexToSite == None:
             def vertexToSite(coord):
                 x = coord[0]
                 y = coord[1]
                 return ( (x + abs(x)*lX)%lX, (y + abs(y)*lY)%lY )
 
-            state = IPEPS(sites, vertexToSite, lX=lX, lY=lY, peps_args=peps_args, global_args=global_args)
-        else:
-            state = IPEPS(sites, vertexToSite, lX=lX, lY=lY, peps_args=peps_args, global_args=global_args)
+        state = IPEPS(sites, vertexToSite, pattern=pattern, lX=lX, lY=lY, peps_args=peps_args, \
+                      global_args=global_args)
 
         # set the correct dtype for newly created state (might be different
         # default in cfg.global_args)
@@ -384,6 +491,11 @@ def _write_ipeps_json(state, aux_seq=[0,1,2,3], tol=1.0e-14, normalize=False,\
 
     json_state["siteIds"]=site_ids
     json_state["map"]=site_map
+
+    ucoord_to_id= {(row["x"], row["y"]): row["siteId"] for row in site_map}
+    json_state["pattern"]= [[ ucoord_to_id[state.vertexToSite((x,y))] for x in range(state.lX)] \
+                            for y in range(state.lY)]
+
     return json_state
     
 def write_ipeps(state, outputfile, aux_seq=[0,1,2,3], tol=1.0e-14, normalize=False,\
