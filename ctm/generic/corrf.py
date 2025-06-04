@@ -307,7 +307,7 @@ def apply_TM_0sO(coord, direction, state, env, edge, verbosity=0):
 
     """
     assert direction in [(0,-1),(-1,0),(0,1),(1,0)],"Invalid direction: "+str(direction)
-    # right is identical do down and left is identical to right
+    # up is identical to down and left is identical to right
     if direction==(1,0): direction=(-1,0) 
     if direction==(0,1): direction=(0,-1)
 

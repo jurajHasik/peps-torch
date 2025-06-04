@@ -1842,6 +1842,8 @@ def rdm2x3_trglringex_compressed(coord,state,env,compressed_chi=None,sym_pos_def
     :param coord: vertex (x,y) specifies lower left site of 2x3 subsystem
     :param state: underlying wavefunction
     :param env: environment corresponding to ``state``
+    :param compressed_chi: target bond dimension on compressed edges. If ``None``,
++                           the bond dimension of the environment ``env`` is used.
     :param ctm_args: CTM algorithm configuration
     :param global_args: global configuration
     :type ctm_args: CTMARGS
@@ -2205,6 +2207,8 @@ def rdm3x2_trglringex_compressed(coord,state,env,compressed_chi=None,sym_pos_def
     :param coord: vertex (x,y) specifies lower left site of 3x2 subsystem
     :param state: underlying wavefunction
     :param env: environment corresponding to ``state``
+    :param compressed_chi: target bond dimension on compressed edges. If ``None``,
++                           the bond dimension of the environment ``env`` is used.
     :param ctm_args: CTM algorithm configuration
     :param global_args: global configuration
     :type ctm_args: CTMARGS

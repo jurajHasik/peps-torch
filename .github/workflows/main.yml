@@ -222,6 +222,10 @@ jobs:
           git submodule update --init --recursive
 
       # Run tests
+      - name: test unit
+        run: |
+          $CONDA/bin/python -m pytest tests/test_*.py
+
       - name: test j1j2
         run: |
           $CONDA/bin/python -c "import sys; print(sys.path)"

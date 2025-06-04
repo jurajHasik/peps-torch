@@ -263,19 +263,28 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args, \
         M = mm(transpose(R), Rt)
     U, S, V = truncated_svd(M, chi) # M = USV^{T}
 
-    S_nz= S[S/S[0] > ctm_args.projector_svd_reltol]
+    nz_mask= S/S[0] > ctm_args.projector_svd_reltol
+    nz_count= sum(nz_mask)
+    S_nz= S[nz_mask]
     S_sqrt= S*0
     S_sqrt[:S_nz.size(0)]= torch.rsqrt(S_nz)
     
     if verbosity>0:
         log.info(f"{diagnostics}")
+        if not ctm_args.projector_full_matrices:
+            log.info(f"S/S[0]>ctm_args.projector_svd_reltol {nz_count}/{S.size(0)}")
     if verbosity>1: print(S_sqrt)
 
     # Construct projectors
     expr='ij,j->ij'
-    def P_Pt_c(*tensors):
-        R, Rt, U, V, S_sqrt= tensors
-        return mm(R, conj(U))*S_sqrt[None,:], mm(Rt,V)*S_sqrt[None,:]
+    if ctm_args.projector_full_matrices:
+        def P_Pt_c(*tensors):
+            R, Rt, U, V, S_sqrt= tensors
+            return mm(R, conj(U))*S_sqrt[None,:], mm(Rt,V)*S_sqrt[None,:]
+    else:
+        def P_Pt_c(*tensors):
+            R, Rt, U, V, S_sqrt= tensors
+            return mm(R, conj(U[:,:nz_count]))*S_sqrt[None,:nz_count], mm(Rt,V[:,:nz_count])*S_sqrt[None,:nz_count]
 
     tensors= R, Rt, U, V, S_sqrt
     if ctm_args.fwd_checkpoint_projectors:
