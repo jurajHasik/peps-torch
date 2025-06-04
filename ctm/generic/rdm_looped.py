@@ -12,7 +12,7 @@ from ctm.generic.rdm import _cast_to_real, _sym_pos_def_rdm, get_contraction_pat
 import ctm.generic.corrf as corrf
 try:
     import opt_einsum as oe
-    from oe_ext.oe_ext import get_contraction_path, contract_with_unroll, _debug_allocated_tensors
+    from oe_ext.oe_ext import get_contraction_path, contract_with_unroll
 except:
     oe=False
     warnings.warn("opt_einsum not available.")
@@ -487,6 +487,46 @@ def rdm2x3_loop_trglringex_manual(coord, state, env, sym_pos_def=False, checkpoi
 def rdm2x3_loop_oe(coord, state, env, open_sites=[0,1,2,3,4,5], unroll=True,\
     sym_pos_def=False, force_cpu=False, checkpoint_unrolled=False, 
     checkpoint_on_device=False,verbosity=0):
+    r"""
+    :param coord: vertex (x,y) specifies top left site of 2x3 subsystem
+    :param state: underlying wavefunction
+    :param env: environment corresponding to ``state``
+    :param verbosity: logging verbosity
+    :type coord: tuple(int,int)
+    :type state: IPEPS
+    :type env: ENV
+    :type verbosity: int
+    :return: 6-site reduced density matrix with indices 
+             :math:`s_0...s5;s'_0...s'_5`
+    :rtype: torch.tensor
+
+    Computes 6-site reduced density matrix :math:`\rho` of six-site subsystem, 
+    specified by the vertex ``coord`` of its top-left 
+    and bottom-right corner within 2x3 patch using strategy:
+
+        1. compute left edge of the network
+        2. add extra T-tensor and on-site tensor to the bottom of the left edge
+        3. analogously for the right edge, attaching extra T-tensor
+           and on-site tensor to the top of the right edge
+        4. contract left and right half to obtain final reduced density matrix
+
+    ::
+
+        C--T------------------T-----T-------------------C = C2x2_LU(coord)---------T-----C2x2(coord+(2,0))
+        |  |                  |     |                   |   |___________________|--A^+A--|_______________|
+        T--A^+A(coord)--------A^+A--A^+A(coord+(2,0))---T   |                   |--A^+A--|               |
+        |  |                  |     |                   |   C2x2_LD(coord+(0,1))---T-----C2x2(coord+(2,1))
+        T--A^+A(coord+(0,1))--A^+A--A^+A(coord+(2,1))---T
+        |  |                  |     |                   |
+        C--T------------------T-----T-------------------C
+
+    The physical indices `s` and `s'` of on-sites tensors :math:`A` (and :math:`A^\dagger`)
+    are left uncontracted and given in the order::
+
+        s0 s1 s2
+        s3 s4 s5
+
+    """
     # C1------(1)1 1(0)----T1----(3)44 44(0)----T1_x----(3)39 39(0)---T1_2x---(3)24 24(0)--C2_2x
     # 0(0)               (1,2)                 (1,2)                  (1,2)                25(1)
     # 0(0)           100  2  5             102 40 42              104 26 28                25(0)
@@ -699,6 +739,230 @@ def rdm2x3_loop_oe_semimanual(coord, state, env, open_sites=[0,1,2,3,4,5], unrol
     if force_cpu:
         res= res.to(env.device)
     return res
+
+def rdm2x3_loop_trglringex_compressed(coord,state,env, open_sites=[0,1,2,3], 
+    compressed_chi=None, sym_pos_def=False,\
+    unroll=True, checkpoint_unrolled=False, checkpoint_on_device=False,\
+    force_cpu=False, dtype=None,\
+    ctm_args=cfg.ctm_args,global_args=cfg.global_args,verbosity=0):
+    r"""
+    :param coord: vertex (x,y) specifies lower left site of 2x3 subsystem
+    :param state: underlying wavefunction
+    :param env: environment corresponding to ``state``
+    :param open_sites: list of open sites in the reduced density matrix
+    :param compressed_chi: target bond dimension on compressed edges. If ``None``,
+                           the bond dimension of the environment ``env`` is used.
+    :param sym_pos_def:
+    :param unroll:
+    :param checkpoint_unrolled:
+    :param checkpoint_on_device:
+    :param force_cpu: move all tensors to cpu
+    :param dtype: perform contraction in dtype (downcast)
+    :param ctm_args: CTM algorithm configuration
+    :param global_args: global configuration
+    :type ctm_args: CTMARGS
+    :type global_args: GLOBALARGS
+    :param verbosity: logging verbosity
+    :type coord: tuple(int,int)
+    :type state: IPEPS
+    :type env: ENV
+    :type verbosity: int
+    :return: 4-site reduced density matrix with indices 
+             :math:`s_0s_1s_2s_3;s'_0s'_1s'_2s'_3`
+    :rtype: torch.tensor
+
+    Computes 4-site reduced density matrix :math:`\rho` of four-site subsystem, 
+    a parallelogram, specified by the vertex ``coord`` of its lower-left 
+    and upper-right corner within 2x3 patch using strategy:
+
+        1. compute left edge of the network with compression on the top-left corner
+        2. add extra T-tensor and on-site tensor to the bottom of the left edge
+        3. analogously for the right edge, attaching extra T-tensor
+           and on-site tensor to the top of the right edge and compression 
+           on the bottom right corner
+        4. contract left and right half to obtain final reduced density matrix
+
+    The isometries performing the compresion are obtained as CTMRG projectors
+    using full (:attr:`CTMARGS.projector_method` = ``"4X4"``) method.
+
+    ::
+
+        C--T-------------------|\    /|--T---------------T-------------------C
+        |  |                   | >--< |  |               |                   |
+        T--A^+A(coord+(0,-1))--|/    \|--A^+A------------A^+A(coord+(2,-1))--T
+        |  |                             |               |                   |
+        T--A^+A(coord)-------------------A^+A--|\    /|--A^+A(coord+(2,0))---T
+        |  |                             |     | >--< |  |                   |
+        C--T-----------------------------T-----|/    \|--T-------------------C
+
+    The physical indices `s` and `s'` of on-sites tensors :math:`A` (and :math:`A^\dagger`)
+    at vertices ``coord`` and ``coord+(1,1)`` are left uncontracted and given in the same order::
+
+        x  s3 s2
+        s0 s1 x
+
+    """
+    who="rdm2x3_loop_compressed"
+    if not compressed_chi: compressed_chi= env.chi
+    # ----- building C2x2_LU ----------------------------------------------------
+    vec = (0, -1)
+    shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    C2X2_LU= c2x2_LU(shift_coord,state,env,mode='sl',verbosity=verbosity)
+
+    # ----- building C2x2_LD ----------------------------------------------------
+    C2X2_LD_o= c2x2_LD(coord,state,env,mode='sl-open',verbosity=verbosity)
+
+    # ----- build left part C2x2_LU--C2X2_LD ------------------------------------
+    # C2x2_LU--1->0
+    # |
+    # 0
+    # 0
+    # C2x2_LD--1
+    half0= torch.tensordot(C2X2_LU, torch.einsum('ijss->ij',C2X2_LD_o), ([0],[0]))
+
+    # construct projector for UP move between coord+(0,-1) and coord+(1,-1)
+    # see :meth:`ctm.generic.ctm_components.halves_of_4x4_CTM_MOVE_UP_c`
+    #
+    #        _0 0_          --|\__/|--
+    #       |     |         --|/  \|--
+    #   half0     half1 =>    P    Pt
+    #       |_1 1_|
+    vec = (1, -1)
+    shift_coord_1n1 = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    vec = (1, 0)
+    shift_coord_10 = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    half1= torch.tensordot(c2x2_RU(shift_coord_1n1,state,env,mode='sl',verbosity=verbosity),\
+        c2x2_RD(shift_coord_10,state,env,mode='sl',verbosity=verbosity),([1],[0]))
+
+    P_up, Pt_up= ctm_get_projectors_from_matrices(half1, half0,\
+        compressed_chi, ctm_args, global_args)
+
+    # compress C2X2_LU
+    #  
+    #      |C2X2_LU--0 0--P--1->0  
+    #      |      |
+    # 2,3--|______|--1
+    # C2X2_LU= torch.tensordot(P_up,C2X2_LU,([0],[0]))
+
+    # ----- building C2x2_RU ----------------------------------------------------
+    vec = (2, -1)
+    shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    C2X2_RU_o= c2x2_RU(shift_coord,state,env,mode='sl-open',verbosity=verbosity)
+
+     # ----- building C2x2_RD ----------------------------------------------------
+    vec = (2, 0)
+    shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    C2X2_RD= c2x2_RD(shift_coord,state,env,mode='sl',verbosity=verbosity)
+    
+    # ----- build right part C2X2_RU--C2X2_RD -----------------------------------
+    #         1<-0--C2x2_RU--1,2->2,3
+    #               1
+    #               0
+    #         0<-1--C2x2_RD
+    half0= torch.tensordot(C2X2_RD, torch.einsum('ijss->ij',C2X2_RU_o),([0],[1]))
+
+    # construct projector for DOWN move between coord+(1,0) and coord+(2,0)
+    # see :meth:`ctm.generic.ctm_components.halves_of_4x4_CTM_MOVE_DOWN_c`
+    #
+    #        _1 1_            --|\__/|--
+    #       |     |           --|/  \|--
+    #   half1     half0 =>      Pt   P
+    #       |_0 0_|
+    half1= torch.tensordot(c2x2_LD(shift_coord_10,state,env,mode='sl',verbosity=verbosity),\
+        c2x2_LU(shift_coord_1n1,state,env,mode='sl',verbosity=verbosity),([0],[0]))
+    
+    P_down, Pt_down= ctm_get_projectors_from_matrices(half1, half0,\
+        compressed_chi, ctm_args, global_args)
+
+    # Granular open corners
+    #
+    # C2x2_LU --61 --|    |------(3)44 44(0)----T1_x----(3)39 39(0)---T1_2x---(3)24 24(0)--C2_2x
+    # |              |\  /|                    (1,2)                  (1,2)                25(1)
+    # |           P_up 62 Pt_up_           102 40 42              104 26 28                25(0)
+    # |              | /\ |     \            \ |  |                  \ |  |                 |  
+    # |              |/  \|_____ \--45 45----a_x--6(1)----41  41-------a_2x-------27 27(1)--T2_2x
+    # |                         \              |  |                    |  |                 |
+    # |________________________  \--46 46--------a*_x-----43  43----------a*_2x---29 29(2)  |
+    # |                   |   |                |  |                    |  |                 |
+    # 15(1)               16 17               47 48 \103               37 38 \105          36(3)           
+    # 15(0)          106  16 17           108 47 48                    37 38               36(0) 
+    # |                 \ |   |              \ |  |                    |__|_________________|
+    # T4_y--(2)9 9--------a_y-------20 20-----a_xy--------49 49(1)--|                       |
+    # |                   |   |                |  |                 |\  /|                  |
+    # |     (3)12 12---------a*_y---22 22------- a*_xy----50 50(2)--| 63 |                  |
+    # |                   10 13 \107           21 23 \109      Pt_down/\ P_down             | 
+    # 8(1)                10 13                21 23                |/  \|                  |
+    # 8(0)                (0,1)                (0,1)                |    |                  | 
+    # C4_y---(1)7 7(2)-----T3_y--(3)19 19(2)----T3_xy---(3)51 51(2)-|    |-- 64   (1)---C2X2_RD
+
+    # Pre-contracted open corners
+    #
+    # C2x2_LU --61 --|    |------(3)44 44(0)----T1_xy---(3)39 39(0)----|               C2X2_RU_o
+    # |              |\  /|                    (1,2)                   |                    |
+    # |           P_up 62 Pt_up_           106 40 42              104  |                    |
+    # |              | /\ |     \            \ |  |                  \ |                    |  
+    # |              |/  \|_____ \--45 45----a_xy-6(1)----41  41-------|                    |
+    # |                         \              |  |                    |                    |
+    # |                          \--46 46--------a*_xy----43  43-------|___________________ |
+    # |                                        |  |                                         |
+    # 15(0)                                   47 48 \107                     \105          36(1)           
+    # 15(0)          100                  102 47 48                                        36(0) 
+    # |                 \                    \ |  |                                         |
+    # |________________________-----20 20-----a_x---------49 49(1)--|    |                  |
+    # |                       |                |  |                 |\  /|                  |
+    # |                       |-----22 22------- a*_x-----50 50(2)--| 63 |                  |
+    # |                       | \101           21 23 \103      Pt_down/\ P_down             | 
+    # |                       |                21 23                |/  \|                  |
+    # |                       |                (0,1)                |    |                  | 
+    # C2X2_LD_o                --(1)19 19(2)----T3_x----(3)51 51(2)-|    |-- 64   (1)---C2X2_RD
+    ind_os= set(sorted(open_sites))
+    assert len(ind_os)==len(open_sites),"contains repeated elements"
+    assert ind_os <= {0,1,2,3},"allowed site labels are 0,1,2, and 3"
+    I= sum([[100+2*x,100+2*x+1] if x in ind_os else [100+2*x]*2 for x in [0,1,2,3]],[])
+    I_out= [100+2*x for x in ind_os]+[100+2*x+1 for x in ind_os]
+
+    a_x= state.site(shift_coord_10)
+    a_xy= state.site(shift_coord_1n1)
+    T3_x= env.T[shift_coord_10,(0,1)]
+    T1_xy= env.T[shift_coord_1n1,(0,-1)]
+    
+    T3_x= T3_x.view([a_x.size(3)]*2+[T3_x.size(1), T3_x.size(2)])
+    T1_xy= T1_xy.view([T1_xy.size(0)]+[a_xy.size(1)]*2+[T1_xy.size(2)])
+    Pt_down= Pt_down.view([T3_x.size(3)]+[a_x.size(4)]*2+[Pt_down.size(1)])
+    Pt_up= Pt_up.view([T1_xy.size(3)]+[a_xy.size(2)]*2+[Pt_up.size(1)])
+    C2X2_RU_o= C2X2_RU_o.view([T1_xy.size(3)]+[a_xy.size(4)]*2+[C2X2_RU_o.size(1)]+[C2X2_RU_o.size(2)]*2)
+    C2X2_LD_o= C2X2_LD_o.view([C2X2_LD_o.size(0),T3_x.size(2)]+[a_x.size(2)]*2+[C2X2_LD_o.size(2)]*2)
+
+    t= C2X2_LD_o, C2X2_LU, P_up, Pt_up, T1_xy, a_xy, C2X2_RU_o, C2X2_RD, P_down, \
+        Pt_down, T3_x, a_x
+    if dtype or force_cpu:
+       dtype= dtype if dtype else env.dtype
+       device= 'cpu' if force_cpu else env.device
+       t=(x.to(device=device, dtype=dtype) for x in t)
+
+    contract_tn= C2X2_LD_o,[15,19,20,22,I[0],I[1]],C2X2_LU,[15,61],P_up,[61,62],\
+        Pt_up,[44,45,46,62],T1_xy,[44,40,42,39],a_xy,[I[6],40,45,47,41],a_xy.conj(),[I[7],42,46,48,43],\
+        C2X2_RU_o,[39,41,43,36,I[4],I[5]],C2X2_RD,[36,64],P_down,[64,63],\
+        Pt_down,[51,49,50,63],T3_x,[21,23,19,51],a_x,[I[2],47,20,21,49],a_x.conj(),[I[3],48,22,23,50],\
+        I_out
+    names= tuple(x.strip() for x in ("C2X2_LD_o, C2X2_LU, P_up, Pt_up, T1_xy, a_xy, a_xy*, C2X2_RU_o, C2X2_RD, P_down, "\
+        +"Pt_down, T3_x, a_x, a_x*").split(','))
+
+    # TODO optional mem_limit
+    mem_limit= None
+    if type(unroll)==bool and unroll:
+        unroll= I_out
+    path, path_info= get_contraction_path(*contract_tn,unroll=unroll if unroll else [],\
+        names=names,path=None,who=who,\
+        memory_limit=mem_limit if unroll else None,\
+            optimizer="default" if env.chi>1 else "auto")
+    R= contract_with_unroll(*contract_tn,optimize=path,backend='torch',\
+        unroll=unroll if unroll else [],checkpoint_unrolled=checkpoint_unrolled,
+        checkpoint_on_device=checkpoint_on_device,who=who,verbosity=verbosity)
+
+    R = _sym_pos_def_rdm(R, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
+    R= R.to(device=env.device,dtype=env.dtype)
+    return R
 
 
 def rdm3x2_loop_trglringex_manual(coord, state, env, sym_pos_def=False, checkpoint_unrolled=False, \
@@ -1016,6 +1280,49 @@ def rdm3x2_loop_oe_semimanual(coord, state, env, open_sites=[0,1,2,3,4,5], unrol
 def rdm3x2_loop_oe(coord, state, env, open_sites=[0,1,2,3,4,5], unroll=True,\
     sym_pos_def=False, force_cpu=False, checkpoint_unrolled=False, 
     checkpoint_on_device=False, verbosity=0):
+    r"""
+    :param coord: vertex (x,y) specifies top left site of 3x2 subsystem
+    :param state: underlying wavefunction
+    :param env: environment corresponding to ``state``
+    :param verbosity: logging verbosity
+    :type coord: tuple(int,int)
+    :type state: IPEPS
+    :type env: ENV
+    :type verbosity: int
+    :return: 6-site reduced density matrix with indices 
+             :math:`s_0...s5;s'_0...s'_5``
+    :rtype: torch.tensor
+
+    Computes 6-site reduced density matrix :math:`\rho` of six-site subsystem, 
+    a parallelogram, specified by the vertex ``coord`` of its top-left 
+    and bottom-right corner within 3x2 patch using strategy:
+
+        1. compute top edge of the network
+        2. add extra T-tensor and on-site tensor to the right of the top edge
+        3. analogously for the bottom edge, attaching extra T-tensor
+           and on-site tensor to the left of the bottom edge
+        4. contract top and bottom half to obtain final reduced density matrix
+
+    ::
+
+        C--T-------------------T-------------------C
+        |  |                   |                   |
+        T--A^+A(coord)---------A^+A(coord+(1,0))---T
+        |  |                   |                   |
+        T--A^+A(coord+(0,1))---A^+A(coord+(1,1))---T
+        |  |                   |                   |
+        T--A^+A(coord+(0,2))---A^+A(coord+(1,2))---T
+        |  |                   |                   |
+        C--T-------------------T-------------------C
+
+    The physical indices `s` and `s'` of on-sites tensors :math:`A` (and :math:`A^\dagger`)
+    are left uncontracted and given in the order::
+
+        s0 s3
+        s1 s4  
+        s2 s5
+
+    """
     # C1------(1)1 1(0)----T1----(3)13 13(0)----T1_x-----(3)7 7(0)-----C2_x
     # 0(0)               (1,2)                 (1,2)                   8(1)
     # 0(0)           100  2  5             106 9 11                    8(0)
@@ -1117,6 +1424,220 @@ def rdm3x2_loop_oe(coord, state, env, open_sites=[0,1,2,3,4,5], unroll=True,\
     R = _sym_pos_def_rdm(R, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
     if force_cpu:
         R= R.to(env.device)
+    return R
+
+def rdm3x2_loop_trglringex_compressed(coord,state,env, open_sites=[0,1,2,3], 
+    compressed_chi=None, sym_pos_def=False,\
+    unroll=True, checkpoint_unrolled=False, checkpoint_on_device=False,\
+    force_cpu=False, dtype=None,\
+    ctm_args=cfg.ctm_args,global_args=cfg.global_args,verbosity=0):
+    r"""
+    :param coord: vertex (x,y) specifies lower left site of 3x2 subsystem
+    :param state: underlying wavefunction
+    :param env: environment corresponding to ``state``
+    :param open_sites: list of open sites in the reduced density matrix
+    :param compressed_chi: target bond dimension on compressed edges. If ``None``,
+                           the bond dimension of the environment ``env`` is used.
+    :param sym_pos_def:
+    :param unroll:
+    :param checkpoint_unrolled:
+    :param checkpoint_on_device:
+    :param force_cpu: move all tensors to cpu
+    :param dtype: perform contraction in dtype (downcast)
+    :param ctm_args: CTM algorithm configuration
+    :param global_args: global configuration
+    :type ctm_args: CTMARGS
+    :type global_args: GLOBALARGS
+    :param verbosity: logging verbosity
+    :type coord: tuple(int,int)
+    :type state: IPEPS
+    :type env: ENV
+    :type verbosity: int
+    :return: 4-site reduced density matrix with indices 
+             :math:`s_0s_1s_2s_3;s'_0s'_1s'_2s'_3`
+    :rtype: torch.tensor
+
+    Computes 4-site reduced density matrix :math:`\rho` of four-site subsystem, 
+    a parallelogram, specified by the vertex ``coord`` of its lower-left 
+    and upper-right corner within 3x2 patch using strategy:
+
+        1. compute top edge of the network with compression on the top-left corner
+        2. add extra T-tensor and on-site tensor to the right of the top edge
+        3. analogously for the botton edge with attaching extra T-tensor
+           and on-site tensor to the left of the bottom edge and compression 
+           on the bottom right corner
+        4. contract top and left half to obtain final reduced density matrix
+
+    The isometries performing the compresion are obtained as CTMRG projectors
+    using full (:attr:`CTMARGS.projector_method` = ``"4X4"``) method.
+
+    ::
+
+        C--T-------------------T-------------------C
+        |  |                   |                   |
+        T--A^+A(coord+(0,-2))--A^+A(coord+(1,-2))--T
+        |  |                   |                   |
+         \/                    |                   |
+         |                     |                   |
+         /\                    |                   |
+        |  |                   |                   |
+        T--A^+A(coord+(0,-1))--A^+A(coord+(1,-1))--T
+        |  |                   |                   |
+        |  |                    \_________________/
+        |  |                     ________|________ 
+        |  |                    /                 \
+        |  |                   |                   |
+        T--A^+A(coord)---------A^+A(coord+(1,0))---T
+        |  |                   |                   |
+        C--T-------------------T-------------------C
+
+    The physical indices `s` and `s'` of on-sites tensors :math:`A` (and :math:`A^\dagger`)
+    at vertices ``coord`` and ``coord+(1,1)`` are left uncontracted and given in the same order::
+    
+        x  s2
+        s3 s1
+        s0 x
+
+    """
+    who="rdm3x2_loop_compressed"
+    if not compressed_chi: compressed_chi= env.chi
+    # ----- building C2x2_LU ----------------------------------------------------
+    vec = (0, -2)
+    shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    C2X2_LU= c2x2_LU(shift_coord,state,env,mode='sl',verbosity=verbosity)
+
+    # ----- building C2x2_RU ----------------------------------------------------
+    vec = (1, -2)
+    shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    C2X2_RU_o= c2x2_RU(shift_coord,state,env,mode='sl-open',verbosity=verbosity)
+
+    # ----- build top part C2x2_LU--C2X2_RU ------------------------------------
+    # C2x2_LU--1 0--C2x2_RU--2,3
+    # |                  |
+    # 0                  1
+    half0= torch.tensordot(C2X2_LU, torch.einsum('ijss->ij',C2X2_RU_o), ([1],[0]))
+
+    # construct projector for LEFT move between coord+(0,-2) and coord+(0,-1)
+    # see :meth:`ctm.generic.ctm_components.halves_of_4x4_CTM_MOVE_LEFT_c`
+    #
+    #        _half0___          
+    #       0         1        \__/ Pt
+    #       0         1  =>    /  \ P
+    #       |_half1___|
+    vec = (0, -1)
+    shift_coord_0n1 = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    vec = (1, -1)
+    shift_coord_1n1 = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    half1= torch.tensordot(c2x2_LD(shift_coord_0n1,state,env,mode='sl',verbosity=verbosity),\
+        c2x2_RD(shift_coord_1n1,state,env,mode='sl',verbosity=verbosity),([1],[1]))
+
+    P_left, Pt_left= ctm_get_projectors_from_matrices(half0,half1,\
+        compressed_chi, ctm_args, global_args)
+
+    # ----- building C2x2_LD ----------------------------------------------------
+    C2X2_LD_o= c2x2_LD(coord,state,env,mode='sl-open',verbosity=verbosity)
+
+    # ----- building C2x2_RD ----------------------------------------------------
+    vec = (1, 0)
+    shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
+    C2X2_RD= c2x2_RD(shift_coord,state,env,mode='sl',verbosity=verbosity)
+    
+    # ----- build bottom part C2X2_LD--C2X2_RD -----------------------------------
+    #        
+    #       0->1          0
+    #  2,3--C2x2_LD--1 1--C2x2_RD
+    half0= torch.tensordot(C2X2_RD,torch.einsum('ijss->ij',C2X2_LD_o),([1],[1]))
+
+    # construct projector for RIGHT move between coord+(1,-1) and coord+(1,0)
+    # see :meth:`ctm.generic.ctm_components.halves_of_4x4_CTM_MOVE_RIGHT_c`
+    #
+    #        _half1___     
+    #       1         0      \___/ P
+    #       1         0  =>  /   \ Pt
+    #       |_half0___|
+    half1= torch.tensordot(c2x2_RU(shift_coord_1n1,state,env,mode='sl',verbosity=verbosity),\
+        c2x2_LU(shift_coord_0n1,state,env,mode='sl',verbosity=verbosity),([0],[1]))
+    
+    P_right, Pt_right= ctm_get_projectors_from_matrices(half0,half1,\
+        compressed_chi, ctm_args, global_args)
+
+    # C2X2_LU                 |--(1)13 13(0)--|                C2X2_RU_o
+    # |                       |               |                        |
+    # |                       |           104 |                        |
+    # |                       |             \ |                        |  
+    # |                       |               |                        |
+    # |_______________________|               |________________________|
+    # |                                       |  |                     |
+    # 60(0)___________________                85 86 \105               87(1)           
+    # \________Pt_left________/
+    #  ________61______________
+    # /________P_left__________\ 
+    # |                   |   |
+    # 18(0)          106  19 20           102 85 86                    87(0) 
+    # |                 \ |   |              \ |  |                     |
+    # T4_y--(2)16 16-----a_y--------83 83-----a_xy--------55 55(1)------T2_xy
+    # |                   |   |                |  |                     |
+    # |     (3)17 17---------a*_y---84 84--------a*_xy----56 56(2)------|
+    # 80(1)               81 82 \107           |  | \103                |
+    #                                         58_59_____________________57(3)
+    #                                          \__________P_right_______/
+    #                                           __________62___________
+    #                                          /__________Pt_right______\
+    # 80(0)           100 81 82                                         63(0) 
+    # |_________________\ |___|                _________________________|
+    # |                       |               |                         |
+    # |                       |               |                         |
+    # |                       |               |                         |
+    # |                       | \101          |                         |
+    # |                       |               |                         |
+    # |                       |               |                         |
+    # C2X2_LD_o               |--(3)52 52(1)--|                   C2X2_RD
+    ind_os= set(sorted(open_sites))
+    assert len(ind_os)==len(open_sites),"contains repeated elements"
+    assert ind_os <= {0,1,2,3},"allowed site labels are 0,1,2, and 3"
+    I= sum([[100+2*x,100+2*x+1] if x in ind_os else [100+2*x]*2 for x in [0,1,2,3]],[])
+    I_out= [100+2*x for x in ind_os]+[100+2*x+1 for x in ind_os]
+
+    a_y= state.site(shift_coord_0n1)
+    a_xy= state.site(shift_coord_1n1)
+    T4_y= env.T[shift_coord_0n1,(-1,0)]
+    T2_xy= env.T[shift_coord_1n1,(1,0)]
+
+    T4_y= T4_y.view([T4_y.size(0)]+[T4_y.size(1)]+[a_y.size(2)]*2)
+    P_left= P_left.view([T4_y.size(0)]+[a_y.size(1)]*2+[P_left.size(1)])
+    T2_xy= T2_xy.view([T2_xy.size(0)]+[a_xy.size(4)]*2+[T2_xy.size(2)]) 
+    P_right= P_right.view([T2_xy.size(3)]+[a_xy.size(3)]*2+[P_right.size(1)])
+    C2X2_RU_o= C2X2_RU_o.view([C2X2_RU_o.size(0)]+[T2_xy.size(0)]+[a_xy.size(1)]*2+[C2X2_RU_o.size(2)]*2)
+    C2X2_LD_o= C2X2_LD_o.view([T4_y.size(1)]+[a_y.size(3)]*2+[C2X2_LD_o.size(1)]+[C2X2_LD_o.size(2)]*2)
+
+    t= C2X2_LU, Pt_left, C2X2_RU_o, P_left, T4_y, a_y, C2X2_LD_o, C2X2_RD, Pt_right, P_right, T2_xy, a_xy
+    if dtype or force_cpu:
+       dtype= dtype if dtype else env.dtype
+       device= 'cpu' if force_cpu else env.device
+       t=(x.to(device=device, dtype=dtype) for x in t)
+
+    contract_tn= C2X2_LU,[60,13],Pt_left,[60,61],C2X2_RU_o,[13,87,85,86,I[4],I[5]],\
+        P_left,[18,19,20,61],T4_y,[18,80,16,17],a_y,[I[6],19,16,81,83],a_y.conj(),[I[7],20,17,82,84],\
+        C2X2_LD_o,[80,81,82,52,I[0],I[1]],C2X2_RD,[63,52],Pt_right,[63,62],\
+        P_right,[57,58,59,62],T2_xy,[87,55,56,57],a_xy,[I[2],85,83,58,55],a_xy.conj(),[I[3],86,84,59,56],\
+        I_out
+    names= tuple(x.strip() for x in ("C2X2_LU, Pt_left, C2X2_RU_o, P_left, "\
+        +"T4_y, a_y, a_y*, C2X2_LD_o, C2X2_RD, Pt_right, P_right, T2_xy, a_xy, a_xy*").split(','))
+
+    # TODO optional mem_limit
+    mem_limit= None
+    if type(unroll)==bool and unroll:
+        unroll= I_out
+    path, path_info= get_contraction_path(*contract_tn,unroll=unroll if unroll else [],\
+        names=names,path=None,who=who,\
+        memory_limit=mem_limit if unroll else None,\
+            optimizer="default" if env.chi>1 else "auto")
+    R= contract_with_unroll(*contract_tn,optimize=path,backend='torch',\
+        unroll=unroll if unroll else [],checkpoint_unrolled=checkpoint_unrolled,
+        checkpoint_on_device=checkpoint_on_device,who=who,verbosity=verbosity)
+
+    R = _sym_pos_def_rdm(R, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
+    R= R.to(device=env.device,dtype=env.dtype)
     return R
 
 # ----- deprecated forms ------

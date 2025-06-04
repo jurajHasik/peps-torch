@@ -245,6 +245,8 @@ class CTMARGS():
 
                                 Default: ``'SYMEIG'`` for c4v-symmetric CTM, otherwise ``'GESDD'``
     :vartype projector_svd_method: str
+    :ivar projector_full_matrices: if ``True``, then the projectors are constructed as full matrices,
+                                   i.e. not truncated to ``projector_svd_reltol``. Default: ``True``
     :ivar projector_svd_reltol: relative threshold on the magnitude of the smallest elements of 
                                 singular value spectrum used in the construction of projectors. 
                                 Default: ``1.0e-8``
@@ -327,6 +329,7 @@ class CTMARGS():
         self.conv_check_cpu = False
         self.projector_method = '4X4'
         self.projector_svd_method = 'DEFAULT'
+        self.projector_full_matrices = True
         self.projector_svd_reltol = 1.0e-8
         self.projector_svd_reltol_block = 0.0
         self.projector_eps_multiplet = 1.0e-8
