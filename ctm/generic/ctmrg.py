@@ -307,10 +307,10 @@ def absorb_truncate_CTM_MOVE_UP(coord, state, env, P, Pt, ctm_args=cfg.ctm_args)
     coord_shift_right = state.vertexToSite((coord[0]+vec[0], coord[1]+vec[1]))
     tensors= env.C[(coord,(1,-1))], env.T[(coord,(1,0))], env.T[(coord,(0,-1))], \
         env.T[(coord,(-1,0))], env.C[(coord,(-1,-1))], state.site(coord), \
-        view(P[coord], (env.chi,state.site(coord_shift_left).size(3+mode)**(mode+1),env.chi)), \
-        view(Pt[coord], (env.chi,state.site(coord).size(1+mode)**(mode+1),env.chi)), \
-        view(P[coord_shift_right], (env.chi,state.site(coord).size(3+mode)**(mode+1),env.chi)), \
-        view(Pt[coord_shift_right], (env.chi,state.site(coord_shift_right).size(1+mode)**(mode+1),env.chi))
+        view(P[coord], (env.C[(coord,(-1,-1))].size(1),state.site(coord_shift_left).size(3+mode)**(mode+1),-1)), \
+        view(Pt[coord], (env.T[(coord,(0,-1))].size(0),state.site(coord).size(1+mode)**(mode+1),-1)), \
+        view(P[coord_shift_right], (env.T[(coord,(0,-1))].size(2),state.site(coord).size(3+mode)**(mode+1),-1)), \
+        view(Pt[coord_shift_right], (env.C[(coord,(1,-1))].size(0), state.site(coord_shift_right).size(1+mode)**(mode+1), -1))
     if mode:
         tensors += (torch.ones(1,dtype=torch.bool),)
 
@@ -423,10 +423,10 @@ def absorb_truncate_CTM_MOVE_LEFT(coord, state, env, P, Pt, ctm_args=cfg.ctm_arg
     coord_shift_down= state.vertexToSite((coord[0]-vec[0], coord[1]-vec[1]))
     tensors = env.C[(coord,(-1,-1))], env.T[(coord,(0,-1))], env.T[(coord,(-1,0))], \
         env.T[(coord,(0,1))], env.C[(coord,(-1,1))], state.site(coord), \
-        view(P[coord], (env.chi,state.site(coord_shift_down).size(0+mode)**(mode+1),env.chi)), \
-        view(Pt[coord], (env.chi,state.site(coord).size(2+mode)**(mode+1),env.chi)), \
-        view(P[coord_shift_up], (env.chi,state.site(coord).size(0+mode)**(mode+1),env.chi)), \
-        view(Pt[coord_shift_up], (env.chi,state.site(coord_shift_up).size(2+mode)**(mode+1),env.chi))
+        view(P[coord], (env.C[(coord,(-1,1))].size(0),state.site(coord_shift_down).size(0+mode)**(mode+1),-1)), \
+        view(Pt[coord], (env.T[(coord,(-1,0))].size(1),state.site(coord).size(2+mode)**(mode+1),-1)), \
+        view(P[coord_shift_up], (env.T[(coord,(-1,0))].size(0),state.site(coord).size(0+mode)**(mode+1),-1)), \
+        view(Pt[coord_shift_up], (env.C[(coord,(-1,-1))].size(0),state.site(coord_shift_up).size(2+mode)**(mode+1),-1))
     if mode:
         tensors += (torch.ones(1,dtype=torch.bool),)
 
@@ -549,10 +549,10 @@ def absorb_truncate_CTM_MOVE_DOWN(coord, state, env, P, Pt, ctm_args=cfg.ctm_arg
     coord_shift_left = state.vertexToSite((coord[0]+vec[0], coord[1]+vec[1]))
     tensors= env.C[(coord,(-1,1))], env.T[(coord,(-1,0))], env.T[(coord,(0,1))], \
         env.T[(coord,(1,0))], env.C[(coord,(1,1))], state.site(coord), \
-        view(P[coord], (env.chi,state.site(coord_shift_right).size(1+mode)**(mode+1),env.chi)), \
-        view(Pt[coord], (env.chi,state.site(coord).size(3+mode)**(mode+1),env.chi)), \
-        view(P[coord_shift_left], (env.chi,state.site(coord).size(1+mode)**(mode+1),env.chi)), \
-        view(Pt[coord_shift_left], (env.chi,state.site(coord_shift_left).size(3+mode)**(mode+1),env.chi))
+        view(P[coord], (env.C[(coord,(1,1))].size(1),state.site(coord_shift_right).size(1+mode)**(mode+1),-1)), \
+        view(Pt[coord], (env.T[(coord,(0,1))].size(2),state.site(coord).size(3+mode)**(mode+1),-1)), \
+        view(P[coord_shift_left], (env.T[(coord,(0,1))].size(1),state.site(coord).size(1+mode)**(mode+1),-1)), \
+        view(Pt[coord_shift_left], (env.C[(coord,(-1,1))].size(1),state.site(coord_shift_left).size(3+mode)**(mode+1),-1))
     if mode:
         tensors += (torch.ones(1,dtype=torch.bool),)
 
@@ -665,10 +665,10 @@ def absorb_truncate_CTM_MOVE_RIGHT(coord, state, env, P, Pt, ctm_args=cfg.ctm_ar
     coord_shift_up = state.vertexToSite((coord[0]-vec[0], coord[1]-vec[1]))
     tensors= env.C[(coord,(1,1))], env.T[(coord,(0,1))], env.T[(coord,(1,0))], \
         env.T[(coord,(0,-1))], env.C[(coord,(1,-1))], state.site(coord), \
-        view(P[coord], (env.chi,state.site(coord_shift_up).size(2+mode)**(mode+1),env.chi)), \
-        view(Pt[coord], (env.chi,state.site(coord).size(0+mode)**(mode+1),env.chi)), \
-        view(P[coord_shift_down], (env.chi,state.site(coord).size(2+mode)**(mode+1),env.chi)), \
-        view(Pt[coord_shift_down], (env.chi,state.site(coord_shift_down).size(0+mode)**(mode+1),env.chi))
+        view(P[coord], (env.C[(coord,(1,-1))].size(1),state.site(coord_shift_up).size(2+mode)**(mode+1),-1)), \
+        view(Pt[coord], (env.T[(coord,(1,0))].size(0),state.site(coord).size(0+mode)**(mode+1),-1)), \
+        view(P[coord_shift_down], (env.T[(coord,(1,0))].size(2),state.site(coord).size(2+mode)**(mode+1),-1)), \
+        view(Pt[coord_shift_down], (env.C[(coord,(1,1))].size(0),state.site(coord_shift_down).size(0+mode)**(mode+1),-1))
     if mode:
         tensors += (torch.ones(1,dtype=torch.bool),)
 
