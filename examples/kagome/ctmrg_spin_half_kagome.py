@@ -172,20 +172,20 @@ def main():
     def energy_f(state, env, force_cpu=False, fail_on_check=False,\
         warn_on_check=True):
         #print(env)
-        e_dn = model.energy_triangle_dn(state, env, force_cpu=args.force_cpu,\
+        e_dn,n_dn = model.energy_triangle_dn(state, env, force_cpu=args.force_cpu,\
             fail_on_check=fail_on_check, warn_on_check=warn_on_check)
-        e_up = model.energy_triangle_up(state, env, force_cpu=args.force_cpu,\
+        e_up,n_up = model.energy_triangle_up(state, env, force_cpu=args.force_cpu,\
             fail_on_check=fail_on_check, warn_on_check=warn_on_check)
         # e_nnn = model.energy_nnn(state, env)
-        return (e_up + e_dn)/3 #+ e_nnn) / 3
+        return (sum(e_up.values()) + sum(e_dn.values()))/(3*len(state.sites)) #+ e_nnn) / 3
     def energy_f_complex(state, env, force_cpu=False):
-        e_dn = model.energy_triangle_dn_NoCheck(state, env, force_cpu=args.force_cpu)
-        e_up = model.energy_triangle_up_NoCheck(state, env, force_cpu=args.force_cpu)
+        e_dn,n_dn = model.energy_triangle_dn_NoCheck(state, env, force_cpu=args.force_cpu)
+        e_up,n_up = model.energy_triangle_up_NoCheck(state, env, force_cpu=args.force_cpu)
         # e_nnn = model.energy_nnn(state, env)
-        return (e_up + e_dn)/3 #+ e_nnn) / 3
+        return (sum(e_up.values()) + sum(e_dn.values()))/(3*len(state.sites)) #+ e_nnn) / 3
     def dn_energy_f(state, env, force_cpu=False):
-        e_dn = model.energy_triangle_dn_NoCheck(state, env, force_cpu=args.force_cpu)
-        return e_dn
+        e_dn,n_dn = model.energy_triangle_dn_NoCheck(state, env, force_cpu=args.force_cpu)
+        return sum(e_dn.values())/len(state.sites)
  
 
     def report_conv_fn(state, env, conv_step, conv_crit, e_curr=None):

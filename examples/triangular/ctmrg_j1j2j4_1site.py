@@ -1,6 +1,7 @@
 import builtins
 from io import StringIO
 import os
+from copy import deepcopy
 from unittest.mock import patch
 import context
 import torch
@@ -38,7 +39,7 @@ parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of trans
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
 parser.add_argument("--gauge", action='store_true', help="put into quasi-canonical form")
-parser.add_argument("--compressed_rdms", type=int, default=-1, help="use compressed RDMs for 2x3 and 3x2 patches"\
+parser.add_argument("--compressed_rdms",type=int,nargs="+",default=[-1],help="use compressed RDMs for 2x3 and 3x2 patches"\
         +" with chi lower that chi x D^2")
 parser.add_argument("--loop_rdms", action='store_true', help="loop over central aux index in rdm2x3 and rdm3x2")
 parser.add_argument("--ctm_conv_crit", default="CSPEC", help="ctm convergence criterion", \
@@ -125,7 +126,7 @@ def main(ctm_env_init=None):
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
             history=[]
-        e_curr= energy_f(state, env, compressed=args.compressed_rdms, unroll=args.loop_rdms)
+        e_curr= energy_f(state, env, compressed=args.compressed_rdms[-1], unroll=args.loop_rdms)
         obs_values= []
         if args.obs_freq > 0 and len(history) % args.obs_freq == 0:
             obs_values, obs_labels = eval_obs_f(state,env)
@@ -140,7 +141,7 @@ def main(ctm_env_init=None):
         _conv_check, history= ctmrg_conv_specC(state, env, history, ctm_args=ctm_args)
         e_curr, obs_values, obs_labels= float('Nan'), [], []
         if args.obs_freq > 0 and len(history) % args.obs_freq == 0:
-            e_curr= energy_f(state, env, compressed=args.compressed_rdms, unroll=args.loop_rdms)
+            e_curr= energy_f(state, env, compressed=args.compressed_rdms[-1], unroll=args.loop_rdms)
             obs_values, obs_labels = eval_obs_f(state,env)
         print(", ".join([f"{len(history['diffs'])}",f"{history['conv_crit'][-1]}",\
             f"{e_curr}"]+[f"{v}" for v in obs_values]))
@@ -164,12 +165,21 @@ def main(ctm_env_init=None):
         ctm_env_init= ctm_env_init.extend(args.chi)
     print(ctm_env_init)
     
-    t0= time.perf_counter()
-    loss0= energy_f(state, ctm_env_init, compressed=args.compressed_rdms, unroll=args.loop_rdms)
-    t1= time.perf_counter()
+    # estimate timings for various compressions rates
+    print("\n")
+    rdm_ctm_args= deepcopy(cfg.ctm_args)
+    rdm_ctm_args.projector_svd_reltol= 1.0e-14
+    rdm_ctm_args.projector_full_matrices= False
+    for c_chi in args.compressed_rdms:
+        t0= time.perf_counter()
+        loss0= energy_f(state, ctm_env_init, compressed=c_chi, unroll=args.loop_rdms, ctm_args=rdm_ctm_args)
+        t1= time.perf_counter()
+        print(f"compressed_rdms {c_chi} {loss0} {t1-t0} [s]")
+        log.info(f"t_energy {t1-t0} [s]")     
     obs_values, obs_labels = eval_obs_f(state,ctm_env_init)
     t2= time.perf_counter()
-    log.info(f"t_energy {t1-t0} s, t_obs {t2-t1} s")
+    log.info(f"t_obs {t2-t1} [s]")
+    print("\n")
     print(", ".join(["epoch","conv_crit","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
 
@@ -193,12 +203,16 @@ def main(ctm_env_init=None):
         ctm_env_init, *ctm_log= ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_f)
 
     # 6) compute final observables
-    e_curr0 = energy_f(state, ctm_env_init, compressed=args.compressed_rdms, unroll=args.loop_rdms)
+    print("\n")
+    for c_chi in args.compressed_rdms:
+        e_curr0 = energy_f(state, ctm_env_init, compressed=c_chi, unroll=args.loop_rdms, ctm_args=rdm_ctm_args)
+        print(f"compressed_rdms {c_chi} {e_curr0}")
+            
     obs_values0, obs_labels = eval_obs_f(state,ctm_env_init)
-    history, t_ctm, t_obs= ctm_log
     print("\n")
     print(", ".join(["epoch","energy"]+obs_labels))
     print("FINAL "+", ".join([f"{e_curr0}"]+[f"{v}" for v in obs_values0]))
+    history, t_ctm, t_obs= ctm_log
     print(f"TIMINGS ctm: {t_ctm} conv_check: {t_obs}")
 
     # environment diagnostics

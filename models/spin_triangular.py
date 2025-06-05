@@ -49,19 +49,28 @@ def eval_nn_per_site(coord,state,env,R,Rinv,op_nn,op_nn_diag,
 
     return energy_nn, energy_nn_diag
 
-def eval_nnn_per_site_semimanual(coord,state,env,R,Rinv,op_nnn,unroll=False,
-    checkpoint_unrolled=False,checkpoint_on_device=False,force_cpu=False,verbosity=0):
+def eval_nnn_per_site_semimanual(coord,state,env,R,Rinv,op_nnn,compressed=-1,unroll=False,
+    checkpoint_unrolled=False,checkpoint_on_device=False,force_cpu=False,dtype=None,
+    ctm_args=cfg.ctm_args,global_args=cfg.global_args,verbosity=0):
     if not unroll: unroll= {}
+
+    kwargs= dict(open_sites=[2,3], 
+            checkpoint_unrolled=checkpoint_unrolled, 
+            checkpoint_on_device=checkpoint_on_device,
+            force_cpu=force_cpu,dtype=dtype,verbosity=verbosity)
 
     # O(X^3 D^6 s^2)
     energy_nnn= 0.
     # RA R^2A R^3A                  B  C  A     x  x s2
     # A  RA   R^2A => 120deg order  A  B  C <=> s3 x x
-    tmp_rdm_2x3= rdm_looped.rdm2x3_loop_oe_semimanual(coord,state,env,\
-            open_sites=[2,3], unroll=unroll.get('rdm2x3_loop_oe_semimanual',False), 
-            checkpoint_unrolled=checkpoint_unrolled, 
-            checkpoint_on_device=checkpoint_on_device,
-            force_cpu=force_cpu,verbosity=verbosity)
+    if compressed>0:
+        tmp_rdm_2x3= rdm_looped.rdm2x3_loop_trglringex_compressed(coord,state,env,
+            compressed_chi=compressed,unroll=True,
+            ctm_args=ctm_args,global_args=global_args,**kwargs)
+    else:
+        tmp_rdm_2x3= rdm_looped.rdm2x3_loop_oe_semimanual(coord,state,env,\
+            unroll=unroll.get('rdm2x3_loop_oe_semimanual',False), 
+            **kwargs)    
     energy_nnn+= torch.einsum('iajb,jbia',tmp_rdm_2x3,
         torch.einsum('jxiy,xb,ya->jbia',op_nnn,R@R@R,R@R@R)) # A--A nnn
 
@@ -69,11 +78,14 @@ def eval_nnn_per_site_semimanual(coord,state,env,R,Rinv,op_nnn,unroll=False,
     # R^2A R^3A     x  s3                 C A
     # RA   R^2A     x  x                  B C
     # A      RA <=> s2 x  => 120deg order A B
-    tmp_rdm_3x2= rdm_looped.rdm3x2_loop_oe_semimanual(coord,state,env,\
-            open_sites=[2,3], unroll=unroll.get('rdm3x2_loop_oe_semimanual',False), 
-            checkpoint_unrolled=checkpoint_unrolled,
-            checkpoint_on_device=checkpoint_on_device,
-            force_cpu=force_cpu,verbosity=verbosity)
+    if compressed>0:
+        tmp_rdm_3x2= rdm_looped.rdm3x2_loop_trglringex_compressed(coord,state,env,
+            compressed_chi=compressed,unroll=True,
+            ctm_args=ctm_args,global_args=global_args,**kwargs)
+    else:
+        tmp_rdm_3x2= rdm_looped.rdm3x2_loop_oe_semimanual(coord,state,env,\
+            unroll=unroll.get('rdm3x2_loop_oe_semimanual',False), 
+            **kwargs)
     energy_nnn+= torch.einsum('iajb,jbia',tmp_rdm_3x2,
         torch.einsum('jxiy,xb,ya->jbia',op_nnn,R@R@R,R@R@R)) # A--A nnn
 
@@ -179,7 +191,8 @@ def eval_j1j2j4jX_per_site_legacy(coord,state,env,R,Rinv,\
     tmp_rdm_2x3= None
     if compressed>0:
         tmp_rdm_2x3= rdm.rdm2x3_trglringex_compressed(coord,state,env,compressed,\
-            ctm_args=ctm_args,global_args=global_args) 
+            ctm_args=ctm_args,global_args=global_args)
+        
     elif type(unroll)==dict and unroll=={}:
         tmp_rdm_2x3= rdm_looped.rdm2x3_loop_trglringex_manual(coord,state,env,\
             checkpoint_unrolled=checkpoint_unrolled)
@@ -209,7 +222,7 @@ def eval_j1j2j4jX_per_site_legacy(coord,state,env,R,Rinv,\
     tmp_rdm_3x2= None
     if compressed>0:
         tmp_rdm_3x2= rdm.rdm3x2_trglringex_compressed(coord,state,env,compressed,\
-            ctm_args=ctm_args,global_args=global_args) 
+            ctm_args=ctm_args,global_args=global_args)
     elif type(unroll)==dict and unroll=={}:
         tmp_rdm_3x2= rdm_looped.rdm3x2_loop_trglringex_manual(coord,state,env,\
             checkpoint_unrolled=checkpoint_unrolled)
@@ -478,9 +491,12 @@ class J1J2J4_1SITEQ():
         else:
             if abs(self.j2)>0:
                 for coord in state.sites.keys():
-                    _nnn= eval_nnn_per_site_semimanual(coord,state,env,R,Rinv,self.SS,unroll=unroll.get('j2',{}),
+                    _nnn= eval_nnn_per_site_semimanual(coord,state,env,R,Rinv,self.SS,
+                        compressed=compressed,unroll=unroll.get('j2',{}),
                         checkpoint_unrolled=ctm_args.fwd_checkpoint_loop_rdm,
-                        checkpoint_on_device=global_args.offload_to_gpu,force_cpu=force_cpu,\
+                        checkpoint_on_device=global_args.offload_to_gpu,
+                        force_cpu=force_cpu,dtype=ctm_args.dtype_rdm,
+                        ctm_args=ctm_args,global_args=global_args,
                         verbosity=ctm_args.verbosity_rdm)
                     energy_nnn+= _nnn
             if abs(self.jchi)>0:

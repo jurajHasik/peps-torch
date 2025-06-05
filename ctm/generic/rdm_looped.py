@@ -20,6 +20,17 @@ import logging
 
 log = logging.getLogger(__name__)
 
+def _dtype_rdm(ctm_args, global_args):
+    if ctm_args.dtype_rdm=="single":
+        if global_args.torch_dtype == torch.float64:
+            return torch.float32
+        if global_args.torch_dtype == torch.complex128:
+            return torch.complex64
+    elif ctm_args.dtype_rdm in ["double", "DEFAULT"]:
+        return None
+    else:
+        raise NotImplementedError(f"Unsupported dtype {ctm_args.dtype_rdm}")
+
 def _col2x3(T_1n1, T_10, a_1n1, a_10, indices):
     i,j,a,b,c,d, m,n,e,f,g,h= indices
     # 0--T_1n1--2->3
@@ -485,7 +496,7 @@ def rdm2x3_loop_trglringex_manual(coord, state, env, sym_pos_def=False, checkpoi
     return rdm
 
 def rdm2x3_loop_oe(coord, state, env, open_sites=[0,1,2,3,4,5], unroll=True,\
-    sym_pos_def=False, force_cpu=False, checkpoint_unrolled=False, 
+    sym_pos_def=False, force_cpu=False, dtype=None, checkpoint_unrolled=False, 
     checkpoint_on_device=False,verbosity=0):
     r"""
     :param coord: vertex (x,y) specifies top left site of 2x3 subsystem
@@ -623,7 +634,7 @@ def rdm2x3_loop_oe(coord, state, env, open_sites=[0,1,2,3,4,5], unroll=True,\
     return R
 
 def rdm2x3_loop_oe_semimanual(coord, state, env, open_sites=[0,1,2,3,4,5], unroll=True,\
-    sym_pos_def=False, force_cpu=False, 
+    sym_pos_def=False, force_cpu=False, dtype=None,
     checkpoint_unrolled=False, checkpoint_on_device=False, verbosity=0):
     # C1------(1)1 1(0)----T1----(3)44 44(0)----T1_x----(3)39 39(0)---T1_2x---(3)24 24(0)--C2_2x
     # 0(0)               (1,2)                 (1,2)                  (1,2)                25(1)
@@ -873,6 +884,9 @@ def rdm2x3_loop_trglringex_compressed(coord,state,env, open_sites=[0,1,2,3],
     
     P_down, Pt_down= ctm_get_projectors_from_matrices(half1, half0,\
         compressed_chi, ctm_args, global_args)
+    if not ctm_args.projector_full_matrices:
+        log.info(f"rdm2x3_loop_trglringex_compressed chi_max(Projectors)"+ 
+            f" {max(P_down.size(1),P_up.size(1))} / {compressed_chi}")
 
     # Granular open corners
     #
@@ -936,9 +950,10 @@ def rdm2x3_loop_trglringex_compressed(coord,state,env, open_sites=[0,1,2,3],
     t= C2X2_LD_o, C2X2_LU, P_up, Pt_up, T1_xy, a_xy, C2X2_RU_o, C2X2_RD, P_down, \
         Pt_down, T3_x, a_x
     if dtype or force_cpu:
-       dtype= dtype if dtype else env.dtype
+       dtype= _dtype_rdm(ctm_args, global_args) if dtype else env.dtype
        device= 'cpu' if force_cpu else env.device
-       t=(x.to(device=device, dtype=dtype) for x in t)
+       C2X2_LD_o, C2X2_LU, P_up, Pt_up, T1_xy, a_xy, C2X2_RU_o, C2X2_RD, P_down, \
+            Pt_down, T3_x, a_x= (x.to(device=device, dtype=dtype) for x in t)
 
     contract_tn= C2X2_LD_o,[15,19,20,22,I[0],I[1]],C2X2_LU,[15,61],P_up,[61,62],\
         Pt_up,[44,45,46,62],T1_xy,[44,40,42,39],a_xy,[I[6],40,45,47,41],a_xy.conj(),[I[7],42,46,48,43],\
@@ -1151,7 +1166,7 @@ def rdm3x2_loop_trglringex_manual(coord, state, env, sym_pos_def=False, checkpoi
     return rdm
 
 def rdm3x2_loop_oe_semimanual(coord, state, env, open_sites=[0,1,2,3,4,5], unroll=True,\
-    sym_pos_def=False, force_cpu=False, 
+    sym_pos_def=False, force_cpu=False, dtype=None,
     checkpoint_unrolled=False, checkpoint_on_device=False, verbosity=0):
     # C1------(1)1 1(0)----T1----(3)13 13(0)----T1_x-----(3)7 7(0)-----C2_x
     # 0(0)               (1,2)                 (1,2)                   8(1)
@@ -1278,7 +1293,7 @@ def rdm3x2_loop_oe_semimanual(coord, state, env, open_sites=[0,1,2,3,4,5], unrol
     return res
 
 def rdm3x2_loop_oe(coord, state, env, open_sites=[0,1,2,3,4,5], unroll=True,\
-    sym_pos_def=False, force_cpu=False, checkpoint_unrolled=False, 
+    sym_pos_def=False, force_cpu=False, dtype=None, checkpoint_unrolled=False, 
     checkpoint_on_device=False, verbosity=0):
     r"""
     :param coord: vertex (x,y) specifies top left site of 3x2 subsystem
@@ -1560,6 +1575,9 @@ def rdm3x2_loop_trglringex_compressed(coord,state,env, open_sites=[0,1,2,3],
     
     P_right, Pt_right= ctm_get_projectors_from_matrices(half0,half1,\
         compressed_chi, ctm_args, global_args)
+    if not ctm_args.projector_full_matrices:
+        log.info(f"rdm3x2_loop_trglringex_compressed chi_max(Projectors)"+ 
+            f" {max(P_right.size(1),P_left.size(1))} / {compressed_chi}")
 
     # C2X2_LU                 |--(1)13 13(0)--|                C2X2_RU_o
     # |                       |               |                        |
@@ -1612,9 +1630,10 @@ def rdm3x2_loop_trglringex_compressed(coord,state,env, open_sites=[0,1,2,3],
 
     t= C2X2_LU, Pt_left, C2X2_RU_o, P_left, T4_y, a_y, C2X2_LD_o, C2X2_RD, Pt_right, P_right, T2_xy, a_xy
     if dtype or force_cpu:
-       dtype= dtype if dtype else env.dtype
-       device= 'cpu' if force_cpu else env.device
-       t=(x.to(device=device, dtype=dtype) for x in t)
+        dtype= _dtype_rdm(ctm_args, global_args) if dtype else env.dtype if dtype else env.dtype
+        device= 'cpu' if force_cpu else env.device
+        C2X2_LU, Pt_left, C2X2_RU_o, P_left, T4_y, a_y, C2X2_LD_o, C2X2_RD, Pt_right, P_right, \
+            T2_xy, a_xy=(x.to(device=device, dtype=dtype) for x in t)
 
     contract_tn= C2X2_LU,[60,13],Pt_left,[60,61],C2X2_RU_o,[13,87,85,86,I[4],I[5]],\
         P_left,[18,19,20,61],T4_y,[18,80,16,17],a_y,[I[6],19,16,81,83],a_y.conj(),[I[7],20,17,82,84],\

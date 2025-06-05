@@ -234,25 +234,26 @@ class TestRdms_precision_J1_TRGL_D5_1SITE_real():
                     torch.einsum('jxiy,xb,ya->jbia',self.model.SS,R@R@R,R@R@R)) # A--A nnn
         
         print(f"rdm.rdm2x3_loop_oe chi={self.env.chi} SS_ref={SS_ref}")
-        print("rdm_looped.rdm2x3_loop_trglringex_compressed chi_c delta_SS_nnn delta_rho_nnn")
-        for c_chi in compressed_chi:
-            # x  s3 s2
-            # s0 s1 x
-            loc_ctm_args= deepcopy(cfg.ctm_args)
-            loc_ctm_args.projector_svd_reltol= 1.0e-14
-            loc_ctm_args.projector_full_matrices= False
-            loc_ctm_args.verbosity_projectors= 1
-            R2x3_loop_eo_c= rdm_looped.rdm2x3_loop_trglringex_compressed((0,0),self.state,self.env,open_sites=[0,2],
-                compressed_chi=c_chi, sym_pos_def=False,\
-                unroll=True, checkpoint_unrolled=False, checkpoint_on_device=False,\
-                force_cpu=False, dtype=None,\
-                ctm_args=loc_ctm_args,global_args=cfg.global_args,verbosity=0)
-            R2x3_loop_eo_c= R2x3_loop_eo_c.permute(1,0,3,2).contiguous()  # permute to match R2x3_ref
+        print("rdm_looped.rdm2x3_loop_trglringex_compressed chi_c delta_SS_nnn delta_rho_nnn dtype")
+        for dtype in [torch.float32, torch.float64]:
+            for c_chi in compressed_chi:
+                # x  s3 s2
+                # s0 s1 x
+                loc_ctm_args= deepcopy(cfg.ctm_args)
+                loc_ctm_args.projector_svd_reltol= 1.0e-14
+                loc_ctm_args.projector_full_matrices= False
+                loc_ctm_args.verbosity_projectors= 1
+                R2x3_loop_eo_c= rdm_looped.rdm2x3_loop_trglringex_compressed((0,0),self.state,self.env,open_sites=[0,2],
+                    compressed_chi=c_chi, sym_pos_def=False,\
+                    unroll=True, checkpoint_unrolled=False, checkpoint_on_device=False,\
+                    force_cpu=False, dtype=dtype,\
+                    ctm_args=loc_ctm_args,global_args=cfg.global_args,verbosity=0)
+                R2x3_loop_eo_c= R2x3_loop_eo_c.permute(1,0,3,2).contiguous()  # permute to match R2x3_ref
 
-            SS_c= torch.einsum('iajb,jbia',R2x3_loop_eo_c,
-                        torch.einsum('jxiy,xb,ya->jbia',self.model.SS,R@R@R,R@R@R)) # A--A nnn
-            
-            print(f"{c_chi} {SS_c} {SS_c-SS_ref} {trace_norm(R2x3_loop_eo_c,R2x3_loop_eo)}")
+                SS_c= torch.einsum('iajb,jbia',R2x3_loop_eo_c,
+                            torch.einsum('jxiy,xb,ya->jbia',self.model.SS,R@R@R,R@R@R)) # A--A nnn
+                
+                print(f"{c_chi} {SS_c} {SS_c-SS_ref} {trace_norm(R2x3_loop_eo_c,R2x3_loop_eo)} {dtype}")
             
         
     @pytest.mark.slow
