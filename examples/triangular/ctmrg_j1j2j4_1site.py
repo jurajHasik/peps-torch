@@ -213,7 +213,7 @@ def main(ctm_env_init=None):
     print(", ".join(["epoch","energy"]+obs_labels))
     print("FINAL "+", ".join([f"{e_curr0}"]+[f"{v}" for v in obs_values0]))
     history, t_ctm, t_obs= ctm_log
-    print(f"TIMINGS ctm: {t_ctm} conv_check: {t_obs}")
+    print(f"TIMINGS ctm: {t_ctm} [s] conv_check: {t_obs} [s] min_chi: {ctm_env_init.min_chi()}")
 
     # environment diagnostics
     # print("\n")
@@ -250,10 +250,11 @@ def main(ctm_env_init=None):
         l, evecs_right= transferops.get_Top_spec(1, sdp[0], (-sdp[1][0],-sdp[1][1]), \
             state, ctm_env_init, eigenvectors=True)
 
-        evecs[sdp]= (evecs_left[:,0].view(ctm_env_init.chi,\
-                state.site(sdp[0]).size(dir_to_ind[(-sdp[1][0],-sdp[1][1])])**2,ctm_env_init.chi).clone(),
-                evecs_right[:,0].view(ctm_env_init.chi,\
-                    state.site(sdp[0]).size(dir_to_ind[sdp[1]])**2,ctm_env_init.chi).clone())
+        ch1,ch2= transferops._get_chis(state, ctm_env_init, sdp[0], sdp[1], 1)
+        evecs[sdp]= (evecs_left[:,0].view(ch1,\
+                state.site(sdp[0]).size(dir_to_ind[(-sdp[1][0],-sdp[1][1])])**2,ch2).clone(),
+                evecs_right[:,0].view(ch1,\
+                    state.site(sdp[0]).size(dir_to_ind[sdp[1]])**2,ch2).clone())
         if not state.site(sdp[0]).is_complex():
             assert evecs_left[:,0].imag.abs().max()<1.0e-14,"Leading eigenvector is not real"
             assert evecs_right[:,0].imag.abs().max()<1.0e-14,"Leading eigenvector is not real"

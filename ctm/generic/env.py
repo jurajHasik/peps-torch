@@ -154,6 +154,13 @@ class ENV():
         for c in self.C.values(): c.detach_()
         for t in self.T.values(): t.detach_()
 
+    def min_chi(self):
+        r"""
+        :return: minimum environment bond dimension of the environment
+        :rtype: int
+        """
+        return min([c.size(0) for c in self.C.values()]+[c.size(1) for c in self.C.values()]),
+
     def extend(self, new_chi, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
         r"""
         :param new_chi: new environment bond dimension
@@ -169,6 +176,7 @@ class ENV():
         .. note::
             This operation preserves gradient tracking.
         """
+        # TODO: extend for dynamic chi
         new_env= ENV(new_chi, ctm_args=ctm_args, global_args=global_args)
         opts= {'dtype': self.dtype, 'device': self.device}
         x= min(self.chi, new_chi)
