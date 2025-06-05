@@ -255,6 +255,7 @@ def main():
     # 4) (optional) compute observables as given by initial environment
     e_curr0 = energy_f(state, ctm_env_init, force_cpu=args.force_cpu, warn_on_check=False)
     obs_values0, obs_labels = model.eval_obs(state,ctm_env_init,force_cpu=args.force_cpu)
+    print("\n")
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{e_curr0}"]+[f"{v}" for v in obs_values0]))
 
