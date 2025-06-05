@@ -105,22 +105,22 @@ def main():
     def energy_f(state, env, force_cpu=False, fail_on_check=False,\
         warn_on_check=True):
         #print(env)
-        e_dn = model.energy_triangle_dn(state, env, force_cpu=force_cpu,\
+        e_dn,n_dn = model.energy_triangle_dn(state, env, force_cpu=force_cpu,\
             fail_on_check=fail_on_check, warn_on_check=warn_on_check)
-        e_up = model.energy_triangle_up(state, env, force_cpu=force_cpu,\
+        e_up,n_up = model.energy_triangle_up(state, env, force_cpu=force_cpu,\
             fail_on_check=fail_on_check, warn_on_check=warn_on_check)
         # e_nnn = model.energy_nnn(state, env)
-        return (e_up + e_dn)/3 #+ e_nnn) / 3
+        return (sum(e_up.values()) + sum(e_dn.values()))/(3*len(state.sites)) #+ e_nnn) / 3
     def energy_f_complex(state, env, force_cpu=False):
         #print(env)
-        e_dn = model.energy_triangle_dn_NoCheck(state, env, force_cpu=force_cpu)
-        e_up = model.energy_triangle_up_NoCheck(state, env, force_cpu=force_cpu)
+        e_dn,n_dn = model.energy_triangle_dn_NoCheck(state, env, force_cpu=force_cpu)
+        e_up,n_up = model.energy_triangle_up_NoCheck(state, env, force_cpu=force_cpu)
         # e_nnn = model.energy_nnn(state, env)
-        return (e_up + e_dn)/3 #+ e_nnn) / 3
+        return (sum(e_up.values()) + sum(e_dn.values()))/(3*len(state.sites)) #+ e_nnn) / 3
     def dn_energy_f_NoCheck(state, env, force_cpu=False):
         #print(env)
-        e_dn = model.energy_triangle_dn_NoCheck(state, env, force_cpu=force_cpu)
-        return e_dn
+        e_dn,n_dn = model.energy_triangle_dn_NoCheck(state, env, force_cpu=force_cpu)
+        return sum(e_dn.values())/(3*len(state.sites))
 
     @torch.no_grad()
     def print_corner_spectra(env):
@@ -166,37 +166,7 @@ def main():
                 return True, history
             return False, history
     elif args.CTM_check=="SingularValue":
-        @torch.no_grad()
-        def ctmrg_conv_f(state, env, history, ctm_args=cfg.ctm_args):
-            if not history:
-                history_spec = []
-                history_ite=1
-                history=[history_ite, history_spec]
-            spect_new=print_corner_spectra(env)
-            spec1_new=spect_new[0][1]
-            spec1_new=spec1_new/spec1_new[0]
-            spec2_new=spect_new[1][1]
-            spec2_new=spec2_new/spec2_new[0]
-            spec3_new=spect_new[2][1]
-            spec3_new=spec3_new/spec3_new[0]
-            spec4_new=spect_new[3][1]
-            spec4_new=spec4_new/spec4_new[0]
-            if len(history[1])==4:
-                spec_ers=torch.zeros(4)
-                spec_ers[0]=torch.linalg.norm(spec1_new-history[1][0])
-                spec_ers[1]=torch.linalg.norm(spec2_new-history[1][1])
-                spec_ers[2]=torch.linalg.norm(spec3_new-history[1][2])
-                spec_ers[3]=torch.linalg.norm(spec4_new-history[1][3])
-                #print(history[0])
-                #print(torch.max(spec_ers))
-
-            if (len(history[1])==4 and torch.max(spec_ers) < ctm_args.ctm_conv_tol*100) \
-                    or (history[0] >= ctm_args.ctm_max_iter):
-                log.info({"history_length": history[0], "history": spec_ers})
-                return True, history
-            history[1]=[spec1_new,spec2_new,spec3_new,spec4_new]
-            history[0]=history[0]+1
-            return False, history
+        ctmrg_conv_f= ctmrg_conv_specC
 
     ctm_env_init = ENV(args.chi, state)
     init_env(state, ctm_env_init)

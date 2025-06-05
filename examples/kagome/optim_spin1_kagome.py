@@ -129,10 +129,10 @@ def main():
             +str(args.ansatz)+" is not supported")
 
     def energy_f(state, env, force_cpu=False):
-        e_dn = model.energy_triangle_dn(state, env, force_cpu=force_cpu)
-        e_up = model.energy_triangle_up(state, env, force_cpu=force_cpu)
+        e_dn,n_dn = model.energy_triangle_dn(state, env, force_cpu=force_cpu)
+        e_up,e_up = model.energy_triangle_up(state, env, force_cpu=force_cpu)
         # e_nnn = model.energy_nnn(state, env)
-        return (e_up + e_dn)/3 #+ e_nnn) / 3
+        return (sum(e_up.values()) + sum(e_dn.values()))/(3*len(state.sites)) #+ e_nnn) / 3
 
     @torch.no_grad()
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
