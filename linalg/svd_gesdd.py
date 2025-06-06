@@ -88,7 +88,7 @@ class SVDGESDD(torch.autograd.Function):
             Computes SVD decompostion of matrix :math:`A = USV^\dagger`.
             """
             # A = U @ diag(S) @ Vh
-            U, S, Vh = torch.linalg.svd(A)
+            U, S, Vh = torch.linalg.svd(A,driver="gesvd" if A.is_cuda else None)
             V= Vh.transpose(-2,-1).conj()
             U,V= fix_svd_signs(U, V)
             self.save_for_backward(U, S, V, cutoff)
@@ -273,7 +273,7 @@ class SVDGESDD(torch.autograd.Function):
         # calls below
         if (gv is None) and (gv is None):
             if not (diagnostics is None):
-                print(f"{diagnostics} {dA.abs().max()} {S.max()}")
+                print(f"{diagnostics} {dA.abs().max()} {sigma.max()}")
             return sigma_term, None, None
 
         sigma_inv= safe_inverse_2(sigma.clone(), sigma_scale*eps)
