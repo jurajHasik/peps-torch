@@ -71,7 +71,8 @@ def main(ctm_env_init=None):
         raise ValueError("Invalid tiling: "+str(args.tiling)+" Supported options: "\
             +["1SITE", "1SITE_NOROT", "1STRIV", "1SPG", "1SITEQ"])
     energy_f=model.energy_per_site
-    eval_obs_f= model.eval_obs
+    eval_obs_f= lambda *aargs,**kwargs: model.eval_obs(*aargs, unroll=args.loop_rdms,**kwargs)
+    # eval_obs_f= model.eval_obs
 
     if args.instate!=None:
         if args.tiling in ["1STRIV"]:
@@ -168,6 +169,7 @@ def main(ctm_env_init=None):
     # estimate timings for various compressions rates
     print("\n")
     rdm_ctm_args= deepcopy(cfg.ctm_args)
+    rdm_ctm_args.projector_svd_method= "GESDD"
     rdm_ctm_args.projector_svd_reltol= 1.0e-14
     rdm_ctm_args.projector_full_matrices= False
     for c_chi in args.compressed_rdms:
@@ -222,7 +224,14 @@ def main(ctm_env_init=None):
         log.info(f"spectrum C[{c_loc}]")
         log.info(f"{s}")
 
-    # chirality
+    # optional: save spectrum of C2x2_LU(0,0) to file
+    # from ctm.generic.ctm_components import c2x2_LU
+    # _C= c2x2_LU((0,0), state, ctm_env_init, mode='sl', verbosity=0)
+    # S= torch.linalg.svdvals(_C)
+    # np.savez(args.out_prefix+f"_X{args.chi}spec.npz", spectrum=S.detach().cpu().numpy())
+    # log.info("Spectrum of C2x2_LU(0,0) saved to "+args.out_prefix+f"_X{args.chi}spec.npz")
+
+    # optional: chirality
     # obs= model.eval_obs_chirality(state, ctm_env_init, compressed=args.compressed_rdms,\
     #     unroll=args.loop_rdms)
     # print("\n\n")
@@ -298,18 +307,17 @@ if __name__=='__main__':
     current_env=None
     if len(args.sequence_chi)==0:
         main(current_env)
-        exit(0)
+    else:     
+        for chi in args.sequence_chi:
+            args.chi= chi
+            with open(args.out_prefix+f"_X{chi}.dat", "w") as current_fout:
+                original_print = builtins.print
+                def passthrough_print(*args, **kwargs):
+                    original_print(*args, **kwargs)
+                    current_fout.write(" ".join([str(arg) for arg in args])+kwargs.get("end", "\n"))
 
-    for chi in args.sequence_chi:
-        args.chi= chi
-        with open(args.out_prefix+f"_X{chi}.dat", "w") as current_fout:
-            original_print = builtins.print
-            def passthrough_print(*args, **kwargs):
-                original_print(*args, **kwargs)
-                current_fout.write(" ".join([str(arg) for arg in args])+"\n")
-
-            with patch('builtins.print', new=passthrough_print) as tmp_print:
-                current_env= main(current_env)
+                with patch('builtins.print', new=passthrough_print) as tmp_print:
+                    current_env= main(current_env)
 
 
 class TestCtmrg_TRGL_D3_1SITE(unittest.TestCase):

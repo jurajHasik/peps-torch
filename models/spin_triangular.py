@@ -346,6 +346,8 @@ class J1J2J4_1SITEQ():
                 'rdm2x3_loop_oe': [47,48,106,107,104,105],
                 'rdm3x2_loop_oe_semimanual': [83,84,104,105,106,107], # alternatively [83,84]
                 'rdm3x2_loop_oe': [83,84,104,105,106,107],
+                'rdm2x3_loop_trglringex_compressed': [47,48,104,105,100,101],
+                'rdm3x2_loop_trglringex_compressed': [100,101,83,84,104,105],
                 # reduces peak-mem by a factor 2 * 2^2 (for two halves of 2x2 patch, each with one open site)
                 'rdm2x2': True
                 },
@@ -526,7 +528,7 @@ class J1J2J4_1SITEQ():
 
         return energy_per_site
 
-    def eval_obs(self,state,env,q=None,force_cpu=False):
+    def eval_obs(self,state,env,q=None,force_cpu=False,unroll=False):
         r"""
         :param state: wavefunction
         :param env: CTM environment
@@ -560,6 +562,9 @@ class J1J2J4_1SITEQ():
                 assert hasattr(state,'q'), "No q-vector available"
                 q= state.q
         
+        if type(unroll)==bool:
+            unroll= self.unroll if unroll else {}
+        
         s2 = su2.SU2(self.phys_dim, dtype=self.dtype, device=self.device)
         R= torch.linalg.matrix_exp( (pi*q[0])*(s2.SP()-s2.SM()) )
         Rinv= R.t().conj()
@@ -580,13 +585,15 @@ class J1J2J4_1SITEQ():
             obs["avg_m"]= obs["avg_m"]/len(state.sites.keys())
 
             # two-site
+            unroll= unroll.get('j1',{})
             for coord,site in state.sites.items():
                 # s0
                 # s1
                 tmp_rdm_1x2= rdm.rdm1x2(coord,state,env,force_cpu=force_cpu)
                 # s0 s1
                 tmp_rdm_2x1= rdm.rdm2x1(coord,state,env,force_cpu=force_cpu)
-                tmp_rdm_2x2_NNN_1n1= rdm.rdm2x2_NNN_1n1(coord,state,env,force_cpu=force_cpu)
+                tmp_rdm_2x2_NNN_1n1= rdm.rdm2x2_NNN_1n1(coord,state,env,force_cpu=force_cpu,\
+                    unroll=unroll.get('rdm2x2',False),)
                 #
                 # A--B
                 SS2x1= torch.einsum('ijab,abij',tmp_rdm_2x1,

@@ -967,8 +967,13 @@ def rdm2x3_loop_trglringex_compressed(coord,state,env, open_sites=[0,1,2,3],
     mem_limit= None
     if type(unroll)==bool and unroll:
         unroll= I_out
+
+    path= None
+    if unroll == I_out:
+        path= ((3, 4), (6, 7), (5, 11), (0,), (0, 1), (8, 9), (3, 8), (4, 7), (3, 6), (2, 5), (3, 4), (1, 3), (1, 2), (0, 1))
+
     path, path_info= get_contraction_path(*contract_tn,unroll=unroll if unroll else [],\
-        names=names,path=None,who=who,\
+        names=names,path=path,who=who,\
         memory_limit=mem_limit if unroll else None,\
             optimizer="default" if env.chi>1 else "auto")
     R= contract_with_unroll(*contract_tn,optimize=path,backend='torch',\
@@ -1647,8 +1652,13 @@ def rdm3x2_loop_trglringex_compressed(coord,state,env, open_sites=[0,1,2,3],
     mem_limit= None
     if type(unroll)==bool and unroll:
         unroll= I_out
+
+    path=None
+    if unroll == I_out:
+        path = ((3, 4), (5,), (5, 6), (10, 11), (0, 1), (0, 9), (3, 8), (4, 7), (3, 6), (2, 5), (3, 4), (1, 3), (1, 2), (0, 1))
+
     path, path_info= get_contraction_path(*contract_tn,unroll=unroll if unroll else [],\
-        names=names,path=None,who=who,\
+        names=names,path=path,who=who,\
         memory_limit=mem_limit if unroll else None,\
             optimizer="default" if env.chi>1 else "auto")
     R= contract_with_unroll(*contract_tn,optimize=path,backend='torch',\
