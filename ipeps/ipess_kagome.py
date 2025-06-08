@@ -906,9 +906,9 @@ class IPESS_KAGOME_PG_LC(IPESS_KAGOME_PG):
         by :meth:`build_elem_tensors` and then construct rank-5 iPEPS by :meth:`build_onsite_tensors`.
         """
         self.elem_tensors= self.build_elem_tensors()
-        self.ipess_tensors= {'T_u': self.elem_tensors['T_u'], 'T_d': self.elem_tensors['T_u'],\
+        self.ipess_tensors= {(0,0): {'T_u': self.elem_tensors['T_u'], 'T_d': self.elem_tensors['T_u'],\
             'B_a': self.elem_tensors['B_c'], 'B_b': self.elem_tensors['B_c'],\
-            'B_c': self.elem_tensors['B_c']}
+            'B_c': self.elem_tensors['B_c']}}
         if not self.SYM_UP_DOWN:
             self.ipess_tensors['T_d']= self.elem_tensors['T_d']
         if not self.SYM_BOND_S:

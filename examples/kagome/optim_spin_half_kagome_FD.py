@@ -104,23 +104,22 @@ def main():
 
     def energy_f(state, env, force_cpu=False, fail_on_check=False,\
         warn_on_check=True):
-        #print(env)
         e_dn,n_dn = model.energy_triangle_dn(state, env, force_cpu=force_cpu,\
             fail_on_check=fail_on_check, warn_on_check=warn_on_check)
         e_up,n_up = model.energy_triangle_up(state, env, force_cpu=force_cpu,\
             fail_on_check=fail_on_check, warn_on_check=warn_on_check)
         # e_nnn = model.energy_nnn(state, env)
         return (sum(e_up.values()) + sum(e_dn.values()))/(3*len(state.sites)) #+ e_nnn) / 3
+    
     def energy_f_complex(state, env, force_cpu=False):
-        #print(env)
         e_dn,n_dn = model.energy_triangle_dn_NoCheck(state, env, force_cpu=force_cpu)
         e_up,n_up = model.energy_triangle_up_NoCheck(state, env, force_cpu=force_cpu)
         # e_nnn = model.energy_nnn(state, env)
         return (sum(e_up.values()) + sum(e_dn.values()))/(3*len(state.sites)) #+ e_nnn) / 3
+    
     def dn_energy_f_NoCheck(state, env, force_cpu=False):
-        #print(env)
         e_dn,n_dn = model.energy_triangle_dn_NoCheck(state, env, force_cpu=force_cpu)
-        return sum(e_dn.values())/(3*len(state.sites))
+        return sum(e_dn.values())
 
     @torch.no_grad()
     def print_corner_spectra(env):
@@ -166,7 +165,7 @@ def main():
                 return True, history
             return False, history
     elif args.CTM_check=="SingularValue":
-        ctmrg_conv_f= ctmrg_conv_specC
+        ctmrg_conv_f=ctmrg_conv_specC
 
     ctm_env_init = ENV(args.chi, state)
     init_env(state, ctm_env_init)
