@@ -104,7 +104,7 @@ def main():
         # if instate is passed together with u1_charges, we assume instate serves as a reference to be extended
         if args.instate!=None:
             ref_state= read_ipeps_c4v_lc(args.instate, settings)
-            coeffs= torch.as_tensor(rebase_params(ref_state.coeffs[(0,0)], torch.stack([m_t[1] for m_t in ref_state.elem_tensors ]),\
+            coeffs= torch.as_tensor(rebase_params(ref_state.coeffs[(0,0)].cpu(), torch.stack([m_t[1] for m_t in ref_state.elem_tensors ]),\
                                   u1basis, args.instate_noise, D=None), dtype=cfg.global_args.torch_dtype).to(cfg.global_args.device)
         else:
             coeffs= torch.rand_like(coeffs, dtype=cfg.global_args.torch_dtype, device='cpu').to(cfg.global_args.device)
@@ -134,7 +134,7 @@ def main():
     def leg_charge_conv_check(env, history):
         tD = env[(0,0)].tl.get_legs(axes=0).tD
         converged = True
-        conv_len = 5
+        conv_len = 3
         history.append(tD)
         if len(history) < conv_len:
             return False, history
@@ -339,22 +339,24 @@ def main():
             with torch.no_grad():
                 env_leg = yastn.Leg(state_yastn.config, s=1, t=(0,), D=(1,))
                 ctm_env_in = EnvCTM_c4v(state_yastn, init=YASTN_ENV_INIT[ctm_args.ctm_env_init_type], leg=env_leg)
-                # 3.1.1 post-init CTM steps (allow expansion of the environment in case of qr policy)
-                if ctm_args.projector_svd_method=='QR':
-                    options_svd_pre_init= {
-                        "policy": "arnoldi",
-                        "D_total": cfg.main_args.chi, "tol": ctm_args.projector_svd_reltol,
-                        "eps_multiplet": ctm_args.projector_eps_multiplet,
-                    }
-                    # ctm_env_in, converged, conv_history, t_ctm, t_check= ctmrg(ctm_env_in, lambda _0,_1: (False, None),
-                    ctm_env_in, converged, conv_history, t_ctm, t_check= ctmrg(ctm_env_in, leg_charge_conv_check,
-                        options_svd_pre_init,
-                        max_sweeps= ctm_args.fpcm_init_iter,
-                        method="default",
-                        checkpoint_move=False
-                    )
         else:
             ctm_env_in.psi = Peps2Layers(state_yastn) if state_yastn.has_physical() else state_yastn
+
+        # 3.1.1 post-init CTM steps (allow expansion of the environment in case of qr policy)
+        if ctm_args.projector_svd_method=='QR':
+            options_svd_pre_init= {
+                "policy": "arnoldi",
+                "D_total": cfg.main_args.chi, "tol": ctm_args.projector_svd_reltol,
+                "eps_multiplet": ctm_args.projector_eps_multiplet,
+            }
+            # ctm_env_in, converged, conv_history, t_ctm, t_check= ctmrg(ctm_env_in, lambda _0,_1: (False, None),
+            ctm_env_in, converged, conv_history, t_ctm, t_check= ctmrg(ctm_env_in, leg_charge_conv_check,
+                options_svd_pre_init,
+                max_sweeps= ctm_args.fpcm_init_iter,
+                method="default",
+                checkpoint_move=False
+            )
+            log.log(logging.INFO, f"WARM-UP: # of ctm steps: {len(conv_history):d}, t_warm_up: {t_ctm:.1f}s")
 
         # 3.2 setup and run CTMRG
         options_svd={

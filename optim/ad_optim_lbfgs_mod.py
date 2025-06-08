@@ -9,11 +9,8 @@ from optim import lbfgs_modified
 import config as cfg
 
 from ctm.generic.env import EnvError
-try:
-    from ctm.generic.env_yastn import NoFixedPointError
-except ImportError:
-    warnings.warn("YASTN not available", ImportWarning)
-    NoFixedPointError= RuntimeError("YASTN not available")
+from yastn.yastn.tn.fpeps.envs.fixed_pt import NoFixedPointError
+
 
 def store_checkpoint(checkpoint_file, state, optimizer, current_epoch, current_loss,\
     verbosity=0):
@@ -97,7 +94,7 @@ def load_optimizer_state_(optimizer, state, main_args=cfg.main_args, opt_args=cf
     cp_state_dict["state"][cp_opt_params["params"][0]]= cp_opt_history
     optimizer.load_state_dict(cp_state_dict)
     print(f"checkpoint.loss = {loss0}")
-    
+
 
 def create_optimizer(state, main_args=cfg.main_args, opt_args=cfg.opt_args,
     ctm_args=cfg.ctm_args, global_args=cfg.global_args):
@@ -105,7 +102,7 @@ def create_optimizer(state, main_args=cfg.main_args, opt_args=cfg.opt_args,
     :param optimizer: Optimizer
     :param parameters: parameters of the optimizer
     :param main_args: main arguments
-    :param opt_args: optimization arguments 
+    :param opt_args: optimization arguments
     :param ctm_args: CTM arguments
     :param global_args: global arguments
     :type optimizer: torch.optim.Optimizer
@@ -114,7 +111,7 @@ def create_optimizer(state, main_args=cfg.main_args, opt_args=cfg.opt_args,
     :type opt_args: OPTARGS
     :type ctm_args: CTMARGS
     :type global_args: GLOBALARGS
-    
+
     Reset the state of the optimizer to the initial state.
     """
     parameters= state.get_parameters()
@@ -126,7 +123,7 @@ def create_optimizer(state, main_args=cfg.main_args, opt_args=cfg.opt_args,
         line_search_eps=opt_args.line_search_tol)
     optimizer.zero_grad()
     return parameters, optimizer
-    
+
 
 def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
     main_args=cfg.main_args, opt_args=cfg.opt_args,ctm_args=cfg.ctm_args,
@@ -303,7 +300,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
             _, new_loss, new_flat_grad = optimizer.step_2c(closure, closure_linesearch, new_loss=new_loss, new_flat_grad=new_flat_grad)
         except NoFixedPointError as e:
             print(e)
-            log.info("No fixed point found. Add noise to the state.")
+            log.info(e.message + "Add noise to the state.")
             # add a random perturbation to the state
             with torch.no_grad():
                 state = state.add_noise(noise=0.1)
