@@ -102,5 +102,5 @@ def read_ipeps_kagome(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=
     tmp_ipeps= read_ipeps(jsonfile, vertexToSite=vertexToSite, aux_seq=aux_seq,\
         peps_args=peps_args, global_args=global_args)
 
-    return IPEPS_KAGOME(tmp_ipeps.sites, vertexToSite=vertexToSite, lX=tmp_ipeps.lX,\
-        lY=tmp_ipeps.lY, peps_args=peps_args, global_args=global_args)
+    return IPEPS_KAGOME(tmp_ipeps.sites, vertexToSite=vertexToSite, pattern=tmp_ipeps._pattern, 
+        lX=tmp_ipeps.lX, lY=tmp_ipeps.lY, peps_args=peps_args, global_args=global_args)
