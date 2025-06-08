@@ -178,6 +178,7 @@ def main():
         e_up,n_up = model.energy_triangle_up_NoCheck(state, env, force_cpu=force_cpu)
         # e_nnn = model.energy_nnn(state, env)
         return (sum(e_up.values()) + sum(e_dn.values()))/(3*len(state.sites)) #+ e_nnn) / 3
+    
     def dn_energy_f_NoCheck(state, env, force_cpu=False):
         #print(env)
         e_dn,n_dn = model.energy_triangle_dn_NoCheck(state, env, force_cpu=force_cpu)
@@ -303,7 +304,9 @@ def main():
 
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"
-    if args.ansatz=="IPESS":
+    if args.ansatz in ["IPEPS"]:
+        state= read_ipeps_kagome(outputstatefile)
+    elif args.ansatz=="IPESS":
         state= read_ipess_kagome_generic(outputstatefile)
     elif args.ansatz in ["IPESS_PG", "A_1,B", "A_2,B"]:
         state= read_ipess_kagome_pg(outputstatefile)
@@ -475,6 +478,154 @@ class TestCheckpoint_IPESS_Ansatze(unittest.TestCase):
         for ansatz in self.ANSATZE:
             out_prefix=self.OUT_PRFX+f"_{ansatz[0].replace(',','')}_"\
                 +("T" if ansatz[1] else "F")+("T" if ansatz[2] else "F")
+            instate= out_prefix[len("RESULT_"):]+"_instate.json"
+            for f in [out_prefix+"_checkpoint.p",out_prefix+"_state.json",\
+                out_prefix+".log",instate]:
+                if os.path.isfile(f): os.remove(f)
+
+
+class TestCheckpoint_IPEPS_Ansatze(unittest.TestCase):
+    tol= 1.0e-6
+    DIR_PATH = os.path.dirname(os.path.realpath(__file__))
+    OUT_PRFX = "RESULT_test_run-opt-chck"
+    ANSATZE= [("IPEPS","[[0],]","1x1"), ("IPEPS","[[0,1,2],[1,2,0],[2,0,1]]","3x3")]
+
+    def reset_couplings(self):
+        args.j1= 1.0
+        args.theta=0.2
+        args.JD=0.1
+
+    def setUp(self):
+        self.reset_couplings()
+        args.bond_dim=2
+        args.chi=16
+        args.seed=300
+        args.opt_max_iter= 10
+        args.instate_noise=0
+        args.GLOBALARGS_dtype= "complex128"
+        torch.manual_seed(args.seed)
+
+    def test_checkpoint_ipess_ansatze(self):
+        from io import StringIO
+        from unittest.mock import patch
+        from cmath import isclose
+        import numpy as np
+
+        for ansatz in self.ANSATZE:
+            with self.subTest(ansatz=ansatz):
+                self.reset_couplings()
+                args.opt_max_iter= 10
+                args.ansatz= ansatz[0]
+                args.pattern= ansatz[1]
+                args.opt_resume= None
+                args.out_prefix=self.OUT_PRFX+f"_{ansatz[0].replace(',','')}_"+ansatz[2]
+                args.instate= args.out_prefix[len("RESULT_"):]+"_instate.json"
+
+                # create random state
+                ansatz_pgs= None
+                bd = args.bond_dim
+                phys_dim= 2
+                pattern= eval(args.pattern)
+                unique_sites, _= from_pattern(pattern)
+                sites={}
+                for us in unique_sites:
+                    t = torch.rand((phys_dim**3, bd, bd, bd, bd),\
+                        dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device) - 0.5
+                    sites[us] = t/torch.max(torch.abs(t))
+                state= IPEPS_KAGOME(sites, pattern=pattern)
+                state.write_to_file(args.instate)
+
+                # i) run optimization and store the optimization data
+                with patch('sys.stdout', new = StringIO()) as tmp_out: 
+                    main()
+                tmp_out.seek(0)
+
+                # parse FINAL observables
+                obs_opt_lines=[]
+                final_obs=None
+                OPT_OBS= OPT_OBS_DONE= False
+                l= tmp_out.readline()
+                while l:
+                    print(l,end="")
+                    if OPT_OBS and not OPT_OBS_DONE and l.rstrip()=="": 
+                        OPT_OBS_DONE= True
+                        OPT_OBS=False
+                    if OPT_OBS and not OPT_OBS_DONE and len(l.split(','))>2:
+                        obs_opt_lines.append(l)
+                    if "epoch, loss," in l and not OPT_OBS_DONE: 
+                        OPT_OBS= True
+                    if "FINAL" in l:
+                        final_obs= l.rstrip()
+                        break
+                    l= tmp_out.readline()
+                assert final_obs
+                assert len(obs_opt_lines)>0
+
+                # compare the line of observables with lowest energy from optimization (i) 
+                # and final observables evaluated from best state stored in *_state.json output file
+                # drop the last column, not separated by comma
+                best_e_line_index= np.argmin([ float(l.split(',')[1]) for l in obs_opt_lines ])
+                opt_line_last= [complex(x) for x in obs_opt_lines[best_e_line_index].split(",")[1:-1]]
+                fobs_tokens= [complex(x) for x in final_obs[len("FINAL"):].split(",")]
+                for val0,val1 in zip(opt_line_last, fobs_tokens):
+                    assert isclose(val0,val1, rel_tol=self.tol, abs_tol=self.tol)
+
+                # ii) run optimization for 3 steps
+                # reset j1 which is otherwise set by main() if args.theta is used
+                args.opt_max_iter= 3 
+                self.reset_couplings()
+                main()
+        
+                # iii) run optimization from checkpoint
+                args.instate=None
+                args.opt_resume= args.out_prefix+"_checkpoint.p"
+                args.opt_max_iter= 7
+                self.reset_couplings()
+                with patch('sys.stdout', new = StringIO()) as tmp_out: 
+                    main()
+                tmp_out.seek(0)
+
+                obs_opt_lines_chk=[]
+                final_obs_chk=None
+                OPT_OBS= OPT_OBS_DONE= False
+                l= tmp_out.readline()
+                while l:
+                    print(l,end="")
+                    if OPT_OBS and not OPT_OBS_DONE and l.rstrip()=="": 
+                        OPT_OBS_DONE= True
+                        OPT_OBS=False
+                    if OPT_OBS and not OPT_OBS_DONE and len(l.split(','))>2:
+                        obs_opt_lines_chk.append(l)
+                    if "checkpoint.loss" in l and not OPT_OBS_DONE: 
+                        OPT_OBS= True
+                    if "FINAL" in l:    
+                        final_obs_chk= l.rstrip()
+                        break
+                    l= tmp_out.readline()
+                assert final_obs_chk
+                assert len(obs_opt_lines_chk)>0
+
+                # compare initial observables from checkpointed optimization (iii) and the observables 
+                # from original optimization (i) at one step after total number of steps done in (ii)
+                opt_line_iii= [complex(x) for x in obs_opt_lines_chk[0].split(",")[1:]]
+                # drop (last) normalization column
+                opt_line_i= [complex(x) for x in obs_opt_lines[4].split(",")[1:-1]]
+                fobs_tokens= [complex(x) for x in final_obs[len("FINAL"):].split(",")]
+                for val3,val1 in zip(opt_line_iii, opt_line_i):
+                    assert isclose(val3,val1, rel_tol=self.tol, abs_tol=self.tol)
+
+                # compare final observables from optimization (i) and the final observables 
+                # from the checkpointed optimization (iii)
+                fobs_tokens_1= [complex(x) for x in final_obs[len("FINAL"):].split(",")]
+                fobs_tokens_3= [complex(x) for x in final_obs_chk[len("FINAL"):].split(",")]
+                for val3,val1 in zip(fobs_tokens_3, fobs_tokens_1):
+                    assert isclose(val3,val1, rel_tol=self.tol, abs_tol=self.tol)
+
+    def tearDown(self):
+        args.opt_resume=None
+        args.instate=None
+        for ansatz in self.ANSATZE:
+            out_prefix=self.OUT_PRFX+f"_{ansatz[0].replace(',','')}_"+ansatz[2]
             instate= out_prefix[len("RESULT_"):]+"_instate.json"
             for f in [out_prefix+"_checkpoint.p",out_prefix+"_state.json",\
                 out_prefix+".log",instate]:

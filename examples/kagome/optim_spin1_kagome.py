@@ -251,6 +251,7 @@ class TestCheckpoint_IPESS_Ansatze(unittest.TestCase):
         args.instate_noise=0
         args.GLOBALARGS_dtype= "float64"
         args.OPTARGS_tolerance_grad= 1.0e-9
+        torch.manual_seed(args.seed)
 
     @pytest.mark.slow
     def test_checkpoint_ipess_ansatze(self):
