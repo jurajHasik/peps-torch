@@ -1,3 +1,4 @@
+from typing import Mapping, Sequence, Union
 import torch
 from collections import OrderedDict
 import json
@@ -7,195 +8,126 @@ from ipeps.ipeps_kagome import IPEPS_KAGOME
 from ipeps.tensor_io import *
 
 class IPESS_KAGOME_GENERIC(IPEPS_KAGOME):
-    def __init__(self, ipess_tensors,
+    def __init__(self, ipess_tensors : Union[dict[str,torch.Tensor], dict[tuple[int,int],dict[str,torch.Tensor]]],
+                 vertexToSite=None, 
+                 pattern : Union[Mapping[tuple[int, int], int], Sequence[Sequence[int]]]=None,
+                 lX=None, lY=None,\
                  peps_args=cfg.peps_args, global_args=cfg.global_args):
         r"""
-        :param ipess_tensors: dictionary of five tensors, which make up Kagome iPESS
-                              ansatz 
+        :param ipess_tensors: either a dict of five tensors 
+            {'T_u','T_d','B_a','B_b','B_c'} for a single non-equivalent site, 
+            or a dict of dicts {(x0,y0): {'T_u': torch.Tensor,'T_d': ...,'B_a': ...,'B_b': ...,'B_c': ...}, 
+            (x1,y1): {...}, ...} for multiple non-equivalent sites.
+            Keys of the outer dict are coordinates of the non-equivalent sites in the unit cell, 
+            compliant with vertexToSite, pattern, or regular PBC unit cell of size lX x lY (columns x rows).  
         :param peps_args: ipeps configuration
         :param global_args: global configuration
-        :type ipess_tensors: dict(str, torch.tensor)
+        :type ipess_tensors: dict
         :type peps_args: PEPSARGS
         :type global_args: GLOBALARGS
-
-        iPESS ansatz for Kagome lattice composes five tensors, specified
-        by dictionary::
-
-            ipess_tensors = {'T_u': torch.Tensor, 'T_d': ..., 'B_a': ..., 'B_b': ..., 'B_c': ...}
-
-        into a single rank-5 on-site tensor of parent IPEPS. These iPESS tensors can
-        be accessed through member ``ipess_tensors``. 
-
-        The ``'B_*'`` are rank-3 tensors, with index structure [p,i,j] where the first index `p` 
-        is for physical degree of freedom, while indices `i` and `j` are auxiliary with bond dimension D.
-        These bond tensors reside on corners shared between different triangles of Kagome lattice. 
-        Bond tensors are connected by rank-3 trivalent tensors ``'T_u'``, ``'T_d'`` on up and down triangles 
-        respectively. Trivalent tensors have only auxiliary indices of matching bond dimension D.
-    
-        The on-site tensors of corresponding iPEPS is obtained by the following contraction::
-                                                     
-                 2(d)            2(c)                    a
-                  \             /          rot. pi       |
-             0(w)==B_a         B_b==0(v)   clockwise  b--\                     
-                    \         /             =>            \
-                    1(l)     1(k)                         s0--s2--d
-                     2(l)   1(k)                           | / 
-                       \   /                               |/   <- down triangle
-                        T_d                               s1
-                         |                                 |
-                         0(j)                              c
-                         1(j)                               
-                         |                 
-                         B_c==0(u)        
-                         |
-                         2(i)
-                         0(i)  
-                         |
-                        T_u
-                       /   \ 
-                     1(a)   2(b) 
-
-        By construction, the degrees of freedom on down triangle are all combined into 
-        a single on-site tensor of iPEPS. Instead, DoFs on the upper triangle have 
-        to be accessed by construction of 2x2 patch (which is then embedded into environment)::        
-        
-            C    T             T          C
-                 a             a
-                 |             |
-            T b--\          b--\
-                  \        /    \
-                  s0--s2--d     s0--s2--d T
-                   | /           | /
-                   |/            |/
-                  s1            s1
-                   |             |
-                   c             c  
-                  /             /
-                 a             a
-                 |             |
-            T b--\          b--\
-                  \        /    \
-                  s0--s2--d     s0--s2--d T
-                   | /           | /
-                   |/            |/
-                  s1            s1
-                   |             |
-                   c             c
-            C      T             T        C
         """
-        #TODO verification?
-        self.ipess_tensors= ipess_tensors
-        sites = self.build_onsite_tensors()
+        # Allow single-site usage as before
+        if set(ipess_tensors.keys())=={'T_u','T_d','B_a','B_b','B_c'}:
+            self.ipess_tensors= {(0,0): ipess_tensors}
+        else:
+            self.ipess_tensors= ipess_tensors
 
-        super().__init__(sites, lX=1, lY=1, peps_args=peps_args,
-                         global_args=global_args)
+        sites= self.build_onsite_tensors()
+        super().__init__(sites, vertexToSite=vertexToSite, pattern=pattern, lX=lX, lY=lY,
+                         peps_args=peps_args, global_args=global_args)
 
     def get_parameters(self):
-        r"""
-        :return: variational parameters of IPESS_KAGOME_GENERIC
-        :rtype: iterable
-        
-        This function is called by optimizer to access variational parameters of the state.
-        In this case member ``ipess_tensors``.
-        """
-        return self.ipess_tensors.values()
+        return [t for subdict in self.ipess_tensors.values() for t in subdict.values()]
 
     def get_checkpoint(self):
-        r"""
-        :return: all data necessary to reconstruct the state. In this case member ``ipess_tensors`` 
-        :rtype: dict[str: torch.tensor]
-        
-        This function is called by optimizer to create checkpoints during 
-        the optimization process.
-        """
         return self.ipess_tensors
 
     def load_checkpoint(self, checkpoint_file):
         checkpoint= torch.load(checkpoint_file, map_location=self.device, weights_only=False)
         self.ipess_tensors= checkpoint["parameters"]
-        for t in self.ipess_tensors.values(): t.requires_grad_(False)
+        # legacy handling
+        if set(self.ipess_tensors.keys())=={'T_u','T_d','B_a','B_b','B_c'}:
+            self.ipess_tensors = {
+                (0,0): self.ipess_tensors
+            }
+        else:
+            for subdict in self.ipess_tensors.values():
+                assert set(subdict.keys())=={'T_u','T_d','B_a','B_b','B_c'},\
+                    "Invalid iPESS tensors in checkpoint file"
+        for subdict in self.ipess_tensors.values():
+            for t in subdict.values():
+                t.requires_grad_(False)
         self.sites = self.build_onsite_tensors()
 
     def build_onsite_tensors(self):
-        r"""
-        :return: elementary unit cell of underlying IPEPS
-        :rtype: dict[tuple(int,int): torch.Tensor]
-
-        Build rank-5 on-site tensor by contracting the iPESS tensors.
-        """
-        A= torch.einsum('iab,uji,jkl,vkc,wld->uvwabcd', self.ipess_tensors['T_u'],
-            self.ipess_tensors['B_c'], self.ipess_tensors['T_d'], self.ipess_tensors['B_b'], \
-            self.ipess_tensors['B_a'])
-        total_phys_dim= self.ipess_tensors['B_a'].size(0)*self.ipess_tensors['B_b'].size(0)\
-            *self.ipess_tensors['B_c'].size(0)
-        A= A.reshape([total_phys_dim]+[self.ipess_tensors['T_u'].size(1), \
-            self.ipess_tensors['T_u'].size(2), self.ipess_tensors['B_b'].size(2), \
-            self.ipess_tensors['B_a'].size(2)])
-        A= A/A.abs().max()
-        sites= {(0, 0): A}
+        sites= {}
+        # # legacy
+        # _loc_ipess_tensors= self.ipess_tensors
+        # if set(self.ipess_tensors.keys())=={'T_u','T_d','B_a','B_b','B_c'}:
+        #     _loc_ipess_tensors= {(0,0): self.ipess_tensors}
+        for c, subdict in self.ipess_tensors.items():
+            A= torch.einsum('iab,uji,jkl,vkc,wld->uvwabcd',
+                subdict['T_u'], subdict['B_c'], subdict['T_d'],
+                subdict['B_b'], subdict['B_a'])
+            total_phys_dim= (subdict['B_a'].size(0)
+                *subdict['B_b'].size(0)*subdict['B_c'].size(0))
+            A= A.reshape([total_phys_dim,
+                subdict['T_u'].size(1), subdict['T_u'].size(2),
+                subdict['B_b'].size(2), subdict['B_a'].size(2)])
+            A= A/A.abs().max()
+            sites[c]= A
         return sites
 
     def add_noise(self, noise):
-        r"""
-        :param noise: magnitude of noise
-        :type noise: float
-
-        Add uniform random noise to iPESS tensors.
-        """
-        for k in self.ipess_tensors:
-            rand_t= torch.rand( self.ipess_tensors[k].size(), dtype=self.dtype, device=self.device)
-            self.ipess_tensors[k]= self.ipess_tensors[k] + noise * (rand_t-1.0)
-        self.sites = self.build_onsite_tensors()
+        for subdict in self.ipess_tensors.values():
+            for k in subdict:
+                rand_t= torch.rand_like(subdict[k])
+                subdict[k]= subdict[k] + noise * (rand_t-0.5)
+        self.sites= self.build_onsite_tensors()
 
     def get_physical_dim(self):
-        assert self.ipess_tensors["B_a"].size(0)==self.ipess_tensors["B_b"].size(0) and \
-            self.ipess_tensors["B_b"].size(0)==self.ipess_tensors["B_c"].size(0),\
-            "Different physical dimensions across iPESS bond tensors"
-        return self.ipess_tensors["B_a"].size(0)
+        for subdict in self.ipess_tensors.values():
+            ba, bb, bc= subdict["B_a"], subdict["B_b"], subdict["B_c"]
+            assert ba.size(0)==bb.size(0) and bb.size(0)==bc.size(0),\
+                "Different physical dimensions across iPESS bond tensors"
+        # Return physical dim of the first set
+        first_key= list(self.ipess_tensors.keys())[0]
+        return self.ipess_tensors[first_key]["B_a"].size(0)
 
     def get_aux_bond_dims(self):
-        aux_bond_dims= set()
-        aux_bond_dims= aux_bond_dims | set(self.ipess_tensors["T_u"].size()) \
-            | set(self.ipess_tensors["T_d"].size())
-        assert len(aux_bond_dims)==1,"iPESS does not have a uniform aux bond dimension"
-        return list(aux_bond_dims)[0]
+        dims= []
+        for subdict in self.ipess_tensors.values():
+            dims += list(subdict["T_u"].size())+list(subdict["T_d"].size())
+        dims= set(dims)
+        assert len(dims)==1,"iPESS does not have a uniform aux bond dimension"
+        return list(dims)[0]
 
     def write_to_file(self, outputfile, aux_seq=None, tol=1.0e-14, normalize=False):
-        r"""
-        See :meth:`write_ipess_kagome_generic`.
-        """
         write_ipess_kagome_generic(self, outputfile, tol=tol, normalize=normalize)
 
     def extend_bond_dim(self, new_d, peps_args=cfg.peps_args, global_args=cfg.global_args):
-        r"""
-        :param new_d: new enlarged auxiliary bond dimension
-        :type state: IPESS_KAGOME_GENERIC
-        :type new_d: int
-        :return: wavefunction with enlarged auxiliary bond dimensions
-        :rtype: IPESS_KAGOME_GENERIC
-
-        Take IPESS_KAGOME_GENERIC and enlarge all auxiliary bond dimensions of ``T_u``, ``T_d``, 
-        ``B_a``, ``B_b``, and ``B_c`` tensors to the new size ``new_d``.
-        """
         ad= self.get_aux_bond_dims()
-        assert new_d>=ad, "Desired dimension is smaller than current aux dimension"
-        new_ipess_tensors= dict()
-        for k in ['T_u','T_d']:
-            new_ipess_tensors[k]= torch.zeros(new_d,new_d,new_d, dtype=self.dtype, device=self.device)
-            new_ipess_tensors[k][:ad,:ad,:ad]= self.ipess_tensors[k]
-        for k in ['B_a','B_b', 'B_c']:
-            new_ipess_tensors[k]= torch.zeros(self.ipess_tensors[k].size(0),new_d,new_d,\
-                dtype=self.dtype, device=self.device)
-            new_ipess_tensors[k][:,:ad,:ad]= self.ipess_tensors[k]
-
-        new_state= self.__class__(new_ipess_tensors,\
-            peps_args=peps_args, global_args=global_args)
-
+        assert new_d>=ad
+        new_ipess_tensors= {}
+        for c, subdict in self.ipess_tensors.items():
+            new_sub= {}
+            for k in ['T_u','T_d']:
+                new_sub[k]= torch.zeros(new_d,new_d,new_d, dtype=subdict[k].dtype, device=subdict[k].device)
+                new_sub[k][:ad,:ad,:ad]= subdict[k]
+            for k in ['B_a','B_b','B_c']:
+                new_sub[k]= torch.zeros(subdict[k].size(0), new_d,new_d,
+                    dtype= subdict[k].dtype, device= subdict[k].device)
+                new_sub[k][:,:ad,:ad]= subdict[k]
+            new_ipess_tensors[c]= new_sub
+        new_state= self.__class__(new_ipess_tensors, vertexToSite=self.ververtexToSite, pattern=self.pattern, 
+                                  lX=self.lX, lY=self.lY, peps_args=peps_args, global_args=global_args)
         return new_state
 
-def read_ipess_kagome_generic(jsonfile, peps_args=cfg.peps_args, global_args=cfg.global_args):
+def read_ipess_kagome_generic(jsonfile, vertexToSite=None, peps_args=cfg.peps_args, global_args=cfg.global_args):
     r"""
     :param jsonfile: input file describing iPEPS in JSON format`
+    :param vertexToSite: function mapping arbitrary vertex of a square lattice 
+                         into a vertex within elementary unit cell
     :param peps_args: ipeps configuration
     :param global_args: global configuration
     :type jsonfile: str or Path object
@@ -219,23 +151,48 @@ def read_ipess_kagome_generic(jsonfile, peps_args=cfg.peps_args, global_args=cfg
                 ==set(list(raw_state["elem_tensors"].keys())),"missing elementary tensors"
             keymap={"UP_T": "T_u", "DOWN_T": "T_d", "BOND_S1": "B_c","BOND_S3": "B_a","BOND_S2": "B_b"}
             for key,t in raw_state["elem_tensors"].items():
-                ipess_tensors[keymap[key]]= torch.from_numpy(read_bare_json_tensor_np_legacy(t))
+                [keymap[key]]= torch.from_numpy(read_bare_json_tensor_np_legacy(t))
 
-        # default
         elif "ipess_tensors" in raw_state.keys(): 
-            assert set(('T_u','T_d','B_a','B_b','B_c'))==set(list(raw_state["ipess_tensors"].keys())),\
-                "missing ipess tensors"
-            for key,t in raw_state["ipess_tensors"].items():
-                ipess_tensors[key]= torch.from_numpy(read_bare_json_tensor_np_legacy(t))
+            # check if single-site or multi-site unit cell
+            if set(raw_state["ipess_tensors"].keys()) == {'T_u','T_d','B_a','B_b','B_c'}:
+                # single-site
+                for key,t in raw_state["ipess_tensors"].items():
+                    ipess_tensors[key] = torch.from_numpy(read_bare_json_tensor_np_legacy(t))
+            else:
+                # multi-site
+                for coord_str, ts_dict in raw_state["ipess_tensors"].items():
+                    c_tuple = eval(coord_str)
+                    subdict = {}
+                    for k,t_item in ts_dict.items():
+                        subdict[k] = torch.from_numpy(read_bare_json_tensor_np_legacy(t_item))
+                    ipess_tensors[c_tuple] = subdict
+
         else:
             raise RuntimeError("Not a valid IPESS_KAGOME_GENERIC state.")
 
         # convert to correct device and/or dtype
         for key,t in ipess_tensors.items():
-             ipess_tensors[key]=  ipess_tensors[key].to(device=global_args.device,dtype=dtype)                  
+            if isinstance(t, torch.Tensor):
+                ipess_tensors[key] = t.to(device=global_args.device, dtype=dtype)
+            elif isinstance(t, dict):
+                for subkey, sub_t in t.items():
+                    t[subkey] = sub_t.to(device=global_args.device, dtype=dtype)              
 
-        state = IPESS_KAGOME_GENERIC(ipess_tensors, peps_args=peps_args, \
-            global_args=global_args)
+        lX = raw_state["lX"]
+        lY = raw_state["lY"]
+
+        pattern=None
+        if vertexToSite == None and "pattern" in raw_state:
+            pattern=raw_state["pattern"]
+        elif vertexToSite == None:
+            def vertexToSite(coord):
+                x = coord[0]
+                y = coord[1]
+                return ( (x + abs(x)*lX)%lX, (y + abs(y)*lY)%lY )
+
+        state = IPESS_KAGOME_GENERIC(ipess_tensors, pattern=pattern, lX=lX, lY=lY,
+            peps_args=peps_args, global_args=global_args)
     return state
 
 def write_ipess_kagome_generic(state, outputfile, tol=1.0e-14, normalize=False):
@@ -257,8 +214,21 @@ def write_ipess_kagome_generic(state, outputfile, tol=1.0e-14, normalize=False):
 
     # write list of considered elementary tensors
     for key, t in state.ipess_tensors.items():
-        tmp_t= t/t.abs().max() if normalize else t
-        json_state["ipess_tensors"][key]= serialize_bare_tensor_legacy(tmp_t)
+        if isinstance(t, dict):
+            # multi-site
+            json_state["ipess_tensors"][str(key)] = {}
+            for subkey, sub_t in t.items():
+                tmp_t = sub_t / sub_t.abs().max() if normalize else sub_t
+                json_state["ipess_tensors"][str(key)][subkey] = serialize_bare_tensor_legacy(tmp_t)
+        else:
+            # single-site   
+            tmp_t= t/t.abs().max() if normalize else t
+            json_state["ipess_tensors"][key]= serialize_bare_tensor_legacy(tmp_t)
+
+    # write pattern
+    ucoord_to_id= {(c[0], c[1]): f"{c}" for c in state.ipess_tensors.keys()}
+    json_state["pattern"]= [[ ucoord_to_id[state.vertexToSite((x,y))] for x in range(state.lX)] \
+                            for y in range(state.lY)]
 
     with open(outputfile, 'w') as f:
         json.dump(json_state, f, indent=4, separators=(',', ': '))
@@ -489,14 +459,15 @@ class IPESS_KAGOME_PG(IPESS_KAGOME_GENERIC):
             self.elem_tensors= elem_t
 
         # default
-        self.ipess_tensors= {'T_u': self.elem_tensors['T_u'], 'T_d': self.elem_tensors['T_u'], \
+        ipess_tensors= {'T_u': self.elem_tensors['T_u'], 'T_d': self.elem_tensors['T_u'], \
             'B_a': self.elem_tensors['B_c'], 'B_b': self.elem_tensors['B_c'], \
             'B_c': self.elem_tensors['B_c']}
         if not self.SYM_UP_DOWN:
-            self.ipess_tensors['T_d']= self.elem_tensors['T_d']
+            ipess_tensors['T_d']= self.elem_tensors['T_d']
         if not self.SYM_BOND_S:
-            self.ipess_tensors['B_b']= self.elem_tensors['B_b']
-            self.ipess_tensors['B_a']= self.elem_tensors['B_a']
+            ipess_tensors['B_b']= self.elem_tensors['B_b']
+            ipess_tensors['B_a']= self.elem_tensors['B_a']
+        self.ipess_tensors= {(0,0): ipess_tensors}
         for t in self.elem_tensors.values(): t.requires_grad_(False)
 
         self.sites = self.build_onsite_tensors()
@@ -510,19 +481,20 @@ class IPESS_KAGOME_PG(IPESS_KAGOME_GENERIC):
         """
         for k in self.elem_tensors:
             rand_t= torch.rand( self.elem_tensors[k].size(), dtype=self.dtype, device=self.device)
-            self.elem_tensors[k]= self.elem_tensors[k] + noise * (rand_t-1.0)
+            self.elem_tensors[k]= self.elem_tensors[k] + noise * (rand_t-0.5)
         self.elem_tensors= _to_PG_symmetric(self.pgs, self.elem_tensors)
 
         # update parent generic kagome iPESS and invoke reconstruction of on-site tensor        
         # default
-        self.ipess_tensors= {'T_u': self.elem_tensors['T_u'], 'T_d': self.elem_tensors['T_u'],\
+        ipess_tensors= {'T_u': self.elem_tensors['T_u'], 'T_d': self.elem_tensors['T_u'],\
             'B_a': self.elem_tensors['B_c'], 'B_b': self.elem_tensors['B_c'],\
             'B_c': self.elem_tensors['B_c']}
         if not self.SYM_UP_DOWN:
-            self.ipess_tensors['T_d']= self.elem_tensors['T_d']
+            ipess_tensors['T_d']= self.elem_tensors['T_d']
         if not self.SYM_BOND_S:
-            self.ipess_tensors['B_b']= self.elem_tensors['B_b']
-            self.ipess_tensors['B_a']= self.elem_tensors['B_a']        
+            ipess_tensors['B_b']= self.elem_tensors['B_b']
+            ipess_tensors['B_a']= self.elem_tensors['B_a']        
+        self.ipess_tensors= {(0,0): ipess_tensors}
         self.sites = self.build_onsite_tensors()
 
     def write_to_file(self, outputfile, aux_seq=None, tol=1.0e-14, normalize=False,\
