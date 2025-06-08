@@ -144,10 +144,7 @@ def main():
                 # extend the auxiliary dimensions
                 state= state.extend_bond_dim(args.bond_dim)
             state.add_noise(args.instate_noise)
-        elif args.opt_resume is not None:
-            state= IPEPS_KAGOME(dict(), lX=1, lY=1)
-            state.load_checkpoint(args.opt_resume)
-        elif args.ipeps_init_type=='RANDOM':
+        else: #args.ipeps_init_type=='RANDOM':
             unique_sites, _= from_pattern(pattern)
             bond_dim = args.bond_dim
             sites={}
@@ -156,6 +153,8 @@ def main():
                     dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device) - 0.5
                 sites[us] = t/torch.max(torch.abs(t))
             state= IPEPS_KAGOME(sites, pattern=pattern)
+        if args.opt_resume is not None:
+            state.load_checkpoint(args.opt_resume)
     else:
         raise ValueError("Missing ansatz specification --ansatz "\
             +str(args.ansatz)+" is not supported")

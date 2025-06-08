@@ -33,6 +33,8 @@ parser.add_argument("--ansatz", type=str, default=None, help="choice of the tens
      choices=["IPEPS", "IPESS", "IPESS_PG", "A_2,B"])
 parser.add_argument("--no_sym_up_dn", action='store_false', dest='sym_up_dn',\
     help="same trivalent tensors for up and down triangles")
+parser.add_argument("--CTM_check", type=str, default='SingularValue', help="method to check CTM convergence",\
+    choices=["Energy", "SingularValue"])
 args, unknown_args = parser.parse_known_args()
 
 
@@ -46,66 +48,60 @@ def main():
         jtrip=args.jtrip,jperm=args.jperm)
 
     # initialize the ipess/ipeps
-    if args.ansatz in ["IPESS","IPESS_PG","A_2,B"]:
-        ansatz_pgs=None
-        if args.ansatz=="A_2,B": ansatz_pgs= ("A_2", "A_2", "B")
+    pattern= eval(args.pattern) if args.pattern else [[0],]
+    if args.ansatz in ["IPESS","IPESS_PG","A_1,B","A_2,B"]:
+        ansatz_pgs= None
+        if args.ansatz=="A_2,B": ansatz_pgs= IPESS_KAGOME_PG.PG_A2_B
+        if args.ansatz=="A_1,B": ansatz_pgs= IPESS_KAGOME_PG.PG_A1_B
         
         if args.instate!=None:
             if args.ansatz=="IPESS":
                 state= read_ipess_kagome_generic(args.instate)
-            elif args.ansatz in ["IPESS_PG","A_2,B"]:
+            elif args.ansatz in ["IPESS_PG","A_1,B","A_2,B"]:
                 state= read_ipess_kagome_pg(args.instate)
 
             # possibly symmetrize by PG
             if ansatz_pgs!=None:
+                assert len(state.sites)==1, "PG symmetry is not supported for multi-site iPESS"
                 if type(state)==IPESS_KAGOME_GENERIC:
-                    state= to_PG_symmetric(state, SYM_UP_DOWN=args.sym_up_dn, pgs=ansatz_pgs)
+                    state= to_PG_symmetric(state, SYM_UP_DOWN=args.sym_up_dn,\
+                        SYM_BOND_S=args.sym_bond_S, pgs=ansatz_pgs)
                 elif type(state)==IPESS_KAGOME_PG:
-                    if state.pgs==(None,None,None):
-                        state= to_PG_symmetric(state, SYM_UP_DOWN=args.sym_up_dn, pgs=ansatz_pgs)
+                    if state.pgs==None or state.pgs==dict():
+                        state= to_PG_symmetric(state, SYM_UP_DOWN=args.sym_up_dn,\
+                            SYM_BOND_S=args.sym_bond_S, pgs=ansatz_pgs)
                     elif state.pgs==ansatz_pgs:
                         # nothing to do here
                         pass
                     elif state.pgs!=ansatz_pgs:
                         raise RuntimeError("instate has incompatible PG symmetry with "+args.ansatz)
-
+                
             if args.bond_dim > state.get_aux_bond_dims():
                 # extend the auxiliary dimensions
                 state= state.extend_bond_dim(args.bond_dim)
-            state.add_noise(args.instate_noise)
-        elif args.opt_resume is not None:
-            T_u= torch.zeros(args.bond_dim, args.bond_dim, args.bond_dim,\
-                dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
-            T_d= torch.zeros(args.bond_dim, args.bond_dim,\
-                args.bond_dim, dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
-            B_a= torch.zeros(3, args.bond_dim, args.bond_dim,\
-                dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
-            if args.ansatz in ["IPESS_PG", "A_2,B"]:
-                state= IPESS_KAGOME_PG(T_u, B_a, T_d, SYM_UP_DOWN=args.sym_up_dn, pgs=ansatz_pgs)
-            elif args.ansatz in ["IPESS"]:
-                B_b= torch.zeros(3, args.bond_dim, args.bond_dim,\
-                    dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
-                B_c= torch.zeros(3, args.bond_dim, args.bond_dim,\
-                    dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
-                state= IPESS_KAGOME_GENERIC({'T_u': T_u, 'B_a': B_a, 'T_d': T_d, 'B_b': B_b, 'B_c': B_c})
-            state.load_checkpoint(args.opt_resume)
-        elif args.ipeps_init_type=='RANDOM':
+            state.add_noise(args.instate_noise)       
+        else: #args.ipeps_init_type=='RANDOM'
             bond_dim = args.bond_dim
-            T_u= torch.rand(bond_dim, bond_dim, bond_dim,\
-                dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)-1.0
-            T_d= torch.rand(bond_dim, bond_dim, bond_dim,\
-                dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)-1.0
-            B_a= torch.rand(3, bond_dim, bond_dim,\
-                dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)-1.0
-            if args.ansatz in ["IPESS_PG", "A_2,B"]:
-                state = IPESS_KAGOME_PG(T_u, B_a, T_d, SYM_UP_DOWN=args.sym_up_dn, pgs=ansatz_pgs)
+            def _gen_rand():
+                T_u= torch.rand(bond_dim, bond_dim, bond_dim,\
+                    dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)-0.5
+                T_d= torch.rand_like(T_u)-0.5
+                B_c= torch.rand(model.phys_dim, bond_dim, bond_dim,\
+                    dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)-0.5
+                B_a= torch.rand_like(B_c)-0.5
+                B_b= torch.rand_like(B_c)-0.5
+                return T_u, T_d, B_c, B_a, B_b
+            if args.ansatz in ["IPESS_PG", "A_1,B", "A_2,B"]:
+                T_u, T_d, B_c, B_a, B_b= _gen_rand()
+                state = IPESS_KAGOME_PG(T_u, B_c, T_d=T_d, B_a=B_a, B_b=B_b,\
+                    SYM_UP_DOWN=args.sym_up_dn,SYM_BOND_S=args.sym_bond_S, pgs=ansatz_pgs,\
+                    pg_symmetrize=True)
             elif args.ansatz in ["IPESS"]:
-                B_b= torch.rand(3, args.bond_dim, args.bond_dim,\
-                    dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
-                B_c= torch.rand(3, args.bond_dim, args.bond_dim,\
-                    dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
-                state= IPESS_KAGOME_GENERIC({'T_u': T_u, 'B_a': B_a, 'T_d': T_d, 'B_b': B_b, 'B_c': B_c})
-    
+                unique_sites, _= from_pattern(pattern)
+                state= IPESS_KAGOME_GENERIC({c: dict(zip(['T_u','B_a','T_d','B_b','B_c'],_gen_rand())) for c in unique_sites},\
+                    pattern=pattern)
+        if args.opt_resume is not None:
+            state.load_checkpoint(args.opt_resume)
     elif args.ansatz in ["IPEPS"]:    
         ansatz_pgs=None
         if args.instate!=None:
@@ -115,42 +111,51 @@ def main():
                 # extend the auxiliary dimensions
                 state= state.extend_bond_dim(args.bond_dim)
             state.add_noise(args.instate_noise)
-        elif args.opt_resume is not None:
-            state= IPEPS_KAGOME(dict(), lX=1, lY=1)
-            state.load_checkpoint(args.opt_resume)
-        elif args.ipeps_init_type=='RANDOM':
+        else: #args.ipeps_init_type=='RANDOM':
+            unique_sites, _= from_pattern(pattern)
             bond_dim = args.bond_dim
-            A = torch.rand((model.phys_dim**3, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device) - 0.5
-            A = A/torch.max(torch.abs(A))
-            state= IPEPS_KAGOME({(0,0): A}, lX=1, lY=1)
+            sites={}
+            for us in unique_sites:
+                t = torch.rand((model.phys_dim**3, bond_dim, bond_dim, bond_dim, bond_dim),\
+                    dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device) - 0.5
+                sites[us] = t/torch.max(torch.abs(t))
+            state= IPEPS_KAGOME(sites, pattern=pattern)
+        if args.opt_resume is not None:
+            state.load_checkpoint(args.opt_resume)
     else:
         raise ValueError("Missing ansatz specification --ansatz "\
             +str(args.ansatz)+" is not supported")
 
-    def energy_f(state, env, force_cpu=False):
-        e_dn = model.energy_triangle_dn(state, env, force_cpu=force_cpu)
-        e_up = model.energy_triangle_up(state, env, force_cpu=force_cpu)
+    def energy_f(state, env, force_cpu=False, fail_on_check=False,\
+        warn_on_check=True):
+        e_dn,n_dn = model.energy_triangle_dn(state, env, force_cpu=force_cpu,\
+            fail_on_check=fail_on_check, warn_on_check=warn_on_check)
+        e_up,n_up = model.energy_triangle_up(state, env, force_cpu=force_cpu,\
+            fail_on_check=fail_on_check, warn_on_check=warn_on_check)
         # e_nnn = model.energy_nnn(state, env)
-        return (e_up + e_dn)/3 #+ e_nnn) / 3
+        return (sum(e_up.values()) + sum(e_dn.values()))/(3*len(state.sites)) #+ e_nnn) / 3
 
-    @torch.no_grad()
-    def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
-        if not history:
-            history = []
-        e_curr = energy_f(state, env, force_cpu=ctm_args.conv_check_cpu)
-        history.append(e_curr.item())
-        if (len(history) > 1 and abs(history[-1] - history[-2]) < ctm_args.ctm_conv_tol) \
-                or len(history) >= ctm_args.ctm_max_iter:
-            log.info({"history_length": len(history), "history": history})
-            return True, history
-        return False, history
+    if args.CTM_check=="Energy":
+        @torch.no_grad()
+        def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
+            if not history:
+                history = []
+            e_curr = energy_f(state, env, force_cpu=ctm_args.conv_check_cpu)
+            history.append(e_curr.item())
+            if (len(history) > 1 and abs(history[-1] - history[-2]) < ctm_args.ctm_conv_tol) \
+                    or len(history) >= ctm_args.ctm_max_iter:
+                log.info({"history_length": len(history), "history": history})
+                return True, history
+            return False, history
+        ctmrg_conv_f= ctmrg_conv_energy
+    elif args.CTM_check=="SingularValue":
+        ctmrg_conv_f=ctmrg_conv_specC
 
     ctm_env_init = ENV(args.chi, state)
     init_env(state, ctm_env_init)
 
     ctm_env_init, history, t_ctm, t_conv_check = ctmrg.run(state, ctm_env_init, \
-            conv_check=ctmrg_conv_energy, ctm_args=cfg.ctm_args)
+            conv_check=ctmrg_conv_f, ctm_args=cfg.ctm_args)
     
     loss0 = energy_f(state, ctm_env_init, force_cpu=cfg.ctm_args.conv_check_cpu)
     obs_values, obs_labels = model.eval_obs(state,ctm_env_init,force_cpu=False)
@@ -172,9 +177,9 @@ def main():
             # include normalization of new on-site tensor
             tmp_state.sites= tmp_state.build_onsite_tensors()
         else:
-            A= state.sites[(0,0)]
-            A= A/A.abs().max()
-            tmp_state= IPEPS_KAGOME({(0,0): A}, lX=1, lY=1)
+            sites_sym= { c: t/torch.max(torch.abs(t)) for c,t in state.sites.items() }
+            tmp_state= IPEPS_KAGOME(sites_sym, vertexToSite=state.vertexToSite,\
+                                    lX=state.lX, lY=state.lY)
 
         # possibly re-initialize the environment
         if opt_args.opt_ctm_reinit:
@@ -182,7 +187,7 @@ def main():
 
         # compute environment by CTMRG
         ctm_env_out, history, t_ctm, t_conv_check = ctmrg.run(tmp_state, ctm_env_in, \
-            conv_check=ctmrg_conv_energy, ctm_args=ctm_args)
+            conv_check=ctmrg_conv_f, ctm_args=ctm_args)
         loss0 = energy_f(tmp_state, ctm_env_out, force_cpu=cfg.ctm_args.conv_check_cpu)
 
         # loc_ctm_args = copy.deepcopy(ctm_args)
@@ -229,7 +234,7 @@ class TestCheckpoint_IPESS_Ansatze(unittest.TestCase):
     tol= 1.0e-6
     DIR_PATH = os.path.dirname(os.path.realpath(__file__))
     OUT_PRFX = "RESULT_test_run-opt-spin1-trimer"
-    ANSATZE= [("IPESS",False,False), ("IPEPS",None,None)]
+    ANSATZE= [ ("IPEPS",None,None), ("IPESS",False,False), ]
         #("IPESS_PG",False,False), ("IPESS_PG",True,True), ("A_2,B",True,True)]
 
     def reset_couplings(self):
@@ -273,22 +278,23 @@ class TestCheckpoint_IPESS_Ansatze(unittest.TestCase):
                 if args.ansatz=="A_2,B": ansatz_pgs= IPESS_KAGOME_PG.PG_A2_B
                 bd = args.bond_dim
                 phys_dim= 3
-                T_u= torch.rand(bd, bd, bd,dtype=torch.complex128, device='cpu')
-                T_d= torch.rand(bd, bd, bd,dtype=torch.complex128, device='cpu')
-                B_c= torch.rand(phys_dim, bd, bd,dtype=torch.complex128, device='cpu')
-                B_a= torch.rand(phys_dim, bd, bd,dtype=torch.complex128, device='cpu')
-                B_b= torch.rand(phys_dim, bd, bd,dtype=torch.complex128, device='cpu')
-                if args.ansatz in ["IPESS_PG", "A_2,B"]:
-                    state = IPESS_KAGOME_PG(T_u, B_c, T_d=T_d, B_a=B_a, B_b=B_b,\
-                        SYM_UP_DOWN=args.sym_up_dn,SYM_BOND_S=args.sym_bond_S, pgs=ansatz_pgs)
-                    write_ipess_kagome_pg(state, args.instate)
-                elif args.ansatz in ["IPESS"]:
-                    state= IPESS_KAGOME_GENERIC({'T_u': T_u, 'B_a': B_a, 'T_d': T_d,\
-                        'B_b': B_b, 'B_c': B_c})
-                    write_ipess_kagome_generic(state, args.instate)
+                if args.ansatz in ["IPESS","IPESS_PG", "A_2,B"]:
+                    T_u= torch.rand(bd, bd, bd,dtype=torch.complex128, device='cpu')
+                    T_d= torch.rand(bd, bd, bd,dtype=torch.complex128, device='cpu')
+                    B_c= torch.rand(phys_dim, bd, bd,dtype=torch.complex128, device='cpu')
+                    B_a= torch.rand(phys_dim, bd, bd,dtype=torch.complex128, device='cpu')
+                    B_b= torch.rand(phys_dim, bd, bd,dtype=torch.complex128, device='cpu')
+                    if args.ansatz in ["IPESS_PG", "A_2,B"]:
+                        state = IPESS_KAGOME_PG(T_u, B_c, T_d=T_d, B_a=B_a, B_b=B_b,\
+                            SYM_UP_DOWN=args.sym_up_dn,SYM_BOND_S=args.sym_bond_S, pgs=ansatz_pgs)
+                        write_ipess_kagome_pg(state, args.instate)
+                    elif args.ansatz in ["IPESS"]:
+                        state= IPESS_KAGOME_GENERIC({'T_u': T_u, 'B_a': B_a, 'T_d': T_d,\
+                            'B_b': B_b, 'B_c': B_c})
+                        write_ipess_kagome_generic(state, args.instate)
                 elif args.ansatz in ["IPEPS"]:
                     A = torch.rand((phys_dim**3, bd, bd, bd, bd),\
-                        dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)
+                        dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)- 0.5
                     A = A/torch.max(torch.abs(A))
                     state= IPEPS_KAGOME({(0,0): A}, lX=1, lY=1)
                     state.write_to_file(args.instate)
