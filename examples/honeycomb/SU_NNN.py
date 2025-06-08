@@ -177,9 +177,28 @@ def BP_conv_check_diff(env_prev, env):
                 return torch.inf
     return diff
 
+def eval_energy(state):
+    # Evaluate energy with CTM-environment
+    chi = cfg.main_args.chi
+    env_opts_svd = {
+        "D_total": chi,
+        "tol": 1e-10,
+        "eps_multiplet": 1e-10,
+        "truncate_multiplets": True,
+    }
+
+    env_leg = yastn.Leg(yastn_config, s=1, t=(0,), D=(chi,))
+    with torch.no_grad():
+        ctm_env = EnvCTM(state, init='eye', leg=env_leg)
+        for out in ctm_env.ctmrg_(opts_svd=env_opts_svd, max_sweeps=200, svd_policy='fullrank', iterator_step=1, use_qr=False, corner_tol=1e-9):
+            print(out)
+    ctm_loss = model.energy_per_site(state, ctm_env).item()
+    log.log(logging.INFO, f"CTM_ENV, loss: {ctm_loss}")
+    state.write_to_file(outputstatefile, normalize=True)
+
 if __name__ == "__main__":
     args = parser.parse_args()  # process command line arguments
-    args.phi = 0.5 * np.pi
+    args.phi = 0.35 * np.pi
     cfg.configure(args)
 
     log = logging.getLogger(__name__)
@@ -195,7 +214,8 @@ if __name__ == "__main__":
     model = tV_model(yastn_config, V1=args.V1, V2=args.V2, V3=args.V3, t1=args.t1, t2=args.t2, t3=args.t3, phi=args.phi, mu=args.mu, m=args.m)
     if cfg.main_args.instate is None:
         bond_dims = {1:1, 0:1, -1:1}
-        state = random_2x2_state_U1(bond_dims=bond_dims, config=yastn_config)
+        # state = random_2x2_state_U1(bond_dims=bond_dims, config=yastn_config)
+        state = random_3x3_9_state_U1(bond_dims=bond_dims, config=yastn_config)
     else:
         state = load_PepsAD(yastn_config, cfg.main_args.instate)
         log.log(logging.INFO, "loaded " + cfg.main_args.instate)
@@ -207,7 +227,7 @@ if __name__ == "__main__":
     infoss = []
 
     # BP-update
-    betas, dbs, env_types = [10, 5, 1], [1e-2, 1e-3, 1e-4], ['BP', 'BP', 'BP']
+    betas, dbs, env_types = [10, 5, 1, 0.1], [1e-2, 1e-3, 5e-4, 1e-4], ['BP', 'BP', 'BP', 'BP']
     weights_tol = 1e-8
 
     losses = []
@@ -239,25 +259,10 @@ if __name__ == "__main__":
                 # losses.append(model.energy_per_site(state, env).item())
                 # log.log(logging.INFO, f"{env_type}_db={db} step: {step:d}, loss: {losses[-1]}")
 
-        # Evaluate energy with CTM-environment
-        chi = cfg.main_args.chi
-        env_opts_svd = {
-            "D_total": chi,
-            "tol": 1e-10,
-            "eps_multiplet": 1e-10,
-            "truncate_multiplets": True,
-        }
+            if step%500 == 0:
+                eval_energy(state)
 
-        env_leg = yastn.Leg(yastn_config, s=1, t=(0,), D=(chi,))
-        with torch.no_grad():
-            ctm_env = EnvCTM(state, init='eye', leg=env_leg)
-            for out in ctm_env.ctmrg_(opts_svd=env_opts_svd, max_sweeps=500, svd_policy='fullrank', iterator_step=1, use_qr=False, corner_tol=1e-9):
-                print(out)
-        ctm_loss = model.energy_per_site(state, ctm_env).item()
-        log.log(logging.INFO, f"CTM_ENV, loss: {ctm_loss}")
-        state.write_to_file(outputstatefile, normalize=True)
-        if len(losses) >= 2 and losses[-1] - losses[-2] > 1e-4:
-            break
+        # eval_energy(state)
 
         Delta = accumulated_truncation_error(infoss)
         log.log(logging.INFO, f"{env_type}_db={db} step: {step:d}, Delta: {Delta}")

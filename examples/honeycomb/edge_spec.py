@@ -161,19 +161,22 @@ def ent_spec_cylinder_abelian(yastn_config, state, env, Lx, charge_sector=0, num
     return vals, evecs, meta
 
 
-def ent_spec_cylinder_Lx1_Lx(yastn_config, env, Lx, charge_sector=0, num_evals=8):
-    # Compute the entanglement spectrum of PEPS ansatz with an Lx1 unit-cell
+def ent_spec_cylinder_Lx(yastn_config, env, Lx, start_site, charge_sector=0, num_evals=8):
+    # Compute the entanglement spectrum of PEPS ansatz for a cut specified by the start_site
     # Lx: width of the cylinder, measure in unit-cells (finite width along x-direction)
+    # start_site: the site whose left-bond is crossed by the entanglement cut
 
     TLs, TRs = [], []
-    unit_len = len(env.sites())
-    for site in env.sites():
-        TL, TR = env[site].l, env[site].r
+    site = start_site
+    for _ in range(env.psi.dims[0]): # iterate in x-direction
+        r_site = env.nn_site(site, "l") # env[r_site].r matches with env[site].l
+        TL, TR = env[site].l, env[r_site].r
         TL = TL.transpose(axes=(2, 1, 0))
         TL = TL.unfuse_legs(axes=(1,))
         TR = TR.unfuse_legs(axes=(1,))
         TLs.append(TL)
         TRs.append(TR)
+        site = env.nn_site(site, "b")
     TL_gen = cycle(TLs)
     TR_gen = cycle(TRs)
 
@@ -201,7 +204,7 @@ def ent_spec_cylinder_Lx1_Lx(yastn_config, env, Lx, charge_sector=0, num_evals=8
         #   ...      |     |
         #  Lx+1 -----|-----|
 
-        for i in range(1, unit_len*Lx - 1):
+        for i in range(1, env.psi.dims[0]*Lx - 1):
             #
             #       | \                                  | \
             #   1--TR | |-----|                      3--TR |   |-----|
@@ -220,19 +223,19 @@ def ent_spec_cylinder_Lx1_Lx(yastn_config, env, Lx, charge_sector=0, num_evals=8
             TR_middle = TR.swap_gate(axes=(2,3))
             V = V.swap_gate(axes=(0, i+2))
             V = TR_middle.tensordot(V, ([0, 2], [i + 1, i + 2]))
-            order = list(range(2, i + 3)) + [0, 1] + list(range(i + 3, unit_len*Lx + 2))
+            order = list(range(2, i + 3)) + [0, 1] + list(range(i + 3, env.psi.dims[0]*Lx + 2))
             V = V.transpose(order)
 
         # add sigma_z to leg 0:
         # V = V.swap_gate(axes=(0,0))
         TR = next(TR_gen)
-        V = V.tensordot(TR, ([unit_len*Lx, unit_len*Lx + 1, 0], [0, 2, 3]))
+        V = V.tensordot(TR, ([env.psi.dims[0]*Lx, env.psi.dims[0]*Lx + 1, 0], [0, 2, 3]))
 
 
         TL = next(TL_gen)
         TL_start = TL.swap_gate(axes=(2,(0,3)))
         V = TL_start.tensordot(V, ([1], [0]))
-        for i in range(1, unit_len*Lx - 1):
+        for i in range(1, env.psi.dims[0]*Lx - 1):
             # TL action (contract TL top with V)
             #
             #    / \                            / \
@@ -252,18 +255,18 @@ def ent_spec_cylinder_Lx1_Lx(yastn_config, env, Lx, charge_sector=0, num_evals=8
             TL_middle = TL.swap_gate(axes=(2,3))
             V = TL_middle.tensordot(V, ([0, 1], [i + 1, i + 2]))
             V = V.swap_gate(axes=(0,2))
-            order = list(range(2, i + 3)) + [0, 1] + list(range(i + 3, unit_len*Lx + 2))
+            order = list(range(2, i + 3)) + [0, 1] + list(range(i + 3, env.psi.dims[0]*Lx + 2))
             V = V.transpose(order)
 
         # add sigma_z to leg 0:
         # V = V.swap_gate(axes=(0,0))
         TL = next(TL_gen)
-        V = V.tensordot(TL, ([unit_len*Lx, unit_len*Lx + 1, 0], [0, 1, 3]))
+        V = V.tensordot(TL, ([env.psi.dims[0]*Lx, env.psi.dims[0]*Lx + 1, 0], [0, 1, 3]))
         v1, _ = yastn.Tensor.compress_to_1d(V, meta)
         return v1
 
 
-    legs = [next(TR_gen).get_legs(axes=1) for _ in range(unit_len*Lx)]
+    legs = [next(TR_gen).get_legs(axes=1) for _ in range(env.psi.dims[0]*Lx)]
     v0 = yastn.rand(config=yastn_config, n=charge_sector, legs=legs)
     data, meta = yastn.Tensor.compress_to_1d(v0)
 
@@ -280,45 +283,45 @@ def ent_spec_cylinder_Lx1_Lx(yastn_config, env, Lx, charge_sector=0, num_evals=8
     return vals, evecs, meta
 
 
-def ent_spec_cylinder_Lx1_Ly(yastn_config, env, Ly, site_ind, charge_sector=0, num_evals=8):
-    # Compute the entanglement spectrum of PEPS ansatz with an Lx1 unit-cell
+def ent_spec_cylinder_Ly(yastn_config, env, Ly, start_site, charge_sector=0, num_evals=8):
+    # Compute the entanglement spectrum of PEPS ansatz for a cut specified by the start_site
     # Ly: width of the cylinder, measure in unit-cells (finite width along y-direction)
-    # site_ind: the index of the site whose top-bond is crossed by the entanglement cut
+    # start_site: the site whose top-bond is crossed by the entanglement cut
 
-    site = list(env.sites())[site_ind]
-    b_site = site
-    for _ in range(Ly-1):
-        b_site = env.nn_site(b_site, "b")
-
-    TT, TB = env[site].t, env[b_site].b
-    TB = TB.transpose(axes=(2, 1, 0))
-    TB = TB.unfuse_legs(axes=(1,))
-    TT = TT.unfuse_legs(axes=(1,))
-
-    #  0   __ 2 (bot)    (bot) 2__   0
-    #  | /                        \  |
-    #  TB----1 (top)     (top) 1----TT
-    #  |                             |
-    #  3                             3
-
-    TT = TT.swap_gate(axes=(1,2))
-    TB = TB.swap_gate(axes=(1,2))
-
-    #  0                             0
-    #  | /\                       /\ |
-    #  TB-\--1 (top)     (top)1--/--TT
-    #  |  \--2 (bot)     (bot)2--/   |
-    #  3                             3
-
+    TTs, TBs = [], []
+    site = start_site
+    for _ in range(env.psi.dims[1]): # iterate in y-direction
+        b_site = env.nn_site(site, "t")
+        TT, TB = env[site].t, env[b_site].b
+        TB = TB.transpose(axes=(2, 1, 0))
+        TB = TB.unfuse_legs(axes=(1,))
+        TT = TT.unfuse_legs(axes=(1,))
+        #  0   __ 2 (bot)    (bot) 2__   0
+        #  | /                        \  |
+        #  TB----1 (top)     (top) 1----TT
+        #  |                             |
+        #  3                             3
+        TT = TT.swap_gate(axes=(1,2))
+        TB = TB.swap_gate(axes=(1,2))
+        #  0                             0
+        #  | /\                       /\ |
+        #  TB-\--1 (top)     (top)1--/--TT
+        #  |  \--2 (bot)     (bot)2--/   |
+        #  3                             3
+        TTs.append(TT)
+        TBs.append(TB)
+        site = env.nn_site(site, "r")
+    TT_gen = cycle(TTs)
+    TB_gen = cycle(TBs)
 
     def mv(v0, meta):
         # V: YASTN Tensor
         # TR action
-        v0 = torch.as_tensor(v0, dtype=TB.dtype, device=TB.device)
+        v0 = torch.as_tensor(v0, dtype=TBs[0].dtype, device=TBs[0].device)
         V = yastn.decompress_from_1d(v0, meta)
+        TT = next(TT_gen)
         TT_start = TT.swap_gate(axes=(2, (0, 3)))
         V = TT_start.tensordot(V, ([2], [0]))
-
         #
         #       | \
         #   1--TT |  |-----|
@@ -328,7 +331,7 @@ def ent_spec_cylinder_Lx1_Ly(yastn_config, env, Ly, site_ind, charge_sector=0, n
         #   ...      |     |
         #  Ly+1 -----|-----|
 
-        for i in range(1, Ly - 1):
+        for i in range(1, env.psi.dims[1]*Ly - 1):
             #
             #       | \                                  | \
             #   1--TT | |-----|                      3--TT |   |-----|
@@ -343,20 +346,23 @@ def ent_spec_cylinder_Lx1_Ly(yastn_config, env, Ly, site_ind, charge_sector=0, n
             #    i+2 ---|     |                       i+3 -----|     |
             #             ...                               	 ...
             #   Ly+1 ---|-----|                      Ly+1 -----|-----|
+            TT = next(TT_gen)
             TT_middle = TT.swap_gate(axes=(2,3))
             V = V.swap_gate(axes=(0, i+2))
             V = TT_middle.tensordot(V, ([0, 2], [i + 1, i + 2]))
-            order = list(range(2, i + 3)) + [0, 1] + list(range(i + 3, Ly + 2))
+            order = list(range(2, i + 3)) + [0, 1] + list(range(i + 3, env.psi.dims[1]*Ly + 2))
             V = V.transpose(order)
+
 
         # add sigma_z to leg 0:
         # V = V.swap_gate(axes=(0,0))
-        V = V.tensordot(TT, ([Ly, Ly + 1, 0], [0, 2, 3]))
+        TT = next(TT_gen)
+        V = V.tensordot(TT, ([env.psi.dims[1]*Ly, env.psi.dims[1]*Ly + 1, 0], [0, 2, 3]))
 
-
-        TB_start = TB.swap_gate(axes=(2,(0,3)))
+        TB = next(TB_gen)
+        TB_start = TB.swap_gate(axes=(2,(0, 3)))
         V = TB_start.tensordot(V, ([1], [0]))
-        for i in range(1, Ly - 1):
+        for i in range(1, env.psi.dims[1]*Ly - 1):
             # TL action (contract TL top with V)
             #
             #    / \                            / \
@@ -372,31 +378,32 @@ def ent_spec_cylinder_Lx1_Ly(yastn_config, env, Ly, site_ind, charge_sector=0, n
             #    i+2 ---|     |                 i+3 ---|     |
             #             ...                            ...
             # L*Ly+1 ---|-----|              L*Ly+1 ---|-----|
+            TB = next(TB_gen)
             TB_middle = TB.swap_gate(axes=(2,3))
             V = TB_middle.tensordot(V, ([0, 1], [i + 1, i + 2]))
             V = V.swap_gate(axes=(0,2))
-            order = list(range(2, i + 3)) + [0, 1] + list(range(i + 3, Ly + 2))
+            order = list(range(2, i + 3)) + [0, 1] + list(range(i + 3, env.psi.dims[1]*Ly + 2))
             V = V.transpose(order)
 
         # add sigma_z to leg 0:
         # V = V.swap_gate(axes=(0,0))
-        V = V.tensordot(TB, ([Ly,Ly + 1, 0], [0, 1, 3]))
+        TB = next(TB_gen)
+        V = V.tensordot(TB, ([env.psi.dims[1]*Ly,env.psi.dims[1]*Ly + 1, 0], [0, 1, 3]))
         v1, _ = yastn.Tensor.compress_to_1d(V, meta)
         return v1
 
-
-    legs = [TT.get_legs(axes=1) for _ in range(Ly)]
+    legs = [next(TT_gen).get_legs(axes=1) for _ in range(env.psi.dims[1]*Ly)]
     v0 = yastn.rand(config=yastn_config, n=charge_sector, legs=legs)
     data, meta = yastn.Tensor.compress_to_1d(v0)
 
-    sigma_L_sigma_R = LinearOperator(
+    sigma_T_sigma_B = LinearOperator(
         (len(data), len(data)),
         matvec=partial(mv, meta=meta) ,
-        dtype="complex128" if TB.is_complex() else "float64",
+        dtype="complex128" if TTs[0].is_complex() else "float64",
     )
 
     vals, evecs = eigs(
-        sigma_L_sigma_R, k=num_evals, v0=data, which="LM", return_eigenvectors=True
+        sigma_T_sigma_B, k=num_evals, v0=data, which="LM", return_eigenvectors=True
     )
 
     return vals, evecs, meta
@@ -410,8 +417,8 @@ def analyze_momentum_sector_abelian(vals, evecs, meta, Ly, k_shift=0):
         # for i in range(Ly-1):
             V = V.swap_gate(axes=(Ly-1, i))
 
-        translated_dims = [(i - 1) % Ly for i in range(Ly)]
-        V = V.transpose(translated_dims)
+        translateddims = [(i - 1) % Ly for i in range(Ly)]
+        V = V.transpose(translateddims)
         return V
 
     evals = {}
@@ -438,8 +445,8 @@ def analyze_momentum_sector_abelian(vals, evecs, meta, Ly, k_shift=0):
         assert cnt == 1
     return evals
 
-def analyze_momentum_sector_Lx1_Lx(vals, evecs, meta, L, Lx, k_shift=0):
-    # L: length of the unit-cell; Lx: width of the cylinder
+def analyze_momentum_sector_unit_L(vals, evecs, meta, unit_L, Lx, k_shift=0):
+    # unit_L: linear length of the unit-cell; Lx: width of the cylinder
     def translation(V):
         # With sigma_z on Lx-1
         for i in range(Lx):
@@ -448,8 +455,8 @@ def analyze_momentum_sector_Lx1_Lx(vals, evecs, meta, L, Lx, k_shift=0):
         # for i in range(Lx-1):
             V = V.swap_gate(axes=(Lx-1, i))
 
-        translated_dims = [(i - 1) % Lx for i in range(Lx)]
-        V = V.transpose(translated_dims)
+        translateddims = [(i - 1) % Lx for i in range(Lx)]
+        V = V.transpose(translateddims)
         return V
 
     evals = {}
@@ -458,7 +465,7 @@ def analyze_momentum_sector_Lx1_Lx(vals, evecs, meta, L, Lx, k_shift=0):
         v0 = torch.as_tensor(evecs[:, i])
         V = yastn.decompress_from_1d(v0, meta)
         # fuse legs within a unit-cell
-        fuse_order = tuple(tuple(range(i, i + L)) for i in range(0, Lx*L, L))
+        fuse_order = tuple(tuple(range(i, i + unit_L)) for i in range(0, Lx*unit_L, unit_L))
         V = V.fuse_legs(axes=fuse_order)
         # print((translation(V).to_dense()-np.exp()V.to_dense()))
         for k in range(Lx):
@@ -467,44 +474,6 @@ def analyze_momentum_sector_Lx1_Lx(vals, evecs, meta, L, Lx, k_shift=0):
                 yastn.linalg.norm(
                     translation(V)
                     - np.exp(1j * 2 * np.pi * (k) / Lx) * V
-                )
-                <= 1e-6
-            ):
-                if k not in evals:
-                    evals[k] = [val]
-                else:
-                    evals[k].append(val)
-                # break
-                cnt += 1
-        assert cnt == 1
-    return evals
-
-def analyze_momentum_sector_Lx1_Ly(vals, evecs, meta, L, Ly, k_shift=0):
-    # L: length of the unit-cell; Ly: width of the cylinder
-    def translation(V):
-        # With sigma_z on Ly-1
-        for i in range(Ly):
-
-        # Without sigma_z on Ly-1
-        # for i in range(Ly-1):
-            V = V.swap_gate(axes=(Ly-1, i))
-
-        translated_dims = [(i - 1) % Ly for i in range(Ly)]
-        V = V.transpose(translated_dims)
-        return V
-
-    evals = {}
-    for i, val in enumerate(vals):
-        cnt = 0
-        v0 = torch.as_tensor(evecs[:, i])
-        V = yastn.decompress_from_1d(v0, meta)
-        # print((translation(V).to_dense()-np.exp()V.to_dense()))
-        for k in range(Ly):
-            k = k+k_shift
-            if (
-                yastn.linalg.norm(
-                    translation(V)
-                    - np.exp(1j * 2 * np.pi * (k) / Ly) * V
                 )
                 <= 1e-6
             ):
@@ -1321,16 +1290,12 @@ def load_env_from_dict(env, d, yastn_config):
 
 
 if __name__ == "__main__":
-    Ly = 8
+    Lx, Ly = 4, 4
     tot_D = 4
-    tot_chi = 60
+    tot_chi = 48
 
     state_file = (
-        # "tV_1x1_D_2+2_odd_chi_40_V_0.00_t1_0.50_t2_0.35_t3_-0.45_mu_-0.90_state.json"
-        # "tV_1x1_D_2+2_odd_chi_40_V_0.00_t1_0.50_t2_0.16_mu_0.00_state.json"
-        # "tV_1x1_D_4_U1_chi_10_V_0.00_t1_0.50_t2_0.35_t3_-0.45_mu_-0.90_state.json"
-        # f"tV_1x1_D_{tot_D:d}_U1_chi_{tot_chi:d}_V_0.00_t1_0.50_t2_0.35_t3_-0.45_mu_-0.90_state.json"
-        f"CI_U1_data_seed_0/CI_fp_1x1_cores_16_D_4_U1_chi_32_V_0.00_t1_1.00_t2_1.00_t3_0.00_phi_0.50_mu_0.000_state.json"
+        f"CI_grad/CI_2x2_SU_init_D_6_chi_48_state.json"
     )
 
     yastn_config = yastn.make_config(
@@ -1350,13 +1315,11 @@ if __name__ == "__main__":
         "tol": 1e-8,
         "eps_multiplet": 1e-8,
         "fix_signs": True,
+        "truncate_multiplets": True,
     }
 
     env_leg = yastn.Leg(yastn_config, s=1, t=(0,), D=(tot_chi,))
-    env_dict_filename = "CI_U1_data_seed_0/env_CI_fp_1x1_D_4_U1_chi_60_V_0.00_t1_1.00_t2_1.00_t3_0.00_phi_0.50_mu_0.000"
-    # env_dict_filename = f"Env_tV_1x1_D_{tot_D:d}_U1_chi_{chi:d}_V_0.00_t1_0.50_t2_0.35_t3_-0.45_mu_-0.90"
-    # env_dict_filename = f"Env_tV_1x1_D_2+2_odd_chi_{tot_chi:d}_V_0.00_t1_0.50_t2_0.35_t3_-0.45_mu_-0.90"
-    # env_dict_filename = f"Env_tV_1x1_D_2+2_odd_chi_{tot_chi:d}_V_0.00_t1_0.50_t2_0.16_t3_0.00_mu_0.00"
+    env_dict_filename = "CI_grad/env_CI_fp_2x2_D_6_U1_chi_48_V_0.00_t1_1.00_t2_1.00_t3_0.00_phi_0.35"
 
 
     _tmp_config = {x: y for x, y in yastn_config._asdict().items() if x != "sym"}
@@ -1391,8 +1354,8 @@ if __name__ == "__main__":
     ax = None
     rerun = False
     colors = {-1: 'k', 0: 'b', 1: 'red'}
-    for i, n in enumerate([-1, 0, 1]):
-        filename = f"es/es_Ly_{Ly:d}_D_{tot_D:d}_U1_chi_{tot_chi:d}_n_{n:d}_APBC"
+    for i, n in enumerate([0]):
+        filename = f"CI_grad/es/es_CI_0.35pi_Ly_{Ly:d}_D_{tot_D:d}_U1_chi_{tot_chi:d}_n_{n:d}_APBC"
         if os.path.exists(filename) and not rerun:
             with open(filename, "rb") as handle:
                 es = pickle.load(handle)
@@ -1423,17 +1386,19 @@ if __name__ == "__main__":
                 env_dict = env.save_to_dict()
                 with open(env_dict_filename, "wb") as handle:
                     pickle.dump(env_dict, handle)
-            vals, evecs, meta = ent_spec_cylinder_abelian(yastn_config, state, env, Ly, charge_sector=n, num_evals=70)
+            # vals, evecs, meta = ent_spec_cylinder_Lx(yastn_config, env, Lx, env.sites()[0], charge_sector=n, num_evals=70)
+            vals, evecs, meta = ent_spec_cylinder_Ly(yastn_config, env, Ly, env.sites()[0], charge_sector=n, num_evals=70)
             print(vals)
             # k_shift = 0 if n%2 ==0 else 0.5
+            # es = analyze_momentum_sector_abelian(vals, evecs, meta, Ly, k_shift=k_shift)
             k_shift = 0
-            es = analyze_momentum_sector_abelian(vals, evecs, meta, Ly, k_shift=k_shift)
+            es = analyze_momentum_sector_unit_L(vals, evecs, meta, env.psi.dims[1], Ly, k_shift=k_shift)
             with open(filename, "wb") as handle:
                 pickle.dump(es, handle)
         # ax = plot_es(es, color=colors[i], ax=ax)
         ax = plot_es(es, color='blue', ax=None)
         # plt.savefig(f"es/es_Ly_{Ly:d}_D_{tot_D:d}_U1_chi_{tot_chi:d}_n_{n:d}_APBC.pdf")
-        plt.savefig(f"es/es_CI_pi_2_Ly_{Ly:d}_D_{tot_D:d}_U1_chi_{tot_chi:d}_n_{n:d}_APBC.pdf")
+        plt.savefig(f"CI_grad/es/es_CI_0.35pi_Ly_{Ly:d}_D_{tot_D:d}_U1_chi_{tot_chi:d}_n_{n:d}_APBC.pdf")
 
     # ks = np.linspace(0, 4.5, 100)
     # lower_line = 1.3*ks

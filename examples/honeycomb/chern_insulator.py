@@ -73,10 +73,10 @@ def main():
     # global args
     args = parser.parse_args()  # process command line arguments
     bond_dims = args.bond_dims
-    D = sum([bond_dims[t] for t in bond_dims.keys()])
-    seed_dir = f"CI_U1_data_seed_{args.seed:d}"
-    if not os.path.exists(seed_dir):
-        os.mkdir(seed_dir)
+    # # D = sum([bond_dims[t] for t in bond_dims.keys()])
+    # seed_dir = f"CI_U1_data_seed_{args.seed:d}"
+    # if not os.path.exists(seed_dir):
+    #     os.mkdir(seed_dir)
 
     args, unknown_args = parser.parse_known_args(
         [
@@ -104,9 +104,9 @@ def main():
     torch.set_num_interop_threads(args.omp_cores)
 
     # args.t2, args.t3, args.phi= 0.7*args.t1, -0.9*args.t1, 0.35*np.pi
-    args.t2, args.t3, args.phi= 1.0*args.t1, 0.0, 0.5*np.pi
+    args.t2, args.t3, args.phi= 1.0*args.t1, 0.0, 0.35*np.pi
 
-    state_file = f"CI_U1_data_seed_{args.seed}/CI_fp_{args.pattern}_cores_{args.omp_cores:d}_D_{D:d}_U1_chi_{args.chi:d}_V_{args.V1:.2f}_t1_{args.t1:.2f}_t2_{args.t2:.2f}_t3_{args.t3:.2f}_phi_{args.phi/np.pi:.2f}"
+    # state_file = f"CI_U1_data_seed_{args.seed}/CI_fp_{args.pattern}_cores_{args.omp_cores:d}_D_{D:d}_U1_chi_{args.chi:d}_V_{args.V1:.2f}_t1_{args.t1:.2f}_t2_{args.t2:.2f}_t3_{args.t3:.2f}_phi_{args.phi/np.pi:.2f}"
     # args, unknown_args = parser.parse_known_args(
     #     [
     #         "--out_prefix",
@@ -131,16 +131,20 @@ def main():
     if args.instate is None or not os.path.exists(args.instate):
         if args.pattern == '1x1':
             state = random_1x1_state_U1(bond_dims=bond_dims, config=yastn_config)
+        elif args.pattern == '2x2':
+            state = random_2x2_state_U1(bond_dims=bond_dims, config=yastn_config)
         else:
             raise ValueError(f"Unknown pattern: {args.pattern}")
     else:
         state = load_PepsAD(yastn_config, args.instate)
         log.log(logging.INFO, "loaded " + args.instate)
         print("loaded ", args.instate)
+        for site in state.sites():
+            print(state[site].unfuse_legs(axes=(0, 1)))
         # state.add_noise_(noise=0.2)
 
     log.log(logging.INFO, "device: "+cfg.global_args.device)
-    log.log(logging.INFO, f"bond_dims:{bond_dims}")
+    # log.log(logging.INFO, f"bond_dims:{bond_dims}")
 
     def loss_fn(state, ctm_env_in, opt_context):
         state.sync_()

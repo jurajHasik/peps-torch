@@ -84,7 +84,7 @@ def main():
     args, unknown_args = parser.parse_known_args(
         [
             "--opt_max_iter",
-            "100",
+            "500",
             "--CTMARGS_ctm_env_init_type",
             "eye",
             "--OPTARGS_fd_eps",
