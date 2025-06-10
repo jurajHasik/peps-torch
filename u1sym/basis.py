@@ -180,7 +180,7 @@ def get_u1_filter(
 
 
 def rebase_params(
-    params: np.ndarray, basis0: torch.Tensor, basis: torch.Tensor, rng_noise: float = 0, D: Union[int,None] = None, 
+    params: np.ndarray, basis0: torch.Tensor, basis: torch.Tensor, rng_noise: float = 0, D: Union[int,None] = None,
 ) -> np.ndarray:
     # This step is done with NumPy
     """
@@ -190,6 +190,8 @@ def rebase_params(
 
     def _to_np_if_tensor(_x) -> np.ndarray:
         if not isinstance(_x, np.ndarray):
+            if _x.device.type == 'cuda':
+                _x = _x.cpu()
             return np.asarray(_x)
         else:
             return _x
