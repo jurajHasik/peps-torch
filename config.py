@@ -377,7 +377,7 @@ class CTMARGS():
         self.fwd_checkpoint_absorb = False
         self.fwd_checkpoint_move = False
         self.fwd_checkpoint_loop_rdm = False
-        self.fwd_svd_policy="fullrank"
+        # self.fwd_svd_policy="fullrank"
         self.fwd_svds_thresh=0.2
         self.fwd_svds_solver='arpack'
 
