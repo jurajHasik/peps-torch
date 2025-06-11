@@ -95,7 +95,7 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
             if ctm_args.verbosity_ctm_convergence>1: print(history)
             if converged:
                 if ctm_args.verbosity_ctm_convergence>0: 
-                    print(f"CTMRG  converged at iter= {i}, history= {history[-1]}")
+                    print(f"CTMRG  converged at iter= {i}, history= {history['conv_crit'][-1]}")
                 break
         t1_obs= time.perf_counter()
 
