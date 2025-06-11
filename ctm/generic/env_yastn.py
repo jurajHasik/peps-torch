@@ -51,7 +51,8 @@ def from_yastn_env_generic(env_yastn: EnvCTM, vertexToSite: Callable= None) -> E
                 pt_env.T[(_map_site(site),rel_c)]= env_yastn[site].__getattribute__(rel_label).to_dense()
             if pt_env.T[(_map_site(site),rel_c)]._is_view():
                 pt_env.T[(_map_site(site),rel_c)]= pt_env.T[(_map_site(site),rel_c)].clone()
-        
+    pt_env.chi= pt_env.min_chi()
+
     return pt_env
 
 
