@@ -60,6 +60,8 @@ parser.add_argument("--force_cpu", action='store_true', help="evaluate energy on
 parser.add_argument("--yast_backend", type=str, default='torch',
     help="YAST backend", choices=['torch','torch_cpp'])
 parser.add_argument("--grad_type", type=str, default='default', help="gradient algo", choices=['default','fp','c4v', 'c4v_fp'])
+parser.add_argument("--energy_checkpoint", type=str, default=None, help="checkpoint_move for energy evaluation", choices=["nonreentrant", "reentrant", None])
+
 args, unknown_args = parser.parse_known_args()
 
 def main():
@@ -87,7 +89,8 @@ def main():
         if cfg.ctm_args.projector_svd_method=='DEFAULT':
             cfg.ctm_args.projector_svd_method= 'GESDD' if args.grad_type=='c4v' else 'QR'
         model= j1j2.J1J2_C4V_BIPARTITE_NOSYM(settings_full, j1=args.j1, j2=args.j2)
-        energy_f= model.energy_1x1_lowmem
+        # energy_f= model.energy_1x1_lowmem
+        energy_f= model.energy_1x1_lowmem_yastn
 
 
     # initialize the ipeps
@@ -310,11 +313,12 @@ def main():
         log.log(logging.INFO, f"# of ctm steps: {len(conv_history):d}, t_ctm: {t_ctm:.1f}s")
 
         # 3.3 convert environment to peps-torch format
-        env_pt= from_yastn_c4v_env_c4v(ctm_env_out)
+        # env_pt= from_yastn_c4v_env_c4v(ctm_env_out)
 
         # 3.4 evaluate loss
         t_loss0= time.perf_counter()
-        loss= energy_f(state, env_pt)
+        # loss= energy_f(state, env_pt)
+        loss= energy_f(state, ctm_env_out, checkpoint_move=args.energy_checkpoint)
         t_loss1= time.perf_counter()
 
         return (loss, ctm_env_out, conv_history, t_ctm, t_check, t_loss1-t_loss0)
@@ -373,11 +377,12 @@ def main():
         print(f"t_ctm: {t_ctm:.1f}s")
 
         # 3.3 convert environment to peps-torch format
-        env_pt= from_yastn_c4v_env_c4v(ctm_env_out)
+        # env_pt= from_yastn_c4v_env_c4v(ctm_env_out)
 
         # 3.4 evaluate loss
         t_loss0= time.perf_counter()
-        loss= energy_f(state, env_pt)
+        # loss= energy_f(state, env_pt)
+        loss= energy_f(state, ctm_env_out, checkpoint_move=args.energy_checkpoint)
         t_loss1= time.perf_counter()
         return (loss, ctm_env_out, [], t_ctm, None, t_loss1-t_loss0)
 
