@@ -521,7 +521,7 @@ class Test_U1c4v_2site(unittest.TestCase):
 
     def test_opt(self):
         for grad_type in ['default','fp','c4v','c4v_fp']:
-            for fwd_checkpoint_move in [True,False]:
+            for fwd_checkpoint_move in ["nonreentrant",False]:
                 with self.subTest(grad_type=grad_type, fwd_checkpoint_move=fwd_checkpoint_move):
                     args.grad_type= grad_type
                     args.CTMARGS_fwd_checkpoint_move= fwd_checkpoint_move
