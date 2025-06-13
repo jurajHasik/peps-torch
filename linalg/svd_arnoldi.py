@@ -86,7 +86,7 @@ def test_SVDSYMARNOLDI_random():
 
 class SVDARNOLDI(torch.autograd.Function):
     @staticmethod
-    def forward(self, M, k, thresh, solver):
+    def forward(self, M, k, thresh):
         r"""
         :param M: square matrix :math:`N \times N`
         :param k: desired rank (must be smaller than :math:`N`)
@@ -139,14 +139,15 @@ class SVDARNOLDI(torch.autograd.Function):
             U, S, Vh = scipy.linalg.svd(M_numpy)
             U, S, Vh = U[:, :k], S[:k], Vh[:k, :]
         else:
-            U, S, Vh= scipy.sparse.linalg.svds(M_numpy, k=k, solver=solver, maxiter=k*10)
+            U, S, Vh= scipy.sparse.linalg.svds(M_numpy, k=k, solver='arpack', maxiter=k*10)
 
         S= torch.as_tensor(S.copy())
         U= torch.as_tensor(U.copy())
         Vh= torch.as_tensor(Vh.copy())
+        V= Vh.transpose(-2,-1).conj()
 
-        self.save_for_backward(U, S, Vh)
-        return U, S, Vh
+        self.save_for_backward(U, S, V)
+        return U, S, V
 
     @staticmethod
     def backward(self, dU, dS, dV):

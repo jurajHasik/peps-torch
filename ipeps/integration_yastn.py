@@ -3,8 +3,10 @@ from typing import Sequence, Union, TypeVar
 import json
 import torch
 from ipeps.tensor_io import NumPy_Encoder
+from ipeps.ipeps import IPEPS
 from ipeps.ipeps_abelian import IPEPS_ABELIAN
 import yastn.yastn as yastn
+from yastn.yastn.backend import backend_torch
 from yastn.yastn import Tensor, load_from_dict, save_to_dict
 from yastn.yastn.tn.fpeps import Peps, RectangularUnitcell
 import config as cfg
@@ -162,7 +164,7 @@ class PepsAD(Peps):
         return d
 
     @staticmethod
-    def from_pt(state: Union[IPEPS_ABELIAN,]) -> PepsAD:
+    def from_pt(state: Union[IPEPS, IPEPS_ABELIAN,], global_args=cfg.global_args) -> PepsAD:
         r"""
         Convert IPEPS_ABELIAN to YASTN's Peps. 
         
@@ -175,10 +177,24 @@ class PepsAD(Peps):
         """
         unique_sites= {v:i for i,v in enumerate(state.sites.keys())}
         pattern = [ [unique_sites[state.vertexToSite((x,y))] for x in range(state.lX)] for y in range(state.lY)]
-        
         geometry=RectangularUnitcell(pattern=pattern)
+
+        if isinstance(state, IPEPS_ABELIAN):
+            parameters= { c: state.site(c).transpose(axes=(1,2,3,4,0)) for c in geometry.sites() }
+        elif isinstance(state, IPEPS):
+            yastn_cfg_nosym= yastn.make_config(
+                backend= backend_torch,
+                default_dtype= dict(zip(backend_torch.DTYPE.values(), backend_torch.DTYPE.keys()))[state.dtype],
+                default_device= global_args.device
+            )
+            def _wrap_t(t):
+                res= yastn.Tensor(config=yastn_cfg_nosym, s=[-1,1,1,-1,1])
+                res.set_block(val=t, Ds=t.shape)
+                return res
+            parameters= { c: _wrap_t(state.site(c).permute(1,2,3,4,0)) for c in geometry.sites() }
+
         peps_yastn= PepsAD(geometry=geometry,\
-            parameters={ c: state.site(c).transpose(axes=(1,2,3,4,0)) for c in geometry.sites() })
+            parameters= parameters)
         return peps_yastn
 
     @staticmethod

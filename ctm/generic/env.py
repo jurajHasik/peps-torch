@@ -159,7 +159,7 @@ class ENV():
         :return: minimum environment bond dimension of the environment
         :rtype: int
         """
-        return min([c.size(0) for c in self.C.values()]+[c.size(1) for c in self.C.values()]),
+        return min([c.size(0) for c in self.C.values()]+[c.size(1) for c in self.C.values()])
 
     def extend(self, new_chi, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
         r"""

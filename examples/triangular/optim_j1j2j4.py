@@ -9,6 +9,12 @@ from ctm.generic.env import *
 from ctm.generic import ctmrg
 from ctm.generic import transferops
 from models import spin_triangular
+from ipeps.integration_yastn import PepsAD
+from ctm.generic.env_yastn import from_yastn_env_generic, YASTN_ENV_INIT, YASTN_PROJ_METHOD
+from yastn.yastn.tn.fpeps import EnvCTM
+from yastn.yastn.tn.fpeps.envs._env_ctm import ctm_conv_corner_spec
+from yastn.yastn.tn.fpeps.envs.fixed_pt import refill_env, fp_ctmrg
+from yastn.yastn.tn.fpeps._peps import Peps2Layers
 # from optim.ad_optim import optimize_state
 from optim.ad_optim_lbfgs_mod import optimize_state
 # from optim.ad_optim_sgd_mod import optimize_state
@@ -35,6 +41,7 @@ parser.add_argument("--compressed_rdms", type=int, default=-1, help="use compres
 parser.add_argument("--loop_rdms", action='store_true', help="loop over central aux index in rdm2x3 and rdm3x2")
 parser.add_argument("--ctm_conv_crit", default="CSPEC", help="ctm convergence criterion", \
     choices=["CSPEC", "ENERGY"])
+parser.add_argument("--grad_type", type=str, default='default', help="gradient algo", choices=['default','fp'])
 args, unknown_args = parser.parse_known_args()
 
 def main():
@@ -174,13 +181,13 @@ def main():
     elif args.ctm_conv_crit=="ENERGY":
         ctmrg_conv_f= ctmrg_conv_energy
     
-    ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_f)
+    ctm_env_0, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_f)
     loss0= energy_f(state, ctm_env, compressed=args.compressed_rdms, unroll=args.loop_rdms)
     obs_values, obs_labels = eval_obs_f(state,ctm_env)
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
 
-    def loss_fn(state, ctm_env_in, opt_context):
+    def loss_fn_default(state, ctm_env_in, opt_context):
         ctm_args= opt_context["ctm_args"]
         opt_args= opt_context["opt_args"]
 
@@ -209,8 +216,54 @@ def main():
         return (loss, ctm_env_out, *ctm_log, t_loss1-t_loss0)
 
 
+    def loss_fn_fp(state, ctm_env_in, opt_context):
+        ctm_args= opt_context["ctm_args"]
+        opt_args= opt_context["opt_args"]
+
+        # 2. convert to YASTN's iPEPS
+        state_yastn= PepsAD.from_pt(state)
+
+        # 3. proceed with YASTN's CTMRG implementation
+        # 3.1 possibly re-initialize the environment
+        if opt_args.opt_ctm_reinit or ctm_env_in is None:
+            env_leg = yastn.Leg(state_yastn.config, s=1, D=(1,))
+            ctm_env_in = EnvCTM(state_yastn, init=YASTN_ENV_INIT[ctm_args.ctm_env_init_type], leg=env_leg)
+        else:
+            ctm_env_in.psi = Peps2Layers(state_yastn) if state_yastn.has_physical() else state_yastn
+
+        # 3.2 setup and run CTMRG
+        options_svd={
+            "D_total": cfg.main_args.chi, "tol": ctm_args.projector_svd_reltol,
+                "eps_multiplet": ctm_args.projector_eps_multiplet,
+                'verbosity': ctm_args.verbosity_projectors 
+            }
+
+        ctm_env_out, env_ts_slices, env_ts = fp_ctmrg(ctm_env_in, \
+            ctm_opts_fwd= {'opts_svd': options_svd, 'corner_tol': ctm_args.ctm_conv_tol, 'max_sweeps': ctm_args.ctm_max_iter, \
+                'method': "2site", 'use_qr': False, 'svd_policy': YASTN_PROJ_METHOD[ctm_args.projector_svd_method], 'D_block': cfg.main_args.chi,
+                'verbosity': cfg.ctm_args.verbosity_ctm_convergence
+                }, 
+            ctm_opts_fp= {'svd_policy': 'fullrank'})
+        refill_env(ctm_env_out, env_ts, env_ts_slices)
+
+        # 3.3 convert environment to peps-torch format
+        env_pt= from_yastn_env_generic(ctm_env_out, vertexToSite=state.vertexToSite)
+
+        # 3.4 evaluate loss
+        t_loss0= time.perf_counter()
+        loss= energy_f(state, env_pt, compressed=args.compressed_rdms, unroll=args.loop_rdms)
+        t_loss1= time.perf_counter()
+
+        return (loss, ctm_env_out, [], None, t_loss1-t_loss0)
+
+
     @torch.no_grad()
-    def obs_fn(state, ctm_env, opt_context):
+    def obs_fn(state, _ctm_env, opt_context):
+        if isinstance(_ctm_env, EnvCTM):
+            ctm_env= from_yastn_env_generic(_ctm_env, vertexToSite=state.vertexToSite)
+        else:
+            ctm_env= _ctm_env
+
         if ("line_search" in opt_context.keys() and not opt_context["line_search"]) \
             or not "line_search" in opt_context.keys():
             epoch= len(opt_context["loss_history"]["loss"]) 
@@ -265,7 +318,9 @@ def main():
 
     # optimize
     state.normalize_()
-    optimize_state(state, ctm_env, loss_fn, obs_fn=obs_fn, post_proc=post_proc)
+    loss_fn= loss_fn_fp if args.grad_type=='fp' else loss_fn_default
+    ctm_env_0= None # TODO convert ctm_env_0 to YASTN's EnvCTM
+    optimize_state(state, ctm_env_0, loss_fn, obs_fn=obs_fn, post_proc=post_proc)
 
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"

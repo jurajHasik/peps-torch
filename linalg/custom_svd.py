@@ -273,7 +273,7 @@ def truncated_svd_symarnoldi(M, chi, abs_tol=1.0e-14, rel_tol=None, keep_multipl
     return U, S, V
 
 def truncated_svd_arnoldi(M, chi, abs_tol=1.0e-14, rel_tol=None, keep_multiplets=False, \
-    eps_multiplet=1.0e-12, verbosity=0):
+    eps_multiplet=1.0e-12, thresh=0.1, verbosity=0):
     r"""
     :param M: square matrix of dimensions :math:`N \times N`
     :param chi: desired maximal rank :math:`\chi`
@@ -304,7 +304,7 @@ def truncated_svd_arnoldi(M, chi, abs_tol=1.0e-14, rel_tol=None, keep_multiplets
     .. note::
         This function does not support autograd.
     """
-    U, S, V = SVDARNOLDI.apply(M, chi+int(keep_multiplets))
+    U, S, V = SVDARNOLDI.apply(M, chi+int(keep_multiplets), thresh)
 
     # estimate the chi_new 
     chi_new= chi
