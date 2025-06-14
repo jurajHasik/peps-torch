@@ -5,7 +5,9 @@ from yastn.yastn.tn.fpeps.envs.fixed_pt import NoFixedPointError
 from ctm.generic.env import ENV
 
 YASTN_ENV_INIT={"CTMRG": "dl", "PROD": "eye"}
-YASTN_PROJ_METHOD={"QR": "qr", "GESDD": "fullrank", "RSVD": "lowrank", "ARP": "arnoldi" }
+YASTN_PROJ_METHOD={"DEFAULT": "fullrank", "GESDD": "fullrank", "QR": "qr",
+                   "RSVD": "randomized",
+                   "ARP": "block_arnoldi", "PROPACK": "block_propack" }
 
 
 def from_yastn_env_generic(env_yastn: EnvCTM, vertexToSite: Callable= None) -> ENV:

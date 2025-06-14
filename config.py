@@ -1,6 +1,8 @@
 import torch
 import argparse
 import logging
+import os
+os.environ["SCIPY_USE_PROPACK"] = "1"
 
 def _torch_version_check(version):
     # for version="X.Y.Z" checks if current version is higher or equal to X.Y
@@ -33,7 +35,8 @@ class _storeTrueOrString(argparse.Action):
 
 def get_args_parser():
     parser = argparse.ArgumentParser(description='',allow_abbrev=False)
-    parser.add_argument("--omp_cores", type=int, default=1,help="number of OpenMP cores")
+    parser.add_argument("--omp_cores", type=int, default=1, help="number of OpenMP cores")
+    parser.add_argument("--pattern", type=str, default=None, help="Unit cell of iPEPS given as a matrix of labels")
     parser.add_argument("--instate", default=None, help="Input state JSON")
     parser.add_argument("--instate_noise", type=float, default=0., help="magnitude of noise added to the trial \"instate\"")
     parser.add_argument("--ipeps_init_type", default="RANDOM", help="initialization of the trial iPEPS state")
@@ -242,15 +245,22 @@ class CTMARGS():
 
     :ivar ctm_max_iter: maximum iterations of directional CTM algorithm. Default: ``50``
     :vartype ctm_max_iter: int
+    :ivar ctm_warmup_iter: if >=0, CTMRG performs at most ``max(ctm_warmup_iter, ceil(chi/D^2))`` number of warmup iterations of directional CTM algorithm.
+                           Default: ``-1`` skips warm-up iterations.
+    :vartype ctm_warmup_iter: int
     :ivar ctm_env_init_type: default initialization method for ENV objects. Default: ``'CTMRG'``
     :vartype ctm_env_init_type: str
     :ivar ctm_conv_tol: threshold for convergence of CTM algorithm. Default: ``'1.0e-10'``
     :vartype ctm_conv_tol: float
     :ivar conv_check_cpu: execute CTM convergence check on cpu (if applicable). Default: ``False``
+    :vartype conv_check_cpu: bool
     :ivar ctm_absorb_normalization: normalization to use for new corner/T tensors. Either ``'fro'`` for usual
                                     L2 norm or ``'inf'`` for L-\infty norm. Default: ``'fro'``.
     :vartype ctm_absorb_normalization: str
-    :vartype conv_check_cpu: bool
+    :ivar dtype_rdm: data type used in (some) reduced density matrix computations. Default: ``'DEFAULT'`` uses
+                     dtype of the state. Otherwise:
+                        * ``'double'``: use ``torch.float64`` or ``torch.complex128``
+                        * ``'single'``: use ``torch.float32`` or ``torch.complex64``
     :ivar projector_method: method used to construct projectors which facilitate truncation
                             of environment bond dimension :math:`\chi` within CTM algorithm
 
@@ -269,9 +279,13 @@ class CTMARGS():
                                     * ``'SYMEIG'``: pytorch wrapper of LAPACK's dsyev for symmetric matrices
                                     * ``'SYMARP'``: scipy wrapper of ARPACK's dsaupd for symmetric matrices
                                     * ``'ARP'``: scipy wrapper of ARPACK's svds for general matrices
+                                    * ``'QR'``: QR decomposition for specialized C4v-symmetric CTM
 
                                 Default: ``'SYMEIG'`` for c4v-symmetric CTM, otherwise ``'GESDD'``
     :vartype projector_svd_method: str
+    :ivar projector_full_matrices: if ``True``, then the projectors are constructed as full matrices,
+                                   i.e. not truncated to ``projector_svd_reltol``. Default: ``True``
+    :vartype projector_full_matrices: bool
     :ivar projector_svd_reltol: relative threshold on the magnitude of the smallest elements of
                                 singular value spectrum used in the construction of projectors.
                                 Default: ``1.0e-8``
@@ -346,9 +360,11 @@ class CTMARGS():
     """
     def __init__(self):
         self.ctm_max_iter= 50
+        self.ctm_warmup_iter= -1
         self.ctm_env_init_type= 'CTMRG'
         self.ctm_conv_tol= 1.0e-8
         self.ctm_absorb_normalization= 'inf'
+        self.dtype_rdm= 'DEFAULT'
         self.fpcm_init_iter=1
         self.fpcm_freq= -1
         self.fpcm_isogauge_tol= 1.0e-14
@@ -356,10 +372,13 @@ class CTMARGS():
         self.conv_check_cpu = False
         self.projector_method = '4X4'
         self.projector_svd_method = 'DEFAULT'
+        self.projector_full_matrices = True
         self.projector_svd_reltol = 1.0e-8
         self.projector_svd_reltol_block = 0.0
         self.projector_eps_multiplet = 1.0e-8
         self.projector_multiplet_abstol = 1.0e-14
+        self.projector_propack_extra_states = 1
+        self.projector_rsvd_niter = 2
         self.ad_decomp_reg= 1.0e-12
         self.ctm_move_sequence = [(0,-1), (-1,0), (0,1), (1,0)]
         self.randomize_ctm_move_sequence = False
@@ -379,7 +398,6 @@ class CTMARGS():
         self.fwd_checkpoint_loop_rdm = False
         # self.fwd_svd_policy="fullrank"
         self.fwd_svds_thresh=0.2
-        self.fwd_svds_solver='arpack'
 
     def __str__(self):
         res=type(self).__name__+"\n"
@@ -458,6 +476,7 @@ class OPTARGS():
         self.tolerance_change= 1e-9
         self.opt_ctm_reinit= True
         self.env_sens_scale= 10.0
+        self.env_sens_regauge= False
         self.line_search= "default"
         self.line_search_ctm_reinit= True
         self.line_search_svd_method= 'DEFAULT'

@@ -9,6 +9,7 @@ import config as cfg
 import numpy as np
 import torch
 
+from ctm.generic.env_yastn import YASTN_PROJ_METHOD
 import yastn.yastn as yastn
 from yastn.yastn.tn.fpeps import EnvCTM
 from yastn.yastn.sym import sym_Z2, sym_U1
@@ -45,7 +46,6 @@ parser.add_argument(
 )
 parser.add_argument("--mu", type=float, default=0.0, help="chemical potential")
 parser.add_argument("--m", type=float, default=0.0, help="Semenoff mass")
-parser.add_argument("--pattern", default="1x1", help="unit-cell of iPEPS: choice={1x1, 3x3}")
 
 def parse_dict(input_string):
     try:
@@ -133,6 +133,8 @@ def main():
             state = random_1x1_state_U1(bond_dims=bond_dims, config=yastn_config)
         elif args.pattern == '2x2':
             state = random_2x2_state_U1(bond_dims=bond_dims, config=yastn_config)
+        elif args.pattern == '3x3':
+            state = random_3x3_9_state_U1(bond_dims=bond_dims, config=yastn_config)
         else:
             raise ValueError(f"Unknown pattern: {args.pattern}")
     else:
@@ -148,25 +150,28 @@ def main():
 
     def loss_fn(state, ctm_env_in, opt_context):
         state.sync_()
+        main_args = cfg.main_args
         ctm_args = opt_context["ctm_args"]
         opt_args = opt_context["opt_args"]
+        if ctm_args.projector_svd_method == "DEFAULT":
+            ctm_args.projector_svd_method = "GESDD"
 
         # possibly re-initialize the environment
         if opt_args.opt_ctm_reinit:
             print("Reinit")
-            chi = cfg.main_args.chi
+            chi = main_args.chi
             env_leg = yastn.Leg(yastn_config, s=1, t=(0,), D=(chi,))
             ctm_env_in = EnvCTM(state, init=ctm_args.ctm_env_init_type, leg=env_leg)
 
         opts_svd = {
-            "D_total": cfg.main_args.chi,
-            "tol": cfg.ctm_args.projector_svd_reltol,
-            "eps_multiplet": cfg.ctm_args.projector_eps_multiplet,
+            "D_total": main_args.chi,
+            "tol": ctm_args.projector_svd_reltol,
+            "eps_multiplet": ctm_args.projector_eps_multiplet,
             "truncate_multiplets": True,
         }
         ctm_env_out, env_ts_slices, env_ts = fp_ctmrg(ctm_env_in, \
-            ctm_opts_fwd={'opts_svd': opts_svd, 'corner_tol': 1e-8, 'max_sweeps': cfg.ctm_args.ctm_max_iter,
-                'method': "2site", 'use_qr': False, 'svd_policy': 'fullrank', 'D_krylov':args.chi, 'D_block': args.chi}, \
+            ctm_opts_fwd={'opts_svd': opts_svd, 'corner_tol': ctm_args.ctm_conv_tol, 'max_sweeps': ctm_args.ctm_max_iter,
+                'method': "2site", 'use_qr': False, 'svd_policy': YASTN_PROJ_METHOD[ctm_args.projector_svd_method], 'D_block': args.chi}, \
             ctm_opts_fp={'svd_policy': 'fullrank'})
         refill_env(ctm_env_out, env_ts, env_ts_slices)
         ctm_log, t_ctm, t_check = FixedPoint.ctm_log, FixedPoint.t_ctm, FixedPoint.t_check

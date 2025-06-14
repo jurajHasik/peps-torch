@@ -49,7 +49,6 @@ parser.add_argument(
 )
 parser.add_argument("--mu", type=float, default=0.0, help="chemical potential")
 parser.add_argument("--m", type=float, default=0.0, help="Semenoff mass")
-parser.add_argument("--pattern", default="1x1", help="unit-cell of iPEPS: choice={1x1, 3x3}")
 
 def parse_dict(input_string):
     try:
@@ -141,7 +140,7 @@ def main():
         ctm_env_out, env_ts_slices, env_ts = fp_ctmrg(ctm_env_in, \
             ctm_opts_fwd={'opts_svd': opts_svd, 'corner_tol': cfg.ctm_args.ctm_conv_tol, 'max_sweeps': cfg.ctm_args.ctm_max_iter,
                 'method': "2site", 'use_qr': False, 'svd_policy': YASTN_PROJ_METHOD[ctm_args.projector_svd_method], 'D_krylov':args.chi, 'D_block': args.chi, \
-                "svds_thresh":ctm_args.fwd_svds_thresh, "svds_solver":ctm_args.fwd_svds_solver}, \
+                "svds_thresh":ctm_args.fwd_svds_thresh}, \
             ctm_opts_fp={'svd_policy': 'fullrank'})
 
         refill_env(ctm_env_out, env_ts, env_ts_slices)
@@ -190,14 +189,14 @@ def main():
             state = random_3x3_state_U1(bond_dims=bond_dims, config=yastn_config)
         elif args.pattern == '3x3_2':
             state = random_3x3_2_state_U1(bond_dims=bond_dims, config=yastn_config)
+        elif args.pattern == '3x3_9':
+            state = random_3x3_9_state_U1(bond_dims=bond_dims, config=yastn_config)
         elif args.pattern == '1x3':
             state = random_1x3_state_U1(bond_dims=bond_dims, config=yastn_config)
         elif args.pattern == '1x6':
             state = random_1x6_state_U1(bond_dims=bond_dims, config=yastn_config)
         elif args.pattern == '3x1':
             state = random_3x1_state_U1(bond_dims=bond_dims, config=yastn_config)
-        elif args.pattern == '2x2':
-            state = random_checkerboard_state_U1(bond_dims=bond_dims, config=yastn_config)
         else:
             raise ValueError(f"Unknown pattern: {args.pattern}")
     else:
