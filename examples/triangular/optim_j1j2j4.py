@@ -177,7 +177,11 @@ def main():
     ctm_env = ENV(args.chi, state)
     init_env(state, ctm_env)
     if args.ctm_conv_crit=="CSPEC":
-        ctmrg_conv_f= ctmrg_conv_specC
+        def ctmrg_conv_f(state,env,history,*aargs,**kwargs): 
+            conv, history= ctmrg_conv_specC(state,env,history,*aargs, **kwargs)
+            if cfg.global_args.cuda_mem_profile:
+                torch.cuda.memory._dump_snapshot(f"{args.out_prefix}_CTM-{len(history['conv_crit'])}_CUDAMEM.pickle")
+            return conv, history
     elif args.ctm_conv_crit=="ENERGY":
         ctmrg_conv_f= ctmrg_conv_energy
     
@@ -241,6 +245,7 @@ def main():
         ctm_env_out, env_ts_slices, env_ts = fp_ctmrg(ctm_env_in, \
             ctm_opts_fwd= {'opts_svd': options_svd, 'corner_tol': ctm_args.ctm_conv_tol, 'max_sweeps': ctm_args.ctm_max_iter, \
                 'method': "2site", 'use_qr': False, 'svd_policy': YASTN_PROJ_METHOD[ctm_args.projector_svd_method], 'D_block': cfg.main_args.chi,
+                'checkpoint_move': 'reentrant' if ctm_args.fwd_checkpoint_move==True else ctm_args.fwd_checkpoint_move,
                 'verbosity': cfg.ctm_args.verbosity_ctm_convergence
                 }, 
             ctm_opts_fp= {'svd_policy': 'fullrank'})
@@ -250,9 +255,13 @@ def main():
         env_pt= from_yastn_env_generic(ctm_env_out, vertexToSite=state.vertexToSite)
 
         # 3.4 evaluate loss
+        if cfg.global_args.cuda_mem_profile:
+            torch.cuda.memory._dump_snapshot(f"{args.out_prefix}_preloss_CUDAMEM.pickle")
         t_loss0= time.perf_counter()
         loss= energy_f(state, env_pt, compressed=args.compressed_rdms, unroll=args.loop_rdms)
         t_loss1= time.perf_counter()
+        if cfg.global_args.cuda_mem_profile:
+            torch.cuda.memory._dump_snapshot(f"{args.out_prefix}_postloss_CUDAMEM.pickle")
 
         return (loss, ctm_env_out, [], None, t_loss1-t_loss0)
 
@@ -317,10 +326,16 @@ def main():
             #         state.sites[c].copy_(state_g.sites[c])
 
     # optimize
+    # enable memory history, which will
+    # add tracebacks and event history to snapshots
+    torch.cuda.memory._record_memory_history(
+        enabled=None, context=None, stacks='all', max_entries=9223372036854775807, device=None
+        )
+
     state.normalize_()
     loss_fn= loss_fn_fp if args.grad_type=='fp' else loss_fn_default
     ctm_env_0= None # TODO convert ctm_env_0 to YASTN's EnvCTM
-    optimize_state(state, ctm_env_0, loss_fn, obs_fn=obs_fn, post_proc=post_proc)
+    optimize_state(state, ctm_env, loss_fn, obs_fn=obs_fn, post_proc=post_proc)
 
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"

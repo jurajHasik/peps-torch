@@ -218,6 +218,7 @@ class GLOBALARGS():
         self.torch_dtype= torch.float64
         self.device= 'cpu'
         self.offload_to_gpu= 'None'
+        self.cuda_mem_profile= False
 
     def __str__(self):
         res=type(self).__name__+"\n"

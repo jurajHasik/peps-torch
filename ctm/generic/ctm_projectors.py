@@ -273,7 +273,7 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args, \
         log.info(f"{diagnostics}")
         if not ctm_args.projector_full_matrices:
             log.info(f"S/S[0]>ctm_args.projector_svd_reltol {nz_count}/{S.size(0)}")
-    if verbosity>1: print(S_sqrt)
+    if verbosity>2: log.info(S_sqrt)
 
     # Construct projectors
     expr='ij,j->ij'

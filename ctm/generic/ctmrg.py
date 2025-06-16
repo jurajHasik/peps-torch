@@ -92,7 +92,9 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
         if conv_check is not None:
             # evaluate convergence of the CTMRG procedure
             converged, history = conv_check(state, env, history, ctm_args=ctm_args)
-            if ctm_args.verbosity_ctm_convergence>1: print(history)
+            if ctm_args.verbosity_ctm_convergence>2: 
+                _last= {k:v[-1] if type(v) in [list,tuple] else v for k,v in history.items()}
+                log.info(f"CTMRG iter {len(history['conv_crit'])} {_last}")
             if converged:
                 if ctm_args.verbosity_ctm_convergence>0: 
                     print(f"CTMRG  converged at iter= {i}, history= {history['conv_crit'][-1]}")

@@ -9,7 +9,11 @@ from optim import lbfgs_modified
 import config as cfg
 
 from ctm.generic.env import EnvError
-from yastn.yastn.tn.fpeps.envs.fixed_pt import NoFixedPointError
+try:
+    from ctm.generic.env_yastn import NoFixedPointError
+except ImportError:
+    warnings.warn("YASTN not available", ImportWarning)
+    NoFixedPointError= RuntimeError("YASTN not available")
 
 
 def store_checkpoint(checkpoint_file, state, optimizer, current_epoch, current_loss,\
