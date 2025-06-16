@@ -116,7 +116,7 @@ def configure(parsed_args):
         global_args.torch_dtype= torch.complex128
     else:
         raise NotImplementedError(f"Unsupported dtype {global_args.dtype}")
-    
+
     if ctm_args.fwd_checkpoint_move in ["True", "true"]:
         ctm_args.fwd_checkpoint_move= True
 
@@ -246,7 +246,7 @@ class CTMARGS():
 
     :ivar ctm_max_iter: maximum iterations of directional CTM algorithm. Default: ``50``
     :vartype ctm_max_iter: int
-    :ivar ctm_warmup_iter: if >=0, CTMRG performs at most ``max(ctm_warmup_iter, ceil(chi/D^2))`` number of warmup iterations of directional CTM algorithm. 
+    :ivar ctm_warmup_iter: if >=0, CTMRG performs at most ``max(ctm_warmup_iter, ceil(chi/D^2))`` number of warmup iterations of directional CTM algorithm.
                            Default: ``-1`` skips warm-up iterations.
     :vartype ctm_warmup_iter: int
     :ivar ctm_env_init_type: default initialization method for ENV objects. Default: ``'CTMRG'``
@@ -258,7 +258,7 @@ class CTMARGS():
     :ivar ctm_absorb_normalization: normalization to use for new corner/T tensors. Either ``'fro'`` for usual
                                     L2 norm or ``'inf'`` for L-\infty norm. Default: ``'fro'``.
     :vartype ctm_absorb_normalization: str
-    :ivar dtype_rdm: data type used in (some) reduced density matrix computations. Default: ``'DEFAULT'`` uses 
+    :ivar dtype_rdm: data type used in (some) reduced density matrix computations. Default: ``'DEFAULT'`` uses
                      dtype of the state. Otherwise:
                         * ``'double'``: use ``torch.float64`` or ``torch.complex128``
                         * ``'single'``: use ``torch.float32`` or ``torch.complex64``
@@ -287,8 +287,8 @@ class CTMARGS():
     :ivar projector_full_matrices: if ``True``, then the projectors are constructed as full matrices,
                                    i.e. not truncated to ``projector_svd_reltol``. Default: ``True``
     :vartype projector_full_matrices: bool
-    :ivar projector_svd_reltol: relative threshold on the magnitude of the smallest elements of 
-                                singular value spectrum used in the construction of projectors. 
+    :ivar projector_svd_reltol: relative threshold on the magnitude of the smallest elements of
+                                singular value spectrum used in the construction of projectors.
                                 Default: ``1.0e-8``
     :vartype projector_svd_reltol: float
     :ivar projector_svd_reltol_block: (relevant only for decompositions of blocks-sparse tensors)
@@ -399,7 +399,6 @@ class CTMARGS():
         self.fwd_checkpoint_loop_rdm = False
         # self.fwd_svd_policy="fullrank"
         self.fwd_svds_thresh=0.2
-        self.fwd_svds_solver='arpack'
 
     def __str__(self):
         res=type(self).__name__+"\n"
