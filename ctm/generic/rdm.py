@@ -547,7 +547,7 @@ def _get_rdm2x1_sl_tn(coord, state, env, force_cpu=False):
     return contract_tn, names
 
 def rdm2x1_sl(coord, state, env, sym_pos_def=False, force_cpu=False, unroll=False, 
-    checkpoint_unrolled=False, checkpoint_on_device=False, verbosity=0):
+    checkpoint_unrolled=False, checkpoint_on_device=False, global_args=cfg.global_args, verbosity=0):
     r"""
     Contract tensor network specified in :meth:`_get_rdm2x1_sl_tn`
     """
@@ -562,7 +562,7 @@ def rdm2x1_sl(coord, state, env, sym_pos_def=False, force_cpu=False, unroll=Fals
                                           optimizer="default" if env.chi>1 else "auto")
     R= contract_with_unroll(*contract_tn,optimize=path,backend='torch',unroll=unroll,
         checkpoint_unrolled=checkpoint_unrolled,checkpoint_on_device=checkpoint_on_device,
-        who=who,verbosity=verbosity)
+        who=who,verbosity=global_args.verbosity_oe)
 
     R = _sym_pos_def_rdm(R, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
     if force_cpu:
@@ -571,7 +571,7 @@ def rdm2x1_sl(coord, state, env, sym_pos_def=False, force_cpu=False, unroll=Fals
 
 def eval_mpo_rdm2x1(coord, state, env, op_mps, sym_pos_def=False, force_cpu=False, 
     unroll=[], checkpoint_unrolled=False, checkpoint_on_device=False,
-    verbosity=0):
+    global_args=cfg.global_args,verbosity=0):
     r"""
     Contract tensor network of :meth:`rdm2x1` with an MPS representation of operator `op_mps`::
 
@@ -601,7 +601,7 @@ def eval_mpo_rdm2x1(coord, state, env, op_mps, sym_pos_def=False, force_cpu=Fals
                                           optimizer="default" if env.chi>1 else "auto")
     R= contract_with_unroll(*contract_tn_op,optimize=path,backend='torch',unroll=unroll,
         checkpoint_unrolled=checkpoint_unrolled,checkpoint_on_device=checkpoint_on_device,
-        who=who,verbosity=verbosity)
+        who=who,verbosity=global_args.verbosity_oe)
     
     
     I_mps_tn, I_mps_names= _get_id_tn(op_mps, contract_tn[-1], force_cpu=force_cpu)
@@ -612,7 +612,7 @@ def eval_mpo_rdm2x1(coord, state, env, op_mps, sym_pos_def=False, force_cpu=Fals
                                           optimizer="default" if env.chi>1 else "auto")
     I= contract_with_unroll(*contract_tn_I,optimize=path_I,backend='torch',unroll=unroll,
         checkpoint_unrolled=checkpoint_unrolled,checkpoint_on_device=checkpoint_on_device,
-        who=who,verbosity=verbosity)
+        who=who,verbosity=global_args.verbosity_oe)
     
     if force_cpu:
         R= R.to(env.device)
@@ -880,7 +880,7 @@ def _get_rdm1x2_sl_tn(coord, state, env, force_cpu=False):
     return contract_tn, names
 
 def rdm1x2_sl(coord, state, env, sym_pos_def=False, force_cpu=False, unroll=False, 
-            checkpoint_unrolled=False, checkpoint_on_device=False, verbosity=0):
+            checkpoint_unrolled=False, checkpoint_on_device=False, global_args=cfg.global_args, verbosity=0):
     r"""
     Contract tensor network specified in :meth:`_get_rdm1x2_sl_tn`
     """
@@ -895,7 +895,7 @@ def rdm1x2_sl(coord, state, env, sym_pos_def=False, force_cpu=False, unroll=Fals
                                           optimizer="default" if env.chi>1 else "auto")
     R= contract_with_unroll(*contract_tn,optimize=path,backend='torch',unroll=unroll,
         checkpoint_unrolled=checkpoint_unrolled,checkpoint_on_device=checkpoint_on_device,
-        who=who,verbosity=verbosity)
+        who=who,verbosity=global_args.verbosity_oe)
 
     R = _sym_pos_def_rdm(R, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
     if force_cpu:
@@ -904,7 +904,7 @@ def rdm1x2_sl(coord, state, env, sym_pos_def=False, force_cpu=False, unroll=Fals
 
 def eval_mpo_rdm1x2(coord, state, env, op_mps, sym_pos_def=False, force_cpu=False, 
     unroll=[], checkpoint_unrolled=False, checkpoint_on_device=False,
-    verbosity=0):
+    global_args=cfg.global_args,verbosity=0):
     r"""
     Contract tensor network of :meth:`rdm2x1` with an MPS representation of operator `op_mps`::
         
@@ -941,7 +941,7 @@ def eval_mpo_rdm1x2(coord, state, env, op_mps, sym_pos_def=False, force_cpu=Fals
                                           optimizer="default" if env.chi>1 else "auto")
     R= contract_with_unroll(*contract_tn_op,optimize=path,backend='torch',unroll=unroll,
         checkpoint_unrolled=checkpoint_unrolled,checkpoint_on_device=checkpoint_on_device,
-        who=who,verbosity=verbosity)
+        who=who,verbosity=global_args.verbosity_oe)
     
     
     I_mps_tn, I_mps_names= _get_id_tn(op_mps, contract_tn[-1], force_cpu=force_cpu)
@@ -952,7 +952,7 @@ def eval_mpo_rdm1x2(coord, state, env, op_mps, sym_pos_def=False, force_cpu=Fals
                                           optimizer="default" if env.chi>1 else "auto")
     I= contract_with_unroll(*contract_tn_I,optimize=path_I,backend='torch',unroll=unroll,
         checkpoint_unrolled=checkpoint_unrolled,checkpoint_on_device=checkpoint_on_device,
-        who=who,verbosity=verbosity)
+        who=who,verbosity=global_args.verbosity_oe)
     
     if force_cpu:
         R= R.to(env.device)
@@ -1215,7 +1215,7 @@ def _get_rdm2x2_NNN_1n1_oe_tn(coord, state, env, force_cpu=False):
 
 def rdm2x2_NNN_1n1_oe(coord, state, env, sym_pos_def=False, force_cpu=False, 
     unroll=False, checkpoint_unrolled=False, checkpoint_on_device=False,
-    verbosity=0):
+    global_args=cfg.global_args, verbosity=0):
     r"""
     Contract tensor network specified in :meth:`_get_rdm2x2_NNN_1n1_oe_tn`
     """
@@ -1234,7 +1234,7 @@ def rdm2x2_NNN_1n1_oe(coord, state, env, sym_pos_def=False, force_cpu=False,
     R= contract_with_unroll(*contract_tn,optimize=path,unroll=unroll if unroll else [],\
         checkpoint_unrolled=checkpoint_unrolled,
         checkpoint_on_device=checkpoint_on_device,
-        backend='torch',who=who,verbosity=verbosity)
+        backend='torch',who=who,verbosity=global_args.verbosity_oe)
 
     R = _sym_pos_def_rdm(R, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
     if force_cpu:
@@ -1242,7 +1242,8 @@ def rdm2x2_NNN_1n1_oe(coord, state, env, sym_pos_def=False, force_cpu=False,
     return R
 
 def eval_mpo_rdm2x2_NNN_1n1(coord, state, env, op_mps, sym_pos_def=False, force_cpu=False, 
-    unroll=False, checkpoint_unrolled=False, checkpoint_on_device=False, verbosity=0):
+    unroll=False, checkpoint_unrolled=False, checkpoint_on_device=False, 
+    global_args=cfg.global_args, verbosity=0):
     r"""
     Contract tensor network of :meth:`rdm2x2_NNN_1n1` with an MPS representation of operator `op_mps`::
 
@@ -1283,7 +1284,7 @@ def eval_mpo_rdm2x2_NNN_1n1(coord, state, env, op_mps, sym_pos_def=False, force_
     R= contract_with_unroll(*contract_tn_op,optimize=path,unroll=unroll if unroll else [],\
         checkpoint_unrolled=checkpoint_unrolled,
         checkpoint_on_device=checkpoint_on_device,
-        backend='torch',who=who,verbosity=verbosity)
+        backend='torch',who=who,verbosity=global_args.verbosity_oe)
     
     
     I_mps_tn, I_mps_names= _get_id_tn(op_mps, contract_tn[-1], force_cpu=force_cpu)
@@ -1295,7 +1296,7 @@ def eval_mpo_rdm2x2_NNN_1n1(coord, state, env, op_mps, sym_pos_def=False, force_
     I= contract_with_unroll(*contract_tn_I,optimize=path_I,unroll=unroll if unroll else [],\
         checkpoint_unrolled=checkpoint_unrolled,
         checkpoint_on_device=checkpoint_on_device,
-        backend='torch',who=who,verbosity=verbosity)
+        backend='torch',who=who,verbosity=global_args.verbosity_oe)
     
     if force_cpu:
         R= R.to(env.device)
@@ -1593,7 +1594,7 @@ def rdm2x2_legacy(coord, state, env, sym_pos_def=False, verbosity=0):
 
 def rdm2x2_oe(coord, state, env, open_sites=[0,1,2,3], unroll=False, 
     checkpoint_unrolled=False, checkpoint_on_device=False,
-    sym_pos_def=False, force_cpu=False, verbosity=0):
+    sym_pos_def=False, force_cpu=False, global_args=cfg.global_args, verbosity=0):
     # C1------(1)1 1(0)----T1----(3)36 36(0)----T1_x----(3)18 18(0)----C2_x
     # 0(0)               (1,2)                 (1,2)                   19(1)
     # 0(0)           100  2  5             102 20 23                   19(0)
@@ -1666,7 +1667,7 @@ def rdm2x2_oe(coord, state, env, open_sites=[0,1,2,3], unroll=False,
         names=names,path=None,who=who,optimizer="default" if env.chi>1 else "auto")
     R= contract_with_unroll(*contract_tn,unroll=unroll,optimize=path,backend='torch',
         checkpoint_unrolled=checkpoint_unrolled,checkpoint_on_device=checkpoint_on_device,
-        who=who,verbosity=verbosity)
+        who=who,verbosity=global_args.verbosity_oe)
 
     R = _sym_pos_def_rdm(R, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
     if force_cpu:

@@ -219,6 +219,7 @@ class GLOBALARGS():
         self.device= 'cpu'
         self.offload_to_gpu= 'None'
         self.cuda_mem_profile= False
+        self.verbosity_oe= 0
 
     def __str__(self):
         res=type(self).__name__+"\n"

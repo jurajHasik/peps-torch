@@ -2,6 +2,7 @@ import logging
 from functools import lru_cache
 from itertools import product
 import gc, subprocess
+import time
 
 import torch
 from torch.utils.checkpoint import checkpoint
@@ -19,7 +20,7 @@ try:
     import arrayfire as af
 except:
     print("Warning: Missing arrayfire. SVDAF is not available.")
-
+from profiling import _debug_allocated_tensors
 
 log = logging.getLogger(__name__)
 
@@ -100,9 +101,13 @@ def get_contraction_path(*tn_to_contract, unroll=[], names=None, who=None, **kwa
     expr, shapes, unrolled_shapes = _preprocess_interleaved_to_expr_and_shapes(
         *tn_to_contract, unroll=unroll if unroll else []
     )
-    return _get_contraction_path_cached(
+    t0= time.perf_counter()
+    res= _get_contraction_path_cached(
         expr, shapes, unrolled=unrolled_shapes, names=names, who=who, **kwargs
     )
+    t1= time.perf_counter()
+    log.info(f"{who} contraction path search took {t1-t0} [s]")
+    return res
 
 
 @lru_cache(maxsize=128)

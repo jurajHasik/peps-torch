@@ -1,3 +1,5 @@
+import time
+from typing import Callable, Sequence
 import opt_einsum as oe
 import torch
 import warnings
@@ -141,6 +143,15 @@ def _find_unrolled(to_unroll,*interleaved_exp):
     intersection= set.intersection(set(to_unroll),indices)
     return list(intersection)
 
+def _validate_proj_pair(proj_store, key, compressed_chi):
+        if proj_store and key in proj_store:
+            assert isinstance(proj_store[key][0], torch.Tensor) and isinstance(proj_store[key][1], torch.Tensor), \
+                "Projectors must be torch.Tensors"
+            assert proj_store[key][0].size(-1) >= compressed_chi and proj_store[key][1].size(-1) >= compressed_chi, \
+                f"Projectors must have at least `compressed_chi`={compressed_chi} columns"
+            return True
+        return False
+
 # mode 1: all tensors are moved to CPU and contraction is evaluated on CPU
 # mode 2: all is evaluated on current device (assumed to be the same for all tensors)
 # mode 3: all is stored on CPU, all is evaluated on GPU under checkpointing (move to GPU happens within checkpointed section)
@@ -231,12 +242,12 @@ def rdm2x3_loop(coord, state, env, sym_pos_def=False, checkpoint_unrolled=False,
     # ----- building C2x2_RU ----------------------------------------------------
     vec = (2, -1)
     shift_coord_2n1 = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
-    C2X2_RU= c2x2_RU(shift_coord_2n1,state,env,mode='sl-open',verbosity=verbosity)
+    C2X2_RU= c2x2_RU(shift_coord_2n1,state,env,mode='sl-open',verbosity=0)
 
      # ----- building C2x2_RD ----------------------------------------------------
     vec = (2, 0)
     shift_coord_20 = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
-    C2X2_RD= c2x2_RD(shift_coord_20,state,env,mode='sl-open',verbosity=verbosity)
+    C2X2_RD= c2x2_RD(shift_coord_20,state,env,mode='sl-open',verbosity=0)
     
     # ----- build right part C2X2_RU--C2X2_RD -----------------------------------
     #         0<-0--C2x2_RU--2,3->1,2  permute  0--C2x2_RU--23(RU),45(RD)
@@ -326,7 +337,7 @@ def rdm2x3_loop(coord, state, env, sym_pos_def=False, checkpoint_unrolled=False,
     return rdm
 
 def rdm2x3_loop_trglringex_manual(coord, state, env, sym_pos_def=False, checkpoint_unrolled=False, \
-    verbosity=0):
+    global_args=cfg.global_args,verbosity=0):
     r"""
     :param coord: vertex (x,y) specifies lower left site of 2x3 subsystem
     :param state: underlying wavefunction
@@ -408,12 +419,12 @@ def rdm2x3_loop_trglringex_manual(coord, state, env, sym_pos_def=False, checkpoi
     # ----- building C2x2_RU ----------------------------------------------------
     vec = (2, -1)
     shift_coord_2n1 = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
-    C2X2_RU= c2x2_RU(shift_coord_2n1,state,env,mode='sl-open',verbosity=verbosity)
+    C2X2_RU= c2x2_RU(shift_coord_2n1,state,env,mode='sl-open',verbosity=0)
 
      # ----- building C2x2_RD ----------------------------------------------------
     vec = (2, 0)
     shift_coord_20 = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
-    C2X2_RD= c2x2_RD(shift_coord_20,state,env,mode='sl',verbosity=verbosity)
+    C2X2_RD= c2x2_RD(shift_coord_20,state,env,mode='sl',verbosity=0)
     
     # ----- build right part C2X2_RU--C2X2_RD -----------------------------------
     #         0<-0--C2x2_RU--1,2->3,4 
@@ -497,7 +508,7 @@ def rdm2x3_loop_trglringex_manual(coord, state, env, sym_pos_def=False, checkpoi
 
 def rdm2x3_loop_oe(coord, state, env, open_sites=[0,1,2,3,4,5], unroll=True,\
     sym_pos_def=False, force_cpu=False, dtype=None, checkpoint_unrolled=False, 
-    checkpoint_on_device=False,verbosity=0):
+    checkpoint_on_device=False,global_args=cfg.global_args,verbosity=0):
     r"""
     :param coord: vertex (x,y) specifies top left site of 2x3 subsystem
     :param state: underlying wavefunction
@@ -626,7 +637,7 @@ def rdm2x3_loop_oe(coord, state, env, open_sites=[0,1,2,3,4,5], unroll=True,\
         memory_limit=mem_limit if unroll else None,optimizer="default" if env.chi>1 else "auto")
     R= contract_with_unroll(*contract_tn,optimize=path,backend='torch',\
         unroll=unroll if unroll else [],checkpoint_unrolled=checkpoint_unrolled,
-        checkpoint_on_device=checkpoint_on_device,who=who,verbosity=verbosity)
+        checkpoint_on_device=checkpoint_on_device,who=who,verbosity=global_args.verbosity_oe)
 
     R = _sym_pos_def_rdm(R, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
     if force_cpu:
@@ -635,7 +646,7 @@ def rdm2x3_loop_oe(coord, state, env, open_sites=[0,1,2,3,4,5], unroll=True,\
 
 def rdm2x3_loop_oe_semimanual(coord, state, env, open_sites=[0,1,2,3,4,5], unroll=True,\
     sym_pos_def=False, force_cpu=False, dtype=None,
-    checkpoint_unrolled=False, checkpoint_on_device=False, verbosity=0):
+    checkpoint_unrolled=False, checkpoint_on_device=False, global_args=cfg.global_args,verbosity=0):
     # C1------(1)1 1(0)----T1----(3)44 44(0)----T1_x----(3)39 39(0)---T1_2x---(3)24 24(0)--C2_2x
     # 0(0)               (1,2)                 (1,2)                  (1,2)                25(1)
     # 0(0)           100  2  5             102 40 42              104 26 28                25(0)
@@ -744,7 +755,7 @@ def rdm2x3_loop_oe_semimanual(coord, state, env, open_sites=[0,1,2,3,4,5], unrol
             optimizer="default" if env.chi>1 else "auto") 
     res= contract_with_unroll(*joint_tn,optimize=path,backend='torch',
         unroll=unroll if unroll else [],checkpoint_unrolled=checkpoint_unrolled,
-        checkpoint_on_device=checkpoint_on_device,who=who,verbosity=verbosity)
+        checkpoint_on_device=checkpoint_on_device,who=who,verbosity=global_args.verbosity_oe)
 
     res = _sym_pos_def_rdm(res, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
     if force_cpu:
@@ -754,7 +765,7 @@ def rdm2x3_loop_oe_semimanual(coord, state, env, open_sites=[0,1,2,3,4,5], unrol
 def rdm2x3_loop_trglringex_compressed(coord,state,env, open_sites=[0,1,2,3], 
     compressed_chi=None, sym_pos_def=False,\
     unroll=True, checkpoint_unrolled=False, checkpoint_on_device=False,\
-    force_cpu=False, dtype=None,\
+    force_cpu=False, dtype=None, proj_store=None,\
     ctm_args=cfg.ctm_args,global_args=cfg.global_args,verbosity=0):
     r"""
     :param coord: vertex (x,y) specifies lower left site of 2x3 subsystem
@@ -769,6 +780,8 @@ def rdm2x3_loop_trglringex_compressed(coord,state,env, open_sites=[0,1,2,3],
     :param checkpoint_on_device:
     :param force_cpu: move all tensors to cpu
     :param dtype: perform contraction in dtype (downcast)
+    :param proj_store: dictionary containing precomputed projectors under "PPt_left" and "PPt_right" as 2-tuple of tensors.
+                       If empty dictionary is passed, computed projectors will be stored under these keys. Default is ``None``.   
     :param ctm_args: CTM algorithm configuration
     :param global_args: global configuration
     :type ctm_args: CTMARGS
@@ -813,40 +826,50 @@ def rdm2x3_loop_trglringex_compressed(coord,state,env, open_sites=[0,1,2,3],
         s0 s1 x
 
     """
-    who="rdm2x3_loop_compressed"
+    who="rdm2x3_loop_trglringex_compressed"
+    t0= time.perf_counter()
     if not compressed_chi: compressed_chi= env.chi
     # ----- building C2x2_LU ----------------------------------------------------
     vec = (0, -1)
     shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
-    C2X2_LU= c2x2_LU(shift_coord,state,env,mode='sl',verbosity=verbosity)
+    C2X2_LU= c2x2_LU(shift_coord,state,env,mode='sl',verbosity=0)
 
     # ----- building C2x2_LD ----------------------------------------------------
-    C2X2_LD_o= c2x2_LD(coord,state,env,mode='sl-open',verbosity=verbosity)
+    C2X2_LD_o= c2x2_LD(coord,state,env,mode='sl-open',verbosity=0)
 
-    # ----- build left part C2x2_LU--C2X2_LD ------------------------------------
-    # C2x2_LU--1->0
-    # |
-    # 0
-    # 0
-    # C2x2_LD--1
-    half0= torch.tensordot(C2X2_LU, torch.einsum('ijss->ij',C2X2_LD_o), ([0],[0]))
-
-    # construct projector for UP move between coord+(0,-1) and coord+(1,-1)
-    # see :meth:`ctm.generic.ctm_components.halves_of_4x4_CTM_MOVE_UP_c`
-    #
-    #        _0 0_          --|\__/|--
-    #       |     |         --|/  \|--
-    #   half0     half1 =>    P    Pt
-    #       |_1 1_|
     vec = (1, -1)
     shift_coord_1n1 = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
     vec = (1, 0)
     shift_coord_10 = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
-    half1= torch.tensordot(c2x2_RU(shift_coord_1n1,state,env,mode='sl',verbosity=verbosity),\
-        c2x2_RD(shift_coord_10,state,env,mode='sl',verbosity=verbosity),([1],[0]))
+    if _validate_proj_pair(proj_store, "PPt_up", compressed_chi):
+        if verbosity>2: log.info(f"rdm3x2_loop_trglringex_compressed using precomputed "
+            +f"P_up[:,{proj_store['PPt_up'][0].size(-1)}], Pt_up[:,{proj_store['PPt_up'][1].size(-1)}]")
+        P_up, Pt_up = proj_store["PPt_up"][0][:,:compressed_chi], proj_store["PPt_up"][1][:,:compressed_chi]
+    else:
+        # ----- build left part C2x2_LU--C2X2_LD ------------------------------------
+        # C2x2_LU--1->0
+        # |
+        # 0
+        # 0
+        # C2x2_LD--1
+        half0= torch.tensordot(C2X2_LU, torch.einsum('ijss->ij',C2X2_LD_o), ([0],[0]))
 
-    P_up, Pt_up= ctm_get_projectors_from_matrices(half1, half0,\
-        compressed_chi, ctm_args, global_args)
+        # construct projector for UP move between coord+(0,-1) and coord+(1,-1)
+        # see :meth:`ctm.generic.ctm_components.halves_of_4x4_CTM_MOVE_UP_c`
+        #
+        #        _0 0_          --|\__/|--
+        #       |     |         --|/  \|--
+        #   half0     half1 =>    P    Pt
+        #       |_1 1_|
+        half1= torch.tensordot(c2x2_RU(shift_coord_1n1,state,env,mode='sl',verbosity=0),\
+            c2x2_RD(shift_coord_10,state,env,mode='sl',verbosity=0),([1],[0]))
+
+        P_up, Pt_up= ctm_get_projectors_from_matrices(half1, half0,\
+            compressed_chi, ctm_args, global_args)
+        if type(proj_store)==dict and "PPt_up" not in proj_store:
+            proj_store["PPt_up"]= (P_up, Pt_up)
+            if verbosity>2: log.info(f"rdm3x2_loop_trglringex_compressed storing "
+                +f"P_up[:,{P_up.size(-1)}], Pt_up[:,{Pt_up.size(-1)}]")   
 
     # compress C2X2_LU
     #  
@@ -858,32 +881,42 @@ def rdm2x3_loop_trglringex_compressed(coord,state,env, open_sites=[0,1,2,3],
     # ----- building C2x2_RU ----------------------------------------------------
     vec = (2, -1)
     shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
-    C2X2_RU_o= c2x2_RU(shift_coord,state,env,mode='sl-open',verbosity=verbosity)
+    C2X2_RU_o= c2x2_RU(shift_coord,state,env,mode='sl-open',verbosity=0)
 
      # ----- building C2x2_RD ----------------------------------------------------
     vec = (2, 0)
     shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
-    C2X2_RD= c2x2_RD(shift_coord,state,env,mode='sl',verbosity=verbosity)
+    C2X2_RD= c2x2_RD(shift_coord,state,env,mode='sl',verbosity=0)
     
-    # ----- build right part C2X2_RU--C2X2_RD -----------------------------------
-    #         1<-0--C2x2_RU--1,2->2,3
-    #               1
-    #               0
-    #         0<-1--C2x2_RD
-    half0= torch.tensordot(C2X2_RD, torch.einsum('ijss->ij',C2X2_RU_o),([0],[1]))
+    if _validate_proj_pair(proj_store, "PPt_down", compressed_chi):
+        if verbosity>2: log.info(f"rdm3x2_loop_trglringex_compressed using precomputed "
+            +f"P_down[:,{proj_store['PPt_down'][0].size(-1)}], Pt_down[:,{proj_store['PPt_down'][1].size(-1)}]")
+        P_down, Pt_down = proj_store["PPt_down"][0][:,:compressed_chi], proj_store["PPt_down"][1][:,:compressed_chi]
+    else:
+        # ----- build right part C2X2_RU--C2X2_RD -----------------------------------
+        #         1<-0--C2x2_RU--1,2->2,3
+        #               1
+        #               0
+        #         0<-1--C2x2_RD
+        half0= torch.tensordot(C2X2_RD, torch.einsum('ijss->ij',C2X2_RU_o),([0],[1]))
 
-    # construct projector for DOWN move between coord+(1,0) and coord+(2,0)
-    # see :meth:`ctm.generic.ctm_components.halves_of_4x4_CTM_MOVE_DOWN_c`
-    #
-    #        _1 1_            --|\__/|--
-    #       |     |           --|/  \|--
-    #   half1     half0 =>      Pt   P
-    #       |_0 0_|
-    half1= torch.tensordot(c2x2_LD(shift_coord_10,state,env,mode='sl',verbosity=verbosity),\
-        c2x2_LU(shift_coord_1n1,state,env,mode='sl',verbosity=verbosity),([0],[0]))
-    
-    P_down, Pt_down= ctm_get_projectors_from_matrices(half1, half0,\
-        compressed_chi, ctm_args, global_args)
+        # construct projector for DOWN move between coord+(1,0) and coord+(2,0)
+        # see :meth:`ctm.generic.ctm_components.halves_of_4x4_CTM_MOVE_DOWN_c`
+        #
+        #        _1 1_            --|\__/|--
+        #       |     |           --|/  \|--
+        #   half1     half0 =>      Pt   P
+        #       |_0 0_|
+        half1= torch.tensordot(c2x2_LD(shift_coord_10,state,env,mode='sl',verbosity=0),\
+            c2x2_LU(shift_coord_1n1,state,env,mode='sl',verbosity=0),([0],[0]))
+        
+        P_down, Pt_down= ctm_get_projectors_from_matrices(half1, half0,\
+            compressed_chi, ctm_args, global_args)
+        if type(proj_store)==dict and "PPt_down" not in proj_store:
+            proj_store["PPt_down"]= (P_down, Pt_down)
+            if verbosity>2: log.info(f"rdm3x2_loop_trglringex_compressed storing "
+                +f"P_down[:,{P_down.size(-1)}], Pt_down[:,{Pt_down.size(-1)}]")   
+
     if not ctm_args.projector_full_matrices:
         log.info(f"rdm2x3_loop_trglringex_compressed chi_max(Projectors)"+ 
             f" {max(P_down.size(1),P_up.size(1))} / {compressed_chi}")
@@ -978,15 +1011,16 @@ def rdm2x3_loop_trglringex_compressed(coord,state,env, open_sites=[0,1,2,3],
             optimizer="default" if env.chi>1 else "auto")
     R= contract_with_unroll(*contract_tn,optimize=path,backend='torch',\
         unroll=unroll if unroll else [],checkpoint_unrolled=checkpoint_unrolled,
-        checkpoint_on_device=checkpoint_on_device,who=who,verbosity=verbosity)
+        checkpoint_on_device=checkpoint_on_device,who=who,verbosity=global_args.verbosity_oe)
 
     R = _sym_pos_def_rdm(R, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
     R= R.to(device=env.device,dtype=env.dtype)
+    if verbosity>2: log.info(f"{who} compressed_chi={compressed_chi} took {time.perf_counter()-t0} [s]")
     return R
 
 
 def rdm3x2_loop_trglringex_manual(coord, state, env, sym_pos_def=False, checkpoint_unrolled=False, \
-    verbosity=0):
+    global_args=cfg.global_args,verbosity=0):
     r"""
     :param coord: vertex (x,y) specifies lower left site of 2x3 subsystem
     :param state: underlying wavefunction
@@ -1051,12 +1085,12 @@ def rdm3x2_loop_trglringex_manual(coord, state, env, sym_pos_def=False, checkpoi
     # ----- building C2x2_LU ----------------------------------------------------
     vec = (0, -2)
     shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
-    C2X2_LU= c2x2_LU(shift_coord,state,env,mode='sl',verbosity=verbosity)
+    C2X2_LU= c2x2_LU(shift_coord,state,env,mode='sl',verbosity=0)
 
     # ----- building C2x2_RU ----------------------------------------------------
     vec = (1, -2)
     shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
-    C2X2_RU= c2x2_RU(shift_coord,state,env,mode='sl-open',verbosity=verbosity)
+    C2X2_RU= c2x2_RU(shift_coord,state,env,mode='sl-open',verbosity=0)
 
     # ----- build top part C2x2_LU--C2X2_RU ------------------------------------
     # C2x2_LU--1 0--C2x2_RU--2,3->6,7
@@ -1071,12 +1105,12 @@ def rdm3x2_loop_trglringex_manual(coord, state, env, sym_pos_def=False, checkpoi
 
 
     # ----- building C2x2_LD ----------------------------------------------------
-    C2X2_LD= c2x2_LD(coord,state,env,mode='sl-open',verbosity=verbosity)
+    C2X2_LD= c2x2_LD(coord,state,env,mode='sl-open',verbosity=0)
 
     # ----- building C2x2_RD ----------------------------------------------------
     vec = (1, 0)
     shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
-    C2X2_RD= c2x2_RD(shift_coord,state,env,mode='sl',verbosity=verbosity)
+    C2X2_RD= c2x2_RD(shift_coord,state,env,mode='sl',verbosity=0)
     
     # ----- build bottom part C2X2_LD--C2X2_RD -----------------------------------
     #        
@@ -1172,7 +1206,7 @@ def rdm3x2_loop_trglringex_manual(coord, state, env, sym_pos_def=False, checkpoi
 
 def rdm3x2_loop_oe_semimanual(coord, state, env, open_sites=[0,1,2,3,4,5], unroll=True,\
     sym_pos_def=False, force_cpu=False, dtype=None,
-    checkpoint_unrolled=False, checkpoint_on_device=False, verbosity=0):
+    checkpoint_unrolled=False, checkpoint_on_device=False, global_args=cfg.global_args,verbosity=0):
     # C1------(1)1 1(0)----T1----(3)13 13(0)----T1_x-----(3)7 7(0)-----C2_x
     # 0(0)               (1,2)                 (1,2)                   8(1)
     # 0(0)           100  2  5             106 9 11                    8(0)
@@ -1290,7 +1324,7 @@ def rdm3x2_loop_oe_semimanual(coord, state, env, open_sites=[0,1,2,3,4,5], unrol
             optimizer="default" if env.chi>1 else "auto") 
     res= contract_with_unroll(*joint_tn,optimize=path,backend='torch',
         unroll=unroll if unroll else [],checkpoint_unrolled=checkpoint_unrolled,
-        checkpoint_on_device=checkpoint_on_device,who=who,verbosity=verbosity)
+        checkpoint_on_device=checkpoint_on_device,who=who,verbosity=global_args.verbosity_oe)
 
     res = _sym_pos_def_rdm(res, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
     if force_cpu:
@@ -1299,7 +1333,7 @@ def rdm3x2_loop_oe_semimanual(coord, state, env, open_sites=[0,1,2,3,4,5], unrol
 
 def rdm3x2_loop_oe(coord, state, env, open_sites=[0,1,2,3,4,5], unroll=True,\
     sym_pos_def=False, force_cpu=False, dtype=None, checkpoint_unrolled=False, 
-    checkpoint_on_device=False, verbosity=0):
+    checkpoint_on_device=False, global_args=cfg.global_args,verbosity=0):
     r"""
     :param coord: vertex (x,y) specifies top left site of 3x2 subsystem
     :param state: underlying wavefunction
@@ -1439,7 +1473,7 @@ def rdm3x2_loop_oe(coord, state, env, open_sites=[0,1,2,3,4,5], unroll=True,\
             optimizer="default" if env.chi>1 else "auto")
     R= contract_with_unroll(*contract_tn,optimize=path,backend='torch',\
         unroll=unroll if unroll else [],checkpoint_unrolled=checkpoint_unrolled,
-        checkpoint_on_device=checkpoint_on_device,who=who,verbosity=verbosity)
+        checkpoint_on_device=checkpoint_on_device,who=who,verbosity=global_args.verbosity_oe)
 
     R = _sym_pos_def_rdm(R, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
     if force_cpu:
@@ -1449,7 +1483,7 @@ def rdm3x2_loop_oe(coord, state, env, open_sites=[0,1,2,3,4,5], unroll=True,\
 def rdm3x2_loop_trglringex_compressed(coord,state,env, open_sites=[0,1,2,3], 
     compressed_chi=None, sym_pos_def=False,\
     unroll=True, checkpoint_unrolled=False, checkpoint_on_device=False,\
-    force_cpu=False, dtype=None,\
+    force_cpu=False, dtype=None, proj_store=None,\
     ctm_args=cfg.ctm_args,global_args=cfg.global_args,verbosity=0):
     r"""
     :param coord: vertex (x,y) specifies lower left site of 3x2 subsystem
@@ -1464,6 +1498,8 @@ def rdm3x2_loop_trglringex_compressed(coord,state,env, open_sites=[0,1,2,3],
     :param checkpoint_on_device:
     :param force_cpu: move all tensors to cpu
     :param dtype: perform contraction in dtype (downcast)
+    :param proj_store: dictionary containing precomputed projectors under "PPt_left" and "PPt_right" as 2-tuple of tensors.
+                       If empty dictionary is passed, computed projectors will be stored under these keys. Default is ``None``.   
     :param ctm_args: CTM algorithm configuration
     :param global_args: global configuration
     :type ctm_args: CTMARGS
@@ -1519,67 +1555,87 @@ def rdm3x2_loop_trglringex_compressed(coord,state,env, open_sites=[0,1,2,3],
         s0 x
 
     """
-    who="rdm3x2_loop_compressed"
+    who="rdm3x2_loop_trglringex_compressed"
+    t0= time.perf_counter()
     if not compressed_chi: compressed_chi= env.chi
     # ----- building C2x2_LU ----------------------------------------------------
     vec = (0, -2)
     shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
-    C2X2_LU= c2x2_LU(shift_coord,state,env,mode='sl',verbosity=verbosity)
+    C2X2_LU= c2x2_LU(shift_coord,state,env,mode='sl',verbosity=0)
 
     # ----- building C2x2_RU ----------------------------------------------------
     vec = (1, -2)
     shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
-    C2X2_RU_o= c2x2_RU(shift_coord,state,env,mode='sl-open',verbosity=verbosity)
+    C2X2_RU_o= c2x2_RU(shift_coord,state,env,mode='sl-open',verbosity=0)
 
-    # ----- build top part C2x2_LU--C2X2_RU ------------------------------------
-    # C2x2_LU--1 0--C2x2_RU--2,3
-    # |                  |
-    # 0                  1
-    half0= torch.tensordot(C2X2_LU, torch.einsum('ijss->ij',C2X2_RU_o), ([1],[0]))
-
-    # construct projector for LEFT move between coord+(0,-2) and coord+(0,-1)
-    # see :meth:`ctm.generic.ctm_components.halves_of_4x4_CTM_MOVE_LEFT_c`
-    #
-    #        _half0___          
-    #       0         1        \__/ Pt
-    #       0         1  =>    /  \ P
-    #       |_half1___|
     vec = (0, -1)
     shift_coord_0n1 = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
     vec = (1, -1)
     shift_coord_1n1 = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
-    half1= torch.tensordot(c2x2_LD(shift_coord_0n1,state,env,mode='sl',verbosity=verbosity),\
-        c2x2_RD(shift_coord_1n1,state,env,mode='sl',verbosity=verbosity),([1],[1]))
+    if _validate_proj_pair(proj_store, "PPt_left", compressed_chi):
+        if verbosity>2: log.info(f"rdm3x2_loop_trglringex_compressed using precomputed "
+            +f"P_left[:,{proj_store['PPt_left'][0].size(-1)}], Pt_left[:,{proj_store['PPt_left'][1].size(-1)}]")
+        P_left, Pt_left = proj_store["PPt_left"][0][:,:compressed_chi], proj_store["PPt_left"][1][:,:compressed_chi]
+    else:
+        # ----- build top part C2x2_LU--C2X2_RU ------------------------------------
+        # C2x2_LU--1 0--C2x2_RU--2,3
+        # |                  |
+        # 0                  1
+        half0= torch.tensordot(C2X2_LU, torch.einsum('ijss->ij',C2X2_RU_o), ([1],[0]))
 
-    P_left, Pt_left= ctm_get_projectors_from_matrices(half0,half1,\
-        compressed_chi, ctm_args, global_args)
+        # construct projector for LEFT move between coord+(0,-2) and coord+(0,-1)
+        # see :meth:`ctm.generic.ctm_components.halves_of_4x4_CTM_MOVE_LEFT_c`
+        #
+        #        _half0___          
+        #       0         1        \__/ Pt
+        #       0         1  =>    /  \ P
+        #       |_half1___|
+        half1= torch.tensordot(c2x2_LD(shift_coord_0n1,state,env,mode='sl',verbosity=0),\
+            c2x2_RD(shift_coord_1n1,state,env,mode='sl',verbosity=0),([1],[1]))
+
+        P_left, Pt_left= ctm_get_projectors_from_matrices(half0,half1,\
+            compressed_chi, ctm_args, global_args)
+        if type(proj_store)==dict and "PPt_left" not in proj_store:
+            proj_store["PPt_left"]= (P_left, Pt_left)
+            if verbosity>2: log.info(f"rdm3x2_loop_trglringex_compressed storing "
+                +f"P_left[:,{P_left.size(-1)}], Pt_left[:,{Pt_left.size(-1)}]")
 
     # ----- building C2x2_LD ----------------------------------------------------
-    C2X2_LD_o= c2x2_LD(coord,state,env,mode='sl-open',verbosity=verbosity)
+    C2X2_LD_o= c2x2_LD(coord,state,env,mode='sl-open',verbosity=0)
 
     # ----- building C2x2_RD ----------------------------------------------------
     vec = (1, 0)
     shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
-    C2X2_RD= c2x2_RD(shift_coord,state,env,mode='sl',verbosity=verbosity)
+    C2X2_RD= c2x2_RD(shift_coord,state,env,mode='sl',verbosity=0)
     
-    # ----- build bottom part C2X2_LD--C2X2_RD -----------------------------------
-    #        
-    #       0->1          0
-    #  2,3--C2x2_LD--1 1--C2x2_RD
-    half0= torch.tensordot(C2X2_RD,torch.einsum('ijss->ij',C2X2_LD_o),([1],[1]))
+    if _validate_proj_pair(proj_store, "PPt_right", compressed_chi):
+        if verbosity>2: log.info(f"rdm3x2_loop_trglringex_compressed using precomputed "
+            +f"P_right[:,{proj_store['PPt_right'][0].size(-1)}], Pt_right[:,{proj_store['PPt_right'][1].size(-1)}]")
+        P_right, Pt_right = proj_store["PPt_right"][0][:,:compressed_chi], proj_store["PPt_right"][1][:,:compressed_chi]
+    else:
+        # ----- build bottom part C2X2_LD--C2X2_RD -----------------------------------
+        #        
+        #       0->1          0
+        #  2,3--C2x2_LD--1 1--C2x2_RD
+        half0= torch.tensordot(C2X2_RD,torch.einsum('ijss->ij',C2X2_LD_o),([1],[1]))
 
-    # construct projector for RIGHT move between coord+(1,-1) and coord+(1,0)
-    # see :meth:`ctm.generic.ctm_components.halves_of_4x4_CTM_MOVE_RIGHT_c`
-    #
-    #        _half1___     
-    #       1         0      \___/ P
-    #       1         0  =>  /   \ Pt
-    #       |_half0___|
-    half1= torch.tensordot(c2x2_RU(shift_coord_1n1,state,env,mode='sl',verbosity=verbosity),\
-        c2x2_LU(shift_coord_0n1,state,env,mode='sl',verbosity=verbosity),([0],[1]))
-    
-    P_right, Pt_right= ctm_get_projectors_from_matrices(half0,half1,\
-        compressed_chi, ctm_args, global_args)
+        # construct projector for RIGHT move between coord+(1,-1) and coord+(1,0)
+        # see :meth:`ctm.generic.ctm_components.halves_of_4x4_CTM_MOVE_RIGHT_c`
+        #
+        #        _half1___     
+        #       1         0      \___/ P
+        #       1         0  =>  /   \ Pt
+        #       |_half0___|
+        half1= torch.tensordot(c2x2_RU(shift_coord_1n1,state,env,mode='sl',verbosity=0),\
+            c2x2_LU(shift_coord_0n1,state,env,mode='sl',verbosity=0),([0],[1]))
+        
+        P_right, Pt_right= ctm_get_projectors_from_matrices(half0,half1,\
+            compressed_chi, ctm_args, global_args)
+        if type(proj_store)==dict and "PPt_right" not in proj_store:
+            proj_store["PPt_right"]= (P_right, Pt_right)
+            if verbosity>2: log.info(f"rdm3x2_loop_trglringex_compressed storing "
+                +f"P_right[:,{P_right.size(-1)}], Pt_right[:,{Pt_right.size(-1)}]")
+
     if not ctm_args.projector_full_matrices:
         log.info(f"rdm3x2_loop_trglringex_compressed chi_max(Projectors)"+ 
             f" {max(P_right.size(1),P_left.size(1))} / {compressed_chi}")
@@ -1663,11 +1719,56 @@ def rdm3x2_loop_trglringex_compressed(coord,state,env, open_sites=[0,1,2,3],
             optimizer="default" if env.chi>1 else "auto")
     R= contract_with_unroll(*contract_tn,optimize=path,backend='torch',\
         unroll=unroll if unroll else [],checkpoint_unrolled=checkpoint_unrolled,
-        checkpoint_on_device=checkpoint_on_device,who=who,verbosity=verbosity)
+        checkpoint_on_device=checkpoint_on_device,who=who,verbosity=global_args.verbosity_oe)
 
     R = _sym_pos_def_rdm(R, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
     R= R.to(device=env.device,dtype=env.dtype)
+    if verbosity>2: log.info(f"{who} compressed_chi={compressed_chi} took {time.perf_counter()-t0} [s]")
     return R
+
+# ----- sequential format for efficient compressed rdms ------
+def rdmSeq_2x3_loop_trglringex_compressed(compressed_chis : Sequence[int], *args, **kwargs):
+    """
+    Computes a sequence of :func:`rdm2x3_loop_trglringex_compressed` starting from largest compressed_chi
+    re-using the projectors.
+
+    Returns
+    -------
+    res : list of torch.Tensor
+        List of reduced density matrices for each compressed_chi in ``compressed_chis`` in descending order.
+    """
+    return _rdmSeq_compressed(rdm2x3_loop_trglringex_compressed, compressed_chis, *args, **kwargs)
+
+def rdmSeq_3x2_loop_trglringex_compressed(compressed_chis : Sequence[int], *args, **kwargs):
+    """
+    Computes a sequence of :func:`rdm3x2_loop_trglringex_compressed` starting from largest compressed_chi
+    re-using the projectors.
+
+    Returns
+    -------
+    res : list of torch.Tensor
+        List of reduced density matrices for each compressed_chi in ``compressed_chis`` in descending order.
+    """
+    return _rdmSeq_compressed(rdm3x2_loop_trglringex_compressed, compressed_chis, *args, **kwargs)
+
+def _rdmSeq_compressed(rdm_f: Callable, compressed_chis : Sequence[int], *args, **kwargs):
+    """
+    Computes a sequence of ``rdm_f`` starting from largest compressed_chi re-using the projectors.
+
+    Returns
+    -------
+    res : list of torch.Tensor
+        List of reduced density matrices for each compressed_chi in ``compressed_chis`` in descending order.
+    """
+    res= []
+    kwargs['proj_store'] = {} # empty dictionary to store precomputed projectors for largest compressed_chi considered
+    for compressed_chi in sorted(compressed_chis)[::-1]:
+        assert compressed_chi > 0, "compressed_chi must be positive"
+        if kwargs.get('verbosity', 0) > 2:
+            log.info(f"{rdm_f}: compressed_chi={compressed_chi}")
+        kwargs['compressed_chi'] = compressed_chi
+        res.append(rdm_f(*args, **kwargs))
+    return res
 
 # ----- deprecated forms ------
 def rdm2x3_mc(coord, state, env, sym_pos_def=False, verbosity=0):
@@ -1775,12 +1876,12 @@ def rdm2x3_mc(coord, state, env, sym_pos_def=False, verbosity=0):
     # ----- building C2x2_RU ----------------------------------------------------
     vec = (2, -1)
     shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
-    C2X2_RU= c2x2_RU(shift_coord,state,env,mode='sl-open',verbosity=verbosity)
+    C2X2_RU= c2x2_RU(shift_coord,state,env,mode='sl-open',verbosity=0)
 
      # ----- building C2x2_RD ----------------------------------------------------
     vec = (2, 0)
     shift_coord = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
-    C2X2_RD= c2x2_RD(shift_coord,state,env,mode='sl',verbosity=verbosity)
+    C2X2_RD= c2x2_RD(shift_coord,state,env,mode='sl',verbosity=0)
     
     # ----- build right part C2X2_RU--C2X2_RD -----------------------------------
     #            0--C2x2_RU--1,2 
