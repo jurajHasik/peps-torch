@@ -305,6 +305,7 @@ def _get_contraction_path_info(path, *operands, **kwargs):
 
     opt_cost = sum(cost_list)
 
+    # TODO associate input_subscripts with names
     path_print = PathInfo(
         contraction_list,
         input_subscripts,

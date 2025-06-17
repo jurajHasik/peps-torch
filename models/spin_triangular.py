@@ -54,22 +54,26 @@ def eval_nnn_per_site_semimanual(coord,state,env,R,Rinv,op_nnn,compressed=-1,unr
     ctm_args=cfg.ctm_args,global_args=cfg.global_args,verbosity=0):
     if not unroll: unroll= {}
 
-    kwargs= dict(open_sites=[2,3], 
+    kwargs= dict( 
             checkpoint_unrolled=checkpoint_unrolled, 
             checkpoint_on_device=checkpoint_on_device,
             force_cpu=force_cpu,dtype=dtype,verbosity=verbosity)
 
     # O(X^3 D^6 s^2)
     energy_nnn= 0.
-    # RA R^2A R^3A                  B  C  A     x  x s2
-    # A  RA   R^2A => 120deg order  A  B  C <=> s3 x x
+    # RA R^2A R^3A                  B  C  A
+    # A  RA   R^2A => 120deg order  A  B  C
     if compressed>0:
+        # x  s3 s2
+        # s0 s1 x
         tmp_rdm_2x3= rdm_looped.rdm2x3_loop_trglringex_compressed(coord,state,env,
-            compressed_chi=compressed,unroll=True,
+            open_sites=[0,2],compressed_chi=compressed,unroll=unroll.get('rdm2x3_loop_trglringex_compressed',False),
             ctm_args=ctm_args,global_args=global_args,**kwargs)
     else:
+        # s0 s1 s2
+        # s3 s4 s5
         tmp_rdm_2x3= rdm_looped.rdm2x3_loop_oe_semimanual(coord,state,env,\
-            unroll=unroll.get('rdm2x3_loop_oe_semimanual',False), 
+            open_sites=[2,3],unroll=unroll.get('rdm2x3_loop_oe_semimanual',False), 
             **kwargs)    
     energy_nnn+= torch.einsum('iajb,jbia',tmp_rdm_2x3,
         torch.einsum('jxiy,xb,ya->jbia',op_nnn,R@R@R,R@R@R)) # A--A nnn
@@ -79,12 +83,18 @@ def eval_nnn_per_site_semimanual(coord,state,env,R,Rinv,op_nnn,compressed=-1,unr
     # RA   R^2A     x  x                  B C
     # A      RA <=> s2 x  => 120deg order A B
     if compressed>0:
+        # x  s2
+        # s3 s1
+        # s0 x
         tmp_rdm_3x2= rdm_looped.rdm3x2_loop_trglringex_compressed(coord,state,env,
-            compressed_chi=compressed,unroll=True,
+            open_sites=[0,2],compressed_chi=compressed,unroll=unroll.get('rdm3x2_loop_trglringex_compressed',False),
             ctm_args=ctm_args,global_args=global_args,**kwargs)
     else:
+        # s0 s3
+        # s1 s4
+        # s2 s5
         tmp_rdm_3x2= rdm_looped.rdm3x2_loop_oe_semimanual(coord,state,env,\
-            unroll=unroll.get('rdm3x2_loop_oe_semimanual',False), 
+            open_sites=[2,3],unroll=unroll.get('rdm3x2_loop_oe_semimanual',False), 
             **kwargs)
     energy_nnn+= torch.einsum('iajb,jbia',tmp_rdm_3x2,
         torch.einsum('jxiy,xb,ya->jbia',op_nnn,R@R@R,R@R@R)) # A--A nnn

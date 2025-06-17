@@ -206,6 +206,8 @@ def main():
 
         # possibly re-initialize the environment
         if opt_args.opt_ctm_reinit:
+            if ctm_env_in is None: 
+                ctm_env_in= ENV(args.chi, state_n)
             init_env(state_n, ctm_env_in)
 
         # 1) compute environment by CTMRG
@@ -335,7 +337,7 @@ def main():
     state.normalize_()
     loss_fn= loss_fn_fp if args.grad_type=='fp' else loss_fn_default
     ctm_env_0= None # TODO convert ctm_env_0 to YASTN's EnvCTM
-    optimize_state(state, ctm_env, loss_fn, obs_fn=obs_fn, post_proc=post_proc)
+    optimize_state(state, ctm_env_0, loss_fn, obs_fn=obs_fn, post_proc=post_proc)
 
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"
