@@ -19,6 +19,12 @@ import scipy.io as io
 import numpy
 import time
 
+
+########################
+pid = os.getpid();
+print('pid= '+str(pid))
+########################
+
 log = logging.getLogger(__name__)
 
 # parse command line args and build necessary configuration objects
@@ -123,7 +129,7 @@ def main():
                     dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)-0.5
                 B_a= torch.rand_like(B_c)-0.5
                 B_b= torch.rand_like(B_c)-0.5
-                return T_u, T_d, B_c, B_a, B_b
+                return T_u, B_a, T_d, B_b, B_c
             if args.ansatz in ["IPESS_PG", "A_1,B", "A_2,B"]:
                 T_u, T_d, B_c, B_a, B_b= _gen_rand()
                 state = IPESS_KAGOME_PG(T_u, B_c, T_d=T_d, B_a=B_a, B_b=B_b,\
