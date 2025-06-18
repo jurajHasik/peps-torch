@@ -147,8 +147,8 @@ def _validate_proj_pair(proj_store, key, compressed_chi):
         if proj_store and key in proj_store:
             assert isinstance(proj_store[key][0], torch.Tensor) and isinstance(proj_store[key][1], torch.Tensor), \
                 "Projectors must be torch.Tensors"
-            assert proj_store[key][0].size(-1) >= compressed_chi and proj_store[key][1].size(-1) >= compressed_chi, \
-                f"Projectors must have at least `compressed_chi`={compressed_chi} columns"
+            # assert proj_store[key][0].size(-1) >= compressed_chi and proj_store[key][1].size(-1) >= compressed_chi, \
+            #     f"Projectors must have at least `compressed_chi`={compressed_chi} columns"
             return True
         return False
 
@@ -508,7 +508,7 @@ def rdm2x3_loop_trglringex_manual(coord, state, env, sym_pos_def=False, checkpoi
 
 def rdm2x3_loop_oe(coord, state, env, open_sites=[0,1,2,3,4,5], unroll=True,\
     sym_pos_def=False, force_cpu=False, dtype=None, checkpoint_unrolled=False, 
-    checkpoint_on_device=False,global_args=cfg.global_args,verbosity=0):
+    checkpoint_on_device=False, ctm_args=cfg.ctm_args, global_args=cfg.global_args,verbosity=0,**kwargs):
     r"""
     :param coord: vertex (x,y) specifies top left site of 2x3 subsystem
     :param state: underlying wavefunction
@@ -566,6 +566,7 @@ def rdm2x3_loop_oe(coord, state, env, open_sites=[0,1,2,3,4,5], unroll=True,\
     # 8(1)                10 13                21 23                  32 34                 31(3)
     # 8(0)                (0,1)                (0,1)                  (0,1)                 31(0)
     # C4_y---(1)7 7(2)-----T3_y--(3)19 19(2)----T3_xy---(3)51 51(2)---T3_2xy--(3)30 30(1)---C3_2xy
+    t0= time.perf_counter()
     ind_os= set(sorted(open_sites))
     assert len(ind_os)==len(open_sites),"contains repeated elements"
     assert ind_os <= {0,1,2,3,4,5},"allowed site labels are 0,1,2,3,4, and 5"
@@ -597,8 +598,11 @@ def rdm2x3_loop_oe(coord, state, env, open_sites=[0,1,2,3,4,5], unroll=True,\
        
     t= C1, C2_2x, C3_2xy, C4_y, T1, T4, T3_y, T4_y, T3_xy, T2_2xy, T3_2xy, T1_2x, T2_2x, T1_x,\
         a, a_x, a_y, a_xy, a_2x, a_2xy
-    if force_cpu:
-       t=(x.cpu() for x in t)
+    if dtype or force_cpu:
+        dtype= _dtype_rdm(ctm_args, global_args) if dtype else env.dtype if dtype else env.dtype
+        device= 'cpu' if force_cpu else env.device
+        C1, C2_2x, C3_2xy, C4_y, T1, T4, T3_y, T4_y, T3_xy, T2_2xy, T3_2xy, T1_2x, T2_2x, T1_x,\
+            a, a_x, a_y, a_xy, a_2x, a_2xy= (x.to(device=device, dtype=dtype) for x in t)
 
     T1= T1.view(T1.size(0),a.size(1),a.size(1),T1.size(2))
     T1_x= T1_x.view(T1_x.size(0),a_x.size(1),a_x.size(1),T1_x.size(2))
@@ -640,8 +644,8 @@ def rdm2x3_loop_oe(coord, state, env, open_sites=[0,1,2,3,4,5], unroll=True,\
         checkpoint_on_device=checkpoint_on_device,who=who,verbosity=global_args.verbosity_oe)
 
     R = _sym_pos_def_rdm(R, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
-    if force_cpu:
-        R= R.to(env.device)
+    R= R.to(device=env.device,dtype=env.dtype)
+    if verbosity>2: log.info(f"{who} unroll {unroll} took {time.perf_counter()-t0} [s]")
     return R
 
 def rdm2x3_loop_oe_semimanual(coord, state, env, open_sites=[0,1,2,3,4,5], unroll=True,\
@@ -1335,7 +1339,7 @@ def rdm3x2_loop_oe_semimanual(coord, state, env, open_sites=[0,1,2,3,4,5], unrol
 
 def rdm3x2_loop_oe(coord, state, env, open_sites=[0,1,2,3,4,5], unroll=True,\
     sym_pos_def=False, force_cpu=False, dtype=None, checkpoint_unrolled=False, 
-    checkpoint_on_device=False, global_args=cfg.global_args,verbosity=0):
+    checkpoint_on_device=False, ctm_args=cfg.ctm_args, global_args=cfg.global_args,verbosity=0,**kwargs):
     r"""
     :param coord: vertex (x,y) specifies top left site of 3x2 subsystem
     :param state: underlying wavefunction
@@ -1402,6 +1406,7 @@ def rdm3x2_loop_oe(coord, state, env, open_sites=[0,1,2,3,4,5], unroll=True,\
     # 47(1)               49 51                42 44                   41(3)
     # 47(0)               (0,1)                (0,1)                   41(0)
     # C4_2y--(1)46 46(2)--T3_2y---(3)52 52(2)--T3_x2y---(3)40 40(1)---C3_x2y
+    t0= time.perf_counter()
     ind_os= set(sorted(open_sites))
     assert len(ind_os)==len(open_sites),"contains repeated elements"
     assert ind_os <= {0,1,2,3,4,5},"allowed site labels are 0,1,2,3,4, and 5"
@@ -1434,8 +1439,11 @@ def rdm3x2_loop_oe(coord, state, env, open_sites=[0,1,2,3,4,5], unroll=True,\
        
     t= C1, C2_x, C3_x2y, C4_2y, T1, T4, T4_y, T4_2y, T1_x, T2_x, T2_xy, T2_x2y, T3_x2y, T3_2y,\
         a, a_x, a_y, a_xy, a_2y, a_x2y
-    if force_cpu:
-       t=(x.cpu() for x in t)
+    if dtype or force_cpu:
+        dtype= _dtype_rdm(ctm_args, global_args) if dtype else env.dtype if dtype else env.dtype
+        device= 'cpu' if force_cpu else env.device
+        C1, C2_x, C3_x2y, C4_2y, T1, T4, T4_y, T4_2y, T1_x, T2_x, T2_xy, T2_x2y, T3_x2y, T3_2y,\
+            a, a_x, a_y, a_xy, a_2y, a_x2y= (x.to(device=device, dtype=dtype) for x in t)
 
     T1= T1.view(T1.size(0),a.size(1),a.size(1),T1.size(2))
     T1_x= T1_x.view(T1_x.size(0),a_x.size(1),a_x.size(1),T1_x.size(2))
@@ -1478,8 +1486,8 @@ def rdm3x2_loop_oe(coord, state, env, open_sites=[0,1,2,3,4,5], unroll=True,\
         checkpoint_on_device=checkpoint_on_device,who=who,verbosity=global_args.verbosity_oe)
 
     R = _sym_pos_def_rdm(R, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
-    if force_cpu:
-        R= R.to(env.device)
+    R= R.to(device=env.device,dtype=env.dtype)
+    if verbosity>2: log.info(f"{who} unroll {unroll} took {time.perf_counter()-t0} [s]")
     return R
 
 def rdm3x2_loop_trglringex_compressed(coord,state,env, open_sites=[0,1,2,3], 

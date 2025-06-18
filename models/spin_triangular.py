@@ -181,7 +181,8 @@ def evalSeq_compressed_nnn_per_site(coord,state,env,R,Rinv,op_nnn,compressed:Seq
     return energies_nnn
 
 def eval_nnn_per_site(coord,state,env,R,Rinv,op_nnn,unroll=False,
-    checkpoint_unrolled=False,checkpoint_on_device=False,force_cpu=False,verbosity=0):
+    checkpoint_unrolled=False,checkpoint_on_device=False,force_cpu=False,dtype=None,
+    verbosity=0,**kwargs):
     if not unroll: unroll= {}
 
     # O(X^3 D^6 s^2)
@@ -192,7 +193,7 @@ def eval_nnn_per_site(coord,state,env,R,Rinv,op_nnn,unroll=False,
             open_sites=[2,3], unroll=unroll.get('rdm2x3_loop_oe',False), 
             checkpoint_unrolled=checkpoint_unrolled, 
             checkpoint_on_device=checkpoint_on_device,
-            force_cpu=force_cpu,verbosity=verbosity)
+            force_cpu=force_cpu,dtype=dtype,verbosity=verbosity,**kwargs)
     energy_nnn+= torch.einsum('iajb,jbia',tmp_rdm_2x3,
         torch.einsum('jxiy,xb,ya->jbia',op_nnn,R@R@R,R@R@R)) # A--A nnn
 
@@ -204,7 +205,7 @@ def eval_nnn_per_site(coord,state,env,R,Rinv,op_nnn,unroll=False,
             open_sites=[2,3], unroll=unroll.get('rdm3x2_loop_oe',False), 
             checkpoint_unrolled=checkpoint_unrolled,
             checkpoint_on_device=checkpoint_on_device,
-            force_cpu=force_cpu,verbosity=verbosity)
+            force_cpu=force_cpu,dtype=dtype,verbosity=verbosity,**kwargs)
     energy_nnn+= torch.einsum('iajb,jbia',tmp_rdm_3x2,
         torch.einsum('jxiy,xb,ya->jbia',op_nnn,R@R@R,R@R@R)) # A--A nnn
 
@@ -573,6 +574,7 @@ class J1J2J4_1SITEQ():
         else:
             if abs(self.j2)>0:
                 for coord in state.sites.keys():
+                    # _nnn= eval_nnn_per_site(coord,state,env,R,Rinv,self.SS,
                     _nnn= eval_nnn_per_site_semimanual(coord,state,env,R,Rinv,self.SS,
                         compressed=compressed,unroll=unroll.get('j2',{}),
                         checkpoint_unrolled=ctm_args.fwd_checkpoint_loop_rdm,
