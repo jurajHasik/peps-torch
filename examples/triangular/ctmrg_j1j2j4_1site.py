@@ -173,17 +173,17 @@ def main(ctm_env_init=None):
     rdm_ctm_args.projector_svd_reltol= 1.0e-14
     rdm_ctm_args.projector_full_matrices= False
     
-    for c_chi in args.compressed_rdms:
-        t0= time.perf_counter()
-        loss0= energy_f(state, ctm_env_init, compressed=c_chi, unroll=args.loop_rdms, ctm_args=rdm_ctm_args)
-        t1= time.perf_counter()
-        print(f"compressed_rdms {c_chi} {loss0} {t1-t0} [s]")
-        log.info(f"t_energy {t1-t0} [s]")
+    # for c_chi in args.compressed_rdms:
+    #     t0= time.perf_counter()
+    #     loss0= energy_f(state, ctm_env_init, compressed=c_chi, unroll=args.loop_rdms, ctm_args=rdm_ctm_args)
+    #     t1= time.perf_counter()
+    #     print(f"compressed_rdms {c_chi} {loss0} {t1-t0} [s]")
+    #     log.info(f"t_energy {t1-t0} [s]")
     #
-    # Efficient variant for compressed RDMs [J1,J2 only]
-    # loss0= model.energySeq_compressed_per_site(state, ctm_env_init, args.compressed_rdms, unroll=args.loop_rdms, ctm_args=rdm_ctm_args)
-    # for (c_chi, e_curr0) in zip(sorted(args.compressed_rdms,reverse=True), loss0):
-    #    print(f"compressed_rdms {c_chi} {e_curr0}")
+    # Variant avoiding recomputation of projectors for compressed RDMs [J1,J2 only]
+    loss0= model.energySeq_compressed_per_site(state, ctm_env_init, args.compressed_rdms, unroll=args.loop_rdms, ctm_args=rdm_ctm_args)
+    for (c_chi, e_curr0) in zip(sorted(args.compressed_rdms,reverse=True), loss0):
+       print(f"compressed_rdms {c_chi} {e_curr0}")
 
     t0= time.perf_counter()
     obs_values, obs_labels = eval_obs_f(state,ctm_env_init)
@@ -216,10 +216,11 @@ def main(ctm_env_init=None):
     for c_chi in args.compressed_rdms:
         e_curr0 = energy_f(state, ctm_env_init, compressed=c_chi, unroll=args.loop_rdms, ctm_args=rdm_ctm_args)
         print(f"compressed_rdms {c_chi} {e_curr0}")
-    # Efficient variant for compressed RDMs [J1,J2 only]
+    # Variant avoiding recomputation of projectors for compressed RDMs [J1,J2 only]
     # loss0= model.energySeq_compressed_per_site(state, ctm_env_init, args.compressed_rdms, unroll=args.loop_rdms, ctm_args=rdm_ctm_args)
     # for (c_chi, e_curr0) in zip(sorted(args.compressed_rdms,reverse=True), loss0):
     #    print(f"compressed_rdms {c_chi} {e_curr0}")
+    # e_curr0= loss0[0]
             
     obs_values0, obs_labels = eval_obs_f(state,ctm_env_init)
     print("\n")

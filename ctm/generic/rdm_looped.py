@@ -842,7 +842,7 @@ def rdm2x3_loop_trglringex_compressed(coord,state,env, open_sites=[0,1,2,3],
     vec = (1, 0)
     shift_coord_10 = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
     if _validate_proj_pair(proj_store, "PPt_up", compressed_chi):
-        if verbosity>2: log.info(f"rdm3x2_loop_trglringex_compressed using precomputed "
+        if verbosity>2: log.info(f"{who} using precomputed "
             +f"P_up[:,{proj_store['PPt_up'][0].size(-1)}], Pt_up[:,{proj_store['PPt_up'][1].size(-1)}]")
         P_up, Pt_up = proj_store["PPt_up"][0][:,:compressed_chi], proj_store["PPt_up"][1][:,:compressed_chi]
     else:
@@ -868,7 +868,7 @@ def rdm2x3_loop_trglringex_compressed(coord,state,env, open_sites=[0,1,2,3],
             compressed_chi, ctm_args, global_args)
         if type(proj_store)==dict and "PPt_up" not in proj_store:
             proj_store["PPt_up"]= (P_up, Pt_up)
-            if verbosity>2: log.info(f"rdm3x2_loop_trglringex_compressed storing "
+            if verbosity>2: log.info(f"{who} storing "
                 +f"P_up[:,{P_up.size(-1)}], Pt_up[:,{Pt_up.size(-1)}]")   
 
     # compress C2X2_LU
@@ -889,7 +889,7 @@ def rdm2x3_loop_trglringex_compressed(coord,state,env, open_sites=[0,1,2,3],
     C2X2_RD= c2x2_RD(shift_coord,state,env,mode='sl',verbosity=0)
     
     if _validate_proj_pair(proj_store, "PPt_down", compressed_chi):
-        if verbosity>2: log.info(f"rdm3x2_loop_trglringex_compressed using precomputed "
+        if verbosity>2: log.info(f"{who} using precomputed "
             +f"P_down[:,{proj_store['PPt_down'][0].size(-1)}], Pt_down[:,{proj_store['PPt_down'][1].size(-1)}]")
         P_down, Pt_down = proj_store["PPt_down"][0][:,:compressed_chi], proj_store["PPt_down"][1][:,:compressed_chi]
     else:
@@ -1002,8 +1002,9 @@ def rdm2x3_loop_trglringex_compressed(coord,state,env, open_sites=[0,1,2,3],
         unroll= I_out
 
     path= None
-    if unroll == I_out:
+    if set(unroll) == set(I_out):
         path= ((3, 4), (6, 7), (5, 11), (0,), (0, 1), (8, 9), (3, 8), (4, 7), (3, 6), (2, 5), (3, 4), (1, 3), (1, 2), (0, 1))
+        if verbosity>2: log.info(f"{who} compressed_chi={compressed_chi} using solved path for unroll={unroll}")
 
     path, path_info= get_contraction_path(*contract_tn,unroll=unroll if unroll else [],\
         names=names,path=path,who=who,\
@@ -1015,7 +1016,7 @@ def rdm2x3_loop_trglringex_compressed(coord,state,env, open_sites=[0,1,2,3],
 
     R = _sym_pos_def_rdm(R, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
     R= R.to(device=env.device,dtype=env.dtype)
-    if verbosity>2: log.info(f"{who} compressed_chi={compressed_chi} took {time.perf_counter()-t0} [s]")
+    if verbosity>2: log.info(f"{who} compressed_chi={compressed_chi} unroll {unroll} took {time.perf_counter()-t0} [s]")
     return R
 
 
@@ -1573,7 +1574,7 @@ def rdm3x2_loop_trglringex_compressed(coord,state,env, open_sites=[0,1,2,3],
     vec = (1, -1)
     shift_coord_1n1 = state.vertexToSite((coord[0] + vec[0], coord[1] + vec[1]))
     if _validate_proj_pair(proj_store, "PPt_left", compressed_chi):
-        if verbosity>2: log.info(f"rdm3x2_loop_trglringex_compressed using precomputed "
+        if verbosity>2: log.info(f"{who} using precomputed "
             +f"P_left[:,{proj_store['PPt_left'][0].size(-1)}], Pt_left[:,{proj_store['PPt_left'][1].size(-1)}]")
         P_left, Pt_left = proj_store["PPt_left"][0][:,:compressed_chi], proj_store["PPt_left"][1][:,:compressed_chi]
     else:
@@ -1597,7 +1598,7 @@ def rdm3x2_loop_trglringex_compressed(coord,state,env, open_sites=[0,1,2,3],
             compressed_chi, ctm_args, global_args)
         if type(proj_store)==dict and "PPt_left" not in proj_store:
             proj_store["PPt_left"]= (P_left, Pt_left)
-            if verbosity>2: log.info(f"rdm3x2_loop_trglringex_compressed storing "
+            if verbosity>2: log.info(f"{who} storing "
                 +f"P_left[:,{P_left.size(-1)}], Pt_left[:,{Pt_left.size(-1)}]")
 
     # ----- building C2x2_LD ----------------------------------------------------
@@ -1609,7 +1610,7 @@ def rdm3x2_loop_trglringex_compressed(coord,state,env, open_sites=[0,1,2,3],
     C2X2_RD= c2x2_RD(shift_coord,state,env,mode='sl',verbosity=0)
     
     if _validate_proj_pair(proj_store, "PPt_right", compressed_chi):
-        if verbosity>2: log.info(f"rdm3x2_loop_trglringex_compressed using precomputed "
+        if verbosity>2: log.info(f"{who} using precomputed "
             +f"P_right[:,{proj_store['PPt_right'][0].size(-1)}], Pt_right[:,{proj_store['PPt_right'][1].size(-1)}]")
         P_right, Pt_right = proj_store["PPt_right"][0][:,:compressed_chi], proj_store["PPt_right"][1][:,:compressed_chi]
     else:
@@ -1633,11 +1634,11 @@ def rdm3x2_loop_trglringex_compressed(coord,state,env, open_sites=[0,1,2,3],
             compressed_chi, ctm_args, global_args)
         if type(proj_store)==dict and "PPt_right" not in proj_store:
             proj_store["PPt_right"]= (P_right, Pt_right)
-            if verbosity>2: log.info(f"rdm3x2_loop_trglringex_compressed storing "
+            if verbosity>2: log.info(f"{who} storing "
                 +f"P_right[:,{P_right.size(-1)}], Pt_right[:,{Pt_right.size(-1)}]")
 
     if not ctm_args.projector_full_matrices:
-        log.info(f"rdm3x2_loop_trglringex_compressed chi_max(Projectors)"+ 
+        log.info(f"{who} chi_max(Projectors)"+ 
             f" {max(P_right.size(1),P_left.size(1))} / {compressed_chi}")
 
     # C2X2_LU                 |--(1)13 13(0)--|                C2X2_RU_o
@@ -1710,8 +1711,9 @@ def rdm3x2_loop_trglringex_compressed(coord,state,env, open_sites=[0,1,2,3],
         unroll= I_out
 
     path=None
-    if unroll == I_out:
+    if set(unroll) == set(I_out):
         path = ((3, 4), (5,), (5, 6), (10, 11), (0, 1), (0, 9), (3, 8), (4, 7), (3, 6), (2, 5), (3, 4), (1, 3), (1, 2), (0, 1))
+        if verbosity>2: log.info(f"{who} compressed_chi={compressed_chi} using solved path for unroll={unroll}")
 
     path, path_info= get_contraction_path(*contract_tn,unroll=unroll if unroll else [],\
         names=names,path=path,who=who,\
@@ -1723,7 +1725,7 @@ def rdm3x2_loop_trglringex_compressed(coord,state,env, open_sites=[0,1,2,3],
 
     R = _sym_pos_def_rdm(R, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
     R= R.to(device=env.device,dtype=env.dtype)
-    if verbosity>2: log.info(f"{who} compressed_chi={compressed_chi} took {time.perf_counter()-t0} [s]")
+    if verbosity>2: log.info(f"{who} compressed_chi={compressed_chi} unroll {unroll} took {time.perf_counter()-t0} [s]")
     return R
 
 # ----- sequential format for efficient compressed rdms ------
