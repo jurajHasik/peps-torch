@@ -914,11 +914,11 @@ def rdm2x3_loop_trglringex_compressed(coord,state,env, open_sites=[0,1,2,3],
             compressed_chi, ctm_args, global_args)
         if type(proj_store)==dict and "PPt_down" not in proj_store:
             proj_store["PPt_down"]= (P_down, Pt_down)
-            if verbosity>2: log.info(f"rdm3x2_loop_trglringex_compressed storing "
+            if verbosity>2: log.info(f"{who} storing "
                 +f"P_down[:,{P_down.size(-1)}], Pt_down[:,{Pt_down.size(-1)}]")   
 
     if not ctm_args.projector_full_matrices:
-        log.info(f"rdm2x3_loop_trglringex_compressed chi_max(Projectors)"+ 
+        log.info(f"{who} chi_max(Projectors)"+ 
             f" {max(P_down.size(1),P_up.size(1))} / {compressed_chi}")
 
     # Granular open corners
@@ -1003,7 +1003,8 @@ def rdm2x3_loop_trglringex_compressed(coord,state,env, open_sites=[0,1,2,3],
 
     path= None
     if set(unroll) == set(I_out):
-        path= ((3, 4), (6, 7), (5, 11), (0,), (0, 1), (8, 9), (3, 8), (4, 7), (3, 6), (2, 5), (3, 4), (1, 3), (1, 2), (0, 1))
+        # path= ((3, 4), (6, 7), (5, 11), (0,), (0, 1), (8, 9), (3, 8), (4, 7), (3, 6), (2, 5), (3, 4), (1, 3), (1, 2), (0, 1))
+        path= ((1, 2), (0, 12), (7, 8), (8, 10), (7, 9), (7, 8), (5, 6), (4, 6), (0, 1), (1, 4), (0, 3), (1, 2), (0, 1))
         if verbosity>2: log.info(f"{who} compressed_chi={compressed_chi} using solved path for unroll={unroll}")
 
     path, path_info= get_contraction_path(*contract_tn,unroll=unroll if unroll else [],\
@@ -1712,7 +1713,9 @@ def rdm3x2_loop_trglringex_compressed(coord,state,env, open_sites=[0,1,2,3],
 
     path=None
     if set(unroll) == set(I_out):
-        path = ((3, 4), (5,), (5, 6), (10, 11), (0, 1), (0, 9), (3, 8), (4, 7), (3, 6), (2, 5), (3, 4), (1, 3), (1, 2), (0, 1))
+        # path = ((3, 4), (5,), (5, 6), (10, 11), (0, 1), (0, 9), (3, 8), (4, 7), (3, 6), (2, 5), (3, 4), (1, 3), (1, 2), (0, 1))
+        # path = ((10,11),(11,12), (10,11), (2,10), (0,1), (7,8), (5,6), (4,6), (0,1), (1,4), (0,3), (1,2), (0,1))
+        path = ((8,9),(7,12),(0,1),(0,10),(4,5),(5,8),(4,7),(5,6),(0,1),(1,4),(0,3),(0,2),(0,1))
         if verbosity>2: log.info(f"{who} compressed_chi={compressed_chi} using solved path for unroll={unroll}")
 
     path, path_info= get_contraction_path(*contract_tn,unroll=unroll if unroll else [],\

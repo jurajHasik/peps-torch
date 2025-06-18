@@ -175,22 +175,23 @@ def main(ctm_env_init=None):
     
     # for c_chi in args.compressed_rdms:
     #     t0= time.perf_counter()
-    #     loss0= energy_f(state, ctm_env_init, compressed=c_chi, unroll=args.loop_rdms, ctm_args=rdm_ctm_args)
+    #     e_curr0= energy_f(state, ctm_env_init, compressed=c_chi, unroll=args.loop_rdms, ctm_args=rdm_ctm_args)
     #     t1= time.perf_counter()
-    #     print(f"compressed_rdms {c_chi} {loss0} {t1-t0} [s]")
+    #     print(f"compressed_rdms {c_chi} {e_curr0} {t1-t0} [s]")
     #     log.info(f"t_energy {t1-t0} [s]")
     #
     # Variant avoiding recomputation of projectors for compressed RDMs [J1,J2 only]
     loss0= model.energySeq_compressed_per_site(state, ctm_env_init, args.compressed_rdms, unroll=args.loop_rdms, ctm_args=rdm_ctm_args)
     for (c_chi, e_curr0) in zip(sorted(args.compressed_rdms,reverse=True), loss0):
        print(f"compressed_rdms {c_chi} {e_curr0}")
+    e_curr0= loss0[0]
 
     t0= time.perf_counter()
     obs_values, obs_labels = eval_obs_f(state,ctm_env_init)
     log.info(f"t_obs {time.perf_counter()-t0} [s]")
     print("\n")
     print(", ".join(["epoch","conv_crit","energy"]+obs_labels))
-    print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
+    print(", ".join([f"{-1}",f"{e_curr0}"]+[f"{v}" for v in obs_values]))
 
     if args.profile_mode:
         prof = torch.profiler.profile(

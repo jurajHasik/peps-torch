@@ -80,6 +80,18 @@ def _preprocess_interleaved_to_expr_and_shapes(*args, unroll=[]):
 
     return expr, shapes, unrolled_shapes
 
+@lru_cache(maxsize=128)
+def _log_input_mem_size(shapes : tuple[tuple[int]],names=None,who=None,**kwargs):
+    # log the total size (memory footprint) of tensors entering contraction
+    if kwargs.get("verbosity",1):
+        if names:
+            assert len(names) == len(shapes),"Number of names has to match number of operands"    
+            in_mem_list=", ".join(f"{n} {t} {np.asarray(t).prod()}" for n, t in zip(names, shapes))
+        else:
+            in_mem_list=", ".join(f"{n} {t} {np.asarray(t).prod()}" for n, t in enumerate(shapes))
+        log.info(f"{who} input sizes "+in_mem_list)
+        log.info(f"{who} total size {sum(np.asarray(t).prod() for t in shapes)}")
+
 
 def get_contraction_path(*tn_to_contract, unroll=[], names=None, who=None, **kwargs):
     r"""Returns optimal contraction path for tensor network contraction specified in interleaved
@@ -97,6 +109,7 @@ def get_contraction_path(*tn_to_contract, unroll=[], names=None, who=None, **kwa
     assert (
         len(tn_to_contract) % 2 == 1
     ), "Explicit specification of output index labels is required"
+    _log_input_mem_size(tuple(tuple(t.shape) for t in tn_to_contract[:-1][0::2]),names=names,who=who,**kwargs)
 
     expr, shapes, unrolled_shapes = _preprocess_interleaved_to_expr_and_shapes(
         *tn_to_contract, unroll=unroll if unroll else []
