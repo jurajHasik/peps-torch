@@ -245,14 +245,15 @@ def main():
         options_svd={
             "D_total": cfg.main_args.chi, "tol": ctm_args.projector_svd_reltol,
                 "eps_multiplet": ctm_args.projector_eps_multiplet,
+                'use_qr': False, 'svd_policy': YASTN_PROJ_METHOD[ctm_args.projector_svd_method],
+                'D_block': cfg.main_args.chi,
                 'verbosity': ctm_args.verbosity_projectors
             }
 
         ctm_env_out, env_ts_slices, env_ts = fp_ctmrg(ctm_env_in, \
             ctm_opts_fwd= {'opts_svd': options_svd, 'corner_tol': ctm_args.ctm_conv_tol, 'max_sweeps': ctm_args.ctm_max_iter, \
-                'method': "2site", 'use_qr': False, 'svd_policy': YASTN_PROJ_METHOD[ctm_args.projector_svd_method],
-                'D_block': cfg.main_args.chi, 'verbosity': cfg.ctm_args.verbosity_ctm_convergence}, \
-            ctm_opts_fp= {'svd_policy': 'fullrank'})
+                'method': "2site",  'verbosity': cfg.ctm_args.verbosity_ctm_convergence}, \
+            ctm_opts_fp= {'opts_svd': {"policy": "fullrank"}})
         refill_env(ctm_env_out, env_ts, env_ts_slices)
 
         # 3.3 convert environment to peps-torch format
@@ -369,13 +370,14 @@ def main():
         options_svd={
             "D_total": cfg.main_args.chi, "tol": ctm_args.projector_svd_reltol,
                 "eps_multiplet": ctm_args.projector_eps_multiplet,
-                'verbosity': ctm_args.verbosity_projectors
+                'use_qr': False, 'policy': YASTN_PROJ_METHOD[ctm_args.projector_svd_method],
+                'D_block': args.chi, 'verbosity': ctm_args.verbosity_projectors,
+                "svds_thresh":ctm_args.fwd_svds_thresh
             }
         ctm_env_out, env_ts_slices, env_ts, t_ctm = fp_ctmrg_c4v(ctm_env_in, \
             ctm_opts_fwd= {'opts_svd': options_svd, 'corner_tol': ctm_args.ctm_conv_tol, 'max_sweeps': ctm_args.ctm_max_iter, \
-                'method': "default", 'use_qr': False, 'svd_policy': YASTN_PROJ_METHOD[ctm_args.projector_svd_method], 'D_block': args.chi, \
-                    "svds_thresh":ctm_args.fwd_svds_thresh}, \
-            ctm_opts_fp= {'svd_policy': 'fullrank'})
+                'method': "default"}, \
+            ctm_opts_fp= {'opts_svd': {"policy": "fullrank"}})
         refill_env_c4v(ctm_env_out, env_ts, env_ts_slices)
 
         # 3.3 convert environment to peps-torch format
