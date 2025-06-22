@@ -18,6 +18,7 @@ from yastn.yastn.tn.fpeps.envs.rdm import *
 from yastn.yastn.tn.fpeps.envs.fixed_pt import FixedPoint, refill_env, fp_ctmrg
 from ipeps.integration_yastn import PepsAD, load_PepsAD
 from optim.ad_optim_lbfgs_mod import optimize_state
+from ctm.generic.env_yastn import YASTN_PROJ_METHOD
 
 
 from models.fermion.tv_model import *
@@ -151,6 +152,10 @@ def main():
             "D_total": cfg.main_args.chi,
             "tol": cfg.ctm_args.projector_svd_reltol,
             "eps_multiplet": cfg.ctm_args.projector_eps_multiplet,
+            'use_qr': False,
+            "policy": YASTN_PROJ_METHOD[ctm_args.projector_svd_method],
+            "D_block": args.chi,
+            "svd_thresh": ctm_args.fwd_svds_thresh,
             "truncate_multiplets": True,
         }
         ctm_env_out, env_ts_slices, env_ts = fp_ctmrg(ctm_env_in, \

@@ -137,18 +137,13 @@ def main():
             "tol": cfg.ctm_args.projector_svd_reltol,
             "eps_multiplet": cfg.ctm_args.projector_eps_multiplet,
             "truncate_multiplets": True,
+            "policy": "block_arnoldi",
+            "use_qr": False,
         }
-        # state_params = state.get_parameters()
-        # env_params, slices = env_raw_data(ctm_env_in)
-        # env_out_data = FixedPoint.apply(env_params, slices, yastn_config, ctm_env_in, opts_svd, cfg.main_args.chi, 1e-10, ctm_args, *state_params)
-        # ctm_env_out, ctm_log, t_ctm, t_check = FixedPoint.ctm_env_out, FixedPoint.ctm_log, FixedPoint.t_ctm, FixedPoint.t_check
-        # refill does not modify the data,
-        # but make the grad_fn of the data of ctm_env_out FixedPointBackward
-        # refill_env(ctm_env_out, env_out_data, FixedPoint.slices)
+
         ctm_env_out, env_ts_slices, env_ts = fp_ctmrg(ctm_env_in, \
-            ctm_opts_fwd={'opts_svd': opts_svd, 'corner_tol': 1e-8, 'max_sweeps': 100,
-                'method': "2site", 'use_qr': False, 'svd_poliey': 'fullrank', 'D_block': None}, \
-            ctm_opts_fp={'svd_policy': 'fullrank'})
+            ctm_opts_fwd={'opts_svd': opts_svd, 'corner_tol': 1e-8, 'max_sweeps': 100, 'method': "2site"},\
+            ctm_opts_fp={'opts_svd': {"policy": 'fullrank'}})
         refill_env(ctm_env_out, env_ts, env_ts_slices)
         ctm_log, t_ctm, t_check = FixedPoint.ctm_log, FixedPoint.t_ctm, FixedPoint.t_check
 
@@ -201,6 +196,9 @@ def main():
         state.add_noise(args.instate_noise)
     elif args.opt_resume is not None:
         state= state.load_checkpoint(yastn_config, args.opt_resume)
+
+    outputstatefile = "D1_1x1_Z2_spinlessf_honeycomb_complex.json"
+    state.write_to_file(outputstatefile, normalize=True)
 
     conv_env = None
     print("\n\nepoch, loss,")
@@ -273,7 +271,7 @@ class Test_1x1_CDW(unittest.TestCase):
         obs_opt_lines = [s for s in obs_opt_lines if "diff" not in s]
         best_e_line_index= np.argmin([ float(l.split(',')[1]) for l in obs_opt_lines ])
         opt_line_last= [complex(x) for x in obs_opt_lines[best_e_line_index].split(",")]
-        for val0,val1 in zip(opt_line_last, [35,-2.9280089] ):
+        for val0,val1 in zip(opt_line_last, [35,-2.9282853] ):
             assert np.isclose(val0,val1, rtol=self.tol, atol=self.tol)
 
     def tearDown(self):

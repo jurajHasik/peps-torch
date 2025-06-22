@@ -135,13 +135,16 @@ def main():
             "D_total": cfg.main_args.chi,
             "tol": cfg.ctm_args.projector_svd_reltol,
             "eps_multiplet": cfg.ctm_args.projector_eps_multiplet,
+            'use_qr': False,
+            "policy": YASTN_PROJ_METHOD[ctm_args.projector_svd_method],
+            "D_block": args.chi,
+            "svd_thresh": ctm_args.fwd_svds_thresh,
             "truncate_multiplets": True,
         }
         ctm_env_out, env_ts_slices, env_ts = fp_ctmrg(ctm_env_in, \
             ctm_opts_fwd={'opts_svd': opts_svd, 'corner_tol': cfg.ctm_args.ctm_conv_tol, 'max_sweeps': cfg.ctm_args.ctm_max_iter,
-                'method': "2site", 'use_qr': False, 'svd_policy': YASTN_PROJ_METHOD[ctm_args.projector_svd_method], 'D_krylov':args.chi, 'D_block': args.chi, \
-                "svds_thresh":ctm_args.fwd_svds_thresh}, \
-            ctm_opts_fp={'svd_policy': 'fullrank'})
+                'method': "2site" }, \
+            ctm_opts_fp={'opts_svd': {'policy': 'fullrank'}})
 
         refill_env(ctm_env_out, env_ts, env_ts_slices)
         ctm_log, t_ctm, t_check = FixedPoint.ctm_log, FixedPoint.t_ctm, FixedPoint.t_check
