@@ -239,18 +239,19 @@ def main():
 
         # 3.2 setup and run CTMRG
         options_svd={
-            "D_total": cfg.main_args.chi, "tol": ctm_args.projector_svd_reltol,
-                "eps_multiplet": ctm_args.projector_eps_multiplet,
-                'verbosity': ctm_args.verbosity_projectors 
-            }
+            "policy": YASTN_PROJ_METHOD[ctm_args.projector_svd_method],
+            "D_total": cfg.main_args.chi, "D_block" : cfg.main_args.chi, 
+            "tol": ctm_args.projector_svd_reltol,
+            "eps_multiplet": ctm_args.projector_eps_multiplet,
+            'verbosity': ctm_args.verbosity_projectors
+        }
 
         ctm_env_out, env_ts_slices, env_ts = fp_ctmrg(ctm_env_in, \
             ctm_opts_fwd= {'opts_svd': options_svd, 'corner_tol': ctm_args.ctm_conv_tol, 'max_sweeps': ctm_args.ctm_max_iter, \
-                'method': "2site", 'use_qr': False, 'svd_policy': YASTN_PROJ_METHOD[ctm_args.projector_svd_method], 'D_block': cfg.main_args.chi,
+                'method': "2site", 'use_qr': False, 
                 'checkpoint_move': 'reentrant' if ctm_args.fwd_checkpoint_move==True else ctm_args.fwd_checkpoint_move,
-                'verbosity': cfg.ctm_args.verbosity_ctm_convergence
                 }, 
-            ctm_opts_fp= {'svd_policy': 'fullrank'})
+            ctm_opts_fp= {'opts_svd': {'policy': 'fullrank'}, 'verbosity': 3,})
         refill_env(ctm_env_out, env_ts, env_ts_slices)
 
         # 3.3 convert environment to peps-torch format

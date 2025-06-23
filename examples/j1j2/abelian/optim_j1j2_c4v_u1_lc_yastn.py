@@ -243,16 +243,17 @@ def main():
 
         # 3.2 setup and run CTMRG
         options_svd={
-            "D_total": cfg.main_args.chi, "tol": ctm_args.projector_svd_reltol,
-                "eps_multiplet": ctm_args.projector_eps_multiplet,
-                'use_qr': False, 'svd_policy': YASTN_PROJ_METHOD[ctm_args.projector_svd_method],
-                'D_block': cfg.main_args.chi,
-                'verbosity': ctm_args.verbosity_projectors
-            }
+            'policy': YASTN_PROJ_METHOD[ctm_args.projector_svd_method],
+            "D_total": cfg.main_args.chi, "D_block": cfg.main_args.chi,
+            "tol": ctm_args.projector_svd_reltol,
+            "eps_multiplet": ctm_args.projector_eps_multiplet,
+            "use_qr": False, 
+            "verbosity": ctm_args.verbosity_projectors
+        }
 
         ctm_env_out, env_ts_slices, env_ts = fp_ctmrg(ctm_env_in, \
             ctm_opts_fwd= {'opts_svd': options_svd, 'corner_tol': ctm_args.ctm_conv_tol, 'max_sweeps': ctm_args.ctm_max_iter, \
-                'method': "2site",  'verbosity': cfg.ctm_args.verbosity_ctm_convergence}, \
+                'method': "2site",  'verbosity': cfg.ctm_args.verbosity_ctm_convergence}, #'use_qr': False,  
             ctm_opts_fp= {'opts_svd': {"policy": "fullrank"}})
         refill_env(ctm_env_out, env_ts, env_ts_slices)
 
@@ -285,7 +286,7 @@ def main():
         # 3.2 setup and run CTMRG
         options_svd={
                 "policy": YASTN_PROJ_METHOD[ctm_args.projector_svd_method],
-                "D_total": cfg.main_args.chi, "tol": ctm_args.projector_svd_reltol,
+                "D_total": cfg.main_args.chi, 'D_block': cfg.main_args.chi, "tol": ctm_args.projector_svd_reltol,
                 "eps_multiplet": ctm_args.projector_eps_multiplet,
             }
         _ctm_conv_f= lambda _x,_y: ctm_conf_f(_x,_y,ctm_args.ctm_conv_tol)
@@ -298,7 +299,7 @@ def main():
                 # 3.2.1 post-init CTM steps (allow expansion of the environment in case of qr policy)
                 options_svd_pre_init= {**options_svd}
                 options_svd_pre_init.update({"policy": "block_arnoldi",})
-                ctm_env_in, converged, conv_history, t_ctm, t_check= ctmrg(ctm_env_in, leg_charge_conv_check,  options_svd_pre_init,
+                ctm_env_in, converged, conv_history, t_ctm, t_check= ctmrg(ctm_env_in, leg_charge_conv_check, options_svd_pre_init,
                     max_sweeps= ctm_args.fpcm_init_iter,
                     method="default",
                     checkpoint_move=False
@@ -353,7 +354,7 @@ def main():
         if ctm_args.projector_svd_method=='QR':
             options_svd_pre_init= {
                 "policy": "block_arnoldi",
-                "D_total": cfg.main_args.chi, "tol": ctm_args.projector_svd_reltol,
+                "D_total": cfg.main_args.chi, 'D_block': cfg.main_args.chi, "tol": ctm_args.projector_svd_reltol,
                 "eps_multiplet": ctm_args.projector_eps_multiplet,
             }
             with torch.no_grad():
@@ -371,7 +372,7 @@ def main():
             "D_total": cfg.main_args.chi, "tol": ctm_args.projector_svd_reltol,
                 "eps_multiplet": ctm_args.projector_eps_multiplet,
                 'use_qr': False, 'policy': YASTN_PROJ_METHOD[ctm_args.projector_svd_method],
-                'D_block': args.chi, 'verbosity': ctm_args.verbosity_projectors,
+                'D_block': cfg.main_args.chi, 'verbosity': ctm_args.verbosity_projectors,
                 "svds_thresh":ctm_args.fwd_svds_thresh
             }
         ctm_env_out, env_ts_slices, env_ts, t_ctm = fp_ctmrg_c4v(ctm_env_in, \
