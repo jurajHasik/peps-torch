@@ -10,7 +10,8 @@ from ctm.generic import ctmrg
 from ctm.generic import transferops
 from models import spin_triangular
 from ipeps.integration_yastn import PepsAD
-from ctm.generic.env_yastn import from_yastn_env_generic, YASTN_ENV_INIT, YASTN_PROJ_METHOD
+from ctm.generic.env_yastn import from_yastn_env_generic, from_env_generic_dense_to_yastn, \
+    YASTN_ENV_INIT, YASTN_PROJ_METHOD
 from yastn.yastn.tn.fpeps import EnvCTM
 from yastn.yastn.tn.fpeps.envs._env_ctm import ctm_conv_corner_spec
 from yastn.yastn.tn.fpeps.envs.fixed_pt import refill_env, fp_ctmrg
@@ -185,7 +186,10 @@ def main():
     elif args.ctm_conv_crit=="ENERGY":
         ctmrg_conv_f= ctmrg_conv_energy
     
-    ctm_env_0, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_f)
+    # 3) Initial env evaluation: Fast, possible starting point for optimization
+    i0_ctm_env= copy.deepcopy(ctm_env)
+    i0_ctm_env.projector_svd_method, i0_ctm_env.projector_rsvd_niter = "RSVD", 4
+    ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_f)
     loss0= energy_f(state, ctm_env, compressed=args.compressed_rdms, unroll=args.loop_rdms)
     obs_values, obs_labels = eval_obs_f(state,ctm_env)
     print(", ".join(["epoch","energy"]+obs_labels))
@@ -337,8 +341,9 @@ def main():
 
     state.normalize_()
     loss_fn= loss_fn_fp if args.grad_type=='fp' else loss_fn_default
-    ctm_env_0= None # TODO convert ctm_env_0 to YASTN's EnvCTM
-    optimize_state(state, ctm_env_0, loss_fn, obs_fn=obs_fn, post_proc=post_proc)
+    if args.grad_type=='fp':
+        ctm_env= from_env_generic_dense_to_yastn(ctm_env, state)
+    optimize_state(state, ctm_env, loss_fn, obs_fn=obs_fn, post_proc=post_proc)
 
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"
