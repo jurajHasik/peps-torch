@@ -1,8 +1,13 @@
 import time
+import config as cfg
 from typing import Callable
+import yastn.yastn as yastn
+from yastn.yastn.backend import backend_torch
 from yastn.yastn.tn.fpeps import EnvCTM
 from yastn.yastn.tn.fpeps.envs.fixed_pt import NoFixedPointError
 from ctm.generic.env import ENV
+from ipeps.ipeps import IPEPS
+from ipeps.integration_yastn import PepsAD
 
 YASTN_ENV_INIT={"CTMRG": "dl", "PROD": "eye"}
 YASTN_PROJ_METHOD={"DEFAULT": "fullrank", "GESDD": "fullrank", "QR": "qr",
@@ -54,6 +59,62 @@ def from_yastn_env_generic(env_yastn: EnvCTM, vertexToSite: Callable= None) -> E
     pt_env.chi= pt_env.min_chi()
 
     return pt_env
+
+
+def from_env_generic_dense_to_yastn(env: ENV, state: IPEPS, global_args=cfg.global_args) -> EnvCTM:
+    """
+    """
+    # site convention  (-)0 /4(+)
+    #               (+)1--A--3(-)
+    #                  (+)2 
+    state_yastn= PepsAD.from_pt(state,global_args=global_args)
+    
+    yastn_cfg_nosym= yastn.make_config(
+        backend= backend_torch,
+        default_dtype= dict(zip(backend_torch.DTYPE.values(), backend_torch.DTYPE.keys()))[state.dtype],
+        default_device= global_args.device
+    )
+    def _wrap_t(t,s):
+        res= yastn.Tensor(config=yastn_cfg_nosym, s=s)
+        res.set_block(val=t, Ds=t.shape)
+        return res
+
+    env_yastn= EnvCTM(psi=state_yastn, init=None)
+    for (site, d), t in env.C.items():
+        if d == (-1, -1):
+            setattr(env_yastn[site], 'tl', _wrap_t(t,s=[1,-1]))
+        elif d == (1, -1):
+            setattr(env_yastn[site], 'tr', _wrap_t(t,s=[1,1]))
+        elif d == (1, 1):
+            setattr(env_yastn[site], 'br', _wrap_t(t,s=[-1,1]))
+        else:
+            setattr(env_yastn[site], 'bl', _wrap_t(t.permute(1,0),s=[-1,-1]))
+
+    for (site, d), t in env.T.items():
+        if d == (-1, 0):
+            # 0       2
+            # T--2 -> T--1
+            # 1       0
+            setattr(env_yastn[site], 'l', _wrap_t(t.permute(1,2,0).reshape(
+                [t.shape[1]]+[state.site(site).shape[2],]*2+[t.shape[0]]),s=[1,-1,1,-1]).fuse_legs(axes=(0,(1,2),3)) )
+        elif d == (0, -1):
+            # 0-- T --2
+            #     1
+            setattr(env_yastn[site], 't', _wrap_t(t.reshape([t.shape[0]]+[state.site(site).shape[1],]*2+[t.shape[2]]),
+                                                   s=[1,1,-1,-1]).fuse_legs(axes=(0,(1,2),3)) )
+        elif d == (1, 0):
+            #    0
+            # 1--T
+            #    2
+            setattr(env_yastn[site], 'r', _wrap_t(t.reshape([t.shape[0]]+[state.site(site).shape[4],]*2+[t.shape[2]]),
+                                                   s=[-1,1,-1,1]).fuse_legs(axes=(0,(1,2),3)) )
+        else:
+            #    0          1
+            # 1--T--2 -> 2--T--0
+            setattr(env_yastn[site], 'b', _wrap_t(t.permute(2,0,1).reshape(
+                [t.shape[2]]+[state.site(site).shape[3],]*2+[t.shape[1]]),s=[-1,-1,1,1]).fuse_legs(axes=(0,(1,2),3)) )
+
+    return env_yastn
 
 
 def ctmrg(env: EnvCTM, ctm_conv_check_f : Callable, options_svd : dict, **kwargs):
