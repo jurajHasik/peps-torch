@@ -53,7 +53,7 @@ def main():
 
     # initialize an ipeps and model
     # 1) define lattice-tiling function, that maps arbitrary vertex of square lattice
-    # coord into one of coordinates within unit-cell of iPEPS ansatz    
+    # coord into one of coordinates within unit-cell of iPEPS ansatz
     if args.tiling == "1SITE":
         model= spin_triangular.J1J2J4_1SITE(j1=args.j1, j2=args.j2, j4=args.j4, jchi=args.jchi)
         lattice_to_site=None
@@ -124,18 +124,18 @@ def main():
             dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)-0.5
         sites[(0,0)]= A/torch.max(torch.abs(A))
         state = IPEPS(sites, lX=1, lY=1)
-        if args.tiling in ["2SITE","2SITE_Y","3SITE","4SITE","4SITE_T"]:     
+        if args.tiling in ["2SITE","2SITE_Y","3SITE","4SITE","4SITE_T"]:
             B = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
                 dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)-0.5
             sites[ (0,1) if args.tiling=="2SITE_Y" else (1,0) ]= B/torch.max(torch.abs(B))
             lX_lY= dict(lX= 1, lY= 2) if args.tiling=="2SITE_Y" else dict(lX= 2, lY= 1)
             state = IPEPS(sites, vertexToSite=lattice_to_site, **lX_lY)
-        if args.tiling in ["3SITE","4SITE","4SITE_T"]: 
+        if args.tiling in ["3SITE","4SITE","4SITE_T"]:
             C = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
                 dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)-0.5
             sites[(2,0)]= C/torch.max(torch.abs(C))
             state = IPEPS(sites, vertexToSite=lattice_to_site, lX=3, lY=3)
-        if args.tiling in ["4SITE","4SITE_T"]:     
+        if args.tiling in ["4SITE","4SITE_T"]:
             D = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
                 dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)-0.5
             del sites[(2,0)]
@@ -155,11 +155,11 @@ def main():
         model= type(model)(j1=args.j1, j2=args.j2, j4=args.j4)
 
     print(state)
-    
-    # 2) select the "energy" function 
+
+    # 2) select the "energy" function
     energy_f=energy_f=model.energy_per_site
     eval_obs_f= model.eval_obs
-    
+
     @torch.no_grad()
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
@@ -178,18 +178,18 @@ def main():
     ctm_env = ENV(args.chi, state)
     init_env(state, ctm_env)
     if args.ctm_conv_crit=="CSPEC":
-        def ctmrg_conv_f(state,env,history,*aargs,**kwargs): 
+        def ctmrg_conv_f(state,env,history,*aargs,**kwargs):
             conv, history= ctmrg_conv_specC(state,env,history,*aargs, **kwargs)
             if cfg.global_args.cuda_mem_profile:
                 torch.cuda.memory._dump_snapshot(f"{args.out_prefix}_CTM-{len(history['conv_crit'])}_CUDAMEM.pickle")
             return conv, history
     elif args.ctm_conv_crit=="ENERGY":
         ctmrg_conv_f= ctmrg_conv_energy
-    
+
     # 3) Initial env evaluation: Fast, possible starting point for optimization
-    i0_ctm_env= copy.deepcopy(ctm_env)
-    i0_ctm_env.projector_svd_method, i0_ctm_env.projector_rsvd_niter = "RSVD", 4
-    ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_f)
+    i0_ctm_args= copy.deepcopy(cfg.ctm_args)
+    i0_ctm_args.projector_svd_method, i0_ctm_args.projector_rsvd_niter = "RSVD", 4
+    ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_f, ctm_args= i0_ctm_args)
     loss0= energy_f(state, ctm_env, compressed=args.compressed_rdms, unroll=args.loop_rdms)
     obs_values, obs_labels = eval_obs_f(state,ctm_env)
     print(", ".join(["epoch","energy"]+obs_labels))
@@ -210,7 +210,7 @@ def main():
 
         # possibly re-initialize the environment
         if opt_args.opt_ctm_reinit:
-            if ctm_env_in is None: 
+            if ctm_env_in is None:
                 ctm_env_in= ENV(args.chi, state_n)
             init_env(state_n, ctm_env_in)
 
@@ -244,7 +244,7 @@ def main():
         # 3.2 setup and run CTMRG
         options_svd={
             "policy": YASTN_PROJ_METHOD[ctm_args.projector_svd_method],
-            "D_total": cfg.main_args.chi, "D_block" : cfg.main_args.chi, 
+            "D_total": cfg.main_args.chi, "D_block" : cfg.main_args.chi,
             "tol": ctm_args.projector_svd_reltol,
             "eps_multiplet": ctm_args.projector_eps_multiplet,
             'verbosity': ctm_args.verbosity_projectors
@@ -252,9 +252,9 @@ def main():
 
         ctm_env_out, env_ts_slices, env_ts = fp_ctmrg(ctm_env_in, \
             ctm_opts_fwd= {'opts_svd': options_svd, 'corner_tol': ctm_args.ctm_conv_tol, 'max_sweeps': ctm_args.ctm_max_iter, \
-                'method': "2site", 'use_qr': False, 
+                'method': "2site", 'use_qr': False,
                 'checkpoint_move': 'reentrant' if ctm_args.fwd_checkpoint_move==True else ctm_args.fwd_checkpoint_move,
-                }, 
+                },
             ctm_opts_fp= {'opts_svd': {'policy': 'fullrank'}, 'verbosity': 3,})
         refill_env(ctm_env_out, env_ts, env_ts_slices)
 
@@ -282,7 +282,7 @@ def main():
 
         if ("line_search" in opt_context.keys() and not opt_context["line_search"]) \
             or not "line_search" in opt_context.keys():
-            epoch= len(opt_context["loss_history"]["loss"]) 
+            epoch= len(opt_context["loss_history"]["loss"])
             loss= opt_context["loss_history"]["loss"][-1]
             obs_values, obs_labels = eval_obs_f(state,ctm_env)
             _flag_antivar= False
@@ -353,7 +353,7 @@ def main():
     ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_f)
     loss0= energy_f(state,ctm_env,compressed=args.compressed_rdms,unroll=args.loop_rdms)
     obs_values, obs_labels = eval_obs_f(state,ctm_env)
-    print(", ".join([f"{args.opt_max_iter}",f"{loss0}"]+[f"{v}" for v in obs_values]))  
+    print(", ".join([f"{args.opt_max_iter}",f"{loss0}"]+[f"{v}" for v in obs_values]))
 
 if __name__=='__main__':
     if len(unknown_args)>0:
