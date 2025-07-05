@@ -241,6 +241,21 @@ def main():
         else:
             ctm_env_in.psi = Peps2Layers(state_yastn) if state_yastn.has_physical() else state_yastn
 
+        # 3.1.1 post-init CTM steps 
+        options_svd_pre_init= {
+            "policy": YASTN_PROJ_METHOD["RSVD"],
+                "D_total": cfg.main_args.chi, 'D_block': cfg.main_args.chi, "tol": ctm_args.projector_svd_reltol,
+                "eps_multiplet": ctm_args.projector_eps_multiplet, "niter": ctm_args.projector_rsvd_niter,
+            }
+        with torch.no_grad():
+            sweep, max_dsv, max_D, converge= ctm_env_in.ctmrg_(
+                method="2site",
+                max_sweeps=math.ceil(args.chi/(args.bond_dim**2)),
+                opts_svd=options_svd_pre_init,
+                corner_tol=ctm_args.projector_svd_reltol
+            )
+        log.log(logging.INFO, f"WARM-UP: Number of ctm steps: {sweep:d}, t_warm_up: N/As")
+
         # 3.2 setup and run CTMRG
         options_svd={
             "policy": YASTN_PROJ_METHOD[ctm_args.projector_svd_method],
