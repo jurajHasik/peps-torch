@@ -247,13 +247,13 @@ def main():
             "D_total": cfg.main_args.chi, "D_block": cfg.main_args.chi,
             "tol": ctm_args.projector_svd_reltol,
             "eps_multiplet": ctm_args.projector_eps_multiplet,
-            "use_qr": False, 
+            "use_qr": False,
             "verbosity": ctm_args.verbosity_projectors
         }
 
         ctm_env_out, env_ts_slices, env_ts = fp_ctmrg(ctm_env_in, \
             ctm_opts_fwd= {'opts_svd': options_svd, 'corner_tol': ctm_args.ctm_conv_tol, 'max_sweeps': ctm_args.ctm_max_iter, \
-                'method': "2site",  'verbosity': cfg.ctm_args.verbosity_ctm_convergence}, #'use_qr': False,  
+                'method': "2site",  'verbosity': cfg.ctm_args.verbosity_ctm_convergence}, #'use_qr': False,
             ctm_opts_fp= {'opts_svd': {"policy": "fullrank"}})
         refill_env(ctm_env_out, env_ts, env_ts_slices)
 
@@ -347,6 +347,19 @@ def main():
             with torch.no_grad():
                 env_leg = yastn.Leg(state_yastn.config, s=1, t=(0,), D=(1,))
                 ctm_env_in = EnvCTM_c4v(state_yastn, init=YASTN_ENV_INIT[ctm_args.ctm_env_init_type], leg=env_leg)
+                options_svd_pre_init= {
+                    "policy": "block_arnoldi",
+                    "D_total": cfg.main_args.chi, 'D_block': cfg.main_args.chi, "tol": ctm_args.projector_svd_reltol,
+                    "eps_multiplet": ctm_args.projector_eps_multiplet,
+                }
+                # Run a fixed number of CTM steps to find good charge sectors;
+                # useful only for the very first initialization
+                ctm_env_in, converged, conv_history, t_ctm, t_check= ctmrg(ctm_env_in, lambda _0,_1: (False, None),
+                    options_svd_pre_init,
+                    max_sweeps= 20,
+                    method="default",
+                    checkpoint_move=False
+                )
         else:
             ctm_env_in.psi = Peps2Layers(state_yastn) if state_yastn.has_physical() else state_yastn
 
