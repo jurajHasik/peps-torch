@@ -60,24 +60,27 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
         stateDL = IPEPS(sites=sitesDL,vertexToSite=state.vertexToSite,lX=state.lX,lY=state.lY,\
             global_args=global_args)
 
-    def _ctmrg_iter(i):
-        for direction in ctm_args.ctm_move_sequence:
-            diagnostics={"ctm_i": i, "ctm_d": direction} if ctm_args.verbosity_projectors>0 else None
+    def _ctmrg_iter(i,loc_ctm_args= ctm_args):
+        for direction in loc_ctm_args.ctm_move_sequence:
+            diagnostics={"ctm_i": i, "ctm_d": direction} if loc_ctm_args.verbosity_projectors>0 else None
             num_rows_or_cols= stateDL.lX if direction in [(-1,0),(1,0)] else stateDL.lY
             for row_or_col in range(num_rows_or_cols):
-                ctm_MOVE(direction, stateDL, env, ctm_args=ctm_args, global_args=global_args, \
-                    verbosity=ctm_args.verbosity_ctm_move,diagnostics=diagnostics)
+                ctm_MOVE(direction, stateDL, env, ctm_args=loc_ctm_args, global_args=global_args, \
+                    verbosity=loc_ctm_args.verbosity_ctm_move,diagnostics=diagnostics)
 
     # 1) perform CTMRG
-    # 1.1) warm-up
     t_obs=t_ctm=0.
     history=None
+
+    # 1.1) warm-up
     if ctm_args.ctm_warmup_iter >= 0:
+        warmpup_ctm_args= copy.deepcopy(ctm_args)
+        warmpup_ctm_args.projector_svd_method= ctm_args.warmup_projector_svd_method
         maxD=max(state.get_aux_bond_dims())
         with torch.no_grad():
             for i in range(max(ctm_args.ctm_warmup_iter,ceil(env.chi/maxD**2))):
                 t0_ctm= time.perf_counter()
-                _ctmrg_iter(i)
+                _ctmrg_iter(i,loc_ctm_args=warmpup_ctm_args)
                 t1_ctm= time.perf_counter()
                 t_ctm+= t1_ctm-t0_ctm
             log.info(f"CTMRG warmup {i} steps, time= {t_ctm:.2f} s")

@@ -250,6 +250,9 @@ class CTMARGS():
     :ivar ctm_warmup_iter: if >=0, CTMRG performs at most ``max(ctm_warmup_iter, ceil(chi/D^2))`` number of warmup iterations of directional CTM algorithm.
                            Default: ``-1`` skips warm-up iterations.
     :vartype ctm_warmup_iter: int
+    :ivar warmup_projector_svd_method: singular/eigen value decomposition algorithm used for warmup CTM steps.
+                                       See ``projector_svd_method`` for details. Default is set to be the as ``projector_svd_method``.
+    :vartype warmpup_projector_svd_method: str
     :ivar ctm_env_init_type: default initialization method for ENV objects. Default: ``'CTMRG'``
     :vartype ctm_env_init_type: str
     :ivar ctm_conv_tol: threshold for convergence of CTM algorithm. Default: ``'1.0e-10'``
@@ -374,6 +377,7 @@ class CTMARGS():
         self.conv_check_cpu = False
         self.projector_method = '4X4'
         self.projector_svd_method = 'DEFAULT'
+        self.warmup_projector_svd_method = self.projector_svd_method
         self.projector_full_matrices = True
         self.projector_svd_reltol = 1.0e-8
         self.projector_svd_reltol_block = 0.0

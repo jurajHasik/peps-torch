@@ -350,8 +350,9 @@ def main():
     # optimize
     # enable memory history, which will
     # add tracebacks and event history to snapshots
-    torch.cuda.memory._record_memory_history(
-        enabled=None, context=None, stacks='all', max_entries=9223372036854775807, device=None
+    if cfg.global_args.cuda_mem_profile:
+        torch.cuda.memory._record_memory_history(
+            enabled=None, context=None, stacks='all', max_entries=9223372036854775807, device=None
         )
 
     state.normalize_()
