@@ -112,17 +112,18 @@ jobs:
           $CONDA/bin/python -m pytest examples/kagome/abelian/optim_*.py
 
   # This workflow contains a single job called "build"
-  test-opt_einsum:
+  test-experimental:
     if: |
       contains(fromJson('["refs/heads/master", "refs/heads/tests"]'), github.ref) ||
       ( github.event_name == 'pull_request' && contains(fromJson('["master",]'), github.base_ref) )
+    continue-on-error: true
 
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
     strategy:
       matrix:
         python_v: [ "3.12", ] #"3.9", "3.10", "3.11"
-        pytorch_v: [ 2.6, ] # 2.0
+        pytorch_v: [ 2.0, 2.6, ] # 2.0
         opt_einsum_v: [ "3.3.0", "3.4.0"]
         primme_v: ["3.2.3"]
         # exclude:
@@ -163,11 +164,10 @@ jobs:
           git submodule update --init --recursive
 
       # Run tests
-      - name: test j1j2
+      - name: test experimental
         run: |
           $CONDA/bin/python -c "import sys; print(sys.path)"
-          $CONDA/bin/python -m pytest examples/j1j2/ctmrg_*.py
-
+          $CONDA/bin/python -m pytest tests/experimental/test_*.py
 
   # This workflow contains a single job called "build"
   test-full:
@@ -175,13 +175,13 @@ jobs:
       contains(fromJson('["refs/heads/master", "refs/heads/tests"]'), github.ref) ||
       ( github.event_name == 'pull_request' && contains(fromJson('["master",]'), github.base_ref) )
 
-    needs: test-opt_einsum
+    #needs: 
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
     strategy:
       matrix:
         python_v: [ "3.12", ] #"3.9", "3.10", "3.11"
-        pytorch_v: [ 2.0, ] # 2.6
+        pytorch_v: [ 2.7, ] # 2.6
         primme_v: ["3.2.3"]
         # opt_einsum_v: [ "3.3.0", "3.4.0"]
         # exclude:
