@@ -2,9 +2,9 @@
 #
 
 # You can set these variables from the command line.
-SPHINXOPTS    =
-SPHINXBUILD   = sphinx-build
-SPHINXPROJ    = tn-torch
+SPHINXOPTS    = 
+SPHINXBUILD   = $(CONDA)/bin/sphinx-build
+SPHINXPROJ    = peps-torch
 SOURCEDIR     = source
 BUILDDIR      = build
 
