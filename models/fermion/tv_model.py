@@ -1,8 +1,11 @@
 from typing import Union
 import torch
+from torch.utils.checkpoint import checkpoint
 import numpy as np
+
 import yastn.yastn as yastn
 from yastn.yastn.tn.fpeps.envs.rdm import *
+from yastn.yastn.tn.fpeps.envs._env_ctm import decompress_env_1d
 from yastn.yastn.tn.fpeps import RectangularUnitcell, Bond
 from yastn.yastn.backend import backend_np
 from ipeps.integration_yastn import PepsAD, load_PepsAD
@@ -58,7 +61,7 @@ class tV_model:
         return []
 
 
-    def energy_per_site(self, psi, env):
+    def energy_per_site(self, psi, env, eval_checkpoint=None):
         r"""
         :param psi: Peps
         :param env: CTM environment
@@ -95,8 +98,24 @@ class tV_model:
         I = sf.I()
         N = len(psi.sites())
 
-
+        if eval_checkpoint=='reentrant':
+            use_reentrant= True
+        elif eval_checkpoint=='nonreentrant':
+            use_reentrant= False
+        data, meta = env.compress_env_1d()
         # measure_function-based computation
+        def _measure_1site(op, site, meta, *inputs_t):
+            env = decompress_env_1d(inputs_t, meta)
+            return env.measure_1site(op, site=site)
+
+        def _measure_nn(op1, op2, bond, meta, *inputs_t):
+            env = decompress_env_1d(inputs_t, meta)
+            return env.measure_nn(op1, op2, bond=bond)
+
+        def _measure_2x2(ops, sites, meta, *inputs_t):
+            env = decompress_env_1d(inputs_t, meta)
+            return env.measure_2x2(*ops, sites=sites)
+
         for site in psi.sites():
             op = (
                 self.V1 * (n_A @ n_B)
@@ -104,57 +123,113 @@ class tV_model:
                 - self.t1 * (cp_A @ c_B + cp_B @ c_A).remove_zero_blocks()
                 + self.m * (n_A - n_B)
             )
-            energy_onsite += env.measure_1site(op, site=site)
+            if eval_checkpoint:
+                energy_onsite += checkpoint(_measure_1site, op, site, meta, *data, use_reentrant=use_reentrant)
+            else:
+                energy_onsite += env.measure_1site(op, site=site)
 
             # horizontal bond
             h_bond = Bond(site, psi.nn_site(site, "r"))
-            e_1x2_loc = self.V1 * env.measure_nn(n_B, n_A, bond=h_bond)+ self.V2 * env.measure_nn(n_B, n_B, bond=h_bond)+ self.V2 * env.measure_nn(n_A, n_A, bond=h_bond)
-            site_r = psi.nn_site(site, "r")
-            res = self.t1 * env.measure_nn(c_B, cp_A, bond=h_bond)
-            e_1x2_loc += res + res.conj()
-            res = self.t2*np.exp(1j*self.phi)*env.measure_nn(c_A, cp_A, bond=h_bond)
-            e_1x2_loc += (res + res.conj()).real
-            res = -self.t2*np.exp(1j*self.phi)*env.measure_nn(cp_B, c_B, bond=h_bond)
-            e_1x2_loc += (res + res.conj()).real
-            energy_horz += e_1x2_loc
+            if eval_checkpoint:
+                e_1x2_loc = self.V1 * checkpoint(_measure_nn, n_B, n_A, h_bond, meta, *data, use_reentrant=use_reentrant) \
+                        + self.V2 * checkpoint(_measure_nn, n_B, n_B, h_bond, meta, *data, use_reentrant=use_reentrant) \
+                        + self.V2 * checkpoint(_measure_nn, n_A, n_A, h_bond, meta, *data, use_reentrant=use_reentrant)
+                site_r = psi.nn_site(site, "r")
+                res = self.t1 * checkpoint(_measure_nn, c_B, cp_A, h_bond, meta, *data, use_reentrant=use_reentrant)
+                e_1x2_loc += res + res.conj()
+                res = self.t2*np.exp(1j*self.phi)*checkpoint(_measure_nn, c_A, cp_A, h_bond, meta, *data, use_reentrant=use_reentrant)
+                e_1x2_loc += (res + res.conj()).real
+                res = -self.t2*np.exp(1j*self.phi)*checkpoint(_measure_nn, cp_B, c_B, h_bond, meta, *data, use_reentrant=use_reentrant)
+                e_1x2_loc += (res + res.conj()).real
+                energy_horz += e_1x2_loc
+            else:
+                e_1x2_loc = self.V1 * env.measure_nn(n_B, n_A, bond=h_bond)+ self.V2 * env.measure_nn(n_B, n_B, bond=h_bond)+ self.V2 * env.measure_nn(n_A, n_A, bond=h_bond)
+                site_r = psi.nn_site(site, "r")
+                res = self.t1 * env.measure_nn(c_B, cp_A, bond=h_bond)
+                e_1x2_loc += res + res.conj()
+                res = self.t2*np.exp(1j*self.phi)*env.measure_nn(c_A, cp_A, bond=h_bond)
+                e_1x2_loc += (res + res.conj()).real
+                res = -self.t2*np.exp(1j*self.phi)*env.measure_nn(cp_B, c_B, bond=h_bond)
+                e_1x2_loc += (res + res.conj()).real
+                energy_horz += e_1x2_loc
 
 
             # vertical bond
-            v_bond = Bond(site, psi.nn_site(site, "b"))
-            e_2x1_loc = self.V1*env.measure_nn(n_A, n_B, bond=v_bond) + self.V2*env.measure_nn(n_B, n_B, bond=v_bond) + self.V2*env.measure_nn(n_A, n_A, bond=v_bond)
-            site_b = psi.nn_site(site, "b")
-            res = -self.t1*env.measure_nn(cp_A, c_B, bond=v_bond)
-            e_2x1_loc += (res + res.conj()).real
-            res = self.t2*np.exp(1j*self.phi)*env.measure_nn(c_A, cp_A, bond=v_bond)
-            e_2x1_loc += (res + res.conj()).real
-            res = -self.t2*np.exp(1j*self.phi)*env.measure_nn(cp_B, c_B, bond=v_bond)
-            e_2x1_loc += (res + res.conj()).real
-            energy_vert += e_2x1_loc
+            if eval_checkpoint:
+                v_bond = Bond(site, psi.nn_site(site, "b"))
+                e_2x1_loc = self.V1*checkpoint(_measure_nn, n_A, n_B, v_bond, meta, *data, use_reentrant=use_reentrant) \
+                        + self.V2*checkpoint(_measure_nn, n_B, n_B, v_bond, meta, *data, use_reentrant=use_reentrant) \
+                        + self.V2*checkpoint(_measure_nn, n_A, n_A, v_bond, meta, *data, use_reentrant=use_reentrant)
+                site_b = psi.nn_site(site, "b")
+                res = -self.t1*checkpoint(_measure_nn, cp_A, c_B, v_bond, meta, *data, use_reentrant=use_reentrant)
+                e_2x1_loc += (res + res.conj()).real
+                res = self.t2*np.exp(1j*self.phi)*checkpoint(_measure_nn, c_A, cp_A, v_bond, meta, *data, use_reentrant=use_reentrant)
+                e_2x1_loc += (res + res.conj()).real
+                res = -self.t2*np.exp(1j*self.phi)*checkpoint(_measure_nn, cp_B, c_B, v_bond, meta, *data, use_reentrant=use_reentrant)
+                e_2x1_loc += (res + res.conj()).real
+                energy_vert += e_2x1_loc
+            else:
+                v_bond = Bond(site, psi.nn_site(site, "b"))
+                e_2x1_loc = self.V1*env.measure_nn(n_A, n_B, bond=v_bond) + self.V2*env.measure_nn(n_B, n_B, bond=v_bond) + self.V2*env.measure_nn(n_A, n_A, bond=v_bond)
+                site_b = psi.nn_site(site, "b")
+                res = -self.t1*env.measure_nn(cp_A, c_B, bond=v_bond)
+                e_2x1_loc += (res + res.conj()).real
+                res = self.t2*np.exp(1j*self.phi)*env.measure_nn(c_A, cp_A, bond=v_bond)
+                e_2x1_loc += (res + res.conj()).real
+                res = -self.t2*np.exp(1j*self.phi)*env.measure_nn(cp_B, c_B, bond=v_bond)
+                e_2x1_loc += (res + res.conj()).real
+                energy_vert += e_2x1_loc
 
             if self.V2 != 0 or self.V3 != 0 or self.t2 != 0 or self.t3 != 0:
                 site_br = psi.nn_site(site, "br")
-                e_2x2_diag_loc = self.V2*env.measure_2x2(n_A, n_A, sites=[site, site_br]) + self.V2*env.measure_2x2(n_B, n_B, sites=[site, site_br])
-                e_2x2_diag_loc += self.V3*env.measure_2x2(n_A, n_B, sites=[site, site_br]) + self.V3*env.measure_2x2(n_B, n_A, sites=[site, site_br])
+                if eval_checkpoint:
+                    e_2x2_diag_loc = self.V2*checkpoint(_measure_2x2, [n_A, n_A], [site, site_br], meta, *data, use_reentrant=use_reentrant)\
+                        + self.V2*checkpoint(_measure_2x2, [n_B, n_B], [site, site_br], meta, *data, use_reentrant=use_reentrant)\
+                        + self.V3*checkpoint(_measure_2x2, [n_A, n_B], [site, site_br], meta, *data, use_reentrant=use_reentrant)\
+                        + self.V3*checkpoint(_measure_2x2, [n_B, n_A], [site, site_br], meta, *data, use_reentrant=use_reentrant)
 
-                res = -self.t2*np.exp(1j*self.phi) * env.measure_2x2(cp_A, c_A, sites=[site, site_br])
-                e_2x2_diag_loc += (res + res.conj()).real
-                res = self.t2*np.exp(1j*self.phi) * env.measure_2x2(c_B, cp_B, sites=[site, site_br])
-                e_2x2_diag_loc += (res + res.conj()).real
-                res = self.t3*env.measure_2x2(c_B, cp_A, sites=[site, site_br])
-                e_2x2_diag_loc += (res + res.conj()).real
-                res = self.t3*env.measure_2x2(c_A, cp_B, sites=[site, site_br])
-                e_2x2_diag_loc += (res + res.conj()).real
+                    res = -self.t2*np.exp(1j*self.phi) * checkpoint(_measure_2x2, [cp_A, c_A], [site, site_br], meta, *data, use_reentrant=use_reentrant)
+                    e_2x2_diag_loc += (res + res.conj()).real
+                    res = self.t2*np.exp(1j*self.phi) * checkpoint(_measure_2x2, [c_B, cp_B], [site, site_br], meta, *data, use_reentrant=use_reentrant)
+                    e_2x2_diag_loc += (res + res.conj()).real
+                    res = self.t3*checkpoint(_measure_2x2, [c_B, cp_A], [site, site_br], meta, *data, use_reentrant=use_reentrant)
+                    e_2x2_diag_loc += (res + res.conj()).real
+                    res = self.t3*checkpoint(_measure_2x2, [c_A, cp_B], [site, site_br], meta, *data, use_reentrant=use_reentrant)
+                    e_2x2_diag_loc += (res + res.conj()).real
 
-                energy_diag += e_2x2_diag_loc
+                    energy_diag += e_2x2_diag_loc
 
-                site_b = psi.nn_site(site, "b")
-                site_r = psi.nn_site(site, "r")
-                e_2x2_anti_diag_loc = self.V3*env.measure_2x2(n_B, n_A, sites=[site_b, site_r])
+                    site_b = psi.nn_site(site, "b")
+                    site_r = psi.nn_site(site, "r")
+                    e_2x2_anti_diag_loc = self.V3*checkpoint(_measure_2x2, [n_B, n_A], [site_b, site_r], meta, *data, use_reentrant=use_reentrant)
 
-                res = self.t3*env.measure_2x2(c_B, cp_A, sites=[site_b, site_r])
-                e_2x2_anti_diag_loc += (res + res.conj()).real
+                    res = self.t3*checkpoint(_measure_2x2, [c_B, cp_A], [site_b, site_r], meta, *data, use_reentrant=use_reentrant)
+                    e_2x2_anti_diag_loc += (res + res.conj()).real
 
-                energy_anti_diag += e_2x2_anti_diag_loc
+                    energy_anti_diag += e_2x2_anti_diag_loc
+                else:
+                    e_2x2_diag_loc = self.V2*env.measure_2x2(n_A, n_A, sites=[site, site_br]) + self.V2*env.measure_2x2(n_B, n_B, sites=[site, site_br])
+                    e_2x2_diag_loc += self.V3*env.measure_2x2(n_A, n_B, sites=[site, site_br]) + self.V3*env.measure_2x2(n_B, n_A, sites=[site, site_br])
+
+                    res = -self.t2*np.exp(1j*self.phi) * env.measure_2x2(cp_A, c_A, sites=[site, site_br])
+                    e_2x2_diag_loc += (res + res.conj()).real
+                    res = self.t2*np.exp(1j*self.phi) * env.measure_2x2(c_B, cp_B, sites=[site, site_br])
+                    e_2x2_diag_loc += (res + res.conj()).real
+                    res = self.t3*env.measure_2x2(c_B, cp_A, sites=[site, site_br])
+                    e_2x2_diag_loc += (res + res.conj()).real
+                    res = self.t3*env.measure_2x2(c_A, cp_B, sites=[site, site_br])
+                    e_2x2_diag_loc += (res + res.conj()).real
+
+                    energy_diag += e_2x2_diag_loc
+
+                    site_b = psi.nn_site(site, "b")
+                    site_r = psi.nn_site(site, "r")
+                    e_2x2_anti_diag_loc = self.V3*env.measure_2x2(n_B, n_A, sites=[site_b, site_r])
+
+                    res = self.t3*env.measure_2x2(c_B, cp_A, sites=[site_b, site_r])
+                    e_2x2_anti_diag_loc += (res + res.conj()).real
+
+                    energy_anti_diag += e_2x2_anti_diag_loc
 
         energy_per_site = (
             energy_onsite + energy_horz + energy_vert + energy_diag + energy_anti_diag

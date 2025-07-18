@@ -343,6 +343,54 @@ def reconstruct_mps(v, meta_X, slices, gauge_Vs, gs_mps):
                 res = res + tmp
     return res
 
+def assemble_qp_mps(evec, gs_mps):
+    gauge_Vs = get_gauge_fixing_V(gs_mps)
+    to_tensor= lambda x: gs_mps[0].config.backend.to_tensor(x if np.sum(np.array(x.strides)<0)==0 else x.copy() , dtype=gs_mps[0].yastn_dtype, device=gs_mps[0].device)
+
+    X_init = []
+    for i in range(gauge_Vs.N):
+        V = gauge_Vs[i]
+        if V:
+            X_init.append(yastn.rand(config=V.config, legs=(V.get_legs(2).conj(), gs_mps[i].get_legs(2)), n=0, dtype=gs_mps[i].yastn_dtype))
+        else:
+            X_init.append(None)
+
+    _, meta_X, slices = compress_Xs(X_init)
+    Xs = decompress_Xs(to_tensor(evec), meta_X, slices)
+
+
+    gs_mps.canonize_(to='first')
+    qps = []
+    for i, X in enumerate(Xs):
+        if X:
+            gs_mps.orthogonalize_site_(i, to='last')
+            qp = gs_mps.copy()
+            qp.A[qp.pC] = X
+            qp.absorb_central_(to='last')
+            gs_mps.absorb_central_(to='last')
+            qps.append(qp)
+
+    return qps
+
+
+def shifted_overlap(qp1, qp2):
+    # assume every tensor carry zero charge
+    qp1.absorb_central_(to='last')
+    qp2.absorb_central_(to='last')
+
+    M = qp1[0].tensordot(qp2[1], axes=(1, 1), conj=(0, 1))
+    M = M.transpose(axes=(0, 2, 1, 3))
+
+    for i in range(1, qp1.N-1):
+        M = M.tensordot(qp1[i], axes=(2, 0))
+        M = M.tensordot(qp2[i+1], axes=((2, 3), (0, 1)))
+
+    M = M.tensordot(qp1[qp1.N-1].swap_gate(axes=(1, 1)), axes=(2, 0))
+    M = M.tensordot(qp2[0], axes=((1, 3), (2, 0)))
+
+    return M.to_number()
+
+
 def overlap(mpo1, mpo2):
     norm = measure_overlap(mpo1, mpo1).real
     comp_norm = measure_overlap(mpo2, mpo2).real

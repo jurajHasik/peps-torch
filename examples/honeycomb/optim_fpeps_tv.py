@@ -160,7 +160,7 @@ def main():
         # )
 
         # 2) evaluate loss with converged environment
-        loss = model.energy_per_site(state, ctm_env_out)  # H= H_0 + mu * (nA + nB)
+        loss = model.energy_per_site(state, ctm_env_out, eval_checkpoint="nonreentrant")  # H= H_0 + mu * (nA + nB)
         return (loss, ctm_env_out, *ctm_log, t_ctm, t_check)
 
     @torch.no_grad()
