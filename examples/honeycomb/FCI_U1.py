@@ -150,7 +150,7 @@ def main():
         ctm_log, t_ctm, t_check = FixedPoint.ctm_log, FixedPoint.t_ctm, FixedPoint.t_check
         # 2) evaluate loss with converged environment
         t_loss_before = time.perf_counter()
-        loss = model.energy_per_site(state, ctm_env_out)  # H= H_0 - mu * (nA + nB)
+        loss = model.energy_per_site(state, ctm_env_out, eval_checkpoint="nonreentrant")  # H= H_0 - mu * (nA + nB)
         t_loss_after = time.perf_counter()
         t_loss = t_loss_after - t_loss_before
         return (loss, ctm_env_out, *ctm_log, t_ctm, t_check, t_loss)

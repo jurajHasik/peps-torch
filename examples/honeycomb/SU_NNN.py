@@ -47,8 +47,9 @@ def compute_gates(state, model, db=0.01):
         # horizontal bonds
         h_bond = Bond(site, state.nn_site(site, "r"))
 
-        # important
+        # important to retain all possible sectors
         Hh = 0*fkron(I, I, sites=(0, 1))
+
         Hh = Hh + model.V1*fkron(n_B, n_A, sites=(0, 1)) + model.V2*fkron(n_B, n_B, sites=(0, 1)) + model.V2*fkron(n_A, n_A, sites=(0, 1))
         Hh = Hh - model.t1*fkron(cp_A, c_B, sites=(1, 0)) - model.t1*fkron(cp_B, c_A, sites=(0, 1))
         Hh = Hh -model.t2*np.exp(1j*model.phi)*fkron(cp_A, c_A, sites=(1, 0)) \
@@ -66,8 +67,9 @@ def compute_gates(state, model, db=0.01):
         # vertical bonds
         v_bond = Bond(site, state.nn_site(site, "b"))
 
-        # important
+        # important to retain all possible sectors
         Hv = 0*fkron(I, I, sites=(0, 1))
+
         Hv = Hv + model.V1*fkron(n_A, n_B, sites=(0, 1)) + model.V2*fkron(n_B, n_B, sites=(0, 1)) + model.V2*fkron(n_A, n_A, sites=(0, 1))
         Hv = Hv - model.t1*fkron(cp_A, c_B, sites=(0, 1)) - model.t1*fkron(cp_B, c_A, sites=(1, 0))
         Hv = Hv - model.t2*np.exp(1j*model.phi)*fkron(cp_A, c_A, sites=(1, 0)) \
@@ -100,7 +102,8 @@ def compute_gates(state, model, db=0.01):
 
             H_diag = H_diag.fuse_legs(axes=((0, 1), (2, 3)))
             D, S = eigh(H_diag, axes=(0, 1))
-            D = exp(D, step=-db/4) # extra factor of 2 due to two choices of the corners
+            # distribute the gate to two possible choices of the corners, thus the step size is further halved.
+            D = exp(D, step=-db/4)
             G_diag = ncon((S, D, S), ([-1, 1], [1, 2], [-3, 2]), conjs=(0, 0, 1))
             G_diag = G_diag.unfuse_legs(axes=(0, 1))
 
@@ -113,7 +116,7 @@ def compute_gates(state, model, db=0.01):
 
             # dirn = "br", corner = "tr"
             nnn.append(decompose_nnn_gate(G_diag, s0, s2, s3))
-            # dirn = "br", corner = "tr"
+            # dirn = "br", corner = "bl"
             nnn.append(decompose_nnn_gate(G_diag, s0, s1, s3))
 
             # anti-diagonal bonds
@@ -124,7 +127,8 @@ def compute_gates(state, model, db=0.01):
                         - model.t3*fkron(cp_B, c_A, sites=(0, 1))
             H_anti_diag = H_anti_diag.fuse_legs(axes=((0, 1), (2, 3)))
             D, S = eigh(H_anti_diag, axes=(0, 1))
-            D = exp(D, step=-db/4) # extra factor of 2 due to two choices of the corners
+            # distribute the gate to two possible choices of the corners, thus the step size is further halved.
+            D = exp(D, step=-db/4)
             G_anti_diag = ncon((S, D, S), ([-1, 1], [1, 2], [-3, 2]), conjs=(0, 0, 1))
 
             # dirn = "tr", corner = "tl"
@@ -248,6 +252,7 @@ if __name__ == "__main__":
                 for site in state.sites():
                     state.parameters[site] = state[site]/state[site].norm(p='inf')
                 state.sync_()
+                # converge the BP env tensors after the update
                 out = env.iterate_(max_sweeps=400, iterator_step=None, diff_tol=1e-8)
                 diff = BP_conv_check_diff(env_prev, env)
                 log.log(logging.INFO, f"{env_type}_db={db} step: {step:d}, weights diff: {diff}")

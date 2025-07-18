@@ -303,7 +303,8 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
             log.info(e.message + "Add noise to the state.")
             # add a random perturbation to the state
             with torch.no_grad():
-                state = state.add_noise(noise=0.1)
+                # state = state.add_noise(noise=0.1)
+                state.add_noise_(noise=0.1)
 
             parameters, optimizer= create_optimizer(state, main_args=main_args, opt_args=opt_args,
                 ctm_args=ctm_args, global_args=global_args)
