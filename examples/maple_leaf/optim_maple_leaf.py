@@ -10,6 +10,13 @@ from ctm.generic.env import *
 from ctm.generic import ctmrg
 from ctm.generic import rdm
 from optim.ad_optim_lbfgs_mod import optimize_state
+from ipeps.integration_yastn import PepsAD
+from ctm.generic.env_yastn import from_yastn_env_generic, from_env_generic_dense_to_yastn, \
+    YASTN_ENV_INIT, YASTN_PROJ_METHOD
+from yastn.yastn.tn.fpeps import EnvCTM
+from yastn.yastn.tn.fpeps.envs._env_ctm import ctm_conv_corner_spec
+from yastn.yastn.tn.fpeps.envs.fixed_pt import refill_env, fp_ctmrg
+from yastn.yastn.tn.fpeps._peps import Peps2Layers
 import logging
 log = logging.getLogger(__name__)
 
@@ -22,6 +29,7 @@ parser.add_argument("--Jt", type=float, default=1., help="interactions around tr
 parser.add_argument("--gauge", action='store_true', help="put into quasi-canonical form")
 parser.add_argument("--test_env_sensitivity", action='store_true', help="compare loss with higher chi env")
 parser.add_argument("--loop_rdms", action='store_true', help="loop over central aux index in rdm2x3 and rdm3x2")
+parser.add_argument("--grad_type", type=str, default='default', help="gradient algo", choices=['default','fp'])
 args, unknown_args = parser.parse_known_args()
 
 
@@ -235,17 +243,21 @@ def main():
     """
     # 2.4.1.1 Construct mps representation of bond Hamiltonians [if necessary] and save them in file. Otherwise, read them from file
     #   Note: For HPC simulations, this is negligible overhead
-    # import os
-    # if os.path.isfile("H_eff_mps_Jd{args.Jd}-Jh{args.Jh}-Jt{args.Jt}.pt"):
-    #     data = torch.load("H_eff_mps_Jd{args.Jd}-Jh{args.Jh}-Jt{args.Jt}.pt", weights_only=True)
-    #     H_eff_mps = data["H_eff_mps"]
-    # else:
-    # We need to permute indices of the effective Hamiltonian apporiately to get compact (small bond dimension) MPS
-    H_eff_mps= [dict(zip(('U','S'),rdm.get_exact_mps(H_eff[i].reshape((dphys_1dof**ndofs,)*4).permute(0,2,1,3), min_S=1.0e-12))) for i in range(3)]
-    # let's add the overall scale of the H_eff to the last mps tensor for each of the three terms
-    for i in range(3):
-        H_eff_mps[i]['U'][-1]= H_eff_mps[i]['U'][-1]*H_eff_mps[i]['S'][-1]
-    # torch.save({"H_eff_mps": H_eff_mps,}, "H_eff_mps_Jd{args.Jd}-Jh{args.Jh}-Jt{args.Jt}.pt")
+    import os
+    mpo_fp= f"H_eff_mps_Jd{args.Jd}-Jh{args.Jh}-Jt{args.Jt}.pt"
+    if os.path.isfile(mpo_fp):
+        data = torch.load(mpo_fp, weights_only=True, map_location=cfg.global_args.device)
+        H_eff_mps = data["H_eff_mps"]
+        log.info(f"Loaded H_eff_mps from file {mpo_fp}")
+    else:
+        t0= time.perf_counter()
+        # We need to permute indices of the effective Hamiltonian apporiately to get compact (small bond dimension) MPS
+        H_eff_mps= [dict(zip(('U','S'),rdm.get_exact_mps(H_eff[i].reshape((dphys_1dof**ndofs,)*4).permute(0,2,1,3), min_S=1.0e-12))) for i in range(3)]
+        # let's add the overall scale of the H_eff to the last mps tensor for each of the three terms
+        for i in range(3):
+            H_eff_mps[i]['U'][-1]= H_eff_mps[i]['U'][-1]*H_eff_mps[i]['S'][-1]
+        torch.save({"H_eff_mps": H_eff_mps,}, mpo_fp)
+        log.info(f"Compute H_eff_mps and store to file {mpo_fp} in {time.perf_counter()-t0} [s]")
 
 
     """### 2.4.2 Define energy evaluation based on mps format of operators"""
@@ -325,6 +337,10 @@ def main():
     def f_conv_ctm_opt(*args,**kw_args):
         verbosity= kw_args.pop('verbosity',0)
         converged, history= ctmrg_conv_specC(*args,**kw_args)
+        #
+        # Use state, env, and history here for detailed reporting/debugging
+        #state, env, _= args
+        #print(f"{len(history['conv_crit'])}\n{env.get_spectra()}")
         # Optionally ?
         if converged and verbosity>0:
             print(f"CTM-CONV {len(history['conv_crit'])} {history['conv_crit'][-1]}")
@@ -332,7 +348,7 @@ def main():
 
     # 3.1.2 Loss function, which, given an iPEPS, first performs CTMRG until convergence
     #       and then evaluates the energy per site
-    def loss_fn(state, ctm_env_in, opt_context):
+    def loss_fn_default(state, ctm_env_in, opt_context):
         ctm_args= opt_context["ctm_args"]
         opt_args= opt_context["opt_args"]
 
@@ -365,6 +381,66 @@ def main():
 
         return (loss, ctm_env_out, *ctm_log)
 
+    #
+    # 3.1.3 Loss function using fixed-point AD
+    def loss_fn_fp(state, ctm_env_in, opt_context):
+        ctm_args= opt_context["ctm_args"]
+        opt_args= opt_context["opt_args"]
+
+        # 2. convert to YASTN's iPEPS
+        state_yastn= PepsAD.from_pt(state)
+
+        # 3. proceed with YASTN's CTMRG implementation
+        # 3.1 possibly re-initialize the environment
+        if opt_args.opt_ctm_reinit or ctm_env_in is None:
+            env_leg = yastn.Leg(state_yastn.config, s=1, D=(1,))
+            ctm_env_in = EnvCTM(state_yastn, init=YASTN_ENV_INIT[ctm_args.ctm_env_init_type], leg=env_leg)
+        else:
+            ctm_env_in.psi = Peps2Layers(state_yastn) if state_yastn.has_physical() else state_yastn
+
+        # 3.1.1 post-init CTM steps 
+        options_svd_pre_init= {
+            "policy": YASTN_PROJ_METHOD["RSVD"],
+                "D_total": cfg.main_args.chi, 'D_block': cfg.main_args.chi, "tol": ctm_args.projector_svd_reltol,
+                "eps_multiplet": ctm_args.projector_eps_multiplet, "niter": ctm_args.projector_rsvd_niter,
+            }
+        with torch.no_grad():
+            sweep, max_dsv, max_D, converge= ctm_env_in.ctmrg_(
+                method="2site",
+                max_sweeps=math.ceil(args.chi/(args.bond_dim**2)),
+                opts_svd=options_svd_pre_init,
+                corner_tol=ctm_args.projector_svd_reltol
+            )
+        log.log(logging.INFO, f"WARM-UP: Number of ctm steps: {sweep:d}, t_warm_up: N/As")
+
+        # 3.2 setup and run CTMRG
+        options_svd={
+            "policy": YASTN_PROJ_METHOD[ctm_args.projector_svd_method],
+            "D_total": cfg.main_args.chi, "D_block" : cfg.main_args.chi,
+            "tol": ctm_args.projector_svd_reltol,
+            "eps_multiplet": ctm_args.projector_eps_multiplet,
+            'verbosity': ctm_args.verbosity_projectors
+        }
+
+        ctm_env_out, env_ts_slices, env_ts = fp_ctmrg(ctm_env_in, \
+            ctm_opts_fwd= {'opts_svd': options_svd, 'corner_tol': ctm_args.ctm_conv_tol, 'max_sweeps': ctm_args.ctm_max_iter, \
+                'method': "2site", 'use_qr': False,
+                'checkpoint_move': 'reentrant' if ctm_args.fwd_checkpoint_move==True else ctm_args.fwd_checkpoint_move,
+                },
+            ctm_opts_fp= {'opts_svd': {'policy': 'fullrank'}, 'verbosity': 3,})
+        refill_env(ctm_env_out, env_ts, env_ts_slices)
+
+        # 3.3 convert environment to peps-torch format
+        env_pt= from_yastn_env_generic(ctm_env_out, vertexToSite=state.vertexToSite)
+
+        # 3.4 evaluate loss
+        t_loss0= time.perf_counter()
+        e_bonds, norm_bonds= get_energy_mps(state, env_pt)
+        loss= sum(e_bonds)
+        t_loss1= time.perf_counter()
+
+        return (loss, ctm_env_out, [], None, t_loss1-t_loss0)
+
     """## 3.2 Run optimization
     ### 3.2.1 Configure optimization
     """
@@ -375,7 +451,12 @@ def main():
 
 
     @torch.no_grad()
-    def f_obs_opt(state, ctm_env, opt_context):
+    def f_obs_opt(state, _ctm_env, opt_context):
+        if isinstance(_ctm_env, EnvCTM):
+            ctm_env= from_yastn_env_generic(_ctm_env, vertexToSite=state.vertexToSite)
+        else:
+            ctm_env= _ctm_env
+
         # We don't report when in line search mode
         if ("line_search" in opt_context.keys() and not opt_context["line_search"]) \
             or not "line_search" in opt_context.keys():
@@ -424,6 +505,7 @@ def main():
     print("epoch, loss, obs")
     f_obs_opt(state, ctm_env, {'loss_history': {'loss': [float('NaN')]}, 'ctm_args': cfg.ctm_args})
 
+    
     # We enter optimization
     def post_proc(state, ctm_env, opt_context):
         with torch.no_grad():
@@ -441,6 +523,9 @@ def main():
         state= state_g.absorb_weights()
         
     state.normalize_()
+    loss_fn= loss_fn_fp if args.grad_type=='fp' else loss_fn_default
+    if args.grad_type=='fp':
+        ctm_env= from_env_generic_dense_to_yastn(ctm_env, state)
     optimize_state(state, ctm_env, loss_fn, obs_fn=f_obs_opt) #, post_proc=post_proc)
 
 
