@@ -79,19 +79,17 @@ class TORICCODE_1x1:
         # s2,s3
 
                ## Tensor prducts for Hamiltonian terms
-        self.Av = torch.einsum('ia,jb,kc,ld->ijklabcd',
-                          self.Id_Id,
+        self.Av = torch.einsum('ia,jb,kc->ijkabc',
                           self.X_Id,
                           self.Id_X,
                           self.X_X
                           ).contiguous()
 
 
-        self.Bp = torch.einsum('ia,jb,kc,ld->ijklabcd',
+        self.Bp = torch.einsum('ia,jb,kc->ijkabc',
                           self.Z_Z,
                           self.Z_Id,
                           self.Id_Z,
-                          self.Id_Id
                           ).contiguous()
 
 
@@ -106,10 +104,12 @@ class TORICCODE_1x1:
         """
         Compute all required RDMs for energy and observables.
         """
-        rdm2x2 = rdm.rdm2x2((0, 0), state, env)  # Vertex and plaq term
+        rdm2x2_v = rdm.rdm2x2((0, 0), state, env,open_sites=[1,2,3])
+        rdm2x2_p = rdm.rdm2x2((0, 0), state, env,open_sites=[0,1,2])# Vertex and plaq term
         rdm1x1 = rdm.rdm1x1((0, 0), state, env)  # field term
 
-        return {"rdm2x2": rdm2x2,
+        return {"rdm2x2_v": rdm2x2_v,
+                "rdm2x2_p": rdm2x2_p,
                 "rdm1x1": rdm1x1}
 
     def energy(self, state, env):
@@ -117,8 +117,8 @@ class TORICCODE_1x1:
         Compute the total energy of the system in the bipartite 2x2 block structure.
         """
         rdms = self.compute_rdm_terms(state, env)
-        energy_jv = torch.einsum('ijklabcd,ijklabcd', rdms["rdm2x2"], self.ham2x2_jv)
-        energy_jp = torch.einsum('ijklabcd,ijklabcd', rdms["rdm2x2"], self.ham2x2_jp)
+        energy_jv = torch.einsum('ijkabc,ijkabc', rdms["rdm2x2_v"], self.ham2x2_jv)
+        energy_jp = torch.einsum('ijkabc,ijkabc', rdms["rdm2x2_p"], self.ham2x2_jp)
         energy_hx = torch.einsum('ij,ij', rdms["rdm1x1"], self.ham1x1_hx)
         energy_hz = torch.einsum('ij,ij', rdms["rdm1x1"], self.ham1x1_hz)
 
@@ -132,8 +132,8 @@ class TORICCODE_1x1:
         with torch.no_grad():
             rdms = self.compute_rdm_terms(state, env)
             obs = {
-                "Av": torch.einsum('ijklabcd,ijklabcd', rdms["rdm2x2"], self.Av),
-                "Bp": torch.einsum('ijklabcd,ijklabcd', rdms["rdm2x2"], self.Bp),
+                "Av": torch.einsum('ijkabc,ijkabc', rdms["rdm2x2_v"], self.Av),
+                "Bp": torch.einsum('ijkabc,ijkabc', rdms["rdm2x2_p"], self.Bp),
                 "X": torch.einsum('ij,ij', rdms["rdm1x1"], self.X_Id+ self.Id_X)/2,
                 "Z": torch.einsum('ij,ij', rdms["rdm1x1"], self.Z_Id + self.Id_Z)/2
             }
