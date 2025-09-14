@@ -216,7 +216,7 @@ def get_edge_2(coord, direction, state, env, verbosity=0):
         # 2<-1--T
         #    3<-2
         E = contract(E,T,([2],[0]))
-        C1= env.C[(s,(1,-1))]
+        C1= env.C[(s,(1,1))]
         #    0--C2
         #    1--T
         #    2--T
