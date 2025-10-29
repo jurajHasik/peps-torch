@@ -1,4 +1,5 @@
 import warnings
+import time
 from functools import lru_cache
 from itertools import product
 import torch
@@ -1213,6 +1214,68 @@ def _get_rdm2x2_NNN_1n1_oe_tn(coord, state, env, force_cpu=False):
         +"T2_x, C3_x, T3_x, a_x, a_x*").split(','))
     return contract_tn, names
 
+def _get_rdm2x2_NNN_11_oe_tn(coord, state, env, force_cpu=False):
+    r"""
+    Define a tensor network of reduced density matrix of (1,1) bond within 2x2 patch::
+
+        C1-----(1)1 1(0)----T1-----(3)36 36(0)----T1_x----(3)18 18(0)----C2_x
+        0(0)               (1,2)                 (1,2)                   19(1)
+        0(0)            11  2  5                 20 23                   19(0)
+        |                 \ 2  5                 |  |                    |  
+        T4-------(2)3 3-----a--|------37 37----a_x--6(1)----21 21(1)-----T2_x
+        |                   |  |                 |30|                    |
+        |        (3)6 6--------a*------38 38-------a*_x-----24 24(2)     |
+        15(1)               16 17 \             34 35                    33(3)
+        15(0)               16 17  14       22  34 35                    33(0)
+        |                   |   |             \  |  |                    |
+        T4_y----(2)9 9------a_y---------39 39----a_xy---------28 28(1)-----T2_xy 
+        |                   | 4 |                |  |                    |
+        |     (3)12 12----------a*_y----40 40------- a*_xy----31 31(2)   |
+        |                   10 13                29 32 \                 |
+        8(1)                10 13                29 32  25              26(3)
+        8(0)                (0,1)                (0,1)                  26(0)
+        C4_y-----(1)7 7(2)---T3_y----(3)41 41(2)--T3_xy---(3)27 27(1)----C3_xy
+    
+    """
+    c_00, c_10, c_01, c_11= (coord[0],coord[1]), (coord[0]+1,coord[1]), (coord[0],coord[1]+1), (coord[0]+1,coord[1]+1)
+    a= state.site( c_00 )
+    a_x= state.site( c_10 )
+    a_y= state.site( c_01 ) 
+    a_xy= state.site( c_11 )
+    C1, C2_x, C3_xy, C4_y= env.C[(state.vertexToSite( c_00 ),(-1,-1))],\
+        env.C[(state.vertexToSite( c_10 ), (1,-1))],\
+        env.C[(state.vertexToSite( c_11 ), (1,1))],\
+        env.C[(state.vertexToSite( c_01 ), (-1,1))]
+    T1, T4, T1_x, T2_x, T2_xy, T3_xy, T3_y, T4_y= \
+        env.T[(state.vertexToSite( c_00 ),(0,-1))],\
+        env.T[(state.vertexToSite( c_00 ),(-1,0))],\
+        env.T[(state.vertexToSite( c_10 ), (0,-1))],\
+        env.T[(state.vertexToSite( c_10 ), (1,0))],\
+        env.T[(state.vertexToSite( c_11 ), (1,0))],\
+        env.T[(state.vertexToSite( c_11 ), (0,1))],\
+        env.T[(state.vertexToSite( c_01 ), (0,1))],\
+        env.T[(state.vertexToSite( c_01 ), (-1,0))]
+    t= C1, C2_x, C3_xy, C4_y, T1, T4, T1_x, T2_x, T2_xy, T3_xy, T3_y, T4_y, a, a_x, a_y, a_xy
+    if force_cpu:
+       t=(x.cpu() for x in t)
+
+    T1= T1.view(T1.size(0),a.size(1),a.size(1),T1.size(2))
+    T1_x= T1_x.view(T1_x.size(0),a_x.size(1),a_x.size(1),T1_x.size(2))
+    T2_x= T2_x.view(T2_x.size(0),a_x.size(4),a_x.size(4),T2_x.size(2))
+    T2_xy= T2_xy.view(T2_xy.size(0),a_xy.size(4),a_xy.size(4),T2_xy.size(2))
+    T3_xy= T3_xy.view(a_xy.size(3),a_xy.size(3),T3_xy.size(1),T3_xy.size(2))
+    T3_y= T3_y.view(a_y.size(3),a_y.size(3),T3_y.size(1),T3_y.size(2))
+    T4_y= T4_y.view(T4_y.size(0),T4_y.size(1),a_y.size(2),a_y.size(2))
+    T4= T4.view(T4.size(0),T4.size(1),a.size(2),a.size(2))
+
+    contract_tn= C1,[0,1],T1,[1,2,5,36],T4,[0,15,3,6],a,[11,2,3,16,37],a.conj(),[14,5,6,17,38],\
+        T4_y,[15,8,9,12],C4_y,[8,7],T3_y,[10,13,7,41],a_y,[4,16,9,10,39],a_y.conj(),[4,17,12,13,40],\
+        T1_x,[36,20,23,18],C2_x,[18,19],T2_x,[19,21,24,33],a_x,[30,20,37,34,21],a_x.conj(),[30,23,38,35,24],\
+        T2_xy,[33,28,31,26],C3_xy,[26,27],T3_xy,[29,32,41,27],a_xy,[22,34,39,29,28],a_xy.conj(),[25,35,40,32,31],[11,22,14,25]
+    names= tuple(x.strip() for x in ("C1, T1, T4, a, a*, T4_y, C4_y, T3_y, a_y, a_y*, T1_x, C2_x, T2_x, a_x, a_x*,"\
+        +"T2_xy, C3_xy, T3_xy, a_xy, a_xy*").split(','))
+    return contract_tn, names
+
 def rdm2x2_NNN_1n1_oe(coord, state, env, sym_pos_def=False, force_cpu=False, 
     unroll=False, checkpoint_unrolled=False, checkpoint_on_device=False,
     global_args=cfg.global_args, verbosity=0):
@@ -1268,6 +1331,67 @@ def eval_mpo_rdm2x2_NNN_1n1(coord, state, env, op_mps, sym_pos_def=False, force_
     """
     who="mpo_rdm2x2_NNN_1n1"
     contract_tn, names= _get_rdm2x2_NNN_1n1_oe_tn(coord, state, env, force_cpu=force_cpu)
+
+    if type(unroll)==bool and unroll:
+        unroll= []
+
+    # Extend tn specification to include op_mps (and validate internally)
+    # We assume last element on contract_tn contains labels of physical indices 
+    # of rdm1x2 ordered according to the convention specified in :meth:`rdm1x2`
+    op_mps_tn, op_mps_names= _get_mps_tn(op_mps, contract_tn[-1], force_cpu=force_cpu)
+    contract_tn_op= contract_tn[:-1] + op_mps_tn + ([],)
+    names_op= names + op_mps_names
+
+    path, path_info= get_contraction_path(*contract_tn_op,names=names_op,path=None,\
+        unroll=unroll if unroll else [],who=who,optimizer="default" if env.chi>1 else "auto")
+    R= contract_with_unroll(*contract_tn_op,optimize=path,unroll=unroll if unroll else [],\
+        checkpoint_unrolled=checkpoint_unrolled,
+        checkpoint_on_device=checkpoint_on_device,
+        backend='torch',who=who,verbosity=global_args.verbosity_oe)
+    
+    
+    I_mps_tn, I_mps_names= _get_id_tn(op_mps, contract_tn[-1], force_cpu=force_cpu)
+    contract_tn_I= contract_tn[:-1] + I_mps_tn + ([],)
+    names_I= names + I_mps_names
+
+    path_I, path_I_info= get_contraction_path(*contract_tn_I,names=names_I,path=None,\
+        unroll=unroll if unroll else [],who=who,optimizer="default" if env.chi>1 else "auto")
+    I= contract_with_unroll(*contract_tn_I,optimize=path_I,unroll=unroll if unroll else [],\
+        checkpoint_unrolled=checkpoint_unrolled,
+        checkpoint_on_device=checkpoint_on_device,
+        backend='torch',who=who,verbosity=global_args.verbosity_oe)
+    
+    if force_cpu:
+        R= R.to(env.device)
+        I= I.to(env.device)
+    return R/I, I
+
+def eval_mpo_rdm2x2_NNN_11(coord, state, env, op_mps, sym_pos_def=False, force_cpu=False, 
+    unroll=False, checkpoint_unrolled=False, checkpoint_on_device=False, 
+    global_args=cfg.global_args, verbosity=0):
+    r"""
+    Contract tensor network of :meth:`rdm2x2_NNN_11` with an MPS representation of operator `op_mps`::
+
+        C1-----(1)1 1(0)----T1-----(3)36 36(0)----T1_x----(3)18 18(0)----C2_x
+        0(0)               (1,2)                 (1,2)                   19(1)
+        0(0)            11  2  5                 20 23                   19(0)
+        |                 \ 2  5                 |  |                    |  
+        T4-------(2)3 3-----a--|------37 37----a_x--6(1)----21 21(1)-----T2_x      11--MPS_0
+        |                   |  |                 |30|                    |             |100
+        |        (3)6 6--------a*------38 38-------a*_x-----24 24(2)     |         14--MPS_1
+        15(1)               16 17 \             34 35                    33(3)   &     |101
+        15(0)               16 17  14       22  34 35                    33(0)     22--MPS_2
+        |                   |   |             \  |  |                    |             |102
+        T4_y----(2)9 9------a_y---------39 39----a_xy---------28 28(1)-----T2_xy   25--MPS_3
+        |                   | 4 |                |  |                    |
+        |     (3)12 12----------a*_y----40 40------- a*_xy----31 31(2)   |
+        |                   10 13                29 32 \                 |
+        8(1)                10 13                29 32  25              26(3)
+        8(0)                (0,1)                (0,1)                  26(0)
+        C4_y-----(1)7 7(2)---T3_y----(3)41 41(2)--T3_xy---(3)27 27(1)----C3_xy
+    """
+    who="mpo_rdm2x2_NNN_11"
+    contract_tn, names= _get_rdm2x2_NNN_11_oe_tn(coord, state, env, force_cpu=force_cpu)
 
     if type(unroll)==bool and unroll:
         unroll= []
@@ -2671,7 +2795,14 @@ def get_exact_mps(tensor,ind_dims=None,max_D=float('inf'),min_S=-1,verbosity=0):
         # --tmp--
         #   |
         tmp= tmp.reshape(left_aux_D*ind_dims[i],-1)
-        U,S,V= torch.linalg.svd(tmp,full_matrices=False)
+        t0= time.perf_counter()
+        if verbosity>1: print(f"get_exact_mps {i} svd of {tmp.shape} ", end="")
+        if tmp.is_cuda:
+            U,S,V= torch.linalg.svd(tmp,full_matrices=False, driver="gesvd")    
+        else:
+            U,S,V= torch.linalg.svd(tmp,full_matrices=False)
+        if verbosity>1: t1= time.perf_counter()
+        print(f"{t1-t0} [s]")
         # check number of sing. values larger than min_S
         above_min_S= sum(S>S[0]*min_S)
         retained_D= min(above_min_S,max_D)
@@ -2687,11 +2818,15 @@ def get_exact_mps(tensor,ind_dims=None,max_D=float('inf'),min_S=-1,verbosity=0):
         tmp= (torch.diag(S)[:min(S.shape[0],retained_D),:]@V).reshape(min(S.shape[0],retained_D),-1)
         Us.append(U)
         Ss.append(S[:min(S.shape[0],retained_D)])
+    # attach overall sign to the last S
+    Ss[-1]= Ss[-1]*V[0,0]
 
     # debugging information
     if verbosity>0:
+        print("get_exact_mps")
         for i,u in enumerate(Us):
             print(f"{u.shape} {Ss[i].shape} {sum( (Ss[i]/Ss[i][0]) >min_S)}")
+        print(f"last V {V}")
     return Us, Ss
 
 def _get_mps_tn(op_mps, phys_labels, offset=100, force_cpu=False):

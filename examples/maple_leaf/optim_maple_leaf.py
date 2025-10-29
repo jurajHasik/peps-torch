@@ -4,6 +4,7 @@ import torch
 import argparse
 import config as cfg
 import time
+from itertools import combinations
 from groups import su2
 from ipeps.ipeps import *
 from ctm.generic.env import *
@@ -13,6 +14,8 @@ from optim.ad_optim_lbfgs_mod import optimize_state
 from ipeps.integration_yastn import PepsAD
 from ctm.generic.env_yastn import from_yastn_env_generic, from_env_generic_dense_to_yastn, \
     YASTN_ENV_INIT, YASTN_PROJ_METHOD
+import yastn.yastn as yastn    
+from yastn.yastn.tn.mps import Hterm, generate_mpo
 from yastn.yastn.tn.fpeps import EnvCTM
 from yastn.yastn.tn.fpeps.envs._env_ctm import ctm_conv_corner_spec
 from yastn.yastn.tn.fpeps.envs.fixed_pt import refill_env, fp_ctmrg
@@ -43,6 +46,7 @@ def H_mapleleaf_coarsegrained(Jd = 1.0, Jh = 1.0, Jt = 1.0):
 
     Get unitary U
 
+    Hamiltonian terms are matrices H = \sum_{S0',S1',S0,S1} H_{S0',S1',S0,S1} |S0'>|S1'><S0|<S1| of shape (2**6,2**6,2**6,2**6) 
     """
     L = 2*6
 
@@ -169,6 +173,128 @@ def H_mapleleaf_coarsegrained(Jd = 1.0, Jh = 1.0, Jt = 1.0):
     unitary= [torch.as_tensor(t) for t in unitary]
     return h_eff, unitary
 
+def spiral_u( k,r, sign=-1 ):
+    """ 
+    Generate spiral unitary rotation matrix for spin-1/2. Wavevector k is given in units of pi.
+    
+        u:= exp( sign (k.r) S^y )
+    """
+    theta= np.pi*( k[0]*r[0] + k[1]*r[1] )
+    isigma_y = torch.as_tensor([[0, 1], [-1, 0]], dtype=torch.float64) # i[[0,-i],[i,0]]
+    uni = torch.eye(2,dtype=torch.float64) * np.cos(theta/2.0) + sign * isigma_y * np.sin(theta/2.0)
+    U= torch.einsum('ab,cd,ef,gh,ij,kl->acegikbdfhjl',uni,uni,uni,uni,uni,uni).reshape( (2**6,2**6) )
+    return U
+
+def H_mapleleaf_mpo_yastn(Jd = 1.0, Jh = 1.0, Jt = 1.0, global_args= cfg.global_args, convention='G'):
+    """
+    Build three MPOs representing Hamiltonian on maple leaf lattice coarse-grained into triangular lattice.
+    Each site of triangular lattice represents 6 spin-1/2 triangle of underlying maple leaf lattice.
+    Hamiltonian term H_S0S1,S0'S1' is represented in MPO form as::
+
+                            U
+        S0                  S1
+        |                   |
+        H_mps[0]--H_mps[1]--H_mps[2]--H_mps[3]    
+                  |                   |
+                  S0'                 S1'
+                                      U^\dagger   
+
+    where U is a unitary rotation associated with underlying magnetic texture.
+
+    Returns:
+        H_eff_mps: list[list[torch.Tensor]] 
+            list of three 4-site MPOs
+        U:  list[torch.Tensor]
+            list of three unitaries associated with action of each MPO
+    """
+    cfg_dense= yastn.make_config(backend= 'torch', sym= 'dense', \
+                                 default_dtype= global_args.dtype,  default_device= global_args.device)
+    yastn_s12= yastn.operators.Spin12(**cfg_dense._asdict())
+
+    def get_Hterms_SS(s1,s2,J):
+        s1,s2=s1-1,s2-1
+        return [Hterm(amplitude=J, positions=(s1,s2), operators=(yastn_s12.sz(),yastn_s12.sz())),
+                Hterm(amplitude=0.5*J, positions=(s1,s2), operators=(yastn_s12.sp(),yastn_s12.sm())),
+                Hterm(amplitude=0.5*J, positions=(s1,s2), operators=(yastn_s12.sm(),yastn_s12.sp()))]
+    
+    def get_intra_SS(Jd, Jh, Jt, offset=0):
+        intra = [
+            # Jd couplings
+            (1, 2, Jd/6), (3, 4, Jd/6), (5, 6, Jd/6),
+            # Jt couplings
+            (2, 4, Jt/6), (4, 6, Jt/6), (6, 2, Jt/6),
+            # Jh couplings
+            (2, 3, Jh/6), (4, 5, Jh/6), (6, 1, Jh/6)
+        ]
+        H_terms= []
+        for s1,s2,J in intra:
+            H_terms+= get_Hterms_SS(s1+offset,s2+offset,J)
+        return H_terms
+    
+    # convetion for lattice vectors 
+    # 
+    # We use 'G' convention for order/labeling of sites within the cluster
+    #
+    # 1\
+    # | 6
+    # 2< >5
+    # | 4
+    # 3/
+    #
+    # lattice vector conventions
+    # 'S'               'G'
+    #                   (-a1+a2)= a1_schmoll
+    #
+    #  --> a2=x          --> a1=x
+    # |                 |
+    # a1=y              a2=y
+    # V                 V
+    inter_terms,U=[],[]
+    if convention in ['S']:
+        inter_terms= {                                     # (a1,a2) S 
+            (0,1): get_Hterms_SS(5,7,Jt)+get_Hterms_SS(5,8,Jh),   # (0,1)
+            (1,0): get_Hterms_SS(3,11,Jt)+get_Hterms_SS(3,12,Jh), # (1,0)
+            (1,1): get_Hterms_SS(3,7,Jt)+get_Hterms_SS(4,7,Jh),   # (1,1)
+            (0,-1): get_Hterms_SS(1,11,Jt)+get_Hterms_SS(2,11,Jh),   # (0,-1)
+            (-1,0): get_Hterms_SS(5,9,Jt)+get_Hterms_SS(6,9,Jh), # (-1,0)
+            (-1,-1): get_Hterms_SS(1,9,Jt)+get_Hterms_SS(1,10,Jh)}   # (-1,-1)
+        U= {d: spiral_u( (2./3., 2./3.),d, sign=1) for d in inter_terms.keys()}
+    elif convention in ['G']:
+        inter_terms= {                                     # (a1,a2) G
+            (1,0): get_Hterms_SS(5,7,Jt)+get_Hterms_SS(5,8,Jh),    # (1,0)  H_eff[0]
+            (0,-1): get_Hterms_SS(1,9,Jt)+get_Hterms_SS(1,10,Jh),  # (0,-1) H_eff[1]
+            (-1,1): get_Hterms_SS(3,11,Jt)+get_Hterms_SS(3,12,Jh), # (-1,1) [=a1_S]
+            (-1,0): get_Hterms_SS(1,5+6,Jt)+get_Hterms_SS(2,5+6,Jh),   # (-1,0)
+            (0,1): get_Hterms_SS(3,1+6,Jt)+get_Hterms_SS(4,1+6,Jh),    # (0,1)
+            (1,-1): get_Hterms_SS(5,3+6,Jt)+get_Hterms_SS(6,3+6,Jh)}   # (1,-1)
+        U= {d: spiral_u( (2./3., 2./3.),d, sign=-1) for d in inter_terms.keys()}
+    else:
+        raise ValueError(f"Unknown convention {convention}")
+    
+    # Cast to format expected by energy evaluation functions. From dummy--O_s1,s1'--...--O_s12,s12'--dummy to 
+    # 
+    # dummy--M_{s1,...,s6}--M_{s1',...,s6'}--M_{s7...s12}--M_{s7'...s12'}--dummy
+    #
+    def _cast_mpo(mpo):
+        O1= yastn.ncon( tuple(mpo[i] for i in range(0,6)), \
+                   [[-0,-1,1,-7],[1,-2,2,-8],[2,-3,3,-9],[3,-4,4,-10],[4,-5,5,-11],[5,-6,-13,-12]] )
+        O1= O1.to_dense()
+        O1= O1.reshape([2**6,]*2 + [O1.shape[-1],])
+        U0,S0,V1h= torch.linalg.svd(O1.reshape(2**6, -1), full_matrices=False, driver='gesvd' if O1.is_cuda else None)
+
+        O2= yastn.ncon( tuple(mpo[i] for i in range(6,12)), \
+                   [[-0,-1,1,-7],[1,-2,2,-8],[2,-3,3,-9],[3,-4,4,-10],[4,-5,5,-11],[5,-6,-13,-12]] )
+        O2= O2.to_dense()
+        O2= O2.reshape([O2.shape[0],]+[2**6,]*2)
+        U2,S2,V2h= torch.linalg.svd(O2.reshape(O2.shape[0] * 2**6, -1), full_matrices=False, driver='gesvd' if O2.is_cuda else None)
+        return [ U0.unsqueeze(0), (S0[:,None]*V1h).reshape(U0.shape[-1:] + O1.shape[1:]), \
+                U2.reshape( O2.shape[:2] + U2.shape[-1:] ), (S2[:,None]*V2h).unsqueeze(-1) ]
+
+    h_mpos= {d: generate_mpo(yastn_s12.I(), opts_svd=None, N=2*6,\
+        terms= get_intra_SS(Jd, Jh, Jt, offset=0)+get_intra_SS(Jd, Jh, Jt, offset=6)+inter_terms[d]) for d in inter_terms.keys()}
+
+    return {d: _cast_mpo(h_mpos[d]) for d in h_mpos.keys()}, U
+
 
 def main():
     cfg.configure(args)
@@ -223,18 +349,21 @@ def main():
     state.add_noise(args.instate_noise)
     print(state)
 
-
     """2.3.1.1 Construct bond Hamiltonians [if necessary] and unitaries and save them in file. Otherwise, read them from file
     #         Note: For HPC simulations, this is negligible overhead"""
-    # import os
-    # if os.path.isfile(f"H_eff_Jd{args.Jd}-Jh{args.Jh}-Jt{args.Jt}.pt"):
-    #     data = torch.load("H_eff_Jd{args.Jd}-Jh{args.Jh}-Jt{args.Jt}.pt", weights_only=True)
-    #     H_eff = data["H_eff"]
-    #     U = data["U"]
-    # else:
-    H_eff, U= H_mapleleaf_coarsegrained(Jd=args.Jd, Jh=args.Jh, Jt=args.Jt)
-    # torch.save({"H_eff": H_eff, "U": U}, "H_eff_Jd{args.Jd}-Jh{args.Jh}-Jt{args.Jt}.pt")
-
+    import os
+    _test_Heff_path= f"H_eff_Jd{args.Jd}-Jh{args.Jh}-Jt{args.Jt}.pt"
+    if os.path.isfile(_test_Heff_path):
+        data = torch.load(_test_Heff_path, weights_only=True)
+        H_eff = data["H_eff"]
+        U = data["U"]
+        print(f"Loaded H_eff and U from {_test_Heff_path}")
+    else:
+        t0= time.perf_counter()
+        H_eff, U= H_mapleleaf_coarsegrained(Jd=args.Jd, Jh=args.Jh, Jt=args.Jt)
+        torch.save({"H_eff": H_eff, "U": U}, _test_Heff_path)
+        t1= time.perf_counter()
+        print(f"Constructed H_eff and U in {t1-t0} [s]. Saving to {_test_Heff_path}")
 
     """## 2.4 Evaluate energy using MPS representation of interaction operators
     This avoids working with open large (~ 2**6) physical indices.
@@ -244,25 +373,80 @@ def main():
     # 2.4.1.1 Construct mps representation of bond Hamiltonians [if necessary] and save them in file. Otherwise, read them from file
     #   Note: For HPC simulations, this is negligible overhead
     import os
-    mpo_fp= f"H_eff_mps_Jd{args.Jd}-Jh{args.Jh}-Jt{args.Jt}.pt"
-    if os.path.isfile(mpo_fp):
-        data = torch.load(mpo_fp, weights_only=True, map_location=cfg.global_args.device)
+    _test_HeffMPS_path= f"H_eff_mps_Jd{args.Jd}-Jh{args.Jh}-Jt{args.Jt}.pt"
+    if os.path.isfile(_test_HeffMPS_path):
+        data = torch.load(_test_HeffMPS_path, weights_only=True)
         H_eff_mps = data["H_eff_mps"]
-        log.info(f"Loaded H_eff_mps from file {mpo_fp}")
+        U_mps= data["U_mps"]
+        print(f"Loaded H_eff_mps from {_test_HeffMPS_path}")
     else:
         t0= time.perf_counter()
-        # We need to permute indices of the effective Hamiltonian apporiately to get compact (small bond dimension) MPS
-        H_eff_mps= [dict(zip(('U','S'),rdm.get_exact_mps(H_eff[i].reshape((dphys_1dof**ndofs,)*4).permute(0,2,1,3), min_S=1.0e-12))) for i in range(3)]
-        # let's add the overall scale of the H_eff to the last mps tensor for each of the three terms
-        for i in range(3):
-            H_eff_mps[i]['U'][-1]= H_eff_mps[i]['U'][-1]*H_eff_mps[i]['S'][-1]
-        torch.save({"H_eff_mps": H_eff_mps,}, mpo_fp)
-        log.info(f"Compute H_eff_mps and store to file {mpo_fp} in {time.perf_counter()-t0} [s]")
+        H_eff_mps, U_mps= H_mapleleaf_mpo_yastn(Jd=args.Jd, Jh=args.Jh, Jt=args.Jt, global_args= cfg.global_args, convention='G')
+        torch.save({"H_eff_mps": H_eff_mps, "U_mps": U_mps}, _test_HeffMPS_path)
+        t1= time.perf_counter()
+        print(f"Constructed H_eff_mps in {t1-t0} [s]. Saving to {_test_HeffMPS_path}")
 
+    def get_energy(state, ctm_env):
+        # 2.3.2.1 let's get 2-site RDM of (1,0) bond  (2x1 or horizontal bond or 2 columns x 1 row)
+        #
+        #       -->x
+        #      |   site(0,0) site(1,0) => with unitary s0 (U s1 U^\dag)
+        #      V
+        #      y
+        #
+        #         and evaluate spin-spin interactions between all possible bonds of two triangles (containing 6 coarse grained sites).
+        #         The indices are sorted as |ket>_site(0,0)|ket>_site(1,0)<bra|_site(0,0)<bra|_site(1,0)
+        r2x1 = rdm.rdm2x1((0,0), state, ctm_env, mode='sl', sym_pos_def=False, force_cpu=False,
+            unroll=[], checkpoint_unrolled=False, checkpoint_on_device=False, verbosity=0)
+
+        # 2.3.2.2 This is the place, where we can conveniently insert (any) unitary rotation, i.e. by conjugating RDM
+        #         with a unitary U acting on site (1,0)
+        #
+        r2x1= torch.einsum(r2x1,[0,1,2,3],U[0],[11,1],U[0],[12,3],[0,11,2,12])
+        ebond_2x1= torch.einsum('ijab,abij',r2x1,H_eff[0].reshape((dphys_1dof**ndofs,)*4))
+
+        # 2.3.2.3 Repeat this evaluation for remaining non-equivalents bonds (using appropriate U if present)
+        #         RDM of (0,1) bond (1x2 or vertical or 2 columns x 1 row)
+        #
+        #       -->x
+        #      |   site(0,0) => with unitary  s0
+        #      V   site(0,1)                 (U s1 U^\dag)
+        #      y
+        #
+        r1x2 = rdm.rdm1x2((0,0), state, ctm_env, mode='sl', sym_pos_def=False, force_cpu=False,
+            unroll=[], checkpoint_unrolled=False, checkpoint_on_device=False, verbosity=0)
+        r1x2= torch.einsum(r1x2,[0,1,2,3],U[1],[11,1],U[1],[12,3],[0,11,2,12])
+        ebond_1x2= torch.einsum('ijab,abij',r1x2,H_eff[1].reshape((dphys_1dof**ndofs,)*4))
+
+        # RDM of (1,-1) (diagonal of 2 columns x 2 rows)
+        #
+        #       -->x
+        #      |   x         site(1,-1) => with unitary  x  (U s1 U^\dag)
+        #      V   site(0,0) x                           s0  x
+        #      y
+        #
+        r2x2_1n1 = rdm.rdm2x2_NNN_1n1((0,0), state, ctm_env, sym_pos_def=False, force_cpu=False,
+        unroll=False, checkpoint_unrolled=False, checkpoint_on_device=False, verbosity=0)
+        r2x2_1n1= torch.einsum(r2x2_1n1,[0,1,2,3],U[2],[11,1],U[2],[12,3],[0,11,2,12])
+        ebond_2x2_1n1= torch.einsum('ijab,abij',r2x2_1n1,H_eff[2].reshape((dphys_1dof**ndofs,)*4))
+
+        return ebond_2x1, ebond_1x2, ebond_2x2_1n1
 
     """### 2.4.2 Define energy evaluation based on mps format of operators"""
-    def get_energy_mps(state, ctm_env):
-
+    default_H_mpos= [ H_eff_mps[ (1,0) ], H_eff_mps[ (0,1) ], H_eff_mps[ (1,-1) ] ]
+    default_U= [ U_mps[ (1,0) ], U_mps[ (0,1) ], U_mps[ (1,-1) ] ]
+    # previous version
+    # default_H_mpos= [ H_eff_mps[ (1,0) ], H_eff_mps[ (0,-1) ], H_eff_mps[ (-1,1) ] ]
+    # default_U= [ U_mps[ (1,0) ], U_mps[ (1,0) ], U_mps[ (1,0) ] ]
+    def get_energy_mpo(state, ctm_env, H_mpos= default_H_mpos, U= default_U):
+        """
+        H_mpos: list[list[torch.Tensor]] 
+            list of three 4-site MPOs representing bond Hamiltonians to be evaluated on RDMs
+            rdm2x1, rdm1x2, rdm2x2_1n1 in this order
+        U:  list[torch.Tensor]
+            list of three unitaries associated with action of each MPO. These are used to conjugate H_eff_mps,
+            always acting on second site of each bond
+        """
         # 2.4.2.1 This is the place, where we can conveniently insert (any) unitary rotation, i.e. by conjugating operator
         #         or in this case, its mps representation with a unitary U acting on site (1,0)
         #         The einsum expression for Tr(U[0],rho2x1,U[0]^\dag,H_eff[0]) is::
@@ -272,10 +456,10 @@ def main():
         #         From here, we can read how to conjugate mps representation of H_eff[0] with U[0]
         #
         h_eff_10= [
-            H_eff_mps[0]['U'][0],
-            H_eff_mps[0]['U'][1],
-            torch.einsum('apb,ps->asb',H_eff_mps[0]['U'][2],U[0]),
-            torch.einsum('apb,ps->asb',H_eff_mps[0]['U'][3],U[0])
+            H_mpos[0][0],
+            H_mpos[0][1],
+            torch.einsum('apb,ps->asb',H_mpos[0][2],U[0]),
+            torch.einsum('apb,ps->asb',H_mpos[0][3],U[0])
         ]
 
         # Let's evaluate this operator and the norm on 2-site RDM of (1,0) bond (2x1 or horizontal bond or 2 columns x 1 row)
@@ -298,10 +482,10 @@ def main():
         #      y
         #
         h_eff_01= [
-            H_eff_mps[1]['U'][0],
-            H_eff_mps[1]['U'][1],
-            torch.einsum('apb,ps->asb',H_eff_mps[1]['U'][2],U[1]),
-            torch.einsum('apb,ps->asb',H_eff_mps[1]['U'][3],U[1])
+            H_mpos[1][0],
+            H_mpos[1][1],
+            torch.einsum('apb,ps->asb',H_mpos[1][2],U[1]),
+            torch.einsum('apb,ps->asb',H_mpos[1][3],U[1])
         ]
         ebond_1x2,I1x2 = rdm.eval_mpo_rdm1x2((0,0), state, ctm_env, h_eff_01, sym_pos_def=False, force_cpu=False,
             unroll=[], checkpoint_unrolled=False, checkpoint_on_device=False, verbosity=0)
@@ -314,10 +498,10 @@ def main():
         #      y
         #
         h_eff_1n1= [
-            H_eff_mps[2]['U'][0],
-            H_eff_mps[2]['U'][1],
-            torch.einsum('apb,ps->asb',H_eff_mps[2]['U'][2],U[1]),
-            torch.einsum('apb,ps->asb',H_eff_mps[2]['U'][3],U[1])
+            H_mpos[2][0],
+            H_mpos[2][1],
+            torch.einsum('apb,ps->asb',H_mpos[2][2],U[2]),
+            torch.einsum('apb,ps->asb',H_mpos[2][3],U[2])
         ]
         ebond_2x2_1n1,I2x2_1n1 = rdm.eval_mpo_rdm2x2_NNN_1n1((0,0), state, ctm_env, h_eff_1n1, sym_pos_def=False, force_cpu=False,
             unroll=False, checkpoint_unrolled=False, checkpoint_on_device=False, verbosity=0)
@@ -328,7 +512,6 @@ def main():
     """# 3. Optimization
     ## 3.1 Define loss function
     """
-
     # 3.1.1 We will track convergence of CTM using spectra of CTM's corners
     #       Lets modify generic conv. check to print convergence info
     #
@@ -374,7 +557,7 @@ def main():
         # OR
         #
         # evaluate compact mps representation of H_eff operators
-        e_bonds, norm_bonds= get_energy_mps(state, ctm_env_out)
+        e_bonds, norm_bonds= get_energy_mpo(state, ctm_env_out)
         loss= sum(e_bonds)
         t1_e_eval= time.perf_counter()
         print(f"time loss {t1_e_eval-t0_e_eval} [s]")
@@ -435,7 +618,7 @@ def main():
 
         # 3.4 evaluate loss
         t_loss0= time.perf_counter()
-        e_bonds, norm_bonds= get_energy_mps(state, env_pt)
+        e_bonds, norm_bonds= get_energy_mpo(state, env_pt)
         loss= sum(e_bonds)
         t_loss1= time.perf_counter()
 
@@ -472,6 +655,17 @@ def main():
             Ss= [ torch.einsum(r1x1,_make_r1x1_inds(i),s2.S(),[51,20+i,20+i+ndofs]) for i in range(ndofs) ]
             print(f"{epoch}, {loss}, "+ ", ".join([f"i={i} (Sz,Sx,Sy)= ({Ss[i]}" for i in range(len(Ss))]) )
 
+            # compute NN spin-spin correlations
+            r1x1_12= torch.einsum('IJlmnoABlmno->IJAB',r1x1)
+            r1x1_34= torch.einsum('lmIJnolmABno->IJAB',r1x1)
+            r1x1_56= torch.einsum('lmnoIJlmnoAB->IJAB',r1x1)
+            r1x1_24= torch.einsum('lImJnolAmBno->IJAB',r1x1)
+            r1x1_46= torch.einsum('lmnIoJlmnAoB->IJAB',r1x1)
+            r1x1_62= torch.einsum('lJmnoIlBmnoA->IJAB',r1x1)
+            for label,R in zip( ["12", "34", "56", "24", "46", "62"], [r1x1_12, r1x1_34, r1x1_56, r1x1_24, r1x1_46, r1x1_62] ):
+                SS_corr= torch.einsum('IJAB,ABIJ',R,s2.SS())
+                print(f"<S.S>_{label}= {SS_corr}")
+
             # test ENV sensitivity
             if args.test_env_sensitivity:
                 loc_ctm_args= copy.deepcopy(opt_context["ctm_args"])
@@ -479,7 +673,7 @@ def main():
                 ctm_env_out1= ctm_env.extend(ctm_env.chi+10)
                 ctm_env_out1, *ctm_log= ctmrg.run(state, ctm_env_out1, \
                     conv_check=f_conv_ctm_opt, ctm_args=loc_ctm_args)
-                e_bonds, norm_bonds= get_energy_mps(state, ctm_env_out1)
+                e_bonds, norm_bonds= get_energy_mpo(state, ctm_env_out1)
                 loss1= sum(e_bonds)
                 delta_loss= opt_context['loss_history']['loss'][-1]-opt_context['loss_history']['loss'][-2]\
                     if len(opt_context['loss_history']['loss'])>1 else float('NaN')
@@ -502,10 +696,10 @@ def main():
     # converge initial environment
     ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=f_conv_ctm_opt)
     # evaluate observables on initial state
+    E0_bonds= get_energy_mpo(state, ctm_env)
     print("epoch, loss, obs")
-    f_obs_opt(state, ctm_env, {'loss_history': {'loss': [float('NaN')]}, 'ctm_args': cfg.ctm_args})
+    f_obs_opt(state, ctm_env, {'loss_history': {'loss': [sum(E0_bonds[0]).item()]}, 'ctm_args': cfg.ctm_args})
 
-    
     # We enter optimization
     def post_proc(state, ctm_env, opt_context):
         with torch.no_grad():
