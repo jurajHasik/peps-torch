@@ -3,9 +3,8 @@ from typing import Sequence, Union, TypeVar
 import json
 import torch
 from ipeps.tensor_io import NumPy_Encoder
-import yastn.yastn as yastn
 from yastn.yastn import Tensor, load_from_dict, save_to_dict
-from yastn.yastn.tn.fpeps import Peps, RectangularUnitcell
+from yastn.yastn.tn.fpeps import Peps, Lattice
 import config as cfg
 YASTN_CONFIG = TypeVar('YASTN_CONFIG')
 
@@ -50,6 +49,14 @@ class PepsAD(Peps):
         super().__init__(geometry=geometry,tensors=None)
         self.sync_()
 
+    def to_Peps(self) -> Peps:
+        r"""
+        :return: underlying Peps state
+        :rtype: Peps
+
+        Returns the underlying Peps state with on-site tensors built from parameters.
+        """
+        return Peps(geometry=self.geometry, tensors={site: self[site] for site in self.sites()})
 
     def sync_(self):
         r"""
@@ -66,19 +73,27 @@ class PepsAD(Peps):
             self[site] = self.parameters[site]
 
 
+    def normalize_(self):
+        r"""
+        Nomralize parameters by their inf-norms.
+        """
+        def norm(t):
+            t._data = t._data.div_(torch.linalg.norm(t._data, ord=float('inf')))
+            return t
+
+        self.parameters = apply_and_copy(self.parameters, norm)
+        self.sync_()
+
     def add_noise_(self, noise : float =0.1):
         r"""
         Add random noise with magnitude ``noise`` to parameters.
         """
-        # self.parameters= apply_and_copy( self.parameters, lambda x: x + noise * yastn.rand_like(x) )
-        # self.parameters= apply_and_copy( self.parameters, lambda x: x + noise * x.norm()*yastn.rand_like(x) )
         def add_raw_data_noise(t):
-            # t._data = t._data + noise*torch.rand_like(t._data)
-            t._data = t._data*(1+noise*torch.rand_like(t._data))
+            t._data = t._data + noise*torch.rand_like(t._data)
+            # t._data = t._data*(1+noise*torch.rand_like(t._data))
             return t
         self.parameters= apply_and_copy( self.parameters, add_raw_data_noise)
         self.sync_()
-
 
     def get_parameters(self):
         r"""
@@ -169,7 +184,7 @@ class PepsAD(Peps):
             "type": type(self).__name__,
             "lattice": type(self.geometry).__name__,
             "dims": self.dims,
-            "geometry": self.geometry.__dict__(),
+            "geometry": self.geometry.to_dict(),
             "parameters": apply_and_copy(self.parameters, save_to_dict),
         }
         return d
@@ -187,7 +202,7 @@ class PepsAD(Peps):
                     return k
             _parameters= apply_and_copy(d['parameters'], lambda x: load_from_dict(yastn_config,x), f_keys=remap_keys)
             d['parameters']= _parameters
-        return PepsAD(geometry=RectangularUnitcell(**d['geometry']),
+        return PepsAD(geometry=Lattice.from_dict(d['geometry']),
             parameters= d['parameters'],
             global_args=cfg.global_args
         )

@@ -15,8 +15,8 @@ from yastn.yastn.tn.fpeps import EnvCTM
 from ctm.generic.env_yastn import YASTN_PROJ_METHOD
 from yastn.yastn.sym import sym_U1
 from yastn.yastn.tn.fpeps.envs.rdm import *
-from yastn.yastn.tn.fpeps.envs.fixed_pt import FixedPoint, fp_ctmrg
-from ipeps.integration_yastn import load_PepsAD
+from yastn.yastn.tn.fpeps.envs.fixed_pt import FixedPoint,fp_ctmrg
+from ipeps.integration_yastn import PepsAD, load_PepsAD
 from optim.ad_optim_lbfgs_mod import optimize_state
 
 from models.fermion.tv_model import *
@@ -134,8 +134,6 @@ def main():
 
         opts_svd = {
             "D_total": cfg.main_args.chi,
-            'D_krylov':cfg.main_args.chi,
-            'D_block': cfg.main_args.chi,
             "tol": cfg.ctm_args.projector_svd_reltol,
             "eps_multiplet": cfg.ctm_args.projector_eps_multiplet,
             "truncate_multiplets": True,
@@ -143,24 +141,24 @@ def main():
         ctm_env_out = fp_ctmrg(ctm_env_in, \
             ctm_opts_fwd={'opts_svd': opts_svd, 'corner_tol': cfg.ctm_args.ctm_conv_tol, 'max_sweeps': cfg.ctm_args.ctm_max_iter,
                 'method': "2site", 'use_qr': False, 'svd_policy': YASTN_PROJ_METHOD[ctm_args.projector_svd_method], \
-                "svds_thresh":ctm_args.fwd_svds_thresh, 'verbosity': 3}, \
+                "svds_thresh":ctm_args.fwd_svds_thresh}, \
             ctm_opts_fp={'svd_policy': 'fullrank'})
-
         d = ctm_env_out.to_dict()
         with open(args.out_prefix + "_ctm_env_dict", "wb") as f:
             pickle.dump(d, f)
+
         ctm_log, t_ctm, t_check = FixedPoint.ctm_log, FixedPoint.t_ctm, FixedPoint.t_check
         # 2) evaluate loss with converged environment
         t_loss_before = time.perf_counter()
         loss = model.energy_per_site(state, ctm_env_out, eval_checkpoint="nonreentrant")  # H= H_0 - mu * (nA + nB)
         t_loss_after = time.perf_counter()
         t_loss = t_loss_after - t_loss_before
+        log.info(f"energy: {loss}")
         return (loss, ctm_env_out, *ctm_log, t_ctm, t_check, t_loss)
 
     @torch.no_grad()
     def post_proc(stateAD, env, opt_context):
-        stateAD.sync_()
-        stateAD.normalize_()
+        pass
 
     @torch.no_grad()
     def obs_fn(stateAD, ctm_env, opt_context):
@@ -185,29 +183,16 @@ def main():
                 )
             )
 
-        obs = model.eval_obs(stateAD, ctm_env)
+        obs = model.eval_obs(stateAD.to_Peps(), ctm_env)
         log.info(json.dumps(obs))
 
     if args.instate is None or not os.path.exists(args.instate):
         if args.pattern == '1x1':
             stateAD = random_1x1_state_U1(bond_dims=bond_dims, config=yastn_config)
-        elif args.pattern == '3x3':
-            stateAD = random_3x3_state_U1(bond_dims=bond_dims, config=yastn_config)
-        elif args.pattern == '3x3_2':
-            stateAD = random_3x3_2_state_U1(bond_dims=bond_dims, config=yastn_config)
-        elif args.pattern == '3x3_9':
-            stateAD = random_3x3_9_state_U1(bond_dims=bond_dims, config=yastn_config)
-        elif args.pattern == '1x3':
-            stateAD = random_1x3_state_U1(bond_dims=bond_dims, config=yastn_config)
-        elif args.pattern == '1x6':
-            stateAD = random_1x6_state_U1(bond_dims=bond_dims, config=yastn_config)
-        elif args.pattern == '3x1':
-            stateAD = random_3x1_state_U1(bond_dims=bond_dims, config=yastn_config)
         else:
             raise ValueError(f"Unknown pattern: {args.pattern}")
     else:
         stateAD = load_PepsAD(yastn_config, args.instate)
-        stateAD.normalize_()
         log.log(logging.INFO, "loaded " + args.instate)
         print("loaded ", args.instate)
         stateAD.add_noise_(args.instate_noise)
@@ -216,7 +201,6 @@ def main():
     env_leg = yastn.Leg(yastn_config, s=1, t=(0,), D=(chi,))
     ctm_env_in = EnvCTM(stateAD.to_Peps(), init=cfg.ctm_args.ctm_env_init_type, leg=env_leg)
 
-    # load env from the previous file, if it exists
     def load_env_from_dict(env, d, yastn_config):
         assert d['class'] == 'EnvCTM'
         for site in d['data']:
@@ -225,17 +209,11 @@ def main():
 
         return env
 
-    suffix = "_state.json"
-    if args.instate is not None:
-        in_env_dict_file = args.instate[:-len(suffix)] + "_ctm_env_dict"
-
-        rerun=False
-        if os.path.exists(in_env_dict_file) and not rerun:
-            print(in_env_dict_file)
-            with open(in_env_dict_file, "rb") as f:
-                d = pickle.load(f)
-            ctm_env_in = load_env_from_dict(ctm_env_in, d, yastn_config)
-
+    rerun = True
+    if os.path.exists(args.out_prefix + "_ctm_env_dict") and not rerun:
+        with open(args.out_prefix + "_ctm_env_dict", "rb") as f:
+            d = pickle.load(f)
+        ctm_env_in = load_env_from_dict(ctm_env_in, d, yastn_config)
 
     if args.eval_loss:
         opt_context = {"ctm_args": cfg.ctm_args, "opt_args": cfg.opt_args}
