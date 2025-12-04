@@ -11,7 +11,7 @@ import numpy as np
 import torch
 
 import yastn.yastn as yastn
-from yastn.yastn.tn.fpeps import EnvCTM
+from yastn.yastn.tn.fpeps import EnvCTM, Peps2Layers
 from ctm.generic.env_yastn import YASTN_PROJ_METHOD
 from yastn.yastn.sym import sym_U1
 from yastn.yastn.tn.fpeps.envs.rdm import *
@@ -49,6 +49,7 @@ parser.add_argument(
 parser.add_argument("--mu", type=float, default=0.0, help="chemical potential")
 parser.add_argument("--m", type=float, default=0.0, help="Semenoff mass")
 parser.add_argument("--eval_loss", action='store_true')
+parser.add_argument("--devices", help='cpu or (list of) cuda. Default is cpu', default=None, dest='devices', nargs="+")
 
 def parse_dict(input_string):
     try:
@@ -104,11 +105,15 @@ def main():
     cfg.configure(args)
     cfg.print_config()
 
+    # process devices
+    ctm_devices= ['cpu'] if args.devices is None else args.devices
+
     yastn_config = yastn.make_config(
         backend=backend,
         sym=sym_U1,
         fermionic=True,
-        default_device=cfg.global_args.device,
+        # default_device=cfg.global_args.device,
+        default_device=args.devices[0],
         default_dtype=cfg.global_args.dtype,
         tensordot_policy="no_fusion",
     )
@@ -144,8 +149,7 @@ def main():
             ctm_opts_fwd={'opts_svd': opts_svd, 'corner_tol': cfg.ctm_args.ctm_conv_tol, 'max_sweeps': cfg.ctm_args.ctm_max_iter,
                 'method': "2site", 'use_qr': False, 'svd_policy': YASTN_PROJ_METHOD[ctm_args.projector_svd_method], \
                 "svds_thresh":ctm_args.fwd_svds_thresh, 'verbosity': 3}, \
-            ctm_opts_fp={'svd_policy': 'fullrank'})
-
+            ctm_opts_fp={'svd_policy': 'fullrank'}, fwd_devices=ctm_devices)
         d = ctm_env_out.to_dict()
         with open(args.out_prefix + "_ctm_env_dict", "wb") as f:
             pickle.dump(d, f)
@@ -234,7 +238,8 @@ def main():
             print(in_env_dict_file)
             with open(in_env_dict_file, "rb") as f:
                 d = pickle.load(f)
-            ctm_env_in = load_env_from_dict(ctm_env_in, d, yastn_config)
+            ctm_env_in = yastn.from_dict(d)
+            ctm_env_in.psi = Peps2Layers(bra=stateAD.to_Peps())
 
 
     if args.eval_loss:

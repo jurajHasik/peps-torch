@@ -4,7 +4,8 @@ import json
 import torch
 from ipeps.tensor_io import NumPy_Encoder
 from yastn.yastn import Tensor, load_from_dict, save_to_dict
-from yastn.yastn.tn.fpeps import Peps, Lattice
+from yastn.yastn.tn.fpeps import Peps, RectangularUnitcell
+from yastn.yastn.tn.fpeps._geometry import LATTICE_CLASSES
 import config as cfg
 YASTN_CONFIG = TypeVar('YASTN_CONFIG')
 
@@ -128,6 +129,7 @@ class PepsAD(Peps):
                     _pattern[k]= d['geometry']['pattern'][k]
             d['pattern_key_to_id']= pattern_key_to_id
             d['geometry']['pattern']= _pattern
+            d['geometry']['type']= 'Lattice'
 
         # We don't make any assumption on (nested) structure of parameters. Hence, we remap keys of dicts
         # in parameters if necessary
@@ -202,10 +204,17 @@ class PepsAD(Peps):
                     return k
             _parameters= apply_and_copy(d['parameters'], lambda x: load_from_dict(yastn_config,x), f_keys=remap_keys)
             d['parameters']= _parameters
-        return PepsAD(geometry=Lattice.from_dict(d['geometry']),
-            parameters= d['parameters'],
-            global_args=cfg.global_args
-        )
+
+        if 'type' in d['geometry'] :
+            return PepsAD(geometry=LATTICE_CLASSES[d['geometry']['type']](**d['geometry']),
+                parameters= d['parameters'],
+                global_args=cfg.global_args
+            )
+        else:
+            return PepsAD(geometry=RectangularUnitcell(**d['geometry']),
+                parameters= d['parameters'],
+                global_args=cfg.global_args
+            )
 
 
 def load_PepsAD(yastn_config : YASTN_CONFIG, state_file : str)->PepsAD:
