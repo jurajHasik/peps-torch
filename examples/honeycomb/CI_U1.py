@@ -49,6 +49,7 @@ parser.add_argument(
 parser.add_argument("--mu", type=float, default=0.0, help="chemical potential")
 parser.add_argument("--m", type=float, default=0.0, help="Semenoff mass")
 parser.add_argument("--eval_loss", action='store_true')
+parser.add_argument("--devices", help='cpu or (list of) cuda. Default is cpu', default=None, dest='devices', nargs="+")
 
 def parse_dict(input_string):
     try:
@@ -96,13 +97,13 @@ def main():
         namespace=args,
     )
 
-
     if args.yast_backend == "torch":
         from yastn.yastn.backend import backend_torch as backend
     torch.set_num_threads(args.omp_cores)
     torch.set_num_interop_threads(args.omp_cores)
     cfg.configure(args)
     cfg.print_config()
+    ctm_devices= ['cpu'] if args.devices is None else args.devices
 
     yastn_config = yastn.make_config(
         backend=backend,
@@ -141,8 +142,8 @@ def main():
         ctm_env_out = fp_ctmrg(ctm_env_in, \
             ctm_opts_fwd={'opts_svd': opts_svd, 'corner_tol': cfg.ctm_args.ctm_conv_tol, 'max_sweeps': cfg.ctm_args.ctm_max_iter,
                 'method': "2site", 'use_qr': False, 'svd_policy': YASTN_PROJ_METHOD[ctm_args.projector_svd_method], \
-                "svds_thresh":ctm_args.fwd_svds_thresh}, \
-            ctm_opts_fp={'svd_policy': 'fullrank'})
+                "svds_thresh":ctm_args.fwd_svds_thresh, 'verbosity':3}, \
+            ctm_opts_fp={'svd_policy': 'fullrank'}, fwd_devices=ctm_devices)
         d = ctm_env_out.to_dict()
         with open(args.out_prefix + "_ctm_env_dict", "wb") as f:
             pickle.dump(d, f)

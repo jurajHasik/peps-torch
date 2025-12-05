@@ -329,22 +329,21 @@ class LBFGS_MOD(LBFGS):
                     try:
                         x_init = self._clone_param()
 
-                        def obj_func(x, t, d):
+                        def obj_func_strong_wolfe(x, t, d):
                             return self._directional_evaluate(closure, x, t, d)
-
                         new_loss, new_flat_grad, t, ls_func_evals = _strong_wolfe(
-                            obj_func, x_init, t, d, loss, flat_grad, gtd)
+                            obj_func_strong_wolfe, x_init, t, d, loss, flat_grad, gtd)
                         opt_cond = new_flat_grad.abs().max() <= tolerance_grad
                     except NoFixedPointError as e:
                         log.warning(f"strong_wolfe failed ({e}); falling back to Armijo backtracking.")
                         print(f"strong_wolfe failed ({e}); falling back to Armijo backtracking.")
                         self._set_param(x_init)
 
-                        def obj_func(t, x, d):
+                        def obj_func_armijo(t, x, d):
                             return self._directional_evaluate_derivative_free(closure_linesearch, t, x, d)
 
                         while t > line_search_eps:
-                            status, t, new_loss = _scalar_search_armijo(obj_func, loss, gtd, args=(x_init,d), alpha0=t/2.0)
+                            status, t, new_loss = _scalar_search_armijo(obj_func_armijo, loss, gtd, args=(x_init,d), alpha0=t/2.0)
                             if status is True:
                                 break
                             elif isinstance(status, NoFixedPointError):

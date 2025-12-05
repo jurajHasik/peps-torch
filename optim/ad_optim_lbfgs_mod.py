@@ -307,6 +307,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
                 # state = state.add_noise(noise=0.1)
                 state.add_noise_(noise=0.1)
 
+            new_loss, new_flat_grad = None, None
             parameters, optimizer= create_optimizer(state, main_args=main_args, opt_args=opt_args,
                 ctm_args=ctm_args, global_args=global_args)
             continue
