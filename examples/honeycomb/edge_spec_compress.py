@@ -1,4 +1,4 @@
-import os, sys, json, pickle, argparse
+import os, sys, json, pickle, argparse, time
 from itertools import cycle
 from functools import partial
 sys.path.insert(0, os.path.abspath('..'))
@@ -12,66 +12,46 @@ import yastn.yastn as yastn
 from yastn.yastn.sym import sym_Z2, sym_U1, sym_none
 from yastn.yastn.backend import backend_torch as backend
 from yastn.yastn.tn.fpeps import product_peps, RectangularUnitcell, Peps
-from yastn.yastn.tn.fpeps.envs.fixed_pt import refill_env, fp_ctmrg
-from yastn.yastn.tn.fpeps import EnvCTM
 from yastn.yastn import load_from_dict
-from ipeps.integration_yastn import PepsAD, load_PepsAD
+from yastn.yastn.tn.fpeps.envs._env_ctm_c4v import EnvCTM_c4v
+from yastn.yastn.tn.fpeps.envs._env_ctm import ctm_conv_corner_spec
+from yastn.yastn._split_combine_dict import split_data_and_meta, combine_data_and_meta
+from ipeps.integration_yastn import load_PepsAD
+
+def get_converged_env(env, method="2site", max_sweeps=100, opts_svd=None, corner_tol=1e-8, **kwargs):
+    t_ctm, t_check = 0.0, 0.0
+    converged, conv_history = False, []
+
+    ctm_itr= env.ctmrg_(iterator_step=1, method=method,  max_sweeps=max_sweeps,
+                opts_svd=opts_svd,
+                corner_tol=None, **kwargs)
+
+    for sweep in range(max_sweeps):
+        t0 = time.perf_counter()
+        ctm_out_info= next(ctm_itr)
+        t1 = time.perf_counter()
+        t_ctm += t1-t0
+
+        t2 = time.perf_counter()
+        converged, max_dsv, conv_history = ctm_conv_corner_spec(env, conv_history, corner_tol)
+        t_check += time.perf_counter()-t2
+        # print(f"CTM iter {len(conv_history)} |delta_C| {max_dsv} t {t1-t0} [s]")
+
+        if converged:
+            break
+
+    return env, converged, conv_history, t_ctm, t_check
 
 
-def load_env_from_dict(env, d, yastn_config):
-    assert d['class'] == 'EnvCTM'
-    for site in d['data']:
-        for dirn in d['data'][site]:
-            setattr(env[site], dirn, yastn.load_from_dict(yastn_config, d['data'][site][dirn]))
-
-    return env
-
-def analyze_momentum_sector_unit_L(vals, evecs, meta, unit_L, Lx, k_shift=0):
-    # unit_L: linear length of the unit-cell; Lx: width of the cylinder
-    def translation(V):
-        # With sigma_z on Lx-1
-        for i in range(Lx):
-
-        # Without sigma_z on Lx-1
-        # for i in range(Lx-1):
-            V = V.swap_gate(axes=(Lx-1, i))
-
-        translateddims = [(i - 1) % Lx for i in range(Lx)]
-        V = V.transpose(translateddims)
-        return V
-
-    evals = {}
-    for i, val in enumerate(vals):
-        cnt = 0
-        v0 = torch.as_tensor(evecs[:, i])
-        V = yastn.decompress_from_1d(v0, meta)
-        # fuse legs within a unit-cell
-        fuse_order = tuple(tuple(range(i, i + unit_L)) for i in range(0, Lx*unit_L, unit_L))
-        V = V.fuse_legs(axes=fuse_order)
-        # print((translation(V).to_dense()-np.exp()V.to_dense()))
-        for k in range(Lx):
-            k = k+k_shift
-            if (
-                yastn.linalg.norm(
-                    translation(V)
-                    - np.exp(1j * 2 * np.pi * (k) / Lx) * V
-                )
-                <= 1e-6
-            ):
-                if k not in evals:
-                    evals[k] = [val]
-                else:
-                    evals[k].append(val)
-                # break
-                cnt += 1
-        assert cnt == 1
-    return evals
-
-def Ts_to_MPO_list(env, start_site=0, dirn="x"):
+def Ts_to_MPO_list(env, start_site=0, dirn="x", c4v=False):
     if dirn == "x":
         TLs, TRs = [], []
         site = start_site
-        for _ in range(env.psi.dims[0]): # iterate in x-direction
+        if c4v:
+            Lx, Ly = 2, 2
+        else:
+            Lx, Ly = env.psi.dims[0], env.psi.dims[1]
+        for _ in range(Lx): # iterate in x-direction
             r_site = env.nn_site(site, "l") # env[r_site].r matches with env[site].l
             TL, TR = env[site].l, env[r_site].r
             TL = TL.transpose(axes=(2, 1, 0))
@@ -88,8 +68,8 @@ def Ts_to_MPO_list(env, start_site=0, dirn="x"):
         #  3                            3
 
         TR_cycle = [None]*len(TRs)
-        for i in range(0, env.psi.dims[0]):
-            TR_middle = TRs[i % env.psi.dims[0]]
+        for i in range(Lx):
+            TR_middle = TRs[i % Lx]
             TR_middle = TR_middle.swap_gate(axes=(2, 3))
             TR_cycle[i] = TR_middle.transpose(axes=(0, 1, 3, 2))
             #       0
@@ -101,8 +81,8 @@ def Ts_to_MPO_list(env, start_site=0, dirn="x"):
             #       2
 
         TL_cycle = [None]*len(TLs)
-        for i in range(0, env.psi.dims[0]):
-            TL_middle = TLs[i % env.psi.dims[0]]
+        for i in range(Lx):
+            TL_middle = TLs[i % Lx]
             TL_middle = TL_middle.swap_gate(axes=(2, 3))
             TL_cycle[i] = TL_middle.transpose(axes=(0, 2, 3, 1))
             #      0
@@ -113,7 +93,7 @@ def Ts_to_MPO_list(env, start_site=0, dirn="x"):
 
         return TR_cycle, TL_cycle
 
-def ent_spec_cylinder_Lx(yastn_config, TL_gen, TR_gen, Lx, L_unit, charge_sector=0, num_evals=8, APBC=True):
+def ent_spec_cylinder_Lx(yastn_config, TL_gen, TR_gen, Lx, unit_L, charge_sector=0, num_evals=8, APBC=True):
     # Compute the entanglement spectrum of PEPS ansatz for a cut specified by the start_site
     # Lx: width of the cylinder, measure in unit-cells (finite width along x-direction)
     # start_site: the site whose left-bond is crossed by the entanglement cut
@@ -123,7 +103,9 @@ def ent_spec_cylinder_Lx(yastn_config, TL_gen, TR_gen, Lx, L_unit, charge_sector
         # TR action
         TR = next(TR_gen)
         v0 = torch.as_tensor(v0, dtype=TR.dtype, device=TR.device)
-        V = yastn.decompress_from_1d(v0, meta)
+        d = combine_data_and_meta((v0,), meta)
+        V = yastn.from_dict(d)
+
         TR_start = TR.swap_gate(axes=(0, 3))
         V = TR_start.tensordot(V, ([3], [0]))
 
@@ -136,7 +118,7 @@ def ent_spec_cylinder_Lx(yastn_config, TL_gen, TR_gen, Lx, L_unit, charge_sector
         #   ...      |     |
         #  Lx+1 -----|-----|
 
-        for i in range(1, L_unit*Lx - 1):
+        for i in range(1, unit_L*Lx - 1):
             #
             #       | \                                  | \
             #   1--TR | |-----|                      3--TR |   |-----|
@@ -154,7 +136,7 @@ def ent_spec_cylinder_Lx(yastn_config, TL_gen, TR_gen, Lx, L_unit, charge_sector
             TR = next(TR_gen)
             V = V.swap_gate(axes=(0, i+2))
             V = TR.tensordot(V, ([0, 3], [i + 1, i + 2]))
-            order = list(range(2, i + 3)) + [0, 1] + list(range(i + 3, L_unit*Lx + 2))
+            order = list(range(2, i + 3)) + [0, 1] + list(range(i + 3, unit_L*Lx + 2))
             V = V.transpose(order)
 
         if not APBC:
@@ -162,13 +144,13 @@ def ent_spec_cylinder_Lx(yastn_config, TL_gen, TR_gen, Lx, L_unit, charge_sector
             V = V.swap_gate(axes=(0,0))
         TR = next(TR_gen)
         TR = TR.swap_gate(axes=(2, 3))
-        V = V.tensordot(TR, ([L_unit*Lx, L_unit*Lx + 1, 0], [0, 3, 2]))
+        V = V.tensordot(TR, ([unit_L*Lx, unit_L*Lx + 1, 0], [0, 3, 2]))
 
 
         TL = next(TL_gen)
         TL_start = TL.swap_gate(axes=(0, 1))
         V = TL_start.tensordot(V, ([3], [0]))
-        for i in range(1, L_unit*Lx - 1):
+        for i in range(1, unit_L*Lx - 1):
             # TL action (contract TL top with V)
             #
             #    / \                            / \
@@ -187,7 +169,7 @@ def ent_spec_cylinder_Lx(yastn_config, TL_gen, TR_gen, Lx, L_unit, charge_sector
             TL = next(TL_gen)
             V = TL.tensordot(V, ([0, 3], [i + 1, i + 2]))
             V = V.swap_gate(axes=(0,2))
-            order = list(range(2, i + 3)) + [0, 1] + list(range(i + 3, L_unit*Lx + 2))
+            order = list(range(2, i + 3)) + [0, 1] + list(range(i + 3, unit_L*Lx + 2))
             V = V.transpose(order)
 
         if not APBC:
@@ -195,14 +177,29 @@ def ent_spec_cylinder_Lx(yastn_config, TL_gen, TR_gen, Lx, L_unit, charge_sector
             V = V.swap_gate(axes=(0,0))
         TL = next(TL_gen)
         TL = TL.swap_gate(axes=(1, 2))
-        V = V.tensordot(TL, ([L_unit*Lx, L_unit*Lx + 1, 0], [0, 3, 2]))
-        v1, _ = yastn.Tensor.compress_to_1d(V, meta)
-        return v1.cpu().numpy()
+        V = V.tensordot(TL, ([unit_L*Lx, unit_L*Lx + 1, 0], [0, 3, 2]))
+
+        if APBC:
+            # With sigma_z on Lx-1
+            V = V.swap_gate(axes=(range((Lx-1)*unit_L, Lx*unit_L), range(Lx*unit_L)))
+        else:
+            # Without sigma_z on Lx-1
+            V = V.swap_gate(axes=(range((Lx-1)*unit_L, Lx*unit_L), range((Lx-1)*unit_L)))
+
+        # =========translation==========
+        translateddims = list(range((Lx-1)*unit_L, Lx*unit_L)) + list(range((Lx-1)*unit_L))
+        V = V.transpose(translateddims)
+
+        d1 = V.to_dict(level=2)
+        v1, _ = split_data_and_meta(d1)
+        return v1[0]
 
 
-    legs = [next(TR_gen).get_legs(axes=3).conj() for _ in range(L_unit*Lx)]
+    legs = [next(TR_gen).get_legs(axes=3).conj() for _ in range(unit_L*Lx)]
     v0 = yastn.rand(config=yastn_config, n=charge_sector, legs=legs)
-    data, meta = yastn.Tensor.compress_to_1d(v0)
+    d = v0.to_dict(level=0)
+    data, meta = split_data_and_meta(d)
+    data = data[0]
 
     sigma_L_sigma_R = LinearOperator(
         (len(data), len(data)),
@@ -210,11 +207,160 @@ def ent_spec_cylinder_Lx(yastn_config, TL_gen, TR_gen, Lx, L_unit, charge_sector
         dtype="complex128" if next(TL_gen).is_complex() else "float64",
     )
 
-    vals, evecs = eigs(
-        sigma_L_sigma_R, k=num_evals, v0=data.cpu().numpy(), which="LM", return_eigenvectors=True, maxiter=int(10**8)
+    vals = eigs(
+        sigma_L_sigma_R, k=num_evals, v0=data.cpu().numpy(), which="LM", return_eigenvectors=False, maxiter=int(10**8)
     )
 
-    return vals, evecs, meta
+    return vals[np.argsort(np.abs(vals))[::-1]]
+
+def translation(V, Lx, APBC=True):
+    if APBC:
+        # With sigma_z on Lx-1
+        for i in range(Lx):
+            V = V.swap_gate(axes=(Lx-1, i))
+    else:
+        # Without sigma_z on Lx-1
+        for i in range(Lx-1):
+            V = V.swap_gate(axes=(Lx-1, i))
+
+    translateddims = [(i - 1) % Lx for i in range(Lx)]
+    V = V.transpose(translateddims)
+    return V
+
+def project_k_sector(v, Lx, unit_L=1, k_sector=0, APBC=True):
+    # fuse legs within a unit-cell
+    fuse_order = tuple(tuple(range(i, i + unit_L)) for i in range(0, Lx*unit_L, unit_L))
+    v = v.fuse_legs(axes=fuse_order)
+
+    # symmetrization
+    sym_v = v
+    for i in range(1, Lx):
+        v = translation(v, Lx, APBC=APBC)
+        sym_v = sym_v + np.exp(-1j * 2 * np.pi * i * k_sector / Lx) * v
+
+    return sym_v.unfuse_legs(axes=list(range(Lx)))/Lx
+
+def  ent_spec_cylinder_Lx_k_sector(yastn_config, TL_gen, TR_gen, Lx, unit_L, k_sector, charge_sector=0, num_evals=8, APBC=True):
+    # Compute the entanglement spectrum of PEPS ansatz for a cut specified by the start_site
+    # Lx: width of the cylinder, measure in unit-cells (finite width along x-direction)
+    # start_site: the site whose left-bond is crossed by the entanglement cut
+
+    def mv(v0, meta):
+        # V: YASTN Tensor
+        # TR action
+        TR = next(TR_gen)
+        v0 = torch.as_tensor(v0, dtype=TR.dtype, device=TR.device)
+        d = combine_data_and_meta((v0,), meta)
+        V = yastn.from_dict(d)
+
+        # symmetrization to k-sector
+        V = project_k_sector(V, Lx, unit_L=unit_L, k_sector=k_sector, APBC=APBC)
+
+        TR_start = TR.swap_gate(axes=(0, 3))
+        V = TR_start.tensordot(V, ([3], [0]))
+
+        #
+        #       | \
+        #   1--TR |  |-----|
+        #    /-|--|--|     |
+        #      2  0  |  V  |
+        #    3 ------|     |
+        #   ...      |     |
+        #  Lx+1 -----|-----|
+
+        for i in range(1, unit_L*Lx - 1):
+            #
+            #       | \                                  | \
+            #   1--TR | |-----|                      3--TR |   |-----|
+            #    /-|--|-|     |                       /-|--|---|     |
+            #	   |  | |	  |							   |   |	 |
+            #   2--TR | |     |                      4--TR |   |     |
+            #    /-|--|-|     |                       /-|--|---|     |
+            #     ... | |     |        --->          ...   |   |     |
+            #   i-TR  | |  V  |                    0 --TR  |   |  V  |
+            #   /-|---|-|     |                       /-|--|---|     |
+            #    i+1  0 |     |                         1  2   |     |
+            #    i+2 ---|     |                       i+3 -----|     |
+            #             ...                               	 ...
+            # L*Lx+1 ---|-----|                    L*Lx+1 -----|-----|
+            TR = next(TR_gen)
+            V = V.swap_gate(axes=(0, i+2))
+            V = TR.tensordot(V, ([0, 3], [i + 1, i + 2]))
+            order = list(range(2, i + 3)) + [0, 1] + list(range(i + 3, unit_L*Lx + 2))
+            V = V.transpose(order)
+
+        if not APBC:
+            # add sigma_z to leg 0:
+            V = V.swap_gate(axes=(0,0))
+        TR = next(TR_gen)
+        TR = TR.swap_gate(axes=(2, 3))
+        V = V.tensordot(TR, ([unit_L*Lx, unit_L*Lx + 1, 0], [0, 3, 2]))
+
+
+        TL = next(TL_gen)
+        TL_start = TL.swap_gate(axes=(0, 1))
+        V = TL_start.tensordot(V, ([3], [0]))
+        for i in range(1, unit_L*Lx - 1):
+            # TL action (contract TL top with V)
+            #
+            #    / \                            / \
+            #    | TL---|-----|                 | TL---|-----|
+            #  1-|-|-\  |     |               3-|-|-\  |     |
+            #	 | |    |	  |				    | |    |	 |
+            #    | TL---|     |                 | TL---|     |
+            #  2-|-|-\	|     |               4-|-|-\  |     |
+            #    |...   |     |        --->     |...   |     |
+            #    | TL---|  V  |                 | TL---|  V  |
+            #  i-|-|-\  |     |               0-|-|-\  |     |
+            #    0 i+1  |     |                 2 1    |     |
+            #    i+2 ---|     |                 i+3 ---|     |
+            #             ...                            ...
+            # L*Lx+1 ---|-----|              L*Lx+1 ---|-----|
+            TL = next(TL_gen)
+            V = TL.tensordot(V, ([0, 3], [i + 1, i + 2]))
+            V = V.swap_gate(axes=(0,2))
+            order = list(range(2, i + 3)) + [0, 1] + list(range(i + 3, unit_L*Lx + 2))
+            V = V.transpose(order)
+
+        if not APBC:
+            # add sigma_z to leg 0:
+            V = V.swap_gate(axes=(0,0))
+        TL = next(TL_gen)
+        TL = TL.swap_gate(axes=(1, 2))
+        V = V.tensordot(TL, ([unit_L*Lx, unit_L*Lx + 1, 0], [0, 3, 2]))
+
+        if APBC:
+            # With sigma_z on Lx-1
+            V = V.swap_gate(axes=(range((Lx-1)*unit_L, Lx*unit_L), range(Lx*unit_L)))
+        else:
+            # Without sigma_z on Lx-1
+            V = V.swap_gate(axes=(range((Lx-1)*unit_L, Lx*unit_L), range((Lx-1)*unit_L)))
+
+        # symmetrization to k-sector
+        V = project_k_sector(V, Lx, unit_L=unit_L, k_sector=k_sector, APBC=APBC)
+
+        d1 = V.to_dict(level=2)
+        v1, _ = split_data_and_meta(d1)
+        return v1[0]
+
+
+    legs = [next(TR_gen).get_legs(axes=3).conj() for _ in range(unit_L*Lx)]
+    v0 = yastn.rand(config=yastn_config, n=charge_sector, legs=legs)
+    d = v0.to_dict(level=0)
+    data, meta = split_data_and_meta(d)
+    data = data[0]
+
+    sigma_L_sigma_R = LinearOperator(
+        (len(data), len(data)),
+        matvec=partial(mv, meta=meta) ,
+        dtype="complex128" if next(TL_gen).is_complex() else "float64",
+    )
+
+    vals = eigs(
+        sigma_L_sigma_R, k=num_evals, v0=data.cpu().numpy(), which="LM", return_eigenvectors=False, maxiter=int(10**8)
+    )
+
+    return vals[np.argsort(np.abs(vals))[::-1]]
 
 def compress_T_horizontal(T, D_max):
     T1 = T.fuse_legs(axes=(1, (0, 2, 3)))
@@ -310,46 +456,16 @@ def coarse_grain(mpo_list1, mpo_list2, D_phy, D_mpo, repeat=1):
 
     return o1, o2
 
-def analyze_momentum_sector_unit_L(vals, evecs, meta, unit_L, Lx, k_shift=0, APBC=True):
-    # unit_L: linear length of the unit-cell; Lx: width of the cylinder
-    def translation(V):
-        if APBC:
-            # With sigma_z on Lx-1
-            for i in range(Lx):
-                V = V.swap_gate(axes=(Lx-1, i))
-        else:
-            # Without sigma_z on Lx-1
-            for i in range(Lx-1):
-                V = V.swap_gate(axes=(Lx-1, i))
-
-        translateddims = [(i - 1) % Lx for i in range(Lx)]
-        V = V.transpose(translateddims)
-        return V
-
+def analyze_evals_momentum(vals, Lx):
     evals = {}
-    for i, val in enumerate(vals):
-        cnt = 0
-        v0 = torch.as_tensor(evecs[:, i])
-        V = yastn.decompress_from_1d(v0, meta)
-        # fuse legs within a unit-cell
-        fuse_order = tuple(tuple(range(i, i + unit_L)) for i in range(0, Lx*unit_L, unit_L))
-        V = V.fuse_legs(axes=fuse_order)
-        for k in range(Lx):
-            k = k+k_shift
-            if (
-                yastn.linalg.norm(
-                    translation(V)
-                    - np.exp(1j * 2 * np.pi * (k) / Lx) * V
-                )/yastn.linalg.norm(V)
-                <= 1e-1
-            ):
-                if k not in evals:
-                    evals[k] = [val]
-                else:
-                    evals[k].append(val)
-                # break
-                cnt += 1
-        assert cnt == 1
+    for i in range(len(vals)):
+        k = np.log(vals[i]).imag*Lx/2/np.pi
+        print(k)
+        if int(k) not in evals:
+            evals[int(k)] = [np.abs(vals[i])]
+        else:
+            evals[int(k)].append(np.abs(vals[i]))
+
     return evals
 
 
@@ -376,7 +492,7 @@ if __name__ == "__main__":
 
     D, env_chi = args.D, args.env_chi
     state_file, env_dict_file = args.state_file, args.env_dict_file
-    print(args.device, f"APBC: {args.APBC}")
+    print(f"run on {args.device}, APBC: {args.APBC}")
 
     yastn_config = yastn.make_config(
         backend=backend,
@@ -399,17 +515,12 @@ if __name__ == "__main__":
     }
 
     start_site=0
-    state = load_PepsAD(yastn_config, state_file)
-    env_leg = yastn.Leg(yastn_config, s=1, t=(0,), D=(env_chi,))
-    env = EnvCTM(state, init="eye", leg=env_leg)
-
-    with open(env_dict_file, "rb") as handle:
-        d = pickle.load(handle)
-    env = load_env_from_dict(env, d,  yastn_config)
-    print("Loaded Env")
-    print(env[(0,0)].l)
-    print(env[(1,0)].l)
-    print(env[(2,0)].l)
+    psi = load_PepsAD(config=yastn_config, state_file=state_file)
+    if os.path.exists(env_dict_file):
+        with open(env_dict_file, 'rb') as file:
+            d = pickle.load(file)
+        env = yastn.from_dict(d, config=yastn_config)
+        print("load env")
 
     # HOSVD
     D_max = args.Dcut
@@ -417,8 +528,6 @@ if __name__ == "__main__":
     start = env.sites()[0]
 
     mpo_R, mpo_L = Ts_to_MPO_list(env, start_site=start, dirn="x")
-    if not os.path.exists(args.mpo_dir):
-        os.makedirs(args.mpo_dir, exist_ok=True)
     mpos_file = os.path.join(args.mpo_dir, f"mpo_lists_D_{D:d}_D_compress_{D_max:d}_chi_{env_chi:d}")
 
     rerun = True
@@ -438,11 +547,17 @@ if __name__ == "__main__":
         with open(mpos_file, "wb") as f:
             pickle.dump((L_list_dicts, R_list_dicts), f)
 
-
     Lx = args.L
     n, unit_L = 0, 1
     id_charge = sym_U1.zero()
-    vals, evecs, meta = ent_spec_cylinder_Lx(yastn_config, cycle(L_list), cycle(R_list), Lx, unit_L, charge_sector=id_charge, num_evals=60, APBC=args.APBC)
-    vals_dict = analyze_momentum_sector_unit_L(vals/vals[0], evecs, meta, unit_L, Lx, k_shift=0, APBC=args.APBC)
+    vals_dict = {}
+
+    for k in range(Lx):
+        vals = ent_spec_cylinder_Lx_k_sector(yastn_config, cycle(L_list), cycle(R_list), Lx, unit_L, k_sector=k, charge_sector=id_charge, num_evals=8, APBC=args.APBC)
+        print(f"Momentum sector k={k}:", vals)
+        vals_dict[k] = vals
+
+    # vals, evecs, meta = ent_spec_cylinder_Lx(yastn_config, cycle(L_list), cycle(R_list), Lx, unit_L, charge_sector=id_charge, num_evals=60, APBC=args.APBC)
+    # vals_dict = analyze_momentum_sector_unit_L(vals/vals[0], evecs, meta, unit_L, Lx, k_shift=0, APBC=args.APBC)
     with open(args.output, "wb") as f:
         pickle.dump(vals_dict, f)
