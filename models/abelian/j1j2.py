@@ -1,5 +1,6 @@
 from math import sqrt
 import numpy as np
+from torch.utils.checkpoint import checkpoint
 import itertools
 import config as cfg
 import yastn.yastn as yastn
@@ -9,6 +10,7 @@ from ctm.generic_abelian import rdm
 from ctm.generic_abelian import corrf
 from ctm.one_site_c4v_abelian import rdm_c4v
 from ctm.one_site_c4v_abelian import corrf_c4v
+from ctm.generic_abelian.env_yastn import *
 
 
 class J1J2_NOSYM():
@@ -25,8 +27,8 @@ class J1J2_NOSYM():
 
         .. math:: H = J_1\sum_{<i,j>} h2_{ij} + J_2\sum_{<<i,j>>} h2_{ij}
 
-        on the square lattice. Where the first sum runs over the pairs of sites `i,j` 
-        which are nearest-neighbours (denoted as `<.,.>`), and the second sum runs over 
+        on the square lattice. Where the first sum runs over the pairs of sites `i,j`
+        which are nearest-neighbours (denoted as `<.,.>`), and the second sum runs over
         pairs of sites `i,j` which are next nearest-neighbours (denoted as `<<.,.>>`)::
 
             y\x
@@ -49,7 +51,7 @@ class J1J2_NOSYM():
         self.phys_dim=2
         self.j1=j1
         self.j2=j2
-        
+
         self.h2, self.h2x2_nn, self.h2x2_nnn= self.get_h()
         self.obs_ops= self.get_obs_ops()
 
@@ -57,15 +59,15 @@ class J1J2_NOSYM():
         irrep = su2.SU2_NOSYM(self.engine, self.phys_dim)
         I1= irrep.I()
         SS= irrep.SS()
-        
-        # 0        0->2                 0     1 
-        # I1--(x)--I1   => transpose => I1----I1 
+
+        # 0        0->2                 0     1
+        # I1--(x)--I1   => transpose => I1----I1
         # 1        1->3                 2     3
-        I2= contract(I1,I1,([],[])) 
+        I2= contract(I1,I1,([],[]))
         I2= permute(I2, (0,2,1,3))
-        
-        # 0 1      0 1->4 5                  0 1   2 3 
-        # SS--(x)--I2        => transpose => SS----I2 
+
+        # 0 1      0 1->4 5                  0 1   2 3
+        # SS--(x)--I2        => transpose => SS----I2
         # 2 3      2 3->6 7                  4 5   6 7
         h2x2_SS= contract(SS,I2,([],[]))
         h2x2_SS= permute(h2x2_SS, (0,1,4,5, 2,3,6,7))
@@ -73,7 +75,7 @@ class J1J2_NOSYM():
         h2x2_nn= h2x2_SS + permute(h2x2_SS, (2,3,0,1,6,7,4,5)) + permute(h2x2_SS, (0,2,1,3,4,6,5,7))\
             + permute(h2x2_SS, (2,0,3,1,6,4,7,5))
         h2x2_nnn= permute(h2x2_SS, (0,3,2,1,4,7,6,5)) + permute(h2x2_SS, (2,0,1,3,6,4,5,7))
-        
+
         return SS, h2x2_nn, h2x2_nnn
 
     def get_obs_ops(self):
@@ -93,8 +95,8 @@ class J1J2_NOSYM():
     #     :return: energy per site
     #     :rtype: float
 
-    #     We assume 1x1 iPEPS which tiles the lattice with a bipartite pattern composed 
-    #     of two tensors A, and B=RA, where R rotates approriately the physical Hilbert space 
+    #     We assume 1x1 iPEPS which tiles the lattice with a bipartite pattern composed
+    #     of two tensors A, and B=RA, where R rotates approriately the physical Hilbert space
     #     of tensor A on every "odd" site::
 
     #         1x1 C4v => rotation P => BIPARTITE
@@ -122,6 +124,19 @@ class J1J2_NOSYM():
 
     #     return energy_per_site
 
+    def _get_phys_allsectors(self,state,n):
+        # We want to guarantee all sectors are always present when converting to nonsymmetric,
+        # here we assume at least one leg has full spin-1/2 Hilbert space
+        _ref_leg= None
+        for coord,site in state.sites.items():
+            if sum(site.get_legs(0).D) == 2:
+                _ref_leg= site.get_legs(0)
+                break
+        assert _ref_leg is not None, "No leg with full spin-1/2 Hilbert space found"
+
+        _ref_legs={ **{i: _ref_leg for i in range(n)}, **{i: site.get_legs(0).conj() for i in range(n,2*n)} }
+        return _ref_legs
+
     def energy_2x1_or_2Lx2site_2x2rdms(self,state,env,**kwargs):
         r"""
 
@@ -133,48 +148,48 @@ class J1J2_NOSYM():
         :rtype: float
 
         Covered cases:
-    
+
         1) Assume iPEPS with 2x1 unit cell containing two tensors A, B. We can
         tile the square lattice in two ways::
 
-            BIPARTITE           STRIPE   
+            BIPARTITE           STRIPE
 
             A B A B             A B A B
             B A B A             A B A B
             A B A B             A B A B
             B A B A             A B A B
 
-        Taking reduced density matrix :math:`\rho_{2x2}` of 2x2 cluster with indexing 
+        Taking reduced density matrix :math:`\rho_{2x2}` of 2x2 cluster with indexing
         of sites as follows :math:`\rho_{2x2}(s_0,s_1,s_2,s_3;s'_0,s'_1,s'_2,s'_3)`::
-        
+
             s0--s1
             |   |
             s2--s3
 
         and without assuming any symmetry on the indices of individual tensors a following
         set of terms has to be evaluated in order to compute energy-per-site::
-                
-               0           
+
+               0
             1--A--3
                2
-            
+
             Ex.1 unit cell A B, with BIPARTITE tiling
 
                 A3--1B, B3--1A, A, B, A3  , B3  ,   1A,   1B
-                                2  0   \     \      /     / 
-                                0  2    \     \    /     /  
-                                B  A    1A    1B  A3    B3  
-            
+                                2  0   \     \      /     /
+                                0  2    \     \    /     /
+                                B  A    1A    1B  A3    B3
+
             Ex.2 unit cell A B, with STRIPE tiling
 
                 A3--1A, B3--1B, A, B, A3  , B3  ,   1A,   1B
-                                2  0   \     \      /     / 
-                                0  2    \     \    /     /  
+                                2  0   \     \      /     /
+                                0  2    \     \    /     /
                                 A  B    1B    1A  B3    A3
 
-        All the above terms can be captured by evaluating correlations over two 
+        All the above terms can be captured by evaluating correlations over two
         reduced density matrices if 2x2 cluster::
-        
+
             A3--1B   B3  1A
             2 \/ 2   2 \/ 2
             0 /\ 0   0 /\ 0
@@ -185,60 +200,60 @@ class J1J2_NOSYM():
             0 /\ 0   0 /\ 0
             A3--1B & B3--1A
 
-        2) We assume iPEPS with 2Lx2 unit cell. Simplest example would be a 2x2 unit cell 
+        2) We assume iPEPS with 2Lx2 unit cell. Simplest example would be a 2x2 unit cell
         containing four tensors A, B, C, and D with simple PBC tiling::
 
             A B A B
             C D C D
             A B A B
             C D C D
-    
-        Taking the reduced density matrix :math:`\rho_{2x2}` of 2x2 cluster given by 
-        :py:func:`ctm.generic.rdm.rdm2x2` with indexing of sites as follows 
+
+        Taking the reduced density matrix :math:`\rho_{2x2}` of 2x2 cluster given by
+        :py:func:`ctm.generic.rdm.rdm2x2` with indexing of sites as follows
         :math:`\rho_{2x2}(s_0,s_1,s_2,s_3;s'_0,s'_1,s'_2,s'_3)`::
-        
+
             s0--s1
             |   |
             s2--s3
 
         and without assuming any symmetry on the indices of the individual tensors a set
-        of four :math:`\rho_{2x2}`'s are needed over which :math:`h2` operators 
-        for the nearest and next-neaerest neighbour pairs are evaluated::  
+        of four :math:`\rho_{2x2}`'s are needed over which :math:`h2` operators
+        for the nearest and next-neaerest neighbour pairs are evaluated::
 
             A3--1B   B3--1A   C3--1D   D3--1C
             2    2   2    2   2    2   2    2
             0    0   0    0   0    0   0    0
             C3--1D & D3--1C & A3--1B & B3--1A
 
-        A more complex example 4x2 unit cell containing eight tensors A, B, C, D, 
+        A more complex example 4x2 unit cell containing eight tensors A, B, C, D,
         E, F, G, H with PBC tiling + SHIFT::
 
             A B E F
             C D G H
           A B E F
           C D G H
-    
-        Taking the reduced density matrix :math:`\rho_{2x2}` of 2x2 cluster given by 
-        :py:func:`ctm.generic.rdm.rdm2x2` with indexing of sites as follows 
+
+        Taking the reduced density matrix :math:`\rho_{2x2}` of 2x2 cluster given by
+        :py:func:`ctm.generic.rdm.rdm2x2` with indexing of sites as follows
         :math:`\rho_{2x2}(s_0,s_1,s_2,s_3;s'_0,s'_1,s'_2,s'_3)`::
-        
+
             s0--s1
             |   |
             s2--s3
 
         and without assuming any symmetry on the indices of the individual tensors a set
-        of eight :math:`\rho_{2x2}`'s are needed over which :math:`h2` operators 
-        for the nearest and next-neaerest neighbour pairs are evaluated::  
+        of eight :math:`\rho_{2x2}`'s are needed over which :math:`h2` operators
+        for the nearest and next-neaerest neighbour pairs are evaluated::
 
             A3--1B   B3--1E   E3--1F   F3--1A
             2    2   2    2   2    2   2    2
             0    0   0    0   0    0   0    0
-            C3--1D & D3--1G & G3--1H & H3--1C 
+            C3--1D & D3--1G & G3--1H & H3--1C
 
             C3--1D   D3--1G   G3--1H   H3--1C
             2    2   2    2   2    2   2    2
             0    0   0    0   0    0   0    0
-            B3--1E & E3--1F & F3--1A & A3--1B 
+            B3--1E & E3--1F & F3--1A & A3--1B
         """
         N= len(state.sites)
 
@@ -246,7 +261,7 @@ class J1J2_NOSYM():
         energy_nnn=yastn.zeros(self.engine)
         _ci= ([0,1,2,3, 4,5,6,7],[4,5,6,7, 0,1,2,3])
         for coord in state.sites.keys():
-            tmp_rdm= rdm.rdm2x2(coord,state,env).to_nonsymmetric()
+            tmp_rdm= rdm.rdm2x2(coord,state,env).to_nonsymmetric(legs=self._get_phys_allsectors(state,4))
             energy_nn += contract(tmp_rdm,self.h2x2_nn,_ci)
             energy_nnn += contract(tmp_rdm,self.h2x2_nnn,_ci)
         energy_per_site= 2.0*(self.j1*energy_nn/(4*N) + self.j2*energy_nnn/(2*N))
@@ -267,24 +282,24 @@ class J1J2_NOSYM():
 
             1. average magnetization over the unit cell,
             2. magnetization for each site in the unit cell
-            3. :math:`\langle S^z \rangle,\ \langle S^+ \rangle,\ \langle S^- \rangle` 
+            3. :math:`\langle S^z \rangle,\ \langle S^+ \rangle,\ \langle S^- \rangle`
                for each site in the unit cell
 
         where the on-site magnetization is defined as
-        
+
         .. math::
-            
+
             \begin{align*}
             m &= \sqrt{ \langle S^z \rangle^2+\langle S^x \rangle^2+\langle S^y \rangle^2 }
-            =\sqrt{\langle S^z \rangle^2+1/4(\langle S^+ \rangle+\langle S^- 
+            =\sqrt{\langle S^z \rangle^2+1/4(\langle S^+ \rangle+\langle S^-
             \rangle)^2 -1/4(\langle S^+\rangle-\langle S^-\rangle)^2} \\
               &=\sqrt{\langle S^z \rangle^2 + 1/2\langle S^+ \rangle \langle S^- \rangle)}
             \end{align*}
 
         Usual spin components can be obtained through the following relations
-        
+
         .. math::
-            
+
             \begin{align*}
             S^+ &=S^x+iS^y               & S^x &= 1/2(S^+ + S^-)\\
             S^- &=S^x-iS^y\ \Rightarrow\ & S^y &=-i/2(S^+ - S^-)
@@ -295,7 +310,7 @@ class J1J2_NOSYM():
         obs= dict({"avg_m": 0.})
         _ci= ([0,1],[1,0])
         for coord,site in state.sites.items():
-            rdm1x1 = rdm.rdm1x1(coord,state,env).to_nonsymmetric()
+            rdm1x1 = rdm.rdm1x1(coord,state,env).to_nonsymmetric(legs=self._get_phys_allsectors(state,1))
             for label,op in self.obs_ops.items():
                 obs[f"{label}{coord}"]= contract(rdm1x1, op, _ci).to_number()
             obs[f"m{coord}"]= sqrt(abs(obs[f"sz{coord}"]**2 + obs[f"sp{coord}"]*obs[f"sm{coord}"]))
@@ -304,13 +319,13 @@ class J1J2_NOSYM():
 
         _ci= ([0,1,2,3],[2,3,0,1])
         for coord,site in state.sites.items():
-            rdm2x1 = rdm.rdm2x1(coord,state,env).to_nonsymmetric()
-            rdm1x2 = rdm.rdm1x2(coord,state,env).to_nonsymmetric()
+            rdm2x1 = rdm.rdm2x1(coord,state,env).to_nonsymmetric(legs=self._get_phys_allsectors(state,2))
+            rdm1x2 = rdm.rdm1x2(coord,state,env).to_nonsymmetric(legs=self._get_phys_allsectors(state,2))
             SS2x1= contract(rdm2x1,self.h2,_ci)
             SS1x2= contract(rdm1x2,self.h2,_ci)
             obs[f"SS2x1{coord}"]= rdm._cast_to_real(SS2x1,**kwargs).to_number()
             obs[f"SS1x2{coord}"]= rdm._cast_to_real(SS1x2,**kwargs).to_number()
-        
+
         # prepare list with labels and values
         obs_labels=["avg_m"]+[f"m{coord}" for coord in state.sites.keys()]\
             +[f"{lc[1]}{lc[0]}" for lc in list(itertools.product(state.sites.keys(), self.obs_ops.keys()))]
@@ -323,7 +338,7 @@ class J1J2_NOSYM():
         r"""
         :param coord: reference site
         :type coord: tuple(int,int)
-        :param direction: 
+        :param direction:
         :type direction: tuple(int,int)
         :param state: wavefunction
         :param env: CTM environment
@@ -337,8 +352,8 @@ class J1J2_NOSYM():
         :type rl_0: tuple(function(tuple(int,int))->yastn.Tensor, function(tuple(int,int))->yastn.Tensor)
         :return: dictionary with full and spin-resolved spin-spin correlation functions
         :rtype: dict(str: np.ndarray)
-        
-        Evaluate spin-spin correlation functions :math:`\langle\mathbf{S}(r).\mathbf{S}(0)\rangle` 
+
+        Evaluate spin-spin correlation functions :math:`\langle\mathbf{S}(r).\mathbf{S}(0)\rangle`
         up to r = ``dist`` in given direction. See :meth:`ctm.generic.corrf.corrf_1sO1sO`.
         """
         # function allowing for additional site-dependent conjugation of op
@@ -372,19 +387,19 @@ class J1J2_C4V_BIPARTITE_NOSYM():
 
         Build Spin-1/2 :math:`J_1-J_2` Hamiltonian
 
-        .. math:: 
+        .. math::
 
             H = J_1\sum_{<i,j>} \mathbf{S}_i.\mathbf{S}_j + J_2\sum_{<<i,j>>} \mathbf{S}_i.\mathbf{S}_j
             = \sum_{p} h_p
 
-        on the square lattice. Where the first sum runs over the pairs of sites `i,j` 
-        which are nearest-neighbours (denoted as `<.,.>`), and the second sum runs over 
+        on the square lattice. Where the first sum runs over the pairs of sites `i,j`
+        which are nearest-neighbours (denoted as `<.,.>`), and the second sum runs over
         pairs of sites `i,j` which are next nearest-neighbours (denoted as `<<.,.>>`).
 
         The plaquette term is defined as
 
         * :math:`h_p = J_1(\mathbf{S}_{r}.\mathbf{S}_{r+\vec{x}} + \mathbf{S}_{r}.\mathbf{S}_{r+\vec{y}})
-          +J_2(\mathbf{S}_{r}.\mathbf{S}_{r+\vec{x}+\vec{y}} + \mathbf{S}_{r+\vec{x}}.\mathbf{S}_{r+\vec{y}})` 
+          +J_2(\mathbf{S}_{r}.\mathbf{S}_{r+\vec{x}+\vec{y}} + \mathbf{S}_{r+\vec{x}}.\mathbf{S}_{r+\vec{y}})`
           with indices of spins ordered as follows :math:`s_r s_{r+\vec{x}} s_{r+\vec{y}} s_{r+\vec{x}+\vec{y}};
           s'_r s'_{r+\vec{x}} s'_{r+\vec{y}} s'_{r+\vec{x}+\vec{y}}`
 
@@ -396,7 +411,7 @@ class J1J2_C4V_BIPARTITE_NOSYM():
         self.phys_dim=2
         self.j1=j1
         self.j2=j2
-        
+
         self.SS, self.SS_rot, self.hp = self.get_h()
         self.obs_ops = self.get_obs_ops()
 
@@ -405,19 +420,19 @@ class J1J2_C4V_BIPARTITE_NOSYM():
         I1= irrep.I()
         SS= irrep.SS()
         rot_op= irrep.BP_rot()
-        
+
         #      1                    0       1
         #      R                    --SS_nn--
         #      0                    2       3
         # 0->1 1    1->0    0->1            0
         # --SS-- => --SS_nn--    =>         R
-        # 2    3    2       3               1->3  
+        # 2    3    2       3               1->3
         SS_nn= contract(rot_op,SS,([0],[1]))
         SS_nn= permute(SS_nn,(1,0,2,3))
         SS_nn= contract(SS_nn,rot_op.conj(),([3],[0]))
 
-        # 0        0->2                 0     1 
-        # I1--(x)--I1   => transpose => I1----I1 
+        # 0        0->2                 0     1
+        # I1--(x)--I1   => transpose => I1----I1
         # 1        1->3                 2     3
         I2= contract(I1,I1,([],[]))
         I2= permute(I2, (0,2,1,3))
@@ -425,23 +440,23 @@ class J1J2_C4V_BIPARTITE_NOSYM():
         I2_nn= permute(I2_nn,(1,0,2,3))
         I2_nn= contract(I2_nn,rot_op.conj(),([3],[0]))
 
-        # 0   1       0 1->4 5                  0 1      2 3 
+        # 0   1       0 1->4 5                  0 1      2 3
         # SS_nn--(x)--I2_nn     => transpose => SS_nn----I2_nn
         # 2   3       2 3->6 7                  4 5      6 7
         h2x2_SSnn= contract(SS_nn,I2_nn,([],[]))
         h2x2_SSnn= permute(h2x2_SSnn, (0,1,5,4, 2,3,7,6))
-        
+
         h2x2_SSnnn= contract(SS,I2.flip_signature(),([],[]))
         h2x2_SSnnn= permute(h2x2_SSnnn, (0,1,4,5, 2,3,6,7))
 
         # all nearest-neighbour S.S terms on 2x2 plaquette
         #        S  SR        x  xR                                S  xR     x  SR
-        #        xR x         SR S                                 SR x      xR S 
+        #        xR x         SR S                                 SR x      xR S
         h2x2_nn= h2x2_SSnn + permute(h2x2_SSnn, (3,2,1,0,7,6,5,4)) + \
             permute(h2x2_SSnn, (0,2,1,3,4,6,5,7)) + permute(h2x2_SSnn, (3,1,2,0,7,5,6,4))
         # all next nearest-neighbour S.S terms on 2x2 plaquette
         #                 S  xR                                    x  SR
-        #                 xR S                                     SR x    
+        #                 xR S                                     SR x
         h2x2_nnn= permute(h2x2_SSnnn, (0,3,2,1,4,7,6,5)) + \
             permute(h2x2_SSnnn.flip_signature(), (2,0,1,3,6,4,5,7))
         h2x2= 0.5*self.j1*h2x2_nn + self.j2*h2x2_nnn
@@ -465,8 +480,8 @@ class J1J2_C4V_BIPARTITE_NOSYM():
         :return: energy per site
         :rtype: float
 
-        We assume 1x1 C4v iPEPS which tiles the lattice with a bipartite pattern composed 
-        of two tensors A, and B=RA, where R rotates approriately the physical Hilbert space 
+        We assume 1x1 C4v iPEPS which tiles the lattice with a bipartite pattern composed
+        of two tensors A, and B=RA, where R rotates approriately the physical Hilbert space
         of tensor A on every "odd" site::
 
             1x1 C4v => rotation P => BIPARTITE
@@ -476,16 +491,16 @@ class J1J2_C4V_BIPARTITE_NOSYM():
             A A A A                  A B A B
             A A A A                  B A B A
 
-        Due to C4v symmetry it is enough to construct a single reduced density matrix 
-        :py:func:`ctm.one_site_c4v.rdm_c4v.rdm2x2` of a 2x2 plaquette. Afterwards, 
+        Due to C4v symmetry it is enough to construct a single reduced density matrix
+        :py:func:`ctm.one_site_c4v.rdm_c4v.rdm2x2` of a 2x2 plaquette. Afterwards,
         the energy per site `e` is computed by evaluating a single plaquette term :math:`h_p`
-        containing two nearest-nighbour terms :math:`\bf{S}.\bf{S}` and two next-nearest 
+        containing two nearest-nighbour terms :math:`\bf{S}.\bf{S}` and two next-nearest
         neighbour :math:`\bf{S}.\bf{S}`, as:
 
         .. math::
 
             e = \langle \mathcal{h_p} \rangle = Tr(\rho_{2x2} \mathcal{h_p})
-        
+
         """
         _ci= ([0,1,2,3,4,5,6,7], [0,1,2,3,4,5,6,7])
         # _ci= ([0,1,2,3,4,5,6,7], [4,5,6,7,0,1,2,3])
@@ -495,7 +510,7 @@ class J1J2_C4V_BIPARTITE_NOSYM():
         energy_per_site= rdm._cast_to_real(energy_per_site,**kwargs).to_number()
         return energy_per_site
 
-    def energy_1x1_lowmem(self,state,env_c4v,force_cpu=False,**kwargs):
+    def energy_1x1_lowmem(self,state,env_c4v,force_cpu=False,checkpoint_move=False,**kwargs):
         r"""
         :param state: wavefunction
         :param env_c4v: CTM c4v symmetric environment
@@ -504,8 +519,8 @@ class J1J2_C4V_BIPARTITE_NOSYM():
         :return: energy per site
         :rtype: float
 
-        We assume 1x1 C4v iPEPS which tiles the lattice with a bipartite pattern composed 
-        of two tensors A, and B=RA, where R rotates approriately the physical Hilbert space 
+        We assume 1x1 C4v iPEPS which tiles the lattice with a bipartite pattern composed
+        of two tensors A, and B=RA, where R rotates approriately the physical Hilbert space
         of tensor A on every "odd" site::
 
             1x1 C4v => rotation P => BIPARTITE
@@ -517,16 +532,16 @@ class J1J2_C4V_BIPARTITE_NOSYM():
 
         Due to C4v symmetry it is enough to construct two reduced density matrices.
         In particular, :py:func:`ctm.one_site_c4v.rdm_c4v.rdm2x1` of a NN-neighbour pair
-        and :py:func:`ctm.one_site_c4v.rdm_c4v.rdm2x1_diag` of NNN-neighbour pair. 
+        and :py:func:`ctm.one_site_c4v.rdm_c4v.rdm2x1_diag` of NNN-neighbour pair.
         Afterwards, the energy per site `e` is computed by evaluating a term :math:`h2_rot`
-        containing :math:`\bf{S}.\bf{S}` for nearest- and :math:`h2` term for 
+        containing :math:`\bf{S}.\bf{S}` for nearest- and :math:`h2` term for
         next-nearest- expectation value as:
 
         .. math::
 
             e = 2*\langle \mathcal{h2} \rangle_{NN} + 2*\langle \mathcal{h2} \rangle_{NNN}
             = 2*Tr(\rho_{2x1} \mathcal{h2_rot}) + 2*Tr(\rho_{2x1_diag} \mathcal{h2})
-        
+
         """
         # _ci= ([0,1,2,3],[2,3,0,1])
         _ci= ([0,1,2,3],[0,1,2,3])
@@ -538,6 +553,81 @@ class J1J2_C4V_BIPARTITE_NOSYM():
         SS_nnn= contract(rdm2x2_NNN,self.SS,_ci)
         energy_per_site= 2.0*self.j1*SS_nn + 2.0*self.j2*SS_nnn
         energy_per_site= rdm._cast_to_real(energy_per_site,**kwargs).to_number()
+        return energy_per_site
+
+    def energy_1x1_lowmem_yastn(self,state,env_c4v_yastn,force_cpu=False,checkpoint_move=None,**kwargs):
+        r"""
+        :param state: wavefunction
+        :param env_c4v: CTM c4v symmetric environment
+        :type state: IPEPS_ABELIAN_C4V
+        :type env_c4v: EnvCTM_c4v
+        :return: energy per site
+        :rtype: float
+
+        We assume 1x1 C4v iPEPS which tiles the lattice with a bipartite pattern composed
+        of two tensors A, and B=RA, where R rotates approriately the physical Hilbert space
+        of tensor A on every "odd" site::
+
+            1x1 C4v => rotation P => BIPARTITE
+
+            A A A A                  A B A B
+            A A A A                  B A B A
+            A A A A                  A B A B
+            A A A A                  B A B A
+
+        Due to C4v symmetry it is enough to construct two reduced density matrices.
+        In particular, :py:func:`ctm.one_site_c4v.rdm_c4v.rdm2x1` of a NN-neighbour pair
+        and :py:func:`ctm.one_site_c4v.rdm_c4v.rdm2x1_diag` of NNN-neighbour pair.
+        Afterwards, the energy per site `e` is computed by evaluating a term :math:`h2_rot`
+        containing :math:`\bf{S}.\bf{S}` for nearest- and :math:`h2` term for
+        next-nearest- expectation value as:
+
+        .. math::
+
+            e = 2*\langle \mathcal{h2} \rangle_{NN} + 2*\langle \mathcal{h2} \rangle_{NNN}
+            = 2*Tr(\rho_{2x1} \mathcal{h2_rot}) + 2*Tr(\rho_{2x1_diag} \mathcal{h2})
+
+        """
+        # _ci= ([0,1,2,3],[2,3,0,1])
+        _ci= ([0,1,2,3],[0,1,2,3])
+
+        if checkpoint_move:
+            inputs_t, inputs_meta= yastn.split_data_and_meta(env_c4v_yastn.to_dict(level=1))
+
+            def _rdm2x2_NN(state, im, *inputs_t):
+                env_c4v_yastn= yastn.from_dict(yastn.combine_data_and_meta(inputs_t,im))
+                env_c4v= from_yastn_c4v_env_c4v(env_c4v_yastn)
+                rdm2x2_NN= rdm_c4v.rdm2x2_NN(state, env_c4v, sym_pos_def=False,\
+                    force_cpu=force_cpu, verbosity=cfg.ctm_args.verbosity_rdm).to_nonsymmetric()
+                SS_nn= contract(rdm2x2_NN,self.SS_rot,_ci)
+                return SS_nn.real().to_number()
+
+            def _rdm2x2_NNN(state, im, *inputs_t):
+                env_c4v_yastn=  yastn.from_dict(yastn.combine_data_and_meta(inputs_t,im))
+                env_c4v= from_yastn_c4v_env_c4v(env_c4v_yastn)
+                rdm2x2_NNN= rdm_c4v.rdm2x2_NNN(state, env_c4v, sym_pos_def=False,\
+                    force_cpu=force_cpu, verbosity=cfg.ctm_args.verbosity_rdm).to_nonsymmetric()
+                SS_nnn= contract(rdm2x2_NNN,self.SS,_ci)
+                return SS_nnn.real().to_number()
+
+            if checkpoint_move=='reentrant':
+                use_reentrant= True
+            elif checkpoint_move=='nonreentrant':
+                use_reentrant= False
+            SS_nn= checkpoint(_rdm2x2_NN, state,inputs_meta,*inputs_t, use_reentrant=use_reentrant)
+            SS_nnn= checkpoint(_rdm2x2_NNN, state,inputs_meta,*inputs_t, use_reentrant=use_reentrant)
+            energy_per_site= 2.0*self.j1*SS_nn + 2.0*self.j2*SS_nnn
+        else:
+            env_c4v= from_yastn_c4v_env_c4v(env_c4v_yastn)
+            rdm2x2_NN= rdm_c4v.rdm2x2_NN(state, env_c4v, sym_pos_def=False,\
+            force_cpu=force_cpu, verbosity=cfg.ctm_args.verbosity_rdm).to_nonsymmetric()
+            rdm2x2_NNN= rdm_c4v.rdm2x2_NNN(state, env_c4v, sym_pos_def=False,\
+            force_cpu=force_cpu, verbosity=cfg.ctm_args.verbosity_rdm).to_nonsymmetric()
+            SS_nn= contract(rdm2x2_NN,self.SS_rot,_ci)
+            SS_nnn= contract(rdm2x2_NNN,self.SS,_ci)
+            energy_per_site= 2.0*self.j1*SS_nn + 2.0*self.j2*SS_nnn
+            energy_per_site= rdm._cast_to_real(energy_per_site,**kwargs).to_number()
+
         return energy_per_site
 
     def eval_obs(self,state,env_c4v,force_cpu=False,**kwargs):
@@ -553,9 +643,9 @@ class J1J2_C4V_BIPARTITE_NOSYM():
 
             1. magnetization
             2. :math:`\langle S^z \rangle,\ \langle S^+ \rangle,\ \langle S^- \rangle`
-    
+
         where the on-site magnetization is defined as
-        
+
         .. math::
             m = \sqrt{ \langle S^z \rangle^2+\langle S^x \rangle^2+\langle S^y \rangle^2 }
         """
@@ -569,7 +659,7 @@ class J1J2_C4V_BIPARTITE_NOSYM():
         # if np.all(np.asarray(rdm2x1.s)/np.asarray(self.SS_rot.s)==-1):
         #     rdm2x1= rdm2x1.flip_signature()
         obs[f"SS2x1"]= contract(rdm2x1,self.SS_rot,_ci).to_number()
-        
+
         # TODO reduce rdm2x1 to 1x1
         # _ci= ([0,1],[1,0])
         _ci= ([0,1],[0,1])
@@ -580,7 +670,7 @@ class J1J2_C4V_BIPARTITE_NOSYM():
         for label,op in self.obs_ops.items():
             obs[f"{label}"]= contract(rdm1x1, op, _ci).to_number()
         obs[f"m"]= sqrt(abs(obs[f"sz"]**2 + obs[f"sp"]*obs[f"sm"]))
-        
+
         # prepare list with labels and values
         obs_labels=[f"m"]+[f"{lc}" for lc in self.obs_ops.keys()]+[f"SS2x1"]
         obs_values=[obs[label] for label in obs_labels]
@@ -589,7 +679,7 @@ class J1J2_C4V_BIPARTITE_NOSYM():
     def eval_corrf_SS(self,state,env_c4v,dist):
         import examples.abelian.settings_U1_torch as settings_U1
         irrep = su2.SU2_U1(settings_U1, self.phys_dim-1)
-        
+
         # manually define the rotated operators, since rotation operator
         # cannot be expressed as U(1)-symmetric tensors
         def get_bilat_op_SZ():

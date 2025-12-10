@@ -1,8 +1,9 @@
-# peps-torch ![Test Status](https://github.com/jurajHasik/peps-torch/actions/workflows/main.yml/badge.svg?branch=master) [![Documentation Status](https://readthedocs.org/projects/peps-torch/badge/?version=latest)](https://peps-torch.readthedocs.io/en/latest/?badge=latest)
+# peps-torch 
+![Test Status](https://github.com/jurajHasik/peps-torch/actions/workflows/main.yml/badge.svg?branch=master)
+![Docs Status](https://gist.githubusercontent.com/jurajHasik/b11fca53c80bbc7224dddad1118d873d/raw/docs.svg)
 ### A tensor network library for two-dimensional lattice models
 by Juraj Hasik, Glen Bigan Mbeng\
-with contributions by Wei-Lin Tu, Seydou-Samba Diop, Sen Niu, Yi Xi
-
+with contributions by Wei-Lin Tu, Seydou-Samba Diop, Sen Niu, Yi Xi, Hao Chen
 
 \
 **peps-torch** performs optimization of infinite Projected entangled-pair states (iPEPS) 
@@ -11,7 +12,7 @@ by the corner-transfer matrix (CTM) algorithm. Afterwards, the gradients are com
 automatic differentiation (AD).
 
 #### Now supporting 
-* **abelian symmetries, with implementation power by [YAST](https://gitlab.com/marekrams/yast)**
+* **abelian symmetries, with implementation power by [YASTN](https://github.com/yastn/yastn)**
 
   Allows definition of abelian-symmetric iPEPS in terms of block-sparse tensors, computing their 
   symmetric environments, and their optimization with gradient-based methods.
@@ -128,17 +129,20 @@ python examples/j1j2/abelian/ctmrg_j1j2_u1.py --tiling BIPARTITE --chi 48 --j2 0
 - both real- and complex-valued tensors
 
 #### Dependencies
-- PyTorch 1.11+ (see https://pytorch.org/)
-- (optional) YAST (see https://gitlab.com/marekrams/yast)
+- PyTorch 2.+ (see https://pytorch.org/)
+- (optional) YASTN (see https://github.com/yastn/yastn)
 - (optional) scipy 1.3.+
+- (optional) opt_einsum
+- (optional) ArrayFire (see https://github.com/arrayfire/arrayfire)
+- (optional) pytest, pytest-subtests
 
-YAST is linked to **peps-torch** as a [git submodule](https://git-scm.com/book/en/v2/Git-Tools-Submodules).
+YASTN is linked to **peps-torch** as a [git submodule](https://git-scm.com/book/en/v2/Git-Tools-Submodules).
 To obtain it, you can use git:
 
 `git submodule update --init --recursive`
 
 #### Building documentation
-- PyTorch 1.11+
+- PyTorch 2.+
 - sphinx
 - sphinx_rtd_theme
 

@@ -74,7 +74,7 @@ def get_Top_spec(n, coord, direction, state, env, edge_t=None,
         yastn.Leg(sym=state.engine.sym, s=1, t=edge_t, D=tuple([1]*len(edge_t)))
     ))
     E0= E0.fuse_legs(axes=(0,(1,2),3,4))
-    E0_dense, meta0= yastn.compress_to_1d(E0,meta=None)
+    E0_dense, meta0= yastn.split_data_and_meta(E0.to_dict(level=1,meta=None),squeeze=True)
 
     # multiply vector by transfer-op and pass the result back in numpy
     #  --0 (approx chi)
@@ -85,14 +85,14 @@ def get_Top_spec(n, coord, direction, state, env, edge_t=None,
     # there as well. Price to pay is the communication overhead of resulting vector
     def _mv(v):
         c0= coord
-        V= yastn.decompress_from_1d(state.engine.backend.to_tensor(
+        V= yastn.from_dict(yastn.combine_data_and_meta(state.engine.backend.to_tensor(
             v,dtype=E0.config.default_dtype,device=E0.config.default_device),
-            meta=meta0)
+            meta=meta0))
         for i in range(N):
             V= corrf.apply_TM_1sO(c0,direction,state,env,V,verbosity=verbosity)
             c0= (c0[0]+direction[0],c0[1]+direction[1])
 
-        v, meta_v= yastn.compress_to_1d(V,meta=None)
+        v, meta_v= yastn.split_data_and_meta(V.to_dict(level=1,meta=None),squeeze=True)
         v= state.engine.backend.to_numpy(v)
         return v
 

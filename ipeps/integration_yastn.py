@@ -4,6 +4,9 @@ import json
 import torch
 from ipeps.tensor_io import NumPy_Encoder
 import yastn.yastn as yastn
+from ipeps.ipeps import IPEPS
+from ipeps.ipeps_abelian import IPEPS_ABELIAN
+from yastn.yastn.backend import backend_torch
 from yastn.yastn import Tensor, load_from_dict, save_to_dict
 from yastn.yastn.tn.fpeps import Peps, RectangularUnitcell
 import config as cfg
@@ -26,21 +29,24 @@ def apply_and_copy(nested_iterable, func, f_keys=None):
     else:
         return func(nested_iterable)
 
+
+# TODO: one should be able to pass parameters and a callable, which is invoked by sync_ to build on-site tensors
 class PepsAD(Peps):
     # TODO accept pattern in the form of i) Sequence[Sequence[Tensor]], then ids of tensors can be labels for lower constructors
     #                        ii) analogously dict[tuple[int,int],Tensor]
     def __init__(
         self,
         geometry=None,
-        tensors: Union[
+        parameters: Union[
             None, Sequence[Sequence[Tensor]], dict[tuple[int, int], Tensor]
         ] = None,
+        get_tensors: callable = None,
         global_args=cfg.global_args,
     ):
         """
         Wrapper around YASTN'n PEPS.
         """
-        self.parameters = tensors
+        self.parameters = parameters
         self.dtype = global_args.torch_dtype
         self.device = global_args.device
         
@@ -57,10 +63,21 @@ class PepsAD(Peps):
 
         .. Note::
             This function must be invoked as part of cost function to maintain comp. graph between
-            logic which build on-site tensors from parameters and subsequent algos (CTMRG, ...).
+            logic which builds on-site tensors from parameters and subsequent algos (CTMRG, ...).
         """
         for site in self.sites():
             self[site] = self.parameters[site]
+
+
+    def to_Peps(self) -> Peps:
+        r"""
+        :return: YASTN's Peps state
+        :rtype: Peps
+
+        Converts PepsAD to YASTN's Peps by invoking sync_ to build on-site tensors from parameters.
+        """
+        self.sync_()
+        return Peps(geometry=self.geometry, tensors= {site: self[site] for site in self.sites()})
 
 
     def add_noise_(self, noise : float =1.0):
@@ -136,7 +153,7 @@ class PepsAD(Peps):
 
         Initializes the state according to the supplied checkpoint file.
         """
-        checkpoint = torch.load(checkpoint_file, map_location=self.device)
+        checkpoint = torch.load(checkpoint_file, map_location=self.device, weights_only=False)
         self.parameters = apply_and_copy(checkpoint['parameters']['parameters'], \
                                      lambda x : load_from_dict(yastn_config,x) )
         self.sync_()
@@ -162,6 +179,40 @@ class PepsAD(Peps):
         return d
 
     @staticmethod
+    def from_pt(state: Union[IPEPS, IPEPS_ABELIAN,], global_args=cfg.global_args) -> PepsAD:
+        r"""
+        Convert IPEPS_ABELIAN to YASTN's Peps. 
+        
+        This implies re-ordering of the indices to match YASTN's convention.
+        
+            * peps-torch convention physical,up=top,left,down=bottom,right with 
+                * signature (-1,-1,-1,1,1) for generic iPEPS
+                * signature (1,1,1,1,1) for C4v-symmetric single-site iPEPS           
+            YASTN convention (top-left)(bottom-right)physical
+        """
+        unique_sites= {v:i for i,v in enumerate(state.sites.keys())}
+        pattern = [ [unique_sites[state.vertexToSite((x,y))] for x in range(state.lX)] for y in range(state.lY)]
+        geometry=RectangularUnitcell(pattern=pattern)
+
+        if isinstance(state, IPEPS_ABELIAN):
+            parameters= { c: state.site(c).transpose(axes=(1,2,3,4,0)) for c in geometry.sites() }
+        elif isinstance(state, IPEPS):
+            yastn_cfg_nosym= yastn.make_config(
+                backend= backend_torch,
+                default_dtype= dict(zip(backend_torch.DTYPE.values(), backend_torch.DTYPE.keys()))[state.dtype],
+                default_device= global_args.device
+            )
+            def _wrap_t(t):
+                res= yastn.Tensor(config=yastn_cfg_nosym, s=[-1,1,1,-1,1])
+                res.set_block(val=t, Ds=t.shape)
+                return res
+            parameters= { c: _wrap_t(state.site(c).permute(1,2,3,4,0)) for c in geometry.sites() }
+
+        peps_yastn= PepsAD(geometry=geometry,\
+            parameters= parameters)
+        return peps_yastn
+
+    @staticmethod
     def from_dict(yastn_config, d : dict) -> PepsAD:
         # post-process in case of prior need to remap uncompliant dict keys
         if 'parameters_key_to_id' in d and len(d['parameters_key_to_id'])>0:
@@ -175,7 +226,7 @@ class PepsAD(Peps):
             _parameters= apply_and_copy(d['parameters'], lambda x: load_from_dict(yastn_config,x), f_keys=remap_keys)
             d['parameters']= _parameters
         return PepsAD(geometry=RectangularUnitcell(**d['geometry']),
-            tensors= d['parameters'],
+            parameters= d['parameters'],
             global_args=cfg.global_args
         )
 
@@ -195,7 +246,7 @@ def load_checkpoint(yastn_config : YASTN_CONFIG, checkpoint_file : str)->PepsAD:
 
     Initializes the state according to the supplied checkpoint file.
     """
-    checkpoint = torch.load(checkpoint_file, map_location=yastn_config.default_device)
+    checkpoint = torch.load(checkpoint_file, map_location=yastn_config.default_device, weights_only=False)
     return PepsAD.from_dict(yastn_config, checkpoint["parameters"])
 
 

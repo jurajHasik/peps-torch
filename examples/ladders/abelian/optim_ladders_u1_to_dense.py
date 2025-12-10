@@ -34,7 +34,7 @@ def main():
     cfg.print_config()
     settings= yastn.make_config(backend=backend, sym=sym_U1, \
         default_device= cfg.global_args.device, default_dtype=cfg.global_args.dtype)
-    settings.backend.set_num_threads(args.omp_cores)
+    torch.set_num_threads(args.omp_cores)
     settings.backend.random_seed(args.seed)
 
     model= coupledLadders.COUPLEDLADDERS(alpha=args.alpha, bz_val=args.bz_stag)

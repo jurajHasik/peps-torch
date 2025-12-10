@@ -15,6 +15,8 @@ class Test_IO_ipeps_abelian(unittest.TestCase):
     outf_U1= "test-write-U1_state.json"
     outf_U1_U1= "test-write-U1-U1_state.json"
 
+    get_leg_charges_and_dims= lambda x: (l.t for l in x.get_legs(native=True)), (l.D for l in x.get_legs(native=True))
+
     def _ipeps_abelian_test_equal(self, state0, state1):
         self.assertTrue(state0.nsym==state1.nsym)
         self.assertTrue(state0.sym==state1.sym)
@@ -31,7 +33,7 @@ class Test_IO_ipeps_abelian(unittest.TestCase):
                 state1.sites[k].get_tensor_charge(),state0.sites[k].get_tensor_charge()))
             if state0.nsym>0:
                 self.assertTrue(np.array_equal(\
-                    state1.sites[k].get_leg_charges_and_dims(),state0.sites[k].get_leg_charges_and_dims()))
+                    get_leg_charges_and_dims(state1.sites[k]),get_leg_charges_and_dims(state0.sites[k])))
             self.assertTrue(state0.sites[k].norm_diff(state1.sites[k])<1.0e-8)
 
     def test_write_full(self):

@@ -50,7 +50,7 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
         def truncated_eig(M, chi):
             return truncated_eig_sym(M, chi, keep_multiplets=True,\
                 ad_decomp_reg=ctm_args.ad_decomp_reg, verbosity=ctm_args.verbosity_projectors)
-    elif ctm_args.projector_svd_method == 'SYMARP':
+    elif ctm_args.projector_svd_method in ['SYMARP','QR']:
         def truncated_eig(M, chi):
             return truncated_eig_symarnoldi(M, chi, keep_multiplets=True, \
                 verbosity=ctm_args.verbosity_projectors)
@@ -84,8 +84,12 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
             log.info(f"fpcm_MOVE_sl DONE t_fpcm {t1_fpcm-t0_fpcm} [s]")
 
         t0_ctm= time.perf_counter()
-        ctm_MOVE_sl(a, env, truncated_eig, ctm_args=ctm_args, global_args=global_args,\
-            past_steps_data=past_steps_data)
+        if ctm_args.projector_svd_method=='QR' and i>ctm_args.fpcm_init_iter:
+            ctm_MOVE_QR_sl(a, env, ctm_args=ctm_args, global_args=global_args,\
+                past_steps_data=past_steps_data)
+        else:
+            ctm_MOVE_sl(a, env, truncated_eig, ctm_args=ctm_args, global_args=global_args,\
+                past_steps_data=past_steps_data)
         t1_ctm= time.perf_counter()
 
         t0_obs= time.perf_counter()
@@ -454,6 +458,146 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
         new_tensors= checkpoint(ctm_MOVE_sl_c,*tensors)
     else:
         new_tensors= ctm_MOVE_sl_c(*tensors)
+
+    env.C[env.keyC]= new_tensors[0]
+    env.T[env.keyT]= new_tensors[1]
+
+def ctm_MOVE_QR_sl(a, env, ctm_args=cfg.ctm_args, global_args=cfg.global_args,
+        past_steps_data=None):
+    r"""
+    :param a: on-site C4v symmetric tensor
+    :param env: C4v symmetric environment
+    :param ctm_args: CTM algorithm configuration
+    :param global_args: global configuration
+    :param past_steps_data: dictionary used for recording diagnostic information during CTM 
+    :type a: torch.Tensor
+    :type env: ENV_C4V
+    :type ctm_args: CTMARGS
+    :type global_args: GLOBALARGS
+    :type past_steps_data:
+
+    Executes a single step of C4v symmetric QR-CTM algorithm for 1-site C4v symmetric iPEPS.
+    This variant of CTM step does not explicitly build double-layer on-site tensor.
+    """
+
+    # 0) extract raw tensors as tuple
+    tensors= tuple([a,env.C[env.keyC],env.T[env.keyT]])
+    
+    # function wrapping up the core of the CTM MOVE segment of CTM algorithm
+    def ctm_MOVE_QR_sl_c(*tensors):
+        a, C, T= tensors
+        if global_args.device=='cpu' and global_args.offload_to_gpu != 'None':
+            #loc_gpu= torch.device(global_args.gpu)
+            a= a.to(global_args.offload_to_gpu) #a.cuda()
+            C= C.to(global_args.offload_to_gpu) #C.cuda()
+            T= T.to(global_args.offload_to_gpu) #T.cuda()
+
+        # 1) build enlarged corner upper left corner
+        C2X2= c2x2_sl(a, C, T, verbosity=ctm_args.verbosity_projectors)
+
+        # 1.1) build "half-enlarged" corner
+        #      ------>      
+        # C--1 1--T--0->1
+        # 0       2
+        C1x2 = torch.tensordot(C, T, ([1],[1])).permute(0,2,1).reshape(-1,env.chi)
+
+        # 2) build projector
+        P, R= torch.linalg.qr(C1x2) # M = QR
+
+        # 3) absorb and truncate
+        #
+        # C2X2--1 0--P--1
+        # 0
+        # 0
+        # P^t
+        # 1->0
+        C2X2= P.t() @ C2X2 @ P
+
+        P= P.view(env.chi,T.size()[2],env.chi)
+        #      2->1
+        #    __P__
+        #   0     1->0
+        # A 0
+        # | T--2->3
+        # | 1->2
+        nT= torch.tensordot(P, T,([0],[0]))
+
+        # 4) double-layer tensor contraction - layer by layer
+        # 4i) untangle the fused D^2 indices
+        #    1->2
+        #  __P__
+        # |     0->0,1
+        # |
+        # T--3->4,5
+        # 2->3
+        nT= nT.view(a.size()[1],a.size()[1],nT.size()[1],nT.size()[2],\
+            a.size()[2],a.size()[2])
+
+        # 4ii) first layer "bra" (in principle conjugate)
+        #    2->1
+        #  __P___________
+        # |         0    1->0
+        # |         1 /0->4
+        # T----4 2--a--4->6 
+        # | |       3->5
+        # |  --5->3
+        # 3->2
+        nT= torch.tensordot(nT, a,([0,4],[1,2]))
+
+        # 4iii) second layer "ket"
+        #    1->0
+        #  __P__________
+        # |    |       0
+        # |    |/4 0\  | 
+        # T----a---------6->3 
+        # | |  |      \1
+        # |  -----3 2--a--4->5
+        # |    |       3->4
+        # |    |
+        # 2->1 5->2
+        nT= torch.tensordot(nT, a.conj(),([0,3,4],[1,2,0]))
+
+        # 4iv) fuse pairs of aux indices
+        #    0
+        #  __P_
+        # |    | 
+        # T----a----3\ 
+        # | |  |\     ->3 
+        # |  ----a--5/
+        # |    | |
+        # |    | |
+        # 1   (2 4)->2
+        nT= nT.permute(0,1,2,4,3,5).contiguous().view(nT.size()[0],nT.size()[1],\
+            a.size()[3]**2,a.size()[4]**2)
+
+        #    0
+        #  __P____
+        # |       |
+        # |       |          A 0
+        # T------aa--3->1 => | T--2
+        # 1       2          | 1
+        # 0       1
+        # |___P___|
+        #     2
+        nT = torch.tensordot(nT,P.conj(),([1,2],[0,1]))
+        nT = nT.permute(0,2,1).contiguous()
+
+        # 4) symmetrize, normalize and assign new C,T
+        nT= 0.5*(nT + nT.conj().permute(1,0,2))    
+        C2X2, nT= _move_normalize_c(C2X2, nT, norm_type=ctm_args.ctm_absorb_normalization,\
+            verbosity= ctm_args.verbosity_ctm_move)
+
+        if global_args.device=='cpu' and global_args.offload_to_gpu != 'None':
+            C2X2= C2X2.cpu()
+            nT= nT.cpu()
+
+        return C2X2, nT
+
+    # Call the core function, allowing for checkpointing
+    if ctm_args.fwd_checkpoint_move:
+        new_tensors= checkpoint(ctm_MOVE_QR_sl_c,*tensors)
+    else:
+        new_tensors= ctm_MOVE_QR_sl_c(*tensors)
 
     env.C[env.keyC]= new_tensors[0]
     env.T[env.keyT]= new_tensors[1]

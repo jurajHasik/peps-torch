@@ -1,18 +1,23 @@
 import torch
+from typing import Union, Mapping, Sequence
 from collections import OrderedDict
 import json
 import math
 import config as cfg
-import ipeps.ipeps as ipeps
+from ipeps.ipeps import IPEPS, read_ipeps, from_pattern
 from ipeps.tensor_io import *
 
-class IPEPS_KAGOME(ipeps.IPEPS):
-    def __init__(self, sites=None, vertexToSite=None, lX=None, lY=None,\
+class IPEPS_KAGOME(IPEPS):
+    def __init__(self, sites=None, vertexToSite=None, 
+                 pattern : Union[Mapping[tuple[int, int], int], Sequence[Sequence[int]]]=None,
+                 lX=None, lY=None,\
                  peps_args=cfg.peps_args, global_args=cfg.global_args):
         r"""
         :param sites: map from elementary unit cell to on-site tensors
         :param vertexToSite: function mapping arbitrary vertex of a square lattice
                              into a vertex within elementary unit cell
+        :param pattern: rectangular unit cell that tiles the square lattice, see :func:`from_pattern`.
+                        When provided, ``vertexToSite`` parameters are ignored.
         :param lX: length of the elementary unit cell in X direction
         :param lY: length of the elementary unit cell in Y direction
         :param peps_args: ipeps configuration
@@ -30,7 +35,7 @@ class IPEPS_KAGOME(ipeps.IPEPS):
         """
         #TODO we infer the size of the cluster from the keys of sites. Is it OK?
         #TODO validate, that on-site physical dimension is 3rd power of integer ?
-        super().__init__(sites, vertexToSite=vertexToSite, lX=lX, lY=lY,\
+        super().__init__(sites, vertexToSite=vertexToSite, pattern=pattern, lX=lX, lY=lY,\
             peps_args=peps_args, global_args=global_args)
 
     def get_physical_dim(self):
@@ -94,8 +99,8 @@ def read_ipeps_kagome(jsonfile, vertexToSite=None, aux_seq=[0,1,2,3], peps_args=
     See :meth:`ipeps.ipeps.read_ipeps`.
     """
     
-    tmp_ipeps= ipeps.read_ipeps(jsonfile, vertexToSite=vertexToSite, aux_seq=aux_seq,\
+    tmp_ipeps= read_ipeps(jsonfile, vertexToSite=vertexToSite, aux_seq=aux_seq,\
         peps_args=peps_args, global_args=global_args)
 
-    return IPEPS_KAGOME(tmp_ipeps.sites, vertexToSite=vertexToSite, lX=tmp_ipeps.lX,\
-        lY=tmp_ipeps.lY, peps_args=peps_args, global_args=global_args)
+    return IPEPS_KAGOME(tmp_ipeps.sites, vertexToSite=vertexToSite, pattern=tmp_ipeps._pattern, 
+        lX=tmp_ipeps.lX, lY=tmp_ipeps.lY, peps_args=peps_args, global_args=global_args)

@@ -9,6 +9,13 @@ from ctm.generic.env import *
 from ctm.generic import ctmrg
 from ctm.generic import transferops
 from models import spin_triangular
+from ipeps.integration_yastn import PepsAD
+from ctm.generic.env_yastn import from_yastn_env_generic, from_env_generic_dense_to_yastn, \
+    YASTN_ENV_INIT, YASTN_PROJ_METHOD
+from yastn.yastn.tn.fpeps import EnvCTM
+from yastn.yastn.tn.fpeps.envs._env_ctm import ctm_conv_corner_spec
+from yastn.yastn.tn.fpeps.envs.fixed_pt import refill_env, fp_ctmrg
+from yastn.yastn.tn.fpeps._peps import Peps2Layers
 # from optim.ad_optim import optimize_state
 from optim.ad_optim_lbfgs_mod import optimize_state
 # from optim.ad_optim_sgd_mod import optimize_state
@@ -29,13 +36,13 @@ parser.add_argument("--tiling", default="3SITE", help="tiling of the lattice", \
 parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
-parser.add_argument("--gauge", action='store_true', help="put into quasi-canonical form")
 parser.add_argument("--test_env_sensitivity", action='store_true', help="compare loss with higher chi env")
 parser.add_argument("--compressed_rdms", type=int, default=-1, help="use compressed RDMs for 2x3 and 3x2 patches"\
         +" with chi lower that chi x D^2")
 parser.add_argument("--loop_rdms", action='store_true', help="loop over central aux index in rdm2x3 and rdm3x2")
 parser.add_argument("--ctm_conv_crit", default="CSPEC", help="ctm convergence criterion", \
     choices=["CSPEC", "ENERGY"])
+parser.add_argument("--grad_type", type=str, default='default', help="gradient algo", choices=['default','fp'])
 args, unknown_args = parser.parse_known_args()
 
 def main():
@@ -46,7 +53,7 @@ def main():
 
     # initialize an ipeps and model
     # 1) define lattice-tiling function, that maps arbitrary vertex of square lattice
-    # coord into one of coordinates within unit-cell of iPEPS ansatz    
+    # coord into one of coordinates within unit-cell of iPEPS ansatz
     if args.tiling == "1SITE":
         model= spin_triangular.J1J2J4_1SITE(j1=args.j1, j2=args.j2, j4=args.j4, jchi=args.jchi)
         lattice_to_site=None
@@ -117,18 +124,18 @@ def main():
             dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)-0.5
         sites[(0,0)]= A/torch.max(torch.abs(A))
         state = IPEPS(sites, lX=1, lY=1)
-        if args.tiling in ["2SITE","2SITE_Y","3SITE","4SITE","4SITE_T"]:     
+        if args.tiling in ["2SITE","2SITE_Y","3SITE","4SITE","4SITE_T"]:
             B = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
                 dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)-0.5
             sites[ (0,1) if args.tiling=="2SITE_Y" else (1,0) ]= B/torch.max(torch.abs(B))
             lX_lY= dict(lX= 1, lY= 2) if args.tiling=="2SITE_Y" else dict(lX= 2, lY= 1)
             state = IPEPS(sites, vertexToSite=lattice_to_site, **lX_lY)
-        if args.tiling in ["3SITE","4SITE","4SITE_T"]: 
+        if args.tiling in ["3SITE","4SITE","4SITE_T"]:
             C = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
                 dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)-0.5
             sites[(2,0)]= C/torch.max(torch.abs(C))
             state = IPEPS(sites, vertexToSite=lattice_to_site, lX=3, lY=3)
-        if args.tiling in ["4SITE","4SITE_T"]:     
+        if args.tiling in ["4SITE","4SITE_T"]:
             D = torch.rand((model.phys_dim, bond_dim, bond_dim, bond_dim, bond_dim),\
                 dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device)-0.5
             del sites[(2,0)]
@@ -148,11 +155,11 @@ def main():
         model= type(model)(j1=args.j1, j2=args.j2, j4=args.j4)
 
     print(state)
-    
-    # 2) select the "energy" function 
+
+    # 2) select the "energy" function
     energy_f=energy_f=model.energy_per_site
     eval_obs_f= model.eval_obs
-    
+
     @torch.no_grad()
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
@@ -171,17 +178,24 @@ def main():
     ctm_env = ENV(args.chi, state)
     init_env(state, ctm_env)
     if args.ctm_conv_crit=="CSPEC":
-        ctmrg_conv_f= ctmrg_conv_specC
+        def ctmrg_conv_f(state,env,history,*aargs,**kwargs):
+            conv, history= ctmrg_conv_specC(state,env,history,*aargs, **kwargs)
+            if cfg.global_args.cuda_mem_profile:
+                torch.cuda.memory._dump_snapshot(f"{args.out_prefix}_CTM-{len(history['conv_crit'])}_CUDAMEM.pickle")
+            return conv, history
     elif args.ctm_conv_crit=="ENERGY":
         ctmrg_conv_f= ctmrg_conv_energy
-    
-    ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_f)
+
+    # 3) Initial env evaluation: Fast, possible starting point for optimization
+    i0_ctm_args= copy.deepcopy(cfg.ctm_args)
+    i0_ctm_args.projector_svd_method, i0_ctm_args.projector_rsvd_niter = "RSVD", 4
+    ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_f, ctm_args= i0_ctm_args)
     loss0= energy_f(state, ctm_env, compressed=args.compressed_rdms, unroll=args.loop_rdms)
     obs_values, obs_labels = eval_obs_f(state,ctm_env)
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
 
-    def loss_fn(state, ctm_env_in, opt_context):
+    def loss_fn_default(state, ctm_env_in, opt_context):
         ctm_args= opt_context["ctm_args"]
         opt_args= opt_context["opt_args"]
 
@@ -196,6 +210,8 @@ def main():
 
         # possibly re-initialize the environment
         if opt_args.opt_ctm_reinit:
+            if ctm_env_in is None:
+                ctm_env_in= ENV(args.chi, state_n)
             init_env(state_n, ctm_env_in)
 
         # 1) compute environment by CTMRG
@@ -209,19 +225,83 @@ def main():
         t_loss1= time.perf_counter()
         return (loss, ctm_env_out, *ctm_log, t_loss1-t_loss0)
 
-    def _to_json(l):
-                re=[l[i,0].item() for i in range(l.size()[0])]
-                im=[l[i,1].item() for i in range(l.size()[0])]
-                return dict({"re": re, "im": im})
+
+    def loss_fn_fp(state, ctm_env_in, opt_context):
+        ctm_args= opt_context["ctm_args"]
+        opt_args= opt_context["opt_args"]
+
+        # 2. convert to YASTN's iPEPS
+        state_yastn= PepsAD.from_pt(state)
+
+        # 3. proceed with YASTN's CTMRG implementation
+        # 3.1 possibly re-initialize the environment
+        if opt_args.opt_ctm_reinit or ctm_env_in is None:
+            env_leg = yastn.Leg(state_yastn.config, s=1, D=(1,))
+            ctm_env_in = EnvCTM(state_yastn, init=YASTN_ENV_INIT[ctm_args.ctm_env_init_type], leg=env_leg)
+        else:
+            ctm_env_in.psi = Peps2Layers(state_yastn) if state_yastn.has_physical() else state_yastn
+
+        # 3.1.1 post-init CTM steps 
+        options_svd_pre_init= {
+            "policy": YASTN_PROJ_METHOD["RSVD"],
+                "D_total": cfg.main_args.chi, 'D_block': cfg.main_args.chi, "tol": ctm_args.projector_svd_reltol,
+                "eps_multiplet": ctm_args.projector_eps_multiplet, "niter": ctm_args.projector_rsvd_niter,
+            }
+        with torch.no_grad():
+            sweep, max_dsv, max_D, converge= ctm_env_in.ctmrg_(
+                method="2site",
+                max_sweeps=math.ceil(args.chi/(args.bond_dim**2)),
+                opts_svd=options_svd_pre_init,
+                corner_tol=ctm_args.projector_svd_reltol
+            )
+        log.log(logging.INFO, f"WARM-UP: Number of ctm steps: {sweep:d}, t_warm_up: N/As")
+
+        # 3.2 setup and run CTMRG
+        options_svd={
+            "policy": YASTN_PROJ_METHOD[ctm_args.projector_svd_method],
+            "D_total": cfg.main_args.chi, "D_block" : cfg.main_args.chi,
+            "tol": ctm_args.projector_svd_reltol,
+            "eps_multiplet": ctm_args.projector_eps_multiplet,
+            'verbosity': ctm_args.verbosity_projectors
+        }
+
+        ctm_env_out, env_ts_slices, env_ts = fp_ctmrg(ctm_env_in, \
+            ctm_opts_fwd= {'opts_svd': options_svd, 'corner_tol': ctm_args.ctm_conv_tol, 'max_sweeps': ctm_args.ctm_max_iter, \
+                'method': "2site", 'use_qr': False,
+                'checkpoint_move': 'reentrant' if ctm_args.fwd_checkpoint_move==True else ctm_args.fwd_checkpoint_move,
+                },
+            ctm_opts_fp= {'opts_svd': {'policy': 'fullrank'}, 'verbosity': 3,})
+        refill_env(ctm_env_out, env_ts, env_ts_slices)
+
+        # 3.3 convert environment to peps-torch format
+        env_pt= from_yastn_env_generic(ctm_env_out, vertexToSite=state.vertexToSite)
+
+        # 3.4 evaluate loss
+        if cfg.global_args.cuda_mem_profile:
+            torch.cuda.memory._dump_snapshot(f"{args.out_prefix}_preloss_CUDAMEM.pickle")
+        t_loss0= time.perf_counter()
+        loss= energy_f(state, env_pt, compressed=args.compressed_rdms, unroll=args.loop_rdms)
+        t_loss1= time.perf_counter()
+        if cfg.global_args.cuda_mem_profile:
+            torch.cuda.memory._dump_snapshot(f"{args.out_prefix}_postloss_CUDAMEM.pickle")
+
+        return (loss, ctm_env_out, [], None, t_loss1-t_loss0)
+
 
     @torch.no_grad()
-    def obs_fn(state, ctm_env, opt_context):
+    def obs_fn(state, _ctm_env, opt_context):
+        if isinstance(_ctm_env, EnvCTM):
+            ctm_env= from_yastn_env_generic(_ctm_env, vertexToSite=state.vertexToSite)
+        else:
+            ctm_env= _ctm_env
+
         if ("line_search" in opt_context.keys() and not opt_context["line_search"]) \
             or not "line_search" in opt_context.keys():
-            epoch= len(opt_context["loss_history"]["loss"]) 
+            epoch= len(opt_context["loss_history"]["loss"])
             loss= opt_context["loss_history"]["loss"][-1]
             obs_values, obs_labels = eval_obs_f(state,ctm_env)
-            
+            _flag_antivar= False
+
             # test ENV sensitivity
             # for J2 or Jchi or J4 > 0, energy computation is expensive
             if args.test_env_sensitivity:
@@ -243,8 +323,10 @@ def main():
             print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]\
                 + ([f"{loss1-loss}"] if args.test_env_sensitivity else []) ))
             log.info(f"env_sensitivity: {loss1-loss} loss_diff: "\
-                +f"{delta_loss}" if args.test_env_sensitivity else ""\
+                +f"{delta_loss} ENV_ANTIVAR {_flag_antivar}" if args.test_env_sensitivity else ""\
                 +" Norm(sites): "+", ".join([f"{t.norm()}" for c,t in state.sites.items()]))
+
+            if _flag_antivar: raise EnvError("ENV_ANTIVAR")
 
             # with torch.no_grad():
             #     if args.top_freq>0 and epoch%args.top_freq==0:
@@ -266,11 +348,18 @@ def main():
             #         state.sites[c].copy_(state_g.sites[c])
 
     # optimize
-    if args.gauge:
-        state_g= IPEPS_WEIGHTED(state=state).gauge()
-        state= state_g.absorb_weights()
+    # enable memory history, which will
+    # add tracebacks and event history to snapshots
+    if cfg.global_args.cuda_mem_profile:
+        torch.cuda.memory._record_memory_history(
+            enabled=None, context=None, stacks='all', max_entries=9223372036854775807, device=None
+        )
+
     state.normalize_()
-    optimize_state(state, ctm_env, loss_fn, obs_fn=obs_fn)#, post_proc=post_proc)
+    loss_fn= loss_fn_fp if args.grad_type=='fp' else loss_fn_default
+    if args.grad_type=='fp':
+        ctm_env= from_env_generic_dense_to_yastn(ctm_env, state)
+    optimize_state(state, ctm_env, loss_fn, obs_fn=obs_fn, post_proc=post_proc)
 
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"
@@ -280,7 +369,7 @@ def main():
     ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_f)
     loss0= energy_f(state,ctm_env,compressed=args.compressed_rdms,unroll=args.loop_rdms)
     obs_values, obs_labels = eval_obs_f(state,ctm_env)
-    print(", ".join([f"{args.opt_max_iter}",f"{loss0}"]+[f"{v}" for v in obs_values]))  
+    print(", ".join([f"{args.opt_max_iter}",f"{loss0}"]+[f"{v}" for v in obs_values]))
 
 if __name__=='__main__':
     if len(unknown_args)>0:

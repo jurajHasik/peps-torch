@@ -237,6 +237,22 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args, \
             return truncated_svd_arnoldi(M, chi, keep_multiplets=True, \
                 abs_tol=ctm_args.projector_multiplet_abstol, \
                 eps_multiplet=ctm_args.projector_eps_multiplet, verbosity=ctm_args.verbosity_projectors)
+    elif ctm_args.projector_svd_method == 'PROPACK':
+        def truncated_svd(M, chi):
+            return truncated_svd_propack(M, chi,\
+                int(chi*ctm_args.projector_propack_extra_states), ctm_args.projector_svd_reltol,\
+                v0=None,\
+                keep_multiplets=True, \
+                abs_tol=ctm_args.projector_multiplet_abstol, eps_multiplet=ctm_args.projector_eps_multiplet, \
+                verbosity=ctm_args.verbosity_projectors)
+    elif ctm_args.projector_svd_method in ['RSVD','RSVD_CUSTOM']:
+        if ctm_args.projector_svd_method == 'RSVD':
+            def truncated_svd(M, chi):
+                U,S,V= torch.svd_lowrank(M, q=2*chi, niter=ctm_args.projector_rsvd_niter)
+                return U[:,:chi], S[:chi], V[:,:chi]
+        if ctm_args.projector_svd_method == 'RSVD_CUSTOM':
+            def truncated_svd(M, chi):
+                return truncated_svd_rsvd(M, chi, q=chi, niter=ctm_args.projector_rsvd_niter, s = 1, vnum = 1) 
     else:
         raise(f"Projector svd method \"{cfg.ctm_args.projector_svd_method}\" not implemented")
 
@@ -247,19 +263,28 @@ def ctm_get_projectors_from_matrices(R, Rt, chi, ctm_args=cfg.ctm_args, \
         M = mm(transpose(R), Rt)
     U, S, V = truncated_svd(M, chi) # M = USV^{T}
 
-    S_nz= S[S/S[0] > ctm_args.projector_svd_reltol]
+    nz_mask= S/S[0] > ctm_args.projector_svd_reltol
+    nz_count= sum(nz_mask)
+    S_nz= S[nz_mask]
     S_sqrt= S*0
     S_sqrt[:S_nz.size(0)]= torch.rsqrt(S_nz)
     
     if verbosity>0:
         log.info(f"{diagnostics}")
-    if verbosity>1: print(S_sqrt)
+        if not ctm_args.projector_full_matrices:
+            log.info(f"S/S[0]>ctm_args.projector_svd_reltol {nz_count}/{S.size(0)}")
+    if verbosity>2: log.info(S_sqrt)
 
     # Construct projectors
     expr='ij,j->ij'
-    def P_Pt_c(*tensors):
-        R, Rt, U, V, S_sqrt= tensors
-        return mm(R, conj(U))*S_sqrt[None,:], mm(Rt,V)*S_sqrt[None,:]
+    if ctm_args.projector_full_matrices:
+        def P_Pt_c(*tensors):
+            R, Rt, U, V, S_sqrt= tensors
+            return mm(R, conj(U))*S_sqrt[None,:], mm(Rt,V)*S_sqrt[None,:]
+    else:
+        def P_Pt_c(*tensors):
+            R, Rt, U, V, S_sqrt= tensors
+            return mm(R, conj(U[:,:nz_count]))*S_sqrt[None,:nz_count], mm(Rt,V[:,:nz_count])*S_sqrt[None,:nz_count]
 
     tensors= R, Rt, U, V, S_sqrt
     if ctm_args.fwd_checkpoint_projectors:

@@ -1,0 +1,88 @@
+name: Docs
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the master branch
+  push:
+    branches: [ master, docs, ]
+  pull_request:
+    branches: [ master, docs, ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
+# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  deploy-docs:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python_v: [ "3.12", ]
+        pytorch_v: [ 2.6, ]
+      fail-fast: false
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Runs a set of commands using the runners shell
+      - name: setup python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python_v }}
+      
+      - name: setup pytorch
+        run: |
+          if [[ "${{ matrix.python_v }}" == "3.9" ]]; then export P39C="-c=conda-forge"; fi
+          if [[ "${{ matrix.pytorch_v }}" == "1.8.2" ]]
+          then
+            $CONDA/bin/conda install -c pytorch-lts -c anaconda pytorch cpuonly scipy pytest
+          elif [ "${{ matrix.pytorch_v }}" == "2.0" ]
+          then
+            $CONDA/bin/conda install pytorch==2.0.0 cpuonly -c pytorch scipy pytest opt_einsum sphinx sphinx_rtd_theme
+          else 
+            $CONDA/bin/pip3 install torch --index-url https://download.pytorch.org/whl/cpu 
+            $CONDA/bin/pip3 install scipy pytest opt_einsum sphinx sphinx_rtd_theme
+          fi
+          git submodule update --init --recursive
+
+      - name: Build and deploy documentation
+        if: github.ref == 'refs/heads/master'
+        run: |
+          cd docs
+          make html
+          cd build/html
+          git init
+          git config user.name 'github-actions'
+          git config user.email 'github-actions@github.com'
+          git add .
+          git commit -m "Deploy documentation"
+          git push --force --quiet "https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" master:gh-pages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Awesome Badge
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.BADGE_SECRET }}
+          gistID: b11fca53c80bbc7224dddad1118d873d
+          filename: docs.svg # Use test.svg if you want to use the SVG mode.
+          label: Docs
+          message: passing
+          color: blue

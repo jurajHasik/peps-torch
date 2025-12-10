@@ -349,7 +349,7 @@ class IPEPS_ABELIAN():
             The `vertexToSite` mapping function is not a part of checkpoint and must 
             be provided either when instantiating IPEPS_ABELIAN or afterwards. 
         """
-        checkpoint= torch.load(checkpoint_file, map_location=self.device) 
+        checkpoint= torch.load(checkpoint_file, map_location=self.device, weights_only=False) 
         self.sites= {ind: yastn.load_from_dict(config= self.engine, d=t_dict_repr) \
             for ind,t_dict_repr in checkpoint["parameters"].items()}
         for site_t in self.sites.values(): site_t.requires_grad_(False)
@@ -378,6 +378,9 @@ class IPEPS_ABELIAN():
         sites= {}
         for ind,t in self.sites.items():
             t_noise= yastn.rand(config=t.config, n=t.n, legs=t.get_legs(), isdiag=t.isdiag)
+            # legs= t.get_legs(native=True)
+            # ts, Ds= (l.t for l in legs), (l.D for l in legs)
+            # t_noise= yastn.rand(config=t.config, s=t.s, n=t.n, t=ts, D=Ds, isdiag=t.isdiag)
             sites[ind]= t + noise * t_noise
         state= IPEPS_ABELIAN(self.engine, sites, self.vertexToSite, 
             lX=self.lX, lY=self.lY, peps_args=peps_args)
@@ -404,6 +407,7 @@ class IPEPS_ABELIAN():
             print("")
         
         return ""
+
 
 def read_ipeps(jsonfile, settings, vertexToSite=None, \
     peps_args=cfg.peps_args, global_args=cfg.global_args):
@@ -485,7 +489,7 @@ def read_ipeps(jsonfile, settings, vertexToSite=None, \
             peps_args=peps_args, global_args=global_args)
 
     # check dtypes of all on-site tensors for newly created state
-    assert (False not in [state.dtype==s.yast_dtype for s in sites.values()]), \
+    assert (False not in [state.dtype==s.yastn_dtype for s in sites.values()]), \
         "incompatible dtype among state and on-site tensors"
 
     # move to desired device and return

@@ -1,3 +1,11 @@
+import gc
+import subprocess
+import torch
+try:
+    import arrayfire as af
+except:
+    print("Warning: Missing arrayfire. SVDAF is not available.")
+
 def _debug_allocated_tensors(device=None,global_args=None,totals_only=False):
     if global_args and not device:
         cuda= global_args.device

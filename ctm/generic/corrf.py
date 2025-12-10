@@ -216,7 +216,7 @@ def get_edge_2(coord, direction, state, env, verbosity=0):
         # 2<-1--T
         #    3<-2
         E = contract(E,T,([2],[0]))
-        C1= env.C[(s,(1,-1))]
+        C1= env.C[(s,(1,1))]
         #    0--C2
         #    1--T
         #    2--T
@@ -307,7 +307,7 @@ def apply_TM_0sO(coord, direction, state, env, edge, verbosity=0):
 
     """
     assert direction in [(0,-1),(-1,0),(0,1),(1,0)],"Invalid direction: "+str(direction)
-    # right is identical do down and left is identical to right
+    # up is identical to down and left is identical to right
     if direction==(1,0): direction=(-1,0) 
     if direction==(0,1): direction=(0,-1)
 

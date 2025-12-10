@@ -136,6 +136,9 @@ class IPEPS_ABELIAN_C4V(IPEPS_ABELIAN):
         if noise==0: return self
         _tmp= self.site()
         t_noise= yastn.rand(config=_tmp.config, n=_tmp.n, legs=_tmp.get_legs(), isdiag=_tmp.isdiag)
+        # t_data, D_data= (l.t for l in _tmp.get_legs(native=True)), (l.D for l in _tmp.get_legs(native=True))
+        # t_noise= yastn.rand(config=_tmp.config, s=_tmp.s, n=_tmp.n, \
+        #     t=t_data, D=D_data, isdiag=_tmp.isdiag)
         site= _tmp + noise * t_noise
         state= IPEPS_ABELIAN_C4V(self.engine, site, self.irrep)
         state= state.symmetrize()
@@ -162,6 +165,45 @@ class IPEPS_ABELIAN_C4V(IPEPS_ABELIAN):
             print("")
         
         return ""
+
+    def get_bipartite_state(self, peps_args=cfg.peps_args, global_args=cfg.global_args):
+        r"""
+        :return: return standard iPEPS with [[A,B],[B,A]] unit cell, with default signature of on-site tensors 
+                 `IPEPS_ABELIAN._REF_S_DIRS`.
+        :rtype: IPEPS_ABELIAN
+
+        Both A and B tensors are functions on the underlying C4v-symmetric tensor.
+        """
+        # 1. from a single-site ansatz with signature [phys,u,l,d,r]= [1,1,1,1,1] -> [-1,-1,-1,1,1]
+        A0= self.site((0,0)).flip_charges(axes=(0,1,2))
+
+        # 1.1 create rotation operator to be applied on B-sublattice
+        rot_op= yastn.Tensor(config=A0.config, s=[1,1], n=0,
+            t=((1,-1),(1,-1)), D=((1,1),(1,1)) )
+        rot_op.set_block((1,-1), (1,1), val=[[-1.],] )
+        rot_op.set_block((-1,1), (1,1), val=[[1.],] )
+
+        # 1.2 create phase operator to be applied on B-sublattice
+        phase_op= yastn.Tensor(config=A0.config, s=[-1,1], n=0,
+            t=((1,-1),(1,-1)), D=((1,1),(1,1)) )
+        phase_op.set_block((1,1), (1,1), val=[[-1.],] )
+        phase_op.set_block((-1,-1), (1,1), val=[[1.],] )
+
+        # flip_signature() is equivalent to conj().conj_blocks(), which changes the total charge from +n to -n
+        # flip_charges(axes) is equivalent to switch_signature(axes), which leaves the total charge unchanged
+        #
+        # 1.2 create B-tensor
+        # A1= state.site((0,0)).flip_signature() # 1.2.1 map into B-sublattice with [phys,u,l,d,r]= [-1,-1,-1,-1,-1]
+        # A1= rot_op.tensordot(A1,([1],[0])).switch_signature(axes=(0,3,4))
+
+        A1= A0.flip_signature().switch_signature(axes='all')
+        A1= phase_op @ A1
+        
+        state_bp= IPEPS_ABELIAN(A0.config, {(0,0): A0, (1,0): A1,}, \
+                             vertexToSite= lambda x: ((x[0]+x[1])%2,0), lX=2, lY=2,\
+                                peps_args=peps_args, global_args=global_args)
+        state_bp.sync_precomputed()
+        return state_bp
 
 def read_ipeps_c4v(jsonfile, settings, default_irrep=None,\
     peps_args=cfg.peps_args, global_args=cfg.global_args):
@@ -239,7 +281,7 @@ def read_ipeps_c4v(jsonfile, settings, default_irrep=None,\
             peps_args=peps_args, global_args=global_args)
 
     # check dtypes of all on-site tensors for newly created state
-    assert (False not in [state.dtype==s.yast_dtype for s in sites.values()]), \
+    assert (False not in [state.dtype==s.yastn_dtype for s in sites.values()]), \
         "incompatible dtype among state and on-site tensors"
 
     # move to desired device and return

@@ -123,8 +123,8 @@ def ctm_MOVE_dl(a_dl, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg
     # 0) compress abelian symmetric tensor into 1D representation for the purposes of 
     #    checkpointing
     metadata_store= {}
-    tmp= tuple([a_dl.compress_to_1d(), env.C[env.keyC].compress_to_1d(), \
-        env.T[env.keyT].compress_to_1d()])
+    tmp= tuple( yastn.split_data_and_meta(x) for x in [a_dl.to_dict(level=1), env.C[env.keyC].to_dict(level=1), \
+        env.T[env.keyT].to_dict(level=1)] )
     tensors, metadata_store["in"]= list(zip(*tmp))
     
     # function wrapping up the core of the CTM MOVE segment of CTM algorithm
@@ -137,7 +137,7 @@ def ctm_MOVE_dl(a_dl, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg
             for meta in metadata_store["in"]: 
                 meta['config']= meta['config']._replace(default_device=global_args.offload_to_gpu)
 
-        tensors= tuple(yastn.decompress_from_1d(r1d, meta) \
+        tensors= tuple( yastn.from_dict(yastn.combine_data_and_meta(r1d, meta)) \
             for r1d,meta in zip(tensors,metadata_store["in"]))
         A, C, T= tensors
         
@@ -212,7 +212,7 @@ def ctm_MOVE_dl(a_dl, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg
         nT= nT.unfuse_legs(axes=2)
 
         # 2) Return raw new tensors
-        tmp_loc= tuple([C2X2.compress_to_1d(), nT.compress_to_1d()])
+        tmp_loc= tuple( yastn.split_data_and_meta(x) for x in [C2X2.to_dict(level=1), nT.to_dict(level=1)])
         tensors_loc, metadata_store["out"]= list(zip(*tmp_loc))
 
         # move back to (default) cpu if offload_to_gpu is specified
@@ -229,7 +229,7 @@ def ctm_MOVE_dl(a_dl, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg
     else:
         new_tensors= ctm_MOVE_dl_c(*tensors)
 
-    new_tensors= tuple(yastn.decompress_from_1d(r1d, meta) \
+    new_tensors= tuple(yastn.fron_dict(yastn.combine_data_and_meta(r1d, meta)) \
             for r1d,meta in zip(new_tensors,metadata_store["out"]))
 
     env.C[env.keyC]= new_tensors[0]
@@ -261,8 +261,8 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
     # keep inputs for autograd stored on cpu, move to gpu for the core 
     # of the computation if desired
     metadata_store= {}
-    tmp= tuple([a.compress_to_1d(), \
-            env.C[env.keyC].compress_to_1d(), env.T[env.keyT].compress_to_1d()])
+    tmp= tuple( yastn.split_data_and_meta(x) for x in [a.to_dict(level=1), \
+            env.C[env.keyC].to_dict(level=1), env.T[env.keyT].to_dict(level=1)] )
     tensors, metadata_store["in"] = list(zip(*tmp))
     
     # function wrapping up the core of the CTM MOVE segment of CTM algorithm
@@ -275,7 +275,7 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
             for meta in metadata_store["in"]: 
                 meta['config']= meta['config']._replace(default_device=global_args.offload_to_gpu)
                 
-        a,C,T= tuple(yastn.decompress_from_1d(r1d, meta) \
+        a,C,T= tuple(yastn.from_dict(yastn.combine_data_and_meta(r1d, meta)) \
             for r1d,meta in zip(tensors,metadata_store["in"]))
 
         # 1) build enlarged corner upper left corner
@@ -374,7 +374,7 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
         nT= nT/nT.norm(p='inf')
 
         # 2) Return raw new tensors
-        tmp_loc= tuple([C2X2.compress_to_1d(), nT.compress_to_1d()])
+        tmp_loc= tuple(yastn.split_data_and_meta(x) for x in [C2X2.to_dict(level=1), nT.to_dict(level=1)])
         tensors_loc, metadata_store["out"]= list(zip(*tmp_loc))
 
         # move back to (default) cpu if offload_to_gpu is specified
@@ -391,7 +391,7 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
     else:
         new_tensors= ctm_MOVE_sl_c(*tensors)
 
-    new_tensors= tuple(yastn.decompress_from_1d(r1d, meta) \
+    new_tensors= tuple(yastn.from_dict(yastn.combine_data_and_meta(r1d, meta)) \
             for r1d,meta in zip(new_tensors,metadata_store["out"]))
 
     env.C[env.keyC]= new_tensors[0]

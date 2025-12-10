@@ -1,8 +1,8 @@
 import torch
 from linalg.svd_gesdd import SVDGESDD
 from linalg.svd_symeig import SVDSYMEIG
-from linalg.svd_arnoldi import SVDSYMARNOLDI, SVDARNOLDI
-from linalg.svd_rsvd import RSVD
+from linalg.svd_arnoldi import SVDSYMARNOLDI, SVDARNOLDI, SVD_PROPACK
+from linalg.svd_rsvd import rsvd
 from linalg.svd_af import SVDAF
 
 def _keep_multiplets(U,S,V,chi,eps_multiplet,abs_tol):
@@ -273,7 +273,7 @@ def truncated_svd_symarnoldi(M, chi, abs_tol=1.0e-14, rel_tol=None, keep_multipl
     return U, S, V
 
 def truncated_svd_arnoldi(M, chi, abs_tol=1.0e-14, rel_tol=None, keep_multiplets=False, \
-    eps_multiplet=1.0e-12, verbosity=0):
+    eps_multiplet=1.0e-12, thresh=0.1, verbosity=0):
     r"""
     :param M: square matrix of dimensions :math:`N \times N`
     :param chi: desired maximal rank :math:`\chi`
@@ -304,7 +304,7 @@ def truncated_svd_arnoldi(M, chi, abs_tol=1.0e-14, rel_tol=None, keep_multiplets
     .. note::
         This function does not support autograd.
     """
-    U, S, V = SVDARNOLDI.apply(M, chi+int(keep_multiplets))
+    U, S, V = SVDARNOLDI.apply(M, chi+int(keep_multiplets), thresh)
 
     # estimate the chi_new 
     chi_new= chi
@@ -337,5 +337,89 @@ def truncated_svd_arnoldi(M, chi, abs_tol=1.0e-14, rel_tol=None, keep_multiplets
 
     return U, S, V
 
-def truncated_svd_rsvd(M, chi, abs_tol=None, rel_tol=None):
-    return RSVD.apply(M, chi)
+def truncated_svd_propack(M, chi, chi_extra, rel_cutoff, v0=None,
+    abs_tol=1.0e-14, rel_tol=None, keep_multiplets=False, \
+    eps_multiplet=1.0e-12, verbosity=0):
+    r"""
+    :param M: square matrix of dimensions :math:`N \times N`
+    :param chi: desired maximal rank :math:`\chi`
+    :param abs_tol: absolute tolerance on minimal singular value 
+    :param rel_tol: relative tolerance on minimal singular value
+    :param keep_multiplets: truncate spectrum down to last complete multiplet
+    :param eps_multiplet: allowed splitting within multiplet
+    :param verbosity: logging verbosity
+    :type M: torch.tensor
+    :type chi: int
+    :type abs_tol: float
+    :type rel_tol: float
+    :type keep_multiplets: bool
+    :type eps_multiplet: float
+    :type verbosity: int
+    :return: leading :math:`\chi` left singular vectors U, right singular vectors V, and
+             singular values S
+    :rtype: torch.tensor, torch.tensor, torch.tensor
+
+    **Note:** `depends on scipy`
+
+    Returns leading :math:`\chi`-singular triples of a matrix M,
+    by computing the partial symmetric decomposition of :math:`H=M^TM` as :math:`H= UDU^T` 
+    up to rank :math:`\chi`. Returned tensors have dimensions 
+
+    .. math:: dim(U)=(N,\chi),\ dim(S)=(\chi,\chi),\ \textrm{and}\ dim(V)=(N,\chi)
+
+    .. note::
+        This function does not support autograd.
+    """
+    U, S, V = SVD_PROPACK.apply(M, chi, max(chi_extra,1), \
+        torch.as_tensor([rel_cutoff],dtype=M.dtype, device=M.device), v0)
+
+    # estimate the chi_new 
+    if keep_multiplets and chi<S.shape[0]:
+        return _keep_multiplets(U,S,V,chi,eps_multiplet,abs_tol)
+
+    St = S[:min(chi,S.shape[0])]
+    Ut = U[:, :St.shape[0]]
+    Vt = V[:, :St.shape[0]]
+
+    return U, S, V
+
+def truncated_svd_rsvd(M, chi, q=10, niter=2, s = 1, vnum = 1,
+    abs_tol=1.0e-14, rel_tol=None, ad_decomp_reg=1.0e-12,\
+    keep_multiplets=False, eps_multiplet=1.0e-12, verbosity=0, diagnostics=None):
+    r"""
+    :param M: matrix of dimensions :math:`N \times L`
+    :param chi: desired maximal rank :math:`\chi`
+    :param abs_tol: absolute tolerance on minimal singular value 
+    :param rel_tol: relative tolerance on minimal singular value
+    :param keep_multiplets: truncate spectrum down to last complete multiplet
+    :param eps_multiplet: allowed splitting within multiplet
+    :param verbosity: logging verbosity
+    :type M: torch.tensor
+    :type chi: int
+    :type abs_tol: float
+    :type rel_tol: float
+    :type keep_multiplets: bool
+    :type eps_multiplet: float
+    :type verbosity: int
+    :return: leading :math:`\chi` left singular vectors U, right singular vectors V, and
+             singular values S
+    :rtype: torch.tensor, torch.tensor, torch.tensor
+
+    Returns leading :math:`\chi`-singular triples of a matrix M by computing the full 
+    SVD :math:`M= USV^T`. Returned tensors have dimensions
+
+    .. math:: dim(U)=(N,\chi),\ dim(S)=(\chi,\chi),\ \textrm{and}\ dim(V)=(L,\chi)
+    """
+    reg= torch.as_tensor(ad_decomp_reg, dtype=M.real.dtype if M.is_complex() else M.dtype,\
+        device=M.device)
+    U, S, V = rsvd(M, chi+1, p=q, q=niter, s=s, vnum = vnum, cutoff=reg)
+
+    # estimate the chi_new 
+    if keep_multiplets and chi<S.shape[0]:
+        return _keep_multiplets(U,S,V,chi,eps_multiplet,abs_tol)
+
+    St = S[:min(chi,S.shape[0])]
+    Ut = U[:, :St.shape[0]]
+    Vt = V[:, :St.shape[0]]
+    
+    return Ut, St, Vt

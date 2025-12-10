@@ -1,6 +1,12 @@
 import torch
 import numpy as np
-from config import _torch_version_check
+try:
+    from config import _torch_version_check
+except:
+    import os
+    import sys
+    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../')))
+    from config import _torch_version_check
 
 def safe_inverse(x, epsilon=1E-12):
     return x/(x**2 + epsilon)
@@ -8,6 +14,16 @@ def safe_inverse(x, epsilon=1E-12):
 def safe_inverse_2(x, epsilon):
     x[abs(x)<epsilon]=float('inf')
     return x.pow(-1)
+
+def fix_svd_signs(U, V):
+    Uamp = (U.abs() * (2**40)).to(dtype=torch.int64)
+    ii = torch.argmax(Uamp, dim=0, keepdims=True)
+    phase = torch.take_along_dim(U, ii, dim=0)
+    phase = phase / phase.abs()
+    U = U * phase.conj().reshape(1, -1)
+    # Vh = Vh * phase.reshape(-1, 1)
+    V = V * phase.conj().reshape(1, -1)
+    return U, V
 
 class SVDGESDD_legacy(torch.autograd.Function):
     @staticmethod
@@ -72,8 +88,9 @@ class SVDGESDD(torch.autograd.Function):
             Computes SVD decompostion of matrix :math:`A = USV^\dagger`.
             """
             # A = U @ diag(S) @ Vh
-            U, S, Vh = torch.linalg.svd(A)
+            U, S, Vh = torch.linalg.svd(A,driver="gesvd" if A.is_cuda else None)
             V= Vh.transpose(-2,-1).conj()
+            U,V= fix_svd_signs(U, V)
             self.save_for_backward(U, S, V, cutoff)
             self.diagnostics= diagnostics
             return U, S, V
@@ -93,6 +110,7 @@ class SVDGESDD(torch.autograd.Function):
             Computes SVD decompostion of matrix :math:`A = USV^\dagger`.
             """
             U, S, V = torch.svd(A)
+            U,V= fix_svd_signs(U, V)
             self.diagnostics= diagnostics
             self.save_for_backward(U, S, V, cutoff)
             return U, S, V
@@ -255,7 +273,7 @@ class SVDGESDD(torch.autograd.Function):
         # calls below
         if (gv is None) and (gv is None):
             if not (diagnostics is None):
-                print(f"{diagnostics} {dA.abs().max()} {S.max()}")
+                print(f"{diagnostics} {dA.abs().max()} {sigma.max()}")
             return sigma_term, None, None
 
         sigma_inv= safe_inverse_2(sigma.clone(), sigma_scale*eps)
@@ -618,9 +636,9 @@ def test_SVDGESDD_random():
     A= torch.rand(M, M, dtype=torch.float64)
     A= 0.5*(A+A.t())
 
-    D, U = torch.symeig(A, eigenvectors=True)
+    D, U = torch.linalg.eigh(A)
     # make random spectrum with almost degen
-    for split_scale in [10.0, 1.0, 0.1, 0.01, 0.]: 
+    for split_scale in [10.0, 1.0, 0.1, 0.01, 0.001, 0.0001, 0.]: 
         tot_scale=1000
         d0= torch.rand(M//2, dtype=torch.float64)
         splits= torch.rand(M//2, dtype=torch.float64)
@@ -669,6 +687,8 @@ def test_SVDGESDD_COMPLEX_random():
         assert(torch.autograd.gradcheck(test_f_2, A, eps=1e-6, atol=1e-4))
 
 if __name__=='__main__':
-    test_SVDGESDD_legacy_random()
-    test_SVDGESDD_random()
+    if _torch_version_check("1.8.1"):
+        test_SVDGESDD_random()
+    else:
+        test_SVDGESDD_legacy_random()
     # test_SVDGESDD_COMPLEX_random()

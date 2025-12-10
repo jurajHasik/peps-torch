@@ -26,6 +26,8 @@ class S_HALF_KAGOME():
         :type jtrip: float
         :param jperm: triangle exchange
         :type jperm: complex
+        :param h: uniform magnetic field in S^z direction
+        :type h: float
         :param global_args: global configuration
         :type global_args: GLOBALARGS
 
@@ -136,15 +138,18 @@ class S_HALF_KAGOME():
         :type env: ENV
         :param force_cpu: perform computation on CPU
         :type force_cpu: bool
-        :return: energy per site
-        :rtype: float
+        :return: energies on down triangles, norms of down triangles
+        :rtype: dict(tuple(int,int), float), dict(tuple(int,int), float)
         
-        Evaluate energy contribution from down triangle within 2x2 subsystem embedded in environment, 
+        Evaluate energy contribution from all non-equivalent down triangles within 2x2 subsystem embedded in environment, 
         see :meth:`ctm.pess_kagome.rdm_kagome.rdm2x2_dn_triangle_with_operator`.
         """
-        e_dn, norm_2x2_dn= rdm_kagome.rdm2x2_dn_triangle_with_operator(\
-            (0, 0), state, env, self.h_triangle, force_cpu=force_cpu)
-        return _cast_to_real(e_dn, **kwargs)
+        e_dn, norms= {}, {}
+        for coord in state.sites.keys():
+            e_dn_c, norms[coord]= rdm_kagome.rdm2x2_dn_triangle_with_operator(\
+                coord, state, env, self.h_triangle, force_cpu=force_cpu)
+            e_dn[coord]= _cast_to_real(e_dn_c, **kwargs)
+        return e_dn, norms
 
     def energy_triangle_dn_1x1(self, state, env, force_cpu=False, **kwargs):
         r"""
@@ -154,15 +159,19 @@ class S_HALF_KAGOME():
         :type env: ENV
         :param force_cpu: perform computation on CPU
         :type force_cpu: bool
-        :return: energy per site
-        :rtype: float
+        :return: energies on down triangles, norms of down triangles
+        :rtype: dict(tuple(int,int), float), dict(tuple(int,int), float)
         
         Evaluate energy contribution from down triangle within 1x1 subsystem embedded in environment, 
         see :meth:`ctm.pess_kagome.rdm_kagome.rdm1x1_kagome`.
         """
-        rdm1x1_dn= rdm_kagome.rdm1x1_kagome((0, 0), state, env, force_cpu=force_cpu, **kwargs)
-        e_dn= torch.einsum('ijkmno,mnoijk', rdm1x1_dn, self.h_triangle )
-        return _cast_to_real(e_dn, **kwargs)
+        e_dn, norms= {}, {}
+        for coord in state.sites.keys():
+            rdm1x1_dn= rdm_kagome.rdm1x1_kagome(coord, state, env, force_cpu=force_cpu, **kwargs)
+            norms[coord]= torch.einsum('ijkijk',rdm1x1_dn)
+            e_dn_c= torch.einsum('ijkmno,mnoijk', rdm1x1_dn, self.h_triangle )
+            e_dn[coord]= _cast_to_real(e_dn_c, **kwargs)
+        return e_dn, norms
 
     def energy_triangle_up(self, state, env, force_cpu=False, **kwargs):
         r"""
@@ -172,29 +181,38 @@ class S_HALF_KAGOME():
         :type env: ENV
         :param force_cpu: perform computation on CPU
         :type force_cpu: bool
-        :return: energy per site
-        :rtype: float
+        :return: energies on down triangles, norms of down triangles
+        :rtype: dict(tuple(int,int), float), dict(tuple(int,int), float)
         
         Evaluate energy contribution from up triangle within 2x2 subsystem embedded in environment, 
         see :meth:`ctm.pess_kagome.rdm_kagome.rdm2x2_up_triangle_open`.
         """
-        rdm_up= rdm_kagome.rdm2x2_up_triangle_open(\
-            (0, 0), state, env, force_cpu=force_cpu, **kwargs)
-        e_up= torch.einsum('ijkmno,mnoijk', rdm_up, self.h_triangle )
-        return _cast_to_real(e_up, **kwargs)
+        e_up,norms= {},{}
+        for coord in state.sites.keys():
+            rdm_up= rdm_kagome.rdm2x2_up_triangle_open(\
+                coord, state, env, force_cpu=force_cpu, **kwargs)
+            norms[coord]= torch.einsum('ijkijk', rdm_up)
+            e_up_c= torch.einsum('ijkmno,mnoijk', rdm_up, self.h_triangle )
+            e_up[coord]= _cast_to_real(e_up_c, **kwargs)
+        return e_up,norms
 
-    # These functions do not cast observable into Real, thus returning
+    # These functions do not cast observable into real, thus returning
     # complex numbers
     def energy_triangle_up_NoCheck(self, state, env, force_cpu=False):
-        rdm_up= rdm_kagome.rdm2x2_up_triangle_open(\
-            (0, 0), state, env, force_cpu=force_cpu)
-        e_up= torch.einsum('ijkmno,mnoijk', rdm_up, self.h_triangle )
-        return e_up
+        e_up,norms= {},{}
+        for coord in state.sites.keys():
+            rdm_up= rdm_kagome.rdm2x2_up_triangle_open(\
+                coord, state, env, force_cpu=force_cpu)
+            norms[coord]= torch.einsum('ijkijk', rdm_up)
+            e_up[coord]= torch.einsum('ijkmno,mnoijk', rdm_up, self.h_triangle )
+        return e_up,norms
 
     def energy_triangle_dn_NoCheck(self, state, env, force_cpu=False):
-        e_dn, norm_2x2_dn= rdm_kagome.rdm2x2_dn_triangle_with_operator(\
-            (0, 0), state, env, self.h_triangle, force_cpu=force_cpu)
-        return e_dn
+        e_dn, norm_2x2_dn= {}, {}
+        for coord in state.sites.keys():
+            e_dn[coord], norm_2x2_dn[coord]= rdm_kagome.rdm2x2_dn_triangle_with_operator(\
+                coord, state, env, self.h_triangle, force_cpu=force_cpu)
+        return e_dn, norm_2x2_dn
 
     # def energy_nnn(self, state, env, force_cpu=False):
     #     if self.j2 == 0:
@@ -206,14 +224,19 @@ class S_HALF_KAGOME():
     # Observables
 
     def P_dn(self, state, env, force_cpu=False):
-        vP_dn,norm_2x2_dn= rdm_kagome.rdm2x2_dn_triangle_with_operator((0, 0), state, env,\
-            operator=self.P_triangle, force_cpu=force_cpu)
-        return vP_dn
+        res,norms={},{}
+        for coord in state.sites.keys():
+            res[coord],norms[coord]= rdm_kagome.rdm2x2_dn_triangle_with_operator(coord, state, env,\
+                operator=self.P_triangle, force_cpu=force_cpu)
+        return res,norms
 
     def P_up(self, state, env, force_cpu=False):
-        rdm_up= rdm_kagome.rdm2x2_up_triangle_open((0, 0), state, env, force_cpu=force_cpu)
-        vP_up= torch.einsum('ijkmno,mnoijk', rdm_up, self.P_triangle)
-        return vP_up
+        res,norms={},{}
+        for coord in state.sites.keys():
+            rdm_up= rdm_kagome.rdm2x2_up_triangle_open(coord, state, env, force_cpu=force_cpu)
+            norms[coord]= torch.einsum('ijkijk', rdm_up)
+            res[coord]= torch.einsum('ijkmno,mnoijk', rdm_up, self.P_triangle)
+        return res,norms
 
     # def P_bonds_nnn(self, state, env, force_cpu=False):
     #     norm_wf = rdm_kagome.rdm2x2_dn_triangle_with_operator((0, 0), state, env, \
@@ -277,49 +300,55 @@ class S_HALF_KAGOME():
             * (optionally) correlation lengths
 
         """
-        obs= {"e_t_dn": 0, "e_t_up": 0, "m2_0": 0, "m2_1": 0, "m2_2": 0}
+        obs= {}
         with torch.no_grad():
             if cast_real:
-                e_t_dn= self.energy_triangle_dn(state, env, force_cpu=force_cpu, **kwargs)
-                e_t_up= self.energy_triangle_up(state, env, force_cpu=force_cpu, **kwargs)
+                e_t_dn,n_dn= self.energy_triangle_dn(state, env, force_cpu=force_cpu, **kwargs)
+                e_t_up,n_up= self.energy_triangle_up(state, env, force_cpu=force_cpu, **kwargs)
             else:
-                e_t_dn= self.energy_triangle_dn_NoCheck(state, env, force_cpu=force_cpu)
-                e_t_up= self.energy_triangle_up_NoCheck(state, env, force_cpu=force_cpu)
-            obs["e_t_dn"]= e_t_dn
-            obs["e_t_up"]= e_t_up
+                e_t_dn,n_dn= self.energy_triangle_dn_NoCheck(state, env, force_cpu=force_cpu)
+                e_t_up,n_up= self.energy_triangle_up_NoCheck(state, env, force_cpu=force_cpu)
+            # 1.1 energy contributions from all non-equivalent up and down triangles
+            obs.update({f"e_t_dn({c[0]},{c[1]})": e_t_dn[c].item() for c in e_t_dn.keys()})
+            obs.update({f"e_t_up({c[0]},{c[1]})": e_t_up[c].item() for c in e_t_up.keys()})
 
-            # compute on-site observables i.e. magnetizations
-            norm_wf_1x1 = rdm_kagome.trace1x1_dn_kagome((0, 0), state, env, self.Id3_t)
-            for label in self.obs_ops.keys():
-                op= self.obs_ops[label].view(self.phys_dim**3, self.phys_dim**3)
-                obs_val= rdm_kagome.trace1x1_dn_kagome((0, 0), state, env, op) / norm_wf_1x1
-                obs[f"{label}"]= obs_val
+            # 1.2 compute on-site observables i.e. magnetizations
+            for c in state.sites.keys():
+                c_str=f"({c[0]},{c[1]})"
+                norm_wf_1x1 = rdm_kagome.trace1x1_dn_kagome(c, state, env, self.Id3_t)
+                
+                for label in self.obs_ops.keys():
+                    op= self.obs_ops[label].view(self.phys_dim**3, self.phys_dim**3)
+                    obs_val= rdm_kagome.trace1x1_dn_kagome(c, state, env, op) / norm_wf_1x1
+                    obs[f"{label}"+c_str]= obs_val
 
-            # compute magnitude of magnetization, m^2, on-site
-            for i in range(3):
-                #obs[f"m_{i}"]= sqrt(_cast_to_real(obs[f"sz_{i}"]*obs[f"sz_{i}"]+ obs[f"sp_{i}"]*obs[f"sm_{i}"]))
-                obs[f"m2_{i}"]= obs[f"sz_{i}"]*obs[f"sz_{i}"]+ obs[f"sp_{i}"]*obs[f"sm_{i}"]
+                # compute magnitude of magnetization, m^2, on-site
+                for i in range(3):
+                    #obs[f"m_{i}"]= sqrt(_cast_to_real(obs[f"sz_{i}"]*obs[f"sz_{i}"]+ obs[f"sp_{i}"]*obs[f"sm_{i}"]))
+                    obs[f"m2_{i}"+c_str]= obs[f"sz_{i}"+c_str]*obs[f"sz_{i}"+c_str]+ obs[f"sp_{i}"+c_str]*obs[f"sm_{i}"+c_str]
  
-            # nn S.S pattern. In self.SSnnId, the identity is placed on s2 of three sites
-            # in the unitcell i.e. \vec{S}_0 \cdot \vec{S}_1 \otimes Id_2
-            SS_dn_01,norm_2x2_dn= rdm_kagome.rdm2x2_dn_triangle_with_operator(\
-                (0, 0), state, env, self.SSnnId, force_cpu=force_cpu, **kwargs)
-            # move identity from site 2 to site 0
-            SS_dn_12,_= rdm_kagome.rdm2x2_dn_triangle_with_operator(\
-                (0, 0), state, env, self.SSnnId.permute(2,1,0, 5,4,3).contiguous(),\
-                force_cpu=force_cpu, **kwargs)
-            # move identity from site 2 to site 1
-            SS_dn_02,_= rdm_kagome.rdm2x2_dn_triangle_with_operator(\
-                (0, 0), state, env, self.SSnnId.permute(0,2,1, 3,5,4).contiguous(),\
-                force_cpu=force_cpu, **kwargs)
-            rdm_up= rdm_kagome.rdm2x2_up_triangle_open(\
-                (0, 0), state, env, force_cpu=force_cpu, **kwargs)
-            SS_up_01= torch.einsum('ijkmno,mnoijk', rdm_up, self.SSnnId )
-            SS_up_12= torch.einsum('ijkmno,mnoijk', rdm_up, self.SSnnId.permute(2,1,0, 5,4,3) )
-            SS_up_02= torch.einsum('ijkmno,mnoijk', rdm_up, self.SSnnId.permute(0,2,1, 3,5,4) )
+            # 1.3 nn S.S pattern. In self.SSnnId, the identity is placed on s2 of three sites
+            #     in the unitcell i.e. \vec{S}_0 \cdot \vec{S}_1 \otimes Id_2
+            for c in state.sites.keys():
+                c_str=f"({c[0]},{c[1]})"
+                SS_dn_01,norm_2x2_dn= rdm_kagome.rdm2x2_dn_triangle_with_operator(\
+                    c, state, env, self.SSnnId, force_cpu=force_cpu, **kwargs)
+                # move identity from site 2 to site 0
+                SS_dn_12,_= rdm_kagome.rdm2x2_dn_triangle_with_operator(\
+                    c, state, env, self.SSnnId.permute(2,1,0, 5,4,3).contiguous(),\
+                    force_cpu=force_cpu, **kwargs)
+                # move identity from site 2 to site 1
+                SS_dn_02,_= rdm_kagome.rdm2x2_dn_triangle_with_operator(\
+                    c, state, env, self.SSnnId.permute(0,2,1, 3,5,4).contiguous(),\
+                    force_cpu=force_cpu, **kwargs)
+                rdm_up= rdm_kagome.rdm2x2_up_triangle_open(\
+                    c, state, env, force_cpu=force_cpu, **kwargs)
+                SS_up_01= torch.einsum('ijkmno,mnoijk', rdm_up, self.SSnnId )
+                SS_up_12= torch.einsum('ijkmno,mnoijk', rdm_up, self.SSnnId.permute(2,1,0, 5,4,3) )
+                SS_up_02= torch.einsum('ijkmno,mnoijk', rdm_up, self.SSnnId.permute(0,2,1, 3,5,4) )
 
-            obs.update({"SS_dn_01": SS_dn_01, "SS_dn_12": SS_dn_12, "SS_dn_02": SS_dn_02,\
-                "SS_up_01": SS_up_01, "SS_up_12": SS_up_12, "SS_up_02": SS_up_02 })
+                obs.update({"SS_dn_01"+c_str: SS_dn_01, "SS_dn_12"+c_str: SS_dn_12, "SS_dn_02"+c_str: SS_dn_02,\
+                    "SS_up_01"+c_str: SS_up_01, "SS_up_12"+c_str: SS_up_12, "SS_up_02"+c_str: SS_up_02 })
             
             if disp_corre_len: 
                 obs= eval_corr_lengths(state, env, obs=obs)
