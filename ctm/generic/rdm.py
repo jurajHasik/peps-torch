@@ -296,8 +296,6 @@ def rdm1x1_sl(coord, state, env, operator=None, sym_pos_def=False, force_cpu=Fal
     # symmetrize and normalize
     if operator is None:
         R = _sym_pos_def_rdm(R, sym_pos_def=sym_pos_def, verbosity=verbosity, who=who)
-    else:
-        R= R.trace()
     if force_cpu:
         R = R.to(env.device)
     return R
