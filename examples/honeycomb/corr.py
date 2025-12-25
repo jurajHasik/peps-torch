@@ -11,7 +11,6 @@ import torch
 import matplotlib.pyplot as plt
 
 from ipeps.integration_yastn import load_PepsAD
-from edge_spec import load_env_from_dict
 
 import yastn.yastn as yastn
 from yastn.yastn.sym import sym_U1
@@ -750,80 +749,134 @@ def corr(state, env, site, dirn, op1, op2, dist, connected=True):
         return corrf, None
 
 if __name__ == "__main__":
-    state_file = (
-        # f"./t1t2t3_V1_grad/seed_123/V1_1.0_t1_0.1_t2_0.07_t3_-0.09_3x3_N9_D_6_chi_72_fullrank_cpu_cont4_state.json"
-        f"./t1t2t3_V1_grad/CDW_3x3/V1_1.0_V2_0.5_V3_0.5_t1_0.05_t2_0.035_t3_-0.045_phi_0_3x3_N3_D_6_chi_72_fullrank_cpu_state.json"
-    )
+    for chi in [441]:
+        D=7
+        opt_chi=98
+        # chi = 180
+        seed = 8
+        state_file = (
+            f"./states/D{D:d}/ctm_test_t1_0.1_3x3_N3_D_{D:d}_chi_{opt_chi:d}_seed_{seed:d}_fullrank_cuda_state.json"
+            # f"./CI_states/t1_1.0_t2_0.7_t3_-0.9_CI_1x1_D_{D:d}_chi_{opt_chi:d}_state.json"
+        )
 
-    yastn_config = yastn.make_config(
-        backend=backend,
-        sym=sym_U1,
-        fermionic=True,
-        default_device="cpu",
-        default_dtype="complex128",
-    )
-    D = 6
-    opt_chi = 72
-    omp_cores = 16
-    torch.set_num_threads(omp_cores)
+        yastn_config = yastn.make_config(
+            backend=backend,
+            sym=sym_U1,
+            fermionic=True,
+            default_device="cpu",
+            default_dtype="complex128",
+        )
+        omp_cores = 16
+        torch.set_num_threads(omp_cores)
 
-    # Converge environment
-    opts_svd = {
-        "D_total": opt_chi,
-        "tol": 1e-8,
-        "eps_multiplet": 1e-8,
-        "fix_signs": True,
-        "truncate_multiplets": True,
-    }
+        # Converge environment
+        opts_svd = {
+            "D_total": opt_chi,
+            "tol": 1e-12,
+            "eps_multiplet": 1e-8,
+            "fix_signs": True,
+            "truncate_multiplets": True,
+        }
 
-    env_leg = yastn.Leg(yastn_config, s=1, t=(0,), D=(opt_chi,))
-    # env_dict_filename = "./t1t2t3_V1_grad/seed_123/es/env_dict_V1_1.0_t1_0.1_t2_0.07_t3_-0.09_3x3_N9_D_6_chi_72_fullrank_cpu"
-    env_dict_filename = "./t1t2t3_V1_grad/CDW_3x3/es/env_dict_V1_1.0_V2_0.5_V3_0.5_t1_0.05_t2_0.035_t3_-0.045_phi_0_3x3_N3_optchi_72_chi_72_fullrank_cpu"
+        env_leg = yastn.Leg(yastn_config, s=1, t=(0,), D=(opt_chi,))
+        env_dict_filename = f"./FCI_data/states/D{D:d}/ctm_test_t1_0.1_3x3_N3_D_{D:d}_chi_{chi:d}_seed_{seed:d}_fullrank_cuda_ctm_env_dict"
+        # env_dict_filename = f"./CI_states/t1_1.0_t2_0.7_t3_-0.9_CI_1x1_D_{D}_chi_{chi}_ctm_env_dict"
 
-    state = load_PepsAD(yastn_config, state_file)
-    with open(env_dict_filename, "rb") as handle:
-        d = pickle.load(handle)
-    env = EnvCTM(state, init="eye", leg=env_leg)
-    env = load_env_from_dict(env, d,  yastn_config)
-    print("Loaded env")
+        state = load_PepsAD(yastn_config, state_file)
+        with open(env_dict_filename, "rb") as handle:
+            d = pickle.load(handle)
+        env = yastn.from_dict(d, config=yastn_config)
+        print("Loaded env")
 
 
-    _tmp_config = {x: y for x, y in yastn_config._asdict().items() if x != "sym"}
-    sf = yastn.operators.SpinfulFermions(sym=str(yastn_config.sym), **_tmp_config)
-    n_A = sf.n(spin="u")  # parity-even operator, no swap gate needed
-    n_B = sf.n(spin="d")
-    c_A = sf.c(spin="u")
-    cp_A = sf.cp(spin="u")
-    c_B = sf.c(spin="d")
-    cp_B = sf.cp(spin="d")
-    I = sf.I()
+        _tmp_config = {x: y for x, y in yastn_config._asdict().items() if x != "sym"}
+        sf = yastn.operators.SpinfulFermions(sym=str(yastn_config.sym), **_tmp_config)
+        n_A = sf.n(spin="u")  # parity-even operator, no swap gate needed
+        n_B = sf.n(spin="d")
+        c_A = sf.c(spin="u")
+        cp_A = sf.cp(spin="u")
+        c_B = sf.c(spin="d")
+        cp_B = sf.cp(spin="d")
+        I = sf.I()
 
-    torch.set_printoptions(precision=10)
+        torch.set_printoptions(precision=10)
 
-    ci_A, cjp_A = op_order(c_A, cp_A, ordered=True, fermionic=True)
-    cip_A, cj_B = op_order(cp_A, c_B, ordered=True, fermionic=True)
+        ci_A, cjp_A = op_order(c_A, cp_A, ordered=True, fermionic=True)
+        cip_A, cj_B = op_order(cp_A, c_B, ordered=True, fermionic=True)
 
-    for i, site in enumerate(state.sites()):
-        dist = 40
-        # corrf, _ = corr(state, env, site, (0, 1), ci_A, cjp_A, dist, connected=False)
-        corrf, op_vals = corr(state, env, site, (1, 0), n_B, n_A, dist, connected=True)
-        o1 = env.measure_1site(n_B@n_A, site=site).item() - env.measure_1site(n_A, site=site).item()*env.measure_1site(n_B, site=site).item()
-        # filename = f"obs/FCI_3x3_N9/cA_cpA_corrf_site_{i:d}_dirn_(0,1).npy"
-        # filename = f"obs/CDW_3x3_N3/cA_cpA_corrf_site_{i:d}_dirn_(0,1).npy"
-        filename = f"obs/CDW_3x3_N3/nB_nA_corrf_site_{i:d}_dirn_(1,0).npy"
-        with open(filename, 'wb') as f:
-            # np.save(f, np.arange(1, dist+1))
-            # np.save(f, corrf - op_vals)
-            # np.save(f, corrf)
-            np.save(f, np.arange(0, dist+1))
-            np.save(f, np.insert(corrf - op_vals, 0, o1))
+        # data_dir = f"obs/CI_honeycomb_1x1/optchi_{opt_chi:d}/chi_{chi:d}"
+        data_dir = f"obs/FCI_3x3_N3/D{D:d}/optchi_{opt_chi:d}/chi_{chi:d}"
+        if not os.path.exists(data_dir):
+            os.makedirs(data_dir, exist_ok=True)
 
-        # # plt.style.use("science")
-        # fig, ax = plt.subplots()
-        # ax.plot(np.arange(1, dist+1), corrf-op_vals, lw=2, marker='o', markersize=6)
-        # # ax.set_yscale('log')
-        # # ax.set_ylabel(r"$|\langle c_{00, A} c^\dagger_{r0, A}\rangle|$")
-        # ax.set_ylabel(r"$\langle n_{00}^{A} n_{r0}^{B}\rangle - \langle n_{00}^{A} \rangle \langle n_{r0}^{A}\rangle$")
-        # ax.set_xlabel(r"$r$")
-        # plt.savefig(f"figs/nA_nB_corrf_site_{i:d}_dirn_(1,0).pdf")
+        for i, site in enumerate(state.sites()):
+            dist = 70
+            corrf, _ = corr(state, env, site, (0, 1), ci_A, cjp_A, dist, connected=False)
+            filename = os.path.join(data_dir, f"cA_cpA_corrf_site_{i:d}_dirn_(0,1).npy")
+            with open(filename, 'wb') as f:
+                np.save(f, np.arange(1, dist+1))
+                np.save(f, corrf)
 
+            corrf, _ = corr(state, env, site, (1, 0), ci_A, cjp_A, dist, connected=False)
+            filename = os.path.join(data_dir, f"cA_cpA_corrf_site_{i:d}_dirn_(1,0).npy")
+            with open(filename, 'wb') as f:
+                np.save(f, np.arange(1, dist+1))
+                np.save(f, corrf)
+
+        for i, site in enumerate(state.sites()):
+            dist = 8
+            # nB_n_(0,1)
+            corrf, op_vals = corr(state, env, site, (0, 1), n_B, n_A, dist, connected=True)
+            # filename = os.path.join(data_dir, f"nB_nA_corrf_site_{i:d}_dirn_(0,1).npy")
+            filename = os.path.join(data_dir, f"normalized_nB_nA_corrf_site_{i:d}_dirn_(0,1).npy")
+            with open(filename, 'wb') as f:
+                np.save(f, np.arange(1, dist+1))
+                np.save(f, corrf/op_vals)
+
+            corrf, op_vals = corr(state, env, site, (0, 1), n_B, n_B, dist, connected=True)
+            # filename = os.path.join(data_dir, f"nB_nB_corrf_site_{i:d}_dirn_(0,1).npy")
+            filename = os.path.join(data_dir, f"normalized_nB_nB_corrf_site_{i:d}_dirn_(0,1).npy")
+            with open(filename, 'wb') as f:
+                np.save(f, np.arange(1, dist+1))
+                np.save(f, corrf/op_vals)
+
+            # nB_n_(1, 0)
+            corrf, op_vals = corr(state, env, site, (1, 0), n_B, n_A, dist, connected=True)
+            filename = os.path.join(data_dir, f"normalized_nB_nA_corrf_site_{i:d}_dirn_(1,0).npy")
+            o1 = env.measure_1site(n_B@n_A, site=site).item()/(env.measure_1site(n_A, site=site).item()*env.measure_1site(n_B, site=site).item())
+            with open(filename, 'wb') as f:
+                np.save(f, np.arange(0, dist+1))
+                np.save(f, np.insert(corrf/op_vals, 0, o1))
+
+            corrf, op_vals = corr(state, env, site, (1, 0), n_B, n_B, dist, connected=True)
+            filename = os.path.join(data_dir, f"normalized_nB_nB_corrf_site_{i:d}_dirn_(1,0).npy")
+            with open(filename, 'wb') as f:
+                np.save(f, np.arange(1, dist+1))
+                np.save(f, corrf/op_vals)
+
+            # # nA_n_(0,1)
+            # corrf, op_vals = corr(state, env, site, (0, 1), n_A, n_A, dist, connected=True)
+            # filename = os.path.join(data_dir, f"nA_nA_corrf_site_{i:d}_dirn_(0,1).npy")
+            # with open(filename, 'wb') as f:
+            #     np.save(f, np.arange(1, dist+1))
+            #     np.save(f, corrf - op_vals)
+
+            # corrf, op_vals = corr(state, env, site, (0, 1), n_A, n_B, dist, connected=True)
+            # filename = os.path.join(data_dir, f"nA_nB_corrf_site_{i:d}_dirn_(0,1).npy")
+            # o1 = env.measure_1site(n_B@n_A, site=site).item() - env.measure_1site(n_A, site=site).item()*env.measure_1site(n_B, site=site).item()
+            # with open(filename, 'wb') as f:
+            #     np.save(f, np.arange(0, dist+1))
+            #     np.save(f, np.insert(corrf - op_vals, 0, o1))
+
+            # # nA_n_(1, 0)
+            # corrf, op_vals = corr(state, env, site, (1, 0), n_A, n_A, dist, connected=True)
+            # filename = os.path.join(data_dir, f"nA_nA_corrf_site_{i:d}_dirn_(1,0).npy")
+            # with open(filename, 'wb') as f:
+            #     np.save(f, np.arange(1, dist+1))
+            #     np.save(f, corrf - op_vals)
+
+            # corrf, op_vals = corr(state, env, site, (1, 0), n_A, n_B, dist, connected=True)
+            # filename = os.path.join(data_dir, f"nA_nB_corrf_site_{i:d}_dirn_(1,0).npy")
+            # with open(filename, 'wb') as f:
+            #     np.save(f, np.arange(1, dist+1))
+            #     np.save(f, corrf - op_vals)

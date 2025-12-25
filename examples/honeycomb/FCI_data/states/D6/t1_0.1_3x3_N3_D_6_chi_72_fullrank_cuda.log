@@ -1,0 +1,15 @@
+INFO:__main__:loaded /capstor/scratch/cscs/hchen/tutorial/tn-torch_dev/examples/honeycomb/FCI_states/D6/t1_0.1_3x3_N3_D_6_chi_72_seed_3_fullrank_cuda_state.json
+INFO:yastn.yastn.tn.fpeps.envs._env_ctm_dist_mp:ctmrg_T main loop max_workers=4 on devices=['cuda:0', 'cuda:1', 'cuda:2', 'cuda:3']
+INFO:yastn.yastn.tn.fpeps.envs._env_ctm_dist_mp:_update_core_T_ h [['cuda:0', 'cuda:3'], ['cuda:1'], ['cuda:2']] 
+INFO:yastn.yastn.tn.fpeps.envs._env_ctm_dist_mp:_update_core_T_ v [['cuda:0', 'cuda:3'], ['cuda:1'], ['cuda:2']] 
+INFO:root:Sweep = 001; max_diff_corner_singular_values = nan
+INFO:FixedPoint:CTM iter 1 |delta_C| nan t 19.465877751936205 [s]
+INFO:yastn.yastn.tn.fpeps.envs._env_ctm_dist_mp:_update_core_T_ h [['cuda:0', 'cuda:3'], ['cuda:1'], ['cuda:2']] 
+INFO:yastn.yastn.tn.fpeps.envs._env_ctm_dist_mp:_update_core_T_ v [['cuda:0', 'cuda:3'], ['cuda:1'], ['cuda:2']] 
+INFO:root:Sweep = 002; max_diff_corner_singular_values = 9.54e-11
+INFO:FixedPoint:CTM iter 2 |delta_C| 9.535515675719023e-11 t 5.44987970800139 [s]
+INFO:FixedPoint:CTM: convergence: True, sweeps 2, t_ctm 24.915757459937595 [s], t_check 0.0623598990496248 [s]
+history [nan, 9.535515675719023e-11].
+INFO:FixedPoint:FixedPointBackward.forward FP CTM step t 5.289925307966769 [s]
+INFO:FixedPoint:FixedPointBackward.forward FP gauge-fixing t 21.395712970988825 [s]
+INFO:__main__:loss: -0.08563392678951305

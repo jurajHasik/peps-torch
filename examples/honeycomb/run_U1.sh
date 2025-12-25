@@ -1,2 +1,0 @@
-python FCI_U1.py --bond_dims "{1:1,0:3,-1:1}" --chi 60 --V1 1.0 --t1 0.2 --mu 0.000 --pattern 1x3 --CTMARGS_ctm_max_iter 300 --seed 103 --omp_cores 8
-# python chern_insulator.py --bond_dims "{1:1,0:2,-1:1}" --chi 36 --V1 0.0 --t1 0.2 --mu 0.000 --pattern 1x1 --CTMARGS_ctm_max_iter 300 --seed 38 --omp_cores 8

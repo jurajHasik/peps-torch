@@ -1,3 +1,4 @@
+import context
 import os, sys, json, pickle, argparse, time
 from itertools import cycle
 from functools import partial
@@ -13,6 +14,7 @@ from yastn.yastn.sym import sym_Z2, sym_U1, sym_none
 from yastn.yastn.backend import backend_torch as backend
 from yastn.yastn.tn.fpeps import product_peps, RectangularUnitcell, Peps
 from yastn.yastn import load_from_dict
+from yastn.yastn.tn.fpeps import EnvCTM
 from yastn.yastn.tn.fpeps.envs._env_ctm_c4v import EnvCTM_c4v
 from yastn.yastn.tn.fpeps.envs._env_ctm import ctm_conv_corner_spec
 from yastn.yastn._split_combine_dict import split_data_and_meta, combine_data_and_meta
@@ -484,6 +486,7 @@ if __name__ == "__main__":
     parser.add_argument("--device", type=str, default="cpu")
     parser.add_argument("--fermionic", action='store_true')
     parser.add_argument("--APBC", action='store_true')
+    parser.add_argument("--k_sector", type=int, default=0)
     args = parser.parse_args()
 
     omp_cores=args.num_threads
@@ -515,12 +518,22 @@ if __name__ == "__main__":
     }
 
     start_site=0
-    psi = load_PepsAD(config=yastn_config, state_file=state_file)
+    psi = load_PepsAD(yastn_config, state_file=state_file)
     if os.path.exists(env_dict_file):
         with open(env_dict_file, 'rb') as file:
             d = pickle.load(file)
         env = yastn.from_dict(d, config=yastn_config)
-        print("load env")
+        # ======load env in old format=====
+        # env_leg = yastn.Leg(yastn_config, s=1, t=(0,), D=(env_chi,))
+        # env = EnvCTM(psi.to_Peps(), init="eye", leg=env_leg)
+        # for site in d['data']:
+        #     for dirn in d['data'][site]:
+        #         setattr(env[site], dirn, yastn.load_from_dict(yastn_config, d['data'][site][dirn]))
+        # print("load env")
+
+        # d = env.to_dict()
+        # with open(env_dict_file, "wb") as f:
+        #     pickle.dump(d, f)
 
     # HOSVD
     D_max = args.Dcut
@@ -552,12 +565,11 @@ if __name__ == "__main__":
     id_charge = sym_U1.zero()
     vals_dict = {}
 
-    for k in range(Lx):
-        vals = ent_spec_cylinder_Lx_k_sector(yastn_config, cycle(L_list), cycle(R_list), Lx, unit_L, k_sector=k, charge_sector=id_charge, num_evals=8, APBC=args.APBC)
-        print(f"Momentum sector k={k}:", vals)
-        vals_dict[k] = vals
-
-    # vals, evecs, meta = ent_spec_cylinder_Lx(yastn_config, cycle(L_list), cycle(R_list), Lx, unit_L, charge_sector=id_charge, num_evals=60, APBC=args.APBC)
-    # vals_dict = analyze_momentum_sector_unit_L(vals/vals[0], evecs, meta, unit_L, Lx, k_shift=0, APBC=args.APBC)
+    # for k in range(Lx):
+    k = args.k_sector
+    assert 0 <= k and k <= Lx-1
+    vals = ent_spec_cylinder_Lx_k_sector(yastn_config, cycle(L_list), cycle(R_list), Lx, unit_L, k_sector=k, charge_sector=id_charge, num_evals=8, APBC=args.APBC)
+    print(f"Momentum sector k={k}:", vals)
     with open(args.output, "wb") as f:
-        pickle.dump(vals_dict, f)
+        # pickle.dump(vals_dict, f)
+        pickle.dump(vals, f)
