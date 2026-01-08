@@ -8,6 +8,38 @@ import ipeps
 from ctm.generic.env import ENV
 from ctm.generic import corrf
 
+
+def _get_chis(state, env, coord, direction, width):
+    assert direction in [(0,-1),(0,1),(-1,0),(1,0)], "Invalid direction: "+str(direction)
+    coord= state.vertexToSite(coord)
+    if direction in [(0,-1),(0,1)]: 
+        w_dir= (1,0) # direction perpendicular to channel
+        c_shifted= state.vertexToSite((coord[0]+width*w_dir[0], coord[1]+width*w_dir[1]))
+        # 0            0
+        # T(-1,0) 2--1 T(c_shifted)(1,0)
+        # 1            2 
+        if direction == (0,-1): # up
+            chi1= env.T[(coord,(-1,0))].size(1) 
+            chi2= env.T[(c_shifted,( 1,0))].size(2)
+        elif direction == (0,1): # down
+            chi1= env.T[(coord,(-1,0))].size(0) 
+            chi2= env.T[(c_shifted,( 1,0))].size(0)
+    elif direction in [(-1,0),(1,0)]: # left
+        w_dir= (0,1) # direction perpendicular to channel
+        c_shifted= state.vertexToSite((coord[0]+width*w_dir[0], coord[1]+width*w_dir[1]))
+        # 0--T(0,-1)--2
+        #    1
+        #    0
+        # 1--T(c_shifted)(0,1)--2
+        if direction == (-1,0): # left
+            chi1= env.T[(coord,(0,-1))].size(2) 
+            chi2= env.T[(c_shifted,(0,1))].size(2)
+        elif direction == (1,0): # right
+            chi1= env.T[(coord,(0,-1))].size(0) 
+            chi2= env.T[(c_shifted,(0,1))].size(1)
+    return chi1, chi2
+
+
 def get_Top_w0_spec(n, coord, direction, state, env, verbosity=0):
     r"""
     :param n: number of leading eigenvalues of a transfer operator to compute
@@ -36,9 +68,9 @@ def get_Top_w0_spec(n, coord, direction, state, env, verbosity=0):
 
     Other directions are obtained by analogous construction.
     """
-    chi= env.chi
     #             up        left       down     right
     dir_to_ind= {(0,-1): 1, (-1,0): 2, (0,1): 3, (1,0): 4}
+    chi1,chi2= _get_chis(state, env, coord, direction, 0)
 
     # depending on the direction, get unit-cell length
     if direction==(1,0) or direction==(-1,0):
@@ -49,25 +81,25 @@ def get_Top_w0_spec(n, coord, direction, state, env, verbosity=0):
         raise ValueError("Invalid direction: "+str(direction))
 
     # multiply vector by transfer-op within torch and pass the result back in numpy
-    #  --0 (chi)
+    #  --0 (chi1)
     # v--1 (D^2)
-    #  --2 (chi)
+    #  --2 (chi2)
     
     # if state and env are on gpu, the matrix-vector product can be performed
     # there as well. Price to pay is the communication overhead of resulting vector
     def _mv(v):
         c0= coord
         V= torch.as_tensor(v,device=state.device)
-        V= V.view(chi,chi)
+        V= V.view(chi1,chi2)
         for i in range(N):
             V= corrf.apply_TM_0sO(c0,direction,state,env,V,verbosity=verbosity)
             c0= (c0[0]+direction[0],c0[1]+direction[1])
-        V= V.view(chi**2)
+        V= V.view(chi1*chi2)
         v= V.cpu().numpy()
         return v
 
     _test_T= torch.zeros(1,dtype=env.dtype)
-    T= LinearOperator((chi**2,chi**2), matvec=_mv, \
+    T= LinearOperator((chi1*chi2,chi1*chi2), matvec=_mv, \
         dtype="complex128" if _test_T.is_complex() else "float64")
     vals= eigs(T, k=n, v0=None, return_eigenvectors=False)
 
@@ -114,13 +146,13 @@ def get_Top_spec(n, coord, direction, state, env, eigenvectors=False, verbosity=
 
     Other directions are obtained by analogous construction. 
     """
-    chi= env.chi
     # if we grow the TM in right direction
     #
     # (-1,0)--A(x,y)--(1,0)--A(x+1,y)--A(x+2,y)--...--A(x+lX-1,y)==A(x,y)--
     #
     #             up        left       down     right
     dir_to_ind= {(0,-1): 1, (-1,0): 2, (0,1): 3, (1,0): 4}
+    chi1,chi2= _get_chis(state, env, coord, direction, 0)
     ad= state.site(coord).size( dir_to_ind[(-direction[0],-direction[1])] )
 
     # depending on the direction, get unit-cell length
@@ -132,25 +164,25 @@ def get_Top_spec(n, coord, direction, state, env, eigenvectors=False, verbosity=
         raise ValueError("Invalid direction: "+str(direction))
 
     # multiply vector by transfer-op within torch and pass the result back in numpy
-    #  --0 (chi)
+    #  --0 (chi1)
     # v--1 (D^2)
-    #  --2 (chi)
+    #  --2 (chi2)
     
     # if state and env are on gpu, the matrix-vector product can be performed
     # there as well. Price to pay is the communication overhead of resulting vector
     def _mv(v):
         c0= coord
         V= torch.as_tensor(v,device=state.device)
-        V= V.view(chi,ad*ad,chi)
+        V= V.view(chi1,ad*ad,chi2)
         for i in range(N):
             V= corrf.apply_TM_1sO(c0,direction,state,env,V,verbosity=verbosity)
             c0= (c0[0]+direction[0],c0[1]+direction[1])
-        V= V.view(chi*ad*ad*chi)
+        V= V.view(chi1*ad*ad*chi2)
         v= V.cpu().numpy()
         return v
 
     _test_T= torch.zeros(1,dtype=env.dtype)
-    T= LinearOperator((chi*ad*ad*chi,chi*ad*ad*chi), matvec=_mv, \
+    T= LinearOperator((chi1*ad*ad*chi2,chi1*ad*ad*chi2), matvec=_mv, \
         dtype="complex128" if _test_T.is_complex() else "float64")
     if eigenvectors:
         vals, vecs= eigs(T, k=n, v0=None, return_eigenvectors=True)

@@ -7,6 +7,10 @@ from tn_interface import contiguous, view
 import logging
 log = logging.getLogger(__name__)
 
+class EnvError(RuntimeError):
+    def __init__(self, message="Environment error"):
+        super().__init__(message)
+
 class ENV():
     def __init__(self, chi, state=None, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
         r"""
@@ -150,6 +154,13 @@ class ENV():
         for c in self.C.values(): c.detach_()
         for t in self.T.values(): t.detach_()
 
+    def min_chi(self):
+        r"""
+        :return: minimum environment bond dimension of the environment
+        :rtype: int
+        """
+        return min([c.size(0) for c in self.C.values()]+[c.size(1) for c in self.C.values()])
+
     def extend(self, new_chi, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
         r"""
         :param new_chi: new environment bond dimension
@@ -165,6 +176,7 @@ class ENV():
         .. note::
             This operation preserves gradient tracking.
         """
+        # TODO: extend for dynamic chi
         new_env= ENV(new_chi, ctm_args=ctm_args, global_args=global_args)
         opts= {'dtype': self.dtype, 'device': self.device}
         x= min(self.chi, new_chi)
@@ -827,6 +839,14 @@ def ctmrg_conv_specC(state, env, history, p='inf', ctm_args=cfg.ctm_args):
     tolerance :attr:`CTMARGS.ctm_conv_tol` or maximal number of steps `CTMARGS.ctm_max_iter`,
     it returns ``True``.
     """
+    def _diff_spec(s1, s2):
+        if s1.size(0) == s2.size(0):
+            return sum((s1-s2)**2).item()
+        elif s1.size(0) < s2.size(0):
+            return (sum((s1-s2[:s1.size(0)])**2)+sum(s2[s1.size(0):]**2)).item()
+        else:
+            return (sum((s1[:s2.size(0)]-s2)**2)+sum(s1[s2.size(0):]**2)).item()
+
     if not history:
         history={'spec': [], 'diffs': [], 'conv_crit': []}
     # use corner spectra
@@ -837,8 +857,7 @@ def ctmrg_conv_specC(state, env, history, p='inf', ctm_args=cfg.ctm_args):
             for s_key, s_t in spec.items() }
     if len(history['spec'])>0:
         s_old= history['spec'][-1]
-        diffs= [ sum((spec_nosym_sorted[k]-s_old[k])**2).item() \
-            for k in spec.keys() ]
+        diffs= [ _diff_spec(spec_nosym_sorted[k],s_old[k]) for k in spec.keys() ]
         # sqrt of sum of squares of all differences of all corner spectra - usual 2-norm
         if p in ['fro',2]: 
             conv_crit= sqrt(sum(diffs))

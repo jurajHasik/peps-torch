@@ -271,7 +271,7 @@ def serialize_abelian_tensor_legacy(t, native=False):
     json_tensor["signature"]= t.get_signature(native=native)
     json_tensor["n"]= t.get_tensor_charge()
     json_tensor["isdiag"]= t.isdiag
-    unique_dtype = t.yast_dtype
+    unique_dtype = t.yastn_dtype
     if unique_dtype:
         json_tensor["dtype"]= unique_dtype
 

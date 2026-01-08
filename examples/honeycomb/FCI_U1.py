@@ -113,7 +113,7 @@ def main():
         sym=sym_U1,
         fermionic=True,
         # default_device=cfg.global_args.device,
-        default_device=args.devices[0],
+        default_device=ctm_devices[0],
         default_dtype=cfg.global_args.dtype,
         tensordot_policy="no_fusion",
     )

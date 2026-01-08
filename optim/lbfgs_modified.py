@@ -324,7 +324,6 @@ class LBFGS_MOD(LBFGS):
                     if t is None:
                         raise RuntimeError("minimize_scalar failed")
 
-
                 elif line_search_fn == "strong_wolfe":
                     try:
                         x_init = self._clone_param()

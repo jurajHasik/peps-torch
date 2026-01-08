@@ -15,7 +15,7 @@ from groups.pg_abelian import make_c4v_symm_A1, make_d2_SW_NE_symm, make_d2_NW_S
 from ipeps.tensor_io import *
 
 class IPEPS_ABELIAN_C4V(IPEPS_ABELIAN):
-    
+
     _REF_S_DIRS=(1,1,1,1,1)
 
     def __init__(self, settings, site=None, irrep="A1", peps_args=cfg.peps_args,\
@@ -35,19 +35,19 @@ class IPEPS_ABELIAN_C4V(IPEPS_ABELIAN):
 
         The index-position convetion for on-site tensor is defined as follows::
 
-               (+1)u (+1)s 
-                   |/ 
+               (+1)u (+1)s
+                   |/
             (+1)l--a--(+1)r  <=> a[s,u,l,d,r] with reference symmetry signature [1,1,1,1,1]
                    |
                (+1)d
-        
+
         where s denotes physical index, and u,l,d,r label four principal directions
         up, left, down, right in anti-clockwise order starting from up.
 
         .. note::
             This signature convention leads to the `bra` interpretation of physical space.
-            The on-site tensor is to be understood as 
-            :math:`a=\sum_{suldr} a_{suldr} \langle s|\langle u|\langle l|\langle d|\langle r|` 
+            The on-site tensor is to be understood as
+            :math:`a=\sum_{suldr} a_{suldr} \langle s|\langle u|\langle l|\langle d|\langle r|`
         """
         def vertexToSite(coord): return (0,0)
 
@@ -69,7 +69,7 @@ class IPEPS_ABELIAN_C4V(IPEPS_ABELIAN):
                  already resides onthe  `device` returns ``self``.
         :rtype: IPEPS_ABELIAN_C4V
 
-        Move the entire state to ``device``.        
+        Move the entire state to ``device``.
         """
         if device==self.device: return self
         site= self.site().to(device)
@@ -78,13 +78,13 @@ class IPEPS_ABELIAN_C4V(IPEPS_ABELIAN):
 
     def to_dense(self):
         r"""
-        :return: returns a copy of the state with all on-site tensors in their dense 
-                 representation. If the state already has just dense on-site tensors 
+        :return: returns a copy of the state with all on-site tensors in their dense
+                 representation. If the state already has just dense on-site tensors
                  returns ``self``.
         :rtype: IPEPS_ABELIAN_C4V
 
         Create a copy of state with all on-site tensors as dense possesing no explicit
-        block structure (symmetry). 
+        block structure (symmetry).
 
         .. note::
             This operations preserves gradients on returned dense state.
@@ -125,17 +125,19 @@ class IPEPS_ABELIAN_C4V(IPEPS_ABELIAN):
         r"""
         :param noise: magnitude of the noise
         :type noise: float
-        :return: a copy of state with noisy on-site tensors. For default value of 
-                 ``noise`` being zero ``self`` is returned. 
+        :return: a copy of state with noisy on-site tensors. For default value of
+                 ``noise`` being zero ``self`` is returned.
         :rtype: IPEPS_ABELIAN_C4V
 
-        Create a new state by adding random uniform noise with magnitude ``noise`` to all 
-        copies of on-site tensors. The noise is added to all blocks making up the individual 
+        Create a new state by adding random uniform noise with magnitude ``noise`` to all
+        copies of on-site tensors. The noise is added to all blocks making up the individual
         on-site tensors.
         """
         if noise==0: return self
         _tmp= self.site()
-        t_noise= yastn.rand(config=_tmp.config, n=_tmp.n, legs=_tmp.get_legs(), isdiag=_tmp.isdiag)
+        t_data, D_data= (l.t for l in _tmp.get_legs(native=True)), (l.D for l in _tmp.get_legs(native=True))
+        t_noise= yastn.rand(config=_tmp.config, s=_tmp.s, n=_tmp.n, \
+            t=t_data, D=D_data, isdiag=_tmp.isdiag)
         site= _tmp + noise * t_noise
         state= IPEPS_ABELIAN_C4V(self.engine, site, self.irrep)
         state= state.symmetrize()
@@ -145,7 +147,7 @@ class IPEPS_ABELIAN_C4V(IPEPS_ABELIAN):
         print(f"irrep {self.irrep} lX x lY: {self.lX} x {self.lY}")
         for nid,coord,site in [(t[0], *t[1]) for t in enumerate(self.sites.items())]:
             print(f"a{nid} {coord}: {site}")
-        
+
         # show tiling of a square lattice
         coord_list = list(self.sites.keys())
         mx, my = 3*self.lX, 3*self.lY
@@ -160,8 +162,47 @@ class IPEPS_ABELIAN_C4V(IPEPS_ABELIAN):
             for x in range(-mx,mx):
                 print(f"a{coord_list.index(self.vertexToSite((x,y)))} ", end="")
             print("")
-        
+
         return ""
+
+    def get_bipartite_state(self, peps_args=cfg.peps_args, global_args=cfg.global_args):
+        r"""
+        :return: return standard iPEPS with [[A,B],[B,A]] unit cell, with default signature of on-site tensors
+                 `IPEPS_ABELIAN._REF_S_DIRS`.
+        :rtype: IPEPS_ABELIAN
+
+        Both A and B tensors are functions on the underlying C4v-symmetric tensor.
+        """
+        # 1. from a single-site ansatz with signature [phys,u,l,d,r]= [1,1,1,1,1] -> [-1,-1,-1,1,1]
+        A0= self.site((0,0)).flip_charges(axes=(0,1,2))
+
+        # 1.1 create rotation operator to be applied on B-sublattice
+        rot_op= yastn.Tensor(config=A0.config, s=[1,1], n=0,
+            t=((1,-1),(1,-1)), D=((1,1),(1,1)) )
+        rot_op.set_block((1,-1), (1,1), val=[[-1.],] )
+        rot_op.set_block((-1,1), (1,1), val=[[1.],] )
+
+        # 1.2 create phase operator to be applied on B-sublattice
+        phase_op= yastn.Tensor(config=A0.config, s=[-1,1], n=0,
+            t=((1,-1),(1,-1)), D=((1,1),(1,1)) )
+        phase_op.set_block((1,1), (1,1), val=[[-1.],] )
+        phase_op.set_block((-1,-1), (1,1), val=[[1.],] )
+
+        # flip_signature() is equivalent to conj().conj_blocks(), which changes the total charge from +n to -n
+        # flip_charges(axes) is equivalent to switch_signature(axes), which leaves the total charge unchanged
+        #
+        # 1.2 create B-tensor
+        # A1= state.site((0,0)).flip_signature() # 1.2.1 map into B-sublattice with [phys,u,l,d,r]= [-1,-1,-1,-1,-1]
+        # A1= rot_op.tensordot(A1,([1],[0])).switch_signature(axes=(0,3,4))
+
+        A1= A0.flip_signature().switch_signature(axes='all')
+        A1= phase_op @ A1
+
+        state_bp= IPEPS_ABELIAN(A0.config, {(0,0): A0, (1,0): A1,}, \
+                             vertexToSite= lambda x: ((x[0]+x[1])%2,0), lX=2, lY=2,\
+                                peps_args=peps_args, global_args=global_args)
+        state_bp.sync_precomputed()
+        return state_bp
 
 def read_ipeps_c4v(jsonfile, settings, default_irrep=None,\
     peps_args=cfg.peps_args, global_args=cfg.global_args):
@@ -176,11 +217,11 @@ def read_ipeps_c4v(jsonfile, settings, default_irrep=None,\
     :type global_args: GLOBALARGS
     :return: wavefunction
     :rtype: IPEPS_ABELIAN_C4V
-    
+
     Read state in JSON format from file.
     """
     sites = OrderedDict()
-    
+
     with open(jsonfile) as j:
         raw_state = json.load(j)
 
@@ -188,14 +229,14 @@ def read_ipeps_c4v(jsonfile, settings, default_irrep=None,\
         for ts in raw_state["map"]:
             coord = (ts["x"],ts["y"])
 
-            # find the corresponding tensor (and its elements) 
+            # find the corresponding tensor (and its elements)
             # identified by "siteId" in the "sites" list
             t = None
             for s in raw_state["sites"]:
                 if s["siteId"] == ts["siteId"]:
                     t = s
             if t == None:
-                raise Exception("Tensor with siteId: "+ts["sideId"]+" NOT FOUND in \"sites\"") 
+                raise Exception("Tensor with siteId: "+ts["sideId"]+" NOT FOUND in \"sites\"")
 
             # depending on the "format", read the bare tensor
             if "format" in t.keys():
@@ -226,7 +267,7 @@ def read_ipeps_c4v(jsonfile, settings, default_irrep=None,\
 
         assert len(sites)==1, "Invalid number of on-site tensors. Expected one."
         site= next(iter(sites.values()))
-        
+
         meta= raw_state.get("metadata",{})
         irrep= meta.get("irrep",None)
         if irrep:
@@ -239,7 +280,7 @@ def read_ipeps_c4v(jsonfile, settings, default_irrep=None,\
             peps_args=peps_args, global_args=global_args)
 
     # check dtypes of all on-site tensors for newly created state
-    assert (False not in [state.dtype==s.yast_dtype for s in sites.values()]), \
+    assert (False not in [state.dtype==s.yastn_dtype for s in sites.values()]), \
         "incompatible dtype among state and on-site tensors"
 
     # move to desired device and return

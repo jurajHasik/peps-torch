@@ -8,8 +8,12 @@ import torch
 from optim import lbfgs_modified
 import config as cfg
 
-# from ctm.generic.env import EnvError
-from yastn.yastn.tn.fpeps.envs.fixed_pt import NoFixedPointError
+from ctm.generic.env import EnvError
+try:
+    from ctm.generic.env_yastn import NoFixedPointError
+except ImportError:
+    warnings.warn("YASTN not available", ImportWarning)
+    NoFixedPointError= RuntimeError("YASTN not available")
 
 
 def store_checkpoint(checkpoint_file, state, optimizer, current_epoch, current_loss,\
@@ -311,16 +315,16 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
             parameters, optimizer= create_optimizer(state, main_args=main_args, opt_args=opt_args,
                 ctm_args=ctm_args, global_args=global_args)
             continue
-        # except EnvError as e:
-        #     log.info("Environment approximation error is above threshold.")
-        #     if opt_args.env_sens_regauge:
-        #         print("Regauging the environment.")
-        #         with torch.no_grad():
-        #             state= state.gauge()
+        except EnvError as e:
+            log.info("Environment approximation error is above threshold.")
+            if opt_args.env_sens_regauge:
+                print("Regauging the environment.")
+                with torch.no_grad():
+                    state= state.gauge()
 
-        #         parameters, optimizer= create_optimizer(state, main_args=main_args, opt_args=opt_args,
-        #             ctm_args=ctm_args, global_args=global_args)
-        #         continue
+                parameters, optimizer= create_optimizer(state, main_args=main_args, opt_args=opt_args,
+                    ctm_args=ctm_args, global_args=global_args)
+                continue
 
         # reset line search history
         t_data["loss_ls"]=[]

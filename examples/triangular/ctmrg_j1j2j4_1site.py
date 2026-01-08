@@ -1,7 +1,12 @@
+import builtins
+from io import StringIO
 import os
+from copy import deepcopy
+from unittest.mock import patch
 import context
 import torch
 import argparse
+import time
 import config as cfg
 from ipeps.ipeps import *
 from ipeps.ipeps_1s_Q import *
@@ -10,9 +15,6 @@ from ctm.generic.env import *
 from ctm.generic import ctmrg
 from ctm.generic import transferops
 from models import spin_triangular
-# from optim.ad_optim import optimize_state
-from optim.ad_optim_lbfgs_mod import optimize_state
-# from optim.ad_optim_sgd_mod import optimize_state
 import unittest
 import logging
 log = logging.getLogger(__name__)
@@ -26,8 +28,10 @@ parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour
 parser.add_argument("--j4", type=float, default=0., help="plaquette coupling")
 parser.add_argument("--q", type=float, default=1., help="pitch vector")
 parser.add_argument("--jchi", type=float, default=0., help="scalar chirality")
+parser.add_argument("--sequence_chi",type=int,nargs="+",default=[],help="increasing list of chis")
 parser.add_argument("--tiling", default="1SITE", help="tiling of the lattice", \
     choices=["1SITE", "1SITE_NOROT", "1STRIV", "1SPG", "1SITEQ"])
+parser.add_argument("--obs_freq", type=int, default=1, help="frequency of computing observables")
 parser.add_argument("--corrf_canonical", action='store_true', help="align spin operators" \
     + " with the vector of spontaneous magnetization")
 parser.add_argument("--corrf_r", type=int, default=1, help="maximal correlation function distance")
@@ -35,7 +39,7 @@ parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of trans
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
 parser.add_argument("--gauge", action='store_true', help="put into quasi-canonical form")
-parser.add_argument("--compressed_rdms", type=int, default=-1, help="use compressed RDMs for 2x3 and 3x2 patches"\
+parser.add_argument("--compressed_rdms",type=int,nargs="+",default=[-1],help="use compressed RDMs for 2x3 and 3x2 patches"\
         +" with chi lower that chi x D^2")
 parser.add_argument("--loop_rdms", action='store_true', help="loop over central aux index in rdm2x3 and rdm3x2")
 parser.add_argument("--ctm_conv_crit", default="CSPEC", help="ctm convergence criterion", \
@@ -43,7 +47,7 @@ parser.add_argument("--ctm_conv_crit", default="CSPEC", help="ctm convergence cr
 parser.add_argument("--profile_mode",action='store_true')
 args, unknown_args = parser.parse_known_args()
 
-def main():
+def main(ctm_env_init=None):
     cfg.configure(args)
     cfg.print_config()
     torch.set_num_threads(args.omp_cores)
@@ -67,7 +71,8 @@ def main():
         raise ValueError("Invalid tiling: "+str(args.tiling)+" Supported options: "\
             +["1SITE", "1SITE_NOROT", "1STRIV", "1SPG", "1SITEQ"])
     energy_f=model.energy_per_site
-    eval_obs_f= model.eval_obs
+    eval_obs_f= lambda *aargs,**kwargs: model.eval_obs(*aargs, unroll=args.loop_rdms,**kwargs)
+    # eval_obs_f= model.eval_obs
 
     if args.instate!=None:
         if args.tiling in ["1STRIV"]:
@@ -122,8 +127,10 @@ def main():
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
             history=[]
-        e_curr= energy_f(state, env, compressed=args.compressed_rdms, unroll=args.loop_rdms)
-        obs_values, obs_labels = eval_obs_f(state,env)
+        e_curr= energy_f(state, env, compressed=args.compressed_rdms[-1], unroll=args.loop_rdms)
+        obs_values= []
+        if args.obs_freq > 0 and len(history) % args.obs_freq == 0:
+            obs_values, obs_labels = eval_obs_f(state,env)
         history.append([e_curr.item()]+obs_values)
         print(", ".join([f"{len(history)}"]+[f"{e_curr}"]*2+[f"{v}" for v in obs_values]))
 
@@ -133,8 +140,10 @@ def main():
 
     def ctmrg_conv_specC_loc(state, env, history, ctm_args=cfg.ctm_args):
         _conv_check, history= ctmrg_conv_specC(state, env, history, ctm_args=ctm_args)
-        e_curr= energy_f(state, env, compressed=args.compressed_rdms, unroll=args.loop_rdms)
-        obs_values, obs_labels = eval_obs_f(state,env)
+        e_curr, obs_values, obs_labels= float('Nan'), [], []
+        if args.obs_freq > 0 and len(history) % args.obs_freq == 0:
+            e_curr= energy_f(state, env, compressed=args.compressed_rdms[-1], unroll=args.loop_rdms)
+            obs_values, obs_labels = eval_obs_f(state,env)
         print(", ".join([f"{len(history['diffs'])}",f"{history['conv_crit'][-1]}",\
             f"{e_curr}"]+[f"{v}" for v in obs_values]))
         return _conv_check, history
@@ -149,14 +158,40 @@ def main():
     elif args.ctm_conv_crit=="ENERGY":
         ctmrg_conv_f= ctmrg_conv_energy
 
-    ctm_env_init = ENV(args.chi, state)
-    init_env(state, ctm_env_init)
+    if ctm_env_init is None:
+        ctm_env_init = ENV(args.chi, state)
+        init_env(state, ctm_env_init)
+    else:
+        print(f"Extend provided environment {ctm_env_init.chi} to {args.chi}")
+        ctm_env_init= ctm_env_init.extend(args.chi)
     print(ctm_env_init)
     
-    loss0= energy_f(state, ctm_env_init, compressed=args.compressed_rdms, unroll=args.loop_rdms)
+    # estimate timings for various compressions rates
+    print("\n")
+    rdm_ctm_args= deepcopy(cfg.ctm_args)
+    rdm_ctm_args.projector_svd_method= "GESDD"
+    rdm_ctm_args.projector_svd_reltol= 1.0e-14
+    rdm_ctm_args.projector_full_matrices= False
+    
+    # for c_chi in args.compressed_rdms:
+    #     t0= time.perf_counter()
+    #     e_curr0= energy_f(state, ctm_env_init, compressed=c_chi, unroll=args.loop_rdms, ctm_args=rdm_ctm_args)
+    #     t1= time.perf_counter()
+    #     print(f"compressed_rdms {c_chi} {e_curr0} {t1-t0} [s]")
+    #     log.info(f"t_energy {t1-t0} [s]")
+    #
+    # Variant avoiding recomputation of projectors for compressed RDMs [J1,J2 only]
+    loss0= model.energySeq_compressed_per_site(state, ctm_env_init, args.compressed_rdms, unroll=args.loop_rdms, ctm_args=rdm_ctm_args)
+    for (c_chi, e_curr0) in zip(sorted(args.compressed_rdms,reverse=True), loss0):
+       print(f"compressed_rdms {c_chi} {e_curr0}")
+    e_curr0= loss0[0]
+
+    t0= time.perf_counter()
     obs_values, obs_labels = eval_obs_f(state,ctm_env_init)
+    log.info(f"t_obs {time.perf_counter()-t0} [s]")
+    print("\n")
     print(", ".join(["epoch","conv_crit","energy"]+obs_labels))
-    print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
+    print(", ".join([f"{-1}",f"{e_curr0}"]+[f"{v}" for v in obs_values]))
 
     if args.profile_mode:
         prof = torch.profiler.profile(
@@ -178,13 +213,22 @@ def main():
         ctm_env_init, *ctm_log= ctmrg.run(state, ctm_env_init, conv_check=ctmrg_conv_f)
 
     # 6) compute final observables
-    e_curr0 = energy_f(state, ctm_env_init, compressed=args.compressed_rdms, unroll=args.loop_rdms)
+    print("\n")
+    for c_chi in args.compressed_rdms:
+        e_curr0 = energy_f(state, ctm_env_init, compressed=c_chi, unroll=args.loop_rdms, ctm_args=rdm_ctm_args)
+        print(f"compressed_rdms {c_chi} {e_curr0}")
+    # Variant avoiding recomputation of projectors for compressed RDMs [J1,J2 only]
+    # loss0= model.energySeq_compressed_per_site(state, ctm_env_init, args.compressed_rdms, unroll=args.loop_rdms, ctm_args=rdm_ctm_args)
+    # for (c_chi, e_curr0) in zip(sorted(args.compressed_rdms,reverse=True), loss0):
+    #    print(f"compressed_rdms {c_chi} {e_curr0}")
+    # e_curr0= loss0[0]
+            
     obs_values0, obs_labels = eval_obs_f(state,ctm_env_init)
-    history, t_ctm, t_obs= ctm_log
     print("\n")
     print(", ".join(["epoch","energy"]+obs_labels))
     print("FINAL "+", ".join([f"{e_curr0}"]+[f"{v}" for v in obs_values0]))
-    print(f"TIMINGS ctm: {t_ctm} conv_check: {t_obs}")
+    history, t_ctm, t_obs= ctm_log
+    print(f"TIMINGS ctm: {t_ctm} [s] conv_check: {t_obs} [s] min_chi: {ctm_env_init.min_chi()}")
 
     # environment diagnostics
     # print("\n")
@@ -193,7 +237,14 @@ def main():
         log.info(f"spectrum C[{c_loc}]")
         log.info(f"{s}")
 
-    # chirality
+    # optional: save spectrum of C2x2_LU(0,0) to file
+    # from ctm.generic.ctm_components import c2x2_LU
+    # _C= c2x2_LU((0,0), state, ctm_env_init, mode='sl', verbosity=0)
+    # S= torch.linalg.svdvals(_C)
+    # np.savez(args.out_prefix+f"_X{args.chi}spec.npz", spectrum=S.detach().cpu().numpy())
+    # log.info("Spectrum of C2x2_LU(0,0) saved to "+args.out_prefix+f"_X{args.chi}spec.npz")
+
+    # optional: chirality
     # obs= model.eval_obs_chirality(state, ctm_env_init, compressed=args.compressed_rdms,\
     #     unroll=args.loop_rdms)
     # print("\n\n")
@@ -221,10 +272,11 @@ def main():
         l, evecs_right= transferops.get_Top_spec(1, sdp[0], (-sdp[1][0],-sdp[1][1]), \
             state, ctm_env_init, eigenvectors=True)
 
-        evecs[sdp]= (evecs_left[:,0].view(ctm_env_init.chi,\
-                state.site(sdp[0]).size(dir_to_ind[(-sdp[1][0],-sdp[1][1])])**2,ctm_env_init.chi).clone(),
-                evecs_right[:,0].view(ctm_env_init.chi,\
-                    state.site(sdp[0]).size(dir_to_ind[sdp[1]])**2,ctm_env_init.chi).clone())
+        ch1,ch2= transferops._get_chis(state, ctm_env_init, sdp[0], sdp[1], 1)
+        evecs[sdp]= (evecs_left[:,0].view(ch1,\
+                state.site(sdp[0]).size(dir_to_ind[(-sdp[1][0],-sdp[1][1])])**2,ch2).clone(),
+                evecs_right[:,0].view(ch1,\
+                    state.site(sdp[0]).size(dir_to_ind[sdp[1]])**2,ch2).clone())
         if not state.site(sdp[0]).is_complex():
             assert evecs_left[:,0].imag.abs().max()<1.0e-14,"Leading eigenvector is not real"
             assert evecs_right[:,0].imag.abs().max()<1.0e-14,"Leading eigenvector is not real"
@@ -258,11 +310,27 @@ def main():
         for i in range(len(next(iter(corrSId.values())))):
             print(f"{i} "+" ".join([f"{corrSId[label][i]}" for label in corrSId.keys()]))
 
+    return ctm_env_init
+
 if __name__=='__main__':
     if len(unknown_args)>0:
         print("args not recognized: "+str(unknown_args))
         raise Exception("Unknown command line arguments")
-    main()
+    
+    current_env=None
+    if len(args.sequence_chi)==0:
+        main(current_env)
+    else:     
+        for chi in args.sequence_chi:
+            args.chi= chi
+            with open(args.out_prefix+f"_X{chi}.dat", "w") as current_fout:
+                original_print = builtins.print
+                def passthrough_print(*args, **kwargs):
+                    original_print(*args, **kwargs)
+                    current_fout.write(" ".join([str(arg) for arg in args])+kwargs.get("end", "\n"))
+
+                with patch('builtins.print', new=passthrough_print) as tmp_print:
+                    current_env= main(current_env)
 
 
 class TestCtmrg_TRGL_D3_1SITE(unittest.TestCase):

@@ -56,7 +56,7 @@ def main():
         from yastn.yastn.backend import backend_torch_cpp as backend
     settings_U1= yastn.make_config(backend=backend, sym=sym_U1, \
         default_device= cfg.global_args.device, default_dtype=cfg.global_args.dtype)
-    settings_U1.backend.set_num_threads(args.omp_cores)
+    torch.set_num_threads(args.omp_cores)
     settings_U1.backend.random_seed(args.seed)
 
     # 0) initialize model
@@ -263,20 +263,20 @@ def main():
     def energy_f(state, env, force_cpu=False, fail_on_check=False,\
         warn_on_check=True):
         #print(env)
-        e_dn = model.energy_triangle_dn(state, env, force_cpu=force_cpu,\
+        e_dn,n_dn = model.energy_triangle_dn(state, env, force_cpu=force_cpu,\
             fail_on_check=fail_on_check, warn_on_check=warn_on_check)
-        e_up = model.energy_triangle_up(state, env, force_cpu=force_cpu,\
+        e_up,n_up = model.energy_triangle_up(state, env, force_cpu=force_cpu,\
             fail_on_check=fail_on_check, warn_on_check=warn_on_check)
         # e_nnn = model.energy_nnn(state, env)
-        return (e_up + e_dn)/3 #+ e_nnn) / 3
+        return (sum(e_up.values()) + sum(e_dn.values()))/(3*len(state.sites)) #+ e_nnn) / 3
     def energy_f_complex(state, env, force_cpu=False):
-        e_dn = model.energy_triangle_dn_NoCheck(state, env, force_cpu=force_cpu)
-        e_up = model.energy_triangle_up_NoCheck(state, env, force_cpu=force_cpu)
+        e_dn,n_dn = model.energy_triangle_dn_NoCheck(state, env, force_cpu=force_cpu)
+        e_up,n_up = model.energy_triangle_up_NoCheck(state, env, force_cpu=force_cpu)
         # e_nnn = model.energy_nnn(state, env)
-        return (e_up + e_dn)/3 #+ e_nnn) / 3
+        return (sum(e_up.values()) + sum(e_dn.values()))/(3*len(state.sites)) #+ e_nnn) / 3
     def dn_energy_f_NoCheck(state, env, force_cpu=False):
-        e_dn = model.energy_triangle_dn_NoCheck(state, env, force_cpu=force_cpu)
-        return e_dn
+        e_dn,n_dn = model.energy_triangle_dn_NoCheck(state, env, force_cpu=force_cpu)
+        return sum(e_dn.values())/len(state.sites)
 
     @torch.no_grad()
     def print_corner_spectra(env):
@@ -329,36 +329,7 @@ def main():
                 return True, history
             return False, history
     elif args.CTM_check=="SingularValue":
-        def ctmrg_conv_f(state, env, history, ctm_args=cfg.ctm_args):
-            if not history:
-                history_spec = []
-                history_ite=1
-                history=[history_ite, history_spec]
-            spect_new=print_corner_spectra(env)
-            spec1_new=spect_new[0][1]
-            spec1_new=spec1_new/spec1_new[0]
-            spec2_new=spect_new[1][1]
-            spec2_new=spec2_new/spec2_new[0]
-            spec3_new=spect_new[2][1]
-            spec3_new=spec3_new/spec3_new[0]
-            spec4_new=spect_new[3][1]
-            spec4_new=spec4_new/spec4_new[0]
-            if len(history[1])==4:
-                spec_ers=torch.zeros(4)
-                spec_ers[0]=torch.linalg.norm(spec1_new-history[1][0])
-                spec_ers[1]=torch.linalg.norm(spec2_new-history[1][1])
-                spec_ers[2]=torch.linalg.norm(spec3_new-history[1][2])
-                spec_ers[3]=torch.linalg.norm(spec4_new-history[1][3])
-                #print(history[0])
-                #print(torch.max(spec_ers))
-
-            if (len(history[1])==4 and torch.max(spec_ers) < ctm_args.ctm_conv_tol*100) \
-                    or (history[0] >= ctm_args.ctm_max_iter):
-                log.info({"history_length": history[0], "history": spec_ers})
-                return True, history
-            history[1]=[spec1_new,spec2_new,spec3_new,spec4_new]
-            history[0]=history[0]+1
-            return False, history
+        ctmrg_conv_f= ctmrg_conv_specC
 
     print(state)
     # convert to dense
@@ -517,16 +488,16 @@ class TestOptim_RVB(unittest.TestCase):
 
         # compare with the reference
         ref_data="""
-        -0.31804132028886806, (-0.47713120438983814+7.549962928898673e-15j), (-0.476992756476766-4.119968255444917e-18j), 
-        (7.274848840199822e-06-3.5746728283180605e-19j), (7.3353653779646725e-06+7.360506398261333e-19j), 
-        (2.922029479032141e-05-2.715668256517051e-19j), (0.002697192770307644-6.626654326806431e-17j), 
-        (-1.5516039582596943e-17-2.1873315117327667e-17j), (6.715536599341479e-17+7.135828673148481e-17j), 
-        (0.0027083879666629507+1.358835308836964e-16j), (4.781780637048328e-17-1.7674029993691934e-16j), 
-        (1.04858281503992e-16-3.2675260491395483e-17j), (-0.005405579967988764+2.5119120173959286e-17j), 
-        (-6.30931345724943e-18+2.564004527408652e-16j), (3.281491030665942e-17-6.597152387257949e-19j), 
-        (-0.15907030200757202+1.803657163136761e-15j), (-0.16060958289227062+2.4285154034098587e-15j), 
-        (-0.1574458254332934+3.3408792468870173e-15j), (-0.1574280728668333+0j), (-0.16058888696847698+0j), 
-        (-0.15897179117210647+0j)
+        -0.3180413202889958, (-0.47713120439278667+3.639623534397078e-15j), (-0.4769927564742007+0j), 
+        (0.0026971891280391123+1.5021174805076658e-17j), (2.953928227115468e-16+3.389897989359694e-17j), 
+        (3.4201498958040513e-16-1.6468002706981575e-18j), (0.0027083902082258096-3.4755919552534e-16j), 
+        (-2.362926078045056e-16+1.5088297192245105e-16j), (-9.96011820377404e-16-1.3731797741619337e-16j), 
+        (-0.005405578567283862+2.1355452589085543e-16j), (-1.0376523478434083e-16-4.722156860876956e-16j), 
+        (4.2601775076768687e-16-2.782213398973379e-16j), (7.274829192412387e-06+8.10298987492667e-20j), 
+        (7.335377520013444e-06-1.882651843879459e-18j), (2.9220279647078648e-05-2.3087715362043214e-18j), 
+        (-0.15907030195628583+1.1943046817711557e-15j), (-0.16060958285806728+6.565741657327078e-16j), 
+        (-0.15744582552237282+1.820532263827809e-15j), (-0.1574280729028653-2.710505431213761e-20j), 
+        (-0.16058888687471531+0j), (-0.15897179122755842+3.3881317890172014e-21j)
         """
         # compare final observables from optimization and the observables from the 
         # final state

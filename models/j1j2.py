@@ -552,6 +552,17 @@ class J1J2_C4V_BIPARTITE(J1J2):
         
         See :class:`J1J2`.
 
+        .. math::
+
+            H = J_1\sum_{<i,j>} \mathbf{S}_i.\mathbf{S}_j + J_2\sum_{<<i,j>>} \mathbf{S}_i.\mathbf{S}_j
+              + J_3\sum_{<<<i,j>>>} \mathbf{S}_i.\mathbf{S}_j
+        
+        on the square lattice. Where the first sum runs over the pairs of sites `i,j` 
+        which are nearest-neighbours (denoted as `<.,.>`), the second sum runs over 
+        pairs of sites `i,j` which are next nearest-neighbours (denoted as `<<.,.>>`), and 
+        the last sum runs over pairs of sites `i,j` which are next-to-next nearest-neighbours 
+        (denoted as `<<<.,.>>>`).
+        
         .. note::
             Unifrom field in z-, and x-directions has no effect on single-site C4v symmetric state
             by construction. Uniform magnetization in y-direction is prohibited by projection
@@ -593,6 +604,7 @@ class J1J2_C4V_BIPARTITE(J1J2):
         of tensor A on every "odd" site::
 
             1x1 C4v => rotation R => BIPARTITE
+
             A A A A                  A B A B
             A A A A                  B A B A
             A A A A                  A B A B
@@ -717,7 +729,7 @@ class J1J2_C4V_BIPARTITE(J1J2):
         :rtype: list[float], list[str]
         
         Computes the following observables in order
-
+        
             1. magnetization
             2. :math:`\langle S^z \rangle,\ \langle S^+ \rangle,\ \langle S^- \rangle`
             3. :math:`\langle S.S \rangle_{NN}`, (optionally) :math:`\langle S.S \rangle_{NNNN}`
@@ -725,7 +737,9 @@ class J1J2_C4V_BIPARTITE(J1J2):
         where the on-site magnetization is defined as
         
         .. math::
+        
             m = \sqrt{ \langle S^z \rangle^2+\langle S^x \rangle^2+\langle S^y \rangle^2 }
+
         """
         # TODO optimize/unify ?
         # expect "list" of (observable label, value) pairs ?

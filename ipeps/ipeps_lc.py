@@ -163,7 +163,7 @@ class IPEPS_LC_1SITE_PG(IPEPS_LC):
         return checkpoint
 
     def load_checkpoint(self,checkpoint_file):
-        checkpoint= torch.load(checkpoint_file)
+        checkpoint= torch.load(checkpoint_file, weights_only=False)
         params= checkpoint["parameters"]
         if "coeffs" in params.keys():
             self.coeffs= params["coeffs"]
@@ -508,7 +508,7 @@ def write_ipeps_lc_1site_pg(state, outputfile, aux_seq=[0,1,2,3], tol=1.0e-14, n
 # TODO make consistent with class method
 def load_checkpoint_lc_1site_pg(checkpoint_file, vertexToSite=None, lX=None, lY=None,\
     peps_args=cfg.peps_args, global_args=cfg.global_args):
-    checkpoint= torch.load(checkpoint_file)
+    checkpoint= torch.load(checkpoint_file, weights_only=False)
     params= checkpoint["parameters"]
     assert "coeffs" in params,"missing 'coeffs' in checkpoint" 
     assert "elem_tensors" in params,"missing 'elem_tensors' in checkpoint"

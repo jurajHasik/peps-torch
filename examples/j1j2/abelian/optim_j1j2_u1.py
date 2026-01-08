@@ -37,7 +37,7 @@ def main():
         default_device= cfg.global_args.device, default_dtype=cfg.global_args.dtype)
     settings= yastn.make_config(backend=backend, sym=sym_U1, \
         default_device= cfg.global_args.device, default_dtype=cfg.global_args.dtype)
-    settings.backend.set_num_threads(args.omp_cores)
+    torch.set_num_threads(args.omp_cores)
     settings.backend.random_seed(args.seed)
     
     # the model (in particular operators forming Hamiltonian) is defined in a dense form

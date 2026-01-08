@@ -2,25 +2,25 @@ import logging
 from functools import lru_cache
 from itertools import product
 import gc, subprocess
+import time
 
 import torch
 from torch.utils.checkpoint import checkpoint
 import numpy as np
 import opt_einsum as oe  # type: ignore
 from opt_einsum.contract import (  # type: ignore
-    _VALID_CONTRACT_KWARGS,
     PathInfo,
     shape_only,
 )
 try:
-    import cuquantum as cuqn
+    from opt_einsum.contract import _VALID_CONTRACT_KWARGS
 except:
-    print("Warning: Missing cuquantum.")
+    _VALID_CONTRACT_KWARGS = {'optimize', 'memory_limit', 'einsum_call', 'use_blas', 'shapes'}
 try:
     import arrayfire as af
 except:
     print("Warning: Missing arrayfire. SVDAF is not available.")
-
+from profiling import _debug_allocated_tensors
 
 log = logging.getLogger(__name__)
 
@@ -80,35 +80,17 @@ def _preprocess_interleaved_to_expr_and_shapes(*args, unroll=[]):
 
     return expr, shapes, unrolled_shapes
 
-
-def _cuqn_search(expr, shapes, options=None, optimize=None, 
-    dtype=None, device=None):
-    """
-    Path searching without device memory allocation.
-
-    Args:
-        inputs: A sequence of string specifying the modes for all inputs.
-        output: A string specifying the output modes.
-        size_dict: A dictionary mapping all modes to corresponding extent.
-        options : Options for the tensor network as a :class:`~cuquantum.NetworkOptions` object. 
-            Alternatively, a `dict` containing the parameters for the ``NetworkOptions`` constructor can also be provided. 
-        optimize : Options for path optimization as an :class:`OptimizerOptions` object. 
-            Alternatively, a dictionary containing the parameters for the ``OptimizerOptions`` constructor can also be provided.
-    
-    Returns:
-        path: A list of pairs of operand ordinals representing the best contraction order in the :func:`numpy.einsum_path` format.
-    """
-    # create dummy cp.ndarray, note this is only meant for path finding, and should not be used 
-    # for operations that requires physical operands, e.g, autotuning and contraction.
-    operands = []
-    # m = cp.cuda.MemoryPointer(cp.cuda.UnownedMemory(0, 0, [], 0), 0)
-    device= torch.get_default_dtype() if not device else device
-    dtype= torch.get_default_dtype() if not dtype else dtype
-    for shape in shapes:
-        # operands.append(cp.ndarray(shape, memptr=m))
-        operands.append( torch.empty(shape, dtype=dtype, device=device) )
-    path, info = cuqn.contract_path(expr, *operands, options=options, optimize=optimize)
-    return path, info
+@lru_cache(maxsize=128)
+def _log_input_mem_size(shapes : tuple[tuple[int]],names=None,who=None,**kwargs):
+    # log the total size (memory footprint) of tensors entering contraction
+    if kwargs.get("verbosity",1):
+        if names:
+            assert len(names) == len(shapes),"Number of names has to match number of operands"
+            in_mem_list=", ".join(f"{n} {t} {np.asarray(t).prod()}" for n, t in zip(names, shapes))
+        else:
+            in_mem_list=", ".join(f"{n} {t} {np.asarray(t).prod()}" for n, t in enumerate(shapes))
+        log.info(f"{who} input sizes "+in_mem_list)
+        log.info(f"{who} total size {sum(np.asarray(t).prod() for t in shapes)}")
 
 
 def get_contraction_path(*tn_to_contract, unroll=[], names=None, who=None, **kwargs):
@@ -127,13 +109,18 @@ def get_contraction_path(*tn_to_contract, unroll=[], names=None, who=None, **kwa
     assert (
         len(tn_to_contract) % 2 == 1
     ), "Explicit specification of output index labels is required"
+    _log_input_mem_size(tuple(tuple(t.shape) for t in tn_to_contract[:-1][0::2]),names=names,who=who,**kwargs)
 
     expr, shapes, unrolled_shapes = _preprocess_interleaved_to_expr_and_shapes(
         *tn_to_contract, unroll=unroll if unroll else []
     )
-    return _get_contraction_path_cached(
+    t0= time.perf_counter()
+    res= _get_contraction_path_cached(
         expr, shapes, unrolled=unrolled_shapes, names=names, who=who, **kwargs
     )
+    t1= time.perf_counter()
+    log.info(f"{who} contraction path search took {t1-t0} [s]")
+    return res
 
 
 @lru_cache(maxsize=128)
@@ -151,20 +138,12 @@ def _get_contraction_path_cached(
     :param who: string id for logging identifying this optimal contraction path search
     """
     optimizer = kwargs.pop("optimizer", None)
-    global_args= kwargs.pop("global_args",None)
-    backend= "torch" if not global_args else global_args.oe_backend
-
     if optimizer in [None, "default", "dynamic-programming"]:
         optimizer = oe.DynamicProgramming(
             minimize="flops",  # 'size' optimize for largest intermediate tensor size, 'flops' for computation complexity
             search_outer=False,  # search through outer products as well
             cost_cap=True,  # don't use cost-capping strategy
         )
-    if backend in ["cuquantum_torch"]:
-        assert global_args
-        optimizer = cuqn.OptimizerOptions(slicing=cuqn.SlicerOptions(
-            disable_slicing=int(not global_args.oe_cuquantum_slicing)
-            ))
 
     # pre-process shapes, by dropping negative values (unrolled index) and last tuple,
     # which holds shapes of output tensor
@@ -172,16 +151,9 @@ def _get_contraction_path_cached(
     path = kwargs.pop("path", None)
     kwargs.pop("shapes", False)
     if not path:
-        path, path_info= None, None
-        if backend in ["cuquantum_torch"]: 
-            path, path_info = _cuqn_search(expr, shapes_unrolled, 
-            options=None, 
-            optimize=optimizer, 
-                dtype=global_args.torch_dtype, device=global_args.device)
-        else:
-            path, path_info = oe.contract_path(
-                expr, *shapes_unrolled, optimize=optimizer, shapes=True, **kwargs
-            )  # ,use_blas=)
+        path, path_info = oe.contract_path(
+            expr, *shapes_unrolled, optimize=optimizer, shapes=True, **kwargs
+        )  # ,use_blas=)
 
     path_info, mem_list = _get_contraction_path_info(
         path, expr, *shapes_unrolled, unrolled=unrolled, names=names, shapes=True
@@ -285,9 +257,15 @@ def _get_contraction_path_info(path, *operands, **kwargs):
         # Make sure we remove inds from right to left
         contract_inds = tuple(sorted(list(contract_inds), reverse=True))
 
-        contract_tuple = oe.helpers.find_contraction(
-            contract_inds, input_sets, output_set
-        )
+        try:
+            contract_tuple = oe.helpers.find_contraction(
+                contract_inds, input_sets, output_set
+            )
+        except TypeError as e:
+            # inputt_sets have to be frozenset sets for v3.4.0
+            contract_tuple = oe.helpers.find_contraction(
+                contract_inds, [frozenset(s) for s in input_sets], output_set
+            )
         out_inds, input_sets, idx_removed, idx_contract = contract_tuple
 
         # Compute cost, scale, and size
@@ -301,6 +279,8 @@ def _get_contraction_path_info(path, *operands, **kwargs):
         tmp_inputs = [input_list.pop(x) for x in contract_inds]
         if names:
             tmp_inds_to_names = [inputs_to_names.pop(x) for x in contract_inds]
+        # make list
+        input_shps= list(input_shps) if type(input_shps)==tuple else input_shps
         tmp_shapes = [input_shps.pop(x) for x in contract_inds]
 
         if use_blas:
@@ -324,7 +304,8 @@ def _get_contraction_path_info(path, *operands, **kwargs):
         input_shps.append(np.asarray(shp_result))
 
         # sum the currently contracted ops and remaining ops
-        mem_list.append(sum([x.prod() for x in tmp_shapes+input_shps]))
+        # Here, all shapes have to by np.ndarray
+        mem_list.append(sum([x.prod() if hasattr(x,'prod') else np.asarray(x).prod() for x in tmp_shapes+input_shps]))
 
         einsum_str= ",".join(tmp_inputs) + "->" + idx_result
         if names:
@@ -342,6 +323,7 @@ def _get_contraction_path_info(path, *operands, **kwargs):
 
     opt_cost = sum(cost_list)
 
+    # TODO associate input_subscripts with names
     path_print = PathInfo(
         contraction_list,
         input_subscripts,
@@ -434,7 +416,7 @@ def contract_with_unroll_compute_constants(*args, **kwargs):
         # force evaluation of all constants
         _contract_unroll_loop_body.evaluate_constants(backend=oe_backend)
         _expr_const_ts= _contract_unroll_loop_body._evaluated_constants[oe_backend]
-        
+
         def _contract_unroll_loop_body_checkpointed(*args):
             # reassign constants so the checkpointed evaluation preserves gradient flow
             count,j=0,-1
@@ -450,7 +432,7 @@ def contract_with_unroll_compute_constants(*args, **kwargs):
             # get handle of evaluated constant tensors
             c_args= tuple(t for t in _expr_const_ts if not (t is None))
             joint_args= args+c_args
-            return checkpoint(_contract_unroll_loop_body_checkpointed, *joint_args)    
+            return checkpoint(_contract_unroll_loop_body_checkpointed, *joint_args)
 
     # assign shape to each index label
     i_to_s = {
@@ -546,12 +528,6 @@ def contract_with_unroll(*args, **kwargs):
     checkpoint_unrolled = kwargs.pop("checkpoint_unrolled", False)
 
     if not unroll or len(unroll) == 0:
-        backend= kwargs.get("backend","")
-        if backend in ["cuquantum_torch"]:
-            path= kwargs.pop("optimize",None)
-            assert path
-            # args<=>contract_tn which is network and operands in interleaved description
-            return cuqn.contract(*args, optimize=cuqn.OptimizerOptions(path=path), stream=None, return_info=False)
         return oe.contract(*args, **kwargs)
 
     # We are unrolling. In general, there will be several constant
@@ -583,30 +559,10 @@ def contract_with_unroll(*args, **kwargs):
     else:
         # Build operands, passing opt_einsum's Shaped (just shapes) for both constants and rest of the ops
         shapes_and_constant_ops = tuple(
-            shape_only(tuple(i for i in shapes[idx] if i > 0)) 
+            shape_only(tuple(i for i in shapes[idx] if i > 0))
             for idx, t in enumerate(args[0 : 2 * (len(args) // 2) : 2])
         )
 
-    backend= kwargs.get("backend","")
-    if backend in ["cuquantum_torch"]:
-        # _contract_with_unroll_cuqn_noautotune
-        # _contract_with_unroll_cuqn
-        result = _contract_with_unroll_cuqn(subscripts, shapes_and_constant_ops, *args, 
-            unroll=unroll, checkpoint_unrolled=checkpoint_unrolled, verbosity=verbosity, who=who, **kwargs)
-    else:
-        result = _contract_with_unroll_oe(subscripts, shapes_and_constant_ops, *args, 
-            unroll=unroll, checkpoint_unrolled=checkpoint_unrolled, verbosity=verbosity, who=who, **kwargs)
-
-    if verbosity>0:
-        log.info(who+" unrolled loop concluded\n"
-            +_debug_allocated_tensors(device=args[0].device,totals_only=False))
-
-    return result
-
-
-def _contract_with_unroll_oe(subscripts, shapes_and_constant_ops, *args, 
-    unroll=None, checkpoint_unrolled=None, verbosity=0, who=None, **kwargs):
-    
     kwargs["_gen_expression"] = True
     oe_backend = kwargs.pop("backend", "auto")
     _contract_unroll_loop_body= oe.contract(
@@ -630,12 +586,11 @@ def _contract_with_unroll_oe(subscripts, shapes_and_constant_ops, *args,
     }
 
     # index groups stripped of unrolled indices
-    # igs = tuple(
-    #     tuple(i for i in ig if not i in unroll) for ig in (args[1::2] + (args[-1],))
-    # )
+    igs = tuple(
+        tuple(i for i in ig if not i in unroll) for ig in (args[1::2] + (args[-1],))
+    )
 
     # prepare tensor to accumulate individual contractions
-    import pdb; pdb.set_trace()
     shape_out = tuple(i_to_s[i] for i in args[-1])
     ig_out_contracted_unrolled = tuple(i for i in unroll if not (i in args[-1]))
     partials = torch.empty(
@@ -692,194 +647,12 @@ def _contract_with_unroll_oe(subscripts, shapes_and_constant_ops, *args,
     result = oe.contract(
         partials, tuple(args[-1]) + ig_out_contracted_unrolled, args[-1]
     )
-    return result
-
-
-def _contract_with_unroll_cuqn(subscripts, shapes_and_constant_ops, *args, 
-    unroll=None, checkpoint_unrolled=None, verbosity=0, who=None, **kwargs):
-    
-    # get operands
-    all_ops=args[0 : 2 * (len(args) // 2) : 2]
-    
-    # assign shape to each index label
-    i_to_s = {
-        i: s
-        for ig, t in zip(args[1::2], args[0 : 2 * (len(args) // 2) : 2])
-        for i, s in zip(ig, t.shape)
-    }
-
-    # sequence of slices (here just index values, i.e. slices of length 1) for unrolled indices
-    ui_seq= tuple(product(*tuple(range(i_to_s[i]) for i in unroll)))
-
-    # create tuple of slices to apply to operands
-    def _get_unrolled_ops_slices(ui_map):
-        return tuple(
-            tuple(ui_map[i] if i in unroll else slice(None) for i in ig) for ig in args[1::2]
-            )
-
-    def _map_slices_to_indices(ui_vals):
-        return {u: v for u, v in zip(unroll, ui_vals)}
-
-    # first create with dummy (i.e. empty) arrays
-    # ASSUME shapes_and_constant_ops are shapes only -> this does not have the correct strides
-    # _dummy_shaped= tuple(torch.empty(s.shape, dtype=args[0].dtype, device=args[0].device) for s in shapes_and_constant_ops)
-
-    # get "tensor layouts" for first element of ui_seq to setup network
-    unrolled_ops_0= tuple( t[s] for t, s in 
-        zip(all_ops, _get_unrolled_ops_slices(_map_slices_to_indices(ui_seq[0]))) )
-
-    # prepare the network context
-    with cuqn.Network(subscripts, *unrolled_ops_0) as tn:
-        path= kwargs.pop("optimize",None)
-        assert path
-        _path, opt_info= tn.contract_path(optimize=cuqn.OptimizerOptions(path=path))
-        tn.autotune()
-
-        def contract_unroll_loop_body(*args):
-            tn.reset_operands(*args)
-            return tn.contract()
-
-        # narrowing of ops by unrolled indices is done within checkpointed section
-        def contract_unroll_loop_body_checkpointed(unrolled_ops_slices,*args):
-            unrolled_ops = tuple(
-                t[s] for t, s in zip(args, unrolled_ops_slices)
-            )
-            tn.reset_operands(*unrolled_ops)
-            return tn.contract()
-
-        import pdb; pdb.set_trace()
-        # prepare tensor to accumulate individual contractions
-        shape_out = tuple(i_to_s[i] for i in args[-1])
-        ig_out_contracted_unrolled = tuple(i for i in unroll if not (i in args[-1]))
-        partials = torch.empty(
-            shape_out + tuple(i_to_s[i] for i in ig_out_contracted_unrolled),\
-            device=args[0].device, dtype=args[0].dtype
-        )
-
-        if verbosity>0:
-            log.info(who+" before unrolled loop\n"
-                +_debug_allocated_tensors(device=args[0].device,totals_only=True))
-
-        #   ui_vals= unrolled index values and list/tuple/sequence 
-        for ui_vals in ui_seq:
-            ui_map = _map_slices_to_indices(ui_vals)
-
-            ig_out = tuple(ui_map[i] if i in unroll else slice(None) for i in args[-1])
-            ig_contracted_unrolled = tuple(ui_map[i] for i in unroll if not (i in args[-1]))
-
-            if checkpoint_unrolled:
-                # ops containing all tensors
-                unrolled_ops_slices = _get_unrolled_ops_slices(ui_map)
-
-                partials[ig_out + ig_contracted_unrolled]= checkpoint(
-                    contract_unroll_loop_body_checkpointed, unrolled_ops_slices, *all_ops )
-            else:
-                # ops containing *only* variable tensors, narrowed by unrolled indices if applicable
-                unrolled_ops = tuple(
-                    t[tuple(ui_map[i] if i in unroll else slice(None) for i in ig)]
-                    for t, ig in zip(args[0 : 2 * (len(args) // 2) : 2], args[1::2])
-                    if len([i for i in unroll if i in ig]) > 0
-                )
-
-                partials[ig_out + ig_contracted_unrolled]= contract_unroll_loop_body(
-                    *unrolled_ops
-                )
-
-            if verbosity>1:
-                log.info(who+f" unrolled loop {ui_vals}\n"
-                    +_debug_allocated_tensors(device=args[0].device,totals_only=True))
-
-    result = oe.contract(
-        partials, tuple(args[-1]) + ig_out_contracted_unrolled, args[-1]
-    )
-    return result
-
-
-def _contract_with_unroll_cuqn_noautotune(subscripts, shapes_and_constant_ops, *args, 
-    unroll=None, checkpoint_unrolled=None, verbosity=0, who=None, **kwargs):
-    
-    # get operands
-    all_ops=args[0 : 2 * (len(args) // 2) : 2]
-    
-    # assign shape to each index label
-    i_to_s = {
-        i: s
-        for ig, t in zip(args[1::2], args[0 : 2 * (len(args) // 2) : 2])
-        for i, s in zip(ig, t.shape)
-    }
-
-    # sequence of slices (here just index values, i.e. slices of length 1) for unrolled indices
-    ui_seq= tuple(product(*tuple(range(i_to_s[i]) for i in unroll)))
-
-    # create tuple of slices to apply to operands
-    def _get_unrolled_ops_slices(ui_map):
-        return tuple(
-            tuple(ui_map[i] if i in unroll else slice(None) for i in ig) for ig in args[1::2]
-            )
-
-    def _map_slices_to_indices(ui_vals):
-        return {u: v for u, v in zip(unroll, ui_vals)}
-
-    path= kwargs.pop("optimize",None)
-    assert path
-
-    def contract_unroll_loop_body(*args):
-        return cuqn.contract(subscripts, *args, optimize=cuqn.OptimizerOptions(path=path), stream=None, return_info=False)
-
-    # narrowing of ops by unrolled indices is done within checkpointed section
-    def contract_unroll_loop_body_checkpointed(unrolled_ops_slices,*args):
-        unrolled_ops = tuple(
-            t[s] for t, s in zip(args, unrolled_ops_slices)
-        )
-        return cuqn.contract(subscripts, *unrolled_ops, optimize=cuqn.OptimizerOptions(path=path), stream=None, return_info=False)
-
-    # prepare tensor to accumulate individual contractions
-    shape_out = tuple(i_to_s[i] for i in args[-1])
-    ig_out_contracted_unrolled = tuple(i for i in unroll if not (i in args[-1]))
-    partials = torch.empty(
-        shape_out + tuple(i_to_s[i] for i in ig_out_contracted_unrolled),\
-        device=args[0].device, dtype=args[0].dtype
-    )
 
     if verbosity>0:
-        log.info(who+" before unrolled loop\n"
-            +_debug_allocated_tensors(device=args[0].device,totals_only=True))
+        log.info(who+" unrolled loop concluded\n"
+            +_debug_allocated_tensors(device=args[0].device,totals_only=False))
 
-    for ui_vals in ui_seq:
-        ui_map = _map_slices_to_indices(ui_vals)
-
-        ig_out = tuple(ui_map[i] if i in unroll else slice(None) for i in args[-1])
-        ig_contracted_unrolled = tuple(ui_map[i] for i in unroll if not (i in args[-1]))
-
-        if checkpoint_unrolled:
-            # ops containing all tensors
-            unrolled_ops_slices = _get_unrolled_ops_slices(ui_map)
-
-            partials[ig_out + ig_contracted_unrolled]= checkpoint(
-                contract_unroll_loop_body_checkpointed, unrolled_ops_slices, *all_ops )
-        else:
-            # ops containing *only* variable tensors, narrowed by unrolled indices if applicable
-            # NOTE: all tensors
-            unrolled_ops = tuple(
-                t[tuple(ui_map[i] if i in unroll else slice(None) for i in ig)]
-                for t, ig in zip(args[0 : 2 * (len(args) // 2) : 2], args[1::2])
-            )
-            # if len([i for i in unroll if i in ig]) > 0
-
-            partials[ig_out + ig_contracted_unrolled]= contract_unroll_loop_body(
-                *unrolled_ops
-            )
-
-        if verbosity>1:
-            log.info(who+f" unrolled loop {ui_vals}\n"
-                +_debug_allocated_tensors(device=args[0].device,totals_only=True))
-
-    result = cuqn.contract(
-        partials, tuple(args[-1]) + ig_out_contracted_unrolled, args[-1], stream=None, return_info=False
-    )
     return result
-
-
 
 # IF checkpoint_on_device move only unrolled ops at each iteration to device
 def HIGHER_PEAK_MEM_contract_with_unroll(*args, **kwargs):
@@ -932,7 +705,7 @@ def HIGHER_PEAK_MEM_contract_with_unroll(*args, **kwargs):
     else:
         # Build operands, passing opt_einsum's Shaped (just shapes) for both constants and rest of the ops
         shapes_and_constant_ops = tuple(
-            shape_only(tuple(i for i in shapes[idx] if i > 0)) 
+            shape_only(tuple(i for i in shapes[idx] if i > 0))
             for idx, t in enumerate(args[0 : 2 * (len(args) // 2) : 2])
         )
 
@@ -1074,7 +847,7 @@ def contract_with_unroll_legacy(*args, **kwargs):
         ig_contracted_unrolled = tuple(ui_map[i] for i in unroll if not (i in args[-1]))
 
         partials[ig_out + ig_contracted_unrolled]= oe.contract(*unrolled_args, **kwargs)
-        
+
 
     result = torch.einsum(
         partials, tuple(args[-1]) + ig_out_contracted_unrolled, args[-1]

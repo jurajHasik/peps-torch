@@ -60,7 +60,7 @@ class IPEPS_TRGL_1S_TTPHYS_PG(ipeps.IPEPS):
         return checkpoint       
 
     def load_checkpoint(self,checkpoint_file):
-        checkpoint= torch.load(checkpoint_file,map_location=self.device)
+        checkpoint= torch.load(checkpoint_file,map_location=self.device, weights_only=False)
         self.elem_tensors= checkpoint['elem_tensors']
         for t in self.elem_tensors.values(): t.requires_grad_(False)
         if True in [t.is_complex() for t in self.elem_tensors.values()]:
@@ -288,7 +288,7 @@ class IPEPS_TRGL_1S_TBT_PG(ipeps.IPEPS):
         return checkpoint       
 
     def load_checkpoint(self,checkpoint_file):
-        checkpoint= torch.load(checkpoint_file,map_location=self.device)
+        checkpoint= torch.load(checkpoint_file,map_location=self.device, weights_only=False)
         self.elem_tensors= checkpoint['elem_tensors']
         for t in self.elem_tensors.values(): t.requires_grad_(False)
         if True in [t.is_complex() for t in self.elem_tensors.values()]:

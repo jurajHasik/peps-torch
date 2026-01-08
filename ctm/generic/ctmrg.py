@@ -1,5 +1,7 @@
 import time
+import copy
 import torch
+from math import ceil
 from torch.utils.checkpoint import checkpoint
 import config as cfg
 from config import _torch_version_check
@@ -58,27 +60,47 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
         stateDL = IPEPS(sites=sitesDL,vertexToSite=state.vertexToSite,lX=state.lX,lY=state.lY,\
             global_args=global_args)
 
+    def _ctmrg_iter(i,loc_ctm_args= ctm_args):
+        for direction in loc_ctm_args.ctm_move_sequence:
+            diagnostics={"ctm_i": i, "ctm_d": direction} if loc_ctm_args.verbosity_projectors>0 else None
+            num_rows_or_cols= stateDL.lX if direction in [(-1,0),(1,0)] else stateDL.lY
+            for row_or_col in range(num_rows_or_cols):
+                ctm_MOVE(direction, stateDL, env, ctm_args=loc_ctm_args, global_args=global_args, \
+                    verbosity=loc_ctm_args.verbosity_ctm_move,diagnostics=diagnostics)
+
     # 1) perform CTMRG
     t_obs=t_ctm=0.
     history=None
+
+    # 1.1) warm-up
+    if ctm_args.ctm_warmup_iter >= 0:
+        warmpup_ctm_args= copy.deepcopy(ctm_args)
+        warmpup_ctm_args.projector_svd_method= ctm_args.warmup_projector_svd_method
+        maxD=max(state.get_aux_bond_dims())
+        with torch.no_grad():
+            for i in range(max(ctm_args.ctm_warmup_iter,ceil(env.chi/maxD**2))):
+                t0_ctm= time.perf_counter()
+                _ctmrg_iter(i,loc_ctm_args=warmpup_ctm_args)
+                t1_ctm= time.perf_counter()
+                t_ctm+= t1_ctm-t0_ctm
+            log.info(f"CTMRG warmup {i} steps, time= {t_ctm:.2f} s")
+    
+    # 1.2) main loop
     for i in range(ctm_args.ctm_max_iter):
         t0_ctm= time.perf_counter()
-        for direction in ctm_args.ctm_move_sequence:
-            diagnostics={"ctm_i": i, "ctm_d": direction} if ctm_args.verbosity_projectors>0 else None
-            num_rows_or_cols= stateDL.lX if direction in [(-1,0),(1,0)] else stateDL.lY
-            for row_or_col in range(num_rows_or_cols):
-                ctm_MOVE(direction, stateDL, env, ctm_args=ctm_args, global_args=global_args, \
-                    verbosity=ctm_args.verbosity_ctm_move,diagnostics=diagnostics)
+        _ctmrg_iter(i)
         t1_ctm= time.perf_counter()
 
         t0_obs= time.perf_counter()
         if conv_check is not None:
             # evaluate convergence of the CTMRG procedure
             converged, history = conv_check(state, env, history, ctm_args=ctm_args)
-            if ctm_args.verbosity_ctm_convergence>1: print(history)
+            if ctm_args.verbosity_ctm_convergence>2: 
+                _last= {k:v[-1] if type(v) in [list,tuple] else v for k,v in history.items()}
+                log.info(f"CTMRG iter {len(history['conv_crit'])} {_last}")
             if converged:
                 if ctm_args.verbosity_ctm_convergence>0: 
-                    print(f"CTMRG  converged at iter= {i}, history= {history[-1]}")
+                    print(f"CTMRG  converged at iter= {i}, history= {history['conv_crit'][-1]}")
                 break
         t1_obs= time.perf_counter()
 
@@ -181,7 +203,6 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
     else:
         raise ValueError("Invalid Projector method: "+str(ctm_args.projector_method))
 
-    # EXPERIMENTAL
     # 0) extract raw tensors as tuple
     tensors= tuple(state.sites[key] for key in state.sites.keys()) \
         + tuple(env.C[key] for key in env.C.keys()) + tuple(env.T[key] for key in env.T.keys())
@@ -307,10 +328,10 @@ def absorb_truncate_CTM_MOVE_UP(coord, state, env, P, Pt, ctm_args=cfg.ctm_args)
     coord_shift_right = state.vertexToSite((coord[0]+vec[0], coord[1]+vec[1]))
     tensors= env.C[(coord,(1,-1))], env.T[(coord,(1,0))], env.T[(coord,(0,-1))], \
         env.T[(coord,(-1,0))], env.C[(coord,(-1,-1))], state.site(coord), \
-        view(P[coord], (env.chi,state.site(coord_shift_left).size(3+mode)**(mode+1),env.chi)), \
-        view(Pt[coord], (env.chi,state.site(coord).size(1+mode)**(mode+1),env.chi)), \
-        view(P[coord_shift_right], (env.chi,state.site(coord).size(3+mode)**(mode+1),env.chi)), \
-        view(Pt[coord_shift_right], (env.chi,state.site(coord_shift_right).size(1+mode)**(mode+1),env.chi))
+        view(P[coord], (env.C[(coord,(-1,-1))].size(1),state.site(coord_shift_left).size(3+mode)**(mode+1),-1)), \
+        view(Pt[coord], (env.T[(coord,(0,-1))].size(0),state.site(coord).size(1+mode)**(mode+1),-1)), \
+        view(P[coord_shift_right], (env.T[(coord,(0,-1))].size(2),state.site(coord).size(3+mode)**(mode+1),-1)), \
+        view(Pt[coord_shift_right], (env.C[(coord,(1,-1))].size(0), state.site(coord_shift_right).size(1+mode)**(mode+1), -1))
     if mode:
         tensors += (torch.ones(1,dtype=torch.bool),)
 
@@ -401,7 +422,7 @@ def absorb_truncate_CTM_MOVE_UP_c(*tensors):
         #                  5  6
         nT= torch.einsum(T,[0,1,2,3],Pt2,[0,8,9,4],A,[12,1,8,5,10],A.conj(),[12,2,9,6,11],\
             P1,[3,10,11,7],[4,5,6,7])
-        nT= nT.view(nT.size(0),nT.size(1)*nT.size(2),nT.size(3))
+        nT= nT.reshape(nT.size(0),nT.size(1)*nT.size(2),nT.size(3))
 
     # Assign new C,T 
     #
@@ -423,10 +444,10 @@ def absorb_truncate_CTM_MOVE_LEFT(coord, state, env, P, Pt, ctm_args=cfg.ctm_arg
     coord_shift_down= state.vertexToSite((coord[0]-vec[0], coord[1]-vec[1]))
     tensors = env.C[(coord,(-1,-1))], env.T[(coord,(0,-1))], env.T[(coord,(-1,0))], \
         env.T[(coord,(0,1))], env.C[(coord,(-1,1))], state.site(coord), \
-        view(P[coord], (env.chi,state.site(coord_shift_down).size(0+mode)**(mode+1),env.chi)), \
-        view(Pt[coord], (env.chi,state.site(coord).size(2+mode)**(mode+1),env.chi)), \
-        view(P[coord_shift_up], (env.chi,state.site(coord).size(0+mode)**(mode+1),env.chi)), \
-        view(Pt[coord_shift_up], (env.chi,state.site(coord_shift_up).size(2+mode)**(mode+1),env.chi))
+        view(P[coord], (env.C[(coord,(-1,1))].size(0),state.site(coord_shift_down).size(0+mode)**(mode+1),-1)), \
+        view(Pt[coord], (env.T[(coord,(-1,0))].size(1),state.site(coord).size(2+mode)**(mode+1),-1)), \
+        view(P[coord_shift_up], (env.T[(coord,(-1,0))].size(0),state.site(coord).size(0+mode)**(mode+1),-1)), \
+        view(Pt[coord_shift_up], (env.C[(coord,(-1,-1))].size(0),state.site(coord_shift_up).size(2+mode)**(mode+1),-1))
     if mode:
         tensors += (torch.ones(1,dtype=torch.bool),)
 
@@ -519,7 +540,7 @@ def absorb_truncate_CTM_MOVE_LEFT_c(*tensors):
         #   12(3) 
         nT= torch.einsum(T,[0,1,2,3],Pt2,[1,6,7,12],A,[8,4,2,6,10],A.conj(),[8,5,3,7,11],\
             P1,[0,4,5,9],[9,12,10,11])
-        nT= nT.view(nT.size(0), nT.size(1), nT.size(2)*nT.size(3))
+        nT= nT.reshape(nT.size(0), nT.size(1), nT.size(2)*nT.size(3))
 
     # Assign new C,T 
     #
@@ -549,10 +570,10 @@ def absorb_truncate_CTM_MOVE_DOWN(coord, state, env, P, Pt, ctm_args=cfg.ctm_arg
     coord_shift_left = state.vertexToSite((coord[0]+vec[0], coord[1]+vec[1]))
     tensors= env.C[(coord,(-1,1))], env.T[(coord,(-1,0))], env.T[(coord,(0,1))], \
         env.T[(coord,(1,0))], env.C[(coord,(1,1))], state.site(coord), \
-        view(P[coord], (env.chi,state.site(coord_shift_right).size(1+mode)**(mode+1),env.chi)), \
-        view(Pt[coord], (env.chi,state.site(coord).size(3+mode)**(mode+1),env.chi)), \
-        view(P[coord_shift_left], (env.chi,state.site(coord).size(1+mode)**(mode+1),env.chi)), \
-        view(Pt[coord_shift_left], (env.chi,state.site(coord_shift_left).size(3+mode)**(mode+1),env.chi))
+        view(P[coord], (env.C[(coord,(1,1))].size(1),state.site(coord_shift_right).size(1+mode)**(mode+1),-1)), \
+        view(Pt[coord], (env.T[(coord,(0,1))].size(2),state.site(coord).size(3+mode)**(mode+1),-1)), \
+        view(P[coord_shift_left], (env.T[(coord,(0,1))].size(1),state.site(coord).size(1+mode)**(mode+1),-1)), \
+        view(Pt[coord_shift_left], (env.C[(coord,(-1,1))].size(1),state.site(coord_shift_left).size(3+mode)**(mode+1),-1))
     if mode:
         tensors += (torch.ones(1,dtype=torch.bool),)
 
@@ -643,7 +664,7 @@ def absorb_truncate_CTM_MOVE_DOWN_c(*tensors):
         #        --(0)2 2--T----3 3(0)------
         nT= torch.einsum(T,[0,1,2,3],Pt2,[3,10,11,7],A,[12,5,8,0,10],A.conj(),[12,6,9,1,11],\
             P1,[2,8,9,4],[5,6,4,7])
-        nT= nT.view(nT.size(0)*nT.size(1),nT.size(2),nT.size(3))
+        nT= nT.reshape(nT.size(0)*nT.size(1),nT.size(2),nT.size(3))
 
     # Assign new C,T
     # 
@@ -665,10 +686,10 @@ def absorb_truncate_CTM_MOVE_RIGHT(coord, state, env, P, Pt, ctm_args=cfg.ctm_ar
     coord_shift_up = state.vertexToSite((coord[0]-vec[0], coord[1]-vec[1]))
     tensors= env.C[(coord,(1,1))], env.T[(coord,(0,1))], env.T[(coord,(1,0))], \
         env.T[(coord,(0,-1))], env.C[(coord,(1,-1))], state.site(coord), \
-        view(P[coord], (env.chi,state.site(coord_shift_up).size(2+mode)**(mode+1),env.chi)), \
-        view(Pt[coord], (env.chi,state.site(coord).size(0+mode)**(mode+1),env.chi)), \
-        view(P[coord_shift_down], (env.chi,state.site(coord).size(2+mode)**(mode+1),env.chi)), \
-        view(Pt[coord_shift_down], (env.chi,state.site(coord_shift_down).size(0+mode)**(mode+1),env.chi))
+        view(P[coord], (env.C[(coord,(1,-1))].size(1),state.site(coord_shift_up).size(2+mode)**(mode+1),-1)), \
+        view(Pt[coord], (env.T[(coord,(1,0))].size(0),state.site(coord).size(0+mode)**(mode+1),-1)), \
+        view(P[coord_shift_down], (env.T[(coord,(1,0))].size(2),state.site(coord).size(2+mode)**(mode+1),-1)), \
+        view(Pt[coord_shift_down], (env.C[(coord,(1,1))].size(0),state.site(coord_shift_down).size(0+mode)**(mode+1),-1))
     if mode:
         tensors += (torch.ones(1,dtype=torch.bool),)
 
@@ -759,7 +780,7 @@ def absorb_truncate_CTM_MOVE_RIGHT_c(*tensors):
         #                        12(3) 
         nT= torch.einsum(T,[0,1,2,3],Pt2,[0,4,5,9],A,[8,4,10,6,1],A.conj(),[8,5,11,7,2],\
             P1,[3,6,7,12],[9,10,11,12])
-        nT= nT.view(nT.size(0), nT.size(1)*nT.size(2), nT.size(3))
+        nT= nT.reshape(nT.size(0), nT.size(1)*nT.size(2), nT.size(3))
     
     # Assign new C,T 
     #

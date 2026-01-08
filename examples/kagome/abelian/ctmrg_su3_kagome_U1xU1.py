@@ -40,7 +40,9 @@ def main():
         from yastn.yastn.backend import backend_torch_cpp as backend
     settings= yastn.make_config(backend=backend, sym=sym_U1xU1, \
         default_device= cfg.global_args.device, default_dtype=cfg.global_args.dtype)
-    settings.backend.set_num_threads(args.omp_cores)
+    if settings.backend.BACKEND_ID == 'torch':
+        import torch
+        torch.set_num_threads(args.omp_cores)
     settings.backend.random_seed(args.seed)
 
     param_j = np.round(np.cos(np.pi*args.phi), decimals=15)

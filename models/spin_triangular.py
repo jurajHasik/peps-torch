@@ -1,3 +1,4 @@
+from typing import Sequence
 import torch
 import groups.su2 as su2
 import config as cfg
@@ -24,7 +25,7 @@ def eval_nn_per_site(coord,state,env,R,Rinv,op_nn,op_nn_diag,
     energy_nn+= torch.einsum('ijab,abij',
         torch.einsum('ixay,xj,yb->ijab',op_nn,R,R),
         tmp_rdm_2x1)
-    
+
     #
     # A(0,0)                 A
     # |                      |
@@ -49,19 +50,32 @@ def eval_nn_per_site(coord,state,env,R,Rinv,op_nn,op_nn_diag,
 
     return energy_nn, energy_nn_diag
 
-def eval_nnn_per_site_semimanual(coord,state,env,R,Rinv,op_nnn,unroll=False,
-    checkpoint_unrolled=False,checkpoint_on_device=False,force_cpu=False,verbosity=0):
+def eval_nnn_per_site_semimanual(coord,state,env,R,Rinv,op_nnn,compressed=-1,unroll=False,
+    checkpoint_unrolled=False,checkpoint_on_device=False,force_cpu=False,dtype=None,
+    ctm_args=cfg.ctm_args,global_args=cfg.global_args,verbosity=0):
     if not unroll: unroll= {}
+
+    kwargs= dict(
+            checkpoint_unrolled=checkpoint_unrolled,
+            checkpoint_on_device=checkpoint_on_device,
+            force_cpu=force_cpu,dtype=dtype,verbosity=verbosity)
 
     # O(X^3 D^6 s^2)
     energy_nnn= 0.
-    # RA R^2A R^3A                  B  C  A     x  x s2
-    # A  RA   R^2A => 120deg order  A  B  C <=> s3 x x
-    tmp_rdm_2x3= rdm_looped.rdm2x3_loop_oe_semimanual(coord,state,env,\
-            open_sites=[2,3], unroll=unroll.get('rdm2x3_loop_oe_semimanual',False), 
-            checkpoint_unrolled=checkpoint_unrolled, 
-            checkpoint_on_device=checkpoint_on_device,
-            force_cpu=force_cpu,verbosity=verbosity)
+    # RA R^2A R^3A                  B  C  A
+    # A  RA   R^2A => 120deg order  A  B  C
+    if compressed>0:
+        # x  s3 s2
+        # s0 s1 x
+        tmp_rdm_2x3= rdm_looped.rdm2x3_loop_trglringex_compressed(coord,state,env,
+            open_sites=[0,2],compressed_chi=compressed,unroll=unroll.get('rdm2x3_loop_trglringex_compressed',False),
+            ctm_args=ctm_args,global_args=global_args,**kwargs)
+    else:
+        # s0 s1 s2
+        # s3 s4 s5
+        tmp_rdm_2x3= rdm_looped.rdm2x3_loop_oe_semimanual(coord,state,env,\
+            open_sites=[2,3],unroll=unroll.get('rdm2x3_loop_oe_semimanual',False),
+            **kwargs)
     energy_nnn+= torch.einsum('iajb,jbia',tmp_rdm_2x3,
         torch.einsum('jxiy,xb,ya->jbia',op_nnn,R@R@R,R@R@R)) # A--A nnn
 
@@ -69,27 +83,106 @@ def eval_nnn_per_site_semimanual(coord,state,env,R,Rinv,op_nnn,unroll=False,
     # R^2A R^3A     x  s3                 C A
     # RA   R^2A     x  x                  B C
     # A      RA <=> s2 x  => 120deg order A B
-    tmp_rdm_3x2= rdm_looped.rdm3x2_loop_oe_semimanual(coord,state,env,\
-            open_sites=[2,3], unroll=unroll.get('rdm3x2_loop_oe_semimanual',False), 
-            checkpoint_unrolled=checkpoint_unrolled,
-            checkpoint_on_device=checkpoint_on_device,
-            force_cpu=force_cpu,verbosity=verbosity)
+    if compressed>0:
+        # x  s2
+        # s3 s1
+        # s0 x
+        tmp_rdm_3x2= rdm_looped.rdm3x2_loop_trglringex_compressed(coord,state,env,
+            open_sites=[0,2],compressed_chi=compressed,unroll=unroll.get('rdm3x2_loop_trglringex_compressed',False),
+            ctm_args=ctm_args,global_args=global_args,**kwargs)
+    else:
+        # s0 s3
+        # s1 s4
+        # s2 s5
+        tmp_rdm_3x2= rdm_looped.rdm3x2_loop_oe_semimanual(coord,state,env,\
+            open_sites=[2,3],unroll=unroll.get('rdm3x2_loop_oe_semimanual',False),
+            **kwargs)
     energy_nnn+= torch.einsum('iajb,jbia',tmp_rdm_3x2,
         torch.einsum('jxiy,xb,ya->jbia',op_nnn,R@R@R,R@R@R)) # A--A nnn
 
-    # 
+    # TODO include rotation R
+    #
     # A    RA     s0 x                 A B
     # R^-1A A <=> x s3 => 120deg order C A
     tmp_rdm_2x2= rdm.rdm2x2(coord,state,env,open_sites=[0,3],force_cpu=force_cpu,
-        unroll=unroll.get('rdm2x2',False),checkpoint_unrolled=checkpoint_unrolled, 
+        unroll=unroll.get('rdm2x2',False),checkpoint_unrolled=checkpoint_unrolled,
         checkpoint_on_device=checkpoint_on_device,
         verbosity=verbosity)
     energy_nnn+= torch.einsum('iajb,jbia',tmp_rdm_2x2,op_nnn) # A--A nnn
 
     return energy_nnn
 
+def evalSeq_compressed_nnn_per_site(coord,state,env,R,Rinv,op_nnn,compressed:Sequence[int],
+    unroll=False,checkpoint_unrolled=False,checkpoint_on_device=False,force_cpu=False,dtype=None,
+    ctm_args=cfg.ctm_args,global_args=cfg.global_args,verbosity=0):
+    """
+    Computes the expectation value of the next nearest neighbour interaction ``op_nnn``
+    for each compressed chi in ``compressed`` order in descending order of compressed chi.
+
+    For each compressed chi, the ``op_nnn`` is evaluated against following reduced density matrices:
+        - :func:`rdm_looped.rdm2x3_loop_trglringex_compressed`
+        - :func:`rdm_looped.rdm3x2_loop_trglringex_compressed`
+        - :func:`rdm.rdm2x2`
+    with results aggregated in a tuple. See respective functions for description of the arguments.
+
+    Parameters
+    ----------
+    compressed : Sequence[int]
+        List of desired compressed chi values in descending order.
+
+    Returns
+    -------
+    energy_nnn : Sequence[Sequence(torch.Tensor)]
+    """
+    if not unroll: unroll= {}
+
+    #
+    # A    RA     s0 x                 A B
+    # R^-1A A <=> x s3 => 120deg order C A
+    tmp_rdm_2x2= rdm.rdm2x2(coord,state,env,open_sites=[0,3],force_cpu=force_cpu,
+        unroll=unroll.get('rdm2x2',False),checkpoint_unrolled=checkpoint_unrolled,
+        checkpoint_on_device=checkpoint_on_device,
+        verbosity=verbosity)
+    energy_nnn_2x2= torch.einsum('iajb,jbia',tmp_rdm_2x2,op_nnn) # A--A nnn
+
+    kwargs= dict(
+            checkpoint_unrolled=checkpoint_unrolled,
+            checkpoint_on_device=checkpoint_on_device,
+            force_cpu=force_cpu,dtype=dtype,verbosity=verbosity,
+            ctm_args=ctm_args,global_args=global_args)
+    c_chis= sorted(compressed)[::-1]
+
+    # O(X^3 D^6 s^2)
+    # RA R^2A R^3A                  B  C  A
+    # A  RA   R^2A => 120deg order  A  B  C
+
+    # x  s3 s2
+    # s0 s1 x
+    rdms_2x3= rdm_looped.rdmSeq_2x3_loop_trglringex_compressed(c_chis, coord,state,env,
+        open_sites=[0,2],unroll=unroll.get('rdm2x3_loop_trglringex_compressed',False),**kwargs)
+
+    #
+    # R^2A R^3A     x  s3                 C A
+    # RA   R^2A     x  x                  B C
+    # A      RA <=> s2 x  => 120deg order A B
+
+    # x  s2
+    # s3 s1
+    # s0 x
+    rdms_3x2= rdm_looped.rdmSeq_3x2_loop_trglringex_compressed(c_chis, coord,state,env,
+        open_sites=[0,2],unroll=unroll.get('rdm3x2_loop_trglringex_compressed',False),**kwargs)
+
+    energies_nnn= [ (
+        torch.einsum('iajb,jbia',rdms_2x3[i],
+            torch.einsum('jxiy,xb,ya->jbia',op_nnn,R@R@R,R@R@R)), # A--A nnn
+        torch.einsum('iajb,jbia',rdms_3x2[i],
+            torch.einsum('jxiy,xb,ya->jbia',op_nnn,R@R@R,R@R@R)), # A--A nnn
+        energy_nnn_2x2 ) for i,c in enumerate(c_chis) ]
+    return energies_nnn
+
 def eval_nnn_per_site(coord,state,env,R,Rinv,op_nnn,unroll=False,
-    checkpoint_unrolled=False,checkpoint_on_device=False,force_cpu=False,verbosity=0):
+    checkpoint_unrolled=False,checkpoint_on_device=False,force_cpu=False,dtype=None,
+    verbosity=0,**kwargs):
     if not unroll: unroll= {}
 
     # O(X^3 D^6 s^2)
@@ -97,10 +190,10 @@ def eval_nnn_per_site(coord,state,env,R,Rinv,op_nnn,unroll=False,
     # RA R^2A R^3A                  B  C  A     x  x s2
     # A  RA   R^2A => 120deg order  A  B  C <=> s3 x x
     tmp_rdm_2x3= rdm_looped.rdm2x3_loop_oe(coord,state,env,\
-            open_sites=[2,3], unroll=unroll.get('rdm2x3_loop_oe',False), 
-            checkpoint_unrolled=checkpoint_unrolled, 
+            open_sites=[2,3], unroll=unroll.get('rdm2x3_loop_oe',False),
+            checkpoint_unrolled=checkpoint_unrolled,
             checkpoint_on_device=checkpoint_on_device,
-            force_cpu=force_cpu,verbosity=verbosity)
+            force_cpu=force_cpu,dtype=dtype,verbosity=verbosity,**kwargs)
     energy_nnn+= torch.einsum('iajb,jbia',tmp_rdm_2x3,
         torch.einsum('jxiy,xb,ya->jbia',op_nnn,R@R@R,R@R@R)) # A--A nnn
 
@@ -109,18 +202,18 @@ def eval_nnn_per_site(coord,state,env,R,Rinv,op_nnn,unroll=False,
     # RA   R^2A     x  x                  B C
     # A      RA <=> s2 x  => 120deg order A B
     tmp_rdm_3x2= rdm_looped.rdm3x2_loop_oe(coord,state,env,\
-            open_sites=[2,3], unroll=unroll.get('rdm3x2_loop_oe',False), 
+            open_sites=[2,3], unroll=unroll.get('rdm3x2_loop_oe',False),
             checkpoint_unrolled=checkpoint_unrolled,
             checkpoint_on_device=checkpoint_on_device,
-            force_cpu=force_cpu,verbosity=verbosity)
+            force_cpu=force_cpu,dtype=dtype,verbosity=verbosity,**kwargs)
     energy_nnn+= torch.einsum('iajb,jbia',tmp_rdm_3x2,
         torch.einsum('jxiy,xb,ya->jbia',op_nnn,R@R@R,R@R@R)) # A--A nnn
 
-    # 
+    #
     # A    RA     s0 x                 A B
     # R^-1A A <=> x s3 => 120deg order C A
     tmp_rdm_2x2= rdm.rdm2x2(coord,state,env,open_sites=[0,3],force_cpu=force_cpu,
-        unroll=unroll.get('rdm2x2',False),checkpoint_unrolled=checkpoint_unrolled, 
+        unroll=unroll.get('rdm2x2',False),checkpoint_unrolled=checkpoint_unrolled,
         checkpoint_on_device=checkpoint_on_device,
         verbosity=verbosity)
     energy_nnn+= torch.einsum('iajb,jbia',tmp_rdm_2x2,op_nnn) # A--A nnn
@@ -134,9 +227,9 @@ def eval_nn_and_chirality_per_site(coord,state,env,R,Rinv,
     force_cpu=False,verbosity=0):
     if not unroll: unroll= {}
 
-    # O(X^3 D^4 s^[2 to 4]) 
+    # O(X^3 D^4 s^[2 to 4])
     energy_nn, energy_nn_diag, energy_chi= 0.,0.,0.
-    # A    RA     x  s1                     A B    
+    # A    RA     x  s1                     A B
     # R^-1A A <=> s2 s3 => for 120deg order C A
     #                               B  x B
     # where we evaluate for   C--A, A, C x and chirality with anti-clockwise order
@@ -168,7 +261,7 @@ def eval_nn_and_chirality_per_site(coord,state,env,R,Rinv,
     return energy_nn/2, energy_nn_diag/2, energy_chi
 
 # force_cpu=True - entire computation is performed on CPU
-# if force_cpu=False and we run on GPU *AND* checkpoint_on_device=True - store 
+# if force_cpu=False and we run on GPU *AND* checkpoint_on_device=True - store
 def eval_j1j2j4jX_per_site_legacy(coord,state,env,R,Rinv,\
     op_nn,op_nnn,op_chi,op_p,compressed=-1,unroll=False,
     checkpoint_unrolled=False,checkpoint_on_device=False,force_cpu=False,\
@@ -181,17 +274,18 @@ def eval_j1j2j4jX_per_site_legacy(coord,state,env,R,Rinv,\
     tmp_rdm_2x3= None
     if compressed>0:
         tmp_rdm_2x3= rdm.rdm2x3_trglringex_compressed(coord,state,env,compressed,\
-            ctm_args=ctm_args,global_args=global_args) 
-    # elif type(unroll)==dict and unroll=={}:
-    #     tmp_rdm_2x3= rdm_looped.rdm2x3_loop_trglringex_manual(coord,state,env,\
-    #         checkpoint_unrolled=checkpoint_unrolled)
+            ctm_args=ctm_args,global_args=global_args)
+
+    elif type(unroll)==dict and unroll=={}:
+        tmp_rdm_2x3= rdm_looped.rdm2x3_loop_trglringex_manual(coord,state,env,\
+            checkpoint_unrolled=checkpoint_unrolled)
     else:
         # x  s0 s1              x  s3 s2
         # s2 s3 x  => (permute) s0 s1 x
-        tmp_rdm_2x3= rdm_looped.rdm2x3_loop_oe(coord, state, env, open_sites=[1,2,3,4], 
+        tmp_rdm_2x3= rdm_looped.rdm2x3_loop_oe(coord, state, env, open_sites=[1,2,3,4],
             unroll=unroll.get('rdm2x3_loop_oe',False),\
-            sym_pos_def=False, 
-            force_cpu=force_cpu, 
+            sym_pos_def=False,
+            force_cpu=force_cpu,
             checkpoint_unrolled=checkpoint_unrolled,
             checkpoint_on_device=checkpoint_on_device,
             global_args=global_args)
@@ -214,15 +308,15 @@ def eval_j1j2j4jX_per_site_legacy(coord,state,env,R,Rinv,\
     tmp_rdm_3x2= None
     if compressed>0:
         tmp_rdm_3x2= rdm.rdm3x2_trglringex_compressed(coord,state,env,compressed,\
-            ctm_args=ctm_args,global_args=global_args) 
-    # elif type(unroll)==dict and unroll=={}:
-    #     tmp_rdm_3x2= rdm_looped.rdm3x2_loop_trglringex_manual(coord,state,env,\
-    #         checkpoint_unrolled=checkpoint_unrolled)
+            ctm_args=ctm_args,global_args=global_args)
+    elif type(unroll)==dict and unroll=={}:
+        tmp_rdm_3x2= rdm_looped.rdm3x2_loop_trglringex_manual(coord,state,env,\
+            checkpoint_unrolled=checkpoint_unrolled)
     else:
         # x  s2               x  s2
         # s0 s3               s3 s1
         # s1  x  => (permute) s0  x
-        tmp_rdm_3x2= rdm_looped.rdm3x2_loop_oe(coord, state, env, open_sites=[1,2,3,4], 
+        tmp_rdm_3x2= rdm_looped.rdm3x2_loop_oe(coord, state, env, open_sites=[1,2,3,4],
             unroll=unroll.get('rdm3x2_loop_oe',False),\
             sym_pos_def=False, force_cpu=force_cpu, checkpoint_unrolled=checkpoint_unrolled,
             checkpoint_on_device=checkpoint_on_device,global_args=global_args)
@@ -235,7 +329,7 @@ def eval_j1j2j4jX_per_site_legacy(coord,state,env,R,Rinv,\
     energy_chi+= torch.einsum('ijclabcd,abdijl',tmp_rdm_3x2,op_chi)
     energy_chi+= torch.einsum('ajklabcd,bcdjkl',tmp_rdm_3x2,op_chi)
 
-    # A    RA     s0 s1                 s0 s1     i j                 A B   
+    # A    RA     s0 s1                 s0 s1     i j                 A B
     # R^-1A A <=> s2 s3 => (permute) => s3 s2 <=> l k => 120def order C A
     tmp_rdm_2x2= rdm.rdm2x2(coord,state,env,open_sites=[0,1,2,3],unroll=unroll.get('rdm2x2',False),\
         checkpoint_unrolled=checkpoint_unrolled,checkpoint_on_device=checkpoint_on_device,force_cpu=force_cpu,
@@ -254,12 +348,12 @@ def eval_j1j2j4jX_per_site_legacy(coord,state,env,R,Rinv,\
 
     return energy_nn/4, energy_nnn, energy_chi/3, energy_p
 
-def eval_obs_chirality(coord,state,env,R,Rinv,op_chi,looped=False,\
+def eval_obs_chirality(coord,state,env,R,Rinv,op_chi,looped=False, force_cpu=False,\
         checkpoint_unrolled=False,ctm_args=cfg.ctm_args,global_args=cfg.global_args):
     r"""
     Expectations of scalar chirality on two non-equivalent triangles
     """
-    # A    RA     x  s1                     A B    
+    # A    RA     x  s1                     A B
     # R^-1A A <=> s2 s3 => for 120deg order C A
     #                               B  x B
     # where we evaluate for   C--A, A, C x and chirality with anti-clockwise order
@@ -284,7 +378,7 @@ class J1J2J4_1SITEQ():
     def __init__(self, phys_dim=2, j1=1.0, j2=0, j4=0, jchi=0, diag=1.,
         q=None, global_args=cfg.global_args):
         r"""
-        :param phys_dim: dimension of physical spin irrep, i.e. 2 for spin S=1/2 
+        :param phys_dim: dimension of physical spin irrep, i.e. 2 for spin S=1/2
         :param j1: nearest-neighbour interaction
         :param j2: next nearest-neighbour interaction
         :param j4: plaquette interaction
@@ -304,18 +398,18 @@ class J1J2J4_1SITEQ():
 
         Build Spin-S :math:`J_1-J_2-J_4-J_\chi` Hamiltonian
 
-        .. math:: H = J_1\sum_{<i,j>} \mathbf{S}_i.\mathbf{S}_j + J_2\sum_{<<i,j>>} 
-                  \mathbf{S}_i.\mathbf{S}_j 
-                  + \sum_{\langle i,j,k,l \rangle}[ 
-                    (\mathbf{S}_i.\mathbf{S}_j)(\mathbf{S}_k.\mathbf{S}_l) 
+        .. math:: H = J_1\sum_{<i,j>} \mathbf{S}_i.\mathbf{S}_j + J_2\sum_{<<i,j>>}
+                  \mathbf{S}_i.\mathbf{S}_j
+                  + \sum_{\langle i,j,k,l \rangle}[
+                    (\mathbf{S}_i.\mathbf{S}_j)(\mathbf{S}_k.\mathbf{S}_l)
                   + (\mathbf{S}_i.\mathbf{S}_l)(\mathbf{S}_j.\mathbf{S}_k)
                   - (\mathbf{S}_i.\mathbf{S}_k)(\mathbf{S}_j.\mathbf{S}_l) ]
                   + J_\chi \sum_{i,j,k\in\Delta} \mathbf{S}_i.(\mathbf{S}_j \cross \mathbf{S}_k)
 
-        on the triangular lattice. Where the first sum runs over the pairs of sites `i,j` 
-        which are nearest-neighbours (denoted as `<.,.>`), and the second sum runs over 
+        on the triangular lattice. Where the first sum runs over the pairs of sites `i,j`
+        which are nearest-neighbours (denoted as `<.,.>`), and the second sum runs over
         pairs of sites `i,j` which are next nearest-neighbours (denoted as `<<.,.>>`),
-        and finally the last sums runs over unique plaquettes composed of 
+        and finally the last sums runs over unique plaquettes composed of
         pairs of edge sharing triangles.
         """
         self.dtype=global_args.torch_dtype
@@ -339,6 +433,8 @@ class J1J2J4_1SITEQ():
                 'rdm2x3_loop_oe': [47,48,106,107,104,105],
                 'rdm3x2_loop_oe_semimanual': [83,84,104,105,106,107], # alternatively [83,84]
                 'rdm3x2_loop_oe': [83,84,104,105,106,107],
+                'rdm2x3_loop_trglringex_compressed': [47,48,104,105,100,101],
+                'rdm3x2_loop_trglringex_compressed': [100,101,83,84,104,105],
                 # reduces peak-mem by a factor 2 * 2^2 (for two halves of 2x2 patch, each with one open site)
                 'rdm2x2': True
                 },
@@ -349,7 +445,7 @@ class J1J2J4_1SITEQ():
                 },
             'j1': {
                 # reduces peak-mem by a factor 2 * 2^2 (for two halves of 2x2 patch, each with one open site)
-                'rdm2x2': True 
+                'rdm2x2': True
             }
         }
 
@@ -369,7 +465,7 @@ class J1J2J4_1SITEQ():
         SS= torch.einsum(expr_kron,s2.SZ(),s2.SZ()) + 0.5*(torch.einsum(expr_kron,s2.SP(),s2.SM()) \
             + torch.einsum(expr_kron,s2.SM(),s2.SP()))
         SS= SS.contiguous()
-        
+
         SSId= torch.einsum('ijab,klcd->ijklabcd',SS,id2)
         SSSS= torch.einsum('ijab,klcd->ijklabcd',SS,SS)
         #
@@ -383,7 +479,7 @@ class J1J2J4_1SITEQ():
         h_p= SSSS + SSSS.permute(0,3,2,1,4,7,6,5) - SSSS.permute(0,2,1,3,4,6,5,7)
 
         h_p_and_nnn= self.j4 * h_p + self.j2 * SSId.permute(0,2,1,3, 4,6,5,7).contiguous()
-        #                      ij   + il ... + lk + 
+        #                      ij   + il ... + lk +
         h_nn_only= SSId + SSId.permute(0,3,2,1, 4,7,6,5).contiguous()\
          + SSId.permute(2,3,0,1, 6,7,4,5).contiguous()\
          + SSId.permute(2,0,1,3, 6,4,5,7).contiguous()
@@ -418,7 +514,7 @@ class J1J2J4_1SITEQ():
         :param force_cpu: compute on CPU
         :type force_cpu: bool
         :param compressed: if ``compressed`` > 0, use projectors to compress :math:`\chi\times D^2`
-                           space to size ``compressed`` 
+                           space to size ``compressed``
         :type compressed: int
         :param unroll: use index unrolling when constructing large reduced density matrices
         :type unroll: bool
@@ -429,9 +525,9 @@ class J1J2J4_1SITEQ():
         :return: energy per site
         :rtype: float
 
-        We assume single-site iPEPS which tiles the lattice with a (2piq,2piq) spiral 
+        We assume single-site iPEPS which tiles the lattice with a (2piq,2piq) spiral
         pattern::
-            
+
             R^-1A--A-----RA---R^2A--R^3A               A B C A B
             |    / |    / | /    |  / |
             R^-2A--R^-1A--A-----RA--R^2A               C A B C A
@@ -440,14 +536,14 @@ class J1J2J4_1SITEQ():
             |    / |    / |    / |  / |
             R^-4A--R^-3A--R^-2A--R^-1A--A => 120degree A B C A B
 
-        All tensors are obtained from tensor A by applying a unitary R on 
+        All tensors are obtained from tensor A by applying a unitary R on
         the physical index.
         The unitary R is a rotation around spin y-axis by :math:`2\pi * q`, i.e.
         :math:`R = exp(-i 2\pi * q\sigma^y)`.
 
         TODO plaquette
         """
-        assert not (abs(self.j4)>0 and self.diag!=1),"J4!=0 and diag!=1 are not suppored" 
+        assert not (abs(self.j4)>0 and self.diag!=1),"J4!=0 and diag!=1 are not suppored"
 
         energy_nn=0.
         energy_nn_diag=0.
@@ -455,7 +551,7 @@ class J1J2J4_1SITEQ():
         energy_p=0.
         energy_chi=0.
 
-        if q is None: 
+        if q is None:
             if not (self.q is None):
                 q= self.q
             else:
@@ -464,7 +560,7 @@ class J1J2J4_1SITEQ():
 
         if type(unroll)==bool:
             unroll= self.unroll if unroll else {}
-        
+
         s2 = su2.SU2(self.phys_dim, dtype=self.dtype, device=self.device)
         R= torch.linalg.matrix_exp( (pi*q[0])*(s2.SP()-s2.SM()) )
         Rinv= R.t().conj()
@@ -484,9 +580,13 @@ class J1J2J4_1SITEQ():
         else:
             if abs(self.j2)>0:
                 for coord in state.sites.keys():
-                    _nnn= eval_nnn_per_site_semimanual(coord,state,env,R,Rinv,self.SS,unroll=unroll.get('j2',{}),
+                    # _nnn= eval_nnn_per_site(coord,state,env,R,Rinv,self.SS,
+                    _nnn= eval_nnn_per_site_semimanual(coord,state,env,R,Rinv,self.SS,
+                        compressed=compressed,unroll=unroll.get('j2',{}),
                         checkpoint_unrolled=ctm_args.fwd_checkpoint_loop_rdm,
-                        checkpoint_on_device=global_args.offload_to_gpu,force_cpu=force_cpu,\
+                        checkpoint_on_device=global_args.offload_to_gpu,
+                        force_cpu=force_cpu,dtype=ctm_args.dtype_rdm,
+                        ctm_args=ctm_args,global_args=global_args,
                         verbosity=ctm_args.verbosity_rdm)
                     energy_nnn+= _nnn
             if abs(self.jchi)>0:
@@ -509,14 +609,75 @@ class J1J2J4_1SITEQ():
                     energy_nn+= _nn
                     energy_nn_diag+= _nn_diag
 
-        # import pdb; pdb.set_trace()
         energy_cell= self.j1*(energy_nn + self.diag*energy_nn_diag) + \
             self.j2*energy_nnn + self.j4*energy_p + self.jchi*energy_chi
         energy_per_site= _cast_to_real(energy_cell/len(state.sites))
 
         return energy_per_site
 
-    def eval_obs(self,state,env,q=None,force_cpu=False):
+    def energySeq_compressed_per_site(self,state,env,compressed:Sequence[int],q=None,unroll=False,\
+        force_cpu=False,ctm_args=cfg.ctm_args,global_args=cfg.global_args):
+        r"""
+        Parameters
+        ----------
+        compressed : Sequence[int]
+            List of desired compressed chi values in descending order.
+        """
+        assert not (abs(self.j4)>0 and self.diag!=1),"J4!=0 and diag!=1 are not suppored"
+
+        compressed= sorted(compressed, reverse=True)
+        energy_nn=0.
+        energy_nn_diag=0.
+        energy_nnn=[0.]*len(compressed)
+        energy_p=0.
+        energy_chi=0.
+
+        if q is None:
+            if not (self.q is None):
+                q= self.q
+            else:
+                assert hasattr(state,'q'), "No q-vector available"
+                q= state.q
+
+        if type(unroll)==bool:
+            unroll= self.unroll if unroll else {}
+
+        s2 = su2.SU2(self.phys_dim, dtype=self.dtype, device=self.device)
+        R= torch.linalg.matrix_exp( (pi*q[0])*(s2.SP()-s2.SM()) )
+        Rinv= R.t().conj()
+
+        if abs(self.j4)>0:
+            raise NotImplementedError("energySeq_compressed_per_site not implemented for j4!=0")
+        else:
+            if abs(self.j2)>0:
+                for coord in state.sites.keys():
+                    _nnn= evalSeq_compressed_nnn_per_site(coord,state,env,R,Rinv,self.SS,
+                        compressed=compressed,unroll=unroll.get('j2',{}),
+                        checkpoint_unrolled=ctm_args.fwd_checkpoint_loop_rdm,
+                        checkpoint_on_device=global_args.offload_to_gpu,
+                        force_cpu=force_cpu,dtype=ctm_args.dtype_rdm,
+                        ctm_args=ctm_args,global_args=global_args,
+                        verbosity=ctm_args.verbosity_rdm)
+                    for c in range(len(compressed)):
+                        energy_nnn[c]+= sum(_nnn[c])
+            if abs(self.jchi)>0:
+                raise NotImplementedError("energySeq_compressed_per_site not implemented for jchi!=0")
+            else:
+                for coord in state.sites.keys():
+                    _nn,_nn_diag= eval_nn_per_site(coord,state,env,R,Rinv,self.SS,self.SS,
+                        force_cpu=force_cpu,unroll=unroll.get('j1',{}),
+                        checkpoint_unrolled=ctm_args.fwd_checkpoint_loop_rdm,
+                        checkpoint_on_device=global_args.offload_to_gpu)
+                    energy_nn+= _nn
+                    energy_nn_diag+= _nn_diag
+
+        energies_cell= [self.j1*(energy_nn + self.diag*energy_nn_diag) + \
+            self.j2*energy_nnn[c] + self.j4*energy_p + self.jchi*energy_chi for c in range(len(compressed))]
+        energies_per_site= [_cast_to_real(energies_cell[c]/len(state.sites)) for c in range(len(compressed))]
+
+        return energies_per_site
+
+    def eval_obs(self,state,env,q=None,force_cpu=False,unroll=False):
         r"""
         :param state: wavefunction
         :param env: CTM environment
@@ -533,23 +694,26 @@ class J1J2J4_1SITEQ():
 
             1. average magnetization over the unit cell,
             2. magnetization for each site in the unit cell
-            3. :math:`\langle S^z \rangle,\ \langle S^+ \rangle,\ \langle S^- \rangle` 
+            3. :math:`\langle S^z \rangle,\ \langle S^+ \rangle,\ \langle S^- \rangle`
                for each site in the unit cell
 
         where the on-site magnetization is defined as
-        
+
         .. math::
             m &= \sqrt{ \langle S^z \rangle^2+\langle S^x \rangle^2+\langle S^y \rangle^2 }
         """
         # TODO optimize/unify ?
         # expect "list" of (observable label, value) pairs ?
-        if q is None: 
+        if q is None:
             if not (self.q is None):
                 q= self.q
             else:
                 assert hasattr(state,'q'), "No q-vector available"
                 q= state.q
-        
+
+        if type(unroll)==bool:
+            unroll= self.unroll if unroll else {}
+
         s2 = su2.SU2(self.phys_dim, dtype=self.dtype, device=self.device)
         R= torch.linalg.matrix_exp( (pi*q[0])*(s2.SP()-s2.SM()) )
         Rinv= R.t().conj()
@@ -560,7 +724,7 @@ class J1J2J4_1SITEQ():
             #
             # magnetization vector <\vec{S}> for B, and C sublattice is obtained simply
             # by applying appropriate rotation, i.e. <\vec{S}>_B= R <\vec{S}>_A
-            #                                        <\vec{S}>_C= R^2 <\vec{S}>_A   
+            #                                        <\vec{S}>_C= R^2 <\vec{S}>_A
             for coord,site in state.sites.items():
                 rdm1x1 = rdm.rdm1x1(coord,state,env,force_cpu=force_cpu)
                 for label,op in self.obs_ops.items():
@@ -570,13 +734,15 @@ class J1J2J4_1SITEQ():
             obs["avg_m"]= obs["avg_m"]/len(state.sites.keys())
 
             # two-site
+            unroll= unroll.get('j1',{})
             for coord,site in state.sites.items():
                 # s0
                 # s1
                 tmp_rdm_1x2= rdm.rdm1x2(coord,state,env,force_cpu=force_cpu)
                 # s0 s1
                 tmp_rdm_2x1= rdm.rdm2x1(coord,state,env,force_cpu=force_cpu)
-                tmp_rdm_2x2_NNN_1n1= rdm.rdm2x2_NNN_1n1(coord,state,env,force_cpu=force_cpu)
+                tmp_rdm_2x2_NNN_1n1= rdm.rdm2x2_NNN_1n1(coord,state,env,force_cpu=force_cpu,\
+                    unroll=unroll.get('rdm2x2',False),)
                 #
                 # A--B
                 SS2x1= torch.einsum('ijab,abij',tmp_rdm_2x1,
@@ -597,9 +763,9 @@ class J1J2J4_1SITEQ():
                 # A B
                 SS2x2_NNN_1n1= torch.einsum('ijab,abij',tmp_rdm_2x2_NNN_1n1,
                     torch.einsum('ixay,xj,yb->ijab',self.SS,R@R,R@R))
-                
+
                 obs[f"SS2x2_NNN_1n1{coord}"]= _cast_to_real(SS2x2_NNN_1n1)
-        
+
         # prepare list with labels and values
         obs_labels=["avg_m"]+[f"m{coord}" for coord in state.sites.keys()]\
             +[f"{lc[1]}{lc[0]}" for lc in list(itertools.product(state.sites.keys(), self.obs_ops.keys()))]
@@ -615,7 +781,7 @@ class J1J2J4_1SITEQ():
         r"""
         :param coord: reference site
         :type coord: tuple(int,int)
-        :param direction: 
+        :param direction:
         :type direction: tuple(int,int)
         :param state: wavefunction
         :param env: CTM environment
@@ -627,18 +793,18 @@ class J1J2J4_1SITEQ():
         :type dist: int
         :param canonical: decompose correlations wrt. to vector of spontaneous magnetization
                           into longitudinal and transverse parts
-        :type canonical: bool 
+        :type canonical: bool
         :param rl_0: right and left edges of the two-point function network. These
                  are expected to be rank-3 tensor compatible with transfer operator indices.
                  Typically provided by leading eigenvectors of transfer matrix.
         :type rl_0: tuple(function(tuple(int,int))->torch.Tensor, function(tuple(int,int))->torch.Tensor)
-        :param conj_s: apply spin-rotation to spin operators to obtain corresponding 
+        :param conj_s: apply spin-rotation to spin operators to obtain corresponding
                        (2pi*q,2pi*q)-ordered corr. function
-        :type conj: bool 
+        :type conj: bool
         :return: dictionary with full and spin-resolved spin-spin correlation functions
         :rtype: dict(str: torch.Tensor)
-        
-        Evaluate spin-spin correlation functions :math:`\langle\mathbf{S}(r).\mathbf{S}(0)\rangle` 
+
+        Evaluate spin-spin correlation functions :math:`\langle\mathbf{S}(r).\mathbf{S}(0)\rangle`
         up to r = ``dist`` in given direction. See :meth:`ctm.generic.corrf.corrf_1sO1sO`.
         """
         s2 = su2.SU2(self.phys_dim, dtype=self.dtype, device=self.device)
@@ -647,7 +813,7 @@ class J1J2J4_1SITEQ():
         # pass to real, i.e. iS^y= 0.5(S^+ - S^-)
         S_zxiy[2,:,:]= 0.5*(s2.SP()-s2.SM())
 
-        if q is None: 
+        if q is None:
             if not (self.q is None):
                 q= self.q
             else:
@@ -676,14 +842,14 @@ class J1J2J4_1SITEQ():
         # function allowing for additional site-dependent conjugation of op.
         def conjugate_op(op):
             op_0= op.clone()
-            sign_r=1. 
+            sign_r=1.
             if direction in [(1,0), (0,-1)]:
                 sign_r= 1.
             elif direction in [(-1,0), (0,1)]:
                 sign_r= -1.
             else:
                 raise RuntimeError("Invalid direction "+str(direction))
-            
+
             def _gen_op(r):
                 # r=0 is nearest-neighbour
                 R= torch.linalg.matrix_exp( (sign_r*(r+1)*pi*q[0])*(s2.SP()-s2.SM()) )
@@ -704,7 +870,7 @@ class J1J2J4_1SITEQ():
         r"""
         :param coord: reference site
         :type coord: tuple(int,int)
-        :param direction: 
+        :param direction:
         :type direction: tuple(int,int)
         :param state: wavefunction
         :param env: CTM environment
@@ -722,8 +888,8 @@ class J1J2J4_1SITEQ():
         :type rl_0: tuple(function(tuple(int,int))->torch.Tensor, function(tuple(int,int))->torch.Tensor)
         :return: dictionary with full and spin-resolved spin-spin correlation functions
         :rtype: dict(str: torch.Tensor)
-        
-        Evaluate spin-spin correlation functions :math:`\langle\mathbf{S}(r).\mathbf{S}(0)\rangle` 
+
+        Evaluate spin-spin correlation functions :math:`\langle\mathbf{S}(r).\mathbf{S}(0)\rangle`
         up to r = ``dist`` in given direction. See :meth:`ctm.generic.corrf.corrf_1sO1sO`.
         """
         # function allowing for additional site-dependent conjugation of op
@@ -733,7 +899,7 @@ class J1J2J4_1SITEQ():
         def _gen_op(r):
             return id1
 
-        if q is None: 
+        if q is None:
             if not (self.q is None):
                 q= self.q
             else:
@@ -761,7 +927,7 @@ class J1J2J4(J1J2J4_1SITEQ):
     def __init__(self, phys_dim=2, j1=1.0, j2=0, j4=0, jchi=0, diag=1,\
         q=(0,0), global_args=cfg.global_args):
         r"""
-        :param phys_dim: dimension of physical spin irrep, i.e. 2 for spin S=1/2 
+        :param phys_dim: dimension of physical spin irrep, i.e. 2 for spin S=1/2
         :param j1: nearest-neighbour interaction
         :param j2: next nearest-neighbour interaction
         :param j4: plaquette interaction
@@ -788,7 +954,7 @@ class J1J2J4(J1J2J4_1SITEQ):
         r"""
         :param coord: reference site
         :type coord: tuple(int,int)
-        :param direction: 
+        :param direction:
         :type direction: tuple(int,int)
         :param state: wavefunction
         :param env: CTM environment
@@ -798,8 +964,8 @@ class J1J2J4(J1J2J4_1SITEQ):
         :type dist: int
         :return: dictionary with full and spin-resolved spin-spin correlation functions
         :rtype: dict(str: torch.Tensor)
-        
-        Evaluate spin-spin correlation functions :math:`\langle\mathbf{S}(r).\mathbf{S}(0)\rangle` 
+
+        Evaluate spin-spin correlation functions :math:`\langle\mathbf{S}(r).\mathbf{S}(0)\rangle`
         up to r = ``dist`` in given direction. See :meth:`ctm.generic.corrf.corrf_1sO1sO`.
         """
         assert self.q[0]==0 and self.q[1]==0,"Ordering vector different than (0,0) not supported."
@@ -812,7 +978,7 @@ class J1J2J4(J1J2J4_1SITEQ):
             return _gen_op
 
         op_sx= 0.5*(self.obs_ops["sp"] + self.obs_ops["sm"])
-        op_isy= -0.5*(self.obs_ops["sp"] - self.obs_ops["sm"]) 
+        op_isy= -0.5*(self.obs_ops["sp"] - self.obs_ops["sm"])
 
         Sz0szR= corrf.corrf_1sO1sO(coord,direction,state,env, self.obs_ops["sz"], \
             conjugate_op(self.obs_ops["sz"]), dist)
@@ -836,19 +1002,19 @@ class J1J2J4(J1J2J4_1SITEQ):
         :type dist: int
         :return: dictionary with horizontal dimer-dimer correlation function
         :rtype: dict(str: torch.Tensor)
-        
-        Evaluate horizontal dimer-dimer correlation functions 
+
+        Evaluate horizontal dimer-dimer correlation functions
 
         .. math::
 
-            \langle(\mathbf{S}(r+3).\mathbf{S}(r+2))(\mathbf{S}(1).\mathbf{S}(0))\rangle 
+            \langle(\mathbf{S}(r+3).\mathbf{S}(r+2))(\mathbf{S}(1).\mathbf{S}(0))\rangle
 
         up to r = ``dist`` in given direction. See :meth:`ctm.generic.corrf.corrf_2sOH2sOH_E1`.
         """
         # function generating properly S.S operator
         def _gen_op(r):
             return self.SS
-        
+
         D0DR= corrf.corrf_2sOH2sOH_E1(coord, direction, state, env, self.SS, _gen_op,\
             dist, verbosity=verbosity)
 
@@ -860,7 +1026,7 @@ class J1J2J4_1SITE(J1J2J4_1SITEQ):
     def __init__(self, phys_dim=2, j1=1.0, j2=0, j4=0, jchi=0,\
         q=(-1./3,-1./3), global_args=cfg.global_args):
         r"""
-        :param phys_dim: dimension of physical spin irrep, i.e. 2 for spin S=1/2 
+        :param phys_dim: dimension of physical spin irrep, i.e. 2 for spin S=1/2
         :param j1: nearest-neighbour interaction
         :param j2: next nearest-neighbour interaction
         :param j4: plaquette interaction
@@ -873,7 +1039,7 @@ class J1J2J4_1SITE(J1J2J4_1SITEQ):
         :type j4: float
         :type jchi: float
         :type global_args: GLOBALARGS
-        
+
         .. note::
             120degree order is realized by four possible ordering vectors (±1/3, ±1/3).
 
@@ -895,7 +1061,7 @@ class J1J2J4_1SITE(J1J2J4_1SITEQ):
         :type global_args: GLOBALARGS
         :return: scalar chiralities
         :rtype: dict(tuple(int,int)), scalar)
-    
+
         Expectations of scalar chirality on two non-equivalent triangles for each site.
         """
         obs=dict()

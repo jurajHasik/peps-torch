@@ -19,6 +19,12 @@ import scipy.io as io
 import numpy
 import time
 
+
+########################
+pid = os.getpid();
+print('pid= '+str(pid))
+########################
+
 log = logging.getLogger(__name__)
 
 # parse command line args and build necessary configuration objects
@@ -29,6 +35,7 @@ parser.add_argument("--JD", type=float, default=0, help="two-spin DM interaction
 parser.add_argument("--j2", type=float, default=0, help="next-nearest-neighbor exchange coupling")
 parser.add_argument("--jtrip", type=float, default=0, help="(SxS).S")
 parser.add_argument("--jperm", type=complex, default=0, help="triangle permutation")
+parser.add_argument("--h_z", type=float, default=0, help="magnetic field in S^z direction")
 parser.add_argument("--ansatz", type=str, default=None, help="choice of the tensor ansatz",\
     choices=["IPEPS", "IPESS", "IPESS_PG", 'A_2,B', 'A_1,B'])
 parser.add_argument("--no_sym_up_dn", action='store_false', dest='sym_up_dn',\
@@ -52,11 +59,12 @@ def main():
     if not args.theta is None:
         args.jtrip= args.j1*math.sin(args.theta*math.pi)
         args.j1= args.j1*math.cos(args.theta*math.pi)
-    print(f"j1={args.j1}; jD={args.JD}; j2={args.j2}; jtrip={args.jtrip}")
+    print(f"j1={args.j1}; jD={args.JD}; j2={args.j2}; jtrip={args.jtrip}",end="\n\n")
     model= spin_half_kagome.S_HALF_KAGOME(j1=args.j1, JD=args.JD,\
-        j2=args.j2, jtrip=args.jtrip, jperm=args.jperm)
+        j2=args.j2, jtrip=args.jtrip, jperm=args.jperm, h=args.h_z)
 
     # initialize the ipess/ipeps
+    pattern= eval(args.pattern) if args.pattern else [[0],]
     if args.ansatz in ["IPESS","IPESS_PG","A_1,B","A_2,B"]:
         ansatz_pgs= None
         if args.ansatz=="A_2,B": ansatz_pgs= IPESS_KAGOME_PG.PG_A2_B
@@ -70,6 +78,7 @@ def main():
 
             # possibly symmetrize by PG
             if ansatz_pgs!=None:
+                assert len(state.sites)==1, "PG symmetry is not supported for multi-site iPESS"
                 if type(state)==IPESS_KAGOME_GENERIC:
                     state= to_PG_symmetric(state, SYM_UP_DOWN=args.sym_up_dn,\
                         SYM_BOND_S=args.sym_bond_S, pgs=ansatz_pgs)
@@ -82,76 +91,56 @@ def main():
                         pass
                     elif state.pgs!=ansatz_pgs:
                         raise RuntimeError("instate has incompatible PG symmetry with "+args.ansatz)
-
+                
             if args.bond_dim > state.get_aux_bond_dims():
                 # extend the auxiliary dimensions
                 state= state.extend_bond_dim(args.bond_dim)
             state.add_noise(args.instate_noise)
-        elif args.opt_resume is not None:
-            T_u= torch.zeros(args.bond_dim, args.bond_dim, args.bond_dim,\
-                dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
-            T_d= torch.zeros(args.bond_dim, args.bond_dim,\
-                args.bond_dim, dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
-            B_c= torch.zeros(model.phys_dim, args.bond_dim, args.bond_dim,\
-                dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
-            B_a= torch.zeros(model.phys_dim, args.bond_dim, args.bond_dim,\
-                dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
-            B_b= torch.zeros(model.phys_dim, args.bond_dim, args.bond_dim,\
-                dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
-            if args.ansatz in ["IPESS_PG", "A_1,B", "A_2,B"]:
-                state= IPESS_KAGOME_PG(T_u, B_c, T_d=T_d, B_a=B_a, B_b=B_b,\
-                    SYM_UP_DOWN=args.sym_up_dn,SYM_BOND_S=args.sym_bond_S, pgs=ansatz_pgs)
-            elif args.ansatz in ["IPESS"]:
-                state= IPESS_KAGOME_GENERIC({'T_u': T_u, 'B_a': B_a, 'T_d': T_d,\
-                    'B_b': B_b, 'B_c': B_c})
-            state.load_checkpoint(args.opt_resume)
-        elif args.ipeps_init_type=='RANDOM':
-            bond_dim = args.bond_dim
-            T_u= torch.rand(bond_dim, bond_dim, bond_dim,\
-                dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)-1.0
-            T_d= torch.rand(bond_dim, bond_dim, bond_dim,\
-                dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)-1.0
-            B_c= torch.rand(model.phys_dim, bond_dim, bond_dim,\
-                dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)-1.0
-            B_a= torch.rand(model.phys_dim, args.bond_dim, args.bond_dim,\
-                dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)-1.0
-            B_b= torch.rand(model.phys_dim, args.bond_dim, args.bond_dim,\
-                dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)-1.0
-            if args.ansatz in ["IPESS_PG", "A_1,B", "A_2,B"]:
-                state = IPESS_KAGOME_PG(T_u, B_c, T_d=T_d, B_a=B_a, B_b=B_b,\
-                    SYM_UP_DOWN=args.sym_up_dn,SYM_BOND_S=args.sym_bond_S, pgs=ansatz_pgs,\
-                    pg_symmetrize=True)
-            elif args.ansatz in ["IPESS"]:
-                state= IPESS_KAGOME_GENERIC({'T_u': T_u, 'B_a': B_a, 'T_d': T_d,\
-                    'B_b': B_b, 'B_c': B_c})
         elif args.ipeps_init_type=='RVB':
-            args.bond_dim==3
+            assert args.bond_dim>=3, "RVB initialization is only supported for bond dimension >= 3"
             B_c=torch.zeros(2, 3, 3,\
                 dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
-            B_c[0,0,2]=1
-            B_c[0,2,0]=1
-            B_c[1,1,2]=1
-            B_c[1,2,1]=1
+            B_c[0,0,2]=B_c[0,2,0]=B_c[1,1,2]=B_c[1,2,1]=1
             B_b=B_c.clone()
             B_a=B_c.clone()
 
             T_u=torch.zeros(3, 3, 3,\
                 dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)
-            T_u[0,1,2]=1
-            T_u[1,0,2]=-1
-            T_u[2,0,1]=1
-            T_u[2,1,0]=-1
-            T_u[1,2,0]=1
-            T_u[0,2,1]=-1
-            T_u[2,2,2]=1
+            T_u[0,1,2]=T_u[2,0,1]=T_u[1,2,0]=T_u[2,2,2]=1
+            T_u[1,0,2]=T_u[2,1,0]=T_u[0,2,1]=-1
             T_d=T_u.clone()
             if args.ansatz in ["IPESS_PG", "A_2,B"]:
                 state = IPESS_KAGOME_PG(T_u, B_c, T_d=T_d, B_a=B_a, B_b=B_b,\
                     SYM_UP_DOWN=args.sym_up_dn,SYM_BOND_S=args.sym_bond_S, pgs=ansatz_pgs)
             elif args.ansatz in ["IPESS"]:
-                state= IPESS_KAGOME_GENERIC({'T_u': T_u, 'B_a': B_a, 'T_d': T_d,\
-                    'B_b': B_b, 'B_c': B_c})
+                unique_sites, _= from_pattern(pattern)
+                state= IPESS_KAGOME_GENERIC(
+                    {c: {'T_u': T_u.clone(), 'B_a': B_a.clone(), 'T_d': T_d.clone(),'B_b': B_b.clone(), 'B_c': B_c.clone()} 
+                        for c in unique_sites}, pattern=pattern)
+            state.extend_bond_dim(args.bond_dim)
             state.add_noise(args.instate_noise)
+        else: #args.ipeps_init_type=='RANDOM'
+            bond_dim = args.bond_dim
+            def _gen_rand():
+                T_u= torch.rand(bond_dim, bond_dim, bond_dim,\
+                    dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)-0.5
+                T_d= torch.rand_like(T_u)-0.5
+                B_c= torch.rand(model.phys_dim, bond_dim, bond_dim,\
+                    dtype=cfg.global_args.torch_dtype, device=cfg.global_args.device)-0.5
+                B_a= torch.rand_like(B_c)-0.5
+                B_b= torch.rand_like(B_c)-0.5
+                return T_u, B_a, T_d, B_b, B_c
+            if args.ansatz in ["IPESS_PG", "A_1,B", "A_2,B"]:
+                T_u, T_d, B_c, B_a, B_b= _gen_rand()
+                state = IPESS_KAGOME_PG(T_u, B_c, T_d=T_d, B_a=B_a, B_b=B_b,\
+                    SYM_UP_DOWN=args.sym_up_dn,SYM_BOND_S=args.sym_bond_S, pgs=ansatz_pgs,\
+                    pg_symmetrize=True)
+            elif args.ansatz in ["IPESS"]:
+                unique_sites, _= from_pattern(pattern)
+                state= IPESS_KAGOME_GENERIC({c: dict(zip(['T_u','B_a','T_d','B_b','B_c'],_gen_rand())) for c in unique_sites},\
+                    pattern=pattern)
+        if args.opt_resume is not None:
+            state.load_checkpoint(args.opt_resume)
     elif args.ansatz in ["IPEPS"]:    
         ansatz_pgs=None
         if args.instate!=None:
@@ -161,40 +150,45 @@ def main():
                 # extend the auxiliary dimensions
                 state= state.extend_bond_dim(args.bond_dim)
             state.add_noise(args.instate_noise)
-        elif args.opt_resume is not None:
-            state= IPEPS_KAGOME(dict(), lX=1, lY=1)
-            state.load_checkpoint(args.opt_resume)
-        elif args.ipeps_init_type=='RANDOM':
+        else: #args.ipeps_init_type=='RANDOM':
+            unique_sites, _= from_pattern(pattern)
             bond_dim = args.bond_dim
-            A = torch.rand((model.phys_dim**3, bond_dim, bond_dim, bond_dim, bond_dim),\
-                dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device) - 0.5
-            A = A/torch.max(torch.abs(A))
-            state= IPEPS_KAGOME({(0,0): A}, lX=1, lY=1)
+            sites={}
+            for us in unique_sites:
+                t = torch.rand((model.phys_dim**3, bond_dim, bond_dim, bond_dim, bond_dim),\
+                    dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device) - 0.5
+                sites[us] = t/torch.max(torch.abs(t))
+            state= IPEPS_KAGOME(sites, pattern=pattern)
+        if args.opt_resume is not None:
+            state.load_checkpoint(args.opt_resume)
     else:
         raise ValueError("Missing ansatz specification --ansatz "\
             +str(args.ansatz)+" is not supported")
 
+    print(f"{state}")
 
     def energy_f(state, env, force_cpu=False, fail_on_check=False,\
         warn_on_check=True):
-        e_dn = model.energy_triangle_dn(state, env, force_cpu=force_cpu,\
+        e_dn,n_dn = model.energy_triangle_dn(state, env, force_cpu=force_cpu,\
             fail_on_check=fail_on_check, warn_on_check=warn_on_check)
         # e_dn= model.energy_triangle_dn_1x1(state, env, force_cpu=force_cpu,\
         #     fail_on_check=fail_on_check, warn_on_check=warn_on_check)
-        e_up = model.energy_triangle_up(state, env, force_cpu=force_cpu,\
+        e_up,n_up = model.energy_triangle_up(state, env, force_cpu=force_cpu,\
             fail_on_check=fail_on_check, warn_on_check=warn_on_check)
         # e_nnn = model.energy_nnn(state, env)
-        return (e_up + e_dn)/3 #+ e_nnn) / 3
+        return (sum(e_up.values()) + sum(e_dn.values()))/(3*len(state.sites)) #+ e_nnn) / 3
+    
     def energy_f_complex(state, env, force_cpu=False):
         #print(env)
-        e_dn = model.energy_triangle_dn_NoCheck(state, env, force_cpu=force_cpu)
-        e_up = model.energy_triangle_up_NoCheck(state, env, force_cpu=force_cpu)
+        e_dn,n_dn = model.energy_triangle_dn_NoCheck(state, env, force_cpu=force_cpu)
+        e_up,n_up = model.energy_triangle_up_NoCheck(state, env, force_cpu=force_cpu)
         # e_nnn = model.energy_nnn(state, env)
-        return (e_up + e_dn)/3 #+ e_nnn) / 3
+        return (sum(e_up.values()) + sum(e_dn.values()))/(3*len(state.sites)) #+ e_nnn) / 3
+    
     def dn_energy_f_NoCheck(state, env, force_cpu=False):
         #print(env)
-        e_dn = model.energy_triangle_dn_NoCheck(state, env, force_cpu=force_cpu)
-        return e_dn
+        e_dn,n_dn = model.energy_triangle_dn_NoCheck(state, env, force_cpu=force_cpu)
+        return sum(e_dn.values())
 
     @torch.no_grad()
     def print_corner_spectra(env):
@@ -268,9 +262,9 @@ def main():
                 state_sym= state
                 state_sym.sites= state_sym.build_onsite_tensors()
         else:
-            A= state.sites[(0,0)]
-            A= A/A.abs().max()
-            state_sym= IPEPS_KAGOME({(0,0): A}, lX=1, lY=1)
+            sites_sym= { c: t/torch.max(torch.abs(t)) for c,t in state.sites.items() }
+            state_sym= IPEPS_KAGOME(sites_sym, vertexToSite=state.vertexToSite,\
+                                    lX=state.lX, lY=state.lY)
 
         # possibly re-initialize the environment
         if opt_args.opt_ctm_reinit:
@@ -316,7 +310,9 @@ def main():
 
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"
-    if args.ansatz=="IPESS":
+    if args.ansatz in ["IPEPS"]:
+        state= read_ipeps_kagome(outputstatefile)
+    elif args.ansatz=="IPESS":
         state= read_ipess_kagome_generic(outputstatefile)
     elif args.ansatz in ["IPESS_PG", "A_1,B", "A_2,B"]:
         state= read_ipess_kagome_pg(outputstatefile)
@@ -488,6 +484,154 @@ class TestCheckpoint_IPESS_Ansatze(unittest.TestCase):
         for ansatz in self.ANSATZE:
             out_prefix=self.OUT_PRFX+f"_{ansatz[0].replace(',','')}_"\
                 +("T" if ansatz[1] else "F")+("T" if ansatz[2] else "F")
+            instate= out_prefix[len("RESULT_"):]+"_instate.json"
+            for f in [out_prefix+"_checkpoint.p",out_prefix+"_state.json",\
+                out_prefix+".log",instate]:
+                if os.path.isfile(f): os.remove(f)
+
+
+class TestCheckpoint_IPEPS_Ansatze(unittest.TestCase):
+    tol= 1.0e-6
+    DIR_PATH = os.path.dirname(os.path.realpath(__file__))
+    OUT_PRFX = "RESULT_test_run-opt-chck"
+    ANSATZE= [("IPEPS","[[0],]","1x1"), ("IPEPS","[[0,1,2],[1,2,0],[2,0,1]]","3x3")]
+
+    def reset_couplings(self):
+        args.j1= 1.0
+        args.theta=0.2
+        args.JD=0.1
+
+    def setUp(self):
+        self.reset_couplings()
+        args.bond_dim=2
+        args.chi=16
+        args.seed=300
+        args.opt_max_iter= 10
+        args.instate_noise=0
+        args.GLOBALARGS_dtype= "complex128"
+        torch.manual_seed(args.seed)
+
+    def test_checkpoint_ipess_ansatze(self):
+        from io import StringIO
+        from unittest.mock import patch
+        from cmath import isclose
+        import numpy as np
+
+        for ansatz in self.ANSATZE:
+            with self.subTest(ansatz=ansatz):
+                self.reset_couplings()
+                args.opt_max_iter= 10
+                args.ansatz= ansatz[0]
+                args.pattern= ansatz[1]
+                args.opt_resume= None
+                args.out_prefix=self.OUT_PRFX+f"_{ansatz[0].replace(',','')}_"+ansatz[2]
+                args.instate= args.out_prefix[len("RESULT_"):]+"_instate.json"
+
+                # create random state
+                ansatz_pgs= None
+                bd = args.bond_dim
+                phys_dim= 2
+                pattern= eval(args.pattern)
+                unique_sites, _= from_pattern(pattern)
+                sites={}
+                for us in unique_sites:
+                    t = torch.rand((phys_dim**3, bd, bd, bd, bd),\
+                        dtype=cfg.global_args.torch_dtype,device=cfg.global_args.device) - 0.5
+                    sites[us] = t/torch.max(torch.abs(t))
+                state= IPEPS_KAGOME(sites, pattern=pattern)
+                state.write_to_file(args.instate)
+
+                # i) run optimization and store the optimization data
+                with patch('sys.stdout', new = StringIO()) as tmp_out: 
+                    main()
+                tmp_out.seek(0)
+
+                # parse FINAL observables
+                obs_opt_lines=[]
+                final_obs=None
+                OPT_OBS= OPT_OBS_DONE= False
+                l= tmp_out.readline()
+                while l:
+                    print(l,end="")
+                    if OPT_OBS and not OPT_OBS_DONE and l.rstrip()=="": 
+                        OPT_OBS_DONE= True
+                        OPT_OBS=False
+                    if OPT_OBS and not OPT_OBS_DONE and len(l.split(','))>2:
+                        obs_opt_lines.append(l)
+                    if "epoch, loss," in l and not OPT_OBS_DONE: 
+                        OPT_OBS= True
+                    if "FINAL" in l:
+                        final_obs= l.rstrip()
+                        break
+                    l= tmp_out.readline()
+                assert final_obs
+                assert len(obs_opt_lines)>0
+
+                # compare the line of observables with lowest energy from optimization (i) 
+                # and final observables evaluated from best state stored in *_state.json output file
+                # drop the last column, not separated by comma
+                best_e_line_index= np.argmin([ float(l.split(',')[1]) for l in obs_opt_lines ])
+                opt_line_last= [complex(x) for x in obs_opt_lines[best_e_line_index].split(",")[1:-1]]
+                fobs_tokens= [complex(x) for x in final_obs[len("FINAL"):].split(",")]
+                for val0,val1 in zip(opt_line_last, fobs_tokens):
+                    assert isclose(val0,val1, rel_tol=self.tol, abs_tol=self.tol)
+
+                # ii) run optimization for 3 steps
+                # reset j1 which is otherwise set by main() if args.theta is used
+                args.opt_max_iter= 3 
+                self.reset_couplings()
+                main()
+        
+                # iii) run optimization from checkpoint
+                args.instate=None
+                args.opt_resume= args.out_prefix+"_checkpoint.p"
+                args.opt_max_iter= 7
+                self.reset_couplings()
+                with patch('sys.stdout', new = StringIO()) as tmp_out: 
+                    main()
+                tmp_out.seek(0)
+
+                obs_opt_lines_chk=[]
+                final_obs_chk=None
+                OPT_OBS= OPT_OBS_DONE= False
+                l= tmp_out.readline()
+                while l:
+                    print(l,end="")
+                    if OPT_OBS and not OPT_OBS_DONE and l.rstrip()=="": 
+                        OPT_OBS_DONE= True
+                        OPT_OBS=False
+                    if OPT_OBS and not OPT_OBS_DONE and len(l.split(','))>2:
+                        obs_opt_lines_chk.append(l)
+                    if "checkpoint.loss" in l and not OPT_OBS_DONE: 
+                        OPT_OBS= True
+                    if "FINAL" in l:    
+                        final_obs_chk= l.rstrip()
+                        break
+                    l= tmp_out.readline()
+                assert final_obs_chk
+                assert len(obs_opt_lines_chk)>0
+
+                # compare initial observables from checkpointed optimization (iii) and the observables 
+                # from original optimization (i) at one step after total number of steps done in (ii)
+                opt_line_iii= [complex(x) for x in obs_opt_lines_chk[0].split(",")[1:]]
+                # drop (last) normalization column
+                opt_line_i= [complex(x) for x in obs_opt_lines[4].split(",")[1:-1]]
+                fobs_tokens= [complex(x) for x in final_obs[len("FINAL"):].split(",")]
+                for val3,val1 in zip(opt_line_iii, opt_line_i):
+                    assert isclose(val3,val1, rel_tol=self.tol, abs_tol=self.tol)
+
+                # compare final observables from optimization (i) and the final observables 
+                # from the checkpointed optimization (iii)
+                fobs_tokens_1= [complex(x) for x in final_obs[len("FINAL"):].split(",")]
+                fobs_tokens_3= [complex(x) for x in final_obs_chk[len("FINAL"):].split(",")]
+                for val3,val1 in zip(fobs_tokens_3, fobs_tokens_1):
+                    assert isclose(val3,val1, rel_tol=self.tol, abs_tol=self.tol)
+
+    def tearDown(self):
+        args.opt_resume=None
+        args.instate=None
+        for ansatz in self.ANSATZE:
+            out_prefix=self.OUT_PRFX+f"_{ansatz[0].replace(',','')}_"+ansatz[2]
             instate= out_prefix[len("RESULT_"):]+"_instate.json"
             for f in [out_prefix+"_checkpoint.p",out_prefix+"_state.json",\
                 out_prefix+".log",instate]:

@@ -91,7 +91,7 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
             map_location = lambda storage, loc: storage.cuda()
         else:
             map_location = 'cpu'
-        checkpoint = torch.load(main_args.opt_resume, map_location = map_location)
+        checkpoint = torch.load(main_args.opt_resume, map_location = map_location, weights_only=False)
         epoch0 = checkpoint["epoch"]
         loss0 = checkpoint["loss"]
         cp_state_dict= checkpoint["optimizer_state_dict"]
