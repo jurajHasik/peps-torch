@@ -638,8 +638,8 @@ def rdm2x3_loop_oe(coord, state, env, open_sites=[0,1,2,3,4,5], unroll=True,\
         unroll= [47,48]
     path, path_info= get_contraction_path(*contract_tn,unroll=unroll if unroll else [],\
         names=names,path=None,who=who,\
-        memory_limit=mem_limit if unroll else None,optimizer="default" if env.chi>1 else "auto",
-        global_args=global_args)
+        memory_limit=mem_limit if unroll else None,optimizer="default" if env.chi>1 else "auto")
+
     R= contract_with_unroll(*contract_tn,optimize=path,backend=global_args.oe_backend,\
         unroll=unroll if unroll else [],checkpoint_unrolled=checkpoint_unrolled,
         checkpoint_on_device=checkpoint_on_device,who=who,verbosity=global_args.verbosity_oe)
@@ -1481,8 +1481,8 @@ def rdm3x2_loop_oe(coord, state, env, open_sites=[0,1,2,3,4,5], unroll=True,\
     path, path_info= get_contraction_path(*contract_tn,unroll=unroll if unroll else [],\
         names=names,path=None,who=who,\
         memory_limit=mem_limit if unroll else None,\
-            optimizer="default" if env.chi>1 else "auto",
-            global_args=global_args)
+            optimizer="default" if env.chi>1 else "auto")
+
     R= contract_with_unroll(*contract_tn,optimize=path,backend=global_args.oe_backend,\
         unroll=unroll if unroll else [],checkpoint_unrolled=checkpoint_unrolled,
         checkpoint_on_device=checkpoint_on_device,who=who,verbosity=global_args.verbosity_oe)

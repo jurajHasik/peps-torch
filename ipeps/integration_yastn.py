@@ -199,6 +199,7 @@ class PepsAD(Peps):
             * peps-torch convention physical,up=top,left,down=bottom,right with
                 * signature (-1,-1,-1,1,1) for generic iPEPS
                 * signature (1,1,1,1,1) for C4v-symmetric single-site iPEPS
+            * The x and y axes are interchanged between the YASTN convention and the IPEPS convention
             YASTN convention (top-left)(bottom-right)physical
         """
         unique_sites= {v:i for i,v in enumerate(state.sites.keys())}
@@ -206,7 +207,7 @@ class PepsAD(Peps):
         geometry=RectangularUnitcell(pattern=pattern)
 
         if isinstance(state, IPEPS_ABELIAN):
-            parameters= { c: state.site(c).transpose(axes=(1,2,3,4,0)) for c in geometry.sites() }
+            parameters= { c: state.site((c[1], c[0])).transpose(axes=(1,2,3,4,0)) for c in geometry.sites() }
         elif isinstance(state, IPEPS):
             yastn_cfg_nosym= yastn.make_config(
                 backend= backend_torch,
@@ -217,7 +218,7 @@ class PepsAD(Peps):
                 res= yastn.Tensor(config=yastn_cfg_nosym, s=[-1,1,1,-1,1])
                 res.set_block(val=t, Ds=t.shape)
                 return res
-            parameters= { c: _wrap_t(state.site(c).permute(1,2,3,4,0)) for c in geometry.sites() }
+            parameters= { c: _wrap_t(state.site((c[1], c[0])).permute(1,2,3,4,0)) for c in geometry.sites() }
 
         peps_yastn= PepsAD(geometry=geometry,\
             parameters= parameters)

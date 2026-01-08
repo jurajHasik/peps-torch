@@ -2,8 +2,8 @@ import time
 import warnings
 from types import SimpleNamespace
 import config as cfg
-# from yamps.tensor import decompress_from_1d
 import yastn.yastn as yastn
+from yastn.yastn import split_data_and_meta, combine_data_and_meta
 from tn_interface_abelian import contract, permute
 from ctm.one_site_c4v_abelian.ctm_components_c4v import *
 try:
@@ -14,12 +14,12 @@ import logging
 log = logging.getLogger(__name__)
 
 
-def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.global_args): 
+def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
     r"""
     :param state: wavefunction
     :param env: initial C4v symmetric environment
     :param conv_check: function which determines the convergence of CTM algorithm. If ``None``,
-                       the algorithm performs ``ctm_args.ctm_max_iter`` iterations. 
+                       the algorithm performs ``ctm_args.ctm_max_iter`` iterations.
     :param ctm_args: CTM algorithm configuration
     :param global_args: global configuration
     :type state: IPEPS_C4V_ABELIAN
@@ -28,18 +28,18 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
     :type ctm_args: CTMARGS
     :type global_args: GLOBALARGS
 
-    Executes specialized CTM algorithm for abelian-symmetric 1-site C4v symmetric iPEPS starting 
-    from the intial environment ``env``. 
+    Executes specialized CTM algorithm for abelian-symmetric 1-site C4v symmetric iPEPS starting
+    from the intial environment ``env``.
 
-    To establish the convergence of CTM before 
-    the maximal number of iterations is reached  a ``conv_check`` function is invoked. 
+    To establish the convergence of CTM before
+    the maximal number of iterations is reached  a ``conv_check`` function is invoked.
     Its expected signature is ``conv_check(IPEPS_ABELIAN_C4V,ENV_ABELIAN_C4V,Object,CTMARGS)``
-    where ``Object`` is an arbitary argument. For example it can be a list or dict used 
+    where ``Object`` is an arbitary argument. For example it can be a list or dict used
     for storing CTM data from previous steps to check convergence.
 
     If :attr:`config.CTMARGS.ctm_force_dl`, then double-layer tensor is precomputed
     and used in the CTMRG. Otherwise, `ket` and `bra` layer of on-site tensor are contracted
-    sequentially when building enlarged corner. 
+    sequentially when building enlarged corner.
     """
 
     if ctm_args.projector_svd_method=='DEFAULT' or ctm_args.projector_svd_method=='GESDD':
@@ -59,7 +59,7 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
     a= state.site()
     if ctm_args.ctm_force_dl:
         # 0) Create double-layer (DL) tensors, preserving the same convention
-        #    for order of indices 
+        #    for order of indices
         #
         #     /               /(+1)
         #  --a---   =  (+1)--A--(+1)
@@ -75,7 +75,7 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
     t_obs=t_ctm=t_fpcm=0.
     history=None
     past_steps_data=dict() # possibly store some data throughout the execution of CTM
-    
+
     for i in range(ctm_args.ctm_max_iter):
 
         t0_ctm= time.perf_counter()
@@ -90,11 +90,11 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
             # evaluate convergence of the CTMRG procedure
             converged, history= conv_check(state, env, history, ctm_args=ctm_args)
             if converged:
-                if ctm_args.verbosity_ctm_convergence>0: 
+                if ctm_args.verbosity_ctm_convergence>0:
                     print(f"CTMRG converged at iter= {i}")
                 break
         t1_obs= time.perf_counter()
-        
+
         t_ctm+= t1_ctm-t0_ctm
         t_obs+= t1_obs-t0_obs
 
@@ -105,7 +105,7 @@ def ctm_MOVE_dl(a_dl, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg
     r"""
     :param a_dl: double-layer on-site C4v symmetric tensor
     :param env: C4v symmetric environment
-    :param f_c2x2_decomp: function performing the truncated spectral decomposition (eigenvalue/svd) 
+    :param f_c2x2_decomp: function performing the truncated spectral decomposition (eigenvalue/svd)
                           of enlarged corner. The ``f_c2x2_decomp`` returns a tuple composed of
                           leading chi spectral values and projector on leading chi spectral values.
     :param ctm_args: CTM algorithm configuration
@@ -117,31 +117,31 @@ def ctm_MOVE_dl(a_dl, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg
     :type global_args: GLOBALARGS
 
     Executes a single step of C4v symmetric CTM algorithm for 1-site C4v symmetric iPEPS.
-    This variant of CTM step uses pre-built double-layer on-site tensor. 
+    This variant of CTM step uses pre-built double-layer on-site tensor.
     """
 
-    # 0) compress abelian symmetric tensor into 1D representation for the purposes of 
+    # 0) compress abelian symmetric tensor into 1D representation for the purposes of
     #    checkpointing
     metadata_store= {}
-    tmp= tuple([a_dl.compress_to_1d(), env.C[env.keyC].compress_to_1d(), \
-        env.T[env.keyT].compress_to_1d()])
+    tmp= tuple([split_data_and_meta(a_dl.to_dict()), split_data_and_meta(env.C[env.keyC].to_dict()), \
+        split_data_and_meta(env.T[env.keyT].to_dict())])
     tensors, metadata_store["in"]= list(zip(*tmp))
-    
+
     # function wrapping up the core of the CTM MOVE segment of CTM algorithm
     def ctm_MOVE_dl_c(*tensors):
         #
-        # keep inputs for autograd stored on cpu, move to gpu for the core 
+        # keep inputs for autograd stored on cpu, move to gpu for the core
         # of the computation if desired
         if global_args.offload_to_gpu != 'None' and global_args.device=='cpu':
             tensors= tuple(r1d.to(global_args.offload_to_gpu) for r1d in tensors)
-            for meta in metadata_store["in"]: 
+            for meta in metadata_store["in"]:
                 meta['config']= meta['config']._replace(default_device=global_args.offload_to_gpu)
 
-        tensors= tuple(yastn.decompress_from_1d(r1d, meta) \
+        tensors= tuple(yastn.from_dict(combine_data_and_meta(r1d, meta)) \
             for r1d,meta in zip(tensors,metadata_store["in"]))
         A, C, T= tensors
-        
-        # Fuse on-site tensor indices into single index  
+
+        # Fuse on-site tensor indices into single index
         # 0(+)
         # T--2(-),3(+)->2(-)
         # 1(+)
@@ -162,7 +162,7 @@ def ctm_MOVE_dl(a_dl, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg
         # |                  0(-1)                                  0(-1)
         # 0(+1)
         # 0(-1)
-        # |         
+        # |
         # P*--
         # 1->0(-1)
         # NOTE change signature <=> hermitian-conj since C2X2= UDU^\dag where U=U^\dag ?
@@ -190,7 +190,7 @@ def ctm_MOVE_dl(a_dl, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg
         #    0(-1)
         #  __P____
         # |       |
-        # |       |              0(-1)  
+        # |       |              0(-1)
         # T-------A--3->1(+1) => T--1(+1)
         # 1(+1)   2(+1)          2->1(-1)
         # 0(-1)   1(-1)
@@ -212,15 +212,15 @@ def ctm_MOVE_dl(a_dl, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg
         nT= nT.unfuse_legs(axes=2)
 
         # 2) Return raw new tensors
-        tmp_loc= tuple([C2X2.compress_to_1d(), nT.compress_to_1d()])
+        tmp_loc= tuple([split_data_and_meta(C2X2.to_dict()), split_data_and_meta(nT.to_dict())])
         tensors_loc, metadata_store["out"]= list(zip(*tmp_loc))
 
         # move back to (default) cpu if offload_to_gpu is specified
         if global_args.offload_to_gpu != 'None' and global_args.device=='cpu':
             tensors_loc= tuple(r1d.to(global_args.device) for r1d in tensors_loc)
-            for meta in metadata_store["out"]: 
+            for meta in metadata_store["out"]:
                 meta['config']= meta['config']._replace(default_device=global_args.device)
-        
+
         return tensors_loc
 
     # Call the core function, allowing for checkpointing
@@ -229,7 +229,7 @@ def ctm_MOVE_dl(a_dl, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg
     else:
         new_tensors= ctm_MOVE_dl_c(*tensors)
 
-    new_tensors= tuple(yastn.decompress_from_1d(r1d, meta) \
+    new_tensors= tuple(yastn.from_dict(combine_data_and_meta(r1d, meta)) \
             for r1d,meta in zip(new_tensors,metadata_store["out"]))
 
     env.C[env.keyC]= new_tensors[0]
@@ -240,7 +240,7 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
     r"""
     :param a: on-site C4v symmetric tensor
     :param env: C4v symmetric environment
-    :param f_c2x2_decomp: function performing the truncated spectral decomposition (eigenvalue/svd) 
+    :param f_c2x2_decomp: function performing the truncated spectral decomposition (eigenvalue/svd)
                           of enlarged corner. The ``f_c2x2_decomp`` returns a tuple composed of
                           leading chi spectral values and projector on leading chi spectral values.
     :param ctm_args: CTM algorithm configuration
@@ -255,27 +255,27 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
     This variant of CTM step does not explicitly build double-layer on-site tensor.
     """
 
-    # 0) compress abelian symmetric tensor into 1D representation for the purposes of 
+    # 0) compress abelian symmetric tensor into 1D representation for the purposes of
     #    checkpointing
     #
-    # keep inputs for autograd stored on cpu, move to gpu for the core 
+    # keep inputs for autograd stored on cpu, move to gpu for the core
     # of the computation if desired
     metadata_store= {}
-    tmp= tuple([a.compress_to_1d(), \
-            env.C[env.keyC].compress_to_1d(), env.T[env.keyT].compress_to_1d()])
+    tmp= tuple([split_data_and_meta(a.to_dict()), \
+            split_data_and_meta(env.C[env.keyC].to_dict()), split_data_and_meta(env.T[env.keyT].to_dict())])
     tensors, metadata_store["in"] = list(zip(*tmp))
-    
+
     # function wrapping up the core of the CTM MOVE segment of CTM algorithm
     def ctm_MOVE_sl_c(*tensors):
         #
-        # keep inputs for autograd stored on cpu, move to gpu for the core 
+        # keep inputs for autograd stored on cpu, move to gpu for the core
         # of the computation if desired
         if global_args.offload_to_gpu != 'None' and global_args.device=='cpu':
             tensors= tuple(r1d.to(global_args.offload_to_gpu) for r1d in tensors)
-            for meta in metadata_store["in"]: 
+            for meta in metadata_store["in"]:
                 meta['config']= meta['config']._replace(default_device=global_args.offload_to_gpu)
-                
-        a,C,T= tuple(yastn.decompress_from_1d(r1d, meta) \
+
+        a,C,T= tuple(yastn.from_dict(combine_data_and_meta(r1d, meta)) \
             for r1d,meta in zip(tensors,metadata_store["in"]))
 
         # 1) build enlarged corner upper left corner
@@ -299,7 +299,7 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
         # |     |
         # 0(+1) 1(+),2(-)
         # 0(-)  1(-),2(+)
-        # |    /         
+        # |    /
         # P*--
         # 2->0(-1)
         C2X2= contract(P.conj(), C2X2, ([0,1,2],[0,1,2]))
@@ -308,9 +308,9 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
         # The absorption step for C is done with T placed at B-sublattice
         # and hence the half-row/column tensor absorption step is done with T'
         # corresponding to A-sublattice
-        # 
+        #
         # C--T--C => C---T--T'--T--C => C--T-- & --T'--
-        # T--A--T    T---A--B---A--T    T--A--   --B--- 
+        # T--A--T    T---A--B---A--T    T--A--   --B---
         # C--T--C    T'--B--A---B--T    |  |       |
         #            T---A--B---A--T
         #            C---T--T'--T--C
@@ -320,7 +320,7 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
         # 1(+1->-1)
         T= T.flip_signature()
 
-        #       3(+)->2(+)                        0 
+        #       3(+)->2(+)                        0
         # ______P___                         _____P___
         # 0(+)     1(+),2(-)->0(+),1(-)  => |        2(+),3(-)
         # 0(-)                              |
@@ -336,9 +336,9 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
         # |             (+)2 \3->2(-)       |             | \
         # |             (-)1                T-------------a-------6->3(-)
         # T----4(+)(-)2----a--4->6(-)       |\       (-)4/|   2(-)
-        # |\5->3(-)        |\0->4(-)        | \      (+)0-|--\1(+) 
+        # |\5->3(-)        |\0->4(-)        | \      (+)0-|--\1(+)
         # |                3->5(-)          |  \(-)3(+)2-----a*---4->5(+)
-        # 1(-)                              |             |  | 
+        # 1(-)                              |             |  |
         #                                   1(-)    (-)2<-5  3->4(+)
         #
         _a= a.flip_signature()
@@ -356,7 +356,7 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
         #    0(+)
         #  __P____
         # |       |
-        # |       |                           0(+)  
+        # |       |                           0(+)
         # T'-----a*a--4(-),5(+)->1(-),2(+) => T--1(-),2(+)->2(-),3(+)
         # 1(-1)   2(-),3(+)                   2->1(+)
         # 0(+1)   1(+),2(-)
@@ -364,7 +364,7 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
         #     3(+)
         # TODO do we conjugate here ?
         nT= contract(nT, P,([1,2,3],[0,1,2]))
-        
+
         nT= nT.transpose((0,3,1,2))
 
         # 4) symmetrize, normalize and assign new C,T
@@ -374,13 +374,13 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
         nT= nT/nT.norm(p='inf')
 
         # 2) Return raw new tensors
-        tmp_loc= tuple([C2X2.compress_to_1d(), nT.compress_to_1d()])
+        tmp_loc= tuple([split_data_and_meta(C2X2.to_dict()), split_data_and_meta(nT.to_dict())])
         tensors_loc, metadata_store["out"]= list(zip(*tmp_loc))
 
         # move back to (default) cpu if offload_to_gpu is specified
         if global_args.offload_to_gpu != 'None' and global_args.device=='cpu':
             tensors_loc= tuple(r1d.to(global_args.device) for r1d in tensors_loc)
-            for meta in metadata_store["out"]: 
+            for meta in metadata_store["out"]:
                 meta['config']= meta['config']._replace(default_device=global_args.device)
 
         return tensors_loc
@@ -391,7 +391,7 @@ def ctm_MOVE_sl(a, env, f_c2x2_decomp, ctm_args=cfg.ctm_args, global_args=cfg.gl
     else:
         new_tensors= ctm_MOVE_sl_c(*tensors)
 
-    new_tensors= tuple(yastn.decompress_from_1d(r1d, meta) \
+    new_tensors= tuple(yastn.from_dict(combine_data_and_meta(r1d, meta)) \
             for r1d,meta in zip(new_tensors,metadata_store["out"]))
 
     env.C[env.keyC]= new_tensors[0]

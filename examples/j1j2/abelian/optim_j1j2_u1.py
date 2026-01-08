@@ -21,7 +21,7 @@ parser= cfg.get_args_parser()
 parser.add_argument("--j1", type=float, default=1., help="nearest-neighbour coupling")
 parser.add_argument("--j2", type=float, default=0., help="next nearest-neighbour coupling")
 parser.add_argument("--tiling", default="BIPARTITE", help="tiling of the lattice")
-parser.add_argument("--yast_backend", type=str, default='torch', 
+parser.add_argument("--yast_backend", type=str, default='torch',
     help="YAST backend", choices=['torch','torch_cpp'])
 args, unknown_args = parser.parse_known_args()
 
@@ -39,14 +39,14 @@ def main():
         default_device= cfg.global_args.device, default_dtype=cfg.global_args.dtype)
     torch.set_num_threads(args.omp_cores)
     settings.backend.random_seed(args.seed)
-    
+
     # the model (in particular operators forming Hamiltonian) is defined in a dense form
     # with no symmetry structure
     model= j1j2.J1J2_NOSYM(settings_full,j1=args.j1,j2=args.j2)
 
     # initialize an ipeps
     # 1) define lattice-tiling function, that maps arbitrary vertex of square lattice
-    # coord into one of coordinates within unit-cell of iPEPS ansatz    
+    # coord into one of coordinates within unit-cell of iPEPS ansatz
     if args.tiling == "BIPARTITE":
         def lattice_to_site(coord):
             vx = (coord[0] + abs(coord[0]) * 2) % 2
@@ -98,8 +98,8 @@ def main():
         model= j1j2.J1J2_NOSYM(settings_full,j1=args.j1,j2=args.j2)
 
     print(state)
-    
-    # 2) select the "energy" function 
+
+    # 2) select the "energy" function
     if args.tiling=="BIPARTITE" or args.tiling=="2SITE" or args.tiling=="4SITE" \
         or args.tiling=="8SITE":
         energy_f=model.energy_2x1_or_2Lx2site_2x2rdms
@@ -121,7 +121,7 @@ def main():
         return False, history
 
     ctm_env= ENV_ABELIAN(args.chi, state=state, init=True)
-    
+
     ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
     loss0 = energy_f(state, ctm_env).to_number()
     obs_values, obs_labels = model.eval_obs(state,ctm_env)
@@ -142,18 +142,18 @@ def main():
         # 1) compute environment by CTMRG
         ctm_env_out, *ctm_log= ctmrg.run(state, ctm_env_in, \
             conv_check=ctmrg_conv_energy, ctm_args=ctm_args)
-        
+
         # 2) evaluate loss with the converged environment
         loss= energy_f(state, ctm_env_out)
         loss= loss.to_number()
-        
+
         return (loss, ctm_env_out, *ctm_log)
 
     @torch.no_grad()
     def obs_fn(state, ctm_env, opt_context):
         if ("line_search" in opt_context.keys() and not opt_context["line_search"]) \
             or not "line_search" in opt_context.keys():
-            epoch= len(opt_context["loss_history"]["loss"]) 
+            epoch= len(opt_context["loss_history"]["loss"])
             loss= opt_context["loss_history"]["loss"][-1]
             obs_values, obs_labels = model.eval_obs(state,ctm_env)
             print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
@@ -169,7 +169,7 @@ def main():
     ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_energy)
     opt_energy = energy_f(state,ctm_env).to_number()
     obs_values, obs_labels = model.eval_obs(state,ctm_env)
-    print(", ".join([f"{args.opt_max_iter}",f"{opt_energy}"]+[f"{v}" for v in obs_values]))  
+    print(", ".join([f"{args.opt_max_iter}",f"{opt_energy}"]+[f"{v}" for v in obs_values]))
 
 if __name__=='__main__':
     if len(unknown_args)>0:
@@ -197,7 +197,7 @@ class TestCheckpoint_NeelBipartiteState(unittest.TestCase):
 
         # i) run optimization and store the optimization data
         args.opt_max_iter= 10
-        with patch('sys.stdout', new = StringIO()) as tmp_out: 
+        with patch('sys.stdout', new = StringIO()) as tmp_out:
             main()
         tmp_out.seek(0)
 
@@ -210,7 +210,7 @@ class TestCheckpoint_NeelBipartiteState(unittest.TestCase):
             if OPT_OBS and not OPT_OBS_DONE and l.rstrip()=="": OPT_OBS_DONE= True
             if OPT_OBS and not OPT_OBS_DONE and len(l.split(','))>2:
                 obs_opt_lines.append(l)
-            if "epoch, energy," in l and not OPT_OBS_DONE: 
+            if "epoch, energy," in l and not OPT_OBS_DONE:
                 OPT_OBS= True
             l= tmp_out.readline()
         assert len(obs_opt_lines)>0
@@ -218,12 +218,12 @@ class TestCheckpoint_NeelBipartiteState(unittest.TestCase):
         # ii) run optimization for 3 steps
         args.opt_max_iter= 3
         main()
-        
+
         # iii) run optimization from checkpoint
         args.instate=None
         args.opt_resume= self.OUT_PRFX+"_checkpoint.p"
         args.opt_max_iter= 7
-        with patch('sys.stdout', new = StringIO()) as tmp_out: 
+        with patch('sys.stdout', new = StringIO()) as tmp_out:
             main()
         tmp_out.seek(0)
 
@@ -235,19 +235,19 @@ class TestCheckpoint_NeelBipartiteState(unittest.TestCase):
             if OPT_OBS and not OPT_OBS_DONE and l.rstrip()=="": OPT_OBS_DONE= True
             if OPT_OBS and not OPT_OBS_DONE and len(l.split(','))>2:
                 obs_opt_lines_chk.append(l)
-            if "checkpoint.loss" in l and not OPT_OBS_DONE: 
+            if "checkpoint.loss" in l and not OPT_OBS_DONE:
                 OPT_OBS= True
             l= tmp_out.readline()
         assert len(obs_opt_lines_chk)>0
 
-        # compare initial observables from checkpointed optimization (iii) and the observables 
+        # compare initial observables from checkpointed optimization (iii) and the observables
         # from original optimization (i) at one step after total number of steps done in (ii)
         opt_line_iii= [float(x) for x in obs_opt_lines_chk[0].split(",")[1:]]
         opt_line_i= [float(x) for x in obs_opt_lines[4].split(",")[1:]]
         for val3,val1 in zip(opt_line_iii, opt_line_i):
             assert isclose(val3,val1, rel_tol=self.tol, abs_tol=self.tol)
 
-        # compare final observables from optimization (i) and the final observables 
+        # compare final observables from optimization (i) and the final observables
         # from the checkpointed optimization (iii)
         fobs_tokens_1= [float(x) for x in obs_opt_lines[-1].split(",")[1:]]
         fobs_tokens_3= [float(x) for x in obs_opt_lines_chk[-1].split(",")[1:]]

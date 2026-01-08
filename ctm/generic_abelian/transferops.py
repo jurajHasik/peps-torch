@@ -4,6 +4,7 @@ from scipy.sparse.linalg import LinearOperator
 from scipy.sparse.linalg import eigs
 import config as cfg
 import yastn.yastn as yastn
+from yastn.yastn import split_data_and_meta, combine_data_and_meta
 from ctm.generic_abelian import corrf
 
 def get_Top_spec(n, coord, direction, state, env, edge_t=None,
@@ -13,8 +14,8 @@ def get_Top_spec(n, coord, direction, state, env, edge_t=None,
     :type n: int
     :param coord: reference site (x,y)
     :type coord: tuple(int,int)
-    :param direction: direction of transfer operator. Choices are: (0,-1) for up, 
-                      (-1,0) for left, (0,1) for down, and (1,0) for right 
+    :param direction: direction of transfer operator. Choices are: (0,-1) for up,
+                      (-1,0) for left, (0,1) for down, and (1,0) for right
     :type direction: tuple(int,int)
     :param state: wavefunction
     :type state: IPEPS_ABELIAN
@@ -31,15 +32,15 @@ def get_Top_spec(n, coord, direction, state, env, edge_t=None,
     Compute the leading `n` eigenvalues of width-0 transfer operator of IPEPS::
 
         --T---------...--T--------            --\               /---
-        --A(x,y)----...--A(x+lX,y)-- = \sum_i ---v_i \lambda_i v_i-- 
+        --A(x,y)----...--A(x+lX,y)-- = \sum_i ---v_i \lambda_i v_i--
         --T---------...--T--------            --/               \---
 
     where `A` is a double-layer tensor. The transfer matrix is given by width-1 channel
     of the same length lX as the unit cell of iPEPS, embedded in environment of T-tensors.
 
-    Other directions are obtained by analogous construction. 
+    Other directions are obtained by analogous construction.
     """
-    if edge_t is None: 
+    if edge_t is None:
         edge_t= (0,) if state.engine.sym.NSYM==1 else (tuple([0]*state.engine.sym.NSYM),)
     # if we grow the TM in right direction
     #
@@ -55,7 +56,7 @@ def get_Top_spec(n, coord, direction, state, env, edge_t=None,
     elif direction==(-1,0):
         N, i_T1, i_T2= state.lX, [(0,-1),2], [(0,1),2]
     elif direction==(0,1):
-        N, i_T1, i_T2= state.lY, [(-1,0),0], [(1,0),0]    
+        N, i_T1, i_T2= state.lY, [(-1,0),0], [(1,0),0]
     elif direction==(0,-1):
         N, i_T1, i_T2= state.lY, [(-1,0),1], [(1,0),2]
     else:
@@ -74,27 +75,26 @@ def get_Top_spec(n, coord, direction, state, env, edge_t=None,
         yastn.Leg(sym=state.engine.sym, s=1, t=edge_t, D=tuple([1]*len(edge_t)))
     ))
     E0= E0.fuse_legs(axes=(0,(1,2),3,4))
-    E0_dense, meta0= yastn.compress_to_1d(E0,meta=None)
+    E0_dense, meta0= split_data_and_meta(E0.to_dict())
 
     # multiply vector by transfer-op and pass the result back in numpy
     #  --0 (approx chi)
     # v--1 (D^2)
     #  --2 (approx chi)
-    
+
     # if state and env are on gpu, the matrix-vector product can be performed
     # there as well. Price to pay is the communication overhead of resulting vector
     def _mv(v):
         c0= coord
-        V= yastn.decompress_from_1d(state.engine.backend.to_tensor(
+        V= yastn.from_dict(combine_data_and_meta(state.engine.backend.to_tensor(
             v,dtype=E0.config.default_dtype,device=E0.config.default_device),
-            meta=meta0)
+            meta=meta0))
         for i in range(N):
             V= corrf.apply_TM_1sO(c0,direction,state,env,V,verbosity=verbosity)
             c0= (c0[0]+direction[0],c0[1]+direction[1])
 
-        v, meta_v= yastn.compress_to_1d(V,meta=None)
-        v= state.engine.backend.to_numpy(v)
-        return v
+        v, meta_v= split_data_and_meta(V.to_dict(level=2))
+        return v[0]
 
     T= LinearOperator((E0.size,E0.size), matvec=_mv, dtype=state.dtype)
     if eigenvectors:

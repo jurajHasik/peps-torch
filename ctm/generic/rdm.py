@@ -1355,7 +1355,7 @@ def rdm2x2(coord, state, env, open_sites=[0,1,2,3],\
     if oe:
         return rdm2x2_oe(coord, state, env, open_sites=open_sites, unroll=unroll,
             checkpoint_unrolled=checkpoint_unrolled, checkpoint_on_device=checkpoint_on_device,
-            sym_pos_def=sym_pos_def, force_cpu=force_cpu, verbosity=verbosity, global_args=global_args)
+            sym_pos_def=sym_pos_def, force_cpu=force_cpu, verbosity=verbosity)
     else:
         return rdm2x2_legacy(coord, state, env, sym_pos_def=sym_pos_def, force_cpu=force_cpu,\
             verbosity=verbosity)
@@ -1664,8 +1664,8 @@ def rdm2x2_oe(coord, state, env, open_sites=[0,1,2,3], unroll=False,
     if type(unroll)==bool and unroll:
         unroll= I_out
     path, path_info= get_contraction_path(*contract_tn,unroll=unroll,\
-        names=names,path=None,who=who,optimizer="default" if env.chi>1 else "auto",
-        global_args=global_args)
+        names=names,path=None,who=who,optimizer="default" if env.chi>1 else "auto")
+
     R= contract_with_unroll(*contract_tn,unroll=unroll,optimize=path,backend=global_args.oe_backend,
         checkpoint_unrolled=checkpoint_unrolled,checkpoint_on_device=checkpoint_on_device,
         who=who,verbosity=global_args.verbosity_oe)

@@ -341,9 +341,10 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
             new_flat_grad.abs().max() <= opt_args.tolerance_grad:
             break
 
-        d, t = optimizer.state[optimizer._params[0]]['d'], optimizer.state[optimizer._params[0]]['t']
-        if d.mul(t).abs().max() <= opt_args.tolerance_change:
-            break
+        if 'd' in optimizer.state[optimizer._params[0]]:
+            d, t = optimizer.state[optimizer._params[0]]['d'], optimizer.state[optimizer._params[0]]['t']
+            if d.mul(t).abs().max() <= opt_args.tolerance_change:
+                break
 
         if (opt_args.line_search not in ["default", None]) and \
             "STATUS" in context and context["STATUS"]=="ENV_ANTIVAR":
