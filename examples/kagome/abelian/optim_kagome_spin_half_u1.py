@@ -20,7 +20,7 @@ log = logging.getLogger(__name__)
 
 # parse command line args and build necessary configuration objects
 parser = cfg.get_args_parser()
-parser.add_argument("--yast_backend", type=str, default='torch', 
+parser.add_argument("--yast_backend", type=str, default='torch',
     help="YAST backend", choices=['torch','torch_cpp'])
 parser.add_argument("--theta", type=float, default=0, help="angle [<value> x pi] parametrizing the chiral Hamiltonian")
 parser.add_argument("--j1", type=float, default=1., help="nearest-neighbor exchange coupling")
@@ -37,7 +37,7 @@ parser.add_argument("--no_sym_bond_S", action='store_false', dest='sym_bond_S',h
 parser.add_argument("--disp_corre_len", action='store_true', dest='disp_corre_len',help="display correlation length during optimization")
 parser.add_argument("--CTM_check", type=str, default='Partial_energy', help="method to check CTM convergence",choices=["Energy", "SingularValue", "Partial_energy"])
 parser.add_argument("--force_cpu", action='store_true', dest='force_cpu', help="force RDM contractions on CPU")
-# initial state can be selected as D=3 RVB state by passing 
+# initial state can be selected as D=3 RVB state by passing
 # --ipeps_init_type RVB
 parser.add_argument("--itebd", action='store_true', dest='do_itebd', help="do itebd as initial state")
 parser.add_argument("--itebd_tol", type=float, default=1e-12, help="itebd truncation tol")
@@ -97,7 +97,7 @@ def main():
             #         elif state.pgs!=ansatz_pgs:
             #             raise RuntimeError("instate has incompatible PG symmetry with "+args.ansatz)
             state= state.add_noise(args.instate_noise)
-        
+
         # 1.2) reading from checkpoint file
         elif args.opt_resume is not None:
             T_u= yastn.Tensor(config=settings_U1, s=(-1,-1,-1))
@@ -187,7 +187,7 @@ def main():
                     D=((1, 2, 3, 2, 1), (1, 2, 3, 2, 1), (1, 2, 3, 2, 1)))
                 T_d = yastn.rand(config=settings_U1, s=(-1, -1, -1), n=0,
                     t=((-2, -1, 0, 1, 2), (-2, -1, 0, 1, 2), (-2, -1, 0, 1, 2)),
-                    D=((1, 2, 3, 2, 1), (1, 2, 3, 2, 1), (1, 2, 3, 2, 1)))            
+                    D=((1, 2, 3, 2, 1), (1, 2, 3, 2, 1), (1, 2, 3, 2, 1)))
 
             #non-su(2) sectors
             elif args.bond_dim==4:
@@ -226,13 +226,13 @@ def main():
                     D=((1, 1, 1, 1, 1), (1, 1, 1, 1, 1), (1, 1, 1, 1, 1)))
             state= IPESS_KAGOME_GENERIC_ABELIAN(settings_U1, {'T_u': T_u, 'B_a': B_a,\
                 'T_d': T_d,'B_b': B_b, 'B_c': B_c})
-        
+
         elif args.ipeps_init_type=="RVB":
             DIR_PATH = os.path.dirname(os.path.realpath(__file__))
             state= read_ipess_kagome_generic(DIR_PATH+"/../../../test-input/abelian/IPESS_KAGOME_RVB_D3_abelian-U1_state.json", \
                     settings_U1, peps_args=cfg.peps_args, global_args=cfg.global_args)
             state= state.add_noise(args.instate_noise)
-            
+
     # 2) (optional) perform iTEBD on top of the initial state
     if args.do_itebd:
         print("-"*20 + " iTEBD initialization "+"-"*20)
@@ -360,7 +360,7 @@ def main():
         ctm_env_out, history, t_ctm, t_conv_check = ctmrg.run(state_sym, ctm_env_in, \
             conv_check=ctmrg_conv_f, ctm_args=ctm_args)
         loss = energy_f(state_sym, ctm_env_out, force_cpu=cfg.ctm_args.conv_check_cpu)
-        
+
         return loss, ctm_env_out, history, t_ctm, t_conv_check
 
     @torch.no_grad()
@@ -375,21 +375,21 @@ def main():
             loss= opt_context["loss_history"]["loss_ls"][-1]
             print("LS",end=" ")
         else:
-            epoch= len(opt_context["loss_history"]["loss"]) 
-            loss= opt_context["loss_history"]["loss"][-1] 
+            epoch= len(opt_context["loss_history"]["loss"])
+            loss= opt_context["loss_history"]["loss"][-1]
         if opt_context["line_search"]:
             print(", ".join([f"{epoch}",f"{loss}"]))
             log.info("Norm(sites): "+", ".join([f"{t.norm()}" for c,t in state.sites.items()]))
         else:
-            obs_values, obs_labels = model.eval_obs(state,ctm_env_init,force_cpu=args.force_cpu,\
+            obs_values, obs_labels = model.eval_obs(state,ctm_env,force_cpu=args.force_cpu,\
                 disp_corre_len=args.disp_corre_len)
             print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]), end="")
             log.info("Norm(sites): "+", ".join([f"{t.norm()}" for c,t in state.sites.items()]))
             print(" "+", ".join([f"{t.norm()}" for c,t in state.sites.items()]) )
-        
+
     # 4) optimize
     optimize_state(state, ctm_env_init, loss_fn, obs_fn=obs_fn)
-    
+
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"
     if args.ansatz=="IPESS":
@@ -410,7 +410,7 @@ def main():
 if __name__ == '__main__':
     if len(unknown_args) > 0:
         print("args not recognized: " + str(unknown_args))
-        raise Exception("Unknown command line arguments")    
+        raise Exception("Unknown command line arguments")
     main()
 
 class TestOptim_RVB(unittest.TestCase):
@@ -432,10 +432,10 @@ class TestOptim_RVB(unittest.TestCase):
 
     def test_basic_opt_rvb(self):
         from io import StringIO
-        from unittest.mock import patch 
+        from unittest.mock import patch
         from cmath import isclose
 
-        with patch('sys.stdout', new = StringIO()) as tmp_out: 
+        with patch('sys.stdout', new = StringIO()) as tmp_out:
             main()
         tmp_out.seek(0)
 
@@ -449,7 +449,7 @@ class TestOptim_RVB(unittest.TestCase):
             if OPT_OBS and not OPT_OBS_DONE and l.rstrip()=="": OPT_OBS_DONE= True
             if OPT_OBS and not OPT_OBS_DONE and len(l.split(','))>2:
                 final_opt_line= l.rstrip()
-            if "epoch, energy," in l and not OPT_OBS_DONE: 
+            if "epoch, energy," in l and not OPT_OBS_DONE:
                 OPT_OBS= True
             if "FINAL" in l:
                 final_obs= l.rstrip()
@@ -460,22 +460,22 @@ class TestOptim_RVB(unittest.TestCase):
 
         # compare with the reference
         ref_data="""
-        -0.3180407711847282, (-0.4771030273105023+2.395659971600811e-16j), (-0.4770192862436823+0j), 
-        (2.2027853160689646e-06+5.098826440112844e-19j), (1.8151220691379348e-06+5.344259112418017e-19j), (1.8745247083438e-08+3.5006284274149174e-22j), 
-        (-0.001484178330278732-1.717727019756202e-16j), 0j, 0j, 
-        (0.0013472646618752882+1.9833738921717212e-16j), 0j, 0j, 
-        (0.00013691328307888171+1.2784108118268017e-18j), 0j, 0j, 
-        (-0.16545105705851107-4.8744230200782965e-16j), (-0.1610407631859544+8.705784359174593e-16j), (-0.1506051103610713-7.924161808310929e-17j), 
+        -0.3180407711847282, (-0.4771030273105023+2.395659971600811e-16j), (-0.4770192862436823+0j),
+        (2.2027853160689646e-06+5.098826440112844e-19j), (1.8151220691379348e-06+5.344259112418017e-19j), (1.8745247083438e-08+3.5006284274149174e-22j),
+        (-0.001484178330278732-1.717727019756202e-16j), 0j, 0j,
+        (0.0013472646618752882+1.9833738921717212e-16j), 0j, 0j,
+        (0.00013691328307888171+1.2784108118268017e-18j), 0j, 0j,
+        (-0.16545105705851107-4.8744230200782965e-16j), (-0.1610407631859544+8.705784359174593e-16j), (-0.1506051103610713-7.924161808310929e-17j),
         (-0.16740173138248024+0j), (-0.152580468641496+0j), (-0.1570313126413648+0j)
         """
-        # compare final observables from optimization and the observables from the 
+        # compare final observables from optimization and the observables from the
         # final state
         final_opt_line_t= [complex(x) for x in final_opt_line.split(",")[1:7]]
         fobs_tokens= [complex(x) for x in final_obs[len("FINAL"):].split(",")[:6]]
         for val0,val1 in zip(final_opt_line_t, fobs_tokens):
             assert isclose(val0,val1, rel_tol=self.tol, abs_tol=self.tol)
 
-        # compare final observables from final state against expected reference 
+        # compare final observables from final state against expected reference
         # drop first token, corresponding to iteration step
         ref_tokens= [complex(x) for x in ref_data.split(",")[:6]]
         for val,ref_val in zip(fobs_tokens, ref_tokens):
@@ -512,7 +512,7 @@ class TestCheckpoint_RVB(unittest.TestCase):
         from cmath import isclose
 
         # i) run optimization and store the optimization data
-        with patch('sys.stdout', new = StringIO()) as tmp_out: 
+        with patch('sys.stdout', new = StringIO()) as tmp_out:
             main()
         tmp_out.seek(0)
 
@@ -526,7 +526,7 @@ class TestCheckpoint_RVB(unittest.TestCase):
             if OPT_OBS and not OPT_OBS_DONE and l.rstrip()=="": OPT_OBS_DONE= True
             if OPT_OBS and not OPT_OBS_DONE and len(l.split(','))>2:
                 obs_opt_lines.append(l.rstrip())
-            if "epoch, energy," in l and not OPT_OBS_DONE: 
+            if "epoch, energy," in l and not OPT_OBS_DONE:
                 OPT_OBS= True
             if "FINAL" in l:
                 final_obs= l.rstrip()
@@ -539,13 +539,13 @@ class TestCheckpoint_RVB(unittest.TestCase):
         args.opt_max_iter= 3
         args.j1= 1.0
         main()
-        
+
         # iii) run optimization from checkpoint
         args.instate=None
         args.opt_resume= self.OUT_PRFX+"_checkpoint.p"
         args.opt_max_iter= 7
         args.j1= 1.0
-        with patch('sys.stdout', new = StringIO()) as tmp_out: 
+        with patch('sys.stdout', new = StringIO()) as tmp_out:
             main()
         tmp_out.seek(0)
 
@@ -558,16 +558,16 @@ class TestCheckpoint_RVB(unittest.TestCase):
             if OPT_OBS and not OPT_OBS_DONE and l.rstrip()=="": OPT_OBS_DONE= True
             if OPT_OBS and not OPT_OBS_DONE and len(l.split(','))>2:
                 obs_opt_lines_chk.append(l.rstrip())
-            if "checkpoint.loss" in l and not OPT_OBS_DONE: 
+            if "checkpoint.loss" in l and not OPT_OBS_DONE:
                 OPT_OBS= True
-            if "FINAL" in l:    
+            if "FINAL" in l:
                 final_obs_chk= l.rstrip()
                 break
             l= tmp_out.readline()
         assert final_obs_chk
         assert len(obs_opt_lines_chk)>0
 
-        # compare initial observables from checkpointed optimization (iii) and the observables 
+        # compare initial observables from checkpointed optimization (iii) and the observables
         # from original optimization (i) at one step after total number of steps done in (ii)
         opt_line_iii= [complex(x) for x in obs_opt_lines_chk[0].split(",")[1:7]]
         opt_line_i= [complex(x) for x in obs_opt_lines[4].split(",")[1:7]]
@@ -575,24 +575,24 @@ class TestCheckpoint_RVB(unittest.TestCase):
         for val3,val1 in zip(opt_line_iii, opt_line_i):
             assert isclose(val3,val1, rel_tol=self.tol, abs_tol=self.tol)
 
-        # compare final observables from optimization (i) and the final observables 
+        # compare final observables from optimization (i) and the final observables
         # from the checkpointed optimization (iii)
         fobs_tokens_1= [complex(x) for x in final_obs[len("FINAL"):].split(",")[:6]]
         fobs_tokens_3= [complex(x) for x in final_obs_chk[len("FINAL"):].split(",")[:6]]
         for val3,val1 in zip(fobs_tokens_3, fobs_tokens_1):
             assert isclose(val3,val1, rel_tol=self.tol, abs_tol=self.tol)
 
-        # compare final observables from the checkpointed optimization (iii) with the reference 
+        # compare final observables from the checkpointed optimization (iii) with the reference
         ref_data="""
-        -0.3180407711847281, (-0.47710302731050136-6.476760086184962e-16j), (-0.4770192862436829+0j), 
-        (2.202785316068753e-06+5.050307439390839e-19j), (1.8151220691379341e-06+5.681548168817215e-19j), (1.874524708341539e-08-2.2866950500479882e-20j), 
-        (-0.0014841783302786606-1.701381611751003e-16j), 0j, 0j, 
-        (0.001347264661875288+2.1085493925554838e-16j), 0j, 0j, 
-        (0.00013691328307879915-8.350888236066556e-17j), 0j, 0j, 
-        (-0.16545105705850982-4.0657356676678447e-16j), (-0.1610407631859552+2.1679343208401926e-16j), (-0.15060511036107044-3.932309688197049e-16j), 
+        -0.3180407711847281, (-0.47710302731050136-6.476760086184962e-16j), (-0.4770192862436829+0j),
+        (2.202785316068753e-06+5.050307439390839e-19j), (1.8151220691379341e-06+5.681548168817215e-19j), (1.874524708341539e-08-2.2866950500479882e-20j),
+        (-0.0014841783302786606-1.701381611751003e-16j), 0j, 0j,
+        (0.001347264661875288+2.1085493925554838e-16j), 0j, 0j,
+        (0.00013691328307879915-8.350888236066556e-17j), 0j, 0j,
+        (-0.16545105705850982-4.0657356676678447e-16j), (-0.1610407631859552+2.1679343208401926e-16j), (-0.15060511036107044-3.932309688197049e-16j),
         (-0.1674017313824818+0j), (-0.15258046864149383+0j), (-0.15703131264136594+0j)
         """
-        # compare final observables from final state of checkpointed optimization 
+        # compare final observables from final state of checkpointed optimization
         # against expected reference. Drop first token, corresponding to iteration step
         ref_tokens= [complex(x) for x in ref_data.split(",")[:6]]
         fobs_tokens_3= [complex(x) for x in final_obs_chk[len("FINAL"):].split(",")[:6]]
@@ -634,7 +634,7 @@ class TestOptim_RVB_r1x1(unittest.TestCase):
 
         state_peps = IPEPS_KAGOME_ABELIAN(settings_U1, {(0,0): state.sites[(0,0)].clone()}, lX=1, lY=1)
 
-        import pdb; pdb.set_trace()
+        # import pdb; pdb.set_trace()
 
         state_peps.sites[(0,0)].requires_grad_()
         state_peps.sync_precomputed()
@@ -642,14 +642,14 @@ class TestOptim_RVB_r1x1(unittest.TestCase):
         ctm_env_init, history, t_ctm, t_conv_check = ctmrg.run(state_peps, ctm_env_init, \
             conv_check=ctmrg_conv_specC, ctm_args=cfg.ctm_args)
         print(history['conv_crit'])
-        
+
         R= rdm_kagome.rdm1x1_kagome((0,0), state_peps, ctm_env_init)
         R= R.fuse_legs(axes=((0,1,2),(3,4,5)))
         loss= R[(-1,-1)].trace().real
         loss.backward()
 
-        print(loss)
-        print(state_peps.sites[(0,0)]._data.grad)
+        # print(loss)
+        # print(state_peps.sites[(0,0)]._data.grad)
 
     def tearDown(self):
         args.opt_resume=None
