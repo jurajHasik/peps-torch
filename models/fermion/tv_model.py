@@ -485,40 +485,6 @@ class tV_model:
 # Define a set of initial states for the tV model
 #
 
-# utility functions
-#
-def _rand_tensor(config, n:int, legs:Sequence[yastn.tensor.Leg], dummy_leg_flag:Union[str,None]=None)->yastn.tensor.Tensor:
-    """
-    Create random tensor with given legs. Optionally, create charged tensor by appending extra dummy leg (effective dimension 1 with single charge sector)
-    carrying the charge. This keeps the tensor invariant under the symmetry (i.e. in trivial rep).
-
-    By convention, dummy leg is the last leg of the tensor and it is fused with the physical leg.
-
-    Parameters
-    ----------
-        config : module | _config(NamedTuple)
-            :ref:`YASTN configuration <tensor/configuration:yastn configuration>`
-        dummy_leg_flag : str | None
-            * 'even' : even charge sector
-            * 'odd' : odd charge sector'
-            * 'even_odd' : both charge sectors
-    """
-    if dummy_leg_flag is not None:
-        if dummy_leg_flag == 'even':
-            dummy_leg = yastn.Leg(config, s=1, t=(0,), D=(1,))
-        elif dummy_leg_flag == 'odd':
-            dummy_leg = yastn.Leg(config, s=1, t=(1,), D=(1,))
-        elif dummy_leg_flag == 'even_odd':
-            dummy_leg = yastn.Leg(config, s=1, t=(0, 1), D=(1, 1))
-        legs = legs + [dummy_leg]
-        A = yastn.rand(config=config, n=n, legs=legs)
-        axes = [i for i in range(len(legs) - 2)] + [(len(legs) - 2, len(legs) - 1)]
-        A = A.fuse_legs(axes=axes)  # Fuse the physical leg with the dummy leg
-    else:
-        A = yastn.rand(config=config, n=n, legs=legs)
-    return A
-
-
 def state_2x1(config= yastn.make_config(backend=backend_np, fermionic=True, sym="Z2"), noise=0):
     """
     Parameters
@@ -547,7 +513,20 @@ def state_2x1(config= yastn.make_config(backend=backend_np, fermionic=True, sym=
     return psi
 
 
-def random_1x1_state_Z2(config=yastn.make_config(backend=backend_np, fermionic=True), bond_dim=(1, 1)):
+def _rand_tensor(config, n, legs, dummy_leg_charge=0):
+    if dummy_leg_charge != 0:
+        dummy_leg = yastn.Leg(config, s=1, t=(dummy_leg_charge,), D=(1,))
+        legs = legs + [dummy_leg]
+        A = yastn.rand(config=config, n=n, legs=legs)
+        l = len(legs)
+        axes = [i for i in range(l - 2)] + [(l - 2, l - 1)]
+        A = A.fuse_legs(axes=axes)  # Fuse the physical leg with the dummy leg
+    else:
+        A = yastn.rand(config=config, n=n, legs=legs)
+
+    return A
+
+def random_1x1_state_Z2(config=yastn.make_config(backend=backend_np, fermionic=True), bond_dims=(1, 1)):
     """
     Coarse-grain honeycomb lattice to square lattice by combining two sites within each honeycomb unit cell.
     Resulting iPEPS has a 1x1 unit cell on the effective square lattice. The filling is fixed at one electron per unit-cell.
@@ -562,24 +541,27 @@ def random_1x1_state_Z2(config=yastn.make_config(backend=backend_np, fermionic=T
         config = yastn.make_config(backend=backend_np, fermionic=True, sym="Z2")
     assert config.sym == sym_Z2, "Expecting Z2 symmetry"
 
-    D0, D1 = bond_dim
+    charges = tuple(bond_dims.keys())
+    Ds = tuple([bond_dims[t] for t in charges])
+    assert sorted(charges) == [0, 1], "Expecting bond dimensions for charges 0 and 1"
+
     legs = [
-        yastn.Leg(config, s=1, t=(0, 1), D=(D0, D1)),
-        yastn.Leg(config, s=1, t=(0, 1), D=(D0, D1)),
-        yastn.Leg(config, s=-1, t=(0, 1), D=(D0, D1)),
-        yastn.Leg(config, s=-1, t=(0, 1), D=(D0, D1)),
+        yastn.Leg(config, s=1, t=charges, D=Ds),
+        yastn.Leg(config, s=1, t=charges, D=Ds),
+        yastn.Leg(config, s=-1, t=charges, D=Ds),
+        yastn.Leg(config, s=-1, t=charges, D=Ds),
         yastn.Leg(config, s=1, t=(0, 1), D=(2, 2)),
     ]
 
     psi = PepsAD(
         RectangularUnitcell([[0],]),
         parameters={
-            (0, 0): _rand_tensor(config, 0, legs, dummy_leg_flag='odd'),
+            (0, 0): _rand_tensor(config, 0, legs, dummy_leg_charge=1),
         },
     )
     return psi
 
-def random_1x3_state_Z2(config= yastn.make_config(backend=backend_np, fermionic=True), bond_dim=(1, 1)):
+def random_1x3_state_Z2(bond_dims, config= yastn.make_config(backend=backend_np, fermionic=True)):
     """
     Coarse-grain honeycomb lattice to square lattice by combining two sites within each honeycomb unit cell.
     Resulting iPEPS has a 1x3 unit cell on the effective square lattice with 3 unique tensors arranged in following pattern::
@@ -598,25 +580,29 @@ def random_1x3_state_Z2(config= yastn.make_config(backend=backend_np, fermionic=
     assert config.sym == sym_Z2, "Expecting Z2 symmetry"
 
     # define legs of on-site tensor
-    D0, D1 = bond_dim
+    charges = tuple(bond_dims.keys())
+    Ds = tuple([bond_dims[t] for t in charges])
+    assert sorted(charges) == [0, 1], "Expecting bond dimensions for charges 0 and 1"
+
     legs = [
-        yastn.Leg(config, s=1, t=(0, 1), D=(D0, D1)),
-        yastn.Leg(config, s=1, t=(0, 1), D=(D0, D1)),
-        yastn.Leg(config, s=-1, t=(0, 1), D=(D0, D1)),
-        yastn.Leg(config, s=-1, t=(0, 1), D=(D0, D1)),
+        yastn.Leg(config, s=1, t=charges, D=Ds),
+        yastn.Leg(config, s=1, t=charges, D=Ds),
+        yastn.Leg(config, s=-1, t=charges, D=Ds),
+        yastn.Leg(config, s=-1, t=charges, D=Ds),
         yastn.Leg(config, s=1, t=(0, 1), D=(2, 2)),
     ]
 
+
     psi = PepsAD(RectangularUnitcell([[0,1,2],]),
         parameters={
-            (0, 0): _rand_tensor(config, 0, legs, dummy_leg_flag='odd'),
-            (0, 1): _rand_tensor(config, 0, legs, dummy_leg_flag='even'),
-            (0, 2): _rand_tensor(config, 0, legs, dummy_leg_flag='even'),
+            (0, 0): _rand_tensor(config, 0, legs, dummy_leg_charge=1),
+            (0, 1): _rand_tensor(config, 0, legs, dummy_leg_charge=0),
+            (0, 2): _rand_tensor(config, 0, legs, dummy_leg_charge=0),
         },
     )
     return psi
 
-def random_3x3_state_Z2(config= yastn.make_config(backend=backend_np, fermionic=True), bond_dim=(1, 1)):
+def random_3x3_state_Z2(bond_dims, config= yastn.make_config(backend=backend_np, fermionic=True)):
     """
     Coarse-grain honeycomb lattice to square lattice by combining two sites within each honeycomb unit cell.
     Resulting iPEPS has a 3x3 unit cell on the effective square lattice with 3 unique tensors arranged in following pattern::
@@ -637,20 +623,22 @@ def random_3x3_state_Z2(config= yastn.make_config(backend=backend_np, fermionic=
     assert config.sym == sym_Z2, "Expecting Z2 symmetry"
 
     # define legs of on-site tensor
-    D0, D1 = bond_dim
+    charges = tuple(bond_dims.keys())
+    Ds = tuple([bond_dims[t] for t in charges])
+    assert sorted(charges) == [0, 1], "Expecting bond dimensions for charges 0 and 1"
     legs = [
-        yastn.Leg(config, s=1, t=(0, 1), D=(D0, D1)),
-        yastn.Leg(config, s=1, t=(0, 1), D=(D0, D1)),
-        yastn.Leg(config, s=-1, t=(0, 1), D=(D0, D1)),
-        yastn.Leg(config, s=-1, t=(0, 1), D=(D0, D1)),
+        yastn.Leg(config, s=1, t=charges, D=Ds),
+        yastn.Leg(config, s=1, t=charges, D=Ds),
+        yastn.Leg(config, s=-1, t=charges, D=Ds),
+        yastn.Leg(config, s=-1, t=charges, D=Ds),
         yastn.Leg(config, s=1, t=(0, 1), D=(2, 2)),
     ]
 
     psi = PepsAD(RectangularUnitcell([[0,1,2],[1,2,0],[2,0,1]]),
         parameters={
-            (0, 0): _rand_tensor(config, 0, legs, dummy_leg_flag='odd'),
-            (0, 1): _rand_tensor(config, 0, legs, dummy_leg_flag='even'),
-            (0, 2): _rand_tensor(config, 0, legs, dummy_leg_flag='even'),
+            (0, 0): _rand_tensor(config, 0, legs, dummy_leg_charge=1),
+            (0, 1): _rand_tensor(config, 0, legs, dummy_leg_charge=0),
+            (0, 2): _rand_tensor(config, 0, legs, dummy_leg_charge=0),
         },
     )
     return psi
@@ -693,24 +681,12 @@ def random_3x3_state_U1(bond_dims, config=None):
         yastn.Leg(config, s=1, t=(0, 1, 2), D=(1, 2, 1)),
     ]
 
-    def _rand_tensor(n, legs, dummy_leg_charge=0):
-        if dummy_leg_charge != 0:
-            dummy_leg = yastn.Leg(config, s=1, t=(dummy_leg_charge,), D=(1,))
-            legs = legs + [dummy_leg]
-            A = yastn.rand(config=config, n=n, legs=legs)
-            l = len(legs)
-            axes = [i for i in range(l - 2)] + [(l - 2, l - 1)]
-            A = A.fuse_legs(axes=axes)  # Fuse the physical leg with the dummy leg
-        else:
-            A = yastn.rand(config=config, n=n, legs=legs)
-        return A
-
     psi = PepsAD(
         geometry,
         parameters={
-            (0, 0): _rand_tensor(0, legs, dummy_leg_charge=-1),
-            (0, 1): _rand_tensor(0, legs, dummy_leg_charge=0),
-            (0, 2): _rand_tensor(0, legs, dummy_leg_charge=0),
+            (0, 0): _rand_tensor(config, 0, legs, dummy_leg_charge=-1),
+            (0, 1): _rand_tensor(config, 0, legs, dummy_leg_charge=0),
+            (0, 2): _rand_tensor(config, 0, legs, dummy_leg_charge=0),
         },
     )
     return psi
@@ -752,24 +728,12 @@ def random_3x3_2_state_U1(bond_dims, config=None):
         yastn.Leg(config, s=1, t=(0, 1, 2), D=(1, 2, 1)),
     ]
 
-    def _rand_tensor(n, legs, dummy_leg_charge=0):
-        if dummy_leg_charge != 0:
-            dummy_leg = yastn.Leg(config, s=1, t=(dummy_leg_charge,), D=(1,))
-            legs = legs + [dummy_leg]
-            A = yastn.rand(config=config, n=n, legs=legs)
-            l = len(legs)
-            axes = [i for i in range(l - 2)] + [(l - 2, l - 1)]
-            A = A.fuse_legs(axes=axes)  # Fuse the physical leg with the dummy leg
-        else:
-            A = yastn.rand(config=config, n=n, legs=legs)
-        return A
-
     psi = PepsAD(
         geometry,
         parameters={
-            (0, 0): _rand_tensor(0, legs, dummy_leg_charge=-1),
-            (0, 1): _rand_tensor(0, legs, dummy_leg_charge=0),
-            (0, 2): _rand_tensor(0, legs, dummy_leg_charge=0),
+            (0, 0): _rand_tensor(config, 0, legs, dummy_leg_charge=-1),
+            (0, 1): _rand_tensor(config, 0, legs, dummy_leg_charge=0),
+            (0, 2): _rand_tensor(config, 0, legs, dummy_leg_charge=0),
         },
     )
     return psi
@@ -807,27 +771,15 @@ def random_1x6_state_U1(bond_dims, config=None):
         yastn.Leg(config, s=1, t=(0, 1, 2), D=(1, 2, 1)),
     ]
 
-    def _rand_tensor(n, legs, dummy_leg_charge=0):
-        if dummy_leg_charge != 0:
-            dummy_leg = yastn.Leg(config, s=1, t=(dummy_leg_charge,), D=(1,))
-            legs = legs + [dummy_leg]
-            A = yastn.rand(config=config, n=n, legs=legs)
-            l = len(legs)
-            axes = [i for i in range(l - 2)] + [(l - 2, l - 1)]
-            A = A.fuse_legs(axes=axes)  # Fuse the physical leg with the dummy leg
-        else:
-            A = yastn.rand(config=config, n=n, legs=legs)
-        return A
-
     psi = PepsAD(
         geometry,
         parameters={
-            (0, 0): _rand_tensor(0, legs, dummy_leg_charge=-1),
-            (0, 1): _rand_tensor(0, legs, dummy_leg_charge=0),
-            (0, 2): _rand_tensor(0, legs, dummy_leg_charge=0),
-            (0, 3): _rand_tensor(0, legs, dummy_leg_charge=-1),
-            (0, 4): _rand_tensor(0, legs, dummy_leg_charge=0),
-            (0, 5): _rand_tensor(0, legs, dummy_leg_charge=0),
+            (0, 0): _rand_tensor(config, 0, legs, dummy_leg_charge=-1),
+            (0, 1): _rand_tensor(config, 0, legs, dummy_leg_charge=0),
+            (0, 2): _rand_tensor(config, 0, legs, dummy_leg_charge=0),
+            (0, 3): _rand_tensor(config, 0, legs, dummy_leg_charge=-1),
+            (0, 4): _rand_tensor(config, 0, legs, dummy_leg_charge=0),
+            (0, 5): _rand_tensor(config, 0, legs, dummy_leg_charge=0),
         },
     )
     return psi
@@ -861,24 +813,12 @@ def random_1x3_state_U1(bond_dims, config=None):
         yastn.Leg(config, s=1, t=(0, 1, 2), D=(1, 2, 1)),
     ]
 
-    def _rand_tensor(n, legs, dummy_leg_charge=0):
-        if dummy_leg_charge != 0:
-            dummy_leg = yastn.Leg(config, s=1, t=(dummy_leg_charge,), D=(1,))
-            legs = legs + [dummy_leg]
-            A = yastn.rand(config=config, n=n, legs=legs)
-            l = len(legs)
-            axes = [i for i in range(l - 2)] + [(l - 2, l - 1)]
-            A = A.fuse_legs(axes=axes)  # Fuse the physical leg with the dummy leg
-        else:
-            A = yastn.rand(config=config, n=n, legs=legs)
-        return A
-
     psi = PepsAD(
         geometry,
         parameters={
-            (0, 0): _rand_tensor(0, legs, dummy_leg_charge=-1),
-            (0, 1): _rand_tensor(0, legs, dummy_leg_charge=0),
-            (0, 2): _rand_tensor(0, legs, dummy_leg_charge=0),
+            (0, 0): _rand_tensor(config, 0, legs, dummy_leg_charge=-1),
+            (0, 1): _rand_tensor(config, 0, legs, dummy_leg_charge=0),
+            (0, 2): _rand_tensor(config, 0, legs, dummy_leg_charge=0),
         },
     )
     return psi
@@ -915,27 +855,15 @@ def random_1x6_state_U1(bond_dims, config=None):
         yastn.Leg(config, s=1, t=(0, 1, 2), D=(1, 2, 1)),
     ]
 
-    def _rand_tensor(n, legs, dummy_leg_charge=0):
-        if dummy_leg_charge != 0:
-            dummy_leg = yastn.Leg(config, s=1, t=(dummy_leg_charge,), D=(1,))
-            legs = legs + [dummy_leg]
-            A = yastn.rand(config=config, n=n, legs=legs)
-            l = len(legs)
-            axes = [i for i in range(l - 2)] + [(l - 2, l - 1)]
-            A = A.fuse_legs(axes=axes)  # Fuse the physical leg with the dummy leg
-        else:
-            A = yastn.rand(config=config, n=n, legs=legs)
-        return A
-
     psi = PepsAD(
         geometry,
         parameters={
-            (0, 0): _rand_tensor(0, legs, dummy_leg_charge=-1),
-            (0, 1): _rand_tensor(0, legs, dummy_leg_charge=0),
-            (0, 2): _rand_tensor(0, legs, dummy_leg_charge=0),
-            (0, 3): _rand_tensor(0, legs, dummy_leg_charge=-1),
-            (0, 4): _rand_tensor(0, legs, dummy_leg_charge=0),
-            (0, 5): _rand_tensor(0, legs, dummy_leg_charge=0),
+            (0, 0): _rand_tensor(config, 0, legs, dummy_leg_charge=-1),
+            (0, 1): _rand_tensor(config, 0, legs, dummy_leg_charge=0),
+            (0, 2): _rand_tensor(config, 0, legs, dummy_leg_charge=0),
+            (0, 3): _rand_tensor(config, 0, legs, dummy_leg_charge=-1),
+            (0, 4): _rand_tensor(config, 0, legs, dummy_leg_charge=0),
+            (0, 5): _rand_tensor(config, 0, legs, dummy_leg_charge=0),
         },
     )
     return psi
@@ -968,24 +896,12 @@ def random_3x1_state_U1(bond_dims, config=None):
         yastn.Leg(config, s=1, t=(0, 1, 2), D=(1, 2, 1)),
     ]
 
-    def _rand_tensor(n, legs, dummy_leg_charge=0):
-        if dummy_leg_charge != 0:
-            dummy_leg = yastn.Leg(config, s=1, t=(dummy_leg_charge,), D=(1,))
-            legs = legs + [dummy_leg]
-            A = yastn.rand(config=config, n=n, legs=legs)
-            l = len(legs)
-            axes = [i for i in range(l - 2)] + [(l - 2, l - 1)]
-            A = A.fuse_legs(axes=axes)  # Fuse the physical leg with the dummy leg
-        else:
-            A = yastn.rand(config=config, n=n, legs=legs)
-        return A
-
     psi = PepsAD(
         geometry,
         parameters={
-            (0, 0): _rand_tensor(0, legs, dummy_leg_charge=-1),
-            (1, 0): _rand_tensor(0, legs, dummy_leg_charge=0),
-            (2, 0): _rand_tensor(0, legs, dummy_leg_charge=0),
+            (0, 0): _rand_tensor(config, 0, legs, dummy_leg_charge=-1),
+            (1, 0): _rand_tensor(config, 0, legs, dummy_leg_charge=0),
+            (2, 0): _rand_tensor(config, 0, legs, dummy_leg_charge=0),
         },
     )
     return psi
@@ -1014,23 +930,11 @@ def random_1x1_state_U1(bond_dims, config=None):
         yastn.Leg(config, s=1, t=(0, 1, 2), D=(1, 2, 1)),
     ]
 
-    def _rand_tensor(n, legs, dummy_leg_charge=0):
-        if dummy_leg_charge != 0:
-            dummy_leg = yastn.Leg(config, s=1, t=(dummy_leg_charge,), D=(1,))
-            legs = legs + [dummy_leg]
-            A = yastn.rand(config=config, n=n, legs=legs)
-            l = len(legs)
-            axes = [i for i in range(l - 2)] + [(l - 2, l - 1)]
-            A = A.fuse_legs(axes=axes)  # Fuse the physical leg with the dummy leg
-        else:
-            A = yastn.rand(config=config, n=n, legs=legs)
-        return A
-
     psi = PepsAD(
         geometry,
         parameters={
             (0, 0): _rand_tensor(
-                0, legs, dummy_leg_charge=-1
+                config, 0, legs, dummy_leg_charge=-1
             ),  # 1 electron per unit-cell
         },
     )
@@ -1039,7 +943,7 @@ def random_1x1_state_U1(bond_dims, config=None):
 
 
 
-def random_ipess_state(config= yastn.make_config(backend=backend_np, fermionic=True, sym="Z2"), bond_dim=(1, 1)):
+def random_ipess_state(bond_dims, config= yastn.make_config(backend=backend_np, fermionic=True, sym="Z2")):
     """
     Coarse-grain honeycomb lattice to square lattice by combining two sites within each honeycomb unit cell.
     The on-site tensor is given further structure (iPESS) by expressing it as a contraction of two rank-4 tensors::
@@ -1060,17 +964,20 @@ def random_ipess_state(config= yastn.make_config(backend=backend_np, fermionic=T
     """
     assert config.sym == "Z2", "Expecting Z2 symmetry"
 
-    D0, D1 = bond_dim
+    charges = tuple(bond_dims.keys())
+    Ds = tuple([bond_dims[t] for t in charges])
+    assert sorted(charges) == [0, 1], "Expecting bond dimensions for charges 0 and 1"
+
     A_legs = [
-        yastn.Leg(config, s=-1, t=(0, 1), D=(D0, D1)),
-        yastn.Leg(config, s=1, t=(0, 1), D=(D0, D1)),
-        yastn.Leg(config, s=-1, t=(0, 1), D=(D0, D1)),
+        yastn.Leg(config, s=-1, t=charges, D=Ds),
+        yastn.Leg(config, s=1, t=charges, D=Ds),
+        yastn.Leg(config, s=-1, t=charges, D=Ds),
         yastn.Leg(config, s=1, t=(0, 1), D=(1, 1)),
     ]
     B_legs = [
-        yastn.Leg(config, s=1, t=(0, 1), D=(D0, D1)),
-        yastn.Leg(config, s=-1, t=(0, 1), D=(D0, D1)),
-        yastn.Leg(config, s=1, t=(0, 1), D=(D0, D1)),
+        yastn.Leg(config, s=1, t=charges, D=Ds),
+        yastn.Leg(config, s=-1, t=charges, D=Ds),
+        yastn.Leg(config, s=1, t=charges, D=Ds),
         yastn.Leg(config, s=1, t=(0, 1), D=(1, 1)),
     ]
 
@@ -1083,8 +990,8 @@ def random_ipess_state(config= yastn.make_config(backend=backend_np, fermionic=T
         RectangularUnitcell([[0],]),
         parameters={
             (0, 0): {
-                "A": _rand_tensor(0, A_legs, dummy_leg_flag="odd"),
-                "B": _rand_tensor(0, B_legs, dummy_leg_flag="even"),
+                "A": _rand_tensor(config, 0, A_legs, dummy_leg_charge=1),
+                "B": _rand_tensor(config, 0, B_legs, dummy_leg_charge=0),
             },
         },
         get_tensors= get_tensors,
@@ -1121,23 +1028,11 @@ def random_checkerboard_state_U1(bond_dims, config=None):
         yastn.Leg(config, s=1, t=(0, 1, 2), D=(1, 2, 1)),
     ]
 
-    def _rand_tensor(n, legs, dummy_leg_charge=0):
-        if dummy_leg_charge != 0:
-            dummy_leg = yastn.Leg(config, s=1, t=(dummy_leg_charge,), D=(1,))
-            legs = legs + [dummy_leg]
-            A = yastn.rand(config=config, n=n, legs=legs)
-            l = len(legs)
-            axes = [i for i in range(l - 2)] + [(l - 2, l - 1)]
-            A = A.fuse_legs(axes=axes)  # Fuse the physical leg with the dummy leg
-        else:
-            A = yastn.rand(config=config, n=n, legs=legs)
-        return A
-
     psi = PepsAD(
         geometry,
         parameters={
-            (0, 0): _rand_tensor(0, legs, dummy_leg_charge=-1),
-            (0, 1): _rand_tensor(0, legs, dummy_leg_charge=-1),
+            (0, 0): _rand_tensor(config, 0, legs, dummy_leg_charge=-1),
+            (0, 1): _rand_tensor(config, 0, legs, dummy_leg_charge=-1),
         },
     )
     return psi
@@ -1172,25 +1067,13 @@ def random_2x2_state_U1(bond_dims, config=None):
         yastn.Leg(config, s=1, t=(0, 1, 2), D=(1, 2, 1)),
     ]
 
-    def _rand_tensor(n, legs, dummy_leg_charge=0):
-        if dummy_leg_charge != 0:
-            dummy_leg = yastn.Leg(config, s=1, t=(dummy_leg_charge,), D=(1,))
-            legs = legs + [dummy_leg]
-            A = yastn.rand(config=config, n=n, legs=legs)
-            l = len(legs)
-            axes = [i for i in range(l - 2)] + [(l - 2, l - 1)]
-            A = A.fuse_legs(axes=axes)  # Fuse the physical leg with the dummy leg
-        else:
-            A = yastn.rand(config=config, n=n, legs=legs)
-        return A
-
     psi = PepsAD(
         geometry,
         parameters={
-            (0, 0): _rand_tensor(0, legs, dummy_leg_charge=-1),
-            (0, 1): _rand_tensor(0, legs, dummy_leg_charge=-1),
-            (1, 0): _rand_tensor(0, legs, dummy_leg_charge=-1),
-            (1, 1): _rand_tensor(0, legs, dummy_leg_charge=-1),
+            (0, 0): _rand_tensor(config, 0, legs, dummy_leg_charge=-1),
+            (0, 1): _rand_tensor(config, 0, legs, dummy_leg_charge=-1),
+            (1, 0): _rand_tensor(config, 0, legs, dummy_leg_charge=-1),
+            (1, 1): _rand_tensor(config, 0, legs, dummy_leg_charge=-1),
         },
     )
     return psi
@@ -1232,30 +1115,18 @@ def random_3x3_9_state_U1(bond_dims, config=None):
         yastn.Leg(config, s=1, t=(0, 1, 2), D=(1, 2, 1)),
     ]
 
-    def _rand_tensor(n, legs, dummy_leg_charge=0):
-        if dummy_leg_charge != 0:
-            dummy_leg = yastn.Leg(config, s=1, t=(dummy_leg_charge,), D=(1,))
-            legs = legs + [dummy_leg]
-            A = yastn.rand(config=config, n=n, legs=legs)
-            l = len(legs)
-            axes = [i for i in range(l - 2)] + [(l - 2, l - 1)]
-            A = A.fuse_legs(axes=axes)  # Fuse the physical leg with the dummy leg
-        else:
-            A = yastn.rand(config=config, n=n, legs=legs)
-        return A
-
     psi = PepsAD(
         geometry,
         parameters={
-            (0, 0): _rand_tensor(0, legs, dummy_leg_charge=-1),
-            (0, 1): _rand_tensor(0, legs, dummy_leg_charge=0),
-            (0, 2): _rand_tensor(0, legs, dummy_leg_charge=0),
-            (1, 0): _rand_tensor(0, legs, dummy_leg_charge=0),
-            (1, 1): _rand_tensor(0, legs, dummy_leg_charge=-1),
-            (1, 2): _rand_tensor(0, legs, dummy_leg_charge=0),
-            (2, 0): _rand_tensor(0, legs, dummy_leg_charge=0),
-            (2, 1): _rand_tensor(0, legs, dummy_leg_charge=0),
-            (2, 2): _rand_tensor(0, legs, dummy_leg_charge=-1),
+            (0, 0): _rand_tensor(config, 0, legs, dummy_leg_charge=-1),
+            (0, 1): _rand_tensor(config, 0, legs, dummy_leg_charge=0),
+            (0, 2): _rand_tensor(config, 0, legs, dummy_leg_charge=0),
+            (1, 0): _rand_tensor(config, 0, legs, dummy_leg_charge=0),
+            (1, 1): _rand_tensor(config, 0, legs, dummy_leg_charge=-1),
+            (1, 2): _rand_tensor(config, 0, legs, dummy_leg_charge=0),
+            (2, 0): _rand_tensor(config, 0, legs, dummy_leg_charge=0),
+            (2, 1): _rand_tensor(config, 0, legs, dummy_leg_charge=0),
+            (2, 2): _rand_tensor(config, 0, legs, dummy_leg_charge=-1),
         },
     )
     return psi
