@@ -12,38 +12,12 @@ from scipy.sparse.linalg import eigs
 import yastn.yastn as yastn
 from yastn.yastn.sym import sym_Z2, sym_U1, sym_none
 from yastn.yastn.backend import backend_torch as backend
-from yastn.yastn.tn.fpeps import product_peps, RectangularUnitcell, Peps
 from yastn.yastn import load_from_dict
 from yastn.yastn.tn.fpeps import EnvCTM
-from yastn.yastn.tn.fpeps.envs._env_ctm_c4v import EnvCTM_c4v
 from yastn.yastn.tn.fpeps.envs._env_ctm import ctm_conv_corner_spec
 from yastn.yastn._split_combine_dict import split_data_and_meta, combine_data_and_meta
 from ipeps.integration_yastn import load_PepsAD
-
-def get_converged_env(env, method="2site", max_sweeps=100, opts_svd=None, corner_tol=1e-8, **kwargs):
-    t_ctm, t_check = 0.0, 0.0
-    converged, conv_history = False, []
-
-    ctm_itr= env.ctmrg_(iterator_step=1, method=method,  max_sweeps=max_sweeps,
-                opts_svd=opts_svd,
-                corner_tol=None, **kwargs)
-
-    for sweep in range(max_sweeps):
-        t0 = time.perf_counter()
-        ctm_out_info= next(ctm_itr)
-        t1 = time.perf_counter()
-        t_ctm += t1-t0
-
-        t2 = time.perf_counter()
-        converged, max_dsv, conv_history = ctm_conv_corner_spec(env, conv_history, corner_tol)
-        t_check += time.perf_counter()-t2
-        # print(f"CTM iter {len(conv_history)} |delta_C| {max_dsv} t {t1-t0} [s]")
-
-        if converged:
-            break
-
-    return env, converged, conv_history, t_ctm, t_check
-
+from ctm.generic.env_yastn import ctmrg
 
 def Ts_to_MPO_list(env, start_site=0, dirn="x", c4v=False):
     if dirn == "x":
@@ -391,41 +365,15 @@ def compress_T_vertical(T, D_max):
 
     return T
 
-# def compress_Ts(T1, T2, D_max):
-#     T1T2 = T1.tensordot(T2, axes=(3, 1))
-#     T1T2 = T1T2.fuse_legs(axes=((0, 1, 2), (3, 4, 5)))
-#     print(T1T2)
-#     u1, s1, vh1 = T1T2.svd_with_truncation(sU=T1.s[3], policy="fullrank", D_block=D_max, D_total=D_max)
-#     T1 = u1@s1.sqrt()
-#     T1 = T1.unfuse_legs(axes=0)
-
-#     T2 = s1.sqrt()@vh1
-#     T2 = T2.unfuse_legs(axes=1)
-
-#     T2T1 = T2.tensordot(T1, axes=(3, 1))
-#     T2T1 = T2T1.fuse_legs(axes=((0, 1, 2), (3, 4, 5)))
-#     print(T2T1)
-#     u2, s2, vh2 = T2T1.svd_with_truncation(sU=T2.s[3], policy="fullrank", D_block=D_max, D_total=D_max)
-#     T2 = u2@s2.sqrt()
-#     T2 = T2.unfuse_legs(axes=0)
-
-#     T1 = s2.sqrt()@vh2
-#     T1 = T1.unfuse_legs(axes=1)
-
-
-
-#     return T1, T2
-
 def compress_Ts(T1, T2, D_max):
 
     T1, u1, u2 = compress_T_horizontal(T1, D_max)
-
     T2 = T2.tensordot(u1, axes=(3, 0))
     T2 = u2.tensordot(T2, axes=(0, 1))
     T2 = T2.transpose(axes=(1, 0, 2, 3))
     return T1, T2
 
-def coarse_grain(mpo_list1, mpo_list2, D_phy, D_mpo, repeat=1):
+def coarse_grain(mpo_list1, mpo_list2, D_phy, repeat=1):
     def rg(o1, o2):
         N = len(o1)
         T1, T2 = None, None
@@ -447,7 +395,6 @@ def coarse_grain(mpo_list1, mpo_list2, D_phy, D_mpo, repeat=1):
 
             if i == N-1:
                 T1, T2 = compress_Ts(T1, T2, D_max=D_phy)
-                # T1, T2 = compress_T_vertical(T1, D_max=D_mpo), compress_T_vertical(T2, D_max=D_mpo)
                 res_list1.append(T1)
                 res_list2.append(T2)
         return res_list1, res_list2
@@ -518,22 +465,23 @@ if __name__ == "__main__":
     }
 
     start_site=0
-    psi = load_PepsAD(yastn_config, state_file=state_file)
+    psi = load_PepsAD(yastn_config, state_file=state_file).to_Peps()
     if os.path.exists(env_dict_file):
         with open(env_dict_file, 'rb') as file:
             d = pickle.load(file)
         env = yastn.from_dict(d, config=yastn_config)
-        # ======load env in old format=====
-        # env_leg = yastn.Leg(yastn_config, s=1, t=(0,), D=(env_chi,))
-        # env = EnvCTM(psi.to_Peps(), init="eye", leg=env_leg)
-        # for site in d['data']:
-        #     for dirn in d['data'][site]:
-        #         setattr(env[site], dirn, yastn.load_from_dict(yastn_config, d['data'][site][dirn]))
-        # print("load env")
+    else:
+        env = EnvCTM(psi, init="eye")
+        def ctm_conv_check_f(env, conv_history):
+            corner_tol = 1e-9
+            converged, max_dsv, conv_history = ctm_conv_corner_spec(env, conv_history, corner_tol)
+            print(f"CTM iter {len(conv_history)} |delta_C| {max_dsv}")
+            return converged, conv_history
 
-        # d = env.to_dict()
-        # with open(env_dict_file, "wb") as f:
-        #     pickle.dump(d, f)
+        env, _, _, _, _ = ctmrg(env, ctm_conv_check_f=ctm_conv_check_f, max_sweeps=1500, options_svd=opts_svd)
+        d = env.to_dict(level=2)
+        with open(env_dict_file, 'wb') as file:
+            pickle.dump(d, file)
 
     # HOSVD
     D_max = args.Dcut
@@ -565,11 +513,9 @@ if __name__ == "__main__":
     id_charge = sym_U1.zero()
     vals_dict = {}
 
-    # for k in range(Lx):
     k = args.k_sector
     assert 0 <= k and k <= Lx-1
     vals = ent_spec_cylinder_Lx_k_sector(yastn_config, cycle(L_list), cycle(R_list), Lx, unit_L, k_sector=k, charge_sector=id_charge, num_evals=8, APBC=args.APBC)
     print(f"Momentum sector k={k}:", vals)
     with open(args.output, "wb") as f:
-        # pickle.dump(vals_dict, f)
         pickle.dump(vals, f)
