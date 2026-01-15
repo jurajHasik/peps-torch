@@ -172,7 +172,7 @@ class PepsAD(Peps):
 
     def __repr__(self):
         return (
-            f"PepsAD(geometry={self.geometry.__repr__()}, parameters={ self._data })"
+            f"PepsAD(geometry={self.geometry.__repr__()}, parameters={ self.parameters })"
         )
 
 

@@ -1,7 +1,11 @@
 from math import sqrt
-import torch
+import torch, warnings
 from torch.optim.lbfgs import LBFGS, _strong_wolfe
-from yastn.yastn.tn.fpeps.envs.fixed_pt import NoFixedPointError
+try:
+    from ctm.generic.env_yastn import NoFixedPointError
+except ImportError:
+    warnings.warn("YASTN not available", ImportWarning)
+    NoFixedPointError= RuntimeError("YASTN not available")
 import logging
 log = logging.getLogger(__name__)
 

@@ -13,10 +13,10 @@ import torch
 import yastn.yastn as yastn
 from yastn.yastn.tn.fpeps import EnvCTM
 from ctm.generic.env_yastn import YASTN_PROJ_METHOD
-from yastn.yastn.sym import sym_U1
+from yastn.yastn.sym import sym_U1, sym_Z2
 from yastn.yastn.tn.fpeps.envs.rdm import *
 from yastn.yastn.tn.fpeps.envs.fixed_pt import FixedPoint,fp_ctmrg
-from ipeps.integration_yastn import PepsAD, load_PepsAD
+from ipeps.integration_yastn import load_PepsAD
 from optim.ad_optim_lbfgs_mod import optimize_state
 
 from models.fermion.tv_model import *
@@ -50,6 +50,7 @@ parser.add_argument("--mu", type=float, default=0.0, help="chemical potential")
 parser.add_argument("--m", type=float, default=0.0, help="Semenoff mass")
 parser.add_argument("--eval_loss", action='store_true')
 parser.add_argument("--devices", help='cpu or (list of) cuda. Default is cpu', default=None, dest='devices', nargs="+")
+parser.add_argument("--sym", choices=['U1', 'Z2'], default='U1', help="Symmetry of the tensors")
 
 def parse_dict(input_string):
     try:
@@ -107,7 +108,7 @@ def main():
 
     yastn_config = yastn.make_config(
         backend=backend,
-        sym=sym_U1,
+        sym=sym_U1 if args.sym == 'U1' else sym_Z2,
         fermionic=True,
         default_device=cfg.global_args.device,
         default_dtype=cfg.global_args.dtype,
@@ -189,7 +190,8 @@ def main():
 
     if args.instate is None or not os.path.exists(args.instate):
         if args.pattern == '1x1':
-            stateAD = random_1x1_state_U1(bond_dims=bond_dims, config=yastn_config)
+            stateAD = random_1x1_state_Z2(bond_dims=bond_dims, config=yastn_config) if args.sym == 'Z2' else \
+            random_1x1_state_U1(bond_dims=bond_dims, config=yastn_config)
         else:
             raise ValueError(f"Unknown pattern: {args.pattern}")
     else:
@@ -202,19 +204,17 @@ def main():
     env_leg = yastn.Leg(yastn_config, s=1, t=(0,), D=(chi,))
     ctm_env_in = EnvCTM(stateAD.to_Peps(), init=cfg.ctm_args.ctm_env_init_type, leg=env_leg)
 
-    def load_env_from_dict(env, d, yastn_config):
-        assert d['class'] == 'EnvCTM'
-        for site in d['data']:
-            for dirn in d['data'][site]:
-                setattr(env[site], dirn, yastn.load_from_dict(yastn_config, d['data'][site][dirn]))
+    suffix = "_state.json"
+    if args.instate is not None:
+        in_env_dict_file = args.instate[:-len(suffix)] + "_ctm_env_dict"
 
-        return env
-
-    rerun = True
-    if os.path.exists(args.out_prefix + "_ctm_env_dict") and not rerun:
-        with open(args.out_prefix + "_ctm_env_dict", "rb") as f:
-            d = pickle.load(f)
-        ctm_env_in = load_env_from_dict(ctm_env_in, d, yastn_config)
+        rerun=False
+        if os.path.exists(in_env_dict_file) and not rerun:
+            print(in_env_dict_file)
+            with open(in_env_dict_file, "rb") as f:
+                d = pickle.load(f)
+            ctm_env_in = yastn.from_dict(d)
+            ctm_env_in.psi = Peps2Layers(bra=stateAD.to_Peps())
 
     if args.eval_loss:
         opt_context = {"ctm_args": cfg.ctm_args, "opt_args": cfg.opt_args}
