@@ -1,6 +1,11 @@
 from math import sqrt
-import torch
+import torch, warnings
 from torch.optim.lbfgs import LBFGS, _strong_wolfe
+try:
+    from ctm.generic.env_yastn import NoFixedPointError
+except ImportError:
+    warnings.warn("YASTN not available", ImportWarning)
+    NoFixedPointError= RuntimeError("YASTN not available")
 import logging
 log = logging.getLogger(__name__)
 
@@ -15,49 +20,66 @@ def _scalar_search_armijo(phi, phi0, derphi0, args=(), c1=1e-4, alpha0=1, amin=1
     alpha
     phi1
     """
-    log.info(f"LS expected phi: {phi0+c1*alpha0*derphi0} (derphi0: {derphi0})")
-    phi_a0 = phi(alpha0, *args)
-    if phi_a0 <= phi0 + c1*alpha0*derphi0:
-        return alpha0, phi_a0
+    alpha1, alpha2 = None, None
+    try:
+        log.info(f"LS expected phi: {phi0+c1*alpha0*derphi0} (derphi0: {derphi0})")
+        data_1d= [alpha0,]
+        phi_a0 = phi(alpha0, *args)
+        data_1d.append(phi_a0)
+        if phi_a0 <= phi0 + c1*alpha0*derphi0:
+            return True, alpha0, phi_a0
 
-    # Otherwise, compute the minimizer of a quadratic interpolant:
+        # Otherwise, compute the minimizer of a quadratic interpolant:
 
-    alpha1 = -(derphi0) * alpha0**2 / 2.0 / (phi_a0 - phi0 - derphi0 * alpha0)
-    phi_a1 = phi(alpha1, *args)
+        alpha1 = -(derphi0) * alpha0**2 / 2.0 / (phi_a0 - phi0 - derphi0 * alpha0)
+        data_1d.append(alpha1)
+        phi_a1 = phi(alpha1, *args)
+        data_1d.append(phi_a1)
 
-    if (phi_a1 <= phi0 + c1*alpha1*derphi0):
-        return alpha1, phi_a1
+        if (phi_a1 <= phi0 + c1*alpha1*derphi0):
+            return True, alpha1, phi_a1
 
-    # Otherwise, loop with cubic interpolation until we find an alpha which
-    # satisfies the first Wolfe condition (since we are backtracking, we will
-    # assume that the value of alpha is not too small and satisfies the second
-    # condition.
+        # Otherwise, loop with cubic interpolation until we find an alpha which
+        # satisfies the first Wolfe condition (since we are backtracking, we will
+        # assume that the value of alpha is not too small and satisfies the second
+        # condition.
 
-    while alpha1 > amin:       # we are assuming alpha>0 is a descent direction
-        factor = alpha0**2 * alpha1**2 * (alpha1-alpha0)
-        a = alpha0**2 * (phi_a1 - phi0 - derphi0*alpha1) - \
-            alpha1**2 * (phi_a0 - phi0 - derphi0*alpha0)
-        a = a / factor
-        b = -alpha0**3 * (phi_a1 - phi0 - derphi0*alpha1) + \
-            alpha1**3 * (phi_a0 - phi0 - derphi0*alpha0)
-        b = b / factor
+        while alpha1 > amin:       # we are assuming alpha>0 is a descent direction
+            factor = alpha0**2 * alpha1**2 * (alpha1-alpha0)
+            a = alpha0**2 * (phi_a1 - phi0 - derphi0*alpha1) - \
+                alpha1**2 * (phi_a0 - phi0 - derphi0*alpha0)
+            a = a / factor
+            b = -alpha0**3 * (phi_a1 - phi0 - derphi0*alpha1) + \
+                alpha1**3 * (phi_a0 - phi0 - derphi0*alpha0)
+            b = b / factor
 
-        alpha2 = (-b + sqrt(abs(b**2 - 3 * a * derphi0))) / (3.0*a)
-        phi_a2 = phi(alpha2, *args)
+            alpha2 = (-b + sqrt(abs(b**2 - 3 * a * derphi0))) / (3.0*a)
+            data_1d.append(alpha2)
+            phi_a2 = phi(alpha2, *args)
+            data_1d.append(phi_a2)
+            log.info(f"LS {data_1d}")
 
-        if (phi_a2 <= phi0 + c1*alpha2*derphi0):
-            return alpha2, phi_a2
+            if (phi_a2 <= phi0 + c1*alpha2*derphi0):
+                return True, alpha2, phi_a2
 
-        if (alpha1 - alpha2) > alpha1 / 2.0 or (1 - alpha2/alpha1) < 0.96:
-            alpha2 = alpha1 / 2.0
+            if (alpha1 - alpha2) > alpha1 / 2.0 or (1 - alpha2/alpha1) < 0.96:
+                alpha2 = alpha1 / 2.0
 
-        alpha0 = alpha1
-        alpha1 = alpha2
-        phi_a0 = phi_a1
-        phi_a1 = phi_a2
+            alpha0 = alpha1
+            alpha1 = alpha2
+            phi_a0 = phi_a1
+            phi_a1 = phi_a2
+    except NoFixedPointError as e:
+        log.info(f"LS {e.message} ls_data {data_1d}")
+        if alpha2:
+            return e, alpha2, None
+        elif alpha1:
+            return e, alpha1, None
+        else:
+            return e, alpha0, None
 
     # Failed to find a suitable step length
-    return None, phi_a1
+    return True, None, phi_a1
 
 class LBFGS_MOD(LBFGS):
     r"""
@@ -163,7 +185,7 @@ class LBFGS_MOD(LBFGS):
         state.setdefault('func_evals', 0)
         state.setdefault('n_iter', 0)
 
-        if new_loss is None and new_flat_grad is None:
+        if (new_loss is None) or (new_flat_grad is None):
             # evaluate initial f(x) and df/dx
             with torch.enable_grad():
                 orig_loss = closure()
@@ -182,7 +204,7 @@ class LBFGS_MOD(LBFGS):
 
         # optimal condition
         if opt_cond:
-            return orig_loss, loss, flat_grad
+            return orig_loss, None, None
 
         # tensors cached in state (for tracing)
         d = state.get('d')
@@ -292,23 +314,46 @@ class LBFGS_MOD(LBFGS):
                 if line_search_fn == "backtracking":
                     x_init = self._clone_param()
 
+
                     def obj_func(t, x, d):
                         return self._directional_evaluate_derivative_free(closure_linesearch, t, x, d)
 
                     # return (xmin, fval, iter, funcalls)
-                    t, loss= _scalar_search_armijo(obj_func, loss, gtd, args=(x_init,d), alpha0=t)
+                    while t > line_search_eps:
+                        status, t, new_loss = _scalar_search_armijo(obj_func, loss, gtd, args=(x_init,d), alpha0=t)
+                        if status is True:
+                            break
+                        elif isinstance(status, NoFixedPointError):
+                            t = t / 2.0
                     if t is None:
                         raise RuntimeError("minimize_scalar failed")
 
                 elif line_search_fn == "strong_wolfe":
-                    x_init = self._clone_param()
+                    try:
+                        x_init = self._clone_param()
 
-                    def obj_func(x, t, d):
-                        return self._directional_evaluate(closure, x, t, d)
+                        def obj_func_strong_wolfe(x, t, d):
+                            return self._directional_evaluate(closure, x, t, d)
+                        new_loss, new_flat_grad, t, ls_func_evals = _strong_wolfe(
+                            obj_func_strong_wolfe, x_init, t, d, loss, flat_grad, gtd)
+                        opt_cond = new_flat_grad.abs().max() <= tolerance_grad
+                    except NoFixedPointError as e:
+                        log.warning(f"strong_wolfe failed ({e}); falling back to Armijo backtracking.")
+                        print(f"strong_wolfe failed ({e}); falling back to Armijo backtracking.")
+                        self._set_param(x_init)
 
-                    new_loss, new_flat_grad, t, ls_func_evals = _strong_wolfe(
-                        obj_func, x_init, t, d, loss, flat_grad, gtd)
-                    opt_cond = new_flat_grad.abs().max() <= tolerance_grad
+                        def obj_func_armijo(t, x, d):
+                            return self._directional_evaluate_derivative_free(closure_linesearch, t, x, d)
+
+                        while t > line_search_eps:
+                            status, t, new_loss = _scalar_search_armijo(obj_func_armijo, loss, gtd, args=(x_init,d), alpha0=t/2.0)
+                            if status is True:
+                                break
+                            elif isinstance(status, NoFixedPointError):
+                                t = t / 2.0
+
+                        if t is None:
+                            raise RuntimeError("minimize_scalar failed")
                 else:
                     raise RuntimeError("unsupported line search")
 

@@ -591,12 +591,13 @@ class J1J2_C4V_BIPARTITE_NOSYM():
         # _ci= ([0,1,2,3],[2,3,0,1])
         _ci= ([0,1,2,3],[0,1,2,3])
 
-        from yastn.yastn.tn.fpeps.envs._env_ctm import decompress_env_1d
+        # from yastn.yastn.tn.fpeps.envs._env_ctm import decompress_env_1d
+        from yastn.yastn import split_data_and_meta, combine_data_and_meta
         if checkpoint_move:
-            inputs_t, inputs_meta= env_c4v_yastn.compress_env_1d()
+            inputs_t, inputs_meta= split_data_and_meta(env_c4v_yastn.to_dict())
 
             def _rdm2x2_NN(state, im, *inputs_t):
-                env_c4v_yastn= decompress_env_1d(inputs_t,im)
+                env_c4v_yastn= yastn.from_dict(combine_data_and_meta(inputs_t,im))
                 env_c4v= from_yastn_c4v_env_c4v(env_c4v_yastn)
                 rdm2x2_NN= rdm_c4v.rdm2x2_NN(state, env_c4v, sym_pos_def=False,\
                     force_cpu=force_cpu, verbosity=cfg.ctm_args.verbosity_rdm).to_nonsymmetric()
@@ -604,7 +605,7 @@ class J1J2_C4V_BIPARTITE_NOSYM():
                 return SS_nn.real().to_number()
 
             def _rdm2x2_NNN(state, im, *inputs_t):
-                env_c4v_yastn= decompress_env_1d(inputs_t,im)
+                env_c4v_yastn= yastn.from_dict(combine_data_and_meta(inputs_t,im))
                 env_c4v= from_yastn_c4v_env_c4v(env_c4v_yastn)
                 rdm2x2_NNN= rdm_c4v.rdm2x2_NNN(state, env_c4v, sym_pos_def=False,\
                     force_cpu=force_cpu, verbosity=cfg.ctm_args.verbosity_rdm).to_nonsymmetric()

@@ -18,8 +18,8 @@ from ctm.generic_abelian.env_yastn import *
 from yastn.yastn.tn.fpeps import EnvCTM, EnvCTM_c4v
 from yastn.yastn.tn.fpeps.envs._env_ctm import ctm_conv_corner_spec
 from yastn.yastn.tn.fpeps.envs.rdm import rdm1x2
-from yastn.yastn.tn.fpeps.envs.fixed_pt import refill_env, fp_ctmrg
-from yastn.yastn.tn.fpeps.envs.fixed_pt_c4v import refill_env_c4v, fp_ctmrg_c4v
+from yastn.yastn.tn.fpeps.envs.fixed_pt import fp_ctmrg
+from yastn.yastn.tn.fpeps.envs.fixed_pt_c4v import fp_ctmrg_c4v
 from yastn.yastn.tn.fpeps._peps import Peps2Layers
 
 from optim.ad_optim_lbfgs_mod import optimize_state
@@ -185,7 +185,7 @@ def main():
 
         # 2. convert to 2-site bipartite YASTN's iPEPS
         state_bp= state.get_bipartite_state()
-        state_yastn= PepsAD.from_pt(state_bp)
+        state_yastn= PepsAD.from_pt(state_bp).to_Peps()
 
         # 3. proceed with YASTN's CTMRG implementation
         # 3.1 possibly re-initialize the environment
@@ -231,7 +231,7 @@ def main():
 
         # 2. convert to 2-site bipartite YASTN's iPEPS
         state_bp= state.get_bipartite_state()
-        state_yastn= PepsAD.from_pt(state_bp)
+        state_yastn= PepsAD.from_pt(state_bp).to_Peps()
 
         # 3. proceed with YASTN's CTMRG implementation
         # 3.1 possibly re-initialize the environment
@@ -243,7 +243,6 @@ def main():
 
         # 3.2 setup and run CTMRG
         options_svd={
-            'policy': YASTN_PROJ_METHOD[ctm_args.projector_svd_method],
             "D_total": cfg.main_args.chi, "D_block": cfg.main_args.chi,
             "tol": ctm_args.projector_svd_reltol,
             "eps_multiplet": ctm_args.projector_eps_multiplet,
@@ -251,11 +250,10 @@ def main():
             "verbosity": ctm_args.verbosity_projectors
         }
 
-        ctm_env_out, env_ts_slices, env_ts = fp_ctmrg(ctm_env_in, \
+        ctm_env_out = fp_ctmrg(ctm_env_in, \
             ctm_opts_fwd= {'opts_svd': options_svd, 'corner_tol': ctm_args.ctm_conv_tol, 'max_sweeps': ctm_args.ctm_max_iter, \
-                'method': "2site",  'verbosity': cfg.ctm_args.verbosity_ctm_convergence}, #'use_qr': False,
-            ctm_opts_fp= {'opts_svd': {"policy": "fullrank"}})
-        refill_env(ctm_env_out, env_ts, env_ts_slices)
+                'svd_policy': YASTN_PROJ_METHOD[ctm_args.projector_svd_method], 'method': "2site",  'verbosity': cfg.ctm_args.verbosity_ctm_convergence}, #'use_qr': False,
+            ctm_opts_fp= {'svd_policy': "fullrank"})
 
         # 3.3 convert environment to peps-torch format
         env_pt= from_yastn_env_generic(ctm_env_out, vertexToSite=state_bp.vertexToSite)
@@ -279,7 +277,7 @@ def main():
         state.sites[(0,0)]= state.sites[(0,0)]/state.sites[(0,0)].norm(p='inf')
 
         # 2. convert to 1-site YASTN's iPEPS
-        state_yastn= PepsAD.from_pt(state)
+        state_yastn= PepsAD.from_pt(state).to_Peps()
 
         # 3. proceed with YASTN's C4v-CTMRG implementation
 
@@ -295,7 +293,7 @@ def main():
         if opt_args.opt_ctm_reinit or ctm_env_in is None:
             with torch.no_grad():
                 env_leg = yastn.Leg(state_yastn.config, s=1, t=(0,), D=(1,))
-                ctm_env_in = EnvCTM_c4v(state_yastn, init=YASTN_ENV_INIT[ctm_args.ctm_env_init_type], leg=env_leg)
+                ctm_env_in = EnvCTM_c4v(state_yastn, init=YASTN_ENV_INIT[ctm_args.ctm_env_init_type])
                 # 3.2.1 post-init CTM steps (allow expansion of the environment in case of qr policy)
                 options_svd_pre_init= {**options_svd}
                 options_svd_pre_init.update({"policy": "block_arnoldi",})
@@ -339,14 +337,14 @@ def main():
         state.sites[(0,0)]= state.sites[(0,0)]/state.sites[(0,0)].norm(p='inf')
 
         # 2. convert to 1-site YASTN's iPEPS
-        state_yastn= PepsAD.from_pt(state)
+        state_yastn= PepsAD.from_pt(state).to_Peps()
 
         # 3. proceed with YASTN's C4v-CTMRG implementation
         # 3.1 possibly re-initialize the environment
         if opt_args.opt_ctm_reinit or ctm_env_in is None:
             with torch.no_grad():
                 env_leg = yastn.Leg(state_yastn.config, s=1, t=(0,), D=(1,))
-                ctm_env_in = EnvCTM_c4v(state_yastn, init=YASTN_ENV_INIT[ctm_args.ctm_env_init_type], leg=env_leg)
+                ctm_env_in = EnvCTM_c4v(state_yastn, init=YASTN_ENV_INIT[ctm_args.ctm_env_init_type])
                 options_svd_pre_init= {
                     "policy": "block_arnoldi",
                     "D_total": cfg.main_args.chi, 'D_block': cfg.main_args.chi, "tol": ctm_args.projector_svd_reltol,
@@ -388,11 +386,10 @@ def main():
                 'D_block': cfg.main_args.chi, 'verbosity': ctm_args.verbosity_projectors,
                 "svds_thresh":ctm_args.fwd_svds_thresh
             }
-        ctm_env_out, env_ts_slices, env_ts, t_ctm = fp_ctmrg_c4v(ctm_env_in, \
+        ctm_env_out = fp_ctmrg_c4v(ctm_env_in, \
             ctm_opts_fwd= {'opts_svd': options_svd, 'corner_tol': ctm_args.ctm_conv_tol, 'max_sweeps': ctm_args.ctm_max_iter, \
                 'method': "default"}, \
             ctm_opts_fp= {'opts_svd': {"policy": "fullrank"}})
-        refill_env_c4v(ctm_env_out, env_ts, env_ts_slices)
 
         # 3.3 convert environment to peps-torch format
         # env_pt= from_yastn_c4v_env_c4v(ctm_env_out)

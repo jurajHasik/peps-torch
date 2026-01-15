@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 
 # parse command line args and build necessary configuration objects
 parser = cfg.get_args_parser()
-parser.add_argument("--yast_backend", type=str, default='torch', 
+parser.add_argument("--yast_backend", type=str, default='torch',
     help="YAST backend", choices=['torch','torch_cpp'])
 parser.add_argument("--theta", type=float, default=0, help="angle [<value> x pi] parametrizing the chiral Hamiltonian")
 parser.add_argument("--j1", type=float, default=1., help="nearest-neighbor exchange coupling")
@@ -36,7 +36,7 @@ parser.add_argument("--no_sym_bond_S", action='store_false', dest='sym_bond_S',h
 parser.add_argument("--disp_corre_len", action='store_true', dest='disp_corre_len',help="display correlation length during optimization")
 parser.add_argument("--CTM_check", type=str, default='Partial_energy', help="method to check CTM convergence",choices=["Energy", "SingularValue", "Partial_energy"])
 parser.add_argument("--force_cpu", action='store_true', dest='force_cpu', help="force RDM contractions on CPU")
-# initial state can be selected as D=3 RVB state by passing 
+# initial state can be selected as D=3 RVB state by passing
 # --ipeps_init_type RVB
 parser.add_argument("--itebd", action='store_true', dest='do_itebd', help="do itebd as initial state")
 parser.add_argument("--itebd_tol", type=float, default=1e-12, help="itebd truncation tol")
@@ -96,7 +96,7 @@ def main():
             #         elif state.pgs!=ansatz_pgs:
             #             raise RuntimeError("instate has incompatible PG symmetry with "+args.ansatz)
             state= state.add_noise(args.instate_noise)
-        
+
         # 1.2) reading from checkpoint file
         elif args.opt_resume is not None:
             T_u= yastn.Tensor(config=settings_U1, s=(-1,-1,-1))
@@ -186,7 +186,7 @@ def main():
                     D=((1, 2, 3, 2, 1), (1, 2, 3, 2, 1), (1, 2, 3, 2, 1)))
                 T_d = yastn.rand(config=settings_U1, s=(-1, -1, -1), n=0,
                     t=((-2, -1, 0, 1, 2), (-2, -1, 0, 1, 2), (-2, -1, 0, 1, 2)),
-                    D=((1, 2, 3, 2, 1), (1, 2, 3, 2, 1), (1, 2, 3, 2, 1)))            
+                    D=((1, 2, 3, 2, 1), (1, 2, 3, 2, 1), (1, 2, 3, 2, 1)))
 
             #non-su(2) sectors
             elif args.bond_dim==4:
@@ -225,7 +225,7 @@ def main():
                     D=((1, 1, 1, 1, 1), (1, 1, 1, 1, 1), (1, 1, 1, 1, 1)))
             state= IPESS_KAGOME_GENERIC_ABELIAN(settings_U1, {'T_u': T_u, 'B_a': B_a,\
                 'T_d': T_d,'B_b': B_b, 'B_c': B_c})
-        
+
         elif args.ipeps_init_type=="RVB":
             unit_block= np.ones((1,1,1), dtype=cfg.global_args.dtype)
             B_c= yastn.Tensor(settings_U1, s=(-1, 1, 1), n=0)
@@ -249,7 +249,7 @@ def main():
             state= IPESS_KAGOME_GENERIC_ABELIAN(settings_U1, {'T_u': T_u, 'B_a': B_a,\
                 'T_d': T_d,'B_b': B_b, 'B_c': B_c})
             state= state.add_noise(args.instate_noise)
-            
+
     # 2) (optional) perform iTEBD on top of the initial state
     if args.do_itebd:
         print("-"*20 + " iTEBD initialization "+"-"*20)
@@ -383,7 +383,7 @@ def main():
         ctm_env_out, history, t_ctm, t_conv_check = ctmrg.run(state_sym, ctm_env_in, \
             conv_check=ctmrg_conv_f, ctm_args=ctm_args)
         loss = energy_f(state_sym, ctm_env_out, force_cpu=cfg.ctm_args.conv_check_cpu)
-        
+
         return loss, ctm_env_out, history, t_ctm, t_conv_check
 
     @torch.no_grad()
@@ -399,21 +399,21 @@ def main():
             loss= opt_context["loss_history"]["loss_ls"][-1]
             print("LS",end=" ")
         else:
-            epoch= len(opt_context["loss_history"]["loss"]) 
-            loss= opt_context["loss_history"]["loss"][-1] 
+            epoch= len(opt_context["loss_history"]["loss"])
+            loss= opt_context["loss_history"]["loss"][-1]
         if opt_context["line_search"]:
             print(", ".join([f"{epoch}",f"{loss}"]))
             log.info("Norm(sites): "+", ".join([f"{t.norm()}" for c,t in state_sym.sites.items()]))
         else:
-            obs_values, obs_labels = model.eval_obs(state_sym,ctm_env_init,force_cpu=args.force_cpu,\
+            obs_values, obs_labels = model.eval_obs(state_sym,ctm_env,force_cpu=args.force_cpu,\
                 disp_corre_len=args.disp_corre_len)
             print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]), end="")
             log.info("Norm(sites): "+", ".join([f"{t.norm()}" for c,t in state_sym.sites.items()]))
             print(" "+", ".join([f"{t.norm()}" for c,t in state_sym.sites.items()]) )
-        
+
     # 4) optimize
     optimize_state(state, ctm_env_init, loss_fn, obs_fn=obs_fn)
-    
+
     # compute final observables for the best variational state
     outputstatefile= args.out_prefix+"_state.json"
     if args.ansatz=="IPESS":
@@ -437,7 +437,7 @@ def main():
 if __name__ == '__main__':
     if len(unknown_args) > 0:
         print("args not recognized: " + str(unknown_args))
-        raise Exception("Unknown command line arguments")    
+        raise Exception("Unknown command line arguments")
     main()
 
 
@@ -460,10 +460,10 @@ class TestOptim_RVB(unittest.TestCase):
 
     def test_basic_opt_rvb(self):
         from io import StringIO
-        from unittest.mock import patch 
+        from unittest.mock import patch
         from cmath import isclose
 
-        with patch('sys.stdout', new = StringIO()) as tmp_out: 
+        with patch('sys.stdout', new = StringIO()) as tmp_out:
             main()
         tmp_out.seek(0)
 
@@ -477,7 +477,7 @@ class TestOptim_RVB(unittest.TestCase):
             if OPT_OBS and not OPT_OBS_DONE and l.rstrip()=="": OPT_OBS_DONE= True
             if OPT_OBS and not OPT_OBS_DONE and len(l.split(','))>2:
                 final_opt_line= l.rstrip()
-            if "epoch, loss," in l and not OPT_OBS_DONE: 
+            if "epoch, loss," in l and not OPT_OBS_DONE:
                 OPT_OBS= True
             if "FINAL" in l:
                 final_obs= l.rstrip()
@@ -488,25 +488,25 @@ class TestOptim_RVB(unittest.TestCase):
 
         # compare with the reference
         ref_data="""
-        -0.3180413202889958, (-0.47713120439278667+3.639623534397078e-15j), (-0.4769927564742007+0j), 
-        (0.0026971891280391123+1.5021174805076658e-17j), (2.953928227115468e-16+3.389897989359694e-17j), 
-        (3.4201498958040513e-16-1.6468002706981575e-18j), (0.0027083902082258096-3.4755919552534e-16j), 
-        (-2.362926078045056e-16+1.5088297192245105e-16j), (-9.96011820377404e-16-1.3731797741619337e-16j), 
-        (-0.005405578567283862+2.1355452589085543e-16j), (-1.0376523478434083e-16-4.722156860876956e-16j), 
-        (4.2601775076768687e-16-2.782213398973379e-16j), (7.274829192412387e-06+8.10298987492667e-20j), 
-        (7.335377520013444e-06-1.882651843879459e-18j), (2.9220279647078648e-05-2.3087715362043214e-18j), 
-        (-0.15907030195628583+1.1943046817711557e-15j), (-0.16060958285806728+6.565741657327078e-16j), 
-        (-0.15744582552237282+1.820532263827809e-15j), (-0.1574280729028653-2.710505431213761e-20j), 
+        -0.3180413202889958, (-0.47713120439278667+3.639623534397078e-15j), (-0.4769927564742007+0j),
+        (0.0026971891280391123+1.5021174805076658e-17j), (2.953928227115468e-16+3.389897989359694e-17j),
+        (3.4201498958040513e-16-1.6468002706981575e-18j), (0.0027083902082258096-3.4755919552534e-16j),
+        (-2.362926078045056e-16+1.5088297192245105e-16j), (-9.96011820377404e-16-1.3731797741619337e-16j),
+        (-0.005405578567283862+2.1355452589085543e-16j), (-1.0376523478434083e-16-4.722156860876956e-16j),
+        (4.2601775076768687e-16-2.782213398973379e-16j), (7.274829192412387e-06+8.10298987492667e-20j),
+        (7.335377520013444e-06-1.882651843879459e-18j), (2.9220279647078648e-05-2.3087715362043214e-18j),
+        (-0.15907030195628583+1.1943046817711557e-15j), (-0.16060958285806728+6.565741657327078e-16j),
+        (-0.15744582552237282+1.820532263827809e-15j), (-0.1574280729028653-2.710505431213761e-20j),
         (-0.16058888687471531+0j), (-0.15897179122755842+3.3881317890172014e-21j)
         """
-        # compare final observables from optimization and the observables from the 
+        # compare final observables from optimization and the observables from the
         # final state
         final_opt_line_t= [complex(x) for x in final_opt_line.split(",")[1:7]]
         fobs_tokens= [complex(x) for x in final_obs[len("FINAL"):].split(",")[:6]]
         for val0,val1 in zip(final_opt_line_t, fobs_tokens):
             assert isclose(val0,val1, rel_tol=self.tol, abs_tol=self.tol)
 
-        # compare final observables from final state against expected reference 
+        # compare final observables from final state against expected reference
         # drop first token, corresponding to iteration step
         ref_tokens= [complex(x) for x in ref_data.split(",")[:6]]
         for val,ref_val in zip(fobs_tokens, ref_tokens):

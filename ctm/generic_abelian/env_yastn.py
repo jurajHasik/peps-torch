@@ -17,7 +17,7 @@ def _set_signature(t,expected_s):
     if t.s==expected_s:
         return t
     else:
-        
+
         def _unravel_fusion_1l(i, f_curr, depth, hf):
             if len(hf.tree) <= 1 or depth>0:
                 f_curr.append(i)
@@ -37,7 +37,7 @@ def _set_signature(t,expected_s):
             for l in T.get_legs():
                 i= _unravel_fusion_1l(i,fusions,0,l.hf)
             return fusions
-        
+
         # pre-compute expected signature. This can be done without unfusing
         exp_s_unfused= []
         for s_e,l in zip(expected_s,t.get_legs()):
@@ -64,20 +64,20 @@ def from_yastn_env_generic(env_yastn: EnvCTM, vertexToSite: Callable = None,\
                            ctm_args=cfg.ctm_args, global_args=cfg.global_args) -> ENV_ABELIAN:
     assert env_yastn.geometry.boundary=='infinite'
 
-    _map_site= lambda c: (vertexToSite(c) if vertexToSite else c)
+    _map_site= lambda c: (vertexToSite((c[1], c[0])) if vertexToSite else c)
     config= env_yastn.config
     # TODO: determine chi
     pt_env= ENV_ABELIAN(chi=0, settings=config, ctm_args=ctm_args, global_args=global_args)
 
     # run over non-equivalent sites in the primitive unit cell
     for site in env_yastn.sites():
-        assert type(site)==tuple and len(site)==2 and type(site[0])==int and type(site[0])==int
+        assert len(site)==2 and type(site[0])==int and type(site[0])==int
 
         # corners
         for rel_c,rel_label in zip([(-1,-1),(1,-1),(1,1),(-1,1)], ('tl', 'tr', 'br', 'bl')):
             if rel_label=='tl':
                 # C--1(+)
-                # 0(+)    
+                # 0(+)
                 pt_env.C[(_map_site(site),rel_c)]= _set_signature(env_yastn[site].__getattribute__(rel_label), (1,1))
             elif rel_label=='tr':
                 # (-)0--C
@@ -92,7 +92,7 @@ def from_yastn_env_generic(env_yastn: EnvCTM, vertexToSite: Callable = None,\
                 # 0(-)         1
                 # C--1(+)      C--0
                 pt_env.C[(_map_site(site),rel_c)]= _set_signature(env_yastn[site].__getattribute__(rel_label).transpose(axes=(1,0)), (-1,1))
-        
+
         # half-row/-column
         for rel_c,rel_label in zip([(-1,0),(0,-1),(1,0),(0,1)], ('l', 't', 'r', 'b')):
             if rel_label=='l':
@@ -107,17 +107,17 @@ def from_yastn_env_generic(env_yastn: EnvCTM, vertexToSite: Callable = None,\
                 # (-)1--T--2(+)         2--T--0
                 pt_env.T[(_map_site(site),rel_c)]= _set_signature(env_yastn[site].__getattribute__(rel_label).transpose(axes=(1,2,0)), (-1,-1,1))
             elif rel_label=='r':
-                # ENV           
-                #    (-)0        
-                # (-)1--T        
+                # ENV
+                #    (-)0
+                # (-)1--T
                 #    (+)2
                 pt_env.T[(_map_site(site),rel_c)]= _set_signature(env_yastn[site].__getattribute__(rel_label), (-1,-1,1))
             elif rel_label=='t':
-                # ENV           
-                # (-)0--T--2(+) 
-                #       1(+)    
+                # ENV
+                # (-)0--T--2(+)
+                #       1(+)
                 pt_env.T[(_map_site(site),rel_c)]= _set_signature(env_yastn[site].__getattribute__(rel_label), (-1,1,1))
-        
+
     return pt_env
 
 
@@ -133,7 +133,7 @@ def from_yastn_c4v_env_generic(env_yastn: EnvCTM_c4v, \
         env_bp.C[((1,0),rel_dir)]= env_bp.C[((0,0),rel_dir)].conj().switch_signature(axes='all')
     for rel_dir in (-1,0),(1,0),(0,1),(0,-1):
         env_bp.T[((1,0),rel_dir)]= env_bp.T[((0,0),rel_dir)].conj().switch_signature(axes='all')
-    
+
     return env_bp
 
 
@@ -144,5 +144,5 @@ def from_yastn_c4v_env_c4v(env_yastn: EnvCTM_c4v, \
     env_c4v= ENV_C4V_ABELIAN(settings=env_yastn.config, chi=0, ctm_args=ctm_args, global_args=global_args)
     env_c4v.C[env_c4v.keyC]= _set_signature(env_yastn[0,0].tl,(-1,-1))
     env_c4v.T[env_c4v.keyT]= _set_signature(env_yastn[0,0].t.transpose(axes=(0,2,1)),(1,1,-1)).unfuse_legs(axes=2)
-    
+
     return env_c4v

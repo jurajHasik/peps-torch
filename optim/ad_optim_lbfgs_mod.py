@@ -192,7 +192,8 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         t_grad1= time.perf_counter()
 
         # 6) detach current environment from autograd graph
-        ctm_env.detach_()
+        # ctm_env.detach_()
+        ctm_env = ctm_env.detach()
         current_env[0]= ctm_env
         # current_env[0]= ctm_env.detach().clone()
 
@@ -307,8 +308,10 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
             log.info(e.message + "Add noise to the state.")
             # add a random perturbation to the state
             with torch.no_grad():
-                state = state.add_noise(noise=0.1)
+                # state = state.add_noise(noise=0.1)
+                state.add_noise_(noise=0.1)
 
+            new_loss, new_flat_grad = None, None
             parameters, optimizer= create_optimizer(state, main_args=main_args, opt_args=opt_args,
                 ctm_args=ctm_args, global_args=global_args)
             continue
@@ -337,6 +340,11 @@ def optimize_state(state, ctm_env_init, loss_fn, obs_fn=None, post_proc=None,
         if new_flat_grad is not None and \
             new_flat_grad.abs().max() <= opt_args.tolerance_grad:
             break
+
+        if 'd' in optimizer.state[optimizer._params[0]]:
+            d, t = optimizer.state[optimizer._params[0]]['d'], optimizer.state[optimizer._params[0]]['t']
+            if d.mul(t).abs().max() <= opt_args.tolerance_change:
+                break
 
         if (opt_args.line_search not in ["default", None]) and \
             "STATUS" in context and context["STATUS"]=="ENV_ANTIVAR":

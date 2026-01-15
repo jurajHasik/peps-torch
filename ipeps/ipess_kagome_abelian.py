@@ -21,7 +21,7 @@ class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
         :param settings: YAST configuration
         :type settings: NamedTuple or SimpleNamespace (TODO link to definition)
         :param ipess_tensors: dictionary of five tensors, which make up Kagome iPESS
-                              ansatz 
+                              ansatz
         :param peps_args: ipeps configuration
         :param global_args: global configuration
         :type ipess_tensors: dict(str, yastn.Tensor)
@@ -34,50 +34,50 @@ class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
             ipess_tensors = {'T_u': yastn.Tensor, 'T_d': ..., 'B_a': ..., 'B_b': ..., 'B_c': ...}
 
         into a single rank-5 on-site tensor of parent IPEPS. These iPESS tensors can
-        be accessed through member ``ipess_tensors``. 
+        be accessed through member ``ipess_tensors``.
 
-        The ``'B_*'`` are rank-3 tensors, with index structure [p,i,j] where the first index `p` 
+        The ``'B_*'`` are rank-3 tensors, with index structure [p,i,j] where the first index `p`
         is for physical degree of freedom, while indices `i` and `j` are auxiliary.
-        These bond tensors reside on corners shared between different triangles of Kagome lattice. 
-        Bond tensors are connected by rank-3 trivalent tensors ``'T_u'``, ``'T_d'`` on up and down triangles 
+        These bond tensors reside on corners shared between different triangles of Kagome lattice.
+        Bond tensors are connected by rank-3 trivalent tensors ``'T_u'``, ``'T_d'`` on up and down triangles
         respectively. Trivalent tensors have only auxiliary indices.
-    
+
         The on-site tensors of corresponding iPEPS is obtained by the following contraction::
-                                                     
+
                  2(d)            2(c)                    (-)a
                   \             /          rot. pi          |
-             0(w)==B_a         B_b==0(v)   clockwise  (-)b--\                     
+             0(w)==B_a         B_b==0(v)   clockwise  (-)b--\
                     \         /             =>               \
                     1(l)     1(k)                            s0--s2--d(+)
-                     2(l)   1(k)                              | / 
+                     2(l)   1(k)                              | /
                        \   /                                  |/   <- DOWN_T
                         T_d                                  s1
                          |                                    |
                          0(j)                                 c(+)
-                         1(j)                               
-                         |                 
-                         B_c==0(u)        
+                         1(j)
+                         |
+                         B_c==0(u)
                          |
                          2(i)
-                         0(i)  
+                         0(i)
                          |
                         T_u
-                       /   \ 
-                     1(a)   2(b) 
+                       /   \
+                     1(a)   2(b)
 
         where the signature convetions of trivalent and bond tensors are as follows::
 
             (-)\ /(-)     (-)|             |(-)
                 T_d   ,     T_u     , (+)--B--(+)
                 |(-)    (-)/   \(-)
-        
-        This choice guarantees that the signature of on-site tensor of equivalent single-site 
-        IPEPS_KAGOME_ABELIAN is compatible. 
 
-        By construction, the degrees of freedom on down triangle are all combined into 
-        a single on-site tensor of iPEPS. Instead, DoFs on the upper triangle have 
-        to be accessed by construction of 2x2 patch (which is then embedded into environment)::        
-        
+        This choice guarantees that the signature of on-site tensor of equivalent single-site
+        IPEPS_KAGOME_ABELIAN is compatible.
+
+        By construction, the degrees of freedom on down triangle are all combined into
+        a single on-site tensor of iPEPS. Instead, DoFs on the upper triangle have
+        to be accessed by construction of 2x2 patch (which is then embedded into environment)::
+
             C    T             T          C
                  a             a
                  |             |
@@ -88,7 +88,7 @@ class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
                    |/            |/
                   s1            s1
                    |             |
-                   c             c  
+                   c             c
                   /             /
                  a             a
                  |             |
@@ -121,7 +121,7 @@ class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
         r"""
         :return: variational parameters of IPESS_KAGOME_GENERIC_ABELIAN
         :rtype: iterable
-        
+
         This function is called by optimizer to access variational parameters of the state.
         In this case member ``ipess_tensors``.
         """
@@ -132,9 +132,9 @@ class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
         :return: serializable representation of IPESS_KAGOME_GENERIC_ABELIAN state
         :rtype: dict
 
-        Return dict containing serialized ``ipess_tensors`` (block-sparse) tensors. 
-        The individual blocks are serialized into Numpy ndarrays. 
-        This function is called by optimizer to create checkpoints during 
+        Return dict containing serialized ``ipess_tensors`` (block-sparse) tensors.
+        The individual blocks are serialized into Numpy ndarrays.
+        This function is called by optimizer to create checkpoints during
         the optimization process.
         """
         return {ind: self.ipess_tensors[ind].save_to_dict() for ind in self.ipess_tensors}
@@ -142,9 +142,9 @@ class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
     def load_checkpoint(self, checkpoint_file):
         r"""
         :param checkpoint_file: path to checkpoint file
-        :type checkpoint_file: str or file object 
+        :type checkpoint_file: str or file object
 
-        Initializes IPESS_KAGOME_GENERIC_ABELIAN from checkpoint file. 
+        Initializes IPESS_KAGOME_GENERIC_ABELIAN from checkpoint file.
         """
         checkpoint= torch.load(checkpoint_file, map_location=self.device, weights_only=False)
         self.ipess_tensors= {ind: yastn.load_from_dict(config= self.engine, d=t_dict_repr) \
@@ -155,12 +155,12 @@ class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
 
     def to_dense(self, peps_args=cfg.peps_args, global_args=cfg.global_args):
         r"""
-        :return: returns equivalent dense state with all on-site tensors in their dense 
+        :return: returns equivalent dense state with all on-site tensors in their dense
                  representation on PyTorch backend.
         :rtype: IPESS_KAGOME_GENERIC_ABELIAN
 
-        Create an IPESS_KAGOME_GENERIC state with all ``ipess_tensors`` as dense possesing 
-        no explicit block structure (symmetry). This operations preserves gradients 
+        Create an IPESS_KAGOME_GENERIC state with all ``ipess_tensors`` as dense possesing
+        no explicit block structure (symmetry). This operations preserves gradients
         on the returned dense state.
         """
         ipess_tensors_dense= {t_id: t.to_dense() for t_id,t in self.ipess_tensors.items()}
@@ -173,28 +173,28 @@ class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
         :return: elementary unit cell of underlying IPEPS
         :rtype: dict[tuple(int,int): yastn.Tensor]
 
-        Build on-site tensor of corresponding IPEPS_KAGOME_ABELIAN be 
+        Build on-site tensor of corresponding IPEPS_KAGOME_ABELIAN be
         performing following contraction of ``ipess_tensors``::
 
                  2(-7)          2(-6)                    (-)(-4)
                   \             /          rot. pi             |
-             0(-3)==B_a        B_b==0(-2)  clockwise  (-)(-5)--\                     
+             0(-3)==B_a        B_b==0(-2)  clockwise  (-)(-5)--\
                     \         /             =>                  \
                     1(3)     1(2)                                s0(-1)--s2(-3)--(-7)(+)
-                     2(3)   1(2)                                 | / 
+                     2(3)   1(2)                                 | /
                        \   /                                     |/   <- DOWN_T
                         T_d                                      s1(-2)
                          |                                       |
                          0(1)                                   (-6)(+)
-                         1(1)                       
-                         |                 
-                         B_c==0(-1)        
+                         1(1)
+                         |
+                         B_c==0(-1)
                          |
                          2(0)
-                         0(0)  
+                         0(0)
                          |
                         T_u
-                       /   \ 
+                       /   \
                      1(-4)  2(-5)
         """
         A= yastn.ncon([self.ipess_tensors['T_u'], self.ipess_tensors['B_c'],\
@@ -210,12 +210,12 @@ class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
         r"""
         :param noise: magnitude of the noise
         :type noise: float
-        :return: a copy of state with noisy ``ipess_tensors``. For default value of 
-                 ``noise`` being zero ``self`` is returned. 
+        :return: a copy of state with noisy ``ipess_tensors``. For default value of
+                 ``noise`` being zero ``self`` is returned.
         :rtype: IPESS_KAGOME_GENERIC_ABELIAN
 
-        Create a new state by adding random uniform noise with magnitude ``noise`` to all 
-        copies of ``ipess_tensors``. The noise is added to all allowed blocks making up 
+        Create a new state by adding random uniform noise with magnitude ``noise`` to all
+        copies of ``ipess_tensors``. The noise is added to all allowed blocks making up
         the individual tensors. If noise is 0, returns ``self``.
         """
         if noise==0: return self
@@ -231,38 +231,38 @@ class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
         r"""
         :return: dictionary of weights on non-equivalent bonds of the iPESS ansatz
         :rtype: dict( str: yastn.Tensor )
-         
-        Generate a set of identity tensors, weights W, for each non-equivalent link 
+
+        Generate a set of identity tensors, weights W, for each non-equivalent link
         in the iPESS ansatz::
 
                 2(d)            2(c)                    (-)a
                  \             /          rot. pi          |
-            0(w)==B_a         B_b==0(v)   clockwise  (-)b--\                     
+            0(w)==B_a         B_b==0(v)   clockwise  (-)b--\
                    \         /             =>               \
                    1(l)     1(k)                            s0--s2--d(+)
                  W_down_a  W_down_b                          |  /
-                    2(l)   1(k)                              | / 
+                    2(l)   1(k)                              | /
                       \   /                                  |/   <- DOWN_T
                        T_d                                  s1
                         |                                    |
                         0(j)                                 c(+)
                       W_down_c
                         1(j)
-                        |                 
-                        B_c==0(u)        
+                        |
+                        B_c==0(u)
                         |
                         2(i)
                        W_up_c
-                        0(i)  
+                        0(i)
                         |
                        T_u
-                      /   \ 
+                      /   \
                     1(a)   2(b)
                   W_up_b   W_up_a
         """
         weights=dict()
-        for w_id, ind1, ind2 in [ 
-                ('lambda_up_c', ('T_u',0), ('B_c',2)), 
+        for w_id, ind1, ind2 in [
+                ('lambda_up_c', ('T_u',0), ('B_c',2)),
                 ('lambda_up_a', ('T_u',2), ('B_a',2)),
                 ('lambda_up_b', ('T_u',1), ('B_b',2)),
                 ('lambda_dn_c', ('T_d',0), ('B_c',1)),
@@ -279,10 +279,10 @@ class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
         for t_id,t in self.ipess_tensors.items():
             print(f"{t_id}")
             print(f"{t}")
-        print("")    
+        print("")
         for nid,coord,site in [(t[0], *t[1]) for t in enumerate(self.sites.items())]:
             print(f"a{nid} {coord}: {site}")
-        
+
         # show tiling of a square lattice
         coord_list = list(self.sites.keys())
         mx, my = 3*self.lX, 3*self.lY
@@ -297,7 +297,7 @@ class IPESS_KAGOME_GENERIC_ABELIAN(ipeps_kagome.IPEPS_KAGOME_ABELIAN):
             for x in range(-mx,mx):
                 print(f"a{coord_list.index(self.vertexToSite((x,y)))} ", end="")
             print("")
-        
+
         return ""
 
     def write_to_file(self, outputfile, tol=None, normalize=False):
@@ -325,7 +325,7 @@ def read_ipess_kagome_generic(jsonfile, settings, peps_args=cfg.peps_args,\
 
         # Loop over non-equivalent tensor,coeffs pairs in the unit cell
         ipess_tensors= OrderedDict()
-        assert "ipess_tensors" in raw_state.keys(),"Missing \"ipess_tensors\"" 
+        assert "ipess_tensors" in raw_state.keys(),"Missing \"ipess_tensors\""
         assert set(('T_u','T_d','B_a','B_b','B_c'))==set(list(raw_state["ipess_tensors"].keys())),\
             "missing some ipess tensors"
         for key,t in raw_state["ipess_tensors"].items():

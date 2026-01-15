@@ -36,7 +36,7 @@ def _debug_allocated_tensors(device=None,global_args=None,totals_only=False):
                 else:
                     _t[obj.data_ptr()]={'count': 1, 'device': {obj.device}, 'shape': obj.size(), \
                         'size': obj.numel()*obj.element_size()}
-        except: 
+        except:
             pass
     if not totals_only:
         for ptr,row in _t.items():

@@ -126,7 +126,7 @@ def main():
     def ctmrg_conv_energy(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
             history=[]
-        e_curr= energy_f(state, env, force_cpu=ctm_args.conv_check_cpu)
+        e_curr= energy_f(state, env, force_cpu=ctm_args.conv_check_cpu, global_args=cfg.global_args)
         history.append(e_curr.item())
 
         if (len(history) > 1 and abs(history[-1]-history[-2]) < ctm_args.ctm_conv_tol)\
@@ -145,7 +145,7 @@ def main():
     init_env(state, ctm_env)
     
     ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_f)
-    loss0= energy_f(state, ctm_env, force_cpu=args.force_cpu)
+    loss0= energy_f(state, ctm_env, force_cpu=args.force_cpu, global_args=cfg.global_args)
     obs_values, obs_labels = eval_obs_f(state,ctm_env)
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
@@ -181,7 +181,7 @@ def main():
              conv_check=ctmrg_conv_f, ctm_args=ctm_args)
 
         # 2) evaluate loss with the converged environment
-        loss = energy_f(state_sym, ctm_env_out, force_cpu=args.force_cpu)
+        loss = energy_f(state_sym, ctm_env_out, force_cpu=args.force_cpu, global_args=cfg.global_args)
 
         return (loss, ctm_env_out, *ctm_log)
 
@@ -208,7 +208,7 @@ def main():
             ctm_env_out1= ctm_env.extend(ctm_env.chi+10)
             ctm_env_out1, *ctm_log= ctmrg.run(state_sym, ctm_env_out1, \
                 conv_check=ctmrg_conv_f, ctm_args=loc_ctm_args)
-            loss1= energy_f(state_sym, ctm_env_out1, force_cpu=args.force_cpu)
+            loss1= energy_f(state_sym, ctm_env_out1, force_cpu=args.force_cpu, global_args=cfg.global_args)
             delta_loss= opt_context['loss_history']['loss'][-1]-opt_context['loss_history']['loss'][-2]\
                 if len(opt_context['loss_history']['loss'])>1 else float('NaN')
             # if we are not linesearching, this can always happen
@@ -257,7 +257,7 @@ def main():
     ctm_env = ENV(args.chi, state)
     init_env(state, ctm_env)
     ctm_env, *ctm_log= ctmrg.run(state, ctm_env, conv_check=ctmrg_conv_f)
-    loss0= energy_f(state,ctm_env,force_cpu=args.force_cpu)
+    loss0= energy_f(state,ctm_env,force_cpu=args.force_cpu, global_args=cfg.global_args)
     obs_values, obs_labels = eval_obs_f(state,ctm_env)
     print("FINAL "+", ".join([f"{loss0}"]+[f"{v}" for v in obs_values]))  
 

@@ -18,14 +18,15 @@ YASTN_PROJ_METHOD={"DEFAULT": "fullrank", "GESDD": "fullrank", "QR": "qr",
 def from_yastn_env_generic(env_yastn: EnvCTM, vertexToSite: Callable= None) -> ENV:
     assert env_yastn.geometry.boundary=='infinite'
 
-    _map_site= lambda c: (vertexToSite(c) if vertexToSite else c)
+    # x and y axes are interchanged
+    _map_site= lambda c: (vertexToSite((c[1], c[0])) if vertexToSite else c)
     # TODO: determine dtype and device from yastn.config
     # TODO: determine chi
     pt_env= ENV(chi=0)
 
     # run over non-equivalent sites in the primitive unit cell
     for site in env_yastn.sites():
-        assert type(site)==tuple and len(site)==2 and type(site[0])==int and type(site[0])==int
+        assert len(site)==2 and type(site[0])==int and type(site[0])==int
 
         # corners
         for rel_c,rel_label in zip([(-1,-1),(1,-1),(1,1),(-1,1)], ('tl', 'tr', 'br', 'bl')):
@@ -66,9 +67,9 @@ def from_env_generic_dense_to_yastn(env: ENV, state: IPEPS, global_args=cfg.glob
     """
     # site convention  (-)0 /4(+)
     #               (+)1--A--3(-)
-    #                  (+)2 
-    state_yastn= PepsAD.from_pt(state,global_args=global_args)
-    
+    #                  (+)2
+    state_yastn= PepsAD.from_pt(state,global_args=global_args).to_Peps()
+
     yastn_cfg_nosym= yastn.make_config(
         backend= backend_torch,
         default_dtype= dict(zip(backend_torch.DTYPE.values(), backend_torch.DTYPE.keys()))[state.dtype],
@@ -81,37 +82,39 @@ def from_env_generic_dense_to_yastn(env: ENV, state: IPEPS, global_args=cfg.glob
 
     env_yastn= EnvCTM(psi=state_yastn, init=None)
     for (site, d), t in env.C.items():
+        yastn_site = (site[1], site[0])
         if d == (-1, -1):
-            setattr(env_yastn[site], 'tl', _wrap_t(t,s=[1,-1]))
+            setattr(env_yastn[yastn_site], 'tl', _wrap_t(t,s=[1,-1]))
         elif d == (1, -1):
-            setattr(env_yastn[site], 'tr', _wrap_t(t,s=[1,1]))
+            setattr(env_yastn[yastn_site], 'tr', _wrap_t(t,s=[1,1]))
         elif d == (1, 1):
-            setattr(env_yastn[site], 'br', _wrap_t(t,s=[-1,1]))
+            setattr(env_yastn[yastn_site], 'br', _wrap_t(t,s=[-1,1]))
         else:
-            setattr(env_yastn[site], 'bl', _wrap_t(t.permute(1,0),s=[-1,-1]))
+            setattr(env_yastn[yastn_site], 'bl', _wrap_t(t.permute(1,0),s=[-1,-1]))
 
     for (site, d), t in env.T.items():
+        yastn_site = (site[1], site[0])
         if d == (-1, 0):
             # 0       2
             # T--2 -> T--1
             # 1       0
-            setattr(env_yastn[site], 'l', _wrap_t(t.permute(1,2,0).reshape(
+            setattr(env_yastn[yastn_site], 'l', _wrap_t(t.permute(1,2,0).reshape(
                 [t.shape[1]]+[state.site(site).shape[2],]*2+[t.shape[0]]),s=[1,-1,1,-1]).fuse_legs(axes=(0,(1,2),3)) )
         elif d == (0, -1):
             # 0-- T --2
             #     1
-            setattr(env_yastn[site], 't', _wrap_t(t.reshape([t.shape[0]]+[state.site(site).shape[1],]*2+[t.shape[2]]),
+            setattr(env_yastn[yastn_site], 't', _wrap_t(t.reshape([t.shape[0]]+[state.site(site).shape[1],]*2+[t.shape[2]]),
                                                    s=[1,1,-1,-1]).fuse_legs(axes=(0,(1,2),3)) )
         elif d == (1, 0):
             #    0
             # 1--T
             #    2
-            setattr(env_yastn[site], 'r', _wrap_t(t.reshape([t.shape[0]]+[state.site(site).shape[4],]*2+[t.shape[2]]),
+            setattr(env_yastn[yastn_site], 'r', _wrap_t(t.reshape([t.shape[0]]+[state.site(site).shape[4],]*2+[t.shape[2]]),
                                                    s=[-1,1,-1,1]).fuse_legs(axes=(0,(1,2),3)) )
         else:
             #    0          1
             # 1--T--2 -> 2--T--0
-            setattr(env_yastn[site], 'b', _wrap_t(t.permute(2,0,1).reshape(
+            setattr(env_yastn[yastn_site], 'b', _wrap_t(t.permute(2,0,1).reshape(
                 [t.shape[2]]+[state.site(site).shape[3],]*2+[t.shape[1]]),s=[-1,-1,1,1]).fuse_legs(axes=(0,(1,2),3)) )
 
     return env_yastn

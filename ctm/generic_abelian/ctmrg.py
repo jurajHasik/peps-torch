@@ -3,7 +3,8 @@ import warnings
 import copy
 from typing import NamedTuple
 import config as cfg
-from yastn.yastn import decompress_from_1d
+import yastn.yastn as yastn
+from yastn.yastn import split_data_and_meta, combine_data_and_meta
 from ipeps.ipeps_abelian import IPEPS_ABELIAN, _fused_dl_site
 from ctm.generic_abelian.env_abelian import ENV_ABELIAN
 from ctm.generic_abelian.ctm_components import *
@@ -15,12 +16,12 @@ try:
 except ImportError as e:
     warnings.warn("torch not available", Warning)
 
-def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.global_args): 
+def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.global_args):
     r"""
     :param state: wavefunction
     :param env: environment
     :param conv_check: function which determines the convergence of CTM algorithm. If ``None``,
-                       the algorithm performs ``ctm_args.ctm_max_iter`` iterations. 
+                       the algorithm performs ``ctm_args.ctm_max_iter`` iterations.
     :param ctm_args: CTM algorithm configuration
     :param global_args: global configuration
     :type state: IPEPS_ABELIAN
@@ -31,16 +32,16 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
 
     Executes directional CTM algorithm for generic iPEPS starting from the intial environment ``env``.
 
-    To establish the convergence of CTM before the maximal number of iterations 
-    is reached  a ``conv_check`` function is invoked. Its expected signature is 
-    ``conv_check(IPEPS_ABELIAN,ENV_ABELIAN,Object,CTMARGS)`` where ``Object`` is an arbitary argument. For 
-    example it can be a list or dict used for storing CTM data from previous steps to   
+    To establish the convergence of CTM before the maximal number of iterations
+    is reached  a ``conv_check`` function is invoked. Its expected signature is
+    ``conv_check(IPEPS_ABELIAN,ENV_ABELIAN,Object,CTMARGS)`` where ``Object`` is an arbitary argument. For
+    example it can be a list or dict used for storing CTM data from previous steps to
     check convergence.
     """
     #TODO add reference
 
     # 0) Create double-layer (DL) tensors, preserving the same convention
-    #    for order of indices 
+    #    for order of indices
     #
     #     /                /(+1)
     #  --a*---   =  (+1)--A--(-1)
@@ -79,7 +80,7 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
             converged, history = conv_check(state, env, history, ctm_args=ctm_args)
             if ctm_args.verbosity_ctm_convergence>1: print(history[-1])
             if converged:
-                if ctm_args.verbosity_ctm_convergence>0: 
+                if ctm_args.verbosity_ctm_convergence>0:
                     print(f"CTMRG  converged at iter= {i}, history= {history[-1]}")
                 break
         t1_obs= time.perf_counter()
@@ -89,7 +90,7 @@ def run(state, env, conv_check=None, ctm_args=cfg.ctm_args, global_args=cfg.glob
 
     return env, history, t_ctm, t_obs
 
-# performs CTM move in one of the directions 
+# performs CTM move in one of the directions
 # [Up=(0,-1), Left=(-1,0), Down=(0,1), Right=(1,0)]
 def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.global_args, \
     verbosity=0, diagnostics=None):
@@ -105,9 +106,9 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
     :type ctm_args: CTMARGS
     :type global_args: GLOBALARGS
 
-    Executes a single directional CTM move in one of the directions. First, build  
+    Executes a single directional CTM move in one of the directions. First, build
     projectors for each non-equivalent bond (to be truncated) in the unit cell of iPEPS.
-    Second, construct enlarged environment tensors and then truncate them 
+    Second, construct enlarged environment tensors and then truncate them
     to obtain updated environment tensors.
     """
     # select projector function
@@ -124,12 +125,15 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
 
     # 0) compress tensors into 1D representation
     #
-    # keep inputs for autograd stored on cpu, move to gpu for the core 
+    # keep inputs for autograd stored on cpu, move to gpu for the core
     # of the computation if desired
     metadata_store= {}
-    tmp= tuple(state.sites[key].compress_to_1d() for key in state.sites.keys()) \
-        + tuple(env.C[key].compress_to_1d() for key in env.C.keys()) \
-        + tuple(env.T[key].compress_to_1d() for key in env.T.keys())
+    # tmp= tuple(state.sites[key].compress_to_1d() for key in state.sites.keys()) \
+    #     + tuple(env.C[key].compress_to_1d() for key in env.C.keys()) \
+    #     + tuple(env.T[key].compress_to_1d() for key in env.T.keys())
+    tmp= tuple(split_data_and_meta(state.sites[key].to_dict(level=0)) for key in state.sites.keys()) \
+        + tuple(split_data_and_meta(env.C[key].to_dict(level=0)) for key in env.C.keys()) \
+        + tuple(split_data_and_meta(env.T[key].to_dict(level=0)) for key in env.T.keys())
     # 1) split into raw 1D tensors and metadata
     tensors, metadata_store["in"]= list(zip(*tmp))
 
@@ -158,15 +162,15 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
         _loc_engine= env.engine
         if global_args.offload_to_gpu != 'None' and global_args.device=='cpu':
             tensors= tuple(r1d.to(global_args.offload_to_gpu) for r1d in tensors)
-            for meta in metadata_store["in"]: 
+            for meta in metadata_store["in"]:
                 meta['config']= meta['config']._replace(default_device=global_args.offload_to_gpu)
             # TODO we assume that configs of all tensors are identical
             _loc_engine= metadata_store["in"][0]["config"]
-        
-        tensors= tuple(decompress_from_1d(r1d, meta) \
+
+        tensors= tuple(yastn.from_dict(combine_data_and_meta(r1d, meta)) \
             for r1d,meta in zip(tensors,metadata_store["in"]))
 
-        # 1) wrap raw tensors back into IPEPS and ENV classes 
+        # 1) wrap raw tensors back into IPEPS and ENV classes
         sites_loc= dict(zip(state.sites.keys(),tensors[0:len(state.sites)]))
         state_loc= IPEPS_ABELIAN(_loc_engine, sites_loc, state.vertexToSite, peps_args=dl_peps_args)
         env_loc= ENV_ABELIAN(env.chi, settings=_loc_engine)
@@ -178,7 +182,7 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
         P = dict()
         Pt = dict()
         for coord,site in state_loc.sites.items():
-            if not (diagnostics is None): diagnostics["coord"]= coord 
+            if not (diagnostics is None): diagnostics["coord"]= coord
             P[coord], Pt[coord] = ctm_get_projectors(direction, coord, state_loc, env_loc, \
                 ctm_args, global_args, diagnostics=diagnostics)
             if verbosity>0:
@@ -206,11 +210,15 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
             nC1[c], nC2[c], nT[c]= move_normalize_c(nC1[c], nC2[c], nT[c])
 
         # 2) Return raw new tensors
-        tmp_loc= tuple(nC1[key].compress_to_1d() for key in nC1.keys()) \
-            + tuple(nC2[key].compress_to_1d() for key in nC2.keys()) \
-            + tuple(nT[key].compress_to_1d() for key in nT.keys())
+        # tmp_loc= tuple(nC1[key].compress_to_1d() for key in nC1.keys()) \
+        #     + tuple(nC2[key].compress_to_1d() for key in nC2.keys()) \
+        #     + tuple(nT[key].compress_to_1d() for key in nT.keys())
+
+        tmp_loc= tuple(split_data_and_meta(nC1[key].to_dict(level=0)) for key in nC1.keys()) \
+            + tuple(split_data_and_meta(nC2[key].to_dict(level=0)) for key in nC2.keys()) \
+            + tuple(split_data_and_meta(nT[key].to_dict(level=0)) for key in nT.keys())
         tensors_loc, metadata_store["out"]= list(zip(*tmp_loc))
-        
+
         # move back to (default) cpu if offload_to_gpu is specified
         if global_args.offload_to_gpu != 'None' and global_args.device=='cpu':
             tensors_loc= tuple(r1d.to(global_args.device) for r1d in tensors_loc)
@@ -224,8 +232,8 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
         new_tensors= checkpoint(ctm_MOVE_c,*tensors)
     else:
         new_tensors= ctm_MOVE_c(*tensors)
-    
-    new_tensors= tuple(decompress_from_1d(r1d, meta) \
+
+    new_tensors= tuple(yastn.from_dict(combine_data_and_meta(r1d, meta)) \
             for r1d,meta in zip(new_tensors,metadata_store["out"]))
 
     # 3) warp the returned raw tensor in dictionary
@@ -238,7 +246,7 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
     # Assign new nC1,nT,nC2 to appropriate environment tensors
     rel_CandT_vecs = dict()
     # specify relative vectors identifying the environment tensors
-    # with respect to the direction 
+    # with respect to the direction
     if direction==(0,-1):
         rel_CandT_vecs = {"nC1": (1,-1), "nC2": (-1,-1), "nT": direction}
     elif direction==(-1,0):
@@ -281,17 +289,17 @@ def absorb_truncate_CTM_MOVE_UP_c(*tensors):
     #             (-1)0--Pt--1(+1)
 
     # (-1)0--C1 => (+1)(0<-01)--C1T1
-    #        1                  |  
+    #        1                  |
     #        0           (-1)1<-2
-    # (+1)1--T1 
-    #    (-1)2 
+    # (+1)1--T1
+    #    (-1)2
     nC1= contract(C1,T1,([1],[0]))
     nC1= nC1.fuse_legs( axes=((0,1),2) )
 
     #        --0 0--C1    <=>  (?)1--Pt1--0(-1) (+1)0--C1T1
     #       |       |                                  |
     # 0<-2--Pt1     |                              (-1)1
-    #       |       | 
+    #       |       |
     #        --1 1--T1
     #               2->1
     nC1 = contract(Pt1, nC1,([0],[0]))
@@ -311,7 +319,7 @@ def absorb_truncate_CTM_MOVE_UP_c(*tensors):
     # T2--2 1--
     # 1->0
     nC2 = contract(nC2, P2,([0],[0]))
-    
+
     #                                        --0(-1) (+1)0--T--2->3(-1)
     #                       0(-1)           |               1->2(-1)
     # (+1)2<-1--Pt2--0(-1)->|      => 1<-2--Pt2
@@ -325,26 +333,26 @@ def absorb_truncate_CTM_MOVE_UP_c(*tensors):
     # (+1)0<-1--Pt2     |              (+1)0--Pt2--A-----
     #           |       0                          2(-1)
     #            --0 1--A--3(-1)
-    #                   2(-1) 
+    #                   2(-1)
     nT = contract(nT, A,([0,2],[1,0]))
     nT = nT.fuse_legs( axes=(0,(1,3),2) )
 
     #         -------T---
-    #        |       |  | 
+    #        |       |  |
     # (+1)0--Pt2     |  |--1(-1)(+1)0--P1--1->2(-1)
     #        |       |  |
     #         -------A---
     #                2->1(-1)
     nT = contract(nT, P1,([1],[0]))
 
-    # Assign new C,T 
+    # Assign new C,T
     #
     # C(coord,(-1,-1))--                --T(coord,(0,-1))--             --C(coord,(1,-1))
     # |                  P2--       --Pt2 |                P1--     -Pt1  |
     # T(coord,(-1,0))---                --A(coord)---------             --T(coord,(1,0))
     # |                                   |                               |
     #
-    # =>                            
+    # =>
     #
     # C^new(coord+(0,1),(-1,-1))--      --T^new(coord+(0,1),(0,-1))--   --C^new(coord+(0,1),(1,-1))
     # |                                   |                               |
@@ -380,7 +388,7 @@ def absorb_truncate_CTM_MOVE_LEFT_c(*tensors):
     # |        |            0(-1)
     # 0        1            0(+1)
     # 0        1            Pt1
-    # |___Pt1__|            1->0(-1) 
+    # |___Pt1__|            1->0(-1)
     #     2->0
     nC1= contract(Pt1, nC1,([0],[0]))
 
@@ -420,14 +428,14 @@ def absorb_truncate_CTM_MOVE_LEFT_c(*tensors):
     # |       |           |         |             0
     # T-------A--3->1     T---------A--2->1(-1) & T--1->2
     # 1       2               1(-1)               2->1
-    # 0       1               0(+1) 
+    # 0       1               0(+1)
     # |___Pt2_|               Pt2
     #     2                   1->2(-1)
-    nT = contract(nT, Pt2,([1],[0]))    
+    nT = contract(nT, Pt2,([1],[0]))
     nT = nT.transpose((0,2,1))
-    
 
-    # Assign new C,T 
+
+    # Assign new C,T
     #
     # C(coord,(-1,-1))--T(coord,(0,-1))-- => C^new(coord+(1,0),(-1,-1))--
     # |________   ______|                    |
@@ -440,8 +448,8 @@ def absorb_truncate_CTM_MOVE_LEFT_c(*tensors):
     # T(coord,(-1,0))--A(coord)--            T^new(coord+(1,0),(-1,0))--
     # |________   _____|                     |
     #          Pt2
-    #          |                     
-    #          
+    #          |
+    #
     #          |
     #  ________P2_______
     # |                 |                    |
@@ -478,17 +486,17 @@ def absorb_truncate_CTM_MOVE_DOWN_c(*tensors):
 
     # 1->0               <=> 1->0(+1)
     # T1--2 1--              C1T1--0(-1)(+1)0--Pt1--1(-1)
-    # |        |        
+    # |        |
     # |        Pt1--2->1
     # |        |
     # C1--0 0--
     nC1 = contract(nC1, Pt1, ([0],[0]))
 
-    #    1<-0  <=>          (+1)1  
+    #    1<-0  <=>          (+1)1
     # 2<-1--T2     (+1)(0<-02)--C2T2
     #       2
     #       0
-    # 0<-1--C2     
+    # 0<-1--C2
     nC2 = contract(C2, T2,([0],[2]))
     nC2 = nC2.fuse_legs( axes=((0,2),1) )
 
@@ -496,13 +504,13 @@ def absorb_truncate_CTM_MOVE_DOWN_c(*tensors):
     #        --1 2--T2     (+1)1--P2--0(-1)(+1)0--C2T2
     #       |       |
     # 1<-2--P2      |
-    #       |       | 
+    #       |       |
     #        --0 0--C2
     nC2 = contract(nC2, P2, ([0],[0]))
 
     #        --1->0         <=>                                    --1(-1)
     #       |                                                     |
-    # 1<-2--P1                  (+1)1--P1--0(-1) => (+1)2<-1--P1--|  
+    # 1<-2--P1                  (+1)1--P1--0(-1) => (+1)2<-1--P1--|
     #       |       0->2                                          |              0->2(+1)
     #        --0 1--T--2->3                                        --0(-1)(+1)1--T--2->3(-1)
     P1= P1.unfuse_legs(axes=0)
@@ -518,23 +526,23 @@ def absorb_truncate_CTM_MOVE_DOWN_c(*tensors):
     nT = nT.fuse_legs( axes=(0,(1,3),2) )
 
     #                2->1(+1)
-    #         -------A-- 
+    #         -------A--
     #        |       |  |
     # (+1)0--P1      |  |--1(-1)(+1)0--Pt2--1->2(-1)
     #        |       |  |
     #         -------T--
     nT = contract(nT, Pt2,([1],[0]))
     nT = nT.transpose((1,0,2))
-    
+
 
     # Assign new C,T
-    # 
+    #
     # |                                 |                              |
     # T(coord,(-1,0))--               --A(coord)--------             --T(coord,(1,0))
     # |                Pt1--      --P1  |               Pt2--    --P2  |
     # C(coord,(-1,1))--               --T(coord,(0,1))--             --C(coord,(1,1))
     #
-    # =>                            
+    # =>
     #
     # |                                 |                              |
     # C^new(coord+(0,-1),(-1,1))--    --T^new(coord+(0,-1),(0,1))--  --C^new(coord+(0,-1),(1,1))
@@ -548,7 +556,7 @@ def absorb_truncate_CTM_MOVE_RIGHT(coord, state, env, P, Pt, verbosity=0):
     tensors= env.C[(coord,(1,1))], env.T[(coord,(0,1))], env.T[(coord,(1,0))], \
         env.T[(coord,(0,-1))], env.C[(coord,(1,-1))], state.site(coord), \
         P[coord], Pt[coord], P[coord_shift_down], Pt[coord_shift_down]
- 
+
     if cfg.ctm_args.fwd_checkpoint_absorb:
         # return checkpoint(absorb_truncate_CTM_MOVE_RIGHT_c,*tensors)
         raise RuntimeError("Checkpointing not implemented")
@@ -560,20 +568,20 @@ def absorb_truncate_CTM_MOVE_RIGHT_c(*tensors):
     # Move: RIGHT  (+1)0--P--1(-1)
     #              (-1)0--Pt--1(+1)
 
-    #       0->1     0        (+1)(0<-01)    
+    #       0->1     0        (+1)(0<-01)
     # 2<-1--T1--2 1--C1 <=> (+1)1<-2--C1T1
     nC1= contract(C1, T1,([1],[2]))
-    nC1= nC1.fuse_legs( axes=((0,1),2) ) 
+    nC1= nC1.fuse_legs( axes=((0,1),2) )
 
     #          2->0      (+1)0<-1
     #        __Pt1_             Pt1
     #       1     0         (-1)0
-    #       1     0         (+1)0  
+    #       1     0         (+1)0
     # 1<-2--T1----C1 <=> (+1)1--C1T1
     nC1= contract(Pt1, nC1,([0],[0]))
 
     # 1<-0--T2--2 0--C2 <=>  (+1)1--C2T2
-    #    2<-1     0<-1      (-1)(0<-02) 
+    #    2<-1     0<-1      (-1)(0<-02)
     nC2= contract(C2,T2,([0],[2]))
     nC2= nC2.fuse_legs( axes=((0,2),1) )
 
@@ -593,12 +601,12 @@ def absorb_truncate_CTM_MOVE_RIGHT_c(*tensors):
     Pt2= Pt2.unfuse_legs(axes=0)
     nT= contract(Pt2, T,([0],[0]))
 
-    #       (+1)0<-1        =>        (+1)0  
+    #       (+1)0<-1        =>        (+1)0
     #           ___Pt2____             ___Pt2___
     #           0         |    (+1)2--A        T
-    #           0         |            \______/ 
+    #           0         |            \______/
     # (+1)2<-1--A--3 2----T           (-1)1
-    #    (+1)3<-2  (-1)1<-3 
+    #    (+1)3<-2  (-1)1<-3
     nT= contract(nT, A,([0,2],[0,3]))
     nT= nT.fuse_legs( axes=(0,(1,3),2) )
 
@@ -606,15 +614,15 @@ def absorb_truncate_CTM_MOVE_RIGHT_c(*tensors):
     #       ___Pt2__                  ___Pt2___
     #       |       |       (+1)1<-2--A       T
     #       |       |                  \_____/
-    # 1<-2--A-------T                (-1)1 
-    #       3       1                (+1)0        
+    # 1<-2--A-------T                (-1)1
+    #       3       1                (+1)0
     #       1       0                    P1
     #       |___P1__|             (-1)2<-1
-    #           2 
+    #           2
     nT= contract(nT, P1,([1],[0]))
-    
-    
-    # Assign new C,T 
+
+
+    # Assign new C,T
     #
     # --T(coord,(0,-1))--C(coord,(1,-1)) =>--C^new(coord+(-1,0),(1,-1))
     #   |______  ________|                   |
@@ -627,8 +635,8 @@ def absorb_truncate_CTM_MOVE_RIGHT_c(*tensors):
     # --A(coord)--T(coord,(1,0))           --T^new(coord+(-1,0),(1,0))
     #   |______  _|                          |
     #          P1
-    #          |                     
-    #          
+    #          |
+    #
     #          |
     #    ______Pt1______
     #   |               |                    |

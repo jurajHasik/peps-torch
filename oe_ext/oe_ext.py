@@ -85,7 +85,7 @@ def _log_input_mem_size(shapes : tuple[tuple[int]],names=None,who=None,**kwargs)
     # log the total size (memory footprint) of tensors entering contraction
     if kwargs.get("verbosity",1):
         if names:
-            assert len(names) == len(shapes),"Number of names has to match number of operands"    
+            assert len(names) == len(shapes),"Number of names has to match number of operands"
             in_mem_list=", ".join(f"{n} {t} {np.asarray(t).prod()}" for n, t in zip(names, shapes))
         else:
             in_mem_list=", ".join(f"{n} {t} {np.asarray(t).prod()}" for n, t in enumerate(shapes))
@@ -416,7 +416,7 @@ def contract_with_unroll_compute_constants(*args, **kwargs):
         # force evaluation of all constants
         _contract_unroll_loop_body.evaluate_constants(backend=oe_backend)
         _expr_const_ts= _contract_unroll_loop_body._evaluated_constants[oe_backend]
-        
+
         def _contract_unroll_loop_body_checkpointed(*args):
             # reassign constants so the checkpointed evaluation preserves gradient flow
             count,j=0,-1
@@ -432,7 +432,7 @@ def contract_with_unroll_compute_constants(*args, **kwargs):
             # get handle of evaluated constant tensors
             c_args= tuple(t for t in _expr_const_ts if not (t is None))
             joint_args= args+c_args
-            return checkpoint(_contract_unroll_loop_body_checkpointed, *joint_args)    
+            return checkpoint(_contract_unroll_loop_body_checkpointed, *joint_args)
 
     # assign shape to each index label
     i_to_s = {
@@ -559,7 +559,7 @@ def contract_with_unroll(*args, **kwargs):
     else:
         # Build operands, passing opt_einsum's Shaped (just shapes) for both constants and rest of the ops
         shapes_and_constant_ops = tuple(
-            shape_only(tuple(i for i in shapes[idx] if i > 0)) 
+            shape_only(tuple(i for i in shapes[idx] if i > 0))
             for idx, t in enumerate(args[0 : 2 * (len(args) // 2) : 2])
         )
 
@@ -705,7 +705,7 @@ def HIGHER_PEAK_MEM_contract_with_unroll(*args, **kwargs):
     else:
         # Build operands, passing opt_einsum's Shaped (just shapes) for both constants and rest of the ops
         shapes_and_constant_ops = tuple(
-            shape_only(tuple(i for i in shapes[idx] if i > 0)) 
+            shape_only(tuple(i for i in shapes[idx] if i > 0))
             for idx, t in enumerate(args[0 : 2 * (len(args) // 2) : 2])
         )
 
@@ -847,7 +847,7 @@ def contract_with_unroll_legacy(*args, **kwargs):
         ig_contracted_unrolled = tuple(ui_map[i] for i in unroll if not (i in args[-1]))
 
         partials[ig_out + ig_contracted_unrolled]= oe.contract(*unrolled_args, **kwargs)
-        
+
 
     result = torch.einsum(
         partials, tuple(args[-1]) + ig_out_contracted_unrolled, args[-1]

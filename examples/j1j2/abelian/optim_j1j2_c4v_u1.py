@@ -28,7 +28,7 @@ parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of trans
 parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
     "of transfer operator to compute")
 parser.add_argument("--force_cpu", action='store_true', help="evaluate energy on cpu")
-parser.add_argument("--yast_backend", type=str, default='torch', 
+parser.add_argument("--yast_backend", type=str, default='torch',
     help="YAST backend", choices=['torch','torch_cpp'])
 args, unknown_args = parser.parse_known_args()
 
@@ -65,7 +65,7 @@ def main():
             +str(args.ipeps_init_type)+" is not supported")
 
     print(state)
-    
+
     @torch.no_grad()
     def ctmrg_conv_f(state, env, history, ctm_args=cfg.ctm_args):
         if not history:
@@ -86,8 +86,8 @@ def main():
 
     ctm_env= ENV_C4V_ABELIAN(args.chi, state=state, init=True)
     print(ctm_env)
-    
-    # 4) (optional) compute observables as given by initial environment 
+
+    # 4) (optional) compute observables as given by initial environment
     e_curr0= energy_f(state, ctm_env, force_cpu=args.force_cpu)
     obs_values0, obs_labels = model.eval_obs(state,ctm_env,force_cpu=args.force_cpu)
     print(", ".join(["epoch","energy"]+obs_labels))
@@ -110,9 +110,9 @@ def main():
             init_env(state_sym, ctm_env_in)
 
         # 1) compute environment by CTMRG
-        ctm_env_out, *ctm_log= ctmrg_c4v.run(state_sym, ctm_env_in, 
+        ctm_env_out, *ctm_log= ctmrg_c4v.run(state_sym, ctm_env_in,
             conv_check=ctmrg_conv_f, ctm_args=ctm_args)
-        
+
         # 2) evaluate loss with converged environment
         loss0 = energy_f(state_sym, ctm_env_out, force_cpu=args.force_cpu)
 
@@ -209,7 +209,7 @@ class TestCheckpoint_j1j2_c4v_u1_state(unittest.TestCase):
 
         # i) run optimization and store the optimization data
         args.opt_max_iter= 10
-        with patch('sys.stdout', new = StringIO()) as tmp_out: 
+        with patch('sys.stdout', new = StringIO()) as tmp_out:
             main()
         tmp_out.seek(0)
 
@@ -222,7 +222,7 @@ class TestCheckpoint_j1j2_c4v_u1_state(unittest.TestCase):
             if OPT_OBS and not OPT_OBS_DONE and l.rstrip()=="": OPT_OBS_DONE= True
             if OPT_OBS and not OPT_OBS_DONE and len(l.split(','))>2:
                 obs_opt_lines.append(l)
-            if "epoch, energy," in l and not OPT_OBS_DONE: 
+            if "epoch, energy," in l and not OPT_OBS_DONE:
                 OPT_OBS= True
             l= tmp_out.readline()
         assert len(obs_opt_lines)>0
@@ -230,12 +230,12 @@ class TestCheckpoint_j1j2_c4v_u1_state(unittest.TestCase):
         # ii) run optimization for 3 steps
         args.opt_max_iter= 3
         main()
-        
+
         # iii) run optimization from checkpoint
         args.instate=None
         args.opt_resume= self.OUT_PRFX+"_checkpoint.p"
         args.opt_max_iter= 7
-        with patch('sys.stdout', new = StringIO()) as tmp_out: 
+        with patch('sys.stdout', new = StringIO()) as tmp_out:
             main()
         tmp_out.seek(0)
 
@@ -247,19 +247,19 @@ class TestCheckpoint_j1j2_c4v_u1_state(unittest.TestCase):
             if OPT_OBS and not OPT_OBS_DONE and l.rstrip()=="": OPT_OBS_DONE= True
             if OPT_OBS and not OPT_OBS_DONE and len(l.split(','))>2:
                 obs_opt_lines_chk.append(l)
-            if "checkpoint.loss" in l and not OPT_OBS_DONE: 
+            if "checkpoint.loss" in l and not OPT_OBS_DONE:
                 OPT_OBS= True
             l= tmp_out.readline()
         assert len(obs_opt_lines_chk)>0
 
-        # compare initial observables from checkpointed optimization (iii) and the observables 
+        # compare initial observables from checkpointed optimization (iii) and the observables
         # from original optimization (i) at one step after total number of steps done in (ii)
         opt_line_iii= [float(x) for x in obs_opt_lines_chk[0].split(",")[1:]]
         opt_line_i= [float(x) for x in obs_opt_lines[4].split(",")[1:]]
         for val3,val1 in zip(opt_line_iii, opt_line_i):
             assert isclose(val3,val1, rel_tol=self.tol, abs_tol=self.tol)
 
-        # compare final observables from optimization (i) and the final observables 
+        # compare final observables from optimization (i) and the final observables
         # from the checkpointed optimization (iii)
         fobs_tokens_1= [float(x) for x in obs_opt_lines[-1].split(",")[1:]]
         fobs_tokens_3= [float(x) for x in obs_opt_lines_chk[-1].split(",")[1:]]
