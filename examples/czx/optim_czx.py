@@ -1,4 +1,5 @@
 
+import unittest
 import context
 import torch
 import config as cfg
@@ -222,3 +223,32 @@ if __name__=='__main__':
         print("args not recognized: "+str(unknown_args))
         raise Exception("Unknown command line arguments")
     main()
+
+
+class TestCZX(unittest.TestCase):
+    def setUp(self):
+        args.CTMARGS_ctm_env_init_type= "PROD"
+        args.CTMARGS_ctm_force_dl= True
+        cfg.configure(args)
+
+    # basic tests
+    def test_ctmrg_norm(self):
+        # Create iPEPS with single double-layer tensor from A_czx
+        Aczx = A_czx()
+        state = IPEPS(sites={(0, 0): torch.einsum('puldr,pULDR->uUlLdDrR', Aczx, Aczx.conj()).reshape([4**2,]*4)})
+
+        # Create and initialize CTM environment
+        chi = 16
+        ctm_env = ENV(chi, state)
+        init_env(state, ctm_env)
+
+        # Run CTMRG
+        ctm_env_out, *ctm_log = ctmrg.run(
+            state,
+            ctm_env,
+            conv_check=ctmrg_conv_specC,
+            ctm_args=cfg.ctm_args
+        )
+
+        assert tuple(ctm_env_out.T[(0, 0),(-1,0)].shape) == (chi, chi, 4**2)
+        assert tuple(ctm_env_out.T[(0, 0),(1,0)].shape) == (chi,  4**2, chi)
