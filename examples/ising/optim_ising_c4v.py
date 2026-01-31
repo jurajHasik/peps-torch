@@ -27,6 +27,19 @@ parser.add_argument("--top_n", type=int, default=2, help="number of leading eige
     "of transfer operator to compute")
 args, unknown_args = parser.parse_known_args()
 
+def _to_json(l):
+    re=[l[i,0].item() for i in range(l.size()[0])]
+    im=[l[i,1].item() for i in range(l.size()[0])]
+    return dict({"re": re, "im": im})
+
+def get_transferops(state, env, coord_dir_pairs=[((0,0), (1,0))], top_n=2):
+    for c,d in coord_dir_pairs:
+        # transfer operator spectrum
+        print(f"TOP spectrum(T)[{c},{d}] ",end="")
+        l= transferops_c4v.get_Top_spec_c4v(args.top_n, state, env)
+        print("TOP "+json.dumps(_to_json(l)))
+
+
 def main():
     cfg.configure(args)
     cfg.print_config()
@@ -97,6 +110,10 @@ def main():
     obs_values, obs_labels= model.eval_obs(state_sym,ctm_env)
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{loss}"]+[f"{v}" for v in obs_values]))
+    if args.top_freq>0:
+        get_transferops(state_sym, ctm_env, top_n=args.top_n)
+    if args.opt_max_iter<1:
+        return
 
     def loss_fn(state, ctm_env_in, opt_context):
         ctm_args= opt_context["ctm_args"]
@@ -117,11 +134,6 @@ def main():
         
         return (loss, ctm_env_out, *ctm_log)
 
-    def _to_json(l):
-        re=[l[i,0].item() for i in range(l.size()[0])]
-        im=[l[i,1].item() for i in range(l.size()[0])]
-        return dict({"re": re, "im": im})
-
     @torch.no_grad()
     def obs_fn(state, ctm_env, opt_context):
         if ("line_search" in opt_context.keys() and not opt_context["line_search"]) \
@@ -134,12 +146,7 @@ def main():
                 + [f"{state.site().norm()}"]))
 
             if args.top_freq>0 and epoch%args.top_freq==0:
-                coord_dir_pairs=[((0,0), (1,0))]
-                for c,d in coord_dir_pairs:
-                    # transfer operator spectrum
-                    print(f"TOP spectrum(T)[{c},{d}] ",end="")
-                    l= transferops_c4v.get_Top_spec_c4v(args.top_n, state_sym, ctm_env)
-                    print("TOP "+json.dumps(_to_json(l)))
+                get_transferops(state_sym, ctm_env, top_n=args.top_n)
 
     # optimize
     optimize_state(state, ctm_env, loss_fn, obs_fn=obs_fn)
