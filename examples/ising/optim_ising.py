@@ -4,7 +4,7 @@ import argparse
 import config as cfg
 from ipeps.ipeps import *
 from ctm.generic.env import *
-from ctm.generic import ctmrg
+from ctm.generic import ctmrg, transferops
 from models import ising
 from optim.ad_optim_lbfgs_mod import optimize_state
 import unittest
@@ -16,7 +16,21 @@ parser= cfg.get_args_parser()
 # additional model-dependent arguments
 parser.add_argument("--hx", type=float, default=0., help="transverse field")
 parser.add_argument("--q", type=float, default=0., help="next nearest-neighbour coupling")
+parser.add_argument("--top_freq", type=int, default=-1, help="freuqency of transfer operator spectrum evaluation")
+parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"+
+    "of transfer operator to compute")
 args, unknown_args = parser.parse_known_args()
+
+def _to_json(l):
+    re=[l[i,0].item() for i in range(l.size()[0])]
+    im=[l[i,1].item() for i in range(l.size()[0])]
+    return dict({"re": re, "im": im})
+
+def get_transferops(state,env,coord_dir_pairs=[((0,0), (1,0)), ((0,0), (0,1))],top_n=2):
+    for c,d in coord_dir_pairs:
+        print(f"TOP spectrum(T)[{c},{d}] ",end="")
+        l= transferops.get_Top_spec(top_n, c, d, state, env)
+        print("TOP "+json.dumps(_to_json(l)))
 
 def main():
     cfg.configure(args)
@@ -73,6 +87,10 @@ def main():
     obs_values, obs_labels = model.eval_obs(state,ctm_env)
     print(", ".join(["epoch","energy"]+obs_labels))
     print(", ".join([f"{-1}",f"{loss0}"]+[f"{v}" for v in obs_values]))
+    if args.top_freq>0:
+        get_transferops(state, ctm_env, top_n=args.top_n)
+    if args.opt_max_iter<1:
+        return
 
     def loss_fn(state, ctm_env_in, opt_context):
         # possibly re-initialize the environment
@@ -91,6 +109,10 @@ def main():
         loss= opt_context["loss_history"]["loss"][-1]
         obs_values, obs_labels = model.eval_obs(state,ctm_env)
         print(", ".join([f"{epoch}",f"{loss}"]+[f"{v}" for v in obs_values]))
+        
+        # transfer operator spectrum (optional)
+        if args.top_freq>0 and epoch%args.top_freq==0:
+            get_transferops(state, ctm_env, top_n=args.top_n)
 
     # optimize
     optimize_state(state, ctm_env, loss_fn, obs_fn=obs_fn)

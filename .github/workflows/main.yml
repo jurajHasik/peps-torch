@@ -106,10 +106,15 @@ jobs:
         run: |
           $CONDA/bin/python -m pytest examples/kagome/ctmrg_*.py
           $CONDA/bin/python -m pytest examples/kagome/optim_*.py
+
       - name: test kagome abelian
         run: |
           $CONDA/bin/python -m pytest examples/kagome/abelian/ctmrg_*.py
           $CONDA/bin/python -m pytest examples/kagome/abelian/optim_*.py
+      
+      - name: test czx
+        run: |
+          $CONDA/bin/python -m pytest examples/czx/optim_*.py
 
   # This workflow contains a single job called "build"
   test-experimental:
@@ -123,7 +128,7 @@ jobs:
     strategy:
       matrix:
         python_v: [ "3.12", ] #"3.9", "3.10", "3.11"
-        pytorch_v: [ 2.0, 2.6, ] # 2.0
+        pytorch_v: [ 2.6, 2.10, ] # 2.0
         opt_einsum_v: [ "3.3.0", "3.4.0"]
         primme_v: ["3.2.3"]
         # exclude:

@@ -2,7 +2,7 @@ import time
 from typing import Callable
 
 import config as cfg
-from yastn.yastn.tn.fpeps import EnvCTM, EnvCTM_c4v, RectangularUnitcell
+from yastn.yastn.tn.fpeps import EnvCTM, EnvCTM_c4v, RectangularUnitcell, Site
 
 from ipeps.integration_yastn import PepsAD
 from ctm.generic_abelian.env_abelian import ENV_ABELIAN

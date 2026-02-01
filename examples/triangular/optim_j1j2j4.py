@@ -13,8 +13,7 @@ from ipeps.integration_yastn import PepsAD
 from ctm.generic.env_yastn import from_yastn_env_generic, from_env_generic_dense_to_yastn, \
     YASTN_ENV_INIT, YASTN_PROJ_METHOD
 from yastn.yastn.tn.fpeps import EnvCTM
-from yastn.yastn.tn.fpeps.envs._env_ctm import ctm_conv_corner_spec
-from yastn.yastn.tn.fpeps.envs.fixed_pt import refill_env, fp_ctmrg
+from yastn.yastn.tn.fpeps.envs.fixed_pt import fp_ctmrg
 from yastn.yastn.tn.fpeps._peps import Peps2Layers
 # from optim.ad_optim import optimize_state
 from optim.ad_optim_lbfgs_mod import optimize_state
@@ -231,7 +230,7 @@ def main():
         opt_args= opt_context["opt_args"]
 
         # 2. convert to YASTN's iPEPS
-        state_yastn= PepsAD.from_pt(state)
+        state_yastn= PepsAD.from_pt(state).to_Peps()
 
         # 3. proceed with YASTN's CTMRG implementation
         # 3.1 possibly re-initialize the environment
@@ -265,13 +264,12 @@ def main():
             'verbosity': ctm_args.verbosity_projectors
         }
 
-        ctm_env_out, env_ts_slices, env_ts = fp_ctmrg(ctm_env_in, \
+        ctm_env_out= fp_ctmrg(ctm_env_in, \
             ctm_opts_fwd= {'opts_svd': options_svd, 'corner_tol': ctm_args.ctm_conv_tol, 'max_sweeps': ctm_args.ctm_max_iter, \
                 'method': "2site", 'use_qr': False,
                 'checkpoint_move': 'reentrant' if ctm_args.fwd_checkpoint_move==True else ctm_args.fwd_checkpoint_move,
                 },
             ctm_opts_fp= {'opts_svd': {'policy': 'fullrank'}, 'verbosity': 3,})
-        refill_env(ctm_env_out, env_ts, env_ts_slices)
 
         # 3.3 convert environment to peps-torch format
         env_pt= from_yastn_env_generic(ctm_env_out, vertexToSite=state.vertexToSite)

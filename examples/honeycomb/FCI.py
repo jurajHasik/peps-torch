@@ -51,7 +51,14 @@ parser.add_argument("--m", type=float, default=0.0, help="Semenoff mass")
 parser.add_argument("--eval_loss", action='store_true')
 parser.add_argument("--devices", help='cpu or (list of) cuda. Default is cpu', default=None, dest='devices', nargs="+")
 parser.add_argument("--sym", choices=['U1', 'Z2'], default='U1', help="Symmetry of the tensors")
-
+parser.add_argument("--bond_dims", type=parse_dict, help="dict of bond dimensions keyed on charge sectors  (e.g., \"{'charge1': 'D1', 'charge2': D2}\")")
+parser.add_argument(
+    "--yast_backend",
+    type=str,
+    default="torch",
+    help="YAST backend",
+    choices=["torch", "torch_cpp"],
+)
 
 def parse_dict(input_string):
     try:
@@ -64,15 +71,6 @@ def parse_dict(input_string):
     except Exception as e:
         raise argparse.ArgumentTypeError(f"Invalid dictionary format: {e}")
 
-parser.add_argument("--bond_dims", type=parse_dict, help="dict of bond dimensions keyed on charge sectors  (e.g., \"{'charge1': 'D1', 'charge2': D2}\")")
-
-parser.add_argument(
-    "--yast_backend",
-    type=str,
-    default="torch",
-    help="YAST backend",
-    choices=["torch", "torch_cpp"],
-)
 
 def main():
     # global args

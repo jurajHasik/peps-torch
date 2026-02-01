@@ -3,8 +3,7 @@ import warnings
 import copy
 from typing import NamedTuple
 import config as cfg
-import yastn.yastn as yastn
-from yastn.yastn import split_data_and_meta, combine_data_and_meta
+from yastn.yastn import split_data_and_meta, combine_data_and_meta, from_dict
 from ipeps.ipeps_abelian import IPEPS_ABELIAN, _fused_dl_site
 from ctm.generic_abelian.env_abelian import ENV_ABELIAN
 from ctm.generic_abelian.ctm_components import *
@@ -128,10 +127,7 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
     # keep inputs for autograd stored on cpu, move to gpu for the core
     # of the computation if desired
     metadata_store= {}
-    # tmp= tuple(state.sites[key].compress_to_1d() for key in state.sites.keys()) \
-    #     + tuple(env.C[key].compress_to_1d() for key in env.C.keys()) \
-    #     + tuple(env.T[key].compress_to_1d() for key in env.T.keys())
-    tmp= tuple(split_data_and_meta(state.sites[key].to_dict(level=0)) for key in state.sites.keys()) \
+    tmp= tuple( split_data_and_meta(state.sites[key].to_dict(level=0)) for key in state.sites.keys()) \
         + tuple(split_data_and_meta(env.C[key].to_dict(level=0)) for key in env.C.keys()) \
         + tuple(split_data_and_meta(env.T[key].to_dict(level=0)) for key in env.T.keys())
     # 1) split into raw 1D tensors and metadata
@@ -166,8 +162,8 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
                 meta['config']= meta['config']._replace(default_device=global_args.offload_to_gpu)
             # TODO we assume that configs of all tensors are identical
             _loc_engine= metadata_store["in"][0]["config"]
-
-        tensors= tuple(yastn.from_dict(combine_data_and_meta(r1d, meta)) \
+        
+        tensors= tuple( from_dict(combine_data_and_meta(r1d, meta)) \
             for r1d,meta in zip(tensors,metadata_store["in"]))
 
         # 1) wrap raw tensors back into IPEPS and ENV classes
@@ -210,10 +206,6 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
             nC1[c], nC2[c], nT[c]= move_normalize_c(nC1[c], nC2[c], nT[c])
 
         # 2) Return raw new tensors
-        # tmp_loc= tuple(nC1[key].compress_to_1d() for key in nC1.keys()) \
-        #     + tuple(nC2[key].compress_to_1d() for key in nC2.keys()) \
-        #     + tuple(nT[key].compress_to_1d() for key in nT.keys())
-
         tmp_loc= tuple(split_data_and_meta(nC1[key].to_dict(level=0)) for key in nC1.keys()) \
             + tuple(split_data_and_meta(nC2[key].to_dict(level=0)) for key in nC2.keys()) \
             + tuple(split_data_and_meta(nT[key].to_dict(level=0)) for key in nT.keys())
@@ -232,8 +224,8 @@ def ctm_MOVE(direction, state, env, ctm_args=cfg.ctm_args, global_args=cfg.globa
         new_tensors= checkpoint(ctm_MOVE_c,*tensors)
     else:
         new_tensors= ctm_MOVE_c(*tensors)
-
-    new_tensors= tuple(yastn.from_dict(combine_data_and_meta(r1d, meta)) \
+    
+    new_tensors= tuple( from_dict(combine_data_and_meta(r1d, meta)) \
             for r1d,meta in zip(new_tensors,metadata_store["out"]))
 
     # 3) warp the returned raw tensor in dictionary

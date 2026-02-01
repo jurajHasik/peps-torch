@@ -16,7 +16,6 @@ import time
 from ctm.generic.env_yastn import ctmrg, YASTN_ENV_INIT, YASTN_PROJ_METHOD
 from ctm.generic_abelian.env_yastn import *
 from yastn.yastn.tn.fpeps import EnvCTM, EnvCTM_c4v
-from yastn.yastn.tn.fpeps.envs._env_ctm import ctm_conv_corner_spec
 from yastn.yastn.tn.fpeps.envs.rdm import rdm1x2
 from yastn.yastn.tn.fpeps.envs.fixed_pt import fp_ctmrg
 from yastn.yastn.tn.fpeps.envs.fixed_pt_c4v import fp_ctmrg_c4v
@@ -128,7 +127,7 @@ def main():
     # 2) convergence criterion based spectra of corner tensors
     @torch.no_grad()
     def yastn_ctm_conv_check_cspec(env,history,corner_tol):
-        converged,max_dsv,history= ctm_conv_corner_spec(env,history,corner_tol)
+        converged,max_dsv,history= env.ctm_conv_corner_spec(history,corner_tol)
         # logging ?
         # C= history[0][((0,0),'tl')]
         # print(f"{max_dsv}" + str([f"{b} {C[b].shape[0]}" for b in C.get_blocks_charge() ]))
@@ -299,7 +298,7 @@ def main():
                 options_svd_pre_init.update({"policy": "block_arnoldi",})
                 ctm_env_in, converged, conv_history, t_ctm, t_check= ctmrg(ctm_env_in, leg_charge_conv_check, options_svd_pre_init,
                     max_sweeps= ctm_args.fpcm_init_iter,
-                    method="default",
+                    method="2x2",
                     checkpoint_move=False
                     )
         else:
@@ -308,7 +307,7 @@ def main():
         # 3.2.2 run CTMRG
         ctm_env_out, converged, conv_history, t_ctm, t_check= ctmrg(ctm_env_in, _ctm_conv_f,  options_svd,
                     max_sweeps=ctm_args.ctm_max_iter,
-                    method="default",
+                    method="1x2" if options_svd['policy'].lower()=="qr" else "2x2",
                     checkpoint_move=ctm_args.fwd_checkpoint_move
                     )
         print(f"t_ctm: {t_ctm:.1f}s")
@@ -355,7 +354,7 @@ def main():
                 ctm_env_in, converged, conv_history, t_ctm, t_check= ctmrg(ctm_env_in, lambda _0,_1: (False, None),
                     options_svd_pre_init,
                     max_sweeps= 20,
-                    method="default",
+                    method="2x2",
                     checkpoint_move=False
                 )
         else:
@@ -373,7 +372,7 @@ def main():
                 ctm_env_in, converged, conv_history, t_ctm, t_check= ctmrg(ctm_env_in, leg_charge_conv_check,
                     options_svd_pre_init,
                     max_sweeps= ctm_args.fpcm_init_iter,
-                    method="default",
+                    method="2x2",
                     checkpoint_move=False
                 )
             log.log(logging.INFO, f"WARM-UP: Number of ctm steps: {len(conv_history):d}, t_warm_up: {t_ctm}s")
@@ -388,7 +387,7 @@ def main():
             }
         ctm_env_out = fp_ctmrg_c4v(ctm_env_in, \
             ctm_opts_fwd= {'opts_svd': options_svd, 'corner_tol': ctm_args.ctm_conv_tol, 'max_sweeps': ctm_args.ctm_max_iter, \
-                'method': "default"}, \
+                'method': "1x2" if options_svd['policy'].lower()=="qr" else "2x2",}, \
             ctm_opts_fp= {'opts_svd': {"policy": "fullrank"}})
 
         # 3.3 convert environment to peps-torch format

@@ -218,6 +218,8 @@ class GLOBALARGS():
         self.torch_dtype= torch.float64
         self.device= 'cpu'
         self.offload_to_gpu= 'None'
+        self.oe_backend= 'torch'
+        self.oe_cuquantum_slicing= False
         self.cuda_mem_profile= False
         self.oe_backend = 'torch'
         self.verbosity_oe= 0

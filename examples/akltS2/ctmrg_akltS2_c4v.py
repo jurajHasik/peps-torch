@@ -1,4 +1,5 @@
 import context
+from ctm.one_site_c4v import transferops_c4v
 import torch
 import argparse
 import config as cfg
@@ -17,6 +18,9 @@ parser= cfg.get_args_parser()
 # additional model-dependent arguments
 # additional observables-related arguments
 parser.add_argument("--corrf_r", type=int, default=1, help="maximal correlation function distance")
+parser.add_argument("--top_n", type=int, default=2, help="number of leading eigenvalues"
+    + "of transfer operator to compute")
+parser.add_argument("--top2", action='store_true', help="compute transfer matrix for width-2 channel")
 args, unknown_args = parser.parse_known_args()
 
 def main():
@@ -113,6 +117,20 @@ def main():
     u,s,v= torch.svd(ctm_env_init.C[ctm_env_init.keyC], compute_uv=False)
     for i in range(args.chi):
         print(f"{i} {s[i]}")
+
+    # transfer operator spectrum
+    print("\n\nspectrum(T)")
+    l= transferops_c4v.get_Top_spec_c4v(args.top_n, state, ctm_env_init)
+    for i in range(l.size()[0]):
+        print(f"{i} {l[i,0]} {l[i,1]}")
+
+    # transfer operator spectrum
+    if args.top2:
+        print("\n\nspectrum(T2)")
+        l= transferops_c4v.get_Top2_spec_c4v(args.top_n, state, ctm_env_init)
+        for i in range(l.size()[0]):
+            print(f"{i} {l[i,0]} {l[i,1]}")
+
 
 if __name__=='__main__':
     if len(unknown_args)>0:

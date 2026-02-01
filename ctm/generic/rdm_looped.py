@@ -507,7 +507,7 @@ def rdm2x3_loop_trglringex_manual(coord, state, env, sym_pos_def=False, checkpoi
     return rdm
 
 def rdm2x3_loop_oe(coord, state, env, open_sites=[0,1,2,3,4,5], unroll=True,\
-    sym_pos_def=False, force_cpu=False, dtype=None, checkpoint_unrolled=False,
+    sym_pos_def=False, force_cpu=False, dtype=None, checkpoint_unrolled=False, 
     checkpoint_on_device=False, ctm_args=cfg.ctm_args, global_args=cfg.global_args,verbosity=0,**kwargs):
     r"""
     :param coord: vertex (x,y) specifies top left site of 2x3 subsystem
@@ -1339,7 +1339,7 @@ def rdm3x2_loop_oe_semimanual(coord, state, env, open_sites=[0,1,2,3,4,5], unrol
     return res
 
 def rdm3x2_loop_oe(coord, state, env, open_sites=[0,1,2,3,4,5], unroll=True,\
-    sym_pos_def=False, force_cpu=False, dtype=None, checkpoint_unrolled=False,
+    sym_pos_def=False, force_cpu=False, dtype=None, checkpoint_unrolled=False, 
     checkpoint_on_device=False, ctm_args=cfg.ctm_args, global_args=cfg.global_args,verbosity=0,**kwargs):
     r"""
     :param coord: vertex (x,y) specifies top left site of 3x2 subsystem

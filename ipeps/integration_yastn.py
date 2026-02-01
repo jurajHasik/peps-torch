@@ -5,9 +5,8 @@ import torch
 from ipeps.tensor_io import NumPy_Encoder
 from ipeps.ipeps import IPEPS
 from ipeps.ipeps_abelian import IPEPS_ABELIAN
-import yastn.yastn as yastn
 from yastn.yastn.backend import backend_torch
-from yastn.yastn import Tensor, load_from_dict, save_to_dict
+from yastn.yastn import Tensor, load_from_dict, save_to_dict, make_config
 from yastn.yastn.tn.fpeps import Peps, RectangularUnitcell
 from yastn.yastn.tn.fpeps._geometry import LATTICE_CLASSES
 import config as cfg
@@ -50,14 +49,6 @@ class PepsAD(Peps):
         super().__init__(geometry=geometry,tensors=None)
         self.sync_()
 
-    def to_Peps(self) -> Peps:
-        r"""
-        :return: underlying Peps state
-        :rtype: Peps
-
-        Returns the underlying Peps state with on-site tensors built from parameters.
-        """
-        return Peps(geometry=self.geometry, tensors={site: self[site] for site in self.sites()})
 
     def sync_(self):
         r"""
@@ -84,7 +75,18 @@ class PepsAD(Peps):
         self.parameters = apply_and_copy(self.parameters, norm)
         self.sync_()
 
-    def add_noise_(self, noise : float =0.1):
+    def to_Peps(self) -> Peps:
+        r"""
+        :return: YASTN's Peps state
+        :rtype: Peps
+
+        Converts PepsAD to YASTN's Peps by invoking sync_ to build on-site tensors from parameters.
+        """
+        self.sync_()
+        return Peps(geometry=self.geometry, tensors= {site: self[site] for site in self.sites()})
+
+
+    def add_noise_(self, noise : float =1.0):
         r"""
         Add random noise with magnitude ``noise`` to parameters.
         """
@@ -209,13 +211,13 @@ class PepsAD(Peps):
         if isinstance(state, IPEPS_ABELIAN):
             parameters= { c: state.site((c[1], c[0])).transpose(axes=(1,2,3,4,0)) for c in geometry.sites() }
         elif isinstance(state, IPEPS):
-            yastn_cfg_nosym= yastn.make_config(
+            yastn_cfg_nosym= make_config(
                 backend= backend_torch,
                 default_dtype= dict(zip(backend_torch.DTYPE.values(), backend_torch.DTYPE.keys()))[state.dtype],
                 default_device= global_args.device
             )
             def _wrap_t(t):
-                res= yastn.Tensor(config=yastn_cfg_nosym, s=[-1,1,1,-1,1])
+                res= Tensor(config=yastn_cfg_nosym, s=[-1,1,1,-1,1])
                 res.set_block(val=t, Ds=t.shape)
                 return res
             parameters= { c: _wrap_t(state.site((c[1], c[0])).permute(1,2,3,4,0)) for c in geometry.sites() }
