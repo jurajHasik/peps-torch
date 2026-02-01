@@ -8,6 +8,7 @@ import ast, argparse
 import context
 import config as cfg
 import numpy as np
+import unittest
 import torch
 
 import yastn.yastn as yastn
@@ -26,7 +27,7 @@ log = logging.getLogger(__name__)
 # parse command line args and build necessary configuration objects
 parser = cfg.get_args_parser()
 parser.add_argument(
-    "--V1", type=float, default=1.0, help="Nearest-neighbor interaction"
+    "--V1", type=float, default=0.0, help="Nearest-neighbor interaction"
 )
 parser.add_argument(
     "--V2", type=float, default=0.0, help="2nd. nearest-neighbor interaction"
@@ -73,16 +74,15 @@ parser.add_argument(
     choices=["torch", "torch_cpp"],
 )
 
-def main():
+def main(args=None):
     # global args
-    args = parser.parse_args()  # process command line arguments
+    if args is None:
+        args = parser.parse_args()  # process command line arguments
     bond_dims = args.bond_dims
     # D = sum([bond_dims[t] for t in bond_dims.keys()])
 
     args, unknown_args = parser.parse_known_args(
         [
-            "--opt_max_iter",
-            "500",
             "--CTMARGS_ctm_env_init_type",
             "eye",
             "--OPTARGS_no_opt_ctm_reinit",
@@ -171,7 +171,7 @@ def main():
             print(
                 "LS "
                 + ", ".join(
-                    [f"{epoch}", f"{loss}"]
+                    ["epoch, energy", f"{epoch}", f"{loss}"]
                     + [f"{x.item()}" for x in model.get_parameters()]
                 )
             )
@@ -180,13 +180,14 @@ def main():
             loss = opt_context["loss_history"]["loss"][-1]
             print(
                 ", ".join(
-                    [f"{epoch}", f"{loss}"]
+                    ["epoch, energy", f"{epoch}", f"{loss}"]
                     + [f"{x.item()}" for x in model.get_parameters()]
                 )
             )
 
         obs = model.eval_obs(stateAD.to_Peps(), ctm_env)
         log.info(json.dumps(obs))
+        print(obs)
 
     if args.instate is None or not os.path.exists(args.instate):
         if args.pattern == '1x1':
@@ -196,6 +197,7 @@ def main():
             raise ValueError(f"Unknown pattern: {args.pattern}")
     else:
         stateAD = load_PepsAD(yastn_config, args.instate)
+        stateAD.normalize_()
         log.log(logging.INFO, "loaded " + args.instate)
         print("loaded ", args.instate)
         stateAD.add_noise_(args.instate_noise)
@@ -221,6 +223,112 @@ def main():
         loss_fn(stateAD, ctm_env_in, opt_context)
     else:
         optimize_state(stateAD, ctm_env_in, loss_fn, obs_fn=obs_fn, post_proc=post_proc)
+
+import re
+import ast
+from typing import Any, Dict, Tuple, Union
+
+_FLOAT = r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?"
+
+def parse_energy_and_nab(text: str) -> Tuple[int, float, Union[float, Dict[str, float]], Union[float, Dict[str, float]]]:
+    """
+    Parse the last reported (epoch, energy) and the last nA/nB dictionary from program output.
+
+    Returns:
+        (epoch, energy, nA, nB)
+
+    Where nA/nB are:
+        - floats if exactly one nA_* and one nB_* key are found
+        - otherwise dicts {key: value}
+    """
+    last_epoch = None
+    last_energy = None
+    last_nA: Dict[str, float] = {}
+    last_nB: Dict[str, float] = {}
+
+    energy_re = re.compile(rf"epoch\s*,\s*energy\s*,\s*(\d+)\s*,\s*({_FLOAT})")
+
+    for line in text.splitlines():
+        # 1) epoch, energy, <epoch>, <energy>
+        m = energy_re.search(line)
+        if m:
+            last_epoch = int(m.group(1))
+            last_energy = float(m.group(2))
+            continue
+
+        # 2) dict line with nA_/nB_
+        s = line.strip()
+        if s.startswith("{") and ("nA_" in s) and ("nB_" in s):
+            try:
+                d: Dict[str, Any] = ast.literal_eval(s)  # safe for literals
+                nA = {k: float(v) for k, v in d.items() if isinstance(k, str) and k.startswith("nA_")}
+                nB = {k: float(v) for k, v in d.items() if isinstance(k, str) and k.startswith("nB_")}
+                if nA and nB:
+                    last_nA, last_nB = nA, nB
+            except Exception:
+                # ignore malformed dict lines
+                pass
+
+    if last_epoch is None or last_energy is None:
+        raise AssertionError("Did not find any line like: 'epoch, energy, <epoch>, <energy>'")
+
+    if not last_nA or not last_nB:
+        raise AssertionError("Did not find any dict line containing both 'nA_' and 'nB_'")
+
+    # If there is only one site reported, return scalars for convenience
+    if len(last_nA) == 1 and len(last_nB) == 1:
+        return last_epoch, last_energy, next(iter(last_nA.values())), next(iter(last_nB.values()))
+
+    return last_epoch, last_energy, last_nA, last_nB
+
+class TestOptim_CI_state(unittest.TestCase):
+    tol= 1.0e-6
+    DIR_PATH = os.path.dirname(os.path.realpath(__file__))
+    OUT_PRFX = "RESULT_test_run-opt_u1_CI"
+
+    def setUp(self):
+        self.args = parser.parse_args([])
+        self.args.instate=self.DIR_PATH+"/../../test-input/abelian/CI_D3_1x1_U1_state.json"
+        self.args.t1=1.0
+        self.args.t2, self.args.t3, self.args.phi= 0.7*self.args.t1, -0.9*self.args.t1, 0.35*np.pi
+        self.args.bond_dims = {-1:1,0:1,1:1}
+        self.args.chi=36
+        self.args.instate_noise=0.3
+        self.args.seed=123
+        self.args.out_prefix=self.OUT_PRFX
+        self.args.opt_max_iter=3
+        self.args.CTMARGS_ctm_conv_tol=1e-10
+        self.args.CTMARGS_ctm_max_iter=800
+        self.args.GLOBALARGS_dtype= "complex128"
+
+    def test_basic_opt_noisy_CI(self):
+        from io import StringIO
+        from unittest.mock import patch
+        from cmath import isclose
+
+        with patch('sys.stdout', new = StringIO()) as tmp_out:
+            main(self.args)
+        tmp_out.seek(0)
+
+        out = tmp_out.getvalue()
+        print(out)
+        epoch, energy, nA, nB = parse_energy_and_nab(out)
+
+        # compare with the reference
+        ref_energy = -2.6116462661745645
+        ref_nA = 0.5092230390029766
+        ref_nB = 0.49077769168530994
+
+        assert isclose(energy,ref_energy, rel_tol=self.tol, abs_tol=self.tol)
+        assert isclose(nA,ref_nA, rel_tol=self.tol, abs_tol=self.tol)
+        assert isclose(nB,ref_nB, rel_tol=self.tol, abs_tol=self.tol)
+
+
+    def tearDown(self):
+        self.args.opt_resume=None
+        self.args.instate=None
+        for f in [self.OUT_PRFX+"_state.json",self.OUT_PRFX+"_checkpoint.p",self.OUT_PRFX+".log", self.OUT_PRFX+"_ctm_env_dict"]:
+            if os.path.isfile(f): os.remove(f)
 
 if __name__ == "__main__":
     main()

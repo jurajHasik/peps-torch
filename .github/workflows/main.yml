@@ -111,10 +111,14 @@ jobs:
         run: |
           $CONDA/bin/python -m pytest examples/kagome/abelian/ctmrg_*.py
           $CONDA/bin/python -m pytest examples/kagome/abelian/optim_*.py
-      
+
       - name: test czx
         run: |
           $CONDA/bin/python -m pytest examples/czx/optim_*.py
+
+      - name: test CI
+        run: |
+          $CONDA/bin/python -m pytest examples/honeycomb/CI.py
 
   # This workflow contains a single job called "build"
   test-experimental:
@@ -180,7 +184,7 @@ jobs:
       contains(fromJson('["refs/heads/master", "refs/heads/tests"]'), github.ref) ||
       ( github.event_name == 'pull_request' && contains(fromJson('["master",]'), github.base_ref) )
 
-    #needs: 
+    #needs:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
     strategy:
