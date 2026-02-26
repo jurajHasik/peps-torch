@@ -52,6 +52,7 @@ parser.add_argument("--eval_loss", action='store_true')
 parser.add_argument("--devices", help='cpu or (list of) cuda. Default is cpu', default=None, dest='devices', nargs="+")
 parser.add_argument("--sym", choices=['U1', 'Z2'], default='U1', help="Symmetry of the tensors")
 parser.add_argument("--bond_dims", type=parse_dict, help="dict of bond dimensions keyed on charge sectors  (e.g., \"{'charge1': 'D1', 'charge2': D2}\")")
+parser.add_argument("--init_normalize", action='store_true', help="Whether to normalize the initial state")
 parser.add_argument(
     "--yast_backend",
     type=str,
@@ -157,8 +158,7 @@ def main():
 
     @torch.no_grad()
     def post_proc(stateAD, env, opt_context):
-        stateAD.sync_()
-        stateAD.normalize_()
+        pass
 
     @torch.no_grad()
     def obs_fn(stateAD, ctm_env, opt_context):
@@ -197,9 +197,10 @@ def main():
             raise ValueError(f"Unknown pattern: {args.pattern}")
     else:
         stateAD = load_PepsAD(yastn_config, args.instate)
-        stateAD.normalize_()
         log.log(logging.INFO, "loaded " + args.instate)
         print("loaded ", args.instate)
+        if args.init_normalize:
+            stateAD.normalize_()
         stateAD.add_noise_(args.instate_noise)
 
     chi = cfg.main_args.chi

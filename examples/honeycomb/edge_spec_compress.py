@@ -501,7 +501,7 @@ if __name__ == "__main__":
             R_list.append(load_from_dict(yastn_config, R_dict))
         print("Loaded compressed MPOs")
     else:
-        L_list, R_list = coarse_grain(mpo_L, mpo_R, D_max, D_mpo, repeat=1)
+        L_list, R_list = coarse_grain(mpo_L, mpo_R, D_max, repeat=1)
         L_list_dicts = [L_list[i].save_to_dict() for i in range(len(L_list))]
         R_list_dicts = [R_list[i].save_to_dict() for i in range(len(R_list))]
 
