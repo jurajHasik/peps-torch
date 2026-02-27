@@ -216,7 +216,7 @@ def main(args=None):
             with open(in_env_dict_file, "rb") as f:
                 d = pickle.load(f)
             ctm_env_in = yastn.from_dict(d)
-            ctm_env_in.psi = Peps2Layers(bra=stateAD.to_Peps())
+            ctm_env_in.psi = Peps2Layers(stateAD.to_Peps())
 
     if args.eval_loss:
         opt_context = {"ctm_args": cfg.ctm_args, "opt_args": cfg.opt_args}

@@ -21,6 +21,16 @@ from optim.ad_optim_lbfgs_mod import optimize_state
 
 from models.fermion.tv_model import *
 
+def parse_dict(input_string):
+    try:
+        # Use `ast.literal_eval` to safely evaluate the string
+        parsed = ast.literal_eval(input_string)
+        if isinstance(parsed, dict):
+            return parsed
+        else:
+            raise argparse.ArgumentTypeError("Input is not a valid dictionary.")
+    except Exception as e:
+        raise argparse.ArgumentTypeError(f"Invalid dictionary format: {e}")
 
 log = logging.getLogger(__name__)
 # parse command line args and build necessary configuration objects
@@ -60,17 +70,6 @@ parser.add_argument(
     help="YAST backend",
     choices=["torch", "torch_cpp"],
 )
-
-def parse_dict(input_string):
-    try:
-        # Use `ast.literal_eval` to safely evaluate the string
-        parsed = ast.literal_eval(input_string)
-        if isinstance(parsed, dict):
-            return parsed
-        else:
-            raise argparse.ArgumentTypeError("Input is not a valid dictionary.")
-    except Exception as e:
-        raise argparse.ArgumentTypeError(f"Invalid dictionary format: {e}")
 
 
 def main():
@@ -217,7 +216,7 @@ def main():
             with open(in_env_dict_file, "rb") as f:
                 d = pickle.load(f)
             ctm_env_in = yastn.from_dict(d)
-            ctm_env_in.psi = Peps2Layers(bra=stateAD.to_Peps())
+            ctm_env_in.psi = Peps2Layers(stateAD.to_Peps())
 
     if args.eval_loss:
         opt_context = {"ctm_args": cfg.ctm_args, "opt_args": cfg.opt_args}
