@@ -25,9 +25,9 @@ class NumPy_Encoder(json.JSONEncoder):
             return super(NumPy_Encoder, self).default(obj)
 
 # assume bare tensor is defined as JSON object with
-# 
+#
 #      key type content
-# i)   dtype [str] datatype 
+# i)   dtype [str] datatype
 # ii)  dims  [list[int]] integer array of dimensions
 # iii) data  [list[str]] 1D array of elements as strings
 #
@@ -76,9 +76,9 @@ def read_bare_json_tensor_np_legacy(json_obj):
     # 1) fill the tensor with elements from the list "entries"
     # which list the non-zero tensor elements in the following
     # notation. Dimensions are indexed starting from 0
-    # 
+    #
     # index (integer) of physDim, left, up, right, down, (float) Re, Im
-    #                             (or generic auxilliary inds ...)  
+    #                             (or generic auxilliary inds ...)
     if dtype_str=="complex128":
         for entry in t["entries"]:
             l = entry.split()
@@ -88,12 +88,12 @@ def read_bare_json_tensor_np_legacy(json_obj):
             l= entry.split()
             k= 1 if len(l)==len(dims)+1 else 2
             X[tuple(int(i) for i in l[:-k])]+=float(l[-k])
-    
+
     return X
 
 # assume abelian block as JSON object is composed of bare tensor
 # with additional charge data
-# 
+#
 #      key type content
 # i)   charges [list[int]] list of charges
 #
@@ -104,7 +104,7 @@ def read_json_abelian_block_np_legacy(json_obj):
 
 # assume abelian tensor is defined as JSON object with
 #
-#      key type content 
+#      key type content
 # i)   rank      [int] rank of tensor (number of dimensions)
 # ii)  signature [list[int]] direction of indices (+1 or -1)
 # iii) symmetry  [str] abelian group
@@ -113,8 +113,8 @@ def read_json_abelian_block_np_legacy(json_obj):
 # vi)  dtype     [str] datatype
 # vii) blocks    [list[abelian_block]] list of blocks
 #
-# NOTE: the default settings (abelian group, backend) of Tensor are injected 
-#       by tensor_abelian module 
+# NOTE: the default settings (abelian group, backend) of Tensor are injected
+#       by tensor_abelian module
 #
 def read_json_abelian_tensor_legacy(json_obj, config, dtype=None, device=None):
     r"""
@@ -125,7 +125,7 @@ def read_json_abelian_tensor_legacy(json_obj, config, dtype=None, device=None):
     :type json_obj: dict
     :param config: yastn.Tensor configuration
     :type config: namedtuple
-    :param dtype: dtype 
+    :param dtype: dtype
     :type dtype: str
     :param device: device
     :type device: str
@@ -143,7 +143,7 @@ def read_json_abelian_tensor_legacy(json_obj, config, dtype=None, device=None):
     s= json_obj["signature"]
     n= json_obj["n"]
     isdiag= json_obj["isdiag"]
-    
+
     if not dtype:
         assert hasattr(config,'default_dtype'), "Either dtype or valid config has to be provided"
         dtype= config.default_dtype
@@ -231,7 +231,7 @@ def serialize_bare_tensor_legacy(t):
 
     json_tensor["dtype"]= dtype_str
     json_tensor["dims"]= list(t.shape)
-    
+
     entries = []
     elem_inds = list(product( *(range(i) for i in t.shape) ))
     if "complex" in dtype_str:
@@ -279,8 +279,13 @@ def serialize_abelian_tensor_legacy(t, native=False):
     # json_tensor["data"]= serialize_bare_tensor_legacy(t._data)
 
     json_tensor["blocks"]= []
-    for k,D in zip(t.struct.t,t.struct.D):
-        json_block= serialize_bare_tensor_legacy(t[k])
+    # consume_transpose() materializes any pending lazy transpose, resetting
+    # trans to identity so that struct.t is in logical (user-facing) leg order.
+    # This makes t_c[k] and the "charges" field both consistent with the
+    # logical signature written above, which is what deserialization expects.
+    t_c= t.consume_transpose()
+    for k,D in zip(t_c.struct.t,t_c.struct.D):
+        json_block= serialize_bare_tensor_legacy(t_c[k])
         json_block["charges"]= k
         json_tensor["blocks"].append(json_block)
 
