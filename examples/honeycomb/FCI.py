@@ -21,6 +21,16 @@ from optim.ad_optim_lbfgs_mod import optimize_state
 
 from models.fermion.tv_model import *
 
+def parse_dict(input_string):
+    try:
+        # Use `ast.literal_eval` to safely evaluate the string
+        parsed = ast.literal_eval(input_string)
+        if isinstance(parsed, dict):
+            return parsed
+        else:
+            raise argparse.ArgumentTypeError("Input is not a valid dictionary.")
+    except Exception as e:
+        raise argparse.ArgumentTypeError(f"Invalid dictionary format: {e}")
 
 log = logging.getLogger(__name__)
 # parse command line args and build necessary configuration objects
@@ -52,6 +62,7 @@ parser.add_argument("--eval_loss", action='store_true')
 parser.add_argument("--devices", help='cpu or (list of) cuda. Default is cpu', default=None, dest='devices', nargs="+")
 parser.add_argument("--sym", choices=['U1', 'Z2'], default='U1', help="Symmetry of the tensors")
 parser.add_argument("--bond_dims", type=parse_dict, help="dict of bond dimensions keyed on charge sectors  (e.g., \"{'charge1': 'D1', 'charge2': D2}\")")
+parser.add_argument("--init_normalize", action='store_true', help="Whether to normalize the initial state")
 parser.add_argument(
     "--yast_backend",
     type=str,
@@ -59,17 +70,6 @@ parser.add_argument(
     help="YAST backend",
     choices=["torch", "torch_cpp"],
 )
-
-def parse_dict(input_string):
-    try:
-        # Use `ast.literal_eval` to safely evaluate the string
-        parsed = ast.literal_eval(input_string)
-        if isinstance(parsed, dict):
-            return parsed
-        else:
-            raise argparse.ArgumentTypeError("Input is not a valid dictionary.")
-    except Exception as e:
-        raise argparse.ArgumentTypeError(f"Invalid dictionary format: {e}")
 
 
 def main():
@@ -157,8 +157,7 @@ def main():
 
     @torch.no_grad()
     def post_proc(stateAD, env, opt_context):
-        stateAD.sync_()
-        stateAD.normalize_()
+        pass
 
     @torch.no_grad()
     def obs_fn(stateAD, ctm_env, opt_context):
@@ -197,9 +196,10 @@ def main():
             raise ValueError(f"Unknown pattern: {args.pattern}")
     else:
         stateAD = load_PepsAD(yastn_config, args.instate)
-        stateAD.normalize_()
         log.log(logging.INFO, "loaded " + args.instate)
         print("loaded ", args.instate)
+        if args.init_normalize:
+            stateAD.normalize_()
         stateAD.add_noise_(args.instate_noise)
 
     chi = cfg.main_args.chi
@@ -216,7 +216,7 @@ def main():
             with open(in_env_dict_file, "rb") as f:
                 d = pickle.load(f)
             ctm_env_in = yastn.from_dict(d)
-            ctm_env_in.psi = Peps2Layers(bra=stateAD.to_Peps())
+            ctm_env_in.psi = Peps2Layers(stateAD.to_Peps())
 
     if args.eval_loss:
         opt_context = {"ctm_args": cfg.ctm_args, "opt_args": cfg.opt_args}

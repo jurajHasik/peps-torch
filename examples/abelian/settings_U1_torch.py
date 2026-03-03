@@ -1,5 +1,5 @@
-import yastn.yastnn.backend.backend_torch as backend
-import yastn.yastnn.sym.sym_U1 as sym
+import yastn.yastn.backend.backend_torch as backend
+import yastn.yastn.sym.sym_U1 as sym
 default_dtype = 'float64'
 default_device = 'cpu'
 default_fusion = 'hard'
