@@ -250,7 +250,7 @@ def init_env(state, env, ctm_args=cfg.ctm_args):
         * ``"CTMRG"`` - tensors C and T are built from the on-site tensors of `state` 
     """
     if len(next(iter(state.sites.values())).size())==4 and \
-        not (ctm_args.ctm_env_init_type in ["PROD","CTMRG_OBC"]):
+        not (ctm_args.ctm_env_init_type in ["PROD","CTMRG_OBC","RANDOM"]):
         raise RuntimeError("Incompatible ENV initialization")
 
     if ctm_args.ctm_env_init_type=='PROD':
