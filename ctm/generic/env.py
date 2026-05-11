@@ -733,11 +733,24 @@ def init_prod_overlap(state1, state2, env, verbosity=0):
         vec = (0,-1)
         A1 = state1.site((coord[0]+vec[0],coord[1]+vec[1]))
         A2 = state2.site((coord[0]+vec[0],coord[1]+vec[1]))
-        dimsA = A1.size()
-        a = contiguous(einsum('miefg,miebg->fb',A1,conj(A2)))
-        a = view(a, (dimsA[3]**2))
+
+        dimsA1 = A1.size()
+        dimsA2 = A2.size()
+
+        if dimsA1[3] >= dimsA2[3]:
+            dimsA2temp = (dimsA2[0], dimsA1[1], dimsA1[2], dimsA2[3], dimsA1[4])
+            A2_temp = torch.zeros(dimsA2temp, dtype=A2.dtype, device=A2.device)
+            A2_temp[:, :dimsA2[1], :dimsA2[2], :, :dimsA2[4]] = A2
+            a = contiguous(einsum('miefg,miebg->fb', A1, conj(A2_temp)))
+        elif dimsA1[3] < dimsA2[3]:
+            dimsA1temp = (dimsA1[0], dimsA2[1], dimsA2[2], dimsA1[3], dimsA2[4])
+            A1_temp = torch.zeros(dimsA1temp, dtype=A1.dtype, device=A1.device)
+            A1_temp[:, :dimsA1[1], :dimsA1[2], :, :dimsA1[4]] = A1
+            a = contiguous(einsum('miefg,miebg->fb', A1_temp, conj(A2)))
+
+        a = view(a, (dimsA1[3]*dimsA2[3]))
         a= a/a.abs().max()
-        env.T[(coord,vec)]= torch.zeros((env.chi,dimsA[3]**2,env.chi), dtype=env.dtype, device=env.device)
+        env.T[(coord,vec)]= torch.zeros((env.chi,dimsA1[3]*dimsA2[3],env.chi), dtype=env.dtype, device=env.device)
         env.T[(coord,vec)][0,:,0]= a
 
         # left transfer matrix
@@ -753,11 +766,24 @@ def init_prod_overlap(state1, state2, env, verbosity=0):
         vec = (-1,0)
         A1 = state1.site((coord[0] + vec[0], coord[1] + vec[1]))
         A2 = state2.site((coord[0] + vec[0], coord[1] + vec[1]))
-        dimsA = A1.size()
-        a = contiguous(einsum('meifg,meifc->gc',A1,conj(A2)))
-        a = view(a, (dimsA[4]**2))
+        dimsA1 = A1.size()
+        dimsA2 = A2.size()
+
+        if dimsA1[4] >= dimsA2[4]:
+
+            dimsA2temp = (dimsA2[0], dimsA1[1], dimsA1[2], dimsA1[3], dimsA2[4])
+            A2_temp = torch.zeros(dimsA2temp, dtype=A2.dtype, device=A2.device)
+            A2_temp[:, :dimsA2[1], :dimsA2[2], :dimsA2[3], :] = A2
+            a = contiguous(einsum('meifg,meifc->gc', A1, conj(A2_temp)))
+        elif dimsA1[4] < dimsA2[4]:
+            dimsA1temp = (dimsA1[0], dimsA2[1], dimsA2[2], dimsA2[3], dimsA1[4])
+            A1_temp = torch.zeros(dimsA1temp, dtype=A1.dtype, device=A1.device)
+            A1_temp[:, :dimsA1[1], :dimsA1[2], :dimsA1[3], :] = A1
+            a = contiguous(einsum('meifg,meifc->gc', A1_temp, conj(A2)))
+
+        a = view(a, (dimsA1[4]*dimsA2[4]))
         a= a/a.abs().max()
-        env.T[(coord,vec)] = torch.zeros((env.chi,env.chi,dimsA[4]**2), dtype=env.dtype, device=env.device)
+        env.T[(coord,vec)] = torch.zeros((env.chi,env.chi,dimsA1[4]*dimsA2[4]), dtype=env.dtype, device=env.device)
         env.T[(coord,vec)][0,0,:]= a
 
         # lower transfer matrix
@@ -773,11 +799,23 @@ def init_prod_overlap(state1, state2, env, verbosity=0):
         vec = (0,1)
         A1 = state1.site((coord[0] + vec[0], coord[1] + vec[1]))
         A2 = state2.site((coord[0] + vec[0], coord[1] + vec[1]))
-        dimsA = A1.size()
-        a = contiguous(einsum('mefig,mafig->ea',A1,conj(A2)))
-        a = view(a, (dimsA[1]**2))
+        dimsA1 = A1.size()
+        dimsA2 = A2.size()
+
+        if dimsA1[1] >= dimsA2[1]:
+
+            dimsA2temp = (dimsA2[0], dimsA2[1], dimsA1[2], dimsA1[3], dimsA1[4])
+            A2_temp = torch.zeros(dimsA2temp, dtype=A2.dtype, device=A2.device)
+            A2_temp[:, :, :dimsA2[2], :dimsA2[3], :dimsA2[4]] = A2
+            a = contiguous(einsum('mefig,mafig->ea', A1, conj(A2_temp)))
+        elif dimsA1[1] < dimsA2[1]:
+            dimsA1temp = (dimsA1[0], dimsA1[1], dimsA2[2], dimsA2[3], dimsA2[4])
+            A1_temp = torch.zeros(dimsA1temp, dtype=A1.dtype, device=A1.device)
+            A1_temp[:, :, :dimsA1[2], :dimsA1[3], :dimsA1[4]] = A1
+            a = contiguous(einsum('mefig,mafig->ea', A1_temp, conj(A2)))
+        a = view(a, (dimsA1[1]*dimsA2[1]))
         a= a/a.abs().max()
-        env.T[(coord,vec)] = torch.zeros((dimsA[1]**2,env.chi,env.chi), dtype=env.dtype, device=env.device)
+        env.T[(coord,vec)] = torch.zeros((dimsA1[1]*dimsA2[1],env.chi,env.chi), dtype=env.dtype, device=env.device)
         env.T[(coord,vec)][:,0,0]= a
 
         # right transfer matrix
@@ -793,11 +831,23 @@ def init_prod_overlap(state1, state2, env, verbosity=0):
         vec = (1,0)
         A1 = state1.site((coord[0] + vec[0], coord[1] + vec[1]))
         A2 = state2.site((coord[0] + vec[0], coord[1] + vec[1]))
-        dimsA = A1.size()
-        a = contiguous(einsum('mefgi,mebgi->fb',A1,conj(A2)))
-        a = view(a, (dimsA[2]**2))
+        dimsA1 = A1.size()
+        dimsA2 = A2.size()
+
+        if dimsA1[2] >= dimsA2[2]:
+
+            dimsA2temp = (dimsA2[0], dimsA1[1], dimsA2[2], dimsA1[3], dimsA1[4])
+            A2_temp = torch.zeros(dimsA2temp, dtype=A2.dtype, device=A2.device)
+            A2_temp[:, :dimsA2[1], :, :dimsA2[3], :dimsA2[4]] = A2
+            a = contiguous(einsum('mefgi,mebgi->fb', A1, conj(A2_temp)))
+        elif dimsA1[2] < dimsA2[2]:
+            dimsA1temp = (dimsA1[0], dimsA2[1], dimsA1[2], dimsA2[3], dimsA2[4])
+            A1_temp = torch.zeros(dimsA1temp, dtype=A1.dtype, device=A1.device)
+            A1_temp[:, :dimsA1[1], :, :dimsA1[3], :dimsA1[4]] = A1
+            a = contiguous(einsum('mefgi,mebgi->fb', A1_temp, conj(A2)))
+        a = view(a, (dimsA1[2]*dimsA2[2]))
         a= a/a.abs().max()
-        env.T[(coord,vec)] = torch.zeros((env.chi,dimsA[2]**2,env.chi), dtype=env.dtype, device=env.device)
+        env.T[(coord,vec)] = torch.zeros((env.chi,dimsA1[2]*dimsA2[2],env.chi), dtype=env.dtype, device=env.device)
         env.T[(coord,vec)][0,:,0]= a
 
 def print_env(env, verbosity=0):
